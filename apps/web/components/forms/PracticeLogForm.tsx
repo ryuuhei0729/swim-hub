@@ -6,56 +6,7 @@ import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import TimeInputModal from './TimeInputModal'
 import TagSelector from './TagSelector'
-
-interface PracticeTag {
-  id: string
-  name: string
-  color: string
-}
-
-interface PracticeSet {
-  id: string
-  reps: number | ''
-  distance: number | ''
-  circleTime: number | ''
-  // UI用の分・秒入力（内部的にはcircleTime[秒]に正規化）
-  uiCircleMin?: number | ''
-  uiCircleSec?: number | ''
-  setCount?: number | ''
-  style: string
-  note?: string
-  tags?: PracticeTag[] // タグ情報
-  times?: Array<{
-    setNumber: number
-    repNumber: number
-    time: number
-  }>
-}
-
-interface PracticeLogFormData {
-  practiceDate: string
-  location: string
-  sets: PracticeSet[]
-  note: string
-}
-
-interface PracticeLogFormProps {
-  isOpen: boolean
-  onClose: () => void
-  onSubmit?: (data: PracticeLogFormData) => Promise<void>
-  onDeletePracticeLog?: (practiceLogId: string) => Promise<void> // 個別のPractice_log削除用
-  initialDate?: Date
-  editData?: any // 編集時のデータ
-  isLoading?: boolean
-}
-
-const SWIMMING_STYLES = [
-  'Fr',
-  'Ba',
-  'Br',
-  'Fly',
-  'IM'
-]
+import { PracticeTag, PracticeSet, PracticeLogFormData, PracticeLogFormProps, SWIMMING_STYLES } from '@/types'
 
 
 export default function PracticeLogForm({

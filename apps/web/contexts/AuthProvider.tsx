@@ -6,27 +6,7 @@ import { createClient } from '@/lib/supabase'
 import type { Database } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { apolloClient } from '@/lib/apollo-client'
-
-type UserProfile = Database['public']['Tables']['users']['Row']
-
-interface AuthState {
-  user: User | null
-  profile: UserProfile | null
-  session: Session | null
-  loading: boolean
-}
-
-interface AuthContextType extends AuthState {
-  supabase: SupabaseClient<Database>
-  signIn: (email: string, password: string) => Promise<{ data: any; error: any }>
-  signUp: (email: string, password: string, name?: string) => Promise<{ data: any; error: any }>
-  signOut: () => Promise<{ error: any }>
-  resetPassword: (email: string) => Promise<{ error: any }>
-  updatePassword: (newPassword: string) => Promise<{ error: any }>
-  updateProfile: (updates: Partial<UserProfile>) => Promise<{ error: any }>
-  isAuthenticated: boolean
-  isLoading: boolean
-}
+import { UserProfile, AuthState, AuthContextType } from '@/types'
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
