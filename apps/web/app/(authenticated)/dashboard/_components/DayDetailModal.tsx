@@ -10,8 +10,8 @@ import { GET_RECORD, GET_PRACTICE } from '@/graphql/queries'
 
 interface CalendarItem {
   id: string
-  entry_type: 'practice' | 'record'
-  entry_date: string
+  item_type: 'practice' | 'record'
+  item_date: string
   title: string
   location?: string
   time_result?: number
@@ -33,7 +33,7 @@ interface DayDetailModalProps {
   entries: CalendarItem[]
   onEditItem?: (item: CalendarItem) => void
   onDeleteItem?: (itemId: string, itemType: 'practice' | 'record') => void
-  onAddEntry?: (date: Date, type: 'practice' | 'record') => void
+  onAddItem?: (date: Date, type: 'practice' | 'record') => void
 }
 
 export default function DayDetailModal({
@@ -43,14 +43,14 @@ export default function DayDetailModal({
   entries,
   onEditItem,
   onDeleteItem,
-  onAddEntry
+  onAddItem
 }: DayDetailModalProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<{id: string, type: 'practice' | 'record'} | null>(null)
 
   if (!isOpen) return null
 
-  const practiceItems = entries.filter(e => e.entry_type === 'practice')
-  const recordItems = entries.filter(e => e.entry_type === 'record')
+  const practiceItems = entries.filter(e => e.item_type === 'practice')
+  const recordItems = entries.filter(e => e.item_type === 'record')
 
   const handleDeleteConfirm = async () => {
     if (showDeleteConfirm) {
@@ -99,14 +99,14 @@ export default function DayDetailModal({
                 <p className="text-gray-500 mb-4">この日の記録はありません</p>
                 <div className="space-y-2">
                   <button
-                    onClick={() => onAddEntry?.(date, 'practice')}
+                    onClick={() => onAddItem?.(date, 'practice')}
                     className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
                     <span className="mr-2">💪</span>
                     練習記録を追加
                   </button>
                   <button
-                    onClick={() => onAddEntry?.(date, 'record')}
+                    onClick={() => onAddItem?.(date, 'record')}
                     className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-blue-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <span className="mr-2">🏊‍♂️</span>
@@ -167,7 +167,7 @@ export default function DayDetailModal({
                             <PencilIcon className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => setShowDeleteConfirm({id: item.id, type: item.entry_type})}
+                            onClick={() => setShowDeleteConfirm({id: item.id, type: item.item_type})}
                             className="p-2 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50"
                             title="削除"
                           >
@@ -236,7 +236,7 @@ export default function DayDetailModal({
                             <PencilIcon className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => setShowDeleteConfirm({id: item.id, type: item.entry_type})}
+                            onClick={() => setShowDeleteConfirm({id: item.id, type: item.item_type})}
                             className="p-2 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50"
                             title="削除"
                           >
@@ -256,14 +256,14 @@ export default function DayDetailModal({
                 <h4 className="text-sm font-medium text-gray-700 mb-3">記録を追加</h4>
                 <div className="grid grid-cols-2 gap-3">
                   <button
-                    onClick={() => onAddEntry?.(date, 'practice')}
+                    onClick={() => onAddItem?.(date, 'practice')}
                     className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
                     <span className="mr-2">💪</span>
                     練習記録
                   </button>
                   <button
-                    onClick={() => onAddEntry?.(date, 'record')}
+                    onClick={() => onAddItem?.(date, 'record')}
                     className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-blue-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <span className="mr-2">🏊‍♂️</span>

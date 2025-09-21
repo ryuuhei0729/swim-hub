@@ -7,8 +7,8 @@ import { formatTime } from '../../../../utils/formatters'
 
 interface CalendarItem {
   id: string
-  entry_type: 'practice' | 'record'
-  entry_date: string
+  item_type: 'practice' | 'record'
+  item_date: string
   title: string
   location?: string
   time_result?: number
@@ -126,8 +126,8 @@ export function useCalendarData(currentDate: Date, userId?: string) {
       if (currentMonth === today.getMonth() && currentYear === today.getFullYear()) {
         mockItems.push({
           id: 'mock-practice-1',
-          entry_type: 'practice',
-          entry_date: format(new Date(currentYear, currentMonth, 5), 'yyyy-MM-dd'),
+          item_type: 'practice',
+          item_date: format(new Date(currentYear, currentMonth, 5), 'yyyy-MM-dd'),
           title: '練習: AN2, EN3',
           location: '市営プール'
         })
@@ -135,8 +135,8 @@ export function useCalendarData(currentDate: Date, userId?: string) {
         // 今月の15日に大会記録
         mockItems.push({
           id: 'mock-record-1',
-          entry_type: 'record',
-          entry_date: format(new Date(currentYear, currentMonth, 15), 'yyyy-MM-dd'),
+          item_type: 'record',
+          item_date: format(new Date(currentYear, currentMonth, 15), 'yyyy-MM-dd'),
           title: '50m自由形: 26.45s',
           location: '県立水泳場',
           time_result: 2645,
@@ -146,8 +146,8 @@ export function useCalendarData(currentDate: Date, userId?: string) {
         // 今月の20日に練習記録
         mockItems.push({
           id: 'mock-practice-2',
-          entry_type: 'practice',
-          entry_date: format(new Date(currentYear, currentMonth, 20), 'yyyy-MM-dd'),
+          item_type: 'practice',
+          item_date: format(new Date(currentYear, currentMonth, 20), 'yyyy-MM-dd'),
           title: '練習: 長水路',
           location: '総合体育館プール'
         })
@@ -155,8 +155,8 @@ export function useCalendarData(currentDate: Date, userId?: string) {
         // 今月の25日に大会記録
         mockItems.push({
           id: 'mock-record-2',
-          entry_type: 'record',
-          entry_date: format(new Date(currentYear, currentMonth, 25), 'yyyy-MM-dd'),
+          item_type: 'record',
+          item_date: format(new Date(currentYear, currentMonth, 25), 'yyyy-MM-dd'),
           title: '100m背泳ぎ: 58.32s',
           location: '国際水泳場',
           time_result: 5832,
@@ -188,8 +188,8 @@ export function useCalendarData(currentDate: Date, userId?: string) {
             
             items.push({
               id: practice.id, // Practice ID
-              entry_type: 'practice',
-              entry_date: practiceDate,
+              item_type: 'practice',
+              item_date: practiceDate,
               title,
               location: practicePlace
             })
@@ -211,8 +211,8 @@ export function useCalendarData(currentDate: Date, userId?: string) {
             
             const entry: any = {
               id: record.id,
-              entry_type: 'record',
-              entry_date: record.competition.date,
+              item_type: 'record',
+              item_date: record.competition.date,
               title,
               location: record.competition.title || '大会'
             }
@@ -240,8 +240,8 @@ export function useCalendarData(currentDate: Date, userId?: string) {
   const monthlySummary: MonthlySummary = useMemo(() => {
     // モックデータを使用する場合
     if (USE_MOCK_DATA) {
-      const practiceCount = calendarItems.filter(e => e.entry_type === 'practice').length
-      const recordCount = calendarItems.filter(e => e.entry_type === 'record').length
+      const practiceCount = calendarItems.filter(e => e.item_type === 'practice').length
+      const recordCount = calendarItems.filter(e => e.item_type === 'record').length
       
       return {
         practiceCount,
@@ -263,8 +263,8 @@ export function useCalendarData(currentDate: Date, userId?: string) {
     }
 
     // フォールバック: エントリーから計算
-    const practiceCount = calendarItems.filter(e => e.entry_type === 'practice').length
-    const recordCount = calendarItems.filter(e => e.entry_type === 'record').length
+    const practiceCount = calendarItems.filter(e => e.item_type === 'practice').length
+    const recordCount = calendarItems.filter(e => e.item_type === 'record').length
 
     return {
       practiceCount,

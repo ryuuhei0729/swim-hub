@@ -10,8 +10,8 @@ import DayDetailModal from './DayDetailModal'
 
 interface CalendarItem {
   id: string
-  entry_type: 'practice' | 'record'
-  entry_date: string
+  item_type: 'practice' | 'record'
+  item_date: string
   title: string
   location?: string
   time_result?: number
@@ -21,7 +21,7 @@ interface CalendarItem {
 interface CalendarProps {
   entries?: CalendarItem[]
   onDateClick?: (date: Date) => void
-  onAddEntry?: (date: Date, type: 'practice' | 'record') => void
+  onAddItem?: (date: Date, type: 'practice' | 'record') => void
   onEditItem?: (item: CalendarItem) => void
   onDeleteItem?: (itemId: string, itemType: 'practice' | 'record') => void
   isLoading?: boolean
@@ -33,7 +33,7 @@ const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
 export default function Calendar({ 
   entries: propEntries, 
   onDateClick, 
-  onAddEntry,
+  onAddItem,
   onEditItem,
   onDeleteItem,
   isLoading: propLoading = false,
@@ -69,7 +69,7 @@ export default function Calendar({
   const entriesByDate = useMemo(() => {
     const map = new Map<string, CalendarItem[]>()
     entries.forEach(item => {
-      const dateKey = item.entry_date
+      const dateKey = item.item_date
       if (!map.has(dateKey)) {
         map.set(dateKey, [])
       }
@@ -101,9 +101,9 @@ export default function Calendar({
     setShowAddModal(true)
   }
 
-  const handleAddEntry = (type: 'practice' | 'record') => {
-    if (selectedDate && onAddEntry) {
-      onAddEntry(selectedDate, type)
+  const handleAddItem = (type: 'practice' | 'record') => {
+    if (selectedDate && onAddItem) {
+      onAddItem(selectedDate, type)
     }
     setShowAddModal(false)
     setSelectedDate(null)
@@ -114,11 +114,11 @@ export default function Calendar({
     return entriesByDate.get(dateKey) || []
   }
 
-  const getEntryIcon = (type: 'practice' | 'record') => {
+  const getItemIcon = (type: 'practice' | 'record') => {
     return type === 'practice' ? '💪' : '🏊‍♂️'
   }
 
-  const getEntryColor = (type: 'practice' | 'record') => {
+  const getItemColor = (type: 'practice' | 'record') => {
     return type === 'practice' 
       ? 'bg-green-100 text-green-800 border-green-200' 
       : 'bg-blue-100 text-blue-800 border-blue-200'
@@ -127,8 +127,8 @@ export default function Calendar({
   const getDayStatusIndicator = (entries: CalendarItem[]) => {
     if (entries.length === 0) return null
     
-    const hasPractice = entries.some(e => e.entry_type === 'practice')
-    const hasRecord = entries.some(e => e.entry_type === 'record')
+    const hasPractice = entries.some(e => e.item_type === 'practice')
+    const hasRecord = entries.some(e => e.item_type === 'record')
     
     if (hasPractice && hasRecord) {
       return (
@@ -329,7 +329,7 @@ export default function Calendar({
                       key={item.id}
                       className={`
                         text-xs px-1 sm:px-2 py-1 rounded-md truncate transition-all duration-200 border
-                        ${getEntryColor(item.entry_type)}
+                        ${getItemColor(item.item_type)}
                         hover:opacity-80 hover:scale-105 cursor-pointer
                       `}
                       title={item.title}
@@ -338,7 +338,7 @@ export default function Calendar({
                         // 詳細表示のためのクリック処理
                       }}
                     >
-                      <span className="mr-1">{getEntryIcon(item.entry_type)}</span>
+                      <span className="mr-1">{getItemIcon(item.item_type)}</span>
                       <span className="hidden sm:inline font-medium">{item.title}</span>
                       <span className="sm:hidden font-medium">{item.title.split(':')[0] || item.title}</span>
                     </div>
@@ -398,8 +398,8 @@ export default function Calendar({
                 <div className="ml-3 flex-1">
                   <div className="text-xl font-bold text-green-600">
                     {monthlySummary?.practiceCount || 
-                      entries.filter(e => e.entry_type === 'practice' && 
-                      format(new Date(e.entry_date), 'yyyy-MM') === format(currentDate, 'yyyy-MM')).length}
+                      entries.filter(e => e.item_type === 'practice' && 
+                      format(new Date(e.item_date), 'yyyy-MM') === format(currentDate, 'yyyy-MM')).length}
                   </div>
                   <div className="text-sm text-gray-600">練習回数</div>
                 </div>
@@ -415,8 +415,8 @@ export default function Calendar({
                 <div className="ml-3 flex-1">
                   <div className="text-xl font-bold text-blue-600">
                     {monthlySummary?.recordCount || 
-                      entries.filter(e => e.entry_type === 'record' && 
-                      format(new Date(e.entry_date), 'yyyy-MM') === format(currentDate, 'yyyy-MM')).length}
+                      entries.filter(e => e.item_type === 'record' && 
+                      format(new Date(e.item_date), 'yyyy-MM') === format(currentDate, 'yyyy-MM')).length}
                   </div>
                   <div className="text-sm text-gray-600">大会回数</div>
                 </div>
@@ -550,14 +550,14 @@ export default function Calendar({
                     </h3>
                     <div className="space-y-3">
                       <button
-                        onClick={() => handleAddEntry('practice')}
+                        onClick={() => handleAddItem('practice')}
                         className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500"
                       >
                         <span className="mr-2">💪</span>
                         練習記録を追加
                       </button>
                       <button
-                        onClick={() => handleAddEntry('record')}
+                        onClick={() => handleAddItem('record')}
                         className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-blue-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <span className="mr-2">🏊‍♂️</span>
@@ -597,10 +597,10 @@ export default function Calendar({
             // データを再取得
             refetch()
           }}
-          onAddEntry={(date, type) => {
+          onAddItem={(date, type) => {
             setShowDayDetail(false)
             setSelectedDate(null)
-            onAddEntry?.(date, type)
+            onAddItem?.(date, type)
           }}
         />
       )}

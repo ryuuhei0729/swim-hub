@@ -17,7 +17,7 @@ export default function DashboardPage() {
   const [showRecordForm, setShowRecordForm] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [editingEntry, setEditingEntry] = useState<any>(null)
+  const [editingItem, setEditingItem] = useState<any>(null)
   const [editingData, setEditingData] = useState<any>(null)
 
 
@@ -27,36 +27,36 @@ export default function DashboardPage() {
 
   // 編集時の詳細データを取得
   const { data: practiceData, loading: practiceDataLoading, error: practiceDataError } = useQuery(GET_PRACTICE, {
-    variables: { id: editingEntry?.id },
-    skip: !editingEntry || editingEntry.entry_type !== 'practice',
+    variables: { id: editingItem?.id },
+    skip: !editingItem || editingItem.item_type !== 'practice',
   })
 
   // デバッグ: 練習記録データの取得状況をログ出力（開発環境でのみ）
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development' && editingEntry?.entry_type === 'practice') {
-      console.log('Dashboard: editingEntry for practice:', editingEntry)
+    if (process.env.NODE_ENV === 'development' && editingItem?.item_type === 'practice') {
+      console.log('Dashboard: editingItem for practice:', editingItem)
       console.log('Dashboard: practiceData:', practiceData)
       console.log('Dashboard: practiceDataLoading:', practiceDataLoading)
       console.log('Dashboard: practiceDataError:', practiceDataError)
     }
-  }, [editingEntry, practiceData, practiceDataLoading, practiceDataError])
+  }, [editingItem, practiceData, practiceDataLoading, practiceDataError])
 
   const { data: recordData, loading: recordLoading, error: recordError } = useQuery(GET_RECORD, {
-    variables: { id: editingEntry?.id },
-    skip: !editingEntry || editingEntry.entry_type !== 'record',
+    variables: { id: editingItem?.id },
+    skip: !editingItem || editingItem.item_type !== 'record',
   })
 
   // デバッグ: 大会記録データの取得状況をログ出力（開発環境でのみ）
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development' && editingEntry && editingEntry.entry_type === 'record') {
+    if (process.env.NODE_ENV === 'development' && editingItem && editingItem.item_type === 'record') {
       console.log('Dashboard: Record query status:', {
-        editingEntryId: editingEntry.id,
+        editingItemId: editingItem.id,
         recordLoading,
         recordError,
         recordData
       })
     }
-  }, [editingEntry, recordData, recordLoading, recordError])
+  }, [editingItem, recordData, recordLoading, recordError])
 
   // GraphQLミューテーション
   const [createPractice] = useMutation(CREATE_PRACTICE, {
@@ -396,7 +396,7 @@ export default function DashboardPage() {
       console.log('Dashboard: Record update completed successfully:', data)
       setShowRecordForm(false)
       setSelectedDate(null)
-      setEditingEntry(null)
+      setEditingItem(null)
       setEditingData(null)
     },
     onError: (error) => {
@@ -407,7 +407,7 @@ export default function DashboardPage() {
 
   // 詳細データが取得されたときにeditingDataを更新
   useEffect(() => {
-    if (editingEntry && editingEntry.entry_type === 'practice' && (practiceData as any)?.practice) {
+    if (editingItem && editingItem.item_type === 'practice' && (practiceData as any)?.practice) {
       const practice = (practiceData as any).practice
       
       // Practice_logの数に応じて適切なデータ構造を設定
@@ -460,7 +460,7 @@ export default function DashboardPage() {
       if (process.env.NODE_ENV === 'development') {
         console.log('Dashboard: editingData has been set with practiceLogs array')
       }
-    } else if (editingEntry && editingEntry.entry_type === 'record' && (recordData as any)?.record) {
+    } else if (editingItem && editingItem.item_type === 'record' && (recordData as any)?.record) {
       const record = (recordData as any).record
       if (process.env.NODE_ENV === 'development') {
         console.log('Setting record data:', record)
@@ -490,16 +490,16 @@ export default function DashboardPage() {
       }
       setEditingData(null)
     }
-  }, [editingEntry, practiceData, recordData])
+  }, [editingItem, practiceData, recordData])
 
 
   const handleDateClick = (date: Date) => {
     setSelectedDate(date)
   }
 
-  const handleAddEntry = (date: Date, type: 'practice' | 'record') => {
+  const handleAddItem = (date: Date, type: 'practice' | 'record') => {
     setSelectedDate(date)
-    setEditingEntry(null)
+    setEditingItem(null)
     setEditingData(null)
     if (type === 'practice') {
       setShowPracticeForm(true)
@@ -508,11 +508,11 @@ export default function DashboardPage() {
     }
   }
 
-  const handleEditEntry = (entry: any) => {
-    setEditingEntry(entry)
+  const handleEditItem = (item: any) => {
+    setEditingItem(item)
     setEditingData(null) // 編集データをリセット
-    setSelectedDate(new Date(entry.entry_date))
-    if (entry.entry_type === 'practice') {
+    setSelectedDate(new Date(item.item_date))
+    if (item.item_type === 'practice') {
       setShowPracticeForm(true)
     } else {
       setShowRecordForm(true)
@@ -659,7 +659,7 @@ export default function DashboardPage() {
       // 編集時: 従来のPracticeLogのみを更新、新規時: Practice作成→PracticeLog作成
       const createdPracticeLogIds: string[] = []
 
-      if (editingData && editingEntry?.entry_type === 'practice') {
+      if (editingData && editingItem?.item_type === 'practice') {
         // 編集時: まずPractice本体を更新
         const practiceInput = {
           date: formData.practiceDate,
@@ -852,7 +852,7 @@ export default function DashboardPage() {
   const handleRecordSubmit = async (formData: any) => {
     console.log('Dashboard: handleRecordSubmit called with:', formData)
     console.log('Dashboard: editingData:', editingData)
-    console.log('Dashboard: editingEntry:', editingEntry)
+    console.log('Dashboard: editingItem:', editingItem)
     setIsLoading(true)
     try {
       let competitionId = null
@@ -957,27 +957,27 @@ export default function DashboardPage() {
       if (!formData.id) {
         setShowRecordForm(false)
         setSelectedDate(null)
-        setEditingEntry(null)
+        setEditingItem(null)
         setEditingData(null)
       }
     }
   }
 
-  const handleDeleteEntry = async (entryId: string, entryType?: 'practice' | 'record') => {
-    if (!entryType) {
-      console.error('エントリータイプが不明です')
+  const handleDeleteItem = async (itemId: string, itemType?: 'practice' | 'record') => {
+    if (!itemType) {
+      console.error('アイテムタイプが不明です')
       return
     }
 
     try {
-      if (entryType === 'practice') {
+      if (itemType === 'practice') {
         // Practice本体を削除（カスケード削除により関連するPracticeLogとPracticeTimeも削除される）
         await deletePractice({
-          variables: { id: entryId }
+          variables: { id: itemId }
         })
       } else {
         await deleteRecord({
-          variables: { id: entryId }
+          variables: { id: itemId }
         })
       }
       
@@ -1005,9 +1005,9 @@ export default function DashboardPage() {
         {/* カレンダーコンポーネント */}
         <Calendar 
           onDateClick={handleDateClick}
-          onAddEntry={handleAddEntry} 
-          onEditItem={handleEditEntry}
-          onDeleteItem={handleDeleteEntry}
+          onAddItem={handleAddItem} 
+          onEditItem={handleEditItem}
+          onDeleteItem={handleDeleteItem}
         />
       </div>
 
@@ -1017,7 +1017,7 @@ export default function DashboardPage() {
         onClose={() => {
           setShowPracticeForm(false)
           setSelectedDate(null)
-          setEditingEntry(null)
+          setEditingItem(null)
           setEditingData(null)
         }}
         onSubmit={handlePracticeSubmit}
@@ -1042,7 +1042,7 @@ export default function DashboardPage() {
         onClose={() => {
           setShowRecordForm(false)
           setSelectedDate(null)
-          setEditingEntry(null)
+          setEditingItem(null)
           setEditingData(null)
         }}
         onSubmit={handleRecordSubmit}
