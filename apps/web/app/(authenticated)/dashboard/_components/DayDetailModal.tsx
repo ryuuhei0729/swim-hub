@@ -423,7 +423,7 @@ function PracticeDetails({ practiceId }: { practiceId: string }) {
                           {setNumber}セット目
                         </div>
                         <div className="grid grid-cols-3 gap-3">
-                          {Array.from({ length: log.repCount }, (_, repIndex) => {
+                          {Array.from({ length: Math.ceil(log.repCount / log.setCount) }, (_, repIndex) => {
                             const repNumber = repIndex + 1
                             const time = setTimes.find(t => t.repNumber === repNumber)
                             
