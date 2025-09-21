@@ -7,34 +7,7 @@ import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
 import { useQuery } from '@apollo/client/react'
 import { GET_RECORD, GET_PRACTICE } from '@/graphql/queries'
-
-interface CalendarItem {
-  id: string
-  item_type: 'practice' | 'record'
-  item_date: string
-  title: string
-  location?: string
-  time_result?: number
-  pool_type?: number
-  tags?: string[]
-  note?: string
-  competition_name?: string
-  style?: {
-    id: string
-    name_jp: string
-    distance: number
-  }
-}
-
-interface DayDetailModalProps {
-  isOpen: boolean
-  onClose: () => void
-  date: Date
-  entries: CalendarItem[]
-  onEditItem?: (item: CalendarItem) => void
-  onDeleteItem?: (itemId: string, itemType: 'practice' | 'record') => void
-  onAddItem?: (date: Date, type: 'practice' | 'record') => void
-}
+import { CalendarItem, DayDetailModalProps } from '@/types'
 
 export default function DayDetailModal({
   isOpen,

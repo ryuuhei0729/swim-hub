@@ -7,26 +7,7 @@ import { ja } from 'date-fns/locale'
 import { useCalendarData } from '../_hooks/useCalendarData'
 import { LoadingSpinner } from '@/components/ui'
 import DayDetailModal from './DayDetailModal'
-
-interface CalendarItem {
-  id: string
-  item_type: 'practice' | 'record'
-  item_date: string
-  title: string
-  location?: string
-  time_result?: number
-  pool_type?: number
-}
-
-interface CalendarProps {
-  entries?: CalendarItem[]
-  onDateClick?: (date: Date) => void
-  onAddItem?: (date: Date, type: 'practice' | 'record') => void
-  onEditItem?: (item: CalendarItem) => void
-  onDeleteItem?: (itemId: string, itemType: 'practice' | 'record') => void
-  isLoading?: boolean
-  userId?: string // 特定のユーザーのカレンダーを表示する場合
-}
+import { CalendarItem, CalendarProps } from '@/types'
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
 

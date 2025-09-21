@@ -1,27 +1,10 @@
+import { CalendarItem, MonthlySummary } from '@/types'
 import { useQuery } from '@apollo/client/react'
 import { endOfMonth, format, startOfMonth } from 'date-fns'
 import { useEffect, useMemo } from 'react'
 import { useAuth } from '../../../../contexts'
 import { GET_CALENDAR_DATA, GET_PRACTICES, GET_RECORDS } from '../../../../graphql/queries'
 import { formatTime } from '../../../../utils/formatters'
-
-interface CalendarItem {
-  id: string
-  item_type: 'practice' | 'record'
-  item_date: string
-  title: string
-  location?: string
-  time_result?: number
-  pool_type?: number
-}
-
-interface MonthlySummary {
-  practiceCount: number
-  recordCount: number
-  totalDistance?: number
-  averageTime?: number
-}
-
 export function useCalendarData(currentDate: Date, userId?: string) {
   const { profile } = useAuth()
   const targetUserId = userId || profile?.id
