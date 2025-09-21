@@ -359,16 +359,18 @@ function PracticeDetails({ practiceId }: { practiceId: string }) {
         const allTimes = log.times || []
         
         return (
-          <div key={log.id} className="bg-white border border-green-200 rounded-lg p-3">
+          <div key={log.id} className="bg-white border border-green-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
             {/* ヘッダー: [種目名] [タグ] */}
-            <div className="flex items-center gap-2 mb-2">
-              <span className="font-medium text-green-800">[{log.style}]</span>
+            <div className="flex items-center gap-3 mb-4">
+              <span className="font-semibold text-lg text-green-800 bg-green-100 px-3 py-1 rounded-full">
+                {log.style}
+              </span>
               {log.tags && Array.isArray(log.tags) && log.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-2">
                   {log.tags.map((tag: any) => (
                     <span
                       key={tag.id}
-                      className="inline-block px-2 py-1 text-xs rounded-full"
+                      className="inline-block px-3 py-1 text-xs font-medium rounded-full shadow-sm"
                       style={{ 
                         backgroundColor: tag.color,
                         color: getTextColor(tag.color)
@@ -382,39 +384,55 @@ function PracticeDetails({ practiceId }: { practiceId: string }) {
             </div>
             
             {/* 練習内容: 距離 × 本数 × セット数 サークル */}
-            <div className="text-sm text-gray-700 mb-2">
-              {log.distance}m × {log.repCount}本 × {log.setCount}セット {log.circle}秒サークル
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 mb-4">
+              <div className="text-sm text-gray-600 mb-1">練習内容</div>
+              <div className="text-base text-gray-800">
+                <span className="text-2xl font-bold text-green-700">{log.distance}</span>m × 
+                <span className="text-2xl font-bold text-green-700">{log.repCount}</span>本 × 
+                <span className="text-2xl font-bold text-green-700">{log.setCount}</span>セット 
+                <span className="text-2xl font-bold text-green-700">{log.circle}</span>秒サークル
+              </div>
             </div>
 
             {/* メモ */}
             {log.note && (
-              <div className="text-sm text-gray-600 mb-3">
-                メモ: {log.note}
+              <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                <div className="text-sm text-gray-500 mb-1">メモ</div>
+                <div className="text-sm text-gray-700">
+                  {log.note}
+                </div>
               </div>
             )}
 
             {/* タイム表示 */}
             {allTimes.length > 0 && (
-              <div className="mt-3">
-                <p className="text-sm font-medium text-green-700 mb-2">タイム</p>
-                <div className="space-y-2">
+              <div className="mt-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-1 h-6 bg-green-500 rounded-full"></div>
+                  <p className="text-base font-semibold text-green-700">タイム</p>
+                </div>
+                <div className="space-y-4">
                   {Array.from({ length: log.setCount }, (_, setIndex) => {
                     const setNumber = setIndex + 1
                     const setTimes = allTimes.filter(t => t.setNumber === setNumber)
                     
                     return (
-                      <div key={setNumber} className="bg-green-50 rounded p-2">
-                        <div className="text-sm font-medium text-green-800 mb-1">
+                      <div key={setNumber} className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
+                        <div className="text-sm font-semibold text-green-800 mb-3 flex items-center gap-2">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                           {setNumber}セット目
                         </div>
-                        <div className="grid grid-cols-3 gap-1 text-xs">
+                        <div className="grid grid-cols-3 gap-3">
                           {Array.from({ length: log.repCount }, (_, repIndex) => {
                             const repNumber = repIndex + 1
                             const time = setTimes.find(t => t.repNumber === repNumber)
                             
                             return (
-                              <div key={repNumber} className="text-gray-700">
-                                {repNumber}本目: {time && time.time > 0 ? formatTime(time.time) : '-'}
+                              <div key={repNumber} className="bg-white rounded-lg p-3 text-center shadow-sm">
+                                <div className="text-xs text-gray-500 mb-1">{repNumber}本目</div>
+                                <div className="text-sm font-semibold text-gray-800">
+                                  {time && time.time > 0 ? formatTime(time.time) : '-'}
+                                </div>
                               </div>
                             )
                           })}

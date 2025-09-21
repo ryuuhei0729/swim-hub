@@ -682,7 +682,7 @@ export default function DashboardPage() {
               style: m?.style || 'Fr',
               repCount: repsPerSet * setCount,
               setCount: setCount,
-              distance: distancePerRep * repsPerSet * setCount,
+              distance: distancePerRep,
               circle: m?.circleTime || null,
               note: m?.note || ''
             }
@@ -730,7 +730,7 @@ export default function DashboardPage() {
             style: m?.style || 'Fr',
             repCount: repsPerSet * setCount,
             setCount: setCount,
-            distance: distancePerRep * repsPerSet * setCount,
+            distance: distancePerRep,
             circle: m?.circleTime || null,
             note: m?.note || ''
           }
@@ -788,7 +788,7 @@ export default function DashboardPage() {
               style: m?.style || 'Fr',
               repCount: repsPerSet * setCount,
               setCount: setCount,
-              distance: distancePerRep * repsPerSet * setCount,
+              distance: distancePerRep,
               circle: m?.circleTime || null,
               note: m?.note || ''
             }
