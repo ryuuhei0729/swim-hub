@@ -101,27 +101,9 @@ export default function DayDetailModal({
                     <div key={item.id} className="border border-green-200 rounded-lg p-4 bg-green-50">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h5 className="font-medium text-gray-900 mb-2">{item.title}</h5>
                           {item.location && (
-                            <p className="text-sm text-gray-600 mb-1">
+                            <p className="text-sm text-gray-600 mb-2">
                               📍 {item.location}
-                            </p>
-                          )}
-                          {item.tags && item.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mb-2">
-                              {item.tags.map((tag, index) => (
-                                <span
-                                  key={index}
-                                  className="inline-block px-2 py-1 text-xs bg-green-200 text-green-800 rounded-full"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          {item.note && (
-                            <p className="text-sm text-gray-600 mt-2">
-                              💭 {item.note}
                             </p>
                           )}
                           {/* 練習記録の詳細情報 */}
@@ -375,74 +357,67 @@ function PracticeDetails({ practiceId }: { practiceId: string }) {
     <div className="mt-3 space-y-4">
       {practiceLogs.map((log: any, index: number) => {
         const allTimes = log.times || []
-        const overallAverage = calculateAverageTime(allTimes)
         
         return (
           <div key={log.id} className="bg-white border border-green-200 rounded-lg p-3">
-            <div className="flex items-center justify-between mb-2">
-              <h6 className="font-medium text-green-800">
-                メニュー{index + 1}: {log.style}
-              </h6>
-              {overallAverage > 0 && (
-                <span className="text-sm font-semibold text-green-700">
-                  全体平均: {formatTime(overallAverage)}
-                </span>
+            {/* ヘッダー: [種目名] [タグ] */}
+            <div className="flex items-center gap-2 mb-2">
+              <span className="font-medium text-green-800">[{log.style}]</span>
+              {log.tags && Array.isArray(log.tags) && log.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {log.tags.map((tag: any) => (
+                    <span
+                      key={tag.id}
+                      className="inline-block px-2 py-1 text-xs rounded-full"
+                      style={{ 
+                        backgroundColor: tag.color,
+                        color: getTextColor(tag.color)
+                      }}
+                    >
+                      {tag.name}
+                    </span>
+                  ))}
+                </div>
               )}
             </div>
             
-            <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-2">
-              <div>距離: {log.distance}m</div>
-              <div>セット数: {log.setCount}</div>
-              <div>本数: {log.repCount}</div>
-              <div>サークル: {log.circle}秒</div>
+            {/* 練習内容: 距離 × 本数 × セット数 サークル */}
+            <div className="text-sm text-gray-700 mb-2">
+              {log.distance}m × {log.repCount}本 × {log.setCount}セット {log.circle}秒サークル
             </div>
 
+            {/* メモ */}
             {log.note && (
-              <div className="text-sm text-gray-600 mb-2">
-                💭 {log.note}
+              <div className="text-sm text-gray-600 mb-3">
+                メモ: {log.note}
               </div>
             )}
 
-            {/* タグ表示 */}
-            {log.tags && Array.isArray(log.tags) && log.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mb-2">
-                {log.tags.map((tag: any) => (
-                  <span
-                    key={tag.id}
-                    className="inline-block px-2 py-1 text-xs rounded-full"
-                    style={{ 
-                      backgroundColor: tag.color,
-                      color: getTextColor(tag.color)
-                    }}
-                  >
-                    {tag.name}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {/* セットごとのタイム表示 */}
+            {/* タイム表示 */}
             {allTimes.length > 0 && (
-              <div className="mt-2">
-                <p className="text-xs font-medium text-green-700 mb-1">セット別タイム</p>
-                <div className="space-y-1">
+              <div className="mt-3">
+                <p className="text-sm font-medium text-green-700 mb-2">タイム</p>
+                <div className="space-y-2">
                   {Array.from({ length: log.setCount }, (_, setIndex) => {
                     const setNumber = setIndex + 1
-                    const setAverage = calculateSetAverageTime(allTimes, setNumber)
                     const setTimes = allTimes.filter(t => t.setNumber === setNumber)
                     
                     return (
-                      <div key={setNumber} className="flex items-center justify-between text-xs bg-green-50 rounded px-2 py-1">
-                        <span className="text-green-800">セット{setNumber}</span>
-                        <div className="flex items-center space-x-2">
-                          {setAverage > 0 && (
-                            <span className="font-medium text-green-700">
-                              平均: {formatTime(setAverage)}
-                            </span>
-                          )}
-                          <span className="text-gray-500">
-                            ({setTimes.filter(t => t.time > 0).length}/{log.repCount}本)
-                          </span>
+                      <div key={setNumber} className="bg-green-50 rounded p-2">
+                        <div className="text-sm font-medium text-green-800 mb-1">
+                          {setNumber}セット目
+                        </div>
+                        <div className="grid grid-cols-3 gap-1 text-xs">
+                          {Array.from({ length: log.repCount }, (_, repIndex) => {
+                            const repNumber = repIndex + 1
+                            const time = setTimes.find(t => t.repNumber === repNumber)
+                            
+                            return (
+                              <div key={repNumber} className="text-gray-700">
+                                {repNumber}本目: {time && time.time > 0 ? formatTime(time.time) : '-'}
+                              </div>
+                            )
+                          })}
                         </div>
                       </div>
                     )
