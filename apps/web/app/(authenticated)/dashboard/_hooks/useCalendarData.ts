@@ -192,7 +192,7 @@ export function useCalendarData(currentDate: Date, userId?: string) {
             const styleInfo = record.style ? `${record.style.nameJp}` : '記録'
             const title = `${styleInfo}: ${timeString}`
             
-            const entry: any = {
+            const item: any = {
               id: record.id,
               item_type: 'record',
               item_date: record.competition.date,
@@ -202,15 +202,15 @@ export function useCalendarData(currentDate: Date, userId?: string) {
 
             // record.timeが有限数値の場合のみtime_resultを設定
             if (Number.isFinite(Number(record.time))) {
-              entry.time_result = Math.round(Number(record.time) * 100) // 秒を百分の一秒に変換
+              item.time_result = Math.round(Number(record.time) * 100) // 秒を百分の一秒に変換
             }
 
             // pool_typeは不明な場合は設定しない
             if (record.competition?.poolType !== undefined) {
-              entry.pool_type = record.competition.poolType
+              item.pool_type = record.competition.poolType
             }
 
-            items.push(entry)
+            items.push(item)
           }
         }
       })

@@ -132,7 +132,7 @@ export default function PracticeLogForm({
       setFormData(newFormData)
     } else if (!editData && isOpen) {
       // 新規作成時はデフォルト値にリセット
-      console.log('PracticeLogForm: Resetting to default values (new entry)')
+      console.log('PracticeLogForm: Resetting to default values (new item)')
       setFormData({
         practiceDate: initialDate ? format(initialDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
         location: '',
