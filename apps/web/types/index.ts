@@ -128,8 +128,8 @@ export interface PracticeUpdate {
 // 2. アプリケーション固有の型定義
 // =============================================================================
 
-// エントリータイプ
-export type EntryType = 'practice' | 'record'
+// カレンダーアイテムタイプ
+export type CalendarItemType = 'practice' | 'record'
 
 // プール種別
 export type PoolType = 0 | 1 // 0: 短水路, 1: 長水路
@@ -146,7 +146,7 @@ export type SwimStyle = 'fr' | 'br' | 'ba' | 'fly' | 'im'
 
 export interface CalendarItem {
   id: string
-  item_type: EntryType
+  item_type: CalendarItemType
   item_date: string
   title: string
   location?: string
@@ -313,9 +313,9 @@ export interface AuthContextType extends AuthState {
 export interface CalendarProps {
   entries?: CalendarItem[]
   onDateClick?: (date: Date) => void
-  onAddItem?: (date: Date, type: EntryType) => void
+  onAddItem?: (date: Date, type: CalendarItemType) => void
   onEditItem?: (item: CalendarItem) => void
-  onDeleteItem?: (itemId: string, itemType: EntryType) => void
+  onDeleteItem?: (itemId: string, itemType: CalendarItemType) => void
   selectedDate?: Date | null
   isLoading?: boolean
   userId?: string
@@ -328,8 +328,8 @@ export interface DayDetailModalProps {
   date: Date
   entries: CalendarItem[]
   onEditItem?: (item: CalendarItem) => void
-  onDeleteItem?: (itemId: string, itemType: EntryType) => void
-  onAddItem?: (date: Date, type: EntryType) => void
+  onDeleteItem?: (itemId: string, itemType: CalendarItemType) => void
+  onAddItem?: (date: Date, type: CalendarItemType) => void
 }
 
 // ダッシュボード統計
@@ -408,8 +408,8 @@ export const GENDERS = {
   FEMALE: 1 as const
 } as const
 
-// エントリータイプの定数
-export const ENTRY_TYPES = {
+// カレンダーアイテムタイプの定数
+export const CALENDAR_ITEM_TYPES = {
   PRACTICE: 'practice' as const,
   RECORD: 'record' as const
 } as const
@@ -418,7 +418,7 @@ export const ENTRY_TYPES = {
 // 10. 型ガード関数
 // =============================================================================
 
-export const isEntryType = (value: any): value is EntryType => {
+export const isCalendarItemType = (value: any): value is CalendarItemType => {
   return value === 'practice' || value === 'record'
 }
 
