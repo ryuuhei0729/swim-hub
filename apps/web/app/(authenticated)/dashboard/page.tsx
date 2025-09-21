@@ -680,7 +680,7 @@ export default function DashboardPage() {
             const input = {
               practiceId: editingData.practiceId,
               style: m?.style || 'Fr',
-              repCount: repsPerSet * setCount,
+              repCount: repsPerSet,
               setCount: setCount,
               distance: distancePerRep,
               circle: m?.circleTime || null,
@@ -728,7 +728,7 @@ export default function DashboardPage() {
           const input = {
             practiceId: editingData.practiceId, // 既存のPractice IDを使用
             style: m?.style || 'Fr',
-            repCount: repsPerSet * setCount,
+            repCount: repsPerSet,
             setCount: setCount,
             distance: distancePerRep,
             circle: m?.circleTime || null,
@@ -786,7 +786,7 @@ export default function DashboardPage() {
             const input = {
               practiceId: practiceId,
               style: m?.style || 'Fr',
-              repCount: repsPerSet * setCount,
+              repCount: repsPerSet,
               setCount: setCount,
               distance: distancePerRep,
               circle: m?.circleTime || null,

@@ -317,12 +317,18 @@ function PracticeDetails({ practiceId }: { practiceId: string }) {
 
   const practiceLogs = practice.practiceLogs || []
 
-  // デバッグ: タグ情報を確認
+  // デバッグ: タグ情報とタイム情報を確認
   console.log('PracticeDetails - practice:', practice)
   console.log('PracticeDetails - practiceLogs:', practiceLogs)
   practiceLogs.forEach((log: any, index: number) => {
     console.log(`PracticeDetails - log ${index}:`, log)
     console.log(`PracticeDetails - log ${index} tags:`, log.tags)
+    console.log(`PracticeDetails - log ${index} times:`, log.times)
+    if (log.times && log.times.length > 0) {
+      log.times.forEach((time: any, timeIndex: number) => {
+        console.log(`PracticeDetails - log ${index} time ${timeIndex}:`, time)
+      })
+    }
   })
 
   // 色の明度に基づいてテキスト色を決定する関数
