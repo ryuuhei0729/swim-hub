@@ -389,14 +389,15 @@ function PracticeDetails({ practiceId }: { practiceId: string }) {
               )}
             </div>
             
-            {/* 練習内容: 距離 × 本数 × セット数 サークル */}
+            {/* 練習内容: 距離 × 本数 × セット数 サークル 泳法 */}
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 mb-4">
               <div className="text-sm text-gray-600 mb-1">練習内容</div>
               <div className="text-base text-gray-800">
                 <span className="text-2xl font-bold text-green-700">{log.distance}</span>m × 
                 <span className="text-2xl font-bold text-green-700">{log.repCount}</span>本 × 
                 <span className="text-2xl font-bold text-green-700">{log.setCount}</span>セット 
-                <span className="text-2xl font-bold text-green-700">{log.circle}</span>秒サークル
+                <span className="text-2xl font-bold text-green-700">{log.circle}</span>秒サークル 
+                <span className="text-2xl font-bold text-green-700">{log.style}</span>
               </div>
             </div>
 
