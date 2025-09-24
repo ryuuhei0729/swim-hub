@@ -71,7 +71,7 @@ export default function DashboardPage() {
           startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
           endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
         }
-      }
+      },
     ],
     awaitRefetchQueries: true,
     onError: (error) => {
@@ -92,7 +92,7 @@ export default function DashboardPage() {
           startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
           endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
         }
-      }
+      },
     ],
     awaitRefetchQueries: true,
     // キャッシュの更新はrefetchQueriesで自動的に行われるため、手動更新は不要
@@ -143,7 +143,7 @@ export default function DashboardPage() {
           startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
           endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
         }
-      }
+      },
     ],
     awaitRefetchQueries: true,
     onError: (error) => {
@@ -156,10 +156,12 @@ export default function DashboardPage() {
     optimisticResponse: (variables) => ({
       deletePracticeLog: true
     }),
-    refetchQueries: [{
-      query: GET_CALENDAR_DATA,
-      variables: { year: new Date().getFullYear(), month: new Date().getMonth() + 1 }
-    }],
+    refetchQueries: [
+      {
+        query: GET_CALENDAR_DATA,
+        variables: { year: new Date().getFullYear(), month: new Date().getMonth() + 1 }
+      },
+    ],
     awaitRefetchQueries: true,
     update: (cache, { data }, { variables }) => {
       if (data?.deletePracticeLog) {
@@ -248,7 +250,7 @@ export default function DashboardPage() {
           startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
           endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
         }
-      }
+      },
     ],
     awaitRefetchQueries: true,
     onError: (error) => {
@@ -269,7 +271,7 @@ export default function DashboardPage() {
           startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
           endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
         }
-      }
+      },
     ],
     awaitRefetchQueries: true,
     update: (cache, { data }) => {
