@@ -475,7 +475,7 @@ export default function DashboardPage() {
         poolType: record.competition?.poolType || 0,
         styleId: record.styleId,
         time: record.time,
-        isRelaying: record.isRelay || false,
+        isRelaying: record.isRelaying || false,
         splitTimes: record.splitTimes || [],
         videoUrl: record.videoUrl,
         note: record.note,
@@ -887,6 +887,7 @@ export default function DashboardPage() {
         time: formData.time,
         videoUrl: formData.videoUrl,
         note: formData.note,
+        isRelaying: formData.isRelaying || false,
         competitionId: competitionId,
         splitTimes: formData.splitTimes || []
       }

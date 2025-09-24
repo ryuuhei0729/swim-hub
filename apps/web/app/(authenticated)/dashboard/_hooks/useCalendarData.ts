@@ -204,15 +204,17 @@ export function useCalendarData(currentDate: Date, userId?: string) {
           const recordDate = new Date(record.competition.date)
           if (recordDate >= monthStart && recordDate <= monthEnd) {
             const timeString = record.time ? formatTime(record.time) : ''
+            const relayIndicator = record.isRelaying ? 'R' : ''
             const styleInfo = record.style ? `${record.style.nameJp}` : '記録'
-            const title = `${styleInfo}: ${timeString}`
+            const title = `${styleInfo}: ${timeString}${relayIndicator}`
             
             const item: any = {
               id: record.id,
               item_type: 'record',
               item_date: record.competition.date,
               title,
-              location: record.competition.title || '大会'
+              location: record.competition.title || '大会',
+              is_relaying: record.isRelaying || false
             }
 
             // record.timeが有限数値の場合のみtime_resultを設定

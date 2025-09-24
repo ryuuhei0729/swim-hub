@@ -155,6 +155,7 @@ export interface CalendarItem {
   tags?: string[]
   note?: string
   competition_name?: string
+  is_relaying?: boolean
   style?: {
     id: string
     name_jp: string
@@ -243,6 +244,7 @@ export interface RecordFormData {
   videoUrl?: string
   note?: string
   competitionId?: string
+  isRelaying?: boolean
   splitTimes: SplitTimeInput[]
 }
 

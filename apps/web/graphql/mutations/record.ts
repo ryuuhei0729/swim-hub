@@ -10,6 +10,7 @@ export const CREATE_RECORD = gql`
       time
       videoUrl
       note
+      isRelaying
       competitionId
       style {
         id
@@ -39,6 +40,7 @@ export const UPDATE_RECORD = gql`
       time
       videoUrl
       note
+      isRelaying
       competition {
         id
         title

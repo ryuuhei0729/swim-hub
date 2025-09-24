@@ -739,10 +739,13 @@ export const resolvers = {
         time: record.time,
         videoUrl: record.video_url,
         note: record.note,
+        isRelaying: record.is_relaying || false,
         competition: record.competitions ? {
           id: record.competitions.id,
           title: record.competitions.title,
-          date: record.competitions.date
+          date: record.competitions.date,
+          place: record.competitions.place,
+          poolType: record.competitions.pool_type
         } : null,
         style: record.styles ? {
           id: record.styles.id,
@@ -794,6 +797,7 @@ export const resolvers = {
         time: data.time,
         videoUrl: data.video_url,
         note: data.note,
+        isRelaying: data.is_relaying || false,
         competition: data.competitions ? {
           id: data.competitions.id,
           title: data.competitions.title,
@@ -1578,7 +1582,8 @@ export const resolvers = {
           style_id: input.styleId,
           time: input.time,
           video_url: input.videoUrl,
-          note: input.note
+          note: input.note,
+          is_relaying: input.isRelaying || false
         })
         .select(`
           *,
@@ -1624,6 +1629,7 @@ export const resolvers = {
         time: data.time,
         videoUrl: data.video_url,
         note: data.note,
+        isRelaying: data.is_relaying || false,
         style: data.styles ? {
           id: data.styles.id,
           nameJp: data.styles.name_jp,
@@ -1670,6 +1676,7 @@ export const resolvers = {
       if (input.time !== undefined) updateData.time = input.time
       if (input.videoUrl !== undefined) updateData.video_url = input.videoUrl
       if (input.note !== undefined) updateData.note = input.note
+      if (input.isRelaying !== undefined) updateData.is_relaying = input.isRelaying
       
       const { data, error } = await supabase
         .from('records')
@@ -1732,6 +1739,7 @@ export const resolvers = {
         time: data.time,
         videoUrl: data.video_url,
         note: data.note,
+        isRelaying: data.is_relaying || false,
         style: data.styles ? {
           id: data.styles.id,
           nameJp: data.styles.name_jp,

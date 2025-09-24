@@ -1,0 +1,589 @@
+'use client'
+
+import React, { useState, useEffect } from 'react'
+import { PlusIcon, TrophyIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
+import { Button } from '@/components/ui'
+import RecordForm from '@/components/forms/RecordForm'
+import { useMutation, useQuery } from '@apollo/client/react'
+import { apolloClient } from '@/lib/apollo-client'
+import { CREATE_RECORD, UPDATE_RECORD, DELETE_RECORD, CREATE_COMPETITION } from '@/graphql/mutations'
+import { GET_RECORDS, GET_STYLES, GET_RECORD } from '@/graphql/queries'
+import { format } from 'date-fns'
+import { ja } from 'date-fns/locale'
+import { formatTime } from '@/utils/formatters'
+
+export default function CompetitionPage() {
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [editingItem, setEditingItem] = useState<any>(null)
+  const [editingData, setEditingData] = useState<any>(null)
+  const [selectedRecord, setSelectedRecord] = useState<any>(null)
+  const [showDetailModal, setShowDetailModal] = useState(false)
+
+  // 大会記録データを取得
+  const { data: recordsData, loading, error, refetch } = useQuery(GET_RECORDS, {
+    fetchPolicy: 'cache-and-network',
+    errorPolicy: 'all'
+  })
+
+  // スタイルデータを取得
+  const { data: stylesData } = useQuery(GET_STYLES)
+  const styles = (stylesData as any)?.styles || []
+
+  // ミューテーション
+  const [createRecord] = useMutation(CREATE_RECORD, {
+    refetchQueries: [{ query: GET_RECORDS }],
+    awaitRefetchQueries: true,
+    onCompleted: () => {
+      setIsFormOpen(false)
+      setEditingItem(null)
+      setEditingData(null)
+    },
+    onError: (error) => {
+      console.error('大会記録の作成に失敗しました:', error)
+      alert('大会記録の作成に失敗しました。')
+    }
+  })
+
+  const [updateRecord] = useMutation(UPDATE_RECORD, {
+    refetchQueries: [{ query: GET_RECORDS }],
+    awaitRefetchQueries: true,
+    onCompleted: () => {
+      setIsFormOpen(false)
+      setEditingItem(null)
+      setEditingData(null)
+    },
+    onError: (error) => {
+      console.error('大会記録の更新に失敗しました:', error)
+      alert('大会記録の更新に失敗しました。')
+    }
+  })
+
+  const [deleteRecord] = useMutation(DELETE_RECORD, {
+    refetchQueries: [{ query: GET_RECORDS }],
+    awaitRefetchQueries: true,
+    onError: (error) => {
+      console.error('大会記録の削除に失敗しました:', error)
+      alert('大会記録の削除に失敗しました。')
+    }
+  })
+
+  const [createCompetition] = useMutation(CREATE_COMPETITION)
+
+  // キャッシュクリア関数
+  const clearCache = async () => {
+    try {
+      await apolloClient.clearStore()
+      await refetch()
+    } catch (error) {
+      console.error('キャッシュクリアに失敗しました:', error)
+    }
+  }
+
+
+  const records = (recordsData as any)?.myRecords || []
+  
+  // データが完全に読み込まれているかチェック
+  const isDataReady = !loading && recordsData
+  
+  // 日付の降順でソート
+  const sortedRecords = [...records].sort((a, b) => {
+    const dateA = new Date(a.competition?.date || a.createdAt)
+    const dateB = new Date(b.competition?.date || b.createdAt)
+    return dateB.getTime() - dateA.getTime()
+  })
+
+  const handleCreateRecord = () => {
+    setEditingItem(null)
+    setEditingData(null)
+    setIsFormOpen(true)
+  }
+
+  const handleEditRecord = async (record: any) => {
+    setEditingItem({
+      id: record.id,
+      item_type: 'record'
+    })
+    
+    // 最新のスプリットタイムを取得
+    let latestSplitTimes = record.splitTimes || []
+    try {
+      const { data: recordData } = await apolloClient.query({
+        query: GET_RECORD,
+        variables: { id: record.id },
+        fetchPolicy: 'network-only'
+      })
+      if ((recordData as any)?.record?.splitTimes) {
+        latestSplitTimes = (recordData as any).record.splitTimes
+      }
+    } catch (error) {
+      console.error('スプリットタイムの取得に失敗しました:', error)
+      // エラーが発生しても既存のデータを使用
+    }
+    
+    setEditingData({
+      id: record.id,
+      recordDate: record.competition?.date || new Date().toISOString().split('T')[0],
+      location: record.competition?.place || '',
+      competitionName: record.competition?.title || '',
+      poolType: record.competition?.poolType || 0,
+      styleId: record.styleId,
+      time: record.time,
+      isRelaying: record.isRelaying || false,
+      splitTimes: latestSplitTimes,
+      videoUrl: record.videoUrl,
+      note: record.note,
+      competition: record.competition,
+      style: record.style
+    })
+    setIsFormOpen(true)
+  }
+
+  const handleViewRecord = (record: any) => {
+    setSelectedRecord(record)
+    setShowDetailModal(true)
+  }
+
+  const handleDeleteRecord = async (recordId: string) => {
+    if (confirm('この大会記録を削除しますか？')) {
+      setIsLoading(true)
+      try {
+        await deleteRecord({
+          variables: { id: recordId }
+        })
+        await refetch()
+      } catch (error) {
+        console.error('削除エラー:', error)
+        alert('削除に失敗しました')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+  }
+
+  const handleRecordSubmit = async (formData: any) => {
+    setIsLoading(true)
+    try {
+      let competitionId = null
+
+      if (formData.id) {
+        // 編集時は既存のCompetition IDを使用
+        competitionId = editingData?.competition?.id || null
+      } else {
+        // 新規作成時は大会情報が入力されている場合、先に大会を作成
+        if (formData.competitionName && formData.location) {
+          const competitionInput = {
+            title: formData.competitionName,
+            date: formData.recordDate,
+            place: formData.location,
+            poolType: formData.poolType,
+            note: ''
+          }
+
+          const competitionResult = await createCompetition({
+            variables: { input: competitionInput }
+          })
+          
+          competitionId = (competitionResult.data as any)?.createCompetition?.id
+        }
+      }
+
+      const recordInput = {
+        styleId: parseInt(formData.styleId),
+        time: formData.time,
+        videoUrl: formData.videoUrl,
+        note: formData.note,
+        isRelaying: formData.isRelaying || false,
+        competitionId: competitionId,
+        splitTimes: formData.splitTimes || []
+      }
+
+      if (formData.id) {
+        // 更新処理
+        await updateRecord({
+          variables: {
+            id: formData.id,
+            input: recordInput
+          }
+        })
+      } else {
+        // 作成処理
+        await createRecord({
+          variables: { input: recordInput }
+        })
+      }
+    } catch (error) {
+      console.error('大会記録の保存に失敗しました:', error)
+      alert('大会記録の保存に失敗しました。')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const formatTime = (seconds: number): string => {
+    if (seconds === 0) return '0.00'
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = seconds % 60
+    return minutes > 0 
+      ? `${minutes}:${remainingSeconds.toFixed(2).padStart(5, '0')}`
+      : `${remainingSeconds.toFixed(2)}`
+  }
+
+  if (loading || isLoading || !isDataReady) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">大会記録</h1>
+          <div className="animate-pulse">
+            <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded mb-4"></div>
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-16 bg-gray-200 rounded"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">大会記録</h1>
+          <div className="text-red-600">
+            エラーが発生しました: {error.message}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* ヘッダー */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              大会記録
+            </h1>
+            <p className="text-gray-600">
+              大会での記録を管理・分析します。
+            </p>
+          </div>
+          <Button
+            onClick={handleCreateRecord}
+            className="flex items-center space-x-2"
+          >
+            <PlusIcon className="h-5 w-5" />
+            <span>新しい大会記録</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* 統計情報 */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center">
+            <div className="p-2 bg-yellow-100 rounded-lg">
+              <TrophyIcon className="h-6 w-6 text-yellow-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">総大会記録数</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {records.length}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 大会記録一覧（表形式） */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">
+            大会記録一覧
+          </h2>
+        </div>
+        
+        {records.length === 0 ? (
+          <div className="p-12 text-center">
+            <TrophyIcon className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">大会記録がありません</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              最初の大会記録を作成しましょう。
+            </p>
+            <div className="mt-6">
+              <Button onClick={handleCreateRecord}>
+                大会記録を作成
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    大会名
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    日付
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    場所
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    種目
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    記録
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    プール
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    メモ
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    操作
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {sortedRecords.map((record: any) => (
+                  <tr key={record.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {record.competition?.title || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {record.competition?.date ? format(new Date(record.competition.date), 'MM/dd', { locale: ja }) : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {record.competition?.place || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {record.style?.nameJp || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {record.time ? (
+                        <>
+                          {formatTime(record.time)}
+                          {record.isRelaying && <span className="font-bold text-red-600 ml-1">R</span>}
+                        </>
+                      ) : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {record.competition?.poolType === 1 ? '長水路' : record.competition?.poolType === 0 ? '短水路' : '-'}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
+                      {record.note || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center justify-end space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewRecord(record)}
+                          className="flex items-center space-x-1"
+                        >
+                          <EyeIcon className="h-4 w-4" />
+                          <span>詳細</span>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditRecord(record)}
+                          className="flex items-center space-x-1"
+                        >
+                          <PencilIcon className="h-4 w-4" />
+                          <span>編集</span>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteRecord(record.id)}
+                          disabled={isLoading}
+                          className="flex items-center space-x-1 text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                          <span>{isLoading ? '削除中...' : '削除'}</span>
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* フォームモーダル */}
+      <RecordForm
+        isOpen={isFormOpen}
+        onClose={() => {
+          setIsFormOpen(false)
+          setEditingItem(null)
+          setEditingData(null)
+        }}
+        onSubmit={handleRecordSubmit}
+        initialDate={null}
+        editData={editingData}
+        isLoading={isLoading}
+        styles={styles}
+      />
+
+      {/* 詳細モーダル */}
+      {showDetailModal && selectedRecord && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div 
+              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+              onClick={() => {
+                setShowDetailModal(false)
+                setSelectedRecord(null)
+              }}
+            ></div>
+
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+              {/* ヘッダー */}
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+                    大会記録詳細
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setShowDetailModal(false)
+                      setSelectedRecord(null)
+                    }}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* 大会記録セクション */}
+                <div className="mb-6">
+                  <h4 className="text-md font-semibold text-blue-700 mb-3 flex items-center">
+                    <span className="mr-2">🏊‍♂️</span>
+                    大会記録
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
+                      <div className="flex-1">
+                        <h5 className="font-medium text-gray-900 mb-2">
+                          {selectedRecord.style?.nameJp || '記録'}: {selectedRecord.time ? (
+                            <>
+                              {formatTime(selectedRecord.time)}
+                              {selectedRecord.isRelaying && <span className="font-bold text-red-600 ml-1">R</span>}
+                            </>
+                          ) : '-'}
+                        </h5>
+                        {selectedRecord.competition?.title && (
+                          <p className="text-sm text-gray-600 mb-1">
+                            🏆 {selectedRecord.competition.title}
+                          </p>
+                        )}
+                        {selectedRecord.competition?.place && (
+                          <p className="text-sm text-gray-600 mb-1">
+                            📍 {selectedRecord.competition.place}
+                          </p>
+                        )}
+                        {selectedRecord.competition?.poolType != null && (
+                          <p className="text-sm text-gray-600 mb-1">
+                            🏊‍♀️ {selectedRecord.competition.poolType === 1 ? '長水路(50m)' : '短水路(25m)'}
+                          </p>
+                        )}
+                        {selectedRecord.time && (
+                          <p className="text-lg font-semibold text-blue-700 mb-1">
+                            ⏱️ {formatTime(selectedRecord.time)}{selectedRecord.isRelaying && <span className="font-bold text-red-600 ml-1">R</span>}
+                          </p>
+                        )}
+                        {selectedRecord.note && (
+                          <p className="text-sm text-gray-600 mt-2">
+                            💭 {selectedRecord.note}
+                          </p>
+                        )}
+                        {/* スプリットタイム */}
+                        <RecordSplitTimes recordId={selectedRecord.id} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* フッター */}
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={() => {
+                    setShowDetailModal(false)
+                    setSelectedRecord(null)
+                  }}
+                >
+                  閉じる
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// 大会記録のスプリットタイム一覧
+function RecordSplitTimes({ recordId }: { recordId: string }) {
+  const { data, loading, error } = useQuery(GET_RECORD, {
+    variables: { id: recordId },
+    fetchPolicy: 'cache-and-network',
+    notifyOnNetworkStatusChange: true,
+    errorPolicy: 'ignore',
+  })
+
+  if (loading) {
+    return (
+      <div className="mt-3 text-sm text-gray-500">スプリットを読み込み中...</div>
+    )
+  }
+  if (error) {
+    return (
+      <div className="mt-3 text-sm text-red-600">スプリットの取得に失敗しました</div>
+    )
+  }
+
+  const splits = (data as any)?.record?.splitTimes || []
+  if (!splits.length) {
+    return null
+  }
+
+  return (
+    <div className="mt-3">
+      <p className="text-sm font-medium text-blue-800 mb-1">スプリット</p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {splits
+          .slice()
+          .sort((a: any, b: any) => (a.distance || 0) - (b.distance || 0))
+          .map((st: any) => (
+          <div key={st.id} className="text-xs text-blue-900 bg-blue-100 rounded px-2 py-1">
+            <span className="mr-2">{st.distance}m</span>
+            <span className="font-semibold">{formatTime(st.splitTime)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}

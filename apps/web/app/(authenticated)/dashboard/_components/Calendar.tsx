@@ -320,8 +320,26 @@ export default function Calendar({
                       }}
                     >
                       <span className="mr-1">{getItemIcon(item.item_type)}</span>
-                      <span className="hidden sm:inline font-medium">{item.title}</span>
-                      <span className="sm:hidden font-medium">{item.title.split(':')[0] || item.title}</span>
+                      <span className="hidden sm:inline font-medium">
+                        {item.item_type === 'record' && item.is_relaying ? (
+                          <>
+                            {item.title.replace(/R$/, '')}
+                            <span className="font-bold text-red-600 ml-1">R</span>
+                          </>
+                        ) : (
+                          item.title
+                        )}
+                      </span>
+                      <span className="sm:hidden font-medium">
+                        {item.item_type === 'record' && item.is_relaying ? (
+                          <>
+                            {(item.title.split(':')[0] || item.title).replace(/R$/, '')}
+                            <span className="font-bold text-red-600 ml-1">R</span>
+                          </>
+                        ) : (
+                          item.title.split(':')[0] || item.title
+                        )}
+                      </span>
                     </div>
                   ))}
                   {dayEntries.length > 2 && (

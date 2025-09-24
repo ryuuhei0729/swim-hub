@@ -11,10 +11,13 @@ export const GET_RECORDS = gql`
       time
       videoUrl
       note
+      isRelaying
       competition {
         id
         title
         date
+        place
+        poolType
       }
       style {
         id
@@ -37,6 +40,7 @@ export const GET_RECORD = gql`
       time
       videoUrl
       note
+      isRelaying
       competition {
         id
         title
@@ -71,10 +75,13 @@ export const GET_RECORDS_BY_USER = gql`
       time
       videoUrl
       note
+      isRelaying
       competition {
         id
         title
         date
+        place
+        poolType
       }
       style {
         id

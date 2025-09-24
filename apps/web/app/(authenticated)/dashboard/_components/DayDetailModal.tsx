@@ -140,7 +140,7 @@ export default function DayDetailModal({
                           )}
                           {item.time_result && (
                             <p className="text-lg font-semibold text-blue-700 mb-1">
-                              ⏱️ {formatTime(item.time_result / 100)}
+                              ⏱️ {formatTime(item.time_result / 100)}{item.is_relaying && <span className="font-bold text-red-600 ml-1">R</span>}
                             </p>
                           )}
                           {item.pool_type != null && (

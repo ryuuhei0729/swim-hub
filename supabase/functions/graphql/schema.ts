@@ -268,7 +268,7 @@ type Competition implements Node {
   id: ID!
   title: String!
   date: Date!
-  place: String!
+  place: String
   poolType: Int # 0: short, 1: long (デフォルト: 0)
   note: String
   records: [Record!]!
@@ -285,6 +285,7 @@ type Record implements Node {
   time: Float!
   videoUrl: String
   note: String
+  isRelaying: Boolean! # リレー種目かどうか
   splitTimes: [SplitTime!]!
   # 楽観的更新サポート
   version: Int!
@@ -632,7 +633,7 @@ input UpdatePracticeTimeInput {
 input CreateCompetitionInput {
   title: String!
   date: Date!
-  place: String! # NOT NULL
+  place: String
   poolType: Int # 0: short, 1: long (デフォルト: 0)
   note: String
 }
@@ -652,6 +653,7 @@ input CreateRecordInput {
   videoUrl: String
   note: String
   competitionId: ID
+  isRelaying: Boolean
   splitTimes: [SplitTimeInput!]
 }
 
@@ -661,6 +663,7 @@ input UpdateRecordInput {
   videoUrl: String
   note: String
   competitionId: ID
+  isRelaying: Boolean
   splitTimes: [SplitTimeInput!]
 }
 

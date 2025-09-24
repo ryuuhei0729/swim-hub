@@ -40,7 +40,7 @@ const navigation: NavigationItem[] = [
   },
   { 
     name: '大会管理', 
-    href: '/competitions', 
+    href: '/competition', 
     icon: TrophyIcon,
     description: '大会結果とエントリー',
   },
