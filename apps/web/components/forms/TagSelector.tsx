@@ -5,12 +5,7 @@ import { useQuery, useMutation } from '@apollo/client/react'
 import { GET_MY_PRACTICE_TAGS } from '@/graphql/queries'
 import { CREATE_PRACTICE_TAG } from '@/graphql/mutations'
 import { PlusIcon, XMarkIcon } from '@heroicons/react/24/outline'
-
-interface PracticeTag {
-  id: string
-  name: string
-  color: string
-}
+import { PracticeTag } from '@/types'
 
 interface TagSelectorProps {
   selectedTags: PracticeTag[]

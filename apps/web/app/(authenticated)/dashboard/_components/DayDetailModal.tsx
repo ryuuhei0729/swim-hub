@@ -408,7 +408,7 @@ function PracticeDetails({
                   )}
                   {'　'}
                   <span className="text-lg font-semibold text-green-700">
-                    {log.circle ? `${Math.floor(log.circle / 60)}'${Math.floor(log.circle % 60)}"` : '-'}
+                    {log.circle ? `${Math.floor(log.circle / 60)}'${Math.floor(log.circle % 60).toString().padStart(2, '0')}"` : '-'}
                   </span>  
                   <span className="text-lg font-semibold text-green-700">　{log.style}</span>
                 </div>

@@ -174,7 +174,7 @@ export function useCalendarData(currentDate: Date, userId?: string) {
               const style = firstLog.style || 'Fr'
               
               // サークル時間のフォーマット
-              const circleTime = circle > 0 ? `${Math.floor(circle / 60)}'${Math.floor(circle % 60)}"` : ''
+              const circleTime = circle > 0 ? `${Math.floor(circle / 60)}'${Math.floor(circle % 60).toString().padStart(2, '0')}"` : ''
               
               // セット数が1の場合は省略
               const setDisplay = setCount > 1 ? `×${setCount}` : ''

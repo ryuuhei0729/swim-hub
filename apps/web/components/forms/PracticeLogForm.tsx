@@ -99,10 +99,8 @@ export default function PracticeLogForm({
       const repsPerSet = derivedRepsFromTimes > 0
         ? derivedRepsFromTimes
         : Math.max(1, Math.floor((editData.repCount || 1) / (actualSetCount || 1)))
-      const totalDistance = editData.distance || 0
-      const perRepDistance = (repsPerSet > 0 && actualSetCount > 0)
-        ? Math.max(1, Math.round(totalDistance / (repsPerSet * actualSetCount)))
-        : (editData.distance || 100)
+      // editData.distanceは既に1回あたりの距離なので、そのまま使用
+      const perRepDistance = editData.distance || 100
       const ct = editData.circle || 90
 
       const setsData = [{

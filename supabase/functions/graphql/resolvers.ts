@@ -530,6 +530,11 @@ export const resolvers = {
           createdAt: time.created_at,
           updatedAt: time.updated_at
         })),
+        tags: (log.practice_log_tags || []).map((tagRelation: any) => ({
+          id: tagRelation.practice_tags?.id,
+          name: tagRelation.practice_tags?.name,
+          color: tagRelation.practice_tags?.color
+        })).filter((tag: any) => tag.id), // 有効なタグのみフィルタリング
         createdAt: log.created_at,
         updatedAt: log.updated_at
       })) || []
@@ -580,7 +585,11 @@ export const resolvers = {
         distance: data.distance,
         circle: data.circle,
         note: data.note,
-        tags: data.practice_log_tags?.map((relation: any) => relation.practice_tags) || [],
+        tags: (data.practice_log_tags || []).map((tagRelation: any) => ({
+          id: tagRelation.practice_tags?.id,
+          name: tagRelation.practice_tags?.name,
+          color: tagRelation.practice_tags?.color
+        })).filter((tag: any) => tag.id), // 有効なタグのみフィルタリング
         times: (data.practice_times || []).map((time: any) => ({
           id: time.id,
           userId: time.user_id || userId,
@@ -1050,12 +1059,31 @@ export const resolvers = {
     createPracticeTag: async (_: any, { input }: { input: any }, context: any) => {
       const userId = getUserId(context)
       
+      // 色を薄い色に変換する関数
+      const getLightColor = (color: string) => {
+        // #RRGGBB形式の色を薄い色に変換
+        if (color.startsWith('#')) {
+          const hex = color.replace('#', '')
+          const r = parseInt(hex.substr(0, 2), 16)
+          const g = parseInt(hex.substr(2, 2), 16)
+          const b = parseInt(hex.substr(4, 2), 16)
+          
+          // 薄い色に変換（透明度20%相当）
+          const lightR = Math.round(r + (255 - r) * 0.8)
+          const lightG = Math.round(g + (255 - g) * 0.8)
+          const lightB = Math.round(b + (255 - b) * 0.8)
+          
+          return `#${lightR.toString(16).padStart(2, '0')}${lightG.toString(16).padStart(2, '0')}${lightB.toString(16).padStart(2, '0')}`
+        }
+        return color + '20' // フォールバック
+      }
+      
       const { data, error } = await supabase
         .from('practice_tags')
         .insert({
           user_id: userId,
           name: input.name,
-          color: input.color || '#93C5FD'
+          color: getLightColor(input.color || '#93C5FD')
         })
         .select()
         .single()
