@@ -98,39 +98,13 @@ export default function DayDetailModal({
                 </h4>
                 <div className="space-y-3">
                   {practiceItems.map((item) => (
-                    <div key={item.id} className="border border-green-200 rounded-lg p-4 bg-green-50">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          {item.location && (
-                            <p className="text-sm text-gray-600 mb-2">
-                              📍 {item.location}
-                            </p>
-                          )}
-                          {/* 練習記録の詳細情報 */}
-                          <PracticeDetails practiceId={item.id} />
-                        </div>
-                        <div className="flex items-center space-x-2 ml-4">
-                          <button
-                            onClick={() => {
-                              console.log('DayDetailModal: Practice edit button clicked for item:', item)
-                              console.log('DayDetailModal: onEditItem function:', onEditItem)
-                              onEditItem?.(item)
-                            }}
-                            className="p-2 text-gray-400 hover:text-blue-600 rounded-md hover:bg-blue-50"
-                            title="編集"
-                          >
-                            <PencilIcon className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => setShowDeleteConfirm({id: item.id, type: item.item_type})}
-                            className="p-2 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50"
-                            title="削除"
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                    <PracticeDetails 
+                      key={item.id} 
+                      practiceId={item.id} 
+                      location={item.location}
+                      onEdit={() => onEditItem?.(item)}
+                      onDelete={() => setShowDeleteConfirm({id: item.id, type: item.item_type})}
+                    />
                   ))}
                 </div>
               </div>
@@ -291,7 +265,17 @@ export default function DayDetailModal({
 }
 
 // 練習記録の詳細表示
-function PracticeDetails({ practiceId }: { practiceId: string }) {
+function PracticeDetails({ 
+  practiceId, 
+  location, 
+  onEdit, 
+  onDelete 
+}: { 
+  practiceId: string
+  location?: string
+  onEdit?: () => void
+  onDelete?: () => void
+}) {
   const { data, loading, error } = useQuery(GET_PRACTICE, {
     variables: { id: practiceId },
     fetchPolicy: 'cache-and-network',
@@ -365,46 +349,75 @@ function PracticeDetails({ practiceId }: { practiceId: string }) {
         const allTimes = log.times || []
         
         return (
-          <div key={log.id} className="bg-white border border-green-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
-            {/* ヘッダー: [種目名] [タグ] */}
-            <div className="flex items-center gap-3 mb-4">
-              <span className="font-semibold text-lg text-green-800 bg-green-100 px-3 py-1 rounded-full">
-                {log.style}
-              </span>
-              {log.tags && Array.isArray(log.tags) && log.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {log.tags.map((tag: any) => (
-                    <span
-                      key={tag.id}
-                      className="inline-block px-3 py-1 text-xs font-medium rounded-full shadow-sm"
-                      style={{ 
-                        backgroundColor: tag.color,
-                        color: getTextColor(tag.color)
-                      }}
-                    >
-                      {tag.name}
-                    </span>
-                  ))}
-                </div>
-              )}
+          <div key={log.id} className="bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 border-0 rounded-lg p-4">
+            {/* ヘッダー: 場所、タグ、ボタン */}
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1">
+                {location && (
+                  <p className="text-sm text-gray-600 mb-2 flex items-center gap-1">
+                    <span className="text-gray-400">📍</span>
+                    {location}
+                  </p>
+                )}
+                {log.tags && Array.isArray(log.tags) && log.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {log.tags.map((tag: any) => (
+                      <span
+                        key={tag.id}
+                        className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full"
+                        style={{ 
+                          backgroundColor: tag.color,
+                          color: getTextColor(tag.color)
+                        }}
+                      >
+                        {tag.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center space-x-2 ml-4">
+                <button
+                  onClick={onEdit}
+                  className="p-2 text-gray-400 hover:text-blue-600 rounded-md hover:bg-blue-50"
+                  title="編集"
+                >
+                  <PencilIcon className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={onDelete}
+                  className="p-2 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50"
+                  title="削除"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </button>
+              </div>
             </div>
             
             {/* 練習内容: 距離 × 本数 × セット数 サークル 泳法 */}
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 mb-4">
-              <div className="text-sm text-gray-600 mb-1">練習内容</div>
-              <div className="text-base text-gray-800">
-                <span className="text-2xl font-bold text-green-700">{log.distance}</span>m × 
-                <span className="text-2xl font-bold text-green-700">{log.repCount}</span>本 × 
-                <span className="text-2xl font-bold text-green-700">{log.setCount}</span>セット 
-                <span className="text-2xl font-bold text-green-700">{log.circle}</span>秒サークル 
-                <span className="text-2xl font-bold text-green-700">{log.style}</span>
-              </div>
+            <div className="bg-white rounded-lg p-3 mb-3 border border-green-200">
+              <div className="text-xs font-medium text-gray-500 mb-1">練習内容</div>
+                <div className="text-sm text-gray-800">
+                  <span className="text-lg font-semibold text-green-700">{log.distance}</span>m × 
+                  <span className="text-lg font-semibold text-green-700"> {log.repCount}</span>
+                  {log.setCount > 1 && (
+                    <>
+                      {' × '}
+                      <span className="text-lg font-semibold text-green-700">{log.setCount}</span>
+                    </>
+                  )}
+                  {'　'}
+                  <span className="text-lg font-semibold text-green-700">
+                    {log.circle ? `${Math.floor(log.circle / 60)}'${Math.floor(log.circle % 60)}"` : '-'}
+                  </span>  
+                  <span className="text-lg font-semibold text-green-700">　{log.style}</span>
+                </div>
             </div>
 
             {/* メモ */}
             {log.note && (
-              <div className="bg-gray-50 rounded-lg p-3 mb-4">
-                <div className="text-sm text-gray-500 mb-1">メモ</div>
+              <div className="bg-gradient-to-r from-slate-50 to-gray-50 rounded-lg p-3 mb-3 border border-slate-200">
+                <div className="text-xs font-medium text-gray-500 mb-1">メモ</div>
                 <div className="text-sm text-gray-700">
                   {log.note}
                 </div>
@@ -413,40 +426,97 @@ function PracticeDetails({ practiceId }: { practiceId: string }) {
 
             {/* タイム表示 */}
             {allTimes.length > 0 && (
-              <div className="mt-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-1 h-6 bg-green-500 rounded-full"></div>
-                  <p className="text-base font-semibold text-green-700">タイム</p>
+              <div className="mt-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-1 h-4 bg-green-500 rounded-full"></div>
+                  <p className="text-sm font-medium text-green-700">タイム</p>
                 </div>
-                <div className="space-y-4">
-                  {Array.from({ length: log.setCount }, (_, setIndex) => {
-                    const setNumber = setIndex + 1
-                    const setTimes = allTimes.filter(t => t.setNumber === setNumber)
-                    
-                    return (
-                      <div key={setNumber} className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
-                        <div className="text-sm font-semibold text-green-800 mb-3 flex items-center gap-2">
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          {setNumber}セット目
-                        </div>
-                        <div className="grid grid-cols-3 gap-3">
-                          {Array.from({ length: Math.ceil(log.repCount / log.setCount) }, (_, repIndex) => {
-                            const repNumber = repIndex + 1
-                            const time = setTimes.find(t => t.repNumber === repNumber)
-                            
-                            return (
-                              <div key={repNumber} className="bg-white rounded-lg p-3 text-center shadow-sm">
-                                <div className="text-xs text-gray-500 mb-1">{repNumber}本目</div>
-                                <div className="text-sm font-semibold text-gray-800">
-                                  {time && time.time > 0 ? formatTime(time.time) : '-'}
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    )
-                  })}
+                <div className="bg-white rounded-lg p-3 border border-green-200 overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-green-200">
+                        <th className="text-left py-2 px-2 font-medium text-green-800"></th>
+                        {Array.from({ length: log.setCount }, (_, setIndex) => (
+                          <th key={setIndex + 1} className="text-center py-2 px-2 font-medium text-green-800">
+                            {setIndex + 1}セット目
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Array.from({ length: log.repCount }, (_, repIndex) => {
+                        const repNumber = repIndex + 1
+                        return (
+                          <tr key={repNumber} className="border-b border-green-100">
+                            <td className="py-2 px-2 font-medium text-gray-700">{repNumber}本目</td>
+                            {Array.from({ length: log.setCount }, (_, setIndex) => {
+                              const setNumber = setIndex + 1
+                              const time = allTimes.find(t => t.setNumber === setNumber && t.repNumber === repNumber)
+                              const setTimes = allTimes.filter(t => t.setNumber === setNumber && t.time > 0)
+                              const setFastest = setTimes.length > 0 ? Math.min(...setTimes.map(t => t.time)) : 0
+                              const isFastest = time && time.time > 0 && time.time === setFastest
+                              
+                              return (
+                                <td key={setNumber} className="py-2 px-2 text-center">
+                                  <span className={isFastest ? "text-blue-600 font-bold" : "text-gray-800"}>
+                                    {time && time.time > 0 ? formatTime(time.time) : '-'}
+                                  </span>
+                                </td>
+                              )
+                            })}
+                          </tr>
+                        )
+                      })}
+                      {/* 平均行 */}
+                      <tr className="border-b border-green-100 bg-green-50">
+                        <td className="py-2 px-2 font-medium text-green-800">セット平均</td>
+                        {Array.from({ length: log.setCount }, (_, setIndex) => {
+                          const setNumber = setIndex + 1
+                          const setTimes = allTimes.filter(t => t.setNumber === setNumber && t.time > 0)
+                          const average = setTimes.length > 0 
+                            ? setTimes.reduce((sum, t) => sum + t.time, 0) / setTimes.length 
+                            : 0
+                          return (
+                            <td key={setNumber} className="py-2 px-2 text-center">
+                              <span className="text-green-800 font-medium">
+                                {average > 0 ? formatTime(average) : '-'}
+                              </span>
+                            </td>
+                          )
+                        })}
+                      </tr>
+                      {/* 全体平均行 */}
+                      <tr className="border-t-2 border-green-300 bg-blue-50">
+                        <td className="py-2 px-2 font-medium text-blue-800">全体平均</td>
+                        <td className="py-2 px-2 text-center" colSpan={log.setCount}>
+                          <span className="text-blue-800 font-bold">
+                            {(() => {
+                              const allValidTimes = allTimes.filter(t => t.time > 0)
+                              const overallAverage = allValidTimes.length > 0 
+                                ? allValidTimes.reduce((sum, t) => sum + t.time, 0) / allValidTimes.length 
+                                : 0
+                              return overallAverage > 0 ? formatTime(overallAverage) : '-'
+                            })()}
+                          </span>
+                        </td>
+                      </tr>
+                      {/* 全体最速行 */}
+                      <tr className="bg-blue-50">
+                        <td className="py-2 px-2 font-medium text-blue-800">全体最速</td>
+                        <td className="py-2 px-2 text-center" colSpan={log.setCount}>
+                          <span className="text-blue-800 font-bold">
+                            {(() => {
+                              const allValidTimes = allTimes.filter(t => t.time > 0)
+                              const overallFastest = allValidTimes.length > 0 
+                                ? Math.min(...allValidTimes.map(t => t.time))
+                                : 0
+                              return overallFastest > 0 ? formatTime(overallFastest) : '-'
+                            })()}
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}

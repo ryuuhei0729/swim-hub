@@ -96,7 +96,7 @@ export default function Calendar({
   }
 
   const getItemIcon = (type: 'practice' | 'record') => {
-    return type === 'practice' ? '💪' : '🏊‍♂️'
+    return ''
   }
 
   const getItemColor = (type: 'practice' | 'record') => {
@@ -309,7 +309,7 @@ export default function Calendar({
                     <div
                       key={item.id}
                       className={`
-                        text-xs px-1 sm:px-2 py-1 rounded-md truncate transition-all duration-200 border
+                        text-[10px] px-0.5 sm:px-1 py-0.5 rounded-md truncate transition-all duration-200 border
                         ${getItemColor(item.item_type)}
                         hover:opacity-80 hover:scale-105 cursor-pointer
                       `}
@@ -325,7 +325,7 @@ export default function Calendar({
                     </div>
                   ))}
                   {dayEntries.length > 2 && (
-                    <div className="text-xs text-gray-500 px-1 sm:px-2">
+                    <div className="text-[10px] text-gray-500 px-0.5 sm:px-1">
                       +{dayEntries.length - 2}件
                     </div>
                   )}

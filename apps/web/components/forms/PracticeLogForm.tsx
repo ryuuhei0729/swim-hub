@@ -438,34 +438,19 @@ export default function PracticeLogForm({
                     <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                          泳法
-                        </label>
-                        <select
-                          value={set.style}
-                          onChange={(e) => updateSet(set.id, 'style', e.target.value)}
-                          className="w-full px-3 py-2 h-9 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          {SWIMMING_STYLES.map(style => (
-                            <option key={style} value={style}>{style}</option>
-                          ))}
-                        </select>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                          セット数
+                          距離(m)
                         </label>
                         <Input
                           type="number"
                           min="1"
-                          value={(set.setCount ?? 1) as number | ''}
+                          value={set.distance as number | ''}
                           onChange={(e) => {
                             const value = e.target.value
                             if (value === '') {
-                              updateSet(set.id, 'setCount', '')
+                              updateSet(set.id, 'distance', '')
                             } else {
                               const numValue = parseInt(value)
-                              updateSet(set.id, 'setCount', Number.isNaN(numValue) ? '' : numValue)
+                              updateSet(set.id, 'distance', Number.isNaN(numValue) ? '' : numValue)
                             }
                           }}
                           className="text-sm h-9"
@@ -493,19 +478,19 @@ export default function PracticeLogForm({
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                          距離(m)
+                          セット数
                         </label>
                         <Input
                           type="number"
                           min="1"
-                          value={set.distance as number | ''}
+                          value={(set.setCount ?? 1) as number | ''}
                           onChange={(e) => {
                             const value = e.target.value
                             if (value === '') {
-                              updateSet(set.id, 'distance', '')
+                              updateSet(set.id, 'setCount', '')
                             } else {
                               const numValue = parseInt(value)
-                              updateSet(set.id, 'distance', Number.isNaN(numValue) ? '' : numValue)
+                              updateSet(set.id, 'setCount', Number.isNaN(numValue) ? '' : numValue)
                             }
                           }}
                           className="text-sm h-9"
@@ -538,6 +523,20 @@ export default function PracticeLogForm({
                           </div>
                           <span className="text-xs text-gray-600">秒</span>
                         </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          泳法
+                        </label>
+                        <select
+                          value={set.style}
+                          onChange={(e) => updateSet(set.id, 'style', e.target.value)}
+                          className="w-full px-3 py-2 h-9 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          {SWIMMING_STYLES.map(style => (
+                            <option key={style} value={style}>{style}</option>
+                          ))}
+                        </select>
                       </div>
                       
                     </div>

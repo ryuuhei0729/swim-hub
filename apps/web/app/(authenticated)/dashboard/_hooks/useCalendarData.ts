@@ -163,11 +163,26 @@ export function useCalendarData(currentDate: Date, userId?: string) {
         if (practiceDate) {
           const logDate = new Date(practiceDate)
           if (logDate >= monthStart && logDate <= monthEnd) {
-            // 練習メニューのスタイルを取得
-            const styles = practiceLogs.map((log: any) => log.style).filter(Boolean)
-            const uniqueStyles = [...new Set(styles)]
-            
-            const title = `練習: ${uniqueStyles.length > 0 ? uniqueStyles.join(', ') : practicePlace}`
+            // 練習内容の詳細を生成
+            let title: string
+            if (practiceLogs.length > 0) {
+              const firstLog = practiceLogs[0]
+              const distance = firstLog.distance || 0
+              const repCount = firstLog.repCount || 0
+              const setCount = firstLog.setCount || 1
+              const circle = firstLog.circle || 0
+              const style = firstLog.style || 'Fr'
+              
+              // サークル時間のフォーマット
+              const circleTime = circle > 0 ? `${Math.floor(circle / 60)}'${Math.floor(circle % 60)}"` : ''
+              
+              // セット数が1の場合は省略
+              const setDisplay = setCount > 1 ? `×${setCount}` : ''
+              
+              title = `${distance}m×${repCount}${setDisplay}　${circleTime} ${style}`
+            } else {
+              title = `練習: ${practicePlace}`
+            }
             
             items.push({
               id: practice.id, // Practice ID
