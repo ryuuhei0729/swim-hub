@@ -398,7 +398,7 @@ export default function PracticeLogForm({
 
               <div className="space-y-4">
                 {formData.sets.map((set, index) => (
-                  <div key={set.id} className="border border-gray-200 rounded-lg p-4">
+                  <div key={set.id} className="border border-gray-200 rounded-lg p-4 bg-green-50">
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="text-sm font-medium text-gray-900">
                         {editData?.practiceLogs && editData.practiceLogs.length > 1 

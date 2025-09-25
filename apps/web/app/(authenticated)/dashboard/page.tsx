@@ -9,7 +9,7 @@ import { useMutation, useQuery } from '@apollo/client/react'
 import { gql } from '@apollo/client'
 import { apolloClient } from '@/lib/apollo-client'
 import { CREATE_PRACTICE, CREATE_PRACTICE_LOG, CREATE_RECORD, DELETE_PRACTICE, DELETE_PRACTICE_LOG, DELETE_RECORD, UPDATE_PRACTICE, UPDATE_PRACTICE_LOG, UPDATE_RECORD, CREATE_PRACTICE_TIME, UPDATE_PRACTICE_TIME, DELETE_PRACTICE_TIME, CREATE_COMPETITION, ADD_PRACTICE_LOG_TAG, REMOVE_PRACTICE_LOG_TAG } from '@/graphql/mutations'
-import { GET_CALENDAR_DATA, GET_STYLES, GET_PRACTICE, GET_PRACTICE_LOG, GET_RECORD, GET_PRACTICE_LOGS, GET_RECORDS, GET_PRACTICES } from '@/graphql/queries'
+import { GET_CALENDAR_DATA, GET_STYLES, GET_PRACTICE, GET_PRACTICE_LOG, GET_RECORD, GET_PRACTICE_LOGS, GET_RECORDS, GET_PRACTICES, GET_COMPETITION_WITH_RECORDS } from '@/graphql/queries'
 
 export default function DashboardPage() {
   const { profile } = useAuth()
@@ -44,6 +44,12 @@ export default function DashboardPage() {
   const { data: recordData, loading: recordLoading, error: recordError } = useQuery(GET_RECORD, {
     variables: { id: editingItem?.id },
     skip: !editingItem || editingItem.item_type !== 'record',
+  })
+
+  // Competition IDから複数のRecordを取得するクエリ
+  const { data: competitionData, loading: competitionLoading, error: competitionError } = useQuery(GET_COMPETITION_WITH_RECORDS, {
+    variables: { id: editingItem?.competition_id },
+    skip: !editingItem || editingItem.item_type !== 'record' || !editingItem?.competition_id,
   })
 
   // デバッグ: 大会記録データの取得状況をログ出力（開発環境でのみ）
@@ -462,37 +468,78 @@ export default function DashboardPage() {
       if (process.env.NODE_ENV === 'development') {
         console.log('Dashboard: editingData has been set with practiceLogs array')
       }
-    } else if (editingItem && editingItem.item_type === 'record' && (recordData as any)?.record) {
-      const record = (recordData as any).record
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Setting record data:', record)
+    } else if (editingItem && editingItem.item_type === 'record') {
+      // 複数のRecordがある場合（Competitionから取得）
+      if ((competitionData as any)?.competition) {
+        const competition = (competitionData as any).competition
+        const records = competition.records || []
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Setting competition data with records:', competition)
+          console.log('Records count:', records.length)
+        }
+        
+        const newEditingData = {
+          id: editingItem.id, // 編集対象のRecord ID
+          recordDate: competition.date || new Date().toISOString().split('T')[0],
+          location: competition.place || '',
+          competitionName: competition.title || '',
+          poolType: competition.poolType || 0,
+          records: records.map((record: any) => ({
+            id: record.id,
+            styleId: record.styleId.toString(),
+            time: record.time,
+            isRelaying: record.isRelaying || false,
+            splitTimes: record.splitTimes || [],
+            videoUrl: record.videoUrl || '',
+            note: record.note || ''
+          })),
+          note: competition.note || '',
+          competition: competition
+        }
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('New editing data for competition with records:', newEditingData)
+        }
+        setEditingData(newEditingData)
+      } 
+      // 単一のRecordの場合（従来の処理）
+      else if ((recordData as any)?.record) {
+        const record = (recordData as any).record
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Setting single record data:', record)
+        }
+        const newEditingData = {
+          id: record.id,
+          recordDate: record.competition?.date || new Date().toISOString().split('T')[0],
+          location: record.competition?.place || '',
+          competitionName: record.competition?.title || '',
+          poolType: record.competition?.poolType || 0,
+          records: [{
+            id: record.id,
+            styleId: record.styleId.toString(),
+            time: record.time,
+            isRelaying: record.isRelaying || false,
+            splitTimes: record.splitTimes || [],
+            videoUrl: record.videoUrl || '',
+            note: record.note || ''
+          }],
+          note: record.note || '',
+          competition: record.competition,
+          style: record.style
+        }
+        if (process.env.NODE_ENV === 'development') {
+          console.log('New editing data for single record:', newEditingData)
+        }
+        setEditingData(newEditingData)
       }
-      const newEditingData = {
-        id: record.id,
-        recordDate: record.competition?.date || new Date().toISOString().split('T')[0],
-        location: record.competition?.place || '',
-        competitionName: record.competition?.title || '',
-        poolType: record.competition?.poolType || 0,
-        styleId: record.styleId,
-        time: record.time,
-        isRelaying: record.isRelaying || false,
-        splitTimes: record.splitTimes || [],
-        videoUrl: record.videoUrl,
-        note: record.note,
-        competition: record.competition,
-        style: record.style
-      }
-      if (process.env.NODE_ENV === 'development') {
-        console.log('New editing data for record:', newEditingData)
-      }
-      setEditingData(newEditingData)
     } else {
       if (process.env.NODE_ENV === 'development') {
         console.log('No data to set, clearing editingData')
       }
       setEditingData(null)
     }
-  }, [editingItem, practiceData, recordData])
+  }, [editingItem, practiceData, recordData, competitionData])
 
 
   const handleDateClick = (date: Date) => {
@@ -871,7 +918,7 @@ export default function DashboardPage() {
             date: formData.recordDate,
             place: formData.location,
             poolType: formData.poolType,
-            note: ''
+            note: formData.note || ''
           }
 
           const competitionResult = await createCompetition({
@@ -882,74 +929,169 @@ export default function DashboardPage() {
         }
       }
 
-      const recordInput = {
-        styleId: parseInt(formData.styleId),
-        time: formData.time,
-        videoUrl: formData.videoUrl,
-        note: formData.note,
-        isRelaying: formData.isRelaying || false,
-        competitionId: competitionId,
-        splitTimes: formData.splitTimes || []
-      }
+      // 複数のRecordを処理
+      const records = formData.records || []
+      console.log('Dashboard: Processing records:', records.length)
 
-      if (formData.id) {
-        // 更新処理
-        console.log('Dashboard: Updating record with ID:', formData.id)
-        console.log('Dashboard: Update input:', recordInput)
-        const updateResult = await updateRecord({
-          variables: {
-            id: formData.id,
-            input: recordInput
+      if (editingData && editingData.records && editingData.records.length > 0) {
+        // 編集時: 複数のRecordを更新
+        console.log('Dashboard: Updating multiple records')
+        for (let i = 0; i < records.length && i < editingData.records.length; i++) {
+          const recordData = records[i]
+          const existingRecord = editingData.records[i]
+          
+          const recordInput = {
+            styleId: parseInt(recordData.styleId),
+            time: recordData.time,
+            videoUrl: recordData.videoUrl,
+            note: recordData.note,
+            isRelaying: recordData.isRelaying || false,
+            competitionId: competitionId,
+            splitTimes: recordData.splitTimes || []
           }
-        })
-        console.log('Dashboard: Update result:', updateResult)
-      } else {
-        // 作成処理
-        console.log('Dashboard: Creating new record')
-        console.log('Dashboard: Create input:', recordInput)
-        let createResult
-        try {
-          createResult = await createRecord({
-            variables: { input: recordInput }
+
+          console.log('Dashboard: Updating record with ID:', existingRecord.id)
+          console.log('Dashboard: Update input:', recordInput)
+          
+          const updateResult = await updateRecord({
+            variables: {
+              id: existingRecord.id,
+              input: recordInput
+            }
           })
-        } catch (err: any) {
-          // 一部の環境でCreateRecordInputにsplitTimesが未定義な場合のフォールバック
-          const message = err?.message || ''
-          const isSplitTimesFieldError = message.includes('Field "splitTimes" is not defined') || message.includes('Field \"splitTimes\" is not defined')
-          if (isSplitTimesFieldError) {
-            console.warn('splitTimesが未対応のためフォールバック実行: Recordのみ先に作成し、その後にスプリットを個別作成します。')
-            const fallbackInput = { ...recordInput }
-            delete (fallbackInput as any).splitTimes
+          console.log('Dashboard: Update result:', updateResult)
+        }
+      } else if (records.length > 0) {
+        // 新規作成時: 複数のRecordを作成
+        console.log('Dashboard: Creating multiple records')
+        for (const recordData of records) {
+          const recordInput = {
+            styleId: parseInt(recordData.styleId),
+            time: recordData.time,
+            videoUrl: recordData.videoUrl,
+            note: recordData.note,
+            isRelaying: recordData.isRelaying || false,
+            competitionId: competitionId,
+            splitTimes: recordData.splitTimes || []
+          }
 
-            // Recordのみ作成
-            createResult = await createRecord({ variables: { input: fallbackInput } })
+          console.log('Dashboard: Creating new record')
+          console.log('Dashboard: Create input:', recordInput)
+          
+          let createResult
+          try {
+            createResult = await createRecord({
+              variables: { input: recordInput }
+            })
+          } catch (err: any) {
+            // 一部の環境でCreateRecordInputにsplitTimesが未定義な場合のフォールバック
+            const message = err?.message || ''
+            const isSplitTimesFieldError = message.includes('Field "splitTimes" is not defined') || message.includes('Field \"splitTimes\" is not defined')
+            if (isSplitTimesFieldError) {
+              console.warn('splitTimesが未対応のためフォールバック実行: Recordのみ先に作成し、その後にスプリットを個別作成します。')
+              const fallbackInput = { ...recordInput }
+              delete (fallbackInput as any).splitTimes
 
-            // 作成されたRecord IDを取得し、スプリットを個別追加
-            const createdRecordId = (createResult as any)?.data?.createRecord?.id
-            const splits: Array<{ distance: number; splitTime: number }> = recordInput.splitTimes || []
-            if (createdRecordId && splits.length > 0) {
-              for (const st of splits) {
-                try {
-                  await apolloClient.mutate({
-                    mutation: gql`
-                      mutation CreateSplitTime($input: CreateSplitTimeInput!) {
-                        createSplitTime(input: $input) { id }
+              // Recordのみ作成
+              createResult = await createRecord({ variables: { input: fallbackInput } })
+
+              // 作成されたRecord IDを取得し、スプリットを個別追加
+              const createdRecordId = (createResult as any)?.data?.createRecord?.id
+              const splits: Array<{ distance: number; splitTime: number }> = recordInput.splitTimes || []
+              if (createdRecordId && splits.length > 0) {
+                for (const st of splits) {
+                  try {
+                    await apolloClient.mutate({
+                      mutation: gql`
+                        mutation CreateSplitTime($input: CreateSplitTimeInput!) {
+                          createSplitTime(input: $input) { id }
+                        }
+                      `,
+                      variables: {
+                        input: { recordId: createdRecordId, distance: st.distance, splitTime: st.splitTime }
                       }
-                    `,
-                    variables: {
-                      input: { recordId: createdRecordId, distance: st.distance, splitTime: st.splitTime }
-                    }
-                  })
-                } catch (splitErr) {
-                  console.error('スプリットの個別作成に失敗しました:', splitErr)
+                    })
+                  } catch (splitErr) {
+                    console.error('スプリットの個別作成に失敗しました:', splitErr)
+                  }
                 }
               }
+            } else {
+              throw err
             }
-          } else {
-            throw err
           }
+          console.log('Dashboard: Create result:', createResult)
         }
-        console.log('Dashboard: Create result:', createResult)
+      } else {
+        // 従来の単一Record処理（後方互換性のため）
+        console.log('Dashboard: Processing single record (legacy)')
+        const recordInput = {
+          styleId: parseInt(formData.styleId),
+          time: formData.time,
+          videoUrl: formData.videoUrl,
+          note: formData.note,
+          isRelaying: formData.isRelaying || false,
+          competitionId: competitionId,
+          splitTimes: formData.splitTimes || []
+        }
+
+        if (formData.id) {
+          // 更新処理
+          console.log('Dashboard: Updating single record with ID:', formData.id)
+          const updateResult = await updateRecord({
+            variables: {
+              id: formData.id,
+              input: recordInput
+            }
+          })
+          console.log('Dashboard: Update result:', updateResult)
+        } else {
+          // 作成処理
+          console.log('Dashboard: Creating single record')
+          let createResult
+          try {
+            createResult = await createRecord({
+              variables: { input: recordInput }
+            })
+          } catch (err: any) {
+            // 一部の環境でCreateRecordInputにsplitTimesが未定義な場合のフォールバック
+            const message = err?.message || ''
+            const isSplitTimesFieldError = message.includes('Field "splitTimes" is not defined') || message.includes('Field \"splitTimes\" is not defined')
+            if (isSplitTimesFieldError) {
+              console.warn('splitTimesが未対応のためフォールバック実行: Recordのみ先に作成し、その後にスプリットを個別作成します。')
+              const fallbackInput = { ...recordInput }
+              delete (fallbackInput as any).splitTimes
+
+              // Recordのみ作成
+              createResult = await createRecord({ variables: { input: fallbackInput } })
+
+              // 作成されたRecord IDを取得し、スプリットを個別追加
+              const createdRecordId = (createResult as any)?.data?.createRecord?.id
+              const splits: Array<{ distance: number; splitTime: number }> = recordInput.splitTimes || []
+              if (createdRecordId && splits.length > 0) {
+                for (const st of splits) {
+                  try {
+                    await apolloClient.mutate({
+                      mutation: gql`
+                        mutation CreateSplitTime($input: CreateSplitTimeInput!) {
+                          createSplitTime(input: $input) { id }
+                        }
+                      `,
+                      variables: {
+                        input: { recordId: createdRecordId, distance: st.distance, splitTime: st.splitTime }
+                      }
+                    })
+                  } catch (splitErr) {
+                    console.error('スプリットの個別作成に失敗しました:', splitErr)
+                  }
+                }
+              }
+            } else {
+              throw err
+            }
+          }
+          console.log('Dashboard: Create result:', createResult)
+        }
       }
     } catch (error) {
       console.error('大会記録の保存に失敗しました:', error)

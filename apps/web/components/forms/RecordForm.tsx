@@ -12,22 +12,30 @@ interface SplitTime {
   splitTime: number
 }
 
-interface RecordFormData {
-  recordDate: string
-  location: string
-  competitionName: string
-  poolType: number // 0: short, 1: long
+interface RecordSet {
+  id: string
   styleId: string
   time: number
+  timeDisplayValue?: string // 入力中の表示用
   isRelaying: boolean
   splitTimes: SplitTimeInput[]
   note: string
   videoUrl?: string
 }
 
+interface RecordFormData {
+  recordDate: string
+  location: string
+  competitionName: string
+  poolType: number // 0: short, 1: long
+  records: RecordSet[]
+  note: string
+}
+
 interface SplitTimeInput {
   distance: number | ''
   splitTime: number
+  splitTimeDisplayValue?: string // 入力中の表示用
   // UI安定化用のキー（サーバー送信時には除去）
   uiKey?: string
 }
@@ -47,7 +55,6 @@ const POOL_TYPES = [
   { value: 1, label: '長水路 (50m)' }
 ]
 
-
 export default function RecordForm({
   isOpen,
   onClose,
@@ -62,12 +69,16 @@ export default function RecordForm({
     location: '',
     competitionName: '',
     poolType: 0,
-    styleId: styles[0]?.id || '',
-    time: 0,
-    isRelaying: false,
-    splitTimes: [],
-    note: '',
-    videoUrl: ''
+    records: [{
+      id: '1',
+      styleId: styles[0]?.id || '',
+      time: 0,
+      isRelaying: false,
+      splitTimes: [],
+      note: '',
+      videoUrl: ''
+    }],
+    note: ''
   })
 
   // initialDateが変更された時にフォームデータを更新
@@ -85,23 +96,59 @@ export default function RecordForm({
     if (editData && isOpen) {
       console.log('RecordForm: Setting form data from editData:', editData)
       
+      // 複数のRecordが存在する場合の処理
+      if (editData.records && editData.records.length > 0) {
+        console.log('RecordForm: Multiple records detected:', editData.records.length)
+        
+        const records: RecordSet[] = editData.records.map((record: any, index: number) => ({
+          id: record.id || `record-${index}`,
+          styleId: record.styleId || styles[0]?.id || '',
+          time: record.time || 0,
+          isRelaying: record.isRelaying || false,
+          splitTimes: (record.splitTimes?.map((st: any) => ({
+            distance: st.distance,
+            splitTime: st.splitTime,
+            uiKey: (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+              ? (crypto as any).randomUUID()
+              : `split-${Date.now()}-${Math.random()}`
+          })) || []),
+          note: record.note || '',
+          videoUrl: record.videoUrl || ''
+        }))
+        
+        setFormData({
+          recordDate: editData.recordDate || format(new Date(), 'yyyy-MM-dd'),
+          location: editData.location || '',
+          competitionName: editData.competitionName || '',
+          poolType: editData.poolType || 0,
+          records: records,
+          note: editData.note || ''
+        })
+        return
+      }
+      
+      // 単一のRecordの場合の従来の処理
       setFormData({
         recordDate: editData.recordDate || format(new Date(), 'yyyy-MM-dd'),
         location: editData.location || '',
         competitionName: editData.competitionName || '',
         poolType: editData.poolType || 0,
-        styleId: editData.styleId || styles[0]?.id || '',
-        time: editData.time || 0,
-        isRelaying: editData.isRelaying || false,
-        splitTimes: (editData.splitTimes?.map((st: any) => ({
-          distance: st.distance,
-          splitTime: st.splitTime,
-          uiKey: (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
-            ? (crypto as any).randomUUID()
-            : 'st-' + Math.random().toString(36).slice(2)
-        })) || []).sort((a: any, b: any) => (a.distance || 0) - (b.distance || 0)),
-        note: editData.note || '',
-        videoUrl: editData.videoUrl || ''
+        records: [{
+          id: editData.id || '1',
+          styleId: editData.styleId || styles[0]?.id || '',
+          time: editData.time || 0,
+          isRelaying: editData.isRelaying || false,
+          splitTimes: (editData.splitTimes?.map((st: any) => ({
+            distance: st.distance,
+            splitTime: st.splitTime,
+            uiKey: (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+              ? (crypto as any).randomUUID()
+              : `split-${Date.now()}-${Math.random()}`
+          })) || []),
+          note: editData.note || '',
+          videoUrl: editData.videoUrl || ''
+        }],
+        note: editData.note || ''
       })
     } else if (!editData && isOpen) {
       // 新規作成時はデフォルト値にリセット
@@ -110,15 +157,19 @@ export default function RecordForm({
         location: '',
         competitionName: '',
         poolType: 0,
-        styleId: styles[0]?.id || '',
-        time: 0,
-        isRelaying: false,
-        splitTimes: [],
-        note: '',
-        videoUrl: ''
+        records: [{
+          id: '1',
+          styleId: styles[0]?.id || '',
+          time: 0,
+          isRelaying: false,
+          splitTimes: [],
+          note: '',
+          videoUrl: ''
+        }],
+        note: ''
       })
     }
-  }, [editData, isOpen, initialDate])
+  }, [editData, isOpen, initialDate, styles])
 
   if (!isOpen) return null
 
@@ -126,95 +177,101 @@ export default function RecordForm({
     e.preventDefault()
     try {
       // 送信前にUI専用プロパティを除去
-      const sanitizedSplitTimes = (formData.splitTimes || [])
-        .filter(st => typeof st.distance === 'number' && Number.isFinite(st.distance) && (st.distance as number) > 0)
-        .map(st => ({
-          distance: st.distance as number,
-          splitTime: st.splitTime
-        }))
-      // 編集時はIDを含めて送信
-      const submitData = {
+      const sanitizedData = {
         ...formData,
-        splitTimes: sanitizedSplitTimes,
-        ...(editData ? { id: editData.id } : {})
+        records: formData.records.map(record => ({
+          ...record,
+          splitTimes: record.splitTimes.map(st => ({
+            distance: st.distance,
+            splitTime: st.splitTime
+          }))
+        }))
       }
-      console.log('RecordForm: Submitting data:', submitData)
-      await onSubmit(submitData)
-      // フォームリセット
-      setFormData({
-        recordDate: format(new Date(), 'yyyy-MM-dd'),
-        location: '',
-        competitionName: '',
-        poolType: 0,
-        styleId: styles[0]?.id || '',
-        time: 0,
-        isRelaying: false,
-        splitTimes: [],
-        note: '',
-        videoUrl: ''
-      })
-      onClose()
+      
+      await onSubmit(sanitizedData)
     } catch (error) {
-      console.error('記録の保存に失敗しました:', error)
+      console.error('フォーム送信エラー:', error)
     }
   }
 
-  const addSplitTime = () => {
-    const newSplit: SplitTimeInput = {
-      distance: 25,
+  const addRecord = () => {
+    const newRecord: RecordSet = {
+      id: `record-${Date.now()}`,
+      styleId: styles[0]?.id || '',
+      time: 0,
+      isRelaying: false,
+      splitTimes: [],
+      note: '',
+      videoUrl: ''
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      records: [...prev.records, newRecord]
+    }))
+  }
+
+  const removeRecord = (recordId: string) => {
+    if (formData.records.length > 1) {
+      setFormData(prev => ({
+        ...prev,
+        records: prev.records.filter(record => record.id !== recordId)
+      }))
+    }
+  }
+
+  const updateRecord = (recordId: string, updates: Partial<RecordSet>) => {
+    setFormData(prev => ({
+      ...prev,
+      records: prev.records.map(record =>
+        record.id === recordId ? { ...record, ...updates } : record
+      )
+    }))
+  }
+
+  const addSplitTime = (recordId: string) => {
+    const newSplitTime: SplitTimeInput = {
+      distance: '',
       splitTime: 0,
       uiKey: (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
         ? (crypto as any).randomUUID()
-        : 'st-' + Math.random().toString(36).slice(2)
+        : `split-${Date.now()}-${Math.random()}`
     }
-    setFormData(prev => ({
-      ...prev,
-      splitTimes: [...prev.splitTimes, newSplit].sort((a, b) => (a.distance || 0) - (b.distance || 0))
-    }))
-  }
-
-  const removeSplitTime = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      splitTimes: prev.splitTimes.filter((_, i) => i !== index)
-    }))
-  }
-
-  const updateSplitTime = (index: number, field: keyof SplitTimeInput, value: number | '') => {
-    setFormData(prev => {
-      const beforeKey = prev.splitTimes[index]?.uiKey
-      const updated = prev.splitTimes
-        .map((split, i) => (i === index ? { ...split, [field]: value } : split))
-        .sort((a, b) => ((a.distance as number) || 0) - ((b.distance as number) || 0))
-
-      // 入力中行がソートで移動してもフォーカスを維持するため、同じuiKeyを持つ要素のindexを探して
-      // 次のレンダリングでも安定したkeyで描画されるようにする（keyはuiKeyを使用）
-      if (beforeKey) {
-        const newIndex = updated.findIndex(s => s.uiKey === beforeKey)
-        if (newIndex >= 0) {
-          // 何もしなくてもkeyによってReactが同一要素とみなす
-        }
-      }
-
-      return { ...prev, splitTimes: updated }
+    
+    updateRecord(recordId, {
+      splitTimes: [...formData.records.find(r => r.id === recordId)?.splitTimes || [], newSplitTime]
     })
   }
 
-  const _formatTimeInput = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60)
-    const secs = (seconds % 60).toFixed(2)
-    return mins > 0 ? `${mins}:${secs.padStart(5, '0')}` : secs
+  const updateSplitTime = (recordId: string, splitIndex: number, updates: Partial<SplitTimeInput>) => {
+    const record = formData.records.find(r => r.id === recordId)
+    if (!record) return
+    
+    const updatedSplitTimes = record.splitTimes.map((split, index) =>
+      index === splitIndex ? { ...split, ...updates } : split
+    )
+    
+    updateRecord(recordId, { splitTimes: updatedSplitTimes })
   }
 
-  const _parseTimeInput = (timeStr: string): number => {
-    const parts = timeStr.split(':')
-    if (parts.length === 2) {
-      return parseInt(parts[0]) * 60 + parseFloat(parts[1])
-    }
-    return parseFloat(timeStr) || 0
+  const removeSplitTime = (recordId: string, splitIndex: number) => {
+    const record = formData.records.find(r => r.id === recordId)
+    if (!record) return
+    
+    const updatedSplitTimes = record.splitTimes.filter((_, index) => index !== splitIndex)
+    updateRecord(recordId, { splitTimes: updatedSplitTimes })
   }
 
-  const _selectedStyle = styles.find(s => s.id === formData.styleId)
+  const getStyleName = (styleId: string) => {
+    const style = styles.find(s => s.id === styleId)
+    return style ? `${style.nameJp} ${style.distance}m` : '種目を選択'
+  }
+
+  const formatTimeDisplay = (seconds: number): string => {
+    if (seconds === 0) return '0.00'
+    return formatTime(seconds)
+  }
+
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -226,282 +283,305 @@ export default function RecordForm({
           <div className="bg-white px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h3 className="text-lg leading-6 font-medium text-gray-900">
-                大会記録を追加
+                {editData ? '大会記録を編集' : '大会記録を追加'}
               </h3>
               <button
                 type="button"
-                className="text-gray-400 hover:text-gray-500"
                 onClick={onClose}
+                className="text-gray-400 hover:text-gray-600"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
           </div>
 
-          {/* フォーム本体 */}
-          <form onSubmit={handleSubmit} className="bg-white px-6 py-4 space-y-6">
-            {/* 大会基本情報 */}
-            <div className="space-y-4">
-              <h4 className="text-md font-medium text-gray-900">大会情報</h4>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    大会日 *
-                  </label>
-                  <Input
-                    type="date"
-                    value={formData.recordDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, recordDate: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    場所 *
-                  </label>
-                  <Input
-                    type="text"
-                    placeholder="例: 県立水泳場"
-                    value={formData.location}
-                    onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                    required
-                  />
-                </div>
-              </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* 大会情報 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                大会日
+              </label>
+              <Input
+                type="date"
+                value={formData.recordDate}
+                onChange={(e) => setFormData(prev => ({ ...prev, recordDate: e.target.value }))}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                開催地
+              </label>
+              <Input
+                type="text"
+                value={formData.location}
+                onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                placeholder="例: 東京プール"
+                required
+              />
+            </div>
+          </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  大会名 *
-                </label>
-                <Input
-                  type="text"
-                  placeholder="例: 県選手権水泳競技大会"
-                  value={formData.competitionName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, competitionName: e.target.value }))}
-                  required
-                />
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                大会名
+              </label>
+              <Input
+                type="text"
+                value={formData.competitionName}
+                onChange={(e) => setFormData(prev => ({ ...prev, competitionName: e.target.value }))}
+                placeholder="例: 第○回水泳大会"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                プール種別
+              </label>
+              <select
+                value={formData.poolType}
+                onChange={(e) => setFormData(prev => ({ ...prev, poolType: parseInt(e.target.value) }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              >
+                {POOL_TYPES.map(type => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    プール種別 *
-                  </label>
-                  <select
-                    value={formData.poolType}
-                    onChange={(e) => setFormData(prev => ({ ...prev, poolType: parseInt(e.target.value) }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  >
-                    {POOL_TYPES.map(type => (
-                      <option key={type.value} value={type.value}>
-                        {type.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+          {/* 記録セクション */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium text-gray-900">記録</h3>
+              <Button
+                type="button"
+                onClick={addRecord}
+                className="flex items-center gap-2"
+              >
+                <PlusIcon className="h-4 w-4" />
+                種目を追加
+              </Button>
             </div>
 
-            {/* 記録詳細 */}
-            <div className="space-y-4">
-              <h4 className="text-md font-medium text-gray-900">記録詳細</h4>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    種目 *
-                  </label>
-                  <select
-                    value={formData.styleId}
-                    onChange={(e) => setFormData(prev => ({ ...prev, styleId: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  >
-                    <option value="" disabled>種目を選択してください</option>
-                    {styles.map(style => (
-                      <option key={style.id} value={style.id}>
-                        {style.nameJp}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    記録タイム (秒) *
-                  </label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="例: 26.45"
-                    value={formData.time || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, time: parseFloat(e.target.value) || 0 }))}
-                    required
-                  />
-                  {formData.time > 0 && (
-                    <p className="text-sm text-gray-600 mt-1">
-                      表示: {formatTime(formData.time)}
-                    </p>
+            {formData.records.map((record, recordIndex) => (
+              <div key={record.id} className="border border-gray-200 rounded-lg p-4 space-y-4 bg-blue-50">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium text-gray-700">種目 {recordIndex + 1}</h4>
+                  {formData.records.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeRecord(record.id)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
                   )}
                 </div>
-              </div>
 
-              {/* リレー情報 */}
-              <div className="space-y-3">
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="isRelaying"
-                    checked={formData.isRelaying}
-                    onChange={(e) => setFormData(prev => ({ 
-                      ...prev, 
-                      isRelaying: e.target.checked
-                    }))}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="isRelaying" className="ml-2 block text-sm text-gray-900">
-                    リレー種目
-                  </label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      種目
+                    </label>
+                    <select
+                      value={record.styleId}
+                      onChange={(e) => updateRecord(record.id, { styleId: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    >
+                      <option value="">種目を選択</option>
+                      {styles.map(style => (
+                        <option key={style.id} value={style.id}>
+                          {style.nameJp}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      記録
+                    </label>
+                    <Input
+                      type="text"
+                      value={record.timeDisplayValue !== undefined ? record.timeDisplayValue : (record.time > 0 ? formatTimeDisplay(record.time) : '')}
+                      onChange={(e) => {
+                        const timeStr = e.target.value
+                        // 入力中は文字列をそのまま保持
+                        updateRecord(record.id, { timeDisplayValue: timeStr })
+                      }}
+                      onBlur={(e) => {
+                        const timeStr = e.target.value
+                        if (timeStr === '') {
+                          updateRecord(record.id, { time: 0, timeDisplayValue: undefined })
+                        } else {
+                          const time = parseTimeString(timeStr)
+                          updateRecord(record.id, { time, timeDisplayValue: undefined })
+                        }
+                      }}
+                      placeholder="例: 1:30.50"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex items-center">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={record.isRelaying}
+                        onChange={(e) => updateRecord(record.id, { isRelaying: e.target.checked })}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-gray-700">リレー</span>
+                    </label>
+                  </div>
                 </div>
-                
-              </div>
-            </div>
 
-            {/* スプリットタイム */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <label className="block text-sm font-medium text-gray-700">
-                  スプリットタイム
-                </label>
-                <Button
-                  type="button"
-                  onClick={addSplitTime}
-                  variant="outline"
-                  size="sm"
-                >
-                  <PlusIcon className="h-4 w-4 mr-1" />
-                  追加
-                </Button>
-              </div>
-
-              {formData.splitTimes.length > 0 && (
-                <div className="space-y-3">
-                  {formData.splitTimes.map((split, index) => (
-                    <div key={split.uiKey ?? index} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
-                      <div className="flex-1">
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                          距離 (m)
-                        </label>
-                        <Input
-                          type="number"
-                          min="1"
-                          value={split.distance as number | ''}
-                          onChange={(e) => {
-                            const val = e.target.value
-                            if (val === '') {
-                              updateSplitTime(index, 'distance', '')
-                            } else {
-                              const n = parseInt(val)
-                              updateSplitTime(index, 'distance', Number.isNaN(n) ? '' : n)
-                            }
-                          }}
-                          className="text-sm"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                          タイム (秒)
-                        </label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={split.splitTime || ''}
-                          onChange={(e) => updateSplitTime(index, 'splitTime', parseFloat(e.target.value) || 0)}
-                          className="text-sm"
-                        />
-                        {split.splitTime > 0 && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            {formatTime(split.splitTime)}
-                          </p>
-                        )}
-                      </div>
+                {/* スプリットタイム */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      スプリットタイム
+                    </label>
+                    <Button
+                      type="button"
+                      onClick={() => addSplitTime(record.id)}
+                      className="text-sm"
+                    >
+                      <PlusIcon className="h-3 w-3 mr-1" />
+                      追加
+                    </Button>
+                  </div>
+                  
+                  {record.splitTimes.map((split, splitIndex) => (
+                    <div key={split.uiKey} className="flex items-center gap-2 mb-2">
+                      <Input
+                        type="text"
+                        placeholder="距離 (m)"
+                        value={split.distance}
+                        onChange={(e) => updateSplitTime(record.id, splitIndex, { distance: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                        className="w-24"
+                      />
+                      <span className="text-gray-500">m:</span>
+                      <Input
+                        type="text"
+                        placeholder="例: 1:30.50"
+                        value={split.splitTimeDisplayValue !== undefined ? split.splitTimeDisplayValue : (split.splitTime > 0 ? formatTimeDisplay(split.splitTime) : '')}
+                        onChange={(e) => {
+                          const timeStr = e.target.value
+                          // 入力中は文字列をそのまま保持
+                          updateSplitTime(record.id, splitIndex, { splitTimeDisplayValue: timeStr })
+                        }}
+                        onBlur={(e) => {
+                          const timeStr = e.target.value
+                          if (timeStr === '') {
+                            updateSplitTime(record.id, splitIndex, { splitTime: 0, splitTimeDisplayValue: undefined })
+                          } else {
+                            const time = parseTimeString(timeStr)
+                            updateSplitTime(record.id, splitIndex, { splitTime: time, splitTimeDisplayValue: undefined })
+                          }
+                        }}
+                        className="flex-1"
+                      />
                       <button
                         type="button"
-                        onClick={() => removeSplitTime(index)}
-                        className="text-red-600 hover:text-red-800 mt-6"
+                        onClick={() => removeSplitTime(record.id, splitIndex)}
+                        className="text-red-500 hover:text-red-700"
                       >
                         <TrashIcon className="h-4 w-4" />
                       </button>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
 
-            {/* 動画URL・メモ */}
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  動画URL
-                </label>
-                <Input
-                  type="url"
-                  placeholder="https://youtube.com/watch?v=..."
-                  value={formData.videoUrl || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, videoUrl: e.target.value }))}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  メモ
-                </label>
-                <textarea
-                  rows={3}
-                  value={formData.note}
-                  onChange={(e) => setFormData(prev => ({ ...prev, note: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="レースの感想や反省点を記録..."
-                />
-              </div>
-            </div>
-
-            {/* 記録情報表示 */}
-            {_selectedStyle && formData.time > 0 && (
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h5 className="font-medium text-blue-900 mb-2">記録サマリー</h5>
-                <div className="text-sm text-blue-800">
-                  <p><strong>{_selectedStyle.nameJp}</strong></p>
-                  <p>タイム: <strong>{formatTime(formData.time)}</strong></p>
-                  <p>プール: {POOL_TYPES.find(pt => pt.value === formData.poolType)?.label}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      動画URL
+                    </label>
+                    <Input
+                      type="url"
+                      value={record.videoUrl || ''}
+                      onChange={(e) => updateRecord(record.id, { videoUrl: e.target.value })}
+                      placeholder="https://..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      メモ
+                    </label>
+                    <Input
+                      type="text"
+                      value={record.note}
+                      onChange={(e) => updateRecord(record.id, { note: e.target.value })}
+                      placeholder="特記事項"
+                    />
+                  </div>
                 </div>
               </div>
-            )}
+            ))}
+          </div>
 
-            {/* フッター */}
-            <div className="bg-gray-50 px-6 py-3 sm:flex sm:flex-row-reverse sm:px-6 -mx-6 -mb-4">
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="w-full sm:w-auto sm:ml-3"
-              >
-                {isLoading ? '保存中...' : '保存'}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                className="mt-3 w-full sm:mt-0 sm:w-auto"
-              >
-                キャンセル
-              </Button>
-            </div>
-          </form>
+          {/* 大会メモ */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              大会メモ
+            </label>
+            <textarea
+              value={formData.note}
+              onChange={(e) => setFormData(prev => ({ ...prev, note: e.target.value }))}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="大会に関する特記事項"
+            />
+          </div>
+
+          {/* ボタン */}
+          <div className="flex justify-end gap-3 pt-6 border-t">
+            <Button
+              type="button"
+              onClick={onClose}
+              variant="secondary"
+              disabled={isLoading}
+            >
+              キャンセル
+            </Button>
+            <Button
+              type="submit"
+              disabled={isLoading}
+            >
+              {isLoading ? '保存中...' : (editData ? '更新' : '保存')}
+            </Button>
+          </div>
+        </form>
         </div>
       </div>
+
     </div>
   )
+}
+
+// タイム文字列を秒数に変換する関数
+function parseTimeString(timeString: string): number {
+  if (!timeString) return 0
+  
+  // "1:30.50" 形式
+  if (timeString.includes(':')) {
+    const [minutes, seconds] = timeString.split(':')
+    return parseInt(minutes) * 60 + parseFloat(seconds)
+  }
+  
+  // "30.50s" 形式
+  if (timeString.endsWith('s')) {
+    return parseFloat(timeString.slice(0, -1))
+  }
+  
+  // 数値のみ
+  return parseFloat(timeString)
 }

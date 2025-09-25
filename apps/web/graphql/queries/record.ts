@@ -93,3 +93,39 @@ export const GET_RECORDS_BY_USER = gql`
     }
   }
 `
+
+export const GET_COMPETITION_WITH_RECORDS = gql`
+  query GetCompetitionWithRecords($id: ID!) {
+    competition(id: $id) {
+      id
+      title
+      date
+      place
+      poolType
+      note
+      records {
+        id
+        userId
+        competitionId
+        styleId
+        time
+        videoUrl
+        note
+        isRelaying
+        style {
+          id
+          nameJp
+          name
+          stroke
+          distance
+        }
+        splitTimes {
+          id
+          recordId
+          distance
+          splitTime
+        }
+      }
+    }
+  }
+`
