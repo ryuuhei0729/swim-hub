@@ -371,7 +371,7 @@ export default function CompetitionPage() {
                       {record.competition?.place || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {record.style?.nameJp || '-'}
+                      {record.style?.name || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {record.time ? (
@@ -484,7 +484,7 @@ export default function CompetitionPage() {
                     <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
                       <div className="flex-1">
                         <h5 className="font-medium text-gray-900 mb-2">
-                          {selectedRecord.style?.nameJp || '記録'}: {selectedRecord.time ? (
+                          {selectedRecord.style?.name || '記録'}: {selectedRecord.time ? (
                             <>
                               {formatTime(selectedRecord.time)}
                               {selectedRecord.isRelaying && <span className="font-bold text-red-600 ml-1">R</span>}
