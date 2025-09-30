@@ -40,33 +40,9 @@ export const UPDATE_PRACTICE = gql`
   mutation UpdatePractice($id: ID!, $input: UpdatePracticeInput!) {
     updatePractice(id: $id, input: $input) {
       id
-      userId
       date
       place
       note
-      practiceLogs {
-        id
-        practiceId
-        style
-        repCount
-        setCount
-        distance
-        circle
-        note
-        times {
-          id
-          repNumber
-          setNumber
-          time
-        }
-        tags {
-          id
-          name
-          color
-        }
-      }
-      createdAt
-      updatedAt
     }
   }
 `

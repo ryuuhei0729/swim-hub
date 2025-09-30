@@ -19,6 +19,11 @@ export default function CompetitionPage() {
   const [editingData, setEditingData] = useState<any>(null)
   const [selectedRecord, setSelectedRecord] = useState<any>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
+  
+  // フィルタリング用のstate
+  const [filterStyle, setFilterStyle] = useState<string>('')
+  const [includeRelay, setIncludeRelay] = useState<boolean>(true)
+  const [filterPoolType, setFilterPoolType] = useState<string>('')
 
   // 大会記録データを取得
   const { data: recordsData, loading, error, refetch } = useQuery(GET_RECORDS, {
@@ -27,8 +32,16 @@ export default function CompetitionPage() {
   })
 
   // スタイルデータを取得
-  const { data: stylesData } = useQuery(GET_STYLES)
+  const { data: stylesData, loading: stylesLoading, error: stylesError } = useQuery(GET_STYLES)
   const styles = (stylesData as any)?.styles || []
+  
+  // デバッグ情報
+  console.log('スタイルデータデバッグ:', {
+    stylesData,
+    styles,
+    stylesLoading,
+    stylesError
+  })
 
   // ミューテーション
   const [createRecord] = useMutation(CREATE_RECORD, {
@@ -86,8 +99,51 @@ export default function CompetitionPage() {
   // データが完全に読み込まれているかチェック
   const isDataReady = !loading && recordsData
   
+  // デバッグ情報
+  console.log('記録データデバッグ:', {
+    recordsData,
+    records,
+    recordsCount: records.length,
+    firstRecord: records[0]
+  })
+  
+  // フィルタリングロジック
+  const filteredRecords = records.filter((record: any) => {
+    // 種目フィルタ（RecordテーブルのstyleIdを使用）
+    if (filterStyle) {
+      const recordStyleId = record.styleId
+      const filterStyleId = parseInt(filterStyle)
+      console.log('フィルタリングデバッグ:', {
+        recordStyleId,
+        filterStyleId,
+        recordStyleName: record.style?.nameJp,
+        filterStyle,
+        match: recordStyleId === filterStyleId
+      })
+      
+      if (recordStyleId !== filterStyleId) {
+        return false
+      }
+    }
+    
+    // リレーフィルタ（チェックボックス形式）
+    if (!includeRelay && record.isRelaying) {
+      return false
+    }
+    
+    // プール種別フィルタ
+    if (filterPoolType === 'long' && record.competition?.poolType !== 1) {
+      return false
+    }
+    if (filterPoolType === 'short' && record.competition?.poolType !== 0) {
+      return false
+    }
+    
+    return true
+  })
+
   // 日付の降順でソート
-  const sortedRecords = [...records].sort((a, b) => {
+  const sortedRecords = [...filteredRecords].sort((a, b) => {
     const dateA = new Date(a.competition?.date || a.createdAt)
     const dateB = new Date(b.competition?.date || b.createdAt)
     return dateB.getTime() - dateA.getTime()
@@ -304,6 +360,93 @@ export default function CompetitionPage() {
             </div>
           </div>
         </div>
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <TrophyIcon className="h-6 w-6 text-blue-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">表示中の記録数</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {sortedRecords.length}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* フィルタリングセクション */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* 種目フィルタ */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              種目
+            </label>
+            <select
+              value={filterStyle}
+              onChange={(e) => setFilterStyle(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">すべての種目</option>
+              {styles.map((style: any) => (
+                <option key={style.id} value={style.id}>
+                  {style.nameJp}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* プール種別フィルタ */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              プール種別
+            </label>
+            <select
+              value={filterPoolType}
+              onChange={(e) => setFilterPoolType(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">すべて</option>
+              <option value="short">短水路(25m)</option>
+              <option value="long">長水路(50m)</option>
+            </select>
+          </div>
+
+          {/* リレーフィルタ */}
+          <div className="flex flex-col justify-center">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="includeRelay"
+                checked={includeRelay}
+                onChange={(e) => setIncludeRelay(e.target.checked)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="includeRelay" className="ml-2 text-sm text-gray-700">
+                引き継ぎ記録
+              </label>
+            </div>
+          </div>
+
+          {/* クリアボタン */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              クリア
+            </label>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setFilterStyle('')
+                setIncludeRelay(true)
+                setFilterPoolType('')
+              }}
+              className="w-full text-sm"
+            >
+              フィルタをリセット
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* 大会記録一覧（表形式） */}
@@ -324,6 +467,27 @@ export default function CompetitionPage() {
             <div className="mt-6">
               <Button onClick={handleCreateRecord}>
                 大会記録を作成
+              </Button>
+            </div>
+          </div>
+        ) : sortedRecords.length === 0 ? (
+          <div className="p-12 text-center">
+            <TrophyIcon className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">該当する記録がありません</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              選択した条件に一致する大会記録が見つかりませんでした。
+            </p>
+            <div className="mt-6">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setFilterStyle('')
+                  setIncludeRelay(true)
+                  setFilterPoolType('')
+                }}
+                className="text-sm"
+              >
+                フィルタをリセット
               </Button>
             </div>
           </div>
@@ -371,7 +535,7 @@ export default function CompetitionPage() {
                       {record.competition?.place || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {record.style?.name || '-'}
+                      {record.style?.nameJp || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {record.time ? (
@@ -484,7 +648,7 @@ export default function CompetitionPage() {
                     <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
                       <div className="flex-1">
                         <h5 className="font-medium text-gray-900 mb-2">
-                          {selectedRecord.style?.name || '記録'}: {selectedRecord.time ? (
+                          {selectedRecord.style?.nameJp || '記録'}: {selectedRecord.time ? (
                             <>
                               {formatTime(selectedRecord.time)}
                               {selectedRecord.isRelaying && <span className="font-bold text-red-600 ml-1">R</span>}

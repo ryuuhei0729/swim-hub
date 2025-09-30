@@ -179,6 +179,11 @@ export const GET_PRACTICE_LOG = gql`
         setNumber
         time
       }
+      tags {
+        id
+        name
+        color
+      }
     }
   }
 `

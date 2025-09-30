@@ -16,7 +16,10 @@ export default function DayDetailModal({
   entries,
   onEditItem,
   onDeleteItem,
-  onAddItem
+  onAddItem,
+  onAddPracticeLog,
+  onEditPracticeLog,
+  onDeletePracticeLog
 }: DayDetailModalProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<{id: string, type: 'practice' | 'record'} | null>(null)
 
@@ -104,6 +107,9 @@ export default function DayDetailModal({
                       location={item.location}
                       onEdit={() => onEditItem?.(item)}
                       onDelete={() => setShowDeleteConfirm({id: item.id, type: item.item_type})}
+                      onAddPracticeLog={onAddPracticeLog}
+                      onEditPracticeLog={onEditPracticeLog}
+                      onDeletePracticeLog={onDeletePracticeLog}
                     />
                   ))}
                 </div>
@@ -135,7 +141,7 @@ export default function DayDetailModal({
                           )}
                           {item.style && (
                             <p className="text-sm text-gray-600 mb-1">
-                              🏊 {item.style.name_jp}
+                              🏊 {(item.style as any).name}
                             </p>
                           )}
                           {item.time_result && (
@@ -269,12 +275,18 @@ function PracticeDetails({
   practiceId, 
   location, 
   onEdit, 
-  onDelete 
+  onDelete,
+  onAddPracticeLog,
+  onEditPracticeLog,
+  onDeletePracticeLog
 }: { 
   practiceId: string
   location?: string
   onEdit?: () => void
   onDelete?: () => void
+  onAddPracticeLog?: (practiceId: string) => void
+  onEditPracticeLog?: (log: any) => void
+  onDeletePracticeLog?: (logId: string) => void
 }) {
   const { data, loading, error } = useQuery(GET_PRACTICE, {
     variables: { id: practiceId },
@@ -344,55 +356,105 @@ function PracticeDetails({
   }
 
   return (
-    <div className="mt-3 space-y-4">
-      {practiceLogs.map((log: any, index: number) => {
+    <div className="mt-3">
+      {/* Practice全体の枠 */}
+      <div className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-xl p-3">
+        {/* Practice全体のヘッダー */}
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg font-semibold text-green-800 bg-green-200 px-3 py-1 rounded-lg">🏊‍♂️ 練習記録</span>
+            </div>
+            {location && (
+              <p className="text-sm text-gray-700 mb-2 flex items-center gap-1">
+                <span className="text-gray-500">📍</span>
+                {location}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center space-x-2 ml-4">
+            <button
+              onClick={onEdit}
+              className="p-2 text-gray-500 hover:text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+              title="練習記録を編集"
+            >
+              <PencilIcon className="h-5 w-5" />
+            </button>
+            <button
+              onClick={onDelete}
+              className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+              title="練習記録を削除"
+            >
+              <TrashIcon className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Practice_logsのコンテナ */}
+        <div className="space-y-3">
+          {/* PracticeLogsがない場合 */}
+          {practiceLogs.length === 0 && (
+            <div className="bg-white border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+              <div className="text-gray-500 mb-4">
+                <span className="text-2xl">📝</span>
+                <p className="text-sm mt-2">練習メニューがまだ登録されていません</p>
+              </div>
+              <button
+                onClick={() => onAddPracticeLog?.(practiceId)}
+                className="inline-flex items-center px-4 py-2 border border-green-300 rounded-lg shadow-sm text-sm font-medium text-green-700 bg-white hover:bg-green-50 hover:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+              >
+                <span className="mr-2">➕</span>
+                練習メニューを追加
+              </button>
+            </div>
+          )}
+
+          {/* PracticeLogsがある場合の表示 */}
+          {practiceLogs.map((log: any, index: number) => {
         const allTimes = log.times || []
         
-        return (
-          <div key={log.id} className="bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 border-0 rounded-lg p-4">
-            {/* ヘッダー: 場所、タグ、ボタン */}
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex-1">
-                {location && (
-                  <p className="text-sm text-gray-600 mb-2 flex items-center gap-1">
-                    <span className="text-gray-400">📍</span>
-                    {location}
-                  </p>
-                )}
-                {log.tags && Array.isArray(log.tags) && log.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {log.tags.map((tag: any) => (
-                      <span
-                        key={tag.id}
-                        className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full"
-                        style={{ 
-                          backgroundColor: tag.color,
-                          color: getTextColor(tag.color)
-                        }}
-                      >
-                        {tag.name}
-                      </span>
-                    ))}
+            return (
+              <div key={log.id} className="bg-white rounded-lg p-4">
+                {/* 練習メニューのヘッダー */}
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm font-semibold text-green-800 bg-green-100 px-3 py-1 rounded-lg">📋 練習メニュー {index + 1}</span>
+                    </div>
+                    {log.tags && Array.isArray(log.tags) && log.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {log.tags.map((tag: any) => (
+                          <span
+                            key={tag.id}
+                            className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full"
+                            style={{ 
+                              backgroundColor: tag.color,
+                              color: getTextColor(tag.color)
+                            }}
+                          >
+                            {tag.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              <div className="flex items-center space-x-2 ml-4">
-                <button
-                  onClick={onEdit}
-                  className="p-2 text-gray-400 hover:text-blue-600 rounded-md hover:bg-blue-50"
-                  title="編集"
-                >
-                  <PencilIcon className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={onDelete}
-                  className="p-2 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50"
-                  title="削除"
-                >
-                  <TrashIcon className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
+                  <div className="flex items-center space-x-2 ml-4">
+                    <button
+                      onClick={() => onEditPracticeLog?.(log)}
+                      className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                      title="練習メニューを編集"
+                    >
+                      <PencilIcon className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => onDeletePracticeLog?.(log.id)}
+                      className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                      title="練習メニューを削除"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
             
             {/* 練習内容: 距離 × 本数 × セット数 サークル 泳法 */}
             <div className="bg-white rounded-lg p-3 mb-3 border border-green-200">
@@ -520,9 +582,11 @@ function PracticeDetails({
                 </div>
               </div>
             )}
-          </div>
-        )
-      })}
+              </div>
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }

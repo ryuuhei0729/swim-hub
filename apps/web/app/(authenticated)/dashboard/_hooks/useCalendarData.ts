@@ -205,7 +205,7 @@ export function useCalendarData(currentDate: Date, userId?: string) {
           if (recordDate >= monthStart && recordDate <= monthEnd) {
             const timeString = record.time ? formatTime(record.time) : ''
             const relayIndicator = record.isRelaying ? 'R' : ''
-            const styleInfo = record.style ? `${record.style.nameJp}` : '記録'
+            const styleInfo = record.style ? `${(record.style as any).name}` : '記録'
             const title = `${styleInfo}: ${timeString}${relayIndicator}`
             
             const item: any = {

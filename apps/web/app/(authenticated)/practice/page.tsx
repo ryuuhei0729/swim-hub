@@ -9,7 +9,7 @@ import PracticeTimeModal from './_components/PracticeTimeModal'
 import { useMyPracticeLogs, useDeletePracticeLog } from '@/hooks/useGraphQL'
 import { useMutation, useQuery } from '@apollo/client/react'
 import { CREATE_PRACTICE, CREATE_PRACTICE_LOG, UPDATE_PRACTICE, UPDATE_PRACTICE_LOG, DELETE_PRACTICE, DELETE_PRACTICE_LOG, CREATE_PRACTICE_TIME, UPDATE_PRACTICE_TIME, DELETE_PRACTICE_TIME, ADD_PRACTICE_LOG_TAG, REMOVE_PRACTICE_LOG_TAG } from '@/graphql/mutations'
-import { GET_STYLES, GET_PRACTICE } from '@/graphql/queries'
+import { GET_STYLES, GET_PRACTICE, GET_MY_PRACTICE_TAGS } from '@/graphql/queries'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { ja } from 'date-fns/locale'
 
@@ -24,6 +24,10 @@ export default function PracticePage() {
   const [editingData, setEditingData] = useState<any>(null)
   const [showTimeModal, setShowTimeModal] = useState(false)
   const [selectedPracticeForTime, setSelectedPracticeForTime] = useState<any>(null)
+  
+  // タグフィルタリング用の状態
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
+  const [showTagFilter, setShowTagFilter] = useState(false)
 
   // 練習記録を取得（全てのデータを表示）
   const { data: practiceLogsData, loading, error, refetch } = useMyPracticeLogs()
@@ -33,6 +37,10 @@ export default function PracticePage() {
   // スタイルデータを取得
   const { data: stylesData } = useQuery(GET_STYLES)
   const styles = (stylesData as any)?.styles || []
+  
+  // タグデータを取得
+  const { data: tagsData } = useQuery(GET_MY_PRACTICE_TAGS)
+  const tags = (tagsData as any)?.myPracticeTags || []
 
   // 編集時の詳細データを取得
   const { data: practiceData, loading: practiceDataLoading, error: practiceDataError } = useQuery(GET_PRACTICE, {
@@ -106,8 +114,16 @@ export default function PracticePage() {
 
   const practiceLogs = (practiceLogsData as any)?.myPracticeLogs || []
   
+  // タグフィルタリングロジック
+  const filteredPracticeLogs = practiceLogs.filter((log: any) => {
+    if (selectedTagIds.length === 0) return true
+    
+    const logTagIds = (log.tags || []).map((tag: any) => tag.id)
+    return selectedTagIds.some(tagId => logTagIds.includes(tagId))
+  })
+  
   // 日付の降順でソート
-  const sortedPracticeLogs = [...practiceLogs].sort((a, b) => {
+  const sortedPracticeLogs = [...filteredPracticeLogs].sort((a, b) => {
     const dateA = new Date(a.practice?.date || a.createdAt)
     const dateB = new Date(b.practice?.date || b.createdAt)
     return dateB.getTime() - dateA.getTime()
@@ -415,14 +431,66 @@ export default function PracticePage() {
               日々の練習内容を記録・分析します。
             </p>
           </div>
-          <Button
-            onClick={handleCreateLog}
-            className="flex items-center space-x-2 w-full sm:w-auto justify-center"
-          >
-            <PlusIcon className="h-5 w-5" />
-            <span>新しい練習記録</span>
-          </Button>
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+            <Button
+              onClick={() => setShowTagFilter(!showTagFilter)}
+              variant="outline"
+              className="flex items-center space-x-2 w-full sm:w-auto justify-center"
+            >
+              <span>タグでフィルター</span>
+            </Button>
+            <Button
+              onClick={handleCreateLog}
+              className="flex items-center space-x-2 w-full sm:w-auto justify-center"
+            >
+              <PlusIcon className="h-5 w-5" />
+              <span>新しい練習記録</span>
+            </Button>
+          </div>
         </div>
+        
+        {/* タグフィルタリングUI */}
+        {showTagFilter && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="flex flex-wrap gap-2">
+              {tags.map((tag: any) => (
+                <button
+                  key={tag.id}
+                  onClick={() => {
+                    if (selectedTagIds.includes(tag.id)) {
+                      setSelectedTagIds(selectedTagIds.filter(id => id !== tag.id))
+                    } else {
+                      setSelectedTagIds([...selectedTagIds, tag.id])
+                    }
+                  }}
+                  className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                    selectedTagIds.includes(tag.id)
+                      ? 'text-white'
+                      : 'text-gray-700 bg-gray-100 hover:bg-gray-200'
+                  }`}
+                  style={{
+                    backgroundColor: selectedTagIds.includes(tag.id) ? tag.color : undefined
+                  }}
+                >
+                  {tag.name}
+                </button>
+              ))}
+              {selectedTagIds.length > 0 && (
+                <button
+                  onClick={() => setSelectedTagIds([])}
+                  className="px-3 py-1 rounded-full text-sm font-medium text-gray-500 bg-gray-100 hover:bg-gray-200"
+                >
+                  クリア
+                </button>
+              )}
+            </div>
+            {selectedTagIds.length > 0 && (
+              <p className="mt-2 text-sm text-gray-600">
+                {selectedTagIds.length}個のタグでフィルタリング中
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 統計情報 */}
@@ -865,17 +933,7 @@ export default function PracticePage() {
           setEditingLog(null)
         }}
         onSubmit={handlePracticeSubmit}
-        onDeletePracticeLog={async (practiceLogId: string) => {
-          try {
-            await deletePracticeLogMutation({
-              variables: { id: practiceLogId }
-            })
-          } catch (error) {
-            console.error('Practice_logの削除に失敗しました:', error)
-            throw error
-          }
-        }}
-        initialDate={selectedDate}
+        practiceId={editingData?.id || ''}
         editData={editingData}
         isLoading={isLoading}
       />

@@ -3,27 +3,32 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts'
 import Calendar from './_components/Calendar'
+import PracticeForm from '@/components/forms/PracticeForm'
 import PracticeLogForm from '@/components/forms/PracticeLogForm'
 import RecordForm from '@/components/forms/RecordForm'
 import { useMutation, useQuery } from '@apollo/client/react'
 import { gql } from '@apollo/client'
 import { apolloClient } from '@/lib/apollo-client'
-import { CREATE_PRACTICE, CREATE_PRACTICE_LOG, CREATE_RECORD, DELETE_PRACTICE, DELETE_PRACTICE_LOG, DELETE_RECORD, UPDATE_PRACTICE, UPDATE_PRACTICE_LOG, UPDATE_RECORD, CREATE_PRACTICE_TIME, UPDATE_PRACTICE_TIME, DELETE_PRACTICE_TIME, CREATE_COMPETITION, ADD_PRACTICE_LOG_TAG, REMOVE_PRACTICE_LOG_TAG } from '@/graphql/mutations'
+import { CREATE_PRACTICE, CREATE_RECORD, DELETE_PRACTICE, DELETE_PRACTICE_LOG, DELETE_RECORD, UPDATE_PRACTICE, UPDATE_PRACTICE_LOG, UPDATE_RECORD, CREATE_PRACTICE_TIME, UPDATE_PRACTICE_TIME, DELETE_PRACTICE_TIME, CREATE_COMPETITION, ADD_PRACTICE_LOG_TAG, REMOVE_PRACTICE_LOG_TAG, CREATE_PRACTICE_LOG } from '@/graphql/mutations'
 import { GET_CALENDAR_DATA, GET_STYLES, GET_PRACTICE, GET_PRACTICE_LOG, GET_RECORD, GET_PRACTICE_LOGS, GET_RECORDS, GET_PRACTICES, GET_COMPETITION_WITH_RECORDS } from '@/graphql/queries'
 
 export default function DashboardPage() {
   const { profile } = useAuth()
   const [showPracticeForm, setShowPracticeForm] = useState(false)
+  const [showPracticeLogForm, setShowPracticeLogForm] = useState(false)
   const [showRecordForm, setShowRecordForm] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
   const [editingData, setEditingData] = useState<any>(null)
+  const [openDayDetail, setOpenDayDetail] = useState<Date | null>(null)
+  const [currentPracticeId, setCurrentPracticeId] = useState<string | null>(null)
 
 
   // スタイルデータを取得
   const { data: stylesData } = useQuery(GET_STYLES)
   const styles = (stylesData as any)?.styles || []
+
 
   // 編集時の詳細データを取得
   const { data: practiceData, loading: practiceDataLoading, error: practiceDataError } = useQuery(GET_PRACTICE, {
@@ -86,31 +91,6 @@ export default function DashboardPage() {
     }
   })
 
-  const [createPracticeLog] = useMutation(CREATE_PRACTICE_LOG, {
-    refetchQueries: [
-      {
-        query: GET_CALENDAR_DATA,
-        variables: { year: new Date().getFullYear(), month: new Date().getMonth() + 1 }
-      },
-      {
-        query: GET_PRACTICES,
-        variables: {
-          startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-          endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
-        }
-      },
-    ],
-    awaitRefetchQueries: true,
-    // キャッシュの更新はrefetchQueriesで自動的に行われるため、手動更新は不要
-    onCompleted: () => {
-      setShowPracticeForm(false)
-      setSelectedDate(null)
-    },
-    onError: (error) => {
-      console.error('練習記録の作成に失敗しました:', error)
-      alert('練習記録の作成に失敗しました。')
-    }
-  })
 
   const [createRecord] = useMutation(CREATE_RECORD, {
     refetchQueries: [
@@ -245,20 +225,6 @@ export default function DashboardPage() {
   })
 
   const [updatePractice] = useMutation(UPDATE_PRACTICE, {
-    refetchQueries: [
-      {
-        query: GET_CALENDAR_DATA,
-        variables: { year: new Date().getFullYear(), month: new Date().getMonth() + 1 }
-      },
-      {
-        query: GET_PRACTICES,
-        variables: {
-          startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-          endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
-        }
-      },
-    ],
-    awaitRefetchQueries: true,
     onError: (error) => {
       console.error('練習の更新に失敗しました:', error)
       alert('練習の更新に失敗しました。')
@@ -333,6 +299,23 @@ export default function DashboardPage() {
   const [updatePracticeTime] = useMutation(UPDATE_PRACTICE_TIME)
   const [deletePracticeTime] = useMutation(DELETE_PRACTICE_TIME)
   const [createCompetition] = useMutation(CREATE_COMPETITION)
+
+  const [createPracticeLog] = useMutation(CREATE_PRACTICE_LOG, {
+    refetchQueries: [
+      {
+        query: GET_CALENDAR_DATA,
+        variables: { year: new Date().getFullYear(), month: new Date().getMonth() + 1 }
+      },
+      {
+        query: GET_PRACTICES,
+        variables: {
+          startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+          endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
+        }
+      },
+    ],
+    awaitRefetchQueries: true
+  })
 
   const [addPracticeLogTag] = useMutation(ADD_PRACTICE_LOG_TAG)
   const [removePracticeLogTag] = useMutation(REMOVE_PRACTICE_LOG_TAG)
@@ -557,14 +540,162 @@ export default function DashboardPage() {
     }
   }
 
+  const handleAddPracticeLog = (practiceId: string) => {
+    setCurrentPracticeId(practiceId)
+    setShowPracticeLogForm(true)
+  }
+
+  const handlePracticeSubmit = async (formData: any) => {
+    setIsLoading(true)
+    try {
+      const practiceInput = {
+        date: formData.practiceDate,
+        place: formData.place,
+        note: formData.note
+      }
+
+      if (editingData) {
+        // 編集モードの場合
+        try {
+          await updatePractice({
+            variables: {
+              id: editingData.id,
+              input: practiceInput
+            }
+          })
+        } catch (updateError) {
+          console.error('Practice更新エラー:', updateError)
+          throw updateError
+        }
+      } else {
+        // 新規作成モードの場合
+        const result = await createPractice({ variables: { input: practiceInput } })
+        const practiceId = (result.data as any)?.createPractice?.id
+        
+        if (practiceId) {
+          // カレンダーをリロードして記録モーダルに戻る
+          setShowPracticeForm(false)
+          setEditingItem(null)
+          setEditingData(null)
+          
+          // カレンダーデータをリフレッシュ
+          try {
+            await apolloClient.refetchQueries({
+              include: [GET_CALENDAR_DATA, GET_PRACTICES]
+            })
+            
+            // リフレッシュ後にその日の記録モーダルを開く
+            setTimeout(() => {
+              if (selectedDate) {
+                setOpenDayDetail(selectedDate)
+              }
+            }, 100)
+          } catch (refetchError) {
+            console.error('カレンダーのリフレッシュに失敗しました:', refetchError)
+          }
+        }
+      }
+      
+      // 編集モードの場合もカレンダーをリフレッシュ
+      if (editingData) {
+        try {
+          await apolloClient.refetchQueries({
+            include: [GET_CALENDAR_DATA, GET_PRACTICES]
+          })
+        } catch (refetchError) {
+          console.error('カレンダーのリフレッシュに失敗しました:', refetchError)
+        }
+        setShowPracticeForm(false)
+        setEditingItem(null)
+        setEditingData(null)
+      }
+    } catch (error) {
+      console.error('練習記録の処理に失敗しました:', error)
+      alert('練習記録の処理に失敗しました。')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+
   const handleEditItem = (item: any) => {
     setEditingItem(item)
-    setEditingData(null) // 編集データをリセット
     setSelectedDate(new Date(item.item_date))
     if (item.item_type === 'practice') {
-      setShowPracticeForm(true)
+      // Practice編集の場合は、practiceIdを渡してhandleEditPracticeを呼び出す
+      handleEditPractice(item.id)
     } else {
+      setEditingData(null) // Record編集の場合はリセット
       setShowRecordForm(true)
+    }
+  }
+
+  // Practice編集のハンドラー
+  const handleEditPractice = async (practiceId: string) => {
+    try {
+      const result = await apolloClient.query({
+        query: GET_PRACTICE,
+        variables: { id: practiceId },
+        fetchPolicy: 'network-only' // キャッシュを無視して最新データを取得
+      })
+      
+      if (result.data && (result.data as any)?.practice) {
+        const practiceData = (result.data as any).practice
+        setEditingData(practiceData)
+        setShowPracticeForm(true)
+      } else {
+        console.error('Practiceデータが見つかりません:', result.data)
+        alert('Practiceデータが見つかりません。')
+      }
+    } catch (error) {
+      console.error('Practiceデータの取得に失敗しました:', error)
+      console.error('エラーの詳細:', error.message)
+      console.error('エラーのスタック:', error.stack)
+      alert(`Practiceデータの取得に失敗しました: ${error.message}`)
+    }
+  }
+
+  // PracticeLog編集のハンドラー
+  const handleEditPracticeLog = async (log: any) => {
+    try {
+      // PracticeLogの詳細データを取得
+      const { data } = await apolloClient.query({
+        query: GET_PRACTICE_LOG,
+        variables: { id: log.id }
+      })
+      
+      if ((data as any)?.practiceLog) {
+        const practiceLog = (data as any).practiceLog
+        console.log('取得したPracticeLogデータ:', practiceLog)
+        setEditingData(practiceLog)
+        setCurrentPracticeId(practiceLog.practiceId)
+        setShowPracticeLogForm(true)
+      } else {
+        console.error('PracticeLogデータが見つかりません:', data)
+        alert('PracticeLogデータが見つかりません。')
+      }
+    } catch (error) {
+      console.error('PracticeLogデータの取得に失敗しました:', error)
+      alert('PracticeLogデータの取得に失敗しました。')
+    }
+  }
+
+  // PracticeLog削除のハンドラー
+  const handleDeletePracticeLog = async (logId: string) => {
+    if (!confirm('この練習メニューを削除しますか？')) return
+    
+    try {
+      await deletePracticeLog({
+        variables: { id: logId }
+      })
+      
+      // カレンダーデータを再取得
+      await apolloClient.refetchQueries({
+        include: [GET_CALENDAR_DATA]
+      })
+    } catch (error) {
+      console.error('PracticeLogの削除に失敗しました:', error)
+      alert('PracticeLogの削除に失敗しました。')
     }
   }
 
@@ -700,203 +831,6 @@ export default function DashboardPage() {
     }
   }
 
-  const handlePracticeSubmit = async (formData: any) => {
-    setIsLoading(true)
-    try {
-      const menus = Array.isArray(formData.sets) ? formData.sets : []
-
-      // 編集時: 従来のPracticeLogのみを更新、新規時: Practice作成→PracticeLog作成
-      const createdPracticeLogIds: string[] = []
-
-      if (editingData && editingItem?.item_type === 'practice') {
-        // 編集時: まずPractice本体を更新
-        const practiceInput = {
-          date: formData.practiceDate,
-          place: formData.location,
-          note: formData.note
-        }
-        await updatePractice({ variables: { id: editingData.practiceId, input: practiceInput } })
-
-        // 編集時: 複数のPractice_logがある場合の処理
-        if (editingData.practiceLogs && editingData.practiceLogs.length > 0) {
-          // 複数のPractice_logを更新
-          for (let i = 0; i < menus.length && i < editingData.practiceLogs.length; i++) {
-            const m = menus[i]
-            const existingLog = editingData.practiceLogs[i]
-            const repsPerSet = (m?.reps as number) || 0
-            const setCount = (m?.setCount as number) || 1
-            const distancePerRep = (m?.distance as number) || 0
-            const input = {
-              practiceId: editingData.practiceId,
-              style: m?.style || 'Fr',
-              repCount: repsPerSet,
-              setCount: setCount,
-              distance: distancePerRep,
-              circle: m?.circleTime || null,
-              note: m?.note || ''
-            }
-            await updatePracticeLog({ variables: { id: existingLog.id, input } })
-            
-            // タグの保存
-            const existingTags = existingLog.tags || []
-            await savePracticeLogTags(existingLog.id, m?.tags || [], existingTags)
-            
-            // タイムデータの変更を確認してから更新処理を実行
-            try {
-              // 最新のPractice_logデータを取得
-              const { data: latestPracticeLogData } = await apolloClient.query({
-                query: GET_PRACTICE_LOG,
-                variables: { id: existingLog.id },
-                fetchPolicy: 'network-only' // キャッシュを無視して最新データを取得
-              })
-              
-              const latestPracticeLog = (latestPracticeLogData as any)?.practiceLog
-              const existingTimes = latestPracticeLog?.times || []
-              const newTimes = m?.times || []
-              
-              // タイムデータに変更があるかチェック
-              const hasChanged = hasTimeDataChanged(existingTimes, newTimes)
-              
-              if (hasChanged) {
-                await updatePracticeTimes(existingLog.id, existingTimes, newTimes)
-              }
-            } catch (fetchError) {
-              console.error('最新のPractice_logデータの取得に失敗しました:', fetchError)
-              // フォールバック: 強制的に更新処理を実行
-              await updatePracticeTimes(existingLog.id, existingLog.times || [], m?.times || [])
-            }
-            
-            createdPracticeLogIds.push(existingLog.id)
-          }
-        } else {
-          // 単一のPractice_logの場合の従来の処理
-          const m = menus[0] || {}
-          const repsPerSet = (m?.reps as number) || 0
-          const setCount = (m?.setCount as number) || 1
-          const distancePerRep = (m?.distance as number) || 0
-          const input = {
-            practiceId: editingData.practiceId, // 既存のPractice IDを使用
-            style: m?.style || 'Fr',
-            repCount: repsPerSet,
-            setCount: setCount,
-            distance: distancePerRep,
-            circle: m?.circleTime || null,
-            note: m?.note || ''
-          }
-          await updatePracticeLog({ variables: { id: editingData.id, input } })
-          
-          // タグの保存
-          const existingTags = editingData.tags || []
-          await savePracticeLogTags(editingData.id, m?.tags || [], existingTags)
-          
-          // タイムデータの変更を確認してから更新処理を実行
-          try {
-            // 最新のPractice_logデータを取得
-            const { data: latestPracticeLogData } = await apolloClient.query({
-              query: GET_PRACTICE_LOG,
-              variables: { id: editingData.id },
-              fetchPolicy: 'network-only' // キャッシュを無視して最新データを取得
-            })
-            
-            const latestPracticeLog = (latestPracticeLogData as any)?.practiceLog
-            const existingTimes = latestPracticeLog?.times || []
-            const newTimes = m?.times || []
-            
-            // タイムデータに変更があるかチェック
-            const hasChanged = hasTimeDataChanged(existingTimes, newTimes)
-            
-            if (hasChanged) {
-              await updatePracticeTimes(editingData.id, existingTimes, newTimes)
-            }
-          } catch (fetchError) {
-            console.error('最新のPractice_logデータの取得に失敗しました:', fetchError)
-            // フォールバック: 強制的に更新処理を実行
-            await updatePracticeTimes(editingData.id, editingData.times || [], m?.times || [])
-          }
-          
-          createdPracticeLogIds.push(editingData.id)
-        }
-      } else {
-        // 新規時: まずPracticeを作成
-        const practiceInput = {
-          date: formData.practiceDate,
-          place: formData.location,
-          note: formData.note
-        }
-        const practiceResult = await createPractice({ variables: { input: practiceInput } })
-        const practiceId = (practiceResult.data as any)?.createPractice?.id
-
-        if (practiceId) {
-          // 各メニューをPracticeLogとして作成
-          for (const m of menus) {
-            const repsPerSet = (m?.reps as number) || 0
-            const setCount = (m?.setCount as number) || 1
-            const distancePerRep = (m?.distance as number) || 0
-            const input = {
-              practiceId: practiceId,
-              style: m?.style || 'Fr',
-              repCount: repsPerSet,
-              setCount: setCount,
-              distance: distancePerRep,
-              circle: m?.circleTime || null,
-              note: m?.note || ''
-            }
-            const result = await createPracticeLog({ variables: { input } })
-            const id = (result.data as any)?.createPracticeLog?.id
-            if (id) {
-              createdPracticeLogIds.push(id)
-              
-              // タグの保存（新規作成時は既存タグなし）
-              await savePracticeLogTags(id, m?.tags || [], [])
-            }
-          }
-        }
-      }
-
-      // タイムデータの管理（新規作成時のみ）
-      if (createdPracticeLogIds.length > 0 && menus.length > 0 && !editingData) {
-        // メニューごとに新しいタイムを保存
-        for (let i = 0; i < menus.length; i++) {
-          const set = menus[i]
-          const practiceLogId = createdPracticeLogIds[i] || createdPracticeLogIds[0]
-          if (practiceLogId && set?.times && set.times.length > 0) {
-            for (const timeRecord of set.times) {
-              if (timeRecord.time > 0) {
-                try {
-                  await createPracticeTime({
-                    variables: {
-                      input: {
-                        practiceLogId,
-                        repNumber: timeRecord.repNumber,
-                        setNumber: timeRecord.setNumber,
-                        time: timeRecord.time
-                      }
-                    }
-                  })
-                } catch (timeError) {
-                  console.error('タイム記録の保存でエラーが発生しました:', timeError)
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // すべてのミューテーション完了後、手動でキャッシュを更新
-      try {
-        await apolloClient.refetchQueries({
-          include: [GET_CALENDAR_DATA, GET_PRACTICES]
-        })
-      } catch (refetchError) {
-        console.error('キャッシュの手動更新でエラーが発生しました:', refetchError)
-      }
-    } catch (error) {
-      console.error('練習記録の保存に失敗しました:', error)
-      alert('練習記録の保存に失敗しました。エラー内容をコンソールで確認してください。')
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handleRecordSubmit = async (formData: any) => {
     console.log('Dashboard: handleRecordSubmit called with:', formData)
@@ -1153,11 +1087,15 @@ export default function DashboardPage() {
           onAddItem={handleAddItem} 
           onEditItem={handleEditItem}
           onDeleteItem={handleDeleteItem}
+          onAddPracticeLog={handleAddPracticeLog}
+          onEditPracticeLog={handleEditPracticeLog}
+          onDeletePracticeLog={handleDeletePracticeLog}
+          openDayDetail={openDayDetail}
         />
       </div>
 
-      {/* 練習記録フォーム */}
-      <PracticeLogForm
+      {/* 練習記録フォーム（第1段階：Practiceのみ作成） */}
+      <PracticeForm
         isOpen={showPracticeForm}
         onClose={() => {
           setShowPracticeForm(false)
@@ -1166,20 +1104,99 @@ export default function DashboardPage() {
           setEditingData(null)
         }}
         onSubmit={handlePracticeSubmit}
-        onDeletePracticeLog={async (practiceLogId: string) => {
-          try {
-            await deletePracticeLog({
-              variables: { id: practiceLogId }
-            })
-          } catch (error) {
-            console.error('Practice_logの削除に失敗しました:', error)
-            throw error
-          }
-        }}
         initialDate={selectedDate}
         editData={editingData}
         isLoading={isLoading}
       />
+
+      {/* 練習メニューフォーム（第2段階：PracticeLog作成） */}
+      {currentPracticeId && (
+        <PracticeLogForm
+          isOpen={showPracticeLogForm}
+          onClose={() => {
+            setShowPracticeLogForm(false)
+            setCurrentPracticeId(null)
+            setEditingData(null)
+          }}
+          editData={editingData}
+          onSubmit={async (formDataArray) => {
+            setIsLoading(true)
+            try {
+              // 複数のPracticeLogを順次作成
+              for (const formData of formDataArray) {
+                // PracticeLogを作成
+                const practiceLogResult = await createPracticeLog({
+                  variables: {
+                    input: {
+                      practiceId: currentPracticeId!,
+                      style: formData.style,
+                      repCount: formData.repCount,
+                      setCount: formData.setCount,
+                      distance: formData.distance,
+                      circle: formData.circle,
+                      note: formData.note
+                    }
+                  }
+                })
+                
+                const practiceLogId = (practiceLogResult.data as any)?.createPracticeLog?.id
+                
+                if (practiceLogId) {
+                  // PracticeTimeを作成
+                  for (const time of formData.times) {
+                    if (time.time > 0) {
+                      await createPracticeTime({
+                        variables: {
+                          input: {
+                            practiceLogId: practiceLogId,
+                            repNumber: time.repNumber,
+                            setNumber: time.setNumber,
+                            time: time.time
+                          }
+                        }
+                      })
+                    }
+                  }
+                  
+                  // タグを追加
+                  for (const tagId of formData.tagIds) {
+                    await addPracticeLogTag({
+                      variables: {
+                        practiceLogId: practiceLogId,
+                        practiceTagId: tagId
+                      }
+                    })
+                  }
+                }
+              }
+              
+              // カレンダーをリフレッシュ
+              await apolloClient.refetchQueries({
+                include: [GET_CALENDAR_DATA, GET_PRACTICES]
+              })
+              
+              setShowPracticeLogForm(false)
+              setCurrentPracticeId(null)
+              
+              // その日の記録モーダルを開く
+              setTimeout(() => {
+                if (selectedDate) {
+                  setOpenDayDetail(selectedDate)
+                }
+              }, 100)
+              
+            } catch (error) {
+              console.error('練習メニューの作成に失敗しました:', error)
+              alert('練習メニューの作成に失敗しました。')
+            } finally {
+              setIsLoading(false)
+            }
+          }}
+          practiceId={currentPracticeId}
+          isLoading={isLoading}
+        />
+      )}
+
 
       {/* 大会記録フォーム */}
       <RecordForm
@@ -1199,4 +1216,5 @@ export default function DashboardPage() {
     </div>
   )
 }
+
 

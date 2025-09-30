@@ -318,9 +318,13 @@ export interface CalendarProps {
   onAddItem?: (date: Date, type: CalendarItemType) => void
   onEditItem?: (item: CalendarItem) => void
   onDeleteItem?: (itemId: string, itemType: CalendarItemType) => void
+  onAddPracticeLog?: (practiceId: string) => void
+  onEditPracticeLog?: (log: any) => void
+  onDeletePracticeLog?: (logId: string) => void
   selectedDate?: Date | null
   isLoading?: boolean
   userId?: string
+  openDayDetail?: Date | null
 }
 
 // 日詳細モーダル
@@ -332,6 +336,9 @@ export interface DayDetailModalProps {
   onEditItem?: (item: CalendarItem) => void
   onDeleteItem?: (itemId: string, itemType: CalendarItemType) => void
   onAddItem?: (date: Date, type: CalendarItemType) => void
+  onAddPracticeLog?: (practiceId: string) => void
+  onEditPracticeLog?: (log: any) => void
+  onDeletePracticeLog?: (logId: string) => void
 }
 
 // ダッシュボード統計

@@ -17,8 +17,12 @@ export default function Calendar({
   onAddItem,
   onEditItem,
   onDeleteItem,
+  onAddPracticeLog,
+  onEditPracticeLog,
+  onDeletePracticeLog,
   isLoading: propLoading = false,
-  userId
+  userId,
+  openDayDetail
 }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
@@ -28,6 +32,14 @@ export default function Calendar({
 
   // GraphQLデータを取得
   const { calendarItems, monthlySummary, loading: dataLoading, error, refetch } = useCalendarData(currentDate, userId)
+  
+  // openDayDetailが変更された時に記録モーダルを開く
+  React.useEffect(() => {
+    if (openDayDetail) {
+      setSelectedDate(openDayDetail)
+      setShowDayDetail(true)
+    }
+  }, [openDayDetail])
   
   // プロップスのentriesが指定されている場合はそれを優先、そうでなければGraphQLデータを使用
   const entries = propEntries && propEntries.length > 0 ? propEntries : calendarItems
@@ -601,6 +613,9 @@ export default function Calendar({
             setSelectedDate(null)
             onAddItem?.(date, type)
           }}
+          onAddPracticeLog={onAddPracticeLog}
+          onEditPracticeLog={onEditPracticeLog}
+          onDeletePracticeLog={onDeletePracticeLog}
         />
       )}
     </div>
