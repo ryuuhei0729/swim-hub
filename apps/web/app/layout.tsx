@@ -7,7 +7,7 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: '水泳選手マネジメントシステム',
+  title: 'SwimHub',
   description: '水泳チームの選手、コーチ、監督、マネージャーが効率的にチーム運営を行えるWebアプリケーション',
 }
 

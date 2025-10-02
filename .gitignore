@@ -20,6 +20,9 @@ yarn-error.log*
 .env.*
 .env.*.local
 
+# MCP Configuration (contains sensitive tokens)
+.mcp.json
+
 # IDE
 .vscode/
 .idea/

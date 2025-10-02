@@ -101,9 +101,8 @@ export default function Home() {
             </div>
             
             <h1 className="text-4xl sm:text-6xl font-bold text-gray-900 mb-6 animate-fade-in">
-              <span className="block">水泳選手</span>
               <span className="block text-transparent bg-clip-text bg-gradient-swim">
-                マネジメントシステム
+                SwimHub
               </span>
             </h1>
             

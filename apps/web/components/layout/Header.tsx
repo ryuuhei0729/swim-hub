@@ -72,11 +72,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
               </div>
               <div>
                 <h1 className="text-base font-bold text-gray-900 sm:text-xl">
-                  水泳選手マネジメント
+                  SwimHub
                 </h1>
-                <div className="text-[10px] sm:text-xs text-gray-500 -mt-1">
-                  Swimming Management System
-                </div>
               </div>
             </div>
           </div>
