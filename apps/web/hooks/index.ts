@@ -2,4 +2,5 @@
 export { useDebounce } from './useDebounce'
 export * from './useGraphQL'
 export { useLocalStorage } from './useLocalStorage'
+export * from './useTeamAnnouncements'
 

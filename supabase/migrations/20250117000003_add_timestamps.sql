@@ -31,22 +31,27 @@ ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 -- =============================================================================
 
 -- competitionsテーブルの更新日時トリガー
+DROP TRIGGER IF EXISTS update_competitions_updated_at ON competitions;
 CREATE TRIGGER update_competitions_updated_at BEFORE UPDATE ON competitions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- recordsテーブルの更新日時トリガー
+DROP TRIGGER IF EXISTS update_records_updated_at ON records;
 CREATE TRIGGER update_records_updated_at BEFORE UPDATE ON records
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- split_timesテーブルの更新日時トリガー
+DROP TRIGGER IF EXISTS update_split_times_updated_at ON split_times;
 CREATE TRIGGER update_split_times_updated_at BEFORE UPDATE ON split_times
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- practice_log_tagsテーブルの更新日時トリガー
+DROP TRIGGER IF EXISTS update_practice_log_tags_updated_at ON practice_log_tags;
 CREATE TRIGGER update_practice_log_tags_updated_at BEFORE UPDATE ON practice_log_tags
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- user_sessionsテーブルの更新日時トリガー
+DROP TRIGGER IF EXISTS update_user_sessions_updated_at ON user_sessions;
 CREATE TRIGGER update_user_sessions_updated_at BEFORE UPDATE ON user_sessions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 

@@ -388,6 +388,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ユーザー作成時のトリガー
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
@@ -402,21 +403,25 @@ VALUES ('profile-images', 'profile-images', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- Storage RLS ポリシーの設定
+DROP POLICY IF EXISTS "Users can view profile images" ON storage.objects;
 CREATE POLICY "Users can view profile images" ON storage.objects
 FOR SELECT USING (bucket_id = 'profile-images');
 
+DROP POLICY IF EXISTS "Users can upload their own profile images" ON storage.objects;
 CREATE POLICY "Users can upload their own profile images" ON storage.objects
 FOR INSERT WITH CHECK (
   bucket_id = 'profile-images' 
   AND auth.uid()::text = (storage.foldername(name))[1]
 );
 
+DROP POLICY IF EXISTS "Users can update their own profile images" ON storage.objects;
 CREATE POLICY "Users can update their own profile images" ON storage.objects
 FOR UPDATE USING (
   bucket_id = 'profile-images' 
   AND auth.uid()::text = (storage.foldername(name))[1]
 );
 
+DROP POLICY IF EXISTS "Users can delete their own profile images" ON storage.objects;
 CREATE POLICY "Users can delete their own profile images" ON storage.objects
 FOR DELETE USING (
   bucket_id = 'profile-images' 

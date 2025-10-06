@@ -20,8 +20,15 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 
 // ユーザーIDを取得するヘルパー関数
 function getUserId(context: any): string {
+  console.log('getUserId called with context:', {
+    hasUser: !!context?.user,
+    userId: context?.user?.id,
+    userEmail: context?.user?.email
+  })
+  
   const userId = context?.user?.id
   if (!userId) {
+    console.error('getUserId: 認証が必要です', { context })
     throw new Error('認証が必要です')
   }
   return userId
@@ -32,9 +39,310 @@ function formatDate(date: Date): string {
   return date.toISOString().split('T')[0]
 }
 
+// 管理者権限チェック関数
+async function checkAdminPermission(userId: string, teamId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('team_memberships')
+      .select('role, is_active')
+      .eq('team_id', teamId)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .single()
+    
+    if (error || !data) {
+      return false
+    }
+    
+    return data.role === 'admin'
+  } catch (error) {
+    console.error('Admin permission check error:', error)
+    return false
+  }
+}
+
 export const resolvers = {
   // クエリリゾルバー
   Query: {
+    // チーム関連クエリ
+    myTeams: async (_: any, __: any, context: any) => {
+      const userId = getUserId(context)
+      
+      try {
+        const { data, error } = await supabase
+          .from('team_memberships')
+          .select(`
+            *,
+            team:teams(*),
+            user:users(*)
+          `)
+          .eq('user_id', userId)
+          .eq('is_active', true)
+        
+        if (error) {
+          throw new Error(error.message)
+        }
+        
+        return data?.map((membership: any) => ({
+          id: membership.id,
+          teamId: membership.team_id,
+          team: membership.team ? {
+            id: membership.team.id,
+            name: membership.team.name,
+            description: membership.team.description,
+            inviteCode: membership.team.invite_code,
+            createdBy: membership.team.created_by,
+            createdAt: membership.team.created_at,
+            updatedAt: membership.team.updated_at
+          } : null,
+          userId: membership.user_id,
+          user: membership.user ? {
+            id: membership.user.id,
+            name: membership.user.name,
+            gender: membership.user.gender,
+            profileImagePath: membership.user.profile_image_path,
+            birthday: membership.user.birthday,
+            bio: membership.user.bio,
+            createdAt: membership.user.created_at,
+            updatedAt: membership.user.updated_at
+          } : null,
+          role: membership.role.toUpperCase(),
+          joinedAt: membership.joined_at,
+          leftAt: membership.left_at,
+          isActive: membership.is_active,
+          createdAt: membership.created_at,
+          updatedAt: membership.updated_at
+        })) || []
+      } catch (error) {
+        console.error('myTeams error:', error)
+        throw error
+      }
+    },
+
+    teamMembers: async (_: any, { teamId }: { teamId: string }, context: any) => {
+      const userId = getUserId(context)
+      
+      try {
+        // チームメンバーかどうか確認
+        const { data: membership, error: membershipError } = await supabase
+          .from('team_memberships')
+          .select('id')
+          .eq('team_id', teamId)
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .single()
+        
+        if (membershipError || !membership) {
+          throw new Error('チームへのアクセス権限がありません')
+        }
+        
+        const { data, error } = await supabase
+          .from('team_memberships')
+          .select(`
+            *,
+            user:users(*)
+          `)
+          .eq('team_id', teamId)
+          .order('created_at', { ascending: true })
+        
+        if (error) {
+          throw new Error(error.message)
+        }
+        
+        return data?.map((membership: any) => ({
+          id: membership.id,
+          teamId: membership.team_id,
+          userId: membership.user_id,
+          user: membership.user ? {
+            id: membership.user.id,
+            name: membership.user.name,
+            gender: membership.user.gender,
+            profileImagePath: membership.user.profile_image_path,
+            birthday: membership.user.birthday,
+            bio: membership.user.bio,
+            createdAt: membership.user.created_at,
+            updatedAt: membership.user.updated_at
+          } : null,
+          role: membership.role.toUpperCase(),
+          joinedAt: membership.joined_at,
+          leftAt: membership.left_at,
+          isActive: membership.is_active,
+          createdAt: membership.created_at,
+          updatedAt: membership.updated_at
+        })) || []
+      } catch (error) {
+        console.error('teamMembers error:', error)
+        throw error
+      }
+    },
+
+    team: async (_: any, { id }: { id: string }, context: any) => {
+      const userId = getUserId(context)
+      
+      try {
+        // チームメンバーかどうか確認
+        const { data: membership, error: membershipError } = await supabase
+          .from('team_memberships')
+          .select('id')
+          .eq('team_id', id)
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .single()
+        
+        if (membershipError || !membership) {
+          throw new Error('チームへのアクセス権限がありません')
+        }
+        
+        const { data, error } = await supabase
+          .from('teams')
+          .select(`
+            *,
+            creator:users(*),
+            members:team_memberships(*, user:users(*)),
+            groups:team_groups(*),
+            announcements:announcements(*),
+            entries:team_entries(*)
+          `)
+          .eq('id', id)
+          .single()
+        
+        if (error) {
+          throw new Error(error.message)
+        }
+        
+        return {
+          id: data.id,
+          name: data.name,
+          description: data.description,
+          inviteCode: data.invite_code,
+          isPublic: data.is_public,
+          maxMembers: data.max_members,
+          createdBy: data.created_by,
+          creator: data.creator ? {
+            id: data.creator.id,
+            name: data.creator.name,
+            gender: data.creator.gender,
+            profileImagePath: data.creator.profile_image_path,
+            birthday: data.creator.birthday,
+            bio: data.creator.bio,
+            createdAt: data.creator.created_at,
+            updatedAt: data.creator.updated_at
+          } : null,
+          members: data.members?.map((membership: any) => ({
+            id: membership.id,
+            teamId: membership.team_id,
+            userId: membership.user_id,
+            user: membership.user ? {
+              id: membership.user.id,
+              name: membership.user.name,
+              gender: membership.user.gender,
+              profileImagePath: membership.user.profile_image_path,
+              birthday: membership.user.birthday,
+              bio: membership.user.bio,
+              createdAt: membership.user.created_at,
+              updatedAt: membership.user.updated_at
+            } : null,
+            role: membership.role.toUpperCase(),
+            joinedAt: membership.joined_at,
+            leftAt: membership.left_at,
+            isActive: membership.is_active,
+            createdAt: membership.created_at,
+            updatedAt: membership.updated_at
+          })) || [],
+          groups: data.groups?.map((group: any) => ({
+            id: group.id,
+            teamId: group.team_id,
+            name: group.name,
+            description: group.description,
+            createdBy: group.created_by,
+            createdAt: group.created_at,
+            updatedAt: group.updated_at
+          })) || [],
+          announcements: data.announcements?.map((announcement: any) => ({
+            id: announcement.id,
+            teamId: announcement.team_id,
+            title: announcement.title,
+            content: announcement.content,
+            createdBy: announcement.created_by,
+            isPublished: announcement.is_published,
+            publishedAt: announcement.published_at,
+            createdAt: announcement.created_at,
+            updatedAt: announcement.updated_at
+          })) || [],
+          schedules: data.schedules?.map((schedule: any) => ({
+            id: schedule.id,
+            teamId: schedule.team_id,
+            eventType: schedule.event_type.toUpperCase(),
+            title: schedule.title,
+            description: schedule.description,
+            scheduleDate: schedule.schedule_date,
+            startTime: schedule.start_time,
+            endTime: schedule.end_time,
+            location: schedule.location,
+            createdBy: schedule.created_by,
+            createdAt: schedule.created_at,
+            updatedAt: schedule.updated_at
+          })) || [],
+          entries: data.entries?.map((entry: any) => ({
+            id: entry.id,
+            teamId: entry.team_id,
+            competitionId: entry.competition_id,
+            userId: entry.user_id,
+            styleId: entry.style_id,
+            entryTime: entry.entry_time,
+            note: entry.note,
+            status: entry.status.toUpperCase(),
+            createdAt: entry.created_at,
+            updatedAt: entry.updated_at
+          })) || [],
+          createdAt: data.created_at,
+          updatedAt: data.updated_at
+        }
+      } catch (error) {
+        console.error('team error:', error)
+        throw error
+      }
+    },
+
+    teamByInviteCode: async (_: any, { inviteCode }: { inviteCode: string }, context: any) => {
+      try {
+        const { data, error } = await supabase
+          .from('teams')
+          .select(`
+            *,
+            creator:users(*)
+          `)
+          .eq('invite_code', inviteCode)
+          .single()
+        
+        if (error) {
+          throw new Error('チームが見つかりません')
+        }
+        
+        return {
+          id: data.id,
+          name: data.name,
+          description: data.description,
+          inviteCode: data.invite_code,
+          createdBy: data.created_by,
+          creator: data.creator ? {
+            id: data.creator.id,
+            name: data.creator.name,
+            gender: data.creator.gender,
+            profileImagePath: data.creator.profile_image_path,
+            birthday: data.creator.birthday,
+            bio: data.creator.bio,
+            createdAt: data.creator.created_at,
+            updatedAt: data.creator.updated_at
+          } : null,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at
+        }
+      } catch (error) {
+        console.error('teamByInviteCode error:', error)
+        throw error
+      }
+    },
     // ユーザー関連
     me: async (_: any, __: any, context: any) => {
       const userId = getUserId(context)
@@ -1054,6 +1362,158 @@ export const resolvers = {
           totalRecords: monthlyRecords.length
         }
       }
+    },
+
+    // チームお知らせ関連のクエリ
+    teamAnnouncements: async (_: any, { teamId }: { teamId: string }, context: any) => {
+      const userId = getUserId(context)
+      
+      try {
+        // チームメンバーかどうか確認
+        const { data: membership } = await supabase
+          .from('team_memberships')
+          .select('id')
+          .eq('team_id', teamId)
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .single()
+        
+        if (!membership) {
+          throw new Error('チームメンバーではありません')
+        }
+
+        const { data, error } = await supabase
+          .from('announcements')
+          .select(`
+            *,
+            created_by_user:users!created_by(name)
+          `)
+          .eq('team_id', teamId)
+          .order('created_at', { ascending: false })
+        
+        if (error) {
+          throw new Error(error.message)
+        }
+        
+        return data?.map((announcement: any) => ({
+          id: announcement.id,
+          teamId: announcement.team_id,
+          title: announcement.title,
+          content: announcement.content,
+          createdBy: announcement.created_by,
+          isPublished: announcement.is_published,
+          publishedAt: announcement.published_at,
+          createdAt: announcement.created_at,
+          updatedAt: announcement.updated_at
+        })) || []
+      } catch (error) {
+        console.error('teamAnnouncements error:', error)
+        throw error
+      }
+    },
+
+    teamAnnouncement: async (_: any, { id }: { id: string }, context: any) => {
+      const userId = getUserId(context)
+      
+      try {
+        const { data, error } = await supabase
+          .from('announcements')
+          .select(`
+            *,
+            created_by_user:users!created_by(name)
+          `)
+          .eq('id', id)
+          .single()
+        
+        if (error) {
+          throw new Error(error.message)
+        }
+        
+        // チームメンバーかどうか確認
+        const { data: membership } = await supabase
+          .from('team_memberships')
+          .select('id')
+          .eq('team_id', data.team_id)
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .single()
+        
+        if (!membership) {
+          throw new Error('チームメンバーではありません')
+        }
+        
+        return {
+          id: data.id,
+          teamId: data.team_id,
+          title: data.title,
+          content: data.content,
+          createdBy: data.created_by,
+          isPublished: data.is_published,
+          publishedAt: data.published_at,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at
+        }
+      } catch (error) {
+        console.error('teamAnnouncement error:', error)
+        throw error
+      }
+    },
+
+    // チーム向け練習・大会取得クエリ
+    teamPractices: async (_: any, { teamId }: { teamId: string }, context: any): Promise<any[] | null> => {
+      const userId = getUserId(context)
+      
+      try {
+        // チームメンバーかチェック
+        const { data: membership, error: membershipError } = await supabase
+          .from('team_memberships')
+          .select('id, role, is_active')
+          .eq('team_id', teamId)
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .single()
+        
+        if (!membership) {
+          return null
+        }
+        
+        // 管理者権限の確認（データベースでは小文字で保存されている）
+        if (membership.role !== 'admin') {
+          return null
+        }
+
+        const { data, error } = await supabase
+          .from('practices')
+          .select('*')
+          .eq('team_id', teamId)
+          .order('date', { ascending: true })
+
+        if (error) {
+          console.error('teamPractices database error:', error)
+          return null
+        }
+
+        const result = (data || []).map((practice: any) => ({
+          id: practice.id,
+          userId: practice.user_id,
+          date: practice.date,
+          place: practice.place,
+          note: practice.note,
+          teamId: practice.team_id,
+          isPersonal: practice.team_id === null,
+          practiceLogs: [],
+          createdAt: practice.created_at,
+          updatedAt: practice.updated_at,
+          version: 1,
+          optimisticId: null,
+          isOptimistic: false
+        }))
+        
+        return result
+      } catch (error) {
+        console.error('teamPractices error:', error)
+        return null
+      }
     }
   },
 
@@ -1292,6 +1752,60 @@ export const resolvers = {
       
       if (error) throw new Error(error.message)
       return true
+    },
+
+    // チーム向け一括練習登録（管理者のみ）
+    bulkCreateTeamPractices: async (_: any, { teamId, inputs }: { teamId: string, inputs: any[] }, context: any) => {
+      const userId = getUserId(context)
+      
+      // 管理者権限チェック
+      const isAdmin = await checkAdminPermission(userId, teamId)
+      if (!isAdmin) {
+        throw new Error('チームの管理者権限が必要です')
+      }
+      
+      try {
+        const practices: any[] = []
+        
+        for (const input of inputs) {
+          const { data, error } = await supabase
+            .from('practices')
+            .insert({
+              user_id: userId, // 管理者が作成者として記録
+              date: input.date,
+              place: input.place,
+              note: input.note,
+              team_id: teamId // チームIDを設定
+            })
+            .select()
+            .single()
+          
+          if (error) {
+            throw new Error(`練習登録エラー: ${error.message}`)
+          }
+          
+          practices.push({
+            id: data.id,
+            userId: data.user_id,
+            date: data.date,
+            place: data.place,
+            note: data.note,
+            teamId: data.team_id,
+            isPersonal: data.team_id === null,
+            practiceLogs: [],
+            createdAt: data.created_at,
+            updatedAt: data.updated_at,
+            version: 1,
+            optimisticId: null,
+            isOptimistic: false
+          })
+        }
+        
+        return practices
+      } catch (error) {
+        console.error('Bulk create team practices error:', error)
+        throw error
+      }
     },
 
     // 練習記録関連
@@ -1568,6 +2082,60 @@ export const resolvers = {
       
       if (error) throw new Error(error.message)
       return true
+    },
+
+    // チーム向け一括大会登録（管理者のみ）
+    bulkCreateTeamCompetitions: async (_: any, { teamId, inputs }: { teamId: string, inputs: any[] }, context: any) => {
+      const userId = getUserId(context)
+      
+      // 管理者権限チェック
+      const isAdmin = await checkAdminPermission(userId, teamId)
+      if (!isAdmin) {
+        throw new Error('チームの管理者権限が必要です')
+      }
+      
+      try {
+        const competitions: any[] = []
+        
+        for (const input of inputs) {
+          const { data, error } = await supabase
+            .from('competitions')
+            .insert({
+              user_id: userId, // 管理者が作成者として記録
+              title: input.title,
+              date: input.date,
+              place: input.place,
+              pool_type: input.poolType || 0,
+              note: input.note,
+              team_id: teamId, // チームIDを設定
+              entry_status: 'upcoming' // デフォルトでエントリー開始前
+            })
+            .select()
+            .single()
+          
+          if (error) {
+            throw new Error(`大会登録エラー: ${error.message}`)
+          }
+          
+          competitions.push({
+            id: data.id,
+            title: data.title,
+            date: data.date,
+            place: data.place,
+            poolType: data.pool_type,
+            note: data.note,
+            teamId: data.team_id,
+            isPersonal: data.team_id === null,
+            entryStatus: data.entry_status.toUpperCase(),
+            records: []
+          })
+        }
+        
+        return competitions
+      } catch (error) {
+        console.error('Bulk create team competitions error:', error)
+        throw error
+      }
     },
 
     // 記録関連
@@ -2107,6 +2675,505 @@ export const resolvers = {
       } catch (error) {
         console.error('removePracticeLogTag error:', error)
         throw error
+      }
+    },
+
+    // チーム関連ミューテーション
+    createTeam: async (_: any, { input }: { input: any }, context: any) => {
+      const userId = getUserId(context)
+      
+      try {
+        const { data, error } = await supabase
+          .from('teams')
+          .insert({
+            name: input.name,
+            description: input.description,
+            created_by: userId
+          })
+          .select()
+          .single()
+        
+        if (error) {
+          throw new Error(error.message)
+        }
+        
+        // 作成者をadminとしてチームに追加
+        const { error: membershipError } = await supabase
+          .from('team_memberships')
+          .insert({
+            team_id: data.id,
+            user_id: userId,
+            role: 'admin'
+          })
+        
+        if (membershipError) {
+          throw new Error(membershipError.message)
+        }
+        
+        return {
+          id: data.id,
+          name: data.name,
+          description: data.description,
+          inviteCode: data.invite_code,
+          isPublic: data.is_public,
+          maxMembers: data.max_members,
+          createdBy: data.created_by,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at
+        }
+      } catch (error) {
+        console.error('createTeam error:', error)
+        throw error
+      }
+    },
+
+    updateTeam: async (_: any, { id, input }: { id: string, input: any }, context: any) => {
+      const userId = getUserId(context)
+      
+      try {
+        // チームのadmin権限があるか確認
+        const { data: membership, error: membershipError } = await supabase
+          .from('team_memberships')
+          .select('id')
+          .eq('team_id', id)
+          .eq('user_id', userId)
+          .eq('role', 'admin')
+          .eq('is_active', true)
+          .single()
+        
+        if (membershipError || !membership) {
+          throw new Error('チームの更新権限がありません')
+        }
+        
+        const { data, error } = await supabase
+          .from('teams')
+          .update({
+            name: input.name,
+            description: input.description
+          })
+          .eq('id', id)
+          .select()
+          .single()
+        
+        if (error) {
+          throw new Error(error.message)
+        }
+        
+        return {
+          id: data.id,
+          name: data.name,
+          description: data.description,
+          inviteCode: data.invite_code,
+          isPublic: data.is_public,
+          maxMembers: data.max_members,
+          createdBy: data.created_by,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at
+        }
+      } catch (error) {
+        console.error('updateTeam error:', error)
+        throw error
+      }
+    },
+
+    deleteTeam: async (_: any, { id }: { id: string }, context: any) => {
+      const userId = getUserId(context)
+      
+      try {
+        // チームのadmin権限があるか確認
+        const { data: membership, error: membershipError } = await supabase
+          .from('team_memberships')
+          .select('id')
+          .eq('team_id', id)
+          .eq('user_id', userId)
+          .eq('role', 'admin')
+          .eq('is_active', true)
+          .single()
+        
+        if (membershipError || !membership) {
+          throw new Error('チームの削除権限がありません')
+        }
+        
+        const { error } = await supabase
+          .from('teams')
+          .delete()
+          .eq('id', id)
+        
+        if (error) {
+          throw new Error(error.message)
+        }
+        
+        return true
+      } catch (error) {
+        console.error('deleteTeam error:', error)
+        throw error
+      }
+    },
+
+    joinTeam: async (_: any, { input }: { input: any }, context: any) => {
+      const userId = getUserId(context)
+      
+      try {
+        // チームを招待コードで検索
+        const { data: team, error: teamError } = await supabase
+          .from('teams')
+          .select('id')
+          .eq('invite_code', input.inviteCode)
+          .single()
+        
+        if (teamError || !team) {
+          throw new Error('無効な招待コードです')
+        }
+        
+        // 既に参加しているか確認
+        const { data: existingMembership, error: existingError } = await supabase
+          .from('team_memberships')
+          .select('id')
+          .eq('team_id', team.id)
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .single()
+        
+        if (existingMembership) {
+          throw new Error('既にチームに参加しています')
+        }
+        
+        
+        // チームに参加
+        const { data, error } = await supabase
+          .from('team_memberships')
+          .insert({
+            team_id: team.id,
+            user_id: userId,
+            role: 'user'
+          })
+          .select()
+          .single()
+        
+        if (error) {
+          throw new Error(error.message)
+        }
+        
+        return {
+          id: data.id,
+          teamId: data.team_id,
+          userId: data.user_id,
+          role: data.role.toUpperCase(),
+          joinedAt: data.joined_at,
+          leftAt: data.left_at,
+          isActive: data.is_active,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at
+        }
+      } catch (error) {
+        console.error('joinTeam error:', error)
+        throw error
+      }
+    },
+
+    leaveTeam: async (_: any, { teamId }: { teamId: string }, context: any) => {
+      const userId = getUserId(context)
+      
+      try {
+        const { error } = await supabase
+          .from('team_memberships')
+          .update({
+            is_active: false,
+            left_at: new Date().toISOString().split('T')[0]
+          })
+          .eq('team_id', teamId)
+          .eq('user_id', userId)
+          .eq('is_active', true)
+        
+        if (error) {
+          throw new Error(error.message)
+        }
+        
+        return true
+      } catch (error) {
+        console.error('leaveTeam error:', error)
+        throw error
+      }
+    },
+
+
+    // 出欠管理
+    updateTeamAttendance: async (_: any, { input }: { input: any }, context: any) => {
+      const userId = getUserId(context)
+      
+      try {
+        // チームメンバーかどうか確認
+        const { data: practice, error: practiceError } = await supabase
+          .from('practices')
+          .select('team_id')
+          .eq('id', input.scheduleId)
+          .single()
+        
+        if (practiceError || !practice) {
+          throw new Error('スケジュールが見つかりません')
+        }
+        
+        if (practice.team_id) {
+          const { data: membership, error: membershipError } = await supabase
+            .from('team_memberships')
+            .select('id')
+            .eq('team_id', practice.team_id)
+            .eq('user_id', userId)
+            .eq('is_active', true)
+            .single()
+          
+          if (membershipError || !membership) {
+            throw new Error('チームメンバーではありません')
+          }
+        }
+        
+        // 出欠レコードを更新または作成
+        const { data, error } = await supabase
+          .from('team_attendance')
+          .upsert({
+            schedule_id: input.scheduleId,
+            user_id: userId,
+            status: input.status?.toLowerCase(),
+            note: input.note
+          })
+          .select()
+          .single()
+        
+        if (error) {
+          throw new Error(error.message)
+        }
+        
+        return {
+          id: data.id,
+          scheduleId: data.schedule_id,
+          userId: data.user_id,
+          status: data.status?.toUpperCase(),
+          note: data.note,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at
+        }
+      } catch (error) {
+        console.error('updateTeamAttendance error:', error)
+        throw error
+      }
+    },
+
+    // チームお知らせ管理のミューテーション
+    createTeamAnnouncement: async (_: any, { input }: { input: any }, context: any) => {
+      const userId = getUserId(context)
+      
+      try {
+        // チームのadminかどうか確認
+        const { data: membership } = await supabase
+          .from('team_memberships')
+          .select('role')
+          .eq('team_id', input.teamId)
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .single()
+        
+        if (!membership || membership.role !== 'admin') {
+          throw new Error('チームの管理者権限が必要です')
+        }
+
+        const { data, error } = await supabase
+          .from('announcements')
+          .insert({
+            team_id: input.teamId,
+            title: input.title,
+            content: input.content,
+            created_by: userId,
+            is_published: input.isPublished || false,
+            published_at: input.isPublished ? new Date().toISOString() : null
+          })
+          .select()
+          .single()
+        
+        if (error) {
+          throw new Error(error.message)
+        }
+        
+        return {
+          id: data.id,
+          teamId: data.team_id,
+          title: data.title,
+          content: data.content,
+          createdBy: data.created_by,
+          isPublished: data.is_published,
+          publishedAt: data.published_at,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at
+        }
+      } catch (error) {
+        console.error('createTeamAnnouncement error:', error)
+        throw error
+      }
+    },
+
+    updateTeamAnnouncement: async (_: any, { id, input }: { id: string, input: any }, context: any) => {
+      const userId = getUserId(context)
+      
+      try {
+        // お知らせの作成者またはチームのadminかどうか確認
+        const { data: announcement } = await supabase
+          .from('announcements')
+          .select('team_id, created_by')
+          .eq('id', id)
+          .single()
+        
+        if (!announcement) {
+          throw new Error('お知らせが見つかりません')
+        }
+
+        const { data: membership } = await supabase
+          .from('team_memberships')
+          .select('role')
+          .eq('team_id', announcement.team_id)
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .single()
+        
+        const isAdmin = membership && membership.role === 'admin'
+        const isCreator = announcement.created_by === userId
+        
+        if (!isAdmin && !isCreator) {
+          throw new Error('お知らせの編集権限がありません')
+        }
+
+        const updateData: any = {}
+        if (input.title !== undefined) updateData.title = input.title
+        if (input.content !== undefined) updateData.content = input.content
+        if (input.isPublished !== undefined) {
+          updateData.is_published = input.isPublished
+          updateData.published_at = input.isPublished ? new Date().toISOString() : null
+        }
+
+        const { data, error } = await supabase
+          .from('announcements')
+          .update(updateData)
+          .eq('id', id)
+          .select()
+          .single()
+        
+        if (error) {
+          throw new Error(error.message)
+        }
+        
+        return {
+          id: data.id,
+          teamId: data.team_id,
+          title: data.title,
+          content: data.content,
+          createdBy: data.created_by,
+          isPublished: data.is_published,
+          publishedAt: data.published_at,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at
+        }
+      } catch (error) {
+        console.error('updateTeamAnnouncement error:', error)
+        throw error
+      }
+    },
+
+    deleteTeamAnnouncement: async (_: any, { id }: { id: string }, context: any) => {
+      const userId = getUserId(context)
+      
+      try {
+        // お知らせの作成者またはチームのadminかどうか確認
+        const { data: announcement } = await supabase
+          .from('announcements')
+          .select('team_id, created_by')
+          .eq('id', id)
+          .single()
+        
+        if (!announcement) {
+          throw new Error('お知らせが見つかりません')
+        }
+
+        const { data: membership } = await supabase
+          .from('team_memberships')
+          .select('role')
+          .eq('team_id', announcement.team_id)
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .single()
+        
+        const isAdmin = membership && membership.role === 'admin'
+        const isCreator = announcement.created_by === userId
+        
+        if (!isAdmin && !isCreator) {
+          throw new Error('お知らせの削除権限がありません')
+        }
+
+        const { error } = await supabase
+          .from('announcements')
+          .delete()
+          .eq('id', id)
+        
+        if (error) {
+          throw new Error(error.message)
+        }
+        
+        return true
+      } catch (error) {
+        console.error('deleteTeamAnnouncement error:', error)
+        throw error
+      }
+    },
+
+    teamCompetitions: async (_: any, { teamId }: { teamId: string }, context: any): Promise<any[] | null> => {
+      const userId = getUserId(context)
+      
+      try {
+        // チームメンバーかチェック
+        const { data: membership, error: membershipError } = await supabase
+          .from('team_memberships')
+          .select('id, role, is_active')
+          .eq('team_id', teamId)
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .single()
+        
+        if (!membership) {
+          return null
+        }
+        
+        // 管理者権限の確認（データベースでは小文字で保存されている）
+        if (membership.role !== 'admin') {
+          return null
+        }
+
+        const { data, error } = await supabase
+          .from('competitions')
+          .select('*')
+          .eq('team_id', teamId)
+          .order('date', { ascending: true })
+
+        if (error) {
+          console.error('teamCompetitions database error:', error)
+          return null
+        }
+
+        const result = (data || []).map((competition: any) => ({
+          id: competition.id,
+          title: competition.title,
+          date: competition.date,
+          place: competition.place,
+          poolType: competition.pool_type,
+          note: competition.note,
+          teamId: competition.team_id,
+          isPersonal: competition.team_id === null,
+          entryStatus: competition.entry_status?.toUpperCase(),
+          records: [],
+          createdAt: competition.created_at,
+          updatedAt: competition.updated_at
+        }))
+        
+        return result
+      } catch (error) {
+        console.error('teamCompetitions error:', error)
+        return null
       }
     }
   }

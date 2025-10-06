@@ -4,12 +4,17 @@ import React from 'react'
 import type { ComponentType, SVGProps } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useQuery } from '@apollo/client/react'
+import { GET_MY_TEAMS } from '@/graphql'
 import { 
   HomeIcon,
   ChartBarIcon,
   TrophyIcon,
   XMarkIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  UsersIcon,
+  SpeakerWaveIcon,
+  CogIcon
 } from '@heroicons/react/24/outline'
 
 interface SidebarProps {
@@ -25,7 +30,7 @@ interface NavigationItem {
   description?: string
 }
 
-const navigation: NavigationItem[] = [
+const baseNavigation: NavigationItem[] = [
   { 
     name: 'ダッシュボード', 
     href: '/dashboard', 
@@ -44,12 +49,44 @@ const navigation: NavigationItem[] = [
     icon: TrophyIcon,
     description: '大会結果とエントリー',
   },
+  { 
+    name: 'チーム管理', 
+    href: '/teams', 
+    icon: UsersIcon,
+    description: 'チームの作成・参加・管理',
+  },
+  { 
+    name: 'お知らせ', 
+    href: '/announcements', 
+    icon: SpeakerWaveIcon,
+    description: 'チームのお知らせ確認',
+  },
 ]
+
+const adminNavigation: NavigationItem = {
+  name: '統合管理', 
+  href: '/team-admin', 
+  icon: CogIcon,
+  description: 'チームの練習・大会一括管理',
+}
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname()
-
-  const filteredNavigation = navigation
+  
+  // ユーザーのチーム一覧を取得して管理者権限をチェック
+  const { data: teamsData } = useQuery(GET_MY_TEAMS, {
+    fetchPolicy: 'cache-and-network'
+  })
+  
+  const myTeams = (teamsData as any)?.myTeams || []
+  const hasAdminTeams = myTeams.some((membership: any) => 
+    membership.role === 'ADMIN' && membership.isActive
+  )
+  
+  // 管理者権限がある場合のみ統合管理を追加
+  const filteredNavigation = hasAdminTeams 
+    ? [...baseNavigation, adminNavigation]
+    : baseNavigation
 
   return (
     <>

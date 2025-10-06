@@ -104,6 +104,19 @@ enum UserRole {
   MANAGER
 }
 
+# チーム関連
+enum TeamRole {
+  ADMIN
+  USER
+}
+
+
+enum EntryStatus {
+  UPCOMING
+  OPEN
+  CLOSED
+}
+
 # プール種別は Integer で管理 (0: 短水路, 1: 長水路)
 
 # 泳法
@@ -147,6 +160,7 @@ type Profile {
   profileImagePath: String # Supabase Storageのパス
   birthday: Date
   bio: String
+  teams: [TeamMembership!]! # 所属チーム
   createdAt: DateTime!
   updatedAt: DateTime!
 }
@@ -178,8 +192,7 @@ type Event {
 enum AttendanceStatus {
   PRESENT
   ABSENT
-  LATE
-  EXCUSED
+  OTHER
 }
 
 type Attendance {
@@ -220,7 +233,12 @@ type Practice implements Node {
   date: Date!
   place: String
   note: String
+  teamId: ID
+  team: Team
+  isPersonal: Boolean! # team_idがNULLかどうか
   practiceLogs: [PracticeLog!]!
+  # チーム練習の場合のみ出欠情報を含める
+  attendance: TeamAttendance
   createdAt: DateTime!
   updatedAt: DateTime!
   # 楽観的更新サポート
@@ -271,7 +289,13 @@ type Competition implements Node {
   place: String
   poolType: Int # 0: short, 1: long (デフォルト: 0)
   note: String
+  teamId: ID
+  team: Team
+  isPersonal: Boolean! # team_idがNULLかどうか
+  entryStatus: EntryStatus!
   records: [Record!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
 }
 
 # 記録関連（remote_migration.sqlと同じ構造）
@@ -286,6 +310,8 @@ type Record implements Node {
   videoUrl: String
   note: String
   isRelaying: Boolean! # リレー種目かどうか
+  teamId: ID
+  team: Team
   splitTimes: [SplitTime!]!
   # 楽観的更新サポート
   version: Int!
@@ -343,6 +369,93 @@ type BestTime {
   recordId: ID
   record: Record
   achievedDate: Date!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+# チーム関連型定義
+type Team {
+  id: ID!
+  name: String!
+  description: String
+  inviteCode: String!
+  createdBy: ID!
+  creator: Profile!
+  members: [TeamMembership!]!
+  groups: [TeamGroup!]!
+  announcements: [TeamAnnouncement!]!
+  entries: [TeamEntry!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type TeamMembership {
+  id: ID!
+  teamId: ID!
+  team: Team!
+  userId: ID!
+  user: Profile!
+  role: TeamRole!
+  joinedAt: Date!
+  leftAt: Date
+  isActive: Boolean!
+  groups: [TeamGroup!]! # 所属グループ
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type TeamGroup {
+  id: ID!
+  teamId: ID!
+  team: Team!
+  name: String!
+  description: String
+  createdBy: ID!
+  creator: Profile!
+  members: [Profile!]! # グループ所属メンバー
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type TeamAnnouncement {
+  id: ID!
+  teamId: ID!
+  team: Team!
+  title: String!
+  content: String!
+  createdBy: ID!
+  creator: Profile!
+  isPublished: Boolean!
+  publishedAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+
+type TeamAttendance {
+  id: ID!
+  scheduleId: ID!
+  schedule: Practice!
+  userId: ID!
+  user: Profile!
+  status: AttendanceStatus
+  note: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type TeamEntry {
+  id: ID!
+  teamId: ID!
+  team: Team!
+  competitionId: ID!
+  competition: Competition!
+  userId: ID!
+  user: Profile!
+  styleId: Int!
+  style: Style!
+  entryTime: Float # エントリータイム
+  note: String
   createdAt: DateTime!
   updatedAt: DateTime!
 }
@@ -448,6 +561,37 @@ type Query {
   # お知らせ関連
   announcements: [Announcement!]!
   announcement(id: ID!): Announcement
+
+  # チーム関連
+  myTeams: [TeamMembership!]!
+  team(id: ID!): Team
+  teams: [Team!]!
+  teamByInviteCode(inviteCode: String!): Team
+  
+  # チームメンバー関連
+  teamMembers(teamId: ID!): [TeamMembership!]!
+  teamMember(teamId: ID!, userId: ID!): TeamMembership
+  
+  # チームグループ関連
+  teamGroups(teamId: ID!): [TeamGroup!]!
+  teamGroup(id: ID!): TeamGroup
+  
+  # チームお知らせ関連
+  teamAnnouncements(teamId: ID!): [TeamAnnouncement!]!
+  teamAnnouncement(id: ID!): TeamAnnouncement
+
+  
+  # チーム出欠関連
+  teamAttendance(scheduleId: ID!): [TeamAttendance!]!
+  
+  # チーム向け練習・大会取得
+  teamPractices(teamId: ID!): [Practice!]
+  teamCompetitions(teamId: ID!): [Competition!]
+  myTeamAttendance(teamId: ID!): [TeamAttendance!]!
+  
+  # チームエントリー関連
+  teamEntries(teamId: ID!, competitionId: ID): [TeamEntry!]!
+  myTeamEntries(teamId: ID!): [TeamEntry!]!
 }
 
 # カレンダーデータ型
@@ -491,6 +635,10 @@ type Mutation {
   bulkCreatePractices(inputs: [CreatePracticeInput!]!): [Practice!]!
   bulkUpdatePractices(inputs: [BulkUpdatePracticeInput!]!): [Practice!]!
   bulkDeletePractices(ids: [ID!]!): [Boolean!]!
+  
+  # チーム向け一括練習登録（管理者のみ）
+  bulkCreateTeamPractices(teamId: ID!, inputs: [CreatePracticeInput!]!): [Practice!]!
+  
 
   # 練習記録（メニュー単位）関連
   createPracticeLog(input: CreatePracticeLogInput!): PracticeLog!
@@ -510,6 +658,9 @@ type Mutation {
   createCompetition(input: CreateCompetitionInput!): Competition!
   updateCompetition(id: ID!, input: UpdateCompetitionInput!): Competition!
   deleteCompetition(id: ID!): Boolean!
+  
+  # チーム向け一括大会登録（管理者のみ）
+  bulkCreateTeamCompetitions(teamId: ID!, inputs: [CreateCompetitionInput!]!): [Competition!]!
 
   # 記録関連（個人利用機能対応）
   createRecord(input: CreateRecordInput!): Record!
@@ -548,6 +699,40 @@ type Mutation {
   createAnnouncement(input: CreateAnnouncementInput!): Announcement!
   updateAnnouncement(id: ID!, input: UpdateAnnouncementInput!): Announcement!
   deleteAnnouncement(id: ID!): Boolean!
+
+  # チーム関連
+  createTeam(input: CreateTeamInput!): Team!
+  updateTeam(id: ID!, input: UpdateTeamInput!): Team!
+  deleteTeam(id: ID!): Boolean!
+  joinTeam(input: JoinTeamInput!): TeamMembership!
+  leaveTeam(teamId: ID!): Boolean!
+  
+  # チームメンバー管理
+  updateTeamMembership(id: ID!, input: UpdateTeamMembershipInput!): TeamMembership!
+  removeTeamMember(teamId: ID!, userId: ID!): Boolean!
+  
+  # チームグループ管理
+  createTeamGroup(input: CreateTeamGroupInput!): TeamGroup!
+  updateTeamGroup(id: ID!, input: UpdateTeamGroupInput!): TeamGroup!
+  deleteTeamGroup(id: ID!): Boolean!
+  assignUserToGroup(input: AssignUserToGroupInput!): Boolean!
+  removeUserFromGroup(input: RemoveUserFromGroupInput!): Boolean!
+  
+  # チームお知らせ管理
+  createTeamAnnouncement(input: CreateTeamAnnouncementInput!): TeamAnnouncement!
+  updateTeamAnnouncement(id: ID!, input: UpdateTeamAnnouncementInput!): TeamAnnouncement!
+  deleteTeamAnnouncement(id: ID!): Boolean!
+  
+  # チームスケジュール管理
+  
+  # チーム出欠管理
+  updateTeamAttendance(input: UpdateTeamAttendanceInput!): TeamAttendance!
+  
+  # チームエントリー管理
+  createTeamEntry(input: CreateTeamEntryInput!): TeamEntry!
+  updateTeamEntry(id: ID!, input: UpdateTeamEntryInput!): TeamEntry!
+  deleteTeamEntry(id: ID!): Boolean!
+  bulkUpdateTeamEntries(inputs: [BulkUpdateTeamEntryInput!]!): [TeamEntry!]!
 }
 
 # 入力型
@@ -575,12 +760,14 @@ input CreatePracticeInput {
   date: Date!
   place: String
   note: String
+  teamId: ID
 }
 
 input UpdatePracticeInput {
   date: Date
   place: String
   note: String
+  teamId: ID
 }
 
 # バッチ操作用のInput型
@@ -636,6 +823,7 @@ input CreateCompetitionInput {
   place: String
   poolType: Int # 0: short, 1: long (デフォルト: 0)
   note: String
+  teamId: ID
 }
 
 input UpdateCompetitionInput {
@@ -644,6 +832,7 @@ input UpdateCompetitionInput {
   place: String
   poolType: Int
   note: String
+  teamId: ID
 }
 
 # 記録入力型
@@ -654,6 +843,7 @@ input CreateRecordInput {
   note: String
   competitionId: ID
   isRelaying: Boolean
+  teamId: ID
   splitTimes: [SplitTimeInput!]
 }
 
@@ -664,6 +854,7 @@ input UpdateRecordInput {
   note: String
   competitionId: ID
   isRelaying: Boolean
+  teamId: ID
   splitTimes: [SplitTimeInput!]
 }
 
@@ -763,6 +954,88 @@ input UpdateAnnouncementInput {
   priority: AnnouncementPriority
   published: Boolean
   publishedAt: DateTime
+}
+
+# チーム関連入力型
+input CreateTeamInput {
+  name: String!
+  description: String
+}
+
+input UpdateTeamInput {
+  name: String
+  description: String
+}
+
+input JoinTeamInput {
+  inviteCode: String!
+}
+
+input UpdateTeamMembershipInput {
+  role: TeamRole
+  isActive: Boolean
+}
+
+input CreateTeamGroupInput {
+  teamId: ID!
+  name: String!
+  description: String
+}
+
+input UpdateTeamGroupInput {
+  name: String
+  description: String
+}
+
+input AssignUserToGroupInput {
+  teamGroupId: ID!
+  userId: ID!
+}
+
+input RemoveUserFromGroupInput {
+  teamGroupId: ID!
+  userId: ID!
+}
+
+input CreateTeamAnnouncementInput {
+  teamId: ID!
+  title: String!
+  content: String!
+  isPublished: Boolean
+}
+
+input UpdateTeamAnnouncementInput {
+  title: String
+  content: String
+  isPublished: Boolean
+}
+
+
+
+input UpdateTeamAttendanceInput {
+  scheduleId: ID!
+  status: AttendanceStatus
+  note: String
+}
+
+input CreateTeamEntryInput {
+  teamId: ID!
+  competitionId: ID!
+  styleId: Int!
+  entryTime: Float
+  note: String
+}
+
+input UpdateTeamEntryInput {
+  styleId: Int
+  entryTime: Float
+  note: String
+  status: EntryStatus
+}
+
+input BulkUpdateTeamEntryInput {
+  id: ID!
+  input: UpdateTeamEntryInput!
 }
 
 # =============================================================================
