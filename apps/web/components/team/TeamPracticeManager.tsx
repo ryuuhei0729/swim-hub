@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useQuery, useMutation } from '@apollo/client/react'
 import { gql } from '@apollo/client'
 import { GET_TEAM_PRACTICES, GET_TEAM_MEMBERS } from '../../graphql/queries/teams'
+import { CREATE_TEAM_PRACTICE } from '../../graphql/mutations/teamPractices'
 
 // スタイル一覧を取得するクエリ
 const GET_STYLES = gql`
@@ -44,9 +45,17 @@ export const TeamPracticeManager: React.FC<TeamPracticeManagerProps> = ({
   teamName
 }) => {
   // モーダル表示制御
+  const [isPracticeModalOpen, setIsPracticeModalOpen] = useState(false)
   const [isLogModalOpen, setIsLogModalOpen] = useState(false)
   const [isTimeModalOpen, setIsTimeModalOpen] = useState(false)
   const [selectedPractice, setSelectedPractice] = useState<any>(null)
+  
+  // 練習作成フォーム用の状態
+  const [practiceForm, setPracticeForm] = useState({
+    date: new Date().toISOString().split('T')[0],
+    place: '',
+    note: ''
+  })
 
   // 練習ログ登録用の状態
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
@@ -78,6 +87,23 @@ export const TeamPracticeManager: React.FC<TeamPracticeManagerProps> = ({
     fetchPolicy: 'cache-and-network'
   })
 
+  const [createTeamPractice, { loading: isCreatingPractice }] = useMutation(CREATE_TEAM_PRACTICE, {
+    onCompleted: () => {
+      alert('チーム練習を登録しました！')
+      setIsPracticeModalOpen(false)
+      setPracticeForm({
+        date: new Date().toISOString().split('T')[0],
+        place: '',
+        note: ''
+      })
+      refetchPractices()
+    },
+    onError: (error) => {
+      console.error('チーム練習登録エラー:', error)
+      alert('練習の登録に失敗しました')
+    }
+  })
+
   const [bulkCreatePracticeLogs, { loading: isSubmittingLogs }] = useMutation(BULK_CREATE_PRACTICE_LOGS, {
     onCompleted: (data: any) => {
       alert(`${data.bulkCreatePracticeLogs.length}件の練習ログを登録しました！`)
@@ -97,6 +123,26 @@ export const TeamPracticeManager: React.FC<TeamPracticeManagerProps> = ({
   const practices = (practicesData as any)?.teamPractices || []
   const members = (membersData as any)?.teamMembers || []
   const styles = (stylesData as any)?.styles || []
+
+  // 練習作成ハンドラー
+  const handleCreatePractice = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    try {
+      await createTeamPractice({
+        variables: {
+          input: {
+            date: practiceForm.date,
+            place: practiceForm.place,
+            note: practiceForm.note,
+            teamId: teamId
+          }
+        }
+      })
+    } catch (error) {
+      console.error('練習作成エラー:', error)
+    }
+  }
 
 
   // 練習ログ登録モーダルを開く
@@ -209,6 +255,13 @@ export const TeamPracticeManager: React.FC<TeamPracticeManagerProps> = ({
         <h2 className="text-lg font-semibold text-gray-900">
           {teamName} - 練習ログ管理
         </h2>
+        <button
+          onClick={() => setIsPracticeModalOpen(true)}
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          <span className="mr-2">+</span>
+          練習を追加
+        </button>
       </div>
 
       {/* 練習一覧 */}
@@ -516,6 +569,85 @@ export const TeamPracticeManager: React.FC<TeamPracticeManagerProps> = ({
                 >
                   {isSubmittingLogs ? '登録中...' : '練習ログを登録'}
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 練習作成モーダル */}
+      {isPracticeModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+            
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+                      チーム練習を追加
+                    </h3>
+                    
+                    <form onSubmit={handleCreatePractice} className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          練習日
+                        </label>
+                        <input
+                          type="date"
+                          value={practiceForm.date}
+                          onChange={(e) => setPracticeForm(prev => ({ ...prev, date: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          required
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          練習場所
+                        </label>
+                        <input
+                          type="text"
+                          value={practiceForm.place}
+                          onChange={(e) => setPracticeForm(prev => ({ ...prev, place: e.target.value }))}
+                          placeholder="例: 市営プール"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          メモ
+                        </label>
+                        <textarea
+                          value={practiceForm.note}
+                          onChange={(e) => setPracticeForm(prev => ({ ...prev, note: e.target.value }))}
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="練習に関する特記事項"
+                        />
+                      </div>
+                      
+                      <div className="flex justify-end space-x-3 pt-4">
+                        <button
+                          type="button"
+                          onClick={() => setIsPracticeModalOpen(false)}
+                          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        >
+                          キャンセル
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={isCreatingPractice}
+                          className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          {isCreatingPractice ? '作成中...' : '練習を追加'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

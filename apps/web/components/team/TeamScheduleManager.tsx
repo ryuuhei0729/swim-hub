@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation } from '@apollo/client/react'
 import { gql } from '@apollo/client'
 import { GET_TEAM_PRACTICES, GET_TEAM_COMPETITIONS } from '../../graphql/queries/teams'
+import { CREATE_BULK_TEAM_COMPETITIONS } from '../../graphql/mutations/teamCompetitions'
 
 // チームのスケジュールを取得するクエリ（練習と大会を同時に取得）
 const GET_TEAM_SCHEDULES = gql`
@@ -65,23 +66,6 @@ const BULK_CREATE_TEAM_PRACTICES = gql`
   }
 `
 
-// 一括大会作成ミューテーション
-const BULK_CREATE_TEAM_COMPETITIONS = gql`
-  mutation BulkCreateTeamCompetitions($teamId: ID!, $inputs: [CreateCompetitionInput!]!) {
-    bulkCreateTeamCompetitions(teamId: $teamId, inputs: $inputs) {
-      id
-      title
-      date
-      place
-      poolType
-      note
-      teamId
-      isPersonal
-      entryStatus
-      createdAt
-    }
-  }
-`
 
 interface TeamScheduleManagerProps {
   teamId: string
@@ -150,11 +134,16 @@ export const TeamScheduleManager: React.FC<TeamScheduleManagerProps> = ({
     }
   })
 
-  const [bulkCreateTeamCompetitions, { loading: isSubmittingCompetitions }] = useMutation(BULK_CREATE_TEAM_COMPETITIONS, {
+  const [bulkCreateTeamCompetitions, { loading: isSubmittingCompetitions }] = useMutation(CREATE_BULK_TEAM_COMPETITIONS, {
     onCompleted: (data: any) => {
-      alert(`${data.bulkCreateTeamCompetitions.length}件の大会を登録しました！`)
-      setCompetitions([{ title: '', date: '', place: '', poolType: 0, note: '' }])
-      refetch()
+      const result = data.createBulkTeamCompetitions
+      if (result.success) {
+        alert(result.message)
+        setCompetitions([{ title: '', date: '', place: '', poolType: 0, note: '' }])
+        refetch()
+      } else {
+        alert(`エラー: ${result.message}`)
+      }
     },
     onError: (error) => {
       console.error('一括大会登録エラー:', error)
@@ -272,8 +261,10 @@ export const TeamScheduleManager: React.FC<TeamScheduleManagerProps> = ({
     try {
       await bulkCreateTeamCompetitions({
         variables: {
-          teamId,
-          inputs: validCompetitions
+          input: {
+            teamId,
+            competitions: validCompetitions
+          }
         }
       })
     } catch (error) {

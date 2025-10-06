@@ -145,7 +145,8 @@ enum GoalType {
 
 type User {
   id: ID!
-  email: String!
+  email: String # ユーザーメールアドレス（nullable）
+  name: String # ユーザー名
   profile: Profile
   createdAt: DateTime!
   updatedAt: DateTime!
@@ -230,6 +231,7 @@ type PracticeTag {
 type Practice implements Node {
   id: ID!
   userId: ID!
+  user: User # ユーザー情報
   date: Date!
   place: String
   note: String
@@ -254,6 +256,8 @@ type PracticeLog {
   practiceId: ID!
   practice: Practice
   style: String!
+  styleId: Int # スタイルID
+  time: Float # タイム
   repCount: Int!
   setCount: Int!
   distance: Int!
@@ -302,6 +306,7 @@ type Competition implements Node {
 type Record implements Node {
   id: ID!
   userId: ID!
+  user: User # ユーザー情報
   competitionId: ID
   competition: Competition
   styleId: Int! # INTEGERに対応
@@ -589,6 +594,10 @@ type Query {
   teamCompetitions(teamId: ID!): [Competition!]
   myTeamAttendance(teamId: ID!): [TeamAttendance!]!
   
+  # ユーザーが所属するチームの記録・練習取得（ダッシュボード用）
+  teamRecords: [Record!]!
+  teamPracticesForCalendar(startDate: Date!, endDate: Date!): [Practice!]!
+  
   # チームエントリー関連
   teamEntries(teamId: ID!, competitionId: ID): [TeamEntry!]!
   myTeamEntries(teamId: ID!): [TeamEntry!]!
@@ -628,6 +637,7 @@ type Mutation {
 
   # 練習関連（個人利用機能対応）
   createPractice(input: CreatePracticeInput!): Practice!
+  createTeamPractice(input: CreateTeamPracticeInput!): Practice!
   updatePractice(id: ID!, input: UpdatePracticeInput!): Practice!
   deletePractice(id: ID!): Boolean!
   
@@ -638,6 +648,9 @@ type Mutation {
   
   # チーム向け一括練習登録（管理者のみ）
   bulkCreateTeamPractices(teamId: ID!, inputs: [CreatePracticeInput!]!): [Practice!]!
+  
+  # チーム向け一括大会登録（管理者のみ）
+  createBulkTeamCompetitions(input: BulkTeamCompetitionsInput!): BulkTeamCompetitionsResult!
   
 
   # 練習記録（メニュー単位）関連
@@ -659,8 +672,6 @@ type Mutation {
   updateCompetition(id: ID!, input: UpdateCompetitionInput!): Competition!
   deleteCompetition(id: ID!): Boolean!
   
-  # チーム向け一括大会登録（管理者のみ）
-  bulkCreateTeamCompetitions(teamId: ID!, inputs: [CreateCompetitionInput!]!): [Competition!]!
 
   # 記録関連（個人利用機能対応）
   createRecord(input: CreateRecordInput!): Record!
@@ -763,6 +774,13 @@ input CreatePracticeInput {
   teamId: ID
 }
 
+input CreateTeamPracticeInput {
+  date: Date!
+  place: String
+  note: String
+  teamId: ID!
+}
+
 input UpdatePracticeInput {
   date: Date
   place: String
@@ -833,6 +851,27 @@ input UpdateCompetitionInput {
   poolType: Int
   note: String
   teamId: ID
+}
+
+# 一括大会登録用のInput型
+input BulkTeamCompetitionsInput {
+  teamId: ID!
+  competitions: [CreateCompetitionInput!]!
+}
+
+# 一括大会登録結果型
+type BulkTeamCompetitionsResult {
+  success: Boolean!
+  message: String!
+  createdCompetitions: [Competition!]!
+  errors: [CompetitionError!]!
+}
+
+# 大会登録エラー型
+type CompetitionError {
+  index: Int!
+  title: String!
+  message: String!
 }
 
 # 記録入力型

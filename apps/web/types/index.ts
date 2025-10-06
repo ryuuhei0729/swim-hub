@@ -203,6 +203,8 @@ export interface CalendarItem {
   note?: string
   competition_name?: string
   is_relaying?: boolean
+  team_practice?: boolean // チーム練習であることを示すフラグ
+  team_record?: boolean // チーム記録であることを示すフラグ
   style?: {
     id: string
     name_jp: string

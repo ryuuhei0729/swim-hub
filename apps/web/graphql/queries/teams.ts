@@ -105,3 +105,70 @@ export const GET_TEAM_COMPETITIONS = gql`
     }
   }
 `
+
+// ユーザーが所属するチームの記録一覧取得
+export const GET_TEAM_RECORDS = gql`
+  query GetTeamRecords {
+    teamRecords {
+      id
+      userId
+      competitionId
+      styleId
+      time
+      videoUrl
+      note
+      isRelaying
+      teamId
+      competition {
+        id
+        title
+        date
+        place
+        poolType
+        teamId
+      }
+      style {
+        id
+        nameJp
+        name
+        stroke
+        distance
+      }
+      user {
+        id
+        name
+        email
+      }
+    }
+  }
+`
+
+// ユーザーが所属するチームの練習一覧取得
+export const GET_TEAM_PRACTICES_FOR_CALENDAR = gql`
+  query GetTeamPracticesForCalendar($startDate: Date!, $endDate: Date!) {
+    teamPracticesForCalendar(startDate: $startDate, endDate: $endDate) {
+      id
+      userId
+      date
+      place
+      note
+      teamId
+      isPersonal
+      practiceLogs {
+        id
+        styleId
+        distance
+        time
+        note
+        style
+      }
+      user {
+        id
+        name
+        email
+      }
+      createdAt
+      updatedAt
+    }
+  }
+`

@@ -983,19 +983,39 @@ export const resolvers = {
 
     // 大会関連
     myCompetitions: async (_: any, __: any, context: any) => {
+      const userId = getUserId(context)
+      
       const { data, error } = await supabase
         .from('competitions')
         .select(`
           *,
           records(*)
         `)
+        .eq('user_id', userId)
         .order('date', { ascending: false })
       
       if (error) throw new Error(error.message)
-      return data || []
+      
+      // データベースのフィールド名をGraphQLスキーマに合わせて変換
+      return (data || []).map((competition: any) => ({
+        id: competition.id,
+        title: competition.title,
+        date: competition.date,
+        place: competition.place,
+        poolType: competition.pool_type,
+        note: competition.note,
+        teamId: competition.team_id,
+        isPersonal: competition.team_id === null,
+        entryStatus: competition.entry_status?.toUpperCase(),
+        records: competition.records || [],
+        createdAt: competition.created_at,
+        updatedAt: competition.updated_at
+      }))
     },
 
     competition: async (_: any, { id }: { id: string }, context: any) => {
+      const userId = getUserId(context)
+      
       const { data, error } = await supabase
         .from('competitions')
         .select(`
@@ -1003,10 +1023,26 @@ export const resolvers = {
           records(*)
         `)
         .eq('id', id)
+        .eq('user_id', userId)
         .single()
       
       if (error) throw new Error(error.message)
-      return data
+      
+      // データベースのフィールド名をGraphQLスキーマに合わせて変換
+      return {
+        id: data.id,
+        title: data.title,
+        date: data.date,
+        place: data.place,
+        poolType: data.pool_type,
+        note: data.note,
+        teamId: data.team_id,
+        isPersonal: data.team_id === null,
+        entryStatus: data.entry_status?.toUpperCase(),
+        records: data.records || [],
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      }
     },
 
     // 記録関連
@@ -1514,6 +1550,192 @@ export const resolvers = {
         console.error('teamPractices error:', error)
         return null
       }
+    },
+
+    // ユーザーが所属するチームの記録一覧取得（ダッシュボード用）
+    teamRecords: async (_: any, __: any, context: any): Promise<any[]> => {
+      const userId = getUserId(context)
+      console.log('=== teamRecords START ===')
+      console.log('teamRecords called with userId:', userId)
+      
+      try {
+        // ユーザーが所属するチームを取得
+        const { data: memberships, error: membershipError } = await supabase
+          .from('team_memberships')
+          .select('team_id')
+          .eq('user_id', userId)
+          .eq('is_active', true)
+        
+        console.log('teamRecords: memberships check result:', { 
+          userId, 
+          memberships, 
+          membershipError 
+        })
+        
+        if (membershipError || !memberships || memberships.length === 0) {
+          console.log('teamRecords: no memberships found, returning empty array')
+          return []
+        }
+        
+        const teamIds = memberships.map(m => m.team_id)
+        console.log('teamRecords: teamIds found:', teamIds)
+        
+        // 所属チームの記録を取得
+        const { data, error } = await supabase
+          .from('records')
+          .select(`
+            *,
+            styles(*),
+            competitions(*),
+            users(id, name),
+            split_times(*)
+          `)
+          .in('team_id', teamIds)
+          .order('id', { ascending: false })
+        
+        console.log('teamRecords: database query result:', {
+          teamIds,
+          dataCount: data?.length || 0,
+          error,
+          sampleData: data?.slice(0, 2) // 最初の2件をサンプル表示
+        })
+        
+        if (error) {
+          console.error('teamRecords error:', error)
+          return []
+        }
+        
+        // データベースのフィールド名をGraphQLスキーマに合わせて変換
+        return (data || []).map(record => ({
+          id: record.id,
+          userId: record.user_id,
+          user: record.users ? {
+            id: record.users.id,
+            email: null, // usersテーブルにはemailカラムがない
+            name: record.users.name || 'ユーザー'
+          } : null,
+          competitionId: record.competition_id,
+          competition: record.competitions ? {
+            id: record.competitions.id,
+            title: record.competitions.title,
+            date: record.competitions.date,
+            place: record.competitions.place,
+            poolType: record.competitions.pool_type,
+            teamId: record.competitions.team_id
+          } : null,
+          styleId: record.style_id,
+          style: record.styles ? {
+            id: record.styles.id,
+            nameJp: record.styles.name_jp,
+            name: record.styles.name,
+            stroke: {
+              1: 'FREESTYLE',
+              2: 'BACKSTROKE', 
+              3: 'BREASTSTROKE',
+              4: 'BUTTERFLY',
+              5: 'INDIVIDUAL_MEDLEY'
+            }[record.styles.style] || 'FREESTYLE',
+            distance: record.styles.distance
+          } : null,
+          time: record.time,
+          videoUrl: record.video_url,
+          note: record.note,
+          isRelaying: record.is_relaying || false,
+          teamId: record.team_id,
+          splitTimes: (record.split_times || []).map(split => ({
+            id: split.id,
+            recordId: split.record_id,
+            distance: split.distance,
+            splitTime: split.split_time
+          })),
+          version: 1,
+          optimisticId: null,
+          isOptimistic: false
+        }))
+        
+      } catch (error) {
+        console.error('teamRecords error:', error)
+        return []
+      }
+    },
+
+    // ユーザーが所属するチームの練習一覧取得（ダッシュボード用）
+    teamPracticesForCalendar: async (_: any, { startDate, endDate }: { startDate: string, endDate: string }, context: any): Promise<any[]> => {
+      const userId = getUserId(context)
+      
+      try {
+        // ユーザーが所属するチームを取得
+        const { data: memberships, error: membershipError } = await supabase
+          .from('team_memberships')
+          .select('team_id')
+          .eq('user_id', userId)
+          .eq('is_active', true)
+        
+        if (membershipError || !memberships || memberships.length === 0) {
+          return []
+        }
+        
+        const teamIds = memberships.map(m => m.team_id)
+        
+        // 所属チームの練習を取得
+        const { data, error } = await supabase
+          .from('practices')
+          .select(`
+            *,
+            users!practices_user_id_fkey(id, name),
+            practice_logs(*)
+          `)
+          .in('team_id', teamIds)
+          .gte('date', startDate)
+          .lte('date', endDate)
+          .order('date', { ascending: true })
+        
+        if (error) {
+          console.error('teamPracticesForCalendar error:', error)
+          return []
+        }
+        
+        // データベースのフィールド名をGraphQLスキーマに合わせて変換
+        return (data || []).map(practice => ({
+          id: practice.id,
+          userId: practice.user_id,
+          date: practice.date,
+          place: practice.place,
+          note: practice.note,
+          teamId: practice.team_id,
+          isPersonal: practice.team_id === null,
+          practiceLogs: (practice.practice_logs || []).map(log => ({
+            id: log.id,
+            userId: log.user_id,
+            practiceId: log.practice_id,
+            style: log.style || 'Fr',
+            styleId: null, // practice_logsテーブルにはstyle_idカラムがない
+            time: null, // practice_logsテーブルにはtimeカラムがない
+            repCount: log.rep_count || 1,
+            setCount: log.set_count || 1,
+            distance: log.distance,
+            circle: log.circle,
+            note: log.note,
+            times: [], // 空配列として設定
+            tags: [], // 空配列として設定
+            createdAt: log.created_at,
+            updatedAt: log.updated_at,
+            version: 1,
+            optimisticId: null,
+            isOptimistic: false
+          })),
+          user: practice.users ? {
+            id: practice.users.id,
+            email: null, // usersテーブルにはemailカラムがない
+            name: practice.users.name || 'ユーザー'
+          } : null,
+          createdAt: practice.created_at,
+          updatedAt: practice.updated_at
+        }))
+      } catch (error) {
+        console.error('teamPracticesForCalendar error:', error)
+        return []
+      }
     }
   },
 
@@ -1612,7 +1834,8 @@ export const resolvers = {
           user_id: userId,
           date: input.date,
           place: input.place,
-          note: input.note
+          note: input.note,
+          team_id: null // ダッシュボードからの作成は個人用としてteam_idをnullに設定
         })
         .select(`
           *,
@@ -1666,6 +1889,83 @@ export const resolvers = {
           createdAt: log.created_at,
           updatedAt: log.updated_at
         })),
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      }
+    },
+
+    createTeamPractice: async (_: any, { input }: { input: any }, context: any) => {
+      const userId = getUserId(context)
+      
+      // チーム管理者権限をチェック
+      if (!input.teamId) {
+        throw new Error('チームIDが必要です')
+      }
+      
+      const { data: membership, error: membershipError } = await supabase
+        .from('team_memberships')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('team_id', input.teamId)
+        .eq('is_active', true)
+        .single()
+      
+      if (membershipError || !membership || membership.role !== 'admin') {
+        throw new Error('チーム管理者権限が必要です')
+      }
+      
+      const { data, error } = await supabase
+        .from('practices')
+        .insert({
+          user_id: userId,
+          date: input.date,
+          place: input.place,
+          note: input.note,
+          team_id: input.teamId // 管理画面からの作成はteam_idを設定
+        })
+        .select(`
+          *,
+          practice_logs(
+            *,
+            practice_times(*)
+          )
+        `)
+        .single()
+      
+      if (error) throw new Error(error.message)
+      
+      return {
+        id: data.id,
+        userId: data.user_id,
+        date: data.date,
+        place: data.place,
+        note: data.note,
+        practiceLogs: (data.practice_logs || []).map((log: any) => ({
+          id: log.id,
+          userId: log.user_id,
+          practiceId: log.practice_id,
+          style: log.style,
+          repCount: log.rep_count,
+          setCount: log.set_count,
+          distance: log.distance,
+          circle: log.circle,
+          note: log.note,
+          times: (log.practice_times || []).map((time: any) => ({
+            id: time.id,
+            userId: time.user_id,
+            practiceLogId: time.practice_log_id,
+            repNumber: time.rep_number,
+            setNumber: time.set_number,
+            time: time.time,
+            createdAt: time.created_at,
+            updatedAt: time.updated_at
+          })),
+          tags: [], // 空配列として設定
+          createdAt: log.created_at,
+          updatedAt: log.updated_at
+        })),
+        teamId: data.team_id,
+        isPersonal: data.team_id === null,
         createdAt: data.created_at,
         updatedAt: data.updated_at
       }
@@ -2029,6 +2329,8 @@ export const resolvers = {
 
     // 大会関連
     createCompetition: async (_: any, { input }: { input: any }, context: any) => {
+      const userId = getUserId(context)
+      
       const { data, error } = await supabase
         .from('competitions')
         .insert({
@@ -2036,7 +2338,9 @@ export const resolvers = {
           date: input.date,
           place: input.place,
           pool_type: input.poolType || 0,
-          note: input.note
+          note: input.note,
+          user_id: userId,
+          team_id: input.teamId || null
         })
         .select()
         .single()
@@ -2056,19 +2360,147 @@ export const resolvers = {
       }
     },
 
+    // 一括チーム大会登録
+    createBulkTeamCompetitions: async (_: any, { input }: { input: any }, context: any) => {
+      const userId = getUserId(context)
+      const { teamId, competitions } = input
+      
+      try {
+        // チームメンバーかチェック
+        const { data: membership, error: membershipError } = await supabase
+          .from('team_memberships')
+          .select('id, role, is_active')
+          .eq('team_id', teamId)
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .single()
+        
+        if (!membership) {
+          return {
+            success: false,
+            message: 'チームのメンバーではありません',
+            createdCompetitions: [],
+            errors: []
+          }
+        }
+        
+        // 管理者権限の確認
+        if (membership.role !== 'admin') {
+          return {
+            success: false,
+            message: 'チームの管理者権限がありません',
+            createdCompetitions: [],
+            errors: []
+          }
+        }
+
+        const createdCompetitions: any[] = []
+        const errors: any[] = []
+
+        // 各大会を順次登録
+        for (let i = 0; i < competitions.length; i++) {
+          const competition = competitions[i]
+          
+          try {
+            const { data, error } = await supabase
+              .from('competitions')
+              .insert({
+                title: competition.title,
+                date: competition.date,
+                place: competition.place,
+                pool_type: competition.poolType || 0,
+                note: competition.note,
+                team_id: teamId,
+                user_id: userId,
+                entry_status: 'upcoming'
+              })
+              .select()
+              .single()
+
+            if (error) {
+              errors.push({
+                index: i,
+                title: competition.title,
+                message: error.message
+              })
+            } else {
+              createdCompetitions.push({
+                id: data.id,
+                title: data.title,
+                date: data.date,
+                place: data.place,
+                poolType: data.pool_type,
+                note: data.note,
+                teamId: data.team_id,
+                isPersonal: data.team_id === null,
+                entryStatus: data.entry_status?.toUpperCase(),
+                records: [],
+                createdAt: data.created_at,
+                updatedAt: data.updated_at
+              })
+            }
+          } catch (error) {
+            errors.push({
+              index: i,
+              title: competition.title,
+              message: error.message || '未知のエラーが発生しました'
+            })
+          }
+        }
+
+        return {
+          success: errors.length === 0,
+          message: errors.length === 0 
+            ? `${createdCompetitions.length}件の大会を登録しました` 
+            : `${createdCompetitions.length}件の大会を登録しましたが、${errors.length}件でエラーが発生しました`,
+          createdCompetitions,
+          errors
+        }
+      } catch (error) {
+        return {
+          success: false,
+          message: '一括大会登録中にエラーが発生しました: ' + error.message,
+          createdCompetitions: [],
+          errors: []
+        }
+      }
+    },
+
     updateCompetition: async (_: any, { id, input }: { id: string, input: any }, context: any) => {
       const userId = getUserId(context)
       
+      // 更新データを準備（teamIdをteam_idに変換）
+      const updateData = {
+        ...input,
+        team_id: input.teamId || undefined
+      }
+      delete updateData.teamId
+      
       const { data, error } = await supabase
         .from('competitions')
-        .update(input)
+        .update(updateData)
         .eq('id', id)
         .eq('user_id', userId)
         .select()
         .single()
       
       if (error) throw new Error(error.message)
-      return data
+      
+      // データベースのフィールド名をGraphQLスキーマに合わせて変換
+      return {
+        id: data.id,
+        title: data.title,
+        date: data.date,
+        place: data.place,
+        poolType: data.pool_type,
+        note: data.note,
+        teamId: data.team_id,
+        isPersonal: data.team_id === null,
+        entryStatus: data.entry_status?.toUpperCase(),
+        records: [],
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      }
     },
 
     deleteCompetition: async (_: any, { id }: { id: string }, context: any) => {

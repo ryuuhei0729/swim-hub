@@ -4,6 +4,7 @@ import { endOfMonth, format, startOfMonth } from 'date-fns'
 import { useEffect, useMemo } from 'react'
 import { useAuth } from '../../../../contexts'
 import { GET_CALENDAR_DATA, GET_PRACTICES, GET_RECORDS } from '../../../../graphql/queries'
+import { GET_TEAM_PRACTICES_FOR_CALENDAR, GET_TEAM_RECORDS } from '../../../../graphql/queries/teams'
 import { formatTime } from '../../../../utils/formatters'
 export function useCalendarData(currentDate: Date, userId?: string) {
   const { profile } = useAuth()
@@ -50,7 +51,7 @@ export function useCalendarData(currentDate: Date, userId?: string) {
     }
   )
 
-  // 記録データを取得
+  // 記録データを取得（個人記録）
   const { data: recordsData, loading: recordsLoading, error: recordsError, refetch: refetchRecords } = useQuery(
     GET_RECORDS,
     {
@@ -61,6 +62,48 @@ export function useCalendarData(currentDate: Date, userId?: string) {
       errorPolicy: 'all' // エラーも含めて全てのデータを取得
     }
   )
+
+  // チーム記録データを取得
+  const { data: teamRecordsData, loading: teamRecordsLoading, error: teamRecordsError, refetch: refetchTeamRecords } = useQuery(
+    GET_TEAM_RECORDS,
+    {
+      skip: USE_MOCK_DATA,
+      fetchPolicy: 'cache-first',
+      nextFetchPolicy: 'cache-first',
+      notifyOnNetworkStatusChange: true,
+      errorPolicy: 'all'
+    }
+  )
+
+  // チーム練習データを取得
+  const { data: teamPracticesData, loading: teamPracticesLoading, error: teamPracticesError, refetch: refetchTeamPractices } = useQuery(
+    GET_TEAM_PRACTICES_FOR_CALENDAR,
+    {
+      variables: {
+        startDate,
+        endDate
+      },
+      skip: USE_MOCK_DATA,
+      fetchPolicy: 'cache-first',
+      nextFetchPolicy: 'cache-first',
+      notifyOnNetworkStatusChange: true,
+      errorPolicy: 'all'
+    }
+  )
+
+  // デバッグ: チーム記録データの取得状況をログ出力
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('=== useCalendarData Debug ===')
+      console.log('teamRecordsData:', teamRecordsData)
+      console.log('teamRecordsLoading:', teamRecordsLoading)
+      console.log('teamRecordsError:', teamRecordsError)
+      console.log('teamPracticesData:', teamPracticesData)
+      console.log('teamPracticesLoading:', teamPracticesLoading)
+      console.log('teamPracticesError:', teamPracticesError)
+      console.log('=== End Debug ===')
+    }
+  }, [teamRecordsData, teamRecordsLoading, teamRecordsError, teamPracticesData, teamPracticesLoading, teamPracticesError])
 
   // エラーログ出力
   useEffect(() => {
@@ -92,7 +135,13 @@ export function useCalendarData(currentDate: Date, userId?: string) {
         console.error('Records Network error:', (recordsError as any).networkError)
       }
     }
-  }, [calendarError, practiceError, recordsError, practicesData, recordsData, practiceLoading, recordsLoading])
+    if (teamRecordsError) {
+      console.error('Team records fetch error:', teamRecordsError)
+    }
+    if (teamPracticesError) {
+      console.error('Team practices fetch error:', teamPracticesError)
+    }
+  }, [calendarError, practiceError, recordsError, teamRecordsError, teamPracticesError, practicesData, recordsData, practiceLoading, recordsLoading])
 
   // データを統合してカレンダー表示用に変換
   const calendarItems: CalendarItem[] = useMemo(() => {
@@ -196,7 +245,7 @@ export function useCalendarData(currentDate: Date, userId?: string) {
       })
     }
 
-    // 大会記録を追加
+    // 大会記録を追加（個人記録）
     if (recordsData && (recordsData as any).myRecords) {
       (recordsData as any).myRecords.forEach((record: any) => {
         // 日付範囲でフィルタリング（competitionのdateを使用）
@@ -233,8 +282,91 @@ export function useCalendarData(currentDate: Date, userId?: string) {
       })
     }
 
+    // チーム記録を追加
+    if (teamRecordsData && (teamRecordsData as any).teamRecords) {
+      (teamRecordsData as any).teamRecords.forEach((record: any) => {
+        // 日付範囲でフィルタリング（competitionのdateを使用）
+        if (record.competition && record.competition.date) {
+          const recordDate = new Date(record.competition.date)
+          if (recordDate >= monthStart && recordDate <= monthEnd) {
+            const timeString = record.time ? formatTime(record.time) : ''
+            const relayIndicator = record.isRelaying ? 'R' : ''
+            const styleInfo = record.style ? `${(record.style as any).name}` : '記録'
+            const userName = record.user ? record.user.name : 'チームメンバー'
+            const title = `${userName} - ${styleInfo}: ${timeString}${relayIndicator}`
+            
+            const item: any = {
+              id: `team-${record.id}`, // チーム記録はIDにプレフィックスを追加
+              item_type: 'record',
+              item_date: record.competition.date,
+              title,
+              location: record.competition.title || '大会',
+              is_relaying: record.isRelaying || false,
+              team_record: true // チーム記録であることを示すフラグ
+            }
+
+            // record.timeが有限数値の場合のみtime_resultを設定
+            if (Number.isFinite(Number(record.time))) {
+              item.time_result = Math.round(Number(record.time) * 100)
+            }
+
+            // pool_typeは不明な場合は設定しない
+            if (record.competition?.poolType !== undefined) {
+              item.pool_type = record.competition.poolType
+            }
+
+            items.push(item)
+          }
+        }
+      })
+    }
+
+    // チーム練習を追加
+    if (teamPracticesData && (teamPracticesData as any).teamPracticesForCalendar) {
+      (teamPracticesData as any).teamPracticesForCalendar.forEach((practice: any) => {
+        const practiceDate = new Date(practice.date)
+        if (practiceDate >= monthStart && practiceDate <= monthEnd) {
+          const practicePlace = practice.place || '練習場'
+          const practiceLogs = practice.practiceLogs || []
+          const userName = practice.user ? practice.user.name : 'チームメンバー'
+          
+          if (practiceLogs.length > 0) {
+            practiceLogs.forEach((log: any) => {
+              const logDate = new Date(practice.date)
+              if (logDate >= monthStart && logDate <= monthEnd) {
+                const distance = log.distance || 0
+                const time = log.time || 0
+                const style = log.style ? log.style.name : 'Fr'
+                const title = `${userName} - ${distance}m ${style} ${time > 0 ? formatTime(time) : ''}`
+                
+                items.push({
+                  id: `team-practice-${practice.id}-${log.id}`, // チーム練習はIDにプレフィックスを追加
+                  item_type: 'practice',
+                  item_date: practice.date,
+                  title,
+                  location: practicePlace,
+                  team_practice: true // チーム練習であることを示すフラグ
+                })
+              }
+            })
+          } else {
+            // 練習ログがない場合
+            const title = `${userName} - 練習: ${practicePlace}`
+            items.push({
+              id: `team-practice-${practice.id}`,
+              item_type: 'practice',
+              item_date: practice.date,
+              title,
+              location: practicePlace,
+              team_practice: true
+            })
+          }
+        }
+      })
+    }
+
     return items
-  }, [practicesData, recordsData, currentDate, USE_MOCK_DATA, monthStart, monthEnd])
+  }, [practicesData, recordsData, teamRecordsData, teamPracticesData, currentDate, USE_MOCK_DATA, monthStart, monthEnd])
 
   // 月間サマリー
   const monthlySummary: MonthlySummary = useMemo(() => {
@@ -275,15 +407,17 @@ export function useCalendarData(currentDate: Date, userId?: string) {
   return {
     calendarItems,
     monthlySummary,
-    loading: USE_MOCK_DATA ? false : (calendarLoading || practiceLoading || recordsLoading),
-    error: USE_MOCK_DATA ? null : (calendarError || practiceError || recordsError),
+    loading: USE_MOCK_DATA ? false : (calendarLoading || practiceLoading || recordsLoading || teamRecordsLoading || teamPracticesLoading),
+    error: USE_MOCK_DATA ? null : (calendarError || practiceError || recordsError || teamRecordsError || teamPracticesError),
     refetch: async () => {
       if (!USE_MOCK_DATA) {
         // すべてのクエリを並行して再実行
         await Promise.all([
           refetch(),
           refetchPractices(),
-          refetchRecords()
+          refetchRecords(),
+          refetchTeamRecords(),
+          refetchTeamPractices()
         ])
       }
     }
