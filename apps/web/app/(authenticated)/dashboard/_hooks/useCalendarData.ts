@@ -340,7 +340,7 @@ export function useCalendarData(currentDate: Date, userId?: string) {
                 const title = `${userName} - ${distance}m ${style} ${time > 0 ? formatTime(time) : ''}`
                 
                 items.push({
-                  id: `team-practice-${practice.id}-${log.id}`, // チーム練習はIDにプレフィックスを追加
+                  id: practice.id, // 実際のpractice.idを使用（詳細表示のため）
                   item_type: 'practice',
                   item_date: practice.date,
                   title,
@@ -353,7 +353,7 @@ export function useCalendarData(currentDate: Date, userId?: string) {
             // 練習ログがない場合
             const title = `${userName} - 練習: ${practicePlace}`
             items.push({
-              id: `team-practice-${practice.id}`,
+              id: practice.id, // 実際のpractice.idを使用（詳細表示のため）
               item_type: 'practice',
               item_date: practice.date,
               title,

@@ -37,7 +37,8 @@ export const TeamCompetitionManager: React.FC<TeamCompetitionManagerProps> = ({
     fetchPolicy: 'cache-and-network'
   })
 
-  const competitions = (competitionsData as any)?.competitions || []
+  // クエリは teamCompetitions を返す点に注意
+  const competitions = (competitionsData as any)?.teamCompetitions || []
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('ja-JP', {

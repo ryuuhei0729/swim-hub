@@ -605,7 +605,17 @@ export const resolvers = {
     practice: async (_: any, { id }: { id: string }, context: any) => {
       const userId = getUserId(context)
       
-      const { data, error } = await supabase
+      // まず、ユーザーが所属するチームを取得
+      const { data: memberships, error: membershipError } = await supabase
+        .from('team_memberships')
+        .select('team_id')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+      
+      const teamIds = membershipError || !memberships ? [] : memberships.map(m => m.team_id)
+      
+      // クエリ条件を構築
+      let query = supabase
         .from('practices')
         .select(`
           *,
@@ -619,8 +629,16 @@ export const resolvers = {
           )
         `)
         .eq('id', id)
-        .eq('user_id', userId)
-        .single()
+      
+      // 個人の練習記録またはチームの練習記録を取得
+      if (teamIds.length > 0) {
+        const orCondition = `user_id.eq.${userId},team_id.in.(${teamIds.join(',')})`
+        query = query.or(orCondition)
+      } else {
+        query = query.eq('user_id', userId)
+      }
+      
+      const { data, error } = await query.single()
       
       if (error) throw new Error(error.message)
       
@@ -680,6 +698,8 @@ export const resolvers = {
           createdAt: log.created_at,
           updatedAt: log.updated_at
         })),
+        teamId: data.team_id,
+        isPersonal: data.team_id === null,
         createdAt: data.created_at,
         updatedAt: data.updated_at
       }
@@ -1549,6 +1569,56 @@ export const resolvers = {
       } catch (error) {
         console.error('teamPractices error:', error)
         return null
+      }
+    },
+
+    teamCompetitions: async (_: any, { teamId }: { teamId: string }, context: any): Promise<any[]> => {
+      const userId = getUserId(context)
+      
+      try {
+        // チームメンバーかチェック（練習管理と同様に、メンバーなら閲覧可能）
+        const { data: membership, error: membershipError } = await supabase
+          .from('team_memberships')
+          .select('id, role, is_active')
+          .eq('team_id', teamId)
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .single()
+        
+        if (!membership) {
+          return []
+        }
+
+        const { data, error } = await supabase
+          .from('competitions')
+          .select('*')
+          .eq('team_id', teamId)
+          .order('date', { ascending: true })
+
+        if (error) {
+          console.error('teamCompetitions database error:', error)
+          return []
+        }
+
+        const result = (data || []).map((competition: any) => ({
+          id: competition.id,
+          title: competition.title,
+          date: competition.date,
+          place: competition.place,
+          poolType: competition.pool_type,
+          note: competition.note,
+          teamId: competition.team_id,
+          isPersonal: competition.team_id === null,
+          entryStatus: competition.entry_status?.toUpperCase() || 'UPCOMING',
+          records: [],
+          createdAt: competition.created_at,
+          updatedAt: competition.updated_at
+        }))
+        
+        return result
+      } catch (error) {
+        console.error('teamCompetitions error:', error)
+        return []
       }
     },
 
@@ -3551,61 +3621,6 @@ export const resolvers = {
       } catch (error) {
         console.error('deleteTeamAnnouncement error:', error)
         throw error
-      }
-    },
-
-    teamCompetitions: async (_: any, { teamId }: { teamId: string }, context: any): Promise<any[] | null> => {
-      const userId = getUserId(context)
-      
-      try {
-        // チームメンバーかチェック
-        const { data: membership, error: membershipError } = await supabase
-          .from('team_memberships')
-          .select('id, role, is_active')
-          .eq('team_id', teamId)
-          .eq('user_id', userId)
-          .eq('is_active', true)
-          .single()
-        
-        if (!membership) {
-          return null
-        }
-        
-        // 管理者権限の確認（データベースでは小文字で保存されている）
-        if (membership.role !== 'admin') {
-          return null
-        }
-
-        const { data, error } = await supabase
-          .from('competitions')
-          .select('*')
-          .eq('team_id', teamId)
-          .order('date', { ascending: true })
-
-        if (error) {
-          console.error('teamCompetitions database error:', error)
-          return null
-        }
-
-        const result = (data || []).map((competition: any) => ({
-          id: competition.id,
-          title: competition.title,
-          date: competition.date,
-          place: competition.place,
-          poolType: competition.pool_type,
-          note: competition.note,
-          teamId: competition.team_id,
-          isPersonal: competition.team_id === null,
-          entryStatus: competition.entry_status?.toUpperCase(),
-          records: [],
-          createdAt: competition.created_at,
-          updatedAt: competition.updated_at
-        }))
-        
-        return result
-      } catch (error) {
-        console.error('teamCompetitions error:', error)
-        return null
       }
     }
   }

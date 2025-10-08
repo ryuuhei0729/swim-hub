@@ -44,6 +44,8 @@ export const GET_PRACTICE = gql`
       date
       place
       note
+      teamId
+      isPersonal
       practiceLogs {
         id
         practiceId
