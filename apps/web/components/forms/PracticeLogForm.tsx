@@ -173,16 +173,28 @@ export default function PracticeLogForm({
     const repCount = parseInt(entry.repCount) || 1
     const setCount = parseInt(entry.setCount) || 1
     
-    // 本数×セット数分のタイムエントリーを生成
+    // 本数×セット数分のタイムエントリーを生成（既存値でプレフィル）
     const newTimeEntries: PracticeTimeInput[] = []
     for (let set = 1; set <= setCount; set++) {
       for (let rep = 1; rep <= repCount; rep++) {
-        newTimeEntries.push({
-          repNumber: rep,
-          setNumber: set,
-          time: 0,
-          timeDisplayValue: ''
-        })
+        // 既存タイムから一致するものを検索
+        const existing = (entry.times || []).find(t => t.setNumber === set && t.repNumber === rep)
+        if (existing) {
+          newTimeEntries.push({
+            id: existing.id,
+            repNumber: rep,
+            setNumber: set,
+            time: existing.time || 0,
+            timeDisplayValue: existing.timeDisplayValue
+          })
+        } else {
+          newTimeEntries.push({
+            repNumber: rep,
+            setNumber: set,
+            time: 0,
+            timeDisplayValue: ''
+          })
+        }
       }
     }
     setTimeEntries(newTimeEntries)
