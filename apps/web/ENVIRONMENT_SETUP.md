@@ -7,7 +7,7 @@
 `apps/web/.env.local` ファイルを作成してください：
 
 ```bash
-# 開発環境用設定 (swimmer-dev プロジェクaト)
+# 開発環境用設定 (swimmer-dev プロジェクト)
 NEXT_PUBLIC_SUPABASE_URL=https://your-dev-project-id.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-dev-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-dev-service-role-key
@@ -77,18 +77,18 @@ Vercelダッシュボード → Settings → Environment Variables で以下を�
 ### 開発環境 (Development)
 - **Supabaseプロジェクト**: `swimmer-dev`
 - **デバッグログ**: 有効
-- **ストレージキー**: `swim-manager-auth-development`
+- **ストレージキー**: `swimhub-auth-development`
 
 ### ステージング環境 (Staging)
 - **Supabaseプロジェクト**: `swimmer-dev` (開発用DBを共有)
 - **デバッグログ**: 有効
-- **ストレージキー**: `swim-manager-auth-staging`
+- **ストレージキー**: `swimhub-auth-staging`
 - **用途**: 本番リリース前のテスト
 
 ### 本番環境 (Production)
 - **Supabaseプロジェクト**: `swimmer-prod` (専用DB)
 - **デバッグログ**: 無効
-- **ストレージキー**: `swim-manager-auth-production`
+- **ストレージキー**: `swimhub-auth-production`
 - **用途**: 実際のユーザー向けサービス
 
 ## ⚠️ 重要な注意事項
@@ -113,7 +113,7 @@ Vercelダッシュボード → Settings → Environment Variables で以下を�
 3. `npm run dev` でローカル開発サーバーを起動
 4. ブラウザコンソールで環境情報を確認：
    ```
-   🏊 Swim Manager - 開発環境 (swimmer-dev)
+   🏊 SwimHub - 開発環境 (swimmer-dev)
    🚀 GraphQL Endpoint: https://your-dev-project-id.supabase.co/functions/v1/graphql
    ```
 

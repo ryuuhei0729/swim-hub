@@ -5,7 +5,7 @@
 ## 🏗️ モノレポ構造
 
 ```
-swimmer-management-system/
+swim-hub/
 ├── .github/
 │   └── workflows/              # GitHub Actions CI/CD
 ├── apps/

@@ -19,7 +19,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 
 const testUsers = [
   {
-    email: 'test@swimmanager.com',
+    email: 'test@swimhub.com',
     password: 'TestPassword123!',
     name: 'テストユーザー'
   }

@@ -1,13 +1,13 @@
 {
-    "name": "swim_manager_mobile",
-    "short_name": "swim_manager_mobile",
+    "name": "SwimHub",
+    "short_name": "SwimHub",
     "id": ".",
     "start_url": ".",
     "scope": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "水泳選手マネジメントシステム モバイルアプリ",
+    "description": "水泳選手マネジメントシステム SwimHub モバイルアプリ",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

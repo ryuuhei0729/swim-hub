@@ -123,7 +123,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({
           {formMode === 'signin' ? 'ログイン' : 'アカウント作成'}
         </h2>
         <p className="text-sm text-gray-600">
-          {formMode === 'signin' ? 'Swim Managerへようこそ' : '新しいアカウントを作成'}
+          {formMode === 'signin' ? 'SwimHubへようこそ' : '新しいアカウントを作成'}
         </p>
       </div>
 

@@ -23,7 +23,7 @@ test.describe('認証機能', () => {
     
     // 新規登録フォームに入力
     await page.fill('input[id="name"]', 'E2Eテストユーザー')
-    await page.fill('input[id="email"]', 'e2e-test@swimmanager.com')
+    await page.fill('input[id="email"]', 'e2e-test@swimhub.com')
     await page.fill('input[id="password"]', 'E2ETest123!')
     
     // 登録ボタンをクリック
@@ -37,7 +37,7 @@ test.describe('認証機能', () => {
     await expect(page.locator('h2').filter({ hasText: 'ログイン' })).toBeVisible()
     
     // Step 3: ログイン実行
-    await page.fill('input[id="email"]', 'e2e-test@swimmanager.com')
+    await page.fill('input[id="email"]', 'e2e-test@swimhub.com')
     await page.fill('input[id="password"]', 'E2ETest123!')
     await page.click('button[type="submit"]')
     
@@ -70,7 +70,7 @@ test.describe('認証機能', () => {
     // Step 1: 新規登録
     await page.click('text=アカウントをお持ちでない方はこちら')
     await page.fill('input[id="name"]', 'ログアウトテストユーザー')
-    await page.fill('input[id="email"]', 'logout-test@swimmanager.com')
+    await page.fill('input[id="email"]', 'logout-test@swimhub.com')
     await page.fill('input[id="password"]', 'LogoutTest123!')
     await page.click('button[type="submit"]')
     
@@ -109,7 +109,7 @@ test.describe('認証機能', () => {
     // Step 1: 新規登録
     await page.click('text=アカウントをお持ちでない方はこちら')
     await page.fill('input[id="name"]', '永続化テストユーザー')
-    await page.fill('input[id="email"]', 'persistence-test@swimmanager.com')
+    await page.fill('input[id="email"]', 'persistence-test@swimhub.com')
     await page.fill('input[id="password"]', 'PersistenceTest123!')
     await page.click('button[type="submit"]')
     
@@ -118,7 +118,7 @@ test.describe('認証機能', () => {
     
     // Step 2: ログイン
     await page.click('text=すでにアカウントをお持ちの方はこちら')
-    await page.fill('input[id="email"]', 'persistence-test@swimmanager.com')
+    await page.fill('input[id="email"]', 'persistence-test@swimhub.com')
     await page.fill('input[id="password"]', 'PersistenceTest123!')
     await page.click('button[type="submit"]')
     
@@ -140,7 +140,7 @@ test.describe('認証機能', () => {
     // Step 1: 新規登録（パスワードリセット対象ユーザー）
     await page.click('text=アカウントをお持ちでない方はこちら')
     await page.fill('input[id="name"]', 'リセットテストユーザー')
-    await page.fill('input[id="email"]', 'reset-test@swimmanager.com')
+    await page.fill('input[id="email"]', 'reset-test@swimhub.com')
     await page.fill('input[id="password"]', 'ResetTest123!')
     await page.click('button[type="submit"]')
     
@@ -173,7 +173,7 @@ test.describe('認証機能', () => {
     
     // 新規登録フォームに入力
     await page.fill('input[id="name"]', '単体登録テストユーザー')
-    await page.fill('input[id="email"]', 'single-register@swimmanager.com')
+    await page.fill('input[id="email"]', 'single-register@swimhub.com')
     await page.fill('input[id="password"]', 'SingleRegister123!')
     
     // 登録ボタンをクリック

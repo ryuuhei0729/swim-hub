@@ -4,12 +4,12 @@ import { createClient } from '@supabase/supabase-js'
 // テスト用ユーザー情報
 export const TEST_USERS = {
   ADMIN: {
-    email: 'test-admin@swimmanager.com',
+    email: 'test-admin@swimhub.com',
     password: 'TestAdmin123!',
     name: 'テスト管理者'
   },
   REGULAR: {
-    email: 'test-user@swimmanager.com', 
+    email: 'test-user@swimhub.com', 
     password: 'TestUser123!',
     name: 'テストユーザー'
   }
