@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { PlusIcon, TrophyIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
+import { TrophyIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui'
 import RecordForm from '@/components/forms/RecordForm'
 import { useMutation, useQuery } from '@apollo/client/react'
@@ -126,11 +126,7 @@ export default function CompetitionPage() {
     return dateB.getTime() - dateA.getTime()
   })
 
-  const handleCreateRecord = () => {
-    setEditingItem(null)
-    setEditingData(null)
-    setIsFormOpen(true)
-  }
+  
 
   const handleEditRecord = async (record: any) => {
     setEditingItem({
@@ -312,13 +308,7 @@ export default function CompetitionPage() {
               大会での記録を管理・分析します。
             </p>
           </div>
-          <Button
-            onClick={handleCreateRecord}
-            className="flex items-center space-x-2"
-          >
-            <PlusIcon className="h-5 w-5" />
-            <span>新しい大会記録</span>
-          </Button>
+          
         </div>
       </div>
 
@@ -441,11 +431,7 @@ export default function CompetitionPage() {
             <p className="mt-1 text-sm text-gray-500">
               最初の大会記録を作成しましょう。
             </p>
-            <div className="mt-6">
-              <Button onClick={handleCreateRecord}>
-                大会記録を作成
-              </Button>
-            </div>
+            
           </div>
         ) : sortedRecords.length === 0 ? (
           <div className="p-12 text-center">
@@ -474,10 +460,10 @@ export default function CompetitionPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    大会名
+                    日付
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    日付
+                    大会名
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     場所
@@ -503,10 +489,10 @@ export default function CompetitionPage() {
                 {sortedRecords.map((record: any) => (
                   <tr key={record.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {record.competition?.title || '-'}
+                      {record.competition?.date ? format(new Date(record.competition.date), 'MM/dd', { locale: ja }) : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {record.competition?.date ? format(new Date(record.competition.date), 'MM/dd', { locale: ja }) : '-'}
+                      {record.competition?.title || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {record.competition?.place || '-'}

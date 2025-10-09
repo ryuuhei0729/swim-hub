@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { PlusIcon, CalendarDaysIcon, ClockIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { CalendarDaysIcon, ClockIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui'
 import PracticeLogForm from '@/components/forms/PracticeLogForm'
 import PracticeTimeForm from '@/components/forms/PracticeTimeForm'
@@ -198,13 +198,7 @@ export default function PracticePage() {
     }
   }
 
-  const handleCreateLog = () => {
-    setEditingLog(null)
-    setSelectedDate(null)
-    setEditingItem(null)
-    setEditingData(null)
-    setIsFormOpen(true)
-  }
+  
 
   const handleEditLog = (log: any) => {
     // ダッシュボードと同じ処理
@@ -472,13 +466,6 @@ export default function PracticePage() {
             >
               <span>タグでフィルター</span>
             </Button>
-            <Button
-              onClick={handleCreateLog}
-              className="flex items-center space-x-2 w-full sm:w-auto justify-center"
-            >
-              <PlusIcon className="h-5 w-5" />
-              <span>新しい練習記録</span>
-            </Button>
           </div>
         </div>
         
@@ -545,7 +532,7 @@ export default function PracticePage() {
 
       {/* 練習記録一覧（表形式） */}
       <div className="bg-white rounded-lg shadow">
-        <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+        <div className="px-3 sm:px-4 py-3 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">
             練習記録一覧
           </h2>
@@ -558,11 +545,7 @@ export default function PracticePage() {
             <p className="mt-1 text-sm text-gray-500">
               最初の練習記録を作成しましょう。
             </p>
-            <div className="mt-6">
-              <Button onClick={handleCreateLog}>
-                練習記録を作成
-              </Button>
-            </div>
+            
           </div>
         ) : (
           <>
@@ -571,31 +554,31 @@ export default function PracticePage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       日付
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       場所
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       距離・本数・セット
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       サークル
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       種目
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       タグ
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       タイム
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       メモ
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       操作
                     </th>
                   </tr>
@@ -603,22 +586,22 @@ export default function PracticePage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {sortedPracticeLogs.map((log: any) => (
                     <tr key={log.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                         {log.practice?.date ? format(new Date(log.practice.date), 'MM/dd', { locale: ja }) : '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                         {log.practice?.place || '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                         {log.distance}m × {log.repCount}本{log.setCount > 1 ? ` × ${log.setCount}セット` : ''}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                         {log.circle ? `${Math.floor(log.circle / 60)}'${Math.floor(log.circle % 60).toString().padStart(2, '0')}"` : '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                         {log.style}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 py-3 whitespace-nowrap">
                         {log.tags && log.tags.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {log.tags.map((tag: any) => (
@@ -637,7 +620,7 @@ export default function PracticePage() {
                           <span className="text-gray-400">-</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 py-3 whitespace-nowrap">
                         {log.times && log.times.length > 0 ? (
                           <div className="text-sm">
                             {calculateSetAverages(log.times, log.repCount, log.setCount).map((avgTime: number, setIndex: number) => (
@@ -651,10 +634,10 @@ export default function PracticePage() {
                           <span className="text-gray-400">-</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
+                      <td className="px-3 py-3 text-sm text-gray-900 max-w-xs truncate">
                         {log.note || '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <td className="px-3 py-3 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center justify-end space-x-2">
                           {log.times && log.times.length > 0 && (
                             <Button
@@ -699,16 +682,16 @@ export default function PracticePage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       日付
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       内容
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       タイム
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       操作
                     </th>
                   </tr>
@@ -716,7 +699,7 @@ export default function PracticePage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {sortedPracticeLogs.map((log: any) => (
                     <tr key={log.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                         <div>
                           <div className="font-medium">
                             {log.practice?.date ? format(new Date(log.practice.date), 'MM/dd', { locale: ja }) : '-'}
@@ -726,7 +709,7 @@ export default function PracticePage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-900">
+                      <td className="px-3 py-3 text-sm text-gray-900">
                         <div className="space-y-1">
                           <div className="font-medium">
                             {log.distance}m × {log.repCount}本{log.setCount > 1 ? ` × ${log.setCount}セット` : ''}
@@ -756,7 +739,7 @@ export default function PracticePage() {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                         {log.times && log.times.length > 0 ? (
                           <div className="text-sm">
                             {calculateSetAverages(log.times, log.repCount, log.setCount).map((avgTime: number, setIndex: number) => (
@@ -770,7 +753,7 @@ export default function PracticePage() {
                           <span className="text-gray-400">-</span>
                         )}
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
+                      <td className="px-3 py-3 whitespace-nowrap text-sm font-medium">
                         <div className="flex flex-col space-y-1">
                           {log.times && log.times.length > 0 && (
                             <Button
