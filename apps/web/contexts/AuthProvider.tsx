@@ -38,12 +38,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data, error } = await Promise.race([profilePromise, timeoutPromise])
       
       if (error) {
-        console.log('AuthProvider: Profile fetch error:', error)
         
         // ユーザーが存在しない場合（PGRST116エラー）、デフォルトプロフィールを作成
         if (error.code === 'PGRST116') {
           if (process.env.NODE_ENV === 'development') {
-            console.log('AuthProvider: Creating default profile for user:', userId)
           }
           
           try {
@@ -141,7 +139,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Apollo Clientのキャッシュを全てクリア
       try {
         await apolloClient.clearStore()
-        console.log('Apollo Client cache cleared on logout')
       } catch (cacheError) {
         console.warn('Failed to clear Apollo Client cache:', cacheError)
       }
@@ -252,7 +249,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (event === 'SIGNED_OUT') {
             try {
               await apolloClient.clearStore()
-              console.log('Apollo Client cache cleared on session sign out')
             } catch (cacheError) {
               console.warn('Failed to clear Apollo Client cache on sign out:', cacheError)
             }

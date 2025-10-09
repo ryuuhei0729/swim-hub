@@ -94,11 +94,9 @@ export default function RecordForm({
   // 編集データがある場合、フォームを初期化
   useEffect(() => {
     if (editData && isOpen) {
-      console.log('RecordForm: Setting form data from editData:', editData)
       
       // 複数のRecordが存在する場合の処理
       if (editData.records && editData.records.length > 0) {
-        console.log('RecordForm: Multiple records detected:', editData.records.length)
         
         const records: RecordSet[] = editData.records.map((record: any, index: number) => ({
           id: record.id || `record-${index}`,

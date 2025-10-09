@@ -87,7 +87,7 @@ test.describe('認証機能', () => {
     await expect(page).toHaveURL('/dashboard', { timeout: 10000 })
     
     // Step 3: ログアウト
-    await page.click('[data-testid="user-menu"], .user-menu, button:has-text("ログアウト"), text=ログアウト').first()
+    await page.locator('[data-testid="user-menu"], .user-menu, button:has-text("ログアウト"), text=ログアウト').first().click()
     
     // ログインページにリダイレクトされることを確認
     await expect(page).toHaveURL('/login', { timeout: 5000 })

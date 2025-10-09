@@ -10,7 +10,6 @@ async function globalTeardown(config: FullConfig) {
   // テスト結果のサマリー表示
   console.log('📊 テスト実行結果:')
   console.log(`  - 設定ファイル: ${config.configFile}`)
-  console.log(`  - テストディレクトリ: ${config.testDir}`)
   console.log(`  - プロジェクト数: ${config.projects.length}`)
   
   // 必要に応じてクリーンアップ処理を追加

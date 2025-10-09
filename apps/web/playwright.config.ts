@@ -22,7 +22,7 @@ export default defineConfig({
   
   // レポート設定
   reporter: [
-    ['html', { outputFolder: 'playwright-report' }],
+    ['html', { outputFolder: 'e2e/playwright-report' }],
     ['junit', { outputFile: 'test-results/results.xml' }],
     ['list']
   ],

@@ -77,16 +77,16 @@ async function setupTestUsers() {
   // 既存のテストユーザーをクリーンアップ
   try {
     const { data: existingUsers } = await supabase.auth.admin.listUsers()
-    const testEmails = Object.values(TEST_USERS).map(user => user.email)
+    const testEmails = Object.values(TEST_USERS).map(user => user.email) as string[]
     
     for (const user of existingUsers.users) {
-      if (testEmails.includes(user.email)) {
+      if (user.email && testEmails.includes(user.email)) {
         await supabase.auth.admin.deleteUser(user.id)
         console.log(`🗑️  既存のテストユーザーを削除: ${user.email}`)
       }
     }
   } catch (error) {
-    console.warn('⚠️  ユーザークリーンアップ警告:', error.message)
+    console.warn('⚠️  ユーザークリーンアップ警告:', (error as any).message)
   }
   
   // 新しいテストユーザーを作成
@@ -123,10 +123,10 @@ async function setupTestUsers() {
         console.log(`✅ ${role}プロフィール情報も作成`)
       } catch (profileError) {
         // プロフィール作成失敗は警告のみ（テーブルが存在しない場合があるため）
-        console.warn(`⚠️  ${role}プロフィール作成スキップ:`, profileError.message)
+        console.warn(`⚠️  ${role}プロフィール作成スキップ:`, (profileError as any).message)
       }
     } catch (error) {
-      console.error(`❌ ${role}ユーザー作成で予期しないエラー:`, error.message)
+      console.error(`❌ ${role}ユーザー作成で予期しないエラー:`, (error as any).message)
     }
   }
   

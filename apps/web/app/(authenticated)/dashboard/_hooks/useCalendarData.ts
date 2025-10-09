@@ -9,7 +9,7 @@ import { GET_TEAM_COMPETITIONS_FOR_CALENDAR, GET_TEAM_PRACTICES_FOR_CALENDAR, GE
 import { formatTime } from '../../../../utils/formatters'
 export function useCalendarData(currentDate: Date, userId?: string) {
   const { profile } = useAuth()
-  const targetUserId = userId || profile?.id
+  const _targetUserId = userId || profile?.id
 
   // 月の開始日と終了日を計算
   const monthStart = startOfMonth(currentDate)
@@ -116,23 +116,8 @@ export function useCalendarData(currentDate: Date, userId?: string) {
     }
   )
 
-  // デバッグ: チーム記録データの取得状況をログ出力
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('=== useCalendarData Debug ===')
-      console.log('teamRecordsData:', teamRecordsData)
-      console.log('teamRecordsLoading:', teamRecordsLoading)
-      console.log('teamRecordsError:', teamRecordsError)
-      console.log('teamPracticesData:', teamPracticesData)
-      console.log('teamPracticesLoading:', teamPracticesLoading)
-      console.log('teamPracticesError:', teamPracticesError)
-      console.log('=== End Debug ===')
-    }
-  }, [teamRecordsData, teamRecordsLoading, teamRecordsError, teamPracticesData, teamPracticesLoading, teamPracticesError])
-
   // エラーログ出力
   useEffect(() => {
-
     if (calendarError) {
       console.error('Calendar data fetch error:', calendarError)
       if ((calendarError as any).graphQLErrors) {

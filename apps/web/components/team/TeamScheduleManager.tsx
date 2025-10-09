@@ -104,21 +104,9 @@ export const TeamScheduleManager: React.FC<TeamScheduleManagerProps> = ({
     fetchPolicy: 'cache-and-network'
   })
 
-  // デバッグ用：データの変化を監視
-  useEffect(() => {
-    console.log('GET_TEAM_SCHEDULES data changed:', {
-      loading,
-      error: error?.message,
-      data,
-      teamId
-    })
-  }, [data, loading, error, teamId])
-
   useEffect(() => {
     if (teamsData) {
-      console.log('GET_MY_TEAMS_DEBUG data:', teamsData)
       const currentTeamMembership = (teamsData as any)?.myTeams?.find((t: any) => t.teamId === teamId)
-      console.log('Current team membership:', currentTeamMembership)
     }
   }, [teamsData, teamId])
 
@@ -153,18 +141,6 @@ export const TeamScheduleManager: React.FC<TeamScheduleManagerProps> = ({
 
   const existingPractices = (data as any)?.teamPractices || []
   const existingCompetitions = (data as any)?.teamCompetitions || []
-  
-  // デバッグ用ログ（一時的）
-  console.log('TeamScheduleManager Data:', {
-    teamId,
-    data,
-    teamPractices: (data as any)?.teamPractices,
-    teamCompetitions: (data as any)?.teamCompetitions,
-    existingPractices,
-    existingCompetitions,
-    practicesCount: existingPractices.length,
-    competitionsCount: existingCompetitions.length
-  })
 
   // 日付順でソート
   const allSchedules = [

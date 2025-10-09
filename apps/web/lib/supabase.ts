@@ -9,7 +9,6 @@ const envConfig = getCurrentEnvConfig()
 
 // 環境情報をログ出力（開発・ステージング環境のみ）
 if (envConfig.debug) {
-  console.log(`🏊 Swim Manager - ${envConfig.name} (${envConfig.supabaseProject})`)
 }
 
 // 型定義

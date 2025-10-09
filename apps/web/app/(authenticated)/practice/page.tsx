@@ -129,6 +129,40 @@ export default function PracticePage() {
     return dateB.getTime() - dateA.getTime()
   })
 
+  // セットごとの平均タイムを計算する関数
+  const calculateSetAverages = (times: any[], repCount: number, setCount: number) => {
+    if (!times || times.length === 0 || repCount === 0 || setCount === 0) {
+      return []
+    }
+
+    const averages: number[] = []
+    const expectedTimesPerSet = repCount
+
+    for (let setIndex = 0; setIndex < setCount; setIndex++) {
+      const startIndex = setIndex * expectedTimesPerSet
+      const endIndex = Math.min(startIndex + expectedTimesPerSet, times.length)
+      const setTimes = times.slice(startIndex, endIndex)
+
+      if (setTimes.length > 0) {
+        const sum = setTimes.reduce((acc: number, time: any) => acc + (time.time || 0), 0)
+        const average = sum / setTimes.length
+        averages.push(average)
+      }
+    }
+
+    return averages
+  }
+
+  // タイムをフォーマットする関数
+  const formatTime = (seconds: number): string => {
+    if (seconds === 0) return '0.00'
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = seconds % 60
+    return minutes > 0 
+      ? `${minutes}:${remainingSeconds.toFixed(2).padStart(5, '0')}`
+      : `${remainingSeconds.toFixed(2)}`
+  }
+
   // タグの保存処理（ダッシュボードと同じ）
   const savePracticeLogTags = async (practiceLogId: string, tags: any[], existingTags: any[] = []) => {
     try {
@@ -362,7 +396,6 @@ export default function PracticePage() {
               await deletePractice({
                 variables: { id: practiceId }
               })
-              console.log('Practice_Logが紐づいていないPracticeを削除しました:', practiceId)
             } catch (practiceDeleteError) {
               console.error('Practiceの削除に失敗しました:', practiceDeleteError)
               // Practice削除に失敗してもエラーを表示しない（Practice_Logは削除済み）
@@ -607,22 +640,12 @@ export default function PracticePage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         {log.times && log.times.length > 0 ? (
                           <div className="text-sm">
-                            {log.times.map((time: any, index: number) => {
-                              const formatTime = (seconds: number): string => {
-                                if (seconds === 0) return '0.00'
-                                const minutes = Math.floor(seconds / 60)
-                                const remainingSeconds = seconds % 60
-                                return minutes > 0 
-                                  ? `${minutes}:${remainingSeconds.toFixed(2).padStart(5, '0')}`
-                                  : `${remainingSeconds.toFixed(2)}`
-                              }
-                              return (
-                                <div key={time.id} className="text-gray-900">
-                                  {formatTime(time.time)}
-                                  {index < log.times.length - 1 && <br />}
-                                </div>
-                              )
-                            })}
+                            {calculateSetAverages(log.times, log.repCount, log.setCount).map((avgTime: number, setIndex: number) => (
+                              <div key={setIndex} className="text-gray-900">
+                                {log.setCount > 1 && <span className="text-xs text-gray-500 mr-1">Set{setIndex + 1}:</span>}
+                                {formatTime(avgTime)}
+                              </div>
+                            ))}
                           </div>
                         ) : (
                           <span className="text-gray-400">-</span>
@@ -736,27 +759,12 @@ export default function PracticePage() {
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                         {log.times && log.times.length > 0 ? (
                           <div className="text-sm">
-                            {log.times.slice(0, 3).map((time: any, index: number) => {
-                              const formatTime = (seconds: number): string => {
-                                if (seconds === 0) return '0.00'
-                                const minutes = Math.floor(seconds / 60)
-                                const remainingSeconds = seconds % 60
-                                return minutes > 0 
-                                  ? `${minutes}:${remainingSeconds.toFixed(2).padStart(5, '0')}`
-                                  : `${remainingSeconds.toFixed(2)}`
-                              }
-                              return (
-                                <div key={time.id} className="text-gray-900">
-                                  {formatTime(time.time)}
-                                  {index < Math.min(log.times.length, 3) - 1 && <br />}
-                                </div>
-                              )
-                            })}
-                            {log.times.length > 3 && (
-                              <div className="text-gray-500 text-xs">
-                                +{log.times.length - 3}件
+                            {calculateSetAverages(log.times, log.repCount, log.setCount).map((avgTime: number, setIndex: number) => (
+                              <div key={setIndex} className="text-gray-900">
+                                {log.setCount > 1 && <span className="text-xs text-gray-500 mr-1">Set{setIndex + 1}:</span>}
+                                {formatTime(avgTime)}
                               </div>
-                            )}
+                            ))}
                           </div>
                         ) : (
                           <span className="text-gray-400">-</span>
@@ -846,29 +854,15 @@ export default function PracticePage() {
                           
                           {log.times && log.times.length > 0 && (
                             <div className="mt-2">
-                              <div className="text-xs text-gray-500 mb-1">タイム:</div>
+                              <div className="text-xs text-gray-500 mb-1">平均タイム:</div>
                               <div className="text-sm">
-                                {log.times.slice(0, 3).map((time: any, index: number) => {
-                                  const formatTime = (seconds: number): string => {
-                                    if (seconds === 0) return '0.00'
-                                    const minutes = Math.floor(seconds / 60)
-                                    const remainingSeconds = seconds % 60
-                                    return minutes > 0 
-                                      ? `${minutes}:${remainingSeconds.toFixed(2).padStart(5, '0')}`
-                                      : `${remainingSeconds.toFixed(2)}`
-                                  }
-                                  return (
-                                    <span key={time.id} className="text-gray-900">
-                                      {formatTime(time.time)}
-                                      {index < Math.min(log.times.length, 3) - 1 && ', '}
-                                    </span>
-                                  )
-                                })}
-                                {log.times.length > 3 && (
-                                  <span className="text-gray-500 text-xs ml-1">
-                                    +{log.times.length - 3}件
+                                {calculateSetAverages(log.times, log.repCount, log.setCount).map((avgTime: number, setIndex: number) => (
+                                  <span key={setIndex} className="text-gray-900">
+                                    {log.setCount > 1 && <span className="text-xs text-gray-500 mr-1">Set{setIndex + 1}:</span>}
+                                    {formatTime(avgTime)}
+                                    {setIndex < log.setCount - 1 && ', '}
                                   </span>
-                                )}
+                                ))}
                               </div>
                             </div>
                           )}

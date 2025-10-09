@@ -23,7 +23,6 @@ export default function TeamsPage() {
   // チーム作成ミューテーション
   const [createTeam] = useMutation(CREATE_TEAM, {
     onCompleted: (data) => {
-      console.log('チーム作成完了:', data)
       refetch()
       setShowCreateForm(false)
       setTeamName('')

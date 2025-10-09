@@ -65,6 +65,6 @@ next-env.d.ts
 
 # Playwright E2E Testing
 /apps/web/test-results/
-/apps/web/playwright-report/
+/apps/web/e2e/playwright-report/
 /apps/web/blob-report/
 /apps/web/playwright/.cache/

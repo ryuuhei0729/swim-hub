@@ -7,7 +7,7 @@ import { ja } from 'date-fns/locale'
 import { useCalendarData } from '../_hooks/useCalendarData'
 import { LoadingSpinner } from '@/components/ui'
 import DayDetailModal from './DayDetailModal'
-import { CalendarItem, CalendarProps } from '@/types'
+import { CalendarItem, CalendarItemType, CalendarProps } from '@/types'
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
 
@@ -107,14 +107,21 @@ export default function Calendar({
     return entriesByDate.get(dateKey) || []
   }
 
-  const getItemIcon = (type: 'practice' | 'record') => {
+  const getItemIcon = (_type: CalendarItemType) => {
     return ''
   }
 
-  const getItemColor = (type: 'practice' | 'record') => {
-    return type === 'practice' 
-      ? 'bg-green-100 text-green-800 border-green-200' 
-      : 'bg-blue-100 text-blue-800 border-blue-200'
+  const getItemColor = (type: CalendarItemType) => {
+    switch (type) {
+      case 'practice':
+        return 'bg-green-100 text-green-800 border-green-200'
+      case 'record':
+        return 'bg-blue-100 text-blue-800 border-blue-200'
+      case 'competition':
+        return 'bg-purple-100 text-purple-800 border-purple-200'
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200'
+    }
   }
 
   const getDayStatusIndicator = (entries: CalendarItem[]) => {

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { PlusIcon, TrophyIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui'
 import RecordForm from '@/components/forms/RecordForm'
@@ -15,7 +15,7 @@ import { formatTime } from '@/utils/formatters'
 export default function CompetitionPage() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [editingItem, setEditingItem] = useState<any>(null)
+  const [_editingItem, setEditingItem] = useState<any>(null)
   const [editingData, setEditingData] = useState<any>(null)
   const [selectedRecord, setSelectedRecord] = useState<any>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
@@ -34,14 +34,6 @@ export default function CompetitionPage() {
   // スタイルデータを取得
   const { data: stylesData, loading: stylesLoading, error: stylesError } = useQuery(GET_STYLES)
   const styles = (stylesData as any)?.styles || []
-  
-  // デバッグ情報
-  console.log('スタイルデータデバッグ:', {
-    stylesData,
-    styles,
-    stylesLoading,
-    stylesError
-  })
 
   // ミューテーション
   const [createRecord] = useMutation(CREATE_RECORD, {
@@ -84,7 +76,7 @@ export default function CompetitionPage() {
   const [createCompetition] = useMutation(CREATE_COMPETITION)
 
   // キャッシュクリア関数
-  const clearCache = async () => {
+  const _clearCache = async () => {
     try {
       await apolloClient.clearStore()
       await refetch()
@@ -99,27 +91,12 @@ export default function CompetitionPage() {
   // データが完全に読み込まれているかチェック
   const isDataReady = !loading && recordsData
   
-  // デバッグ情報
-  console.log('記録データデバッグ:', {
-    recordsData,
-    records,
-    recordsCount: records.length,
-    firstRecord: records[0]
-  })
-  
   // フィルタリングロジック
   const filteredRecords = records.filter((record: any) => {
     // 種目フィルタ（RecordテーブルのstyleIdを使用）
     if (filterStyle) {
       const recordStyleId = record.styleId
       const filterStyleId = parseInt(filterStyle)
-      console.log('フィルタリングデバッグ:', {
-        recordStyleId,
-        filterStyleId,
-        recordStyleName: record.style?.nameJp,
-        filterStyle,
-        match: recordStyleId === filterStyleId
-      })
       
       if (recordStyleId !== filterStyleId) {
         return false

@@ -7,7 +7,7 @@ import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
 import { useQuery } from '@apollo/client/react'
 import { GET_RECORD, GET_PRACTICE } from '@/graphql/queries'
-import { CalendarItem, DayDetailModalProps } from '@/types'
+import { CalendarItemType, DayDetailModalProps } from '@/types'
 
 export default function DayDetailModal({
   isOpen,
@@ -21,7 +21,7 @@ export default function DayDetailModal({
   onEditPracticeLog,
   onDeletePracticeLog
 }: DayDetailModalProps) {
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<{id: string, type: 'practice' | 'record'} | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<{id: string, type: CalendarItemType} | null>(null)
 
   if (!isOpen) return null
 
@@ -313,20 +313,6 @@ function PracticeDetails({
 
   const practiceLogs = practice.practiceLogs || []
 
-  // デバッグ: タグ情報とタイム情報を確認
-  console.log('PracticeDetails - practice:', practice)
-  console.log('PracticeDetails - practiceLogs:', practiceLogs)
-  practiceLogs.forEach((log: any, index: number) => {
-    console.log(`PracticeDetails - log ${index}:`, log)
-    console.log(`PracticeDetails - log ${index} tags:`, log.tags)
-    console.log(`PracticeDetails - log ${index} times:`, log.times)
-    if (log.times && log.times.length > 0) {
-      log.times.forEach((time: any, timeIndex: number) => {
-        console.log(`PracticeDetails - log ${index} time ${timeIndex}:`, time)
-      })
-    }
-  })
-
   // 色の明度に基づいてテキスト色を決定する関数
   const getTextColor = (backgroundColor: string) => {
     // 16進数カラーをRGBに変換
@@ -350,7 +336,7 @@ function PracticeDetails({
   }
 
   // セットごとの平均タイムを計算する関数
-  const calculateSetAverageTime = (times: any[], setNumber: number) => {
+  const _calculateSetAverageTime = (times: any[], setNumber: number) => {
     const setTimes = times.filter(t => t.setNumber === setNumber)
     return calculateAverageTime(setTimes)
   }

@@ -416,7 +416,6 @@ export default function PracticeLogForm({
 
   // 編集データがある場合、フォームを初期化
   useEffect(() => {
-    console.log('PracticeLogForm useEffect - editData:', editData, 'isOpen:', isOpen)
     if (editData && isOpen) {
       const circleSeconds = editData.circle || 0
       const minutes = Math.floor(circleSeconds / 60)
@@ -441,7 +440,6 @@ export default function PracticeLogForm({
         })),
         tagIds: (editData.tags || []).map((tag: any) => tag.id)
       }
-      console.log('PracticeLogForm - 設定するentry:', entry)
       setPracticeLogEntries([entry])
     } else if (!editData && isOpen) {
       // 新規作成時はデフォルト値にリセット

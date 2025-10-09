@@ -39,10 +39,6 @@ export default function DashboardPage() {
   // デバッグ: 練習記録データの取得状況をログ出力（開発環境でのみ）
   useEffect(() => {
     if (process.env.NODE_ENV === 'development' && editingItem?.item_type === 'practice') {
-      console.log('Dashboard: editingItem for practice:', editingItem)
-      console.log('Dashboard: practiceData:', practiceData)
-      console.log('Dashboard: practiceDataLoading:', practiceDataLoading)
-      console.log('Dashboard: practiceDataError:', practiceDataError)
     }
   }, [editingItem, practiceData, practiceDataLoading, practiceDataError])
 
@@ -56,18 +52,6 @@ export default function DashboardPage() {
     variables: { id: editingItem?.competition_id },
     skip: !editingItem || editingItem.item_type !== 'record' || !editingItem?.competition_id,
   })
-
-  // デバッグ: 大会記録データの取得状況をログ出力（開発環境でのみ）
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development' && editingItem && editingItem.item_type === 'record') {
-      console.log('Dashboard: Record query status:', {
-        editingItemId: editingItem.id,
-        recordLoading,
-        recordError,
-        recordData
-      })
-    }
-  }, [editingItem, recordData, recordLoading, recordError])
 
   // GraphQLミューテーション
   const [createPractice] = useMutation(CREATE_PRACTICE, {
@@ -170,7 +154,6 @@ export default function DashboardPage() {
             })
           }
         } catch (error) {
-          console.log('Practice logs cache update failed:', error)
         }
         
         cache.gc() // ガベージコレクション
@@ -212,7 +195,6 @@ export default function DashboardPage() {
             })
           }
         } catch (error) {
-          console.log('Records cache update failed:', error)
         }
         
         cache.gc() // ガベージコレクション
@@ -268,7 +250,6 @@ export default function DashboardPage() {
             })
           }
         } catch (error) {
-          console.log('Practice logs cache update failed:', error)
         }
 
         // キャッシュの更新はrefetchQueriesで自動的に行われるため、手動更新は不要
@@ -362,7 +343,6 @@ export default function DashboardPage() {
             })
           }
         } catch (error) {
-          console.log('Records cache update failed:', error)
         }
 
         // 特定の記録のキャッシュも更新
@@ -384,7 +364,6 @@ export default function DashboardPage() {
       }
     },
     onCompleted: (data) => {
-      console.log('Dashboard: Record update completed successfully:', data)
       setShowRecordForm(false)
       setSelectedDate(null)
       setEditingItem(null)
@@ -415,7 +394,6 @@ export default function DashboardPage() {
           note: practice.note || '',
           practiceLogs: practiceLogs // 複数のPractice_logを渡す
         }
-        console.log('編集時 - 複数Practice_logのタイムデータ:', practiceLogs.map(log => ({ id: log.id, times: log.times })))
       } else if (practiceLogs.length === 1) {
         // 単一のPractice_logの場合、従来の構造を維持
         const practiceLog = practiceLogs[0]
@@ -433,7 +411,6 @@ export default function DashboardPage() {
           times: practiceLog.times || [], // 単一のPractice_logのタイムデータ
           tags: practiceLog.tags || [] // 単一のPractice_logのタグデータ
         }
-        console.log('編集時 - 単一Practice_logのタイムデータ:', practiceLog.times)
       } else {
         // Practice_logがない場合（通常は発生しない）
         newEditingData = {
@@ -445,11 +422,9 @@ export default function DashboardPage() {
         }
       }
       if (process.env.NODE_ENV === 'development') {
-        console.log('Dashboard: New editing data for practice with multiple logs:', newEditingData)
       }
       setEditingData(newEditingData)
       if (process.env.NODE_ENV === 'development') {
-        console.log('Dashboard: editingData has been set with practiceLogs array')
       }
     } else if (editingItem && editingItem.item_type === 'record') {
       // 複数のRecordがある場合（Competitionから取得）
@@ -458,8 +433,6 @@ export default function DashboardPage() {
         const records = competition.records || []
         
         if (process.env.NODE_ENV === 'development') {
-          console.log('Setting competition data with records:', competition)
-          console.log('Records count:', records.length)
         }
         
         const newEditingData = {
@@ -482,7 +455,6 @@ export default function DashboardPage() {
         }
         
         if (process.env.NODE_ENV === 'development') {
-          console.log('New editing data for competition with records:', newEditingData)
         }
         setEditingData(newEditingData)
       } 
@@ -490,7 +462,6 @@ export default function DashboardPage() {
       else if ((recordData as any)?.record) {
         const record = (recordData as any).record
         if (process.env.NODE_ENV === 'development') {
-          console.log('Setting single record data:', record)
         }
         const newEditingData = {
           id: record.id,
@@ -512,13 +483,11 @@ export default function DashboardPage() {
           style: record.style
         }
         if (process.env.NODE_ENV === 'development') {
-          console.log('New editing data for single record:', newEditingData)
         }
         setEditingData(newEditingData)
       }
     } else {
       if (process.env.NODE_ENV === 'development') {
-        console.log('No data to set, clearing editingData')
       }
       setEditingData(null)
     }
@@ -666,7 +635,6 @@ export default function DashboardPage() {
       
       if ((data as any)?.practiceLog) {
         const practiceLog = (data as any).practiceLog
-        console.log('取得したPracticeLogデータ:', practiceLog)
         setEditingData(practiceLog)
         setCurrentPracticeId(practiceLog.practiceId)
         setShowPracticeLogForm(true)
@@ -794,9 +762,6 @@ export default function DashboardPage() {
   // タグの保存処理
   const savePracticeLogTags = async (practiceLogId: string, tags: any[], existingTags: any[] = []) => {
     try {
-      console.log('savePracticeLogTags - practiceLogId:', practiceLogId)
-      console.log('savePracticeLogTags - new tags:', tags)
-      console.log('savePracticeLogTags - existing tags:', existingTags)
       
       // 既存のタグをすべて削除
       for (const existingTag of existingTags) {
@@ -821,7 +786,6 @@ export default function DashboardPage() {
               practiceTagId: tag.id
             }
           })
-          console.log('タグを追加しました:', tag.name)
         } catch (error) {
           console.error('タグの追加に失敗しました:', error)
         }
@@ -833,9 +797,6 @@ export default function DashboardPage() {
 
 
   const handleRecordSubmit = async (formData: any) => {
-    console.log('Dashboard: handleRecordSubmit called with:', formData)
-    console.log('Dashboard: editingData:', editingData)
-    console.log('Dashboard: editingItem:', editingItem)
     setIsLoading(true)
     try {
       let competitionId = null
@@ -843,7 +804,6 @@ export default function DashboardPage() {
       if (formData.id) {
         // 編集時は既存のCompetition IDを使用
         competitionId = editingData?.competition?.id || null
-        console.log('Dashboard: Using existing competition ID:', competitionId)
       } else {
         // 新規作成時は大会情報が入力されている場合、先に大会を作成
         if (formData.competitionName && formData.location) {
@@ -865,11 +825,9 @@ export default function DashboardPage() {
 
       // 複数のRecordを処理
       const records = formData.records || []
-      console.log('Dashboard: Processing records:', records.length)
 
       if (editingData && editingData.records && editingData.records.length > 0) {
         // 編集時: 複数のRecordを更新
-        console.log('Dashboard: Updating multiple records')
         for (let i = 0; i < records.length && i < editingData.records.length; i++) {
           const recordData = records[i]
           const existingRecord = editingData.records[i]
@@ -884,8 +842,6 @@ export default function DashboardPage() {
             splitTimes: recordData.splitTimes || []
           }
 
-          console.log('Dashboard: Updating record with ID:', existingRecord.id)
-          console.log('Dashboard: Update input:', recordInput)
           
           const updateResult = await updateRecord({
             variables: {
@@ -893,11 +849,9 @@ export default function DashboardPage() {
               input: recordInput
             }
           })
-          console.log('Dashboard: Update result:', updateResult)
         }
       } else if (records.length > 0) {
         // 新規作成時: 複数のRecordを作成
-        console.log('Dashboard: Creating multiple records')
         for (const recordData of records) {
           const recordInput = {
             styleId: parseInt(recordData.styleId),
@@ -909,8 +863,6 @@ export default function DashboardPage() {
             splitTimes: recordData.splitTimes || []
           }
 
-          console.log('Dashboard: Creating new record')
-          console.log('Dashboard: Create input:', recordInput)
           
           let createResult
           try {
@@ -954,11 +906,9 @@ export default function DashboardPage() {
               throw err
             }
           }
-          console.log('Dashboard: Create result:', createResult)
         }
       } else {
         // 従来の単一Record処理（後方互換性のため）
-        console.log('Dashboard: Processing single record (legacy)')
         const recordInput = {
           styleId: parseInt(formData.styleId),
           time: formData.time,
@@ -971,17 +921,14 @@ export default function DashboardPage() {
 
         if (formData.id) {
           // 更新処理
-          console.log('Dashboard: Updating single record with ID:', formData.id)
           const updateResult = await updateRecord({
             variables: {
               id: formData.id,
               input: recordInput
             }
           })
-          console.log('Dashboard: Update result:', updateResult)
         } else {
           // 作成処理
-          console.log('Dashboard: Creating single record')
           let createResult
           try {
             createResult = await createRecord({
@@ -1024,7 +971,6 @@ export default function DashboardPage() {
               throw err
             }
           }
-          console.log('Dashboard: Create result:', createResult)
         }
       }
     } catch (error) {
@@ -1061,7 +1007,6 @@ export default function DashboardPage() {
       }
       
       // 削除成功の通知
-      console.log('記録が正常に削除されました')
     } catch (error) {
       console.error('記録の削除に失敗しました:', error)
       alert('記録の削除に失敗しました。')
