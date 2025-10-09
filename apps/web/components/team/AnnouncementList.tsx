@@ -9,17 +9,24 @@ interface AnnouncementListProps {
   isAdmin: boolean
   onCreateNew?: () => void
   onEdit?: (announcement: TeamAnnouncement) => void
+  viewOnly?: boolean
 }
 
 export const AnnouncementList: React.FC<AnnouncementListProps> = ({
   teamId,
   isAdmin,
   onCreateNew,
-  onEdit
+  onEdit,
+  viewOnly = false
 }) => {
   const { announcements, loading, error, refetch } = useTeamAnnouncements(teamId)
   const { remove, loading: deleteLoading } = useDeleteTeamAnnouncement()
   const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  // viewOnlyの場合は公開済みのものだけをフィルタリング
+  const filteredAnnouncements = viewOnly 
+    ? announcements.filter((a: TeamAnnouncement) => a.isPublished)
+    : announcements
 
   const handleDelete = async (id: string) => {
     if (!confirm('このお知らせを削除しますか？')) return
@@ -70,27 +77,29 @@ export const AnnouncementList: React.FC<AnnouncementListProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* ヘッダー */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-900">お知らせ</h2>
-        {isAdmin && onCreateNew && (
-          <button
-            onClick={onCreateNew}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            新規作成
-          </button>
-        )}
-      </div>
+      {/* ヘッダー（viewOnlyの場合は非表示） */}
+      {!viewOnly && (
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-semibold text-gray-900">お知らせ</h2>
+          {isAdmin && onCreateNew && (
+            <button
+              onClick={onCreateNew}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              新規作成
+            </button>
+          )}
+        </div>
+      )}
 
       {/* お知らせ一覧 */}
-      {announcements.length === 0 ? (
+      {filteredAnnouncements.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           <p>お知らせはありません</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {announcements.map((announcement) => (
+          {filteredAnnouncements.map((announcement) => (
             <div
               key={announcement.id}
               className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
@@ -118,26 +127,28 @@ export const AnnouncementList: React.FC<AnnouncementListProps> = ({
                   </div>
                 </div>
                 
-                {/* アクションボタン */}
-                <div className="flex gap-2 ml-4">
-                  {isAdmin && onEdit && (
-                    <button
-                      onClick={() => onEdit(announcement)}
-                      className="text-blue-600 hover:text-blue-800 text-sm"
-                    >
-                      編集
-                    </button>
-                  )}
-                  {isAdmin && (
-                    <button
-                      onClick={() => handleDelete(announcement.id)}
-                      disabled={deletingId === announcement.id || deleteLoading}
-                      className="text-red-600 hover:text-red-800 text-sm disabled:opacity-50"
-                    >
-                      {deletingId === announcement.id ? '削除中...' : '削除'}
-                    </button>
-                  )}
-                </div>
+                {/* アクションボタン（viewOnlyの場合は非表示） */}
+                {!viewOnly && (
+                  <div className="flex gap-2 ml-4">
+                    {isAdmin && onEdit && (
+                      <button
+                        onClick={() => onEdit(announcement)}
+                        className="text-blue-600 hover:text-blue-800 text-sm"
+                      >
+                        編集
+                      </button>
+                    )}
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleDelete(announcement.id)}
+                        disabled={deletingId === announcement.id || deleteLoading}
+                        className="text-red-600 hover:text-red-800 text-sm disabled:opacity-50"
+                      >
+                        {deletingId === announcement.id ? '削除中...' : '削除'}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           ))}

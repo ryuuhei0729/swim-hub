@@ -13,7 +13,6 @@ import {
   XMarkIcon,
   ChevronRightIcon,
   UsersIcon,
-  SpeakerWaveIcon,
   CogIcon
 } from '@heroicons/react/24/outline'
 
@@ -54,12 +53,6 @@ const baseNavigation: NavigationItem[] = [
     href: '/teams', 
     icon: UsersIcon,
     description: 'チームの作成・参加・管理',
-  },
-  { 
-    name: 'お知らせ', 
-    href: '/announcements', 
-    icon: SpeakerWaveIcon,
-    description: 'チームのお知らせ確認',
   },
 ]
 

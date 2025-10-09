@@ -85,7 +85,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
           <button
             type="button"
             className="relative p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors duration-200"
-            onClick={() => router.push('/announcements')}
+            onClick={() => router.push('/dashboard')}
           >
             <span className="sr-only">通知を表示</span>
             <BellIcon className="h-6 w-6" aria-hidden="true" />

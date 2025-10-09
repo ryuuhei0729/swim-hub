@@ -9,11 +9,13 @@ import type { TeamAnnouncement } from '@/types'
 interface TeamAnnouncementsProps {
   teamId: string
   isAdmin: boolean
+  viewOnly?: boolean
 }
 
 export const TeamAnnouncements: React.FC<TeamAnnouncementsProps> = ({
   teamId,
-  isAdmin
+  isAdmin,
+  viewOnly = false
 }) => {
   const [showForm, setShowForm] = useState(false)
   const [showDetail, setShowDetail] = useState(false)
@@ -52,6 +54,7 @@ export const TeamAnnouncements: React.FC<TeamAnnouncementsProps> = ({
         isAdmin={isAdmin}
         onCreateNew={handleCreateNew}
         onEdit={handleEdit}
+        viewOnly={viewOnly}
       />
 
       {/* お知らせ作成・編集フォーム */}

@@ -10,10 +10,11 @@ import { useMutation, useQuery } from '@apollo/client/react'
 import { gql } from '@apollo/client'
 import { apolloClient } from '@/lib/apollo-client'
 import { CREATE_PRACTICE, CREATE_RECORD, DELETE_PRACTICE, DELETE_PRACTICE_LOG, DELETE_RECORD, UPDATE_PRACTICE, UPDATE_PRACTICE_LOG, UPDATE_RECORD, CREATE_PRACTICE_TIME, UPDATE_PRACTICE_TIME, DELETE_PRACTICE_TIME, CREATE_COMPETITION, ADD_PRACTICE_LOG_TAG, REMOVE_PRACTICE_LOG_TAG, CREATE_PRACTICE_LOG } from '@/graphql/mutations'
-import { GET_CALENDAR_DATA, GET_STYLES, GET_PRACTICE, GET_PRACTICE_LOG, GET_RECORD, GET_PRACTICE_LOGS, GET_RECORDS, GET_PRACTICES, GET_COMPETITION_WITH_RECORDS } from '@/graphql/queries'
+import { GET_CALENDAR_DATA, GET_STYLES, GET_PRACTICE, GET_PRACTICE_LOG, GET_RECORD, GET_PRACTICE_LOGS, GET_RECORDS, GET_PRACTICES, GET_COMPETITION_WITH_RECORDS, GET_MY_TEAMS } from '@/graphql/queries'
+import { TeamAnnouncements } from '@/components/team'
 
 export default function DashboardPage() {
-  const { profile } = useAuth()
+  const { profile, user } = useAuth()
   const [showPracticeForm, setShowPracticeForm] = useState(false)
   const [showPracticeLogForm, setShowPracticeLogForm] = useState(false)
   const [showRecordForm, setShowRecordForm] = useState(false)
@@ -28,6 +29,14 @@ export default function DashboardPage() {
   // スタイルデータを取得
   const { data: stylesData } = useQuery(GET_STYLES)
   const styles = (stylesData as any)?.styles || []
+
+  // ユーザーのチーム一覧を取得
+  const { data: teamsData, loading: teamsLoading } = useQuery(GET_MY_TEAMS, {
+    skip: !user,
+    fetchPolicy: 'cache-and-network'
+  })
+
+  const teams = (teamsData as any)?.myTeams || []
 
 
   // 編集時の詳細データを取得
@@ -1025,6 +1034,34 @@ export default function DashboardPage() {
             {profile?.name || 'ユーザー'}さん、お疲れ様です！
           </p>
         </div>
+
+        {/* チームのお知らせセクション */}
+        {teams.length > 0 && (
+          <div className="pb-6 space-y-4">
+            {teams.map((teamMembership: any) => (
+              <div key={teamMembership.teamId} className="bg-white rounded-lg shadow">
+                <div className="p-4 sm:p-6">
+                  <div className="mb-4">
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      {teamMembership.team.name} のお知らせ
+                    </h2>
+                    {teamMembership.role === 'ADMIN' && (
+                      <span className="text-xs text-gray-500">管理者</span>
+                    )}
+                  </div>
+
+                  <div className="border-t border-gray-200 pt-4">
+                    <TeamAnnouncements 
+                      teamId={teamMembership.teamId}
+                      isAdmin={false}
+                      viewOnly={true}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
         
         {/* カレンダーコンポーネント */}
         <Calendar 
