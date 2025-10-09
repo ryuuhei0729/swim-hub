@@ -172,3 +172,22 @@ export const GET_TEAM_PRACTICES_FOR_CALENDAR = gql`
     }
   }
 `
+
+// ユーザーが所属するチームの大会一覧取得（ダッシュボード用）
+export const GET_TEAM_COMPETITIONS_FOR_CALENDAR = gql`
+  query GetTeamCompetitionsForCalendar {
+    teamCompetitionsForCalendar {
+      id
+      title
+      date
+      place
+      poolType
+      note
+      teamId
+      isPersonal
+      entryStatus
+      createdAt
+      updatedAt
+    }
+  }
+`

@@ -4,7 +4,8 @@ import { endOfMonth, format, startOfMonth } from 'date-fns'
 import { useEffect, useMemo } from 'react'
 import { useAuth } from '../../../../contexts'
 import { GET_CALENDAR_DATA, GET_PRACTICES, GET_RECORDS } from '../../../../graphql/queries'
-import { GET_TEAM_PRACTICES_FOR_CALENDAR, GET_TEAM_RECORDS } from '../../../../graphql/queries/teams'
+import { GET_MY_COMPETITIONS } from '../../../../graphql/queries/competition'
+import { GET_TEAM_COMPETITIONS_FOR_CALENDAR, GET_TEAM_PRACTICES_FOR_CALENDAR, GET_TEAM_RECORDS } from '../../../../graphql/queries/teams'
 import { formatTime } from '../../../../utils/formatters'
 export function useCalendarData(currentDate: Date, userId?: string) {
   const { profile } = useAuth()
@@ -91,6 +92,30 @@ export function useCalendarData(currentDate: Date, userId?: string) {
     }
   )
 
+  // 個人大会データを取得
+  const { data: competitionsData, loading: competitionsLoading, error: competitionsError, refetch: refetchCompetitions } = useQuery(
+    GET_MY_COMPETITIONS,
+    {
+      skip: USE_MOCK_DATA,
+      fetchPolicy: 'cache-first',
+      nextFetchPolicy: 'cache-first',
+      notifyOnNetworkStatusChange: true,
+      errorPolicy: 'all'
+    }
+  )
+
+  // チーム大会データを取得
+  const { data: teamCompetitionsData, loading: teamCompetitionsLoading, error: teamCompetitionsError, refetch: refetchTeamCompetitions } = useQuery(
+    GET_TEAM_COMPETITIONS_FOR_CALENDAR,
+    {
+      skip: USE_MOCK_DATA,
+      fetchPolicy: 'cache-first',
+      nextFetchPolicy: 'cache-first',
+      notifyOnNetworkStatusChange: true,
+      errorPolicy: 'all'
+    }
+  )
+
   // デバッグ: チーム記録データの取得状況をログ出力
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
@@ -141,7 +166,13 @@ export function useCalendarData(currentDate: Date, userId?: string) {
     if (teamPracticesError) {
       console.error('Team practices fetch error:', teamPracticesError)
     }
-  }, [calendarError, practiceError, recordsError, teamRecordsError, teamPracticesError, practicesData, recordsData, practiceLoading, recordsLoading])
+    if (competitionsError) {
+      console.error('Competitions fetch error:', competitionsError)
+    }
+    if (teamCompetitionsError) {
+      console.error('Team competitions fetch error:', teamCompetitionsError)
+    }
+  }, [calendarError, practiceError, recordsError, teamRecordsError, teamPracticesError, competitionsError, teamCompetitionsError, practicesData, recordsData, practiceLoading, recordsLoading])
 
   // データを統合してカレンダー表示用に変換
   const calendarItems: CalendarItem[] = useMemo(() => {
@@ -365,8 +396,66 @@ export function useCalendarData(currentDate: Date, userId?: string) {
       })
     }
 
+    // 個人大会を追加（記録がない大会も表示）
+    if (competitionsData && (competitionsData as any).myCompetitions) {
+      (competitionsData as any).myCompetitions.forEach((competition: any) => {
+        if (competition.date) {
+          const competitionDate = new Date(competition.date)
+          if (competitionDate >= monthStart && competitionDate <= monthEnd) {
+            // この大会に記録が既に存在するかチェック
+            const hasRecord = items.some(item => 
+              item.item_type === 'record' && 
+              item.location === competition.title
+            )
+            
+            // 記録がない場合のみ大会として追加
+            if (!hasRecord) {
+              items.push({
+                id: `competition-${competition.id}`,
+                item_type: 'competition',
+                item_date: competition.date,
+                title: competition.title,
+                location: competition.place || '大会会場',
+                pool_type: competition.poolType
+              })
+            }
+          }
+        }
+      })
+    }
+
+    // チーム大会を追加（記録がない大会も表示）
+    if (teamCompetitionsData && (teamCompetitionsData as any).teamCompetitionsForCalendar) {
+      (teamCompetitionsData as any).teamCompetitionsForCalendar.forEach((competition: any) => {
+        if (competition.date) {
+          const competitionDate = new Date(competition.date)
+          if (competitionDate >= monthStart && competitionDate <= monthEnd) {
+            // この大会に記録が既に存在するかチェック
+            const hasRecord = items.some(item => 
+              item.item_type === 'record' && 
+              item.location === competition.title &&
+              item.team_record === true
+            )
+            
+            // 記録がない場合のみ大会として追加
+            if (!hasRecord) {
+              items.push({
+                id: `team-competition-${competition.id}`,
+                item_type: 'competition',
+                item_date: competition.date,
+                title: `${competition.title}`,
+                location: competition.place || '大会会場',
+                pool_type: competition.poolType,
+                team_record: true // チーム大会であることを示すフラグ
+              })
+            }
+          }
+        }
+      })
+    }
+
     return items
-  }, [practicesData, recordsData, teamRecordsData, teamPracticesData, currentDate, USE_MOCK_DATA, monthStart, monthEnd])
+  }, [practicesData, recordsData, teamRecordsData, teamPracticesData, competitionsData, teamCompetitionsData, currentDate, USE_MOCK_DATA, monthStart, monthEnd])
 
   // 月間サマリー
   const monthlySummary: MonthlySummary = useMemo(() => {
@@ -407,8 +496,8 @@ export function useCalendarData(currentDate: Date, userId?: string) {
   return {
     calendarItems,
     monthlySummary,
-    loading: USE_MOCK_DATA ? false : (calendarLoading || practiceLoading || recordsLoading || teamRecordsLoading || teamPracticesLoading),
-    error: USE_MOCK_DATA ? null : (calendarError || practiceError || recordsError || teamRecordsError || teamPracticesError),
+    loading: USE_MOCK_DATA ? false : (calendarLoading || practiceLoading || recordsLoading || teamRecordsLoading || teamPracticesLoading || competitionsLoading || teamCompetitionsLoading),
+    error: USE_MOCK_DATA ? null : (calendarError || practiceError || recordsError || teamRecordsError || teamPracticesError || competitionsError || teamCompetitionsError),
     refetch: async () => {
       if (!USE_MOCK_DATA) {
         // すべてのクエリを並行して再実行
@@ -417,7 +506,9 @@ export function useCalendarData(currentDate: Date, userId?: string) {
           refetchPractices(),
           refetchRecords(),
           refetchTeamRecords(),
-          refetchTeamPractices()
+          refetchTeamPractices(),
+          refetchCompetitions(),
+          refetchTeamCompetitions()
         ])
       }
     }

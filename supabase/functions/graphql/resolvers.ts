@@ -777,7 +777,8 @@ export const resolvers = {
     myPracticeLogs: async (_: any, { startDate, endDate }: { startDate?: string, endDate?: string }, context: any) => {
       const userId = getUserId(context)
       
-      let query = supabase
+      // とにかくuser_idが一致するものをすべて取得（個人・チーム関係なし）
+      const { data, error } = await supabase
         .from('practice_logs')
         .select(`
           *,
@@ -793,38 +794,6 @@ export const resolvers = {
         `)
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-      
-      // 日付フィルタリングはpracticeテーブル経由で行う
-      if (startDate || endDate) {
-        // practice テーブルとJOINして日付フィルタリング
-        let practiceQuery = supabase
-          .from('practices')
-          .select('id')
-          .eq('user_id', userId)
-        
-        if (startDate) {
-          practiceQuery = practiceQuery.gte('date', startDate)
-        }
-        if (endDate) {
-          practiceQuery = practiceQuery.lte('date', endDate)
-        }
-        
-        const { data: practiceIds, error: practiceError } = await practiceQuery
-        
-        if (practiceError) {
-          throw new Error(practiceError.message)
-        }
-        
-        if (practiceIds && practiceIds.length > 0) {
-          const ids = practiceIds.map(p => p.id)
-          query = query.in('practice_id', ids)
-        } else {
-          // 条件に合うpracticeが存在しない場合は空配列を返す
-          return []
-        }
-      }
-      
-      const { data, error } = await query
       
       if (error) throw new Error(error.message)
       
@@ -1725,6 +1694,58 @@ export const resolvers = {
         
       } catch (error) {
         console.error('teamRecords error:', error)
+        return []
+      }
+    },
+
+    // ユーザーが所属するチームの大会一覧取得（ダッシュボード用）
+    teamCompetitionsForCalendar: async (_: any, __: any, context: any): Promise<any[]> => {
+      const userId = getUserId(context)
+      
+      try {
+        // ユーザーが所属するチームを取得
+        const { data: memberships, error: membershipError } = await supabase
+          .from('team_memberships')
+          .select('team_id')
+          .eq('user_id', userId)
+          .eq('is_active', true)
+        
+        if (membershipError || !memberships || memberships.length === 0) {
+          return []
+        }
+        
+        const teamIds = memberships.map(m => m.team_id)
+        
+        // 所属チームの大会を取得
+        const { data, error } = await supabase
+          .from('competitions')
+          .select('*')
+          .in('team_id', teamIds)
+          .order('date', { ascending: true })
+        
+        if (error) {
+          console.error('teamCompetitionsForCalendar error:', error)
+          return []
+        }
+        
+        const result = (data || []).map((competition: any) => ({
+          id: competition.id,
+          title: competition.title,
+          date: competition.date,
+          place: competition.place,
+          poolType: competition.pool_type,
+          note: competition.note,
+          teamId: competition.team_id,
+          isPersonal: competition.team_id === null,
+          entryStatus: competition.entry_status?.toUpperCase() || 'UPCOMING',
+          records: [],
+          createdAt: competition.created_at,
+          updatedAt: competition.updated_at
+        }))
+        
+        return result
+      } catch (error) {
+        console.error('teamCompetitionsForCalendar error:', error)
         return []
       }
     },

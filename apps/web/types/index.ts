@@ -176,7 +176,7 @@ export interface UpdateTeamAnnouncementInput {
 // =============================================================================
 
 // カレンダーアイテムタイプ
-export type CalendarItemType = 'practice' | 'record'
+export type CalendarItemType = 'practice' | 'record' | 'competition'
 
 // プール種別
 export type PoolType = 0 | 1 // 0: 短水路, 1: 長水路
@@ -469,7 +469,8 @@ export const GENDERS = {
 // カレンダーアイテムタイプの定数
 export const CALENDAR_ITEM_TYPES = {
   PRACTICE: 'practice' as const,
-  RECORD: 'record' as const
+  RECORD: 'record' as const,
+  COMPETITION: 'competition' as const
 } as const
 
 // =============================================================================
@@ -477,7 +478,7 @@ export const CALENDAR_ITEM_TYPES = {
 // =============================================================================
 
 export const isCalendarItemType = (value: any): value is CalendarItemType => {
-  return value === 'practice' || value === 'record'
+  return value === 'practice' || value === 'record' || value === 'competition'
 }
 
 export const isPoolType = (value: any): value is PoolType => {

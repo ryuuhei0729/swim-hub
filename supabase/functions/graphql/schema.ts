@@ -594,9 +594,10 @@ type Query {
   teamCompetitions(teamId: ID!): [Competition!]
   myTeamAttendance(teamId: ID!): [TeamAttendance!]!
   
-  # ユーザーが所属するチームの記録・練習取得（ダッシュボード用）
+  # ユーザーが所属するチームの記録・練習・大会取得（ダッシュボード用）
   teamRecords: [Record!]!
   teamPracticesForCalendar(startDate: Date!, endDate: Date!): [Practice!]!
+  teamCompetitionsForCalendar: [Competition!]!
   
   # チームエントリー関連
   teamEntries(teamId: ID!, competitionId: ID): [TeamEntry!]!
