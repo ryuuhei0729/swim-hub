@@ -1,0 +1,42 @@
+---
+alwaysApply: true
+---
+
+# 技術スタック
+
+## プロジェクト構成
+
+**モノレポ構成（npm workspaces）**
+
+```
+swim-hub/
+├── apps/
+│   ├── web/           # Next.jsアプリケーション
+│   └── mobile/        # React Native（未実装）
+├── supabase/          # Supabase設定
+│   ├── functions/     # Edge Functions（GraphQL）
+│   └── migrations/    # データベースマイグレーション
+├── docs/              # ドキュメント
+└── package.json       # ルートpackage.json（workspaces管理）
+```
+
+## Frontend (Web)
+- **Framework**: Next.js 15 (App Router)
+- **Language**: TypeScript 5
+- **UI**: React 19 + Tailwind CSS 3
+- **State**: Apollo Client (GraphQL) + React Context
+- **Form**: useState (React Hook Formは未使用)
+- **Date**: date-fns 4
+- **Testing**: Playwright (E2E)
+
+## Backend
+- **Database**: PostgreSQL (Supabase)
+- **API**: GraphQL (Supabase Edge Functions)
+- **Auth**: Supabase Auth
+- **Storage**: Supabase Storage
+
+## Mobile (未実装)
+- **Framework**: React Native + Expo
+- **Language**: TypeScript
+- **State**: Apollo Client (GraphQL) + React Context
+- **Navigation**: React Navigation
