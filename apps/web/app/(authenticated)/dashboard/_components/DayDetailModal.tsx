@@ -1,12 +1,11 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { XMarkIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
-import { useQuery } from '@apollo/client/react'
-import { GET_RECORD, GET_PRACTICE } from '@/graphql/queries'
+import { createClient } from '@/lib/supabase'
 import { CalendarItemType, DayDetailModalProps } from '@/types'
 
 export default function DayDetailModal({
@@ -79,7 +78,7 @@ export default function DayDetailModal({
                     className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
                     <span className="mr-2">💪</span>
-                    練習記録を追加
+                    練習予定を追加
                   </button>
                   <button
                     onClick={() => onAddItem?.(date, 'record')}
@@ -288,12 +287,67 @@ function PracticeDetails({
   onEditPracticeLog?: (log: any) => void
   onDeletePracticeLog?: (logId: string) => void
 }) {
-  const { data, loading, error } = useQuery(GET_PRACTICE, {
-    variables: { id: practiceId },
-    fetchPolicy: 'cache-and-network',
-    notifyOnNetworkStatusChange: true,
-    errorPolicy: 'ignore',
-  })
+  const [practice, setPractice] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
+  const supabase = createClient()
+
+  useEffect(() => {
+    const loadPractice = async () => {
+      try {
+        setLoading(true)
+        const { data, error } = await supabase
+          .from('practices')
+          .select(`
+            *,
+            practice_logs (
+              *,
+              practice_times (*),
+              practice_log_tags (
+                practice_tag:practice_tags (*)
+              )
+            )
+          `)
+          .eq('id', practiceId)
+          .single()
+
+        if (error) throw error
+        if (!data) throw new Error('Practice data not found')
+        
+        // データ整形（GraphQLと同じ構造に変換）
+        const practiceData = data as any
+        const formattedPractice = {
+          ...practiceData,
+          practiceLogs: practiceData.practice_logs?.map((log: any) => ({
+            id: log.id,
+            practiceId: log.practice_id,
+            style: log.style,
+            repCount: log.rep_count,
+            setCount: log.set_count,
+            distance: log.distance,
+            circle: log.circle,
+            note: log.note,
+            tags: log.practice_log_tags?.map((plt: any) => plt.practice_tag) || [],
+            times: log.practice_times?.map((time: any) => ({
+              id: time.id,
+              time: time.time,
+              repNumber: time.rep_number,
+              setNumber: time.set_number
+            })) || []
+          })) || []
+        }
+        
+        setPractice(formattedPractice)
+      } catch (err) {
+        console.error('練習詳細の取得エラー:', err)
+        setError(err as Error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadPractice()
+  }, [practiceId])
 
   if (loading) {
     return (
@@ -306,7 +360,6 @@ function PracticeDetails({
     )
   }
 
-  const practice = (data as any)?.practice
   if (!practice) {
     return null
   }
@@ -390,7 +443,7 @@ function PracticeDetails({
                 className="inline-flex items-center px-4 py-2 border border-green-300 rounded-lg shadow-sm text-sm font-medium text-green-700 bg-white hover:bg-green-50 hover:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
               >
                 <span className="mr-2">➕</span>
-                練習メニューを追加
+                練習記録を追加
               </button>
             </div>
           )}
@@ -400,7 +453,7 @@ function PracticeDetails({
         const allTimes = log.times || []
         
             return (
-              <div key={log.id} className="bg-white rounded-lg p-4">
+              <div key={log.id} className="bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 border-0 rounded-lg p-4">
                 {/* 練習メニューのヘッダー */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
@@ -426,7 +479,23 @@ function PracticeDetails({
                   </div>
                   <div className="flex items-center space-x-2 ml-4">
                     <button
-                      onClick={() => onEditPracticeLog?.(log)}
+                      onClick={() => {
+                        // フォームに必要な形式に変換
+                        const formData = {
+                          id: log.id,
+                          practice_id: log.practiceId,
+                          style: log.style,
+                          rep_count: log.repCount,
+                          set_count: log.setCount,
+                          distance: log.distance,
+                          circle: log.circle,
+                          note: log.note,
+                          tags: log.tags,
+                          times: log.times || []
+                        }
+                        console.log('Edit PracticeLog formData:', formData) // デバッグ用
+                        onEditPracticeLog?.(formData)
+                      }}
                       className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
                       title="練習メニューを編集"
                     >
@@ -442,25 +511,25 @@ function PracticeDetails({
                   </div>
                 </div>
             
-            {/* 練習内容: 距離 × 本数 × セット数 サークル 泳法 */}
-            <div className="bg-white rounded-lg p-3 mb-3 border border-green-200">
-              <div className="text-xs font-medium text-gray-500 mb-1">練習内容</div>
-                <div className="text-sm text-gray-800">
-                  <span className="text-lg font-semibold text-green-700">{log.distance}</span>m × 
-                  <span className="text-lg font-semibold text-green-700"> {log.repCount}</span>
-                  {log.setCount > 1 && (
-                    <>
-                      {' × '}
-                      <span className="text-lg font-semibold text-green-700">{log.setCount}</span>
-                    </>
-                  )}
-                  {'　'}
-                  <span className="text-lg font-semibold text-green-700">
-                    {log.circle ? `${Math.floor(log.circle / 60)}'${Math.floor(log.circle % 60).toString().padStart(2, '0')}"` : '-'}
-                  </span>  
-                  <span className="text-lg font-semibold text-green-700">　{log.style}</span>
+                {/* 練習内容: 距離 × 本数 × セット数 サークル 泳法 */}
+                <div className="bg-white rounded-lg p-3 mb-3 border border-green-200">
+                  <div className="text-xs font-medium text-gray-500 mb-1">練習内容</div>
+                    <div className="text-sm text-gray-800">
+                      <span className="text-lg font-semibold text-green-700">{log.distance}</span>m ×
+                      <span className="text-lg font-semibold text-green-700">{log.repCount}</span>
+                      {log.setCount > 1 && (
+                        <>
+                          {' × '}
+                          <span className="text-lg font-semibold text-green-700">{log.setCount}</span>
+                        </>
+                      )}
+                      {'　'}
+                      <span className="text-lg font-semibold text-green-700">
+                        {log.circle ? `${Math.floor(log.circle / 60)}'${Math.floor(log.circle % 60).toString().padStart(2, '0')}"` : '-'}
+                      </span>
+                      <span className="text-lg font-semibold text-green-700">　{log.style}</span>
+                    </div>
                 </div>
-            </div>
 
             {/* メモ */}
             {log.note && (
@@ -579,12 +648,34 @@ function PracticeDetails({
 
 // 大会記録のスプリットタイム一覧
 function RecordSplitTimes({ recordId }: { recordId: string }) {
-  const { data, loading, error } = useQuery(GET_RECORD, {
-    variables: { id: recordId },
-    fetchPolicy: 'cache-and-network',
-    notifyOnNetworkStatusChange: true,
-    errorPolicy: 'ignore',
-  })
+  const [splits, setSplits] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
+  const supabase = createClient()
+
+  useEffect(() => {
+    const loadSplits = async () => {
+      try {
+        setLoading(true)
+        const { data, error } = await supabase
+          .from('split_times')
+          .select('*')
+          .eq('record_id', recordId)
+          .order('distance', { ascending: true })
+
+        if (error) throw error
+        
+        setSplits(data || [])
+      } catch (err) {
+        console.error('スプリットタイムの取得エラー:', err)
+        setError(err as Error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadSplits()
+  }, [recordId])
 
   if (loading) {
     return (
@@ -597,7 +688,6 @@ function RecordSplitTimes({ recordId }: { recordId: string }) {
     )
   }
 
-  const splits = (data as any)?.record?.splitTimes || []
   if (!splits.length) {
     return null
   }
@@ -606,13 +696,10 @@ function RecordSplitTimes({ recordId }: { recordId: string }) {
     <div className="mt-3">
       <p className="text-sm font-medium text-blue-800 mb-1">スプリット</p>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {splits
-          .slice()
-          .sort((a: any, b: any) => (a.distance || 0) - (b.distance || 0))
-          .map((st: any) => (
+        {splits.map((st: any) => (
           <div key={st.id} className="text-xs text-blue-900 bg-blue-100 rounded px-2 py-1">
             <span className="mr-2">{st.distance}m</span>
-            <span className="font-semibold">{formatTime(st.splitTime)}</span>
+            <span className="font-semibold">{formatTime(st.split_time)}</span>
           </div>
         ))}
       </div>

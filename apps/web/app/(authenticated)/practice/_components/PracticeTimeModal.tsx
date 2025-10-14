@@ -1,11 +1,10 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { useQuery } from '@apollo/client/react'
-import { GET_PRACTICE } from '@/graphql/queries'
+import { createClient } from '@/lib/supabase'
 
 interface PracticeTimeModalProps {
   isOpen: boolean
@@ -20,12 +19,65 @@ export default function PracticeTimeModal({
   practiceId,
   location
 }: PracticeTimeModalProps) {
-  const { data, loading, error } = useQuery(GET_PRACTICE, {
-    variables: { id: practiceId },
-    fetchPolicy: 'cache-and-network',
-    notifyOnNetworkStatusChange: true,
-    errorPolicy: 'ignore',
-  })
+  const [practice, setPractice] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
+  const supabase = createClient()
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const loadPractice = async () => {
+      try {
+        setLoading(true)
+        const { data, error } = await supabase
+          .from('practices')
+          .select(`
+            *,
+            practice_logs (
+              *,
+              practice_times (*)
+            )
+          `)
+          .eq('id', practiceId)
+          .single()
+
+        if (error) throw error
+        if (!data) throw new Error('Practice data not found')
+        
+        // データ整形
+        const practiceData = data as any
+        const formattedPractice = {
+          ...practiceData,
+          practiceLogs: practiceData.practice_logs?.map((log: any) => ({
+            id: log.id,
+            style: log.style,
+            repCount: log.rep_count,
+            setCount: log.set_count,
+            distance: log.distance,
+            circle: log.circle,
+            note: log.note,
+            tags: log.tags || [],
+            times: log.practice_times?.map((time: any) => ({
+              id: time.id,
+              time: time.time,
+              repNumber: time.rep_number,
+              setNumber: time.set_number
+            })) || []
+          })) || []
+        }
+        
+        setPractice(formattedPractice)
+      } catch (err) {
+        console.error('練習詳細の取得エラー:', err)
+        setError(err as Error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadPractice()
+  }, [isOpen, practiceId])
 
   if (!isOpen) return null
 
@@ -63,7 +115,6 @@ export default function PracticeTimeModal({
     )
   }
 
-  const practice = (data as any)?.practice
   if (!practice) {
     return null
   }

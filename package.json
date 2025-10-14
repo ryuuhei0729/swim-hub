@@ -35,9 +35,7 @@
     "supabase:start": "npx supabase start --workdir supabase",
     "supabase:stop": "npx supabase stop --workdir supabase",
     "supabase:reset": "npx supabase db reset --workdir supabase",
-    "supabase:status": "npx supabase status --workdir supabase",
-    "supabase:deploy": "npx supabase functions deploy --workdir supabase",
-    "supabase:deploy:graphql": "npx supabase functions deploy graphql --workdir supabase"
+    "supabase:status": "npx supabase status --workdir supabase"
   },
   "devDependencies": {
     "@types/node": "^20",

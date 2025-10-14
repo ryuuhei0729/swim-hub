@@ -4,21 +4,17 @@ import React, { useState } from 'react'
 import { CalendarDaysIcon, ClockIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui'
 import PracticeLogForm from '@/components/forms/PracticeLogForm'
-import PracticeTimeForm from '@/components/forms/PracticeTimeForm'
 import PracticeTimeModal from './_components/PracticeTimeModal'
-import { useMyPracticeLogs, useDeletePracticeLog } from '@/hooks/useGraphQL'
-import { useMutation, useQuery } from '@apollo/client/react'
-import { CREATE_PRACTICE, CREATE_PRACTICE_LOG, UPDATE_PRACTICE, UPDATE_PRACTICE_LOG, DELETE_PRACTICE, DELETE_PRACTICE_LOG, CREATE_PRACTICE_TIME, UPDATE_PRACTICE_TIME, DELETE_PRACTICE_TIME, ADD_PRACTICE_LOG_TAG, REMOVE_PRACTICE_LOG_TAG } from '@/graphql/mutations'
-import { GET_STYLES, GET_PRACTICE, GET_MY_PRACTICE_TAGS } from '@/graphql/queries'
-import { format, startOfMonth, endOfMonth } from 'date-fns'
+import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
+import { createClient } from '@/lib/supabase'
+import { usePractices } from '@shared/hooks/usePractices'
+import { PracticeAPI, StyleAPI } from '@shared/api'
 
 export default function PracticePage() {
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [isTimeFormOpen, setIsTimeFormOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [editingLog, setEditingLog] = useState<any>(null)
-  const [selectedLogForTime, setSelectedLogForTime] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
   const [editingData, setEditingData] = useState<any>(null)
@@ -28,92 +24,63 @@ export default function PracticePage() {
   // タグフィルタリング用の状態
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
   const [showTagFilter, setShowTagFilter] = useState(false)
+  const [styles, setStyles] = useState<any[]>([])
+  const [tags, setTags] = useState<any[]>([])
 
-  // 練習記録を取得（全てのデータを表示）
-  const { data: practiceLogsData, loading, error, refetch } = useMyPracticeLogs()
-
-  const [deletePracticeLog] = useDeletePracticeLog()
-
-  // スタイルデータを取得
-  const { data: stylesData } = useQuery(GET_STYLES)
-  const styles = (stylesData as any)?.styles || []
+  const supabase = createClient()
   
-  // タグデータを取得
-  const { data: tagsData } = useQuery(GET_MY_PRACTICE_TAGS)
-  const tags = (tagsData as any)?.myPracticeTags || []
+  // 練習記録を取得
+  const {
+    practices,
+    loading,
+    error,
+    createPractice,
+    updatePractice,
+    deletePractice,
+    createPracticeLog,
+    updatePracticeLog,
+    deletePracticeLog,
+    refetch
+  } = usePractices(supabase, {})
 
-  // 編集時の詳細データを取得
-  const { data: practiceData, loading: practiceDataLoading, error: practiceDataError } = useQuery(GET_PRACTICE, {
-    variables: { id: editingItem?.id },
-    skip: !editingItem || editingItem.item_type !== 'practice',
-  })
+  // practice_logsを平坦化
+  const practiceLogs = practices.flatMap(practice => 
+    (practice.practice_logs || []).map(log => ({
+      ...log,
+      practice: {
+        id: practice.id,
+        date: practice.date,
+        place: practice.place,
+        note: practice.note
+      },
+      practiceId: practice.id
+    }))
+  )
 
-  // 編集データの設定（ダッシュボードと同じ処理）
+  // スタイルデータとタグデータを取得
   React.useEffect(() => {
-    if (practiceData && editingItem?.item_type === 'practice') {
-      const practice = (practiceData as any)?.practice
-      if (practice) {
-        const practiceLogs = practice.practiceLogs || []
-        let newEditingData: any = null
+    const loadMasterData = async () => {
+      try {
+        const styleAPI = new StyleAPI(supabase)
+        const stylesData = await styleAPI.getStyles()
+        setStyles(stylesData)
 
-        if (practiceLogs.length > 1) {
-          // 複数のPractice_logがある場合
-          newEditingData = {
-            id: practice.id,
-            practiceId: practice.id,
-            date: practice.date || new Date().toISOString().split('T')[0],
-            place: practice.place || '',
-            note: practice.note || '',
-            practiceLogs: practiceLogs // 複数のPractice_logを渡す
-          }
-        } else if (practiceLogs.length === 1) {
-          // 単一のPractice_logの場合、従来の構造を維持
-          const practiceLog = practiceLogs[0]
-          newEditingData = {
-            id: practiceLog.id, // Practice_log ID
-            practiceId: practice.id,
-            date: practice.date || new Date().toISOString().split('T')[0],
-            place: practice.place || '',
-            note: practice.note || '',
-            style: practiceLog.style,
-            repCount: practiceLog.repCount,
-            setCount: practiceLog.setCount,
-            distance: practiceLog.distance,
-            circle: practiceLog.circle,
-            times: practiceLog.times || [], // 単一のPractice_logのタイムデータ
-            tags: practiceLog.tags || [] // 単一のPractice_logのタグデータ
-          }
-        } else {
-          // Practice_logがない場合（通常は発生しない）
-          newEditingData = {
-            id: practice.id,
-            practiceId: practice.id,
-            date: practice.date || new Date().toISOString().split('T')[0],
-            place: practice.place || '',
-            note: practice.note || ''
-          }
+        // タグデータ取得
+        const { data: tagsData } = await supabase
+          .from('practice_tags')
+          .select('*')
+          .order('name')
+        
+        if (tagsData) {
+          setTags(tagsData)
         }
-
-        setEditingData(newEditingData)
+      } catch (err) {
+        console.error('マスターデータの取得に失敗:', err)
       }
     }
-  }, [practiceData, editingItem])
+    loadMasterData()
+  }, [])
 
-  // ミューテーション
-  const [createPractice] = useMutation(CREATE_PRACTICE)
-  const [updatePractice] = useMutation(UPDATE_PRACTICE)
-  const [deletePractice] = useMutation(DELETE_PRACTICE)
-  const [createPracticeLog] = useMutation(CREATE_PRACTICE_LOG)
-  const [updatePracticeLog] = useMutation(UPDATE_PRACTICE_LOG)
-  const [deletePracticeLogMutation] = useMutation(DELETE_PRACTICE_LOG)
-  const [createPracticeTime] = useMutation(CREATE_PRACTICE_TIME)
-  const [updatePracticeTime] = useMutation(UPDATE_PRACTICE_TIME)
-  const [deletePracticeTime] = useMutation(DELETE_PRACTICE_TIME)
-  const [addPracticeLogTag] = useMutation(ADD_PRACTICE_LOG_TAG)
-  const [removePracticeLogTag] = useMutation(REMOVE_PRACTICE_LOG_TAG)
-
-  const practiceLogs = (practiceLogsData as any)?.myPracticeLogs || []
-  
   // タグフィルタリングロジック
   const filteredPracticeLogs = practiceLogs.filter((log: any) => {
     if (selectedTagIds.length === 0) return true
@@ -124,8 +91,8 @@ export default function PracticePage() {
   
   // 日付の降順でソート
   const sortedPracticeLogs = [...filteredPracticeLogs].sort((a, b) => {
-    const dateA = new Date(a.practice?.date || a.createdAt)
-    const dateB = new Date(b.practice?.date || b.createdAt)
+    const dateA = new Date(a.practice?.date || a.created_at)
+    const dateB = new Date(b.practice?.date || b.created_at)
     return dateB.getTime() - dateA.getTime()
   })
 
@@ -163,45 +130,30 @@ export default function PracticePage() {
       : `${remainingSeconds.toFixed(2)}`
   }
 
-  // タグの保存処理（ダッシュボードと同じ）
-  const savePracticeLogTags = async (practiceLogId: string, tags: any[], existingTags: any[] = []) => {
+  // タグの保存処理
+  const savePracticeLogTags = async (practiceLogId: string, newTags: any[]) => {
     try {
       // 既存のタグをすべて削除
-      for (const existingTag of existingTags) {
-        try {
-          await removePracticeLogTag({
-            variables: {
-              practiceLogId: practiceLogId,
-              practiceTagId: existingTag.id
-            }
-          })
-        } catch (error) {
-          console.error('既存タグの削除に失敗しました:', error)
-        }
-      }
+      await supabase
+        .from('practice_log_tags')
+        .delete()
+        .eq('practice_log_id', practiceLogId)
       
       // 新しいタグを追加
-      for (const tag of tags) {
-        try {
-          await addPracticeLogTag({
-            variables: {
-              practiceLogId: practiceLogId,
-              practiceTagId: tag.id
-            }
-          })
-        } catch (error) {
-          console.error('タグの追加に失敗しました:', error)
-        }
+      if (newTags.length > 0) {
+        await (supabase as any)
+          .from('practice_log_tags')
+          .insert(newTags.map(tag => ({
+            practice_log_id: practiceLogId,
+            practice_tag_id: tag.id
+          })))
       }
     } catch (error) {
       console.error('タグの保存処理でエラーが発生しました:', error)
     }
   }
 
-  
-
   const handleEditLog = (log: any) => {
-    // ダッシュボードと同じ処理
     setEditingItem({
       id: log.practiceId,
       item_type: 'practice',
@@ -209,11 +161,27 @@ export default function PracticePage() {
     })
     setSelectedDate(new Date(log.practice?.date || new Date()))
     setEditingLog(log)
+    
+    // 編集データを設定
+    setEditingData({
+      id: log.id,
+      practiceId: log.practiceId,
+      date: log.practice?.date || new Date().toISOString().split('T')[0],
+      place: log.practice?.place || '',
+      note: log.practice?.note || '',
+      style: log.style,
+      repCount: log.reps,
+      setCount: log.set_count || 1,
+      distance: log.distance,
+      circle: log.circle_time,
+      times: log.practice_times || [],
+      tags: log.tags || []
+    })
+    
     setIsFormOpen(true)
   }
 
   const handleTimeLog = (log: any) => {
-    // ダッシュボードと同じ表示にするため、Practice情報を取得
     setSelectedPracticeForTime({
       id: log.practiceId,
       location: log.practice?.place
@@ -221,112 +189,65 @@ export default function PracticePage() {
     setShowTimeModal(true)
   }
 
-  const handlePracticeSubmit = async (formData: any) => {
+  const handlePracticeSubmit = async (formDataArray: any[]) => {
     setIsLoading(true)
     try {
-      const menus = Array.isArray(formData.sets) ? formData.sets : []
-      const createdPracticeLogIds: string[] = []
+      const menus = Array.isArray(formDataArray) ? formDataArray : []
 
       if (editingData && editingItem?.item_type === 'practice') {
-        // 編集時の処理（簡略化）
+        // 編集時の処理
+        const firstMenu = menus[0] || {}
         const practiceInput = {
-          date: formData.practiceDate,
-          place: formData.location,
-          note: formData.note
+          date: firstMenu.practiceDate || editingData.date,
+          place: firstMenu.location || editingData.place,
+          note: firstMenu.note || editingData.note
         }
-        await updatePractice({ variables: { id: editingData.practiceId, input: practiceInput } })
         
-        // 編集時: 複数のPractice_logがある場合の処理
-        if (editingData.practiceLogs && editingData.practiceLogs.length > 0) {
-          // 複数のPractice_logを更新
-          for (let i = 0; i < menus.length && i < editingData.practiceLogs.length; i++) {
-            const m = menus[i]
-            const existingLog = editingData.practiceLogs[i]
-            const repsPerSet = (m?.reps as number) || 0
-            const setCount = (m?.setCount as number) || 1
-            const distancePerRep = (m?.distance as number) || 0
-            const input = {
-              practiceId: editingData.practiceId,
-              style: m?.style || 'Fr',
-              repCount: repsPerSet,
-              setCount: setCount,
-              distance: distancePerRep,
-              circle: m?.circleTime || null,
-              note: m?.note || ''
-            }
-            await updatePracticeLog({ variables: { id: existingLog.id, input } })
-            
-            // タグの保存
-            const existingTags = existingLog.tags || []
-            await savePracticeLogTags(existingLog.id, m?.tags || [], existingTags)
+        await updatePractice(editingData.practiceId, practiceInput)
+        
+        // Practice_log更新
+        for (const menu of menus) {
+          const logInput = {
+            practice_id: editingData.practiceId,
+            style: menu.style || 'Fr',
+            reps: menu.reps || 1,
+            distance: menu.distance || 100,
+            circle_time: menu.circleTime || null,
+            note: menu.note || ''
           }
-        } else {
-          // 単一のPractice_logの場合の従来の処理
-          const m = menus[0] || {}
-          const repsPerSet = (m?.reps as number) || 0
-          const setCount = (m?.setCount as number) || 1
-          const distancePerRep = (m?.distance as number) || 0
-          const input = {
-            practiceId: editingData.practiceId, // 既存のPractice IDを使用
-            style: m?.style || 'Fr',
-            repCount: repsPerSet,
-            setCount: setCount,
-            distance: distancePerRep,
-            circle: m?.circleTime || null,
-            note: m?.note || ''
-          }
-          await updatePracticeLog({ variables: { id: editingData.id, input } })
+          
+          await updatePracticeLog(editingData.id, logInput)
           
           // タグの保存
-          const existingTags = editingData.tags || []
-          await savePracticeLogTags(editingData.id, m?.tags || [], existingTags)
+          await savePracticeLogTags(editingData.id, menu.tags || [])
         }
       } else {
         // 新規作成時の処理
+        const firstMenu = menus[0] || {}
         const practiceInput = {
-          date: formData.practiceDate,
-          place: formData.location,
-          note: formData.note
+          date: firstMenu.practiceDate || new Date().toISOString().split('T')[0],
+          place: firstMenu.location || '',
+          note: firstMenu.note || ''
         }
-        const practiceResult = await createPractice({ variables: { input: practiceInput } })
-        const practiceId = (practiceResult.data as any)?.createPractice?.id
+        
+        const newPractice = await createPractice(practiceInput)
 
-        if (practiceId) {
-          // 各メニューをPracticeLogとして作成
-          for (const m of menus) {
-            const repsPerSet = (m?.reps as number) || 0
-            const setCount = (m?.setCount as number) || 1
-            const distancePerRep = (m?.distance as number) || 0
-            const input = {
-              practiceId: practiceId,
-              style: m?.style || 'Fr',
-              repCount: repsPerSet,
-              setCount: setCount,
-              distance: distancePerRep,
-              circle: m?.circleTime || null,
-              note: m?.note || ''
-            }
-            const result = await createPracticeLog({ variables: { input } })
-            const id = (result.data as any)?.createPracticeLog?.id
-            if (id) {
-              createdPracticeLogIds.push(id)
-              
-              // タグの保存
-              if (m?.tags && m.tags.length > 0) {
-                for (const tag of m.tags) {
-                  try {
-                    await addPracticeLogTag({
-                      variables: {
-                        practiceLogId: id,
-                        practiceTagId: tag.id
-                      }
-                    })
-                  } catch (tagError) {
-                    console.error('タグの保存に失敗しました:', tagError)
-                  }
-                }
-              }
-            }
+        // 各メニューをPracticeLogとして作成
+        for (const menu of menus) {
+          const logInput = {
+            practice_id: newPractice.id,
+            style: menu.style || 'Fr',
+            reps: menu.reps || 1,
+            distance: menu.distance || 100,
+            circle_time: menu.circleTime || null,
+            note: menu.note || ''
+          }
+          
+          const newLog = await createPracticeLog(logInput)
+          
+          // タグの保存
+          if (menu.tags && menu.tags.length > 0) {
+            await savePracticeLogTags(newLog.id, menu.tags)
           }
         }
       }
@@ -352,20 +273,12 @@ export default function PracticePage() {
     setSelectedDate(null)
   }
 
-  const handleTimeFormClose = () => {
-    setIsTimeFormOpen(false)
-    setSelectedLogForTime(null)
-    // データを再取得
-    refetch()
-  }
-
   const handleTimeModalClose = () => {
     setShowTimeModal(false)
     setSelectedPracticeForTime(null)
   }
 
   const handleDeleteLog = async (logId: string) => {
-    // ダッシュボードと同じ処理
     if (confirm('この練習記録を削除しますか？')) {
       setIsLoading(true)
       try {
@@ -374,9 +287,7 @@ export default function PracticePage() {
         const practiceId = logToDelete?.practiceId
 
         // Practice_Logを削除
-        await deletePracticeLog({
-          variables: { id: logId }
-        })
+        await deletePracticeLog(logId)
 
         // Practice_Log削除後、そのPracticeに紐づく他のPractice_Logがあるかチェック
         if (practiceId) {
@@ -387,17 +298,14 @@ export default function PracticePage() {
           // 紐づくPractice_Logがない場合は、Practiceも削除
           if (remainingLogs.length === 0) {
             try {
-              await deletePractice({
-                variables: { id: practiceId }
-              })
+              await deletePractice(practiceId)
             } catch (practiceDeleteError) {
               console.error('Practiceの削除に失敗しました:', practiceDeleteError)
-              // Practice削除に失敗してもエラーを表示しない（Practice_Logは削除済み）
             }
           }
         }
 
-        // 明示的にrefetchを実行（キャッシュを無視）
+        // 明示的にrefetchを実行
         await refetch()
       } catch (error) {
         console.error('削除エラー:', error)
@@ -455,7 +363,7 @@ export default function PracticePage() {
               練習記録
             </h1>
             <p className="text-sm sm:text-base text-gray-600">
-              日々の練習内容を記録・分析します。
+              日々の練習内容を記録・分析します。新しい練習記録の追加はダッシュボードのカレンダーから行えます。
             </p>
           </div>
           <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
@@ -523,7 +431,7 @@ export default function PracticePage() {
             <div className="ml-3 sm:ml-4">
               <p className="text-xs sm:text-sm font-medium text-gray-600">総練習日数</p>
               <p className="text-xl sm:text-2xl font-bold text-gray-900">
-                {practiceLogs.length}
+                {practices.length}
               </p>
             </div>
           </div>
@@ -543,9 +451,16 @@ export default function PracticePage() {
             <CalendarDaysIcon className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">練習記録がありません</h3>
             <p className="mt-1 text-sm text-gray-500">
-              最初の練習記録を作成しましょう。
+              ダッシュボードのカレンダーから練習記録を追加できます。
             </p>
-            
+            <div className="mt-4">
+              <Button
+                onClick={() => window.location.href = '/dashboard'}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                ダッシュボードに移動
+              </Button>
+            </div>
           </div>
         ) : (
           <>
@@ -593,10 +508,10 @@ export default function PracticePage() {
                         {log.practice?.place || '-'}
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {log.distance}m × {log.repCount}本{log.setCount > 1 ? ` × ${log.setCount}セット` : ''}
+                        {log.distance}m × {log.reps}本
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {log.circle ? `${Math.floor(log.circle / 60)}'${Math.floor(log.circle % 60).toString().padStart(2, '0')}"` : '-'}
+                        {log.circle_time ? `${Math.floor(log.circle_time / 60)}'${Math.floor(log.circle_time % 60).toString().padStart(2, '0')}"` : '-'}
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                         {log.style}
@@ -621,11 +536,10 @@ export default function PracticePage() {
                         )}
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap">
-                        {log.times && log.times.length > 0 ? (
+                        {log.practice_times && log.practice_times.length > 0 ? (
                           <div className="text-sm">
-                            {calculateSetAverages(log.times, log.repCount, log.setCount).map((avgTime: number, setIndex: number) => (
+                            {calculateSetAverages(log.practice_times, log.reps, 1).map((avgTime: number, setIndex: number) => (
                               <div key={setIndex} className="text-gray-900">
-                                {log.setCount > 1 && <span className="text-xs text-gray-500 mr-1">Set{setIndex + 1}:</span>}
                                 {formatTime(avgTime)}
                               </div>
                             ))}
@@ -639,7 +553,7 @@ export default function PracticePage() {
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center justify-end space-x-2">
-                          {log.times && log.times.length > 0 && (
+                          {log.practice_times && log.practice_times.length > 0 && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -677,124 +591,8 @@ export default function PracticePage() {
               </table>
             </div>
 
-            {/* タブレット表示（簡略テーブル） */}
-            <div className="hidden md:block lg:hidden overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      日付
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      内容
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      タイム
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      操作
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {sortedPracticeLogs.map((log: any) => (
-                    <tr key={log.id} className="hover:bg-gray-50">
-                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
-                        <div>
-                          <div className="font-medium">
-                            {log.practice?.date ? format(new Date(log.practice.date), 'MM/dd', { locale: ja }) : '-'}
-                          </div>
-                          <div className="text-gray-500 text-xs">
-                            {log.practice?.place || '-'}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-3 py-3 text-sm text-gray-900">
-                        <div className="space-y-1">
-                          <div className="font-medium">
-                            {log.distance}m × {log.repCount}本{log.setCount > 1 ? ` × ${log.setCount}セット` : ''}
-                          </div>
-                          <div className="text-gray-600">
-                            {log.circle ? `${Math.floor(log.circle / 60)}'${Math.floor(log.circle % 60).toString().padStart(2, '0')}"` : '-'} {log.style}
-                          </div>
-                          {log.tags && log.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {log.tags.map((tag: any) => (
-                                <span
-                                  key={tag.id}
-                                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-black"
-                                  style={{ 
-                                    backgroundColor: tag.color
-                                  }}
-                                >
-                                  {tag.name}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          {log.note && (
-                            <div className="text-gray-600 text-xs truncate max-w-xs">
-                              {log.note}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {log.times && log.times.length > 0 ? (
-                          <div className="text-sm">
-                            {calculateSetAverages(log.times, log.repCount, log.setCount).map((avgTime: number, setIndex: number) => (
-                              <div key={setIndex} className="text-gray-900">
-                                {log.setCount > 1 && <span className="text-xs text-gray-500 mr-1">Set{setIndex + 1}:</span>}
-                                {formatTime(avgTime)}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-3 whitespace-nowrap text-sm font-medium">
-                        <div className="flex flex-col space-y-1">
-                          {log.times && log.times.length > 0 && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleTimeLog(log)}
-                              className="flex items-center justify-center space-x-1 text-xs"
-                            >
-                              <ClockIcon className="h-3 w-3" />
-                              <span>タイム</span>
-                            </Button>
-                          )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditLog(log)}
-                            className="flex items-center justify-center space-x-1 text-xs"
-                          >
-                            <PencilIcon className="h-3 w-3" />
-                            <span>編集</span>
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteLog(log.id)}
-                            disabled={isLoading}
-                            className="flex items-center justify-center space-x-1 text-xs text-red-600 hover:text-red-700"
-                          >
-                            <TrashIcon className="h-3 w-3" />
-                            <span>{isLoading ? '削除中...' : '削除'}</span>
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* モバイル表示（カード形式） */}
-            <div className="md:hidden">
+            {/* タブレット・モバイル表示（カード形式） */}
+            <div className="lg:hidden">
               <div className="divide-y divide-gray-200">
                 {sortedPracticeLogs.map((log: any) => (
                   <div key={log.id} className="p-4 hover:bg-gray-50">
@@ -813,10 +611,10 @@ export default function PracticePage() {
                         
                         <div className="space-y-1">
                           <div className="text-sm font-medium text-gray-900">
-                            {log.distance}m × {log.repCount}本{log.setCount > 1 ? ` × ${log.setCount}セット` : ''}
+                            {log.distance}m × {log.reps}本
                           </div>
                           <div className="text-sm text-gray-600">
-                            {log.circle ? `${Math.floor(log.circle / 60)}'${Math.floor(log.circle % 60).toString().padStart(2, '0')}"` : '-'} {log.style}
+                            {log.circle_time ? `${Math.floor(log.circle_time / 60)}'${Math.floor(log.circle_time % 60).toString().padStart(2, '0')}"` : '-'} {log.style}
                           </div>
                           
                           {log.tags && log.tags.length > 0 && (
@@ -835,15 +633,13 @@ export default function PracticePage() {
                             </div>
                           )}
                           
-                          {log.times && log.times.length > 0 && (
+                          {log.practice_times && log.practice_times.length > 0 && (
                             <div className="mt-2">
                               <div className="text-xs text-gray-500 mb-1">平均タイム:</div>
                               <div className="text-sm">
-                                {calculateSetAverages(log.times, log.repCount, log.setCount).map((avgTime: number, setIndex: number) => (
+                                {calculateSetAverages(log.practice_times, log.reps, 1).map((avgTime: number, setIndex: number) => (
                                   <span key={setIndex} className="text-gray-900">
-                                    {log.setCount > 1 && <span className="text-xs text-gray-500 mr-1">Set{setIndex + 1}:</span>}
                                     {formatTime(avgTime)}
-                                    {setIndex < log.setCount - 1 && ', '}
                                   </span>
                                 ))}
                               </div>
@@ -859,7 +655,7 @@ export default function PracticePage() {
                       </div>
                       
                       <div className="flex flex-col space-y-1 ml-4">
-                        {log.times && log.times.length > 0 && (
+                        {log.practice_times && log.practice_times.length > 0 && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -910,22 +706,12 @@ export default function PracticePage() {
           setEditingLog(null)
         }}
         onSubmit={handlePracticeSubmit}
-        practiceId={editingData?.id || ''}
+        practiceId={editingData?.practiceId || ''}
         editData={editingData}
         isLoading={isLoading}
+        availableTags={tags}
+        styles={styles}
       />
-
-      {/* タイム記録フォームモーダル */}
-      {selectedLogForTime && (
-        <PracticeTimeForm
-          isOpen={isTimeFormOpen}
-          onClose={handleTimeFormClose}
-          practiceLogId={selectedLogForTime.id}
-          repCount={selectedLogForTime.repCount}
-          setCount={selectedLogForTime.setCount}
-          existingTimes={selectedLogForTime.times}
-        />
-      )}
 
       {/* 練習記録表示モーダル（編集・削除・追加ボタンなし） */}
       {selectedPracticeForTime && (
