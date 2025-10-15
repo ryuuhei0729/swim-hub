@@ -3,8 +3,8 @@
 // =============================================================================
 
 // 共通型定義の再エクスポート
-export * from '@shared/types/database'
-export * from '@shared/types/ui'
+export * from '@apps/shared/types/database'
+export * from '@apps/shared/types/ui'
 
 // Web専用型定義
 export * from './web-specific'

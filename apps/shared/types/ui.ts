@@ -27,6 +27,25 @@ export interface CalendarItem {
     name_jp: string
     distance: number
   }
+  // Record型との互換性のための追加プロパティ
+  user_id?: string
+  competition_id?: string
+  style_id?: number
+  time?: number
+  video_url?: string
+  created_at?: string
+  updated_at?: string
+  split_times?: any[]
+  competition?: {
+    id: string
+    title: string
+    date: string
+    place: string | null
+    pool_type: number
+  }
+  // Practice型との互換性のための追加プロパティ
+  practiceLogs?: any[]
+  practice_logs?: any[]
 }
 
 export interface CalendarDay {

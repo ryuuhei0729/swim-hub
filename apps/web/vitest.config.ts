@@ -33,7 +33,7 @@ export default defineConfig({
     },
     alias: {
       '@': './',
-      '@shared': '../../packages/shared',
+      '@apps/shared': '../shared',
     },
   }),
 })

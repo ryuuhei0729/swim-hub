@@ -4,8 +4,7 @@
   "private": true,
   "description": "水泳選手マネジメントシステム - モノレポ",
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "apps/*"
   ],
   "scripts": {
     "dev": "npm run dev --workspace=apps/web",
@@ -22,7 +21,7 @@
     "lint:web": "npm run lint --workspace=apps/web",
     "lint:mobile": "cd apps/mobile && flutter analyze",
     "test": "npm run test --workspaces --if-present",
-    "test:unit": "npm run test --workspace=apps/web && npm run test --workspace=packages/shared",
+    "test:unit": "npm run test --workspace=apps/web && npm run test --workspace=apps/shared",
     "test:watch": "npm run test:watch --workspace=apps/web",
     "test:coverage": "npm run test:coverage --workspaces --if-present",
     "test:web": "npm run test --workspace=apps/web",

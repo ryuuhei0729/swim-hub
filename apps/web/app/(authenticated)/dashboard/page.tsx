@@ -10,10 +10,10 @@ import PracticeBasicForm from '@/components/forms/PracticeBasicForm'
 import PracticeLogForm from '@/components/forms/PracticeLogForm'
 import CompetitionBasicForm from '@/components/forms/CompetitionBasicForm'
 import RecordLogForm from '@/components/forms/RecordLogForm'
-import { usePractices } from '@shared/hooks/usePractices'
-import { useRecords } from '@shared/hooks/useRecords'
+import { usePractices } from '@apps/shared/hooks/usePractices'
+import { useRecords } from '@apps/shared/hooks/useRecords'
 import { useCalendarData } from './_hooks/useCalendarData'
-import { StyleAPI } from '@shared/api'
+import { StyleAPI } from '@apps/shared/api'
 
 export default function DashboardPage() {
   const { profile, user } = useAuth()
@@ -40,10 +40,10 @@ export default function DashboardPage() {
   const {
     createPractice,
     updatePractice,
-    deletePractice,
+    deletePractice: _deletePractice,
     createPracticeLog,
     updatePracticeLog,
-    deletePracticeLog,
+    deletePracticeLog: _deletePracticeLog,
     createPracticeTime,
     deletePracticeTime,
     refetch
@@ -53,7 +53,7 @@ export default function DashboardPage() {
   const {
     createRecord,
     updateRecord,
-    deleteRecord,
+    deleteRecord: _deleteRecord,
     createCompetition,
     updateCompetition,
     createSplitTimes,
@@ -214,6 +214,7 @@ export default function DashboardPage() {
           for (const timeEntry of menu.times) {
             if (timeEntry.time > 0) {
               await createPracticeTime({
+                user_id: user?.id || '',
                 practice_log_id: editingData.id,
                 set_number: timeEntry.setNumber,
                 rep_number: timeEntry.repNumber,
@@ -260,6 +261,7 @@ export default function DashboardPage() {
             for (const timeEntry of menu.times) {
               if (timeEntry.time > 0) {
                 await createPracticeTime({
+                  user_id: user?.id || '',
                   practice_log_id: createdLog.id,
                   set_number: timeEntry.setNumber,
                   rep_number: timeEntry.repNumber,
@@ -449,7 +451,7 @@ export default function DashboardPage() {
           
           console.log('マッピング後のスプリットタイムデータ:', splitTimesData)
           console.log('splitTimesDataの各要素を詳細確認:')
-          splitTimesData.forEach((st, idx) => {
+          splitTimesData.forEach((st: any, idx: number) => {
             console.log(`  [${idx}] record_id: ${st.record_id}, distance: ${st.distance} (${typeof st.distance}), split_time: ${st.split_time} (${typeof st.split_time})`)
           })
           

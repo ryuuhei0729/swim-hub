@@ -6,7 +6,7 @@ import { Button } from '@/components/ui'
 // @ts-ignore
 import TagManagementModal from './TagManagementModal'
 import { createClient } from '@/lib/supabase'
-import { PracticeTag } from '@shared/types/database'
+import { PracticeTag } from '@apps/shared/types/database'
 
 type Tag = PracticeTag
 

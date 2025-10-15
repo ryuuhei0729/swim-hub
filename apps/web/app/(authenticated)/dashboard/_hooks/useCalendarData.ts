@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase'
-import type { CalendarEntry } from '@shared/api/dashboard'
-import { DashboardAPI } from '@shared/api/dashboard'
+import type { CalendarEntry } from '@apps/shared/api/dashboard'
+import { DashboardAPI } from '@apps/shared/api/dashboard'
 import { endOfMonth, format, startOfMonth } from 'date-fns'
 import { useEffect, useState } from 'react'
 
@@ -11,7 +11,7 @@ export interface MonthlySummary {
   averageTime?: number
 }
 
-export function useCalendarData(currentDate: Date, userId?: string) {
+export function useCalendarData(currentDate: Date, _userId?: string) {
   const [calendarItems, setCalendarItems] = useState<CalendarEntry[]>([])
   const [monthlySummary, setMonthlySummary] = useState<MonthlySummary>({
     practiceCount: 0,
@@ -54,7 +54,7 @@ export function useCalendarData(currentDate: Date, userId?: string) {
   // 初回データ取得
   useEffect(() => {
     loadData()
-  }, [startDate, endDate])
+  }, [startDate, endDate, loadData])
 
   // リアルタイム購読（オプション）
   useEffect(() => {
@@ -96,7 +96,7 @@ export function useCalendarData(currentDate: Date, userId?: string) {
       supabase.removeChannel(practicesChannel)
       supabase.removeChannel(recordsChannel)
     }
-  }, [startDate, endDate])
+  }, [startDate, endDate, supabase])
 
   return {
     calendarItems,

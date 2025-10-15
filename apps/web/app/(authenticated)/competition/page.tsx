@@ -8,16 +8,17 @@ import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
 import { createClient } from '@/lib/supabase'
-import { useRecords } from '@shared/hooks/useRecords'
-import { StyleAPI } from '@shared/api'
+import { useRecords } from '@apps/shared/hooks/useRecords'
+import { StyleAPI } from '@apps/shared/api'
+import type { Record, Competition, Style, SplitTime } from '@apps/shared/types/database'
 
 export default function CompetitionPage() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [editingData, setEditingData] = useState<any>(null)
-  const [selectedRecord, setSelectedRecord] = useState<any>(null)
+  const [editingData, setEditingData] = useState<Record | null>(null)
+  const [selectedRecord, setSelectedRecord] = useState<Record | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
-  const [styles, setStyles] = useState<any[]>([])
+  const [styles, setStyles] = useState<Style[]>([])
   
   // フィルタリング用のstate
   const [filterStyle, setFilterStyle] = useState<string>('')
@@ -37,7 +38,7 @@ export default function CompetitionPage() {
     createCompetition,
     createSplitTimes,
     replaceSplitTimes,
-    refetch
+    refetch: _refetch
   } = useRecords(supabase, {})
 
   // スタイルデータを取得
@@ -52,10 +53,10 @@ export default function CompetitionPage() {
       }
     }
     loadStyles()
-  }, [])
+  }, [supabase])
   
   // フィルタリングロジック
-  const filteredRecords = records.filter((record: any) => {
+  const filteredRecords = records.filter((record: Record) => {
     // 種目フィルタ
     if (filterStyle) {
       const recordStyleId = record.style_id
@@ -84,18 +85,18 @@ export default function CompetitionPage() {
 
   // 日付の降順でソート
   const sortedRecords = [...filteredRecords].sort((a, b) => {
-    const dateA = new Date((a.competition as any)?.date || a.created_at)
-    const dateB = new Date((b.competition as any)?.date || b.created_at)
+    const dateA = new Date(a.competition?.date || a.created_at)
+    const dateB = new Date(b.competition?.date || b.created_at)
     return dateB.getTime() - dateA.getTime()
   })
 
-  const handleEditRecord = async (record: any) => {
+  const handleEditRecord = async (record: Record) => {
     setEditingData({
-      id: record.id,
-      recordDate: (record.competition as any)?.date || new Date().toISOString().split('T')[0],
-      location: (record.competition as any)?.place || '',
-      competitionName: (record.competition as any)?.title || '',
-      poolType: (record.competition as any)?.pool_type || 0,
+      ...record,
+      recordDate: record.competition?.date || new Date().toISOString().split('T')[0],
+      location: record.competition?.place || '',
+      competitionName: record.competition?.title || '',
+      poolType: record.competition?.pool_type || 0,
       styleId: record.style_id,
       time: record.time,
       isRelaying: record.is_relaying || false,
@@ -104,11 +105,11 @@ export default function CompetitionPage() {
       note: record.note,
       competition: record.competition,
       style: record.style
-    })
+    } as any)
     setIsFormOpen(true)
   }
 
-  const handleViewRecord = (record: any) => {
+  const handleViewRecord = (record: Record) => {
     setSelectedRecord(record)
     setShowDetailModal(true)
   }
@@ -134,7 +135,7 @@ export default function CompetitionPage() {
 
       if (formData.id) {
         // 編集時は既存のCompetition IDを使用
-        competitionId = editingData?.competition?.id || null
+        competitionId = editingData?.competition_id || null
       } else {
         // 新規作成時は大会情報が入力されている場合、先に大会を作成
         if (formData.competitionName && formData.location) {
@@ -285,7 +286,7 @@ export default function CompetitionPage() {
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">すべての種目</option>
-              {styles.map((style: any) => (
+              {styles.map((style: Style) => (
                 <option key={style.id} value={style.id}>
                   {style.name_jp}
                 </option>
@@ -414,19 +415,19 @@ export default function CompetitionPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {sortedRecords.map((record: any) => (
+                {sortedRecords.map((record: Record) => (
                   <tr key={record.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {(record.competition as any)?.date ? format(new Date((record.competition as any).date), 'MM/dd', { locale: ja }) : '-'}
+                      {(record.competition as Competition)?.date ? format(new Date((record.competition as Competition).date), 'MM/dd', { locale: ja }) : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {(record.competition as any)?.title || '-'}
+                      {(record.competition as Competition)?.title || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {(record.competition as any)?.place || '-'}
+                      {(record.competition as Competition)?.place || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {(record.style as any)?.name_jp || '-'}
+                      {(record.style as Style)?.name_jp || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {record.time ? (
@@ -437,7 +438,7 @@ export default function CompetitionPage() {
                       ) : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {(record.competition as any)?.pool_type === 1 ? '長水路' : (record.competition as any)?.pool_type === 0 ? '短水路' : '-'}
+                      {(record.competition as Competition)?.pool_type === 1 ? '長水路' : (record.competition as Competition)?.pool_type === 0 ? '短水路' : '-'}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
                       {record.note || '-'}
@@ -490,10 +491,14 @@ export default function CompetitionPage() {
           setEditingData(null)
         }}
         onSubmit={handleRecordSubmit}
-        initialDate={null}
+        initialDate={undefined}
         editData={editingData}
         isLoading={isLoading}
-        styles={styles}
+        styles={styles.map(style => ({
+          id: style.id.toString(),
+          nameJp: style.name_jp,
+          distance: style.distance
+        }))}
       />
 
       {/* 詳細モーダル */}
@@ -538,26 +543,26 @@ export default function CompetitionPage() {
                     <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
                       <div className="flex-1">
                         <h5 className="font-medium text-gray-900 mb-2">
-                          {(selectedRecord.style as any)?.name_jp || '記録'}: {selectedRecord.time ? (
+                          {selectedRecord.style?.name_jp || '記録'}: {selectedRecord.time ? (
                             <>
                               {formatTime(selectedRecord.time)}
                               {selectedRecord.is_relaying && <span className="font-bold text-red-600 ml-1">R</span>}
                             </>
                           ) : '-'}
                         </h5>
-                        {(selectedRecord.competition as any)?.title && (
+                        {selectedRecord.competition?.title && (
                           <p className="text-sm text-gray-600 mb-1">
-                            🏆 {(selectedRecord.competition as any).title}
+                            🏆 {selectedRecord.competition.title}
                           </p>
                         )}
-                        {(selectedRecord.competition as any)?.place && (
+                        {selectedRecord.competition?.place && (
                           <p className="text-sm text-gray-600 mb-1">
-                            📍 {(selectedRecord.competition as any).place}
+                            📍 {selectedRecord.competition.place}
                           </p>
                         )}
-                        {(selectedRecord.competition as any)?.pool_type != null && (
+                        {selectedRecord.competition?.pool_type != null && (
                           <p className="text-sm text-gray-600 mb-1">
-                            🏊‍♀️ {(selectedRecord.competition as any).pool_type === 1 ? '長水路(50m)' : '短水路(25m)'}
+                            🏊‍♀️ {selectedRecord.competition.pool_type === 1 ? '長水路(50m)' : '短水路(25m)'}
                           </p>
                         )}
                         {selectedRecord.time && (

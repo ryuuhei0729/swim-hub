@@ -3,7 +3,7 @@
 // Next.js App Router専用の型定義
 // =============================================================================
 
-import { UserProfile } from '@shared/types/database'
+import { UserProfile } from '@apps/shared/types/database'
 
 // =============================================================================
 // 1. 認証関連の型定義（Web専用）

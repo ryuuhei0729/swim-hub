@@ -7,7 +7,7 @@ import { format } from 'date-fns'
 import TimeInputModal from './TimeInputModal'
 import TagInput from './TagInput'
 import { createClient } from '@/lib/supabase'
-import { PracticeTag } from '@shared/types/database'
+import { PracticeTag } from '@apps/shared/types/database'
 
 type Tag = PracticeTag
 

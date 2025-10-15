@@ -53,7 +53,7 @@ export default function DashboardStats() {
     }
 
     loadStats()
-  }, [])
+  }, [supabase])
 
   const stats = [
     {
@@ -107,9 +107,9 @@ export default function DashboardStats() {
 
 // 今後のイベント一覧コンポーネント
 export function UpcomingEventsList() {
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [data, _setData] = useState(null)
+  const [loading, _setLoading] = useState(true)
+  const [error, _setError] = useState(null)
 
   if (loading) {
     return (
@@ -153,22 +153,15 @@ export function UpcomingEventsList() {
               <div className="flex-1">
                 <h3 className="font-medium text-gray-900">{event.title}</h3>
                 <p className="text-sm text-gray-500">
-                  {format(new Date(event.startTime), 'yyyy年MM月dd日')} {format(new Date(event.startTime), 'HH:mm')}
+                  {format(new Date(event.date), 'yyyy年MM月dd日')}
                 </p>
                 {event.location && (
                   <p className="text-sm text-gray-400">📍 {event.location}</p>
                 )}
               </div>
               <div className="ml-4">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  event.eventType === 'PRACTICE' ? 'bg-blue-100 text-blue-800' :
-                  event.eventType === 'COMPETITION' ? 'bg-red-100 text-red-800' :
-                  event.eventType === 'MEETING' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-gray-100 text-gray-800'
-                }`}>
-                  {event.eventType === 'PRACTICE' ? '練習' :
-                   event.eventType === 'COMPETITION' ? '大会' :
-                   event.eventType === 'MEETING' ? '会議' : 'その他'}
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  イベント
                 </span>
               </div>
             </div>

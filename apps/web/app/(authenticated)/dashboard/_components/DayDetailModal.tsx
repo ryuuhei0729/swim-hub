@@ -7,6 +7,7 @@ import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
 import { createClient } from '@/lib/supabase'
 import { CalendarItemType, DayDetailModalProps } from '@/types'
+import type { Record, Practice, PracticeLog, PracticeTime, PoolType } from '@apps/shared/types/database'
 
 export default function DayDetailModal({
   isOpen,
@@ -45,7 +46,7 @@ export default function DayDetailModal({
   }
 
 
-  const getPoolTypeText = (poolType: number) => {
+  const _getPoolTypeText = (poolType: number) => {
     return poolType === 1 ? '長水路(50m)' : '短水路(25m)'
   }
 
@@ -150,14 +151,14 @@ export default function DayDetailModal({
                   
                   {/* Recordがある大会をグルーピングして表示 */}
                   {(() => {
-                    const competitionMap = new Map<string, any[]>()
+                    const competitionMap = new Map<string, Record[]>()
                     recordItems.forEach(record => {
-                      const compId = (record as any).competition_id
+                      const compId = record.competition_id
                       if (!compId) return
                       if (!competitionMap.has(compId)) {
                         competitionMap.set(compId, [])
                       }
-                      competitionMap.get(compId)!.push(record)
+                      competitionMap.get(compId)!.push(record as any)
                     })
                     
                     return Array.from(competitionMap.entries()).map(([compId, records]) => {
@@ -169,19 +170,19 @@ export default function DayDetailModal({
                           competitionName={firstRecord.competition_name}
                           location={firstRecord.location}
                           poolType={firstRecord.pool_type}
-                          note={(firstRecord as any).competition?.note}
+                          note={firstRecord.competition?.note || undefined}
                           records={records}
                           onEdit={() => {
                             // Competition編集: 最初のRecordからCompetition情報を取得
                             const competitionData = {
                               id: compId,
                               item_type: 'competition' as const,
-                              item_date: firstRecord.item_date,
-                              title: firstRecord.competition_name,
-                              date: (firstRecord as any).competition?.date || firstRecord.item_date,
-                              place: firstRecord.location,
-                              pool_type: firstRecord.pool_type,
-                              note: (firstRecord as any).competition?.note
+                              item_date: firstRecord.item_date || '',
+                              title: firstRecord.competition_name || '',
+                              date: firstRecord.competition?.date || firstRecord.item_date || '',
+                              place: firstRecord.location || '',
+                              pool_type: (firstRecord.pool_type || 0) as PoolType,
+                              note: firstRecord.competition?.note || undefined
                             }
                             onEditItem?.(competitionData)
                             onClose()
@@ -299,10 +300,10 @@ function PracticeDetails({
   onEdit?: () => void
   onDelete?: () => void
   onAddPracticeLog?: (practiceId: string) => void
-  onEditPracticeLog?: (log: any) => void
+  onEditPracticeLog?: (log: PracticeLog) => void
   onDeletePracticeLog?: (logId: string) => void
 }) {
-  const [practice, setPractice] = useState<any>(null)
+  const [practice, setPractice] = useState<Practice | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
   const supabase = createClient()
@@ -333,7 +334,7 @@ function PracticeDetails({
         const practiceData = data as any
         const formattedPractice = {
           ...practiceData,
-          practiceLogs: practiceData.practice_logs?.map((log: any) => ({
+          practiceLogs: (practiceData.practice_logs as any[])?.map((log: any) => ({
             id: log.id,
             practiceId: log.practice_id,
             style: log.style,
@@ -362,7 +363,7 @@ function PracticeDetails({
     }
 
     loadPractice()
-  }, [practiceId])
+  }, [practiceId, supabase])
 
   if (loading) {
     return (
@@ -379,7 +380,7 @@ function PracticeDetails({
     return null
   }
 
-  const practiceLogs = practice.practiceLogs || []
+  const practiceLogs = practice.practiceLogs || practice.practice_logs || []
 
   // 色の明度に基づいてテキスト色を決定する関数
   const getTextColor = (backgroundColor: string) => {
@@ -498,15 +499,18 @@ function PracticeDetails({
                         // フォームに必要な形式に変換
                         const formData = {
                           id: log.id,
-                          practice_id: log.practiceId,
+                          user_id: log.user_id || '',
+                          practice_id: log.practiceId || log.practice_id,
                           style: log.style,
-                          rep_count: log.repCount,
-                          set_count: log.setCount,
+                          rep_count: log.repCount || log.rep_count,
+                          set_count: log.setCount || log.set_count,
                           distance: log.distance,
                           circle: log.circle,
                           note: log.note,
                           tags: log.tags,
-                          times: log.times || []
+                          times: log.times || [],
+                          created_at: log.created_at || '',
+                          updated_at: log.updated_at || ''
                         }
                         console.log('Edit PracticeLog formData:', formData) // デバッグ用
                         onEditPracticeLog?.(formData)
@@ -690,7 +694,7 @@ function RecordSplitTimes({ recordId }: { recordId: string }) {
     }
 
     loadSplits()
-  }, [recordId])
+  }, [recordId, supabase])
 
   if (loading) {
     return (
@@ -750,7 +754,7 @@ function CompetitionDetails({
   onDeleteRecord?: (recordId: string) => void
   onClose?: () => void
 }) {
-  const getPoolTypeText = (poolType: number) => {
+  const _getPoolTypeText = (poolType: number) => {
     return poolType === 1 ? '長水路(50m)' : '短水路(25m)'
   }
 
@@ -773,7 +777,7 @@ function CompetitionDetails({
             {poolType != null && (
               <p className="text-sm text-gray-700 mb-2 flex items-center gap-1">
                 <span className="text-gray-500">🏊‍♀️</span>
-                {getPoolTypeText(poolType)}
+                {_getPoolTypeText(poolType)}
               </p>
             )}
             {note && (

@@ -60,7 +60,7 @@ export const createMockQueryBuilder = (
   mockBuilder.maybeSingle.mockResolvedValue({ data: returnData, error: returnError })
 
   // デフォルトの Promise 解決（select の最終結果など）
-  mockBuilder.then = (resolve: Function) => {
+  mockBuilder.then = (resolve: (value: { data: any; error: any }) => any) => {
     return Promise.resolve({ data: returnData, error: returnError }).then(resolve)
   }
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useTeamAnnouncements, useDeleteTeamAnnouncement } from '@shared/hooks'
+import { useTeamAnnouncements, useDeleteTeamAnnouncement } from '@apps/shared/hooks'
 import { createClient } from '@/lib/supabase'
 import type { TeamAnnouncement } from '@/types'
 
@@ -22,7 +22,7 @@ export const AnnouncementList: React.FC<AnnouncementListProps> = ({
 }) => {
   const supabase = createClient()
   const { announcements, loading, error, refetch } = useTeamAnnouncements(supabase, teamId)
-  const { remove, loading: deleteLoading } = useDeleteTeamAnnouncement()
+  const { remove, loading: deleteLoading } = useDeleteTeamAnnouncement(supabase)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   // viewOnlyの場合は公開済みのものだけをフィルタリング

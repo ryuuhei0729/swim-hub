@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { useCallback, useEffect, useState } from 'react'
 import type {
   CreateTeamAnnouncementInput,
   TeamAnnouncement,
   UpdateTeamAnnouncementInput
-} from '@shared/types/database'
+} from '../types/database'
 
 // チームお知らせ一覧取得フック
 export const useTeamAnnouncements = (supabase: SupabaseClient, teamId: string) => {
@@ -85,12 +85,10 @@ export const useTeamAnnouncements = (supabase: SupabaseClient, teamId: string) =
 }
 
 // チームお知らせ詳細取得フック
-export const useTeamAnnouncement = (id: string) => {
+export const useTeamAnnouncement = (supabase: SupabaseClient, id: string) => {
   const [announcement, setAnnouncement] = useState<TeamAnnouncement | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-
-  const supabase = createClient()
 
   useEffect(() => {
     if (!id) return
@@ -140,11 +138,9 @@ export const useTeamAnnouncement = (id: string) => {
 }
 
 // チームお知らせ作成フック
-export const useCreateTeamAnnouncement = () => {
+export const useCreateTeamAnnouncement = (supabase: SupabaseClient) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
-
-  const supabase = createClient()
 
   const create = async (input: CreateTeamAnnouncementInput): Promise<TeamAnnouncement> => {
     try {
@@ -198,11 +194,9 @@ export const useCreateTeamAnnouncement = () => {
 }
 
 // チームお知らせ更新フック
-export const useUpdateTeamAnnouncement = () => {
+export const useUpdateTeamAnnouncement = (supabase: SupabaseClient) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
-
-  const supabase = createClient()
 
   const update = async (id: string, input: UpdateTeamAnnouncementInput): Promise<TeamAnnouncement> => {
     try {
@@ -215,7 +209,7 @@ export const useUpdateTeamAnnouncement = () => {
         is_published: input.isPublished
       }
 
-      const { data, error: updateError } = await (supabase as any)
+      const { data, error: updateError } = await supabase
         .from('announcements')
         .update(updateData)
         .eq('id', id)
@@ -254,11 +248,9 @@ export const useUpdateTeamAnnouncement = () => {
 }
 
 // チームお知らせ削除フック
-export const useDeleteTeamAnnouncement = () => {
+export const useDeleteTeamAnnouncement = (supabase: SupabaseClient) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
-
-  const supabase = createClient()
 
   const remove = async (id: string): Promise<boolean> => {
     try {

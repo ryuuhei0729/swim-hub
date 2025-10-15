@@ -42,6 +42,25 @@ export interface Practice {
   note: string | null
   created_at: string
   updated_at: string
+  // CalendarItemとの互換性のための追加プロパティ
+  item_type?: CalendarItemType
+  item_date?: string
+  title?: string
+  location?: string
+  time_result?: number
+  pool_type?: PoolType
+  tags?: string[]
+  competition_name?: string
+  is_relaying?: boolean
+  team_practice?: boolean
+  team_record?: boolean
+  style?: {
+    id: string
+    name_jp: string
+    distance: number
+  }
+  practiceLogs?: PracticeLog[]
+  practice_logs?: PracticeLog[]
 }
 
 export type PracticeInsert = Omit<Practice, 'id' | 'created_at' | 'updated_at'>
@@ -120,6 +139,20 @@ export interface Record {
   is_relaying: boolean
   created_at: string
   updated_at: string
+  // CalendarItemとの互換性のための追加プロパティ
+  item_type?: CalendarItemType
+  item_date?: string
+  title?: string
+  location?: string
+  time_result?: number
+  pool_type?: PoolType
+  tags?: string[]
+  competition_name?: string
+  team_practice?: boolean
+  team_record?: boolean
+  split_times?: SplitTime[]
+  competition?: Competition | null
+  style?: Style
 }
 
 export type RecordInsert = Omit<Record, 'id' | 'created_at' | 'updated_at'>

@@ -1,6 +1,7 @@
 'use client'
 
-import { useTeamAnnouncement, useDeleteTeamAnnouncement } from '@/hooks'
+import { useTeamAnnouncements, useDeleteTeamAnnouncement } from '@apps/shared/hooks'
+import { createClient } from '@/lib/supabase'
 import type { TeamAnnouncement } from '@/types'
 
 interface AnnouncementDetailProps {
@@ -16,8 +17,10 @@ export const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({
   onClose,
   onEdit
 }) => {
-  const { announcement, loading, error } = useTeamAnnouncement(announcementId)
-  const { remove, loading: deleteLoading } = useDeleteTeamAnnouncement()
+  const supabase = createClient()
+  const { announcements, loading, error } = useTeamAnnouncements(supabase, '')
+  const announcement = announcements.find(a => a.id === announcementId)
+  const { remove, loading: deleteLoading } = useDeleteTeamAnnouncement(supabase)
 
   const handleDelete = async () => {
     if (!announcement || !confirm('このお知らせを削除しますか？')) return

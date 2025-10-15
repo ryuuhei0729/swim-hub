@@ -8,8 +8,8 @@ import PracticeTimeModal from './_components/PracticeTimeModal'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { createClient } from '@/lib/supabase'
-import { usePractices } from '@shared/hooks/usePractices'
-import { PracticeAPI, StyleAPI } from '@shared/api'
+import { usePractices } from '@apps/shared/hooks/usePractices'
+import { PracticeAPI, StyleAPI } from '@apps/shared/api'
 
 export default function PracticePage() {
   const [isFormOpen, setIsFormOpen] = useState(false)
