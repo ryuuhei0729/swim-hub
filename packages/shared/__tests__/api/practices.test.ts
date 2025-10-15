@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-    createMockPractice,
-    createMockPracticeLog,
-    createMockSupabaseClient,
-} from '../__mocks__/supabase'
-import { PracticeAPI } from './practices'
+  createMockPractice,
+  createMockPracticeLog,
+  createMockSupabaseClient,
+} from '../../__mocks__/supabase'
+import { PracticeAPI } from '../../api/practices'
 
 describe('PracticeAPI', () => {
   let mockClient: any
@@ -67,7 +67,7 @@ describe('PracticeAPI', () => {
       mockClient.from = vi.fn(() => ({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
-        then: (resolve: Function) =>
+        then: (resolve: any) =>
           Promise.resolve({ data: [mockPractice], error: null }).then(resolve),
       }))
 
@@ -96,7 +96,7 @@ describe('PracticeAPI', () => {
         }),
       }))
 
-      const result = await api.createPractice(newPractice)
+      const result = await api.createPractice({ ...newPractice, note: 'テストメモ' })
 
       expect(mockClient.from).toHaveBeenCalledWith('practices')
       expect(result).toEqual(createdPractice)
@@ -107,7 +107,7 @@ describe('PracticeAPI', () => {
       api = new PracticeAPI(mockClient)
 
       await expect(
-        api.createPractice({ date: '2025-01-15', place: 'プール' })
+        api.createPractice({ date: '2025-01-15', place: 'プール', note: 'テストメモ' })
       ).rejects.toThrow('認証が必要です')
     })
   })
@@ -188,6 +188,8 @@ describe('PracticeAPI', () => {
         set_count: 2,
         circle_time: 90,
         style: 'freestyle',
+        note: 'テストメモ',
+        circle: 1,
       }
       const createdLog = createMockPracticeLog(newLog)
 
@@ -217,6 +219,8 @@ describe('PracticeAPI', () => {
           set_count: 2,
           circle_time: 90,
           style: 'freestyle',
+          note: 'テストメモ1',
+          circle: 1,
         },
         {
           practice_id: 'practice-1',
@@ -225,6 +229,8 @@ describe('PracticeAPI', () => {
           set_count: 1,
           circle_time: 180,
           style: 'backstroke',
+          note: 'テストメモ2',
+          circle: 2,
         },
       ]
       const createdLogs = newLogs.map((log, i) =>

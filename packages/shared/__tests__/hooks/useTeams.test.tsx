@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createMockSupabaseClient, createMockTeam } from '../__mocks__/supabase'
-import { useTeams } from './useTeams'
+import { createMockSupabaseClient, createMockTeam } from '../../__mocks__/supabase'
+import { useTeams } from '../../hooks/useTeams'
 
 // TeamAPI をモック
 const mockApi = {

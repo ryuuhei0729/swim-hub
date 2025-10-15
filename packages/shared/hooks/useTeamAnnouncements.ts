@@ -1,18 +1,16 @@
-import { createClient } from '@/lib/supabase'
+import { useCallback, useEffect, useState } from 'react'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type {
   CreateTeamAnnouncementInput,
   TeamAnnouncement,
   UpdateTeamAnnouncementInput
-} from '@/types'
-import { useCallback, useEffect, useState } from 'react'
+} from '@shared/types/database'
 
 // チームお知らせ一覧取得フック
-export const useTeamAnnouncements = (teamId: string) => {
+export const useTeamAnnouncements = (supabase: SupabaseClient, teamId: string) => {
   const [announcements, setAnnouncements] = useState<TeamAnnouncement[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-
-  const supabase = createClient()
 
   const loadAnnouncements = useCallback(async () => {
     if (!teamId) return
@@ -32,14 +30,14 @@ export const useTeamAnnouncements = (teamId: string) => {
 
       setAnnouncements(data.map((a: any) => ({
         id: a.id,
-        teamId: a.team_id,
+        team_id: a.team_id,
         title: a.title,
         content: a.content,
-        createdBy: a.created_by,
-        isPublished: a.is_published,
-        publishedAt: a.published_at,
-        createdAt: a.created_at,
-        updatedAt: a.updated_at
+        created_by: a.created_by,
+        is_published: a.is_published,
+        published_at: a.published_at,
+        created_at: a.created_at,
+        updated_at: a.updated_at
       })))
     } catch (err) {
       console.error('お知らせの取得に失敗:', err)
@@ -47,7 +45,7 @@ export const useTeamAnnouncements = (teamId: string) => {
     } finally {
       setLoading(false)
     }
-  }, [teamId])
+  }, [teamId, supabase])
 
   useEffect(() => {
     loadAnnouncements()
@@ -76,7 +74,7 @@ export const useTeamAnnouncements = (teamId: string) => {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [teamId, loadAnnouncements])
+  }, [teamId, loadAnnouncements, supabase])
 
   return {
     announcements,
@@ -114,14 +112,14 @@ export const useTeamAnnouncement = (id: string) => {
         const record = data as any
         setAnnouncement({
           id: record.id,
-          teamId: record.team_id,
+          team_id: record.team_id,
           title: record.title,
           content: record.content,
-          createdBy: record.created_by,
-          isPublished: record.is_published,
-          publishedAt: record.published_at,
-          createdAt: record.created_at,
-          updatedAt: record.updated_at
+          created_by: record.created_by,
+          is_published: record.is_published,
+          published_at: record.published_at,
+          created_at: record.created_at,
+          updated_at: record.updated_at
         })
       } catch (err) {
         console.error('お知らせ詳細の取得に失敗:', err)
@@ -132,7 +130,7 @@ export const useTeamAnnouncement = (id: string) => {
     }
 
     loadAnnouncement()
-  }, [id])
+  }, [id, supabase])
 
   return {
     announcement,
@@ -174,14 +172,14 @@ export const useCreateTeamAnnouncement = () => {
       const record = data as any
       return {
         id: record.id,
-        teamId: record.team_id,
+        team_id: record.team_id,
         title: record.title,
         content: record.content,
-        createdBy: record.created_by,
-        isPublished: record.is_published,
-        publishedAt: record.published_at,
-        createdAt: record.created_at,
-        updatedAt: record.updated_at
+        created_by: record.created_by,
+        is_published: record.is_published,
+        published_at: record.published_at,
+        created_at: record.created_at,
+        updated_at: record.updated_at
       }
     } catch (err) {
       console.error('お知らせ作成エラー:', err)
@@ -230,14 +228,14 @@ export const useUpdateTeamAnnouncement = () => {
       const record = data as any
       return {
         id: record.id,
-        teamId: record.team_id,
+        team_id: record.team_id,
         title: record.title,
         content: record.content,
-        createdBy: record.created_by,
-        isPublished: record.is_published,
-        publishedAt: record.published_at,
-        createdAt: record.created_at,
-        updatedAt: record.updated_at
+        created_by: record.created_by,
+        is_published: record.is_published,
+        published_at: record.published_at,
+        created_at: record.created_at,
+        updated_at: record.updated_at
       }
     } catch (err) {
       console.error('お知らせ更新エラー:', err)

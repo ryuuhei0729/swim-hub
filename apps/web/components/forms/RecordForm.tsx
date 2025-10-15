@@ -297,10 +297,11 @@ export default function RecordForm({
           {/* 大会情報 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="record-date" className="block text-sm font-medium text-gray-700 mb-2">
                 大会日
               </label>
               <Input
+                id="record-date"
                 type="date"
                 value={formData.recordDate}
                 onChange={(e) => setFormData(prev => ({ ...prev, recordDate: e.target.value }))}
@@ -308,10 +309,11 @@ export default function RecordForm({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="record-location" className="block text-sm font-medium text-gray-700 mb-2">
                 開催地
               </label>
               <Input
+                id="record-location"
                 type="text"
                 value={formData.location}
                 onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
@@ -323,10 +325,11 @@ export default function RecordForm({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="competition-name" className="block text-sm font-medium text-gray-700 mb-2">
                 大会名
               </label>
               <Input
+                id="competition-name"
                 type="text"
                 value={formData.competitionName}
                 onChange={(e) => setFormData(prev => ({ ...prev, competitionName: e.target.value }))}

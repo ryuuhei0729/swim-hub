@@ -243,9 +243,9 @@ export default function PracticeTimeModal({
                                     <td className="py-2 px-2 font-medium text-gray-700">{repNumber}本目</td>
                                     {Array.from({ length: log.setCount }, (_, setIndex) => {
                                       const setNumber = setIndex + 1
-                                      const time = allTimes.find(t => t.setNumber === setNumber && t.repNumber === repNumber)
-                                      const setTimes = allTimes.filter(t => t.setNumber === setNumber && t.time > 0)
-                                      const setFastest = setTimes.length > 0 ? Math.min(...setTimes.map(t => t.time)) : 0
+                                      const time = allTimes.find((t: any) => t.setNumber === setNumber && t.repNumber === repNumber)
+                                      const setTimes = allTimes.filter((t: any) => t.setNumber === setNumber && t.time > 0)
+                                      const setFastest = setTimes.length > 0 ? Math.min(...setTimes.map((t: any) => t.time)) : 0
                                       const isFastest = time && time.time > 0 && time.time === setFastest
 
                                       return (
@@ -264,9 +264,9 @@ export default function PracticeTimeModal({
                                 <td className="py-2 px-2 font-medium text-green-800">平均</td>
                                 {Array.from({ length: log.setCount }, (_, setIndex) => {
                                   const setNumber = setIndex + 1
-                                  const setTimes = allTimes.filter(t => t.setNumber === setNumber && t.time > 0)
+                                  const setTimes = allTimes.filter((t: any) => t.setNumber === setNumber && t.time > 0)
                                   const average = setTimes.length > 0
-                                    ? setTimes.reduce((sum, t) => sum + t.time, 0) / setTimes.length
+                                    ? setTimes.reduce((sum: any, t: any) => sum + t.time, 0) / setTimes.length
                                     : 0
                                   return (
                                     <td key={setNumber} className="py-2 px-2 text-center">
@@ -283,9 +283,9 @@ export default function PracticeTimeModal({
                                 <td className="py-2 px-2 text-center" colSpan={log.setCount}>
                                   <span className="text-blue-800 font-bold">
                                     {(() => {
-                                      const allValidTimes = allTimes.filter(t => t.time > 0)
+                                      const allValidTimes = allTimes.filter((t: any) => t.time > 0)
                                       const overallAverage = allValidTimes.length > 0
-                                        ? allValidTimes.reduce((sum, t) => sum + t.time, 0) / allValidTimes.length
+                                        ? allValidTimes.reduce((sum: any, t: any) => sum + t.time, 0) / allValidTimes.length
                                         : 0
                                       return overallAverage > 0 ? formatTime(overallAverage) : '-'
                                     })()}
@@ -298,9 +298,9 @@ export default function PracticeTimeModal({
                                 <td className="py-2 px-2 text-center" colSpan={log.setCount}>
                                   <span className="text-blue-800 font-bold">
                                     {(() => {
-                                      const allValidTimes = allTimes.filter(t => t.time > 0)
+                                      const allValidTimes = allTimes.filter((t: any) => t.time > 0)
                                       const overallFastest = allValidTimes.length > 0
-                                        ? Math.min(...allValidTimes.map(t => t.time))
+                                        ? Math.min(...allValidTimes.map((t: any) => t.time))
                                         : 0
                                       return overallFastest > 0 ? formatTime(overallFastest) : '-'
                                     })()}

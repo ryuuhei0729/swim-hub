@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createMockSupabaseClient, createMockTeam } from '../__mocks__/supabase'
-import { TeamAPI } from './teams'
+import { createMockSupabaseClient, createMockTeam } from '../../__mocks__/supabase'
+import { TeamAPI } from '../../api/teams'
 
 describe('TeamAPI', () => {
   let mockClient: any

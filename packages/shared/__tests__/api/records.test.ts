@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createMockRecord, createMockSupabaseClient } from '../__mocks__/supabase'
-import { RecordAPI } from './records'
+import { createMockRecord, createMockSupabaseClient } from '../../__mocks__/supabase'
+import { RecordAPI } from '../../api/records'
 
 describe('RecordAPI', () => {
   let mockClient: any
@@ -85,10 +85,11 @@ describe('RecordAPI', () => {
     it('should create record for authenticated user', async () => {
       const newRecord = {
         competition_id: 'comp-1',
-        style_id: 'style-1',
-        time_seconds: 60.5,
-        pool_type: 'long' as const,
-        is_relay: false,
+        style_id: 1,
+        time: 60.5,
+        video_url: null,
+        note: 'テストメモ',
+        is_relaying: false,
       }
       const createdRecord = createMockRecord(newRecord)
 
@@ -114,10 +115,11 @@ describe('RecordAPI', () => {
       await expect(
         api.createRecord({
           competition_id: 'comp-1',
-          style_id: 'style-1',
-          time_seconds: 60.5,
-          pool_type: 'long',
-          is_relay: false,
+          style_id: 1,
+          time: 60.5,
+          video_url: null,
+          note: 'テストメモ',
+          is_relaying: false,
         })
       ).rejects.toThrow('認証が必要です')
     })
@@ -137,7 +139,7 @@ describe('RecordAPI', () => {
         }),
       }))
 
-      const result = await api.updateRecord('record-1', { time_seconds: 59.0 })
+      const result = await api.updateRecord('record-1', { time: 59.0 })
 
       expect(mockClient.from).toHaveBeenCalledWith('records')
       expect(result).toEqual(updatedRecord)
@@ -155,7 +157,7 @@ describe('RecordAPI', () => {
         }),
       }))
 
-      await expect(api.updateRecord('record-1', { time_seconds: 59.0 })).rejects.toThrow(
+      await expect(api.updateRecord('record-1', { time: 59.0 })).rejects.toThrow(
         'Update failed'
       )
     })
@@ -221,10 +223,11 @@ describe('RecordAPI', () => {
   describe('createCompetition', () => {
     it('should create competition', async () => {
       const newCompetition = {
-        name: '新規大会',
+        title: '新規大会',
         date: '2025-02-01',
         place: 'プール',
-        pool_type: 'long' as const,
+        pool_type: 1,
+        note: 'テストメモ',
       }
       const createdCompetition = {
         id: 'comp-2',
@@ -266,7 +269,7 @@ describe('RecordAPI', () => {
         }),
       }))
 
-      const result = await api.updateCompetition('comp-1', { name: '更新後大会名' })
+      const result = await api.updateCompetition('comp-1', { title: '更新後大会名' })
 
       expect(mockClient.from).toHaveBeenCalledWith('competitions')
       expect(result).toEqual(updatedCompetition)

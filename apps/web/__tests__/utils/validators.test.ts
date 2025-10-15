@@ -9,7 +9,7 @@ import {
     isValidPhoneNumber,
     isValidTime,
     validateForm,
-} from './validators'
+} from '../../utils/validators'
 
 describe('isValidEmail', () => {
   it('should validate correct email addresses', () => {

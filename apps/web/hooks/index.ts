@@ -1,5 +1,11 @@
+// =============================================================================
+// Web専用フックエクスポート - Swim Hub Webアプリケーション
+// =============================================================================
+
 // useCalendarData moved to app/(authenticated)/dashboard/_hooks/
-export { useDebounce } from './useDebounce'
-export { useLocalStorage } from './useLocalStorage'
-export * from './useTeamAnnouncements'
+// useTeamAnnouncements moved to packages/shared/hooks/
+
+export * from './useAsyncState'
+export * from './useDebounce'
+export * from './useLocalStorage'
 

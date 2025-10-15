@@ -184,6 +184,23 @@ export interface TeamAnnouncement {
 export type TeamAnnouncementInsert = Omit<TeamAnnouncement, 'id' | 'created_at' | 'updated_at'>
 export type TeamAnnouncementUpdate = Partial<Omit<TeamAnnouncementInsert, 'team_id' | 'created_by'>>
 
+// フォーム用の型定義（camelCase）
+export interface CreateTeamAnnouncementInput {
+  teamId: string
+  title: string
+  content: string
+  isPublished?: boolean
+  publishedAt?: string | null
+}
+
+export interface UpdateTeamAnnouncementInput {
+  id: string
+  title?: string
+  content?: string
+  isPublished?: boolean
+  publishedAt?: string | null
+}
+
 // =============================================================================
 // 2. リレーション付き型定義（JOIN結果）
 // =============================================================================

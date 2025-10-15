@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import PracticeForm from './PracticeForm'
+import PracticeForm from '../../../components/forms/PracticeForm'
 
 // Next.js Router をモック
 vi.mock('next/navigation', () => ({
@@ -15,6 +15,7 @@ vi.mock('next/navigation', () => ({
 describe('PracticeForm', () => {
   const mockOnClose = vi.fn()
   const mockOnSubmit = vi.fn()
+  const mockSetAvailableTags = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -27,6 +28,7 @@ describe('PracticeForm', () => {
           isOpen={true}
           onClose={mockOnClose}
           onSubmit={mockOnSubmit}
+          setAvailableTags={mockSetAvailableTags}
         />
       )
 
@@ -58,6 +60,7 @@ describe('PracticeForm', () => {
           isOpen={true}
           onClose={mockOnClose}
           onSubmit={mockOnSubmit}
+          setAvailableTags={mockSetAvailableTags}
         />
       )
 
@@ -119,6 +122,7 @@ describe('PracticeForm', () => {
           isOpen={true}
           onClose={mockOnClose}
           onSubmit={mockOnSubmit}
+          setAvailableTags={mockSetAvailableTags}
         />
       )
 
@@ -146,6 +150,7 @@ describe('PracticeForm', () => {
           isOpen={true}
           onClose={mockOnClose}
           onSubmit={mockOnSubmit}
+          setAvailableTags={mockSetAvailableTags}
         />
       )
 
@@ -165,6 +170,7 @@ describe('PracticeForm', () => {
           isOpen={true}
           onClose={mockOnClose}
           onSubmit={mockOnSubmit}
+          setAvailableTags={mockSetAvailableTags}
         />
       )
 
@@ -187,6 +193,7 @@ describe('PracticeForm', () => {
           isOpen={true}
           onClose={mockOnClose}
           onSubmit={mockOnSubmit}
+          setAvailableTags={mockSetAvailableTags}
         />
       )
 
@@ -205,6 +212,7 @@ describe('PracticeForm', () => {
           isOpen={true}
           onClose={mockOnClose}
           onSubmit={mockOnSubmit}
+          setAvailableTags={mockSetAvailableTags}
         />
       )
 
@@ -225,6 +233,7 @@ describe('PracticeForm', () => {
           isOpen={true}
           onClose={mockOnClose}
           onSubmit={mockOnSubmit}
+          setAvailableTags={mockSetAvailableTags}
         />
       )
 
@@ -241,6 +250,7 @@ describe('PracticeForm', () => {
           isOpen={true}
           onClose={mockOnClose}
           onSubmit={mockOnSubmit}
+          setAvailableTags={mockSetAvailableTags}
         />
       )
 

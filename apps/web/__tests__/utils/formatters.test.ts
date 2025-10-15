@@ -7,7 +7,7 @@ import {
     formatRole,
     formatStroke,
     formatTime,
-} from './formatters'
+} from '../../utils/formatters'
 
 describe('formatTime', () => {
   it('should format seconds to MM:SS.ss format when >= 60 seconds', () => {

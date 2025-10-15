@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createMockStyle, createMockSupabaseClient } from '../__mocks__/supabase'
-import { StyleAPI } from './styles'
+import { createMockStyle, createMockSupabaseClient } from '../../__mocks__/supabase'
+import { StyleAPI } from '../../api/styles'
 
 describe('StyleAPI', () => {
   let mockClient: any

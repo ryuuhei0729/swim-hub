@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useCreateTeamAnnouncement, useUpdateTeamAnnouncement } from '@/hooks'
+import { useCreateTeamAnnouncement, useUpdateTeamAnnouncement } from '@shared/hooks'
 import type { TeamAnnouncement, CreateTeamAnnouncementInput, UpdateTeamAnnouncementInput } from '@/types'
 
 interface AnnouncementFormProps {
@@ -20,11 +20,9 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [isPublished, setIsPublished] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const { create, loading: createLoading } = useCreateTeamAnnouncement()
   const { update, loading: updateLoading } = useUpdateTeamAnnouncement()
-
   const isLoading = createLoading || updateLoading
 
   // 編集データがある場合はフォームに設定
@@ -32,7 +30,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
     if (editData) {
       setTitle(editData.title)
       setContent(editData.content)
-      setIsPublished(editData.isPublished)
+      setIsPublished(editData.is_published)
     } else {
       setTitle('')
       setContent('')
@@ -49,11 +47,11 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
     }
 
     try {
-      setIsSubmitting(true)
 
       if (editData) {
         // 更新
         const input: UpdateTeamAnnouncementInput = {
+          id: editData.id,
           title: title.trim(),
           content: content.trim(),
           isPublished
@@ -74,13 +72,11 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
     } catch (error) {
       console.error('保存エラー:', error)
       alert('保存に失敗しました')
-    } finally {
-      setIsSubmitting(false)
     }
   }
 
   const handleClose = () => {
-    if (!isSubmitting) {
+    if (!isLoading) {
       onClose()
     }
   }
@@ -96,7 +92,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
           </h2>
           <button
             onClick={handleClose}
-            disabled={isSubmitting}
+            disabled={isLoading}
             className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
           >
             ✕
@@ -114,7 +110,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              disabled={isSubmitting}
+              disabled={isLoading}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
               placeholder="お知らせのタイトルを入力"
               maxLength={100}
@@ -131,7 +127,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
               id="content"
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              disabled={isSubmitting}
+              disabled={isLoading}
               rows={8}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
               placeholder="お知らせの内容を入力"
@@ -147,7 +143,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
               id="isPublished"
               checked={isPublished}
               onChange={(e) => setIsPublished(e.target.checked)}
-              disabled={isSubmitting}
+              disabled={isLoading}
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
             />
             <label htmlFor="isPublished" className="ml-2 text-sm text-gray-700">
@@ -160,17 +156,17 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
             <button
               type="button"
               onClick={handleClose}
-              disabled={isSubmitting}
+              disabled={isLoading}
               className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
             >
               キャンセル
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || !title.trim() || !content.trim()}
+              disabled={isLoading || !title.trim() || !content.trim()}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? '保存中...' : editData ? '更新' : '作成'}
+              {isLoading ? '保存中...' : editData ? '更新' : '作成'}
             </button>
           </div>
         </form>

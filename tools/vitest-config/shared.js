@@ -1,7 +1,9 @@
-import { defineConfig } from 'vitest/config'
-import { createVitestConfig } from '../../tools/vitest-config/shared.js'
+import path from 'path'
+import { createVitestConfig } from './base.js'
 
-export default defineConfig(createVitestConfig({
+export { createVitestConfig }
+
+export default createVitestConfig({
   name: 'shared',
   environment: 'jsdom',
   include: ['**/*.{test,spec}.{js,mjs,cjs,ts,tsx,mts,cts}'],
@@ -25,7 +27,6 @@ export default defineConfig(createVitestConfig({
     },
   },
   alias: {
-    '@shared': './',
+    '@shared': path.resolve(process.cwd(), './'),
   },
-}))
-
+})

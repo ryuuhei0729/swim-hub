@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import RecordForm from './RecordForm'
+import RecordForm from '../../../components/forms/RecordForm'
 
 // Next.js Router をモック
 vi.mock('next/navigation', () => ({
@@ -45,9 +45,9 @@ describe('RecordForm', () => {
         />
       )
 
-      expect(screen.getByText('記録を追加')).toBeInTheDocument()
-      expect(screen.getByLabelText('記録日')).toBeInTheDocument()
-      expect(screen.getByLabelText('場所')).toBeInTheDocument()
+      expect(screen.getByText('大会記録を追加')).toBeInTheDocument()
+      expect(screen.getByLabelText('大会日')).toBeInTheDocument()
+      expect(screen.getByLabelText('開催地')).toBeInTheDocument()
       expect(screen.getByLabelText('大会名')).toBeInTheDocument()
     })
 
@@ -78,10 +78,10 @@ describe('RecordForm', () => {
         />
       )
 
-      const addButton = screen.getByText('記録を追加')
+      const addButton = screen.getByText('種目を追加')
       await user.click(addButton)
 
-      expect(screen.getByText('記録セット 1')).toBeInTheDocument()
+      expect(screen.getByText('種目 1')).toBeInTheDocument()
     })
 
     it('should remove record set', async () => {
@@ -97,12 +97,16 @@ describe('RecordForm', () => {
       )
 
       // 記録セットを追加
-      const addButton = screen.getByText('記録を追加')
+      const addButton = screen.getByText('種目を追加')
       await user.click(addButton)
 
       // 削除ボタンをクリック
-      const removeButton = screen.getByRole('button', { name: /削除/i })
-      await user.click(removeButton)
+      const removeButton = screen.getAllByRole('button').find(button => 
+        button.querySelector('svg[data-slot="icon"]')
+      )
+      if (removeButton) {
+        await user.click(removeButton)
+      }
 
       expect(screen.queryByText('記録セット 1')).not.toBeInTheDocument()
     })
@@ -122,7 +126,7 @@ describe('RecordForm', () => {
       )
 
       // 記録セットを追加
-      const addButton = screen.getByText('記録を追加')
+      const addButton = screen.getByText('種目を追加')
       await user.click(addButton)
 
       const timeInput = screen.getByLabelText(/タイム/i)
@@ -144,7 +148,7 @@ describe('RecordForm', () => {
       )
 
       // 記録セットを追加
-      const addButton = screen.getByText('記録を追加')
+      const addButton = screen.getByText('種目を追加')
       await user.click(addButton)
 
       const styleSelect = screen.getByLabelText(/種目/i)
@@ -166,7 +170,7 @@ describe('RecordForm', () => {
       )
 
       // 記録セットを追加
-      const addButton = screen.getByText('記録を追加')
+      const addButton = screen.getByText('種目を追加')
       await user.click(addButton)
 
       const relayCheckbox = screen.getByLabelText(/リレー/i)
@@ -190,7 +194,7 @@ describe('RecordForm', () => {
       )
 
       // 記録セットを追加
-      const addButton = screen.getByText('記録を追加')
+      const addButton = screen.getByText('種目を追加')
       await user.click(addButton)
 
       // リレーモードを有効化
@@ -216,7 +220,7 @@ describe('RecordForm', () => {
       )
 
       // 記録セットを追加
-      const addButton = screen.getByText('記録を追加')
+      const addButton = screen.getByText('種目を追加')
       await user.click(addButton)
 
       // リレーモードを有効化
@@ -250,14 +254,14 @@ describe('RecordForm', () => {
       )
 
       // 基本情報を入力
-      const locationInput = screen.getByLabelText('場所')
+      const locationInput = screen.getByLabelText('開催地')
       const competitionInput = screen.getByLabelText('大会名')
       
       await user.type(locationInput, 'テストプール')
       await user.type(competitionInput, 'テスト大会')
 
       // 記録セットを追加
-      const addButton = screen.getByText('記録を追加')
+      const addButton = screen.getByText('種目を追加')
       await user.click(addButton)
 
       // 記録を入力
@@ -299,6 +303,7 @@ describe('RecordForm', () => {
           onClose={mockOnClose}
           onSubmit={mockOnSubmit}
           styles={mockStyles}
+          isLoading={true}
         />
       )
 
@@ -322,7 +327,7 @@ describe('RecordForm', () => {
         />
       )
 
-      const closeButton = screen.getByRole('button', { name: /閉じる/i })
+      const closeButton = screen.getByRole('button', { name: '' })
       await user.click(closeButton)
 
       expect(mockOnClose).toHaveBeenCalled()

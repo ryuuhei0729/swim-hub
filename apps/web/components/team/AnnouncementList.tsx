@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useTeamAnnouncements, useDeleteTeamAnnouncement } from '@/hooks'
+import { useTeamAnnouncements, useDeleteTeamAnnouncement } from '@shared/hooks'
+import { createClient } from '@/lib/supabase'
 import type { TeamAnnouncement } from '@/types'
 
 interface AnnouncementListProps {
@@ -19,13 +20,14 @@ export const AnnouncementList: React.FC<AnnouncementListProps> = ({
   onEdit,
   viewOnly = false
 }) => {
-  const { announcements, loading, error, refetch } = useTeamAnnouncements(teamId)
+  const supabase = createClient()
+  const { announcements, loading, error, refetch } = useTeamAnnouncements(supabase, teamId)
   const { remove, loading: deleteLoading } = useDeleteTeamAnnouncement()
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   // viewOnlyの場合は公開済みのものだけをフィルタリング
   const filteredAnnouncements = viewOnly 
-    ? announcements.filter((a: TeamAnnouncement) => a.isPublished)
+    ? announcements.filter((a: TeamAnnouncement) => a.is_published)
     : announcements
 
   const handleDelete = async (id: string) => {
@@ -110,7 +112,7 @@ export const AnnouncementList: React.FC<AnnouncementListProps> = ({
                     <h3 className="font-medium text-gray-900">
                       {announcement.title}
                     </h3>
-                    {!announcement.isPublished && (
+                    {!announcement.is_published && (
                       <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">
                         下書き
                       </span>
@@ -120,9 +122,9 @@ export const AnnouncementList: React.FC<AnnouncementListProps> = ({
                     {announcement.content}
                   </p>
                   <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <span>作成: {formatDate(announcement.createdAt)}</span>
-                    {announcement.publishedAt && (
-                      <span>公開: {formatDate(announcement.publishedAt)}</span>
+                    <span>作成: {formatDate(announcement.created_at)}</span>
+                    {announcement.published_at && (
+                      <span>公開: {formatDate(announcement.published_at)}</span>
                     )}
                   </div>
                 </div>

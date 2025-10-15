@@ -98,10 +98,11 @@ export default function PracticeForm({
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
             {/* 練習日 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="practice-date" className="block text-sm font-medium text-gray-700 mb-2">
                 練習日
               </label>
               <Input
+                id="practice-date"
                 type="date"
                 value={formData.practiceDate}
                 onChange={(e) => setFormData(prev => ({ ...prev, practiceDate: e.target.value }))}
@@ -111,10 +112,11 @@ export default function PracticeForm({
 
             {/* 練習場所 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="practice-place" className="block text-sm font-medium text-gray-700 mb-2">
                 練習場所
               </label>
               <Input
+                id="practice-place"
                 type="text"
                 value={formData.place}
                 onChange={(e) => setFormData(prev => ({ ...prev, place: e.target.value }))}
@@ -125,10 +127,11 @@ export default function PracticeForm({
 
             {/* メモ */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="practice-note" className="block text-sm font-medium text-gray-700 mb-2">
                 メモ
               </label>
               <textarea
+                id="practice-note"
                 value={formData.note}
                 onChange={(e) => setFormData(prev => ({ ...prev, note: e.target.value }))}
                 rows={3}

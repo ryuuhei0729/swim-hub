@@ -112,17 +112,17 @@ export const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({
               {announcement.title}
             </h1>
             <div className="flex items-center gap-4 text-sm text-gray-500">
-              {!announcement.isPublished && (
+              {!announcement.is_published && (
                 <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs">
                   下書き
                 </span>
               )}
-              <span>作成: {formatDate(announcement.createdAt)}</span>
-              {announcement.publishedAt && (
-                <span>公開: {formatDate(announcement.publishedAt)}</span>
+              <span>作成: {formatDate(announcement.created_at)}</span>
+              {announcement.published_at && (
+                <span>公開: {formatDate(announcement.published_at)}</span>
               )}
-              {announcement.updatedAt !== announcement.createdAt && (
-                <span>更新: {formatDate(announcement.updatedAt)}</span>
+              {announcement.updated_at !== announcement.created_at && (
+                <span>更新: {formatDate(announcement.updated_at)}</span>
               )}
             </div>
           </div>

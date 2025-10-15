@@ -114,6 +114,7 @@ export interface PracticeFormProps {
   initialDate?: Date
   editData?: any
   isLoading?: boolean
+  setAvailableTags?: (tags: PracticeTag[]) => void
 }
 
 // 記録フォーム
@@ -147,6 +148,9 @@ export interface CalendarProps {
   onAddPracticeLog?: (practiceId: string) => void
   onEditPracticeLog?: (log: any) => void
   onDeletePracticeLog?: (logId: string) => void
+  onAddRecord?: (competitionId: string) => void
+  onEditRecord?: (record: any) => void
+  onDeleteRecord?: (recordId: string) => void
   selectedDate?: Date | null
   isLoading?: boolean
   userId?: string
@@ -165,6 +169,9 @@ export interface DayDetailModalProps {
   onAddPracticeLog?: (practiceId: string) => void
   onEditPracticeLog?: (log: any) => void
   onDeletePracticeLog?: (logId: string) => void
+  onAddRecord?: (competitionId: string) => void
+  onEditRecord?: (record: any) => void
+  onDeleteRecord?: (recordId: string) => void
 }
 
 // ダッシュボード統計

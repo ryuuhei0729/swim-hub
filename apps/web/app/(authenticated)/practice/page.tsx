@@ -711,6 +711,7 @@ export default function PracticePage() {
         isLoading={isLoading}
         availableTags={tags}
         styles={styles}
+        setAvailableTags={setTags}
       />
 
       {/* 練習記録表示モーダル（編集・削除・追加ボタンなし） */}

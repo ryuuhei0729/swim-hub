@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createMockSupabaseClient, createMockPractice } from '../__mocks__/supabase'
-import { usePractices } from './usePractices'
+import { createMockSupabaseClient, createMockPractice } from '../../__mocks__/supabase'
+import { usePractices } from '../../hooks/usePractices'
 
 // PracticeAPI をモック
 const mockApi = {

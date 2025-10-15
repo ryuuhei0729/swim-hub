@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import TagInput from './TagInput'
+import TagInput from '../../../components/forms/TagInput'
 
 // Supabase クライアントをモック
 vi.mock('@/lib/supabase', () => ({
