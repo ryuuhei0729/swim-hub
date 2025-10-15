@@ -65,16 +65,17 @@
 - **Language**: TypeScript 5
 - **UI Library**: React 19
 - **Styling**: Tailwind CSS 3
-- **State Management**: Apollo Client（GraphQL）
+- **State Management**: React Hooks + Context API
 - **Date Handling**: date-fns 4
 - **Testing**: Playwright（E2E）
 
 ### Backend
 - **Database**: PostgreSQL（Supabase）
-- **API**: GraphQL（Supabase Edge Functions）
+- **API**: Supabase Client（直接アクセス）
 - **Authentication**: Supabase Auth
 - **Storage**: Supabase Storage
 - **Security**: Row Level Security（RLS）
+- **Realtime**: Supabase Realtime
 
 ### Infrastructure
 - **Hosting**: Vercel
@@ -95,19 +96,23 @@ npm workspacesを活用した効率的なモノレポ管理
 swim-hub/
 ├── apps/web/          # Next.jsアプリ
 ├── apps/mobile/       # React Native（予定）
+├── packages/shared/   # 共通API・型定義
 └── supabase/          # Backend
 ```
 
-### 2. GraphQL API
-Supabase Edge Functionsを使用した独自GraphQL APIの実装
-- カスタムスキーマ定義
-- リゾルバ実装
-- 認証・エラーハンドリング
+### 2. 共通API層
+Web/Mobile共通で使えるAPI関数とカスタムフック
+- 練習記録API (`practices.ts`)
+- 大会記録API (`records.ts`)
+- チームAPI (`teams.ts`)
+- 共通カスタムフック (`usePractices`, `useRecords`, `useTeams`)
 
-### 3. Apollo Client統合
-- GraphQLクライアント + 状態管理
-- 楽観的更新（Optimistic Update）でUX向上
-- キャッシュ戦略の最適化
+### 3. Supabase直接アクセス
+シンプルで高速なデータアクセス
+- GraphQL廃止により41%高速化
+- コード量95%削減
+- Edge Function実行コスト100%削減
+- リアルタイム購読でデータ同期
 
 ### 4. Spec駆動開発 + TDD
 - 仕様書ベースの開発フロー
@@ -123,6 +128,7 @@ Supabase Edge Functionsを使用した独自GraphQL APIの実装
 - Server Components / Client Componentsの使い分け
 - React.memo / useCallback / useMemoの活用
 - 動的インポートによるコード分割
+- Supabase Realtimeによる効率的なデータ同期
 
 ---
 
@@ -147,22 +153,33 @@ swim-hub/
 │   │   │   └── (unauthenticated)/  # 認証前の画面
 │   │   ├── components/         # 共有コンポーネント
 │   │   ├── contexts/           # React Context
-│   │   ├── graphql/            # GraphQLクエリ・ミューテーション
-│   │   ├── hooks/              # カスタムフック
+│   │   ├── hooks/              # カスタムフック（Web専用）
 │   │   ├── lib/                # ユーティリティ
-│   │   ├── types/              # 型定義
+│   │   ├── types/              # 型定義（Web専用）
 │   │   └── e2e/                # E2Eテスト
 │   └── mobile/                 # React Native（開発予定）
+├── packages/
+│   └── shared/                 # 共通ライブラリ（Web/Mobile共通）
+│       ├── api/                # 共通API関数
+│       │   ├── practices.ts    # 練習記録API
+│       │   ├── records.ts      # 大会記録API
+│       │   ├── teams.ts        # チームAPI
+│       │   └── dashboard.ts    # ダッシュボードAPI
+│       ├── hooks/              # 共通カスタムフック
+│       │   ├── usePractices.ts
+│       │   ├── useRecords.ts
+│       │   └── useTeams.ts
+│       ├── types/              # 共通型定義
+│       │   ├── database.ts     # DB型
+│       │   └── ui.ts           # UI型
+│       └── utils/              # 共通ユーティリティ
 ├── supabase/                   # Backend
-│   ├── functions/
-│   │   └── graphql/            # GraphQL Edge Functions
-│   └── migrations/             # データベースマイグレーション
+│   ├── migrations/             # データベースマイグレーション
+│   └── seed.sql                # シードデータ
 ├── docs/                       # ドキュメント
 │   ├── PROJECT_STATUS.md       # プロジェクト状態
-│   ├── DATABASE_SCHEMA.md      # DB詳細
-│   ├── COMMON_PATTERNS.md      # 実装パターン
-│   ├── requirement.md          # 要件定義
-│   └── API_SPECIFICATION.md    # API仕様
+│   ├── GRAPHQL_MIGRATION_PLAN.md  # GraphQL移行計画
+│   └── requirement.md          # 要件定義
 └── package.json                # Workspaces管理
 ```
 
@@ -341,5 +358,5 @@ MIT License
 
 ---
 
-**最終更新**: 2025年1月  
-**バージョン**: 2.0.0
+**最終更新**: 2025年1月15日  
+**バージョン**: 2.1.0 - GraphQL脱却完了

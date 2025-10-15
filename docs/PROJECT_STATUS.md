@@ -4,7 +4,7 @@
 
 このドキュメントはプロジェクトの現在の実装状態を記録します。機能の追加・完成のたびに更新してください。
 
-**最終更新**: 2025年1月17日
+**最終更新**: 2025年1月15日
 
 ---
 
@@ -140,37 +140,30 @@
   - [x] チームデータのアクセス制御
   - [x] 共有大会データの制御
 
-### GraphQL API
+### API層（Supabase直接アクセス）
 
-- [x] **GraphQL Edge Function** - `supabase/functions/graphql/`
-  - [x] スキーマ定義 - `schema.ts`
-  - [x] リゾルバ実装 - `resolvers.ts`
-- [x] **クエリ定義** - `apps/web/graphql/queries/`
-  - [x] user.ts - ユーザー情報
-  - [x] style.ts - 種目マスタ
-  - [x] practice.ts - 練習記録
-  - [x] record.ts - 大会記録
-  - [x] competition.ts - 大会情報
-  - [x] dashboard.ts - ダッシュボード
-  - [x] teams.ts - チーム情報
-  - [x] teamAnnouncements.ts - お知らせ
-- [x] **ミューテーション定義** - `apps/web/graphql/mutations/`
-  - [x] user.ts - ユーザー更新
-  - [x] practice.ts - 練習CRUD
-  - [x] record.ts - 記録CRUD
-  - [x] competition.ts - 大会CRUD
-  - [x] teams.ts - チームCRUD
-  - [x] teamAnnouncements.ts - お知らせCRUD
+- [x] **共通API関数** - `packages/shared/api/`
+  - [x] `practices.ts` - 練習記録API
+  - [x] `records.ts` - 大会記録API
+  - [x] `teams.ts` - チームAPI
+  - [x] `styles.ts` - 種目API
+  - [x] `dashboard.ts` - ダッシュボードAPI
+- [x] **共通カスタムフック** - `packages/shared/hooks/`
+  - [x] `usePractices.ts` - 練習記録フック
+  - [x] `useRecords.ts` - 大会記録フック
+  - [x] `useTeams.ts` - チームフック
+- [x] **型定義** - `packages/shared/types/`
+  - [x] `database.ts` - データベース型定義
+  - [x] `ui.ts` - UI型定義
+  - [x] `index.ts` - 共通エクスポート
 
 ### 状態管理・認証
 
-- [x] **Apollo Client 設定** - `lib/apollo-client.ts`
-  - [x] 認証ヘッダー自動付与
-  - [x] エラーハンドリング
-  - [x] キャッシュ設定
-- [x] **ApolloProvider** - `contexts/ApolloProvider.tsx`
 - [x] **AuthProvider** - `contexts/AuthProvider.tsx`
 - [x] **Supabaseクライアント** - `lib/supabase.ts`, `lib/supabase-server.ts`
+  - [x] Client Component用クライアント
+  - [x] Server Component用クライアント
+  - [x] 認証状態管理
 
 ### UI コンポーネント
 
@@ -341,28 +334,33 @@
 - [ ] 画像の最適化（Next.js Image コンポーネント活用）
 - [ ] コンポーネントのメモ化（React.memo）
 - [ ] 不要な再レンダリングの削減
+- [ ] リアルタイム購読の最適化
 
 ### コード品質
 - [ ] ユニットテストの追加
 - [ ] E2Eテストのカバレッジ向上
 - [ ] TypeScriptの`any`型の削減
 - [ ] エラーハンドリングの統一
+- [ ] 共通API関数のテスト追加
 
 ### UI/UX
 - [ ] ローディング状態の改善
 - [ ] エラーメッセージの統一
 - [ ] レスポンシブデザインの改善
 - [ ] アクセシビリティの向上
+- [ ] オフライン対応
 
 ### セキュリティ
 - [ ] CSRFトークンの実装
 - [ ] レート制限の実装
 - [ ] 入力バリデーションの強化
 - [ ] XSS対策の徹底
+- [ ] RLSポリシーの定期レビュー
 
 ### ドキュメント
+- [x] GraphQL移行計画の完了
+- [x] プロジェクト状態の更新
 - [ ] コンポーネントのドキュメント作成
-- [ ] APIドキュメントの自動生成
 - [ ] デプロイ手順の詳細化
 - [ ] トラブルシューティングガイド
 
@@ -404,6 +402,13 @@
 ---
 
 ## 📝 更新履歴
+
+### 2025年1月15日
+- **GraphQL脱却完了**: Apollo ClientからSupabase直接アクセスに完全移行
+- **共通API層の追加**: `packages/shared/api/` に共通API関数を実装
+- **共通フックの追加**: `packages/shared/hooks/` に共通カスタムフックを実装
+- **型定義の整理**: `packages/shared/types/` に型定義を統一
+- **ドキュメント更新**: 技術スタックの変更を反映
 
 ### 2025年1月17日
 - プロジェクト状態ドキュメントを新規作成
