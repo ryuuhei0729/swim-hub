@@ -370,6 +370,9 @@ export interface CalendarProps {
   onAddPracticeLog?: (practiceId: string) => void
   onEditPracticeLog?: (log: any) => void
   onDeletePracticeLog?: (logId: string) => void
+  onAddRecord?: (competitionId: string) => void
+  onEditRecord?: (record: any) => void
+  onDeleteRecord?: (recordId: string) => void
   selectedDate?: Date | null
   isLoading?: boolean
   userId?: string
@@ -388,6 +391,9 @@ export interface DayDetailModalProps {
   onAddPracticeLog?: (practiceId: string) => void
   onEditPracticeLog?: (log: any) => void
   onDeletePracticeLog?: (logId: string) => void
+  onAddRecord?: (competitionId: string) => void
+  onEditRecord?: (record: any) => void
+  onDeleteRecord?: (recordId: string) => void
 }
 
 // ダッシュボード統計
@@ -398,32 +404,7 @@ export interface DashboardStatsProps {
 }
 
 // =============================================================================
-// 7. GraphQL関連の型定義
-// =============================================================================
-
-// GraphQLレスポンス型
-export interface GraphQLResponse<T> {
-  data?: T
-  errors?: Array<{
-    message: string
-    locations?: Array<{
-      line: number
-      column: number
-    }>
-    path?: string[]
-  }>
-}
-
-// 楽観的更新用の型
-export interface OptimisticUpdate {
-  id: string
-  optimisticId: string
-  isOptimistic: boolean
-  version: number
-}
-
-// =============================================================================
-// 8. ユーティリティ型定義
+// 7. ユーティリティ型定義
 // =============================================================================
 
 // 部分的な型（一部のフィールドのみ更新可能）

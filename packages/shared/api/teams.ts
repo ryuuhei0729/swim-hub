@@ -32,7 +32,7 @@ export class TeamAPI {
     if (!user) throw new Error('認証が必要です')
 
     const { data, error } = await this.supabase
-      .from('team_membershipships')
+      .from('team_memberships')
       .select(`
         *,
         team:teams(*),
@@ -55,7 +55,7 @@ export class TeamAPI {
 
     // メンバーシップ確認
     const { data: membership } = await this.supabase
-      .from('team_membershipships')
+      .from('team_memberships')
       .select('id')
       .eq('team_id', teamId)
       .eq('user_id', user.id)
@@ -70,7 +70,7 @@ export class TeamAPI {
       .from('teams')
       .select(`
         *,
-        team_membershipships(
+        team_memberships(
           *,
           user:users(*)
         )
@@ -164,7 +164,7 @@ export class TeamAPI {
 
     // メンバーシップ確認
     const { data: membership } = await this.supabase
-      .from('team_membershipships')
+      .from('team_memberships')
       .select('id')
       .eq('team_id', teamId)
       .eq('user_id', user.id)
@@ -176,7 +176,7 @@ export class TeamAPI {
     }
 
     const { data, error } = await this.supabase
-      .from('team_membershipships')
+      .from('team_memberships')
       .select(`
         *,
         user:users(*),
@@ -209,7 +209,7 @@ export class TeamAPI {
 
     // 既存メンバーシップ確認
     const { data: existing } = await this.supabase
-      .from('team_membershipships')
+      .from('team_memberships')
       .select('id')
       .eq('team_id', team.id)
       .eq('user_id', user.id)
@@ -237,7 +237,7 @@ export class TeamAPI {
     if (!user) throw new Error('認証が必要です')
 
     const { error } = await this.supabase
-      .from('team_membershipships')
+      .from('team_memberships')
       .update({
         is_active: false,
         left_at: new Date().toISOString()
@@ -253,7 +253,7 @@ export class TeamAPI {
    */
   private async createMembership(membership: TeamMembershipInsert): Promise<TeamMembership> {
     const { data, error } = await this.supabase
-      .from('team_membershipships')
+      .from('team_memberships')
       .insert(membership)
       .select()
       .single()
@@ -277,7 +277,7 @@ export class TeamAPI {
     await this.checkAdminPermission(currentUser.id, teamId)
 
     const { data, error } = await this.supabase
-      .from('team_membershipships')
+      .from('team_memberships')
       .update({ role })
       .eq('team_id', teamId)
       .eq('user_id', userId)
@@ -299,7 +299,7 @@ export class TeamAPI {
     await this.checkAdminPermission(user.id, teamId)
 
     const { error } = await this.supabase
-      .from('team_membershipships')
+      .from('team_memberships')
       .update({
         is_active: false,
         left_at: new Date().toISOString()
@@ -323,7 +323,7 @@ export class TeamAPI {
 
     // メンバーシップ確認
     const { data: membership } = await this.supabase
-      .from('team_membershipships')
+      .from('team_memberships')
       .select('id, role')
       .eq('team_id', teamId)
       .eq('user_id', user.id)
@@ -412,7 +412,7 @@ export class TeamAPI {
    */
   private async checkAdminPermission(userId: string, teamId: string): Promise<void> {
     const { data, error } = await this.supabase
-      .from('team_membershipships')
+      .from('team_memberships')
       .select('role, is_active')
       .eq('team_id', teamId)
       .eq('user_id', userId)
@@ -474,7 +474,7 @@ export class TeamAPI {
         {
           event: '*',
           schema: 'public',
-          table: 'team_membershipships',
+          table: 'team_memberships',
           filter: `team_id=eq.${teamId}`
         },
         (payload) => {

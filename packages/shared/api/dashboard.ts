@@ -59,6 +59,23 @@ export class DashboardAPI {
 
     if (practicesError) throw practicesError
 
+    // 大会取得（期間内）
+    const { data: competitions, error: competitionsError } = await this.supabase
+      .from('competitions')
+      .select(`
+        id,
+        title,
+        date,
+        place,
+        pool_type,
+        note
+      `)
+      .eq('user_id', user.id)
+      .gte('date', startDate)
+      .lte('date', endDate)
+
+    if (competitionsError) throw competitionsError
+
     // 大会記録取得
     const { data: records, error: recordsError } = await this.supabase
       .from('records')
@@ -69,12 +86,14 @@ export class DashboardAPI {
         note,
         is_relaying,
         created_at,
+        competition_id,
         competition:competitions (
           id,
           title,
           date,
           place,
-          pool_type
+          pool_type,
+          note
         ),
         style:styles (
           id,
@@ -105,25 +124,51 @@ export class DashboardAPI {
       } as any)
     })
 
-    // 大会記録を変換
-    records?.forEach(record => {
-      const competition = record.competition as any
-      entries.push({
-        id: record.id,
-        item_type: 'record',
-        item_date: competition?.date || record.created_at?.split('T')[0],
-        title: `${(record.style as any)?.name_jp || '種目不明'}`,
-        time_result: record.time,
-        pool_type: competition?.pool_type,
-        note: record.note || undefined,
-        competition_name: competition?.title,
-        is_relaying: record.is_relaying,
-        style: record.style ? {
-          id: (record.style as any).id,
-          name_jp: (record.style as any).name_jp,
-          distance: (record.style as any).distance
-        } : undefined
-      })
+    // 大会ごとに処理
+    competitions?.forEach(competition => {
+      // この大会に紐づくRecordを取得
+      const competitionRecords = records?.filter(r => r.competition_id === competition.id) || []
+      
+      if (competitionRecords.length > 0) {
+        // Recordがある場合は、各Recordをエントリーとして追加
+        competitionRecords.forEach(record => {
+          entries.push({
+            id: record.id,
+            item_type: 'record',
+            item_date: competition.date,
+            title: `${(record.style as any)?.name_jp || '種目不明'}`,
+            time_result: record.time,
+            pool_type: competition.pool_type,
+            note: record.note || undefined,
+            competition_name: competition.title,
+            is_relaying: record.is_relaying,
+            style: record.style ? {
+              id: (record.style as any).id,
+              name_jp: (record.style as any).name_jp,
+              distance: (record.style as any).distance
+            } : undefined,
+            // 編集時に必要なフィールドを追加
+            competition_id: competition.id,
+            competition: competition
+          } as any)
+        })
+      } else {
+        // Recordがない場合は、Competition自体をエントリーとして追加
+        entries.push({
+          id: competition.id,
+          item_type: 'competition',
+          item_date: competition.date,
+          title: `大会 - ${competition.title}`,
+          location: competition.place || undefined,
+          pool_type: competition.pool_type,
+          note: competition.note || undefined,
+          competition_name: competition.title,
+          // 編集時に必要なフィールドを追加
+          date: competition.date,
+          place: competition.place,
+          pool_type: competition.pool_type
+        } as any)
+      }
     })
 
     // 日付順にソート

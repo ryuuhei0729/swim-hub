@@ -6,7 +6,7 @@ interface TeamCompetitionManagerProps {
   teamId: string
 }
 
-// TODO: GraphQL移行完了後に実装する
+// TODO: Supabase直接アクセスで実装する
 export default function TeamCompetitionManager({ teamId }: TeamCompetitionManagerProps) {
   return (
     <div className="bg-white rounded-lg shadow p-6">
@@ -18,7 +18,7 @@ export default function TeamCompetitionManager({ teamId }: TeamCompetitionManage
           この機能は現在実装中です。
         </p>
         <p className="text-sm text-gray-500 mt-2">
-          GraphQL移行完了後に利用可能になります。
+          チーム大会管理機能を実装予定です。
         </p>
       </div>
     </div>

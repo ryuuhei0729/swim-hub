@@ -6,7 +6,7 @@ interface TeamPracticeManagerProps {
   teamId: string
 }
 
-// TODO: GraphQL移行完了後に実装する
+// TODO: Supabase直接アクセスで実装する
 export default function TeamPracticeManager({ teamId }: TeamPracticeManagerProps) {
   return (
     <div className="bg-white rounded-lg shadow p-6">
@@ -18,7 +18,7 @@ export default function TeamPracticeManager({ teamId }: TeamPracticeManagerProps
           この機能は現在実装中です。
         </p>
         <p className="text-sm text-gray-500 mt-2">
-          GraphQL移行完了後に利用可能になります。
+          チーム練習管理機能を実装予定です。
         </p>
       </div>
     </div>

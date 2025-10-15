@@ -116,11 +116,22 @@ export function useRecords(
   }, [])
 
   const createSplitTimes = useCallback(async (recordId: string, splitTimes: any[]) => {
-    const created = await api.createSplitTimes(splitTimes.map(st => ({
-      record_id: recordId,
-      distance: st.distance,
-      split_time: st.splitTime
-    })))
+    // 空の配列の場合は早期リターン
+    if (!splitTimes || splitTimes.length === 0) return []
+    
+    console.log('useRecords.createSplitTimes - 受信データ:', splitTimes)
+    
+    const created = await api.createSplitTimes(splitTimes.map(st => {
+      // snake_case と camelCase の両方に対応
+      const splitTime = st.split_time ?? st.splitTime
+      const data = {
+        record_id: recordId,
+        distance: st.distance,
+        split_time: splitTime
+      }
+      console.log('useRecords.createSplitTimes - マッピング結果:', data)
+      return data
+    }))
     await loadRecords() // 再取得
     return created
   }, [loadRecords])

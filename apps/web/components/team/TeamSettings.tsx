@@ -7,7 +7,7 @@ interface TeamSettingsProps {
   isAdmin?: boolean
 }
 
-// TODO: GraphQL移行完了後に実装する
+// TODO: TeamAPIを使用して実装する
 export default function TeamSettings({ teamId, isAdmin }: TeamSettingsProps) {
   return (
     <div className="bg-white rounded-lg shadow p-6">
@@ -19,7 +19,7 @@ export default function TeamSettings({ teamId, isAdmin }: TeamSettingsProps) {
           この機能は現在実装中です。
         </p>
         <p className="text-sm text-gray-500 mt-2">
-          GraphQL移行完了後に利用可能になります。
+          チーム設定機能を実装予定です。
         </p>
       </div>
     </div>

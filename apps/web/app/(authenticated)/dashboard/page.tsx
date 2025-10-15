@@ -8,8 +8,12 @@ import { createClient } from '@/lib/supabase'
 import { useEffect } from 'react'
 import PracticeBasicForm from '@/components/forms/PracticeBasicForm'
 import PracticeLogForm from '@/components/forms/PracticeLogForm'
+import CompetitionBasicForm from '@/components/forms/CompetitionBasicForm'
+import RecordLogForm from '@/components/forms/RecordLogForm'
 import { usePractices } from '@shared/hooks/usePractices'
+import { useRecords } from '@shared/hooks/useRecords'
 import { useCalendarData } from './_hooks/useCalendarData'
+import { StyleAPI } from '@shared/api'
 
 export default function DashboardPage() {
   const { profile, user } = useAuth()
@@ -26,6 +30,12 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [availableTags, setAvailableTags] = useState<any[]>([])
 
+  // 大会記録フォーム用の状態（2段階対応）
+  const [isCompetitionBasicFormOpen, setIsCompetitionBasicFormOpen] = useState(false)
+  const [isRecordLogFormOpen, setIsRecordLogFormOpen] = useState(false)
+  const [createdCompetitionId, setCreatedCompetitionId] = useState<string | null>(null)
+  const [styles, setStyles] = useState<any[]>([])
+
   // 練習記録用のフック
   const {
     createPractice,
@@ -39,11 +49,23 @@ export default function DashboardPage() {
     refetch
   } = usePractices(supabase, {})
 
+  // 大会記録用のフック
+  const {
+    createRecord,
+    updateRecord,
+    deleteRecord,
+    createCompetition,
+    updateCompetition,
+    createSplitTimes,
+    replaceSplitTimes,
+    refetch: refetchRecords
+  } = useRecords(supabase, {})
+
   // カレンダーデータ用のフック
   const [calendarRefreshKey, setCalendarRefreshKey] = useState(0)
   const { refetch: refetchCalendar } = useCalendarData(new Date(), user?.id)
 
-  // チーム一覧とタグを取得
+  // チーム一覧、タグ、種目を取得
   useEffect(() => {
     const loadTeams = async () => {
       if (!user) return
@@ -89,8 +111,19 @@ export default function DashboardPage() {
       }
     }
 
+    const loadStyles = async () => {
+      try {
+        const styleAPI = new StyleAPI(supabase)
+        const stylesData = await styleAPI.getStyles()
+        setStyles(stylesData)
+      } catch (error) {
+        console.error('種目情報の取得に失敗:', error)
+      }
+    }
+
     loadTeams()
     loadTags()
+    loadStyles()
   }, [user])
 
   // 練習予定作成・更新
@@ -258,7 +291,7 @@ export default function DashboardPage() {
   }
 
   // アイテム削除ハンドラー
-  const handleDeleteItem = async (itemId: string, itemType?: 'practice' | 'record') => {
+  const handleDeleteItem = async (itemId: string, itemType?: 'practice' | 'record' | 'competition') => {
     if (!itemType) {
       console.error('アイテムタイプが不明です')
       return
@@ -277,10 +310,18 @@ export default function DashboardPage() {
           .eq('id', itemId)
 
         if (error) throw error
-      } else {
+      } else if (itemType === 'record') {
         // 大会記録削除
         const { error } = await supabase
           .from('records')
+          .delete()
+          .eq('id', itemId)
+
+        if (error) throw error
+      } else if (itemType === 'competition') {
+        // 大会削除
+        const { error } = await supabase
+          .from('competitions')
           .delete()
           .eq('id', itemId)
 
@@ -289,7 +330,7 @@ export default function DashboardPage() {
 
       // データを再取得
       console.log('削除後データ再取得開始...')
-      await Promise.all([refetch(), refetchCalendar()])
+      await Promise.all([refetch(), refetchRecords(), refetchCalendar()])
       setCalendarRefreshKey(prev => prev + 1) // カレンダー強制更新
       console.log('削除後データ再取得完了')
       
@@ -298,6 +339,146 @@ export default function DashboardPage() {
     } catch (error) {
       console.error('記録の削除に失敗しました:', error)
       alert('記録の削除に失敗しました。')
+    }
+  }
+
+  // 大会情報作成・更新
+  const handleCompetitionBasicSubmit = async (basicData: { date: string; title: string; place: string; poolType: number; note: string }) => {
+    setIsLoading(true)
+    try {
+      if (editingData) {
+        // 編集モード: 更新
+        await updateCompetition(editingData.id, {
+          date: basicData.date,
+          title: basicData.title,
+          place: basicData.place,
+          pool_type: basicData.poolType,
+          note: basicData.note
+        })
+        alert('大会情報を更新しました')
+      } else {
+        // 新規作成モード: 作成
+        await createCompetition({
+          date: basicData.date,
+          title: basicData.title,
+          place: basicData.place,
+          pool_type: basicData.poolType,
+          note: basicData.note
+        })
+        alert('大会情報を保存しました')
+      }
+      
+      setIsCompetitionBasicFormOpen(false)
+      setSelectedDate(null)
+      setEditingData(null)
+      setCreatedCompetitionId(null)
+      
+      // データを再取得
+      await Promise.all([refetchRecords(), refetchCalendar()])
+      setCalendarRefreshKey(prev => prev + 1)
+      
+    } catch (error) {
+      console.error('大会情報の処理に失敗しました:', error)
+      alert('大会情報の処理に失敗しました。')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // 記録登録・更新
+  const handleRecordLogSubmit = async (formData: any) => {
+    setIsLoading(true)
+    try {
+      console.log('handleRecordLogSubmit - formData:', formData)
+      
+      const recordInput = {
+        style_id: parseInt(formData.styleId),
+        time: formData.time,
+        video_url: formData.videoUrl || null,
+        note: formData.note || null,
+        is_relaying: formData.isRelaying || false,
+        competition_id: createdCompetitionId || editingData?.competition_id
+      }
+      
+      console.log('recordInput:', recordInput)
+
+      if (editingData && editingData.id) {
+        // 更新処理
+        await updateRecord(editingData.id, recordInput)
+        
+        // スプリットタイム更新
+        if (formData.splitTimes && formData.splitTimes.length > 0) {
+          const splitTimesData = formData.splitTimes
+            .filter((st: any) => {
+              // distanceが数値で、splitTimeが0より大きい場合のみ
+              const distance = typeof st.distance === 'number' ? st.distance : parseInt(st.distance)
+              return !isNaN(distance) && distance > 0 && st.splitTime > 0
+            })
+            .map((st: any) => ({
+              distance: typeof st.distance === 'number' ? st.distance : parseInt(st.distance),
+              split_time: st.splitTime  // 秒単位のDECIMAL
+            }))
+          
+          // 有効なスプリットタイムがある場合のみ更新
+          if (splitTimesData.length > 0) {
+            await replaceSplitTimes(editingData.id, splitTimesData)
+          }
+        }
+        alert('記録を更新しました')
+      } else {
+        // 作成処理
+        const newRecord = await createRecord(recordInput)
+        
+        // スプリットタイム作成
+        console.log('スプリットタイム処理開始 - formData.splitTimes:', formData.splitTimes)
+        
+        if (formData.splitTimes && formData.splitTimes.length > 0) {
+          const splitTimesData = formData.splitTimes
+            .filter((st: any) => {
+              // distanceが数値で、splitTimeが0より大きい場合のみ
+              const distance = typeof st.distance === 'number' ? st.distance : parseInt(st.distance)
+              const isValid = !isNaN(distance) && distance > 0 && st.splitTime > 0
+              console.log(`スプリット検証 - distance: ${st.distance} (type: ${typeof st.distance}), splitTime: ${st.splitTime}, isValid: ${isValid}`)
+              return isValid
+            })
+            .map((st: any) => ({
+              record_id: newRecord.id,
+              distance: typeof st.distance === 'number' ? st.distance : parseInt(st.distance),
+              split_time: st.splitTime  // 秒単位のDECIMAL
+            }))
+          
+          console.log('マッピング後のスプリットタイムデータ:', splitTimesData)
+          console.log('splitTimesDataの各要素を詳細確認:')
+          splitTimesData.forEach((st, idx) => {
+            console.log(`  [${idx}] record_id: ${st.record_id}, distance: ${st.distance} (${typeof st.distance}), split_time: ${st.split_time} (${typeof st.split_time})`)
+          })
+          
+          // 有効なスプリットタイムがある場合のみ作成
+          if (splitTimesData.length > 0) {
+            console.log('createSplitTimes呼び出し - recordId:', newRecord.id, 'data:', splitTimesData)
+            await createSplitTimes(newRecord.id, splitTimesData)
+          } else {
+            console.log('有効なスプリットタイムがないため、作成をスキップ')
+          }
+        } else {
+          console.log('スプリットタイムが存在しないため、作成をスキップ')
+        }
+        alert('記録を登録しました')
+      }
+
+      // データを再取得
+      await Promise.all([refetchRecords(), refetchCalendar()])
+      setCalendarRefreshKey(prev => prev + 1)
+      
+    } catch (error) {
+      console.error('記録の処理に失敗しました:', error)
+      alert('記録の処理に失敗しました。')
+    } finally {
+      setIsLoading(false)
+      setIsRecordLogFormOpen(false)
+      setSelectedDate(null)
+      setEditingData(null)
+      setCreatedCompetitionId(null)
     }
   }
 
@@ -347,22 +528,31 @@ export default function DashboardPage() {
           key={calendarRefreshKey} // 強制再レンダリング
           onDateClick={(date) => console.log('Date clicked:', date)}
           onAddItem={(date, type) => {
+            setSelectedDate(date)
+            setEditingData(null)
             if (type === 'practice') {
-              setSelectedDate(date)
-              setEditingData(null)
               setIsPracticeBasicFormOpen(true)
             } else {
-              // 大会記録はまだ未実装
-              alert('大会記録の追加機能は実装中です')
+              setIsCompetitionBasicFormOpen(true)
             }
           }} 
           onEditItem={(item) => {
-            // Practice編集モーダルを開く
-            setEditingData(item)
             // 日付文字列をDateオブジェクトに変換（安全に）
-            const dateObj = new Date(item.item_date + 'T00:00:00') // タイムゾーン問題を回避
+            const dateObj = new Date(item.item_date + 'T00:00:00')
             setSelectedDate(dateObj)
-            setIsPracticeBasicFormOpen(true)
+            setEditingData(item)
+            
+            if (item.item_type === 'practice') {
+              // Practice編集モーダルを開く
+              setIsPracticeBasicFormOpen(true)
+            } else if (item.item_type === 'record') {
+              // Record編集モーダルを開く
+              // 大会情報も一緒に編集データに含める
+              setIsCompetitionBasicFormOpen(true)
+            } else if (item.item_type === 'competition') {
+              // Competition編集モーダルを開く
+              setIsCompetitionBasicFormOpen(true)
+            }
           }}
           onDeleteItem={handleDeleteItem}
           onAddPracticeLog={(practiceId) => {
@@ -400,6 +590,54 @@ export default function DashboardPage() {
               alert('練習ログの削除に失敗しました。')
             }
           }}
+          onAddRecord={(competitionId) => {
+            setCreatedCompetitionId(competitionId)
+            setEditingData(null)
+            setIsRecordLogFormOpen(true)
+          }}
+          onEditRecord={(record) => {
+            // Record編集モーダルを開く
+            // RecordLogFormに必要な形式に変換
+            console.log('onEditRecord - 受信したrecord:', record)
+            const editData = {
+              id: record.id,
+              style_id: record.style_id || record.style?.id,
+              time: record.time || record.time_result,
+              is_relaying: record.is_relaying,
+              note: record.note,
+              video_url: record.video_url,
+              split_times: record.split_times || [],
+              competition_id: record.competition_id
+            }
+            console.log('onEditRecord - 変換後のeditData:', editData)
+            setEditingData(editData)
+            setIsRecordLogFormOpen(true)
+          }}
+          onDeleteRecord={async (recordId) => {
+            if (!confirm('この大会記録を削除してもよろしいですか？')) {
+              return
+            }
+            
+            try {
+              const { error } = await supabase
+                .from('records')
+                .delete()
+                .eq('id', recordId)
+
+              if (error) throw error
+
+              // データを再取得
+              console.log('大会記録削除後データ再取得開始...')
+              await Promise.all([refetchRecords(), refetchCalendar()])
+              setCalendarRefreshKey(prev => prev + 1)
+              console.log('大会記録削除後データ再取得完了')
+
+              alert('大会記録を削除しました')
+            } catch (error) {
+              console.error('大会記録の削除に失敗しました:', error)
+              alert('大会記録の削除に失敗しました。')
+            }
+          }}
           openDayDetail={null}
         />
 
@@ -434,6 +672,37 @@ export default function DashboardPage() {
           availableTags={availableTags}
           setAvailableTags={setAvailableTags}
           styles={[]}
+        />
+
+        {/* 第1段階: 大会基本情報フォーム */}
+        <CompetitionBasicForm
+          isOpen={isCompetitionBasicFormOpen}
+          onClose={() => {
+            setIsCompetitionBasicFormOpen(false)
+            setSelectedDate(null)
+            setEditingData(null)
+            setCreatedCompetitionId(null)
+          }}
+          onSubmit={handleCompetitionBasicSubmit}
+          selectedDate={selectedDate || new Date()}
+          editData={editingData}
+          isLoading={isLoading}
+        />
+
+        {/* 第2段階: 記録登録フォーム */}
+        <RecordLogForm
+          isOpen={isRecordLogFormOpen}
+          onClose={() => {
+            setIsRecordLogFormOpen(false)
+            setSelectedDate(null)
+            setEditingData(null)
+            setCreatedCompetitionId(null)
+          }}
+          onSubmit={handleRecordLogSubmit}
+          competitionId={createdCompetitionId || editingData?.competition_id || ''}
+          editData={editingData}
+          isLoading={isLoading}
+          styles={styles}
         />
       </div>
     </div>
