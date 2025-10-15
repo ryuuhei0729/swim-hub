@@ -153,7 +153,8 @@ export function usePractices(
     replacePracticeTimes,
     createPracticeTime: api.createPracticeTime.bind(api),
     deletePracticeTime: api.deletePracticeTime.bind(api),
-    refetch: loadPractices
+    refetch: loadPractices,
+    refresh: loadPractices
   }
 }
 

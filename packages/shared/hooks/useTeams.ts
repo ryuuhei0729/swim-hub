@@ -163,7 +163,8 @@ export function useTeams(
     createAnnouncement,
     updateAnnouncement,
     deleteAnnouncement,
-    refetch: loadData
+    refetch: loadData,
+    refresh: loadData
   }
 }
 

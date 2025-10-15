@@ -1,0 +1,36 @@
+version: 2
+updates:
+  # Enable version updates for npm
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "ryuuhei_0729"
+    assignees:
+      - "ryuuhei_0729"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      dev-dependencies:
+        patterns:
+          - "@types/*"
+          - "@testing-library/*"
+          - "@vitest/*"
+          - "vitest"
+          - "typescript"
+          - "eslint*"
+          - "prettier*"
+        update-types:
+          - "minor"
+          - "patch"

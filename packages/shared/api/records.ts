@@ -5,15 +5,15 @@
 
 import { SupabaseClient } from '@supabase/supabase-js'
 import {
-    Competition,
-    CompetitionInsert,
-    CompetitionUpdate,
-    Record,
-    RecordInsert,
-    RecordUpdate,
-    RecordWithDetails,
-    SplitTime,
-    SplitTimeInsert
+  Competition,
+  CompetitionInsert,
+  CompetitionUpdate,
+  Record,
+  RecordInsert,
+  RecordUpdate,
+  RecordWithDetails,
+  SplitTime,
+  SplitTimeInsert
 } from '../types/database'
 
 export class RecordAPI {

@@ -165,8 +165,7 @@ export class DashboardAPI {
           competition_name: competition.title,
           // 編集時に必要なフィールドを追加
           date: competition.date,
-          place: competition.place,
-          pool_type: competition.pool_type
+          place: competition.place
         } as any)
       }
     })

@@ -155,7 +155,8 @@ export function useRecords(
     deleteCompetition,
     createSplitTimes,
     replaceSplitTimes,
-    refetch: loadRecords
+    refetch: loadRecords,
+    refresh: loadRecords
   }
 }
 

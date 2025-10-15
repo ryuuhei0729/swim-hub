@@ -2,10 +2,12 @@
 
 import React, { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
+import { format } from 'date-fns'
 import { 
   CalendarDaysIcon,
   ChartBarIcon,
-  TrophyIcon
+  TrophyIcon,
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
 
 export default function DashboardStats() {
@@ -103,3 +105,76 @@ export default function DashboardStats() {
   )
 }
 
+// 今後のイベント一覧コンポーネント
+export function UpcomingEventsList() {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">今後のイベント</h2>
+        <div className="space-y-3">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">今後のイベント</h2>
+        <div className="flex items-center justify-center py-8">
+          <ExclamationTriangleIcon className="h-8 w-8 text-red-500 mr-2" />
+          <span className="text-red-600">データの取得に失敗しました</span>
+        </div>
+      </div>
+    )
+  }
+
+  const events = (data as any)?.upcomingEvents || []
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">今後のイベント</h2>
+      {events.length === 0 ? (
+        <p className="text-gray-500 text-center py-8">今後のイベントはありません</p>
+      ) : (
+        <div className="space-y-4">
+          {events.slice(0, 5).map((event) => (
+            <div key={event.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+              <div className="flex-1">
+                <h3 className="font-medium text-gray-900">{event.title}</h3>
+                <p className="text-sm text-gray-500">
+                  {format(new Date(event.startTime), 'yyyy年MM月dd日')} {format(new Date(event.startTime), 'HH:mm')}
+                </p>
+                {event.location && (
+                  <p className="text-sm text-gray-400">📍 {event.location}</p>
+                )}
+              </div>
+              <div className="ml-4">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  event.eventType === 'PRACTICE' ? 'bg-blue-100 text-blue-800' :
+                  event.eventType === 'COMPETITION' ? 'bg-red-100 text-red-800' :
+                  event.eventType === 'MEETING' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {event.eventType === 'PRACTICE' ? '練習' :
+                   event.eventType === 'COMPETITION' ? '大会' :
+                   event.eventType === 'MEETING' ? '会議' : 'その他'}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
