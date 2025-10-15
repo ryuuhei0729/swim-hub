@@ -4,98 +4,61 @@ import React, { useState } from 'react'
 import { TrophyIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui'
 import RecordForm from '@/components/forms/RecordForm'
-import { useMutation, useQuery } from '@apollo/client/react'
-import { apolloClient } from '@/lib/apollo-client'
-import { CREATE_RECORD, UPDATE_RECORD, DELETE_RECORD, CREATE_COMPETITION } from '@/graphql/mutations'
-import { GET_RECORDS, GET_STYLES, GET_RECORD } from '@/graphql/queries'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
+import { createClient } from '@/lib/supabase'
+import { useRecords } from '@shared/hooks/useRecords'
+import { StyleAPI } from '@shared/api'
 
 export default function CompetitionPage() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [_editingItem, setEditingItem] = useState<any>(null)
   const [editingData, setEditingData] = useState<any>(null)
   const [selectedRecord, setSelectedRecord] = useState<any>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
+  const [styles, setStyles] = useState<any[]>([])
   
   // フィルタリング用のstate
   const [filterStyle, setFilterStyle] = useState<string>('')
   const [includeRelay, setIncludeRelay] = useState<boolean>(true)
   const [filterPoolType, setFilterPoolType] = useState<string>('')
 
-  // 大会記録データを取得
-  const { data: recordsData, loading, error, refetch } = useQuery(GET_RECORDS, {
-    fetchPolicy: 'cache-and-network',
-    errorPolicy: 'all'
-  })
+  const supabase = createClient()
+  
+  // 大会記録を取得
+  const {
+    records,
+    loading,
+    error,
+    createRecord,
+    updateRecord,
+    deleteRecord: deleteRecordFn,
+    createCompetition,
+    createSplitTimes,
+    replaceSplitTimes,
+    refetch
+  } = useRecords(supabase, {})
 
   // スタイルデータを取得
-  const { data: stylesData, loading: stylesLoading, error: stylesError } = useQuery(GET_STYLES)
-  const styles = (stylesData as any)?.styles || []
-
-  // ミューテーション
-  const [createRecord] = useMutation(CREATE_RECORD, {
-    refetchQueries: [{ query: GET_RECORDS }],
-    awaitRefetchQueries: true,
-    onCompleted: () => {
-      setIsFormOpen(false)
-      setEditingItem(null)
-      setEditingData(null)
-    },
-    onError: (error) => {
-      console.error('大会記録の作成に失敗しました:', error)
-      alert('大会記録の作成に失敗しました。')
+  React.useEffect(() => {
+    const loadStyles = async () => {
+      try {
+        const styleAPI = new StyleAPI(supabase)
+        const stylesData = await styleAPI.getStyles()
+        setStyles(stylesData)
+      } catch (err) {
+        console.error('種目データの取得に失敗:', err)
+      }
     }
-  })
-
-  const [updateRecord] = useMutation(UPDATE_RECORD, {
-    refetchQueries: [{ query: GET_RECORDS }],
-    awaitRefetchQueries: true,
-    onCompleted: () => {
-      setIsFormOpen(false)
-      setEditingItem(null)
-      setEditingData(null)
-    },
-    onError: (error) => {
-      console.error('大会記録の更新に失敗しました:', error)
-      alert('大会記録の更新に失敗しました。')
-    }
-  })
-
-  const [deleteRecord] = useMutation(DELETE_RECORD, {
-    refetchQueries: [{ query: GET_RECORDS }],
-    awaitRefetchQueries: true,
-    onError: (error) => {
-      console.error('大会記録の削除に失敗しました:', error)
-      alert('大会記録の削除に失敗しました。')
-    }
-  })
-
-  const [createCompetition] = useMutation(CREATE_COMPETITION)
-
-  // キャッシュクリア関数
-  const _clearCache = async () => {
-    try {
-      await apolloClient.clearStore()
-      await refetch()
-    } catch (error) {
-      console.error('キャッシュクリアに失敗しました:', error)
-    }
-  }
-
-
-  const records = (recordsData as any)?.myRecords || []
-  
-  // データが完全に読み込まれているかチェック
-  const isDataReady = !loading && recordsData
+    loadStyles()
+  }, [])
   
   // フィルタリングロジック
   const filteredRecords = records.filter((record: any) => {
-    // 種目フィルタ（RecordテーブルのstyleIdを使用）
+    // 種目フィルタ
     if (filterStyle) {
-      const recordStyleId = record.styleId
+      const recordStyleId = record.style_id
       const filterStyleId = parseInt(filterStyle)
       
       if (recordStyleId !== filterStyleId) {
@@ -103,16 +66,16 @@ export default function CompetitionPage() {
       }
     }
     
-    // リレーフィルタ（チェックボックス形式）
-    if (!includeRelay && record.isRelaying) {
+    // リレーフィルタ
+    if (!includeRelay && record.is_relaying) {
       return false
     }
     
     // プール種別フィルタ
-    if (filterPoolType === 'long' && record.competition?.poolType !== 1) {
+    if (filterPoolType === 'long' && record.competition?.pool_type !== 1) {
       return false
     }
-    if (filterPoolType === 'short' && record.competition?.poolType !== 0) {
+    if (filterPoolType === 'short' && record.competition?.pool_type !== 0) {
       return false
     }
     
@@ -121,46 +84,23 @@ export default function CompetitionPage() {
 
   // 日付の降順でソート
   const sortedRecords = [...filteredRecords].sort((a, b) => {
-    const dateA = new Date(a.competition?.date || a.createdAt)
-    const dateB = new Date(b.competition?.date || b.createdAt)
+    const dateA = new Date((a.competition as any)?.date || a.created_at)
+    const dateB = new Date((b.competition as any)?.date || b.created_at)
     return dateB.getTime() - dateA.getTime()
   })
 
-  
-
   const handleEditRecord = async (record: any) => {
-    setEditingItem({
-      id: record.id,
-      item_type: 'record'
-    })
-    
-    // 最新のスプリットタイムを取得
-    let latestSplitTimes = record.splitTimes || []
-    try {
-      const { data: recordData } = await apolloClient.query({
-        query: GET_RECORD,
-        variables: { id: record.id },
-        fetchPolicy: 'network-only'
-      })
-      if ((recordData as any)?.record?.splitTimes) {
-        latestSplitTimes = (recordData as any).record.splitTimes
-      }
-    } catch (error) {
-      console.error('スプリットタイムの取得に失敗しました:', error)
-      // エラーが発生しても既存のデータを使用
-    }
-    
     setEditingData({
       id: record.id,
-      recordDate: record.competition?.date || new Date().toISOString().split('T')[0],
-      location: record.competition?.place || '',
-      competitionName: record.competition?.title || '',
-      poolType: record.competition?.poolType || 0,
-      styleId: record.styleId,
+      recordDate: (record.competition as any)?.date || new Date().toISOString().split('T')[0],
+      location: (record.competition as any)?.place || '',
+      competitionName: (record.competition as any)?.title || '',
+      poolType: (record.competition as any)?.pool_type || 0,
+      styleId: record.style_id,
       time: record.time,
-      isRelaying: record.isRelaying || false,
-      splitTimes: latestSplitTimes,
-      videoUrl: record.videoUrl,
+      isRelaying: record.is_relaying || false,
+      splitTimes: record.split_times || [],
+      videoUrl: record.video_url,
       note: record.note,
       competition: record.competition,
       style: record.style
@@ -177,10 +117,7 @@ export default function CompetitionPage() {
     if (confirm('この大会記録を削除しますか？')) {
       setIsLoading(true)
       try {
-        await deleteRecord({
-          variables: { id: recordId }
-        })
-        await refetch()
+        await deleteRecordFn(recordId)
       } catch (error) {
         console.error('削除エラー:', error)
         alert('削除に失敗しました')
@@ -205,42 +142,44 @@ export default function CompetitionPage() {
             title: formData.competitionName,
             date: formData.recordDate,
             place: formData.location,
-            poolType: formData.poolType,
+            pool_type: formData.poolType,
             note: ''
           }
 
-          const competitionResult = await createCompetition({
-            variables: { input: competitionInput }
-          })
-          
-          competitionId = (competitionResult.data as any)?.createCompetition?.id
+          const newCompetition = await createCompetition(competitionInput)
+          competitionId = newCompetition.id
         }
       }
 
       const recordInput = {
-        styleId: parseInt(formData.styleId),
+        style_id: parseInt(formData.styleId),
         time: formData.time,
-        videoUrl: formData.videoUrl,
-        note: formData.note,
-        isRelaying: formData.isRelaying || false,
-        competitionId: competitionId,
-        splitTimes: formData.splitTimes || []
+        video_url: formData.videoUrl || null,
+        note: formData.note || null,
+        is_relaying: formData.isRelaying || false,
+        competition_id: competitionId
       }
 
       if (formData.id) {
         // 更新処理
-        await updateRecord({
-          variables: {
-            id: formData.id,
-            input: recordInput
-          }
-        })
+        await updateRecord(formData.id, recordInput)
+        
+        // スプリットタイム更新
+        if (formData.splitTimes && formData.splitTimes.length > 0) {
+          await replaceSplitTimes(formData.id, formData.splitTimes)
+        }
       } else {
         // 作成処理
-        await createRecord({
-          variables: { input: recordInput }
-        })
+        const newRecord = await createRecord(recordInput)
+        
+        // スプリットタイム作成
+        if (formData.splitTimes && formData.splitTimes.length > 0) {
+          await createSplitTimes(newRecord.id, formData.splitTimes)
+        }
       }
+      
+      setIsFormOpen(false)
+      setEditingData(null)
     } catch (error) {
       console.error('大会記録の保存に失敗しました:', error)
       alert('大会記録の保存に失敗しました。')
@@ -249,16 +188,7 @@ export default function CompetitionPage() {
     }
   }
 
-  const formatTime = (seconds: number): string => {
-    if (seconds === 0) return '0.00'
-    const minutes = Math.floor(seconds / 60)
-    const remainingSeconds = seconds % 60
-    return minutes > 0 
-      ? `${minutes}:${remainingSeconds.toFixed(2).padStart(5, '0')}`
-      : `${remainingSeconds.toFixed(2)}`
-  }
-
-  if (loading || isLoading || !isDataReady) {
+  if (loading || isLoading) {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-lg shadow p-6">
@@ -308,7 +238,6 @@ export default function CompetitionPage() {
               大会での記録を管理・分析します。
             </p>
           </div>
-          
         </div>
       </div>
 
@@ -358,7 +287,7 @@ export default function CompetitionPage() {
               <option value="">すべての種目</option>
               {styles.map((style: any) => (
                 <option key={style.id} value={style.id}>
-                  {style.nameJp}
+                  {style.name_jp}
                 </option>
               ))}
             </select>
@@ -431,7 +360,6 @@ export default function CompetitionPage() {
             <p className="mt-1 text-sm text-gray-500">
               最初の大会記録を作成しましょう。
             </p>
-            
           </div>
         ) : sortedRecords.length === 0 ? (
           <div className="p-12 text-center">
@@ -489,27 +417,27 @@ export default function CompetitionPage() {
                 {sortedRecords.map((record: any) => (
                   <tr key={record.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {record.competition?.date ? format(new Date(record.competition.date), 'MM/dd', { locale: ja }) : '-'}
+                      {(record.competition as any)?.date ? format(new Date((record.competition as any).date), 'MM/dd', { locale: ja }) : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {record.competition?.title || '-'}
+                      {(record.competition as any)?.title || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {record.competition?.place || '-'}
+                      {(record.competition as any)?.place || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {record.style?.nameJp || '-'}
+                      {(record.style as any)?.name_jp || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {record.time ? (
                         <>
                           {formatTime(record.time)}
-                          {record.isRelaying && <span className="font-bold text-red-600 ml-1">R</span>}
+                          {record.is_relaying && <span className="font-bold text-red-600 ml-1">R</span>}
                         </>
                       ) : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {record.competition?.poolType === 1 ? '長水路' : record.competition?.poolType === 0 ? '短水路' : '-'}
+                      {(record.competition as any)?.pool_type === 1 ? '長水路' : (record.competition as any)?.pool_type === 0 ? '短水路' : '-'}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
                       {record.note || '-'}
@@ -559,7 +487,6 @@ export default function CompetitionPage() {
         isOpen={isFormOpen}
         onClose={() => {
           setIsFormOpen(false)
-          setEditingItem(null)
           setEditingData(null)
         }}
         onSubmit={handleRecordSubmit}
@@ -611,31 +538,31 @@ export default function CompetitionPage() {
                     <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
                       <div className="flex-1">
                         <h5 className="font-medium text-gray-900 mb-2">
-                          {selectedRecord.style?.nameJp || '記録'}: {selectedRecord.time ? (
+                          {(selectedRecord.style as any)?.name_jp || '記録'}: {selectedRecord.time ? (
                             <>
                               {formatTime(selectedRecord.time)}
-                              {selectedRecord.isRelaying && <span className="font-bold text-red-600 ml-1">R</span>}
+                              {selectedRecord.is_relaying && <span className="font-bold text-red-600 ml-1">R</span>}
                             </>
                           ) : '-'}
                         </h5>
-                        {selectedRecord.competition?.title && (
+                        {(selectedRecord.competition as any)?.title && (
                           <p className="text-sm text-gray-600 mb-1">
-                            🏆 {selectedRecord.competition.title}
+                            🏆 {(selectedRecord.competition as any).title}
                           </p>
                         )}
-                        {selectedRecord.competition?.place && (
+                        {(selectedRecord.competition as any)?.place && (
                           <p className="text-sm text-gray-600 mb-1">
-                            📍 {selectedRecord.competition.place}
+                            📍 {(selectedRecord.competition as any).place}
                           </p>
                         )}
-                        {selectedRecord.competition?.poolType != null && (
+                        {(selectedRecord.competition as any)?.pool_type != null && (
                           <p className="text-sm text-gray-600 mb-1">
-                            🏊‍♀️ {selectedRecord.competition.poolType === 1 ? '長水路(50m)' : '短水路(25m)'}
+                            🏊‍♀️ {(selectedRecord.competition as any).pool_type === 1 ? '長水路(50m)' : '短水路(25m)'}
                           </p>
                         )}
                         {selectedRecord.time && (
                           <p className="text-lg font-semibold text-blue-700 mb-1">
-                            ⏱️ {formatTime(selectedRecord.time)}{selectedRecord.isRelaying && <span className="font-bold text-red-600 ml-1">R</span>}
+                            ⏱️ {formatTime(selectedRecord.time)}{selectedRecord.is_relaying && <span className="font-bold text-red-600 ml-1">R</span>}
                           </p>
                         )}
                         {selectedRecord.note && (
@@ -643,8 +570,24 @@ export default function CompetitionPage() {
                             💭 {selectedRecord.note}
                           </p>
                         )}
+                        
                         {/* スプリットタイム */}
-                        <RecordSplitTimes recordId={selectedRecord.id} />
+                        {selectedRecord.split_times && selectedRecord.split_times.length > 0 && (
+                          <div className="mt-3">
+                            <p className="text-sm font-medium text-blue-800 mb-1">スプリット</p>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                              {selectedRecord.split_times
+                                .slice()
+                                .sort((a: any, b: any) => (a.distance || 0) - (b.distance || 0))
+                                .map((st: any) => (
+                                  <div key={st.id} className="text-xs text-blue-900 bg-blue-100 rounded px-2 py-1">
+                                    <span className="mr-2">{st.distance}m</span>
+                                    <span className="font-semibold">{formatTime(st.split_time)}</span>
+                                  </div>
+                                ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -668,49 +611,6 @@ export default function CompetitionPage() {
           </div>
         </div>
       )}
-    </div>
-  )
-}
-
-// 大会記録のスプリットタイム一覧
-function RecordSplitTimes({ recordId }: { recordId: string }) {
-  const { data, loading, error } = useQuery(GET_RECORD, {
-    variables: { id: recordId },
-    fetchPolicy: 'cache-and-network',
-    notifyOnNetworkStatusChange: true,
-    errorPolicy: 'ignore',
-  })
-
-  if (loading) {
-    return (
-      <div className="mt-3 text-sm text-gray-500">スプリットを読み込み中...</div>
-    )
-  }
-  if (error) {
-    return (
-      <div className="mt-3 text-sm text-red-600">スプリットの取得に失敗しました</div>
-    )
-  }
-
-  const splits = (data as any)?.record?.splitTimes || []
-  if (!splits.length) {
-    return null
-  }
-
-  return (
-    <div className="mt-3">
-      <p className="text-sm font-medium text-blue-800 mb-1">スプリット</p>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {splits
-          .slice()
-          .sort((a: any, b: any) => (a.distance || 0) - (b.distance || 0))
-          .map((st: any) => (
-          <div key={st.id} className="text-xs text-blue-900 bg-blue-100 rounded px-2 py-1">
-            <span className="mr-2">{st.distance}m</span>
-            <span className="font-semibold">{formatTime(st.splitTime)}</span>
-          </div>
-        ))}
-      </div>
     </div>
   )
 }

@@ -1,11 +1,11 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import type { ComponentType, SVGProps } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useQuery } from '@apollo/client/react'
-import { GET_MY_TEAMS } from '@/graphql'
+import { createClient } from '@/lib/supabase'
+import { useAuth } from '@/contexts'
 import { 
   HomeIcon,
   ChartBarIcon,
@@ -65,16 +65,35 @@ const adminNavigation: NavigationItem = {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname()
+  const { user } = useAuth()
+  const [hasAdminTeams, setHasAdminTeams] = useState(false)
+  const supabase = createClient()
   
   // ユーザーのチーム一覧を取得して管理者権限をチェック
-  const { data: teamsData } = useQuery(GET_MY_TEAMS, {
-    fetchPolicy: 'cache-and-network'
-  })
-  
-  const myTeams = (teamsData as any)?.myTeams || []
-  const hasAdminTeams = myTeams.some((membership: any) => 
-    membership.role === 'ADMIN' && membership.isActive
-  )
+  useEffect(() => {
+    const loadTeams = async () => {
+      if (!user) return
+      
+      try {
+        const { data, error } = await supabase
+          .from('team_memberships')
+          .select('role, is_active')
+          .eq('user_id', user.id)
+        
+        if (error) throw error
+        
+        const hasAdmin = data?.some((membership: any) => 
+          membership.role === 'ADMIN' && membership.is_active
+        ) || false
+        
+        setHasAdminTeams(hasAdmin)
+      } catch (error) {
+        console.error('チーム情報の取得に失敗:', error)
+      }
+    }
+    
+    loadTeams()
+  }, [user])
   
   // 管理者権限がある場合のみ統合管理を追加
   const filteredNavigation = hasAdminTeams 

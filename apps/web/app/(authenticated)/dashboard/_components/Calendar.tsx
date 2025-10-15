@@ -20,6 +20,9 @@ export default function Calendar({
   onAddPracticeLog,
   onEditPracticeLog,
   onDeletePracticeLog,
+  onAddRecord,
+  onEditRecord,
+  onDeleteRecord,
   isLoading: propLoading = false,
   userId,
   openDayDetail
@@ -30,7 +33,7 @@ export default function Calendar({
   const [showMonthSelector, setShowMonthSelector] = useState(false)
   const [showDayDetail, setShowDayDetail] = useState(false)
 
-  // GraphQLデータを取得
+  // カレンダーデータを取得（Supabase直接アクセス）
   const { calendarItems, monthlySummary, loading: dataLoading, error, refetch } = useCalendarData(currentDate, userId)
   
   // openDayDetailが変更された時に記録モーダルを開く
@@ -41,7 +44,7 @@ export default function Calendar({
     }
   }, [openDayDetail])
   
-  // プロップスのentriesが指定されている場合はそれを優先、そうでなければGraphQLデータを使用
+  // プロップスのentriesが指定されている場合はそれを優先、そうでなければカレンダーデータを使用
   const entries = propEntries && propEntries.length > 0 ? propEntries : calendarItems
   const isLoading = propLoading || dataLoading
 
@@ -129,8 +132,9 @@ export default function Calendar({
     
     const hasPractice = entries.some(e => e.item_type === 'practice')
     const hasRecord = entries.some(e => e.item_type === 'record')
+    const hasCompetition = entries.some(e => e.item_type === 'competition')
     
-    if (hasPractice && hasRecord) {
+    if (hasPractice && (hasRecord || hasCompetition)) {
       return (
         <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-gradient-to-r from-green-400 to-blue-400 border border-white shadow-sm"></div>
       )
@@ -138,7 +142,7 @@ export default function Calendar({
       return (
         <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-green-400 border border-white shadow-sm"></div>
       )
-    } else if (hasRecord) {
+    } else if (hasRecord || hasCompetition) {
       return (
         <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-blue-400 border border-white shadow-sm"></div>
       )
@@ -572,7 +576,7 @@ export default function Calendar({
                         className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500"
                       >
                         <span className="mr-2">💪</span>
-                        練習記録を追加
+                        練習予定を追加
                       </button>
                       <button
                         onClick={() => handleAddItem('record')}
@@ -623,6 +627,9 @@ export default function Calendar({
           onAddPracticeLog={onAddPracticeLog}
           onEditPracticeLog={onEditPracticeLog}
           onDeletePracticeLog={onDeletePracticeLog}
+          onAddRecord={onAddRecord}
+          onEditRecord={onEditRecord}
+          onDeleteRecord={onDeleteRecord}
         />
       )}
     </div>

@@ -1,0 +1,50 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run shared package tests
+      run: npm run test --workspace=packages/shared
+      
+    - name: Run web package tests
+      run: npm run test --workspace=apps/web
+      
+    - name: Run E2E tests
+      run: npm run test:e2e --workspace=apps/web
+      
+    - name: Generate coverage report
+      run: |
+        npm run test:coverage --workspace=packages/shared
+        npm run test:coverage --workspace=apps/web
+        
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        files: ./packages/shared/coverage/lcov.info,./apps/web/coverage/lcov.info
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false

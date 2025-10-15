@@ -1,46 +1,61 @@
 'use client'
 
-import { useState, use } from 'react'
-import { useQuery } from '@apollo/client/react'
-import { useRouter } from 'next/navigation'
-import { GET_TEAM, GET_MY_TEAMS } from '@/graphql'
-import { TeamMembers } from '@/components/team/TeamMembers'
-import { TeamSettings } from '@/components/team/TeamSettings'
-import { TeamAnnouncements } from '@/components/team/TeamAnnouncements'
+import React, { useState, useEffect } from 'react'
+import { useParams } from 'next/navigation'
+import { createClient } from '@/lib/supabase'
+import { useAuth } from '@/contexts'
+import { TeamAnnouncements } from '@/components/team'
 
-interface TeamDetailPageProps {
-  params: Promise<{
-    teamId: string
-  }>
-}
+export default function TeamDetailPage() {
+  const params = useParams()
+  const teamId = params.teamId as string
+  const [team, setTeam] = useState<any>(null)
+  const [membership, setMembership] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
+  const supabase = createClient()
 
-export default function TeamDetailPage({ params }: TeamDetailPageProps) {
-  const router = useRouter()
-  const [activeTab, setActiveTab] = useState<'announcements' | 'members' | 'settings'>('announcements')
-  
-  // Next.js 15の新しい仕様でparamsをunwrap
-  const { teamId } = use(params)
+  useEffect(() => {
+    const loadTeam = async () => {
+      if (!user) return
+      
+      try {
+        setLoading(true)
+        
+        // チーム情報を取得
+        const { data: teamData, error: teamError } = await supabase
+          .from('teams')
+          .select('*')
+          .eq('id', teamId)
+          .single()
 
-  // チーム詳細情報を取得
-  const { data: teamData, loading: teamLoading, error: teamError } = useQuery(GET_TEAM, {
-    variables: { id: teamId },
-    fetchPolicy: 'cache-and-network'
-  })
+        if (teamError) throw teamError
 
-  // ユーザーのチーム一覧を取得（権限確認用）
-  const { data: myTeamsData } = useQuery(GET_MY_TEAMS, {
-    fetchPolicy: 'cache-and-network'
-  })
+        // メンバーシップ情報を取得
+        const { data: membershipData, error: membershipError } = await supabase
+          .from('team_memberships')
+          .select('*')
+          .eq('team_id', teamId)
+          .eq('user_id', user.id)
+          .single()
 
-  const team = (teamData as any)?.team
-  const myTeams = (myTeamsData as any)?.myTeams || []
-  
-  // 現在のユーザーのチーム内での権限を確認
-  const userMembership = myTeams.find((membership: any) => membership.teamId === teamId)
-  const isAdmin = userMembership?.role === 'ADMIN'
-  const isMember = !!userMembership?.isActive
+        if (membershipError && membershipError.code !== 'PGRST116') {
+          throw membershipError
+        }
 
-  if (teamLoading) {
+        setTeam(teamData)
+        setMembership(membershipData)
+      } catch (error) {
+        console.error('チーム情報の取得に失敗:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadTeam()
+  }, [user, teamId])
+
+  if (loading) {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-lg shadow p-6">
@@ -53,146 +68,50 @@ export default function TeamDetailPage({ params }: TeamDetailPageProps) {
     )
   }
 
-  if (teamError || !team) {
+  if (!team) {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-center py-12">
-            <h1 className="text-xl font-semibold text-gray-900 mb-2">
-              チームが見つかりません
-            </h1>
-            <p className="text-gray-600 mb-4">
-              このチームは存在しないか、アクセス権限がありません。
-            </p>
-            <button
-              onClick={() => router.push('/teams')}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              チーム一覧に戻る
-            </button>
-          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            チームが見つかりません
+          </h1>
+          <p className="text-gray-600">
+            指定されたチームは存在しないか、アクセス権限がありません。
+          </p>
         </div>
       </div>
     )
   }
 
-  if (!isMember) {
-    return (
-      <div className="space-y-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-center py-12">
-            <h1 className="text-xl font-semibold text-gray-900 mb-2">
-              アクセス権限がありません
-            </h1>
-            <p className="text-gray-600 mb-4">
-              このチームのメンバーではありません。
-            </p>
-            <button
-              onClick={() => router.push('/teams')}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              チーム一覧に戻る
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  const tabs = [
-    { id: 'announcements', name: 'お知らせ', icon: '📢' },
-    { id: 'members', name: 'メンバー', icon: '👥' },
-    ...(isAdmin ? [{ id: 'settings', name: '設定', icon: '⚙️' }] : [])
-  ] as const
+  const isAdmin = membership?.role === 'ADMIN'
 
   return (
     <div className="space-y-6">
-      {/* ヘッダー */}
+      {/* チームヘッダー */}
       <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              {team.name}
-            </h1>
-            {team.description && (
-              <p className="text-gray-600 mb-2">{team.description}</p>
-            )}
-            <div className="flex items-center gap-2">
-              <span className={`text-xs px-2 py-1 rounded ${
-                isAdmin
-                  ? 'bg-red-100 text-red-800'
-                  : 'bg-blue-100 text-blue-800'
-              }`}>
-                {isAdmin ? '管理者' : 'メンバー'}
-              </span>
-              <span className="text-xs text-gray-500">
-                作成日: {new Date(team.createdAt).toLocaleDateString('ja-JP')}
-              </span>
-            </div>
-          </div>
-          <button
-            onClick={() => router.push('/teams')}
-            className="text-gray-600 hover:text-gray-800"
-          >
-            ← チーム一覧に戻る
-          </button>
-        </div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          {team.name}
+        </h1>
+        {team.description && (
+          <p className="text-gray-600 mb-4">{team.description}</p>
+        )}
+        {isAdmin && (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            管理者
+          </span>
+        )}
       </div>
 
-      {/* タブナビゲーション */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="border-b border-gray-200">
-          <nav className="flex space-x-8 px-6">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as 'announcements' | 'members' | 'settings')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <span className="mr-2">{tab.icon}</span>
-                {tab.name}
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        {/* タブコンテンツ */}
-        <div className="p-6">
-          {activeTab === 'announcements' && (
-            <TeamAnnouncements 
-              teamId={teamId}
-              isAdmin={isAdmin}
-            />
-          )}
-          
-          {activeTab === 'members' && (
-            <TeamMembers 
-              teamId={teamId}
-              isAdmin={isAdmin}
-            />
-          )}
-          
-          {activeTab === 'settings' && isAdmin && (
-            <TeamSettings
-              teamId={teamId}
-              teamName={team.name}
-              teamDescription={team.description}
-              isAdmin={isAdmin}
-              onTeamUpdated={() => {
-                // チーム情報が更新された場合の処理
-                window.location.reload()
-              }}
-              onTeamDeleted={() => {
-                // チームが削除された場合の処理
-                router.push('/teams')
-              }}
-            />
-          )}
-        </div>
+      {/* お知らせセクション */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          お知らせ
+        </h2>
+        <TeamAnnouncements 
+          teamId={teamId}
+          isAdmin={isAdmin}
+          viewOnly={false}
+        />
       </div>
     </div>
   )

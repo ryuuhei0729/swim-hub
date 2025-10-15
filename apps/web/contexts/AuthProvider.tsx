@@ -5,7 +5,6 @@ import { User, Session, SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase'
 import type { Database } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import { apolloClient } from '@/lib/apollo-client'
 import { UserProfile, AuthState, AuthContextType } from '@/types'
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -136,13 +135,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error }
       }
       
-      // Apollo Clientのキャッシュを全てクリア
-      try {
-        await apolloClient.clearStore()
-      } catch (cacheError) {
-        console.warn('Failed to clear Apollo Client cache:', cacheError)
-      }
-      
       return { error: null }
     } catch (error) {
       console.error('Sign out error:', error)
@@ -245,15 +237,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // ログイン/ログアウト時にページをリフレッシュ
         if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-          // ログアウト時にApollo Clientのキャッシュをクリア
-          if (event === 'SIGNED_OUT') {
-            try {
-              await apolloClient.clearStore()
-            } catch (cacheError) {
-              console.warn('Failed to clear Apollo Client cache on sign out:', cacheError)
-            }
-          }
-          
           const currentPath = window.location.pathname
           const authPages = ['/login', '/signup', '/reset-password', '/auth/callback']
           const isAuthPage = authPages.some(page => currentPath.startsWith(page))

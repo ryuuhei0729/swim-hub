@@ -1,12 +1,11 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { XMarkIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
-import { useQuery } from '@apollo/client/react'
-import { GET_RECORD, GET_PRACTICE } from '@/graphql/queries'
+import { createClient } from '@/lib/supabase'
 import { CalendarItemType, DayDetailModalProps } from '@/types'
 
 export default function DayDetailModal({
@@ -19,7 +18,10 @@ export default function DayDetailModal({
   onAddItem,
   onAddPracticeLog,
   onEditPracticeLog,
-  onDeletePracticeLog
+  onDeletePracticeLog,
+  onAddRecord,
+  onEditRecord,
+  onDeleteRecord
 }: DayDetailModalProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<{id: string, type: CalendarItemType} | null>(null)
 
@@ -27,6 +29,7 @@ export default function DayDetailModal({
 
   const practiceItems = entries.filter(e => e.item_type === 'practice')
   const recordItems = entries.filter(e => e.item_type === 'record')
+  const competitionItems = entries.filter(e => e.item_type === 'competition')
 
   const handleDeleteConfirm = async () => {
     if (showDeleteConfirm) {
@@ -79,7 +82,7 @@ export default function DayDetailModal({
                     className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
                     <span className="mr-2">💪</span>
-                    練習記録を追加
+                    練習予定を追加
                   </button>
                   <button
                     onClick={() => onAddItem?.(date, 'record')}
@@ -116,71 +119,82 @@ export default function DayDetailModal({
               </div>
             )}
 
-            {/* 大会記録セクション */}
-            {recordItems.length > 0 && (
+            {/* 大会セクション */}
+            {(competitionItems.length > 0 || recordItems.length > 0) && (
               <div className="mb-6">
                 <h4 className="text-md font-semibold text-blue-700 mb-3 flex items-center">
-                  <span className="mr-2">🏊‍♂️</span>
-                  大会記録
+                  <span className="mr-2">🏆</span>
+                  大会
                 </h4>
                 <div className="space-y-3">
-                  {recordItems.map((item) => (
-                    <div key={item.id} className="border border-blue-200 rounded-lg p-4 bg-blue-50">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h5 className="font-medium text-gray-900 mb-2">{item.title}</h5>
-                          {item.competition_name && (
-                            <p className="text-sm text-gray-600 mb-1">
-                              🏆 {item.competition_name}
-                            </p>
-                          )}
-                          {item.location && (
-                            <p className="text-sm text-gray-600 mb-1">
-                              📍 {item.location}
-                            </p>
-                          )}
-                          {item.style && (
-                            <p className="text-sm text-gray-600 mb-1">
-                              🏊 {(item.style as any).name}
-                            </p>
-                          )}
-                          {item.time_result && (
-                            <p className="text-lg font-semibold text-blue-700 mb-1">
-                              ⏱️ {formatTime(item.time_result / 100)}{item.is_relaying && <span className="font-bold text-red-600 ml-1">R</span>}
-                            </p>
-                          )}
-                          {item.pool_type != null && (
-                            <p className="text-sm text-gray-600 mb-1">
-                              🏊‍♀️ {getPoolTypeText(item.pool_type)}
-                            </p>
-                          )}
-                          {item.note && (
-                            <p className="text-sm text-gray-600 mt-2">
-                              💭 {item.note}
-                            </p>
-                          )}
-                          {/* スプリットタイム */}
-                          <RecordSplitTimes recordId={item.id} />
-                        </div>
-                        <div className="flex items-center space-x-2 ml-4">
-                          <button
-                            onClick={() => onEditItem?.(item)}
-                            className="p-2 text-gray-400 hover:text-blue-600 rounded-md hover:bg-blue-50"
-                            title="編集"
-                          >
-                            <PencilIcon className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => setShowDeleteConfirm({id: item.id, type: item.item_type})}
-                            className="p-2 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50"
-                            title="削除"
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                  {/* Recordがない大会を表示 */}
+                  {competitionItems.map((item) => (
+                    <CompetitionDetails
+                      key={item.id}
+                      competitionId={item.id}
+                      competitionName={item.competition_name}
+                      location={item.location}
+                      poolType={item.pool_type}
+                      note={item.note}
+                      onEdit={() => {
+                        onEditItem?.(item)
+                        onClose()
+                      }}
+                      onDelete={() => setShowDeleteConfirm({id: item.id, type: item.item_type})}
+                      onAddRecord={onAddRecord}
+                      onEditRecord={onEditRecord}
+                      onDeleteRecord={onDeleteRecord}
+                      onClose={onClose}
+                    />
                   ))}
+                  
+                  {/* Recordがある大会をグルーピングして表示 */}
+                  {(() => {
+                    const competitionMap = new Map<string, any[]>()
+                    recordItems.forEach(record => {
+                      const compId = (record as any).competition_id
+                      if (!compId) return
+                      if (!competitionMap.has(compId)) {
+                        competitionMap.set(compId, [])
+                      }
+                      competitionMap.get(compId)!.push(record)
+                    })
+                    
+                    return Array.from(competitionMap.entries()).map(([compId, records]) => {
+                      const firstRecord = records[0]
+                      return (
+                        <CompetitionDetails
+                          key={compId}
+                          competitionId={compId}
+                          competitionName={firstRecord.competition_name}
+                          location={firstRecord.location}
+                          poolType={firstRecord.pool_type}
+                          note={(firstRecord as any).competition?.note}
+                          records={records}
+                          onEdit={() => {
+                            // Competition編集: 最初のRecordからCompetition情報を取得
+                            const competitionData = {
+                              id: compId,
+                              item_type: 'competition' as const,
+                              item_date: firstRecord.item_date,
+                              title: firstRecord.competition_name,
+                              date: (firstRecord as any).competition?.date || firstRecord.item_date,
+                              place: firstRecord.location,
+                              pool_type: firstRecord.pool_type,
+                              note: (firstRecord as any).competition?.note
+                            }
+                            onEditItem?.(competitionData)
+                            onClose()
+                          }}
+                          onDelete={() => setShowDeleteConfirm({id: compId, type: 'competition'})}
+                          onAddRecord={onAddRecord}
+                          onEditRecord={onEditRecord}
+                          onDeleteRecord={onDeleteRecord}
+                          onClose={onClose}
+                        />
+                      )
+                    })
+                  })()}
                 </div>
               </div>
             )}
@@ -288,12 +302,67 @@ function PracticeDetails({
   onEditPracticeLog?: (log: any) => void
   onDeletePracticeLog?: (logId: string) => void
 }) {
-  const { data, loading, error } = useQuery(GET_PRACTICE, {
-    variables: { id: practiceId },
-    fetchPolicy: 'cache-and-network',
-    notifyOnNetworkStatusChange: true,
-    errorPolicy: 'ignore',
-  })
+  const [practice, setPractice] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
+  const supabase = createClient()
+
+  useEffect(() => {
+    const loadPractice = async () => {
+      try {
+        setLoading(true)
+        const { data, error } = await supabase
+          .from('practices')
+          .select(`
+            *,
+            practice_logs (
+              *,
+              practice_times (*),
+              practice_log_tags (
+                practice_tag:practice_tags (*)
+              )
+            )
+          `)
+          .eq('id', practiceId)
+          .single()
+
+        if (error) throw error
+        if (!data) throw new Error('Practice data not found')
+        
+        // データ整形（camelCase構造に変換）
+        const practiceData = data as any
+        const formattedPractice = {
+          ...practiceData,
+          practiceLogs: practiceData.practice_logs?.map((log: any) => ({
+            id: log.id,
+            practiceId: log.practice_id,
+            style: log.style,
+            repCount: log.rep_count,
+            setCount: log.set_count,
+            distance: log.distance,
+            circle: log.circle,
+            note: log.note,
+            tags: log.practice_log_tags?.map((plt: any) => plt.practice_tag) || [],
+            times: log.practice_times?.map((time: any) => ({
+              id: time.id,
+              time: time.time,
+              repNumber: time.rep_number,
+              setNumber: time.set_number
+            })) || []
+          })) || []
+        }
+        
+        setPractice(formattedPractice)
+      } catch (err) {
+        console.error('練習詳細の取得エラー:', err)
+        setError(err as Error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadPractice()
+  }, [practiceId])
 
   if (loading) {
     return (
@@ -306,7 +375,6 @@ function PracticeDetails({
     )
   }
 
-  const practice = (data as any)?.practice
   if (!practice) {
     return null
   }
@@ -390,7 +458,7 @@ function PracticeDetails({
                 className="inline-flex items-center px-4 py-2 border border-green-300 rounded-lg shadow-sm text-sm font-medium text-green-700 bg-white hover:bg-green-50 hover:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
               >
                 <span className="mr-2">➕</span>
-                練習メニューを追加
+                練習記録を追加
               </button>
             </div>
           )}
@@ -400,7 +468,7 @@ function PracticeDetails({
         const allTimes = log.times || []
         
             return (
-              <div key={log.id} className="bg-white rounded-lg p-4">
+              <div key={log.id} className="bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 border-0 rounded-lg p-4">
                 {/* 練習メニューのヘッダー */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
@@ -426,7 +494,23 @@ function PracticeDetails({
                   </div>
                   <div className="flex items-center space-x-2 ml-4">
                     <button
-                      onClick={() => onEditPracticeLog?.(log)}
+                      onClick={() => {
+                        // フォームに必要な形式に変換
+                        const formData = {
+                          id: log.id,
+                          practice_id: log.practiceId,
+                          style: log.style,
+                          rep_count: log.repCount,
+                          set_count: log.setCount,
+                          distance: log.distance,
+                          circle: log.circle,
+                          note: log.note,
+                          tags: log.tags,
+                          times: log.times || []
+                        }
+                        console.log('Edit PracticeLog formData:', formData) // デバッグ用
+                        onEditPracticeLog?.(formData)
+                      }}
                       className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
                       title="練習メニューを編集"
                     >
@@ -442,25 +526,25 @@ function PracticeDetails({
                   </div>
                 </div>
             
-            {/* 練習内容: 距離 × 本数 × セット数 サークル 泳法 */}
-            <div className="bg-white rounded-lg p-3 mb-3 border border-green-200">
-              <div className="text-xs font-medium text-gray-500 mb-1">練習内容</div>
-                <div className="text-sm text-gray-800">
-                  <span className="text-lg font-semibold text-green-700">{log.distance}</span>m × 
-                  <span className="text-lg font-semibold text-green-700"> {log.repCount}</span>
-                  {log.setCount > 1 && (
-                    <>
-                      {' × '}
-                      <span className="text-lg font-semibold text-green-700">{log.setCount}</span>
-                    </>
-                  )}
-                  {'　'}
-                  <span className="text-lg font-semibold text-green-700">
-                    {log.circle ? `${Math.floor(log.circle / 60)}'${Math.floor(log.circle % 60).toString().padStart(2, '0')}"` : '-'}
-                  </span>  
-                  <span className="text-lg font-semibold text-green-700">　{log.style}</span>
+                {/* 練習内容: 距離 × 本数 × セット数 サークル 泳法 */}
+                <div className="bg-white rounded-lg p-3 mb-3 border border-green-200">
+                  <div className="text-xs font-medium text-gray-500 mb-1">練習内容</div>
+                    <div className="text-sm text-gray-800">
+                      <span className="text-lg font-semibold text-green-700">{log.distance}</span>m ×
+                      <span className="text-lg font-semibold text-green-700">{log.repCount}</span>
+                      {log.setCount > 1 && (
+                        <>
+                          {' × '}
+                          <span className="text-lg font-semibold text-green-700">{log.setCount}</span>
+                        </>
+                      )}
+                      {'　'}
+                      <span className="text-lg font-semibold text-green-700">
+                        {log.circle ? `${Math.floor(log.circle / 60)}'${Math.floor(log.circle % 60).toString().padStart(2, '0')}"` : '-'}
+                      </span>
+                      <span className="text-lg font-semibold text-green-700">　{log.style}</span>
+                    </div>
                 </div>
-            </div>
 
             {/* メモ */}
             {log.note && (
@@ -579,12 +663,34 @@ function PracticeDetails({
 
 // 大会記録のスプリットタイム一覧
 function RecordSplitTimes({ recordId }: { recordId: string }) {
-  const { data, loading, error } = useQuery(GET_RECORD, {
-    variables: { id: recordId },
-    fetchPolicy: 'cache-and-network',
-    notifyOnNetworkStatusChange: true,
-    errorPolicy: 'ignore',
-  })
+  const [splits, setSplits] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
+  const supabase = createClient()
+
+  useEffect(() => {
+    const loadSplits = async () => {
+      try {
+        setLoading(true)
+        const { data, error } = await supabase
+          .from('split_times')
+          .select('*')
+          .eq('record_id', recordId)
+          .order('distance', { ascending: true })
+
+        if (error) throw error
+        
+        setSplits(data || [])
+      } catch (err) {
+        console.error('スプリットタイムの取得エラー:', err)
+        setError(err as Error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadSplits()
+  }, [recordId])
 
   if (loading) {
     return (
@@ -597,7 +703,6 @@ function RecordSplitTimes({ recordId }: { recordId: string }) {
     )
   }
 
-  const splits = (data as any)?.record?.splitTimes || []
   if (!splits.length) {
     return null
   }
@@ -606,15 +711,217 @@ function RecordSplitTimes({ recordId }: { recordId: string }) {
     <div className="mt-3">
       <p className="text-sm font-medium text-blue-800 mb-1">スプリット</p>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {splits
-          .slice()
-          .sort((a: any, b: any) => (a.distance || 0) - (b.distance || 0))
-          .map((st: any) => (
+        {splits.map((st: any) => (
           <div key={st.id} className="text-xs text-blue-900 bg-blue-100 rounded px-2 py-1">
             <span className="mr-2">{st.distance}m</span>
-            <span className="font-semibold">{formatTime(st.splitTime)}</span>
+            <span className="font-semibold">{formatTime(st.split_time)}</span>
           </div>
         ))}
+      </div>
+    </div>
+  )
+}
+
+// CompetitionDetails: 大会情報とそれに紐づくRecordを表示
+function CompetitionDetails({
+  competitionId,
+  competitionName,
+  location,
+  poolType,
+  note,
+  records = [],
+  onEdit,
+  onDelete,
+  onAddRecord,
+  onEditRecord,
+  onDeleteRecord,
+  onClose
+}: {
+  competitionId: string
+  competitionName?: string
+  location?: string
+  poolType?: number
+  note?: string
+  records?: any[]
+  onEdit?: () => void
+  onDelete?: () => void
+  onAddRecord?: (competitionId: string) => void
+  onEditRecord?: (record: any) => void
+  onDeleteRecord?: (recordId: string) => void
+  onClose?: () => void
+}) {
+  const getPoolTypeText = (poolType: number) => {
+    return poolType === 1 ? '長水路(50m)' : '短水路(25m)'
+  }
+
+  return (
+    <div className="mt-3">
+      {/* Competition全体の枠 */}
+      <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl p-3">
+        {/* Competition全体のヘッダー */}
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg font-semibold text-blue-800 bg-blue-200 px-3 py-1 rounded-lg">🏆 {competitionName}</span>
+            </div>
+            {location && (
+              <p className="text-sm text-gray-700 mb-2 flex items-center gap-1">
+                <span className="text-gray-500">📍</span>
+                {location}
+              </p>
+            )}
+            {poolType != null && (
+              <p className="text-sm text-gray-700 mb-2 flex items-center gap-1">
+                <span className="text-gray-500">🏊‍♀️</span>
+                {getPoolTypeText(poolType)}
+              </p>
+            )}
+            {note && (
+              <p className="text-sm text-gray-600 mt-2">
+                💭 {note}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center space-x-2 ml-4">
+            <button
+              onClick={onEdit}
+              className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+              title="大会情報を編集"
+            >
+              <PencilIcon className="h-5 w-5" />
+            </button>
+            <button
+              onClick={onDelete}
+              className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+              title="大会を削除"
+            >
+              <TrashIcon className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Recordsのコンテナ */}
+        <div className="space-y-3">
+          {/* Recordsがない場合 */}
+          {records.length === 0 && (
+            <div className="bg-white border-2 border-dashed border-blue-300 rounded-lg p-6 text-center">
+              <div className="text-gray-500 mb-4">
+                <span className="text-2xl">🏊‍♂️</span>
+                <p className="text-sm mt-2">大会記録がまだ登録されていません</p>
+              </div>
+              <button
+                onClick={() => {
+                  onAddRecord?.(competitionId)
+                  onClose?.()
+                }}
+                className="inline-flex items-center px-4 py-2 border border-blue-300 rounded-lg shadow-sm text-sm font-medium text-blue-700 bg-white hover:bg-blue-50 hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+              >
+                <span className="mr-2">➕</span>
+                大会記録を追加
+              </button>
+            </div>
+          )}
+
+          {/* Recordsがある場合の表示 */}
+          {records.map((record: any, index: number) => {
+            return (
+              <div key={record.id} className="bg-gradient-to-br from-cyan-50 via-blue-50 to-indigo-50 border-0 rounded-lg p-4">
+                {/* 記録のヘッダー */}
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm font-semibold text-blue-800 bg-blue-100 px-3 py-1 rounded-lg">🏊‍♂️ 記録 {index + 1}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2 ml-4">
+                    <button
+                      onClick={async () => {
+                        // Record編集時は、DBから最新データを取得してsplit_timesも含める
+                        const supabase = createClient()
+                        const { data: fullRecord } = await supabase
+                          .from('records')
+                          .select(`
+                            id,
+                            style_id,
+                            time,
+                            video_url,
+                            note,
+                            is_relaying,
+                            competition_id,
+                            split_times (*)
+                          `)
+                          .eq('id', record.id)
+                          .single()
+                        
+                        if (fullRecord) {
+                          onEditRecord?.(fullRecord)
+                        }
+                        onClose?.()
+                      }}
+                      className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                      title="記録を編集"
+                    >
+                      <PencilIcon className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => onDeleteRecord?.(record.id)}
+                      className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                      title="記録を削除"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 記録内容 */}
+                <div className="bg-white rounded-lg p-3 mb-3 border border-blue-200">
+                  <div className="text-xs font-medium text-gray-500 mb-1">種目</div>
+                  <div className="text-sm text-gray-800 mb-3">
+                    <span className="text-base font-semibold text-blue-700">{record.title}</span>
+                    {record.is_relaying && <span className="font-bold text-red-600 ml-2">R</span>}
+                  </div>
+                  
+                  {record.time_result && (
+                    <>
+                      <div className="text-xs font-medium text-gray-500 mb-1">タイム</div>
+                      <div className="text-2xl font-bold text-blue-700 mb-3">
+                        ⏱️ {formatTime(record.time_result)}
+                      </div>
+                    </>
+                  )}
+
+                  {record.note && (
+                    <>
+                      <div className="text-xs font-medium text-gray-500 mb-1">メモ</div>
+                      <div className="text-sm text-gray-700">
+                        {record.note}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* スプリットタイム */}
+                <RecordSplitTimes recordId={record.id} />
+              </div>
+            )
+          })}
+
+          {/* 「大会記録を追加」ボタン（Recordsがある場合でも表示） */}
+          {records.length > 0 && (
+            <div className="text-center pt-2">
+              <button
+                onClick={() => {
+                  onAddRecord?.(competitionId)
+                  onClose?.()
+                }}
+                className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 rounded transition-colors"
+              >
+                <span className="mr-1">➕</span>
+                大会記録を追加
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

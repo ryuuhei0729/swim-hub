@@ -1,0 +1,22 @@
+{
+  "name": "@swim-hub/shared",
+  "version": "1.0.0",
+  "description": "Shared utilities and types for Swim Hub (Web & Mobile)",
+  "main": "index.ts",
+  "types": "index.ts",
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^2.1.9",
+    "jsdom": "^27.0.0",
+    "typescript": "^5.3.3",
+    "vitest": "^2.1.9"
+  }
+}

@@ -22,6 +22,9 @@
     "lint:web": "npm run lint --workspace=apps/web",
     "lint:mobile": "cd apps/mobile && flutter analyze",
     "test": "npm run test --workspaces --if-present",
+    "test:unit": "npm run test --workspace=apps/web && npm run test --workspace=packages/shared",
+    "test:watch": "npm run test:watch --workspace=apps/web",
+    "test:coverage": "npm run test:coverage --workspaces --if-present",
     "test:web": "npm run test --workspace=apps/web",
     "test:mobile": "cd apps/mobile && flutter test",
     "type-check": "npm run type-check --workspaces --if-present",
@@ -35,9 +38,7 @@
     "supabase:start": "npx supabase start --workdir supabase",
     "supabase:stop": "npx supabase stop --workdir supabase",
     "supabase:reset": "npx supabase db reset --workdir supabase",
-    "supabase:status": "npx supabase status --workdir supabase",
-    "supabase:deploy": "npx supabase functions deploy --workdir supabase",
-    "supabase:deploy:graphql": "npx supabase functions deploy graphql --workdir supabase"
+    "supabase:status": "npx supabase status --workdir supabase"
   },
   "devDependencies": {
     "@types/node": "^20",
