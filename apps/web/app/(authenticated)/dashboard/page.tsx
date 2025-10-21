@@ -63,7 +63,14 @@ export default function DashboardPage() {
 
   // カレンダーデータ用のフック
   const [calendarRefreshKey, setCalendarRefreshKey] = useState(0)
-  const { refetch: refetchCalendar } = useCalendarData(new Date(), user?.id)
+  const [currentDate] = useState(() => new Date()) // 初回のみ作成
+  const { 
+    calendarItems, 
+    monthlySummary, 
+    loading: calendarLoading, 
+    error: calendarError, 
+    refetch: refetchCalendar 
+  } = useCalendarData(currentDate, user?.id)
 
   // チーム一覧、タグ、種目を取得
   useEffect(() => {
@@ -83,6 +90,7 @@ export default function DashboardPage() {
             )
           `)
           .eq('user_id', user.id)
+          .eq('is_active', true)
 
         if (error) throw error
 
@@ -499,11 +507,11 @@ export default function DashboardPage() {
 
         {/* チームのお知らせセクション */}
         {!teamsLoading && teams.length > 0 && (
-          <div className="pb-6 space-y-4">
+          <div className="pb-4 space-y-3">
             {teams.map((teamMembership: any) => (
               <div key={teamMembership.team_id} className="bg-white rounded-lg shadow">
-                <div className="p-4 sm:p-6">
-                  <div className="mb-4">
+                <div className="px-4 sm:px-6 py-3">
+                  <div className="mb-3">
                     <h2 className="text-lg font-semibold text-gray-900">
                       {teamMembership.team?.name} のお知らせ
                     </h2>
@@ -512,7 +520,7 @@ export default function DashboardPage() {
                     )}
                   </div>
 
-                  <div className="border-t border-gray-200 pt-4">
+                  <div className="border-t border-gray-200 pt-3">
                     <TeamAnnouncements 
                       teamId={teamMembership.team_id}
                       isAdmin={teamMembership.role === 'ADMIN'}
@@ -525,9 +533,35 @@ export default function DashboardPage() {
           </div>
         )}
         
+        {/* カレンダーエラー表示 */}
+        {calendarError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex">
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">
+                  カレンダーデータの取得に失敗しました
+                </h3>
+                <div className="mt-2 text-sm text-red-700">
+                  <p>{calendarError.message}</p>
+                </div>
+                <div className="mt-4">
+                  <button
+                    onClick={() => refetchCalendar()}
+                    className="bg-red-100 px-3 py-2 rounded-md text-sm font-medium text-red-800 hover:bg-red-200"
+                  >
+                    再試行
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* カレンダーコンポーネント */}
         <Calendar 
           key={calendarRefreshKey} // 強制再レンダリング
+          entries={calendarItems as any}
+          isLoading={calendarLoading}
           onDateClick={(date) => console.log('Date clicked:', date)}
           onAddItem={(date, type) => {
             setSelectedDate(date)

@@ -94,7 +94,11 @@ export class TeamAPI {
 
     const { data, error } = await this.supabase
       .from('teams')
-      .insert({ ...team, invite_code: inviteCode })
+      .insert({ 
+        ...team, 
+        invite_code: inviteCode,
+        created_by: user.id
+      })
       .select()
       .single()
 
@@ -106,7 +110,7 @@ export class TeamAPI {
       user_id: user.id,
       role: 'admin',
       is_active: true,
-      joined_at: new Date().toISOString()
+      joined_at: new Date().toISOString().split('T')[0] // DATE形式に変換
     } as any)
 
     return data
@@ -179,10 +183,18 @@ export class TeamAPI {
       .from('team_memberships')
       .select(`
         *,
-        user:users(*),
-        team:teams(*)
+        users!team_memberships_user_id_fkey (
+          name,
+          birthday,
+          bio
+        ),
+        teams!team_memberships_team_id_fkey (
+          name,
+          description
+        )
       `)
       .eq('team_id', teamId)
+      .eq('is_active', true)
       .order('joined_at', { ascending: true })
 
     if (error) throw error
@@ -225,28 +237,10 @@ export class TeamAPI {
       user_id: user.id,
       role: 'user',
       is_active: true,
-      joined_at: new Date().toISOString()
+      joined_at: new Date().toISOString().split('T')[0] // DATE形式に変換
     } as any)
   }
 
-  /**
-   * チーム脱退
-   */
-  async leaveTeam(teamId: string): Promise<void> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
-
-    const { error } = await this.supabase
-      .from('team_memberships')
-      .update({
-        is_active: false,
-        left_at: new Date().toISOString()
-      })
-      .eq('team_id', teamId)
-      .eq('user_id', user.id)
-
-    if (error) throw error
-  }
 
   /**
    * メンバーシップ作成（内部用）
@@ -484,6 +478,124 @@ export class TeamAPI {
         }
       )
       .subscribe()
+  }
+
+  /**
+   * 現在のユーザーがチームから退出
+   */
+  async leaveTeam(teamId: string): Promise<void> {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+
+    const { error } = await this.supabase
+      .from('team_memberships')
+      .update({ is_active: false })
+      .eq('team_id', teamId)
+      .eq('user_id', user.id)
+
+    if (error) throw error
+  }
+
+  /**
+   * チーム練習記録を作成
+   */
+  async createTeamPractice(teamId: string, practiceData: {
+    date: string
+    place?: string | null
+    note?: string | null
+  }): Promise<string> {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+
+    const { data, error } = await this.supabase
+      .from('practices')
+      .insert({
+        user_id: user.id, // 作成者は現在のユーザー
+        team_id: teamId,
+        date: practiceData.date,
+        place: practiceData.place,
+        note: practiceData.note,
+        created_by: user.id
+      })
+      .select('id')
+      .single()
+
+    if (error) throw error
+    return data.id
+  }
+
+  /**
+   * チーム練習ログを作成（メンバー一括用）
+   */
+  async createTeamPracticeLog(practiceId: string, userId: string, logData: {
+    style: string
+    distance: number
+    times: number[]
+  }): Promise<string> {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+
+    // PracticeLogを作成
+    const { data: practiceLog, error: logError } = await this.supabase
+      .from('practice_logs')
+      .insert({
+        practice_id: practiceId,
+        user_id: userId,
+        style: logData.style,
+        distance: logData.distance
+      })
+      .select('id')
+      .single()
+
+    if (logError) throw logError
+
+    // PracticeTimeを作成
+    const practiceTimes = logData.times.map(time => ({
+      practice_log_id: practiceLog.id,
+      time: time
+    }))
+
+    const { error: timesError } = await this.supabase
+      .from('practice_times')
+      .insert(practiceTimes)
+
+    if (timesError) throw timesError
+
+    return practiceLog.id
+  }
+
+  /**
+   * チームの管理者数を取得
+   */
+  async getAdminCount(teamId: string): Promise<number> {
+    const { data, error } = await this.supabase
+      .from('team_memberships')
+      .select('id')
+      .eq('team_id', teamId)
+      .eq('role', 'admin')
+      .eq('is_active', true)
+
+    if (error) throw error
+    return data.length
+  }
+
+  /**
+   * 現在のユーザーが管理者かどうかチェック
+   */
+  async isCurrentUserAdmin(teamId: string): Promise<boolean> {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) return false
+
+    const { data, error } = await this.supabase
+      .from('team_memberships')
+      .select('role')
+      .eq('team_id', teamId)
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single()
+
+    if (error) return false
+    return data.role === 'admin'
   }
 }
 

@@ -264,8 +264,8 @@ export interface TeamWithMembers extends Team {
 
 // チームメンバーシップ with ユーザー
 export interface TeamMembershipWithUser extends TeamMembership {
-  user: UserProfile
-  team: Team
+  users: UserProfile
+  teams: Team
 }
 
 // =============================================================================

@@ -78,7 +78,7 @@ export const AnnouncementList: React.FC<AnnouncementListProps> = ({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="p-6 space-y-4">
       {/* ヘッダー（viewOnlyの場合は非表示） */}
       {!viewOnly && (
         <div className="flex justify-between items-center">
@@ -104,7 +104,7 @@ export const AnnouncementList: React.FC<AnnouncementListProps> = ({
           {filteredAnnouncements.map((announcement) => (
             <div
               key={announcement.id}
-              className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+              className="bg-white border border-gray-200 rounded-lg p-4"
             >
               <div className="flex justify-between items-start">
                 <div className="flex-1">

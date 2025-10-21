@@ -4,44 +4,48 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import { useAuth } from '@/contexts'
-import { PlusIcon, UsersIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, UsersIcon, UserPlusIcon } from '@heroicons/react/24/outline'
+import TeamCreateModal from '@/components/team/TeamCreateModal'
+import TeamJoinModal from '@/components/team/TeamJoinModal'
 
 export default function TeamsPage() {
   const [teams, setTeams] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false)
   const { user } = useAuth()
   const supabase = createClient()
 
-  useEffect(() => {
-    const loadTeams = async () => {
-      if (!user) return
-      
-      try {
-        setLoading(true)
-        const { data, error } = await supabase
-          .from('team_memberships')
-          .select(`
-            *,
-            team:teams (
-              id,
-              name,
-              description,
-              created_at
-            )
-          `)
-          .eq('user_id', user.id)
-          .eq('is_active', true)
+  const loadTeams = async () => {
+    if (!user) return
+    
+    try {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('team_memberships')
+        .select(`
+          *,
+          team:teams (
+            id,
+            name,
+            description,
+            created_at
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('is_active', true)
 
-        if (error) throw error
+      if (error) throw error
 
-        setTeams(data || [])
-      } catch (error) {
-        console.error('チーム情報の取得に失敗:', error)
-      } finally {
-        setLoading(false)
-      }
+      setTeams(data || [])
+    } catch (error) {
+      console.error('チーム情報の取得に失敗:', error)
+    } finally {
+      setLoading(false)
     }
+  }
 
+  useEffect(() => {
     loadTeams()
   }, [user])
 
@@ -71,13 +75,22 @@ export default function TeamsPage() {
               参加しているチームの一覧
             </p>
           </div>
-          <button
-            onClick={() => alert('チーム作成機能は実装中です')}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <PlusIcon className="h-5 w-5 mr-2" />
-            新規作成
-          </button>
+          <div className="flex space-x-3">
+            <button
+              onClick={() => setIsJoinModalOpen(true)}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <UserPlusIcon className="h-5 w-5 mr-2" />
+              チームに参加
+            </button>
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <PlusIcon className="h-5 w-5 mr-2" />
+              新規作成
+            </button>
+          </div>
         </div>
       </div>
 
@@ -91,9 +104,16 @@ export default function TeamsPage() {
           <p className="mt-1 text-sm text-gray-500">
             新しくチームを作成するか、既存のチームに参加しましょう
           </p>
-          <div className="mt-6">
+          <div className="mt-6 flex justify-center space-x-3">
             <button
-              onClick={() => alert('チーム作成機能は実装中です')}
+              onClick={() => setIsJoinModalOpen(true)}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <UserPlusIcon className="h-5 w-5 mr-2" />
+              チームに参加
+            </button>
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
               className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               <PlusIcon className="h-5 w-5 mr-2" />
@@ -131,6 +151,28 @@ export default function TeamsPage() {
           ))}
         </div>
       )}
+
+      {/* チーム作成モーダル */}
+      <TeamCreateModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={(teamId) => {
+          console.log('チーム作成成功:', teamId)
+          // チーム一覧を再読み込み
+          loadTeams()
+        }}
+      />
+
+      {/* チーム参加モーダル */}
+      <TeamJoinModal
+        isOpen={isJoinModalOpen}
+        onClose={() => setIsJoinModalOpen(false)}
+        onSuccess={(teamId) => {
+          console.log('チーム参加成功:', teamId)
+          // チーム一覧を再読み込み
+          loadTeams()
+        }}
+      />
     </div>
   )
 }
