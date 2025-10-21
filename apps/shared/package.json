@@ -11,12 +11,12 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0"
+    "@supabase/supabase-js": "^2.75.0"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^2.1.9",
     "jsdom": "^27.0.0",
-    "typescript": "^5.3.3",
+    "typescript": "^5.9.3",
     "vitest": "^2.1.9"
   }
 }
