@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useAuth } from '@/contexts'
-import Calendar from './_components/Calendar'
+import CalendarContainer from './_components/CalendarContainer'
 import { TeamAnnouncements } from '@/components/team'
 import { createClient } from '@/lib/supabase'
 import { useEffect } from 'react'
@@ -61,16 +61,8 @@ export default function DashboardPage() {
     refetch: refetchRecords
   } = useRecords(supabase, {})
 
-  // カレンダーデータ用のフック
+  // カレンダーデータ用のフック（簡素化）
   const [calendarRefreshKey, setCalendarRefreshKey] = useState(0)
-  const [currentDate, setCurrentDate] = useState(() => new Date()) // カレンダーの表示月を管理
-  const { 
-    calendarItems, 
-    monthlySummary, 
-    loading: calendarLoading, 
-    error: calendarError, 
-    refetch: refetchCalendar 
-  } = useCalendarData(currentDate, user?.id)
 
   // チーム一覧、タグ、種目を取得
   useEffect(() => {
@@ -147,11 +139,8 @@ export default function DashboardPage() {
         await createPractice(basicData)
         alert('練習予定を作成しました')
         
-        // 新規作成時は選択された日付の月をカレンダーに設定
-        if (selectedDate) {
-          const selectedMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
-          setCurrentDate(selectedMonth)
-        }
+        // 新規作成時は選択された日付の月をカレンダーに設定（Contextで管理）
+        // この処理はCalendarProviderで自動的に処理される
       }
       
       // フォームを閉じる
@@ -161,7 +150,7 @@ export default function DashboardPage() {
       
       // データを再取得
       console.log('データ再取得開始...')
-      await Promise.all([refetch(), refetchCalendar()])
+      await Promise.all([refetch()])
       setCalendarRefreshKey(prev => prev + 1) // カレンダー強制更新
       console.log('データ再取得完了')
       
@@ -290,7 +279,7 @@ export default function DashboardPage() {
 
       // データを再取得
       console.log('データ再取得開始...')
-      await Promise.all([refetch(), refetchCalendar()])
+      await Promise.all([refetch()])
       setCalendarRefreshKey(prev => prev + 1) // カレンダー強制更新
       console.log('データ再取得完了')
       
@@ -346,7 +335,7 @@ export default function DashboardPage() {
 
       // データを再取得
       console.log('削除後データ再取得開始...')
-      await Promise.all([refetch(), refetchRecords(), refetchCalendar()])
+      await Promise.all([refetch(), refetchRecords()])
       setCalendarRefreshKey(prev => prev + 1) // カレンダー強制更新
       console.log('削除後データ再取得完了')
       
@@ -383,11 +372,8 @@ export default function DashboardPage() {
         })
         alert('大会情報を保存しました')
         
-        // 新規作成時は選択された日付の月をカレンダーに設定
-        if (selectedDate) {
-          const selectedMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
-          setCurrentDate(selectedMonth)
-        }
+        // 新規作成時は選択された日付の月をカレンダーに設定（Contextで管理）
+        // この処理はCalendarProviderで自動的に処理される
       }
       
       setIsCompetitionBasicFormOpen(false)
@@ -396,7 +382,7 @@ export default function DashboardPage() {
       setCreatedCompetitionId(null)
       
       // データを再取得
-      await Promise.all([refetchRecords(), refetchCalendar()])
+      await Promise.all([refetchRecords()])
       setCalendarRefreshKey(prev => prev + 1)
       
     } catch (error) {
@@ -489,7 +475,7 @@ export default function DashboardPage() {
       }
 
       // データを再取得
-      await Promise.all([refetchRecords(), refetchCalendar()])
+      await Promise.all([refetchRecords()])
       setCalendarRefreshKey(prev => prev + 1)
       
     } catch (error) {
@@ -545,37 +531,11 @@ export default function DashboardPage() {
           </div>
         )}
         
-        {/* カレンダーエラー表示 */}
-        {calendarError && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <div className="flex">
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">
-                  カレンダーデータの取得に失敗しました
-                </h3>
-                <div className="mt-2 text-sm text-red-700">
-                  <p>{calendarError.message}</p>
-                </div>
-                <div className="mt-4">
-                  <button
-                    onClick={() => refetchCalendar()}
-                    className="bg-red-100 px-3 py-2 rounded-md text-sm font-medium text-red-800 hover:bg-red-200"
-                  >
-                    再試行
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* カレンダーエラー表示はCalendarProviderで管理 */}
 
         {/* カレンダーコンポーネント */}
-        <Calendar 
+        <CalendarContainer 
           key={calendarRefreshKey} // 強制再レンダリング
-          entries={calendarItems as any}
-          isLoading={calendarLoading}
-          currentDate={currentDate}
-          onCurrentDateChange={setCurrentDate}
           onDateClick={(date) => console.log('Date clicked:', date)}
           onAddItem={(date, type) => {
             setSelectedDate(date)
@@ -588,18 +548,18 @@ export default function DashboardPage() {
           }} 
           onEditItem={(item) => {
             // 日付文字列をDateオブジェクトに変換（安全に）
-            const dateObj = new Date(item.item_date + 'T00:00:00')
+            const dateObj = new Date(item.date + 'T00:00:00')
             setSelectedDate(dateObj)
             setEditingData(item)
             
-            if (item.item_type === 'practice') {
+            if (item.type === 'practice') {
               // Practice編集モーダルを開く
               setIsPracticeBasicFormOpen(true)
-            } else if (item.item_type === 'record') {
+            } else if (item.type === 'record') {
               // Record編集モーダルを開く
               // 大会情報も一緒に編集データに含める
               setIsCompetitionBasicFormOpen(true)
-            } else if (item.item_type === 'competition') {
+            } else if (item.type === 'competition') {
               // Competition編集モーダルを開く
               setIsCompetitionBasicFormOpen(true)
             }
@@ -630,7 +590,7 @@ export default function DashboardPage() {
 
               // データを再取得
               console.log('練習ログ削除後データ再取得開始...')
-              await Promise.all([refetch(), refetchCalendar()])
+              await Promise.all([refetch()])
               setCalendarRefreshKey(prev => prev + 1) // カレンダー強制更新
               console.log('練習ログ削除後データ再取得完了')
 
@@ -678,7 +638,7 @@ export default function DashboardPage() {
 
               // データを再取得
               console.log('大会記録削除後データ再取得開始...')
-              await Promise.all([refetchRecords(), refetchCalendar()])
+              await Promise.all([refetchRecords()])
               setCalendarRefreshKey(prev => prev + 1)
               console.log('大会記録削除後データ再取得完了')
 
