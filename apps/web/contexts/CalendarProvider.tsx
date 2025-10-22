@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import { DashboardAPI } from '@apps/shared/api/dashboard'
 import { CalendarItem, MonthlySummary } from '@apps/shared/types/ui'
@@ -33,10 +33,17 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
+  const isLoadingDataRef = useRef(false)
 
-  // データ取得関数
+  // データ取得関数（重複実行を防ぐ）
   const loadData = useCallback(async () => {
+    // 既に実行中の場合はスキップ
+    if (isLoadingDataRef.current) {
+      return
+    }
+
     try {
+      isLoadingDataRef.current = true
       setLoading(true)
       setError(null)
 
@@ -46,8 +53,8 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
       // ユーザー認証チェック
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        console.log('User not authenticated, skipping data fetch')
         setLoading(false)
+        isLoadingDataRef.current = false
         return
       }
 
@@ -57,14 +64,16 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
       const startDate = format(monthStart, 'yyyy-MM-dd')
       const endDate = format(monthEnd, 'yyyy-MM-dd')
 
+
       // カレンダーエントリーと月間サマリーを並行取得
-      const [entries, summary] = await Promise.all([
-        api.getCalendarEntries(startDate, endDate),
-        api.getMonthlySummary(currentDate.getFullYear(), currentDate.getMonth() + 1)
-      ])
+            const [entries, summary] = await Promise.all([
+              api.getCalendarEntries(startDate, endDate),
+              api.getMonthlySummary(currentDate.getFullYear(), currentDate.getMonth() + 1)
+            ])
+            
+            setCalendarItems(entries)
+            setMonthlySummary(summary)
       
-      setCalendarItems(entries)
-      setMonthlySummary(summary)
     } catch (err) {
       console.error('Calendar data fetch error:', err)
       setError(err as Error)
@@ -72,6 +81,7 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
       setMonthlySummary({ practiceCount: 0, recordCount: 0 })
     } finally {
       setLoading(false)
+      isLoadingDataRef.current = false
     }
   }, [currentDate])
 

@@ -282,7 +282,13 @@ export type Gender = 0 | 1 // 0: 男性, 1: 女性
 export type SwimStyle = 'fr' | 'br' | 'ba' | 'fly' | 'im'
 
 // カレンダーアイテムタイプ
-export type CalendarItemType = 'practice' | 'record' | 'competition'
+export type CalendarItemType = 
+  | 'practice'           // 個人練習
+  | 'team_practice'     // チーム練習
+  | 'practice_log'      // 練習ログ
+  | 'competition'       // 個人大会
+  | 'team_competition'  // チーム大会
+  | 'record'            // 大会記録
 
 // チームロール
 export type TeamRole = 'admin' | 'user'

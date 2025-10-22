@@ -58,6 +58,7 @@ export default function CalendarView({
   // プロップスのentriesが指定されている場合はそれを優先、そうでなければカレンダーデータを使用
   const entries = propEntries && propEntries.length > 0 ? propEntries : calendarItems
   const isLoading = propLoading || dataLoading
+  
 
   // 月の日付を取得
   const monthStart = startOfMonth(currentDate)
@@ -82,6 +83,8 @@ export default function CalendarView({
       }
       map.get(dateKey)!.push(item)
     })
+    
+    
     return map
   }, [entries])
 
@@ -125,10 +128,16 @@ export default function CalendarView({
     switch (type) {
       case 'practice':
         return 'bg-green-100 text-green-800 border-green-200'
-      case 'record':
-        return 'bg-blue-100 text-blue-800 border-blue-200'
+      case 'team_practice':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200'
+      case 'practice_log':
+        return 'bg-lime-100 text-lime-800 border-lime-200'
       case 'competition':
         return 'bg-purple-100 text-purple-800 border-purple-200'
+      case 'team_competition':
+        return 'bg-violet-100 text-violet-800 border-violet-200'
+      case 'record':
+        return 'bg-blue-100 text-blue-800 border-blue-200'
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200'
     }
@@ -137,9 +146,9 @@ export default function CalendarView({
   const getDayStatusIndicator = (entries: CalendarItem[]) => {
     if (entries.length === 0) return null
     
-    const hasPractice = entries.some(e => e.type === 'practice')
+    const hasPractice = entries.some(e => e.type === 'practice' || e.type === 'team_practice' || e.type === 'practice_log')
     const hasRecord = entries.some(e => e.type === 'record')
-    const hasCompetition = entries.some(e => e.type === 'competition')
+    const hasCompetition = entries.some(e => e.type === 'competition' || e.type === 'team_competition')
     
     if (hasPractice && (hasRecord || hasCompetition)) {
       return (

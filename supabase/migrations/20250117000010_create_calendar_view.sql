@@ -1,8 +1,8 @@
 -- カレンダービューの作成
--- 練習、大会、記録を統合したビュー
+-- 練習、大会、記録を統合したビュー（認証済みユーザーのみ）
 
 CREATE OR REPLACE VIEW calendar_view AS
--- 練習記録
+-- 練習記録（認証済みユーザーのみ）
 SELECT 
   p.id,
   'practice'::text as item_type,
@@ -14,10 +14,11 @@ SELECT
   p.created_at,
   p.updated_at
 FROM practices p
+WHERE p.user_id = auth.uid()
 
 UNION ALL
 
--- 大会記録
+-- 大会記録（認証済みユーザーのみ）
 SELECT 
   r.id,
   'record'::text as item_type,
@@ -41,10 +42,11 @@ SELECT
 FROM records r
 JOIN competitions c ON r.competition_id = c.id
 JOIN styles s ON r.style_id = s.id
+WHERE r.user_id = auth.uid()
 
 UNION ALL
 
--- 大会（記録がない場合）
+-- 大会（記録がない場合、認証済みユーザーのみ）
 SELECT 
   c.id,
   'competition'::text as item_type,
@@ -60,9 +62,10 @@ SELECT
   c.created_at,
   c.updated_at
 FROM competitions c
-WHERE NOT EXISTS (
-  SELECT 1 FROM records r WHERE r.competition_id = c.id
-);
+WHERE c.user_id = auth.uid()
+  AND NOT EXISTS (
+    SELECT 1 FROM records r WHERE r.competition_id = c.id
+  );
 
 -- RLSポリシーを設定
 ALTER VIEW calendar_view OWNER TO postgres;

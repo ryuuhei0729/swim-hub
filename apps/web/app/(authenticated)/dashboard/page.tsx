@@ -296,7 +296,7 @@ export default function DashboardPage() {
   }
 
   // アイテム削除ハンドラー
-  const handleDeleteItem = async (itemId: string, itemType?: 'practice' | 'record' | 'competition') => {
+  const handleDeleteItem = async (itemId: string, itemType?: 'practice' | 'team_practice' | 'practice_log' | 'competition' | 'team_competition' | 'record') => {
     if (!itemType) {
       console.error('アイテムタイプが不明です')
       return
@@ -307,10 +307,18 @@ export default function DashboardPage() {
     }
 
     try {
-      if (itemType === 'practice') {
+      if (itemType === 'practice' || itemType === 'team_practice') {
         // 練習記録削除
         const { error } = await supabase
           .from('practices')
+          .delete()
+          .eq('id', itemId)
+
+        if (error) throw error
+      } else if (itemType === 'practice_log') {
+        // 練習ログ削除
+        const { error } = await supabase
+          .from('practice_logs')
           .delete()
           .eq('id', itemId)
 
@@ -323,7 +331,7 @@ export default function DashboardPage() {
           .eq('id', itemId)
 
         if (error) throw error
-      } else if (itemType === 'competition') {
+      } else if (itemType === 'competition' || itemType === 'team_competition') {
         // 大会削除
         const { error } = await supabase
           .from('competitions')
@@ -552,14 +560,18 @@ export default function DashboardPage() {
             setSelectedDate(dateObj)
             setEditingData(item)
             
-            if (item.type === 'practice') {
+            if (item.type === 'practice' || item.type === 'team_practice') {
               // Practice編集モーダルを開く
               setIsPracticeBasicFormOpen(true)
+            } else if (item.type === 'practice_log') {
+              // PracticeLog編集モーダルを開く
+              setEditingData(item)
+              setIsPracticeLogFormOpen(true)
             } else if (item.type === 'record') {
               // Record編集モーダルを開く
               // 大会情報も一緒に編集データに含める
               setIsCompetitionBasicFormOpen(true)
-            } else if (item.type === 'competition') {
+            } else if (item.type === 'competition' || item.type === 'team_competition') {
               // Competition編集モーダルを開く
               setIsCompetitionBasicFormOpen(true)
             }

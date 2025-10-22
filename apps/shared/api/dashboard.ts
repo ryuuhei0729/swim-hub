@@ -19,6 +19,7 @@ export class DashboardAPI {
     const { data: { user } } = await this.supabase.auth.getUser()
     if (!user) throw new Error('認証が必要です')
 
+
     // カレンダービューから一括取得
     const { data: calendarData, error } = await this.supabase
       .from('calendar_view')
@@ -30,7 +31,7 @@ export class DashboardAPI {
     if (error) throw error
 
     // データをCalendarItem形式に変換
-    return calendarData?.map(item => ({
+    const result = calendarData?.map(item => ({
       id: item.id,
       type: item.item_type as any,
       date: item.item_date,
@@ -44,6 +45,8 @@ export class DashboardAPI {
         ...(item.metadata || {})
       }
     })) || []
+
+    return result
   }
 
   /**
@@ -53,24 +56,28 @@ export class DashboardAPI {
     const { data: { user } } = await this.supabase.auth.getUser()
     if (!user) throw new Error('認証が必要です')
 
-    const startDate = `${year}-${String(month).padStart(2, '0')}-01`
-    const endDate = `${year}-${String(month).padStart(2, '0')}-31`
+    // 月の開始日と終了日を正確に計算
+    const startDate = new Date(year, month - 1, 1)
+    const endDate = new Date(year, month, 0) // 月の最後の日を取得
+    
+    const startDateStr = startDate.toISOString().split('T')[0]
+    const endDateStr = endDate.toISOString().split('T')[0]
 
     // 練習回数
     const { count: practiceCount } = await this.supabase
       .from('practices')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id)
-      .gte('date', startDate)
-      .lte('date', endDate)
+      .gte('date', startDateStr)
+      .lte('date', endDateStr)
 
     // 記録数
     const { count: recordCount } = await this.supabase
       .from('records')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id)
-      .gte('created_at', startDate)
-      .lte('created_at', endDate)
+      .gte('created_at', startDateStr)
+      .lte('created_at', endDateStr)
 
     return {
       practiceCount: practiceCount || 0,
