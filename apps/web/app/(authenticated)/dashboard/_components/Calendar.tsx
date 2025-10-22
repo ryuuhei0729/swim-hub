@@ -25,13 +25,22 @@ export default function Calendar({
   onDeleteRecord,
   isLoading: propLoading = false,
   userId,
-  openDayDetail
+  openDayDetail,
+  currentDate: propCurrentDate,
+  onCurrentDateChange
 }: CalendarProps) {
-  const [currentDate, setCurrentDate] = useState(new Date())
+  const [currentDate, setCurrentDate] = useState(propCurrentDate || new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showMonthSelector, setShowMonthSelector] = useState(false)
   const [showDayDetail, setShowDayDetail] = useState(false)
+
+  // 外部から渡されたcurrentDateが変更された場合に同期
+  React.useEffect(() => {
+    if (propCurrentDate) {
+      setCurrentDate(propCurrentDate)
+    }
+  }, [propCurrentDate])
 
   // カレンダーデータを取得（Supabase直接アクセス）
   const { calendarItems, monthlySummary, loading: dataLoading, error, refetch } = useCalendarData(currentDate, userId)
@@ -69,19 +78,32 @@ export default function Calendar({
       if (!map.has(dateKey)) {
         map.set(dateKey, [])
       }
-      map.get(dateKey)!.push(item)
+      // CalendarEntryをCalendarItemに変換
+      const calendarItem: CalendarItem = {
+        ...item,
+        pool_type: item.pool_type as any, // 型変換
+        style: item.style ? {
+          ...item.style,
+          id: item.style.id.toString() // numberをstringに変換
+        } : undefined
+      }
+      map.get(dateKey)!.push(calendarItem)
     })
     return map
   }, [entries])
 
   const handlePrevMonth = () => {
-    setCurrentDate(subMonths(currentDate, 1))
+    const newDate = subMonths(currentDate, 1)
+    setCurrentDate(newDate)
+    onCurrentDateChange?.(newDate)
     // データを再取得
     setTimeout(() => refetch(), 100)
   }
 
   const handleNextMonth = () => {
-    setCurrentDate(addMonths(currentDate, 1))
+    const newDate = addMonths(currentDate, 1)
+    setCurrentDate(newDate)
+    onCurrentDateChange?.(newDate)
     // データを再取得
     setTimeout(() => refetch(), 100)
   }
@@ -154,6 +176,7 @@ export default function Calendar({
   const handleMonthYearSelect = (year: number, month: number) => {
     const newDate = new Date(year, month, 1)
     setCurrentDate(newDate)
+    onCurrentDateChange?.(newDate)
     setShowMonthSelector(false)
     // データを再取得
     setTimeout(() => refetch(), 100)
@@ -162,6 +185,7 @@ export default function Calendar({
   const handleTodayClick = () => {
     const today = new Date()
     setCurrentDate(today)
+    onCurrentDateChange?.(today)
     // データを再取得
     setTimeout(() => refetch(), 100)
   }

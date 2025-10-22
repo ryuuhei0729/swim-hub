@@ -174,6 +174,8 @@ export interface CalendarProps {
   isLoading?: boolean
   userId?: string
   openDayDetail?: Date | null
+  currentDate?: Date
+  onCurrentDateChange?: (date: Date) => void
 }
 
 // 日詳細モーダル

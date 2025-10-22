@@ -11,7 +11,7 @@ export interface MonthlySummary {
   averageTime?: number
 }
 
-export function useCalendarData(currentDate: Date, _userId?: string) {
+export function useCalendarData(displayDate: Date, _userId?: string) {
   const [calendarItems, setCalendarItems] = useState<CalendarEntry[]>([])
   const [monthlySummary, setMonthlySummary] = useState<MonthlySummary>({
     practiceCount: 0,
@@ -20,9 +20,9 @@ export function useCalendarData(currentDate: Date, _userId?: string) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  // 月の開始日と終了日を計算
-  const monthStart = startOfMonth(currentDate)
-  const monthEnd = endOfMonth(currentDate)
+  // 月の開始日と終了日を計算（displayDateを使用）
+  const monthStart = startOfMonth(displayDate)
+  const monthEnd = endOfMonth(displayDate)
   const startDate = format(monthStart, 'yyyy-MM-dd')
   const endDate = format(monthEnd, 'yyyy-MM-dd')
 
@@ -46,7 +46,7 @@ export function useCalendarData(currentDate: Date, _userId?: string) {
       // カレンダーエントリーと月間サマリーを並行取得
       const [entries, summary] = await Promise.all([
         api.getCalendarEntries(startDate, endDate),
-        api.getMonthlySummary(currentDate.getFullYear(), currentDate.getMonth() + 1)
+        api.getMonthlySummary(displayDate.getFullYear(), displayDate.getMonth() + 1)
       ])
       setCalendarItems(entries)
       setMonthlySummary(summary)
@@ -59,7 +59,7 @@ export function useCalendarData(currentDate: Date, _userId?: string) {
     } finally {
       setLoading(false)
     }
-  }, [startDate, endDate, currentDate])
+  }, [startDate, endDate, displayDate])
 
   // 初回データ取得
   useEffect(() => {

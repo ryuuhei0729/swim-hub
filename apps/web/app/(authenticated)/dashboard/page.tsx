@@ -63,7 +63,7 @@ export default function DashboardPage() {
 
   // カレンダーデータ用のフック
   const [calendarRefreshKey, setCalendarRefreshKey] = useState(0)
-  const [currentDate] = useState(() => new Date()) // 初回のみ作成
+  const [currentDate, setCurrentDate] = useState(() => new Date()) // カレンダーの表示月を管理
   const { 
     calendarItems, 
     monthlySummary, 
@@ -146,6 +146,12 @@ export default function DashboardPage() {
         // 新規作成モード: 作成
         await createPractice(basicData)
         alert('練習予定を作成しました')
+        
+        // 新規作成時は選択された日付の月をカレンダーに設定
+        if (selectedDate) {
+          const selectedMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
+          setCurrentDate(selectedMonth)
+        }
       }
       
       // フォームを閉じる
@@ -376,6 +382,12 @@ export default function DashboardPage() {
           note: basicData.note
         })
         alert('大会情報を保存しました')
+        
+        // 新規作成時は選択された日付の月をカレンダーに設定
+        if (selectedDate) {
+          const selectedMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
+          setCurrentDate(selectedMonth)
+        }
       }
       
       setIsCompetitionBasicFormOpen(false)
@@ -562,6 +574,8 @@ export default function DashboardPage() {
           key={calendarRefreshKey} // 強制再レンダリング
           entries={calendarItems as any}
           isLoading={calendarLoading}
+          currentDate={currentDate}
+          onCurrentDateChange={setCurrentDate}
           onDateClick={(date) => console.log('Date clicked:', date)}
           onAddItem={(date, type) => {
             setSelectedDate(date)
