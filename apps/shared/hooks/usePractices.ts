@@ -67,7 +67,12 @@ export function usePractices(
         const index = prev.findIndex(p => p.id === newPractice.id)
         if (index >= 0) {
           const updated = [...prev]
-          updated[index] = { ...updated[index], ...newPractice }
+          // 型を正しく合わせてマージ
+          updated[index] = { 
+            ...updated[index], 
+            ...newPractice,
+            practice_logs: updated[index].practice_logs // 既存のpractice_logsを保持
+          } as PracticeWithLogs
           return updated
         }
         // 日付範囲内なら追加
@@ -101,7 +106,11 @@ export function usePractices(
     updates: Partial<Practice>
   ) => {
     const updated = await api.updatePractice(id, updates)
-    setPractices(prev => prev.map(p => p.id === id ? { ...p, ...updated } : p))
+    setPractices(prev => prev.map(p => p.id === id ? { 
+      ...p, 
+      ...updated,
+      practice_logs: p.practice_logs // 既存のpractice_logsを保持
+    } as PracticeWithLogs : p))
     return updated
   }, [])
 

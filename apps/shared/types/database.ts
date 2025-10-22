@@ -282,7 +282,15 @@ export type Gender = 0 | 1 // 0: 男性, 1: 女性
 export type SwimStyle = 'fr' | 'br' | 'ba' | 'fly' | 'im'
 
 // カレンダーアイテムタイプ
-export type CalendarItemType = 'practice' | 'record' | 'competition'
+// 注意: この型はCALENDAR_ITEM_TYPES定数から導出可能
+// export type CalendarItemType = typeof CALENDAR_ITEM_TYPES[number]
+export type CalendarItemType = 
+  | 'practice'           // 個人練習
+  | 'team_practice'     // チーム練習
+  | 'practice_log'      // 練習ログ
+  | 'competition'       // 個人大会
+  | 'team_competition'  // チーム大会
+  | 'record'            // 大会記録
 
 // チームロール
 export type TeamRole = 'admin' | 'user'
@@ -306,11 +314,15 @@ export const GENDERS = {
 
 export const SWIM_STYLES = ['Fr', 'Ba', 'Br', 'Fly', 'IM'] as const
 
-export const CALENDAR_ITEM_TYPES = {
-  PRACTICE: 'practice' as const,
-  RECORD: 'record' as const,
-  COMPETITION: 'competition' as const
-} as const
+// カレンダーアイテムタイプの定数（Single Source of Truth）
+export const CALENDAR_ITEM_TYPES = [
+  'practice',           // 個人練習
+  'team_practice',     // チーム練習
+  'practice_log',      // 練習ログ
+  'competition',       // 個人大会
+  'team_competition',  // チーム大会
+  'record'            // 大会記録
+] as const
 
 // =============================================================================
 // 5. 型ガード
@@ -329,7 +341,7 @@ export const isSwimStyle = (value: any): value is SwimStyle => {
 }
 
 export const isCalendarItemType = (value: any): value is CalendarItemType => {
-  return ['practice', 'record', 'competition'].includes(value)
+  return (CALENDAR_ITEM_TYPES as readonly string[]).includes(value)
 }
 
 export const isTeamRole = (value: any): value is TeamRole => {

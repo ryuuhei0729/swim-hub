@@ -6,7 +6,7 @@ import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
 import { createClient } from '@/lib/supabase'
-import { CalendarItemType, DayDetailModalProps } from '@/types'
+import { CalendarItemType, DayDetailModalProps, CalendarItem } from '@/types'
 import type { Record, Practice, PracticeLog, PracticeTime, PoolType } from '@apps/shared/types/database'
 
 export default function DayDetailModal({
@@ -28,9 +28,9 @@ export default function DayDetailModal({
 
   if (!isOpen) return null
 
-  const practiceItems = entries.filter(e => e.item_type === 'practice')
-  const recordItems = entries.filter(e => e.item_type === 'record')
-  const competitionItems = entries.filter(e => e.item_type === 'competition')
+  const practiceItems = entries.filter(e => e.type === 'practice' || e.type === 'team_practice')
+  const recordItems = entries.filter(e => e.type === 'record')
+  const competitionItems = entries.filter(e => e.type === 'competition' || e.type === 'team_competition')
 
   const handleDeleteConfirm = async () => {
     if (showDeleteConfirm) {
@@ -102,6 +102,11 @@ export default function DayDetailModal({
                 <h4 className="text-md font-semibold text-green-700 mb-3 flex items-center">
                   <span className="mr-2">💪</span>
                   練習記録
+                  {practiceItems.some(e => e.type === 'team_practice') && (
+                    <span className="ml-2 text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">
+                      チーム練習含む
+                    </span>
+                  )}
                 </h4>
                 <div className="space-y-3">
                   {practiceItems.map((item) => (
@@ -109,8 +114,9 @@ export default function DayDetailModal({
                       key={item.id} 
                       practiceId={item.id} 
                       location={item.location}
+                      isTeamPractice={item.type === 'team_practice'}
                       onEdit={() => onEditItem?.(item)}
-                      onDelete={() => setShowDeleteConfirm({id: item.id, type: item.item_type})}
+                      onDelete={() => setShowDeleteConfirm({id: item.id, type: item.type})}
                       onAddPracticeLog={onAddPracticeLog}
                       onEditPracticeLog={onEditPracticeLog}
                       onDeletePracticeLog={onDeletePracticeLog}
@@ -126,6 +132,11 @@ export default function DayDetailModal({
                 <h4 className="text-md font-semibold text-blue-700 mb-3 flex items-center">
                   <span className="mr-2">🏆</span>
                   大会
+                  {competitionItems.some(e => e.type === 'team_competition') && (
+                    <span className="ml-2 text-xs bg-violet-100 text-violet-700 px-2 py-1 rounded-full">
+                      チーム大会含む
+                    </span>
+                  )}
                 </h4>
                 <div className="space-y-3">
                   {/* Recordがない大会を表示 */}
@@ -133,15 +144,16 @@ export default function DayDetailModal({
                     <CompetitionDetails
                       key={item.id}
                       competitionId={item.id}
-                      competitionName={item.competition_name}
+                      competitionName={item.title}
                       location={item.location}
-                      poolType={item.pool_type}
+                      poolType={item.metadata?.competition?.pool_type}
                       note={item.note}
+                      isTeamCompetition={item.type === 'team_competition'}
                       onEdit={() => {
                         onEditItem?.(item)
                         onClose()
                       }}
-                      onDelete={() => setShowDeleteConfirm({id: item.id, type: item.item_type})}
+                      onDelete={() => setShowDeleteConfirm({id: item.id, type: item.type})}
                       onAddRecord={onAddRecord}
                       onEditRecord={onEditRecord}
                       onDeleteRecord={onDeleteRecord}
@@ -151,38 +163,50 @@ export default function DayDetailModal({
                   
                   {/* Recordがある大会をグルーピングして表示 */}
                   {(() => {
-                    const competitionMap = new Map<string, Record[]>()
+                    // metadataにcompetition_idが含まれている拡張型を定義
+                    type RecordItemWithCompetition = CalendarItem & {
+                      metadata: CalendarItem['metadata'] & { competition_id?: string }
+                    }
+                    
+                    const competitionMap = new Map<string, RecordItemWithCompetition[]>()
                     recordItems.forEach(record => {
-                      const compId = record.competition_id
+                      const recordWithCompId = record as RecordItemWithCompetition
+                      const compId = recordWithCompId.metadata?.competition_id
+                      
                       if (!compId) return
                       if (!competitionMap.has(compId)) {
                         competitionMap.set(compId, [])
                       }
-                      competitionMap.get(compId)!.push(record as any)
+                      competitionMap.get(compId)!.push(recordWithCompId)
                     })
                     
                     return Array.from(competitionMap.entries()).map(([compId, records]) => {
-                      const firstRecord = records[0]
+                      const firstRecord: RecordItemWithCompetition = records[0]
                       return (
                         <CompetitionDetails
                           key={compId}
                           competitionId={compId}
-                          competitionName={firstRecord.competition_name}
+                          competitionName={firstRecord.title}
                           location={firstRecord.location}
-                          poolType={firstRecord.pool_type}
-                          note={firstRecord.competition?.note || undefined}
+                          poolType={firstRecord.metadata?.record?.style?.distance || 0}
+                          note={firstRecord.note || undefined}
                           records={records}
                           onEdit={() => {
                             // Competition編集: 最初のRecordからCompetition情報を取得
                             const competitionData = {
                               id: compId,
-                              item_type: 'competition' as const,
-                              item_date: firstRecord.item_date || '',
-                              title: firstRecord.competition_name || '',
-                              date: firstRecord.competition?.date || firstRecord.item_date || '',
-                              place: firstRecord.location || '',
-                              pool_type: (firstRecord.pool_type || 0) as PoolType,
-                              note: firstRecord.competition?.note || undefined
+                              type: 'competition' as const,
+                              date: firstRecord.date || '',
+                              title: firstRecord.title || '',
+                              location: firstRecord.location || '',
+                              note: firstRecord.note || undefined,
+                              metadata: {
+                                competition: {
+                                  title: firstRecord.title || '',
+                                  place: firstRecord.location || '',
+                                  pool_type: 0 // pool_typeはrecordのmetadataに含まれていないため、デフォルト値
+                                }
+                              }
                             }
                             onEditItem?.(competitionData)
                             onClose()
@@ -293,7 +317,8 @@ function PracticeDetails({
   onDelete,
   onAddPracticeLog,
   onEditPracticeLog,
-  onDeletePracticeLog
+  onDeletePracticeLog,
+  isTeamPractice = false
 }: { 
   practiceId: string
   location?: string
@@ -302,6 +327,7 @@ function PracticeDetails({
   onAddPracticeLog?: (practiceId: string) => void
   onEditPracticeLog?: (log: PracticeLog) => void
   onDeletePracticeLog?: (logId: string) => void
+  isTeamPractice?: boolean
 }) {
   const [practice, setPractice] = useState<Practice | null>(null)
   const [loading, setLoading] = useState(true)
@@ -418,7 +444,13 @@ function PracticeDetails({
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-lg font-semibold text-green-800 bg-green-200 px-3 py-1 rounded-lg">🏊‍♂️ 練習記録</span>
+              <span className={`text-lg font-semibold px-3 py-1 rounded-lg ${
+                isTeamPractice 
+                  ? 'text-emerald-800 bg-emerald-200' 
+                  : 'text-green-800 bg-green-200'
+              }`}>
+                🏊‍♂️ {isTeamPractice ? 'チーム練習記録' : '練習記録'}
+              </span>
             </div>
             {location && (
               <p className="text-sm text-gray-700 mb-2 flex items-center gap-1">
@@ -512,7 +544,6 @@ function PracticeDetails({
                           created_at: log.created_at || '',
                           updated_at: log.updated_at || ''
                         }
-                        console.log('Edit PracticeLog formData:', formData) // デバッグ用
                         onEditPracticeLog?.(formData)
                       }}
                       className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
@@ -739,7 +770,8 @@ function CompetitionDetails({
   onAddRecord,
   onEditRecord,
   onDeleteRecord,
-  onClose
+  onClose,
+  isTeamCompetition = false
 }: {
   competitionId: string
   competitionName?: string
@@ -753,6 +785,7 @@ function CompetitionDetails({
   onEditRecord?: (record: any) => void
   onDeleteRecord?: (recordId: string) => void
   onClose?: () => void
+  isTeamCompetition?: boolean
 }) {
   const _getPoolTypeText = (poolType: number) => {
     return poolType === 1 ? '長水路(50m)' : '短水路(25m)'
@@ -766,7 +799,14 @@ function CompetitionDetails({
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-lg font-semibold text-blue-800 bg-blue-200 px-3 py-1 rounded-lg">🏆 {competitionName}</span>
+              <span className={`text-lg font-semibold px-3 py-1 rounded-lg ${
+                isTeamCompetition 
+                  ? 'text-violet-800 bg-violet-200' 
+                  : 'text-blue-800 bg-blue-200'
+              }`}>
+                🏆 {competitionName}
+                {isTeamCompetition && <span className="ml-2 text-sm">(チーム大会)</span>}
+              </span>
             </div>
             {location && (
               <p className="text-sm text-gray-700 mb-2 flex items-center gap-1">
@@ -858,7 +898,18 @@ function CompetitionDetails({
                           .single()
                         
                         if (fullRecord) {
-                          onEditRecord?.(fullRecord)
+                          // 編集用のデータを構築
+                          const editData = {
+                            id: (fullRecord as any).id,
+                            style_id: (fullRecord as any).style_id,
+                            time: (fullRecord as any).time,
+                            is_relaying: (fullRecord as any).is_relaying,
+                            note: (fullRecord as any).note,
+                            video_url: (fullRecord as any).video_url,
+                            split_times: (fullRecord as any).split_times || [],
+                            competition_id: (fullRecord as any).competition_id
+                          }
+                          onEditRecord?.(editData)
                         }
                         onClose?.()
                       }}
@@ -881,20 +932,20 @@ function CompetitionDetails({
                 <div className="bg-white rounded-lg p-3 mb-3 border border-blue-200">
                   <div className="text-xs font-medium text-gray-500 mb-1">種目</div>
                   <div className="text-sm text-gray-800 mb-3">
-                    <span className="text-base font-semibold text-blue-700">{record.title}</span>
-                    {record.is_relaying && <span className="font-bold text-red-600 ml-2">R</span>}
+                    <span className="text-base font-semibold text-blue-700">{record.metadata?.style?.name_jp || record.title}</span>
+                    {(record.metadata?.is_relaying) && <span className="font-bold text-red-600 ml-2">R</span>}
                   </div>
                   
-                  {record.time_result && (
+                  {(record.metadata?.time) && (
                     <>
                       <div className="text-xs font-medium text-gray-500 mb-1">タイム</div>
                       <div className="text-2xl font-bold text-blue-700 mb-3">
-                        ⏱️ {formatTime(record.time_result)}
+                        ⏱️ {formatTime(record.metadata.time)}
                       </div>
                     </>
                   )}
 
-                  {record.note && (
+                  {(record.note) && (
                     <>
                       <div className="text-xs font-medium text-gray-500 mb-1">メモ</div>
                       <div className="text-sm text-gray-700">

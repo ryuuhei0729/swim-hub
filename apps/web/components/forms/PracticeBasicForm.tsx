@@ -45,7 +45,6 @@ export default function PracticeBasicForm({
       
       if (editData) {
         // 編集モード: 既存データで初期化
-        console.log('PracticeBasicForm editData:', editData) // デバッグ用
         setFormData({
           date: editData.date || format(validDate, 'yyyy-MM-dd'),
           place: editData.place || editData.location || '', // locationもフォールバック

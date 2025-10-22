@@ -2,50 +2,47 @@
 // UI・フォーム関連型定義 - Swim Hub共通パッケージ
 // =============================================================================
 
-import { CalendarItemType, PoolType, PracticeTag } from './database'
+import { CalendarItemType, PracticeTag } from './database'
 
 // =============================================================================
 // 1. カレンダー関連
 // =============================================================================
 
+// 統一されたカレンダーアイテム型
 export interface CalendarItem {
   id: string
-  item_type: CalendarItemType
-  item_date: string
+  type: CalendarItemType
+  date: string
   title: string
   location?: string
-  time_result?: number
-  pool_type?: PoolType
-  tags?: string[]
   note?: string
-  competition_name?: string
-  is_relaying?: boolean
-  team_practice?: boolean
-  team_record?: boolean
-  style?: {
-    id: string
-    name_jp: string
-    distance: number
+  // メタデータ（型別の詳細情報）
+  metadata: {
+    practice?: {
+      place: string
+      practice_logs?: any[]
+    }
+    competition?: {
+      title: string
+      place: string | null
+      pool_type: number
+    }
+    record?: {
+      time: number
+      time_result?: number
+      is_relaying: boolean
+      video_url?: string
+      style: {
+        id: string
+        name_jp: string
+        distance: number
+      }
+      competition_id?: string
+      split_times?: any[]
+    }
   }
-  // Record型との互換性のための追加プロパティ
-  user_id?: string
-  competition_id?: string
-  style_id?: number
-  time?: number
-  video_url?: string
-  created_at?: string
-  updated_at?: string
-  split_times?: any[]
-  competition?: {
-    id: string
-    title: string
-    date: string
-    place: string | null
-    pool_type: number
-  }
-  // Practice型との互換性のための追加プロパティ
-  practiceLogs?: any[]
-  practice_logs?: any[]
+  // 編集時に必要な追加フィールド
+  editData?: any
 }
 
 export interface CalendarDay {

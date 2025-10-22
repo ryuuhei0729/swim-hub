@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase'
-import type { CalendarEntry } from '@apps/shared/api/dashboard'
 import { DashboardAPI } from '@apps/shared/api/dashboard'
+import type { CalendarItem } from '@apps/shared/types'
 import { endOfMonth, format, startOfMonth } from 'date-fns'
 import { useCallback, useEffect, useState } from 'react'
 
@@ -12,7 +12,7 @@ export interface MonthlySummary {
 }
 
 export function useCalendarData(displayDate: Date, _userId?: string) {
-  const [calendarItems, setCalendarItems] = useState<CalendarEntry[]>([])
+  const [calendarItems, setCalendarItems] = useState<CalendarItem[]>([])
   const [monthlySummary, setMonthlySummary] = useState<MonthlySummary>({
     practiceCount: 0,
     recordCount: 0
@@ -38,7 +38,6 @@ export function useCalendarData(displayDate: Date, _userId?: string) {
       // ユーザー認証チェック
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        console.log('User not authenticated, skipping data fetch')
         setLoading(false)
         return
       }

@@ -157,7 +157,6 @@ export default function TeamsPage() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={(teamId) => {
-          console.log('チーム作成成功:', teamId)
           // チーム一覧を再読み込み
           loadTeams()
         }}
@@ -168,7 +167,6 @@ export default function TeamsPage() {
         isOpen={isJoinModalOpen}
         onClose={() => setIsJoinModalOpen(false)}
         onSuccess={(teamId) => {
-          console.log('チーム参加成功:', teamId)
           // チーム一覧を再読み込み
           loadTeams()
         }}
