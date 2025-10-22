@@ -183,28 +183,23 @@ export default function RecordLogForm({
       // distanceチェック
       const distance = typeof st.distance === 'number' ? st.distance : parseInt(st.distance as string)
       if (isNaN(distance) || distance <= 0) {
-        console.log('無効なスプリット（距離）:', st)
         return false
       }
       
       // splitTimeチェック
       if (!st.splitTime || st.splitTime <= 0) {
-        console.log('無効なスプリット（タイム）:', st)
         return false
       }
       
       return true
     })
 
-    console.log('RecordLogForm - validSplitTimes:', validSplitTimes)
 
     // バリデーション済みのデータを送信
     const submitData = {
       ...formData,
       splitTimes: validSplitTimes
     }
-
-    console.log('RecordLogForm - submitData:', submitData)
 
     await onSubmit(submitData)
   }

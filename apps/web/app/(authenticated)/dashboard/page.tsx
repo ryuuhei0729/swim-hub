@@ -149,10 +149,8 @@ export default function DashboardPage() {
       setEditingData(null)
       
       // データを再取得
-      console.log('データ再取得開始...')
       await Promise.all([refetch()])
       setCalendarRefreshKey(prev => prev + 1) // カレンダー強制更新
-      console.log('データ再取得完了')
       
     } catch (error) {
       console.error('練習予定の処理に失敗しました:', error)
@@ -278,10 +276,8 @@ export default function DashboardPage() {
       }
 
       // データを再取得
-      console.log('データ再取得開始...')
       await Promise.all([refetch()])
       setCalendarRefreshKey(prev => prev + 1) // カレンダー強制更新
-      console.log('データ再取得完了')
       
     } catch (error) {
       console.error('練習記録の処理に失敗しました:', error)
@@ -342,10 +338,8 @@ export default function DashboardPage() {
       }
 
       // データを再取得
-      console.log('削除後データ再取得開始...')
       await Promise.all([refetch(), refetchRecords()])
       setCalendarRefreshKey(prev => prev + 1) // カレンダー強制更新
-      console.log('削除後データ再取得完了')
       
       // 成功通知
       alert('アイテムを削除しました')
@@ -405,7 +399,6 @@ export default function DashboardPage() {
   const handleRecordLogSubmit = async (formData: any) => {
     setIsLoading(true)
     try {
-      console.log('handleRecordLogSubmit - formData:', formData)
       
       const recordInput = {
         style_id: parseInt(formData.styleId),
@@ -415,8 +408,6 @@ export default function DashboardPage() {
         is_relaying: formData.isRelaying || false,
         competition_id: createdCompetitionId || editingData?.competition_id
       }
-      
-      console.log('recordInput:', recordInput)
 
       if (editingData && editingData.id) {
         // 更新処理
@@ -446,15 +437,12 @@ export default function DashboardPage() {
         const newRecord = await createRecord(recordInput)
         
         // スプリットタイム作成
-        console.log('スプリットタイム処理開始 - formData.splitTimes:', formData.splitTimes)
-        
         if (formData.splitTimes && formData.splitTimes.length > 0) {
           const splitTimesData = formData.splitTimes
             .filter((st: any) => {
               // distanceが数値で、splitTimeが0より大きい場合のみ
               const distance = typeof st.distance === 'number' ? st.distance : parseInt(st.distance)
               const isValid = !isNaN(distance) && distance > 0 && st.splitTime > 0
-              console.log(`スプリット検証 - distance: ${st.distance} (type: ${typeof st.distance}), splitTime: ${st.splitTime}, isValid: ${isValid}`)
               return isValid
             })
             .map((st: any) => ({
@@ -463,21 +451,10 @@ export default function DashboardPage() {
               split_time: st.splitTime  // 秒単位のDECIMAL
             }))
           
-          console.log('マッピング後のスプリットタイムデータ:', splitTimesData)
-          console.log('splitTimesDataの各要素を詳細確認:')
-          splitTimesData.forEach((st: any, idx: number) => {
-            console.log(`  [${idx}] record_id: ${st.record_id}, distance: ${st.distance} (${typeof st.distance}), split_time: ${st.split_time} (${typeof st.split_time})`)
-          })
-          
           // 有効なスプリットタイムがある場合のみ作成
           if (splitTimesData.length > 0) {
-            console.log('createSplitTimes呼び出し - recordId:', newRecord.id, 'data:', splitTimesData)
             await createSplitTimes(newRecord.id, splitTimesData)
-          } else {
-            console.log('有効なスプリットタイムがないため、作成をスキップ')
           }
-        } else {
-          console.log('スプリットタイムが存在しないため、作成をスキップ')
         }
         alert('記録を登録しました')
       }
@@ -544,7 +521,7 @@ export default function DashboardPage() {
         {/* カレンダーコンポーネント */}
         <CalendarContainer 
           key={calendarRefreshKey} // 強制再レンダリング
-          onDateClick={(date) => console.log('Date clicked:', date)}
+          onDateClick={(date) => {}}
           onAddItem={(date, type) => {
             setSelectedDate(date)
             setEditingData(null)
@@ -601,10 +578,8 @@ export default function DashboardPage() {
               if (error) throw error
 
               // データを再取得
-              console.log('練習ログ削除後データ再取得開始...')
               await Promise.all([refetch()])
               setCalendarRefreshKey(prev => prev + 1) // カレンダー強制更新
-              console.log('練習ログ削除後データ再取得完了')
 
               alert('練習ログを削除しました')
             } catch (error) {
@@ -620,7 +595,6 @@ export default function DashboardPage() {
           onEditRecord={(record) => {
             // Record編集モーダルを開く
             // RecordLogFormに必要な形式に変換
-            console.log('onEditRecord - 受信したrecord:', record)
             const editData = {
               id: record.id,
               style_id: record.style_id || record.style?.id,
@@ -631,7 +605,7 @@ export default function DashboardPage() {
               split_times: record.split_times || [],
               competition_id: record.competition_id
             }
-            console.log('onEditRecord - 変換後のeditData:', editData)
+            
             setEditingData(editData)
             setIsRecordLogFormOpen(true)
           }}
@@ -649,10 +623,8 @@ export default function DashboardPage() {
               if (error) throw error
 
               // データを再取得
-              console.log('大会記録削除後データ再取得開始...')
               await Promise.all([refetchRecords()])
               setCalendarRefreshKey(prev => prev + 1)
-              console.log('大会記録削除後データ再取得完了')
 
               alert('大会記録を削除しました')
             } catch (error) {

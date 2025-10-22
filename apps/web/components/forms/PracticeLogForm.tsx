@@ -101,7 +101,6 @@ export default function PracticeLogForm({
     if (isOpen) {
       if (editData) {
         // 編集モード: 既存データで初期化
-        console.log('PracticeLogForm editData:', editData) // デバッグ用
         
         const circleTime = editData.circle || 0
         const circleMin = Math.floor(circleTime / 60)
@@ -121,14 +120,6 @@ export default function PracticeLogForm({
             times: editData.times || []
           }
         ])
-        
-        console.log('PracticeLogForm initialized menus:', {
-          style: editData.style,
-          distance: editData.distance,
-          reps: editData.rep_count,
-          circleMin,
-          circleSec
-        })
       } else {
         // 新規作成モード: デフォルト値で初期化
         setMenus([
@@ -227,7 +218,6 @@ export default function PracticeLogForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    console.log('PracticeLogForm送信開始:', { menus })
 
     // データを整形
     const submitData = menus.map(menu => {
@@ -247,11 +237,9 @@ export default function PracticeLogForm({
         times: menu.times || []
       }
       
-      console.log('メニューデータ:', data)
       return data
     })
 
-    console.log('送信データ全体:', submitData)
 
     try {
       await onSubmit(submitData)

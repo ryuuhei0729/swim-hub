@@ -538,7 +538,6 @@ function PracticeDetails({
                           created_at: log.created_at || '',
                           updated_at: log.updated_at || ''
                         }
-                        console.log('Edit PracticeLog formData:', formData) // デバッグ用
                         onEditPracticeLog?.(formData)
                       }}
                       className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"

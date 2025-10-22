@@ -38,7 +38,6 @@ export function useCalendarData(displayDate: Date, _userId?: string) {
       // ユーザー認証チェック
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        console.log('User not authenticated, skipping data fetch')
         setLoading(false)
         return
       }

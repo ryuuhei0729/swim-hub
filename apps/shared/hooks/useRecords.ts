@@ -119,7 +119,6 @@ export function useRecords(
     // 空の配列の場合は早期リターン
     if (!splitTimes || splitTimes.length === 0) return []
     
-    console.log('useRecords.createSplitTimes - 受信データ:', splitTimes)
     
     const created = await api.createSplitTimes(splitTimes.map(st => {
       // snake_case と camelCase の両方に対応
@@ -129,7 +128,6 @@ export function useRecords(
         distance: st.distance,
         split_time: splitTime
       }
-      console.log('useRecords.createSplitTimes - マッピング結果:', data)
       return data
     }))
     await loadRecords() // 再取得

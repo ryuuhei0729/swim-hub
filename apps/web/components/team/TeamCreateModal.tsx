@@ -39,7 +39,6 @@ export default function TeamCreateModal({
         description: data.description.trim() || null
       })
 
-      console.log('チーム作成成功:', newTeam)
       
       // 成功時の処理
       if (onSuccess) {
