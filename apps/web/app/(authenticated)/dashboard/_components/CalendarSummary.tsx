@@ -59,7 +59,7 @@ export default function CalendarSummary({
               </div>
               <div className="ml-3 flex-1">
                 <div className="text-xl font-bold text-green-600">
-                  {monthlySummary?.practiceCount || 
+                  {monthlySummary?.practiceCount ?? 
                     entries.filter(e => e.type === 'practice' && 
                     format(new Date(e.date), 'yyyy-MM') === format(currentDate, 'yyyy-MM')).length}
                 </div>
@@ -76,8 +76,8 @@ export default function CalendarSummary({
               </div>
               <div className="ml-3 flex-1">
                 <div className="text-xl font-bold text-blue-600">
-                  {monthlySummary?.recordCount || 
-                    entries.filter(e => e.type === 'record' && 
+                  {monthlySummary?.recordCount ?? 
+                    entries.filter(e => (e.type === 'competition' || e.type === 'team_competition') && 
                     format(new Date(e.date), 'yyyy-MM') === format(currentDate, 'yyyy-MM')).length}
                 </div>
                 <div className="text-sm text-gray-600">大会回数</div>

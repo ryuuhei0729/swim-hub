@@ -53,6 +53,10 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
       // ユーザー認証チェック
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
+        // 認証されていない場合、全ての状態を初期値にリセット
+        setCalendarItems([])
+        setMonthlySummary({ practiceCount: 0, recordCount: 0 })
+        setError(null)
         setLoading(false)
         isLoadingDataRef.current = false
         return

@@ -6,7 +6,7 @@ import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
 import { createClient } from '@/lib/supabase'
-import { CalendarItemType, DayDetailModalProps } from '@/types'
+import { CalendarItemType, DayDetailModalProps, CalendarItem } from '@/types'
 import type { Record, Practice, PracticeLog, PracticeTime, PoolType } from '@apps/shared/types/database'
 
 export default function DayDetailModal({
@@ -163,26 +163,32 @@ export default function DayDetailModal({
                   
                   {/* Recordがある大会をグルーピングして表示 */}
                   {(() => {
-                    const competitionMap = new Map<string, Record[]>()
+                    // metadataにcompetition_idが含まれている拡張型を定義
+                    type RecordItemWithCompetition = CalendarItem & {
+                      metadata: CalendarItem['metadata'] & { competition_id?: string }
+                    }
+                    
+                    const competitionMap = new Map<string, RecordItemWithCompetition[]>()
                     recordItems.forEach(record => {
-                      const compId = (record.metadata as any)?.competition_id
+                      const recordWithCompId = record as RecordItemWithCompetition
+                      const compId = recordWithCompId.metadata?.competition_id
                       
                       if (!compId) return
                       if (!competitionMap.has(compId)) {
                         competitionMap.set(compId, [])
                       }
-                      competitionMap.get(compId)!.push(record as any)
+                      competitionMap.get(compId)!.push(recordWithCompId)
                     })
                     
                     return Array.from(competitionMap.entries()).map(([compId, records]) => {
-                      const firstRecord = records[0]
+                      const firstRecord: RecordItemWithCompetition = records[0]
                       return (
                         <CompetitionDetails
                           key={compId}
                           competitionId={compId}
                           competitionName={firstRecord.title}
                           location={firstRecord.location}
-                          poolType={(firstRecord as any).metadata?.competition?.pool_type}
+                          poolType={firstRecord.metadata?.record?.style?.distance || 0}
                           note={firstRecord.note || undefined}
                           records={records}
                           onEdit={() => {
@@ -190,7 +196,7 @@ export default function DayDetailModal({
                             const competitionData = {
                               id: compId,
                               type: 'competition' as const,
-                              date: (firstRecord as any).date || '',
+                              date: firstRecord.date || '',
                               title: firstRecord.title || '',
                               location: firstRecord.location || '',
                               note: firstRecord.note || undefined,
@@ -198,7 +204,7 @@ export default function DayDetailModal({
                                 competition: {
                                   title: firstRecord.title || '',
                                   place: firstRecord.location || '',
-                                  pool_type: (firstRecord as any).metadata?.competition?.pool_type || 0
+                                  pool_type: 0 // pool_typeはrecordのmetadataに含まれていないため、デフォルト値
                                 }
                               }
                             }

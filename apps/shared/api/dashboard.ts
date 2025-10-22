@@ -31,20 +31,32 @@ export class DashboardAPI {
     if (error) throw error
 
     // データをCalendarItem形式に変換
-    const result = calendarData?.map(item => ({
-      id: item.id,
-      type: item.item_type as any,
-      date: item.item_date,
-      title: item.title,
-      location: item.location,
-      note: item.note,
-      metadata: item.metadata || {},
-      editData: {
+    // 注意: calendar_viewは既にauth.uid()でフィルタリングされていますが、
+    // 多層防御として、metadataのuser_idが現在のユーザーと一致することを確認
+    const result = calendarData
+      ?.filter(item => {
+        // metadataにuser_idが含まれている場合のみ検証
+        const userId = item.metadata?.user_id
+        if (userId) {
+          return userId === user.id
+        }
+        // user_idがない場合はViewのauth.uid()フィルタリングを信頼
+        return true
+      })
+      .map(item => ({
         id: item.id,
+        type: item.item_type as any,
         date: item.item_date,
-        ...(item.metadata || {})
-      }
-    })) || []
+        title: item.title,
+        location: item.location,
+        note: item.note,
+        metadata: item.metadata || {},
+        editData: {
+          id: item.id,
+          date: item.item_date,
+          ...(item.metadata || {})
+        }
+      })) || []
 
     return result
   }
@@ -71,17 +83,17 @@ export class DashboardAPI {
       .gte('date', startDateStr)
       .lte('date', endDateStr)
 
-    // 記録数
-    const { count: recordCount } = await this.supabase
-      .from('records')
+    // 大会数
+    const { count: competitionCount } = await this.supabase
+      .from('competitions')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id)
-      .gte('created_at', startDateStr)
-      .lte('created_at', endDateStr)
+      .gte('date', startDateStr)
+      .lte('date', endDateStr)
 
     return {
       practiceCount: practiceCount || 0,
-      recordCount: recordCount || 0
+      recordCount: competitionCount || 0
     }
   }
 }

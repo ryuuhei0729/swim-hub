@@ -6,6 +6,7 @@ import CalendarContainer from './_components/CalendarContainer'
 import { TeamAnnouncements } from '@/components/team'
 import { createClient } from '@/lib/supabase'
 import { useEffect } from 'react'
+import { parseISO, startOfDay } from 'date-fns'
 import PracticeBasicForm from '@/components/forms/PracticeBasicForm'
 import PracticeLogForm from '@/components/forms/PracticeLogForm'
 import CompetitionBasicForm from '@/components/forms/CompetitionBasicForm'
@@ -20,6 +21,17 @@ export default function DashboardPage() {
   const [teams, setTeams] = useState<any[]>([])
   const [teamsLoading, setTeamsLoading] = useState(true)
   const supabase = createClient()
+
+  // タイムゾーンを考慮した日付パース
+  const parseDateString = (dateString: string): Date => {
+    // ISO形式の日付文字列（yyyy-MM-dd）をパース
+    // parseISOはローカルタイムゾーンで解釈される
+    const parsedDate = parseISO(dateString)
+    
+    // その日の開始時刻（00:00:00）として取得
+    // startOfDayはローカルタイムゾーンの開始時刻を返す
+    return startOfDay(parsedDate)
+  }
 
   // 練習記録フォーム用の状態（2段階対応）
   const [isPracticeBasicFormOpen, setIsPracticeBasicFormOpen] = useState(false)
@@ -532,8 +544,8 @@ export default function DashboardPage() {
             }
           }} 
           onEditItem={(item) => {
-            // 日付文字列をDateオブジェクトに変換（安全に）
-            const dateObj = new Date(item.date + 'T00:00:00')
+            // 日付文字列をDateオブジェクトに変換（タイムゾーン考慮）
+            const dateObj = parseDateString(item.date)
             setSelectedDate(dateObj)
             setEditingData(item)
             
