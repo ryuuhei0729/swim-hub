@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import { useAuth } from '@/contexts'
-import Calendar from './_components/Calendar'
+import CalendarContainer from './_components/CalendarContainer'
 import { TeamAnnouncements } from '@/components/team'
 import { createClient } from '@/lib/supabase'
 import { useEffect } from 'react'
+import { parseISO, startOfDay } from 'date-fns'
 import PracticeBasicForm from '@/components/forms/PracticeBasicForm'
 import PracticeLogForm from '@/components/forms/PracticeLogForm'
 import CompetitionBasicForm from '@/components/forms/CompetitionBasicForm'
@@ -20,6 +21,17 @@ export default function DashboardPage() {
   const [teams, setTeams] = useState<any[]>([])
   const [teamsLoading, setTeamsLoading] = useState(true)
   const supabase = createClient()
+
+  // タイムゾーンを考慮した日付パース
+  const parseDateString = (dateString: string): Date => {
+    // ISO形式の日付文字列（yyyy-MM-dd）をパース
+    // parseISOはローカルタイムゾーンで解釈される
+    const parsedDate = parseISO(dateString)
+    
+    // その日の開始時刻（00:00:00）として取得
+    // startOfDayはローカルタイムゾーンの開始時刻を返す
+    return startOfDay(parsedDate)
+  }
 
   // 練習記録フォーム用の状態（2段階対応）
   const [isPracticeBasicFormOpen, setIsPracticeBasicFormOpen] = useState(false)
@@ -61,16 +73,8 @@ export default function DashboardPage() {
     refetch: refetchRecords
   } = useRecords(supabase, {})
 
-  // カレンダーデータ用のフック
+  // カレンダーデータ用のフック（簡素化）
   const [calendarRefreshKey, setCalendarRefreshKey] = useState(0)
-  const [currentDate] = useState(() => new Date()) // 初回のみ作成
-  const { 
-    calendarItems, 
-    monthlySummary, 
-    loading: calendarLoading, 
-    error: calendarError, 
-    refetch: refetchCalendar 
-  } = useCalendarData(currentDate, user?.id)
 
   // チーム一覧、タグ、種目を取得
   useEffect(() => {
@@ -146,6 +150,9 @@ export default function DashboardPage() {
         // 新規作成モード: 作成
         await createPractice(basicData)
         alert('練習予定を作成しました')
+        
+        // 新規作成時は選択された日付の月をカレンダーに設定（Contextで管理）
+        // この処理はCalendarProviderで自動的に処理される
       }
       
       // フォームを閉じる
@@ -154,10 +161,8 @@ export default function DashboardPage() {
       setEditingData(null)
       
       // データを再取得
-      console.log('データ再取得開始...')
-      await Promise.all([refetch(), refetchCalendar()])
+      await Promise.all([refetch()])
       setCalendarRefreshKey(prev => prev + 1) // カレンダー強制更新
-      console.log('データ再取得完了')
       
     } catch (error) {
       console.error('練習予定の処理に失敗しました:', error)
@@ -283,10 +288,8 @@ export default function DashboardPage() {
       }
 
       // データを再取得
-      console.log('データ再取得開始...')
-      await Promise.all([refetch(), refetchCalendar()])
+      await Promise.all([refetch()])
       setCalendarRefreshKey(prev => prev + 1) // カレンダー強制更新
-      console.log('データ再取得完了')
       
     } catch (error) {
       console.error('練習記録の処理に失敗しました:', error)
@@ -301,7 +304,7 @@ export default function DashboardPage() {
   }
 
   // アイテム削除ハンドラー
-  const handleDeleteItem = async (itemId: string, itemType?: 'practice' | 'record' | 'competition') => {
+  const handleDeleteItem = async (itemId: string, itemType?: 'practice' | 'team_practice' | 'practice_log' | 'competition' | 'team_competition' | 'record') => {
     if (!itemType) {
       console.error('アイテムタイプが不明です')
       return
@@ -312,10 +315,18 @@ export default function DashboardPage() {
     }
 
     try {
-      if (itemType === 'practice') {
+      if (itemType === 'practice' || itemType === 'team_practice') {
         // 練習記録削除
         const { error } = await supabase
           .from('practices')
+          .delete()
+          .eq('id', itemId)
+
+        if (error) throw error
+      } else if (itemType === 'practice_log') {
+        // 練習ログ削除
+        const { error } = await supabase
+          .from('practice_logs')
           .delete()
           .eq('id', itemId)
 
@@ -328,7 +339,7 @@ export default function DashboardPage() {
           .eq('id', itemId)
 
         if (error) throw error
-      } else if (itemType === 'competition') {
+      } else if (itemType === 'competition' || itemType === 'team_competition') {
         // 大会削除
         const { error } = await supabase
           .from('competitions')
@@ -339,10 +350,8 @@ export default function DashboardPage() {
       }
 
       // データを再取得
-      console.log('削除後データ再取得開始...')
-      await Promise.all([refetch(), refetchRecords(), refetchCalendar()])
+      await Promise.all([refetch(), refetchRecords()])
       setCalendarRefreshKey(prev => prev + 1) // カレンダー強制更新
-      console.log('削除後データ再取得完了')
       
       // 成功通知
       alert('アイテムを削除しました')
@@ -376,6 +385,9 @@ export default function DashboardPage() {
           note: basicData.note
         })
         alert('大会情報を保存しました')
+        
+        // 新規作成時は選択された日付の月をカレンダーに設定（Contextで管理）
+        // この処理はCalendarProviderで自動的に処理される
       }
       
       setIsCompetitionBasicFormOpen(false)
@@ -384,7 +396,7 @@ export default function DashboardPage() {
       setCreatedCompetitionId(null)
       
       // データを再取得
-      await Promise.all([refetchRecords(), refetchCalendar()])
+      await Promise.all([refetchRecords()])
       setCalendarRefreshKey(prev => prev + 1)
       
     } catch (error) {
@@ -399,7 +411,6 @@ export default function DashboardPage() {
   const handleRecordLogSubmit = async (formData: any) => {
     setIsLoading(true)
     try {
-      console.log('handleRecordLogSubmit - formData:', formData)
       
       const recordInput = {
         style_id: parseInt(formData.styleId),
@@ -409,8 +420,6 @@ export default function DashboardPage() {
         is_relaying: formData.isRelaying || false,
         competition_id: createdCompetitionId || editingData?.competition_id
       }
-      
-      console.log('recordInput:', recordInput)
 
       if (editingData && editingData.id) {
         // 更新処理
@@ -440,15 +449,12 @@ export default function DashboardPage() {
         const newRecord = await createRecord(recordInput)
         
         // スプリットタイム作成
-        console.log('スプリットタイム処理開始 - formData.splitTimes:', formData.splitTimes)
-        
         if (formData.splitTimes && formData.splitTimes.length > 0) {
           const splitTimesData = formData.splitTimes
             .filter((st: any) => {
               // distanceが数値で、splitTimeが0より大きい場合のみ
               const distance = typeof st.distance === 'number' ? st.distance : parseInt(st.distance)
               const isValid = !isNaN(distance) && distance > 0 && st.splitTime > 0
-              console.log(`スプリット検証 - distance: ${st.distance} (type: ${typeof st.distance}), splitTime: ${st.splitTime}, isValid: ${isValid}`)
               return isValid
             })
             .map((st: any) => ({
@@ -457,27 +463,16 @@ export default function DashboardPage() {
               split_time: st.splitTime  // 秒単位のDECIMAL
             }))
           
-          console.log('マッピング後のスプリットタイムデータ:', splitTimesData)
-          console.log('splitTimesDataの各要素を詳細確認:')
-          splitTimesData.forEach((st: any, idx: number) => {
-            console.log(`  [${idx}] record_id: ${st.record_id}, distance: ${st.distance} (${typeof st.distance}), split_time: ${st.split_time} (${typeof st.split_time})`)
-          })
-          
           // 有効なスプリットタイムがある場合のみ作成
           if (splitTimesData.length > 0) {
-            console.log('createSplitTimes呼び出し - recordId:', newRecord.id, 'data:', splitTimesData)
             await createSplitTimes(newRecord.id, splitTimesData)
-          } else {
-            console.log('有効なスプリットタイムがないため、作成をスキップ')
           }
-        } else {
-          console.log('スプリットタイムが存在しないため、作成をスキップ')
         }
         alert('記録を登録しました')
       }
 
       // データを再取得
-      await Promise.all([refetchRecords(), refetchCalendar()])
+      await Promise.all([refetchRecords()])
       setCalendarRefreshKey(prev => prev + 1)
       
     } catch (error) {
@@ -533,36 +528,12 @@ export default function DashboardPage() {
           </div>
         )}
         
-        {/* カレンダーエラー表示 */}
-        {calendarError && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <div className="flex">
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">
-                  カレンダーデータの取得に失敗しました
-                </h3>
-                <div className="mt-2 text-sm text-red-700">
-                  <p>{calendarError.message}</p>
-                </div>
-                <div className="mt-4">
-                  <button
-                    onClick={() => refetchCalendar()}
-                    className="bg-red-100 px-3 py-2 rounded-md text-sm font-medium text-red-800 hover:bg-red-200"
-                  >
-                    再試行
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* カレンダーエラー表示はCalendarProviderで管理 */}
 
         {/* カレンダーコンポーネント */}
-        <Calendar 
+        <CalendarContainer 
           key={calendarRefreshKey} // 強制再レンダリング
-          entries={calendarItems as any}
-          isLoading={calendarLoading}
-          onDateClick={(date) => console.log('Date clicked:', date)}
+          onDateClick={(date) => {}}
           onAddItem={(date, type) => {
             setSelectedDate(date)
             setEditingData(null)
@@ -573,19 +544,23 @@ export default function DashboardPage() {
             }
           }} 
           onEditItem={(item) => {
-            // 日付文字列をDateオブジェクトに変換（安全に）
-            const dateObj = new Date(item.item_date + 'T00:00:00')
+            // 日付文字列をDateオブジェクトに変換（タイムゾーン考慮）
+            const dateObj = parseDateString(item.date)
             setSelectedDate(dateObj)
             setEditingData(item)
             
-            if (item.item_type === 'practice') {
+            if (item.type === 'practice' || item.type === 'team_practice') {
               // Practice編集モーダルを開く
               setIsPracticeBasicFormOpen(true)
-            } else if (item.item_type === 'record') {
+            } else if (item.type === 'practice_log') {
+              // PracticeLog編集モーダルを開く
+              setEditingData(item)
+              setIsPracticeLogFormOpen(true)
+            } else if (item.type === 'record') {
               // Record編集モーダルを開く
               // 大会情報も一緒に編集データに含める
               setIsCompetitionBasicFormOpen(true)
-            } else if (item.item_type === 'competition') {
+            } else if (item.type === 'competition' || item.type === 'team_competition') {
               // Competition編集モーダルを開く
               setIsCompetitionBasicFormOpen(true)
             }
@@ -615,10 +590,8 @@ export default function DashboardPage() {
               if (error) throw error
 
               // データを再取得
-              console.log('練習ログ削除後データ再取得開始...')
-              await Promise.all([refetch(), refetchCalendar()])
+              await Promise.all([refetch()])
               setCalendarRefreshKey(prev => prev + 1) // カレンダー強制更新
-              console.log('練習ログ削除後データ再取得完了')
 
               alert('練習ログを削除しました')
             } catch (error) {
@@ -634,7 +607,6 @@ export default function DashboardPage() {
           onEditRecord={(record) => {
             // Record編集モーダルを開く
             // RecordLogFormに必要な形式に変換
-            console.log('onEditRecord - 受信したrecord:', record)
             const editData = {
               id: record.id,
               style_id: record.style_id || record.style?.id,
@@ -645,7 +617,7 @@ export default function DashboardPage() {
               split_times: record.split_times || [],
               competition_id: record.competition_id
             }
-            console.log('onEditRecord - 変換後のeditData:', editData)
+            
             setEditingData(editData)
             setIsRecordLogFormOpen(true)
           }}
@@ -663,10 +635,8 @@ export default function DashboardPage() {
               if (error) throw error
 
               // データを再取得
-              console.log('大会記録削除後データ再取得開始...')
-              await Promise.all([refetchRecords(), refetchCalendar()])
+              await Promise.all([refetchRecords()])
               setCalendarRefreshKey(prev => prev + 1)
-              console.log('大会記録削除後データ再取得完了')
 
               alert('大会記録を削除しました')
             } catch (error) {

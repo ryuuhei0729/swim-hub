@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase'
-import type { CalendarEntry } from '@apps/shared/api/dashboard'
 import { DashboardAPI } from '@apps/shared/api/dashboard'
+import type { CalendarItem } from '@apps/shared/types'
 import { endOfMonth, format, startOfMonth } from 'date-fns'
 import { useCallback, useEffect, useState } from 'react'
 
@@ -11,8 +11,8 @@ export interface MonthlySummary {
   averageTime?: number
 }
 
-export function useCalendarData(currentDate: Date, _userId?: string) {
-  const [calendarItems, setCalendarItems] = useState<CalendarEntry[]>([])
+export function useCalendarData(displayDate: Date, _userId?: string) {
+  const [calendarItems, setCalendarItems] = useState<CalendarItem[]>([])
   const [monthlySummary, setMonthlySummary] = useState<MonthlySummary>({
     practiceCount: 0,
     recordCount: 0
@@ -20,9 +20,9 @@ export function useCalendarData(currentDate: Date, _userId?: string) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  // 月の開始日と終了日を計算
-  const monthStart = startOfMonth(currentDate)
-  const monthEnd = endOfMonth(currentDate)
+  // 月の開始日と終了日を計算（displayDateを使用）
+  const monthStart = startOfMonth(displayDate)
+  const monthEnd = endOfMonth(displayDate)
   const startDate = format(monthStart, 'yyyy-MM-dd')
   const endDate = format(monthEnd, 'yyyy-MM-dd')
 
@@ -38,7 +38,6 @@ export function useCalendarData(currentDate: Date, _userId?: string) {
       // ユーザー認証チェック
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        console.log('User not authenticated, skipping data fetch')
         setLoading(false)
         return
       }
@@ -46,7 +45,7 @@ export function useCalendarData(currentDate: Date, _userId?: string) {
       // カレンダーエントリーと月間サマリーを並行取得
       const [entries, summary] = await Promise.all([
         api.getCalendarEntries(startDate, endDate),
-        api.getMonthlySummary(currentDate.getFullYear(), currentDate.getMonth() + 1)
+        api.getMonthlySummary(displayDate.getFullYear(), displayDate.getMonth() + 1)
       ])
       setCalendarItems(entries)
       setMonthlySummary(summary)
@@ -59,7 +58,7 @@ export function useCalendarData(currentDate: Date, _userId?: string) {
     } finally {
       setLoading(false)
     }
-  }, [startDate, endDate, currentDate])
+  }, [startDate, endDate, displayDate])
 
   // 初回データ取得
   useEffect(() => {
