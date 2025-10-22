@@ -60,7 +60,7 @@ export default function CalendarSummary({
               <div className="ml-3 flex-1">
                 <div className="text-xl font-bold text-green-600">
                   {monthlySummary?.practiceCount ?? 
-                    entries.filter(e => e.type === 'practice' && 
+                    entries.filter(e => (e.type === 'practice' || e.type === 'team_practice') && 
                     format(new Date(e.date), 'yyyy-MM') === format(currentDate, 'yyyy-MM')).length}
                 </div>
                 <div className="text-sm text-gray-600">練習回数</div>
