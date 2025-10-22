@@ -53,10 +53,10 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
         .from('teams')
         .select('invite_code')
         .eq('id', teamId)
-        .single()
+        .single<{ invite_code: string }>()
 
       if (error) throw error
-      setInviteCode(data.invite_code)
+      setInviteCode(data?.invite_code || '')
     } catch (err) {
       console.error('招待コードの取得に失敗:', err)
     }
@@ -143,7 +143,7 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
               <div>
                 <div className="flex items-center space-x-2">
                   <p className="text-sm font-medium text-gray-900">
-                    {member.user?.name || 'Unknown User'}
+                    {member.users?.name || 'Unknown User'}
                   </p>
                   {member.role === 'admin' && (
                     <StarIcon className="h-4 w-4 text-yellow-500" title="管理者" />
