@@ -11,7 +11,7 @@ import {
   TeamMembers,
   TeamMemberManagement,
   TeamPractices,
-  TeamRecords,
+  TeamCompetitions,
   TeamSettings
 } from '@/components/team'
 import MemberDetailModal from '@/components/team/MemberDetailModal'
@@ -209,8 +209,8 @@ export default function TeamDetailPage() {
         )
       case 'practices':
         return <TeamPractices teamId={teamId} isAdmin={isAdmin} />
-      case 'records':
-        return <TeamRecords teamId={teamId} isAdmin={isAdmin} />
+      case 'competitions':
+        return <TeamCompetitions teamId={teamId} isAdmin={isAdmin} />
       case 'settings':
         return (
           <TeamSettings 

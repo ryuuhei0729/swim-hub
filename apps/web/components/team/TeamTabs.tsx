@@ -9,7 +9,7 @@ import {
   CogIcon 
 } from '@heroicons/react/24/outline'
 
-export type TeamTabType = 'announcements' | 'members' | 'practices' | 'records' | 'settings'
+export type TeamTabType = 'announcements' | 'members' | 'practices' | 'competitions' | 'settings'
 
 export interface TeamTab {
   id: TeamTabType
@@ -40,8 +40,8 @@ const tabs: TeamTab[] = [
     icon: ClockIcon
   },
   {
-    id: 'records',
-    name: '記録',
+    id: 'competitions',
+    name: '大会',
     icon: TrophyIcon
   },
   {

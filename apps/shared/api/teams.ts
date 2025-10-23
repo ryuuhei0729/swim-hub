@@ -597,5 +597,38 @@ export class TeamAPI {
     if (error) return false
     return data.role === 'admin'
   }
+
+  /**
+   * チーム大会を作成
+   */
+  async createTeamCompetition(teamId: string, competitionData: {
+    title: string
+    date: string
+    place?: string | null
+    note?: string | null
+  }): Promise<string> {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+
+    // 管理者権限確認
+    await this.checkAdminPermission(user.id, teamId)
+
+    const { data, error } = await this.supabase
+      .from('competitions')
+      .insert({
+        user_id: user.id,
+        team_id: teamId,
+        title: competitionData.title,
+        date: competitionData.date,
+        place: competitionData.place,
+        note: competitionData.note,
+        created_by: user.id
+      })
+      .select('id')
+      .single()
+
+    if (error) throw error
+    return data.id
+  }
 }
 
