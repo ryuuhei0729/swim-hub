@@ -10,11 +10,12 @@ import { parseISO, startOfDay } from 'date-fns'
 import PracticeBasicForm from '@/components/forms/PracticeBasicForm'
 import PracticeLogForm from '@/components/forms/PracticeLogForm'
 import CompetitionBasicForm from '@/components/forms/CompetitionBasicForm'
+import EntryLogForm from '@/components/forms/EntryLogForm'
 import RecordLogForm from '@/components/forms/RecordLogForm'
 import { usePractices } from '@apps/shared/hooks/usePractices'
 import { useRecords } from '@apps/shared/hooks/useRecords'
 import { useCalendarData } from './_hooks/useCalendarData'
-import { StyleAPI } from '@apps/shared/api'
+import { StyleAPI, EntryAPI } from '@apps/shared/api'
 
 export default function DashboardPage() {
   const { profile, user } = useAuth()
@@ -42,10 +43,12 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [availableTags, setAvailableTags] = useState<any[]>([])
 
-  // 大会記録フォーム用の状態（2段階対応）
+  // 大会記録フォーム用の状態（3段階対応: Competition → Entry → Record）
   const [isCompetitionBasicFormOpen, setIsCompetitionBasicFormOpen] = useState(false)
+  const [isEntryLogFormOpen, setIsEntryLogFormOpen] = useState(false)
   const [isRecordLogFormOpen, setIsRecordLogFormOpen] = useState(false)
   const [createdCompetitionId, setCreatedCompetitionId] = useState<string | null>(null)
+  const [createdEntries, setCreatedEntries] = useState<any[]>([])
   const [styles, setStyles] = useState<any[]>([])
 
   // 練習記録用のフック
@@ -304,7 +307,7 @@ export default function DashboardPage() {
   }
 
   // アイテム削除ハンドラー
-  const handleDeleteItem = async (itemId: string, itemType?: 'practice' | 'team_practice' | 'practice_log' | 'competition' | 'team_competition' | 'record') => {
+  const handleDeleteItem = async (itemId: string, itemType?: 'practice' | 'team_practice' | 'practice_log' | 'competition' | 'team_competition' | 'entry' | 'record') => {
     if (!itemType) {
       console.error('アイテムタイプが不明です')
       return
@@ -327,6 +330,14 @@ export default function DashboardPage() {
         // 練習ログ削除
         const { error } = await supabase
           .from('practice_logs')
+          .delete()
+          .eq('id', itemId)
+
+        if (error) throw error
+      } else if (itemType === 'entry') {
+        // エントリー削除
+        const { error } = await supabase
+          .from('entries')
           .delete()
           .eq('id', itemId)
 
@@ -375,29 +386,34 @@ export default function DashboardPage() {
           note: basicData.note
         })
         alert('大会情報を更新しました')
+        
+        // 編集時は完了
+        setIsCompetitionBasicFormOpen(false)
+        setSelectedDate(null)
+        setEditingData(null)
+        
+        // データを再取得
+        await Promise.all([refetchRecords()])
+        setCalendarRefreshKey(prev => prev + 1)
       } else {
-        // 新規作成モード: 作成
-        await createCompetition({
+        // 新規作成モード: 大会作成後、エントリーフォームへ
+        const newCompetition = await createCompetition({
           date: basicData.date,
           title: basicData.title,
           place: basicData.place,
           pool_type: basicData.poolType,
           note: basicData.note
         })
-        alert('大会情報を保存しました')
         
-        // 新規作成時は選択された日付の月をカレンダーに設定（Contextで管理）
-        // この処理はCalendarProviderで自動的に処理される
+        // Competition IDを保存
+        setCreatedCompetitionId(newCompetition.id)
+        
+        // Competition作成フォームを閉じる
+        setIsCompetitionBasicFormOpen(false)
+        
+        // エントリーフォームを開く
+        setIsEntryLogFormOpen(true)
       }
-      
-      setIsCompetitionBasicFormOpen(false)
-      setSelectedDate(null)
-      setEditingData(null)
-      setCreatedCompetitionId(null)
-      
-      // データを再取得
-      await Promise.all([refetchRecords()])
-      setCalendarRefreshKey(prev => prev + 1)
       
     } catch (error) {
       console.error('大会情報の処理に失敗しました:', error)
@@ -405,6 +421,76 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // エントリー登録
+  const handleEntrySubmit = async (entriesData: any[]) => {
+    setIsLoading(true)
+    try {
+      if (!createdCompetitionId) {
+        throw new Error('Competition ID が見つかりません')
+      }
+
+      const entryAPI = new EntryAPI(supabase)
+      const createdEntriesList = []
+
+      // 各エントリーを作成
+      for (const entryData of entriesData) {
+        // 既存エントリーをチェック
+        const existingEntry = await entryAPI.checkExistingEntry(
+          createdCompetitionId,
+          user?.id || '',
+          parseInt(entryData.styleId)
+        )
+
+        let entry
+        if (existingEntry) {
+          // 既存エントリーがある場合は更新
+          entry = await entryAPI.updateEntry(existingEntry.id, {
+            entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
+            note: entryData.note || null
+          })
+        } else {
+          // 新規作成
+          entry = await entryAPI.createPersonalEntry({
+            competition_id: createdCompetitionId,
+            style_id: parseInt(entryData.styleId),
+            entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
+            note: entryData.note || null
+          })
+        }
+        
+        // スタイル情報を追加（Record作成時に使用）
+        const style = styles.find(s => s.id === parseInt(entryData.styleId))
+        createdEntriesList.push({
+          ...entry,
+          styleName: style?.name_jp || ''
+        })
+      }
+
+      setCreatedEntries(createdEntriesList)
+      
+      // エントリーフォームを閉じる
+      setIsEntryLogFormOpen(false)
+      
+      // 最初のエントリー情報を使ってRecord作成フォームを開く
+      if (createdEntriesList.length > 0) {
+        setIsRecordLogFormOpen(true)
+      }
+
+      alert(createdEntriesList.length === 1 ? 'エントリーを登録しました' : `${createdEntriesList.length}件のエントリーを登録しました`)
+    } catch (error) {
+      console.error('エントリーの登録に失敗しました:', error)
+      alert('エントリーの登録に失敗しました。')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // エントリーをスキップ
+  const handleEntrySkip = () => {
+    setIsEntryLogFormOpen(false)
+    setIsRecordLogFormOpen(true)
   }
 
   // 記録登録・更新
@@ -484,6 +570,7 @@ export default function DashboardPage() {
       setSelectedDate(null)
       setEditingData(null)
       setCreatedCompetitionId(null)
+      setCreatedEntries([])
     }
   }
 
@@ -599,10 +686,19 @@ export default function DashboardPage() {
               alert('練習ログの削除に失敗しました。')
             }
           }}
-          onAddRecord={(competitionId) => {
-            setCreatedCompetitionId(competitionId)
-            setEditingData(null)
-            setIsRecordLogFormOpen(true)
+          onAddRecord={(params) => {
+            const { competitionId, entryData } = params
+            setCreatedCompetitionId(competitionId || null)
+            
+            if (entryData) {
+              // エントリーデータがある場合は直接Record作成フォームを開く
+              setEditingData({ entryData })
+              setIsRecordLogFormOpen(true)
+            } else {
+              // エントリーデータがない場合はEntry作成フォームを開く
+              setEditingData(null)
+              setIsEntryLogFormOpen(true)
+            }
           }}
           onEditRecord={(record) => {
             // Record編集モーダルを開く
@@ -695,7 +791,23 @@ export default function DashboardPage() {
           isLoading={isLoading}
         />
 
-        {/* 第2段階: 記録登録フォーム */}
+        {/* 第2段階: エントリー登録フォーム（SKIP可能） */}
+        <EntryLogForm
+          isOpen={isEntryLogFormOpen}
+          onClose={() => {
+            setIsEntryLogFormOpen(false)
+            setSelectedDate(null)
+            setCreatedCompetitionId(null)
+            setCreatedEntries([])
+          }}
+          onSubmit={handleEntrySubmit}
+          onSkip={handleEntrySkip}
+          competitionId={createdCompetitionId || ''}
+          isLoading={isLoading}
+          styles={styles.map(s => ({ id: s.id.toString(), nameJp: s.name_jp, distance: s.distance }))}
+        />
+
+        {/* 第3段階: 記録登録フォーム */}
         <RecordLogForm
           isOpen={isRecordLogFormOpen}
           onClose={() => {
@@ -703,12 +815,21 @@ export default function DashboardPage() {
             setSelectedDate(null)
             setEditingData(null)
             setCreatedCompetitionId(null)
+            setCreatedEntries([])
           }}
           onSubmit={handleRecordLogSubmit}
           competitionId={createdCompetitionId || editingData?.competition_id || ''}
-          editData={editingData}
+          editData={editingData?.id ? editingData : null}
           isLoading={isLoading}
           styles={styles}
+          entryData={
+            // エントリーデータの優先順位: editingData.entryData > createdEntries
+            editingData?.entryData || (createdEntries.length > 0 ? {
+              styleId: createdEntries[0].style_id,
+              styleName: createdEntries[0].styleName,
+              entryTime: createdEntries[0].entry_time
+            } : undefined)
+          }
         />
       </div>
     </div>

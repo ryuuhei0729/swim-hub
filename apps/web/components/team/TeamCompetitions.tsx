@@ -35,6 +35,15 @@ export interface TeamCompetition {
       name: string
     }
   }[]
+  entries?: {
+    id: string
+    user_id: string
+    style_id: number
+    entry_time: number | null
+    users?: {
+      name: string
+    }
+  }[]
 }
 
 export interface TeamCompetitionsProps {
@@ -55,7 +64,7 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
       setLoading(true)
       setError(null)
       
-      // チームIDが設定された大会を取得
+      // チームIDが設定された大会を取得（エントリー情報も含む）
       const { data: competitionsData, error: competitionsError } = await supabase
         .from('competitions')
         .select(`
@@ -78,6 +87,15 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
             id,
             time,
             users!records_user_id_fkey (
+              name
+            )
+          ),
+          entries (
+            id,
+            user_id,
+            style_id,
+            entry_time,
+            users!entries_user_id_fkey (
               name
             )
           )
@@ -199,10 +217,20 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
                   <p className="text-sm text-gray-600 mb-2 mt-2">{competition.note}</p>
                 )}
                 
+                {/* 記録情報 */}
                 {competition.records && competition.records.length > 0 && (
                   <div className="mt-2">
                     <span className="text-sm text-gray-600">
-                      登録記録: {competition.records.length}件
+                      📊 登録記録: {competition.records.length}件
+                    </span>
+                  </div>
+                )}
+                
+                {/* エントリー情報 */}
+                {competition.entries && competition.entries.length > 0 && (
+                  <div className="mt-1">
+                    <span className="text-sm text-blue-600">
+                      📝 エントリー: {competition.entries.length}件
                     </span>
                   </div>
                 )}

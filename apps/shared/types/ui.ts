@@ -23,9 +23,24 @@ export interface CalendarItem {
       practice_logs?: any[]
     }
     competition?: {
+      id: string
       title: string
       place: string | null
       pool_type: number
+      team_id?: string | null
+    }
+    entry?: {
+      id: string
+      competition_id: string
+      user_id: string
+      style_id: number
+      entry_time?: number | null
+      team_id?: string | null
+    }
+    style?: {
+      id: number
+      name_jp: string
+      distance: number
     }
     record?: {
       time: number
@@ -40,6 +55,10 @@ export interface CalendarItem {
       competition_id?: string
       split_times?: any[]
     }
+    team_id?: string | null
+    user_id?: string
+    entry_time?: number | null
+    pool_type?: number
   }
   // 編集時に必要な追加フィールド
   editData?: any
@@ -69,6 +88,13 @@ export interface MonthlySummary {
 // =============================================================================
 // 2. フォーム関連
 // =============================================================================
+
+// エントリー情報（記録作成時）
+export interface EntryInfo {
+  styleId: number
+  styleName: string
+  entryTime?: number | null
+}
 
 // 練習セット
 export interface PracticeSet {
@@ -164,7 +190,7 @@ export interface CalendarProps {
   onAddPracticeLog?: (practiceId: string) => void
   onEditPracticeLog?: (log: any) => void
   onDeletePracticeLog?: (logId: string) => void
-  onAddRecord?: (competitionId: string) => void
+  onAddRecord?: (params: { competitionId?: string; entryData?: EntryInfo }) => void
   onEditRecord?: (record: any) => void
   onDeleteRecord?: (recordId: string) => void
   selectedDate?: Date | null
@@ -187,7 +213,7 @@ export interface DayDetailModalProps {
   onAddPracticeLog?: (practiceId: string) => void
   onEditPracticeLog?: (log: any) => void
   onDeletePracticeLog?: (logId: string) => void
-  onAddRecord?: (competitionId: string) => void
+  onAddRecord?: (params: { competitionId?: string; entryData?: EntryInfo }) => void
   onEditRecord?: (record: any) => void
   onDeleteRecord?: (recordId: string) => void
 }

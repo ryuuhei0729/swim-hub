@@ -3,6 +3,7 @@
 // =============================================================================
 
 export * from './dashboard'
+export * from './entries'
 export * from './practices'
 export * from './records'
 export * from './styles'

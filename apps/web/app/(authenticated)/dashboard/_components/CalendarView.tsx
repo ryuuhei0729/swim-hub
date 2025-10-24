@@ -136,6 +136,8 @@ export default function CalendarView({
         return 'bg-purple-100 text-purple-800 border-purple-200'
       case 'team_competition':
         return 'bg-violet-100 text-violet-800 border-violet-200'
+      case 'entry':
+        return 'bg-orange-100 text-orange-800 border-orange-200'
       case 'record':
         return 'bg-blue-100 text-blue-800 border-blue-200'
       default:
@@ -149,14 +151,19 @@ export default function CalendarView({
     const hasPractice = entries.some(e => e.type === 'practice' || e.type === 'team_practice' || e.type === 'practice_log')
     const hasRecord = entries.some(e => e.type === 'record')
     const hasCompetition = entries.some(e => e.type === 'competition' || e.type === 'team_competition')
+    const hasEntry = entries.some(e => e.type === 'entry')
     
-    if (hasPractice && (hasRecord || hasCompetition)) {
+    if (hasPractice && (hasRecord || hasCompetition || hasEntry)) {
       return (
         <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-gradient-to-r from-green-400 to-blue-400 border border-white shadow-sm"></div>
       )
     } else if (hasPractice) {
       return (
         <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-green-400 border border-white shadow-sm"></div>
+      )
+    } else if (hasEntry) {
+      return (
+        <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-orange-400 border border-white shadow-sm"></div>
       )
     } else if (hasRecord || hasCompetition) {
       return (

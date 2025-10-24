@@ -234,6 +234,22 @@ export interface UpdateTeamAnnouncementInput {
   publishedAt?: string | null
 }
 
+// 大会エントリー（個人・チーム共通）
+export interface Entry {
+  id: string
+  team_id: string | null // NULL = 個人エントリー
+  competition_id: string
+  user_id: string
+  style_id: number
+  entry_time: number | null // エントリータイム（秒）
+  note: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type EntryInsert = Omit<Entry, 'id' | 'created_at' | 'updated_at'>
+export type EntryUpdate = Partial<Omit<EntryInsert, 'competition_id' | 'user_id'>>
+
 // =============================================================================
 // 2. リレーション付き型定義（JOIN結果）
 // =============================================================================
@@ -253,6 +269,14 @@ export interface RecordWithDetails extends Record {
   competition: Competition | null
   style: Style
   split_times: SplitTime[]
+}
+
+// エントリー with 大会・種目・ユーザー
+export interface EntryWithDetails extends Entry {
+  competition: Competition
+  style: Style
+  user: UserProfile
+  team?: Team | null
 }
 
 // チーム with メンバー
@@ -290,6 +314,7 @@ export type CalendarItemType =
   | 'practice_log'      // 練習ログ
   | 'competition'       // 個人大会
   | 'team_competition'  // チーム大会
+  | 'entry'             // 大会エントリー（記録未登録）
   | 'record'            // 大会記録
 
 // チームロール
@@ -321,6 +346,7 @@ export const CALENDAR_ITEM_TYPES = [
   'practice_log',      // 練習ログ
   'competition',       // 個人大会
   'team_competition',  // チーム大会
+  'entry',             // 大会エントリー（記録未登録）
   'record'            // 大会記録
 ] as const
 
