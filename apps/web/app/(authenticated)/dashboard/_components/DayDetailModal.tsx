@@ -1,13 +1,15 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { XMarkIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, PencilIcon, TrashIcon, ClipboardDocumentCheckIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
 import { createClient } from '@/lib/supabase'
 import { CalendarItemType, DayDetailModalProps, CalendarItem } from '@/types'
 import type { Record, Practice, PracticeLog, PracticeTime, PoolType } from '@apps/shared/types/database'
+import { AttendanceAPI } from '@swim-hub/shared'
+import Link from 'next/link'
 
 export default function DayDetailModal({
   isOpen,
@@ -25,6 +27,11 @@ export default function DayDetailModal({
   onDeleteRecord
 }: DayDetailModalProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<{id: string, type: CalendarItemType} | null>(null)
+  const [showAttendanceModal, setShowAttendanceModal] = useState<{
+    eventId: string
+    eventType: 'practice' | 'competition'
+    teamId: string
+  } | null>(null)
 
   if (!isOpen) return null
 
@@ -116,11 +123,22 @@ export default function DayDetailModal({
                       practiceId={item.id} 
                       location={item.location}
                       isTeamPractice={item.type === 'team_practice'}
+                      teamId={item.metadata?.team_id}
                       onEdit={() => onEditItem?.(item)}
                       onDelete={() => setShowDeleteConfirm({id: item.id, type: item.type})}
                       onAddPracticeLog={onAddPracticeLog}
                       onEditPracticeLog={onEditPracticeLog}
                       onDeletePracticeLog={onDeletePracticeLog}
+                      onShowAttendance={item.type === 'team_practice' && item.metadata?.team_id ? () => {
+                        const teamId = item.metadata?.team_id
+                        if (teamId) {
+                          setShowAttendanceModal({
+                            eventId: item.id,
+                            eventType: 'practice',
+                            teamId
+                          })
+                        }
+                      } : undefined}
                     />
                   ))}
                 </div>
@@ -150,6 +168,7 @@ export default function DayDetailModal({
                       poolType={item.metadata?.competition?.pool_type}
                       note={item.note}
                       isTeamCompetition={item.type === 'team_competition'}
+                      teamId={item.metadata?.team_id}
                       onEdit={() => {
                         onEditItem?.(item)
                         onClose()
@@ -159,6 +178,16 @@ export default function DayDetailModal({
                       onEditRecord={onEditRecord}
                       onDeleteRecord={onDeleteRecord}
                       onClose={onClose}
+                      onShowAttendance={item.type === 'team_competition' && item.metadata?.team_id ? () => {
+                        const teamId = item.metadata?.team_id
+                        if (teamId) {
+                          setShowAttendanceModal({
+                            eventId: item.id,
+                            eventType: 'competition',
+                            teamId
+                          })
+                        }
+                      } : undefined}
                     />
                   ))}
                   
@@ -327,6 +356,213 @@ export default function DayDetailModal({
           </div>
         </div>
       )}
+
+      {/* 出欠情報モーダル */}
+      {showAttendanceModal && (
+        <AttendanceModal
+          isOpen={true}
+          onClose={() => setShowAttendanceModal(null)}
+          eventId={showAttendanceModal.eventId}
+          eventType={showAttendanceModal.eventType}
+          teamId={showAttendanceModal.teamId}
+        />
+      )}
+    </div>
+  )
+}
+
+// 出欠アイコンボタン
+function AttendanceButton({ 
+  onClick
+}: { 
+  onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition-colors text-sm"
+      title="出欠状況を確認"
+    >
+      <ClipboardDocumentCheckIcon className="h-4 w-4" />
+      <span>出欠状況</span>
+    </button>
+  )
+}
+
+// 出欠情報モーダル
+function AttendanceModal({ 
+  isOpen,
+  onClose,
+  eventId, 
+  eventType,
+  teamId 
+}: { 
+  isOpen: boolean
+  onClose: () => void
+  eventId: string
+  eventType: 'practice' | 'competition'
+  teamId: string
+}) {
+  const [attendances, setAttendances] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const supabase = createClient()
+  const attendanceAPI = new AttendanceAPI(supabase)
+
+  useEffect(() => {
+    if (isOpen) {
+      loadAttendances()
+    }
+  }, [isOpen, eventId])
+
+  const loadAttendances = async () => {
+    try {
+      setLoading(true)
+      const data = eventType === 'practice'
+        ? await attendanceAPI.getAttendanceByPractice(eventId)
+        : await attendanceAPI.getAttendanceByCompetition(eventId)
+      setAttendances(data)
+    } catch (err) {
+      console.error('出欠情報の取得に失敗:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!isOpen) return null
+
+  const stats = {
+    present: attendances.filter(a => a.status === 'present').length,
+    absent: attendances.filter(a => a.status === 'absent').length,
+    other: attendances.filter(a => a.status === 'other').length,
+    pending: attendances.filter(a => a.status === null).length,
+    total: attendances.length
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] overflow-y-auto">
+      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div 
+          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+          onClick={onClose}
+        ></div>
+
+        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+          {/* ヘッダー */}
+          <div className="bg-blue-50 px-4 pt-5 pb-4 sm:p-6 border-b border-blue-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ClipboardDocumentCheckIcon className="h-6 w-6 text-blue-600" />
+                <h3 className="text-lg leading-6 font-medium text-gray-900">
+                  出欠状況
+                </h3>
+              </div>
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+          </div>
+
+          {/* コンテンツ */}
+          <div className="bg-white px-4 pt-5 pb-4 sm:p-6">
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                <p className="mt-2 text-gray-500">読み込み中...</p>
+              </div>
+            ) : (
+              <>
+                {/* 統計サマリー */}
+                <div className="grid grid-cols-4 gap-3 mb-6">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-green-700">{stats.present}</div>
+                    <div className="text-xs text-green-600 mt-1">出席</div>
+                  </div>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-red-700">{stats.absent}</div>
+                    <div className="text-xs text-red-600 mt-1">欠席</div>
+                  </div>
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-yellow-700">{stats.other}</div>
+                    <div className="text-xs text-yellow-600 mt-1">その他</div>
+                  </div>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-gray-700">{stats.pending}</div>
+                    <div className="text-xs text-gray-600 mt-1">未回答</div>
+                  </div>
+                </div>
+
+                {/* 詳細リスト */}
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">名前</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ステータス</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">備考</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {attendances.map((attendance) => (
+                        <tr key={attendance.id}>
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                            {attendance.user?.name || '不明'}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {attendance.status === 'present' && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                出席
+                              </span>
+                            )}
+                            {attendance.status === 'absent' && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                欠席
+                              </span>
+                            )}
+                            {attendance.status === 'other' && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                その他
+                              </span>
+                            )}
+                            {!attendance.status && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                未回答
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600">
+                            {attendance.note || '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* フッター */}
+          <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse gap-3">
+            <Link
+              href={`/teams/${teamId}?tab=attendance`}
+              className="w-full inline-flex justify-center items-center gap-2 rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:w-auto sm:text-sm"
+            >
+              <ClipboardDocumentCheckIcon className="h-4 w-4" />
+              出欠を変更する
+            </Link>
+            <button
+              type="button"
+              className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
+              onClick={onClose}
+            >
+              閉じる
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -340,7 +576,9 @@ function PracticeDetails({
   onAddPracticeLog,
   onEditPracticeLog,
   onDeletePracticeLog,
-  isTeamPractice = false
+  isTeamPractice = false,
+  teamId,
+  onShowAttendance
 }: { 
   practiceId: string
   location?: string
@@ -350,6 +588,8 @@ function PracticeDetails({
   onEditPracticeLog?: (log: PracticeLog) => void
   onDeletePracticeLog?: (logId: string) => void
   isTeamPractice?: boolean
+  teamId?: string | null
+  onShowAttendance?: () => void
 }) {
   const [practice, setPractice] = useState<Practice | null>(null)
   const [loading, setLoading] = useState(true)
@@ -473,6 +713,9 @@ function PracticeDetails({
               }`}>
                 🏊‍♂️ {isTeamPractice ? 'チーム練習記録' : '練習記録'}
               </span>
+              {isTeamPractice && teamId && onShowAttendance && (
+                <AttendanceButton onClick={onShowAttendance} />
+              )}
             </div>
             {location && (
               <p className="text-sm text-gray-700 mb-2 flex items-center gap-1">
@@ -793,7 +1036,9 @@ function CompetitionDetails({
   onEditRecord,
   onDeleteRecord,
   onClose,
-  isTeamCompetition = false
+  isTeamCompetition = false,
+  teamId,
+  onShowAttendance
 }: {
   competitionId: string
   competitionName?: string
@@ -808,6 +1053,8 @@ function CompetitionDetails({
   onDeleteRecord?: (recordId: string) => void
   onClose?: () => void
   isTeamCompetition?: boolean
+  teamId?: string | null
+  onShowAttendance?: () => void
 }) {
   const _getPoolTypeText = (poolType: number) => {
     return poolType === 1 ? '長水路(50m)' : '短水路(25m)'
@@ -829,6 +1076,9 @@ function CompetitionDetails({
                 🏆 {competitionName}
                 {isTeamCompetition && <span className="ml-2 text-sm">(チーム大会)</span>}
               </span>
+              {isTeamCompetition && teamId && onShowAttendance && (
+                <AttendanceButton onClick={onShowAttendance} />
+              )}
             </div>
             {location && (
               <p className="text-sm text-gray-700 mb-2 flex items-center gap-1">

@@ -40,6 +40,8 @@ export interface Practice {
   date: string
   place: string | null
   note: string | null
+  team_id?: string | null
+  attendance_status?: AttendanceStatusType | null // 出欠提出ステータス
   created_at: string
   updated_at: string
   // CalendarItemとの互換性のための追加プロパティ
@@ -121,6 +123,7 @@ export interface Competition {
   place: string | null
   pool_type: number // 0: 短水路, 1: 長水路
   entry_status?: 'before' | 'open' | 'closed' // エントリーステータス（デフォルト: before）
+  attendance_status?: AttendanceStatusType | null // 出欠提出ステータス
   note: string | null
   created_at: string
   updated_at: string
@@ -236,6 +239,24 @@ export interface UpdateTeamAnnouncementInput {
   publishedAt?: string | null
 }
 
+// 出欠管理
+export type AttendanceStatus = 'present' | 'absent' | 'other'
+export type AttendanceStatusType = 'before' | 'open' | 'closed'
+
+export interface TeamAttendance {
+  id: string
+  practice_id: string | null
+  competition_id: string | null
+  user_id: string
+  status: AttendanceStatus | null // null = 未回答
+  note: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type TeamAttendanceInsert = Omit<TeamAttendance, 'id' | 'created_at' | 'updated_at'>
+export type TeamAttendanceUpdate = Partial<Omit<TeamAttendanceInsert, 'user_id'>>
+
 // 大会エントリー（個人・チーム共通）
 export interface Entry {
   id: string
@@ -292,6 +313,15 @@ export interface TeamWithMembers extends Team {
 export interface TeamMembershipWithUser extends TeamMembership {
   users: UserProfile
   teams: Team
+}
+
+// 出欠管理 with ユーザー・練習・大会（JOINでteam_idを取得）
+export interface TeamAttendanceWithDetails extends TeamAttendance {
+  user: UserProfile
+  practice?: Practice | null
+  competition?: Competition | null
+  // JOINで取得したteam_id
+  team_id?: string | null
 }
 
 // =============================================================================

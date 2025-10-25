@@ -6,10 +6,11 @@ import {
   UsersIcon, 
   ClockIcon, 
   TrophyIcon, 
-  CogIcon 
+  CogIcon,
+  ClipboardDocumentCheckIcon
 } from '@heroicons/react/24/outline'
 
-export type TeamTabType = 'announcements' | 'members' | 'practices' | 'competitions' | 'settings'
+export type TeamTabType = 'announcements' | 'members' | 'practices' | 'competitions' | 'attendance' | 'settings'
 
 export interface TeamTab {
   id: TeamTabType
@@ -43,6 +44,11 @@ const tabs: TeamTab[] = [
     id: 'competitions',
     name: '大会',
     icon: TrophyIcon
+  },
+  {
+    id: 'attendance',
+    name: '出欠',
+    icon: ClipboardDocumentCheckIcon
   },
   {
     id: 'settings',
