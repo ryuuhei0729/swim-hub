@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase'
 import { useAuth } from '@/contexts'
 import { 
   TeamAnnouncements,
+  TeamEntrySection,
   TeamStatsCards,
   TeamTabs,
   TeamMembers,
@@ -250,6 +251,9 @@ export default function TeamDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* エントリーフォームセクション */}
+      <TeamEntrySection teamId={teamId} isAdmin={isAdmin} />
 
       {/* 統計カード */}
       <TeamStatsCards stats={teamStats} isLoading={loading} />

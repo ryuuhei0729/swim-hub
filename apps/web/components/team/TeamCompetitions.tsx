@@ -11,6 +11,7 @@ import {
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import TeamCompetitionForm from './TeamCompetitionForm'
+import TeamCompetitionEntryModal from './TeamCompetitionEntryModal'
 
 export interface TeamCompetition {
   id: string
@@ -19,6 +20,7 @@ export interface TeamCompetition {
   title: string
   date: string
   place: string | null
+  entry_status?: 'before' | 'open' | 'closed'
   note: string | null
   created_at: string
   created_by: string | null
@@ -57,6 +59,8 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showCompetitionForm, setShowCompetitionForm] = useState(false)
+  const [selectedCompetition, setSelectedCompetition] = useState<TeamCompetition | null>(null)
+  const [showEntryModal, setShowEntryModal] = useState(false)
 
   // チームの大会一覧を取得（関数として抽出）
   const loadTeamCompetitions = useCallback(async () => {
@@ -74,6 +78,7 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
           title,
           date,
           place,
+          entry_status,
           note,
           created_at,
           created_by,
@@ -188,15 +193,31 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
         {competitions.map((competition) => (
           <div 
             key={competition.id}
-            className="border border-gray-200 rounded-lg p-4 transition-colors duration-200 hover:bg-gray-50"
+            className="border border-gray-200 rounded-lg p-4 transition-colors duration-200 hover:bg-gray-50 cursor-pointer"
+            onClick={() => {
+              setSelectedCompetition(competition)
+              setShowEntryModal(true)
+            }}
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <div className="flex items-center space-x-2 mb-2">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <TrophyIcon className="h-5 w-5 text-blue-500" />
                   <span className="text-lg font-medium text-gray-900">
                     {competition.title}
                   </span>
+                  {/* エントリーステータスバッジ */}
+                  {competition.entry_status && (
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                      competition.entry_status === 'open' ? 'bg-green-100 text-green-800' :
+                      competition.entry_status === 'closed' ? 'bg-red-100 text-red-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {competition.entry_status === 'open' ? '受付中' :
+                       competition.entry_status === 'closed' ? '受付終了' :
+                       '受付前'}
+                    </span>
+                  )}
                 </div>
                 
                 <div className="flex items-center space-x-2 mb-1">
@@ -275,6 +296,22 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
         teamId={teamId}
         onSuccess={handleCompetitionCreated}
       />
+
+      {/* エントリー管理モーダル */}
+      {showEntryModal && selectedCompetition && (
+        <TeamCompetitionEntryModal
+          isOpen={showEntryModal}
+          onClose={() => {
+            setShowEntryModal(false)
+            setSelectedCompetition(null)
+            // モーダルを閉じた後、リストを再読み込み（ステータス変更が反映されるように）
+            loadTeamCompetitions()
+          }}
+          competitionId={selectedCompetition.id}
+          competitionTitle={selectedCompetition.title}
+          teamId={teamId}
+        />
+      )}
     </>
   )
 }

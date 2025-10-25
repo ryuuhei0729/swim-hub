@@ -36,7 +36,15 @@ export default function PracticeTimeModal({
             *,
             practice_logs (
               *,
-              practice_times (*)
+              practice_times (*),
+              practice_log_tags (
+                practice_tag_id,
+                practice_tags (
+                  id,
+                  name,
+                  color
+                )
+              )
             )
           `)
           .eq('id', practiceId)

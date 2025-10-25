@@ -115,10 +115,12 @@ export type PracticeTagUpdate = Partial<Omit<PracticeTagInsert, 'user_id'>>
 export interface Competition {
   id: string
   user_id: string | null
+  team_id?: string | null
   title: string
   date: string
   place: string | null
   pool_type: number // 0: 短水路, 1: 長水路
+  entry_status?: 'before' | 'open' | 'closed' // エントリーステータス（デフォルト: before）
   note: string | null
   created_at: string
   updated_at: string
