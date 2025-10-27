@@ -7,7 +7,6 @@ import { useAuth } from '@/contexts'
 import { 
   TeamAnnouncements,
   TeamEntrySection,
-  TeamStatsCards,
   TeamTabs,
   TeamMembers,
   TeamMemberManagement,
@@ -252,12 +251,7 @@ export default function TeamDetailPage() {
       }
     }
   }, [])
-  const [teamStats, setTeamStats] = useState({
-    memberCount: 0,
-    practiceCount: 0,
-    recordCount: 0,
-    lastActivity: null
-  })
+
   const [selectedMember, setSelectedMember] = useState<any>(null)
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false)
   const { user } = useAuth()
@@ -293,9 +287,6 @@ export default function TeamDetailPage() {
 
         setTeam(teamData)
         setMembership(membershipData)
-
-        // チーム統計情報を取得
-        await loadTeamStats(teamId)
       } catch (error) {
         console.error('チーム情報の取得に失敗:', error)
       } finally {
@@ -305,71 +296,6 @@ export default function TeamDetailPage() {
 
     loadTeam()
   }, [user, teamId])
-
-  // チーム統計情報を取得
-  const loadTeamStats = async (teamId: string) => {
-    try {
-      // メンバー数取得
-      const { count: memberCount } = await supabase
-        .from('team_memberships')
-        .select('*', { count: 'exact', head: true })
-        .eq('team_id', teamId)
-        .eq('is_active', true)
-
-      // チームメンバーのID一覧を取得
-      const { data: members } = await supabase
-        .from('team_memberships')
-        .select('user_id')
-        .eq('team_id', teamId)
-        .eq('is_active', true)
-
-      const userIds = members?.map((m: any) => m.user_id) || []
-
-      // 練習記録数（チームメンバー全体）
-      const { count: practiceCount } = await supabase
-        .from('practices')
-        .select('*', { count: 'exact', head: true })
-        .in('user_id', userIds)
-
-      // 大会記録数（チームメンバー全体）
-      const { count: recordCount } = await supabase
-        .from('records')
-        .select('*', { count: 'exact', head: true })
-        .in('user_id', userIds)
-
-      // 最新の活動日を取得（練習記録と大会記録から）
-      const [practices, records] = await Promise.all([
-        supabase
-          .from('practices')
-          .select('date')
-          .in('user_id', userIds)
-          .order('date', { ascending: false })
-          .limit(1),
-        supabase
-          .from('records')
-          .select('created_at')
-          .in('user_id', userIds)
-          .order('created_at', { ascending: false })
-          .limit(1)
-      ])
-
-      const lastPracticeDate = (practices.data as any)?.[0]?.date
-      const lastRecordDate = (records.data as any)?.[0]?.created_at?.split('T')[0]
-      
-      const lastActivity = lastPracticeDate && lastRecordDate 
-        ? new Date(Math.max(new Date(lastPracticeDate).getTime(), new Date(lastRecordDate).getTime())).toISOString().split('T')[0]
-        : lastPracticeDate || lastRecordDate
-
-      setTeamStats({
-        memberCount: memberCount || 0,
-        practiceCount: practiceCount || 0,
-        recordCount: recordCount || 0,
-        lastActivity
-      })
-    } catch (error) {
-      console.error('チーム統計情報の取得に失敗:', error)
-    }
-  }
 
   if (loading) {
     return (
@@ -483,9 +409,6 @@ export default function TeamDetailPage() {
 
       {/* エントリーフォームセクション */}
       <TeamEntrySection teamId={teamId} isAdmin={isAdmin} />
-
-      {/* 統計カード */}
-      <TeamStatsCards stats={teamStats} isLoading={loading} />
 
       {/* タブナビゲーション */}
       <TeamTabs 
