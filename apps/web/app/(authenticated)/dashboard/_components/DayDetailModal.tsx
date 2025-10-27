@@ -36,10 +36,10 @@ export default function DayDetailModal({
   if (!isOpen) return null
 
   const practiceItems = entries.filter(e => e.type === 'practice' || e.type === 'team_practice')
+  const practiceLogItems = entries.filter(e => e.type === 'practice_log')
   const recordItems = entries.filter(e => e.type === 'record')
   const competitionItems = entries.filter(e => e.type === 'competition' || e.type === 'team_competition')
   const entryItems = entries.filter(e => e.type === 'entry')
-
   const handleDeleteConfirm = async () => {
     if (showDeleteConfirm) {
       await onDeleteItem?.(showDeleteConfirm.id, showDeleteConfirm.type)
@@ -105,18 +105,14 @@ export default function DayDetailModal({
             )}
 
             {/* 練習記録セクション */}
-            {practiceItems.length > 0 && (
+            {(practiceItems.length > 0 || practiceLogItems.length > 0) && (
               <div className="mb-6">
                 <h4 className="text-md font-semibold text-green-700 mb-3 flex items-center">
                   <span className="mr-2">💪</span>
                   練習記録
-                  {practiceItems.some(e => e.type === 'team_practice') && (
-                    <span className="ml-2 text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">
-                      チーム練習含む
-                    </span>
-                  )}
                 </h4>
                 <div className="space-y-3">
+                  {/* 練習（practice_logがない場合のみ） */}
                   {practiceItems.map((item) => (
                     <PracticeDetails 
                       key={item.id} 
@@ -124,6 +120,7 @@ export default function DayDetailModal({
                       location={item.location}
                       isTeamPractice={item.type === 'team_practice'}
                       teamId={item.metadata?.team_id}
+                      teamName={(item.metadata as any)?.team?.name}
                       onEdit={() => onEditItem?.(item)}
                       onDelete={() => setShowDeleteConfirm({id: item.id, type: item.type})}
                       onAddPracticeLog={onAddPracticeLog}
@@ -141,6 +138,53 @@ export default function DayDetailModal({
                       } : undefined}
                     />
                   ))}
+                  
+                  {/* 練習ログ（practice情報からログを取得して表示） */}
+                  {practiceLogItems.map((item) => {
+                    const practiceId = (item.metadata as any)?.practice?.id || (item.metadata as any)?.practice_id
+                    if (!practiceId) return null
+                    
+                    return (
+                      <PracticeDetails 
+                        key={item.id}
+                        practiceId={practiceId}
+                        location={item.location}
+                        isTeamPractice={!!(item.metadata as any)?.team_id}
+                        teamId={(item.metadata as any)?.team_id}
+                        teamName={(item.metadata as any)?.team?.name}
+                        onEdit={() => {
+                          // practiceの編集
+                          const practiceData = {
+                            id: practiceId,
+                            type: 'practice' as const,
+                            date: item.date || '',
+                            title: '練習',
+                            location: item.location || '',
+                            note: item.note || undefined,
+                            metadata: (item.metadata as any)?.practice || {}
+                          }
+                          onEditItem?.(practiceData)
+                        }}
+                        onDelete={() => {
+                          // practiceの削除
+                          setShowDeleteConfirm({id: practiceId, type: 'practice' as const})
+                        }}
+                        onAddPracticeLog={onAddPracticeLog}
+                        onEditPracticeLog={onEditPracticeLog}
+                        onDeletePracticeLog={onDeletePracticeLog}
+                        onShowAttendance={(item.metadata as any)?.team_id ? () => {
+                          const teamId = (item.metadata as any)?.team_id
+                          if (teamId) {
+                            setShowAttendanceModal({
+                              eventId: practiceId,
+                              eventType: 'practice',
+                              teamId
+                            })
+                          }
+                        } : undefined}
+                      />
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -151,11 +195,6 @@ export default function DayDetailModal({
                 <h4 className="text-md font-semibold text-blue-700 mb-3 flex items-center">
                   <span className="mr-2">🏆</span>
                   大会
-                  {competitionItems.some(e => e.type === 'team_competition') && (
-                    <span className="ml-2 text-xs bg-violet-100 text-violet-700 px-2 py-1 rounded-full">
-                      チーム大会含む
-                    </span>
-                  )}
                 </h4>
                 <div className="space-y-3">
                   {/* パターン1: Competitionのみ（エントリーなし、記録なし） */}
@@ -169,6 +208,7 @@ export default function DayDetailModal({
                       note={item.note}
                       isTeamCompetition={item.type === 'team_competition'}
                       teamId={item.metadata?.team_id}
+                      teamName={(item.metadata as any)?.team?.name}
                       onEdit={() => {
                         onEditItem?.(item)
                         onClose()
@@ -205,72 +245,165 @@ export default function DayDetailModal({
                       entryTime={item.metadata?.entry_time}
                       isTeamCompetition={!!item.metadata?.team_id}
                       onAddRecord={onAddRecord}
-                      onDeleteEntry={() => setShowDeleteConfirm({id: item.id, type: item.type})}
+                      onEditCompetition={() => {
+                        // 大会情報を編集
+                        const competitionData = {
+                          id: item.metadata?.competition?.id || '',
+                          type: 'competition' as const,
+                          date: item.date || '',
+                          title: item.metadata?.competition?.title || '',
+                          location: item.location || '',
+                          note: item.note || undefined,
+                          metadata: {
+                            competition: {
+                              id: item.metadata?.competition?.id || '',
+                              title: item.metadata?.competition?.title || '',
+                              place: item.location || '',
+                              pool_type: item.metadata?.competition?.pool_type || 0
+                            }
+                          }
+                        }
+                        onEditItem?.(competitionData)
+                      }}
+                      onDeleteCompetition={() => setShowDeleteConfirm({id: item.metadata?.competition?.id || '', type: 'competition'})}
+                      onEditEntry={async () => {
+                        // エントリー編集処理
+                        const supabase = createClient()
+                        const { data: { user } } = await supabase.auth.getUser()
+                        if (!user) return
+
+                        // エントリーデータを取得
+                        const { data: entryData, error } = await supabase
+                          .from('entries')
+                          .select(`
+                            *,
+                            style:styles!inner(id, name_jp),
+                            competition:competitions!inner(id, title, date, place, pool_type, team_id)
+                          `)
+                          .eq('competition_id', item.metadata?.competition?.id || '')
+                          .eq('user_id', user.id)
+                          .limit(1)
+                          .single()
+
+                        if (error || !entryData) {
+                          console.error('エントリー取得エラー:', error)
+                          return
+                        }
+
+                        const data = entryData as any
+
+                        // EntryLogFormを開くために、parentに編集用データを渡す
+                        const editData = {
+                          id: data.id,
+                          type: 'entry' as const, // typeフィールドを追加
+                          date: data.competition.date, // EntryLogFormで必要なdateフィールド
+                          competition_id: data.competition_id,
+                          style_id: data.style_id,
+                          entry_time: data.entry_time,
+                          note: data.note || '', // メモを追加
+                          style: {
+                            id: data.style.id,
+                            name_jp: data.style.name_jp
+                          },
+                          competition: {
+                            id: data.competition.id,
+                            title: data.competition.title,
+                            date: data.competition.date,
+                            place: data.competition.place,
+                            pool_type: data.competition.pool_type,
+                            team_id: data.competition.team_id
+                          }
+                        }
+                        
+                        console.log('CompetitionWithEntry: onEditEntry called', { editData })
+                        
+                        // onEditItemに渡す（EntryLogFormが開かれる）
+                        onEditItem?.(editData as any)
+                        // EntryLogFormを開いた後、モーダルは開いたまま
+                      }}
+                      onDeleteEntry={async () => {
+                        // エントリー削除処理
+                        const supabase = createClient()
+                        const { data: { user } } = await supabase.auth.getUser()
+                        if (!user) return
+
+                        // エントリーデータを取得してエントリーIDを特定
+                        const { data: entryData, error } = await supabase
+                          .from('entries')
+                          .select('id')
+                          .eq('competition_id', item.metadata?.competition?.id || '')
+                          .eq('user_id', user.id)
+                          .limit(1)
+                          .single()
+
+                        if (error || !entryData) {
+                          console.error('エントリー取得エラー:', error)
+                          return
+                        }
+
+                        // エントリーIDを使って削除確認
+                        const data = entryData as any
+                        setShowDeleteConfirm({id: data.id, type: 'entry'})
+                      }}
                       onClose={onClose}
                     />
                   ))}
                   
-                  {/* パターン3: Recordがある大会をグルーピングして表示 */}
-                  {(() => {
-                    const competitionMap = new Map<string, CalendarItem[]>()
-                    recordItems.forEach(record => {
-                      // metadata.competition.id または metadata.record.competition_id を取得
-                      const compId = record.metadata?.competition?.id || record.metadata?.record?.competition_id
-                      
-                      if (!compId) {
-                        console.warn('Record without competition_id:', record)
-                        return
-                      }
-                      if (!competitionMap.has(compId)) {
-                        competitionMap.set(compId, [])
-                      }
-                      competitionMap.get(compId)!.push(record)
-                    })
+                  {/* パターン3: Recordがある大会を表示 */}
+                  {recordItems.map((record) => {
+                    const compId = record.metadata?.competition?.id || record.id
+                    const poolType = record.metadata?.pool_type || 0
                     
-                    return Array.from(competitionMap.entries()).map(([compId, records]) => {
-                      const firstRecord = records[0]
-                      const poolType = firstRecord.metadata?.pool_type || 0
-                      
-                      return (
-                        <CompetitionDetails
-                          key={compId}
-                          competitionId={compId}
-                          competitionName={firstRecord.title}
-                          location={firstRecord.location}
-                          poolType={poolType}
-                          note={firstRecord.note || undefined}
-                          records={records}
-                          isTeamCompetition={firstRecord.metadata?.competition?.team_id != null}
-                          onEdit={() => {
-                            // Competition編集: 最初のRecordからCompetition情報を取得
-                            const competitionData = {
-                              id: compId,
-                              type: 'competition' as const,
-                              date: firstRecord.date || '',
-                              title: firstRecord.title || '',
-                              location: firstRecord.location || '',
-                              note: firstRecord.note || undefined,
-                              metadata: {
-                                competition: {
-                                  id: compId,
-                                  title: firstRecord.title || '',
-                                  place: firstRecord.location || '',
-                                  pool_type: poolType
-                                }
+                    return (
+                      <CompetitionDetails
+                        key={compId}
+                        competitionId={compId}
+                        competitionName={record.title}
+                        location={record.location}
+                        poolType={poolType}
+                        note={record.note || undefined}
+                        records={[record]}
+                        isTeamCompetition={record.metadata?.competition?.team_id != null}
+                        teamId={record.metadata?.competition?.team_id}
+                        teamName={record.metadata?.competition?.team_id ? ((record.metadata as any)?.team?.name) : undefined}
+                        onEdit={() => {
+                          const competitionData = {
+                            id: compId,
+                            type: 'competition' as const,
+                            date: record.date || '',
+                            title: record.title || '',
+                            location: record.location || '',
+                            note: record.note || undefined,
+                            metadata: {
+                              competition: {
+                                id: compId,
+                                title: record.title || '',
+                                place: record.location || '',
+                                pool_type: poolType
                               }
                             }
-                            onEditItem?.(competitionData)
-                            onClose()
-                          }}
-                          onDelete={() => setShowDeleteConfirm({id: compId, type: 'competition'})}
-                          onAddRecord={onAddRecord}
-                          onEditRecord={onEditRecord}
-                          onDeleteRecord={onDeleteRecord}
-                          onClose={onClose}
-                        />
-                      )
-                    })
-                  })()}
+                          }
+                          onEditItem?.(competitionData)
+                          // 編集フォームを開いた後、モーダルは開いたまま
+                        }}
+                        onDelete={() => setShowDeleteConfirm({id: compId, type: 'competition'})}
+                        onAddRecord={onAddRecord}
+                        onEditRecord={onEditRecord}
+                        onDeleteRecord={onDeleteRecord}
+                        onClose={onClose}
+                        onShowAttendance={record.metadata?.competition?.team_id ? () => {
+                          const teamId = record.metadata?.competition?.team_id
+                          if (teamId) {
+                            setShowAttendanceModal({
+                              eventId: compId,
+                              eventType: 'competition',
+                              teamId
+                            })
+                          }
+                        } : undefined}
+                      />
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -578,6 +711,7 @@ function PracticeDetails({
   onDeletePracticeLog,
   isTeamPractice = false,
   teamId,
+  teamName,
   onShowAttendance
 }: { 
   practiceId: string
@@ -589,6 +723,7 @@ function PracticeDetails({
   onDeletePracticeLog?: (logId: string) => void
   isTeamPractice?: boolean
   teamId?: string | null
+  teamName?: string
   onShowAttendance?: () => void
 }) {
   const [practice, setPractice] = useState<Practice | null>(null)
@@ -701,7 +836,7 @@ function PracticeDetails({
   return (
     <div className="mt-3">
       {/* Practice全体の枠 */}
-      <div className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-xl p-3">
+      <div className="bg-green-50 rounded-xl p-3">
         {/* Practice全体のヘッダー */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
@@ -711,7 +846,8 @@ function PracticeDetails({
                   ? 'text-emerald-800 bg-emerald-200' 
                   : 'text-green-800 bg-green-200'
               }`}>
-                🏊‍♂️ {isTeamPractice ? 'チーム練習記録' : '練習記録'}
+                🏊‍♂️ 練習記録
+                {isTeamPractice && teamName && <span className="ml-2 text-sm">({teamName})</span>}
               </span>
               {isTeamPractice && teamId && onShowAttendance && (
                 <AttendanceButton onClick={onShowAttendance} />
@@ -766,7 +902,7 @@ function PracticeDetails({
         const allTimes = log.times || []
         
             return (
-              <div key={log.id} className="bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 border-0 rounded-lg p-4">
+              <div key={log.id} className="bg-green-50 rounded-lg p-4">
                 {/* 練習メニューのヘッダー */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
@@ -827,7 +963,7 @@ function PracticeDetails({
                 </div>
             
                 {/* 練習内容: 距離 × 本数 × セット数 サークル 泳法 */}
-                <div className="bg-white rounded-lg p-3 mb-3 border border-green-200">
+                <div className="bg-white rounded-lg p-3 mb-3 border border-green-300">
                   <div className="text-xs font-medium text-gray-500 mb-1">練習内容</div>
                     <div className="text-sm text-gray-800">
                       <span className="text-lg font-semibold text-green-700">{log.distance}</span>m ×
@@ -863,10 +999,10 @@ function PracticeDetails({
                   <div className="w-1 h-4 bg-green-500 rounded-full"></div>
                   <p className="text-sm font-medium text-green-700">タイム</p>
                 </div>
-                <div className="bg-white rounded-lg p-3 border border-green-200 overflow-x-auto">
+                <div className="bg-white rounded-lg p-3 border border-green-300 overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-green-200">
+                      <tr className="border-b border-green-300">
                         <th className="text-left py-2 px-2 font-medium text-green-800"></th>
                         {Array.from({ length: log.setCount }, (_, setIndex) => (
                           <th key={setIndex + 1} className="text-center py-2 px-2 font-medium text-green-800">
@@ -1038,6 +1174,7 @@ function CompetitionDetails({
   onClose,
   isTeamCompetition = false,
   teamId,
+  teamName,
   onShowAttendance
 }: {
   competitionId: string
@@ -1054,8 +1191,63 @@ function CompetitionDetails({
   onClose?: () => void
   isTeamCompetition?: boolean
   teamId?: string | null
+  teamName?: string
   onShowAttendance?: () => void
 }) {
+  const [actualRecords, setActualRecords] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [hasLoaded, setHasLoaded] = useState(false)
+  const supabase = createClient()
+
+  useEffect(() => {
+    // すでにロード済みの場合はスキップ
+    if (hasLoaded) return
+
+    const loadRecords = async () => {
+      try {
+        setLoading(true)
+        const { data, error } = await supabase
+          .from('records')
+          .select(`
+            *,
+            style:styles(*),
+            competition:competitions(*),
+            split_times(*)
+          `)
+          .eq('competition_id', competitionId)
+
+        if (error) throw error
+
+        // calendar_view形式に変換
+        const formattedRecords = (data || []).map((record: any) => ({
+          id: record.id,
+          type: 'record' as const,
+          date: record.competition?.date || '',
+          title: record.competition?.title || '',
+          location: record.competition?.place || '',
+          note: record.note || undefined,
+          metadata: {
+            record: record,
+            competition: record.competition,
+            style: record.style,
+            pool_type: record.competition?.pool_type || 0
+          }
+        }))
+
+        setActualRecords(formattedRecords)
+        setHasLoaded(true)
+      } catch (err) {
+        console.error('記録の取得エラー:', err)
+        setActualRecords([])
+        setHasLoaded(true)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadRecords()
+  }, [competitionId, supabase, hasLoaded])
+
   const _getPoolTypeText = (poolType: number) => {
     return poolType === 1 ? '長水路(50m)' : '短水路(25m)'
   }
@@ -1063,7 +1255,7 @@ function CompetitionDetails({
   return (
     <div className="mt-3">
       {/* Competition全体の枠 */}
-      <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl p-3">
+      <div className="bg-blue-50 rounded-xl p-3">
         {/* Competition全体のヘッダー */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
@@ -1074,7 +1266,7 @@ function CompetitionDetails({
                   : 'text-blue-800 bg-blue-200'
               }`}>
                 🏆 {competitionName}
-                {isTeamCompetition && <span className="ml-2 text-sm">(チーム大会)</span>}
+                {isTeamCompetition && teamName && <span className="ml-2 text-sm">({teamName})</span>}
               </span>
               {isTeamCompetition && teamId && onShowAttendance && (
                 <AttendanceButton onClick={onShowAttendance} />
@@ -1118,8 +1310,18 @@ function CompetitionDetails({
 
         {/* Recordsのコンテナ */}
         <div className="space-y-3">
+          {/* Loading状態 */}
+          {loading && (
+            <div className="bg-white border-2 border-dashed border-blue-300 rounded-lg p-6 text-center">
+              <div className="text-gray-500">
+                <span className="text-2xl">⏳</span>
+                <p className="text-sm mt-2">記録を読み込み中...</p>
+              </div>
+            </div>
+          )}
+
           {/* Recordsがない場合 */}
-          {records.length === 0 && (
+          {!loading && actualRecords.length === 0 && (
             <div className="bg-white border-2 border-dashed border-blue-300 rounded-lg p-6 text-center">
               <div className="text-gray-500 mb-4">
                 <span className="text-2xl">🏊‍♂️</span>
@@ -1139,9 +1341,9 @@ function CompetitionDetails({
           )}
 
           {/* Recordsがある場合の表示 */}
-          {records.map((record: any, index: number) => {
+          {!loading && actualRecords.map((record: any, index: number) => {
             return (
-              <div key={record.id} className="bg-gradient-to-br from-cyan-50 via-blue-50 to-indigo-50 border-0 rounded-lg p-4">
+              <div key={record.id} className="bg-blue-50 rounded-lg p-4">
                 {/* 記録のヘッダー */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
@@ -1201,18 +1403,18 @@ function CompetitionDetails({
                 </div>
 
                 {/* 記録内容 */}
-                <div className="bg-white rounded-lg p-3 mb-3 border border-blue-200">
+                <div className="bg-white rounded-lg p-3 mb-3 border border-blue-300">
                   <div className="text-xs font-medium text-gray-500 mb-1">種目</div>
                   <div className="text-sm text-gray-800 mb-3">
-                    <span className="text-base font-semibold text-blue-700">{record.metadata?.style?.name_jp || record.title}</span>
-                    {(record.metadata?.is_relaying) && <span className="font-bold text-red-600 ml-2">R</span>}
+                    <span className="text-base font-semibold text-blue-700">{record.metadata?.style?.name_jp || record.metadata?.record?.style?.name_jp || record.title}</span>
+                    {(record.metadata?.record?.is_relaying || record.metadata?.is_relaying) && <span className="font-bold text-red-600 ml-2">R</span>}
                   </div>
                   
-                  {(record.metadata?.time) && (
+                  {(record.metadata?.record?.time || record.metadata?.time) && (
                     <>
                       <div className="text-xs font-medium text-gray-500 mb-1">タイム</div>
                       <div className="text-2xl font-bold text-blue-700 mb-3">
-                        ⏱️ {formatTime(record.metadata.time)}
+                        ⏱️ {formatTime(record.metadata?.record?.time || record.metadata?.time)}
                       </div>
                     </>
                   )}
@@ -1266,6 +1468,9 @@ function CompetitionWithEntry({
   entryTime,
   isTeamCompetition = false,
   onAddRecord,
+  onEditCompetition,
+  onDeleteCompetition,
+  onEditEntry,
   onDeleteEntry,
   onClose
 }: {
@@ -1279,9 +1484,60 @@ function CompetitionWithEntry({
   entryTime?: number | null
   isTeamCompetition?: boolean
   onAddRecord?: (params: { competitionId?: string; entryData?: any }) => void
+  onEditCompetition?: () => void
+  onDeleteCompetition?: () => void
+  onEditEntry?: () => void
   onDeleteEntry?: () => void
   onClose?: () => void
 }) {
+  const [actualStyleId, setActualStyleId] = useState<number | undefined>(styleId)
+  const [actualStyleName, setActualStyleName] = useState<string>(styleName)
+  const [actualEntryTime, setActualEntryTime] = useState<number | null | undefined>(entryTime)
+  const [loading, setLoading] = useState(!styleId || !styleName)
+
+  // styleIdやstyleNameが欠けている場合、データベースから取得
+  useEffect(() => {
+    if (!styleId || !styleName) {
+      const fetchEntryData = async () => {
+        try {
+          const supabase = createClient()
+          const { data: { user } } = await supabase.auth.getUser()
+          if (!user) return
+
+          // competitionIdから最初のエントリーを取得
+          const { data: entryData, error } = await supabase
+            .from('entries')
+            .select(`
+              id,
+              style_id,
+              entry_time,
+              note,
+              style:styles!inner(id, name_jp)
+            `)
+            .eq('competition_id', competitionId)
+            .eq('user_id', user.id)
+            .limit(1)
+            .single()
+
+          if (error) throw error
+
+          if (entryData) {
+            const data = entryData as any
+            const style = data.style
+            setActualStyleId(data.style_id)
+            setActualStyleName(style?.name_jp || '')
+            setActualEntryTime(data.entry_time)
+            setLoading(false)
+          }
+        } catch (err) {
+          console.error('エントリーデータの取得エラー:', err)
+          setLoading(false)
+        }
+      }
+
+      fetchEntryData()
+    }
+  }, [competitionId, styleId, styleName])
   return (
     <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
       {/* 大会情報ヘッダー */}
@@ -1295,13 +1551,26 @@ function CompetitionWithEntry({
               </span>
             )}
           </div>
-          <button
-            onClick={onDeleteEntry}
-            className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
-            title="エントリーを削除"
-          >
-            <TrashIcon className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {onEditCompetition && (
+              <button
+                onClick={onEditCompetition}
+                className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                title="大会を編集"
+              >
+                <PencilIcon className="h-5 w-5" />
+              </button>
+            )}
+            {onDeleteCompetition && (
+              <button
+                onClick={onDeleteCompetition}
+                className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                title="大会を削除"
+              >
+                <TrashIcon className="h-5 w-5" />
+              </button>
+            )}
+          </div>
         </div>
         {location && (
           <p className="text-sm text-gray-600 mt-1">📍 {location}</p>
@@ -1311,19 +1580,39 @@ function CompetitionWithEntry({
       {/* エントリー情報ボックス */}
       <div className="p-4">
         <div className="bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 border border-orange-200 rounded-lg p-4 mb-3">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-lg">📝</span>
-            <h6 className="text-sm font-semibold text-orange-900">エントリー済み（記録未登録）</h6>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">📝</span>
+              <h6 className="text-sm font-semibold text-orange-900">エントリー済み（記録未登録）</h6>
+            </div>
+            <div className="flex items-center gap-1">
+              {onEditEntry && (
+                <button
+                  onClick={onEditEntry}
+                  className="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                  title="エントリーを編集"
+                >
+                  <PencilIcon className="h-4 w-4" />
+                </button>
+              )}
+              <button
+                onClick={onDeleteEntry}
+                className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
+                title="エントリーを削除"
+              >
+                <TrashIcon className="h-4 w-4" />
+              </button>
+            </div>
           </div>
           <div className="space-y-2 text-sm">
             <div className="flex items-baseline gap-2">
               <span className="font-semibold text-orange-900 min-w-[80px]">種目:</span>
-              <span className="text-gray-900 font-medium">{styleName}</span>
+              <span className="text-gray-900 font-medium">{loading ? '読み込み中...' : actualStyleName}</span>
             </div>
-            {entryTime && entryTime > 0 && (
+            {actualEntryTime && actualEntryTime > 0 && (
               <div className="flex items-baseline gap-2">
                 <span className="font-semibold text-orange-900 min-w-[80px]">エントリータイム:</span>
-                <span className="text-gray-900 font-mono font-semibold">{formatTime(entryTime)}</span>
+                <span className="text-gray-900 font-mono font-semibold">{formatTime(actualEntryTime)}</span>
               </div>
             )}
           </div>
@@ -1340,18 +1629,30 @@ function CompetitionWithEntry({
         {/* 記録追加ボタン */}
         <button
           onClick={() => {
-            if (styleId && styleName) {
-              onAddRecord?.({
-                competitionId,
-                entryData: {
-                  styleId,
-                  styleName,
-                  entryTime
-                }
-              })
-              onClose?.()
-            }
+            // エントリー済みの場合は必ずentryDataを渡す
+            // actualStyleId/actualStyleNameを使用（データ取得後）
+            // エントリータイムは別物なので渡さない
+            const entryDataToPass = (actualStyleId && actualStyleName) ? {
+              styleId: actualStyleId,
+              styleName: actualStyleName
+            } : undefined
+            
+            console.log('CompetitionWithEntry: ボタンクリック', {
+              competitionId,
+              entryData: entryDataToPass,
+              hasStyleId: !!actualStyleId,
+              styleId: actualStyleId,
+              hasStyleName: !!actualStyleName,
+              styleName: actualStyleName
+            })
+            
+            onAddRecord?.({
+              competitionId,
+              entryData: entryDataToPass
+            })
+            onClose?.()
           }}
+          disabled={loading}
           className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm font-medium"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">

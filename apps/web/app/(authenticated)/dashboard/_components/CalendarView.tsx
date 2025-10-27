@@ -127,19 +127,18 @@ export default function CalendarView({
   const getItemColor = (type: CalendarItemType) => {
     switch (type) {
       case 'practice':
-        return 'bg-green-100 text-green-800 border-green-200'
       case 'team_practice':
-        return 'bg-emerald-100 text-emerald-800 border-emerald-200'
       case 'practice_log':
-        return 'bg-lime-100 text-lime-800 border-lime-200'
+        // 練習系: 全て緑色
+        return 'bg-green-100 text-green-800 border-green-200'
       case 'competition':
-        return 'bg-purple-100 text-purple-800 border-purple-200'
       case 'team_competition':
-        return 'bg-violet-100 text-violet-800 border-violet-200'
       case 'entry':
-        return 'bg-orange-100 text-orange-800 border-orange-200'
-      case 'record':
+        // 大会系: 全て青色
         return 'bg-blue-100 text-blue-800 border-blue-200'
+      case 'record':
+        // 記録: 青色（枠線は濃い青色）
+        return 'bg-blue-100 text-blue-800 border-blue-400'
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200'
     }

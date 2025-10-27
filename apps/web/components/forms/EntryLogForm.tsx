@@ -21,6 +21,7 @@ interface EntryLogFormProps {
   competitionId: string
   isLoading?: boolean
   styles?: Array<{ id: string; nameJp: string; distance: number }>
+  editData?: any // 編集用の既存データ
 }
 
 export default function EntryLogForm({
@@ -30,7 +31,8 @@ export default function EntryLogForm({
   onSkip,
   competitionId,
   isLoading = false,
-  styles = []
+  styles = [],
+  editData
 }: EntryLogFormProps) {
   const [entries, setEntries] = useState<EntryData[]>([
     {
@@ -41,19 +43,32 @@ export default function EntryLogForm({
     }
   ])
 
-  // モーダルが開かれたときにリセット
+  // モーダルが開かれたときにリセットまたは編集データを設定
   useEffect(() => {
     if (isOpen) {
-      setEntries([
-        {
-          id: '1',
-          styleId: styles[0]?.id || '',
-          entryTime: 0,
-          note: ''
+      if (editData) {
+        // 編集モード: 既存の値をセット
+        const entryData: EntryData = {
+          id: editData.id || '1',
+          styleId: String(editData.style_id || editData.styleId || styles[0]?.id || ''),
+          entryTime: editData.entry_time || 0,
+          entryTimeDisplayValue: editData.entry_time ? formatTime(editData.entry_time) : '',
+          note: editData.note || ''
         }
-      ])
+        setEntries([entryData])
+      } else {
+        // 新規作成モード
+        setEntries([
+          {
+            id: '1',
+            styleId: styles[0]?.id || '',
+            entryTime: 0,
+            note: ''
+          }
+        ])
+      }
     }
-  }, [isOpen, styles])
+  }, [isOpen, styles, editData])
 
   if (!isOpen) return null
 

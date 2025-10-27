@@ -90,8 +90,13 @@ export default function RecordLogForm({
         })
       } else {
         // 新規作成モード
+        // entryDataがある場合は、それを使って初期化（エントリー済みの種目を反映）
+        const defaultStyleId = entryData?.styleId 
+          ? String(entryData.styleId) 
+          : (styles[0]?.id ? String(styles[0].id) : '')
+        
         setFormData({
-          styleId: entryData?.styleId?.toString() || styles[0]?.id?.toString() || '',
+          styleId: defaultStyleId,
           time: 0,
           timeDisplayValue: '',
           isRelaying: false,

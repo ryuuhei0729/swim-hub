@@ -427,37 +427,50 @@ export default function DashboardPage() {
   const handleEntrySubmit = async (entriesData: any[]) => {
     setIsLoading(true)
     try {
-      if (!createdCompetitionId) {
+      // 編集モードの場合はeditingDataからcompetition_idを取得
+      const competitionId = createdCompetitionId || editingData?.competition_id
+      
+      if (!competitionId) {
         throw new Error('Competition ID が見つかりません')
       }
 
       const entryAPI = new EntryAPI(supabase)
       const createdEntriesList = []
 
-      // 各エントリーを作成
+      // 各エントリーを作成または更新
       for (const entryData of entriesData) {
-        // 既存エントリーをチェック
-        const existingEntry = await entryAPI.checkExistingEntry(
-          createdCompetitionId,
-          user?.id || '',
-          parseInt(entryData.styleId)
-        )
-
+        // 編集モードでentryDataにidがある場合は更新、そうでなければチェックしてから作成/更新
         let entry
-        if (existingEntry) {
-          // 既存エントリーがある場合は更新
-          entry = await entryAPI.updateEntry(existingEntry.id, {
+        if (entryData.id && editingData?.type === 'entry') {
+          // 編集モード: 既存エントリーを更新
+          entry = await entryAPI.updateEntry(entryData.id, {
+            style_id: parseInt(entryData.styleId), // 種目も更新
             entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
             note: entryData.note || null
           })
         } else {
-          // 新規作成
-          entry = await entryAPI.createPersonalEntry({
-            competition_id: createdCompetitionId,
-            style_id: parseInt(entryData.styleId),
-            entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
-            note: entryData.note || null
-          })
+          // 新規作成または既存チェック後作成/更新
+          const existingEntry = await entryAPI.checkExistingEntry(
+            competitionId,
+            user?.id || '',
+            parseInt(entryData.styleId)
+          )
+
+          if (existingEntry) {
+            // 既存エントリーがある場合は更新
+            entry = await entryAPI.updateEntry(existingEntry.id, {
+              entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
+              note: entryData.note || null
+            })
+          } else {
+            // 新規作成
+            entry = await entryAPI.createPersonalEntry({
+              competition_id: competitionId,
+              style_id: parseInt(entryData.styleId),
+              entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
+              note: entryData.note || null
+            })
+          }
         }
         
         // スタイル情報を追加（Record作成時に使用）
@@ -473,12 +486,20 @@ export default function DashboardPage() {
       // エントリーフォームを閉じる
       setIsEntryLogFormOpen(false)
       
-      // 最初のエントリー情報を使ってRecord作成フォームを開く
-      if (createdEntriesList.length > 0) {
-        setIsRecordLogFormOpen(true)
+      // 編集モードの場合は、Record作成フォームは開かない（モーダルを閉じる）
+      if (editingData?.type === 'entry') {
+        setEditingData(null)
+        setCreatedCompetitionId(null)
+        setCreatedEntries([])
+        setCalendarRefreshKey(prev => prev + 1) // カレンダーを更新
+        alert('エントリーを更新しました')
+      } else {
+        // 新規作成モード: 最初のエントリー情報を使ってRecord作成フォームを開く
+        if (createdEntriesList.length > 0) {
+          setIsRecordLogFormOpen(true)
+        }
+        alert(createdEntriesList.length === 1 ? 'エントリーを登録しました' : `${createdEntriesList.length}件のエントリーを登録しました`)
       }
-
-      alert(createdEntriesList.length === 1 ? 'エントリーを登録しました' : `${createdEntriesList.length}件のエントリーを登録しました`)
     } catch (error) {
       console.error('エントリーの登録に失敗しました:', error)
       alert('エントリーの登録に失敗しました。')
@@ -643,6 +664,9 @@ export default function DashboardPage() {
               // PracticeLog編集モーダルを開く
               setEditingData(item)
               setIsPracticeLogFormOpen(true)
+            } else if (item.type === 'entry') {
+              // Entry編集モーダルを開く
+              setIsEntryLogFormOpen(true)
             } else if (item.type === 'record') {
               // Record編集モーダルを開く
               // 大会情報も一緒に編集データに含める
@@ -688,14 +712,23 @@ export default function DashboardPage() {
           }}
           onAddRecord={(params) => {
             const { competitionId, entryData } = params
+            
+            console.log('dashboard/page.tsx: onAddRecord called', {
+              competitionId,
+              hasEntryData: !!entryData,
+              entryData
+            })
+            
             setCreatedCompetitionId(competitionId || null)
             
             if (entryData) {
               // エントリーデータがある場合は直接Record作成フォームを開く
+              console.log('Opening RecordLogForm with entryData')
               setEditingData({ entryData })
               setIsRecordLogFormOpen(true)
             } else {
               // エントリーデータがない場合はEntry作成フォームを開く
+              console.log('Opening EntryLogForm (no entryData)')
               setEditingData(null)
               setIsEntryLogFormOpen(true)
             }
@@ -799,12 +832,14 @@ export default function DashboardPage() {
             setSelectedDate(null)
             setCreatedCompetitionId(null)
             setCreatedEntries([])
+            setEditingData(null)
           }}
           onSubmit={handleEntrySubmit}
           onSkip={handleEntrySkip}
-          competitionId={createdCompetitionId || ''}
+          competitionId={createdCompetitionId || editingData?.competition_id || ''}
           isLoading={isLoading}
           styles={styles.map(s => ({ id: s.id.toString(), nameJp: s.name_jp, distance: s.distance }))}
+          editData={editingData?.type === 'entry' ? editingData : undefined}
         />
 
         {/* 第3段階: 記録登録フォーム */}
