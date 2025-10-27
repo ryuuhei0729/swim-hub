@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import type { ComponentType, SVGProps } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { useAuth } from '@/contexts'
@@ -118,8 +119,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         {/* モバイル用ヘッダー */}
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 lg:hidden">
           <div className="flex items-center">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mr-3">
-              <span className="text-white font-bold text-sm">🏊</span>
+            <div className="w-8 h-8 flex items-center justify-center mr-1">
+              <Image src="/favicon.png" alt="SwimHub" width={32} height={32} className="w-full h-full object-contain" />
             </div>
             <span className="text-lg font-semibold text-gray-900">メニュー</span>
           </div>

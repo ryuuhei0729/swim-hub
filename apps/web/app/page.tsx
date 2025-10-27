@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useAuth } from '@/contexts'
 import { FullScreenLoading } from '@/components/ui/LoadingSpinner'
 import { 
@@ -95,8 +96,8 @@ export default function Home() {
           <div className="text-center">
             {/* ロゴ */}
             <div className="flex justify-center mb-8">
-              <div className="w-20 h-20 bg-gradient-to-br from-swim-500 to-swim-600 rounded-2xl flex items-center justify-center shadow-swim">
-                <span className="text-white font-bold text-3xl">🏊</span>
+              <div className="w-20 h-20 flex items-center justify-center">
+                <Image src="/favicon.png" alt="SwimHub" width={80} height={80} className="w-full h-full object-contain" />
               </div>
             </div>
             
@@ -255,8 +256,8 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <div className="flex justify-center mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-swim-500 to-swim-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">🏊</span>
+              <div className="w-12 h-12 flex items-center justify-center mr-1">
+                <Image src="/favicon.png" alt="SwimHub" width={48} height={48} className="w-full h-full object-contain" />
               </div>
             </div>
             <h3 className="text-xl font-semibold mb-4">

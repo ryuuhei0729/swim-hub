@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { HomeIcon, ArrowLeftIcon } from '@heroicons/react/24/outline'
 
 export default function NotFound() {
@@ -9,8 +10,8 @@ export default function NotFound() {
       <div className="max-w-md w-full space-y-8 text-center">
         {/* ロゴ */}
         <div className="flex justify-center">
-          <div className="w-20 h-20 bg-gradient-to-br from-swim-500 to-swim-600 rounded-2xl flex items-center justify-center shadow-swim">
-            <span className="text-white font-bold text-3xl">🏊</span>
+          <div className="w-20 h-20 flex items-center justify-center mr-1">
+            <Image src="/favicon.png" alt="SwimHub" width={80} height={80} className="w-full h-full object-contain" />
           </div>
         </div>
 
