@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { useAuth } from '@/contexts'
 import { UsersIcon } from '@heroicons/react/24/outline'
@@ -12,7 +11,6 @@ export default function TeamsPage() {
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
   const supabase = createClient()
-  const router = useRouter()
 
   const loadTeams = async () => {
     if (!user) return
@@ -46,13 +44,6 @@ export default function TeamsPage() {
   useEffect(() => {
     loadTeams()
   }, [user])
-
-  // チームが1つだけの場合はそのチームページに自動遷移
-  useEffect(() => {
-    if (!loading && teams.length === 1) {
-      router.push(`/teams/${teams[0].team_id}`)
-    }
-  }, [loading, teams, router])
 
   if (loading) {
     return (

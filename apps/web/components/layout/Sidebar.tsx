@@ -68,9 +68,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname()
   const { user } = useAuth()
   const [hasAdminTeams, setHasAdminTeams] = useState(false)
+  const [singleTeamId, setSingleTeamId] = useState<string | null>(null)
   const supabase = createClient()
   
-  // ユーザーのチーム一覧を取得して管理者権限をチェック
+  // ユーザーのチーム一覧を取得して管理者権限とチーム数をチェック
   useEffect(() => {
     const loadTeams = async () => {
       if (!user) return
@@ -78,16 +79,24 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       try {
         const { data, error } = await supabase
           .from('team_memberships')
-          .select('role, is_active')
+          .select('team_id, role, is_active')
           .eq('user_id', user.id)
+          .eq('is_active', true)
         
         if (error) throw error
         
         const hasAdmin = data?.some((membership: any) => 
-          membership.role === 'ADMIN' && membership.is_active
+          membership.role === 'ADMIN'
         ) || false
         
         setHasAdminTeams(hasAdmin)
+        
+        // チームが1つだけの場合はIDを保存
+        if (data?.length === 1) {
+          setSingleTeamId((data[0] as any).team_id)
+        } else {
+          setSingleTeamId(null)
+        }
       } catch (error) {
         console.error('チーム情報の取得に失敗:', error)
       }
@@ -140,13 +149,19 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           <div className="space-y-2">
             {filteredNavigation.map((item) => {
               const isActive = pathname === item.href
+              // チーム管理の場合は、チームが1つだけの場合は直接チームページへ
+              const href = (item.name === 'チーム管理' && singleTeamId) 
+                ? `/teams/${singleTeamId}` 
+                : item.href
+              const isActiveTeam = (item.name === 'チーム管理' && singleTeamId && pathname.startsWith('/teams/'))
+              
               return (
                 <div key={item.name} className="group">
                   <Link
-                    href={item.href}
+                    href={href}
                     className={`
                       group flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 relative
-                      ${isActive
+                      ${isActive || isActiveTeam
                         ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 shadow-sm border-l-4 border-blue-500'
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50 hover:shadow-sm'
                       }

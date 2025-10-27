@@ -599,6 +599,20 @@ export class TeamAPI {
   }
 
   /**
+   * チームの総メンバー数を取得
+   */
+  async getTotalMemberCount(teamId: string): Promise<number> {
+    const { data, error } = await this.supabase
+      .from('team_memberships')
+      .select('id')
+      .eq('team_id', teamId)
+      .eq('is_active', true)
+
+    if (error) throw error
+    return data.length
+  }
+
+  /**
    * チーム大会を作成
    */
   async createTeamCompetition(teamId: string, competitionData: {
