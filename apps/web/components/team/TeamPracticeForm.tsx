@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { useAuth } from '@/contexts/AuthProvider'
 import { TeamAPI } from '@apps/shared/api/teams'
-import { BaseModal } from '@/components/ui'
+import { Button, Input } from '@/components/ui'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 
 interface TeamPracticeFormProps {
@@ -79,109 +79,115 @@ export default function TeamPracticeForm({
     }
   }
 
-  return (
-    <BaseModal isOpen={isOpen} onClose={handleClose} size="md">
-      <div className="w-full max-w-md mx-auto p-6">
-        {/* ヘッダー */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">
-            チーム練習記録追加
-          </h2>
-          <button
-            onClick={handleClose}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            disabled={loading}
-          >
-            <XMarkIcon className="h-6 w-6" />
-          </button>
-        </div>
+  if (!isOpen) return null
 
-        {/* エラー表示 */}
-        {error && (
-          <div className="mb-4 rounded-md bg-red-50 p-4">
-            <div className="flex">
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">
-                  エラーが発生しました
-                </h3>
-                <div className="mt-2 text-sm text-red-700">
-                  <p>{error}</p>
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div
+          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+          onClick={handleClose}
+        />
+
+        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+          {/* ヘッダー */}
+          <div className="bg-white px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg leading-6 font-medium text-gray-900">
+                チーム練習記録を追加
+              </h3>
+              <button
+                type="button"
+                onClick={handleClose}
+                className="text-gray-400 hover:text-gray-600"
+                disabled={loading}
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+            <p className="mt-2 text-sm text-gray-600">
+              チームの練習記録を作成します
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            {/* エラー表示 */}
+            {error && (
+              <div className="rounded-md bg-red-50 p-4">
+                <div className="flex">
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-red-800">
+                      エラーが発生しました
+                    </h3>
+                    <div className="mt-2 text-sm text-red-700">
+                      <p>{error}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
+            )}
+
+            {/* 練習日 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                練習日 <span className="text-red-500">*</span>
+              </label>
+              <Input
+                type="date"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                required
+              />
             </div>
-          </div>
-        )}
 
-        {/* フォーム */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* 日付 */}
-          <div>
-            <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-2">
-              日付 <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="date"
-              id="date"
-              value={formData.date}
-              onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              required
-              disabled={loading}
-            />
-          </div>
+            {/* 練習場所 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                練習場所
+              </label>
+              <Input
+                type="text"
+                value={formData.place}
+                onChange={(e) => setFormData({ ...formData, place: e.target.value })}
+                placeholder="例: 市営プール、学校プール"
+              />
+            </div>
 
-          {/* 場所 */}
-          <div>
-            <label htmlFor="place" className="block text-sm font-medium text-gray-700 mb-2">
-              場所
-            </label>
-            <input
-              type="text"
-              id="place"
-              value={formData.place}
-              onChange={(e) => setFormData(prev => ({ ...prev, place: e.target.value }))}
-              placeholder="例: 市民プール"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              disabled={loading}
-            />
-          </div>
+            {/* メモ */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                メモ
+              </label>
+              <textarea
+                value={formData.note}
+                onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="練習内容や感想など"
+              />
+            </div>
 
-          {/* メモ */}
-          <div>
-            <label htmlFor="note" className="block text-sm font-medium text-gray-700 mb-2">
-              メモ
-            </label>
-            <textarea
-              id="note"
-              value={formData.note}
-              onChange={(e) => setFormData(prev => ({ ...prev, note: e.target.value }))}
-              placeholder="練習内容や感想など"
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              disabled={loading}
-            />
-          </div>
-
-          {/* ボタン */}
-          <div className="flex justify-end space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={handleClose}
-              disabled={loading}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              キャンセル
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? '作成中...' : '作成'}
-            </button>
-          </div>
-        </form>
+            {/* ボタン */}
+            <div className="flex justify-end gap-3 pt-6 border-t">
+              <Button
+                type="button"
+                onClick={handleClose}
+                variant="secondary"
+                disabled={loading}
+              >
+                キャンセル
+              </Button>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {loading ? '作成中...' : '作成'}
+              </Button>
+            </div>
+          </form>
+        </div>
       </div>
-    </BaseModal>
+    </div>
   )
 }
