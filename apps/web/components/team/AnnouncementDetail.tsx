@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useTeamAnnouncements, useDeleteTeamAnnouncement } from '@apps/shared/hooks'
 import { createClient } from '@/lib/supabase'
 import type { TeamAnnouncement } from '@/types'
@@ -17,7 +18,7 @@ export const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({
   onClose,
   onEdit
 }) => {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { announcements, loading, error } = useTeamAnnouncements(supabase, '')
   const announcement = announcements.find(a => a.id === announcementId)
   const { remove, loading: deleteLoading } = useDeleteTeamAnnouncement(supabase)

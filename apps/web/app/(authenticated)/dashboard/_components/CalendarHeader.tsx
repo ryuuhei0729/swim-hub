@@ -32,7 +32,7 @@ export default function CalendarHeader({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
         <div className="flex items-center space-x-2">
           <h2 className="hidden sm:block text-xl font-semibold text-gray-900">
-            練習・記録カレンダー
+            カレンダー
           </h2>
           {isLoading && <LoadingSpinner size="sm" />}
         </div>

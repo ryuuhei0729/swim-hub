@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { XMarkIcon, TrashIcon, SwatchIcon } from '@heroicons/react/24/outline'
 import { Button, Input } from '@/components/ui'
 
@@ -16,21 +16,49 @@ interface TagManagementModalProps {
   onDeleteTag: (id: string) => Promise<void>
 }
 
-// プリセットカラー
+// パステルカラー（固定10種類）
 const PRESET_COLORS = [
-  '#3B82F6', // Blue
-  '#EF4444', // Red
-  '#10B981', // Green
-  '#F59E0B', // Yellow
-  '#8B5CF6', // Purple
-  '#EC4899', // Pink
-  '#06B6D4', // Cyan
-  '#84CC16', // Lime
-  '#F97316', // Orange
-  '#6B7280', // Gray
-  '#14B8A6', // Teal
-  '#A855F7', // Violet
+  '#93C5FD', // 青
+  '#7DD3FC', // 水色
+  '#86EFAC', // 緑
+  '#A3E635', // 黄緑
+  '#FCA5A5', // 赤
+  '#F9A8D4', // ピンク
+  '#FDBA74', // オレンジ
+  '#FDE047', // 黄色
+  '#C4B5FD', // 紫
+  '#D1D5DB', // グレー
 ]
+
+// カラー正規化関数
+const normalizeColor = (color: string): string => {
+  if (!color) return '#D1D5DB' // デフォルト色
+  
+  // 先頭の#を追加（ない場合）
+  let normalized = color.startsWith('#') ? color : `#${color}`
+  
+  // 小文字に変換
+  normalized = normalized.toLowerCase()
+  
+  // 3桁のHEXを6桁に変換（例: #fff → #ffffff）
+  if (normalized.length === 4) {
+    normalized = `#${normalized[1]}${normalized[1]}${normalized[2]}${normalized[2]}${normalized[3]}${normalized[3]}`
+  }
+  
+  // 有効なHEXカラーかチェック
+  const hexPattern = /^#[0-9a-f]{6}$/
+  if (!hexPattern.test(normalized)) {
+    return '#D1D5DB' // 無効な場合はデフォルト色
+  }
+  
+  return normalized
+}
+
+// カラー検証関数
+const isValidColor = (color: string): boolean => {
+  const normalized = normalizeColor(color)
+  return normalized !== '#D1D5DB' || color === '#D1D5DB'
+}
 
 export default function TagManagementModal({
   isOpen,
@@ -40,10 +68,23 @@ export default function TagManagementModal({
   onDeleteTag
 }: TagManagementModalProps) {
   const [tagName, setTagName] = useState(tag.name)
-  const [selectedColor, setSelectedColor] = useState(tag.color)
+  const [selectedColor, setSelectedColor] = useState(() => normalizeColor(tag.color))
   const [isUpdating, setIsUpdating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  // カラーオプション（プリセット + カスタムカラー）
+  const colorOptions = useMemo(() => {
+    const normalizedTagColor = normalizeColor(tag.color)
+    const options = [...PRESET_COLORS]
+    
+    // タグのカラーがプリセットにない場合、追加
+    if (!PRESET_COLORS.includes(normalizedTagColor) && isValidColor(tag.color)) {
+      options.unshift(normalizedTagColor)
+    }
+    
+    return options
+  }, [tag.color])
 
   if (!isOpen) return null
 
@@ -53,9 +94,16 @@ export default function TagManagementModal({
       return
     }
 
+    // カラーを正規化して検証
+    const normalizedColor = normalizeColor(selectedColor)
+    if (!isValidColor(selectedColor)) {
+      alert('無効なカラー形式です。有効なHEXカラーを選択してください。')
+      return
+    }
+
     try {
       setIsUpdating(true)
-      await onUpdateTag(tag.id, tagName.trim(), selectedColor)
+      await onUpdateTag(tag.id, tagName.trim(), normalizedColor)
       onClose()
     } catch (error) {
       console.error('タグ更新エラー:', error)
@@ -125,37 +173,26 @@ export default function TagManagementModal({
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 色
               </label>
-              <div className="grid grid-cols-6 gap-2">
-                {PRESET_COLORS.map(color => (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => setSelectedColor(color)}
-                    className={`w-8 h-8 rounded-full border-2 transition-all ${
-                      selectedColor === color
-                        ? 'border-gray-800 scale-110'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                    style={{ backgroundColor: color }}
-                    title={color}
-                  />
-                ))}
-              </div>
-              
-              {/* カスタムカラー */}
-              <div className="mt-2">
-                <label className="block text-xs text-gray-500 mb-1">
-                  カスタムカラー
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={selectedColor}
-                    onChange={(e) => setSelectedColor(e.target.value)}
-                    className="w-8 h-8 rounded border border-gray-300 cursor-pointer"
-                  />
-                  <span className="text-xs text-gray-600">{selectedColor}</span>
-                </div>
+              <div className="grid grid-cols-5 gap-2">
+                {colorOptions.map(color => {
+                  const normalizedColor = normalizeColor(color)
+                  const isSelected = normalizeColor(selectedColor) === normalizedColor
+                  
+                  return (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setSelectedColor(normalizedColor)}
+                      className={`w-8 h-8 rounded-full border-2 transition-all ${
+                        isSelected
+                          ? 'border-gray-800 scale-110'
+                          : 'border-gray-300 hover:border-gray-400'
+                      }`}
+                      style={{ backgroundColor: normalizedColor }}
+                      title={normalizedColor}
+                    />
+                  )
+                })}
               </div>
             </div>
 
@@ -166,8 +203,8 @@ export default function TagManagementModal({
               </label>
               <div className="flex items-center gap-2">
                 <span
-                  className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-white"
-                  style={{ backgroundColor: selectedColor }}
+                  className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-black"
+                  style={{ backgroundColor: normalizeColor(selectedColor) }}
                 >
                   {tagName || 'タグ名'}
                 </span>

@@ -40,6 +40,8 @@ export interface Practice {
   date: string
   place: string | null
   note: string | null
+  team_id?: string | null
+  attendance_status?: AttendanceStatusType | null // 出欠提出ステータス
   created_at: string
   updated_at: string
   // CalendarItemとの互換性のための追加プロパティ
@@ -115,10 +117,13 @@ export type PracticeTagUpdate = Partial<Omit<PracticeTagInsert, 'user_id'>>
 export interface Competition {
   id: string
   user_id: string | null
+  team_id?: string | null
   title: string
   date: string
   place: string | null
   pool_type: number // 0: 短水路, 1: 長水路
+  entry_status?: 'before' | 'open' | 'closed' // エントリーステータス（デフォルト: before）
+  attendance_status?: AttendanceStatusType | null // 出欠提出ステータス
   note: string | null
   created_at: string
   updated_at: string
@@ -234,6 +239,40 @@ export interface UpdateTeamAnnouncementInput {
   publishedAt?: string | null
 }
 
+// 出欠管理
+export type AttendanceStatus = 'present' | 'absent' | 'other'
+export type AttendanceStatusType = 'before' | 'open' | 'closed'
+
+export interface TeamAttendance {
+  id: string
+  practice_id: string | null
+  competition_id: string | null
+  user_id: string
+  status: AttendanceStatus | null // null = 未回答
+  note: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type TeamAttendanceInsert = Omit<TeamAttendance, 'id' | 'created_at' | 'updated_at'>
+export type TeamAttendanceUpdate = Partial<Omit<TeamAttendanceInsert, 'user_id'>>
+
+// 大会エントリー（個人・チーム共通）
+export interface Entry {
+  id: string
+  team_id: string | null // NULL = 個人エントリー
+  competition_id: string
+  user_id: string
+  style_id: number
+  entry_time: number | null // エントリータイム（秒）
+  note: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type EntryInsert = Omit<Entry, 'id' | 'created_at' | 'updated_at'>
+export type EntryUpdate = Partial<Omit<EntryInsert, 'competition_id' | 'user_id'>>
+
 // =============================================================================
 // 2. リレーション付き型定義（JOIN結果）
 // =============================================================================
@@ -255,6 +294,14 @@ export interface RecordWithDetails extends Record {
   split_times: SplitTime[]
 }
 
+// エントリー with 大会・種目・ユーザー
+export interface EntryWithDetails extends Entry {
+  competition: Competition
+  style: Style
+  user: UserProfile
+  team?: Team | null
+}
+
 // チーム with メンバー
 export interface TeamWithMembers extends Team {
   team_membershipships: (TeamMembership & {
@@ -266,6 +313,15 @@ export interface TeamWithMembers extends Team {
 export interface TeamMembershipWithUser extends TeamMembership {
   users: UserProfile
   teams: Team
+}
+
+// 出欠管理 with ユーザー・練習・大会（JOINでteam_idを取得）
+export interface TeamAttendanceWithDetails extends TeamAttendance {
+  user: UserProfile
+  practice?: Practice | null
+  competition?: Competition | null
+  // JOINで取得したteam_id
+  team_id?: string | null
 }
 
 // =============================================================================
@@ -290,6 +346,7 @@ export type CalendarItemType =
   | 'practice_log'      // 練習ログ
   | 'competition'       // 個人大会
   | 'team_competition'  // チーム大会
+  | 'entry'             // 大会エントリー（記録未登録）
   | 'record'            // 大会記録
 
 // チームロール
@@ -321,6 +378,7 @@ export const CALENDAR_ITEM_TYPES = [
   'practice_log',      // 練習ログ
   'competition',       // 個人大会
   'team_competition',  // チーム大会
+  'entry',             // 大会エントリー（記録未登録）
   'record'            // 大会記録
 ] as const
 
@@ -360,4 +418,21 @@ export type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>
 
 // Supabase Client型
 export type SupabaseClientType = SupabaseClient
+
+// =============================================================================
+// 7. イベント型定義（チーム関連）
+// =============================================================================
+
+// 練習イベント
+export interface PracticeEvent extends Practice {
+  type: 'practice'
+}
+
+// 大会イベント
+export interface CompetitionEvent extends Competition {
+  type: 'competition'
+}
+
+// チームイベント（ユニオン型）
+export type TeamEvent = PracticeEvent | CompetitionEvent
 

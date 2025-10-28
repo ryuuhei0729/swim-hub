@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { CalendarDaysIcon, ClockIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui'
 import PracticeLogForm from '@/components/forms/PracticeLogForm'
@@ -27,7 +27,7 @@ export default function PracticePage() {
   const [styles, setStyles] = useState<any[]>([])
   const [tags, setTags] = useState<any[]>([])
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   
   // 練習記録を取得
   const {
@@ -43,18 +43,28 @@ export default function PracticePage() {
     refetch
   } = usePractices(supabase, {})
 
-  // practice_logsを平坦化
+  // practice_logsを平坦化し、タグデータを整形
   const practiceLogs = practices.flatMap(practice => 
-    (practice.practice_logs || []).map(log => ({
-      ...log,
-      practice: {
-        id: practice.id,
-        date: practice.date,
-        place: practice.place,
-        note: practice.note
-      },
-      practiceId: practice.id
-    }))
+    (practice.practice_logs || []).map(log => {
+      // タグデータを整形（practice_log_tags -> tags に変換）
+      const tags = (log as any).practice_log_tags?.map((plt: any) => ({
+        id: plt.practice_tags?.id || plt.practice_tag_id,
+        name: plt.practice_tags?.name || '',
+        color: plt.practice_tags?.color || '#9CA3AF'
+      })) || []
+
+      return {
+        ...log,
+        tags, // 整形したタグを追加
+        practice: {
+          id: practice.id,
+          date: practice.date,
+          place: practice.place,
+          note: practice.note
+        },
+        practiceId: practice.id
+      }
+    })
   )
 
   // スタイルデータとタグデータを取得
@@ -163,6 +173,13 @@ export default function PracticePage() {
     setEditingLog(log)
     
     // 編集データを設定
+    // タイムデータをフォームが期待する形式に変換
+    const formattedTimes = (log.practice_times || []).map((time: any) => ({
+      setNumber: time.set_number,
+      repNumber: time.rep_number,
+      time: time.time
+    }))
+
     setEditingData({
       id: log.id,
       practiceId: log.practiceId,
@@ -170,11 +187,11 @@ export default function PracticePage() {
       place: log.practice?.place || '',
       note: log.practice?.note || '',
       style: log.style,
-      repCount: log.reps,
-      setCount: log.set_count || 1,
+      rep_count: log.rep_count,
+      set_count: log.set_count || 1,
       distance: log.distance,
-      circle: log.circle_time,
-      times: log.practice_times || [],
+      circle: log.circle,
+      times: formattedTimes,
       tags: log.tags || []
     })
     
@@ -210,9 +227,10 @@ export default function PracticePage() {
           const logInput = {
             practice_id: editingData.practiceId,
             style: menu.style || 'Fr',
-            reps: menu.reps || 1,
+            rep_count: menu.reps || 1,
+            set_count: menu.sets || 1,
             distance: menu.distance || 100,
-            circle_time: menu.circleTime || null,
+            circle: menu.circleTime || null,
             note: menu.note || ''
           }
           
@@ -237,9 +255,10 @@ export default function PracticePage() {
           const logInput = {
             practice_id: newPractice.id,
             style: menu.style || 'Fr',
-            reps: menu.reps || 1,
+            rep_count: menu.reps || 1,
+            set_count: menu.sets || 1,
             distance: menu.distance || 100,
-            circle_time: menu.circleTime || null,
+            circle: menu.circleTime || null,
             note: menu.note || ''
           }
           
@@ -508,10 +527,10 @@ export default function PracticePage() {
                         {log.practice?.place || '-'}
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {log.distance}m × {log.reps}本
+                        {log.distance}m × {log.rep_count}本 × {log.set_count}セット
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {log.circle_time ? `${Math.floor(log.circle_time / 60)}'${Math.floor(log.circle_time % 60).toString().padStart(2, '0')}"` : '-'}
+                        {log.circle ? `${Math.floor(log.circle / 60)}'${Math.floor(log.circle % 60).toString().padStart(2, '0')}"` : '-'}
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                         {log.style}
@@ -538,7 +557,7 @@ export default function PracticePage() {
                       <td className="px-3 py-3 whitespace-nowrap">
                         {log.practice_times && log.practice_times.length > 0 ? (
                           <div className="text-sm">
-                            {calculateSetAverages(log.practice_times, log.reps, 1).map((avgTime: number, setIndex: number) => (
+                            {calculateSetAverages(log.practice_times, log.rep_count, log.set_count).map((avgTime: number, setIndex: number) => (
                               <div key={setIndex} className="text-gray-900">
                                 {formatTime(avgTime)}
                               </div>
@@ -611,10 +630,10 @@ export default function PracticePage() {
                         
                         <div className="space-y-1">
                           <div className="text-sm font-medium text-gray-900">
-                            {log.distance}m × {log.reps}本
+                            {log.distance}m × {log.rep_count}本 × {log.set_count}セット
                           </div>
                           <div className="text-sm text-gray-600">
-                            {log.circle_time ? `${Math.floor(log.circle_time / 60)}'${Math.floor(log.circle_time % 60).toString().padStart(2, '0')}"` : '-'} {log.style}
+                            {log.circle ? `${Math.floor(log.circle / 60)}'${Math.floor(log.circle % 60).toString().padStart(2, '0')}"` : '-'} {log.style}
                           </div>
                           
                           {log.tags && log.tags.length > 0 && (
@@ -637,8 +656,8 @@ export default function PracticePage() {
                             <div className="mt-2">
                               <div className="text-xs text-gray-500 mb-1">平均タイム:</div>
                               <div className="text-sm">
-                                {calculateSetAverages(log.practice_times, log.reps, 1).map((avgTime: number, setIndex: number) => (
-                                  <span key={setIndex} className="text-gray-900">
+                                {calculateSetAverages(log.practice_times, log.rep_count, log.set_count).map((avgTime: number, setIndex: number) => (
+                                  <span key={setIndex} className="text-gray-900 mr-2">
                                     {formatTime(avgTime)}
                                   </span>
                                 ))}

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react'
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 import { DashboardAPI } from '@apps/shared/api/dashboard'
 import { CalendarItem, MonthlySummary } from '@apps/shared/types/ui'
@@ -26,6 +26,8 @@ const CalendarContext = createContext<CalendarContextType | undefined>(undefined
 
 export function CalendarProvider({ children }: { children: React.ReactNode }) {
   const [currentDate, setCurrentDate] = useState(new Date())
+  const supabase = useMemo(() => createClient(), [])
+  const api = useMemo(() => new DashboardAPI(supabase), [supabase])
   const [calendarItems, setCalendarItems] = useState<CalendarItem[]>([])
   const [monthlySummary, setMonthlySummary] = useState<MonthlySummary>({
     practiceCount: 0,
@@ -47,8 +49,7 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
       setLoading(true)
       setError(null)
 
-      const supabase = createClient()
-      const api = new DashboardAPI(supabase)
+      // SupabaseクライアントとAPIインスタンスは既にメモ化済み
 
       // ユーザー認証チェック
       const { data: { user } } = await supabase.auth.getUser()

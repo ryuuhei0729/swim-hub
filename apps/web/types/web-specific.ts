@@ -37,5 +37,4 @@ export interface CalendarData {
   year: number
   month: number
   days: any[] // CalendarDay[]は共通型から取得
-  summary: any // CalendarSummaryは共通型から取得
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths, subMonths, getDay } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -9,7 +10,6 @@ import { LoadingSpinner } from '@/components/ui'
 import DayDetailModal from './DayDetailModal'
 import CalendarHeader from './CalendarHeader'
 import CalendarGrid from './CalendarGrid'
-import CalendarSummary from './CalendarSummary'
 import { CalendarItem, CalendarItemType, CalendarProps } from '@/types'
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
@@ -31,6 +31,7 @@ export default function CalendarView({
   userId,
   openDayDetail
 }: Omit<CalendarProps, 'currentDate' | 'onCurrentDateChange'>) {
+  const router = useRouter()
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showMonthSelector, setShowMonthSelector] = useState(false)
@@ -127,17 +128,18 @@ export default function CalendarView({
   const getItemColor = (type: CalendarItemType) => {
     switch (type) {
       case 'practice':
-        return 'bg-green-100 text-green-800 border-green-200'
       case 'team_practice':
-        return 'bg-emerald-100 text-emerald-800 border-emerald-200'
       case 'practice_log':
-        return 'bg-lime-100 text-lime-800 border-lime-200'
+        // 練習系: 全て緑色
+        return 'bg-green-100 text-green-800 border-green-200'
       case 'competition':
-        return 'bg-purple-100 text-purple-800 border-purple-200'
       case 'team_competition':
-        return 'bg-violet-100 text-violet-800 border-violet-200'
-      case 'record':
+      case 'entry':
+        // 大会系: 全て青色
         return 'bg-blue-100 text-blue-800 border-blue-200'
+      case 'record':
+        // 記録: 青色（枠線は濃い青色）
+        return 'bg-blue-100 text-blue-800 border-blue-400'
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200'
     }
@@ -149,14 +151,19 @@ export default function CalendarView({
     const hasPractice = entries.some(e => e.type === 'practice' || e.type === 'team_practice' || e.type === 'practice_log')
     const hasRecord = entries.some(e => e.type === 'record')
     const hasCompetition = entries.some(e => e.type === 'competition' || e.type === 'team_competition')
+    const hasEntry = entries.some(e => e.type === 'entry')
     
-    if (hasPractice && (hasRecord || hasCompetition)) {
+    if (hasPractice && (hasRecord || hasCompetition || hasEntry)) {
       return (
         <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-gradient-to-r from-green-400 to-blue-400 border border-white shadow-sm"></div>
       )
     } else if (hasPractice) {
       return (
         <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-green-400 border border-white shadow-sm"></div>
+      )
+    } else if (hasEntry) {
+      return (
+        <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-orange-400 border border-white shadow-sm"></div>
       )
     } else if (hasRecord || hasCompetition) {
       return (
@@ -206,7 +213,7 @@ export default function CalendarView({
                 再試行
               </button>
               <button
-                onClick={() => window.location.reload()}
+                onClick={() => router.refresh()}
                 className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
               >
                 ページを更新
@@ -244,13 +251,6 @@ export default function CalendarView({
         getDayStatusIndicator={getDayStatusIndicator}
       />
 
-      {/* 今月のサマリー */}
-      <CalendarSummary
-        currentDate={currentDate}
-        monthlySummary={monthlySummary}
-        entries={entries}
-        isLoading={isLoading}
-      />
 
       {/* 年月選択モーダル */}
       {showMonthSelector && (

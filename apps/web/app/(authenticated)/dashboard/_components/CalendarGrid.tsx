@@ -107,43 +107,70 @@ export default function CalendarGrid({
 
                 {/* エントリー表示 */}
                 <div className="space-y-1">
-                  {dayEntries.slice(0, 2).map((item) => (
-                    <div
-                      key={item.id}
-                      className={`
-                        text-[10px] px-0.5 sm:px-1 py-0.5 rounded-md truncate transition-all duration-200 border
-                        ${getItemColor(item.type)}
-                        hover:opacity-80 hover:scale-105 cursor-pointer
-                      `}
-                      title={item.title}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        // 詳細表示のためのクリック処理
-                      }}
-                    >
-                      <span className="mr-1"></span>
-                      <span className="hidden sm:inline font-medium">
-                        {item.type === 'record' && item.metadata.record?.is_relaying ? (
-                          <>
-                            {item.title.replace(/R$/, '')}
-                            <span className="font-bold text-red-600 ml-1">R</span>
-                          </>
-                        ) : (
-                          item.title
-                        )}
-                      </span>
-                      <span className="sm:hidden font-medium">
-                        {item.type === 'record' && item.metadata.record?.is_relaying ? (
-                          <>
-                            {(item.title.split(':')[0] || item.title).replace(/R$/, '')}
-                            <span className="font-bold text-red-600 ml-1">R</span>
-                          </>
-                        ) : (
-                          item.title.split(':')[0] || item.title
-                        )}
-                      </span>
-                    </div>
-                  ))}
+                  {dayEntries.slice(0, 2).map((item) => {
+                    // タイトルを生成
+                    let displayTitle = item.title
+                    
+                    if (item.type === 'practice') {
+                      // Practice: 練習場所
+                      displayTitle = item.location || '練習'
+                    } else if (item.type === 'team_practice') {
+                      // TeamPractice: チーム名 - 練習場所（metadataから動的に取得）
+                      const teamName = (item.metadata as any)?.team?.name || 'チーム'
+                      displayTitle = `${teamName} - ${item.location || '練習'}`
+                    } else if (item.type === 'practice_log') {
+                      // PracticeLog: 距離×本数×セット数
+                      displayTitle = item.title
+                    } else if (item.type === 'competition' || item.type === 'team_competition') {
+                      // Competition/TeamCompetition: 大会の名前
+                      displayTitle = item.title
+                    } else if (item.type === 'entry') {
+                      // Entry: 大会の名前
+                      displayTitle = item.metadata?.competition?.title || item.title
+                    } else if (item.type === 'record') {
+                      // Record: 大会の名前
+                      displayTitle = item.metadata?.competition?.title || item.title
+                    }
+                    
+                    return (
+                      <div
+                        key={`${item.type}-${item.id}`}
+                        className={`
+                          text-[10px] px-0.5 sm:px-1 py-0.5 rounded-md truncate transition-all duration-200
+                          ${getItemColor(item.type)}
+                          ${item.type === 'record' ? 'border-2 border-blue-400' : item.type === 'practice_log' ? 'border-2 border-green-400' : 'border'}
+                          hover:opacity-80 hover:scale-105 cursor-pointer
+                        `}
+                        title={displayTitle}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          // 詳細表示のためのクリック処理
+                        }}
+                      >
+                        <span className="mr-1"></span>
+                        <span className="hidden sm:inline font-medium">
+                          {item.type === 'record' && item.metadata?.record?.is_relaying ? (
+                            <>
+                              {displayTitle}
+                              <span className="font-bold text-red-600 ml-1">R</span>
+                            </>
+                          ) : (
+                            displayTitle
+                          )}
+                        </span>
+                        <span className="sm:hidden font-medium">
+                          {item.type === 'record' && item.metadata?.record?.is_relaying ? (
+                            <>
+                              {(displayTitle.split(':')[0] || displayTitle)}
+                              <span className="font-bold text-red-600 ml-1">R</span>
+                            </>
+                          ) : (
+                            displayTitle.split(':')[0] || displayTitle
+                          )}
+                        </span>
+                      </div>
+                    )
+                  })}
                   {dayEntries.length > 2 && (
                     <div className="text-[10px] text-gray-500 px-0.5 sm:px-1">
                       +{dayEntries.length - 2}件

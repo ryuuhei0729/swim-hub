@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts'
 import { 
@@ -66,16 +68,16 @@ export default function Header({ onMenuClick }: HeaderProps) {
           
           {/* ロゴ・タイトル */}
           <div className="flex items-center ml-4 lg:ml-4">
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-white font-bold text-sm">🏊</span>
+            <Link href="/dashboard" className="flex items-center hover:opacity-80 transition-opacity">
+              <div className="w-10 h-10 flex items-center justify-center mr-2">
+                <Image src="/favicon.png" alt="SwimHub" width={40} height={40} className="w-full h-full object-contain" />
               </div>
               <div>
-                <h1 className="text-base font-bold text-gray-900 sm:text-xl">
+                <h1 className="text-lg font-bold text-gray-900 sm:text-2xl">
                   SwimHub
                 </h1>
               </div>
-            </div>
+            </Link>
           </div>
         </div>
 

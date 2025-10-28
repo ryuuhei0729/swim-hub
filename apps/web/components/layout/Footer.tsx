@@ -1,5 +1,6 @@
 import React from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { 
   HeartIcon,
   ShieldCheckIcon,
@@ -41,8 +42,8 @@ export default function Footer() {
           {/* 左側：システム情報 */}
           <div className="space-y-4">
             <div className="flex items-center">
-              <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-blue-600 rounded flex items-center justify-center mr-2">
-                <span className="text-white font-bold text-xs">🏊</span>
+              <div className="w-6 h-6 flex items-center justify-center mr-2">
+                <Image src="/favicon.png" alt="SwimHub" width={24} height={24} className="w-full h-full object-contain" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900">
                 SwimHub

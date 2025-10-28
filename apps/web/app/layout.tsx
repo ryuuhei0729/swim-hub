@@ -7,8 +7,19 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'SwimHub',
-  description: '水泳チームの選手、コーチ、監督、マネージャーが効率的にチーム運営を行えるWebアプリケーション',
+  title: 'SwimHub - 水泳選手のための記録管理システム',
+  description: '個人でもチームでも使える、水泳記録帳。練習記録、大会記録、目標管理をシンプルに。チーム不要、今すぐ無料で始められます。',
+  icons: {
+    icon: '/favicon.png',
+    apple: '/apple-touch-icon.png',
+  },
+  keywords: ['水泳', '記録管理', 'スイミング', '練習記録', '大会記録', 'タイム管理', 'SwimHub', '水泳選手', 'マスターズスイマー'],
+  openGraph: {
+    title: 'SwimHub - 水泳選手のための記録管理システム',
+    description: '個人でもチームでも使える、あなただけの水泳記録帳',
+    type: 'website',
+    locale: 'ja_JP',
+  },
 }
 
 export default function RootLayout({

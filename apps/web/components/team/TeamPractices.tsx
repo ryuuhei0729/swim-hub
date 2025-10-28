@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthProvider'
 import { 
   PlusIcon, 
@@ -44,6 +45,8 @@ export interface TeamPracticesProps {
 
 export default function TeamPractices({ teamId, isAdmin = false }: TeamPracticesProps) {
   const { supabase } = useAuth()
+  const teamAPI = useMemo(() => new (require('@apps/shared/api/teams')).TeamAPI(supabase), [supabase])
+  const router = useRouter()
   const [practices, setPractices] = useState<TeamPractice[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -53,69 +56,69 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
   const [teamMembers, setTeamMembers] = useState<any[]>([])
   const [editData, setEditData] = useState<any>(null)
 
-  // チームの練習記録を取得
-  useEffect(() => {
-    const loadTeamPractices = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        
-        // チームIDが設定された練習記録を取得
-        const { data: practicesData, error: practicesError } = await supabase
-          .from('practices')
-          .select(`
+  // チームの練習記録を取得（関数として抽出）
+  const loadTeamPractices = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      // チームIDが設定された練習記録を取得
+      const { data: practicesData, error: practicesError } = await supabase
+        .from('practices')
+        .select(`
+          id,
+          user_id,
+          date,
+          place,
+          note,
+          created_at,
+          created_by,
+          users!practices_user_id_fkey (
+            name
+          ),
+          created_by_user:users!practices_created_by_fkey (
+            name
+          ),
+          practice_logs (
             id,
-            user_id,
-            date,
-            place,
-            note,
-            created_at,
-            created_by,
-            users!practices_user_id_fkey (
-              name
-            ),
-            created_by_user:users!practices_created_by_fkey (
-              name
-            ),
-            practice_logs (
-              id,
-              style,
-              distance,
-              practice_times (time)
-            )
-          `)
-          .eq('team_id', teamId)
-          .order('date', { ascending: false })
-          .limit(20) // 最新20件のみ
+            style,
+            distance,
+            practice_times (time)
+          )
+        `)
+        .eq('team_id', teamId)
+        .order('date', { ascending: false })
+        .limit(20) // 最新20件のみ
 
-        if (practicesError) throw practicesError
+      if (practicesError) throw practicesError
 
-        setPractices(practicesData || [])
-      } catch (err) {
-        console.error('チーム練習情報の取得に失敗:', err)
-        setError('チーム練習情報の取得に失敗しました')
-      } finally {
-        setLoading(false)
-      }
+      setPractices(practicesData || [])
+    } catch (err) {
+      console.error('チーム練習情報の取得に失敗:', err)
+      setError('チーム練習情報の取得に失敗しました')
+    } finally {
+      setLoading(false)
     }
-
-    loadTeamPractices()
   }, [teamId, supabase])
+
+  // 初回読み込み
+  useEffect(() => {
+    loadTeamPractices()
+  }, [loadTeamPractices])
 
   const handleAddPractice = () => {
     setShowPracticeForm(true)
   }
 
   const handlePracticeCreated = () => {
-    // 練習記録一覧を再読み込み
-    window.location.reload()
+    // 練習記録一覧を再読み込み（画面全体ではなくデータのみ）
+    loadTeamPractices()
   }
 
   const handlePracticeClick = async (practiceId: string) => {
     if (isAdmin) {
       try {
         // チームメンバーを取得
-        const teamAPI = new (await import('@apps/shared/api/teams')).TeamAPI(supabase)
         const members = await teamAPI.getTeamMembers(teamId)
         
         setTeamMembers(members)
@@ -164,7 +167,6 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
         if (logsError) throw logsError
 
         // チームメンバーを取得
-        const teamAPI = new (await import('@apps/shared/api/teams')).TeamAPI(supabase)
         const members = await teamAPI.getTeamMembers(teamId)
 
         // 秒数を表示用フォーマットに変換する関数
@@ -182,7 +184,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
           // 各メンバーごとのタイムデータを整理
           const teamTimes: any[] = []
           
-          members.forEach(member => {
+          members.forEach((member: any) => {
             // このメンバーのタイムデータを抽出
             const memberTimes = log.practice_times
               ?.filter((timeEntry: any) => timeEntry.user_id === member.user_id)
@@ -220,8 +222,8 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
   }
 
   const handlePracticeLogCreated = () => {
-    // 練習記録一覧を再読み込み
-    window.location.reload()
+    // 練習記録一覧を再読み込み（画面全体ではなくデータのみ）
+    loadTeamPractices()
   }
 
   if (loading) {
@@ -249,7 +251,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
         <div className="text-center py-8">
           <p className="text-red-600 mb-4">{error}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => router.refresh()}
             className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
           >
             再試行

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Button, Input } from '@/components/ui'
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { formatTime } from '@/utils/formatters'
+import { EntryInfo } from '@apps/shared/types/ui'
 
 interface SplitTimeInput {
   distance: number | ''
@@ -30,6 +31,7 @@ interface RecordLogFormProps {
   editData?: any
   isLoading?: boolean
   styles?: Array<{ id: string | number; name_jp: string; distance: number }>
+  entryData?: EntryInfo // エントリー情報（ある場合は種目固定）
 }
 
 export default function RecordLogForm({
@@ -39,10 +41,11 @@ export default function RecordLogForm({
   competitionId,
   editData,
   isLoading = false,
-  styles = []
+  styles = [],
+  entryData
 }: RecordLogFormProps) {
   const [formData, setFormData] = useState<RecordLogFormData>({
-    styleId: styles[0]?.id?.toString() || '',
+    styleId: entryData?.styleId?.toString() || styles[0]?.id?.toString() || '',
     time: 0,
     timeDisplayValue: '',
     isRelaying: false,
@@ -50,6 +53,9 @@ export default function RecordLogForm({
     note: '',
     videoUrl: ''
   })
+
+  // エントリーモードかどうかを判定
+  const isEntryMode = !!entryData
 
   // editDataまたはstylesが変更された時にフォームを初期化
   useEffect(() => {
@@ -84,8 +90,13 @@ export default function RecordLogForm({
         })
       } else {
         // 新規作成モード
+        // entryDataがある場合は、それを使って初期化（エントリー済みの種目を反映）
+        const defaultStyleId = entryData?.styleId 
+          ? String(entryData.styleId) 
+          : (styles[0]?.id ? String(styles[0].id) : '')
+        
         setFormData({
-          styleId: styles[0]?.id?.toString() || '',
+          styleId: defaultStyleId,
           time: 0,
           timeDisplayValue: '',
           isRelaying: false,
@@ -95,7 +106,7 @@ export default function RecordLogForm({
         })
       }
     }
-  }, [isOpen, editData, styles])
+  }, [isOpen, editData, styles, entryData])
 
   const parseTimeToSeconds = (timeStr: string): number => {
     if (!timeStr || timeStr.trim() === '') return 0
@@ -239,6 +250,19 @@ export default function RecordLogForm({
               </button>
             </div>
 
+            {/* エントリー情報表示 */}
+            {isEntryMode && entryData && (
+              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h4 className="text-sm font-medium text-blue-900 mb-2">📝 エントリー情報</h4>
+                <div className="space-y-1 text-sm text-blue-800">
+                  <p><span className="font-medium">種目:</span> {entryData.styleName}</p>
+                  {entryData.entryTime && entryData.entryTime > 0 && (
+                    <p><span className="font-medium">エントリータイム:</span> {formatTime(entryData.entryTime)}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* フォーム */}
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* 種目 */}
@@ -246,19 +270,27 @@ export default function RecordLogForm({
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   種目 <span className="text-red-500">*</span>
                 </label>
-                <select
-                  value={formData.styleId}
-                  onChange={(e) => setFormData({ ...formData, styleId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
-                >
-                  <option value="">種目を選択</option>
-                  {styles.map((style) => (
-                    <option key={style.id} value={style.id}>
-                      {style.name_jp}
-                    </option>
-                  ))}
-                </select>
+                {isEntryMode && entryData ? (
+                  // エントリーモード: 種目固定表示
+                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-700">
+                    {entryData.styleName}
+                  </div>
+                ) : (
+                  // 通常モード: 種目選択
+                  <select
+                    value={formData.styleId}
+                    onChange={(e) => setFormData({ ...formData, styleId: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  >
+                    <option value="">種目を選択</option>
+                    {styles.map((style) => (
+                      <option key={style.id} value={style.id}>
+                        {style.name_jp}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               {/* タイム */}

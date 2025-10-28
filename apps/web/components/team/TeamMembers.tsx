@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { TeamAPI } from '@apps/shared/api/teams'
 import { TeamMembershipWithUser } from '@apps/shared/types/database'
@@ -17,14 +18,15 @@ export interface TeamMembersProps {
 }
 
 export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProps) {
+  const router = useRouter()
   const [members, setMembers] = useState<TeamMembershipWithUser[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [inviteCode, setInviteCode] = useState('')
   
-  const supabase = createClient()
-  const api = new TeamAPI(supabase)
+  const supabase = useMemo(() => createClient(), [])
+  const api = useMemo(() => new TeamAPI(supabase), [supabase])
 
   // メンバー一覧を取得
   useEffect(() => {
@@ -99,7 +101,7 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
         <div className="text-center py-8">
           <p className="text-red-600 mb-4">{error}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => router.refresh()}
             className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
           >
             再試行

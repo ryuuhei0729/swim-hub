@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 import { format } from 'date-fns'
 import { 
@@ -14,7 +14,7 @@ export default function DashboardStats() {
   const [practiceCount, setPracticeCount] = useState(0)
   const [recordCount, setRecordCount] = useState(0)
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const loadStats = async () => {

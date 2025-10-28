@@ -5,17 +5,56 @@
 
 import { SupabaseClient } from '@supabase/supabase-js'
 import {
-  Team,
-  TeamAnnouncement,
-  TeamAnnouncementInsert,
-  TeamAnnouncementUpdate,
-  TeamInsert,
-  TeamMembership,
-  TeamMembershipInsert,
-  TeamMembershipWithUser,
-  TeamUpdate,
-  TeamWithMembers
+    Team,
+    TeamAnnouncement,
+    TeamAnnouncementInsert,
+    TeamAnnouncementUpdate,
+    TeamInsert,
+    TeamMembership,
+    TeamMembershipInsert,
+    TeamMembershipWithUser,
+    TeamUpdate,
+    TeamWithMembers
 } from '../types/database'
+
+// =============================================================================
+// 型定義
+// =============================================================================
+
+// エントリー集計用の型定義
+interface EntrySummary {
+  id: string
+  user: {
+    id: string
+    name: string
+  }
+  entry_time: number | null
+  note: string | null
+  created_at: string
+}
+
+interface GroupedEntry {
+  style: {
+    id: number
+    name_jp: string
+    distance: number
+  }
+  entries: EntrySummary[]
+}
+
+// 大会エントリー集計の戻り値型
+interface CompetitionEntriesResult {
+  competition: {
+    team_id: string
+    title: string
+    date: string
+    place: string | null
+    entry_status: 'before' | 'open' | 'closed'
+  }
+  isAdmin: boolean
+  entriesByStyle: Record<number, GroupedEntry>
+  totalEntries: number
+}
 
 export class TeamAPI {
   constructor(private supabase: SupabaseClient) {}
@@ -596,6 +635,267 @@ export class TeamAPI {
 
     if (error) return false
     return data.role === 'admin'
+  }
+
+  /**
+   * チームの総メンバー数を取得
+   */
+  async getTotalMemberCount(teamId: string): Promise<number> {
+    const { data, error } = await this.supabase
+      .from('team_memberships')
+      .select('id')
+      .eq('team_id', teamId)
+      .eq('is_active', true)
+
+    if (error) throw error
+    return data.length
+  }
+
+  /**
+   * チーム大会を作成
+   */
+  async createTeamCompetition(teamId: string, competitionData: {
+    title: string
+    date: string
+    place?: string | null
+    note?: string | null
+  }): Promise<string> {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+
+    // 管理者権限確認
+    await this.checkAdminPermission(user.id, teamId)
+
+    const { data, error } = await this.supabase
+      .from('competitions')
+      .insert({
+        user_id: user.id,
+        team_id: teamId,
+        title: competitionData.title,
+        date: competitionData.date,
+        place: competitionData.place,
+        note: competitionData.note,
+        created_by: user.id
+      })
+      .select('id')
+      .single()
+
+    if (error) throw error
+    return data.id
+  }
+
+  // =========================================================================
+  // エントリー管理
+  // =========================================================================
+
+  /**
+   * 大会のエントリーステータスを更新（管理者専用）
+   */
+  async updateCompetitionEntryStatus(
+    competitionId: string,
+    entryStatus: 'before' | 'open' | 'closed'
+  ): Promise<void> {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+
+    // 大会情報を取得してteam_idを確認
+    const { data: competition, error: competitionError } = await this.supabase
+      .from('competitions')
+      .select('team_id')
+      .eq('id', competitionId)
+      .single()
+
+    if (competitionError) throw competitionError
+    if (!competition?.team_id) throw new Error('チーム大会ではありません')
+
+    // 管理者権限を確認
+    const { data: membership, error: membershipError } = await this.supabase
+      .from('team_memberships')
+      .select('role')
+      .eq('team_id', competition.team_id)
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single()
+
+    if (membershipError) throw membershipError
+    if (membership.role !== 'admin') throw new Error('管理者権限が必要です')
+
+    // エントリーステータスを更新
+    const { error } = await this.supabase
+      .from('competitions')
+      .update({ entry_status: entryStatus })
+      .eq('id', competitionId)
+
+    if (error) throw error
+  }
+
+  /**
+   * 大会のエントリー集計（種目別）
+   */
+  async getCompetitionEntries(competitionId: string): Promise<CompetitionEntriesResult> {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+
+    // 大会情報を取得
+    const { data: competition, error: competitionError } = await this.supabase
+      .from('competitions')
+      .select('team_id, title, date, place, entry_status')
+      .eq('id', competitionId)
+      .single()
+
+    if (competitionError) throw competitionError
+    if (!competition?.team_id) throw new Error('チーム大会ではありません')
+
+    // チームメンバーかどうか確認
+    const { data: membership, error: membershipError } = await this.supabase
+      .from('team_memberships')
+      .select('role')
+      .eq('team_id', competition.team_id)
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single()
+
+    if (membershipError) throw membershipError
+
+    // エントリー一覧を取得（種目・ユーザー情報付き）
+    const { data: entries, error: entriesError } = await this.supabase
+      .from('entries')
+      .select(`
+        id,
+        user_id,
+        style_id,
+        entry_time,
+        note,
+        created_at,
+        users!entries_user_id_fkey (
+          id,
+          name
+        ),
+        styles (
+          id,
+          name_jp,
+          distance
+        )
+      `)
+      .eq('competition_id', competitionId)
+      .eq('team_id', competition.team_id)
+      .order('style_id', { ascending: true })
+      .order('entry_time', { ascending: true, nullsFirst: false })
+
+    if (entriesError) throw entriesError
+
+    // 種目別にグルーピング
+    const entriesByStyle = (entries || []).reduce((acc: Record<number, GroupedEntry>, entry) => {
+      const styleId = entry.style_id
+      if (!acc[styleId]) {
+        acc[styleId] = {
+          style: entry.styles[0], // SupabaseのJOIN結果は配列で返される
+          entries: []
+        }
+      }
+      acc[styleId].entries.push({
+        id: entry.id,
+        user: entry.users[0], // SupabaseのJOIN結果は配列で返される
+        entry_time: entry.entry_time,
+        note: entry.note,
+        created_at: entry.created_at
+      })
+      return acc
+    }, {} as Record<number, GroupedEntry>)
+
+    return {
+      competition,
+      isAdmin: membership.role === 'admin',
+      entriesByStyle,
+      totalEntries: entries?.length || 0
+    }
+  }
+
+  /**
+   * エントリー受付中の大会一覧取得
+   */
+  async getOpenCompetitions(teamId: string) {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+
+    // チームメンバーかどうか確認
+    const { data: membership, error: membershipError } = await this.supabase
+      .from('team_memberships')
+      .select('role')
+      .eq('team_id', teamId)
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single()
+
+    if (membershipError) throw membershipError
+
+    // entry_status='open'の大会を取得
+    const { data: competitions, error: competitionsError } = await this.supabase
+      .from('competitions')
+      .select('id, title, date, place, pool_type, entry_status, note')
+      .eq('team_id', teamId)
+      .eq('entry_status', 'open')
+      .order('date', { ascending: true })
+
+    if (competitionsError) throw competitionsError
+
+    return {
+      competitions: competitions || [],
+      isAdmin: membership.role === 'admin'
+    }
+  }
+
+  /**
+   * 特定の大会における現在のユーザーのエントリー一覧取得
+   */
+  async getUserEntriesForCompetition(competitionId: string) {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+
+    // 大会情報を取得
+    const { data: competition, error: competitionError } = await this.supabase
+      .from('competitions')
+      .select('team_id, title, date, place, entry_status')
+      .eq('id', competitionId)
+      .single()
+
+    if (competitionError) throw competitionError
+    if (!competition?.team_id) throw new Error('チーム大会ではありません')
+
+    // チームメンバーかどうか確認
+    const { data: membership, error: membershipError } = await this.supabase
+      .from('team_memberships')
+      .select('id')
+      .eq('team_id', competition.team_id)
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single()
+
+    if (membershipError) throw membershipError
+
+    // 自分のエントリー一覧を取得
+    const { data: entries, error: entriesError } = await this.supabase
+      .from('entries')
+      .select(`
+        id,
+        user_id,
+        style_id,
+        entry_time,
+        note,
+        created_at,
+        styles (
+          id,
+          name_jp,
+          distance
+        )
+      `)
+      .eq('competition_id', competitionId)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+
+    if (entriesError) throw entriesError
+
+    return entries || []
   }
 }
 

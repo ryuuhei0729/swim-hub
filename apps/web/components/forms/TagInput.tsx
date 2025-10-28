@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useMemo } from 'react'
 import { ChevronDownIcon, XMarkIcon, EllipsisVerticalIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui'
 // @ts-ignore
@@ -32,7 +32,7 @@ export default function TagInput({
   
   const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   // ドロップダウン外クリックで閉じる
   useEffect(() => {
@@ -63,21 +63,19 @@ export default function TagInput({
     }
   }
 
-  // ランダムカラーを取得する関数
+  // パステルカラーを取得する関数
   const getRandomColor = () => {
     const colors = [
-      '#3B82F6', // Blue
-      '#EF4444', // Red
-      '#10B981', // Green
-      '#F59E0B', // Yellow
-      '#8B5CF6', // Purple
-      '#EC4899', // Pink
-      '#06B6D4', // Cyan
-      '#84CC16', // Lime
-      '#F97316', // Orange
-      '#6B7280', // Gray
-      '#14B8A6', // Teal
-      '#A855F7', // Violet
+      '#93C5FD', // 青
+      '#7DD3FC', // 水色
+      '#86EFAC', // 緑
+      '#A3E635', // 黄緑
+      '#FCA5A5', // 赤
+      '#F9A8D4', // ピンク
+      '#FDBA74', // オレンジ
+      '#FDE047', // 黄色
+      '#C4B5FD', // 紫
+      '#D1D5DB', // グレー
     ]
     return colors[Math.floor(Math.random() * colors.length)]
   }
@@ -209,14 +207,14 @@ export default function TagInput({
       <div className="relative" ref={dropdownRef}>
         {/* タグ入力エリア */}
         <div
-          className="min-h-[40px] border border-gray-300 rounded-md p-2 hover:border-gray-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 transition-all"
+          className="min-h-[40px] border border-gray-300 rounded-md p-2 hover:border-gray-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 transition-all bg-white"
         >
           <div className="flex flex-wrap gap-1 items-center">
             {/* 選択済みタグ */}
             {selectedTags.map((tag, index) => (
               <span
                 key={tag.id}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium text-white animate-in slide-in-from-top-1 duration-200"
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium text-black animate-in slide-in-from-top-1 duration-200"
                 style={{ 
                   backgroundColor: tag.color,
                   animationDelay: `${index * 50}ms` // 順次表示のアニメーション
