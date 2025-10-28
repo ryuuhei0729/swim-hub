@@ -382,9 +382,9 @@ export default function TeamDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* チームヘッダー */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-lg shadow p-6 mb-4">
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -408,14 +408,18 @@ export default function TeamDetailPage() {
       </div>
 
       {/* エントリーフォームセクション */}
-      <TeamEntrySection teamId={teamId} isAdmin={isAdmin} />
+      <div className="mb-0">
+        <TeamEntrySection teamId={teamId} isAdmin={isAdmin} />
+      </div>
 
       {/* タブナビゲーション */}
-      <TeamTabs 
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        isAdmin={isAdmin}
-      />
+      <div className="mt-4">
+        <TeamTabs 
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          isAdmin={isAdmin}
+        />
+      </div>
 
       {/* タブコンテンツ */}
       <div className="bg-white rounded-lg shadow">

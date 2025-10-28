@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { XMarkIcon, PencilIcon, TrashIcon, ClipboardDocumentCheckIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
+import { BoltIcon, TrophyIcon } from '@heroicons/react/24/solid'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
@@ -107,10 +108,6 @@ export default function DayDetailModal({
             {/* 練習記録セクション */}
             {(practiceItems.length > 0 || practiceLogItems.length > 0) && (
               <div className="mb-6">
-                <h4 className="text-md font-semibold text-green-700 mb-3 flex items-center">
-                  <span className="mr-2">💪</span>
-                  練習記録
-                </h4>
                 <div className="space-y-3">
                   {/* 練習（practice_logがない場合のみ） */}
                   {practiceItems.map((item) => (
@@ -192,10 +189,6 @@ export default function DayDetailModal({
             {/* 大会セクション */}
             {(competitionItems.length > 0 || entryItems.length > 0 || recordItems.length > 0) && (
               <div className="mb-6">
-                <h4 className="text-md font-semibold text-blue-700 mb-3 flex items-center">
-                  <span className="mr-2">🏆</span>
-                  大会
-                </h4>
                 <div className="space-y-3">
                   {/* パターン1: Competitionのみ（エントリーなし、記録なし） */}
                   {competitionItems.map((item) => (
@@ -838,16 +831,17 @@ function PracticeDetails({
       {/* Practice全体の枠 */}
       <div className="bg-green-50 rounded-xl p-3">
         {/* Practice全体のヘッダー */}
-        <div className="flex items-start justify-between mb-4">
+        <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <span className={`text-lg font-semibold px-3 py-1 rounded-lg ${
+              <span className={`text-lg font-semibold px-3 py-1 rounded-lg flex items-center gap-2 ${
                 isTeamPractice 
                   ? 'text-emerald-800 bg-emerald-200' 
                   : 'text-green-800 bg-green-200'
               }`}>
-                🏊‍♂️ 練習記録
-                {isTeamPractice && teamName && <span className="ml-2 text-sm">({teamName})</span>}
+                <BoltIcon className="h-5 w-5" />
+                練習記録
+                {isTeamPractice && teamName && <span className="text-sm">({teamName})</span>}
               </span>
               {isTeamPractice && teamId && onShowAttendance && (
                 <AttendanceButton onClick={onShowAttendance} />
@@ -883,16 +877,12 @@ function PracticeDetails({
           {/* PracticeLogsがない場合 */}
           {practiceLogs.length === 0 && (
             <div className="bg-white border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-              <div className="text-gray-500 mb-4">
-                <span className="text-2xl">📝</span>
-                <p className="text-sm mt-2">練習メニューがまだ登録されていません</p>
-              </div>
               <button
                 onClick={() => onAddPracticeLog?.(practiceId)}
                 className="inline-flex items-center px-4 py-2 border border-green-300 rounded-lg shadow-sm text-sm font-medium text-green-700 bg-white hover:bg-green-50 hover:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
               >
                 <span className="mr-2">➕</span>
-                練習記録を追加
+                練習メニューを追加
               </button>
             </div>
           )}
@@ -1257,16 +1247,17 @@ function CompetitionDetails({
       {/* Competition全体の枠 */}
       <div className="bg-blue-50 rounded-xl p-3">
         {/* Competition全体のヘッダー */}
-        <div className="flex items-start justify-between mb-4">
+        <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <span className={`text-lg font-semibold px-3 py-1 rounded-lg ${
+              <span className={`text-lg font-semibold px-3 py-1 rounded-lg flex items-center gap-2 ${
                 isTeamCompetition 
                   ? 'text-violet-800 bg-violet-200' 
                   : 'text-blue-800 bg-blue-200'
               }`}>
-                🏆 {competitionName}
-                {isTeamCompetition && teamName && <span className="ml-2 text-sm">({teamName})</span>}
+                <TrophyIcon className="h-5 w-5" />
+                {competitionName}
+                {isTeamCompetition && teamName && <span className="text-sm">({teamName})</span>}
               </span>
               {isTeamCompetition && teamId && onShowAttendance && (
                 <AttendanceButton onClick={onShowAttendance} />
@@ -1323,10 +1314,6 @@ function CompetitionDetails({
           {/* Recordsがない場合 */}
           {!loading && actualRecords.length === 0 && (
             <div className="bg-white border-2 border-dashed border-blue-300 rounded-lg p-6 text-center">
-              <div className="text-gray-500 mb-4">
-                <span className="text-2xl">🏊‍♂️</span>
-                <p className="text-sm mt-2">大会記録がまだ登録されていません</p>
-              </div>
               <button
                 onClick={() => {
                   onAddRecord?.({ competitionId })

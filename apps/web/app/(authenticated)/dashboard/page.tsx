@@ -598,22 +598,12 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="w-full">
-        {/* ページヘッダー */}
-        <div className="px-4 sm:px-6 lg:px-8 py-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-            ダッシュボード
-          </h1>
-          <p className="text-gray-600">
-            {profile?.name || 'ユーザー'}さん、お疲れ様です！
-          </p>
-        </div>
-
         {/* チームのお知らせセクション */}
         {!teamsLoading && teams.length > 0 && (
-          <div className="pb-4 space-y-3">
+          <div className="mb-4 space-y-3">
             {teams.map((teamMembership: any) => (
               <div key={teamMembership.team_id} className="bg-white rounded-lg shadow">
-                <div className="px-4 sm:px-6 py-3">
+                <div className="px-4 py-4">
                   <div className="mb-3">
                     <h2 className="text-lg font-semibold text-gray-900">
                       {teamMembership.team?.name} のお知らせ
@@ -623,7 +613,7 @@ export default function DashboardPage() {
                     )}
                   </div>
 
-                  <div className="border-t border-gray-200 pt-3">
+                  <div className="border-t border-gray-200">
                     <TeamAnnouncements 
                       teamId={teamMembership.team_id}
                       isAdmin={teamMembership.role === 'ADMIN'}

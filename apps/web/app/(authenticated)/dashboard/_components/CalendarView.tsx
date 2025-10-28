@@ -9,7 +9,6 @@ import { LoadingSpinner } from '@/components/ui'
 import DayDetailModal from './DayDetailModal'
 import CalendarHeader from './CalendarHeader'
 import CalendarGrid from './CalendarGrid'
-import CalendarSummary from './CalendarSummary'
 import { CalendarItem, CalendarItemType, CalendarProps } from '@/types'
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
@@ -250,13 +249,6 @@ export default function CalendarView({
         getDayStatusIndicator={getDayStatusIndicator}
       />
 
-      {/* 今月のサマリー */}
-      <CalendarSummary
-        currentDate={currentDate}
-        monthlySummary={monthlySummary}
-        entries={entries}
-        isLoading={isLoading}
-      />
 
       {/* 年月選択モーダル */}
       {showMonthSelector && (
