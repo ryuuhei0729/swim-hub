@@ -134,7 +134,7 @@ export default function CalendarGrid({
                     
                     return (
                       <div
-                        key={item.id}
+                        key={`${item.type}-${item.id}`}
                         className={`
                           text-[10px] px-0.5 sm:px-1 py-0.5 rounded-md truncate transition-all duration-200
                           ${getItemColor(item.type)}

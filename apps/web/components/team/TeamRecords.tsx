@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { 
   TrophyIcon,
@@ -32,13 +33,14 @@ export interface TeamRecordsProps {
 }
 
 export default function TeamRecords({ teamId, isAdmin = false }: TeamRecordsProps) {
+  const router = useRouter()
   const [records, setRecords] = useState<TeamRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedStyle, setSelectedStyle] = useState<string>('all')
   const [styles, setStyles] = useState<{id: string, name_jp: string, distance: number}[]>([])
   
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   // チームの記録を取得
   useEffect(() => {
@@ -148,7 +150,7 @@ export default function TeamRecords({ teamId, isAdmin = false }: TeamRecordsProp
         <div className="text-center py-8">
           <p className="text-red-600 mb-4">{error}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => router.refresh()}
             className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
           >
             再試行

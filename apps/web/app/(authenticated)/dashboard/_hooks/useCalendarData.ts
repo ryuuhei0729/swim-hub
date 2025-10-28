@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase'
 import { DashboardAPI } from '@apps/shared/api/dashboard'
 import type { CalendarItem } from '@apps/shared/types'
 import { endOfMonth, format, startOfMonth } from 'date-fns'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 export interface MonthlySummary {
   practiceCount: number
@@ -12,6 +12,8 @@ export interface MonthlySummary {
 }
 
 export function useCalendarData(displayDate: Date, _userId?: string) {
+  const supabase = useMemo(() => createClient(), [])
+  const api = useMemo(() => new DashboardAPI(supabase), [supabase])
   const [calendarItems, setCalendarItems] = useState<CalendarItem[]>([])
   const [monthlySummary, setMonthlySummary] = useState<MonthlySummary>({
     practiceCount: 0,
@@ -32,8 +34,7 @@ export function useCalendarData(displayDate: Date, _userId?: string) {
       setLoading(true)
       setError(null)
 
-      const supabase = createClient()
-      const api = new DashboardAPI(supabase)
+      // SupabaseクライアントとAPIインスタンスは既にメモ化済み
 
       // ユーザー認証チェック
       const { data: { user } } = await supabase.auth.getUser()

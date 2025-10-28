@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useTeamAnnouncements, useDeleteTeamAnnouncement } from '@apps/shared/hooks'
 import { createClient } from '@/lib/supabase'
 import type { TeamAnnouncement } from '@/types'
@@ -20,7 +20,7 @@ export const AnnouncementList: React.FC<AnnouncementListProps> = ({
   onEdit,
   viewOnly = false
 }) => {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { announcements, loading, error, refetch } = useTeamAnnouncements(supabase, teamId)
   const { remove, loading: deleteLoading } = useDeleteTeamAnnouncement(supabase)
   const [deletingId, setDeletingId] = useState<string | null>(null)

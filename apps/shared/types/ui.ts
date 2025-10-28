@@ -8,6 +8,102 @@ import { CalendarItemType, PracticeTag } from './database'
 // 1. カレンダー関連
 // =============================================================================
 
+// =============================================================================
+// メタデータ型定義
+// =============================================================================
+
+// チーム情報
+export interface TeamInfo {
+  id: string
+  name: string
+}
+
+// 練習メタデータ
+export interface PracticeMetadata {
+  practice?: {
+    id: string
+    place: string
+    practice_logs?: any[]
+  }
+  practice_id?: string
+  team_id?: string | null
+  team?: TeamInfo
+  user_id?: string
+}
+
+// 大会メタデータ
+export interface CompetitionMetadata {
+  competition?: {
+    id: string
+    title: string
+    place: string | null
+    pool_type: number
+    team_id?: string | null
+  }
+  team_id?: string | null
+  team?: TeamInfo
+  pool_type?: number
+}
+
+// エントリーメタデータ
+export interface EntryMetadata {
+  entry?: {
+    id: string
+    competition_id: string
+    user_id: string
+    style_id: number
+    entry_time?: number | null
+    team_id?: string | null
+  }
+  competition?: {
+    id: string
+    title: string
+    place: string | null
+    pool_type: number
+    team_id?: string | null
+  }
+  style?: {
+    id: number
+    name_jp: string
+    distance: number
+  }
+  team_id?: string | null
+  team?: TeamInfo
+  entry_time?: number | null
+}
+
+// 記録メタデータ
+export interface RecordMetadata {
+  record?: {
+    time: number
+    time_result?: number
+    is_relaying: boolean
+    video_url?: string
+    style: {
+      id: string
+      name_jp: string
+      distance: number
+    }
+    competition_id?: string
+    split_times?: any[]
+  }
+  competition?: {
+    id: string
+    title: string
+    place: string | null
+    pool_type: number
+    team_id?: string | null
+  }
+  style?: {
+    id: number
+    name_jp: string
+    distance: number
+  }
+  team_id?: string | null
+  team?: TeamInfo
+  pool_type?: number
+}
+
 // 統一されたカレンダーアイテム型
 export interface CalendarItem {
   id: string
@@ -18,10 +114,14 @@ export interface CalendarItem {
   note?: string
   // メタデータ（型別の詳細情報）
   metadata: {
+    // 練習関連
     practice?: {
+      id?: string
       place: string
       practice_logs?: any[]
     }
+    practice_id?: string
+    // 大会関連
     competition?: {
       id: string
       title: string
@@ -29,6 +129,7 @@ export interface CalendarItem {
       pool_type: number
       team_id?: string | null
     }
+    // エントリー関連
     entry?: {
       id: string
       competition_id: string
@@ -37,11 +138,13 @@ export interface CalendarItem {
       entry_time?: number | null
       team_id?: string | null
     }
+    // 種目関連
     style?: {
       id: number
       name_jp: string
       distance: number
     }
+    // 記録関連
     record?: {
       time: number
       time_result?: number
@@ -55,7 +158,9 @@ export interface CalendarItem {
       competition_id?: string
       split_times?: any[]
     }
+    // 共通フィールド
     team_id?: string | null
+    team?: TeamInfo
     user_id?: string
     entry_time?: number | null
     pool_type?: number
@@ -228,6 +333,60 @@ export interface DashboardStatsProps {
 // =============================================================================
 // 4. デフォルト値
 // =============================================================================
+
+// =============================================================================
+// 型ガード関数
+// =============================================================================
+
+// 練習メタデータの型ガード
+export function isPracticeMetadata(metadata: any): metadata is { practice?: any; practice_id?: string; team_id?: string | null; team?: TeamInfo; user_id?: string } {
+  return metadata && (
+    metadata.practice !== undefined ||
+    metadata.practice_id !== undefined ||
+    metadata.team_id !== undefined ||
+    metadata.team !== undefined ||
+    metadata.user_id !== undefined
+  )
+}
+
+// 大会メタデータの型ガード
+export function isCompetitionMetadata(metadata: any): metadata is { competition?: any; team_id?: string | null; team?: TeamInfo; pool_type?: number } {
+  return metadata && (
+    metadata.competition !== undefined ||
+    metadata.team_id !== undefined ||
+    metadata.team !== undefined ||
+    metadata.pool_type !== undefined
+  )
+}
+
+// エントリーメタデータの型ガード
+export function isEntryMetadata(metadata: any): metadata is { entry?: any; competition?: any; style?: any; team_id?: string | null; team?: TeamInfo; entry_time?: number | null } {
+  return metadata && (
+    metadata.entry !== undefined ||
+    metadata.competition !== undefined ||
+    metadata.style !== undefined ||
+    metadata.team_id !== undefined ||
+    metadata.team !== undefined ||
+    metadata.entry_time !== undefined
+  )
+}
+
+// 記録メタデータの型ガード
+export function isRecordMetadata(metadata: any): metadata is { record?: any; competition?: any; style?: any; team_id?: string | null; team?: TeamInfo; pool_type?: number } {
+  return metadata && (
+    metadata.record !== undefined ||
+    metadata.competition !== undefined ||
+    metadata.style !== undefined ||
+    metadata.team_id !== undefined ||
+    metadata.team !== undefined ||
+    metadata.pool_type !== undefined
+  )
+}
+
+// チーム情報の型ガード
+export function isTeamInfo(team: any): team is TeamInfo {
+  return team && typeof team.id === 'string' && typeof team.name === 'string'
+}
 
 export const DEFAULT_VALUES = {
   POOL_TYPE: 0 as const, // 短水路

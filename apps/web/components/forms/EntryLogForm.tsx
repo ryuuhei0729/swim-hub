@@ -128,14 +128,25 @@ export default function EntryLogForm({
   const parseTimeString = (timeString: string): number => {
     if (!timeString) return 0
     
+    const trimmed = timeString.trim()
+    if (!trimmed) return 0
+    
     // "1:30.50" 形式
-    if (timeString.includes(':')) {
-      const [minutes, seconds] = timeString.split(':')
-      return parseInt(minutes) * 60 + parseFloat(seconds)
+    if (trimmed.includes(':')) {
+      const [minutesStr, secondsStr] = trimmed.split(':')
+      const minutes = parseInt(minutesStr)
+      const seconds = parseFloat(secondsStr)
+      
+      if (!Number.isFinite(minutes) || !Number.isFinite(seconds)) {
+        return 0
+      }
+      
+      return minutes * 60 + seconds
     }
     
     // "30.50" 形式
-    return parseFloat(timeString)
+    const parsed = parseFloat(trimmed)
+    return Number.isFinite(parsed) ? parsed : 0
   }
 
   return (

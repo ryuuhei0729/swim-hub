@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { TrophyIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui'
 import RecordForm from '@/components/forms/RecordForm'
@@ -25,7 +25,7 @@ export default function CompetitionPage() {
   const [includeRelay, setIncludeRelay] = useState<boolean>(true)
   const [filterPoolType, setFilterPoolType] = useState<string>('')
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   
   // 大会記録を取得
   const {

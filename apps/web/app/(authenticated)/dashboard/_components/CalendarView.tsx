@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths, subMonths, getDay } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -30,6 +31,7 @@ export default function CalendarView({
   userId,
   openDayDetail
 }: Omit<CalendarProps, 'currentDate' | 'onCurrentDateChange'>) {
+  const router = useRouter()
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showMonthSelector, setShowMonthSelector] = useState(false)
@@ -211,7 +213,7 @@ export default function CalendarView({
                 再試行
               </button>
               <button
-                onClick={() => window.location.reload()}
+                onClick={() => router.refresh()}
                 className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
               >
                 ページを更新

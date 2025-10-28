@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { createClient } from '@/lib/supabase'
 import { useAuth } from '@/contexts'
@@ -16,7 +16,7 @@ export default function TeamJoinModal({ isOpen, onClose, onSuccess }: TeamJoinMo
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   const handleSubmit = async (inviteId: string) => {
     if (!user) {

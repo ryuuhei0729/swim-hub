@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthProvider'
 import { 
   PlusIcon, 
@@ -55,6 +56,7 @@ export interface TeamCompetitionsProps {
 
 export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompetitionsProps) {
   const { supabase } = useAuth()
+  const router = useRouter()
   const [competitions, setCompetitions] = useState<TeamCompetition[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -159,7 +161,7 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
         <div className="text-center py-8">
           <p className="text-red-600 mb-4">{error}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => router.refresh()}
             className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
           >
             再試行
@@ -223,7 +225,7 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
                 <div className="flex items-center space-x-2 mb-1">
                   <CalendarDaysIcon className="h-4 w-4 text-gray-400" />
                   <span className="text-sm text-gray-600">
-                    {format(new Date(competition.date + 'T00:00:00'), 'yyyy年M月d日(E)', { locale: ja })}
+                    {format(new Date(competition.date + 'T00:00:00'), 'yyyy年M月d日(EEE)', { locale: ja })}
                   </span>
                 </div>
                 

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useMemo } from 'react'
 import { ChevronDownIcon, XMarkIcon, EllipsisVerticalIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui'
 // @ts-ignore
@@ -32,7 +32,7 @@ export default function TagInput({
   
   const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   // ドロップダウン外クリックで閉じる
   useEffect(() => {

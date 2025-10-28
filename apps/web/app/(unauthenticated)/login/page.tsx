@@ -1,26 +1,34 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { AuthForm } from '@/components/auth'
 import { useAuth } from '@/contexts'
 import { FullScreenLoading } from '@/components/ui/LoadingSpinner'
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<FullScreenLoading message="認証情報を確認中..." />}>
+      <LoginPageContent />
+    </Suspense>
+  )
+}
+
+function LoginPageContent() {
   const { user, session, isLoading } = useAuth()
   const isAuthenticated = !!user && !!session
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [hasRedirected, setHasRedirected] = useState(false)
 
   useEffect(() => {
     if (!isLoading && isAuthenticated && !hasRedirected) {
       setHasRedirected(true)
       // URLパラメータからリダイレクト先を取得
-      const urlParams = new URLSearchParams(window.location.search)
-      const redirectTo = urlParams.get('redirect_to') || '/dashboard'
+      const redirectTo = searchParams.get('redirect_to') || '/dashboard'
       router.push(redirectTo)
     }
-  }, [isAuthenticated, isLoading, router, hasRedirected])
+  }, [isAuthenticated, isLoading, router, hasRedirected, searchParams])
 
   if (isLoading) {
     return <FullScreenLoading message="認証情報を確認中..." />
@@ -36,8 +44,7 @@ export default function LoginPage() {
         mode="signin" 
         onSuccess={() => {
           // URLパラメータからリダイレクト先を取得
-          const urlParams = new URLSearchParams(window.location.search)
-          const redirectTo = urlParams.get('redirect_to') || '/dashboard'
+          const redirectTo = searchParams.get('redirect_to') || '/dashboard'
           router.push(redirectTo)
         }}
       />

@@ -81,10 +81,48 @@ USING (
 );
 
 CREATE POLICY "Users can manage own attendance" ON team_attendance FOR INSERT 
-WITH CHECK (user_id = auth.uid());
+WITH CHECK (
+  user_id = auth.uid() AND (
+    (practice_id IS NOT NULL AND EXISTS (
+      SELECT 1 FROM practices p
+      JOIN team_memberships tm ON tm.team_id = p.team_id
+      WHERE p.id = team_attendance.practice_id 
+      AND tm.user_id = auth.uid() 
+      AND tm.is_active = true
+      AND p.team_id IS NOT NULL
+    )) OR
+    (competition_id IS NOT NULL AND EXISTS (
+      SELECT 1 FROM competitions c
+      JOIN team_memberships tm ON tm.team_id = c.team_id
+      WHERE c.id = team_attendance.competition_id 
+      AND tm.user_id = auth.uid() 
+      AND tm.is_active = true
+      AND c.team_id IS NOT NULL
+    ))
+  )
+);
 
 CREATE POLICY "Users can update own attendance" ON team_attendance FOR UPDATE 
-USING (user_id = auth.uid());
+USING (
+  user_id = auth.uid() AND (
+    (practice_id IS NOT NULL AND EXISTS (
+      SELECT 1 FROM practices p
+      JOIN team_memberships tm ON tm.team_id = p.team_id
+      WHERE p.id = team_attendance.practice_id 
+      AND tm.user_id = auth.uid() 
+      AND tm.is_active = true
+      AND p.team_id IS NOT NULL
+    )) OR
+    (competition_id IS NOT NULL AND EXISTS (
+      SELECT 1 FROM competitions c
+      JOIN team_memberships tm ON tm.team_id = c.team_id
+      WHERE c.id = team_attendance.competition_id 
+      AND tm.user_id = auth.uid() 
+      AND tm.is_active = true
+      AND c.team_id IS NOT NULL
+    ))
+  )
+);
 
 CREATE POLICY "Team admins can manage all attendance" ON team_attendance FOR INSERT 
 WITH CHECK (

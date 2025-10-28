@@ -1,16 +1,17 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { XMarkIcon, PencilIcon, TrashIcon, ClipboardDocumentCheckIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
 import { BoltIcon, TrophyIcon } from '@heroicons/react/24/solid'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
 import { createClient } from '@/lib/supabase'
-import { CalendarItemType, DayDetailModalProps, CalendarItem } from '@/types'
-import type { Record, Practice, PracticeLog, PracticeTime, PoolType } from '@apps/shared/types/database'
+import { CalendarItemType, DayDetailModalProps, CalendarItem, isPracticeMetadata, isCompetitionMetadata, isEntryMetadata, isRecordMetadata, isTeamInfo } from '@/types'
+import type { Record, Practice, PracticeLog, PracticeTime, PoolType, TeamAttendanceWithDetails } from '@apps/shared/types/database'
 import { AttendanceAPI } from '@swim-hub/shared'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 export default function DayDetailModal({
   isOpen,
@@ -27,6 +28,7 @@ export default function DayDetailModal({
   onEditRecord,
   onDeleteRecord
 }: DayDetailModalProps) {
+  const supabase = useMemo(() => createClient(), [])
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<{id: string, type: CalendarItemType} | null>(null)
   const [showAttendanceModal, setShowAttendanceModal] = useState<{
     eventId: string
@@ -117,7 +119,7 @@ export default function DayDetailModal({
                       location={item.location}
                       isTeamPractice={item.type === 'team_practice'}
                       teamId={item.metadata?.team_id}
-                      teamName={(item.metadata as any)?.team?.name}
+                      teamName={isPracticeMetadata(item.metadata) && isTeamInfo(item.metadata.team) ? item.metadata.team.name : undefined}
                       onEdit={() => onEditItem?.(item)}
                       onDelete={() => setShowDeleteConfirm({id: item.id, type: item.type})}
                       onAddPracticeLog={onAddPracticeLog}
@@ -138,7 +140,9 @@ export default function DayDetailModal({
                   
                   {/* 練習ログ（practice情報からログを取得して表示） */}
                   {practiceLogItems.map((item) => {
-                    const practiceId = (item.metadata as any)?.practice?.id || (item.metadata as any)?.practice_id
+                    const practiceId = isPracticeMetadata(item.metadata) 
+                      ? (item.metadata.practice?.id || item.metadata.practice_id)
+                      : null
                     if (!practiceId) return null
                     
                     return (
@@ -146,9 +150,9 @@ export default function DayDetailModal({
                         key={item.id}
                         practiceId={practiceId}
                         location={item.location}
-                        isTeamPractice={!!(item.metadata as any)?.team_id}
-                        teamId={(item.metadata as any)?.team_id}
-                        teamName={(item.metadata as any)?.team?.name}
+                        isTeamPractice={isPracticeMetadata(item.metadata) ? !!item.metadata.team_id : false}
+                        teamId={isPracticeMetadata(item.metadata) ? item.metadata.team_id : undefined}
+                        teamName={isPracticeMetadata(item.metadata) && isTeamInfo(item.metadata.team) ? item.metadata.team.name : undefined}
                         onEdit={() => {
                           // practiceの編集
                           const practiceData = {
@@ -158,7 +162,7 @@ export default function DayDetailModal({
                             title: '練習',
                             location: item.location || '',
                             note: item.note || undefined,
-                            metadata: (item.metadata as any)?.practice || {}
+                            metadata: isPracticeMetadata(item.metadata) ? (item.metadata.practice || {}) : {}
                           }
                           onEditItem?.(practiceData)
                         }}
@@ -169,8 +173,8 @@ export default function DayDetailModal({
                         onAddPracticeLog={onAddPracticeLog}
                         onEditPracticeLog={onEditPracticeLog}
                         onDeletePracticeLog={onDeletePracticeLog}
-                        onShowAttendance={(item.metadata as any)?.team_id ? () => {
-                          const teamId = (item.metadata as any)?.team_id
+                        onShowAttendance={isPracticeMetadata(item.metadata) && item.metadata.team_id ? () => {
+                          const teamId = item.metadata.team_id
                           if (teamId) {
                             setShowAttendanceModal({
                               eventId: practiceId,
@@ -187,7 +191,7 @@ export default function DayDetailModal({
             )}
 
             {/* 大会セクション */}
-            {(competitionItems.length > 0 || entryItems.length > 0 || recordItems.length > 0) && (
+            {(competitionItems.length > 0 || entryItems.filter(item => item.metadata?.competition?.id).length > 0 || recordItems.length > 0) && (
               <div className="mb-6">
                 <div className="space-y-3">
                   {/* パターン1: Competitionのみ（エントリーなし、記録なし） */}
@@ -201,7 +205,7 @@ export default function DayDetailModal({
                       note={item.note}
                       isTeamCompetition={item.type === 'team_competition'}
                       teamId={item.metadata?.team_id}
-                      teamName={(item.metadata as any)?.team?.name}
+                      teamName={isCompetitionMetadata(item.metadata) && isTeamInfo(item.metadata.team) ? item.metadata.team.name : undefined}
                       onEdit={() => {
                         onEditItem?.(item)
                         onClose()
@@ -225,11 +229,13 @@ export default function DayDetailModal({
                   ))}
                   
                   {/* パターン2: Entry あり（記録なし） */}
-                  {entryItems.map((item) => (
+                  {entryItems
+                    .filter(item => item.metadata?.competition?.id) // competition.idが存在するもののみフィルタリング
+                    .map((item) => (
                     <CompetitionWithEntry
                       key={item.id}
                       entryId={item.id}
-                      competitionId={item.metadata?.competition?.id || ''}
+                      competitionId={item.metadata?.competition?.id!} // フィルタリング済みなので非null assertion
                       competitionName={item.metadata?.competition?.title || ''}
                       location={item.location}
                       note={item.note}
@@ -241,7 +247,7 @@ export default function DayDetailModal({
                       onEditCompetition={() => {
                         // 大会情報を編集
                         const competitionData = {
-                          id: item.metadata?.competition?.id || '',
+                          id: item.metadata?.competition?.id!,
                           type: 'competition' as const,
                           date: item.date || '',
                           title: item.metadata?.competition?.title || '',
@@ -249,7 +255,7 @@ export default function DayDetailModal({
                           note: item.note || undefined,
                           metadata: {
                             competition: {
-                              id: item.metadata?.competition?.id || '',
+                              id: item.metadata?.competition?.id!,
                               title: item.metadata?.competition?.title || '',
                               place: item.location || '',
                               pool_type: item.metadata?.competition?.pool_type || 0
@@ -258,10 +264,9 @@ export default function DayDetailModal({
                         }
                         onEditItem?.(competitionData)
                       }}
-                      onDeleteCompetition={() => setShowDeleteConfirm({id: item.metadata?.competition?.id || '', type: 'competition'})}
+                      onDeleteCompetition={() => setShowDeleteConfirm({id: item.metadata?.competition?.id!, type: 'competition'})}
                       onEditEntry={async () => {
                         // エントリー編集処理
-                        const supabase = createClient()
                         const { data: { user } } = await supabase.auth.getUser()
                         if (!user) return
 
@@ -273,7 +278,7 @@ export default function DayDetailModal({
                             style:styles!inner(id, name_jp),
                             competition:competitions!inner(id, title, date, place, pool_type, team_id)
                           `)
-                          .eq('competition_id', item.metadata?.competition?.id || '')
+                          .eq('competition_id', item.metadata?.competition?.id!)
                           .eq('user_id', user.id)
                           .limit(1)
                           .single()
@@ -316,7 +321,6 @@ export default function DayDetailModal({
                       }}
                       onDeleteEntry={async () => {
                         // エントリー削除処理
-                        const supabase = createClient()
                         const { data: { user } } = await supabase.auth.getUser()
                         if (!user) return
 
@@ -324,7 +328,7 @@ export default function DayDetailModal({
                         const { data: entryData, error } = await supabase
                           .from('entries')
                           .select('id')
-                          .eq('competition_id', item.metadata?.competition?.id || '')
+                          .eq('competition_id', item.metadata?.competition?.id!)
                           .eq('user_id', user.id)
                           .limit(1)
                           .single()
@@ -358,7 +362,7 @@ export default function DayDetailModal({
                         records={[record]}
                         isTeamCompetition={record.metadata?.competition?.team_id != null}
                         teamId={record.metadata?.competition?.team_id}
-                        teamName={record.metadata?.competition?.team_id ? ((record.metadata as any)?.team?.name) : undefined}
+                        teamName={record.metadata?.competition?.team_id && isRecordMetadata(record.metadata) && isTeamInfo(record.metadata.team) ? record.metadata.team.name : undefined}
                         onEdit={() => {
                           const competitionData = {
                             id: compId,
@@ -529,18 +533,12 @@ function AttendanceModal({
   eventType: 'practice' | 'competition'
   teamId: string
 }) {
-  const [attendances, setAttendances] = useState<any[]>([])
+  const [attendances, setAttendances] = useState<TeamAttendanceWithDetails[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
-  const attendanceAPI = new AttendanceAPI(supabase)
+  const supabase = useMemo(() => createClient(), [])
+  const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase])
 
-  useEffect(() => {
-    if (isOpen) {
-      loadAttendances()
-    }
-  }, [isOpen, eventId])
-
-  const loadAttendances = async () => {
+  const loadAttendances = useCallback(async () => {
     try {
       setLoading(true)
       const data = eventType === 'practice'
@@ -552,7 +550,13 @@ function AttendanceModal({
     } finally {
       setLoading(false)
     }
-  }
+  }, [eventType, eventId, attendanceAPI])
+
+  useEffect(() => {
+    if (isOpen) {
+      loadAttendances()
+    }
+  }, [isOpen, eventId, eventType, loadAttendances])
 
   if (!isOpen) return null
 
@@ -560,7 +564,7 @@ function AttendanceModal({
     present: attendances.filter(a => a.status === 'present').length,
     absent: attendances.filter(a => a.status === 'absent').length,
     other: attendances.filter(a => a.status === 'other').length,
-    pending: attendances.filter(a => a.status === null).length,
+    pending: attendances.filter(a => !a.status).length,
     total: attendances.length
   }
 
@@ -716,13 +720,13 @@ function PracticeDetails({
   onDeletePracticeLog?: (logId: string) => void
   isTeamPractice?: boolean
   teamId?: string | null
-  teamName?: string
+  teamName?: string | undefined
   onShowAttendance?: () => void
 }) {
   const [practice, setPractice] = useState<Practice | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const loadPractice = async () => {
@@ -1092,7 +1096,7 @@ function RecordSplitTimes({ recordId }: { recordId: string }) {
   const [splits, setSplits] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const loadSplits = async () => {
@@ -1181,18 +1185,14 @@ function CompetitionDetails({
   onClose?: () => void
   isTeamCompetition?: boolean
   teamId?: string | null
-  teamName?: string
+  teamName?: string | undefined
   onShowAttendance?: () => void
 }) {
   const [actualRecords, setActualRecords] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [hasLoaded, setHasLoaded] = useState(false)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
-    // すでにロード済みの場合はスキップ
-    if (hasLoaded) return
-
     const loadRecords = async () => {
       try {
         setLoading(true)
@@ -1225,18 +1225,16 @@ function CompetitionDetails({
         }))
 
         setActualRecords(formattedRecords)
-        setHasLoaded(true)
       } catch (err) {
         console.error('記録の取得エラー:', err)
         setActualRecords([])
-        setHasLoaded(true)
       } finally {
         setLoading(false)
       }
     }
 
     loadRecords()
-  }, [competitionId, supabase, hasLoaded])
+  }, [competitionId, supabase])
 
   const _getPoolTypeText = (poolType: number) => {
     return poolType === 1 ? '長水路(50m)' : '短水路(25m)'
@@ -1342,7 +1340,6 @@ function CompetitionDetails({
                     <button
                       onClick={async () => {
                         // Record編集時は、DBから最新データを取得してsplit_timesも含める
-                        const supabase = createClient()
                         const { data: fullRecord } = await supabase
                           .from('records')
                           .select(`
@@ -1477,19 +1474,26 @@ function CompetitionWithEntry({
   onDeleteEntry?: () => void
   onClose?: () => void
 }) {
+  const router = useRouter()
+  const supabase = useMemo(() => createClient(), [])
   const [actualStyleId, setActualStyleId] = useState<number | undefined>(styleId)
   const [actualStyleName, setActualStyleName] = useState<string>(styleName)
   const [actualEntryTime, setActualEntryTime] = useState<number | null | undefined>(entryTime)
   const [loading, setLoading] = useState(!styleId || !styleName)
+  const [authError, setAuthError] = useState<string | null>(null)
 
   // styleIdやstyleNameが欠けている場合、データベースから取得
   useEffect(() => {
     if (!styleId || !styleName) {
       const fetchEntryData = async () => {
         try {
-          const supabase = createClient()
           const { data: { user } } = await supabase.auth.getUser()
-          if (!user) return
+          if (!user) {
+            setLoading(false)
+            setAuthError('認証が必要です。ログインしてください。')
+            router.replace('/login')
+            return
+          }
 
           // competitionIdから最初のエントリーを取得
           const { data: entryData, error } = await supabase
@@ -1561,6 +1565,11 @@ function CompetitionWithEntry({
         </div>
         {location && (
           <p className="text-sm text-gray-600 mt-1">📍 {location}</p>
+        )}
+        {authError && (
+          <p className="text-sm text-red-600 mt-2 bg-red-50 border border-red-200 rounded px-3 py-2">
+            {authError}
+          </p>
         )}
       </div>
 

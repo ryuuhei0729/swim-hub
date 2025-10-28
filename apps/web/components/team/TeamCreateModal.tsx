@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useAuth } from '@/contexts'
 import { useTeams } from '@apps/shared/hooks/useTeams'
@@ -20,7 +20,7 @@ export default function TeamCreateModal({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { createTeam } = useTeams(supabase, {})
 
   // チーム作成処理

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Button, Input } from '@/components/ui'
 import { XMarkIcon, PlusIcon, TrashIcon, ClockIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
@@ -56,7 +56,7 @@ export default function PracticeLogForm({
   setAvailableTags,
   styles = []
 }: PracticeLogFormProps) {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   // タイム表示のフォーマット関数
   const formatTime = (seconds: number): string => {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useAuth } from '@/contexts'
 import CalendarContainer from './_components/CalendarContainer'
 import { TeamAnnouncements } from '@/components/team'
@@ -21,7 +21,7 @@ export default function DashboardPage() {
   const { profile, user } = useAuth()
   const [teams, setTeams] = useState<any[]>([])
   const [teamsLoading, setTeamsLoading] = useState(true)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   // タイムゾーンを考慮した日付パース
   const parseDateString = (dateString: string): Date => {
@@ -510,6 +510,10 @@ export default function DashboardPage() {
 
   // エントリーをスキップ
   const handleEntrySkip = () => {
+    if (!createdCompetitionId) {
+      alert('大会IDが取得できませんでした。エントリーを先に登録してください。')
+      return
+    }
     setIsEntryLogFormOpen(false)
     setIsRecordLogFormOpen(true)
   }
@@ -709,7 +713,16 @@ export default function DashboardPage() {
               entryData
             })
             
-            setCreatedCompetitionId(competitionId || null)
+            // competitionIdが無効な場合は競技作成フローを開く
+            if (!competitionId || competitionId.trim() === '') {
+              console.log('Opening CompetitionBasicForm (no valid competitionId)')
+              setCreatedCompetitionId(null)
+              setEditingData(null)
+              setIsCompetitionBasicFormOpen(true)
+              return
+            }
+            
+            setCreatedCompetitionId(competitionId)
             
             if (entryData) {
               // エントリーデータがある場合は直接Record作成フォームを開く

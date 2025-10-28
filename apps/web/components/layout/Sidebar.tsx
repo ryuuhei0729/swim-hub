@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import type { ComponentType, SVGProps } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -69,7 +69,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user } = useAuth()
   const [hasAdminTeams, setHasAdminTeams] = useState(false)
   const [singleTeamId, setSingleTeamId] = useState<string | null>(null)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   
   // ユーザーのチーム一覧を取得して管理者権限とチーム数をチェック
   useEffect(() => {

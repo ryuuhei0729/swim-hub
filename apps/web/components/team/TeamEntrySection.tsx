@@ -129,14 +129,33 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
   const parseTime = (timeStr: string): number | null => {
     if (!timeStr || timeStr.trim() === '') return null
     
+    const trimmed = timeStr.trim()
+    
     try {
-      const parts = timeStr.split(':')
+      const parts = trimmed.split(':')
       if (parts.length === 2) {
-        const minutes = parseInt(parts[0])
-        const seconds = parseFloat(parts[1])
+        const minutesStr = parts[0].trim()
+        const secondsStr = parts[1].trim()
+        
+        const minutes = parseInt(minutesStr, 10)
+        const seconds = parseFloat(secondsStr)
+        
+        // 両方の値が有効な数値であることを確認
+        if (!Number.isFinite(minutes) || !Number.isFinite(seconds) || 
+            Number.isNaN(minutes) || Number.isNaN(seconds) ||
+            minutes < 0 || seconds < 0) {
+          return null
+        }
+        
         return minutes * 60 + seconds
       } else {
-        const seconds = parseFloat(timeStr)
+        const seconds = parseFloat(trimmed)
+        
+        // 単一の数値が有効であることを確認
+        if (!Number.isFinite(seconds) || Number.isNaN(seconds) || seconds < 0) {
+          return null
+        }
+        
         return seconds
       }
     } catch {
@@ -157,8 +176,17 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
       const entryAPI = new EntryAPI(supabase)
       
       const entryTime = parseTime(form.entryTime)
+      
+      // 新規作成用のデータ（competition_id, user_id を含む）
       const entryData = {
         competition_id: competitionId,
+        style_id: parseInt(form.styleId),
+        entry_time: entryTime,
+        note: form.note || null
+      }
+      
+      // 更新用のペイロード（competition_id, user_id を除外）
+      const updatePayload = {
         style_id: parseInt(form.styleId),
         entry_time: entryTime,
         note: form.note || null
@@ -176,11 +204,11 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
 
       if (form.editingEntryId) {
         // 編集モード
-        await entryAPI.updateEntry(form.editingEntryId, entryData)
+        await entryAPI.updateEntry(form.editingEntryId, updatePayload)
         alert('エントリーを更新しました')
       } else if (existingEntry) {
         // 既存エントリーがある場合は更新
-        await entryAPI.updateEntry(existingEntry.id, entryData)
+        await entryAPI.updateEntry(existingEntry.id, updatePayload)
         alert('エントリーを更新しました')
       } else {
         // 新規作成

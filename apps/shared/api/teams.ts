@@ -5,17 +5,56 @@
 
 import { SupabaseClient } from '@supabase/supabase-js'
 import {
-  Team,
-  TeamAnnouncement,
-  TeamAnnouncementInsert,
-  TeamAnnouncementUpdate,
-  TeamInsert,
-  TeamMembership,
-  TeamMembershipInsert,
-  TeamMembershipWithUser,
-  TeamUpdate,
-  TeamWithMembers
+    Team,
+    TeamAnnouncement,
+    TeamAnnouncementInsert,
+    TeamAnnouncementUpdate,
+    TeamInsert,
+    TeamMembership,
+    TeamMembershipInsert,
+    TeamMembershipWithUser,
+    TeamUpdate,
+    TeamWithMembers
 } from '../types/database'
+
+// =============================================================================
+// 型定義
+// =============================================================================
+
+// エントリー集計用の型定義
+interface EntrySummary {
+  id: string
+  user: {
+    id: string
+    name: string
+  }
+  entry_time: number | null
+  note: string | null
+  created_at: string
+}
+
+interface GroupedEntry {
+  style: {
+    id: number
+    name_jp: string
+    distance: number
+  }
+  entries: EntrySummary[]
+}
+
+// 大会エントリー集計の戻り値型
+interface CompetitionEntriesResult {
+  competition: {
+    team_id: string
+    title: string
+    date: string
+    place: string | null
+    entry_status: 'before' | 'open' | 'closed'
+  }
+  isAdmin: boolean
+  entriesByStyle: Record<number, GroupedEntry>
+  totalEntries: number
+}
 
 export class TeamAPI {
   constructor(private supabase: SupabaseClient) {}
@@ -693,7 +732,7 @@ export class TeamAPI {
   /**
    * 大会のエントリー集計（種目別）
    */
-  async getCompetitionEntries(competitionId: string) {
+  async getCompetitionEntries(competitionId: string): Promise<CompetitionEntriesResult> {
     const { data: { user } } = await this.supabase.auth.getUser()
     if (!user) throw new Error('認証が必要です')
 
@@ -746,23 +785,23 @@ export class TeamAPI {
     if (entriesError) throw entriesError
 
     // 種目別にグルーピング
-    const entriesByStyle = (entries || []).reduce((acc, entry) => {
+    const entriesByStyle = (entries || []).reduce((acc: Record<number, GroupedEntry>, entry) => {
       const styleId = entry.style_id
       if (!acc[styleId]) {
         acc[styleId] = {
-          style: entry.styles,
+          style: entry.styles[0], // SupabaseのJOIN結果は配列で返される
           entries: []
         }
       }
       acc[styleId].entries.push({
         id: entry.id,
-        user: entry.users,
+        user: entry.users[0], // SupabaseのJOIN結果は配列で返される
         entry_time: entry.entry_time,
         note: entry.note,
         created_at: entry.created_at
       })
       return acc
-    }, {} as Record<number, any>)
+    }, {} as Record<number, GroupedEntry>)
 
     return {
       competition,

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthProvider'
 import { TeamAPI } from '@apps/shared/api/teams'
 import { 
@@ -26,7 +26,7 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
   const [showLastMemberWarning, setShowLastMemberWarning] = useState(false)
   
   const { supabase } = useAuth()
-  const teamAPI = new TeamAPI(supabase)
+  const teamAPI = useMemo(() => new TeamAPI(supabase), [supabase])
 
   useEffect(() => {
     setName(teamName)

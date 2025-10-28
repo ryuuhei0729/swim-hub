@@ -1,7 +1,9 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
+import { format } from 'date-fns'
+import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
 import { TeamAPI } from '@apps/shared/api'
 import { useAuth } from '@/contexts/AuthProvider'
@@ -22,6 +24,7 @@ export default function TeamCompetitionEntryModal({
   teamId
 }: TeamCompetitionEntryModalProps) {
   const { supabase } = useAuth()
+  const teamAPI = useMemo(() => new TeamAPI(supabase), [supabase])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [data, setData] = useState<any>(null)
@@ -201,12 +204,7 @@ export default function TeamCompetitionEntryModal({
                                 )}
                               </div>
                               <div className="text-right text-xs text-gray-400">
-                                {new Date(entry.created_at).toLocaleDateString('ja-JP', {
-                                  month: 'short',
-                                  day: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
+                                {format(new Date(entry.created_at), 'M月d日 HH:mm', { locale: ja })}
                               </div>
                             </div>
                           </div>

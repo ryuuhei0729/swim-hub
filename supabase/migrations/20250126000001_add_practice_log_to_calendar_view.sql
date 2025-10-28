@@ -18,7 +18,7 @@ SELECT
   p.place AS location,
   p.note,
   jsonb_build_object(
-    'practice', row_to_json(p.*),
+    'practice', to_jsonb(p),
     'user_id', p.user_id
   ) AS metadata
 FROM practices p
@@ -40,10 +40,10 @@ SELECT
   p.place AS location,
   p.note,
   jsonb_build_object(
-    'practice', row_to_json(p.*),
+    'practice', to_jsonb(p),
     'user_id', p.user_id,
     'team_id', p.team_id,
-    'team', row_to_json(t.*)
+    'team', to_jsonb(t)
   ) AS metadata
 FROM practices p
 JOIN teams t ON t.id = p.team_id
@@ -73,8 +73,8 @@ SELECT
   p.place AS location,
   pl.note,
   jsonb_build_object(
-    'practice_log', row_to_json(pl.*),
-    'practice', row_to_json(p.*),
+    'practice_log', to_jsonb(pl),
+    'practice', to_jsonb(p),
     'user_id', pl.user_id
   ) AS metadata
 FROM practice_logs pl
@@ -95,11 +95,11 @@ SELECT
   p.place AS location,
   pl.note,
   jsonb_build_object(
-    'practice_log', row_to_json(pl.*),
-    'practice', row_to_json(p.*),
+    'practice_log', to_jsonb(pl),
+    'practice', to_jsonb(p),
     'user_id', pl.user_id,
     'team_id', p.team_id,
-    'team', row_to_json(t.*)
+    'team', to_jsonb(t)
   ) AS metadata
 FROM practice_logs pl
 JOIN practices p ON p.id = pl.practice_id
@@ -123,7 +123,7 @@ SELECT
   c.place AS location,
   c.note,
   jsonb_build_object(
-    'competition', row_to_json(c.*),
+    'competition', to_jsonb(c),
     'user_id', c.user_id,
     'pool_type', c.pool_type
   ) AS metadata
@@ -151,10 +151,10 @@ SELECT
   c.place AS location,
   c.note,
   jsonb_build_object(
-    'competition', row_to_json(c.*),
+    'competition', to_jsonb(c),
     'user_id', c.user_id,
     'team_id', c.team_id,
-    'team', row_to_json(t.*),
+    'team', to_jsonb(t),
     'pool_type', c.pool_type
   ) AS metadata
 FROM competitions c
@@ -187,7 +187,7 @@ SELECT
   c.place AS location,
   NULL AS note,
   jsonb_build_object(
-    'competition', row_to_json(c.*),
+    'competition', to_jsonb(c),
     'user_id', c.user_id
   ) AS metadata
 FROM competitions c
@@ -214,10 +214,10 @@ SELECT
   c.place AS location,
   NULL AS note,
   jsonb_build_object(
-    'competition', row_to_json(c.*),
+    'competition', to_jsonb(c),
     'user_id', c.user_id,
     'team_id', c.team_id,
-    'team', row_to_json(t.*)
+    'team', to_jsonb(t)
   ) AS metadata
 FROM competitions c
 JOIN teams t ON t.id = c.team_id
@@ -249,7 +249,7 @@ SELECT
   c.place AS location,
   NULL AS note,
   jsonb_build_object(
-    'competition', row_to_json(c.*),
+    'competition', to_jsonb(c),
     'user_id', c.user_id,
     'pool_type', c.pool_type
   ) AS metadata
@@ -273,10 +273,10 @@ SELECT
   c.place AS location,
   NULL AS note,
   jsonb_build_object(
-    'competition', row_to_json(c.*),
+    'competition', to_jsonb(c),
     'user_id', c.user_id,
     'team_id', c.team_id,
-    'team', row_to_json(t.*),
+    'team', to_jsonb(t),
     'pool_type', c.pool_type
   ) AS metadata
 FROM competitions c

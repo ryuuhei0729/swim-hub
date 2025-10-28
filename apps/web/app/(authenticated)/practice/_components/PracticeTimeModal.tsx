@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -22,7 +22,7 @@ export default function PracticeTimeModal({
   const [practice, setPractice] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     if (!isOpen) return
@@ -65,7 +65,7 @@ export default function PracticeTimeModal({
             distance: log.distance,
             circle: log.circle,
             note: log.note,
-            tags: log.tags || [],
+            tags: log.practice_log_tags?.map((tagRelation: any) => tagRelation.practice_tags).filter((tag: any) => tag !== null) || [],
             times: log.practice_times?.map((time: any) => ({
               id: time.id,
               time: time.time,

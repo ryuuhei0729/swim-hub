@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { CalendarDaysIcon, ClockIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui'
 import PracticeLogForm from '@/components/forms/PracticeLogForm'
@@ -27,7 +27,7 @@ export default function PracticePage() {
   const [styles, setStyles] = useState<any[]>([])
   const [tags, setTags] = useState<any[]>([])
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   
   // 練習記録を取得
   const {
@@ -50,7 +50,7 @@ export default function PracticePage() {
       const tags = (log as any).practice_log_tags?.map((plt: any) => ({
         id: plt.practice_tags?.id || plt.practice_tag_id,
         name: plt.practice_tags?.name || '',
-        color: plt.practice_tags?.color || '#gray'
+        color: plt.practice_tags?.color || '#9CA3AF'
       })) || []
 
       return {

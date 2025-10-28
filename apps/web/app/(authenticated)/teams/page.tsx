@@ -1,16 +1,22 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import { useAuth } from '@/contexts'
 import { UsersIcon } from '@heroicons/react/24/outline'
+import { TeamMembership, Team } from '@swim-hub/shared/types/database'
+
+// Supabaseクエリ結果の型定義
+interface TeamMembershipWithTeam extends TeamMembership {
+  team: Team
+}
 
 export default function TeamsPage() {
-  const [teams, setTeams] = useState<any[]>([])
+  const [teams, setTeams] = useState<TeamMembershipWithTeam[]>([])
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   const loadTeams = async () => {
     if (!user) return
@@ -33,7 +39,7 @@ export default function TeamsPage() {
 
       if (error) throw error
 
-      setTeams(data || [])
+      setTeams((data as TeamMembershipWithTeam[]) || [])
     } catch (error) {
       console.error('チーム情報の取得に失敗:', error)
     } finally {
@@ -94,7 +100,7 @@ export default function TeamsPage() {
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <UsersIcon className="h-10 w-10 text-blue-600" />
-                  {membership.role === 'ADMIN' && (
+                  {membership.role === 'admin' && (
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                       管理者
                     </span>

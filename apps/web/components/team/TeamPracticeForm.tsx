@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthProvider'
 import { TeamAPI } from '@apps/shared/api/teams'
 import { Button, Input } from '@/components/ui'
@@ -27,6 +27,63 @@ export default function TeamPracticeForm({
     place: '',
     note: ''
   })
+
+  // フォーカストラップ用のref
+  const modalRef = useRef<HTMLDivElement>(null)
+  const firstFocusableRef = useRef<HTMLButtonElement>(null)
+  const lastFocusableRef = useRef<HTMLButtonElement>(null)
+
+  // フォーカストラップ機能
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose()
+        return
+      }
+
+      if (e.key === 'Tab') {
+        const focusableElements = modalRef.current?.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        )
+        
+        if (!focusableElements || focusableElements.length === 0) return
+
+        const firstElement = focusableElements[0] as HTMLElement
+        const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement
+
+        if (e.shiftKey) {
+          // Shift + Tab
+          if (document.activeElement === firstElement) {
+            e.preventDefault()
+            lastElement.focus()
+          }
+        } else {
+          // Tab
+          if (document.activeElement === lastElement) {
+            e.preventDefault()
+            firstElement.focus()
+          }
+        }
+      }
+    }
+
+    // モーダルが開いた時に最初のフォーカス可能要素にフォーカス
+    const firstFocusable = modalRef.current?.querySelector(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    ) as HTMLElement
+    
+    if (firstFocusable) {
+      firstFocusable.focus()
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isOpen])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -87,13 +144,20 @@ export default function TeamPracticeForm({
         <div
           className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
           onClick={handleClose}
+          aria-hidden="true"
         />
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+        <div 
+          ref={modalRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
+          className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full"
+        >
           {/* ヘッダー */}
           <div className="bg-white px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
+              <h3 id="modal-title" className="text-lg leading-6 font-medium text-gray-900">
                 チーム練習記録を追加
               </h3>
               <button
@@ -101,6 +165,7 @@ export default function TeamPracticeForm({
                 onClick={handleClose}
                 className="text-gray-400 hover:text-gray-600"
                 disabled={loading}
+                aria-label="モーダルを閉じる"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -113,14 +178,14 @@ export default function TeamPracticeForm({
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
             {/* エラー表示 */}
             {error && (
-              <div className="rounded-md bg-red-50 p-4">
+              <div className="rounded-md bg-red-50 p-4" role="alert" aria-live="polite">
                 <div className="flex">
                   <div className="ml-3">
                     <h3 className="text-sm font-medium text-red-800">
                       エラーが発生しました
                     </h3>
                     <div className="mt-2 text-sm text-red-700">
-                      <p>{error}</p>
+                      <p id="practice-date-error">{error}</p>
                     </div>
                   </div>
                 </div>
@@ -129,23 +194,26 @@ export default function TeamPracticeForm({
 
             {/* 練習日 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="practice-date" className="block text-sm font-medium text-gray-700 mb-2">
                 練習日 <span className="text-red-500">*</span>
               </label>
               <Input
+                id="practice-date"
                 type="date"
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 required
+                aria-describedby="practice-date-error"
               />
             </div>
 
             {/* 練習場所 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="practice-place" className="block text-sm font-medium text-gray-700 mb-2">
                 練習場所
               </label>
               <Input
+                id="practice-place"
                 type="text"
                 value={formData.place}
                 onChange={(e) => setFormData({ ...formData, place: e.target.value })}
@@ -155,10 +223,11 @@ export default function TeamPracticeForm({
 
             {/* メモ */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="practice-note" className="block text-sm font-medium text-gray-700 mb-2">
                 メモ
               </label>
               <textarea
+                id="practice-note"
                 value={formData.note}
                 onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                 rows={3}

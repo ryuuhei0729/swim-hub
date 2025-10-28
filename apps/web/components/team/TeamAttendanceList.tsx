@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 import { AttendanceAPI, TeamAttendanceWithDetails } from '@swim-hub/shared'
 import { AttendanceStatus } from '@swim-hub/shared/types/database'
@@ -23,8 +23,8 @@ export default function TeamAttendanceList({
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
   const [noteInput, setNoteInput] = useState<string>('')
   
-  const supabase = createClient()
-  const attendanceAPI = new AttendanceAPI(supabase)
+  const supabase = useMemo(() => createClient(), [])
+  const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase])
 
   useEffect(() => {
     loadAttendances()

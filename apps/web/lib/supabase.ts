@@ -78,6 +78,7 @@ export type Database = {
           place: string // NOT NULL
           pool_type: number // 0: short, 1: long
           note: string | null
+          attendance_status?: string | null
         }
         Insert: {
           id?: string
@@ -86,6 +87,7 @@ export type Database = {
           place: string // NOT NULL
           pool_type?: number // デフォルト: 0 (short)
           note?: string | null
+          attendance_status?: string | null
         }
         Update: {
           id?: string
@@ -94,6 +96,33 @@ export type Database = {
           place?: string
           pool_type?: number
           note?: string | null
+          attendance_status?: string | null
+        }
+      }
+      practices: {
+        Row: {
+          id: string
+          user_id: string
+          date: string
+          location: string
+          note: string | null
+          attendance_status?: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          date: string
+          location: string
+          note?: string | null
+          attendance_status?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          date?: string
+          location?: string
+          note?: string | null
+          attendance_status?: string | null
         }
       }
       records: {

@@ -419,3 +419,20 @@ export type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>
 // Supabase Client型
 export type SupabaseClientType = SupabaseClient
 
+// =============================================================================
+// 7. イベント型定義（チーム関連）
+// =============================================================================
+
+// 練習イベント
+export interface PracticeEvent extends Practice {
+  type: 'practice'
+}
+
+// 大会イベント
+export interface CompetitionEvent extends Competition {
+  type: 'competition'
+}
+
+// チームイベント（ユニオン型）
+export type TeamEvent = PracticeEvent | CompetitionEvent
+

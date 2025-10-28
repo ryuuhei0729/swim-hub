@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthProvider'
 import { 
   PlusIcon, 
@@ -44,6 +45,8 @@ export interface TeamPracticesProps {
 
 export default function TeamPractices({ teamId, isAdmin = false }: TeamPracticesProps) {
   const { supabase } = useAuth()
+  const teamAPI = useMemo(() => new (require('@apps/shared/api/teams')).TeamAPI(supabase), [supabase])
+  const router = useRouter()
   const [practices, setPractices] = useState<TeamPractice[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -116,7 +119,6 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
     if (isAdmin) {
       try {
         // チームメンバーを取得
-        const teamAPI = new (await import('@apps/shared/api/teams')).TeamAPI(supabase)
         const members = await teamAPI.getTeamMembers(teamId)
         
         setTeamMembers(members)
@@ -165,7 +167,6 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
         if (logsError) throw logsError
 
         // チームメンバーを取得
-        const teamAPI = new (await import('@apps/shared/api/teams')).TeamAPI(supabase)
         const members = await teamAPI.getTeamMembers(teamId)
 
         // 秒数を表示用フォーマットに変換する関数
@@ -183,7 +184,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
           // 各メンバーごとのタイムデータを整理
           const teamTimes: any[] = []
           
-          members.forEach(member => {
+          members.forEach((member: any) => {
             // このメンバーのタイムデータを抽出
             const memberTimes = log.practice_times
               ?.filter((timeEntry: any) => timeEntry.user_id === member.user_id)
@@ -250,7 +251,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
         <div className="text-center py-8">
           <p className="text-red-600 mb-4">{error}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => router.refresh()}
             className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
           >
             再試行

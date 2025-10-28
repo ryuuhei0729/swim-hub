@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthProvider'
 import { TeamAPI } from '@apps/shared/api/teams'
 import { Button, Input } from '@/components/ui'
@@ -20,6 +20,7 @@ export default function TeamCompetitionForm({
   onSuccess 
 }: TeamCompetitionFormProps) {
   const { supabase } = useAuth()
+  const teamAPI = useMemo(() => new TeamAPI(supabase), [supabase])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
