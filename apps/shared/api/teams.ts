@@ -225,7 +225,8 @@ export class TeamAPI {
         users!team_memberships_user_id_fkey (
           name,
           birthday,
-          bio
+          bio,
+          profile_image_path
         ),
         teams!team_memberships_team_id_fkey (
           name,

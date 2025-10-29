@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { TeamAPI } from '@apps/shared/api/teams'
 import { TeamMembershipWithUser } from '@apps/shared/types/database'
+import { Avatar } from '@/components/ui'
 import { 
   UserPlusIcon, 
   UserMinusIcon,
-  StarIcon,
-  UserIcon
+  StarIcon
 } from '@heroicons/react/24/outline'
 
 export interface TeamMembersProps {
@@ -138,9 +138,11 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
           >
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
-                <div className="h-10 w-10 bg-gray-300 rounded-full flex items-center justify-center">
-                  <UserIcon className="h-6 w-6 text-gray-600" />
-                </div>
+                <Avatar
+                  avatarUrl={(member.users as any)?.profile_image_path || null}
+                  userName={member.users?.name || 'Unknown User'}
+                  size="md"
+                />
               </div>
               <div>
                 <div className="flex items-center space-x-2">
@@ -170,7 +172,12 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
         
         {members.length === 0 && (
           <div className="text-center py-8">
-            <UserIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <Avatar
+              avatarUrl={null}
+              userName="?"
+              size="lg"
+              className="mx-auto mb-4 opacity-50"
+            />
             <p className="text-gray-600">メンバーがいません</p>
           </div>
         )}

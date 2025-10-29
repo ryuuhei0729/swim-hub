@@ -2,9 +2,8 @@
 
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthProvider'
-import { BaseModal } from '@/components/ui'
+import { BaseModal, Avatar } from '@/components/ui'
 import { 
-  UserIcon,
   StarIcon,
   TrashIcon,
   XMarkIcon,
@@ -24,6 +23,7 @@ export interface MemberDetail {
     name: string
     birthday?: string
     bio?: string
+    profile_image_path?: string | null
   }
 }
 
@@ -146,15 +146,11 @@ export default function MemberDetailModal({
     }
   }
 
-  // 表形式のデータを生成（データベースから取得した種目を使用）
-  const generateBestTimesTable = () => {
-    // ID順で種目を取得（種目名から距離を除去して基本種目名を取得）
-    const baseStyles = ['自由形', '平泳ぎ', '背泳ぎ', 'バタフライ', '個人メドレー']
-    
-    const distances = [...new Set(availableStyles.map((s: any) => s.distance))].sort((a, b) => a - b)
-    
-    return { styles: baseStyles, distances }
-  }
+  // 静的距離リスト（50m, 100m, 200m, 400m, 800m）
+  const DISTANCES = [50, 100, 200, 400, 800]
+  
+  // 静的種目リスト
+  const STYLES = ['自由形', '平泳ぎ', '背泳ぎ', 'バタフライ', '個人メドレー']
 
   const handleRoleChange = async (newRole: 'admin' | 'user') => {
     if (!member) return
@@ -230,15 +226,11 @@ export default function MemberDetailModal({
 
   // ベストタイム表コンポーネント
   const BestTimesTable = ({ bestTimes }: { bestTimes: BestTime[] }) => {
-    const { styles, distances } = generateBestTimesTable()
-    
     const getBestTime = (style: string, distance: number) => {
       // データベースの種目名形式（例：50m自由形）で検索
       const dbStyleName = `${distance}m${style}`
       return bestTimes.find(bt => bt.style.name_jp === dbStyleName)
     }
-
-    // 記録がない場合でも表を表示する
 
     return (
       <div className="overflow-x-auto bg-white rounded-lg shadow-sm border border-gray-200">
@@ -248,7 +240,7 @@ export default function MemberDetailModal({
               <th className="px-3 py-2 text-left text-sm font-semibold text-gray-900 border-r border-gray-200 min-w-[100px] h-[50px]">
                 種目
               </th>
-              {distances.map((distance) => (
+              {DISTANCES.map((distance) => (
                 <th key={distance} className="px-3 py-2 text-center text-sm font-semibold text-gray-900 border-r border-gray-200 last:border-r-0 min-w-[120px] h-[50px]">
                   {distance}m
                 </th>
@@ -256,12 +248,12 @@ export default function MemberDetailModal({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {styles.map((style) => (
+            {STYLES.map((style) => (
               <tr key={style} className="hover:bg-gray-50 transition-colors duration-150">
                 <td className="px-3 py-2 text-sm font-medium text-gray-900 border-r border-gray-200 bg-gray-50 min-w-[100px] h-[80px]">
                   {style}
                 </td>
-                {distances.map((distance) => {
+                {DISTANCES.map((distance) => {
                   const bestTime = getBestTime(style, distance)
                   return (
                     <td key={distance} className="px-3 py-2 text-center text-sm text-gray-900 border-r border-gray-200 last:border-r-0 min-w-[120px] h-[80px]">
@@ -333,11 +325,11 @@ export default function MemberDetailModal({
           <div className="flex items-start space-x-8">
             {/* プロフィール画像 */}
             <div className="flex-shrink-0">
-              <div className="h-24 w-24 bg-blue-500 rounded-full flex items-center justify-center">
-                  <span className="text-3xl font-bold text-white">
-                    {member.users?.name?.charAt(0) || '?'}
-                  </span>
-              </div>
+              <Avatar
+                avatarUrl={member.users?.profile_image_path || null}
+                userName={member.users?.name || 'Unknown User'}
+                size="lg"
+              />
             </div>
             
             {/* 基本情報 */}
