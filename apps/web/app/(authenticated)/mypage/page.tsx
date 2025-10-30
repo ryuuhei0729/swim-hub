@@ -236,13 +236,20 @@ export default function MyPage() {
       <div className="space-y-6">
         {/* プロフィール表示 */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            プロフィール
-          </h2>
+          <div className="flex items-center justify-between pb-2 mb-4 border-b border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-900">
+              プロフィール
+            </h2>
+            <button
+              onClick={() => setIsEditModalOpen(true)}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              編集
+            </button>
+          </div>
           {profile && (
             <ProfileDisplay
               profile={profile}
-              onEdit={() => setIsEditModalOpen(true)}
             />
           )}
         </div>
@@ -251,7 +258,7 @@ export default function MyPage() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center space-x-2 mb-4">
             <TrophyIcon className="h-5 w-5 text-yellow-500" />
-            <h2 className="text-xl font-semibold text-gray-900">Best Time</h2>
+            <h2 className="text-2xl font-semibold text-gray-900">Best Time</h2>
           </div>
           
           <BestTimesTable bestTimes={bestTimes} />

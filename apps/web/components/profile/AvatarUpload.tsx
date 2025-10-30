@@ -186,7 +186,7 @@ export default function AvatarUpload({
       {/* アバター表示 */}
       <div 
         className={`
-          relative h-28 w-28 md:h-32 md:w-32 rounded-full flex items-center justify-center cursor-pointer
+          relative h-40 w-40 md:h-40 md:w-40 rounded-full flex items-center justify-center cursor-pointer
           ${disabled || isUploading ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-80'}
           ${currentAvatarUrl ? 'bg-gray-100' : 'bg-blue-500'}
           transition-opacity duration-200
@@ -200,7 +200,7 @@ export default function AvatarUpload({
             className="w-full h-full rounded-full object-cover"
           />
         ) : (
-          <span className="text-3xl md:text-4xl font-bold text-white">
+          <span className="text-4xl md:text-5xl font-bold text-white">
             {userName.charAt(0) || '?'}
           </span>
         )}
@@ -222,11 +222,13 @@ export default function AvatarUpload({
         {/* 削除ボタン */}
         {currentAvatarUrl && !isUploading && !disabled && (
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation()
               handleRemoveAvatar()
             }}
-            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg hover:bg-red-600"
+            className="absolute top-1 right-1 z-10 bg-red-500 text-white rounded-full p-1 shadow-lg hover:bg-red-600"
+            aria-label="アバターを削除"
           >
             <XMarkIcon className="h-3 w-3" />
           </button>

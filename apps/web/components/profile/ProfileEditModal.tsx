@@ -35,7 +35,7 @@ export default function ProfileEditModal({
   })
   const [isUpdating, setIsUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  
 
   // プロフィールが変更されたときにフォームデータを更新
   useEffect(() => {
@@ -59,7 +59,6 @@ export default function ProfileEditModal({
     try {
       setIsUpdating(true)
       setError(null)
-      setSuccess(false)
 
       // 誕生日をISO形式に変換
       const birthday = formData.birthday ? new Date(formData.birthday).toISOString() : null
@@ -69,12 +68,8 @@ export default function ProfileEditModal({
         birthday,
         bio: formData.bio.trim() || null
       })
-
-      setSuccess(true)
-      setTimeout(() => {
-        setSuccess(false)
-        onClose()
-      }, 1500)
+      // 成功時は即時にモーダルを閉じる
+      onClose()
     } catch (err) {
       console.error('プロフィール更新エラー:', err)
       setError('プロフィールの更新に失敗しました')
@@ -91,7 +86,6 @@ export default function ProfileEditModal({
       [field]: e.target.value
     }))
     setError(null)
-    setSuccess(false)
   }
 
   const handleClose = () => {
@@ -112,7 +106,7 @@ export default function ProfileEditModal({
       
       {/* モーダル */}
       <div className="flex min-h-full items-center justify-center p-4">
-        <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div className="relative bg-white rounded-lg shadow-xl max-w-3xl w-full">
           {/* ヘッダー */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900">
@@ -131,84 +125,78 @@ export default function ProfileEditModal({
 
           {/* ボディ */}
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
-            {/* プロフィール画像アップロード */}
-            <div className="flex items-center space-x-4">
-              <AvatarUpload
-                currentAvatarUrl={profile.avatar_url}
-                userName={formData.name || profile.name}
-                onAvatarChange={onAvatarChange}
-                disabled={isUpdating}
-              />
-              <div>
-                <p className="text-sm text-gray-600">プロフィール画像</p>
-                <p className="text-xs text-gray-500">クリックして画像を選択</p>
-              </div>
-            </div>
-
-            {/* エラー表示 */}
+            {/* フィードバックメッセージ */}
             {error && (
               <div className="rounded-md bg-red-50 p-4">
                 <div className="text-sm text-red-700">{error}</div>
               </div>
             )}
 
-            {/* 成功表示 */}
-            {success && (
-              <div className="rounded-md bg-green-50 p-4">
-                <div className="text-sm text-green-700">プロフィールを更新しました</div>
+            {/* 上段: 左=アバター / 右=名前+生年月日 */}
+            <div className="grid grid-cols-1 md:[grid-template-columns:160px_1fr] gap-8">
+              {/* アバター */}
+              <div className="flex items-start">
+                <AvatarUpload
+                  currentAvatarUrl={profile.avatar_url}
+                  userName={formData.name || profile.name}
+                  onAvatarChange={onAvatarChange}
+                  disabled={isUpdating}
+                />
               </div>
-            )}
 
-            {/* 名前 */}
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                名前 <span className="text-red-500">*</span>
-              </label>
-              <Input
-                id="name"
-                type="text"
-                value={formData.name}
-                onChange={handleChange('name')}
-                placeholder="名前を入力"
-                required
-                className="w-full"
-                disabled={isUpdating}
-              />
-            </div>
+              {/* 名前 + 生年月日 */}
+              <div className="space-y-4">
+                {/* 名前 */}
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                    名前 <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    id="name"
+                    type="text"
+                    value={formData.name}
+                    onChange={handleChange('name')}
+                    placeholder="名前を入力"
+                    required
+                    className="w-full"
+                    disabled={isUpdating}
+                  />
+                </div>
+                {/* 生年月日 */}
+                <div>
+                  <label htmlFor="birthday" className="block text-sm font-medium text-gray-700 mb-2">
+                    生年月日
+                  </label>
+                  <Input
+                    id="birthday"
+                    type="date"
+                    value={formData.birthday}
+                    onChange={handleChange('birthday')}
+                    className="w-full"
+                    disabled={isUpdating}
+                  />
+                </div>
+              </div>
 
-            {/* 生年月日 */}
-            <div>
-              <label htmlFor="birthday" className="block text-sm font-medium text-gray-700 mb-2">
-                生年月日
-              </label>
-              <Input
-                id="birthday"
-                type="date"
-                value={formData.birthday}
-                onChange={handleChange('birthday')}
-                className="w-full"
-                disabled={isUpdating}
-              />
-            </div>
-
-            {/* 自己紹介 */}
-            <div>
-              <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-2">
-                自己紹介
-              </label>
-              <textarea
-                id="bio"
-                value={formData.bio}
-                onChange={handleChange('bio')}
-                placeholder="自己紹介を入力してください"
-                rows={4}
-                maxLength={500}
-                disabled={isUpdating}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
-              />
-              <p className="mt-1 text-sm text-gray-500">
-                {formData.bio.length}/500文字
-              </p>
+              {/* 自己紹介（下段・全幅） */}
+              <div className="md:col-span-2">
+                <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-2">
+                  自己紹介
+                </label>
+                <textarea
+                  id="bio"
+                  value={formData.bio}
+                  onChange={handleChange('bio')}
+                  placeholder="自己紹介を入力してください"
+                  rows={5}
+                  maxLength={500}
+                  disabled={isUpdating}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                />
+                <p className="mt-1 text-sm text-gray-500">
+                  {formData.bio.length}/500文字
+                </p>
+              </div>
             </div>
 
             {/* ボタン */}

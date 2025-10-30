@@ -28,10 +28,35 @@ const DISTANCES = [50, 100, 200, 400, 800]
 const STYLES = ['自由形', '平泳ぎ', '背泳ぎ', 'バタフライ', '個人メドレー']
 
 export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
+  const styleHeaderBgClass: Record<string, string> = {
+    '自由形': 'bg-yellow-100',
+    '平泳ぎ': 'bg-green-100',
+    '背泳ぎ': 'bg-red-100',
+    'バタフライ': 'bg-blue-100', // 紺色系はTailwindではblue系で代替
+    '個人メドレー': 'bg-pink-100'
+  }
+
+  const styleCellBgClass: Record<string, string> = {
+    '自由形': 'bg-yellow-50',
+    '平泳ぎ': 'bg-green-50',
+    '背泳ぎ': 'bg-red-50',
+    'バタフライ': 'bg-blue-50',
+    '個人メドレー': 'bg-pink-50'
+  }
+
+  const isInvalidCombination = (style: string, distance: number): boolean => {
+    // ありえない種目/距離の組み合わせ
+    if (style === '個人メドレー' && (distance === 50 || distance === 800)) return true
+    if ((style === '平泳ぎ' || style === '背泳ぎ' || style === 'バタフライ') && (distance === 400 || distance === 800)) return true
+    return false
+  }
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60)
-    const seconds = (time % 60).toFixed(2)
-    return `${minutes}:${seconds.padStart(5, '0')}`
+    const seconds = time - minutes * 60
+    if (minutes === 0) {
+      return seconds.toFixed(2)
+    }
+    return `${minutes}:${seconds.toFixed(2).padStart(5, '0')}`
   }
 
   const formatDate = (dateString: string) => {
@@ -61,47 +86,74 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
   }
 
   return (
-    <div className="overflow-x-auto bg-white rounded-lg shadow-sm border border-gray-200">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+    <div className="overflow-x-auto bg-white rounded-xl shadow border border-gray-300">
+      <table className="min-w-full table-fixed border-separate border-spacing-0">
+        <thead className="sticky top-0 z-10">
           <tr>
-            <th className="px-3 py-2 text-left text-sm font-semibold text-gray-900 border-r border-gray-200 min-w-[100px] h-[50px]">
-              種目
+            <th className="px-3 py-2 text-left text-xs md:text-sm font-semibold text-gray-700 border-r border-gray-300 min-w-[64px] w-[72px] h-[44px] tracking-wide">
+              距離
             </th>
-            {DISTANCES.map((distance) => (
-              <th key={distance} className="px-3 py-2 text-center text-sm font-semibold text-gray-900 border-r border-gray-200 last:border-r-0 min-w-[120px] h-[50px]">
-                {distance}m
+            {STYLES.map((style) => (
+              <th
+                key={style}
+                className={`px-3 py-2 text-center text-xs md:text-sm font-semibold text-gray-800 border-r border-gray-300 last:border-r-0 min-w-[110px] h-[44px] ${styleHeaderBgClass[style]}`}
+              >
+                {style}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {STYLES.map((style) => (
-            <tr key={style} className="hover:bg-gray-50 transition-colors duration-150">
-              <td className="px-3 py-2 text-sm font-medium text-gray-900 border-r border-gray-200 bg-gray-50 min-w-[100px] h-[80px]">
-                {style}
+        <tbody className="bg-white">
+          {DISTANCES.map((distance, rowIdx) => (
+            <tr key={distance}>
+              <td className={`px-3 py-3 text-xs md:text-sm font-semibold text-gray-600 border-r border-gray-300 bg-gray-50 min-w-[64px] w-[72px] h-[64px] ${rowIdx > 0 ? 'border-t border-gray-300' : ''}`}>
+                {distance}m
               </td>
-              {DISTANCES.map((distance) => {
+              {STYLES.map((style) => {
                 const bestTime = getBestTime(style, distance)
                 return (
-                  <td key={distance} className="px-3 py-2 text-center text-sm text-gray-900 border-r border-gray-200 last:border-r-0 min-w-[120px] h-[80px]">
+                  <td
+                    key={style}
+                    className={`px-3 py-3 text-center text-xs md:text-sm text-gray-900 border-r border-gray-300 last:border-r-0 min-w-[110px] h-[64px] ${rowIdx > 0 ? 'border-t border-gray-300' : ''} ${isInvalidCombination(style, distance) ? 'bg-gray-200' : styleCellBgClass[style]}`}
+                  >
                     {bestTime ? (
-                      <div className="flex flex-col items-center space-y-1">
-                        <span className="font-bold text-base text-gray-900 bg-yellow-50 px-2 py-1 rounded">
+                      <div className="group relative inline-block pr-6 pt-2">
+                        {(() => {
+                          const createdAt = new Date(bestTime.created_at)
+                          const now = new Date()
+                          const diffDays = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24)
+                          const isNew = diffDays <= 30
+                          return isNew ? (
+                            <span className="absolute -top-1 -right-3 text-[10px] md:text-xs bg-red-500 text-white px-1.5 py-0.5 rounded-full shadow">New</span>
+                          ) : null
+                        })()}
+                        {/* 通常表示：ベストタイムのみ（セル背景色で表現） */}
+                        <span className={`font-semibold text-base md:text-lg ${(() => {
+                          const createdAt = new Date(bestTime.created_at)
+                          const now = new Date()
+                          const diffDays = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24)
+                          return diffDays <= 30 ? 'text-red-600' : 'text-gray-900'
+                        })()}`}>
                           {formatTime(bestTime.time)}
                         </span>
-                        <div className="flex items-center space-x-1 text-xs text-gray-500">
-                          <CalendarIcon className="h-3 w-3" />
-                          <span>{formatDate(bestTime.created_at)}</span>
-                        </div>
-                        {bestTime.competition && (
-                          <div className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
-                            {bestTime.competition.title}
+                        
+                        {/* ホバー時の詳細情報 */}
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-[11px] md:text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                          <div className="flex items-center space-x-1 mb-1">
+                            <CalendarIcon className="h-3 w-3" />
+                            <span>{formatDate(bestTime.created_at)}</span>
                           </div>
-                        )}
+                          {bestTime.competition && (
+                            <div className="text-blue-300">
+                              {bestTime.competition.title}
+                            </div>
+                          )}
+                          {/* 矢印 */}
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                        </div>
                       </div>
                     ) : (
-                      <span className="text-gray-400 text-base">-</span>
+                      <span className="inline-block text-gray-300">—</span>
                     )}
                   </td>
                 )
