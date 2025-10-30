@@ -3,21 +3,21 @@
 // =============================================================================
 
 import { SupabaseClient } from '@supabase/supabase-js'
-import { TeamMembership, TeamMembershipInsert } from '../../types/database'
+import { TeamMembership, TeamMembershipInsert, TeamMembershipWithUser } from '../../types/database'
 
 export class TeamMembersAPI {
   constructor(private supabase: SupabaseClient) {}
 
-  async list(teamId: string): Promise<TeamMembership[]> {
+  async list(teamId: string): Promise<TeamMembershipWithUser[]> {
     const { data: { user } } = await this.supabase.auth.getUser()
     if (!user) throw new Error('認証が必要です')
     const { data, error } = await this.supabase
       .from('team_memberships')
-      .select('*, user:users(*), team:teams(*)')
+      .select('*, users:users(*), teams:teams(*)')
       .eq('team_id', teamId)
       .eq('is_active', true)
     if (error) throw error
-    return data as unknown as TeamMembership[]
+    return data as unknown as TeamMembershipWithUser[]
   }
 
   async join(inviteCode: string): Promise<TeamMembership> {

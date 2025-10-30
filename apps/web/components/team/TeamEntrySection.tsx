@@ -30,11 +30,7 @@ interface UserEntry {
   entry_time: number | null
   note: string | null
   created_at: string
-  styles: {
-    id: number
-    name_jp: string
-    distance: number
-  } | null
+  style: Style | null
 }
 
 export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionProps) {
@@ -84,12 +80,12 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
           const { data: { user } } = await supabase.auth.getUser()
           if (!user) throw new Error('認証が必要です')
           await Promise.all(
-            openComps.map(async (comp) => {
+            openComps.map(async (comp: Competition) => {
               const entries = await entryAPI.getEntriesByCompetition(comp.id)
               const mine = (entries || []).filter((e: any) => e.user_id === user.id)
               const convertedEntries = mine.map((entry: any) => ({
                 ...entry,
-                styles: Array.isArray(entry.styles) ? entry.styles[0] : entry.styles
+                style: Array.isArray(entry.style) ? entry.style[0] : entry.style
               }))
               entriesData[comp.id] = convertedEntries
             })
@@ -239,7 +235,7 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
       const mine = (allEntries || []).filter((e: any) => e.user_id === user.id)
       const convertedEntries = mine.map((entry: any) => ({
         ...entry,
-        styles: Array.isArray(entry.styles) ? entry.styles[0] : entry.styles
+        style: Array.isArray(entry.style) ? entry.style[0] : entry.style
       }))
       setUserEntries(prev => ({
         ...prev,
@@ -287,7 +283,7 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
       const mine = (allEntries || []).filter((e: any) => e.user_id === user.id)
       const convertedEntries = mine.map((entry: any) => ({
         ...entry,
-        styles: Array.isArray(entry.styles) ? entry.styles[0] : entry.styles
+        style: Array.isArray(entry.style) ? entry.style[0] : entry.style
       }))
       setUserEntries(prev => ({
         ...prev,
@@ -378,7 +374,7 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
                           <div key={entry.id} className="flex items-center justify-between p-3 bg-orange-50 rounded-md border border-orange-100">
                             <div className="flex-1">
                               <p className="font-medium text-gray-900">
-                                {entry.styles?.name_jp || '種目不明'}
+                                {entry.style?.name_jp || '種目不明'}
                               </p>
                               {entry.entry_time && entry.entry_time > 0 && (
                                 <p className="text-sm text-gray-600">

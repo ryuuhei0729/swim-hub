@@ -83,10 +83,10 @@ export default function TeamCompetitionEntryModal({
       // 4) 種目ごとにグルーピング
       const entriesByStyle = (entries || []).reduce((acc: any, entry: any) => {
         const styleId = entry.style_id
-        if (!acc[styleId]) acc[styleId] = { style: entry.styles[0], entries: [] }
+        if (!acc[styleId]) acc[styleId] = { style: entry.styles ?? null, entries: [] }
         acc[styleId].entries.push({
           id: entry.id,
-          user: entry.users[0],
+          user: entry.users ?? null,
           entry_time: entry.entry_time,
           note: entry.note,
           created_at: entry.created_at
@@ -262,7 +262,7 @@ export default function TeamCompetitionEntryModal({
                       {/* 種目ヘッダー */}
                       <div className="bg-blue-50 px-4 py-3 border-b border-blue-200">
                         <h4 className="font-semibold text-blue-900">
-                          {styleData.style.name_jp} ({styleData.entries.length}件)
+                          {styleData.style?.name_jp ?? '種目不明'} ({styleData.entries.length})
                         </h4>
                       </div>
 
@@ -273,7 +273,7 @@ export default function TeamCompetitionEntryModal({
                             <div className="flex items-center justify-between">
                               <div className="flex-1">
                                 <p className="font-medium text-gray-900">
-                                  {index + 1}. {entry.user.name}
+                                  {index + 1}. {entry.user?.name ?? '不明なユーザー'}
                                 </p>
                                 {entry.entry_time && (
                                   <p className="text-sm text-gray-600 mt-1">

@@ -4,19 +4,13 @@ import React, { useState, useEffect } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { Button, Input } from '@/components/ui'
 import AvatarUpload from './AvatarUpload'
+import type { UserProfile } from '@apps/shared/types/database'
 
-interface UserProfile {
-  id: string
-  name: string
-  birthday?: string | null
-  bio?: string | null
-  profile_image_path?: string | null
-}
 
 interface ProfileEditModalProps {
   isOpen: boolean
   onClose: () => void
-  profile: UserProfile
+  profile: Partial<UserProfile>
   onUpdate: (updatedProfile: Partial<UserProfile>) => Promise<void>
   onAvatarChange: (newAvatarUrl: string | null) => void
 }
@@ -137,8 +131,8 @@ export default function ProfileEditModal({
               {/* アバター */}
               <div className="flex items-start">
                 <AvatarUpload
-                  currentAvatarUrl={profile.profile_image_path}
-                  userName={formData.name || profile.name}
+                  currentAvatarUrl={profile.profile_image_path ?? null}
+                  userName={(formData.name || profile.name) ?? ''}
                   onAvatarChange={onAvatarChange}
                   disabled={isUpdating}
                 />

@@ -42,7 +42,8 @@ export default function TeamCompetitionForm({
       setLoading(true)
       setError(null)
       
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError) throw authError
       if (!user) throw new Error('認証が必要です')
 
       await recordsAPI.create({

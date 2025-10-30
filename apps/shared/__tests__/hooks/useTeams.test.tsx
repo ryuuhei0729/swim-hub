@@ -207,9 +207,9 @@ describe('useTeams', () => {
       const teamId = 'team-1'
       
       mockCore.getMyTeams.mockResolvedValue([])
-      mockApi.getTeam.mockResolvedValue(createMockTeam())
-      mockApi.getTeamMembers.mockResolvedValue([])
-      mockApi.getTeamAnnouncements.mockResolvedValue([])
+      mockCore.getTeam.mockResolvedValue(createMockTeam())
+      mockMembers.list.mockResolvedValue([])
+      mockAnnouncements.list.mockResolvedValue([])
 
       const { result } = renderHook(() =>
         useTeams(mockClient, { teamId, enableRealtime: false })
