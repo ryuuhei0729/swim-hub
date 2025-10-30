@@ -10,7 +10,7 @@ interface UserProfile {
   name: string
   birthday?: string | null
   bio?: string | null
-  avatar_url?: string | null
+  profile_image_path?: string | null
 }
 
 interface ProfileEditModalProps {
@@ -133,11 +133,11 @@ export default function ProfileEditModal({
             )}
 
             {/* 上段: 左=アバター / 右=名前+生年月日 */}
-            <div className="grid grid-cols-1 md:[grid-template-columns:160px_1fr] gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-[160px_1fr] gap-8">
               {/* アバター */}
               <div className="flex items-start">
                 <AvatarUpload
-                  currentAvatarUrl={profile.avatar_url}
+                  currentAvatarUrl={profile.profile_image_path}
                   userName={formData.name || profile.name}
                   onAvatarChange={onAvatarChange}
                   disabled={isUpdating}

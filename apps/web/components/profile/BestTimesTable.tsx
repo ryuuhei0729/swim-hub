@@ -1,7 +1,9 @@
 'use client'
 
 import React from 'react'
+import { differenceInDays, parseISO } from 'date-fns'
 import { CalendarIcon } from '@heroicons/react/24/outline'
+import { formatTime, formatDate } from '../../utils/formatters'
 
 export interface BestTime {
   id: string
@@ -50,18 +52,7 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
     if ((style === '平泳ぎ' || style === '背泳ぎ' || style === 'バタフライ') && (distance === 400 || distance === 800)) return true
     return false
   }
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60)
-    const seconds = time - minutes * 60
-    if (minutes === 0) {
-      return seconds.toFixed(2)
-    }
-    return `${minutes}:${seconds.toFixed(2).padStart(5, '0')}`
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ja-JP')
-  }
+  
 
   const getBestTime = (style: string, distance: number) => {
     // データベースの種目名形式（例：50m自由形）で検索
@@ -119,20 +110,16 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
                     {bestTime ? (
                       <div className="group relative inline-block pr-6 pt-2">
                         {(() => {
-                          const createdAt = new Date(bestTime.created_at)
-                          const now = new Date()
-                          const diffDays = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24)
-                          const isNew = diffDays <= 30
+                          const createdAt = parseISO(bestTime.created_at)
+                          const isNew = differenceInDays(new Date(), createdAt) <= 30
                           return isNew ? (
                             <span className="absolute -top-1 -right-3 text-[10px] md:text-xs bg-red-500 text-white px-1.5 py-0.5 rounded-full shadow">New</span>
                           ) : null
                         })()}
                         {/* 通常表示：ベストタイムのみ（セル背景色で表現） */}
                         <span className={`font-semibold text-base md:text-lg ${(() => {
-                          const createdAt = new Date(bestTime.created_at)
-                          const now = new Date()
-                          const diffDays = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24)
-                          return diffDays <= 30 ? 'text-red-600' : 'text-gray-900'
+                          const createdAt = parseISO(bestTime.created_at)
+                          return differenceInDays(new Date(), createdAt) <= 30 ? 'text-red-600' : 'text-gray-900'
                         })()}`}>
                           {formatTime(bestTime.time)}
                         </span>

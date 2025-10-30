@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react'
 import { ChevronDownIcon, ChevronUpIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { formatTime } from '@/utils/formatters'
-import { TeamAPI, StyleAPI, EntryAPI } from '@apps/shared/api'
+import { StyleAPI } from '@apps/shared/api/styles'
+import { EntryAPI } from '@apps/shared/api/entries'
 import { useAuth } from '@/contexts/AuthProvider'
 import type { Style } from '@apps/shared/types/database'
 
@@ -60,11 +61,16 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
   const loadData = async () => {
     try {
       setLoading(true)
-      const teamAPI = new TeamAPI(supabase)
       const styleAPI = new StyleAPI(supabase)
 
-      // エントリー受付中の大会を取得
-      const { competitions: openComps } = await teamAPI.getOpenCompetitions(teamId)
+      // エントリー受付中の大会を取得（open のみ）
+      const { data: openComps, error: compsError } = await supabase
+        .from('competitions')
+        .select('*')
+        .eq('team_id', teamId)
+        .eq('entry_status', 'open')
+        .order('date', { ascending: true })
+      if (compsError) throw compsError
       setCompetitions(openComps)
 
       // 種目一覧を取得
@@ -74,11 +80,14 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
         // 各大会のユーザーエントリーを取得
         if (openComps.length > 0) {
           const entriesData: Record<string, UserEntry[]> = {}
+          const entryAPI = new EntryAPI(supabase)
+          const { data: { user } } = await supabase.auth.getUser()
+          if (!user) throw new Error('認証が必要です')
           await Promise.all(
             openComps.map(async (comp) => {
-              const entries = await teamAPI.getUserEntriesForCompetition(comp.id)
-              // 型変換: stylesが配列の場合は最初の要素を取得
-              const convertedEntries = entries.map((entry: any) => ({
+              const entries = await entryAPI.getEntriesByCompetition(comp.id)
+              const mine = (entries || []).filter((e: any) => e.user_id === user.id)
+              const convertedEntries = mine.map((entry: any) => ({
                 ...entry,
                 styles: Array.isArray(entry.styles) ? entry.styles[0] : entry.styles
               }))
@@ -224,9 +233,11 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
         editingEntryId: null
       })
 
-      // エントリー一覧を再読み込み
-      const entries = await new TeamAPI(supabase).getUserEntriesForCompetition(competitionId)
-      const convertedEntries = entries.map((entry: any) => ({
+      // エントリー一覧を再読み込み（自分の分のみ）
+      const entryAPIRefetch = new EntryAPI(supabase)
+      const allEntries = await entryAPIRefetch.getEntriesByCompetition(competitionId)
+      const mine = (allEntries || []).filter((e: any) => e.user_id === user.id)
+      const convertedEntries = mine.map((entry: any) => ({
         ...entry,
         styles: Array.isArray(entry.styles) ? entry.styles[0] : entry.styles
       }))
@@ -268,9 +279,13 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
       const entryAPI = new EntryAPI(supabase)
       await entryAPI.deleteEntry(entryId)
       
-      // エントリー一覧を再読み込み
-      const entries = await new TeamAPI(supabase).getUserEntriesForCompetition(competitionId)
-      const convertedEntries = entries.map((entry: any) => ({
+      // エントリー一覧を再読み込み（自分の分のみ）
+      const entryAPIRefetch = new EntryAPI(supabase)
+      const allEntries = await entryAPIRefetch.getEntriesByCompetition(competitionId)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('認証が必要です')
+      const mine = (allEntries || []).filter((e: any) => e.user_id === user.id)
+      const convertedEntries = mine.map((entry: any) => ({
         ...entry,
         styles: Array.isArray(entry.styles) ? entry.styles[0] : entry.styles
       }))

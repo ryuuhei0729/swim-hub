@@ -9,7 +9,7 @@ interface UserProfile {
   name: string
   birthday?: string | null
   bio?: string | null
-  avatar_url?: string | null
+  profile_image_path?: string | null
 }
 
 interface ProfileDisplayProps {
@@ -33,7 +33,7 @@ export default function ProfileDisplay({ profile }: ProfileDisplayProps) {
         {/* 左カラム: プロフィール画像（表示のみ） */}
         <div className="flex-shrink-0 mt-3 ml-3">
           <Avatar
-            avatarUrl={profile.avatar_url || null}
+            avatarUrl={profile.profile_image_path || null}
             userName={profile.name}
             size="xxl"
           />

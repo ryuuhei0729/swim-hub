@@ -13,6 +13,7 @@ import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import TeamPracticeForm from './TeamPracticeForm'
 import TeamPracticeLogForm from './TeamPracticeLogForm'
+import { TeamMembersAPI } from '@apps/shared/api/teams/members'
 
 export interface TeamPractice {
   id: string
@@ -45,7 +46,7 @@ export interface TeamPracticesProps {
 
 export default function TeamPractices({ teamId, isAdmin = false }: TeamPracticesProps) {
   const { supabase } = useAuth()
-  const teamAPI = useMemo(() => new (require('@apps/shared/api/teams')).TeamAPI(supabase), [supabase])
+  const membersAPI = useMemo(() => new TeamMembersAPI(supabase), [supabase])
   const router = useRouter()
   const [practices, setPractices] = useState<TeamPractice[]>([])
   const [loading, setLoading] = useState(true)
@@ -119,7 +120,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
     if (isAdmin) {
       try {
         // チームメンバーを取得
-        const members = await teamAPI.getTeamMembers(teamId)
+        const members = await membersAPI.list(teamId)
         
         setTeamMembers(members)
         setSelectedPracticeId(practiceId)
@@ -167,7 +168,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
         if (logsError) throw logsError
 
         // チームメンバーを取得
-        const members = await teamAPI.getTeamMembers(teamId)
+        const members = await membersAPI.list(teamId)
 
         // 秒数を表示用フォーマットに変換する関数
         const formatTimeFromSeconds = (seconds: number) => {

@@ -160,6 +160,13 @@ export default function AvatarUpload({
       console.error('アップロードエラー:', err)
       setError('画像のアップロードに失敗しました')
     } finally {
+      // メモリリークを防ぐため、生成したオブジェクトURLを解放
+      try {
+        const imageSrc = selectedImage?.src
+        if (typeof imageSrc === 'string' && imageSrc.length > 0) {
+          URL.revokeObjectURL(imageSrc)
+        }
+      } catch {}
       setIsUploading(false)
       setIsCropModalOpen(false)
       setSelectedImage(null)

@@ -114,7 +114,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
               </div>
               <div className="relative">
                 <Avatar
-                  avatarUrl={(profile as any)?.profile_image_path || null}
+                  avatarUrl={profile?.profile_image_path || null}
                   userName={profile?.name || user?.email?.split('@')[0] || 'ユーザー'}
                   size="md"
                 />

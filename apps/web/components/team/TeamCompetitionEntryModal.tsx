@@ -5,7 +5,7 @@ import { XMarkIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
-import { TeamAPI } from '@apps/shared/api'
+// ここでは直接Supabaseクエリで置換（TeamAPI互換の処理を画面内実装）
 import { useAuth } from '@/contexts/AuthProvider'
 
 interface TeamCompetitionEntryModalProps {
@@ -24,7 +24,7 @@ export default function TeamCompetitionEntryModal({
   teamId
 }: TeamCompetitionEntryModalProps) {
   const { supabase } = useAuth()
-  const teamAPI = useMemo(() => new TeamAPI(supabase), [supabase])
+  // TeamAPI への依存は排除
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [data, setData] = useState<any>(null)
@@ -40,9 +40,66 @@ export default function TeamCompetitionEntryModal({
     try {
       setLoading(true)
       setError(null)
-      const teamAPI = new TeamAPI(supabase)
-      const result = await teamAPI.getCompetitionEntries(competitionId)
-      setData(result)
+      // 1) 競技会情報取得（team_id含む）
+      const { data: competition, error: competitionError } = await supabase
+        .from('competitions')
+        .select('team_id, title, date, place, entry_status')
+        .eq('id', competitionId)
+        .single()
+      if (competitionError) throw competitionError
+      if (!competition?.team_id) throw new Error('チーム大会ではありません')
+
+      // 2) 現在ユーザーのロール取得
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('認証が必要です')
+      const { data: membership, error: membershipError } = await supabase
+        .from('team_memberships')
+        .select('role')
+        .eq('team_id', competition.team_id)
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .single()
+      if (membershipError) throw membershipError
+
+      // 3) エントリー一覧取得（ユーザー・種目join）
+      const { data: entries, error: entriesError } = await supabase
+        .from('entries')
+        .select(`
+          id,
+          user_id,
+          style_id,
+          entry_time,
+          note,
+          created_at,
+          users!entries_user_id_fkey ( id, name ),
+          styles ( id, name_jp, distance )
+        `)
+        .eq('competition_id', competitionId)
+        .eq('team_id', competition.team_id)
+        .order('style_id', { ascending: true })
+        .order('entry_time', { ascending: true, nullsFirst: false })
+      if (entriesError) throw entriesError
+
+      // 4) 種目ごとにグルーピング
+      const entriesByStyle = (entries || []).reduce((acc: any, entry: any) => {
+        const styleId = entry.style_id
+        if (!acc[styleId]) acc[styleId] = { style: entry.styles[0], entries: [] }
+        acc[styleId].entries.push({
+          id: entry.id,
+          user: entry.users[0],
+          entry_time: entry.entry_time,
+          note: entry.note,
+          created_at: entry.created_at
+        })
+        return acc
+      }, {} as Record<number, any>)
+
+      setData({
+        competition,
+        isAdmin: membership?.role === 'admin',
+        entriesByStyle,
+        totalEntries: (entries || []).length
+      })
     } catch (err: any) {
       console.error('エントリー情報の取得に失敗:', err)
       setError(err.message || 'エントリー情報の取得に失敗しました')
@@ -59,8 +116,32 @@ export default function TeamCompetitionEntryModal({
 
     try {
       setUpdatingStatus(true)
-      const teamAPI = new TeamAPI(supabase)
-      await teamAPI.updateCompetitionEntryStatus(competitionId, newStatus)
+      // 管理者チェックと更新
+      const { data: competition, error: competitionError } = await supabase
+        .from('competitions')
+        .select('team_id')
+        .eq('id', competitionId)
+        .single()
+      if (competitionError) throw competitionError
+      if (!competition?.team_id) throw new Error('チーム大会ではありません')
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('認証が必要です')
+      const { data: membership, error: membershipError } = await supabase
+        .from('team_memberships')
+        .select('role')
+        .eq('team_id', competition.team_id)
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .single()
+      if (membershipError) throw membershipError
+      if (membership?.role !== 'admin') throw new Error('管理者権限が必要です')
+
+      const { error: updateError } = await supabase
+        .from('competitions')
+        .update({ entry_status: newStatus })
+        .eq('id', competitionId)
+      if (updateError) throw updateError
       await loadEntries() // 再読み込み
       alert(`エントリーステータスを「${getStatusLabel(newStatus)}」に変更しました`)
     } catch (err: any) {
