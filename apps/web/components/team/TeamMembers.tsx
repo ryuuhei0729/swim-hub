@@ -3,13 +3,13 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
-import { TeamAPI } from '@apps/shared/api/teams'
+import { TeamMembersAPI } from '@apps/shared/api/teams/members'
 import { TeamMembershipWithUser } from '@apps/shared/types/database'
+import { Avatar } from '@/components/ui'
 import { 
   UserPlusIcon, 
   UserMinusIcon,
-  StarIcon,
-  UserIcon
+  StarIcon
 } from '@heroicons/react/24/outline'
 
 export interface TeamMembersProps {
@@ -26,7 +26,7 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
   const [inviteCode, setInviteCode] = useState('')
   
   const supabase = useMemo(() => createClient(), [])
-  const api = useMemo(() => new TeamAPI(supabase), [supabase])
+  const api = useMemo(() => new TeamMembersAPI(supabase), [supabase])
 
   // メンバー一覧を取得
   useEffect(() => {
@@ -35,7 +35,7 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
         setLoading(true)
         setError(null)
         
-        const membersData = await api.getTeamMembers(teamId)
+        const membersData = await api.list(teamId)
         setMembers(membersData)
       } catch (err) {
         console.error('メンバー情報の取得に失敗:', err)
@@ -138,9 +138,11 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
           >
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
-                <div className="h-10 w-10 bg-gray-300 rounded-full flex items-center justify-center">
-                  <UserIcon className="h-6 w-6 text-gray-600" />
-                </div>
+                <Avatar
+                  avatarUrl={member.users?.profile_image_path || null}
+                  userName={member.users?.name || 'Unknown User'}
+                  size="md"
+                />
               </div>
               <div>
                 <div className="flex items-center space-x-2">
@@ -170,7 +172,12 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
         
         {members.length === 0 && (
           <div className="text-center py-8">
-            <UserIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <Avatar
+              avatarUrl={null}
+              userName="?"
+              size="lg"
+              className="mx-auto mb-4 opacity-50"
+            />
             <p className="text-gray-600">メンバーがいません</p>
           </div>
         )}

@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthProvider'
-import { TeamAPI } from '@apps/shared/api/teams'
+import { TeamRecordsAPI } from '@apps/shared/api/teams/records'
 import { Button, Input } from '@/components/ui'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 
@@ -20,7 +20,7 @@ export default function TeamCompetitionForm({
   onSuccess 
 }: TeamCompetitionFormProps) {
   const { supabase } = useAuth()
-  const teamAPI = useMemo(() => new TeamAPI(supabase), [supabase])
+  const recordsAPI = useMemo(() => new TeamRecordsAPI(supabase), [supabase])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
@@ -42,15 +42,19 @@ export default function TeamCompetitionForm({
       setLoading(true)
       setError(null)
       
-      const teamAPI = new TeamAPI(supabase)
-      
-      // チーム大会を作成（team_idを自動で設定）
-      await teamAPI.createTeamCompetition(teamId, {
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError) throw authError
+      if (!user) throw new Error('認証が必要です')
+
+      await recordsAPI.create({
+        user_id: user.id,
+        team_id: teamId,
         title: formData.title,
         date: formData.date,
         place: formData.place || null,
-        note: formData.note || null
-      })
+        note: formData.note || null,
+        pool_type: 0
+      } as any)
       
       onSuccess()
       onClose()

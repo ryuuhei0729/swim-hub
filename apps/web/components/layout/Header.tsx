@@ -5,10 +5,10 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts'
+import { Avatar } from '@/components/ui'
 import { 
   Bars3Icon, 
   BellIcon, 
-  UserCircleIcon, 
   ChevronDownIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
@@ -33,7 +33,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
   }
 
   const handleProfileClick = () => {
-    router.push('/settings')
+    router.push('/mypage')
     setIsUserMenuOpen(false)
   }
 
@@ -113,7 +113,11 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 </div>
               </div>
               <div className="relative">
-                <UserCircleIcon className="h-8 w-8 text-gray-400" aria-hidden="true" />
+                <Avatar
+                  avatarUrl={profile?.profile_image_path || null}
+                  userName={profile?.name || user?.email?.split('@')[0] || 'ユーザー'}
+                  size="md"
+                />
               </div>
               <ChevronDownIcon 
                 className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${
@@ -143,7 +147,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                   </button>
                   <button
                     onClick={() => {
-                      router.push('/settings')
+                      router.push('/mypage')
                       setIsUserMenuOpen(false)
                     }}
                     className="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"

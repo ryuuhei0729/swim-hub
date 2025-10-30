@@ -4,8 +4,8 @@
 // =============================================================================
 
 import { SupabaseClient } from '@supabase/supabase-js'
-import { useCallback, useEffect, useState } from 'react'
-import { TeamAPI } from '../api/teams'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { TeamAnnouncementsAPI, TeamCoreAPI, TeamMembersAPI } from '../api/teams'
 import {
   TeamAnnouncement,
   TeamMembershipWithUser,
@@ -30,7 +30,9 @@ export function useTeams(
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  const api = new TeamAPI(supabase)
+  const core = useMemo(() => new TeamCoreAPI(supabase), [supabase])
+  const membersApi = useMemo(() => new TeamMembersAPI(supabase), [supabase])
+  const announcementsApi = useMemo(() => new TeamAnnouncementsAPI(supabase), [supabase])
 
   // データ取得関数
   const loadData = useCallback(async () => {
@@ -39,15 +41,15 @@ export function useTeams(
       setError(null)
 
       // 自分のチーム一覧を取得
-      const teamsData = await api.getMyTeams()
+      const teamsData = await core.getMyTeams()
       setTeams(teamsData)
 
       // 特定のチームが指定されている場合
       if (teamId) {
         const [teamData, membersData, announcementsData] = await Promise.all([
-          api.getTeam(teamId),
-          api.getTeamMembers(teamId),
-          api.getTeamAnnouncements(teamId)
+          core.getTeam(teamId),
+          membersApi.list(teamId),
+          announcementsApi.list(teamId)
         ])
 
         setCurrentTeam(teamData)
@@ -60,91 +62,109 @@ export function useTeams(
     } finally {
       setLoading(false)
     }
-  }, [teamId])
+  }, [teamId, core, membersApi, announcementsApi])
 
   // 初回データ取得
   useEffect(() => {
     loadData()
-  }, [loadData])
+  }, [core, loadData])
 
-  // リアルタイム購読
+  // リアルタイム購読（アナウンス/メンバー）
   useEffect(() => {
     if (!enableRealtime || !teamId) return
 
-    const announcementsChannel = api.subscribeToAnnouncements(teamId, () => {
-      loadData()
-    })
+    const annCh = supabase
+      .channel(`team-announcements-${teamId}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'announcements', filter: `team_id=eq.${teamId}`
+      }, () => { loadData() })
+      .subscribe()
 
-    const membersChannel = api.subscribeToMembers(teamId, () => {
-      loadData()
-    })
+    const memCh = supabase
+      .channel(`team-members-${teamId}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'team_memberships', filter: `team_id=eq.${teamId}`
+      }, () => { loadData() })
+      .subscribe()
 
     return () => {
-      supabase.removeChannel(announcementsChannel)
-      supabase.removeChannel(membersChannel)
+      supabase.removeChannel(annCh)
+      supabase.removeChannel(memCh)
     }
-  }, [enableRealtime, teamId, loadData])
+  }, [enableRealtime, teamId, loadData, supabase])
 
   // 操作関数
   const createTeam = useCallback(async (team: any) => {
-    const newTeam = await api.createTeam(team)
+    const newTeam = await core.createTeam(team)
     await loadData()
     return newTeam
-  }, [loadData])
+  }, [core, loadData])
 
   const updateTeam = useCallback(async (id: string, updates: any) => {
-    const updated = await api.updateTeam(id, updates)
+    const updated = await core.updateTeam(id, updates)
     await loadData()
     return updated
   }, [loadData])
 
   const deleteTeam = useCallback(async (id: string) => {
-    await api.deleteTeam(id)
+    await core.deleteTeam(id)
     setTeams(prev => prev.filter((t: any) => t.team?.id !== id))
-  }, [])
+  }, [core])
 
   const joinTeam = useCallback(async (inviteCode: string) => {
-    const membership = await api.joinTeam(inviteCode)
+    const membership = await membersApi.join(inviteCode)
     await loadData()
     return membership
-  }, [loadData])
+  }, [membersApi, loadData])
 
   const leaveTeam = useCallback(async (id: string) => {
-    await api.leaveTeam(id)
+    await membersApi.leave(id)
     setTeams(prev => prev.filter((t: any) => t.team?.id !== id))
-  }, [])
+  }, [membersApi])
 
   const updateMemberRole = useCallback(async (
     teamId: string,
     userId: string,
     role: 'admin' | 'user'
   ) => {
-    const updated = await api.updateMemberRole(teamId, userId, role)
+    const updated = await membersApi.updateRole(teamId, userId, role)
     await loadData()
     return updated
-  }, [loadData])
+  }, [membersApi, loadData])
 
   const removeMember = useCallback(async (teamId: string, userId: string) => {
-    await api.removeMember(teamId, userId)
+    await membersApi.remove(teamId, userId)
     await loadData()
-  }, [loadData])
+  }, [membersApi, loadData])
 
   const createAnnouncement = useCallback(async (announcement: any) => {
-    const newAnnouncement = await api.createAnnouncement(announcement)
+    const newAnnouncement = await announcementsApi.create({
+      team_id: announcement.team_id ?? announcement.teamId,
+      title: announcement.title,
+      content: announcement.content,
+      is_published: announcement.is_published ?? announcement.isPublished ?? false,
+      published_at: announcement.published_at ?? announcement.publishedAt ?? null,
+      created_by: '' // サーバー側で user を付与
+    } as any)
     setAnnouncements(prev => [newAnnouncement, ...prev])
     return newAnnouncement
-  }, [])
+  }, [announcementsApi])
 
   const updateAnnouncement = useCallback(async (id: string, updates: any) => {
-    const updated = await api.updateAnnouncement(id, updates)
+    const updated = await announcementsApi.update(id, {
+      title: updates.title,
+      content: updates.content,
+      is_published: updates.is_published ?? updates.isPublished,
+      published_at: updates.published_at ?? updates.publishedAt
+    } as any)
     setAnnouncements(prev => prev.map(a => a.id === id ? updated : a))
     return updated
-  }, [])
+  }, [announcementsApi])
 
   const deleteAnnouncement = useCallback(async (id: string) => {
-    await api.deleteAnnouncement(id)
+    await announcementsApi.remove(id)
     setAnnouncements(prev => prev.filter(a => a.id !== id))
-  }, [])
+  }, [announcementsApi])
 
   return {
     teams,

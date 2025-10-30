@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthProvider'
+import { Avatar } from '@/components/ui'
 import { 
-  UserIcon,
   StarIcon
 } from '@heroicons/react/24/outline'
 
@@ -18,6 +18,7 @@ export interface TeamMember {
     name: string
     birthday?: string
     bio?: string
+    profile_image_path?: string | null
   }
 }
 
@@ -58,7 +59,8 @@ export default function TeamMemberManagement({
             id,
             name,
             birthday,
-            bio
+            bio,
+            profile_image_path
           )
         `)
         .eq('team_id', teamId)
@@ -147,9 +149,11 @@ export default function TeamMemberManagement({
             <div className="flex items-center space-x-3 flex-1">
               {/* ユーザーアイコン */}
               <div className="flex-shrink-0">
-                <div className="h-10 w-10 bg-gray-300 rounded-full flex items-center justify-center">
-                  <UserIcon className="h-6 w-6 text-gray-600" />
-                </div>
+                <Avatar
+                  avatarUrl={member.users?.profile_image_path || null}
+                  userName={member.users?.name || 'Unknown User'}
+                  size="md"
+                />
               </div>
               
               {/* ユーザー情報 */}
@@ -190,7 +194,12 @@ export default function TeamMemberManagement({
         
         {members.length === 0 && (
           <div className="text-center py-8">
-            <UserIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <Avatar
+              avatarUrl={null}
+              userName="?"
+              size="lg"
+              className="mx-auto mb-4 opacity-50"
+            />
             <p className="text-gray-600">メンバーがいません</p>
           </div>
         )}

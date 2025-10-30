@@ -14,7 +14,8 @@ import {
   XMarkIcon,
   ChevronRightIcon,
   UsersIcon,
-  CogIcon
+  CogIcon,
+  UserIcon
 } from '@heroicons/react/24/outline'
 
 interface SidebarProps {
@@ -54,6 +55,12 @@ const baseNavigation: NavigationItem[] = [
     href: '/teams', 
     icon: UsersIcon,
     description: 'チームの作成・参加・管理',
+  },
+  { 
+    name: 'マイページ', 
+    href: '/mypage', 
+    icon: UserIcon,
+    description: 'プロフィールとベストタイム',
   },
 ]
 

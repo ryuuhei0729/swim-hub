@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthProvider'
-import { TeamAPI } from '@apps/shared/api/teams'
+import { TeamCoreAPI } from '@apps/shared/api/teams/core'
+import { TeamMembersAPI } from '@apps/shared/api/teams/members'
 import { 
   ExclamationTriangleIcon,
   ArrowRightOnRectangleIcon,
@@ -26,7 +27,8 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
   const [showLastMemberWarning, setShowLastMemberWarning] = useState(false)
   
   const { supabase } = useAuth()
-  const teamAPI = useMemo(() => new TeamAPI(supabase), [supabase])
+  const coreAPI = useMemo(() => new TeamCoreAPI(supabase), [supabase])
+  const membersAPI = useMemo(() => new TeamMembersAPI(supabase), [supabase])
 
   useEffect(() => {
     setName(teamName)
@@ -43,7 +45,7 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
       setLoading(true)
       setError(null)
       
-      await teamAPI.updateTeam(teamId, {
+      await coreAPI.updateTeam(teamId, {
         name: name.trim(),
         description: description.trim() || null
       })
@@ -70,7 +72,7 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
       setLoading(true)
       setError(null)
       
-      await teamAPI.leaveTeam(teamId)
+      await membersAPI.leave(teamId)
       alert('チームから退出しました')
       window.location.href = '/teams'
     } catch (err) {
@@ -104,9 +106,33 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
                 <button
                   onClick={async () => {
                     try {
-                      const adminCount = await teamAPI.getAdminCount(teamId)
-                      const totalMemberCount = await teamAPI.getTotalMemberCount(teamId)
-                      const isCurrentUserAdmin = await teamAPI.isCurrentUserAdmin(teamId)
+                      const { data: adminList, error: adminErr } = await supabase
+                        .from('team_memberships')
+                        .select('id')
+                        .eq('team_id', teamId)
+                        .eq('role', 'admin')
+                        .eq('is_active', true)
+                      if (adminErr) throw adminErr
+                      const adminCount = adminList?.length || 0
+
+                      const { data: totalList, error: totalErr } = await supabase
+                        .from('team_memberships')
+                        .select('id')
+                        .eq('team_id', teamId)
+                        .eq('is_active', true)
+                      if (totalErr) throw totalErr
+                      const totalMemberCount = totalList?.length || 0
+
+                      const { data: { user } } = await supabase.auth.getUser()
+                      if (!user) throw new Error('認証が必要です')
+                      const { data: myMembership } = await supabase
+                        .from('team_memberships')
+                        .select('role')
+                        .eq('team_id', teamId)
+                        .eq('user_id', user.id)
+                        .eq('is_active', true)
+                        .maybeSingle()
+                      const isCurrentUserAdmin = myMembership?.role === 'admin'
                       
                       // 管理者が最後の1人で、かつ他にメンバーがいる場合は退出不可
                       if (isCurrentUserAdmin && adminCount === 1 && totalMemberCount > 1) {
@@ -342,22 +368,46 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
               <button
                 onClick={async () => {
                   try {
-                    const adminCount = await teamAPI.getAdminCount(teamId)
-                    const totalMemberCount = await teamAPI.getTotalMemberCount(teamId)
-                    const isCurrentUserAdmin = await teamAPI.isCurrentUserAdmin(teamId)
-                    
+                    const { data: adminList, error: adminErr } = await supabase
+                      .from('team_memberships')
+                      .select('id')
+                      .eq('team_id', teamId)
+                      .eq('role', 'admin')
+                      .eq('is_active', true)
+                    if (adminErr) throw adminErr
+                    const adminCount = adminList?.length || 0
+
+                    const { data: totalList, error: totalErr } = await supabase
+                      .from('team_memberships')
+                      .select('id')
+                      .eq('team_id', teamId)
+                      .eq('is_active', true)
+                    if (totalErr) throw totalErr
+                    const totalMemberCount = totalList?.length || 0
+
+                    const { data: { user } } = await supabase.auth.getUser()
+                    if (!user) throw new Error('認証が必要です')
+                    const { data: myMembership } = await supabase
+                      .from('team_memberships')
+                      .select('role')
+                      .eq('team_id', teamId)
+                      .eq('user_id', user.id)
+                      .eq('is_active', true)
+                      .maybeSingle()
+                    const isCurrentUserAdmin = myMembership?.role === 'admin'
+
                     // 管理者が最後の1人で、かつ他にメンバーがいる場合は退出不可
                     if (isCurrentUserAdmin && adminCount === 1 && totalMemberCount > 1) {
                       setError('チームには最低1人の管理者が必要です。他のメンバーを管理者に任命してから退出してください。')
                       return
                     }
-                    
+
                     // 自分が最後のメンバーの場合は警告を表示
                     if (totalMemberCount === 1) {
                       setShowLastMemberWarning(true)
                       return
                     }
-                    
+
                     setShowLeaveModal(true)
                   } catch (err) {
                     console.error('管理者チェックエラー:', err)

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthProvider'
-import { TeamAPI } from '@apps/shared/api/teams'
+import { TeamPracticesAPI } from '@apps/shared/api/teams/practices'
 import { Button, Input } from '@/components/ui'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 
@@ -97,14 +97,17 @@ export default function TeamPracticeForm({
       setLoading(true)
       setError(null)
       
-      const teamAPI = new TeamAPI(supabase)
-      
-      // チーム練習記録を作成（team_idを自動で設定）
-      await teamAPI.createTeamPractice(teamId, {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('認証が必要です')
+
+      const practicesAPI = new TeamPracticesAPI(supabase)
+      await practicesAPI.create({
+        user_id: user.id,
+        team_id: teamId,
         date: formData.date,
         place: formData.place || null,
         note: formData.note || null
-      })
+      } as any)
       
       onSuccess()
       onClose()
