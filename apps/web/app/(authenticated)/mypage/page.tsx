@@ -29,6 +29,7 @@ interface UserProfile {
   birthday?: string | null
   bio?: string | null
   avatar_url?: string | null
+  profile_image_path?: string | null
 }
 
 export default function MyPage() {
@@ -60,7 +61,8 @@ export default function MyPage() {
           name: userData.name,
           birthday: userData.birthday,
           bio: userData.bio,
-          avatar_url: userData.profile_image_path
+          avatar_url: userData.profile_image_path,
+          profile_image_path: userData.profile_image_path
         })
       }
     } catch (err) {
@@ -163,6 +165,7 @@ export default function MyPage() {
       if (updatedProfile.birthday !== undefined) dbUpdate.birthday = updatedProfile.birthday
       if (updatedProfile.bio !== undefined) dbUpdate.bio = updatedProfile.bio
       if (updatedProfile.avatar_url !== undefined) dbUpdate.profile_image_path = updatedProfile.avatar_url
+      if (updatedProfile.profile_image_path !== undefined) dbUpdate.profile_image_path = updatedProfile.profile_image_path
 
       // TODO: Supabase型推論の制約回避のため一時的にas any
       const { error } = await (supabase as any)
@@ -172,7 +175,11 @@ export default function MyPage() {
 
       if (error) throw error
 
-      setProfile(prev => prev ? { ...prev, ...updatedProfile } : null)
+      setProfile(prev => prev ? { 
+        ...prev, 
+        ...updatedProfile,
+        profile_image_path: updatedProfile.profile_image_path ?? updatedProfile.avatar_url ?? prev.profile_image_path
+      } : null)
     } catch (err) {
       console.error('プロフィール更新エラー:', err)
       throw err
@@ -191,7 +198,11 @@ export default function MyPage() {
 
       if (error) throw error
 
-      setProfile(prev => prev ? { ...prev, avatar_url: newAvatarUrl } : null)
+      setProfile(prev => prev ? { 
+        ...prev, 
+        avatar_url: newAvatarUrl,
+        profile_image_path: newAvatarUrl
+      } : null)
     } catch (err) {
       console.error('アバター更新エラー:', err)
       throw err

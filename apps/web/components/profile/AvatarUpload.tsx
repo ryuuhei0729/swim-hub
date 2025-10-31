@@ -78,25 +78,37 @@ export default function AvatarUpload({
   }
 
   const handleRemoveAvatar = async () => {
-    if (!currentAvatarUrl || !user) return
+    if (!user) return
 
     try {
-      // 現在の画像をStorageから削除
-      const filePath = extractFilePathFromUrl(currentAvatarUrl)
-      if (!filePath) {
-        throw new Error('Invalid URL format')
-      }
-
-      console.log('画像を削除中:', filePath)
-      const { error: deleteError } = await supabase.storage
+      // User:1 - ProfileImage:1 の関係を保つため、ユーザーフォルダ内のすべてのファイルを削除
+      const userFolderPath = `avatars/${user.id}`
+      
+      // ユーザーフォルダ内のファイル一覧を取得
+      const { data: files, error: listError } = await supabase.storage
         .from('profile-images')
-        .remove([filePath])
-
-      if (deleteError) {
-        throw deleteError
+        .list(userFolderPath)
+      
+      if (listError) {
+        throw listError
       }
-
-      console.log('画像を削除しました:', filePath)
+      
+      if (files && files.length > 0) {
+        // すべてのファイルを削除
+        const filePathsToDelete = files.map(file => `${userFolderPath}/${file.name}`)
+        console.log('プロフィール画像を削除中:', filePathsToDelete)
+        
+        const { error: deleteError } = await supabase.storage
+          .from('profile-images')
+          .remove(filePathsToDelete)
+        
+        if (deleteError) {
+          throw deleteError
+        }
+        
+        console.log('プロフィール画像を削除しました:', filePathsToDelete.length, 'ファイル')
+      }
+      
       onAvatarChange(null)
     } catch (err) {
       console.error('画像削除エラー:', err)
@@ -111,32 +123,43 @@ export default function AvatarUpload({
     setError(null)
 
     try {
+      // ユーザーフォルダのパス: avatars/{userId}/
+      const userFolderPath = `avatars/${user.id}`
+      
+      // User:1 - ProfileImage:1 の関係を保つため、ユーザーフォルダ内のすべてのファイルを削除
+      try {
+        // ユーザーフォルダ内のファイル一覧を取得
+        const { data: files, error: listError } = await supabase.storage
+          .from('profile-images')
+          .list(userFolderPath)
+        
+        if (listError) {
+          console.warn('ファイル一覧取得エラー:', listError)
+        } else if (files && files.length > 0) {
+          // すべてのファイルを削除
+          const filePathsToDelete = files.map(file => `${userFolderPath}/${file.name}`)
+          console.log('既存のプロフィール画像を削除中:', filePathsToDelete)
+          
+          const { error: deleteError } = await supabase.storage
+            .from('profile-images')
+            .remove(filePathsToDelete)
+          
+          if (deleteError) {
+            console.warn('既存画像の削除に失敗:', deleteError)
+          } else {
+            console.log('既存のプロフィール画像を削除しました:', filePathsToDelete.length, 'ファイル')
+          }
+        }
+      } catch (deleteErr) {
+        console.warn('既存画像の削除処理でエラー:', deleteErr)
+        // エラーが発生しても続行（新規ユーザーなど、フォルダが存在しない場合もある）
+      }
+
       // ファイル名を生成（ユニークにするためタイムスタンプを追加）
       const fileExt = croppedFile.name.split('.').pop()
       const fileName = `${Date.now()}.${fileExt}`
       // ユーザーIDを含むパス構造: avatars/{userId}/{fileName}
-      const filePath = `avatars/${user.id}/${fileName}`
-
-      // 既存の画像があれば削除（新しい画像アップロード前に実行）
-      if (currentAvatarUrl) {
-        try {
-          const oldFilePath = extractFilePathFromUrl(currentAvatarUrl)
-          if (oldFilePath) {
-            console.log('古い画像を削除中:', oldFilePath)
-            const { error: deleteError } = await supabase.storage
-              .from('profile-images')
-              .remove([oldFilePath])
-            
-            if (deleteError) {
-              console.warn('古い画像の削除に失敗:', deleteError)
-            } else {
-              console.log('古い画像を削除しました:', oldFilePath)
-            }
-          }
-        } catch (deleteErr) {
-          console.warn('古い画像の削除処理でエラー:', deleteErr)
-        }
-      }
+      const filePath = `${userFolderPath}/${fileName}`
 
       // Supabase Storageにアップロード
       console.log('新しい画像をアップロード中:', filePath)
