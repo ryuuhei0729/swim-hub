@@ -1,11 +1,10 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import type { ComponentType, SVGProps } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { createClient } from '@/lib/supabase'
 import { useAuth } from '@/contexts'
 import { 
   HomeIcon,
@@ -73,10 +72,9 @@ const adminNavigation: NavigationItem = {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname()
-  const { user } = useAuth()
+  const { user, supabase } = useAuth()
   const [hasAdminTeams, setHasAdminTeams] = useState(false)
   const [singleTeamId, setSingleTeamId] = useState<string | null>(null)
-  const supabase = useMemo(() => createClient(), [])
   
   // ユーザーのチーム一覧を取得して管理者権限とチーム数をチェック
   useEffect(() => {

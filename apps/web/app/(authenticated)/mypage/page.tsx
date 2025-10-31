@@ -1,9 +1,8 @@
 'use client'
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts'
-import { createClient, type Database } from '@/lib/supabase'
-import { UserIcon, TrophyIcon, CalendarIcon } from '@heroicons/react/24/outline'
+import { UserIcon, TrophyIcon } from '@heroicons/react/24/outline'
 import BestTimesTable from '@/components/profile/BestTimesTable'
 import ProfileDisplay from '@/components/profile/ProfileDisplay'
 import ProfileEditModal from '@/components/profile/ProfileEditModal'
@@ -33,14 +32,12 @@ interface UserProfile {
 }
 
 export default function MyPage() {
-  const { user } = useAuth()
+  const { user, supabase } = useAuth()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [bestTimes, setBestTimes] = useState<BestTime[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-
-  const supabase = useMemo(() => createClient(), [])
 
   const loadProfile = useCallback(async () => {
     if (!user) return
@@ -96,15 +93,18 @@ export default function MyPage() {
       if (error) throw error
 
       // 種目ごとのベストタイムを取得
-      type RecordWithRelations = Record & {
-        styles?: Style | null
-        competitions?: Competition | null
+      type RecordWithRelations = {
+        id: string
+        time: number
+        created_at: string
+        styles?: { name_jp: string; distance: number } | null
+        competitions?: { title: string; date: string } | null
       }
       
       const bestTimesByStyle = new Map<string, BestTime>()
       
       if (data && Array.isArray(data)) {
-        data.forEach((record: RecordWithRelations) => {
+        (data as unknown as RecordWithRelations[]).forEach((record) => {
           const styleKey = record.styles?.name_jp || 'Unknown'
           
           if (!bestTimesByStyle.has(styleKey) || record.time < bestTimesByStyle.get(styleKey)!.time) {
@@ -162,8 +162,7 @@ export default function MyPage() {
 
       const { error } = await supabase
         .from('users')
-        // @ts-expect-error: Supabaseの型推論がupdateでneverになる既知の問題のため
-        .update(dbUpdate)
+        .update(dbUpdate as any)
         .eq('id', user.id)
 
       if (error) throw error
@@ -185,8 +184,7 @@ export default function MyPage() {
     try {
       const { error } = await supabase
         .from('users')
-        // @ts-expect-error: Supabaseの型推論がupdateでneverになる既知の問題のため
-        .update({ profile_image_path: newAvatarUrl })
+        .update({ profile_image_path: newAvatarUrl } as any)
         .eq('id', user.id)
 
       if (error) throw error

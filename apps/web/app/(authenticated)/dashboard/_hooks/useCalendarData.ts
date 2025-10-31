@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase'
+import { useAuth } from '@/contexts'
 import { DashboardAPI } from '@apps/shared/api/dashboard'
 import type { CalendarItem } from '@apps/shared/types'
 import { endOfMonth, format, startOfMonth } from 'date-fns'
@@ -12,7 +12,7 @@ export interface MonthlySummary {
 }
 
 export function useCalendarData(displayDate: Date, _userId?: string) {
-  const supabase = useMemo(() => createClient(), [])
+  const { supabase } = useAuth()
   const api = useMemo(() => new DashboardAPI(supabase), [supabase])
   const [calendarItems, setCalendarItems] = useState<CalendarItem[]>([])
   const [monthlySummary, setMonthlySummary] = useState<MonthlySummary>({

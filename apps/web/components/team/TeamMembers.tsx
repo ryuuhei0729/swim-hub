@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase'
+import { useAuth } from '@/contexts'
 import { TeamMembersAPI } from '@apps/shared/api/teams/members'
 import { TeamMembershipWithUser } from '@apps/shared/types/database'
 import { Avatar } from '@/components/ui'
@@ -25,7 +25,7 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [inviteCode, setInviteCode] = useState('')
   
-  const supabase = useMemo(() => createClient(), [])
+  const { supabase } = useAuth()
   const api = useMemo(() => new TeamMembersAPI(supabase), [supabase])
 
   // メンバー一覧を取得

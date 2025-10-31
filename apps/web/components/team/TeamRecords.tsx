@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase'
+import { useAuth } from '@/contexts'
 import { 
   TrophyIcon,
   StarIcon,
@@ -40,7 +40,7 @@ export default function TeamRecords({ teamId, isAdmin = false }: TeamRecordsProp
   const [selectedStyle, setSelectedStyle] = useState<string>('all')
   const [styles, setStyles] = useState<{id: string, name_jp: string, distance: number}[]>([])
   
-  const supabase = useMemo(() => createClient(), [])
+  const { supabase } = useAuth()
 
   // チームの記録を取得
   useEffect(() => {

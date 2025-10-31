@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from 'react'
-import { createClient } from '@/lib/supabase'
+import { useAuth } from '@/contexts'
 import { DashboardAPI } from '@apps/shared/api/dashboard'
 import { CalendarItem, MonthlySummary } from '@apps/shared/types/ui'
 import { endOfMonth, format, startOfMonth } from 'date-fns'
@@ -25,8 +25,8 @@ interface CalendarContextType {
 const CalendarContext = createContext<CalendarContextType | undefined>(undefined)
 
 export function CalendarProvider({ children }: { children: React.ReactNode }) {
+  const { supabase } = useAuth()
   const [currentDate, setCurrentDate] = useState(new Date())
-  const supabase = useMemo(() => createClient(), [])
   const api = useMemo(() => new DashboardAPI(supabase), [supabase])
   const [calendarItems, setCalendarItems] = useState<CalendarItem[]>([])
   const [monthlySummary, setMonthlySummary] = useState<MonthlySummary>({

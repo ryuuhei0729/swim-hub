@@ -1,8 +1,7 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase'
 import { useAuth } from '@/contexts'
 import { 
   TeamAnnouncements,
@@ -21,11 +20,11 @@ import { TeamEvent, AttendanceStatusType, Team, TeamMembership } from '@swim-hub
 
 // 出欠タブコンポーネント
 function AttendanceTab({ teamId, isAdmin }: { teamId: string, isAdmin: boolean }) {
+  const { supabase } = useAuth()
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [selectedEventType, setSelectedEventType] = useState<'practice' | 'competition' | null>(null)
   const [events, setEvents] = useState<TeamEvent[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = useMemo(() => createClient(), [])
 
   const loadEvents = useCallback(async () => {
     try {
@@ -246,8 +245,7 @@ export default function TeamDetailPage() {
 
   const [selectedMember, setSelectedMember] = useState<import('@/components/team/MemberDetailModal').MemberDetail | null>(null)
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false)
-  const { user } = useAuth()
-  const supabase = useMemo(() => createClient(), [])
+  const { user, supabase } = useAuth()
 
   useEffect(() => {
     const loadTeam = async () => {

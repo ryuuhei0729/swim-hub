@@ -1,10 +1,8 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
-import { createClient } from '@/lib/supabase'
+import { useAuth } from '@/contexts'
 import type {
   Practice,
   PracticeLog,
@@ -69,7 +67,7 @@ export default function PracticeTimeModal({
   const [practice, setPractice] = useState<FormattedPractice | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-  const supabase = useMemo(() => createClient(), [])
+  const { supabase } = useAuth()
 
   useEffect(() => {
     if (!isOpen) return

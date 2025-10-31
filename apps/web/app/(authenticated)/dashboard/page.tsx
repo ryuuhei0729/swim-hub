@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useAuth } from '@/contexts'
 import CalendarContainer from './_components/CalendarContainer'
 import { TeamAnnouncements } from '@/components/team'
-import { createClient } from '@/lib/supabase'
 import { useEffect } from 'react'
 import { parseISO, startOfDay } from 'date-fns'
 import PracticeBasicForm from '@/components/forms/PracticeBasicForm'
@@ -14,16 +13,13 @@ import EntryLogForm from '@/components/forms/EntryLogForm'
 import RecordLogForm from '@/components/forms/RecordLogForm'
 import { usePractices } from '@apps/shared/hooks/usePractices'
 import { useRecords } from '@apps/shared/hooks/useRecords'
-import { useCalendarData } from './_hooks/useCalendarData'
 import { StyleAPI, EntryAPI } from '@apps/shared/api'
 import type {
   Style,
   PracticeTag,
   TeamMembership,
   Team,
-  Entry,
-  PracticeTime,
-  SplitTime
+  Entry
 } from '@apps/shared/types/database'
 import type {
   CalendarItem,
@@ -69,10 +65,9 @@ export default function DashboardPage() {
     }>
   }
   
-  const { profile, user } = useAuth()
+  const { user, supabase } = useAuth()
   const [teams, setTeams] = useState<TeamMembershipWithTeam[]>([])
   const [teamsLoading, setTeamsLoading] = useState(true)
-  const supabase = useMemo(() => createClient(), [])
 
   // タイムゾーンを考慮した日付パース
   const parseDateString = (dateString: string): Date => {
@@ -711,7 +706,7 @@ export default function DashboardPage() {
         {/* カレンダーコンポーネント */}
         <CalendarContainer 
           key={calendarRefreshKey} // 強制再レンダリング
-          onDateClick={(date) => {}}
+          onDateClick={(_date) => {}}
           onAddItem={(date, type) => {
             setSelectedDate(date)
             setEditingData(null)

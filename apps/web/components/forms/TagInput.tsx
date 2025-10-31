@@ -1,11 +1,11 @@
 'use client'
 
-import React, { useState, useRef, useEffect, useMemo } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { ChevronDownIcon, XMarkIcon, EllipsisVerticalIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui'
 // @ts-ignore
 import TagManagementModal from './TagManagementModal'
-import { createClient } from '@/lib/supabase'
+import { useAuth } from '@/contexts'
 import { PracticeTag } from '@apps/shared/types/database'
 
 type Tag = PracticeTag
@@ -32,7 +32,7 @@ export default function TagInput({
   
   const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const supabase = useMemo(() => createClient(), [])
+  const { supabase } = useAuth()
 
   // ドロップダウン外クリックで閉じる
   useEffect(() => {

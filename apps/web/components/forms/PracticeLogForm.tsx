@@ -6,7 +6,7 @@ import { XMarkIcon, PlusIcon, TrashIcon, ClockIcon } from '@heroicons/react/24/o
 import { format } from 'date-fns'
 import TimeInputModal from './TimeInputModal'
 import TagInput from './TagInput'
-import { createClient } from '@/lib/supabase'
+import { useAuth } from '@/contexts'
 import { PracticeTag } from '@apps/shared/types/database'
 
 type Tag = PracticeTag
@@ -78,7 +78,7 @@ export default function PracticeLogForm({
   setAvailableTags,
   styles = []
 }: PracticeLogFormProps) {
-  const supabase = useMemo(() => createClient(), [])
+  const { supabase } = useAuth()
 
   // タイム表示のフォーマット関数
   const formatTime = (seconds: number): string => {

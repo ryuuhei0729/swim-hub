@@ -2,7 +2,6 @@
 
 import React, { useState, useRef } from 'react'
 import { CameraIcon, XMarkIcon } from '@heroicons/react/24/outline'
-import { createClient } from '@/lib/supabase'
 import { useAuth } from '@/contexts'
 import ImageCropModal from './ImageCropModal'
 import { validateImageFile } from '@/utils/imageUtils'
@@ -20,13 +19,12 @@ export default function AvatarUpload({
   onAvatarChange, 
   disabled = false 
 }: AvatarUploadProps) {
-  const { user } = useAuth()
+  const { user, supabase } = useAuth()
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isCropModalOpen, setIsCropModalOpen] = useState(false)
   const [selectedImage, setSelectedImage] = useState<{ src: string; fileName: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const supabase = createClient()
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]

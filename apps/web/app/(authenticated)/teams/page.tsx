@@ -1,8 +1,7 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase'
 import { useAuth } from '@/contexts'
 import { UsersIcon } from '@heroicons/react/24/outline'
 import { TeamMembership, Team } from '@swim-hub/shared/types/database'
@@ -15,8 +14,7 @@ interface TeamMembershipWithTeam extends TeamMembership {
 export default function TeamsPage() {
   const [teams, setTeams] = useState<TeamMembershipWithTeam[]>([])
   const [loading, setLoading] = useState(true)
-  const { user } = useAuth()
-  const supabase = useMemo(() => createClient(), [])
+  const { user, supabase } = useAuth()
 
   const loadTeams = async () => {
     if (!user) return

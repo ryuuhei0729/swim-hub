@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { createClient } from '@/lib/supabase'
+import { useState, useEffect } from 'react'
+import { useAuth } from '@/contexts'
 import { useCreateTeamAnnouncement, useUpdateTeamAnnouncement } from '@apps/shared/hooks'
 import type { TeamAnnouncement, CreateTeamAnnouncementInput, UpdateTeamAnnouncementInput } from '@/types'
 
@@ -22,7 +22,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
   const [content, setContent] = useState('')
   const [isPublished, setIsPublished] = useState(false)
 
-  const supabase = useMemo(() => createClient(), [])
+  const { supabase } = useAuth()
   const { create, loading: createLoading } = useCreateTeamAnnouncement(supabase)
   const { update, loading: updateLoading } = useUpdateTeamAnnouncement(supabase)
   const isLoading = createLoading || updateLoading

@@ -6,7 +6,7 @@ import { BoltIcon, TrophyIcon } from '@heroicons/react/24/solid'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
-import { createClient } from '@/lib/supabase'
+import { useAuth } from '@/contexts'
 import { CalendarItemType, DayDetailModalProps, CalendarItem, isPracticeMetadata, isCompetitionMetadata, isEntryMetadata, isRecordMetadata, isTeamInfo } from '@/types'
 import type {
   Record,
@@ -40,7 +40,7 @@ export default function DayDetailModal({
   onEditRecord,
   onDeleteRecord
 }: DayDetailModalProps) {
-  const supabase = useMemo(() => createClient(), [])
+  const { supabase } = useAuth()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<{id: string, type: CalendarItemType} | null>(null)
   const [showAttendanceModal, setShowAttendanceModal] = useState<{
     eventId: string
@@ -566,9 +566,9 @@ function AttendanceModal({
   eventType: 'practice' | 'competition'
   teamId: string
 }) {
+  const { supabase } = useAuth()
   const [attendances, setAttendances] = useState<TeamAttendanceWithDetails[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = useMemo(() => createClient(), [])
   const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase])
 
   const loadAttendances = useCallback(async () => {
@@ -776,10 +776,10 @@ function PracticeDetails({
   type PracticeWithFormattedLogs = Omit<Practice, 'practiceLogs' | 'practice_logs'> & {
     practiceLogs: FormattedPracticeLog[]
   }
+  const { supabase } = useAuth()
   const [practice, setPractice] = useState<PracticeWithFormattedLogs | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const loadPractice = async () => {
@@ -1193,10 +1193,10 @@ function PracticeDetails({
 
 // 大会記録のスプリットタイム一覧
 function RecordSplitTimes({ recordId }: { recordId: string }) {
+  const { supabase } = useAuth()
   const [splits, setSplits] = useState<SplitTime[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const loadSplits = async () => {
@@ -1288,9 +1288,9 @@ function CompetitionDetails({
   teamName?: string | undefined
   onShowAttendance?: () => void
 }) {
+  const { supabase } = useAuth()
   const [actualRecords, setActualRecords] = useState<CalendarItem[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const loadRecords = async () => {
@@ -1625,7 +1625,7 @@ function CompetitionWithEntry({
   onClose?: () => void
 }) {
   const router = useRouter()
-  const supabase = useMemo(() => createClient(), [])
+  const { supabase } = useAuth()
   const [actualStyleId, setActualStyleId] = useState<number | undefined>(styleId)
   const [actualStyleName, setActualStyleName] = useState<string>(styleName)
   const [actualEntryTime, setActualEntryTime] = useState<number | null | undefined>(entryTime)

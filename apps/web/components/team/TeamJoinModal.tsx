@@ -1,8 +1,7 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
-import { createClient } from '@/lib/supabase'
 import { useAuth } from '@/contexts'
 import TeamJoinForm from '@/components/forms/TeamJoinForm'
 import { Team, TeamMembership, TeamMembershipInsert, TeamMembershipUpdate } from '@apps/shared/types/database'
@@ -21,8 +20,7 @@ type TeamMembershipSelectResult = Pick<TeamMembership, 'id' | 'is_active'>
 export default function TeamJoinModal({ isOpen, onClose, onSuccess }: TeamJoinModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { user } = useAuth()
-  const supabase = useMemo(() => createClient(), [])
+  const { user, supabase } = useAuth()
 
   const handleSubmit = async (inviteId: string) => {
     if (!user) {

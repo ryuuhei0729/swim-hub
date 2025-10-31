@@ -1,7 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
-import { createClient } from '@/lib/supabase'
+import React, { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts'
 
 type TeamMembershipWithTeam = {
@@ -16,8 +15,7 @@ type TeamMembershipWithTeam = {
 export default function TeamAdminPage() {
   const [teams, setTeams] = useState<TeamMembershipWithTeam[]>([])
   const [loading, setLoading] = useState(true)
-  const { user } = useAuth()
-  const supabase = useMemo(() => createClient(), [])
+  const { user, supabase } = useAuth()
 
   useEffect(() => {
     const loadTeams = async () => {

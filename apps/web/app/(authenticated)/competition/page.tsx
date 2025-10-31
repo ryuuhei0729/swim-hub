@@ -1,13 +1,13 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState } from 'react'
 import { TrophyIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui'
 import RecordForm from '@/components/forms/RecordForm'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
-import { createClient } from '@/lib/supabase'
+import { useAuth } from '@/contexts'
 import { useRecords } from '@apps/shared/hooks/useRecords'
 import { StyleAPI } from '@apps/shared/api'
 import type { Record, Competition, Style, SplitTime } from '@apps/shared/types/database'
@@ -59,7 +59,7 @@ export default function CompetitionPage() {
   const [includeRelay, setIncludeRelay] = useState<boolean>(true)
   const [filterPoolType, setFilterPoolType] = useState<string>('')
 
-  const supabase = useMemo(() => createClient(), [])
+  const { supabase } = useAuth()
   
   // 大会記録を取得
   const {

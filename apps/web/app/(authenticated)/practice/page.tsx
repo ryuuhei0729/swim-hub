@@ -1,13 +1,13 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState } from 'react'
 import { CalendarDaysIcon, ClockIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui'
 import PracticeLogForm from '@/components/forms/PracticeLogForm'
 import PracticeTimeModal from './_components/PracticeTimeModal'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { createClient } from '@/lib/supabase'
+import { useAuth } from '@/contexts'
 import { usePractices } from '@apps/shared/hooks/usePractices'
 import { PracticeAPI, StyleAPI } from '@apps/shared/api'
 import type {
@@ -72,7 +72,7 @@ export default function PracticePage() {
   const [styles, setStyles] = useState<Style[]>([])
   const [tags, setTags] = useState<PracticeTag[]>([])
 
-  const supabase = useMemo(() => createClient(), [])
+  const { supabase } = useAuth()
   
   // 練習記録を取得
   const {
