@@ -6,7 +6,16 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { useCallback, useEffect, useState } from 'react'
 import { PracticeAPI } from '../api/practices'
-import { Practice, PracticeWithLogs } from '../types/database'
+import {
+  Practice,
+  PracticeInsert,
+  PracticeLog,
+  PracticeLogInsert,
+  PracticeLogUpdate,
+  PracticeTimeInsert,
+  PracticeUpdate,
+  PracticeWithLogs
+} from '../types/database'
 
 export interface UsePracticesOptions {
   startDate?: string
@@ -93,18 +102,13 @@ export function usePractices(
   }, [enableRealtime, startDate, endDate])
 
   // 操作関数
-  const createPractice = useCallback(async (
-    practice: Omit<Practice, 'id' | 'user_id' | 'created_at' | 'updated_at'>
-  ) => {
+  const createPractice = useCallback(async (practice: Omit<PracticeInsert, 'user_id'>) => {
     const newPractice = await api.createPractice(practice)
     await loadPractices() // 再取得
     return newPractice
-  }, [loadPractices])
+  }, [api, loadPractices])
 
-  const updatePractice = useCallback(async (
-    id: string,
-    updates: Partial<Practice>
-  ) => {
+  const updatePractice = useCallback(async (id: string, updates: PracticeUpdate) => {
     const updated = await api.updatePractice(id, updates)
     setPractices(prev => prev.map(p => p.id === id ? { 
       ...p, 
@@ -112,41 +116,45 @@ export function usePractices(
       practice_logs: p.practice_logs // 既存のpractice_logsを保持
     } as PracticeWithLogs : p))
     return updated
-  }, [])
+  }, [api])
 
   const deletePractice = useCallback(async (id: string) => {
     await api.deletePractice(id)
     setPractices(prev => prev.filter(p => p.id !== id))
   }, [])
 
-  const createPracticeLog = useCallback(async (log: any) => {
+  const createPracticeLog = useCallback(async (log: Omit<PracticeLogInsert, 'user_id'>) => {
     const newLog = await api.createPracticeLog(log)
     await loadPractices() // 再取得してリレーションデータも含める
     return newLog
-  }, [loadPractices])
+  }, [api, loadPractices])
 
-  const updatePracticeLog = useCallback(async (id: string, updates: any) => {
+  const updatePracticeLog = useCallback(async (id: string, updates: PracticeLogUpdate) => {
     const updated = await api.updatePracticeLog(id, updates)
     await loadPractices() // 再取得
     return updated
-  }, [loadPractices])
+  }, [api, loadPractices])
 
   const deletePracticeLog = useCallback(async (id: string) => {
     await api.deletePracticeLog(id)
     await loadPractices() // 再取得
-  }, [loadPractices])
+  }, [api, loadPractices])
 
-  const createPracticeTimes = useCallback(async (times: any[]) => {
-    const created = await api.createPracticeTimes(times)
+  const createPracticeTimes = useCallback(async (times: Omit<PracticeTimeInsert, 'user_id'>[]) => {
+    // API側でuser_idを自動付与するため、Omit型で渡す
+    const created = await api.createPracticeTimes(times as PracticeTimeInsert[])
     await loadPractices() // 再取得
     return created
-  }, [loadPractices])
+  }, [api, loadPractices])
 
-  const replacePracticeTimes = useCallback(async (practiceLogId: string, times: any[]) => {
+  const replacePracticeTimes = useCallback(async (
+    practiceLogId: string,
+    times: Omit<PracticeTimeInsert, 'practice_log_id' | 'user_id'>[]
+  ) => {
     const replaced = await api.replacePracticeTimes(practiceLogId, times)
     await loadPractices() // 再取得
     return replaced
-  }, [loadPractices])
+  }, [api, loadPractices])
 
   return {
     practices,

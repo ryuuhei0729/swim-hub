@@ -27,7 +27,33 @@ export default function TeamCompetitionEntryModal({
   // TeamAPI への依存は排除
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [data, setData] = useState<any>(null)
+  type EntryRow = {
+    id: string
+    user_id: string
+    style_id: number
+    entry_time: number | null
+    note: string | null
+    created_at?: string
+    users: { id: string; name: string } | null
+    styles: { id: number; name_jp: string; distance: number } | null
+  }
+  
+  type EntryByStyleData = {
+    competition: {
+      team_id: string
+      title: string
+      date: string
+      place: string | null
+      entry_status: 'before' | 'open' | 'closed'
+    }
+    entriesByStyle: Record<number, {
+      style: { id: number; name_jp: string; distance: number } | null
+      entries: EntryRow[]
+    }>
+    isAdmin: boolean
+    totalEntries: number
+  }
+  const [data, setData] = useState<EntryByStyleData | null>(null)
   const [updatingStatus, setUpdatingStatus] = useState(false)
 
   useEffect(() => {
@@ -81,18 +107,33 @@ export default function TeamCompetitionEntryModal({
       if (entriesError) throw entriesError
 
       // 4) 種目ごとにグルーピング
-      const entriesByStyle = (entries || []).reduce((acc: any, entry: any) => {
+      type EntryFromDB = {
+        id: string
+        user_id: string
+        style_id: number
+        entry_time: number | null
+        note: string | null
+        created_at: string
+        users: { id: string; name: string }[] | { id: string; name: string } | null
+        styles: { id: number; name_jp: string; distance: number }[] | { id: number; name_jp: string; distance: number } | null
+      }
+      const entriesByStyle = ((entries || []) as EntryFromDB[]).reduce((acc: Record<number, { style: EntryRow['styles']; entries: EntryRow[] }>, entry) => {
         const styleId = entry.style_id
-        if (!acc[styleId]) acc[styleId] = { style: entry.styles ?? null, entries: [] }
+        const style = Array.isArray(entry.styles) ? entry.styles[0] : entry.styles
+        const user = Array.isArray(entry.users) ? entry.users[0] : entry.users
+        if (!acc[styleId]) acc[styleId] = { style: style ?? null, entries: [] }
         acc[styleId].entries.push({
           id: entry.id,
-          user: entry.users ?? null,
+          user_id: entry.user_id,
+          style_id: entry.style_id,
           entry_time: entry.entry_time,
           note: entry.note,
-          created_at: entry.created_at
+          created_at: entry.created_at,
+          users: user ?? null,
+          styles: style ?? null
         })
         return acc
-      }, {} as Record<number, any>)
+      }, {} as Record<number, { style: EntryRow['styles']; entries: EntryRow[] }>)
 
       setData({
         competition,
@@ -100,9 +141,10 @@ export default function TeamCompetitionEntryModal({
         entriesByStyle,
         totalEntries: (entries || []).length
       })
-    } catch (err: any) {
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err))
       console.error('エントリー情報の取得に失敗:', err)
-      setError(err.message || 'エントリー情報の取得に失敗しました')
+      setError(error.message || 'エントリー情報の取得に失敗しました')
     } finally {
       setLoading(false)
     }
@@ -144,9 +186,10 @@ export default function TeamCompetitionEntryModal({
       if (updateError) throw updateError
       await loadEntries() // 再読み込み
       alert(`エントリーステータスを「${getStatusLabel(newStatus)}」に変更しました`)
-    } catch (err: any) {
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err))
       console.error('ステータス変更に失敗:', err)
-      alert(err.message || 'ステータス変更に失敗しました')
+      alert(error.message || 'ステータス変更に失敗しました')
     } finally {
       setUpdatingStatus(false)
     }
@@ -257,7 +300,7 @@ export default function TeamCompetitionEntryModal({
                     </div>
                   )}
 
-                  {Object.entries(data.entriesByStyle).map(([styleId, styleData]: [string, any]) => (
+                  {Object.entries(data.entriesByStyle).map(([styleId, styleData]) => (
                     <div key={styleId} className="border border-gray-200 rounded-lg overflow-hidden">
                       {/* 種目ヘッダー */}
                       <div className="bg-blue-50 px-4 py-3 border-b border-blue-200">
@@ -268,12 +311,12 @@ export default function TeamCompetitionEntryModal({
 
                       {/* エントリー一覧 */}
                       <div className="divide-y divide-gray-200">
-                        {styleData.entries.map((entry: any, index: number) => (
+                        {styleData.entries.map((entry, index: number) => (
                           <div key={entry.id} className="px-4 py-3 hover:bg-gray-50">
                             <div className="flex items-center justify-between">
                               <div className="flex-1">
                                 <p className="font-medium text-gray-900">
-                                  {index + 1}. {entry.user?.name ?? '不明なユーザー'}
+                                  {index + 1}. {entry.users?.name ?? '不明なユーザー'}
                                 </p>
                                 {entry.entry_time && (
                                   <p className="text-sm text-gray-600 mt-1">
@@ -285,7 +328,7 @@ export default function TeamCompetitionEntryModal({
                                 )}
                               </div>
                               <div className="text-right text-xs text-gray-400">
-                                {format(new Date(entry.created_at), 'M月d日 HH:mm', { locale: ja })}
+                                {entry.created_at ? format(new Date(entry.created_at), 'M月d日 HH:mm', { locale: ja }) : '-'}
                               </div>
                             </div>
                           </div>

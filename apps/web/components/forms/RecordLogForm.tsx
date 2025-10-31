@@ -5,6 +5,7 @@ import { Button, Input } from '@/components/ui'
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { formatTime } from '@/utils/formatters'
 import { EntryInfo } from '@apps/shared/types/ui'
+import { SplitTime as SplitTimeRow } from '@apps/shared/types/database'
 
 interface SplitTimeInput {
   distance: number | ''
@@ -28,7 +29,15 @@ interface RecordLogFormProps {
   onClose: () => void
   onSubmit: (data: RecordLogFormData) => Promise<void>
   competitionId: string
-  editData?: any
+  editData?: {
+    id?: string
+    style_id?: number
+    time?: number
+    is_relaying?: boolean
+    split_times?: SplitTimeRow[]
+    note?: string
+    video_url?: string
+  } | null
   isLoading?: boolean
   styles?: Array<{ id: string | number; name_jp: string; distance: number }>
   entryData?: EntryInfo // エントリー情報（ある場合は種目固定）
@@ -62,17 +71,17 @@ export default function RecordLogForm({
     if (isOpen) {
       if (editData) {
         // 編集モード
-        const timeInSeconds = editData.time // DBは秒単位のDECIMAL
+        const timeInSeconds = editData.time ?? 0 // DBは秒単位のDECIMAL
         const minutes = Math.floor(timeInSeconds / 60)
         const seconds = (timeInSeconds % 60).toFixed(2)
         const timeDisplay = minutes > 0 ? `${minutes}:${seconds.padStart(5, '0')}` : seconds
 
         setFormData({
           styleId: editData.style_id?.toString() || styles[0]?.id?.toString() || '',
-          time: editData.time || 0,
+          time: editData.time ?? 0,
           timeDisplayValue: timeDisplay,
           isRelaying: editData.is_relaying || false,
-          splitTimes: editData.split_times?.map((st: any, index: number) => {
+          splitTimes: editData.split_times?.map((st: SplitTimeRow, index: number) => {
             const splitSeconds = st.split_time
             const splitMinutes = Math.floor(splitSeconds / 60)
             const splitSecs = (splitSeconds % 60).toFixed(2)

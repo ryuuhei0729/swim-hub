@@ -109,7 +109,7 @@ export function useTeams(
     const updated: Team = await core.updateTeam(id, updates)
     await loadData()
     return updated
-  }, [loadData])
+  }, [core, loadData])
 
   const deleteTeam = useCallback(async (id: string) => {
     await core.deleteTeam(id)

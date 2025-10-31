@@ -10,22 +10,67 @@ import { ja } from 'date-fns/locale'
 import { createClient } from '@/lib/supabase'
 import { usePractices } from '@apps/shared/hooks/usePractices'
 import { PracticeAPI, StyleAPI } from '@apps/shared/api'
+import type {
+  Style,
+  PracticeTag,
+  PracticeLog,
+  PracticeLogWithTimes,
+  PracticeTime
+} from '@apps/shared/types/database'
 
 export default function PracticePage() {
+  type PracticeLogWithFormattedData = PracticeLog & {
+    tags: PracticeTag[]
+    practice: {
+      id: string
+      date: string
+      place: string | null
+      note: string | null
+    }
+    practiceId: string
+    practice_times?: PracticeTime[]
+  }
+  
+  type EditingData = {
+    id: string
+    practiceId: string
+    date: string
+    place: string
+    note: string
+    style: string
+    rep_count: number
+    set_count: number
+    distance: number
+    circle: number | null
+    times: Array<{
+      setNumber: number
+      repNumber: number
+      time: number
+    }>
+    tags: PracticeTag[]
+  }
+  
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
-  const [editingLog, setEditingLog] = useState<any>(null)
+  const [editingLog, setEditingLog] = useState<PracticeLogWithFormattedData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [editingItem, setEditingItem] = useState<any>(null)
-  const [editingData, setEditingData] = useState<any>(null)
+  const [editingItem, setEditingItem] = useState<{
+    id: string
+    item_type: string
+    item_date?: string
+  } | null>(null)
+  const [editingData, setEditingData] = useState<EditingData | null>(null)
   const [showTimeModal, setShowTimeModal] = useState(false)
-  const [selectedPracticeForTime, setSelectedPracticeForTime] = useState<any>(null)
+  const [selectedPracticeForTime, setSelectedPracticeForTime] = useState<{
+    id: string
+    location?: string | null
+  } | null>(null)
   
   // タグフィルタリング用の状態
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
   const [showTagFilter, setShowTagFilter] = useState(false)
-  const [styles, setStyles] = useState<any[]>([])
-  const [tags, setTags] = useState<any[]>([])
+  const [styles, setStyles] = useState<Style[]>([])
+  const [tags, setTags] = useState<PracticeTag[]>([])
 
   const supabase = useMemo(() => createClient(), [])
   
@@ -44,14 +89,29 @@ export default function PracticePage() {
   } = usePractices(supabase, {})
 
   // practice_logsを平坦化し、タグデータを整形
-  const practiceLogs = practices.flatMap(practice => 
-    (practice.practice_logs || []).map(log => {
+  const practiceLogs: PracticeLogWithFormattedData[] = practices.flatMap(practice => 
+    (practice.practice_logs || []).map((log): PracticeLogWithFormattedData => {
       // タグデータを整形（practice_log_tags -> tags に変換）
-      const tags = (log as any).practice_log_tags?.map((plt: any) => ({
-        id: plt.practice_tags?.id || plt.practice_tag_id,
-        name: plt.practice_tags?.name || '',
-        color: plt.practice_tags?.color || '#9CA3AF'
-      })) || []
+      type PracticeLogTagRow = {
+        practice_tags?: PracticeTag
+        practice_tag_id?: string
+      }
+      const tags: PracticeTag[] = (log as unknown as PracticeLogWithTimes & {
+        practice_log_tags?: Array<{ practice_tags?: PracticeTag; practice_tag_id?: string }>
+      }).practice_log_tags?.map((plt: PracticeLogTagRow): PracticeTag => {
+        if (plt.practice_tags) {
+          return plt.practice_tags
+        }
+        // フォールバック（通常は発生しない）
+        return {
+          id: plt.practice_tag_id || '',
+          user_id: '',
+          name: '',
+          color: '#9CA3AF',
+          created_at: '',
+          updated_at: ''
+        }
+      }).filter((tag): tag is PracticeTag => !!tag.id) || []
 
       return {
         ...log,
@@ -92,10 +152,10 @@ export default function PracticePage() {
   }, [])
 
   // タグフィルタリングロジック
-  const filteredPracticeLogs = practiceLogs.filter((log: any) => {
+  const filteredPracticeLogs = practiceLogs.filter((log) => {
     if (selectedTagIds.length === 0) return true
     
-    const logTagIds = (log.tags || []).map((tag: any) => tag.id)
+    const logTagIds = (log.tags || []).map((tag) => tag.id)
     return selectedTagIds.some(tagId => logTagIds.includes(tagId))
   })
   
@@ -107,7 +167,7 @@ export default function PracticePage() {
   })
 
   // セットごとの平均タイムを計算する関数
-  const calculateSetAverages = (times: any[], repCount: number, setCount: number) => {
+  const calculateSetAverages = (times: PracticeTime[], repCount: number, setCount: number) => {
     if (!times || times.length === 0 || repCount === 0 || setCount === 0) {
       return []
     }
@@ -121,7 +181,7 @@ export default function PracticePage() {
       const setTimes = times.slice(startIndex, endIndex)
 
       if (setTimes.length > 0) {
-        const sum = setTimes.reduce((acc: number, time: any) => acc + (time.time || 0), 0)
+        const sum = setTimes.reduce((acc: number, time) => acc + (time.time || 0), 0)
         const average = sum / setTimes.length
         averages.push(average)
       }
@@ -141,7 +201,7 @@ export default function PracticePage() {
   }
 
   // タグの保存処理
-  const savePracticeLogTags = async (practiceLogId: string, newTags: any[]) => {
+  const savePracticeLogTags = async (practiceLogId: string, newTags: PracticeTag[]) => {
     try {
       // 既存のタグをすべて削除
       await supabase
@@ -151,19 +211,24 @@ export default function PracticePage() {
       
       // 新しいタグを追加
       if (newTags.length > 0) {
-        await (supabase as any)
-          .from('practice_log_tags')
-          .insert(newTags.map(tag => ({
-            practice_log_id: practiceLogId,
-            practice_tag_id: tag.id
-          })))
+        for (const tag of newTags) {
+          // 型定義は追加済みだが、TypeScriptの型推論が正しく機能しないため一時的にas anyを使用
+          // TODO: Supabase型システムの改善後に削除
+          const { error: insertError } = await (supabase as any)
+            .from('practice_log_tags')
+            .insert({
+              practice_log_id: practiceLogId,
+              practice_tag_id: tag.id
+            })
+          if (insertError) throw insertError
+        }
       }
     } catch (error) {
       console.error('タグの保存処理でエラーが発生しました:', error)
     }
   }
 
-  const handleEditLog = (log: any) => {
+  const handleEditLog = (log: PracticeLogWithFormattedData) => {
     setEditingItem({
       id: log.practiceId,
       item_type: 'practice',
@@ -174,7 +239,7 @@ export default function PracticePage() {
     
     // 編集データを設定
     // タイムデータをフォームが期待する形式に変換
-    const formattedTimes = (log.practice_times || []).map((time: any) => ({
+    const formattedTimes = (log.practice_times || []).map((time: PracticeTime) => ({
       setNumber: time.set_number,
       repNumber: time.rep_number,
       time: time.time
@@ -198,7 +263,7 @@ export default function PracticePage() {
     setIsFormOpen(true)
   }
 
-  const handleTimeLog = (log: any) => {
+  const handleTimeLog = (log: PracticeLogWithFormattedData) => {
     setSelectedPracticeForTime({
       id: log.practiceId,
       location: log.practice?.place
@@ -206,7 +271,24 @@ export default function PracticePage() {
     setShowTimeModal(true)
   }
 
-  const handlePracticeSubmit = async (formDataArray: any[]) => {
+  type PracticeMenuFormData = {
+    practiceDate?: string
+    location?: string
+    note?: string
+    style?: string
+    reps?: number
+    sets?: number
+    distance?: number
+    circleTime?: number | null
+    tags?: PracticeTag[]
+    times?: Array<{
+      setNumber: number
+      repNumber: number
+      time: number
+    }>
+  }
+  
+  const handlePracticeSubmit = async (formDataArray: PracticeMenuFormData[]) => {
     setIsLoading(true)
     try {
       const menus = Array.isArray(formDataArray) ? formDataArray : []
@@ -302,7 +384,7 @@ export default function PracticePage() {
       setIsLoading(true)
       try {
         // 削除対象のPractice_Logの情報を取得
-        const logToDelete = practiceLogs.find((log: any) => log.id === logId)
+        const logToDelete = practiceLogs.find((log) => log.id === logId)
         const practiceId = logToDelete?.practiceId
 
         // Practice_Logを削除
@@ -310,7 +392,7 @@ export default function PracticePage() {
 
         // Practice_Log削除後、そのPracticeに紐づく他のPractice_Logがあるかチェック
         if (practiceId) {
-          const remainingLogs = practiceLogs.filter((log: any) => 
+          const remainingLogs = practiceLogs.filter((log) => 
             log.practiceId === practiceId && log.id !== logId
           )
 
@@ -400,7 +482,7 @@ export default function PracticePage() {
         {showTagFilter && (
           <div className="mt-4 pt-4 border-t border-gray-200">
             <div className="flex flex-wrap gap-2">
-              {tags.map((tag: any) => (
+              {tags.map((tag: PracticeTag) => (
                 <button
                   key={tag.id}
                   onClick={() => {
@@ -518,7 +600,7 @@ export default function PracticePage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {sortedPracticeLogs.map((log: any) => (
+                  {sortedPracticeLogs.map((log) => (
                     <tr key={log.id} className="hover:bg-gray-50">
                       <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                         {log.practice?.date ? format(new Date(log.practice.date), 'MM/dd', { locale: ja }) : '-'}
@@ -538,7 +620,7 @@ export default function PracticePage() {
                       <td className="px-3 py-3 whitespace-nowrap">
                         {log.tags && log.tags.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
-                            {log.tags.map((tag: any) => (
+                            {log.tags.map((tag: PracticeTag) => (
                               <span
                                 key={tag.id}
                                 className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-black"
@@ -613,7 +695,7 @@ export default function PracticePage() {
             {/* タブレット・モバイル表示（カード形式） */}
             <div className="lg:hidden">
               <div className="divide-y divide-gray-200">
-                {sortedPracticeLogs.map((log: any) => (
+                {sortedPracticeLogs.map((log) => (
                   <div key={log.id} className="p-4 hover:bg-gray-50">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
@@ -638,7 +720,7 @@ export default function PracticePage() {
                           
                           {log.tags && log.tags.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-2">
-                              {log.tags.map((tag: any) => (
+                              {log.tags.map((tag: PracticeTag) => (
                                 <span
                                   key={tag.id}
                                   className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-black"
@@ -726,7 +808,24 @@ export default function PracticePage() {
         }}
         onSubmit={handlePracticeSubmit}
         practiceId={editingData?.practiceId || ''}
-        editData={editingData}
+        editData={editingData ? {
+          id: editingData.id,
+          style: editingData.style,
+          distance: editingData.distance,
+          rep_count: editingData.rep_count,
+          set_count: editingData.set_count,
+          circle: editingData.circle,
+          note: editingData.note,
+          tags: editingData.tags,
+          times: editingData.times.map(t => ({
+            memberId: '',
+            times: [{
+              setNumber: t.setNumber,
+              repNumber: t.repNumber,
+              time: t.time
+            }]
+          }))
+        } : undefined}
         isLoading={isLoading}
         availableTags={tags}
         styles={styles}
@@ -739,7 +838,7 @@ export default function PracticePage() {
           isOpen={showTimeModal}
           onClose={handleTimeModalClose}
           practiceId={selectedPracticeForTime.id}
-          location={selectedPracticeForTime.location}
+          location={selectedPracticeForTime.location || undefined}
         />
       )}
     </div>

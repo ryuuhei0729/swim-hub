@@ -6,7 +6,15 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { useCallback, useEffect, useState } from 'react'
 import { RecordAPI } from '../api/records'
-import { Competition, RecordWithDetails } from '../types/database'
+import {
+  Competition,
+  CompetitionInsert,
+  CompetitionUpdate,
+  RecordInsert,
+  RecordUpdate,
+  RecordWithDetails,
+  SplitTimeInsert
+} from '../types/database'
 
 export interface UseRecordsOptions {
   startDate?: string
@@ -81,49 +89,52 @@ export function useRecords(
   }, [enableRealtime])
 
   // 操作関数
-  const createRecord = useCallback(async (record: any) => {
+  const createRecord = useCallback(async (record: Omit<RecordInsert, 'user_id'>) => {
     const newRecord = await api.createRecord(record)
     await loadRecords() // 再取得
     return newRecord
-  }, [loadRecords])
+  }, [api, loadRecords])
 
-  const updateRecord = useCallback(async (id: string, updates: any) => {
+  const updateRecord = useCallback(async (id: string, updates: RecordUpdate) => {
     const updated = await api.updateRecord(id, updates)
     await loadRecords() // 再取得
     return updated
-  }, [loadRecords])
+  }, [api, loadRecords])
 
   const deleteRecord = useCallback(async (id: string) => {
     await api.deleteRecord(id)
     setRecords(prev => prev.filter(r => r.id !== id))
   }, [])
 
-  const createCompetition = useCallback(async (competition: any) => {
+  const createCompetition = useCallback(async (competition: Omit<CompetitionInsert, 'user_id'>) => {
     const newCompetition = await api.createCompetition(competition)
     setCompetitions(prev => [newCompetition, ...prev])
     return newCompetition
-  }, [])
+  }, [api])
 
-  const updateCompetition = useCallback(async (id: string, updates: any) => {
+  const updateCompetition = useCallback(async (id: string, updates: CompetitionUpdate) => {
     const updated = await api.updateCompetition(id, updates)
     setCompetitions(prev => prev.map(c => c.id === id ? updated : c))
     return updated
-  }, [])
+  }, [api])
 
   const deleteCompetition = useCallback(async (id: string) => {
     await api.deleteCompetition(id)
     setCompetitions(prev => prev.filter(c => c.id !== id))
   }, [])
 
-  const createSplitTimes = useCallback(async (recordId: string, splitTimes: any[]) => {
+  const createSplitTimes = useCallback(async (
+    recordId: string,
+    splitTimes: Array<{ distance: number; split_time?: number; splitTime?: number }>
+  ) => {
     // 空の配列の場合は早期リターン
     if (!splitTimes || splitTimes.length === 0) return []
     
     
     const created = await api.createSplitTimes(splitTimes.map(st => {
       // snake_case と camelCase の両方に対応
-      const splitTime = st.split_time ?? st.splitTime
-      const data = {
+      const splitTime = st.split_time ?? st.splitTime ?? 0
+      const data: SplitTimeInsert = {
         record_id: recordId,
         distance: st.distance,
         split_time: splitTime
@@ -132,13 +143,16 @@ export function useRecords(
     }))
     await loadRecords() // 再取得
     return created
-  }, [loadRecords])
+  }, [api, loadRecords])
 
-  const replaceSplitTimes = useCallback(async (recordId: string, splitTimes: any[]) => {
+  const replaceSplitTimes = useCallback(async (
+    recordId: string,
+    splitTimes: Omit<SplitTimeInsert, 'record_id'>[]
+  ) => {
     const replaced = await api.replaceSplitTimes(recordId, splitTimes)
     await loadRecords() // 再取得
     return replaced
-  }, [loadRecords])
+  }, [api, loadRecords])
 
   return {
     records,

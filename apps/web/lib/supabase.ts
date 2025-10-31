@@ -235,6 +235,52 @@ export type Database = {
           time?: number
         }
       }
+      practice_tags: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          color: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          color?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          color?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      practice_log_tags: {
+        Row: {
+          id: string
+          practice_log_id: string
+          practice_tag_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          practice_log_id: string
+          practice_tag_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          practice_log_id?: string
+          practice_tag_id?: string
+          created_at?: string
+        }
+      }
     }
   }
 }

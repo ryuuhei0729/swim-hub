@@ -85,7 +85,7 @@ export interface RecordMetadata {
       distance: number
     }
     competition_id?: string
-    split_times?: any[]
+    split_times?: SplitTime[]
   }
   competition?: {
     id: string
@@ -118,7 +118,7 @@ export interface CalendarItem {
     practice?: {
       id?: string
       place: string
-      practice_logs?: any[]
+      practice_logs?: PracticeLog[]
     }
     practice_id?: string
     // 大会関連

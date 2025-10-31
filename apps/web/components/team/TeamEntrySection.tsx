@@ -5,6 +5,7 @@ import { ChevronDownIcon, ChevronUpIcon, PencilIcon, TrashIcon } from '@heroicon
 import { formatTime } from '@/utils/formatters'
 import { StyleAPI } from '@apps/shared/api/styles'
 import { EntryAPI } from '@apps/shared/api/entries'
+import { Entry, EntryWithDetails } from '@apps/shared/types/database'
 import { useAuth } from '@/contexts/AuthProvider'
 import type { Style } from '@apps/shared/types/database'
 
@@ -82,8 +83,8 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
           await Promise.all(
             openComps.map(async (comp: Competition) => {
               const entries = await entryAPI.getEntriesByCompetition(comp.id)
-              const mine = (entries || []).filter((e: any) => e.user_id === user.id)
-              const convertedEntries = mine.map((entry: any) => ({
+              const mine = (entries || []).filter((e: EntryWithDetails) => e.user_id === user.id)
+              const convertedEntries = mine.map((entry: EntryWithDetails) => ({
                 ...entry,
                 style: Array.isArray(entry.style) ? entry.style[0] : entry.style
               }))
@@ -232,8 +233,8 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
       // エントリー一覧を再読み込み（自分の分のみ）
       const entryAPIRefetch = new EntryAPI(supabase)
       const allEntries = await entryAPIRefetch.getEntriesByCompetition(competitionId)
-      const mine = (allEntries || []).filter((e: any) => e.user_id === user.id)
-      const convertedEntries = mine.map((entry: any) => ({
+      const mine = (allEntries || []).filter((e: EntryWithDetails) => e.user_id === user.id)
+      const convertedEntries = mine.map((entry: EntryWithDetails) => ({
         ...entry,
         style: Array.isArray(entry.style) ? entry.style[0] : entry.style
       }))
@@ -241,8 +242,9 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
         ...prev,
         [competitionId]: convertedEntries
       }))
-    } catch (error: any) {
-      console.error('エントリーの送信に失敗:', error)
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err))
+      console.error('エントリーの送信に失敗:', err)
       alert(error.message || 'エントリーの送信に失敗しました')
     } finally {
       setSubmitting(false)
@@ -280,8 +282,8 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
       const allEntries = await entryAPIRefetch.getEntriesByCompetition(competitionId)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('認証が必要です')
-      const mine = (allEntries || []).filter((e: any) => e.user_id === user.id)
-      const convertedEntries = mine.map((entry: any) => ({
+      const mine = (allEntries || []).filter((e: EntryWithDetails) => e.user_id === user.id)
+      const convertedEntries = mine.map((entry: EntryWithDetails) => ({
         ...entry,
         style: Array.isArray(entry.style) ? entry.style[0] : entry.style
       }))
@@ -291,8 +293,9 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
       }))
       
       alert('エントリーを削除しました')
-    } catch (error: any) {
-      console.error('エントリーの削除に失敗:', error)
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err))
+      console.error('エントリーの削除に失敗:', err)
       alert(error.message || 'エントリーの削除に失敗しました')
     } finally {
       setSubmitting(false)
