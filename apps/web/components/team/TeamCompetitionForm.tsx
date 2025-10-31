@@ -46,15 +46,16 @@ export default function TeamCompetitionForm({
       if (authError) throw authError
       if (!user) throw new Error('認証が必要です')
 
-      await recordsAPI.create({
+      const competitionInput: import('@apps/shared/types/database').CompetitionInsert = {
         user_id: user.id,
-        team_id: teamId,
         title: formData.title,
         date: formData.date,
         place: formData.place || null,
         note: formData.note || null,
-        pool_type: 0
-      } as any)
+        pool_type: 0,
+        team_id: teamId
+      }
+      await recordsAPI.create(competitionInput)
       
       onSuccess()
       onClose()

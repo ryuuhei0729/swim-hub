@@ -28,7 +28,20 @@ interface PracticeMenu {
   circleSec: number
   note: string
   tags: Tag[]
-  times: any[] // チーム用なので複雑な構造
+  times: TeamTimeEntry[] // チーム用タイムエントリの配列
+}
+
+// 編集モード用のデータ型（TeamPractices.tsxから渡されるデータ構造）
+interface EditDataItem {
+  id: string
+  style: string
+  distance: number
+  rep_count: number
+  set_count: number
+  circle: number | null
+  note: string | null
+  tags: PracticeTag[]
+  times: TeamTimeEntry[]
 }
 
 interface TeamPracticeLogFormProps {
@@ -37,7 +50,7 @@ interface TeamPracticeLogFormProps {
   practiceId: string
   teamMembers: TeamMember[]
   onSuccess: () => void
-  editData?: any // 編集モード用のデータ
+  editData?: EditDataItem[] // 編集モード用のデータ
 }
 
 // 種目の選択肢
@@ -98,7 +111,7 @@ export default function TeamPracticeLogForm({
       if (editData) {
         // 編集モード: 既存データで初期化
         // editDataからメニューデータを構築
-        const menuData = editData.map((log: any, index: number) => ({
+        const menuData = editData.map((log: EditDataItem, index: number) => ({
           id: log.id || String(index + 1),
           style: log.style || 'Fr',
           distance: log.distance || 100,
@@ -181,7 +194,7 @@ export default function TeamPracticeLogForm({
     }
   }
 
-  const updateMenu = (menuId: string, field: keyof PracticeMenu, value: any) => {
+  const updateMenu = <K extends keyof PracticeMenu>(menuId: string, field: K, value: PracticeMenu[K]) => {
     setMenus(prev => prev.map(menu => 
       menu.id === menuId ? { ...menu, [field]: value } : menu
     ))
@@ -243,7 +256,7 @@ export default function TeamPracticeLogForm({
 
             // PracticeTimeを作成（タイムがある場合のみ）
             if (memberTimes.length > 0) {
-              const practiceTimes = memberTimes.map((timeEntry: any) => ({
+              const practiceTimes = memberTimes.map((timeEntry) => ({
                 practice_log_id: practiceLog.id,
                 user_id: member.user_id,
                 set_number: timeEntry.setNumber,
@@ -409,7 +422,7 @@ export default function TeamPracticeLogForm({
                         <input
                           type="number"
                           value={menu.distance}
-                          onChange={(e) => updateMenu(menu.id, 'distance', e.target.value)}
+                          onChange={(e) => updateMenu(menu.id, 'distance', e.target.value === '' ? '' : Number(e.target.value))}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           min="25"
                           step="25"
@@ -424,7 +437,7 @@ export default function TeamPracticeLogForm({
                         <input
                           type="number"
                           value={menu.sets}
-                          onChange={(e) => updateMenu(menu.id, 'sets', e.target.value)}
+                          onChange={(e) => updateMenu(menu.id, 'sets', Number(e.target.value))}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           min="1"
                         />
@@ -438,7 +451,7 @@ export default function TeamPracticeLogForm({
                         <input
                           type="number"
                           value={menu.reps}
-                          onChange={(e) => updateMenu(menu.id, 'reps', e.target.value)}
+                          onChange={(e) => updateMenu(menu.id, 'reps', Number(e.target.value))}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           min="1"
                         />
@@ -497,11 +510,11 @@ export default function TeamPracticeLogForm({
                       <div className="mt-4">
                         <h4 className="text-sm font-medium text-gray-700 mb-3">記録されたタイム</h4>
                         <div className="space-y-3">
-                          {menu.times.map((memberTime: any) => {
+                          {menu.times.map((memberTime: TeamTimeEntry) => {
                             const member = teamMembers.find(m => m.id === memberTime.memberId)
                             if (!member || !memberTime.times || memberTime.times.length === 0) return null
                             
-                            const validTimes = memberTime.times.filter((t: any) => t.time > 0)
+                            const validTimes = memberTime.times.filter((t) => t.time > 0)
                             if (validTimes.length === 0) return null
                             
                             return (
@@ -515,7 +528,7 @@ export default function TeamPracticeLogForm({
                                   </span>
                                 </div>
                                 <div className="grid grid-cols-4 gap-2 text-xs">
-                                  {validTimes.map((timeEntry: any, index: number) => (
+                                  {validTimes.map((timeEntry, index: number) => (
                                     <div key={index} className="bg-white p-2 rounded border text-center">
                                       <div className="text-gray-500">
                                         {timeEntry.setNumber}セット-{timeEntry.repNumber}本

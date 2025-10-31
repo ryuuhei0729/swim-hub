@@ -16,10 +16,61 @@ import { usePractices } from '@apps/shared/hooks/usePractices'
 import { useRecords } from '@apps/shared/hooks/useRecords'
 import { useCalendarData } from './_hooks/useCalendarData'
 import { StyleAPI, EntryAPI } from '@apps/shared/api'
+import type {
+  Style,
+  PracticeTag,
+  TeamMembership,
+  Team,
+  Entry,
+  PracticeTime,
+  SplitTime
+} from '@apps/shared/types/database'
+import type {
+  CalendarItem,
+  TimeEntry
+} from '@apps/shared/types/ui'
 
 export default function DashboardPage() {
+  type TeamMembershipWithTeam = TeamMembership & {
+    team?: Team
+  }
+  
+  type EntryWithStyle = Entry & {
+    styleName?: string
+  }
+  
+  type PracticeMenuFormData = {
+    style: string
+    distance: number
+    reps: number
+    sets: number
+    circleTime: number | null
+    note: string
+    tags: PracticeTag[]
+    times: TimeEntry[]
+  }
+  
+  type EntryFormData = {
+    id: string
+    styleId: string
+    entryTime: number
+    note: string
+  }
+  
+  type RecordFormData = {
+    styleId: string
+    time: number
+    videoUrl?: string | null
+    note?: string | null
+    isRelaying: boolean
+    splitTimes: Array<{
+      distance: number | string
+      splitTime: number
+    }>
+  }
+  
   const { profile, user } = useAuth()
-  const [teams, setTeams] = useState<any[]>([])
+  const [teams, setTeams] = useState<TeamMembershipWithTeam[]>([])
   const [teamsLoading, setTeamsLoading] = useState(true)
   const supabase = useMemo(() => createClient(), [])
 
@@ -38,18 +89,27 @@ export default function DashboardPage() {
   const [isPracticeBasicFormOpen, setIsPracticeBasicFormOpen] = useState(false)
   const [isPracticeLogFormOpen, setIsPracticeLogFormOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
-  const [editingData, setEditingData] = useState<any>(null)
+  // editingDataは様々な型のデータを保持する可能性があるため、union型を使用
+  type EditingData = CalendarItem | {
+    id?: string
+    type?: string
+    competition_id?: string | null
+    practice_id?: string
+    entryData?: unknown
+  } | null
+  
+  const [editingData, setEditingData] = useState<EditingData>(null)
   const [createdPracticeId, setCreatedPracticeId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [availableTags, setAvailableTags] = useState<any[]>([])
+  const [availableTags, setAvailableTags] = useState<PracticeTag[]>([])
 
   // 大会記録フォーム用の状態（3段階対応: Competition → Entry → Record）
   const [isCompetitionBasicFormOpen, setIsCompetitionBasicFormOpen] = useState(false)
   const [isEntryLogFormOpen, setIsEntryLogFormOpen] = useState(false)
   const [isRecordLogFormOpen, setIsRecordLogFormOpen] = useState(false)
   const [createdCompetitionId, setCreatedCompetitionId] = useState<string | null>(null)
-  const [createdEntries, setCreatedEntries] = useState<any[]>([])
-  const [styles, setStyles] = useState<any[]>([])
+  const [createdEntries, setCreatedEntries] = useState<EntryWithStyle[]>([])
+  const [styles, setStyles] = useState<Style[]>([])
 
   // 練習記録用のフック
   const {
@@ -101,7 +161,7 @@ export default function DashboardPage() {
 
         if (error) throw error
 
-        setTeams(data || [])
+        setTeams((data || []) as TeamMembershipWithTeam[])
       } catch (error) {
         console.error('チーム情報の取得に失敗:', error)
       } finally {
@@ -145,7 +205,7 @@ export default function DashboardPage() {
   const handlePracticeBasicSubmit = async (basicData: { date: string; place: string; note: string }) => {
     setIsLoading(true)
     try {
-      if (editingData) {
+      if (editingData && editingData.id) {
         // 編集モード: 更新
         await updatePractice(editingData.id, basicData)
         alert('練習予定を更新しました')
@@ -176,7 +236,7 @@ export default function DashboardPage() {
   }
 
   // 練習メニュー作成・更新処理
-  const handlePracticeLogSubmit = async (formDataArray: any[]) => {
+  const handlePracticeLogSubmit = async (formDataArray: PracticeMenuFormData[]) => {
     setIsLoading(true)
     try {
       const menus = Array.isArray(formDataArray) ? formDataArray : []
@@ -193,23 +253,25 @@ export default function DashboardPage() {
           note: menu.note || ''
         }
         
+        if (!editingData.id) throw new Error('Editing data ID is required')
         await updatePracticeLog(editingData.id, logInput)
         
         // 既存のタグデータを削除
         await supabase
           .from('practice_log_tags')
           .delete()
-          .eq('practice_log_id', editingData.id)
+          .eq('practice_log_id', editingData.id || '')
         
         // 新しいタグデータを保存
         if (menu.tags && menu.tags.length > 0) {
           for (const tag of menu.tags) {
-            await supabase
+            // TODO: Supabase型推論の制約回避のため一時的にas any
+            await (supabase as any)
               .from('practice_log_tags')
               .insert({
-                practice_log_id: editingData.id,
+                practice_log_id: editingData.id || '',
                 practice_tag_id: tag.id
-              } as any)
+              })
           }
         }
         
@@ -217,11 +279,11 @@ export default function DashboardPage() {
         const { data: existingTimes } = await supabase
           .from('practice_times')
           .select('id')
-          .eq('practice_log_id', editingData.id) as any
+          .eq('practice_log_id', editingData.id || '')
         
         if (existingTimes && existingTimes.length > 0) {
-          for (const time of existingTimes) {
-            await deletePracticeTime((time as any).id)
+          for (const time of existingTimes as Array<{ id: string }>) {
+            await deletePracticeTime(time.id)
           }
         }
         
@@ -263,12 +325,13 @@ export default function DashboardPage() {
           // タグデータがある場合は保存
           if (menu.tags && menu.tags.length > 0 && createdLog) {
             for (const tag of menu.tags) {
-              await supabase
+              // TODO: Supabase型推論の制約回避のため一時的にas any
+              await (supabase as any)
                 .from('practice_log_tags')
                 .insert({
                   practice_log_id: createdLog.id,
                   practice_tag_id: tag.id
-                } as any)
+                })
             }
           }
           
@@ -376,7 +439,7 @@ export default function DashboardPage() {
   const handleCompetitionBasicSubmit = async (basicData: { date: string; title: string; place: string; poolType: number; note: string }) => {
     setIsLoading(true)
     try {
-      if (editingData) {
+      if (editingData && editingData.id) {
         // 編集モード: 更新
         await updateCompetition(editingData.id, {
           date: basicData.date,
@@ -424,11 +487,14 @@ export default function DashboardPage() {
   }
 
   // エントリー登録
-  const handleEntrySubmit = async (entriesData: any[]) => {
+  const handleEntrySubmit = async (entriesData: EntryFormData[]) => {
     setIsLoading(true)
     try {
       // 編集モードの場合はeditingDataからcompetition_idを取得
-      const competitionId = createdCompetitionId || editingData?.competition_id
+      const competitionId = createdCompetitionId || 
+        (editingData && typeof editingData === 'object' && 'competition_id' in editingData 
+          ? editingData.competition_id 
+          : undefined)
       
       if (!competitionId) {
         throw new Error('Competition ID が見つかりません')
@@ -474,11 +540,13 @@ export default function DashboardPage() {
         }
         
         // スタイル情報を追加（Record作成時に使用）
-        const style = styles.find(s => s.id === parseInt(entryData.styleId))
-        createdEntriesList.push({
-          ...entry,
-          styleName: style?.name_jp || ''
-        })
+        const style = styles.find(s => s.id === parseInt(String(entryData.styleId)))
+        if (entry) {
+          createdEntriesList.push({
+            ...entry,
+            styleName: style?.name_jp || ''
+          })
+        }
       }
 
       setCreatedEntries(createdEntriesList)
@@ -519,7 +587,7 @@ export default function DashboardPage() {
   }
 
   // 記録登録・更新
-  const handleRecordLogSubmit = async (formData: any) => {
+  const handleRecordLogSubmit = async (formData: RecordFormData) => {
     setIsLoading(true)
     try {
       
@@ -529,7 +597,15 @@ export default function DashboardPage() {
         video_url: formData.videoUrl || null,
         note: formData.note || null,
         is_relaying: formData.isRelaying || false,
-        competition_id: createdCompetitionId || editingData?.competition_id
+        competition_id: createdCompetitionId || 
+          (editingData && typeof editingData === 'object' && 'competition_id' in editingData
+            ? editingData.competition_id || null
+            : (editingData && typeof editingData === 'object' && 'metadata' in editingData && 
+               editingData.metadata && typeof editingData.metadata === 'object' && 
+               'record' in editingData.metadata && editingData.metadata.record &&
+               typeof editingData.metadata.record === 'object' && 'competition_id' in editingData.metadata.record
+              ? editingData.metadata.record.competition_id || null
+              : null))
       }
 
       if (editingData && editingData.id) {
@@ -539,13 +615,13 @@ export default function DashboardPage() {
         // スプリットタイム更新
         if (formData.splitTimes && formData.splitTimes.length > 0) {
           const splitTimesData = formData.splitTimes
-            .filter((st: any) => {
+            .filter((st) => {
               // distanceが数値で、splitTimeが0より大きい場合のみ
-              const distance = typeof st.distance === 'number' ? st.distance : parseInt(st.distance)
+              const distance = typeof st.distance === 'number' ? st.distance : parseInt(String(st.distance))
               return !isNaN(distance) && distance > 0 && st.splitTime > 0
             })
-            .map((st: any) => ({
-              distance: typeof st.distance === 'number' ? st.distance : parseInt(st.distance),
+            .map((st) => ({
+              distance: typeof st.distance === 'number' ? st.distance : parseInt(String(st.distance)),
               split_time: st.splitTime  // 秒単位のDECIMAL
             }))
           
@@ -562,15 +638,15 @@ export default function DashboardPage() {
         // スプリットタイム作成
         if (formData.splitTimes && formData.splitTimes.length > 0) {
           const splitTimesData = formData.splitTimes
-            .filter((st: any) => {
+            .filter((st) => {
               // distanceが数値で、splitTimeが0より大きい場合のみ
-              const distance = typeof st.distance === 'number' ? st.distance : parseInt(st.distance)
+              const distance = typeof st.distance === 'number' ? st.distance : parseInt(String(st.distance))
               const isValid = !isNaN(distance) && distance > 0 && st.splitTime > 0
               return isValid
             })
-            .map((st: any) => ({
+            .map((st) => ({
               record_id: newRecord.id,
-              distance: typeof st.distance === 'number' ? st.distance : parseInt(st.distance),
+              distance: typeof st.distance === 'number' ? st.distance : parseInt(String(st.distance)),
               split_time: st.splitTime  // 秒単位のDECIMAL
             }))
           
@@ -605,14 +681,14 @@ export default function DashboardPage() {
         {/* チームのお知らせセクション */}
         {!teamsLoading && teams.length > 0 && (
           <div className="mb-4 space-y-3">
-            {teams.map((teamMembership: any) => (
+            {teams.map((teamMembership) => (
               <div key={teamMembership.team_id} className="bg-white rounded-lg shadow">
                 <div className="px-4 py-4">
                   <div className="mb-3">
                     <h2 className="text-lg font-semibold text-gray-900">
                       {teamMembership.team?.name} のお知らせ
                     </h2>
-                    {teamMembership.role === 'ADMIN' && (
+                    {teamMembership.role === 'admin' && (
                       <span className="text-xs text-gray-500">管理者</span>
                     )}
                   </div>
@@ -620,7 +696,7 @@ export default function DashboardPage() {
                   <div className="border-t border-gray-200">
                     <TeamAnnouncements 
                       teamId={teamMembership.team_id}
-                      isAdmin={teamMembership.role === 'ADMIN'}
+                      isAdmin={teamMembership.role === 'admin'}
                       viewOnly={true}
                     />
                   </div>
@@ -678,7 +754,7 @@ export default function DashboardPage() {
           }}
           onEditPracticeLog={(log) => {
             // PracticeLog編集モーダルを開く
-            setEditingData(log)
+            setEditingData(log as unknown as EditingData)
             setIsPracticeLogFormOpen(true)
           }}
           onDeletePracticeLog={async (logId) => {
@@ -727,7 +803,7 @@ export default function DashboardPage() {
             if (entryData) {
               // エントリーデータがある場合は直接Record作成フォームを開く
               console.log('Opening RecordLogForm with entryData')
-              setEditingData({ entryData })
+              setEditingData({ entryData } as EditingData)
               setIsRecordLogFormOpen(true)
             } else {
               // エントリーデータがない場合はEntry作成フォームを開く
@@ -750,7 +826,7 @@ export default function DashboardPage() {
               competition_id: record.competition_id
             }
             
-            setEditingData(editData)
+            setEditingData(editData as unknown as EditingData)
             setIsRecordLogFormOpen(true)
           }}
           onDeleteRecord={async (recordId) => {
@@ -790,7 +866,7 @@ export default function DashboardPage() {
           }}
           onSubmit={handlePracticeBasicSubmit}
           selectedDate={selectedDate || new Date()}
-          editData={editingData}
+          editData={undefined}
           isLoading={isLoading}
         />
 
@@ -804,8 +880,11 @@ export default function DashboardPage() {
             setCreatedPracticeId(null)
           }}
           onSubmit={handlePracticeLogSubmit}
-          practiceId={createdPracticeId || editingData?.practice_id || ''}
-          editData={editingData}
+          practiceId={createdPracticeId || 
+            (editingData && typeof editingData === 'object' && 'practice_id' in editingData 
+              ? (editingData.practice_id || '')
+              : '')}
+          editData={undefined}
           isLoading={isLoading}
           availableTags={availableTags}
           setAvailableTags={setAvailableTags}
@@ -823,7 +902,7 @@ export default function DashboardPage() {
           }}
           onSubmit={handleCompetitionBasicSubmit}
           selectedDate={selectedDate || new Date()}
-          editData={editingData}
+          editData={undefined}
           isLoading={isLoading}
         />
 
@@ -839,7 +918,10 @@ export default function DashboardPage() {
           }}
           onSubmit={handleEntrySubmit}
           onSkip={handleEntrySkip}
-          competitionId={createdCompetitionId || editingData?.competition_id || ''}
+          competitionId={createdCompetitionId || 
+            (editingData && typeof editingData === 'object' && 'competition_id' in editingData 
+              ? editingData.competition_id || ''
+              : '')}
           isLoading={isLoading}
           styles={styles.map(s => ({ id: s.id.toString(), nameJp: s.name_jp, distance: s.distance }))}
           editData={editingData?.type === 'entry' ? editingData : undefined}
@@ -856,18 +938,46 @@ export default function DashboardPage() {
             setCreatedEntries([])
           }}
           onSubmit={handleRecordLogSubmit}
-          competitionId={createdCompetitionId || editingData?.competition_id || ''}
+          competitionId={createdCompetitionId || 
+            (editingData && typeof editingData === 'object' && 'competition_id' in editingData 
+              ? editingData.competition_id || ''
+              : '')}
           editData={editingData?.id ? editingData : null}
           isLoading={isLoading}
           styles={styles}
-          entryData={
-            // エントリーデータの優先順位: editingData.entryData > createdEntries
-            editingData?.entryData || (createdEntries.length > 0 ? {
-              styleId: createdEntries[0].style_id,
-              styleName: createdEntries[0].styleName,
-              entryTime: createdEntries[0].entry_time
-            } : undefined)
-          }
+          entryData={(() => {
+            // editingData.entryDataからEntryInfoを作成
+            if (editingData && typeof editingData === 'object' && 'entryData' in editingData 
+              && editingData.entryData 
+              && typeof editingData.entryData === 'object' 
+              && editingData.entryData !== null) {
+              const entryData = editingData.entryData
+              if ('styleId' in entryData && 'styleName' in entryData && 'entryTime' in entryData) {
+                const styleId = typeof entryData.styleId === 'number' ? entryData.styleId 
+                  : typeof entryData.styleId === 'string' ? Number(entryData.styleId) 
+                  : undefined
+                const styleName = typeof entryData.styleName === 'string' ? entryData.styleName : ''
+                const entryTime = typeof entryData.entryTime === 'number' ? entryData.entryTime 
+                  : entryData.entryTime === null ? null 
+                  : undefined
+                
+                if (styleId !== undefined && styleName !== undefined && entryTime !== undefined) {
+                  return { styleId, styleName, entryTime } as import('@apps/shared/types/ui').EntryInfo
+                }
+              }
+            }
+            
+            // createdEntriesからEntryInfoを作成
+            if (createdEntries.length > 0) {
+              return {
+                styleId: createdEntries[0].style_id,
+                styleName: String(createdEntries[0].styleName || ''),
+                entryTime: createdEntries[0].entry_time
+              }
+            }
+            
+            return undefined
+          })()}
         />
       </div>
     </div>

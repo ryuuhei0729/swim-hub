@@ -749,7 +749,7 @@ function PracticeDetails({
   onEdit?: () => void
   onDelete?: () => void
   onAddPracticeLog?: (practiceId: string) => void
-  onEditPracticeLog?: (log: PracticeLog) => void
+  onEditPracticeLog?: (log: PracticeLogWithTimes & { tags?: PracticeTag[] }) => void
   onDeletePracticeLog?: (logId: string) => void
   isTeamPractice?: boolean
   teamId?: string | null
@@ -1015,8 +1015,8 @@ function PracticeDetails({
                   <div className="flex items-center space-x-2 ml-4">
                     <button
                       onClick={() => {
-                        // フォームに必要な形式に変換
-                        const formData: PracticeLog = {
+                        // 編集に必要な情報を保持したまま渡す
+                        const formData = {
                           id: formattedLog.id,
                           user_id: practice.user_id,
                           practice_id: formattedLog.practiceId,
@@ -1026,9 +1026,19 @@ function PracticeDetails({
                           distance: formattedLog.distance,
                           circle: formattedLog.circle,
                           note: formattedLog.note,
-                          created_at: practice.created_at,
-                          updated_at: practice.updated_at
-                        }
+                          // ログ固有のタイムを practice_times にマップ
+                          practice_times: (formattedLog.times || []).map((t) => ({
+                            // 型上は完全な PracticeTime を要求するが、利用側は set/rep/time のみ参照
+                            set_number: t.setNumber,
+                            rep_number: t.repNumber,
+                            time: t.time
+                          })) as any,
+                          // タグを保持
+                          tags: formattedLog.tags || [],
+                          // ログ側の created_at/updated_at を優先（親 practice の値で上書きしない）
+                          created_at: (formattedLog as any).created_at,
+                          updated_at: (formattedLog as any).updated_at
+                        } as unknown as PracticeLogWithTimes & { tags?: PracticeTag[] }
                         onEditPracticeLog?.(formData)
                       }}
                       className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"

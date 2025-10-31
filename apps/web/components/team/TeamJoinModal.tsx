@@ -5,12 +5,17 @@ import { XMarkIcon } from '@heroicons/react/24/outline'
 import { createClient } from '@/lib/supabase'
 import { useAuth } from '@/contexts'
 import TeamJoinForm from '@/components/forms/TeamJoinForm'
+import { Team, TeamMembership, TeamMembershipInsert, TeamMembershipUpdate } from '@apps/shared/types/database'
 
 export interface TeamJoinModalProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: (teamId: string) => void
 }
+
+// Supabaseクエリから返される型
+type TeamSelectResult = Pick<Team, 'id' | 'name' | 'description' | 'invite_code'>
+type TeamMembershipSelectResult = Pick<TeamMembership, 'id' | 'is_active'>
 
 export default function TeamJoinModal({ isOpen, onClose, onSuccess }: TeamJoinModalProps) {
   const [isLoading, setIsLoading] = useState(false)
@@ -46,11 +51,13 @@ export default function TeamJoinModal({ isOpen, onClose, onSuccess }: TeamJoinMo
         throw new Error('チームが見つかりません')
       }
 
+      const teamData = team as TeamSelectResult
+
       // 既に参加しているかチェック
       const { data: existingMembership, error: membershipError } = await supabase
         .from('team_memberships')
         .select('id, is_active')
-        .eq('team_id', (team as any).id)
+        .eq('team_id', teamData.id)
         .eq('user_id', user.id)
         .single()
 
@@ -59,37 +66,48 @@ export default function TeamJoinModal({ isOpen, onClose, onSuccess }: TeamJoinMo
       }
 
       if (existingMembership) {
-        if ((existingMembership as any).is_active) {
+        const membershipData = existingMembership as TeamMembershipSelectResult
+        
+        if (membershipData.is_active) {
           throw new Error('既にこのチームに参加しています')
         } else {
-          // 非アクティブなメンバーシップを復活
-          const { error: updateError } = await (supabase
-            .from('team_memberships') as any)
-            .update({ 
-              is_active: true,
-              joined_at: new Date().toISOString().split('T')[0] // 今日の日付
-            })
-            .eq('id', (existingMembership as any).id)
-
-          if (updateError) throw updateError
+          // 非アクティブなメンバーシップを復活（Server Route経由）
+          const res = await fetch('/api/team-memberships/reactivate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: membershipData.id, joinedAt: new Date().toISOString().split('T')[0] })
+          })
+          if (!res.ok) {
+            const { error } = await res.json().catch(() => ({ error: 'Unknown error' }))
+            throw new Error(error)
+          }
         }
       } else {
         // 新しいメンバーシップを作成
-        const { error: insertError } = await (supabase
-          .from('team_memberships') as any)
-          .insert({
-            team_id: (team as any).id,
-            user_id: user.id,
-            role: 'user',
-            is_active: true,
-            joined_at: new Date().toISOString().split('T')[0] // 今日の日付
-          })
+        const insertData: TeamMembershipInsert = {
+          team_id: teamData.id,
+          user_id: user.id,
+          role: 'user',
+          member_type: null,
+          group_name: null,
+          is_active: true,
+          joined_at: new Date().toISOString().split('T')[0], // 今日の日付
+          left_at: null
+        }
 
-        if (insertError) throw insertError
+        const res = await fetch('/api/team-memberships/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(insertData)
+        })
+        if (!res.ok) {
+          const { error } = await res.json().catch(() => ({ error: 'Unknown error' }))
+          throw new Error(error)
+        }
       }
 
       // 成功時の処理
-      onSuccess((team as any).id)
+      onSuccess(teamData.id)
       onClose()
     } catch (err) {
       console.error('チーム参加エラー:', err)

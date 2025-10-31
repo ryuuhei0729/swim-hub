@@ -13,9 +13,43 @@ import { StyleAPI } from '@apps/shared/api'
 import type { Record, Competition, Style, SplitTime } from '@apps/shared/types/database'
 
 export default function CompetitionPage() {
+  type RecordFormEdit = {
+    id?: string
+    recordDate: string
+    location: string
+    competitionName: string
+    poolType: number
+    styleId: string
+    time: number
+    isRelaying: boolean
+    splitTimes: Array<{ distance: number; splitTime: number }>
+    videoUrl?: string
+    note?: string
+  }
+
+  // RecordForm から渡されるデータ形状（RecordForm.tsxの構造に合わせる）
+  type RecordFormSplitTime = { distance: number | ''; splitTime: number }
+  type RecordFormRecord = {
+    id: string
+    styleId: string
+    time: number
+    timeDisplayValue?: string
+    isRelaying: boolean
+    splitTimes: RecordFormSplitTime[]
+    note: string
+    videoUrl?: string
+  }
+  type RecordFormData = {
+    recordDate: string
+    location: string
+    competitionName: string
+    poolType: number
+    records: RecordFormRecord[]
+    note: string
+  }
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [editingData, setEditingData] = useState<Record | null>(null)
+  const [editingData, setEditingData] = useState<Record | RecordFormEdit | null>(null)
   const [selectedRecord, setSelectedRecord] = useState<Record | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [styles, setStyles] = useState<Style[]>([])
@@ -92,20 +126,19 @@ export default function CompetitionPage() {
 
   const handleEditRecord = async (record: Record) => {
     setEditingData({
-      ...record,
+      // RecordForm の EditData 形状に合わせる
+      id: record.id,
       recordDate: record.competition?.date || new Date().toISOString().split('T')[0],
       location: record.competition?.place || '',
       competitionName: record.competition?.title || '',
       poolType: record.competition?.pool_type || 0,
-      styleId: record.style_id,
+      styleId: record.style_id.toString(),
       time: record.time,
       isRelaying: record.is_relaying || false,
-      splitTimes: record.split_times || [],
-      videoUrl: record.video_url,
-      note: record.note,
-      competition: record.competition,
-      style: record.style
-    } as any)
+      splitTimes: (record.split_times || []).map(st => ({ distance: st.distance, splitTime: st.split_time })),
+      videoUrl: record.video_url || undefined,
+      note: record.note || ''
+    })
     setIsFormOpen(true)
   }
 
@@ -128,14 +161,30 @@ export default function CompetitionPage() {
     }
   }
 
-  const handleRecordSubmit = async (formData: any) => {
+  type RecordFormSubmit = {
+    id?: string
+    recordDate: string
+    location: string
+    competitionName: string
+    poolType: number
+    styleId: string
+    time: number
+    isRelaying?: boolean
+    splitTimes?: Array<{ distance: number; splitTime: number }>
+    videoUrl?: string | null
+    note?: string | null
+  }
+
+  const handleRecordSubmit = async (formData: RecordFormData) => {
     setIsLoading(true)
     try {
       let competitionId = null
 
-      if (formData.id) {
-        // 編集時は既存のCompetition IDを使用
-        competitionId = editingData?.competition_id || null
+      if (editingData) {
+        // 編集時は既存のCompetition IDを使用（Recordのときのみ）
+        competitionId = (editingData && 'competition_id' in editingData)
+          ? (editingData as Record).competition_id
+          : null
       } else {
         // 新規作成時は大会情報が入力されている場合、先に大会を作成
         if (formData.competitionName && formData.location) {
@@ -152,30 +201,51 @@ export default function CompetitionPage() {
         }
       }
 
-      const recordInput = {
-        style_id: parseInt(formData.styleId),
-        time: formData.time,
-        video_url: formData.videoUrl || null,
-        note: formData.note || null,
-        is_relaying: formData.isRelaying || false,
-        competition_id: competitionId
-      }
+      if (editingData && editingData.id) {
+        // 更新処理（先頭の1件を対象）
+        const rec = formData.records[0]
+        const recordInput = {
+          style_id: parseInt(rec.styleId),
+          time: rec.time,
+          video_url: rec.videoUrl || null,
+          note: rec.note || null,
+          is_relaying: rec.isRelaying || false,
+          competition_id: competitionId
+        }
 
-      if (formData.id) {
-        // 更新処理
-        await updateRecord(formData.id, recordInput)
+        await updateRecord(editingData.id, recordInput)
         
         // スプリットタイム更新
-        if (formData.splitTimes && formData.splitTimes.length > 0) {
-          await replaceSplitTimes(formData.id, formData.splitTimes)
+        if (rec.splitTimes && rec.splitTimes.length > 0) {
+          await replaceSplitTimes(
+            editingData.id,
+            rec.splitTimes
+              .filter(st => st.distance !== '' && st.splitTime > 0)
+              .map(st => ({ distance: Number(st.distance), split_time: st.splitTime }))
+          )
         }
       } else {
-        // 作成処理
-        const newRecord = await createRecord(recordInput)
-        
-        // スプリットタイム作成
-        if (formData.splitTimes && formData.splitTimes.length > 0) {
-          await createSplitTimes(newRecord.id, formData.splitTimes)
+        // 作成処理（複数レコード対応）
+        for (const rec of formData.records) {
+          const recordInput = {
+            style_id: parseInt(rec.styleId),
+            time: rec.time,
+            video_url: rec.videoUrl || null,
+            note: rec.note || null,
+            is_relaying: rec.isRelaying || false,
+            competition_id: competitionId
+          }
+          const newRecord = await createRecord(recordInput)
+          
+          // スプリットタイム作成
+          if (rec.splitTimes && rec.splitTimes.length > 0) {
+            await createSplitTimes(
+              newRecord.id,
+              rec.splitTimes
+                .filter(st => st.distance !== '' && st.splitTime > 0)
+                .map(st => ({ distance: Number(st.distance), split_time: st.splitTime }))
+            )
+          }
         }
       }
       
@@ -492,7 +562,11 @@ export default function CompetitionPage() {
         }}
         onSubmit={handleRecordSubmit}
         initialDate={undefined}
-        editData={editingData}
+        editData={
+          editingData && typeof editingData === 'object' && 'recordDate' in editingData
+            ? (editingData as RecordFormEdit)
+            : undefined
+        }
         isLoading={isLoading}
         styles={styles.map(style => ({
           id: style.id.toString(),
@@ -583,8 +657,8 @@ export default function CompetitionPage() {
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                               {selectedRecord.split_times
                                 .slice()
-                                .sort((a: any, b: any) => (a.distance || 0) - (b.distance || 0))
-                                .map((st: any) => (
+                                .sort((a: SplitTime, b: SplitTime) => (a.distance || 0) - (b.distance || 0))
+                                .map((st: SplitTime) => (
                                   <div key={st.id} className="text-xs text-blue-900 bg-blue-100 rounded px-2 py-1">
                                     <span className="mr-2">{st.distance}m</span>
                                     <span className="font-semibold">{formatTime(st.split_time)}</span>

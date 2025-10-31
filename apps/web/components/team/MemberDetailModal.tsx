@@ -121,12 +121,12 @@ export default function MemberDetailModal({
         id: string
         time: number
         created_at: string
-        styles: { name_jp: string; distance: number } | null | { name_jp: string; distance: number }[]
-        competitions: { title: string; date: string } | null | { title: string; date: string }[]
+        styles: { name_jp: string; distance: number } | null
+        competitions: { title: string; date: string } | null
       }
       ;(data || []).forEach((record: RecordRow) => {
-        const style = Array.isArray(record.styles) ? record.styles[0] : record.styles
-        const competition = Array.isArray(record.competitions) ? record.competitions[0] : record.competitions
+        const style = record.styles
+        const competition = record.competitions
         if (!style) return
         const styleKey = style.name_jp || 'Unknown'
         

@@ -45,9 +45,36 @@ interface RecordFormProps {
   onClose: () => void
   onSubmit: (data: RecordFormData) => Promise<void>
   initialDate?: Date
-  editData?: any
+  editData?: EditData
   isLoading?: boolean
   styles?: Array<{ id: string; nameJp: string; distance: number }>
+}
+
+// 編集データ用の型
+type EditSplitTime = { distance: number; splitTime: number }
+type EditRecord = {
+  id?: string
+  styleId?: string
+  time?: number
+  isRelaying?: boolean
+  splitTimes?: EditSplitTime[]
+  note?: string
+  videoUrl?: string
+}
+type EditData = {
+  recordDate?: string
+  location?: string
+  competitionName?: string
+  poolType?: number
+  note?: string
+  records?: EditRecord[]
+  // 単一レコード編集ケースのためのフィールド
+  id?: string
+  styleId?: string
+  time?: number
+  isRelaying?: boolean
+  splitTimes?: EditSplitTime[]
+  videoUrl?: string
 }
 
 const POOL_TYPES = [
@@ -98,16 +125,16 @@ export default function RecordForm({
       // 複数のRecordが存在する場合の処理
       if (editData.records && editData.records.length > 0) {
         
-        const records: RecordSet[] = editData.records.map((record: any, index: number) => ({
+        const records: RecordSet[] = editData.records.map((record: EditRecord, index: number) => ({
           id: record.id || `record-${index}`,
           styleId: record.styleId || styles[0]?.id || '',
           time: record.time || 0,
           isRelaying: record.isRelaying || false,
-          splitTimes: (record.splitTimes?.map((st: any) => ({
+          splitTimes: (record.splitTimes?.map((st: EditSplitTime) => ({
             distance: st.distance,
             splitTime: st.splitTime,
             uiKey: (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
-              ? (crypto as any).randomUUID()
+              ? (crypto as Crypto).randomUUID()
               : `split-${Date.now()}-${Math.random()}`
           })) || []),
           note: record.note || '',
@@ -136,11 +163,11 @@ export default function RecordForm({
           styleId: editData.styleId || styles[0]?.id || '',
           time: editData.time || 0,
           isRelaying: editData.isRelaying || false,
-          splitTimes: (editData.splitTimes?.map((st: any) => ({
+          splitTimes: (editData.splitTimes?.map((st: EditSplitTime) => ({
             distance: st.distance,
             splitTime: st.splitTime,
             uiKey: (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
-              ? (crypto as any).randomUUID()
+              ? (crypto as Crypto).randomUUID()
               : `split-${Date.now()}-${Math.random()}`
           })) || []),
           note: editData.note || '',
@@ -232,7 +259,7 @@ export default function RecordForm({
       distance: '',
       splitTime: 0,
       uiKey: (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
-        ? (crypto as any).randomUUID()
+        ? (crypto as Crypto).randomUUID()
         : `split-${Date.now()}-${Math.random()}`
     }
     

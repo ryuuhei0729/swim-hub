@@ -1,4 +1,3 @@
-import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
@@ -7,59 +6,6 @@ export async function middleware(request: NextRequest) {
       headers: request.headers,
     },
   })
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-        },
-        remove(name: string, options: any) {
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-            expires: new Date(0),
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-            expires: new Date(0),
-          })
-        },
-      },
-    }
-  )
-
-  // セッションを取得
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
 
   const { pathname } = request.nextUrl
 
@@ -93,23 +39,8 @@ export async function middleware(request: NextRequest) {
   // 認証が不要なルートにアクセスしている場合
   const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route))
 
-  // 認証が必要なルートに未認証でアクセスした場合
-  if (isProtectedRoute && !session) {
-    const redirectUrl = new URL('/login', request.url)
-    redirectUrl.searchParams.set('redirect_to', pathname)
-    return NextResponse.redirect(redirectUrl)
-  }
-
-  // 認証済みユーザーが認証不要なルートにアクセスした場合
-  if (session && (pathname === '/login' || pathname === '/signup')) {
-    const redirectTo = request.nextUrl.searchParams.get('redirect_to') || '/dashboard'
-    return NextResponse.redirect(new URL(redirectTo, request.url))
-  }
-
-  // 認証済みユーザーがルートページにアクセスした場合
-  if (session && pathname === '/') {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
-  }
+  // NOTE: ここでは認証判定を行わずパスベースの制御のみ。
+  // 認証判定はアプリ側で行う（SSR/クライアント）
 
   return response
 }

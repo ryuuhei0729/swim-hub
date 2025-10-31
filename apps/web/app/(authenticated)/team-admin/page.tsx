@@ -4,8 +4,17 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useAuth } from '@/contexts'
 
+type TeamMembershipWithTeam = {
+  team_id: string
+  team?: {
+    id: string
+    name: string
+    description: string | null
+  }
+}
+
 export default function TeamAdminPage() {
-  const [teams, setTeams] = useState<any[]>([])
+  const [teams, setTeams] = useState<TeamMembershipWithTeam[]>([])
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
   const supabase = useMemo(() => createClient(), [])

@@ -419,7 +419,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
           practiceId={selectedPracticeId}
           teamMembers={teamMembers}
           onSuccess={handlePracticeLogCreated}
-          editData={editData}
+          editData={editData ?? undefined}
         />
       )}
     </>

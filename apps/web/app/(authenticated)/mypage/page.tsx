@@ -7,6 +7,7 @@ import { UserIcon, TrophyIcon, CalendarIcon } from '@heroicons/react/24/outline'
 import BestTimesTable from '@/components/profile/BestTimesTable'
 import ProfileDisplay from '@/components/profile/ProfileDisplay'
 import ProfileEditModal from '@/components/profile/ProfileEditModal'
+import type { UserProfile as UserDB, Record, Style, Competition } from '@apps/shared/types/database'
 
 interface BestTime {
   id: string
@@ -53,12 +54,13 @@ export default function MyPage() {
       if (error) throw error
       
       if (data) {
+        const userData = data as UserDB
         setProfile({
-          id: (data as any).id,
-          name: (data as any).name,
-          birthday: (data as any).birthday,
-          bio: (data as any).bio,
-          avatar_url: (data as any).profile_image_path
+          id: userData.id,
+          name: userData.name,
+          birthday: userData.birthday,
+          bio: userData.bio,
+          avatar_url: userData.profile_image_path
         })
       }
     } catch (err) {
@@ -92,27 +94,34 @@ export default function MyPage() {
       if (error) throw error
 
       // 種目ごとのベストタイムを取得
+      type RecordWithRelations = Record & {
+        styles?: Style | null
+        competitions?: Competition | null
+      }
+      
       const bestTimesByStyle = new Map<string, BestTime>()
       
-      data?.forEach((record: any) => {
-        const styleKey = record.styles?.name_jp || 'Unknown'
-        
-        if (!bestTimesByStyle.has(styleKey) || record.time < bestTimesByStyle.get(styleKey)!.time) {
-          bestTimesByStyle.set(styleKey, {
-            id: record.id,
-            time: record.time,
-            created_at: record.created_at,
-            style: {
-              name_jp: record.styles?.name_jp || 'Unknown',
-              distance: record.styles?.distance || 0
-            },
-            competition: record.competitions ? {
-              title: record.competitions.title,
-              date: record.competitions.date
-            } : undefined
-          })
-        }
-      })
+      if (data && Array.isArray(data)) {
+        data.forEach((record: RecordWithRelations) => {
+          const styleKey = record.styles?.name_jp || 'Unknown'
+          
+          if (!bestTimesByStyle.has(styleKey) || record.time < bestTimesByStyle.get(styleKey)!.time) {
+            bestTimesByStyle.set(styleKey, {
+              id: record.id,
+              time: record.time,
+              created_at: record.created_at,
+              style: {
+                name_jp: record.styles?.name_jp || 'Unknown',
+                distance: record.styles?.distance || 0
+              },
+              competition: record.competitions ? {
+                title: record.competitions.title,
+                date: record.competitions.date
+              } : undefined
+            })
+          }
+        })
+      }
 
       setBestTimes(Array.from(bestTimesByStyle.values()))
     } catch (err) {
@@ -142,14 +151,22 @@ export default function MyPage() {
 
     try {
       // データベースのカラム名に合わせて変換
-      const dbUpdate: any = {}
+      type UserUpdate = {
+        name?: string
+        birthday?: string | null
+        bio?: string | null
+        profile_image_path?: string | null
+      }
+      
+      const dbUpdate: UserUpdate = {}
       if (updatedProfile.name !== undefined) dbUpdate.name = updatedProfile.name
       if (updatedProfile.birthday !== undefined) dbUpdate.birthday = updatedProfile.birthday
       if (updatedProfile.bio !== undefined) dbUpdate.bio = updatedProfile.bio
       if (updatedProfile.avatar_url !== undefined) dbUpdate.profile_image_path = updatedProfile.avatar_url
 
-      const { error } = await (supabase
-        .from('users') as any)
+      // TODO: Supabase型推論の制約回避のため一時的にas any
+      const { error } = await (supabase as any)
+        .from('users')
         .update(dbUpdate)
         .eq('id', user.id)
 
@@ -166,8 +183,9 @@ export default function MyPage() {
     if (!user) return
 
     try {
-      const { error } = await (supabase
-        .from('users') as any)
+      // TODO: Supabase型推論の制約回避のため一時的にas any
+      const { error } = await (supabase as any)
+        .from('users')
         .update({ profile_image_path: newAvatarUrl })
         .eq('id', user.id)
 

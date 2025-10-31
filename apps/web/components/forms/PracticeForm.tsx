@@ -11,12 +11,18 @@ interface PracticeFormData {
   note: string
 }
 
+type EditPracticeData = {
+  date?: string
+  place?: string
+  note?: string
+}
+
 interface PracticeFormProps {
   isOpen: boolean
   onClose: () => void
   onSubmit: (data: PracticeFormData) => Promise<void>
   initialDate?: Date
-  editData?: any
+  editData?: EditPracticeData
   isLoading?: boolean
 }
 

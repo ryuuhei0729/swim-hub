@@ -13,6 +13,14 @@ interface EntryData {
   note: string
 }
 
+type EditEntryData = {
+  id?: string
+  style_id?: number
+  styleId?: string
+  entry_time?: number
+  note?: string
+}
+
 interface EntryLogFormProps {
   isOpen: boolean
   onClose: () => void
@@ -21,7 +29,7 @@ interface EntryLogFormProps {
   competitionId: string
   isLoading?: boolean
   styles?: Array<{ id: string; nameJp: string; distance: number }>
-  editData?: any // 編集用の既存データ
+  editData?: EditEntryData // 編集用の既存データ
 }
 
 export default function EntryLogForm({

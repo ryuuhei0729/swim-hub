@@ -212,8 +212,7 @@ export default function PracticePage() {
       // 新しいタグを追加
       if (newTags.length > 0) {
         for (const tag of newTags) {
-          // 型定義は追加済みだが、TypeScriptの型推論が正しく機能しないため一時的にas anyを使用
-          // TODO: Supabase型システムの改善後に削除
+          // TODO: Supabase型推論の制約回避のため一時的にas any
           const { error: insertError } = await (supabase as any)
             .from('practice_log_tags')
             .insert({

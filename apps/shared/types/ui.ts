@@ -2,7 +2,7 @@
 // UI・フォーム関連型定義 - Swim Hub共通パッケージ
 // =============================================================================
 
-import { CalendarItemType, PracticeTag, PracticeLog, SplitTime, Record as RecordRow } from './database'
+import { CalendarItemType, PracticeTag, PracticeLog, PracticeLogWithTimes, SplitTime, Record as RecordRow } from './database'
 
 // =============================================================================
 // 1. カレンダー関連
@@ -299,7 +299,7 @@ export interface CalendarProps {
   onEditItem?: (item: CalendarItem) => void
   onDeleteItem?: (itemId: string, itemType: CalendarItemType) => void
   onAddPracticeLog?: (practiceId: string) => void
-  onEditPracticeLog?: (log: PracticeLog) => void
+  onEditPracticeLog?: (log: PracticeLogWithTimes & { tags?: PracticeTag[] }) => void
   onDeletePracticeLog?: (logId: string) => void
   onAddRecord?: (params: { competitionId?: string; entryData?: EntryInfo }) => void
   onEditRecord?: (record: RecordRow) => void
@@ -322,7 +322,7 @@ export interface DayDetailModalProps {
   onDeleteItem?: (itemId: string, itemType: CalendarItemType) => void
   onAddItem?: (date: Date, type: CalendarItemType) => void
   onAddPracticeLog?: (practiceId: string) => void
-  onEditPracticeLog?: (log: PracticeLog) => void
+  onEditPracticeLog?: (log: PracticeLogWithTimes & { tags?: PracticeTag[] }) => void
   onDeletePracticeLog?: (logId: string) => void
   onAddRecord?: (params: { competitionId?: string; entryData?: EntryInfo }) => void
   onEditRecord?: (record: RecordRow) => void

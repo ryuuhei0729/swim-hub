@@ -92,15 +92,24 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         
         if (error) throw error
         
-        const hasAdmin = data?.some((membership: any) => 
-          membership.role === 'ADMIN'
+        // クエリ結果の型定義
+        type TeamMembershipSelect = {
+          team_id: string
+          role: 'admin' | 'user' | 'ADMIN' | 'USER'
+          is_active: boolean
+        }
+        
+        const memberships = (data || []) as TeamMembershipSelect[]
+        
+        const hasAdmin = memberships.some((membership) => 
+          membership.role === 'ADMIN' || membership.role === 'admin'
         ) || false
         
         setHasAdminTeams(hasAdmin)
         
         // チームが1つだけの場合はIDを保存
-        if (data?.length === 1) {
-          setSingleTeamId((data[0] as any).team_id)
+        if (memberships.length === 1) {
+          setSingleTeamId(memberships[0].team_id)
         } else {
           setSingleTeamId(null)
         }

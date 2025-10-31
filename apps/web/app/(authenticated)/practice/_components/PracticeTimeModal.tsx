@@ -5,6 +5,12 @@ import { XMarkIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { createClient } from '@/lib/supabase'
+import type {
+  Practice,
+  PracticeLog,
+  PracticeTime,
+  PracticeTag
+} from '@apps/shared/types/database'
 
 interface PracticeTimeModalProps {
   isOpen: boolean
@@ -13,13 +19,54 @@ interface PracticeTimeModalProps {
   location?: string
 }
 
+type PracticeLogTagRelation = {
+  practice_tag_id: string
+  practice_tags?: PracticeTag | null
+}
+
+type PracticeLogFromDB = PracticeLog & {
+  practice_times?: PracticeTime[]
+  practice_log_tags?: PracticeLogTagRelation[]
+}
+
+type PracticeFromDB = Practice & {
+  practice_logs?: PracticeLogFromDB[]
+}
+
+type FormattedPracticeTime = {
+  id: string
+  time: number
+  repNumber: number
+  setNumber: number
+}
+
+type FormattedPracticeLog = {
+  id: string
+  style: string
+  repCount: number
+  setCount: number
+  distance: number
+  circle: number | null
+  note: string | null
+  tags: PracticeTag[]
+  times: FormattedPracticeTime[]
+}
+
+type FormattedPractice = {
+  id: string
+  date: string
+  place: string | null
+  note: string | null
+  practiceLogs: FormattedPracticeLog[]
+}
+
 export default function PracticeTimeModal({
   isOpen,
   onClose,
   practiceId,
   location
 }: PracticeTimeModalProps) {
-  const [practice, setPractice] = useState<any>(null)
+  const [practice, setPractice] = useState<FormattedPractice | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
   const supabase = useMemo(() => createClient(), [])
@@ -54,10 +101,13 @@ export default function PracticeTimeModal({
         if (!data) throw new Error('Practice data not found')
         
         // データ整形
-        const practiceData = data as any
-        const formattedPractice = {
-          ...practiceData,
-          practiceLogs: practiceData.practice_logs?.map((log: any) => ({
+        const practiceData = data as unknown as PracticeFromDB
+        const formattedPractice: FormattedPractice = {
+          id: practiceData.id,
+          date: practiceData.date,
+          place: practiceData.place,
+          note: practiceData.note,
+          practiceLogs: (practiceData.practice_logs || []).map((log: PracticeLogFromDB): FormattedPracticeLog => ({
             id: log.id,
             style: log.style,
             repCount: log.rep_count,
@@ -65,14 +115,16 @@ export default function PracticeTimeModal({
             distance: log.distance,
             circle: log.circle,
             note: log.note,
-            tags: log.practice_log_tags?.map((tagRelation: any) => tagRelation.practice_tags).filter((tag: any) => tag !== null) || [],
-            times: log.practice_times?.map((time: any) => ({
+            tags: (log.practice_log_tags || [])
+              .map((tagRelation: PracticeLogTagRelation) => tagRelation.practice_tags)
+              .filter((tag): tag is PracticeTag => tag !== null && tag !== undefined),
+            times: (log.practice_times || []).map((time: PracticeTime): FormattedPracticeTime => ({
               id: time.id,
               time: time.time,
               repNumber: time.rep_number,
               setNumber: time.set_number
-            })) || []
-          })) || []
+            }))
+          }))
         }
         
         setPractice(formattedPractice)
@@ -162,7 +214,7 @@ export default function PracticeTimeModal({
             </div>
 
             <div className="mt-3 space-y-4">
-              {practiceLogs.map((log: any, index: number) => {
+              {practiceLogs.map((log: FormattedPracticeLog, index: number) => {
                 const allTimes = log.times || []
 
                 return (
@@ -178,7 +230,7 @@ export default function PracticeTimeModal({
                         )}
                         {log.tags && Array.isArray(log.tags) && log.tags.length > 0 && (
                           <div className="flex flex-wrap gap-1">
-                            {log.tags.map((tag: any) => (
+                            {log.tags.map((tag: PracticeTag) => (
                               <span
                                 key={tag.id}
                                 className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full text-black"
@@ -251,9 +303,9 @@ export default function PracticeTimeModal({
                                     <td className="py-2 px-2 font-medium text-gray-700">{repNumber}本目</td>
                                     {Array.from({ length: log.setCount }, (_, setIndex) => {
                                       const setNumber = setIndex + 1
-                                      const time = allTimes.find((t: any) => t.setNumber === setNumber && t.repNumber === repNumber)
-                                      const setTimes = allTimes.filter((t: any) => t.setNumber === setNumber && t.time > 0)
-                                      const setFastest = setTimes.length > 0 ? Math.min(...setTimes.map((t: any) => t.time)) : 0
+                                      const time = allTimes.find((t: FormattedPracticeTime) => t.setNumber === setNumber && t.repNumber === repNumber)
+                                      const setTimes = allTimes.filter((t: FormattedPracticeTime) => t.setNumber === setNumber && t.time > 0)
+                                      const setFastest = setTimes.length > 0 ? Math.min(...setTimes.map((t: FormattedPracticeTime) => t.time)) : 0
                                       const isFastest = time && time.time > 0 && time.time === setFastest
 
                                       return (
@@ -272,9 +324,9 @@ export default function PracticeTimeModal({
                                 <td className="py-2 px-2 font-medium text-green-800">平均</td>
                                 {Array.from({ length: log.setCount }, (_, setIndex) => {
                                   const setNumber = setIndex + 1
-                                  const setTimes = allTimes.filter((t: any) => t.setNumber === setNumber && t.time > 0)
+                                  const setTimes = allTimes.filter((t: FormattedPracticeTime) => t.setNumber === setNumber && t.time > 0)
                                   const average = setTimes.length > 0
-                                    ? setTimes.reduce((sum: any, t: any) => sum + t.time, 0) / setTimes.length
+                                    ? setTimes.reduce((sum: number, t: FormattedPracticeTime) => sum + t.time, 0) / setTimes.length
                                     : 0
                                   return (
                                     <td key={setNumber} className="py-2 px-2 text-center">
@@ -291,9 +343,9 @@ export default function PracticeTimeModal({
                                 <td className="py-2 px-2 text-center" colSpan={log.setCount}>
                                   <span className="text-blue-800 font-bold">
                                     {(() => {
-                                      const allValidTimes = allTimes.filter((t: any) => t.time > 0)
+                                      const allValidTimes = allTimes.filter((t: FormattedPracticeTime) => t.time > 0)
                                       const overallAverage = allValidTimes.length > 0
-                                        ? allValidTimes.reduce((sum: any, t: any) => sum + t.time, 0) / allValidTimes.length
+                                        ? allValidTimes.reduce((sum: number, t: FormattedPracticeTime) => sum + t.time, 0) / allValidTimes.length
                                         : 0
                                       return overallAverage > 0 ? formatTime(overallAverage) : '-'
                                     })()}
@@ -306,9 +358,9 @@ export default function PracticeTimeModal({
                                 <td className="py-2 px-2 text-center" colSpan={log.setCount}>
                                   <span className="text-blue-800 font-bold">
                                     {(() => {
-                                      const allValidTimes = allTimes.filter((t: any) => t.time > 0)
+                                      const allValidTimes = allTimes.filter((t: FormattedPracticeTime) => t.time > 0)
                                       const overallFastest = allValidTimes.length > 0
-                                        ? Math.min(...allValidTimes.map((t: any) => t.time))
+                                        ? Math.min(...allValidTimes.map((t: FormattedPracticeTime) => t.time))
                                         : 0
                                       return overallFastest > 0 ? formatTime(overallFastest) : '-'
                                     })()}

@@ -179,37 +179,43 @@ export type Database = {
           id: string
           user_id: string
           date: string
-          tags: any | null
+          practice_id: string
           style: string
           rep_count: number
           set_count: number
           distance: number
           circle: number | null // NOT NULLからNULLに変更
           note: string | null
+          created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
           user_id: string
-          date: string
-          tags?: any | null
+          date?: string
+          practice_id: string
           style: string
           rep_count: number
           set_count: number
           distance: number
           circle?: number | null
           note?: string | null
+          created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
           user_id?: string
           date?: string
-          tags?: any | null
+          practice_id?: string
           style?: string
           rep_count?: number
           set_count?: number
           distance?: number
           circle?: number | null
           note?: string | null
+          created_at?: string
+          updated_at?: string
         }
       }
       practice_times: {
@@ -279,6 +285,35 @@ export type Database = {
           practice_log_id?: string
           practice_tag_id?: string
           created_at?: string
+        }
+      }
+      team_memberships: {
+        Row: {
+          id: string
+          team_id: string
+          user_id: string
+          role: 'admin' | 'user'
+          is_active: boolean
+          joined_at: string
+          left_at: string | null
+        }
+        Insert: {
+          id?: string
+          team_id: string
+          user_id: string
+          role?: 'admin' | 'user'
+          is_active?: boolean
+          joined_at?: string
+          left_at?: string | null
+        }
+        Update: {
+          id?: string
+          team_id?: string
+          user_id?: string
+          role?: 'admin' | 'user'
+          is_active?: boolean
+          joined_at?: string
+          left_at?: string | null
         }
       }
     }

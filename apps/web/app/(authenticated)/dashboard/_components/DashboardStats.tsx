@@ -139,7 +139,16 @@ export function UpcomingEventsList() {
     )
   }
 
-  const events = (data as any)?.upcomingEvents || []
+  type UpcomingEvent = {
+    id: string
+    title: string
+    date: string
+    location?: string
+  }
+  
+  const events = (data && typeof data === 'object' && 'upcomingEvents' in data 
+    ? (data as { upcomingEvents?: UpcomingEvent[] }).upcomingEvents 
+    : []) || []
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
@@ -148,7 +157,7 @@ export function UpcomingEventsList() {
         <p className="text-gray-500 text-center py-8">今後のイベントはありません</p>
       ) : (
         <div className="space-y-4">
-          {events.slice(0, 5).map((event: any) => (
+          {events.slice(0, 5).map((event: UpcomingEvent) => (
             <div key={event.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
               <div className="flex-1">
                 <h3 className="font-medium text-gray-900">{event.title}</h3>

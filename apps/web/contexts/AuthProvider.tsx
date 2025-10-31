@@ -44,16 +44,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           
           try {
-            const { data: newProfile, error: createError } = await (supabase as any)
+            const userInsert = {
+              id: userId,
+              name: 'ユーザー',
+              gender: 0,
+              bio: '',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            } satisfies Database['public']['Tables']['users']['Insert']
+            
+            const { data: newProfile, error: createError } = await supabase
               .from('users')
-              .insert({
-                id: userId,
-                name: 'ユーザー',
-                gender: 0,
-                bio: '',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              })
+              // @ts-expect-error: Supabaseの型推論がinsertでneverになる既知の問題のため
+              .insert(userInsert)
               .select()
               .single()
             
@@ -182,16 +185,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
     try {
       if (!authState.user) {
-        return { error: new Error('User not authenticated') }
+        return { error: new Error('User not authenticated') as unknown as import('@supabase/supabase-js').AuthError }
       }
       
-      const { error } = await (supabase as any)
+      const userUpdate: Database['public']['Tables']['users']['Update'] = updates
+      const { error } = await supabase
         .from('users')
-        .update(updates)
+        // @ts-expect-error: Supabaseの型推論がupdateでneverになる既知の問題のため
+        .update(userUpdate)
         .eq('id', authState.user.id)
       
       if (error) {
-        return { error }
+        return { error: (error as unknown) as import('@supabase/supabase-js').AuthError }
       }
       
       // プロフィールを再取得
@@ -203,7 +208,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { error: null }
     } catch (error) {
       console.error('Profile update error:', error)
-      return { error }
+      return { error: (error as unknown) as import('@supabase/supabase-js').AuthError }
     }
   }, [authState.user, supabase, fetchUserProfile]) // fetchUserProfileを依存配列に追加
 

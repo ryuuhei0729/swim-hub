@@ -17,7 +17,7 @@ import {
 } from '@/components/team'
 import MemberDetailModal from '@/components/team/MemberDetailModal'
 import type { TeamTabType } from '@/components/team/TeamTabs'
-import { TeamEvent, AttendanceStatusType } from '@swim-hub/shared/types/database'
+import { TeamEvent, AttendanceStatusType, Team, TeamMembership } from '@swim-hub/shared/types/database'
 
 // 出欠タブコンポーネント
 function AttendanceTab({ teamId, isAdmin }: { teamId: string, isAdmin: boolean }) {
@@ -79,21 +79,15 @@ function AttendanceTab({ teamId, isAdmin }: { teamId: string, isAdmin: boolean }
     newStatus: AttendanceStatusType
   ) => {
     try {
-      if (eventType === 'practice') {
-        const { error } = await (supabase as any)
-          .from('practices')
-          .update({ attendance_status: newStatus })
-          .eq('id', eventId)
-        if (error) throw error
-      } else {
-        const { error } = await (supabase as any)
-          .from('competitions')
-          .update({ attendance_status: newStatus })
-          .eq('id', eventId)
-        if (error) throw error
+      const res = await fetch('/api/attendance/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table: eventType === 'practice' ? 'practices' : 'competitions', id: eventId, status: newStatus })
+      })
+      if (!res.ok) {
+        const { error } = await res.json().catch(() => ({ error: 'Unknown error' }))
+        throw new Error(error)
       }
-
-      // リロード
       await loadEvents()
     } catch (error) {
       console.error('ステータス更新エラー:', error)
@@ -237,8 +231,8 @@ export default function TeamDetailPage() {
   const teamId = params.teamId as string
   const searchParams = useSearchParams()
   const router = useRouter()
-  const [team, setTeam] = useState<any>(null)
-  const [membership, setMembership] = useState<any>(null)
+  const [team, setTeam] = useState<Team | null>(null)
+  const [membership, setMembership] = useState<TeamMembership | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<TeamTabType>('announcements')
 
@@ -250,7 +244,7 @@ export default function TeamDetailPage() {
     }
   }, [searchParams])
 
-  const [selectedMember, setSelectedMember] = useState<any>(null)
+  const [selectedMember, setSelectedMember] = useState<import('@/components/team/MemberDetailModal').MemberDetail | null>(null)
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false)
   const { user } = useAuth()
   const supabase = useMemo(() => createClient(), [])
@@ -325,7 +319,7 @@ export default function TeamDetailPage() {
 
   const isAdmin = membership?.role === 'admin'
 
-  const handleMemberClick = (member: any) => {
+  const handleMemberClick = (member: import('@/components/team/MemberDetailModal').MemberDetail) => {
     setSelectedMember(member)
     setIsMemberModalOpen(true)
   }
@@ -370,7 +364,7 @@ export default function TeamDetailPage() {
           <TeamSettings 
             teamId={teamId}
             teamName={team.name}
-            teamDescription={team.description}
+            teamDescription={team.description || undefined}
             isAdmin={isAdmin}
           />
         )

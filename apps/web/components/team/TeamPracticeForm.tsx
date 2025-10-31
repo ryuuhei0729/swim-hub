@@ -101,13 +101,14 @@ export default function TeamPracticeForm({
       if (!user) throw new Error('認証が必要です')
 
       const practicesAPI = new TeamPracticesAPI(supabase)
-      await practicesAPI.create({
+      const practiceInput: import('@apps/shared/types/database').PracticeInsert = {
         user_id: user.id,
-        team_id: teamId,
         date: formData.date,
         place: formData.place || null,
-        note: formData.note || null
-      } as any)
+        note: formData.note || null,
+        team_id: teamId
+      }
+      await practicesAPI.create(practiceInput)
       
       onSuccess()
       onClose()

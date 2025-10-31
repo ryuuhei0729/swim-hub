@@ -25,9 +25,15 @@ export const AuthForm: React.FC<AuthFormProps> = ({
   const { signIn, signUp } = useAuth()
 
   const formatAuthError = (err: unknown, action: 'signin' | 'signup'): string => {
-    const e = err as any
-    const statusText = e?.status ? ` [status: ${e.status}]` : ''
-    const errMsg = e?.message || e?.error_description || e?.error || '不明なエラーが発生しました。'
+    const errorObj = err && typeof err === 'object' ? err : {}
+    const status = 'status' in errorObj && typeof (errorObj as any).status === 'number' 
+      ? (errorObj as any).status 
+      : undefined
+    const statusText = status ? ` [status: ${status}]` : ''
+    const errMsg = ('message' in errorObj && typeof errorObj.message === 'string' ? errorObj.message : null)
+      || ('error_description' in errorObj && typeof errorObj.error_description === 'string' ? errorObj.error_description : null)
+      || ('error' in errorObj && typeof errorObj.error === 'string' ? errorObj.error : null)
+      || '不明なエラーが発生しました。'
 
     // エラーメッセージの日本語化と補足ヒント
     if (typeof errMsg === 'string') {
@@ -69,7 +75,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({
       if (msg.includes('captcha')) {
         return `Captcha認証が必要です。Captchaを完了してから再度お試しください。`
       }
-      if (msg.includes('rate limit') || e?.status === 429) {
+      if (msg.includes('rate limit') || status === 429) {
         return `リクエスト制限に達しました。しばらく時間をおいてから再度お試しください。`
       }
       if (msg.includes('network') || msg.includes('connection')) {

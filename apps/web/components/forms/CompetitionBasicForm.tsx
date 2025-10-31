@@ -13,12 +13,22 @@ interface CompetitionBasicFormData {
   note: string
 }
 
+type EditCompetitionBasicData = {
+  date?: string
+  title?: string
+  competition_name?: string
+  place?: string
+  location?: string
+  pool_type?: number
+  note?: string
+}
+
 interface CompetitionBasicFormProps {
   isOpen: boolean
   onClose: () => void
   onSubmit: (data: CompetitionBasicFormData) => Promise<void>
   selectedDate: Date
-  editData?: any
+  editData?: EditCompetitionBasicData
   isLoading?: boolean
 }
 
