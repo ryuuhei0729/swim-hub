@@ -866,7 +866,13 @@ export default function DashboardPage() {
           }}
           onSubmit={handlePracticeBasicSubmit}
           selectedDate={selectedDate || new Date()}
-          editData={undefined}
+          editData={editingData && typeof editingData === 'object' && 'metadata' in editingData
+            ? {
+                date: editingData.date,
+                place: editingData.metadata.practice?.place || '',
+                note: editingData.note || ''
+              }
+            : undefined}
           isLoading={isLoading}
         />
 

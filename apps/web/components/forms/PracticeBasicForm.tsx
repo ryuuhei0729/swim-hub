@@ -15,7 +15,6 @@ interface PracticeBasicData {
 type EditPracticeBasicData = {
   date?: string
   place?: string
-  location?: string
   note?: string
 }
 
@@ -54,7 +53,7 @@ export default function PracticeBasicForm({
         // 編集モード: 既存データで初期化
         setFormData({
           date: editData.date || format(validDate, 'yyyy-MM-dd'),
-          place: editData.place || editData.location || '', // locationもフォールバック
+          place: editData.place || '',
           note: editData.note || ''
         })
       } else {

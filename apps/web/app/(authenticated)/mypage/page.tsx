@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAuth } from '@/contexts'
-import { createClient } from '@/lib/supabase'
+import { createClient, type Database } from '@/lib/supabase'
 import { UserIcon, TrophyIcon, CalendarIcon } from '@heroicons/react/24/outline'
 import BestTimesTable from '@/components/profile/BestTimesTable'
 import ProfileDisplay from '@/components/profile/ProfileDisplay'
 import ProfileEditModal from '@/components/profile/ProfileEditModal'
-import type { UserProfile as UserDB, Record, Style, Competition } from '@apps/shared/types/database'
+import type { UserProfile as UserDB, UserUpdate, Record, Style, Competition } from '@apps/shared/types/database'
 
 interface BestTime {
   id: string
@@ -153,13 +153,6 @@ export default function MyPage() {
 
     try {
       // データベースのカラム名に合わせて変換
-      type UserUpdate = {
-        name?: string
-        birthday?: string | null
-        bio?: string | null
-        profile_image_path?: string | null
-      }
-      
       const dbUpdate: UserUpdate = {}
       if (updatedProfile.name !== undefined) dbUpdate.name = updatedProfile.name
       if (updatedProfile.birthday !== undefined) dbUpdate.birthday = updatedProfile.birthday
@@ -167,9 +160,9 @@ export default function MyPage() {
       if (updatedProfile.avatar_url !== undefined) dbUpdate.profile_image_path = updatedProfile.avatar_url
       if (updatedProfile.profile_image_path !== undefined) dbUpdate.profile_image_path = updatedProfile.profile_image_path
 
-      // TODO: Supabase型推論の制約回避のため一時的にas any
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('users')
+        // @ts-expect-error: Supabaseの型推論がupdateでneverになる既知の問題のため
         .update(dbUpdate)
         .eq('id', user.id)
 
@@ -190,9 +183,9 @@ export default function MyPage() {
     if (!user) return
 
     try {
-      // TODO: Supabase型推論の制約回避のため一時的にas any
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('users')
+        // @ts-expect-error: Supabaseの型推論がupdateでneverになる既知の問題のため
         .update({ profile_image_path: newAvatarUrl })
         .eq('id', user.id)
 

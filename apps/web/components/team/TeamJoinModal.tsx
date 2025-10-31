@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase'
 import { useAuth } from '@/contexts'
 import TeamJoinForm from '@/components/forms/TeamJoinForm'
 import { Team, TeamMembership, TeamMembershipInsert, TeamMembershipUpdate } from '@apps/shared/types/database'
+import { format } from 'date-fns'
 
 export interface TeamJoinModalProps {
   isOpen: boolean
@@ -75,7 +76,7 @@ export default function TeamJoinModal({ isOpen, onClose, onSuccess }: TeamJoinMo
           const res = await fetch('/api/team-memberships/reactivate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: membershipData.id, joinedAt: new Date().toISOString().split('T')[0] })
+            body: JSON.stringify({ id: membershipData.id, joinedAt: format(new Date(), 'yyyy-MM-dd') })
           })
           if (!res.ok) {
             const { error } = await res.json().catch(() => ({ error: 'Unknown error' }))
@@ -91,7 +92,7 @@ export default function TeamJoinModal({ isOpen, onClose, onSuccess }: TeamJoinMo
           member_type: null,
           group_name: null,
           is_active: true,
-          joined_at: new Date().toISOString().split('T')[0], // 今日の日付
+          joined_at: format(new Date(), 'yyyy-MM-dd'), // 今日の日付
           left_at: null
         }
 

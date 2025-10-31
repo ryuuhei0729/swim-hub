@@ -215,15 +215,12 @@ export default function CompetitionPage() {
 
         await updateRecord(editingData.id, recordInput)
         
-        // スプリットタイム更新
-        if (rec.splitTimes && rec.splitTimes.length > 0) {
-          await replaceSplitTimes(
-            editingData.id,
-            rec.splitTimes
-              .filter(st => st.distance !== '' && st.splitTime > 0)
-              .map(st => ({ distance: Number(st.distance), split_time: st.splitTime }))
-          )
-        }
+        // スプリットタイム更新（削除されたスプリットタイムもクリア）
+        const filteredSplitTimes = rec.splitTimes
+          .filter(st => st.distance !== '' && st.splitTime > 0)
+          .map(st => ({ distance: Number(st.distance), split_time: st.splitTime }))
+        
+        await replaceSplitTimes(editingData.id, filteredSplitTimes)
       } else {
         // 作成処理（複数レコード対応）
         for (const rec of formData.records) {
