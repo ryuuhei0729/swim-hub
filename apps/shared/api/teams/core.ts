@@ -3,23 +3,23 @@
 // =============================================================================
 
 import { SupabaseClient } from '@supabase/supabase-js'
-import { Team, TeamInsert, TeamUpdate, TeamWithMembers } from '../../types/database'
+import { Team, TeamInsert, TeamMembershipWithUser, TeamUpdate, TeamWithMembers } from '../../types/database'
 
 export class TeamCoreAPI {
   constructor(private supabase: SupabaseClient) {}
 
   // NOTE: 実体は既存 teams.ts から段階的に移行する
-  async getMyTeams(): Promise<any[]> {
+  async getMyTeams(): Promise<TeamMembershipWithUser[]> {
     const { data: { user } } = await this.supabase.auth.getUser()
     if (!user) throw new Error('認証が必要です')
     const { data, error } = await this.supabase
       .from('team_memberships')
-      .select(`*, team:teams(*), user:users(*)`)
+      .select(`*, teams:teams(*), users:users(*)`)
       .eq('user_id', user.id)
       .eq('is_active', true)
       .order('joined_at', { ascending: false })
     if (error) throw error
-    return data as any[]
+    return data as TeamMembershipWithUser[]
   }
 
   async getTeam(teamId: string): Promise<TeamWithMembers> {

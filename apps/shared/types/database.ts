@@ -185,7 +185,7 @@ export interface Team {
   updated_at: string
 }
 
-export type TeamInsert = Omit<Team, 'id' | 'created_at' | 'updated_at'>
+export type TeamInsert = Omit<Team, 'id' | 'invite_code' | 'created_at' | 'updated_at'>
 export type TeamUpdate = Partial<TeamInsert>
 
 // チームメンバーシップ

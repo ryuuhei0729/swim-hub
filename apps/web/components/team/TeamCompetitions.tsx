@@ -113,7 +113,7 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
 
       if (competitionsError) throw competitionsError
 
-      setCompetitions(competitionsData || [])
+      setCompetitions((competitionsData || []) as unknown as TeamCompetition[])
     } catch (err) {
       console.error('チーム大会情報の取得に失敗:', err)
       setError('チーム大会情報の取得に失敗しました')

@@ -21,7 +21,7 @@ export class TeamRecordsAPI {
   async create(input: CompetitionInsert): Promise<Competition> {
     const { data, error } = await this.supabase
       .from('competitions')
-      .insert(input as any)
+      .insert(input)
       .select('*')
       .single()
     if (error) throw error
@@ -31,7 +31,7 @@ export class TeamRecordsAPI {
   async update(id: string, updates: CompetitionUpdate): Promise<Competition> {
     const { data, error } = await this.supabase
       .from('competitions')
-      .update(updates as any)
+      .update(updates)
       .eq('id', id)
       .select('*')
       .single()

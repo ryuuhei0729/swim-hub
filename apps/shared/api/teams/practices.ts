@@ -21,7 +21,7 @@ export class TeamPracticesAPI {
   async create(input: PracticeInsert): Promise<Practice> {
     const { data, error } = await this.supabase
       .from('practices')
-      .insert(input as any)
+      .insert(input)
       .select('*')
       .single()
     if (error) throw error
@@ -31,7 +31,7 @@ export class TeamPracticesAPI {
   async update(id: string, updates: PracticeUpdate): Promise<Practice> {
     const { data, error } = await this.supabase
       .from('practices')
-      .update(updates as any)
+      .update(updates)
       .eq('id', id)
       .select('*')
       .single()

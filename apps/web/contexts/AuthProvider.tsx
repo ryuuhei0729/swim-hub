@@ -90,13 +90,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       
       if (error) {
-        return { data: null, error }
+        return { data: null, error: error as import('@supabase/supabase-js').AuthError }
       }
       
-      return { data, error: null }
+      return { data: data ? { user: data.user, session: data.session } : null, error: null }
     } catch (error) {
       console.error('Sign in error:', error)
-      return { data: null, error }
+      return { data: null, error: error as import('@supabase/supabase-js').AuthError }
     }
   }, [supabase])
 
@@ -116,13 +116,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       
       if (error) {
-        return { data: null, error }
+        return { data: null, error: error as import('@supabase/supabase-js').AuthError }
       }
       
-      return { data, error: null }
+      return { data: data ? { user: data.user, session: data.session } : null, error: null }
     } catch (error) {
       console.error('Sign up error:', error)
-      return { data: null, error }
+      return { data: null, error: error as import('@supabase/supabase-js').AuthError }
     }
   }, [supabase])
 
@@ -132,13 +132,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error } = await supabase.auth.signOut()
       
       if (error) {
-        return { error }
+        return { error: error as import('@supabase/supabase-js').AuthError }
       }
       
       return { error: null }
     } catch (error) {
       console.error('Sign out error:', error)
-      return { error }
+      return { error: error as import('@supabase/supabase-js').AuthError }
     }
   }, [supabase])
 
@@ -150,13 +150,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       
       if (error) {
-        return { error }
+        return { error: error as import('@supabase/supabase-js').AuthError }
       }
       
       return { error: null }
     } catch (error) {
       console.error('Password reset error:', error)
-      return { error }
+      return { error: error as import('@supabase/supabase-js').AuthError }
     }
   }, [supabase])
 
@@ -168,13 +168,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       
       if (error) {
-        return { error }
+        return { error: error as import('@supabase/supabase-js').AuthError }
       }
       
       return { error: null }
     } catch (error) {
       console.error('Password update error:', error)
-      return { error }
+      return { error: error as import('@supabase/supabase-js').AuthError }
     }
   }, [supabase])
 

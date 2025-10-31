@@ -341,7 +341,7 @@ export class PracticeAPI {
   /**
    * 練習タグ一覧取得
    */
-  async getPracticeTags(): Promise<any[]> {
+  async getPracticeTags(): Promise<import('../types/database').PracticeTag[]> {
     const { data: { user } } = await this.supabase.auth.getUser()
     if (!user) throw new Error('認証が必要です')
 
@@ -352,13 +352,13 @@ export class PracticeAPI {
       .order('name')
 
     if (error) throw error
-    return data || []
+    return (data || []) as import('../types/database').PracticeTag[]
   }
 
   /**
    * 練習タグ作成
    */
-  async createPracticeTag(name: string, color: string): Promise<any> {
+  async createPracticeTag(name: string, color: string): Promise<import('../types/database').PracticeTag> {
     const { data: { user } } = await this.supabase.auth.getUser()
     if (!user) throw new Error('認証が必要です')
 
@@ -373,7 +373,7 @@ export class PracticeAPI {
       .single()
 
     if (error) throw error
-    return data
+    return data as import('../types/database').PracticeTag
   }
 
   /**
