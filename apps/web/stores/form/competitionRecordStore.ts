@@ -2,8 +2,8 @@
 // Competition Page用の大会記録フォームZustandストア
 // =============================================================================
 
-import { create } from 'zustand'
 import type { Record, Style } from '@apps/shared/types/database'
+import { create } from 'zustand'
 
 // Competition Page専用の型定義
 export type RecordFormEdit = {

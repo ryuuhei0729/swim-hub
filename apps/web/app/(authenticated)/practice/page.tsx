@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React from 'react'
 import { CalendarDaysIcon, ClockIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui'
 import PracticeLogForm from '@/components/forms/PracticeLogForm'
@@ -11,68 +11,54 @@ import { useAuth } from '@/contexts'
 import { usePractices } from '@apps/shared/hooks/usePractices'
 import { PracticeAPI, StyleAPI } from '@apps/shared/api'
 import type {
-  Style,
   PracticeTag,
   PracticeLog,
   PracticeLogWithTimes,
   PracticeTime
 } from '@apps/shared/types/database'
+import {
+  usePracticeFilterStore,
+  usePracticeRecordStore
+} from '@/stores'
+import type {
+  PracticeLogWithFormattedData,
+  PracticePageEditingData
+} from '@/stores/form/practiceRecordStore'
 
 export default function PracticePage() {
-  type PracticeLogWithFormattedData = PracticeLog & {
-    tags: PracticeTag[]
-    practice: {
-      id: string
-      date: string
-      place: string | null
-      note: string | null
-    }
-    practiceId: string
-    practice_times?: PracticeTime[]
-  }
-  
-  type EditingData = {
-    id: string
-    practiceId: string
-    date: string
-    place: string
-    note: string
-    style: string
-    rep_count: number
-    set_count: number
-    distance: number
-    circle: number | null
-    times: Array<{
-      setNumber: number
-      repNumber: number
-      time: number
-    }>
-    tags: PracticeTag[]
-  }
-  
-  const [isFormOpen, setIsFormOpen] = useState(false)
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
-  const [editingLog, setEditingLog] = useState<PracticeLogWithFormattedData | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [editingItem, setEditingItem] = useState<{
-    id: string
-    item_type: string
-    item_date?: string
-  } | null>(null)
-  const [editingData, setEditingData] = useState<EditingData | null>(null)
-  const [showTimeModal, setShowTimeModal] = useState(false)
-  const [selectedPracticeForTime, setSelectedPracticeForTime] = useState<{
-    id: string
-    location?: string | null
-  } | null>(null)
-  
-  // タグフィルタリング用の状態
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
-  const [showTagFilter, setShowTagFilter] = useState(false)
-  const [styles, setStyles] = useState<Style[]>([])
-  const [tags, setTags] = useState<PracticeTag[]>([])
-
   const { supabase } = useAuth()
+  
+  // Zustandストア
+  const {
+    selectedTagIds,
+    showTagFilter,
+    setSelectedTags,
+    toggleTagFilter,
+  } = usePracticeFilterStore()
+  
+  const {
+    isFormOpen,
+    selectedDate,
+    editingLog,
+    isLoading,
+    editingItem,
+    editingData,
+    showTimeModal,
+    selectedPracticeForTime,
+    styles,
+    tags,
+    openForm,
+    closeForm,
+    setSelectedDate,
+    setEditingLog,
+    setEditingItem,
+    setEditingData,
+    openTimeModal,
+    closeTimeModal,
+    setStyles,
+    setTags,
+    setLoading,
+  } = usePracticeRecordStore()
   
   // 練習記録を取得
   const {
@@ -259,15 +245,14 @@ export default function PracticePage() {
       tags: log.tags || []
     })
     
-    setIsFormOpen(true)
+    openForm()
   }
 
   const handleTimeLog = (log: PracticeLogWithFormattedData) => {
-    setSelectedPracticeForTime({
+    openTimeModal({
       id: log.practiceId,
       location: log.practice?.place
     })
-    setShowTimeModal(true)
   }
 
   type PracticeMenuFormData = {
@@ -288,7 +273,7 @@ export default function PracticePage() {
   }
   
   const handlePracticeSubmit = async (formDataArray: PracticeMenuFormData[]) => {
-    setIsLoading(true)
+    setLoading(true)
     try {
       const menus = Array.isArray(formDataArray) ? formDataArray : []
 
@@ -358,29 +343,22 @@ export default function PracticePage() {
       console.error('練習記録の保存に失敗しました:', error)
       alert('練習記録の保存に失敗しました。')
     } finally {
-      setIsLoading(false)
-      setIsFormOpen(false)
-      setEditingLog(null)
-      setSelectedDate(null)
-      setEditingItem(null)
-      setEditingData(null)
+      setLoading(false)
+      closeForm()
     }
   }
 
   const handleFormClose = () => {
-    setIsFormOpen(false)
-    setEditingLog(null)
-    setSelectedDate(null)
+    closeForm()
   }
 
   const handleTimeModalClose = () => {
-    setShowTimeModal(false)
-    setSelectedPracticeForTime(null)
+    closeTimeModal()
   }
 
   const handleDeleteLog = async (logId: string) => {
     if (confirm('この練習記録を削除しますか？')) {
-      setIsLoading(true)
+      setLoading(true)
       try {
         // 削除対象のPractice_Logの情報を取得
         const logToDelete = practiceLogs.find((log) => log.id === logId)
@@ -411,7 +389,7 @@ export default function PracticePage() {
         console.error('削除エラー:', error)
         alert('削除に失敗しました')
       } finally {
-        setIsLoading(false)
+        setLoading(false)
       }
     }
   }
@@ -486,9 +464,9 @@ export default function PracticePage() {
                   key={tag.id}
                   onClick={() => {
                     if (selectedTagIds.includes(tag.id)) {
-                      setSelectedTagIds(selectedTagIds.filter(id => id !== tag.id))
+                      setSelectedTags(selectedTagIds.filter(id => id !== tag.id))
                     } else {
-                      setSelectedTagIds([...selectedTagIds, tag.id])
+                      setSelectedTags([...selectedTagIds, tag.id])
                     }
                   }}
                   className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
@@ -505,7 +483,7 @@ export default function PracticePage() {
               ))}
               {selectedTagIds.length > 0 && (
                 <button
-                  onClick={() => setSelectedTagIds([])}
+                  onClick={() => setSelectedTags([])}
                   className="px-3 py-1 rounded-full text-sm font-medium text-gray-500 bg-gray-100 hover:bg-gray-200"
                 >
                   クリア
@@ -799,11 +777,7 @@ export default function PracticePage() {
       <PracticeLogForm
         isOpen={isFormOpen}
         onClose={() => {
-          setIsFormOpen(false)
-          setSelectedDate(null)
-          setEditingItem(null)
-          setEditingData(null)
-          setEditingLog(null)
+          closeForm()
         }}
         onSubmit={handlePracticeSubmit}
         practiceId={editingData?.practiceId || ''}
