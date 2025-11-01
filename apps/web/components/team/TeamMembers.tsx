@@ -71,7 +71,6 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
 
   const handleCopyInviteCode = () => {
     navigator.clipboard.writeText(inviteCode)
-    alert('招待コードをコピーしました')
   }
 
   if (loading) {

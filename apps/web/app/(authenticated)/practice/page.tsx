@@ -343,7 +343,6 @@ export default function PracticePage() {
       await refetch()
     } catch (error) {
       console.error('練習記録の保存に失敗しました:', error)
-      alert('練習記録の保存に失敗しました。')
     } finally {
       setLoading(false)
       closeForm()
@@ -389,7 +388,6 @@ export default function PracticePage() {
         await refetch()
       } catch (error) {
         console.error('削除エラー:', error)
-        alert('削除に失敗しました')
       } finally {
         setLoading(false)
       }

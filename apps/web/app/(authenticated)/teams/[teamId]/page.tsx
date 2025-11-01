@@ -96,7 +96,6 @@ function AttendanceTab({ teamId, isAdmin }: { teamId: string, isAdmin: boolean }
       await loadEvents()
     } catch (error) {
       console.error('ステータス更新エラー:', error)
-      alert('ステータスの更新に失敗しました')
     }
   }
   

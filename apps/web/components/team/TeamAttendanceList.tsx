@@ -67,7 +67,6 @@ export default function TeamAttendanceList({
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err))
       console.error('出欠情報の更新に失敗:', error)
-      alert(`出欠情報の更新に失敗しました: ${error.message || String(err)}`)
     }
   }
 
@@ -78,7 +77,6 @@ export default function TeamAttendanceList({
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err))
       console.error('出欠情報の更新に失敗:', error)
-      alert(`出欠情報の更新に失敗しました: ${error.message || String(err)}`)
     }
   }
 

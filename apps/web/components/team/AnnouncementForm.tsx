@@ -44,7 +44,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
     e.preventDefault()
     
     if (!title.trim() || !content.trim()) {
-      alert('タイトルと内容を入力してください')
+      console.error('タイトルと内容を入力してください')
       return
     }
 
@@ -73,7 +73,6 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
       onClose()
     } catch (error) {
       console.error('保存エラー:', error)
-      alert('保存に失敗しました')
     }
   }
 

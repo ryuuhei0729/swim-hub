@@ -272,11 +272,9 @@ export default function DashboardPage() {
       if (editingData && editingData.id) {
         // 編集モード: 更新
         await updatePractice(editingData.id, basicData)
-        alert('練習予定を更新しました')
       } else {
         // 新規作成モード: 作成
         await createPractice(basicData)
-        alert('練習予定を作成しました')
         
         // 新規作成時は選択された日付の月をカレンダーに設定（Contextで管理）
         // この処理はCalendarProviderで自動的に処理される
@@ -291,7 +289,6 @@ export default function DashboardPage() {
       
     } catch (error) {
       console.error('練習予定の処理に失敗しました:', error)
-      alert('練習予定の処理に失敗しました。')
     } finally {
       setLoading(false)
     }
@@ -362,7 +359,6 @@ export default function DashboardPage() {
             }
           }
         }
-        alert('練習記録を更新しました')
       } else {
         // 新規作成モード: 新しいPracticeLogを作成
         if (!createdPracticeId) {
@@ -409,7 +405,6 @@ export default function DashboardPage() {
             }
           }
         }
-        alert('練習記録を保存しました')
       }
 
       // データを再取得
@@ -418,7 +413,6 @@ export default function DashboardPage() {
       
     } catch (error) {
       console.error('練習記録の処理に失敗しました:', error)
-      alert('練習記録の処理に失敗しました。')
     } finally {
       setLoading(false)
       closePracticeLogForm()
@@ -487,7 +481,6 @@ export default function DashboardPage() {
       alert('アイテムを削除しました')
     } catch (error) {
       console.error('記録の削除に失敗しました:', error)
-      alert('記録の削除に失敗しました。')
     }
   }
 
@@ -504,7 +497,6 @@ export default function DashboardPage() {
           pool_type: basicData.poolType,
           note: basicData.note
         })
-        alert('大会情報を更新しました')
         
         // 編集時は完了
         closeCompetitionBasicForm()
@@ -531,7 +523,6 @@ export default function DashboardPage() {
       
     } catch (error) {
       console.error('大会情報の処理に失敗しました:', error)
-      alert('大会情報の処理に失敗しました。')
     } finally {
       setLoading(false)
     }
@@ -609,17 +600,14 @@ export default function DashboardPage() {
       // 編集モードの場合は、Record作成フォームは開かない（モーダルを閉じる）
       if (competitionEditingData?.type === 'entry') {
         refreshCalendar() // カレンダーを更新
-        alert('エントリーを更新しました')
       } else {
         // 新規作成モード: 最初のエントリー情報を使ってRecord作成フォームを開く
         if (createdEntriesList.length > 0) {
           openRecordLogForm(createdCompetitionId || undefined, createdEntriesList)
         }
-        alert(createdEntriesList.length === 1 ? 'エントリーを登録しました' : `${createdEntriesList.length}件のエントリーを登録しました`)
       }
     } catch (error) {
       console.error('エントリーの登録に失敗しました:', error)
-      alert('エントリーの登録に失敗しました。')
     } finally {
       setLoading(false)
     }
@@ -628,7 +616,7 @@ export default function DashboardPage() {
   // エントリーをスキップ
   const handleEntrySkip = () => {
     if (!createdCompetitionId) {
-      alert('大会IDが取得できませんでした。エントリーを先に登録してください。')
+      console.error('大会IDが取得できませんでした。エントリーを先に登録してください。')
       return
     }
     closeEntryLogForm()
@@ -662,7 +650,6 @@ export default function DashboardPage() {
           
           await replaceSplitTimes(competitionEditingData.id, splitTimesData)
         }
-        alert('記録を更新しました')
       } else {
         // 作成処理
         const newRecord = await createRecord(recordInput)
@@ -676,7 +663,6 @@ export default function DashboardPage() {
           
           await createSplitTimes(newRecord.id, splitTimesData)
         }
-        alert('記録を登録しました')
       }
 
       // データを再取得
@@ -685,7 +671,6 @@ export default function DashboardPage() {
       
     } catch (error) {
       console.error('記録の処理に失敗しました:', error)
-      alert('記録の処理に失敗しました。')
     } finally {
       setLoading(false)
       closeRecordLogForm()
@@ -792,7 +777,6 @@ export default function DashboardPage() {
               alert('練習ログを削除しました')
             } catch (error) {
               console.error('練習ログの削除に失敗しました:', error)
-              alert('練習ログの削除に失敗しました。')
             }
           }}
           onAddRecord={(params) => {
@@ -865,7 +849,6 @@ export default function DashboardPage() {
               alert('大会記録を削除しました')
             } catch (error) {
               console.error('大会記録の削除に失敗しました:', error)
-              alert('大会記録の削除に失敗しました。')
             }
           }}
           openDayDetail={null}

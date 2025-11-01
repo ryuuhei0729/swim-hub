@@ -30,7 +30,6 @@ export const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({
       onClose()
     } catch (error) {
       console.error('削除エラー:', error)
-      alert('削除に失敗しました')
     }
   }
 

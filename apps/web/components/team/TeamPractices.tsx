@@ -147,7 +147,6 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
         setShowPracticeLogForm(true)
       } catch (err) {
         console.error('チームメンバー取得エラー:', err)
-        alert('チームメンバーの取得に失敗しました')
       }
     }
   }
@@ -258,7 +257,6 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
         setEditData(editData)
       } catch (err) {
         console.error('練習ログ取得エラー:', err)
-        alert('練習ログの取得に失敗しました')
       }
     }
   }

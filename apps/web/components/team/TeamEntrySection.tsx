@@ -173,7 +173,7 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
     const form = getFormData(competitionId)
     
     if (!form.styleId) {
-      alert('種目を選択してください')
+      console.error('種目を選択してください')
       return
     }
 
@@ -211,15 +211,12 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
       if (form.editingEntryId) {
         // 編集モード
         await entryAPI.updateEntry(form.editingEntryId, updatePayload)
-        alert('エントリーを更新しました')
       } else if (existingEntry) {
         // 既存エントリーがある場合は更新
         await entryAPI.updateEntry(existingEntry.id, updatePayload)
-        alert('エントリーを更新しました')
       } else {
         // 新規作成
         await entryAPI.createTeamEntry(teamId, user.id, entryData)
-        alert('エントリーを追加しました')
       }
 
       // フォームをリセット
@@ -245,7 +242,6 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err))
       console.error('エントリーの送信に失敗:', err)
-      alert(error.message || 'エントリーの送信に失敗しました')
     } finally {
       setSubmitting(false)
     }
@@ -296,7 +292,6 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err))
       console.error('エントリーの削除に失敗:', err)
-      alert(error.message || 'エントリーの削除に失敗しました')
     } finally {
       setSubmitting(false)
     }

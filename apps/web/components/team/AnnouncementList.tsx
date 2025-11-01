@@ -39,7 +39,6 @@ export const AnnouncementList: React.FC<AnnouncementListProps> = ({
       await refetch()
     } catch (error) {
       console.error('削除エラー:', error)
-      alert('削除に失敗しました')
     } finally {
       setDeletingId(null)
     }

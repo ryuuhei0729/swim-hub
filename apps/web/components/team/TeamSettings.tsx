@@ -51,7 +51,6 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
       })
       
       setIsEditing(false)
-      alert('チーム情報を更新しました')
     } catch (err) {
       console.error('チーム更新エラー:', err)
       setError('チーム情報の更新に失敗しました')
@@ -73,7 +72,6 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
       setError(null)
       
       await membersAPI.leave(teamId)
-      alert('チームから退出しました')
       window.location.href = '/teams'
     } catch (err) {
       console.error('チーム退出エラー:', err)

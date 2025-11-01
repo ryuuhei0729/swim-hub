@@ -90,14 +90,14 @@ export default function TagManagementModal({
 
   const handleUpdate = async () => {
     if (!tagName.trim()) {
-      alert('タグ名を入力してください')
+      console.error('タグ名を入力してください')
       return
     }
 
     // カラーを正規化して検証
     const normalizedColor = normalizeColor(selectedColor)
     if (!isValidColor(selectedColor)) {
-      alert('無効なカラー形式です。有効なHEXカラーを選択してください。')
+      console.error('無効なカラー形式です。有効なHEXカラーを選択してください。')
       return
     }
 
@@ -107,7 +107,6 @@ export default function TagManagementModal({
       onClose()
     } catch (error) {
       console.error('タグ更新エラー:', error)
-      alert('タグの更新に失敗しました')
     } finally {
       setIsUpdating(false)
     }
@@ -120,7 +119,6 @@ export default function TagManagementModal({
       onClose()
     } catch (error) {
       console.error('タグ削除エラー:', error)
-      alert('タグの削除に失敗しました')
     } finally {
       setIsDeleting(false)
       setShowDeleteConfirm(false)

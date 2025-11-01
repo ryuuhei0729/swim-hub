@@ -72,7 +72,7 @@ export default function PracticeBasicForm({
     
     // バリデーション
     if (!formData.place.trim()) {
-      alert('練習場所を入力してください')
+      console.error('練習場所を入力してください')
       return
     }
 

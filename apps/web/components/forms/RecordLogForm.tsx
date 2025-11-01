@@ -201,11 +201,11 @@ export default function RecordLogForm({
 
     // バリデーション
     if (!formData.styleId) {
-      alert('種目を選択してください')
+      console.error('種目を選択してください')
       return
     }
     if (formData.time <= 0) {
-      alert('タイムを入力してください（形式: 分:秒.小数 または 秒.小数）')
+      console.error('タイムを入力してください（形式: 分:秒.小数 または 秒.小数）')
       return
     }
 

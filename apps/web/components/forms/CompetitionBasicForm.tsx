@@ -83,11 +83,11 @@ export default function CompetitionBasicForm({
     
     // バリデーション
     if (!formData.title.trim()) {
-      alert('大会名を入力してください')
+      console.error('大会名を入力してください')
       return
     }
     if (!formData.place.trim()) {
-      alert('場所を入力してください')
+      console.error('場所を入力してください')
       return
     }
 

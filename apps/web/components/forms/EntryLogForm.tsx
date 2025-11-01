@@ -88,14 +88,14 @@ export default function EntryLogForm({
     
     // バリデーション: 少なくとも1つのエントリーが必要
     if (entries.length === 0) {
-      alert('少なくとも1つのエントリーを追加してください')
+      console.error('少なくとも1つのエントリーを追加してください')
       return
     }
 
     // バリデーション: 種目が選択されているか
     const hasInvalidStyle = entries.some(entry => !entry.styleId)
     if (hasInvalidStyle) {
-      alert('すべてのエントリーで種目を選択してください')
+      console.error('すべてのエントリーで種目を選択してください')
       return
     }
 

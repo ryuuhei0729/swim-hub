@@ -32,8 +32,7 @@ export default function SignupPage() {
       <AuthForm 
         mode="signup" 
         onSuccess={() => {
-          // メール認証の案内メッセージを表示
-          alert('確認メールを送信しました。メール内のリンクをクリックしてアカウントを有効化してください。')
+          // メール認証の案内メッセージは表示しない
         }}
       />
     </div>

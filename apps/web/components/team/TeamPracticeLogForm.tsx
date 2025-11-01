@@ -217,7 +217,6 @@ export default function TeamPracticeLogForm({
       }
     } catch (err) {
       console.error('チーム練習ログ処理エラー:', err)
-      alert('練習ログの処理に失敗しました')
     }
   }
 
@@ -298,15 +297,11 @@ export default function TeamPracticeLogForm({
       }
 
       if (totalCreated > 0) {
-        alert(`チーム練習ログを作成しました！\n成功: ${totalCreated}件${totalErrors > 0 ? `\nエラー: ${totalErrors}件` : ''}`)
         onSuccess()
         onClose()
-      } else {
-        alert('練習ログの作成に失敗しました。')
       }
     } catch (err) {
       console.error('チーム練習ログ作成エラー:', err)
-      alert('練習ログの作成に失敗しました')
     }
   }
 
@@ -322,7 +317,6 @@ export default function TeamPracticeLogForm({
 
     if (deleteError) {
       console.error('既存の練習ログ削除エラー:', deleteError)
-      alert('既存の練習ログの削除に失敗しました')
       return
     }
 

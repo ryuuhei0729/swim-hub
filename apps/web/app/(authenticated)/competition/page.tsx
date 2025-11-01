@@ -120,7 +120,6 @@ export default function CompetitionPage() {
         await deleteRecordFn(recordId)
       } catch (error) {
         console.error('削除エラー:', error)
-        alert('削除に失敗しました')
       } finally {
         setLoading(false)
       }
@@ -164,14 +163,11 @@ export default function CompetitionPage() {
         
         // データを再取得
         await _refetch()
-        
-        alert('記録を更新しました')
       }
       
       closeForm()
     } catch (error) {
       console.error('大会記録の保存に失敗しました:', error)
-      alert('大会記録の保存に失敗しました。')
     } finally {
       setLoading(false)
     }

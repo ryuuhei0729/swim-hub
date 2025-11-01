@@ -185,11 +185,9 @@ export default function TeamCompetitionEntryModal({
         .eq('id', competitionId)
       if (updateError) throw updateError
       await loadEntries() // 再読み込み
-      alert(`エントリーステータスを「${getStatusLabel(newStatus)}」に変更しました`)
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err))
       console.error('ステータス変更に失敗:', err)
-      alert(error.message || 'ステータス変更に失敗しました')
     } finally {
       setUpdatingStatus(false)
     }
