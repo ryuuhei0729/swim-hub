@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { useAuth } from '@/contexts'
 import CalendarContainer from './_components/CalendarContainer'
 import { TeamAnnouncements } from '@/components/team'
@@ -15,59 +14,85 @@ import { usePractices } from '@apps/shared/hooks/usePractices'
 import { useRecords } from '@apps/shared/hooks/useRecords'
 import { StyleAPI, EntryAPI } from '@apps/shared/api'
 import type {
-  Style,
   PracticeTag,
   TeamMembership,
-  Team,
-  Entry
+  Team
 } from '@apps/shared/types/database'
 import type {
-  CalendarItem,
   TimeEntry
 } from '@apps/shared/types/ui'
+import {
+  usePracticeFormStore,
+  useCompetitionFormStore,
+  useTeamStore,
+  useUIStore
+} from '@/stores'
+import type {
+  EditingData,
+  PracticeMenuFormData,
+  EntryFormData,
+  RecordFormData,
+  EntryWithStyle
+} from '@/stores/types'
 
 export default function DashboardPage() {
   type TeamMembershipWithTeam = TeamMembership & {
     team?: Team
   }
-  
-  type EntryWithStyle = Entry & {
-    styleName?: string
-  }
-  
-  type PracticeMenuFormData = {
-    style: string
-    distance: number
-    reps: number
-    sets: number
-    circleTime: number | null
-    note: string
-    tags: PracticeTag[]
-    times: TimeEntry[]
-  }
-  
-  type EntryFormData = {
-    id: string
-    styleId: string
-    entryTime: number
-    note: string
-  }
-  
-  type RecordFormData = {
-    styleId: string
-    time: number
-    videoUrl?: string | null
-    note?: string | null
-    isRelaying: boolean
-    splitTimes: Array<{
-      distance: number | string
-      splitTime: number
-    }>
-  }
-  
+
   const { user, supabase } = useAuth()
-  const [teams, setTeams] = useState<TeamMembershipWithTeam[]>([])
-  const [teamsLoading, setTeamsLoading] = useState(true)
+  
+  // Zustandストア
+  const {
+    teams,
+    teamsLoading,
+    setTeams,
+    setTeamsLoading,
+  } = useTeamStore()
+  
+  const {
+    calendarRefreshKey,
+    refreshCalendar,
+  } = useUIStore()
+  
+  const {
+    isBasicFormOpen: isPracticeBasicFormOpen,
+    isLogFormOpen: isPracticeLogFormOpen,
+    selectedDate,
+    editingData,
+    createdPracticeId,
+    isLoading,
+    availableTags,
+    openBasicForm: openPracticeBasicForm,
+    openLogForm: openPracticeLogForm,
+    closeBasicForm: closePracticeBasicForm,
+    closeLogForm: closePracticeLogForm,
+    closeAll: closePracticeAll,
+    setSelectedDate,
+    setEditingData,
+    setCreatedPracticeId,
+    setAvailableTags,
+    setLoading,
+  } = usePracticeFormStore()
+  
+  const {
+    isBasicFormOpen: isCompetitionBasicFormOpen,
+    isEntryFormOpen: isEntryLogFormOpen,
+    isRecordFormOpen: isRecordLogFormOpen,
+    createdCompetitionId,
+    createdEntries,
+    styles,
+    openBasicForm: openCompetitionBasicForm,
+    openEntryForm: openEntryLogForm,
+    openRecordForm: openRecordLogForm,
+    closeBasicForm: closeCompetitionBasicForm,
+    closeEntryForm: closeEntryLogForm,
+    closeRecordForm: closeRecordLogForm,
+    closeAll: closeCompetitionAll,
+    setCreatedCompetitionId,
+    setCreatedEntries,
+    setStyles,
+  } = useCompetitionFormStore()
 
   // タイムゾーンを考慮した日付パース
   const parseDateString = (dateString: string): Date => {
@@ -79,32 +104,6 @@ export default function DashboardPage() {
     // startOfDayはローカルタイムゾーンの開始時刻を返す
     return startOfDay(parsedDate)
   }
-
-  // 練習記録フォーム用の状態（2段階対応）
-  const [isPracticeBasicFormOpen, setIsPracticeBasicFormOpen] = useState(false)
-  const [isPracticeLogFormOpen, setIsPracticeLogFormOpen] = useState(false)
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
-  // editingDataは様々な型のデータを保持する可能性があるため、union型を使用
-  type EditingData = CalendarItem | {
-    id?: string
-    type?: string
-    competition_id?: string | null
-    practice_id?: string
-    entryData?: unknown
-  } | null
-  
-  const [editingData, setEditingData] = useState<EditingData>(null)
-  const [createdPracticeId, setCreatedPracticeId] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [availableTags, setAvailableTags] = useState<PracticeTag[]>([])
-
-  // 大会記録フォーム用の状態（3段階対応: Competition → Entry → Record）
-  const [isCompetitionBasicFormOpen, setIsCompetitionBasicFormOpen] = useState(false)
-  const [isEntryLogFormOpen, setIsEntryLogFormOpen] = useState(false)
-  const [isRecordLogFormOpen, setIsRecordLogFormOpen] = useState(false)
-  const [createdCompetitionId, setCreatedCompetitionId] = useState<string | null>(null)
-  const [createdEntries, setCreatedEntries] = useState<EntryWithStyle[]>([])
-  const [styles, setStyles] = useState<Style[]>([])
 
   // 練習記録用のフック
   const {
@@ -130,9 +129,6 @@ export default function DashboardPage() {
     replaceSplitTimes,
     refetch: refetchRecords
   } = useRecords(supabase, {})
-
-  // カレンダーデータ用のフック（簡素化）
-  const [calendarRefreshKey, setCalendarRefreshKey] = useState(0)
 
   // チーム一覧、タグ、種目を取得
   useEffect(() => {
@@ -198,7 +194,7 @@ export default function DashboardPage() {
 
   // 練習予定作成・更新
   const handlePracticeBasicSubmit = async (basicData: { date: string; place: string; note: string }) => {
-    setIsLoading(true)
+    setLoading(true)
     try {
       if (editingData && editingData.id) {
         // 編集モード: 更新
@@ -214,25 +210,23 @@ export default function DashboardPage() {
       }
       
       // フォームを閉じる
-      setIsPracticeBasicFormOpen(false)
-      setSelectedDate(null)
-      setEditingData(null)
+      closePracticeBasicForm()
       
       // データを再取得
       await Promise.all([refetch()])
-      setCalendarRefreshKey(prev => prev + 1) // カレンダー強制更新
+      refreshCalendar() // カレンダー強制更新
       
     } catch (error) {
       console.error('練習予定の処理に失敗しました:', error)
       alert('練習予定の処理に失敗しました。')
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
   // 練習メニュー作成・更新処理
   const handlePracticeLogSubmit = async (formDataArray: PracticeMenuFormData[]) => {
-    setIsLoading(true)
+    setLoading(true)
     try {
       const menus = Array.isArray(formDataArray) ? formDataArray : []
 
@@ -350,17 +344,14 @@ export default function DashboardPage() {
 
       // データを再取得
       await Promise.all([refetch()])
-      setCalendarRefreshKey(prev => prev + 1) // カレンダー強制更新
+      refreshCalendar() // カレンダー強制更新
       
     } catch (error) {
       console.error('練習記録の処理に失敗しました:', error)
       alert('練習記録の処理に失敗しました。')
     } finally {
-      setIsLoading(false)
-      setIsPracticeLogFormOpen(false)
-      setSelectedDate(null)
-      setEditingData(null)
-      setCreatedPracticeId(null)
+      setLoading(false)
+      closePracticeLogForm()
     }
   }
 
@@ -420,7 +411,7 @@ export default function DashboardPage() {
 
       // データを再取得
       await Promise.all([refetch(), refetchRecords()])
-      setCalendarRefreshKey(prev => prev + 1) // カレンダー強制更新
+      refreshCalendar() // カレンダー強制更新
       
       // 成功通知
       alert('アイテムを削除しました')
@@ -432,7 +423,7 @@ export default function DashboardPage() {
 
   // 大会情報作成・更新
   const handleCompetitionBasicSubmit = async (basicData: { date: string; title: string; place: string; poolType: number; note: string }) => {
-    setIsLoading(true)
+    setLoading(true)
     try {
       if (editingData && editingData.id) {
         // 編集モード: 更新
@@ -446,13 +437,13 @@ export default function DashboardPage() {
         alert('大会情報を更新しました')
         
         // 編集時は完了
-        setIsCompetitionBasicFormOpen(false)
+        closeCompetitionBasicForm()
         setSelectedDate(null)
         setEditingData(null)
         
         // データを再取得
         await Promise.all([refetchRecords()])
-        setCalendarRefreshKey(prev => prev + 1)
+        refreshCalendar()
       } else {
         // 新規作成モード: 大会作成後、エントリーフォームへ
         const newCompetition = await createCompetition({
@@ -467,23 +458,23 @@ export default function DashboardPage() {
         setCreatedCompetitionId(newCompetition.id)
         
         // Competition作成フォームを閉じる
-        setIsCompetitionBasicFormOpen(false)
+        closeCompetitionBasicForm()
         
         // エントリーフォームを開く
-        setIsEntryLogFormOpen(true)
+        openEntryLogForm()
       }
       
     } catch (error) {
       console.error('大会情報の処理に失敗しました:', error)
       alert('大会情報の処理に失敗しました。')
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
   // エントリー登録
   const handleEntrySubmit = async (entriesData: EntryFormData[]) => {
-    setIsLoading(true)
+    setLoading(true)
     try {
       // 編集モードの場合はeditingDataからcompetition_idを取得
       const competitionId = createdCompetitionId || 
@@ -547,19 +538,19 @@ export default function DashboardPage() {
       setCreatedEntries(createdEntriesList)
       
       // エントリーフォームを閉じる
-      setIsEntryLogFormOpen(false)
+      closeEntryLogForm()
       
       // 編集モードの場合は、Record作成フォームは開かない（モーダルを閉じる）
       if (editingData?.type === 'entry') {
         setEditingData(null)
         setCreatedCompetitionId(null)
         setCreatedEntries([])
-        setCalendarRefreshKey(prev => prev + 1) // カレンダーを更新
+        refreshCalendar() // カレンダーを更新
         alert('エントリーを更新しました')
       } else {
         // 新規作成モード: 最初のエントリー情報を使ってRecord作成フォームを開く
         if (createdEntriesList.length > 0) {
-          setIsRecordLogFormOpen(true)
+          openRecordLogForm()
         }
         alert(createdEntriesList.length === 1 ? 'エントリーを登録しました' : `${createdEntriesList.length}件のエントリーを登録しました`)
       }
@@ -567,7 +558,7 @@ export default function DashboardPage() {
       console.error('エントリーの登録に失敗しました:', error)
       alert('エントリーの登録に失敗しました。')
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
@@ -577,13 +568,13 @@ export default function DashboardPage() {
       alert('大会IDが取得できませんでした。エントリーを先に登録してください。')
       return
     }
-    setIsEntryLogFormOpen(false)
-    setIsRecordLogFormOpen(true)
+    closeEntryLogForm()
+    openRecordLogForm()
   }
 
   // 記録登録・更新
   const handleRecordLogSubmit = async (formData: RecordFormData) => {
-    setIsLoading(true)
+    setLoading(true)
     try {
       
       const recordInput = {
@@ -655,18 +646,14 @@ export default function DashboardPage() {
 
       // データを再取得
       await Promise.all([refetchRecords()])
-      setCalendarRefreshKey(prev => prev + 1)
+      refreshCalendar()
       
     } catch (error) {
       console.error('記録の処理に失敗しました:', error)
       alert('記録の処理に失敗しました。')
     } finally {
-      setIsLoading(false)
-      setIsRecordLogFormOpen(false)
-      setSelectedDate(null)
-      setEditingData(null)
-      setCreatedCompetitionId(null)
-      setCreatedEntries([])
+      setLoading(false)
+      closeRecordLogForm()
     }
   }
 
@@ -711,9 +698,9 @@ export default function DashboardPage() {
             setSelectedDate(date)
             setEditingData(null)
             if (type === 'practice') {
-              setIsPracticeBasicFormOpen(true)
+              openPracticeBasicForm()
             } else {
-              setIsCompetitionBasicFormOpen(true)
+              openCompetitionBasicForm()
             }
           }} 
           onEditItem={(item) => {
@@ -724,33 +711,33 @@ export default function DashboardPage() {
             
             if (item.type === 'practice' || item.type === 'team_practice') {
               // Practice編集モーダルを開く
-              setIsPracticeBasicFormOpen(true)
+              openPracticeBasicForm()
             } else if (item.type === 'practice_log') {
               // PracticeLog編集モーダルを開く
               setEditingData(item)
-              setIsPracticeLogFormOpen(true)
+              openPracticeLogForm()
             } else if (item.type === 'entry') {
               // Entry編集モーダルを開く
-              setIsEntryLogFormOpen(true)
+              openEntryLogForm()
             } else if (item.type === 'record') {
               // Record編集モーダルを開く
               // 大会情報も一緒に編集データに含める
-              setIsCompetitionBasicFormOpen(true)
+              openCompetitionBasicForm()
             } else if (item.type === 'competition' || item.type === 'team_competition') {
               // Competition編集モーダルを開く
-              setIsCompetitionBasicFormOpen(true)
+              openCompetitionBasicForm()
             }
           }}
           onDeleteItem={handleDeleteItem}
           onAddPracticeLog={(practiceId) => {
             setCreatedPracticeId(practiceId)
             setEditingData(null)
-            setIsPracticeLogFormOpen(true)
+            openPracticeLogForm()
           }}
           onEditPracticeLog={(log) => {
             // PracticeLog編集モーダルを開く
             setEditingData(log as unknown as EditingData)
-            setIsPracticeLogFormOpen(true)
+            openPracticeLogForm()
           }}
           onDeletePracticeLog={async (logId) => {
             if (!confirm('この練習ログを削除してもよろしいですか？')) {
@@ -767,7 +754,7 @@ export default function DashboardPage() {
 
               // データを再取得
               await Promise.all([refetch()])
-              setCalendarRefreshKey(prev => prev + 1) // カレンダー強制更新
+              refreshCalendar() // カレンダー強制更新
 
               alert('練習ログを削除しました')
             } catch (error) {
@@ -789,7 +776,7 @@ export default function DashboardPage() {
               console.log('Opening CompetitionBasicForm (no valid competitionId)')
               setCreatedCompetitionId(null)
               setEditingData(null)
-              setIsCompetitionBasicFormOpen(true)
+              openCompetitionBasicForm()
               return
             }
             
@@ -799,12 +786,12 @@ export default function DashboardPage() {
               // エントリーデータがある場合は直接Record作成フォームを開く
               console.log('Opening RecordLogForm with entryData')
               setEditingData({ entryData } as EditingData)
-              setIsRecordLogFormOpen(true)
+              openRecordLogForm()
             } else {
               // エントリーデータがない場合はEntry作成フォームを開く
               console.log('Opening EntryLogForm (no entryData)')
               setEditingData(null)
-              setIsEntryLogFormOpen(true)
+              openEntryLogForm()
             }
           }}
           onEditRecord={(record) => {
@@ -822,7 +809,7 @@ export default function DashboardPage() {
             }
             
             setEditingData(editData as unknown as EditingData)
-            setIsRecordLogFormOpen(true)
+            openRecordLogForm()
           }}
           onDeleteRecord={async (recordId) => {
             if (!confirm('この大会記録を削除してもよろしいですか？')) {
@@ -839,7 +826,7 @@ export default function DashboardPage() {
 
               // データを再取得
               await Promise.all([refetchRecords()])
-              setCalendarRefreshKey(prev => prev + 1)
+              refreshCalendar()
 
               alert('大会記録を削除しました')
             } catch (error) {
@@ -854,14 +841,14 @@ export default function DashboardPage() {
         <PracticeBasicForm
           isOpen={isPracticeBasicFormOpen}
           onClose={() => {
-            setIsPracticeBasicFormOpen(false)
+            closePracticeBasicForm()
             setSelectedDate(null)
             setEditingData(null)
             setCreatedPracticeId(null)
           }}
           onSubmit={handlePracticeBasicSubmit}
           selectedDate={selectedDate || new Date()}
-          editData={editingData && typeof editingData === 'object' && 'metadata' in editingData
+          editData={editingData && typeof editingData === 'object' && 'metadata' in editingData && editingData.metadata
             ? {
                 date: editingData.date,
                 place: editingData.metadata.practice?.place || '',
@@ -875,10 +862,7 @@ export default function DashboardPage() {
         <PracticeLogForm
           isOpen={isPracticeLogFormOpen}
           onClose={() => {
-            setIsPracticeLogFormOpen(false)
-            setSelectedDate(null)
-            setEditingData(null)
-            setCreatedPracticeId(null)
+            closePracticeLogForm()
           }}
           onSubmit={handlePracticeLogSubmit}
           practiceId={createdPracticeId || 
@@ -896,10 +880,7 @@ export default function DashboardPage() {
         <CompetitionBasicForm
           isOpen={isCompetitionBasicFormOpen}
           onClose={() => {
-            setIsCompetitionBasicFormOpen(false)
-            setSelectedDate(null)
-            setEditingData(null)
-            setCreatedCompetitionId(null)
+            closeCompetitionBasicForm()
           }}
           onSubmit={handleCompetitionBasicSubmit}
           selectedDate={selectedDate || new Date()}
@@ -911,11 +892,7 @@ export default function DashboardPage() {
         <EntryLogForm
           isOpen={isEntryLogFormOpen}
           onClose={() => {
-            setIsEntryLogFormOpen(false)
-            setSelectedDate(null)
-            setCreatedCompetitionId(null)
-            setCreatedEntries([])
-            setEditingData(null)
+            closeEntryLogForm()
           }}
           onSubmit={handleEntrySubmit}
           onSkip={handleEntrySkip}
@@ -925,25 +902,21 @@ export default function DashboardPage() {
               : '')}
           isLoading={isLoading}
           styles={styles.map(s => ({ id: s.id.toString(), nameJp: s.name_jp, distance: s.distance }))}
-          editData={editingData?.type === 'entry' ? editingData : undefined}
+          editData={editingData?.type === 'entry' ? editingData as any : undefined}
         />
 
         {/* 第3段階: 記録登録フォーム */}
         <RecordLogForm
           isOpen={isRecordLogFormOpen}
           onClose={() => {
-            setIsRecordLogFormOpen(false)
-            setSelectedDate(null)
-            setEditingData(null)
-            setCreatedCompetitionId(null)
-            setCreatedEntries([])
+            closeRecordLogForm()
           }}
           onSubmit={handleRecordLogSubmit}
           competitionId={createdCompetitionId || 
             (editingData && typeof editingData === 'object' && 'competition_id' in editingData 
               ? editingData.competition_id || ''
               : '')}
-          editData={editingData?.id ? editingData : null}
+          editData={editingData?.id ? editingData as any : null}
           isLoading={isLoading}
           styles={styles}
           entryData={(() => {

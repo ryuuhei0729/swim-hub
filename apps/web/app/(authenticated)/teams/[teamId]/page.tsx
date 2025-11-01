@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useEffect, useCallback } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts'
 import { 
@@ -17,14 +17,20 @@ import {
 import MemberDetailModal from '@/components/team/MemberDetailModal'
 import type { TeamTabType } from '@/components/team/TeamTabs'
 import { TeamEvent, AttendanceStatusType, Team, TeamMembership } from '@swim-hub/shared/types/database'
+import { useAttendanceTabStore, useTeamDetailStore } from '@/stores'
 
 // 出欠タブコンポーネント
 function AttendanceTab({ teamId, isAdmin }: { teamId: string, isAdmin: boolean }) {
   const { supabase } = useAuth()
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
-  const [selectedEventType, setSelectedEventType] = useState<'practice' | 'competition' | null>(null)
-  const [events, setEvents] = useState<TeamEvent[]>([])
-  const [loading, setLoading] = useState(true)
+  const {
+    selectedEventId,
+    selectedEventType,
+    events,
+    loading,
+    setSelectedEvent,
+    setEvents,
+    setLoading
+  } = useAttendanceTabStore()
 
   const loadEvents = useCallback(async () => {
     try {
@@ -100,8 +106,7 @@ function AttendanceTab({ teamId, isAdmin }: { teamId: string, isAdmin: boolean }
         <div>
           <button
             onClick={() => {
-              setSelectedEventId(null)
-              setSelectedEventType(null)
+              setSelectedEvent(null, null)
             }}
             className="mb-4 text-blue-600 hover:text-blue-800 flex items-center"
           >
@@ -149,8 +154,7 @@ function AttendanceTab({ teamId, isAdmin }: { teamId: string, isAdmin: boolean }
                       <div 
                         className="flex-1 cursor-pointer"
                         onClick={() => {
-                          setSelectedEventId(event.id)
-                          setSelectedEventType(event.type)
+                          setSelectedEvent(event.id, event.type)
                         }}
                       >
                         <div className="flex items-center gap-2 mb-1">
@@ -201,8 +205,7 @@ function AttendanceTab({ teamId, isAdmin }: { teamId: string, isAdmin: boolean }
                         )}
                         <button
                           onClick={() => {
-                            setSelectedEventId(event.id)
-                            setSelectedEventType(event.type)
+                            setSelectedEvent(event.id, event.type)
                           }}
                           className="text-sm text-blue-600 hover:text-blue-800 whitespace-nowrap"
                         >
@@ -230,10 +233,22 @@ export default function TeamDetailPage() {
   const teamId = params.teamId as string
   const searchParams = useSearchParams()
   const router = useRouter()
-  const [team, setTeam] = useState<Team | null>(null)
-  const [membership, setMembership] = useState<TeamMembership | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<TeamTabType>('announcements')
+  const { user, supabase } = useAuth()
+  
+  const {
+    team,
+    membership,
+    loading,
+    activeTab,
+    selectedMember,
+    isMemberModalOpen,
+    setTeam,
+    setMembership,
+    setLoading,
+    setActiveTab,
+    openMemberModal,
+    closeMemberModal
+  } = useTeamDetailStore()
 
   // URLパラメータからタブを取得
   useEffect(() => {
@@ -241,11 +256,7 @@ export default function TeamDetailPage() {
     if (tabParam && ['announcements', 'members', 'practices', 'competitions', 'attendance', 'settings'].includes(tabParam)) {
       setActiveTab(tabParam as TeamTabType)
     }
-  }, [searchParams])
-
-  const [selectedMember, setSelectedMember] = useState<import('@/components/team/MemberDetailModal').MemberDetail | null>(null)
-  const [isMemberModalOpen, setIsMemberModalOpen] = useState(false)
-  const { user, supabase } = useAuth()
+  }, [searchParams, setActiveTab])
 
   useEffect(() => {
     const loadTeam = async () => {
@@ -285,7 +296,7 @@ export default function TeamDetailPage() {
     }
 
     loadTeam()
-  }, [user, teamId])
+  }, [user, teamId, setLoading, setTeam, setMembership])
 
   if (loading) {
     return (
@@ -318,13 +329,11 @@ export default function TeamDetailPage() {
   const isAdmin = membership?.role === 'admin'
 
   const handleMemberClick = (member: import('@/components/team/MemberDetailModal').MemberDetail) => {
-    setSelectedMember(member)
-    setIsMemberModalOpen(true)
+    openMemberModal(member)
   }
 
   const handleCloseMemberModal = () => {
-    setIsMemberModalOpen(false)
-    setSelectedMember(null)
+    closeMemberModal()
   }
 
   // アクティブなタブのコンテンツをレンダリング
@@ -405,7 +414,7 @@ export default function TeamDetailPage() {
       {/* タブナビゲーション */}
       <div className="mt-4">
         <TeamTabs 
-          activeTab={activeTab}
+          activeTab={activeTab as TeamTabType}
           onTabChange={setActiveTab}
           isAdmin={isAdmin}
         />

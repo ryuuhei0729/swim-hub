@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useEffect } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts'
 import { UsersIcon } from '@heroicons/react/24/outline'
 import { TeamMembership, Team } from '@swim-hub/shared/types/database'
+import { useTeamStore } from '@/stores'
 
 // Supabaseクエリ結果の型定義
 interface TeamMembershipWithTeam extends TeamMembership {
@@ -12,15 +13,14 @@ interface TeamMembershipWithTeam extends TeamMembership {
 }
 
 export default function TeamsPage() {
-  const [teams, setTeams] = useState<TeamMembershipWithTeam[]>([])
-  const [loading, setLoading] = useState(true)
+  const { teams, teamsLoading, setTeams, setTeamsLoading } = useTeamStore()
   const { user, supabase } = useAuth()
 
   const loadTeams = async () => {
     if (!user) return
     
     try {
-      setLoading(true)
+      setTeamsLoading(true)
       const { data, error } = await supabase
         .from('team_memberships')
         .select(`
@@ -41,7 +41,7 @@ export default function TeamsPage() {
     } catch (error) {
       console.error('チーム情報の取得に失敗:', error)
     } finally {
-      setLoading(false)
+      setTeamsLoading(false)
     }
   }
 
@@ -49,7 +49,7 @@ export default function TeamsPage() {
     loadTeams()
   }, [user])
 
-  if (loading) {
+  if (teamsLoading) {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-lg shadow p-6">
