@@ -1,23 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
+import { createRouteHandlerClient } from '@/lib/supabase-server'
 import type { TeamMembershipInsert } from '@apps/shared/types/database'
+import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
   try {
     // (1) Supabase クライアント作成と認証チェック
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return req.cookies.get(name)?.value
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    )
+    const supabase = createRouteHandlerClient(req)
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
@@ -50,6 +38,7 @@ export async function POST(req: NextRequest) {
     // (4) データベースに挿入
     const { error } = await supabase
       .from('team_memberships')
+      // @ts-expect-error: Supabaseの型推論がinsertでneverになる既知の問題のため
       .insert(insertPayload)
     
     if (error) {

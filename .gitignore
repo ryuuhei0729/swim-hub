@@ -66,7 +66,10 @@ temp/
 /apps/supabase/.temp.next/
 /supabase/.branches
 /supabase/.temp
+
+# Next.js auto-generated files
 next-env.d.ts
+apps/web/next-env.d.ts
 
 # Playwright E2E Testing
 /apps/web/test-results/

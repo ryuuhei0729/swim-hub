@@ -25,6 +25,7 @@ import type {
   PracticeLogWithFormattedData,
   PracticePageEditingData
 } from '@/stores/form/practiceRecordStore'
+import type { PracticeMenuFormData } from '@/stores/types'
 
 export default function PracticePage() {
   const { supabase } = useAuth()
@@ -255,23 +256,6 @@ export default function PracticePage() {
       id: log.practiceId,
       location: log.practice?.place
     })
-  }
-
-  type PracticeMenuFormData = {
-    practiceDate?: string
-    location?: string
-    note?: string
-    style?: string
-    reps?: number
-    sets?: number
-    distance?: number
-    circleTime?: number | null
-    tags?: PracticeTag[]
-    times?: Array<{
-      setNumber: number
-      repNumber: number
-      time: number
-    }>
   }
   
   const handlePracticeSubmit = async (formDataArray: PracticeMenuFormData[]) => {

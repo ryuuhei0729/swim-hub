@@ -114,14 +114,14 @@ export default function TeamCompetitionEntryModal({
         entry_time: number | null
         note: string | null
         created_at: string
-        users: { id: string; name: string }[] | { id: string; name: string } | null
-        styles: { id: number; name_jp: string; distance: number }[] | { id: number; name_jp: string; distance: number } | null
+        users: { id: string; name: string } | null
+        styles: { id: number; name_jp: string; distance: number } | null
       }
       const entriesByStyle = ((entries || []) as EntryFromDB[]).reduce((acc: Record<number, { style: EntryRow['styles']; entries: EntryRow[] }>, entry) => {
         const styleId = entry.style_id
-        const style = Array.isArray(entry.styles) ? entry.styles[0] : entry.styles
-        const user = Array.isArray(entry.users) ? entry.users[0] : entry.users
-        if (!acc[styleId]) acc[styleId] = { style: style ?? null, entries: [] }
+        const style = entry.styles ?? null
+        const user = entry.users ?? null
+        if (!acc[styleId]) acc[styleId] = { style: style, entries: [] }
         acc[styleId].entries.push({
           id: entry.id,
           user_id: entry.user_id,
@@ -129,8 +129,8 @@ export default function TeamCompetitionEntryModal({
           entry_time: entry.entry_time,
           note: entry.note,
           created_at: entry.created_at,
-          users: user ?? null,
-          styles: style ?? null
+          users: user,
+          styles: style
         })
         return acc
       }, {} as Record<number, { style: EntryRow['styles']; entries: EntryRow[] }>)

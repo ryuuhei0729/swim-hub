@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
+import { createRouteHandlerClient } from '@/lib/supabase-server'
 
 type Body = {
   table: 'practices' | 'competitions'
@@ -14,19 +14,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid body' }, { status: 400 })
     }
 
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return req.cookies.get(name)?.value
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    )
+    const supabase = createRouteHandlerClient(req)
 
     const table = body.table
     const statusValue: string | null = body.status

@@ -24,7 +24,8 @@ export type EditingData =
       }
       date?: string
       note?: string
-      style_id?: string | number
+      style?: string
+      style_id?: number
       time?: number
       is_relaying?: boolean
       video_url?: string | null
@@ -37,14 +38,16 @@ export type EditingData =
 // =============================================================================
 
 export interface PracticeMenuFormData {
-  style: string
-  distance: number
-  reps: number
-  sets: number
-  circleTime: number | null
-  note: string
-  tags: PracticeTag[]
-  times: TimeEntry[]
+  practiceDate?: string
+  location?: string
+  note?: string
+  style?: string
+  reps?: number
+  sets?: number
+  distance?: number
+  circleTime?: number | null
+  tags?: PracticeTag[]
+  times?: TimeEntry[]
 }
 
 export interface EntryFormData {

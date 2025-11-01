@@ -92,13 +92,13 @@ export default function CalendarView({
   const handlePrevMonth = () => {
     const newDate = subMonths(currentDate, 1)
     setCurrentDate(newDate)
-    setTimeout(() => refetch(), 100)
+    // setCurrentDate内で自動的にデータ再取得が実行されるため、refetch()は不要
   }
 
   const handleNextMonth = () => {
     const newDate = addMonths(currentDate, 1)
     setCurrentDate(newDate)
-    setTimeout(() => refetch(), 100)
+    // setCurrentDate内で自動的にデータ再取得が実行されるため、refetch()は不要
   }
 
   const handleDateClick = (date: Date) => {

@@ -2,6 +2,7 @@
 // チーム詳細ページ用Zustandストア
 // =============================================================================
 
+import type { TeamTabType } from '@/components/team/TeamTabs'
 import type { Team, TeamMembership } from '@apps/shared/types/database'
 import { create } from 'zustand'
 
@@ -12,7 +13,7 @@ interface TeamDetailState {
   loading: boolean
   
   // タブ
-  activeTab: string
+  activeTab: TeamTabType
   
   // モーダル
   selectedMember: any | null
@@ -26,7 +27,7 @@ interface TeamDetailActions {
   setLoading: (loading: boolean) => void
   
   // タブ操作
-  setActiveTab: (tab: string) => void
+  setActiveTab: (tab: TeamTabType) => void
   
   // モーダル操作
   setSelectedMember: (member: any | null) => void
@@ -55,7 +56,7 @@ export const useTeamDetailStore = create<TeamDetailState & TeamDetailActions>()(
   setLoading: (loading) => set({ loading }),
   
   // タブ操作
-  setActiveTab: (tab) => set({ activeTab: tab }),
+  setActiveTab: (tab: TeamTabType) => set({ activeTab: tab }),
   
   // モーダル操作
   setSelectedMember: (member) => set({ selectedMember: member }),

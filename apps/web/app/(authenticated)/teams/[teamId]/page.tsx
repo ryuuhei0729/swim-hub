@@ -15,6 +15,7 @@ import {
   TeamAttendanceList
 } from '@/components/team'
 import MemberDetailModal from '@/components/team/MemberDetailModal'
+import type { MemberDetail } from '@/components/team/MemberDetailModal'
 import type { TeamTabType } from '@/components/team/TeamTabs'
 import { TeamEvent, AttendanceStatusType, Team, TeamMembership } from '@swim-hub/shared/types/database'
 import { useAttendanceTabStore, useTeamDetailStore } from '@/stores'
@@ -327,7 +328,7 @@ export default function TeamDetailPage() {
 
   const isAdmin = membership?.role === 'admin'
 
-  const handleMemberClick = (member: import('@/components/team/MemberDetailModal').MemberDetail) => {
+  const handleMemberClick = (member: MemberDetail) => {
     openMemberModal(member)
   }
 
@@ -413,7 +414,7 @@ export default function TeamDetailPage() {
       {/* タブナビゲーション */}
       <div className="mt-4">
         <TeamTabs 
-          activeTab={activeTab as TeamTabType}
+          activeTab={activeTab}
           onTabChange={setActiveTab}
           isAdmin={isAdmin}
         />

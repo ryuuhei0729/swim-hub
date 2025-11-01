@@ -12,7 +12,7 @@ export type RecordFormEdit = {
   location: string
   competitionName: string
   poolType: number
-  styleId: string
+  styleId: number
   time: number
   isRelaying: boolean
   splitTimes: Array<{ distance: number; splitTime: number }>
