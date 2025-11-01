@@ -94,7 +94,7 @@ export default function ProfileEditModal({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* オーバーレイ */}
       <div 
-        className="fixed inset-0 bg-gray-600 bg-opacity-75 transition-opacity"
+        className="fixed inset-0 bg-black/40 transition-opacity"
         onClick={handleClose}
       />
       

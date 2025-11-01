@@ -3,7 +3,7 @@
 import React from 'react'
 import { TrophyIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui'
-import RecordForm from '@/components/forms/RecordForm'
+import RecordLogForm from '@/components/forms/RecordLogForm'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
@@ -15,29 +15,18 @@ import {
   useCompetitionFilterStore, 
   useCompetitionRecordStore 
 } from '@/stores'
-import type { RecordFormEdit } from '@/stores/form/competitionRecordStore'
 
 export default function CompetitionPage() {
 
-  // RecordForm から渡されるデータ形状（RecordForm.tsxの構造に合わせる）
-  type RecordFormSplitTime = { distance: number | ''; splitTime: number }
-  type RecordFormRecord = {
-    id: string
+  // RecordLogForm から渡されるデータ形状（RecordLogForm.tsxの構造に合わせる）
+  type RecordLogFormData = {
     styleId: string
     time: number
     timeDisplayValue?: string
     isRelaying: boolean
-    splitTimes: RecordFormSplitTime[]
+    splitTimes: Array<{ distance: number | ''; splitTime: number }>
     note: string
     videoUrl?: string
-  }
-  type RecordFormData = {
-    recordDate: string
-    location: string
-    competitionName: string
-    poolType: number
-    records: RecordFormRecord[]
-    note: string
   }
   const { supabase } = useAuth()
   
@@ -72,11 +61,8 @@ export default function CompetitionPage() {
     records,
     loading,
     error,
-    createRecord,
     updateRecord,
     deleteRecord: deleteRecordFn,
-    createCompetition,
-    createSplitTimes,
     replaceSplitTimes,
     refetch: _refetch
   } = useRecords(supabase, {})
@@ -131,21 +117,7 @@ export default function CompetitionPage() {
   })
 
   const handleEditRecord = async (record: Record) => {
-    setEditingData({
-      // RecordForm の EditData 形状に合わせる
-      id: record.id,
-      recordDate: record.competition?.date || new Date().toISOString().split('T')[0],
-      location: record.competition?.place || '',
-      competitionName: record.competition?.title || '',
-      poolType: record.competition?.pool_type || 0,
-      styleId: record.style_id.toString(),
-      time: record.time,
-      isRelaying: record.is_relaying || false,
-      splitTimes: (record.split_times || []).map(st => ({ distance: st.distance, splitTime: st.split_time })),
-      videoUrl: record.video_url || undefined,
-      note: record.note || ''
-    })
-    openForm()
+    openForm(record)
   }
 
   const handleViewRecord = (record: Record) => {
@@ -166,89 +138,52 @@ export default function CompetitionPage() {
     }
   }
 
-  type RecordFormSubmit = {
-    id?: string
-    recordDate: string
-    location: string
-    competitionName: string
-    poolType: number
-    styleId: string
-    time: number
-    isRelaying?: boolean
-    splitTimes?: Array<{ distance: number; splitTime: number }>
-    videoUrl?: string | null
-    note?: string | null
-  }
-
-  const handleRecordSubmit = async (formData: RecordFormData) => {
+  const handleRecordSubmit = async (formData: RecordLogFormData) => {
     setLoading(true)
     try {
-      let competitionId = null
+      // /competitionページは編集のみなので、常にeditingDataからcompetition_idを取得
+      const competitionId = editingData && typeof editingData === 'object' && 'competition_id' in editingData
+        ? editingData.competition_id as string
+        : null
 
-      if (editingData) {
-        // 編集時は既存のCompetition IDを使用（Recordのときのみ）
-        competitionId = (editingData && 'competition_id' in editingData)
-          ? (editingData as Record).competition_id
-          : null
-      } else {
-        // 新規作成時は大会情報が入力されている場合、先に大会を作成
-        if (formData.competitionName && formData.location) {
-          const competitionInput = {
-            title: formData.competitionName,
-            date: formData.recordDate,
-            place: formData.location,
-            pool_type: formData.poolType,
-            note: ''
-          }
+      if (!competitionId) {
+        throw new Error('Competition ID が見つかりません')
+      }
 
-          const newCompetition = await createCompetition(competitionInput)
-          competitionId = newCompetition.id
-        }
+      const recordInput = {
+        style_id: parseInt(formData.styleId),
+        time: formData.time,
+        video_url: formData.videoUrl || null,
+        note: formData.note || null,
+        is_relaying: formData.isRelaying || false,
+        competition_id: competitionId
       }
 
       if (editingData && editingData.id) {
-        // 更新処理（先頭の1件を対象）
-        const rec = formData.records[0]
-        const recordInput = {
-          style_id: parseInt(rec.styleId),
-          time: rec.time,
-          video_url: rec.videoUrl || null,
-          note: rec.note || null,
-          is_relaying: rec.isRelaying || false,
-          competition_id: competitionId
-        }
-
+        // 更新処理
         await updateRecord(editingData.id, recordInput)
         
-        // スプリットタイム更新（削除されたスプリットタイムもクリア）
-        const filteredSplitTimes = rec.splitTimes
-          .filter(st => st.distance !== '' && st.splitTime > 0)
-          .map(st => ({ distance: Number(st.distance), split_time: st.splitTime }))
-        
-        await replaceSplitTimes(editingData.id, filteredSplitTimes)
-      } else {
-        // 作成処理（複数レコード対応）
-        for (const rec of formData.records) {
-          const recordInput = {
-            style_id: parseInt(rec.styleId),
-            time: rec.time,
-            video_url: rec.videoUrl || null,
-            note: rec.note || null,
-            is_relaying: rec.isRelaying || false,
-            competition_id: competitionId
-          }
-          const newRecord = await createRecord(recordInput)
+        // スプリットタイム更新
+        if (formData.splitTimes && formData.splitTimes.length > 0) {
+          const splitTimesData = formData.splitTimes
+            .filter((st) => {
+              const distance = typeof st.distance === 'number' ? st.distance : parseInt(String(st.distance))
+              return !isNaN(distance) && distance > 0 && st.splitTime > 0
+            })
+            .map((st) => ({
+              distance: typeof st.distance === 'number' ? st.distance : parseInt(String(st.distance)),
+              split_time: st.splitTime
+            }))
           
-          // スプリットタイム作成
-          if (rec.splitTimes && rec.splitTimes.length > 0) {
-            await createSplitTimes(
-              newRecord.id,
-              rec.splitTimes
-                .filter(st => st.distance !== '' && st.splitTime > 0)
-                .map(st => ({ distance: Number(st.distance), split_time: st.splitTime }))
-            )
+          if (splitTimesData.length > 0) {
+            await replaceSplitTimes(editingData.id, splitTimesData)
           }
         }
+        
+        // データを再取得
+        await _refetch()
+        
+        alert('記録を更新しました')
       }
       
       closeForm()
@@ -555,38 +490,48 @@ export default function CompetitionPage() {
       </div>
 
       {/* フォームモーダル */}
-      <RecordForm
+      <RecordLogForm
         isOpen={isFormOpen}
         onClose={() => {
           closeForm()
         }}
         onSubmit={handleRecordSubmit}
-        initialDate={undefined}
-        editData={
-          editingData && typeof editingData === 'object' && 'recordDate' in editingData
-            ? (editingData as RecordFormEdit)
-            : undefined
-        }
+        competitionId={editingData && typeof editingData === 'object' && 'competition_id' in editingData
+          ? editingData.competition_id as string
+          : ''}
+        editData={editingData && typeof editingData === 'object' && 'style_id' in editingData
+          ? {
+              id: editingData.id,
+              style_id: editingData.style_id,
+              time: editingData.time,
+              is_relaying: editingData.is_relaying,
+              split_times: editingData.split_times,
+              note: editingData.note ?? undefined,
+              video_url: editingData.video_url ?? undefined
+            }
+          : null}
         isLoading={isLoading}
         styles={styles.map(style => ({
           id: style.id.toString(),
-          nameJp: style.name_jp,
+          name_jp: style.name_jp,
           distance: style.distance
         }))}
       />
 
       {/* 詳細モーダル */}
       {showDetailModal && selectedRecord && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div className="fixed inset-0 z-[70] overflow-y-auto">
+          <div className="flex min-h-screen items-center justify-center p-4">
+            {/* オーバーレイ */}
             <div 
-              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+              className="fixed inset-0 bg-black/40 transition-opacity" 
               onClick={() => {
                 closeDetailModal()
               }}
             ></div>
 
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+            {/* モーダルコンテンツ */}
+            <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               {/* ヘッダー */}
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="flex items-center justify-between mb-4">

@@ -235,7 +235,7 @@ export default function AvatarUpload({
 
         {/* アップロード中インジケーター */}
         {isUploading && (
-          <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
           </div>
         )}

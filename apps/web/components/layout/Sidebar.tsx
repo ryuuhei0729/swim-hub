@@ -129,7 +129,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* モバイル用オーバーレイ */}
       {isOpen && (
         <div 
-          className="fixed top-16 inset-x-0 bottom-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden"
+          className="fixed top-16 inset-x-0 bottom-0 z-40 bg-black/40 lg:hidden"
           onClick={onClose}
         />
       )}

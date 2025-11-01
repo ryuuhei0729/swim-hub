@@ -141,10 +141,13 @@ export default function PracticeTimeModal({
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-50 overflow-y-auto">
-        <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
-          <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+      <div className="fixed inset-0 z-[70] overflow-y-auto">
+        <div className="flex min-h-screen items-center justify-center p-4">
+          {/* オーバーレイ */}
+          <div className="fixed inset-0 bg-black/40 transition-opacity" />
+          
+          {/* モーダルコンテンツ */}
+          <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
               <div className="text-center">
                 <div className="text-sm text-gray-500">練習詳細を読み込み中...</div>
@@ -158,10 +161,13 @@ export default function PracticeTimeModal({
 
   if (error) {
     return (
-      <div className="fixed inset-0 z-50 overflow-y-auto">
-        <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
-          <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+      <div className="fixed inset-0 z-[70] overflow-y-auto">
+        <div className="flex min-h-screen items-center justify-center p-4">
+          {/* オーバーレイ */}
+          <div className="fixed inset-0 bg-black/40 transition-opacity" />
+          
+          {/* モーダルコンテンツ */}
+          <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
               <div className="text-center">
                 <div className="text-sm text-red-600">練習詳細の取得に失敗しました</div>
@@ -191,13 +197,16 @@ export default function PracticeTimeModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+    <div className="fixed inset-0 z-[70] overflow-y-auto">
+      <div className="flex min-h-screen items-center justify-center p-4">
+        {/* オーバーレイ */}
         <div 
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+          className="fixed inset-0 bg-black/40 transition-opacity" 
           onClick={onClose}
         />
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+        
+        {/* モーダルコンテンツ */}
+        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
           <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-medium text-gray-900">

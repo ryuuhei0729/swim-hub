@@ -52,7 +52,7 @@ export default function ImageCropModal({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* オーバーレイ */}
       <div 
-        className="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity"
+        className="fixed inset-0 bg-gray-900/75 transition-opacity"
         onClick={handleClose}
       />
       

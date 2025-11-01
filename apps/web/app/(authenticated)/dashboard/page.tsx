@@ -82,6 +82,7 @@ export default function DashboardPage() {
     createdCompetitionId,
     createdEntries,
     styles,
+    editingData: competitionEditingData,
     openBasicForm: openCompetitionBasicForm,
     openEntryForm: openEntryLogForm,
     openRecordForm: openRecordLogForm,
@@ -254,8 +255,7 @@ export default function DashboardPage() {
         // 新しいタグデータを保存
         if (menu.tags && menu.tags.length > 0) {
           for (const tag of menu.tags) {
-            // TODO: Supabase型推論の制約回避のため一時的にas any
-            await (supabase as any)
+            await supabase
               .from('practice_log_tags')
               .insert({
                 practice_log_id: editingData.id || '',
@@ -314,8 +314,7 @@ export default function DashboardPage() {
           // タグデータがある場合は保存
           if (menu.tags && menu.tags.length > 0 && createdLog) {
             for (const tag of menu.tags) {
-              // TODO: Supabase型推論の制約回避のため一時的にas any
-              await (supabase as any)
+              await supabase
                 .from('practice_log_tags')
                 .insert({
                   practice_log_id: createdLog.id,
@@ -425,9 +424,9 @@ export default function DashboardPage() {
   const handleCompetitionBasicSubmit = async (basicData: { date: string; title: string; place: string; poolType: number; note: string }) => {
     setLoading(true)
     try {
-      if (editingData && editingData.id) {
+      if (competitionEditingData && competitionEditingData.id) {
         // 編集モード: 更新
-        await updateCompetition(editingData.id, {
+        await updateCompetition(competitionEditingData.id, {
           date: basicData.date,
           title: basicData.title,
           place: basicData.place,
@@ -438,8 +437,6 @@ export default function DashboardPage() {
         
         // 編集時は完了
         closeCompetitionBasicForm()
-        setSelectedDate(null)
-        setEditingData(null)
         
         // データを再取得
         await Promise.all([refetchRecords()])
@@ -454,14 +451,11 @@ export default function DashboardPage() {
           note: basicData.note
         })
         
-        // Competition IDを保存
-        setCreatedCompetitionId(newCompetition.id)
-        
         // Competition作成フォームを閉じる
         closeCompetitionBasicForm()
         
-        // エントリーフォームを開く
-        openEntryLogForm()
+        // エントリーフォームを開く（competitionIdを渡す）
+        openEntryLogForm(newCompetition.id)
       }
       
     } catch (error) {
@@ -476,10 +470,10 @@ export default function DashboardPage() {
   const handleEntrySubmit = async (entriesData: EntryFormData[]) => {
     setLoading(true)
     try {
-      // 編集モードの場合はeditingDataからcompetition_idを取得
+      // 編集モードの場合はcompetitionEditingDataからcompetition_idを取得
       const competitionId = createdCompetitionId || 
-        (editingData && typeof editingData === 'object' && 'competition_id' in editingData 
-          ? editingData.competition_id 
+        (competitionEditingData && typeof competitionEditingData === 'object' && 'competition_id' in competitionEditingData 
+          ? competitionEditingData.competition_id 
           : undefined)
       
       if (!competitionId) {
@@ -493,7 +487,7 @@ export default function DashboardPage() {
       for (const entryData of entriesData) {
         // 編集モードでentryDataにidがある場合は更新、そうでなければチェックしてから作成/更新
         let entry
-        if (entryData.id && editingData?.type === 'entry') {
+        if (entryData.id && competitionEditingData?.type === 'entry') {
           // 編集モード: 既存エントリーを更新
           entry = await entryAPI.updateEntry(entryData.id, {
             style_id: parseInt(entryData.styleId), // 種目も更新
@@ -541,16 +535,13 @@ export default function DashboardPage() {
       closeEntryLogForm()
       
       // 編集モードの場合は、Record作成フォームは開かない（モーダルを閉じる）
-      if (editingData?.type === 'entry') {
-        setEditingData(null)
-        setCreatedCompetitionId(null)
-        setCreatedEntries([])
+      if (competitionEditingData?.type === 'entry') {
         refreshCalendar() // カレンダーを更新
         alert('エントリーを更新しました')
       } else {
         // 新規作成モード: 最初のエントリー情報を使ってRecord作成フォームを開く
         if (createdEntriesList.length > 0) {
-          openRecordLogForm()
+          openRecordLogForm(createdCompetitionId || undefined, createdEntriesList)
         }
         alert(createdEntriesList.length === 1 ? 'エントリーを登録しました' : `${createdEntriesList.length}件のエントリーを登録しました`)
       }
@@ -569,7 +560,7 @@ export default function DashboardPage() {
       return
     }
     closeEntryLogForm()
-    openRecordLogForm()
+    openRecordLogForm(createdCompetitionId, [])
   }
 
   // 記録登録・更新
@@ -584,19 +575,19 @@ export default function DashboardPage() {
         note: formData.note || null,
         is_relaying: formData.isRelaying || false,
         competition_id: createdCompetitionId || 
-          (editingData && typeof editingData === 'object' && 'competition_id' in editingData
-            ? editingData.competition_id || null
-            : (editingData && typeof editingData === 'object' && 'metadata' in editingData && 
-               editingData.metadata && typeof editingData.metadata === 'object' && 
-               'record' in editingData.metadata && editingData.metadata.record &&
-               typeof editingData.metadata.record === 'object' && 'competition_id' in editingData.metadata.record
-              ? editingData.metadata.record.competition_id || null
+          (competitionEditingData && typeof competitionEditingData === 'object' && 'competition_id' in competitionEditingData
+            ? competitionEditingData.competition_id || null
+            : (competitionEditingData && typeof competitionEditingData === 'object' && 'metadata' in competitionEditingData && 
+               competitionEditingData.metadata && typeof competitionEditingData.metadata === 'object' && 
+               'record' in competitionEditingData.metadata && competitionEditingData.metadata.record &&
+               typeof competitionEditingData.metadata.record === 'object' && 'competition_id' in competitionEditingData.metadata.record
+              ? competitionEditingData.metadata.record.competition_id || null
               : null))
       }
 
-      if (editingData && editingData.id) {
+      if (competitionEditingData && competitionEditingData.id) {
         // 更新処理
-        await updateRecord(editingData.id, recordInput)
+        await updateRecord(competitionEditingData.id, recordInput)
         
         // スプリットタイム更新
         if (formData.splitTimes && formData.splitTimes.length > 0) {
@@ -613,7 +604,7 @@ export default function DashboardPage() {
           
           // 有効なスプリットタイムがある場合のみ更新
           if (splitTimesData.length > 0) {
-            await replaceSplitTimes(editingData.id, splitTimesData)
+            await replaceSplitTimes(competitionEditingData.id, splitTimesData)
           }
         }
         alert('記録を更新しました')
@@ -695,49 +686,43 @@ export default function DashboardPage() {
           key={calendarRefreshKey} // 強制再レンダリング
           onDateClick={(_date) => {}}
           onAddItem={(date, type) => {
-            setSelectedDate(date)
-            setEditingData(null)
             if (type === 'practice') {
-              openPracticeBasicForm()
+              openPracticeBasicForm(date)
             } else {
+              setSelectedDate(date)
+              setEditingData(null)
               openCompetitionBasicForm()
             }
           }} 
           onEditItem={(item) => {
             // 日付文字列をDateオブジェクトに変換（タイムゾーン考慮）
             const dateObj = parseDateString(item.date)
-            setSelectedDate(dateObj)
-            setEditingData(item)
             
             if (item.type === 'practice' || item.type === 'team_practice') {
               // Practice編集モーダルを開く
-              openPracticeBasicForm()
+              openPracticeBasicForm(dateObj, item)
             } else if (item.type === 'practice_log') {
               // PracticeLog編集モーダルを開く
-              setEditingData(item)
-              openPracticeLogForm()
+              openPracticeLogForm(undefined, item as unknown as EditingData)
             } else if (item.type === 'entry') {
               // Entry編集モーダルを開く
-              openEntryLogForm()
-            } else if (item.type === 'record') {
-              // Record編集モーダルを開く
-              // 大会情報も一緒に編集データに含める
-              openCompetitionBasicForm()
+              const entryEditData = item as unknown as EditingData
+              const competitionId = typeof entryEditData === 'object' && entryEditData !== null && 'competition_id' in entryEditData 
+                ? entryEditData.competition_id || undefined
+                : undefined
+              openEntryLogForm(competitionId, entryEditData)
             } else if (item.type === 'competition' || item.type === 'team_competition') {
               // Competition編集モーダルを開く
-              openCompetitionBasicForm()
+              openCompetitionBasicForm(dateObj, item)
             }
           }}
           onDeleteItem={handleDeleteItem}
           onAddPracticeLog={(practiceId) => {
-            setCreatedPracticeId(practiceId)
-            setEditingData(null)
-            openPracticeLogForm()
+            openPracticeLogForm(practiceId)
           }}
           onEditPracticeLog={(log) => {
             // PracticeLog編集モーダルを開く
-            setEditingData(log as unknown as EditingData)
-            openPracticeLogForm()
+            openPracticeLogForm(undefined, log as unknown as EditingData)
           }}
           onDeletePracticeLog={async (logId) => {
             if (!confirm('この練習ログを削除してもよろしいですか？')) {
@@ -774,24 +759,18 @@ export default function DashboardPage() {
             // competitionIdが無効な場合は競技作成フローを開く
             if (!competitionId || competitionId.trim() === '') {
               console.log('Opening CompetitionBasicForm (no valid competitionId)')
-              setCreatedCompetitionId(null)
-              setEditingData(null)
               openCompetitionBasicForm()
               return
             }
             
-            setCreatedCompetitionId(competitionId)
-            
             if (entryData) {
               // エントリーデータがある場合は直接Record作成フォームを開く
               console.log('Opening RecordLogForm with entryData')
-              setEditingData({ entryData } as EditingData)
-              openRecordLogForm()
+              openRecordLogForm(competitionId, undefined, { entryData } as EditingData)
             } else {
               // エントリーデータがない場合はEntry作成フォームを開く
               console.log('Opening EntryLogForm (no entryData)')
-              setEditingData(null)
-              openEntryLogForm()
+              openEntryLogForm(competitionId)
             }
           }}
           onEditRecord={(record) => {
@@ -808,8 +787,7 @@ export default function DashboardPage() {
               competition_id: record.competition_id
             }
             
-            setEditingData(editData as unknown as EditingData)
-            openRecordLogForm()
+            openRecordLogForm(record.competition_id || undefined, undefined, editData as unknown as EditingData)
           }}
           onDeleteRecord={async (recordId) => {
             if (!confirm('この大会記録を削除してもよろしいですか？')) {
@@ -842,9 +820,6 @@ export default function DashboardPage() {
           isOpen={isPracticeBasicFormOpen}
           onClose={() => {
             closePracticeBasicForm()
-            setSelectedDate(null)
-            setEditingData(null)
-            setCreatedPracticeId(null)
           }}
           onSubmit={handlePracticeBasicSubmit}
           selectedDate={selectedDate || new Date()}
@@ -869,7 +844,36 @@ export default function DashboardPage() {
             (editingData && typeof editingData === 'object' && 'practice_id' in editingData 
               ? (editingData.practice_id || '')
               : '')}
-          editData={undefined}
+          editData={(() => {
+            if (!editingData || typeof editingData !== 'object' || !('style' in editingData)) {
+              return undefined
+            }
+            
+            // editingDataがstyleを持つことが確認できたので、PracticeLogFormのeditData形式に変換
+            const data = editingData as { 
+              id?: string; 
+              style: string; 
+              distance?: number; 
+              rep_count?: number; 
+              set_count?: number; 
+              circle?: number | null; 
+              note?: string | null; 
+              tags?: PracticeTag[]; 
+              times?: Array<{ memberId: string; times: TimeEntry[] }> 
+            }
+            
+            return {
+              id: data.id,
+              style: String(data.style || 'Fr'),
+              distance: data.distance,
+              rep_count: data.rep_count,
+              set_count: data.set_count,
+              circle: data.circle,
+              note: data.note,
+              tags: data.tags,
+              times: data.times
+            }
+          })()}
           isLoading={isLoading}
           availableTags={availableTags}
           setAvailableTags={setAvailableTags}
@@ -884,7 +888,29 @@ export default function DashboardPage() {
           }}
           onSubmit={handleCompetitionBasicSubmit}
           selectedDate={selectedDate || new Date()}
-          editData={undefined}
+          editData={(() => {
+            if (!competitionEditingData || typeof competitionEditingData !== 'object' || !('title' in competitionEditingData)) {
+              return undefined
+            }
+            
+            const data = competitionEditingData as { 
+              date?: string; 
+              title?: string; 
+              location?: string; 
+              note?: string; 
+              metadata?: { competition?: { title?: string; place?: string; pool_type?: number } } 
+            }
+            
+            return {
+              date: data.date,
+              title: data.title,
+              competition_name: data.metadata?.competition?.title,
+              place: data.location,
+              location: data.location,
+              pool_type: data.metadata?.competition?.pool_type,
+              note: data.note || ''
+            }
+          })()}
           isLoading={isLoading}
         />
 
@@ -897,12 +923,35 @@ export default function DashboardPage() {
           onSubmit={handleEntrySubmit}
           onSkip={handleEntrySkip}
           competitionId={createdCompetitionId || 
-            (editingData && typeof editingData === 'object' && 'competition_id' in editingData 
-              ? editingData.competition_id || ''
+            (competitionEditingData && typeof competitionEditingData === 'object' && 'competition_id' in competitionEditingData 
+              ? competitionEditingData.competition_id || ''
               : '')}
           isLoading={isLoading}
           styles={styles.map(s => ({ id: s.id.toString(), nameJp: s.name_jp, distance: s.distance }))}
-          editData={editingData?.type === 'entry' ? editingData as any : undefined}
+          editData={(() => {
+            if (!competitionEditingData || competitionEditingData === null || typeof competitionEditingData !== 'object') {
+              return undefined
+            }
+            
+            if ('type' in competitionEditingData && competitionEditingData.type === 'entry') {
+              const data = competitionEditingData as { 
+                id?: string; 
+                type: string; 
+                style_id?: number; 
+                entry_time?: number; 
+                note?: string 
+              }
+              
+              return {
+                id: data.id,
+                style_id: data.style_id,
+                entry_time: data.entry_time,
+                note: data.note
+              }
+            }
+            
+            return undefined
+          })()}
         />
 
         {/* 第3段階: 記録登録フォーム */}
@@ -913,29 +962,65 @@ export default function DashboardPage() {
           }}
           onSubmit={handleRecordLogSubmit}
           competitionId={createdCompetitionId || 
-            (editingData && typeof editingData === 'object' && 'competition_id' in editingData 
-              ? editingData.competition_id || ''
+            (competitionEditingData && typeof competitionEditingData === 'object' && 'competition_id' in competitionEditingData 
+              ? competitionEditingData.competition_id || ''
               : '')}
-          editData={editingData?.id ? editingData as any : null}
+          editData={(() => {
+            if (!competitionEditingData || competitionEditingData === null || typeof competitionEditingData !== 'object' || !('id' in competitionEditingData)) {
+              return null
+            }
+            
+            const data = competitionEditingData as { 
+              id?: string; 
+              style_id?: number; 
+              time?: number; 
+              is_relaying?: boolean; 
+              split_times?: Array<{ id?: string; record_id?: string; distance: number; split_time: number; created_at?: string }>; 
+              note?: string; 
+              video_url?: string | null 
+            }
+            
+            // RecordLogFormのSplitTime型に変換
+            const splitTimes = data.split_times?.map(st => ({
+              id: st.id || '', 
+              record_id: st.record_id || '', 
+              distance: st.distance,
+              split_time: st.split_time,
+              created_at: st.created_at || '' 
+            }))
+            
+            return {
+              id: data.id,
+              style_id: data.style_id,
+              time: data.time,
+              is_relaying: data.is_relaying,
+              split_times: splitTimes,
+              note: data.note,
+              video_url: data.video_url === null ? undefined : data.video_url
+            }
+          })()}
           isLoading={isLoading}
           styles={styles}
           entryData={(() => {
-            // editingData.entryDataからEntryInfoを作成
-            if (editingData && typeof editingData === 'object' && 'entryData' in editingData 
-              && editingData.entryData 
-              && typeof editingData.entryData === 'object' 
-              && editingData.entryData !== null) {
-              const entryData = editingData.entryData
-              if ('styleId' in entryData && 'styleName' in entryData && 'entryTime' in entryData) {
+            // competitionEditingData.entryDataからEntryInfoを作成
+            if (competitionEditingData && typeof competitionEditingData === 'object' && 'entryData' in competitionEditingData 
+              && competitionEditingData.entryData 
+              && typeof competitionEditingData.entryData === 'object' 
+              && competitionEditingData.entryData !== null) {
+              const entryData = competitionEditingData.entryData
+              // styleIdとstyleNameがあればEntryInfoとして渡す
+              if ('styleId' in entryData && 'styleName' in entryData) {
                 const styleId = typeof entryData.styleId === 'number' ? entryData.styleId 
                   : typeof entryData.styleId === 'string' ? Number(entryData.styleId) 
                   : undefined
                 const styleName = typeof entryData.styleName === 'string' ? entryData.styleName : ''
-                const entryTime = typeof entryData.entryTime === 'number' ? entryData.entryTime 
-                  : entryData.entryTime === null ? null 
+                const entryTime = 'entryTime' in entryData 
+                  ? (typeof entryData.entryTime === 'number' ? entryData.entryTime 
+                    : entryData.entryTime === null ? null 
+                    : undefined)
                   : undefined
                 
-                if (styleId !== undefined && styleName !== undefined && entryTime !== undefined) {
+                if (styleId !== undefined && styleName !== undefined) {
                   return { styleId, styleName, entryTime } as import('@apps/shared/types/ui').EntryInfo
                 }
               }

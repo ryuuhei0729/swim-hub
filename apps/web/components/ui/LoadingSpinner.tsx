@@ -37,7 +37,7 @@ export default function LoadingSpinner({
 // フルスクリーンローディング
 export function FullScreenLoading({ message = 'アプリケーションを読み込み中...' }: { message?: string }) {
   return (
-    <div className="fixed inset-0 bg-white bg-opacity-95 backdrop-blur-sm z-50 flex items-center justify-center">
+    <div className="fixed inset-0 bg-white/95 backdrop-blur-sm z-50 flex items-center justify-center">
       <div className="text-center">
         <LoadingSpinner size="xl" message={message} />
         <div className="mt-6">

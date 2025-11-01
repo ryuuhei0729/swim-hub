@@ -75,13 +75,15 @@ export default function DayDetailModal({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <div className="flex min-h-screen items-center justify-center p-4">
+        {/* オーバーレイ */}
         <div 
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+          className="fixed inset-0 bg-black/40 transition-opacity" 
           onClick={onClose}
-        ></div>
+        />
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+        {/* モーダルコンテンツ */}
+        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-2xl">
           {/* ヘッダー */}
           <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div className="flex items-center justify-between mb-4">
@@ -478,10 +480,10 @@ export default function DayDetailModal({
       {/* 削除確認モーダル */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-[60] overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+          <div className="flex min-h-screen items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/40 transition-opacity"></div>
             
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div className="relative bg-white rounded-lg shadow-2xl border-2 border-red-300 w-full max-w-lg">
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="sm:flex sm:items-start">
                   <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
@@ -603,13 +605,13 @@ function AttendanceModal({
 
   return (
     <div className="fixed inset-0 z-[60] overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <div className="flex min-h-screen items-center justify-center p-4">
         <div 
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+          className="fixed inset-0 bg-black/40 transition-opacity" 
           onClick={onClose}
-        ></div>
+        />
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-blue-300 w-full max-w-2xl">
           {/* ヘッダー */}
           <div className="bg-blue-50 px-4 pt-5 pb-4 sm:p-6 border-b border-blue-200">
             <div className="flex items-center justify-between">
@@ -1026,15 +1028,13 @@ function PracticeDetails({
                           distance: formattedLog.distance,
                           circle: formattedLog.circle,
                           note: formattedLog.note,
-                          // ログ固有のタイムを practice_times にマップ
-                          practice_times: (formattedLog.times || []).map((t) => ({
-                            // 型上は完全な PracticeTime を要求するが、利用側は set/rep/time のみ参照
-                            set_number: t.setNumber,
-                            rep_number: t.repNumber,
-                            time: t.time
-                          })) as any,
                           // タグを保持
                           tags: formattedLog.tags || [],
+                          // times形式に変換
+                          times: [{
+                            memberId: '',
+                            times: formattedLog.times || []
+                          }],
                           // ログ側の created_at/updated_at を優先（親 practice の値で上書きしない）
                           created_at: (formattedLog as any).created_at,
                           updated_at: (formattedLog as any).updated_at
@@ -1667,11 +1667,11 @@ function CompetitionWithEntry({
             style_id: number
             entry_time: number | null
             note: string | null
-            style: { id: number; name_jp: string }
+            style: { id: number; name_jp: string } | { id: number; name_jp: string }[]
           }
           if (entryData) {
-            const data = entryData as EntryData
-            const style = data.style
+            const data = entryData as unknown as EntryData
+            const style = Array.isArray(data.style) ? data.style[0] : data.style
             setActualStyleId(data.style_id)
             setActualStyleName(style?.name_jp || '')
             setActualEntryTime(data.entry_time)

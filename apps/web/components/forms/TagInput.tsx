@@ -228,7 +228,7 @@ export default function TagInput({
                     e.stopPropagation()
                     onTagsChange(selectedTags.filter(t => t.id !== tag.id))
                   }}
-                  className="hover:bg-black hover:bg-opacity-20 rounded-full p-0.5 transition-colors"
+                  className="hover:bg-black/20 rounded-full p-0.5 transition-colors"
                   title="タグを削除"
                 >
                   <XMarkIcon className="h-3 w-3" />

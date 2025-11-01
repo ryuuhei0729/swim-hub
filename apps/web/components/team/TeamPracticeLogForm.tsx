@@ -353,7 +353,7 @@ export default function TeamPracticeLogForm({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen pt-1 px-4 pb-1 text-center sm:block sm:p-0 max-h-screen">
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={handleClose}></div>
+        <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose}></div>
 
         <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-2 sm:align-middle sm:max-w-4xl sm:w-full max-h-[98vh] overflow-y-auto">
           {/* ヘッダー */}
