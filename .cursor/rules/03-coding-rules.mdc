@@ -16,24 +16,19 @@ alwaysApply: true
 - useEffectの依存配列を正確に指定
 - `memo`でコンポーネントメモ化（必要に応じて）
 
-## GraphQL
-- クエリとミューテーションを適切に分離
-- フィールド名は**camelCase**で統一
-- DB側は**snake_case**、GraphQLで**camelCase**に変換
-- エラーハンドリングを適切に実装
-- `refetchQueries`でデータ整合性を保つ
+## Supabase クライアント
+- Supabaseクライアントを直接使用してデータアクセス
+- Server Componentでは`createServerClient`を使用
+- Client Componentでは`createClient`を使用
+- クエリビルダーを活用して型安全なクエリを記述
+- エラーハンドリングはtry-catchで実装
+- RLS（Row Level Security）でセキュリティを確保
 
 ## データベース
 - テーブル名とカラム名は**snake_case**で統一
 - RLS（Row Level Security）を必ず設定
 - マイグレーションファイルで変更管理
 - 外部キー制約を適切に設定
-
-## Apollo Client
-- `optimisticResponse`を使用してUX向上
-- キャッシュ更新を適切に実装
-- `refetchQueries`でデータ整合性を保つ
-- エラーハンドリングは`error`オブジェクトで
 
 ## フォーム処理
 - **useState**を使用（React Hook Formは未使用）
@@ -71,14 +66,25 @@ alwaysApply: true
 ```typescript
 // ✅ Server Component（推奨）
 async function DashboardPage() {
-  const data = await fetchData()  // サーバーサイドで実行
+  const supabase = createServerClient()
+  const { data } = await supabase.from('practices').select('*')
   return <View data={data} />
 }
 
 // ✅ Client Component（インタラクティブな場合）
 'use client'
 function InteractiveList() {
-  const { data } = useQuery(GET_DATA)  // クライアントサイド
+  const { supabase } = useAuth()
+  const [data, setData] = useState([])
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      const { data } = await supabase.from('practices').select('*')
+      setData(data || [])
+    }
+    fetchData()
+  }, [supabase])
+  
   return <List data={data} />
 }
 ```
@@ -145,13 +151,19 @@ import Image from 'next/image'
 ```typescript
 // ✅ 適切なエラーハンドリング
 try {
-  await mutation({ variables: { input } })
+  const { data, error } = await supabase
+    .from('practices')
+    .insert(newPractice)
+    .select()
+    .single()
+  
+  if (error) throw error
+  
+  // 成功時の処理
 } catch (error) {
-  if (error instanceof ApolloError) {
-    // GraphQLエラー処理
-  } else {
-    // その他のエラー
-  }
+  // エラーハンドリング
+  console.error('データ登録エラー:', error)
+  // ユーザーにエラーメッセージを表示
 }
 ```
 
