@@ -63,10 +63,10 @@ export const useCompetitionRecordStore = create<CompetitionRecordState & Competi
   ...initialState,
   
   // フォーム操作
-  openForm: (data) => set({
+  openForm: (data) => set((state) => ({
     isFormOpen: true,
-    editingData: data || null,
-  }),
+    editingData: data !== undefined ? data : state.editingData,
+  })),
   
   closeForm: () => set({
     isFormOpen: false,

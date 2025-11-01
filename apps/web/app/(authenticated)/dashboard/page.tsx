@@ -12,11 +12,13 @@ import EntryLogForm from '@/components/forms/EntryLogForm'
 import RecordLogForm from '@/components/forms/RecordLogForm'
 import { usePractices } from '@apps/shared/hooks/usePractices'
 import { useRecords } from '@apps/shared/hooks/useRecords'
-import { StyleAPI, EntryAPI } from '@apps/shared/api'
+import { StyleAPI, EntryAPI, RecordAPI } from '@apps/shared/api'
 import type {
   PracticeTag,
+  PracticeLogTagInsert,
   TeamMembership,
-  Team
+  Team,
+  SplitTime
 } from '@apps/shared/types/database'
 import type {
   TimeEntry
@@ -131,6 +133,76 @@ export default function DashboardPage() {
     refetch: refetchRecords
   } = useRecords(supabase, {})
 
+  // ヘルパー関数
+  const getCompetitionId = (
+    createdId: string | null, 
+    editingData: unknown
+  ): string | undefined => {
+    if (createdId) return createdId
+    if (editingData && typeof editingData === 'object' && 'competition_id' in editingData) {
+      return editingData.competition_id as string | undefined
+    }
+    return undefined
+  }
+
+  const getRecordCompetitionId = (
+    createdId: string | null,
+    editingData: unknown
+  ): string | null => {
+    if (createdId) return createdId
+    if (editingData && typeof editingData === 'object' && 'competition_id' in editingData) {
+      return editingData.competition_id as string | null
+    }
+    if (editingData && typeof editingData === 'object' && 'metadata' in editingData) {
+      const metadata = (editingData as { metadata?: unknown }).metadata
+      if (metadata && typeof metadata === 'object' && 'record' in metadata) {
+        const record = (metadata as { record?: unknown }).record
+        if (record && typeof record === 'object' && 'competition_id' in record) {
+          return record.competition_id as string | null
+        }
+      }
+    }
+    return null
+  }
+
+  // EntryInfoを取得するヘルパー関数
+  const getEntryDataForRecord = (editingData: unknown, createdEntries: EntryWithStyle[]): import('@apps/shared/types/ui').EntryInfo | undefined => {
+    // competitionEditingData.entryDataからEntryInfoを作成
+    if (editingData && typeof editingData === 'object' && 'entryData' in editingData 
+      && editingData.entryData 
+      && typeof editingData.entryData === 'object' 
+      && editingData.entryData !== null) {
+      const entryData = editingData.entryData
+      // styleIdとstyleNameがあればEntryInfoとして渡す
+      if ('styleId' in entryData && 'styleName' in entryData) {
+        const styleId = typeof entryData.styleId === 'number' ? entryData.styleId 
+          : typeof entryData.styleId === 'string' ? Number(entryData.styleId) 
+          : undefined
+        const styleName = typeof entryData.styleName === 'string' ? entryData.styleName : ''
+        const entryTime = 'entryTime' in entryData 
+          ? (typeof entryData.entryTime === 'number' ? entryData.entryTime 
+            : entryData.entryTime === null ? null 
+            : undefined)
+          : undefined
+        
+        if (styleId !== undefined && styleName !== undefined) {
+          return { styleId, styleName, entryTime }
+        }
+      }
+    }
+    
+    // createdEntriesからEntryInfoを作成
+    if (createdEntries.length > 0) {
+      return {
+        styleId: createdEntries[0].style_id,
+        styleName: String(createdEntries[0].styleName || ''),
+        entryTime: createdEntries[0].entry_time
+      }
+    }
+    
+    return undefined
+  }
+
   // チーム一覧、タグ、種目を取得
   useEffect(() => {
     const loadTeams = async () => {
@@ -244,31 +316,31 @@ export default function DashboardPage() {
         }
         
         if (!editingData.id) throw new Error('Editing data ID is required')
-        await updatePracticeLog(editingData.id, logInput)
+        const practiceLogId = editingData.id
+        await updatePracticeLog(practiceLogId, logInput)
         
         // 既存のタグデータを削除
         await supabase
           .from('practice_log_tags')
           .delete()
-          .eq('practice_log_id', editingData.id || '')
+          .eq('practice_log_id', practiceLogId)
         
         // 新しいタグデータを保存
         if (menu.tags && menu.tags.length > 0) {
-          for (const tag of menu.tags) {
-            await supabase
-              .from('practice_log_tags')
-              .insert({
-                practice_log_id: editingData.id || '',
-                practice_tag_id: tag.id
-              })
-          }
+          const tagInserts: PracticeLogTagInsert[] = menu.tags.map(tag => ({
+            practice_log_id: practiceLogId,
+            practice_tag_id: tag.id
+          }))
+          await supabase
+            .from('practice_log_tags')
+            .insert(tagInserts)
         }
         
         // 既存のタイムデータを削除
         const { data: existingTimes } = await supabase
           .from('practice_times')
           .select('id')
-          .eq('practice_log_id', editingData.id || '')
+          .eq('practice_log_id', practiceLogId)
         
         if (existingTimes && existingTimes.length > 0) {
           for (const time of existingTimes as Array<{ id: string }>) {
@@ -282,7 +354,7 @@ export default function DashboardPage() {
             if (timeEntry.time > 0) {
               await createPracticeTime({
                 user_id: user?.id || '',
-                practice_log_id: editingData.id,
+                practice_log_id: practiceLogId,
                 set_number: timeEntry.setNumber,
                 rep_number: timeEntry.repNumber,
                 time: timeEntry.time
@@ -313,14 +385,13 @@ export default function DashboardPage() {
           
           // タグデータがある場合は保存
           if (menu.tags && menu.tags.length > 0 && createdLog) {
-            for (const tag of menu.tags) {
-              await supabase
-                .from('practice_log_tags')
-                .insert({
-                  practice_log_id: createdLog.id,
-                  practice_tag_id: tag.id
-                })
-            }
+            const tagInserts: PracticeLogTagInsert[] = menu.tags.map(tag => ({
+              practice_log_id: createdLog.id,
+              practice_tag_id: tag.id
+            }))
+            await supabase
+              .from('practice_log_tags')
+              .insert(tagInserts)
           }
           
           // タイムデータがある場合は保存
@@ -470,11 +541,7 @@ export default function DashboardPage() {
   const handleEntrySubmit = async (entriesData: EntryFormData[]) => {
     setLoading(true)
     try {
-      // 編集モードの場合はcompetitionEditingDataからcompetition_idを取得
-      const competitionId = createdCompetitionId || 
-        (competitionEditingData && typeof competitionEditingData === 'object' && 'competition_id' in competitionEditingData 
-          ? competitionEditingData.competition_id 
-          : undefined)
+      const competitionId = getCompetitionId(createdCompetitionId, competitionEditingData)
       
       if (!competitionId) {
         throw new Error('Competition ID が見つかりません')
@@ -520,11 +587,16 @@ export default function DashboardPage() {
         }
         
         // スタイル情報を追加（Record作成時に使用）
-        const style = styles.find(s => s.id === parseInt(String(entryData.styleId)))
+        const styleId = parseInt(String(entryData.styleId))
+        const style = styles.find(s => s.id === styleId)
+        if (!style) {
+          const entryId = entry?.id || 'unknown'
+          throw new Error(`Style not found for entry ${entryId}: styleId=${styleId}`)
+        }
         if (entry) {
           createdEntriesList.push({
             ...entry,
-            styleName: style?.name_jp || ''
+            styleName: style.name_jp
           })
         }
       }
@@ -574,15 +646,7 @@ export default function DashboardPage() {
         video_url: formData.videoUrl || null,
         note: formData.note || null,
         is_relaying: formData.isRelaying || false,
-        competition_id: createdCompetitionId || 
-          (competitionEditingData && typeof competitionEditingData === 'object' && 'competition_id' in competitionEditingData
-            ? competitionEditingData.competition_id || null
-            : (competitionEditingData && typeof competitionEditingData === 'object' && 'metadata' in competitionEditingData && 
-               competitionEditingData.metadata && typeof competitionEditingData.metadata === 'object' && 
-               'record' in competitionEditingData.metadata && competitionEditingData.metadata.record &&
-               typeof competitionEditingData.metadata.record === 'object' && 'competition_id' in competitionEditingData.metadata.record
-              ? competitionEditingData.metadata.record.competition_id || null
-              : null))
+        competition_id: getRecordCompetitionId(createdCompetitionId, competitionEditingData)
       }
 
       if (competitionEditingData && competitionEditingData.id) {
@@ -591,21 +655,12 @@ export default function DashboardPage() {
         
         // スプリットタイム更新
         if (formData.splitTimes && formData.splitTimes.length > 0) {
-          const splitTimesData = formData.splitTimes
-            .filter((st) => {
-              // distanceが数値で、splitTimeが0より大きい場合のみ
-              const distance = typeof st.distance === 'number' ? st.distance : parseInt(String(st.distance))
-              return !isNaN(distance) && distance > 0 && st.splitTime > 0
-            })
-            .map((st) => ({
-              distance: typeof st.distance === 'number' ? st.distance : parseInt(String(st.distance)),
-              split_time: st.splitTime  // 秒単位のDECIMAL
-            }))
+          const splitTimesData = formData.splitTimes.map((st) => ({
+            distance: st.distance,
+            split_time: st.splitTime
+          }))
           
-          // 有効なスプリットタイムがある場合のみ更新
-          if (splitTimesData.length > 0) {
-            await replaceSplitTimes(competitionEditingData.id, splitTimesData)
-          }
+          await replaceSplitTimes(competitionEditingData.id, splitTimesData)
         }
         alert('記録を更新しました')
       } else {
@@ -614,23 +669,12 @@ export default function DashboardPage() {
         
         // スプリットタイム作成
         if (formData.splitTimes && formData.splitTimes.length > 0) {
-          const splitTimesData = formData.splitTimes
-            .filter((st) => {
-              // distanceが数値で、splitTimeが0より大きい場合のみ
-              const distance = typeof st.distance === 'number' ? st.distance : parseInt(String(st.distance))
-              const isValid = !isNaN(distance) && distance > 0 && st.splitTime > 0
-              return isValid
-            })
-            .map((st) => ({
-              record_id: newRecord.id,
-              distance: typeof st.distance === 'number' ? st.distance : parseInt(String(st.distance)),
-              split_time: st.splitTime  // 秒単位のDECIMAL
-            }))
+          const splitTimesData = formData.splitTimes.map((st) => ({
+            distance: st.distance,
+            split_time: st.splitTime
+          }))
           
-          // 有効なスプリットタイムがある場合のみ作成
-          if (splitTimesData.length > 0) {
-            await createSplitTimes(newRecord.id, splitTimesData)
-          }
+          await createSplitTimes(newRecord.id, splitTimesData)
         }
         alert('記録を登録しました')
       }
@@ -703,14 +747,11 @@ export default function DashboardPage() {
               openPracticeBasicForm(dateObj, item)
             } else if (item.type === 'practice_log') {
               // PracticeLog編集モーダルを開く
-              openPracticeLogForm(undefined, item as unknown as EditingData)
+              openPracticeLogForm(undefined, item)
             } else if (item.type === 'entry') {
               // Entry編集モーダルを開く
-              const entryEditData = item as unknown as EditingData
-              const competitionId = typeof entryEditData === 'object' && entryEditData !== null && 'competition_id' in entryEditData 
-                ? entryEditData.competition_id || undefined
-                : undefined
-              openEntryLogForm(competitionId, entryEditData)
+              const competitionId = item.metadata?.entry?.competition_id || undefined
+              openEntryLogForm(competitionId, item)
             } else if (item.type === 'competition' || item.type === 'team_competition') {
               // Competition編集モーダルを開く
               openCompetitionBasicForm(dateObj, item)
@@ -722,7 +763,14 @@ export default function DashboardPage() {
           }}
           onEditPracticeLog={(log) => {
             // PracticeLog編集モーダルを開く
-            openPracticeLogForm(undefined, log as unknown as EditingData)
+            // PracticeLogWithTimesをEditingData形式に変換
+            const editData: EditingData = {
+              id: log.id,
+              practice_id: log.practice_id,
+              style_id: log.style,
+              note: log.note || undefined
+            }
+            openPracticeLogForm(undefined, editData)
           }}
           onDeletePracticeLog={async (logId) => {
             if (!confirm('この練習ログを削除してもよろしいですか？')) {
@@ -766,7 +814,8 @@ export default function DashboardPage() {
             if (entryData) {
               // エントリーデータがある場合は直接Record作成フォームを開く
               console.log('Opening RecordLogForm with entryData')
-              openRecordLogForm(competitionId, undefined, { entryData } as EditingData)
+              const editData: EditingData = { entryData }
+              openRecordLogForm(competitionId, undefined, editData)
             } else {
               // エントリーデータがない場合はEntry作成フォームを開く
               console.log('Opening EntryLogForm (no entryData)')
@@ -776,18 +825,25 @@ export default function DashboardPage() {
           onEditRecord={(record) => {
             // Record編集モーダルを開く
             // RecordLogFormに必要な形式に変換
-            const editData = {
+            // SplitTime[]をEditingData形式に変換
+            const splitTimes = record.split_times || []
+            const convertedSplitTimes: Array<{ distance: number; split_time: number }> = splitTimes.map(st => ({
+              distance: st.distance,
+              split_time: st.split_time
+            }))
+            
+            const editData: EditingData = {
               id: record.id,
               style_id: record.style_id || record.style?.id,
               time: record.time || record.time_result,
               is_relaying: record.is_relaying,
-              note: record.note,
+              note: record.note || undefined,
               video_url: record.video_url,
-              split_times: record.split_times || [],
+              split_times: convertedSplitTimes,
               competition_id: record.competition_id
             }
             
-            openRecordLogForm(record.competition_id || undefined, undefined, editData as unknown as EditingData)
+            openRecordLogForm(record.competition_id || undefined, undefined, editData)
           }}
           onDeleteRecord={async (recordId) => {
             if (!confirm('この大会記録を削除してもよろしいですか？')) {
@@ -1001,42 +1057,7 @@ export default function DashboardPage() {
           })()}
           isLoading={isLoading}
           styles={styles}
-          entryData={(() => {
-            // competitionEditingData.entryDataからEntryInfoを作成
-            if (competitionEditingData && typeof competitionEditingData === 'object' && 'entryData' in competitionEditingData 
-              && competitionEditingData.entryData 
-              && typeof competitionEditingData.entryData === 'object' 
-              && competitionEditingData.entryData !== null) {
-              const entryData = competitionEditingData.entryData
-              // styleIdとstyleNameがあればEntryInfoとして渡す
-              if ('styleId' in entryData && 'styleName' in entryData) {
-                const styleId = typeof entryData.styleId === 'number' ? entryData.styleId 
-                  : typeof entryData.styleId === 'string' ? Number(entryData.styleId) 
-                  : undefined
-                const styleName = typeof entryData.styleName === 'string' ? entryData.styleName : ''
-                const entryTime = 'entryTime' in entryData 
-                  ? (typeof entryData.entryTime === 'number' ? entryData.entryTime 
-                    : entryData.entryTime === null ? null 
-                    : undefined)
-                  : undefined
-                
-                if (styleId !== undefined && styleName !== undefined) {
-                  return { styleId, styleName, entryTime } as import('@apps/shared/types/ui').EntryInfo
-                }
-              }
-            }
-            
-            // createdEntriesからEntryInfoを作成
-            if (createdEntries.length > 0) {
-              return {
-                styleId: createdEntries[0].style_id,
-                styleName: String(createdEntries[0].styleName || ''),
-                entryTime: createdEntries[0].entry_time
-              }
-            }
-            
-            return undefined
-          })()}
+          entryData={getEntryDataForRecord(competitionEditingData, createdEntries)}
         />
       </div>
     </div>

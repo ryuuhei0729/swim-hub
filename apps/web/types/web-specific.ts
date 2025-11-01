@@ -4,8 +4,8 @@
 // =============================================================================
 
 import { UserProfile } from '@apps/shared/types/database'
-import { AuthError, Session, SupabaseClient, User } from '@supabase/supabase-js'
 import { CalendarDay } from '@apps/shared/types/ui'
+import { AuthError, Session, SupabaseClient, User } from '@supabase/supabase-js'
 
 // =============================================================================
 // 1. 認証関連の型定義（Web専用）

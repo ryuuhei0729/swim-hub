@@ -2,8 +2,8 @@
 // Zustandストア用型定義
 // =============================================================================
 
+import type { PracticeTag } from '@apps/shared/types/database'
 import type { CalendarItem, TimeEntry } from '@apps/shared/types/ui'
-import type { PracticeTag, Style, Entry } from '@apps/shared/types/database'
 
 // =============================================================================
 // 編集データ型定義（統一）
@@ -54,6 +54,20 @@ export interface EntryFormData {
   note: string
 }
 
+// 入力型（フォームで使用） - distanceはstring
+export interface RecordFormDataInput {
+  styleId: string
+  time: number
+  videoUrl?: string | null
+  note?: string | null
+  isRelaying: boolean
+  splitTimes: Array<{
+    distance: string | number
+    splitTime: number
+  }>
+}
+
+// 内部型（処理済み） - distanceはnumber
 export interface RecordFormData {
   styleId: string
   time: number
@@ -61,9 +75,32 @@ export interface RecordFormData {
   note?: string | null
   isRelaying: boolean
   splitTimes: Array<{
-    distance: number | string
+    distance: number
     splitTime: number
   }>
+}
+
+// 型変換関数
+export const convertRecordFormData = (input: RecordFormDataInput): RecordFormData => {
+  return {
+    ...input,
+    splitTimes: input.splitTimes
+      .map(st => {
+        const distance = typeof st.distance === 'number' 
+          ? st.distance 
+          : (st.distance === '' ? NaN : Number(st.distance))
+        
+        // 有効な数値のみ含める
+        if (!isNaN(distance) && distance > 0 && st.splitTime > 0) {
+          return {
+            distance,
+            splitTime: st.splitTime
+          }
+        }
+        return null
+      })
+      .filter((st): st is { distance: number; splitTime: number } => st !== null)
+  }
 }
 
 export interface EntryWithStyle {

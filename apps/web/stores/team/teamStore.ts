@@ -2,6 +2,7 @@
 // チーム管理用Zustandストア
 // =============================================================================
 
+import type { MemberDetail } from '@/components/team/MemberDetailModal'
 import type { Team, TeamMembership } from '@apps/shared/types/database'
 import { create } from 'zustand'
 
@@ -21,7 +22,7 @@ interface TeamState {
   teamLoading: boolean
   
   // モーダル
-  selectedMember: any | null
+  selectedMember: MemberDetail | null
   isMemberModalOpen: boolean
   
   // 出欠管理
@@ -41,9 +42,9 @@ interface TeamActions {
   setTeamLoading: (loading: boolean) => void
   
   // モーダル操作
-  setSelectedMember: (member: any | null) => void
+  setSelectedMember: (member: MemberDetail | null) => void
   setIsMemberModalOpen: (open: boolean) => void
-  openMemberModal: (member: any) => void
+  openMemberModal: (member: MemberDetail) => void
   closeMemberModal: () => void
   
   // 出欠管理操作

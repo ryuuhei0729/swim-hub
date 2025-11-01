@@ -113,6 +113,16 @@ export interface PracticeTag {
 export type PracticeTagInsert = Omit<PracticeTag, 'id' | 'created_at' | 'updated_at'>
 export type PracticeTagUpdate = Partial<Omit<PracticeTagInsert, 'user_id'>>
 
+// 練習ログタグ関連
+export interface PracticeLogTag {
+  id: string
+  practice_log_id: string
+  practice_tag_id: string
+  created_at: string
+}
+
+export type PracticeLogTagInsert = Omit<PracticeLogTag, 'id' | 'created_at'>
+
 // 大会
 export interface Competition {
   id: string

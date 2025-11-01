@@ -31,6 +31,102 @@ type PracticeFromDB = Practice & {
   practice_logs?: PracticeLogFromDB[]
 }
 
+// 型ガード関数
+const isPracticeTag = (value: unknown): value is PracticeTag => {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'id' in value &&
+    'name' in value &&
+    'color' in value &&
+    typeof (value as any).id === 'string' &&
+    typeof (value as any).name === 'string' &&
+    typeof (value as any).color === 'string'
+  )
+}
+
+const isPracticeTime = (value: unknown): value is PracticeTime => {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'id' in value &&
+    'time' in value &&
+    'rep_number' in value &&
+    'set_number' in value &&
+    typeof (value as any).id === 'string' &&
+    typeof (value as any).time === 'number' &&
+    typeof (value as any).rep_number === 'number' &&
+    typeof (value as any).set_number === 'number'
+  )
+}
+
+const isPracticeLogTagRelation = (value: unknown): value is PracticeLogTagRelation => {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'practice_tag_id' in value &&
+    typeof (value as any).practice_tag_id === 'string' &&
+    (!('practice_tags' in value) || (value as any).practice_tags === null || isPracticeTag((value as any).practice_tags))
+  )
+}
+
+const isPracticeLogFromDB = (value: unknown): value is PracticeLogFromDB => {
+  if (!(typeof value === 'object' && value !== null)) return false
+  
+  const obj = value as any
+  
+  // 基本フィールドのチェック
+  if (
+    !('id' in obj) || typeof obj.id !== 'string' ||
+    !('style' in obj) || typeof obj.style !== 'string' ||
+    !('rep_count' in obj) || typeof obj.rep_count !== 'number' ||
+    !('set_count' in obj) || typeof obj.set_count !== 'number' ||
+    !('distance' in obj) || typeof obj.distance !== 'number'
+  ) {
+    return false
+  }
+  
+  // practice_timesのチェック（存在する場合）
+  if ('practice_times' in obj && obj.practice_times !== undefined) {
+    if (!Array.isArray(obj.practice_times) || !obj.practice_times.every(isPracticeTime)) {
+      return false
+    }
+  }
+  
+  // practice_log_tagsのチェック（存在する場合）
+  if ('practice_log_tags' in obj && obj.practice_log_tags !== undefined) {
+    if (!Array.isArray(obj.practice_log_tags) || !obj.practice_log_tags.every(isPracticeLogTagRelation)) {
+      return false
+    }
+  }
+  
+  return true
+}
+
+const isPracticeFromDB = (value: unknown): value is PracticeFromDB => {
+  if (!(typeof value === 'object' && value !== null)) return false
+  
+  const obj = value as any
+  
+  // 基本フィールドのチェック
+  if (
+    !('id' in obj) || typeof obj.id !== 'string' ||
+    !('user_id' in obj) || typeof obj.user_id !== 'string' ||
+    !('date' in obj) || typeof obj.date !== 'string'
+  ) {
+    return false
+  }
+  
+  // practice_logsのチェック（存在する場合）
+  if ('practice_logs' in obj && obj.practice_logs !== undefined) {
+    if (!Array.isArray(obj.practice_logs) || !obj.practice_logs.every(isPracticeLogFromDB)) {
+      return false
+    }
+  }
+  
+  return true
+}
+
 type FormattedPracticeTime = {
   id: string
   time: number
@@ -98,8 +194,13 @@ export default function PracticeTimeModal({
         if (error) throw error
         if (!data) throw new Error('Practice data not found')
         
+        // データ検証
+        if (!isPracticeFromDB(data)) {
+          throw new Error('Invalid practice data structure')
+        }
+        
         // データ整形
-        const practiceData = data as unknown as PracticeFromDB
+        const practiceData = data
         const formattedPractice: FormattedPractice = {
           id: practiceData.id,
           date: practiceData.date,
@@ -114,7 +215,7 @@ export default function PracticeTimeModal({
             circle: log.circle,
             note: log.note,
             tags: (log.practice_log_tags || [])
-              .map((tagRelation: PracticeLogTagRelation) => tagRelation.practice_tags)
+              .map((tagRelation) => tagRelation.practice_tags)
               .filter((tag): tag is PracticeTag => tag !== null && tag !== undefined),
             times: (log.practice_times || []).map((time: PracticeTime): FormattedPracticeTime => ({
               id: time.id,

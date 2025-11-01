@@ -6,7 +6,7 @@ import { UserIcon, TrophyIcon } from '@heroicons/react/24/outline'
 import BestTimesTable from '@/components/profile/BestTimesTable'
 import ProfileDisplay from '@/components/profile/ProfileDisplay'
 import ProfileEditModal from '@/components/profile/ProfileEditModal'
-import type { UserProfile as UserDB, UserUpdate, Record, Style, Competition } from '@apps/shared/types/database'
+import type { UserUpdate } from '@apps/shared/types/database'
 
 interface BestTime {
   id: string
@@ -52,14 +52,13 @@ export default function MyPage() {
       if (error) throw error
       
       if (data) {
-        const userData = data as UserDB
         setProfile({
-          id: userData.id,
-          name: userData.name,
-          birthday: userData.birthday,
-          bio: userData.bio,
-          avatar_url: userData.profile_image_path,
-          profile_image_path: userData.profile_image_path
+          id: data.id,
+          name: data.name,
+          birthday: data.birthday,
+          bio: data.bio,
+          avatar_url: data.profile_image_path,
+          profile_image_path: data.profile_image_path
         })
       }
     } catch (err) {
@@ -101,10 +100,23 @@ export default function MyPage() {
         competitions?: { title: string; date: string } | null
       }
       
+      // 型ガード関数
+      const isRecordWithRelations = (obj: unknown): obj is RecordWithRelations => {
+        if (!obj || typeof obj !== 'object') return false
+        const record = obj as Record<string, unknown>
+        return (
+          typeof record.id === 'string' &&
+          typeof record.time === 'number' &&
+          typeof record.created_at === 'string'
+        )
+      }
+      
       const bestTimesByStyle = new Map<string, BestTime>()
       
       if (data && Array.isArray(data)) {
-        (data as unknown as RecordWithRelations[]).forEach((record) => {
+        data.forEach((record) => {
+          if (!isRecordWithRelations(record)) return
+          
           const styleKey = record.styles?.name_jp || 'Unknown'
           
           if (!bestTimesByStyle.has(styleKey) || record.time < bestTimesByStyle.get(styleKey)!.time) {

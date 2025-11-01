@@ -7,19 +7,31 @@ import { formatTime } from '@/utils/formatters'
 import { EntryInfo } from '@apps/shared/types/ui'
 import { SplitTime as SplitTimeRow } from '@apps/shared/types/database'
 
-interface SplitTimeInput {
+export interface SplitTimeInput {
   distance: number | ''
   splitTime: number
   splitTimeDisplayValue?: string
   uiKey?: string
 }
 
-interface RecordLogFormData {
+// フォーム内部状態用（入力中はdistanceがnumber | ''）
+interface RecordLogFormState {
   styleId: string
   time: number
   timeDisplayValue?: string
   isRelaying: boolean
   splitTimes: SplitTimeInput[]
+  note: string
+  videoUrl?: string
+}
+
+// 送信用（distanceはnumber）
+export interface RecordLogFormData {
+  styleId: string
+  time: number
+  timeDisplayValue?: string
+  isRelaying: boolean
+  splitTimes: Array<{ distance: number; splitTime: number }>
   note: string
   videoUrl?: string
 }
@@ -53,7 +65,7 @@ export default function RecordLogForm({
   styles = [],
   entryData
 }: RecordLogFormProps) {
-  const [formData, setFormData] = useState<RecordLogFormData>({
+  const [formData, setFormData] = useState<RecordLogFormState>({
     styleId: entryData?.styleId?.toString() || styles[0]?.id?.toString() || '',
     time: 0,
     timeDisplayValue: '',
@@ -197,23 +209,23 @@ export default function RecordLogForm({
       return
     }
 
-    // スプリットタイムのバリデーション
-    // 空のスプリットタイムを除外してから送信
-    const validSplitTimes = formData.splitTimes.filter((st) => {
-      // distanceチェック
-      const distance = typeof st.distance === 'number' ? st.distance : parseInt(st.distance as string)
-      if (isNaN(distance) || distance <= 0) {
-        return false
-      }
-      
-      // splitTimeチェック
-      if (!st.splitTime || st.splitTime <= 0) {
-        return false
-      }
-      
-      return true
-    })
-
+    // スプリットタイムのバリデーション・変換
+    // 空のスプリットタイムを除外し、distanceをnumberに変換
+    const validSplitTimes = formData.splitTimes
+      .map((st) => {
+        // distanceをnumberに変換
+        const distance = typeof st.distance === 'number' ? st.distance : (st.distance === '' ? NaN : parseInt(String(st.distance)))
+        
+        // 有効な値のみ返す
+        if (!isNaN(distance) && distance > 0 && st.splitTime > 0) {
+          return {
+            distance,
+            splitTime: st.splitTime
+          }
+        }
+        return null
+      })
+      .filter((st): st is { distance: number; splitTime: number } => st !== null)
 
     // バリデーション済みのデータを送信
     const submitData = {

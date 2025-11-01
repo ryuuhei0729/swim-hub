@@ -14,7 +14,8 @@ import type {
   PracticeTag,
   PracticeLog,
   PracticeLogWithTimes,
-  PracticeTime
+  PracticeTime,
+  PracticeLogTagInsert
 } from '@apps/shared/types/database'
 import {
   usePracticeFilterStore,
@@ -197,16 +198,17 @@ export default function PracticePage() {
       
       // 新しいタグを追加
       if (newTags.length > 0) {
-        for (const tag of newTags) {
-          // TODO: Supabase型推論の制約回避のため一時的にas any
-          const { error: insertError } = await (supabase as any)
-            .from('practice_log_tags')
-            .insert({
-              practice_log_id: practiceLogId,
-              practice_tag_id: tag.id
-            })
-          if (insertError) throw insertError
-        }
+        const inserts: PracticeLogTagInsert[] = 
+          newTags.map(tag => ({
+            practice_log_id: practiceLogId,
+            practice_tag_id: tag.id
+          }))
+        
+        const { error: insertError } = await supabase
+          .from('practice_log_tags')
+          .insert(inserts)
+        
+        if (insertError) throw insertError
       }
     } catch (error) {
       console.error('タグの保存処理でエラーが発生しました:', error)

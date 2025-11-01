@@ -3,7 +3,7 @@
 import React from 'react'
 import { TrophyIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui'
-import RecordLogForm from '@/components/forms/RecordLogForm'
+import RecordLogForm, { type RecordLogFormData } from '@/components/forms/RecordLogForm'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
@@ -17,17 +17,6 @@ import {
 } from '@/stores'
 
 export default function CompetitionPage() {
-
-  // RecordLogForm から渡されるデータ形状（RecordLogForm.tsxの構造に合わせる）
-  type RecordLogFormData = {
-    styleId: string
-    time: number
-    timeDisplayValue?: string
-    isRelaying: boolean
-    splitTimes: Array<{ distance: number | ''; splitTime: number }>
-    note: string
-    videoUrl?: string
-  }
   const { supabase } = useAuth()
   
   // Zustandストア
@@ -165,19 +154,12 @@ export default function CompetitionPage() {
         
         // スプリットタイム更新
         if (formData.splitTimes && formData.splitTimes.length > 0) {
-          const splitTimesData = formData.splitTimes
-            .filter((st) => {
-              const distance = typeof st.distance === 'number' ? st.distance : parseInt(String(st.distance))
-              return !isNaN(distance) && distance > 0 && st.splitTime > 0
-            })
-            .map((st) => ({
-              distance: typeof st.distance === 'number' ? st.distance : parseInt(String(st.distance)),
-              split_time: st.splitTime
-            }))
+          const splitTimesData = formData.splitTimes.map((st) => ({
+            distance: st.distance,
+            split_time: st.splitTime
+          }))
           
-          if (splitTimesData.length > 0) {
-            await replaceSplitTimes(editingData.id, splitTimesData)
-          }
+          await replaceSplitTimes(editingData.id, splitTimesData)
         }
         
         // データを再取得

@@ -87,7 +87,8 @@ export default function AvatarUpload({
         .from('profile-images')
         .list(userFolderPath)
       
-      if (listError) {
+      // 404エラーは「ディレクトリが存在しない（削除するものがない）」として扱う
+      if (listError && listError.statusCode !== '404' && listError.statusCode !== 404) {
         throw listError
       }
       
@@ -105,6 +106,22 @@ export default function AvatarUpload({
         }
         
         console.log('プロフィール画像を削除しました:', filePathsToDelete.length, 'ファイル')
+      }
+      
+      // レガシーURLベースのパス削除（fallback）
+      if (currentAvatarUrl) {
+        const legacyFilePath = extractFilePathFromUrl(currentAvatarUrl)
+        if (legacyFilePath) {
+          console.log('レガシーパスの削除を試行:', legacyFilePath)
+          const { error: legacyDeleteError } = await supabase.storage
+            .from('profile-images')
+            .remove([legacyFilePath])
+          
+          if (legacyDeleteError) {
+            console.warn('レガシーパスの削除に失敗:', legacyDeleteError)
+            // レガシーパスの削除失敗は続行
+          }
+        }
       }
       
       onAvatarChange(null)

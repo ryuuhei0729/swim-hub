@@ -2,6 +2,7 @@
 // プロフィール管理用Zustandストア
 // =============================================================================
 
+import type { UserProfile } from '@apps/shared/types/database'
 import { create } from 'zustand'
 
 interface BestTime {
@@ -16,15 +17,6 @@ interface BestTime {
     title: string
     date: string
   }
-}
-
-interface UserProfile {
-  id: string
-  name: string
-  birthday?: string | null
-  bio?: string | null
-  avatar_url?: string | null
-  profile_image_path?: string | null
 }
 
 interface ProfileState {

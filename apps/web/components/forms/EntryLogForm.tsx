@@ -13,10 +13,13 @@ interface EntryData {
   note: string
 }
 
+// 編集データの型定義
+// Note: style_id (snake_case) はAPIレスポンス形式、styleId (camelCase) は内部形式
+// 両方が存在する場合はどちらでも受け入れ可能（どちらも string | number に変換可能）
 type EditEntryData = {
   id?: string
-  style_id?: number
-  styleId?: string
+  style_id?: number | string
+  styleId?: string | number
   entry_time?: number
   note?: string
 }
