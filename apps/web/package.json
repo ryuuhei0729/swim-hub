@@ -27,13 +27,15 @@
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.76.1",
     "@swim-hub/shared": "*",
+    "@tailwindcss/postcss": "^4.1.16",
     "@types/react-easy-crop": "^1.16.0",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "next": "16.0.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "react-easy-crop": "^5.5.3"
+    "react-easy-crop": "^5.5.3",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
