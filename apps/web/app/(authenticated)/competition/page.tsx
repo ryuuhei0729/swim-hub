@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React from 'react'
 import { TrophyIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui'
 import RecordForm from '@/components/forms/RecordForm'
@@ -11,21 +11,13 @@ import { useAuth } from '@/contexts'
 import { useRecords } from '@apps/shared/hooks/useRecords'
 import { StyleAPI } from '@apps/shared/api'
 import type { Record, Competition, Style, SplitTime } from '@apps/shared/types/database'
+import { 
+  useCompetitionFilterStore, 
+  useCompetitionRecordStore 
+} from '@/stores'
+import type { RecordFormEdit } from '@/stores/form/competitionRecordStore'
 
 export default function CompetitionPage() {
-  type RecordFormEdit = {
-    id?: string
-    recordDate: string
-    location: string
-    competitionName: string
-    poolType: number
-    styleId: string
-    time: number
-    isRelaying: boolean
-    splitTimes: Array<{ distance: number; splitTime: number }>
-    videoUrl?: string
-    note?: string
-  }
 
   // RecordForm から渡されるデータ形状（RecordForm.tsxの構造に合わせる）
   type RecordFormSplitTime = { distance: number | ''; splitTime: number }
@@ -47,19 +39,33 @@ export default function CompetitionPage() {
     records: RecordFormRecord[]
     note: string
   }
-  const [isFormOpen, setIsFormOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [editingData, setEditingData] = useState<Record | RecordFormEdit | null>(null)
-  const [selectedRecord, setSelectedRecord] = useState<Record | null>(null)
-  const [showDetailModal, setShowDetailModal] = useState(false)
-  const [styles, setStyles] = useState<Style[]>([])
-  
-  // フィルタリング用のstate
-  const [filterStyle, setFilterStyle] = useState<string>('')
-  const [includeRelay, setIncludeRelay] = useState<boolean>(true)
-  const [filterPoolType, setFilterPoolType] = useState<string>('')
-
   const { supabase } = useAuth()
+  
+  // Zustandストア
+  const {
+    filterStyle,
+    includeRelay,
+    filterPoolType,
+    setFilterStyle,
+    setIncludeRelay,
+    setFilterPoolType,
+  } = useCompetitionFilterStore()
+  
+  const {
+    isFormOpen,
+    isLoading,
+    editingData,
+    selectedRecord,
+    showDetailModal,
+    styles,
+    openForm,
+    closeForm,
+    setEditingData,
+    openDetailModal,
+    closeDetailModal,
+    setStyles,
+    setLoading,
+  } = useCompetitionRecordStore()
   
   // 大会記録を取得
   const {
@@ -139,24 +145,23 @@ export default function CompetitionPage() {
       videoUrl: record.video_url || undefined,
       note: record.note || ''
     })
-    setIsFormOpen(true)
+    openForm()
   }
 
   const handleViewRecord = (record: Record) => {
-    setSelectedRecord(record)
-    setShowDetailModal(true)
+    openDetailModal(record)
   }
 
   const handleDeleteRecord = async (recordId: string) => {
     if (confirm('この大会記録を削除しますか？')) {
-      setIsLoading(true)
+      setLoading(true)
       try {
         await deleteRecordFn(recordId)
       } catch (error) {
         console.error('削除エラー:', error)
         alert('削除に失敗しました')
       } finally {
-        setIsLoading(false)
+        setLoading(false)
       }
     }
   }
@@ -176,7 +181,7 @@ export default function CompetitionPage() {
   }
 
   const handleRecordSubmit = async (formData: RecordFormData) => {
-    setIsLoading(true)
+    setLoading(true)
     try {
       let competitionId = null
 
@@ -246,13 +251,12 @@ export default function CompetitionPage() {
         }
       }
       
-      setIsFormOpen(false)
-      setEditingData(null)
+      closeForm()
     } catch (error) {
       console.error('大会記録の保存に失敗しました:', error)
       alert('大会記録の保存に失敗しました。')
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
@@ -554,8 +558,7 @@ export default function CompetitionPage() {
       <RecordForm
         isOpen={isFormOpen}
         onClose={() => {
-          setIsFormOpen(false)
-          setEditingData(null)
+          closeForm()
         }}
         onSubmit={handleRecordSubmit}
         initialDate={undefined}
@@ -579,8 +582,7 @@ export default function CompetitionPage() {
             <div 
               className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
               onClick={() => {
-                setShowDetailModal(false)
-                setSelectedRecord(null)
+                closeDetailModal()
               }}
             ></div>
 
@@ -593,8 +595,7 @@ export default function CompetitionPage() {
                   </h3>
                   <button
                     onClick={() => {
-                      setShowDetailModal(false)
-                      setSelectedRecord(null)
+                      closeDetailModal()
                     }}
                     className="text-gray-400 hover:text-gray-600 transition-colors"
                   >
@@ -676,8 +677,7 @@ export default function CompetitionPage() {
                   type="button"
                   className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                   onClick={() => {
-                    setShowDetailModal(false)
-                    setSelectedRecord(null)
+                    closeDetailModal()
                   }}
                 >
                   閉じる
