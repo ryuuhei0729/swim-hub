@@ -11,27 +11,38 @@ export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as Partial<Body>
     if (!body || !body.table || !body.id || body.status === undefined) {
-      return NextResponse.json({ error: 'Invalid body' }, { status: 400 })
+      const response = NextResponse.json({ error: 'Invalid body' }, { status: 400 })
+      const { setCookiesOnResponse } = createRouteHandlerClient(req)
+      setCookiesOnResponse(response)
+      return response
     }
 
-    const supabase = createRouteHandlerClient(req)
+    const { client, setCookiesOnResponse } = createRouteHandlerClient(req)
 
     const table = body.table
     const statusValue: string | null = body.status
 
-    const { error } = await supabase
+    const { error } = await client
       .from(table)
       .update({ attendance_status: statusValue })
       .eq('id', body.id)
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      const response = NextResponse.json({ error: error.message }, { status: 500 })
+      setCookiesOnResponse(response)
+      return response
     }
 
-    return NextResponse.json({ ok: true })
+    const response = NextResponse.json({ ok: true })
+    setCookiesOnResponse(response)
+    return response
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
-    return NextResponse.json({ error: msg }, { status: 500 })
+    const response = NextResponse.json({ error: msg }, { status: 500 })
+    // エラー時でもCookieを設定（認証状態の更新がある可能性があるため）
+    const { setCookiesOnResponse } = createRouteHandlerClient(req)
+    setCookiesOnResponse(response)
+    return response
   }
 }
 

@@ -55,9 +55,11 @@ export function FormModals({
     isBasicFormOpen: isCompetitionBasicFormOpen,
     isEntryFormOpen: isEntryLogFormOpen,
     isRecordFormOpen: isRecordLogFormOpen,
+    selectedDate: competitionSelectedDate,
     createdCompetitionId,
     createdEntries,
     editingData: competitionEditingData,
+    isLoading: competitionIsLoading,
     closeBasicForm: closeCompetitionBasicForm,
     closeEntryForm: closeEntryLogForm,
     closeRecordForm: closeRecordLogForm,
@@ -196,7 +198,7 @@ export function FormModals({
         isOpen={isCompetitionBasicFormOpen}
         onClose={closeCompetitionBasicForm}
         onSubmit={onCompetitionBasicSubmit}
-        selectedDate={selectedDate || new Date()}
+        selectedDate={competitionSelectedDate || new Date()}
         editData={(() => {
           if (!competitionEditingData || typeof competitionEditingData !== 'object' || !('title' in competitionEditingData)) {
             return undefined
@@ -220,7 +222,7 @@ export function FormModals({
             note: data.note || ''
           }
         })()}
-        isLoading={isLoading}
+        isLoading={competitionIsLoading}
         />
       </Suspense>
 
@@ -235,7 +237,7 @@ export function FormModals({
           (competitionEditingData && typeof competitionEditingData === 'object' && 'competition_id' in competitionEditingData 
             ? competitionEditingData.competition_id || ''
             : '')}
-        isLoading={isLoading}
+        isLoading={competitionIsLoading}
         styles={styles.map(s => ({ id: s.id.toString(), nameJp: s.name_jp, distance: s.distance }))}
         editData={(() => {
           if (!competitionEditingData || competitionEditingData === null || typeof competitionEditingData !== 'object') {
@@ -307,7 +309,7 @@ export function FormModals({
             video_url: data.video_url === null ? undefined : data.video_url
           }
         })()}
-        isLoading={isLoading}
+        isLoading={competitionIsLoading}
         styles={styles}
         entryData={getEntryDataForRecord(competitionEditingData, createdEntries)}
         />

@@ -3,6 +3,7 @@
 // =============================================================================
 
 import type { TeamTabType } from '@/components/team/TeamTabs'
+import type { MemberDetail } from '@/components/team/MemberDetailModal'
 import type { Team, TeamMembership } from '@apps/shared/types/database'
 import { create } from 'zustand'
 
@@ -16,7 +17,7 @@ interface TeamDetailState {
   activeTab: TeamTabType
   
   // モーダル
-  selectedMember: any | null
+  selectedMember: MemberDetail | null
   isMemberModalOpen: boolean
 }
 
@@ -30,9 +31,9 @@ interface TeamDetailActions {
   setActiveTab: (tab: TeamTabType) => void
   
   // モーダル操作
-  setSelectedMember: (member: any | null) => void
+  setSelectedMember: (member: MemberDetail | null) => void
   setIsMemberModalOpen: (open: boolean) => void
-  openMemberModal: (member: any) => void
+  openMemberModal: (member: MemberDetail) => void
   closeMemberModal: () => void
   
   reset: () => void

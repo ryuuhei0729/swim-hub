@@ -133,14 +133,14 @@ export default function DashboardClient({
     user,
     styles,
     createPractice,
-    updatePractice: updatePractice as any, // 型の不一致を回避
+    updatePractice,
     createPracticeLog,
     updatePracticeLog,
     createPracticeTime,
     deletePracticeTime,
     refetch,
     createRecord,
-    updateRecord: updateRecord as any, // 型の不一致を回避
+    updateRecord,
     createCompetition,
     updateCompetition,
     createSplitTimes,

@@ -4,7 +4,9 @@
 
 import type { Database } from '@/lib/supabase'
 import type {
+  EditingData,
   EntryFormData,
+  EntryWithStyle,
   PracticeMenuFormData,
   RecordFormData
 } from '@/stores/types'
@@ -20,7 +22,7 @@ interface UseDashboardHandlersProps {
   styles: Style[]
   // Practice hooks（実際の型に合わせる）
   createPractice: (practice: Omit<import('@apps/shared/types/database').PracticeInsert, 'user_id'>) => Promise<import('@apps/shared/types/database').Practice>
-  updatePractice: (id: string, updates: import('@apps/shared/types/database').PracticeUpdate) => Promise<import('@apps/shared/types/database').PracticeWithLogs>
+  updatePractice: (id: string, updates: import('@apps/shared/types/database').PracticeUpdate) => Promise<import('@apps/shared/types/database').Practice>
   createPracticeLog: (log: Omit<import('@apps/shared/types/database').PracticeLogInsert, 'user_id'>) => Promise<import('@apps/shared/types/database').PracticeLog>
   updatePracticeLog: (id: string, updates: import('@apps/shared/types/database').PracticeLogUpdate) => Promise<import('@apps/shared/types/database').PracticeLog>
   createPracticeTime: (time: import('@apps/shared/types/database').PracticeTimeInsert) => Promise<import('@apps/shared/types/database').PracticeTime>
@@ -28,16 +30,16 @@ interface UseDashboardHandlersProps {
   refetch: () => Promise<void>
   // Record hooks（実際の型に合わせる）
   createRecord: (record: Omit<import('@apps/shared/types/database').RecordInsert, 'user_id'>) => Promise<import('@apps/shared/types/database').Record>
-  updateRecord: (id: string, updates: import('@apps/shared/types/database').RecordUpdate) => Promise<import('@apps/shared/types/database').RecordWithDetails>
+  updateRecord: (id: string, updates: import('@apps/shared/types/database').RecordUpdate) => Promise<import('@apps/shared/types/database').Record>
   createCompetition: (competition: Omit<import('@apps/shared/types/database').CompetitionInsert, 'user_id'>) => Promise<import('@apps/shared/types/database').Competition>
   updateCompetition: (id: string, updates: import('@apps/shared/types/database').CompetitionUpdate) => Promise<import('@apps/shared/types/database').Competition>
   createSplitTimes: (recordId: string, splitTimes: Array<{ distance: number; split_time?: number; splitTime?: number }>) => Promise<import('@apps/shared/types/database').SplitTime[]>
   replaceSplitTimes: (recordId: string, splitTimes: Omit<import('@apps/shared/types/database').SplitTimeInsert, 'record_id'>[]) => Promise<import('@apps/shared/types/database').SplitTime[]>
   refetchRecords: () => Promise<void>
   // Form store actions
-  editingData: any
+  editingData: EditingData | null
   createdPracticeId: string | null
-  competitionEditingData: any
+  competitionEditingData: EditingData | null
   createdCompetitionId: string | null
   setLoading: (loading: boolean) => void
   closePracticeBasicForm: () => void
@@ -45,9 +47,9 @@ interface UseDashboardHandlersProps {
   closeCompetitionBasicForm: () => void
   closeEntryLogForm: () => void
   closeRecordLogForm: () => void
-  setCreatedEntries: (entries: any[]) => void
+  setCreatedEntries: (entries: Array<import('@apps/shared/types/database').Entry & { styleName: string }>) => void
   openEntryLogForm: (competitionId: string) => void
-  openRecordLogForm: (competitionId: string | undefined, entries?: any[], editData?: any) => void
+  openRecordLogForm: (competitionId: string | undefined, entries?: Array<import('@apps/shared/types/database').Entry & { styleName: string }>, editData?: EditingData) => void
   refreshCalendar: () => void
 }
 
@@ -92,7 +94,11 @@ export function useDashboardHandlers({
     setLoading(true)
     try {
       if (editingData && editingData.id) {
-        await updatePractice(editingData.id, basicData as any)
+        await updatePractice(editingData.id, {
+          date: basicData.date,
+          place: basicData.place || null,
+          note: basicData.note || null
+        })
       } else {
         await createPractice(basicData)
       }
@@ -109,6 +115,10 @@ export function useDashboardHandlers({
 
   // 練習メニュー作成・更新処理
   const handlePracticeLogSubmit = useCallback(async (formDataArray: PracticeMenuFormData[]) => {
+    if (!user || !user.id) {
+      throw new Error('認証されたユーザーが必要です')
+    }
+    
     setLoading(true)
     try {
       const menus = Array.isArray(formDataArray) ? formDataArray : []
@@ -158,7 +168,7 @@ export function useDashboardHandlers({
           for (const timeEntry of menu.times) {
             if (timeEntry.time > 0) {
               await createPracticeTime({
-                user_id: user?.id || '',
+                user_id: user.id,
                 practice_log_id: practiceLogId,
                 set_number: timeEntry.setNumber,
                 rep_number: timeEntry.repNumber,
@@ -200,7 +210,7 @@ export function useDashboardHandlers({
             for (const timeEntry of menu.times) {
               if (timeEntry.time > 0) {
                 await createPracticeTime({
-                  user_id: user?.id || '',
+                  user_id: user.id,
                   practice_log_id: createdLog.id,
                   set_number: timeEntry.setNumber,
                   rep_number: timeEntry.repNumber,
@@ -309,6 +319,10 @@ export function useDashboardHandlers({
 
   // エントリー登録
   const handleEntrySubmit = useCallback(async (entriesData: EntryFormData[]) => {
+    if (!user || !user.id) {
+      throw new Error('認証されたユーザーが必要です')
+    }
+    
     setLoading(true)
     try {
       const competitionId = getCompetitionId(createdCompetitionId, competitionEditingData)
@@ -318,7 +332,7 @@ export function useDashboardHandlers({
       }
 
       const entryAPI = new EntryAPI(supabase)
-      const createdEntriesList = []
+      const createdEntriesList: EntryWithStyle[] = []
 
       for (const entryData of entriesData) {
         let entry
@@ -331,7 +345,7 @@ export function useDashboardHandlers({
         } else {
           const existingEntry = await entryAPI.checkExistingEntry(
             competitionId,
-            user?.id || '',
+            user.id,
             parseInt(entryData.styleId)
           )
 
@@ -405,7 +419,8 @@ export function useDashboardHandlers({
       }
 
       if (competitionEditingData && competitionEditingData.id) {
-        await updateRecord(competitionEditingData.id, recordInput as any)
+        const updates: import('@apps/shared/types/database').RecordUpdate = recordInput
+        await updateRecord(competitionEditingData.id, updates)
         
         if (formData.splitTimes && formData.splitTimes.length > 0) {
           const splitTimesData = formData.splitTimes.map((st) => ({
@@ -415,7 +430,8 @@ export function useDashboardHandlers({
           await replaceSplitTimes(competitionEditingData.id, splitTimesData as Omit<import('@apps/shared/types/database').SplitTimeInsert, 'record_id'>[])
         }
       } else {
-        const newRecord = await createRecord(recordInput)
+        const recordForCreate: Omit<import('@apps/shared/types/database').RecordInsert, 'user_id'> = recordInput
+        const newRecord = await createRecord(recordForCreate)
         
         if (formData.splitTimes && formData.splitTimes.length > 0) {
           const splitTimesData = formData.splitTimes.map((st) => ({

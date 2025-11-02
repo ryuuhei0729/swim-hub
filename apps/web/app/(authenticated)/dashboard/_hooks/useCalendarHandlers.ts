@@ -3,12 +3,32 @@
 // =============================================================================
 
 import type { Database } from '@/lib/supabase'
-import type { EditingData } from '@/stores/types'
+import type { EditingData, EntryWithStyle } from '@/stores/types'
 import type { CalendarItemType } from '@apps/shared/types/database'
-import type { CalendarItem } from '@apps/shared/types/ui'
+import type { CalendarItem, EntryInfo } from '@apps/shared/types/ui'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { parseISO, startOfDay } from 'date-fns'
 import { useCallback } from 'react'
+
+// スプリットタイム型（編集時に使用）
+export interface RecordSplitTime {
+  distance: number
+  split_time: number
+}
+
+// 記録型（編集時に使用）
+export interface RecordForEdit {
+  id: string
+  style_id: number
+  style?: { id: number }
+  time?: number
+  time_result?: number
+  is_relaying?: boolean
+  note?: string | null
+  video_url?: string | null
+  split_times?: RecordSplitTime[]
+  competition_id?: string | null
+}
 
 interface UseCalendarHandlersProps {
   supabase: SupabaseClient<Database>
@@ -17,7 +37,7 @@ interface UseCalendarHandlersProps {
   openPracticeLogForm: (practiceId?: string, editData?: EditingData) => void
   openCompetitionBasicForm: (date?: Date, item?: CalendarItem) => void
   openEntryLogForm: (competitionId: string, item?: CalendarItem) => void
-  openRecordLogForm: (competitionId: string | undefined, entries?: any[], editData?: EditingData) => void
+  openRecordLogForm: (competitionId: string | undefined, entries?: EntryWithStyle[], editData?: EditingData) => void
   setSelectedDate: (date: Date) => void
   setEditingData: (data: EditingData | null) => void
   handleDeleteItem: (itemId: string, itemType?: CalendarItemType) => Promise<void>
@@ -128,7 +148,7 @@ export function useCalendarHandlers({
   }, [supabase, refetch, refreshCalendar])
 
   // 記録追加ハンドラー
-  const onAddRecord = useCallback((params: { competitionId?: string; entryData?: any }) => {
+  const onAddRecord = useCallback((params: { competitionId?: string; entryData?: EntryInfo }) => {
     const { competitionId, entryData } = params
     
     if (!competitionId || competitionId.trim() === '') {
@@ -147,9 +167,9 @@ export function useCalendarHandlers({
   }, [openCompetitionBasicForm, openRecordLogForm, openEntryLogForm])
 
   // 記録編集ハンドラー
-  const onEditRecord = useCallback((record: any) => {
+  const onEditRecord = useCallback((record: RecordForEdit) => {
     const splitTimes = record.split_times || []
-    const convertedSplitTimes: Array<{ distance: number; split_time: number }> = splitTimes.map((st: any) => ({
+    const convertedSplitTimes: Array<{ distance: number; split_time: number }> = splitTimes.map((st: RecordSplitTime) => ({
       distance: st.distance,
       split_time: st.split_time
     }))
@@ -157,15 +177,15 @@ export function useCalendarHandlers({
     const editData: EditingData = {
       id: record.id,
       style_id: record.style_id ?? record.style?.id,
-      time: record.time || record.time_result,
+      time: record.time ?? record.time_result,
       is_relaying: record.is_relaying,
-      note: record.note || undefined,
-      video_url: record.video_url,
+      note: record.note ?? undefined,
+      video_url: record.video_url ?? undefined,
       split_times: convertedSplitTimes,
-      competition_id: record.competition_id
+      competition_id: record.competition_id ?? undefined
     }
     
-    openRecordLogForm(record.competition_id || undefined, undefined, editData)
+    openRecordLogForm(record.competition_id ?? undefined, undefined, editData)
   }, [openRecordLogForm])
 
   // 記録削除ハンドラー

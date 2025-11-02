@@ -33,7 +33,7 @@ export default function TeamCompetitionEntryModal({
     style_id: number
     entry_time: number | null
     note: string | null
-    created_at?: string
+    created_at: string
     users: { id: string; name: string } | null
     styles: { id: number; name_jp: string; distance: number } | null
   }
@@ -326,7 +326,7 @@ export default function TeamCompetitionEntryModal({
                                 )}
                               </div>
                               <div className="text-right text-xs text-gray-400">
-                                {entry.created_at ? format(new Date(entry.created_at), 'M月d日 HH:mm', { locale: ja }) : '-'}
+                                {format(new Date(entry.created_at), 'M月d日 HH:mm', { locale: ja })}
                               </div>
                             </div>
                           </div>

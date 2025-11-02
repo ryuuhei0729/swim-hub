@@ -3,7 +3,7 @@
 // =============================================================================
 
 import type { PracticeTag } from '@apps/shared/types/database'
-import type { CalendarItem, TimeEntry } from '@apps/shared/types/ui'
+import type { CalendarItem, EntryInfo, TimeEntry } from '@apps/shared/types/ui'
 
 // =============================================================================
 // 編集データ型定義（統一）
@@ -16,7 +16,7 @@ export type EditingData =
       type?: string
       competition_id?: string | null
       practice_id?: string
-      entryData?: unknown
+      entryData?: EntryInfo
       metadata?: {
         practice?: { place?: string }
         competition?: { title?: string; place?: string }

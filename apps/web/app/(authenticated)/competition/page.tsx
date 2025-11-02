@@ -130,8 +130,12 @@ export default function CompetitionPage() {
     setLoading(true)
     try {
       // /competitionページは編集のみなので、常にeditingDataからcompetition_idを取得
-      const competitionId = editingData && typeof editingData === 'object' && 'competition_id' in editingData
-        ? editingData.competition_id as string
+      const competitionId = editingData && 
+        typeof editingData === 'object' && 
+        editingData !== null &&
+        'competition_id' in editingData &&
+        typeof editingData.competition_id === 'string'
+        ? editingData.competition_id
         : null
 
       if (!competitionId) {
@@ -474,8 +478,12 @@ export default function CompetitionPage() {
           closeForm()
         }}
         onSubmit={handleRecordSubmit}
-        competitionId={editingData && typeof editingData === 'object' && 'competition_id' in editingData
-          ? editingData.competition_id as string
+        competitionId={editingData && 
+          typeof editingData === 'object' && 
+          editingData !== null &&
+          'competition_id' in editingData &&
+          typeof editingData.competition_id === 'string'
+          ? editingData.competition_id
           : ''}
         editData={editingData && typeof editingData === 'object' && 'style_id' in editingData
           ? {
