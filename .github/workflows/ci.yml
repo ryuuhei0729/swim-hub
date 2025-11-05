@@ -24,9 +24,6 @@ jobs:
     - name: Install dependencies
       run: npm ci
     
-    - name: Generate GraphQL types
-      run: npm run graphql:codegen
-    
     - name: Lint
       run: npm run lint
       env:
@@ -50,9 +47,6 @@ jobs:
     - name: Install dependencies
       run: npm ci
     
-    - name: Generate GraphQL types
-      run: npm run graphql:codegen
-    
     - name: Build web app
       run: npm run build:web
   
@@ -71,14 +65,8 @@ jobs:
     - name: Install dependencies
       run: npm ci
     
-    - name: Generate GraphQL types
-      run: npm run graphql:codegen
-    
-    - name: Build types package
-      run: npm run build --workspace=packages/types
-    
-    - name: Build GraphQL schema package
-      run: npm run build --workspace=packages/graphql-schema
+    - name: Type check shared package
+      run: npm run type-check --workspace=apps/shared
   
   build-mobile-web:
     runs-on: ubuntu-latest
