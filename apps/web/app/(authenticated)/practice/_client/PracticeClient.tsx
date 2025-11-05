@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts'
 import { usePractices } from '@apps/shared/hooks/usePractices'
 import type {
   PracticeTag,
-  PracticeLogWithTimes,
+  PracticeLogWithTags,
   PracticeTime,
   PracticeLogTagInsert,
   PracticeWithLogs,
@@ -100,28 +100,9 @@ export default function PracticeClient({
 
   // practice_logsを平坦化し、タグデータを整形
   const practiceLogs: PracticeLogWithFormattedData[] = displayPractices.flatMap(practice => 
-    (practice.practice_logs || []).map((log): PracticeLogWithFormattedData => {
+    (practice.practice_logs || []).map((log: PracticeLogWithTags): PracticeLogWithFormattedData => {
       // タグデータを整形（practice_log_tags -> tags に変換）
-      type PracticeLogTagRow = {
-        practice_tags?: PracticeTag
-        practice_tag_id?: string
-      }
-      const tags: PracticeTag[] = (log as unknown as PracticeLogWithTimes & {
-        practice_log_tags?: Array<{ practice_tags?: PracticeTag; practice_tag_id?: string }>
-      }).practice_log_tags?.map((plt: PracticeLogTagRow): PracticeTag => {
-        if (plt.practice_tags) {
-          return plt.practice_tags
-        }
-        // フォールバック（通常は発生しない）
-        return {
-          id: plt.practice_tag_id || '',
-          user_id: '',
-          name: '',
-          color: '#9CA3AF',
-          created_at: '',
-          updated_at: ''
-        }
-      }).filter((tag): tag is PracticeTag => !!tag.id) || []
+      const tags: PracticeTag[] = log.practice_log_tags.map((plt) => plt.practice_tags)
 
       return {
         ...log,
@@ -186,31 +167,20 @@ export default function PracticeClient({
       : `${remainingSeconds.toFixed(2)}`
   }
 
-  // タグの保存処理
+  // タグの保存処理（原子性のある操作）
   const savePracticeLogTags = async (practiceLogId: string, newTags: PracticeTag[]) => {
     try {
-      // 既存のタグをすべて削除
-      await supabase
-        .from('practice_log_tags')
-        .delete()
-        .eq('practice_log_id', practiceLogId)
+      const tagIds = newTags.map(tag => tag.id)
       
-      // 新しいタグを追加
-      if (newTags.length > 0) {
-        const inserts: PracticeLogTagInsert[] = 
-          newTags.map(tag => ({
-            practice_log_id: practiceLogId,
-            practice_tag_id: tag.id
-          }))
-        
-        const { error: insertError } = await supabase
-          .from('practice_log_tags')
-          .insert(inserts)
-        
-        if (insertError) throw insertError
-      }
+      const { error } = await supabase.rpc('replace_practice_log_tags', {
+        p_practice_log_id: practiceLogId,
+        p_tag_ids: tagIds
+      })
+      
+      if (error) throw error
     } catch (error) {
       console.error('タグの保存処理でエラーが発生しました:', error)
+      throw error // エラーを呼び出し元に再スロー
     }
   }
 

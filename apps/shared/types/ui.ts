@@ -219,7 +219,7 @@ export interface PracticeSet {
 // 練習ログフォームデータ
 export interface PracticeLogFormData {
   practiceDate: string
-  location: string
+  place: string
   sets: PracticeSet[]
   note: string
 }

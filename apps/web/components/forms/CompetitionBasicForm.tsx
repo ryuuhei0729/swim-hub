@@ -18,7 +18,6 @@ type EditCompetitionBasicData = {
   title?: string
   competition_name?: string
   place?: string
-  location?: string
   pool_type?: number
   note?: string
 }
@@ -61,7 +60,7 @@ export default function CompetitionBasicForm({
         setFormData({
           date: editData.date || format(selectedDate, 'yyyy-MM-dd'),
           title: editData.title || editData.competition_name || '',
-          place: editData.place || editData.location || '',
+          place: editData.place || '',
           poolType: editData.pool_type ?? 0,
           note: editData.note || ''
         })

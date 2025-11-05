@@ -277,7 +277,7 @@ describe('RecordForm', () => {
 
       expect(mockOnSubmit).toHaveBeenCalledWith({
         recordDate: expect.any(String),
-        location: 'テストプール',
+        place: 'テストプール',
         competitionName: 'テスト大会',
         poolType: 0,
         records: expect.arrayContaining([

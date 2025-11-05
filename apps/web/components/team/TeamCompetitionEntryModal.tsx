@@ -117,7 +117,7 @@ export default function TeamCompetitionEntryModal({
         users: { id: string; name: string } | null
         styles: { id: number; name_jp: string; distance: number } | null
       }
-      const entriesByStyle = ((entries || []) as EntryFromDB[]).reduce((acc: Record<number, { style: EntryRow['styles']; entries: EntryRow[] }>, entry) => {
+      const entriesByStyle = ((entries || []) as unknown as EntryFromDB[]).reduce((acc: Record<number, { style: EntryRow['styles']; entries: EntryRow[] }>, entry) => {
         const styleId = entry.style_id
         const style = entry.styles ?? null
         const user = entry.users ?? null

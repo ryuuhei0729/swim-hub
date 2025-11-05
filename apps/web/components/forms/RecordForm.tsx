@@ -25,7 +25,7 @@ interface RecordSet {
 
 interface RecordFormData {
   recordDate: string
-  location: string
+  place: string
   competitionName: string
   poolType: number // 0: short, 1: long
   records: RecordSet[]
@@ -63,7 +63,7 @@ type EditRecord = {
 }
 type EditData = {
   recordDate?: string
-  location?: string
+  place?: string
   competitionName?: string
   poolType?: number
   note?: string
@@ -93,7 +93,7 @@ export default function RecordForm({
 }: RecordFormProps) {
   const [formData, setFormData] = useState<RecordFormData>({
     recordDate: initialDate ? format(initialDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
-    location: '',
+    place: '',
     competitionName: '',
     poolType: 0,
     records: [{
@@ -143,7 +143,7 @@ export default function RecordForm({
         
         setFormData({
           recordDate: editData.recordDate || format(new Date(), 'yyyy-MM-dd'),
-          location: editData.location || '',
+          place: editData.place || '',
           competitionName: editData.competitionName || '',
           poolType: editData.poolType || 0,
           records: records,
@@ -155,7 +155,7 @@ export default function RecordForm({
       // 単一のRecordの場合の従来の処理
       setFormData({
         recordDate: editData.recordDate || format(new Date(), 'yyyy-MM-dd'),
-        location: editData.location || '',
+        place: editData.place || '',
         competitionName: editData.competitionName || '',
         poolType: editData.poolType || 0,
         records: [{
@@ -179,7 +179,7 @@ export default function RecordForm({
       // 新規作成時はデフォルト値にリセット
       setFormData({
         recordDate: initialDate ? format(initialDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
-        location: '',
+        place: '',
         competitionName: '',
         poolType: 0,
         records: [{
@@ -338,14 +338,14 @@ export default function RecordForm({
               />
             </div>
             <div>
-              <label htmlFor="record-location" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="record-place" className="block text-sm font-medium text-gray-700 mb-2">
                 開催地
               </label>
               <Input
-                id="record-location"
+                id="record-place"
                 type="text"
-                value={formData.location}
-                onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                value={formData.place}
+                onChange={(e) => setFormData(prev => ({ ...prev, place: e.target.value }))}
                 placeholder="例: 東京プール"
                 required
               />

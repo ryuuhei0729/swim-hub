@@ -90,7 +90,18 @@ export default function TeamRecords({ teamId, isAdmin = false }: TeamRecordsProp
 
         if (recordsError) throw recordsError
 
-        setRecords(recordsData || [])
+        // SupabaseのJOIN結果をTeamRecord型に変換
+        const transformedRecords: TeamRecord[] = (recordsData || []).map((record: any) => ({
+          id: record.id,
+          user_id: record.user_id,
+          time: record.time,
+          created_at: record.created_at,
+          users: Array.isArray(record.users) && record.users.length > 0 ? record.users[0] : record.users,
+          styles: Array.isArray(record.styles) && record.styles.length > 0 ? record.styles[0] : record.styles,
+          competitions: Array.isArray(record.competitions) && record.competitions.length > 0 ? record.competitions[0] : record.competitions,
+        }))
+
+        setRecords(transformedRecords)
       } catch (err) {
         console.error('チーム記録情報の取得に失敗:', err)
         setError('チーム記録情報の取得に失敗しました')

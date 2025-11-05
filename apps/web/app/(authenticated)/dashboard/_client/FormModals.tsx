@@ -12,7 +12,7 @@ import type {
   EditingData,
   PracticeMenuFormData,
   EntryFormData,
-  RecordFormData,
+  RecordFormDataInternal,
   EntryWithStyle
 } from '@/stores/types'
 
@@ -22,7 +22,7 @@ interface FormModalsProps {
   onCompetitionBasicSubmit: (basicData: { date: string; title: string; place: string; poolType: number; note: string }) => Promise<void>
   onEntrySubmit: (entriesData: EntryFormData[]) => Promise<void>
   onEntrySkip: () => void
-  onRecordLogSubmit: (formData: RecordFormData) => Promise<void>
+  onRecordLogSubmit: (formData: RecordFormDataInternal) => Promise<void>
   styles: Style[]
 }
 
@@ -91,9 +91,9 @@ export function FormModals({
     
     if (createdEntries.length > 0) {
       return {
-        styleId: createdEntries[0].style_id,
+        styleId: createdEntries[0].styleId,
         styleName: String(createdEntries[0].styleName || ''),
-        entryTime: createdEntries[0].entry_time
+        entryTime: createdEntries[0].entryTime
       }
     }
     
@@ -309,7 +309,11 @@ export function FormModals({
           }
         })()}
         isLoading={competitionIsLoading}
-        styles={styles}
+        styles={styles.map(style => ({
+          id: style.id.toString(),
+          nameJp: style.name_jp,
+          distance: style.distance
+        }))}
         entryData={getEntryDataForRecord(competitionEditingData, createdEntries)}
         />
       </Suspense>

@@ -50,6 +50,7 @@ alwaysApply: true
 3. **場所を示すフィールド: `place`に統一**
    - `location`は使用しない。データベースもUI層も`place`を使用
    - 例: `CalendarItem.place`, `Practice.place`, `Competition.place`
+   - 詳細は `docs/NAMING_CONVENTIONS.md` を参照
 
 ### データベース型とUI型の変換
 
@@ -104,8 +105,6 @@ export interface CalendarItem {
 }
 ```
 
-詳細は `docs/NAMING_CONVENTIONS.md` を参照
-
 ## フォーム処理
 - **useState**を使用（React Hook Formは未使用）
 - バリデーションを適切に実装
@@ -142,9 +141,9 @@ export interface CalendarItem {
 ```typescript
 // ✅ Server Component（推奨）
 async function DashboardPage() {
-  const supabase = createServerClient()
+  const supabase = await createAuthenticatedServerClient()
   const { data } = await supabase.from('practices').select('*')
-  return <View data={data} />
+  return <View data={data || []} />
 }
 
 // ✅ Client Component（インタラクティブな場合）

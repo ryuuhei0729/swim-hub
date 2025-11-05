@@ -12,8 +12,7 @@ import type { TeamMembershipWithUser } from '@apps/shared/types/database'
  * チーム情報を取得
  */
 async function getTeams(
-  supabase: Awaited<ReturnType<typeof createAuthenticatedServerClient>>,
-  userId: string
+  supabase: Awaited<ReturnType<typeof createAuthenticatedServerClient>>
 ): Promise<TeamMembershipWithUser[]> {
   const coreAPI = new TeamCoreAPI(supabase)
   return await coreAPI.getMyTeams()
@@ -32,7 +31,7 @@ export default async function TeamsDataLoader() {
 
   // チーム情報取得（認証必要）
   const teamsResult = user
-    ? await getTeams(supabase, user.id).catch((error) => {
+    ? await getTeams(supabase).catch((error) => {
         console.error('チーム情報取得エラー:', error)
         throw new Error(`Failed to fetch teams: ${error instanceof Error ? error.message : String(error)}`)
       })

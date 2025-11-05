@@ -22,8 +22,8 @@ export async function POST(req: NextRequest) {
     const table = body.table
     const statusValue: string | null = body.status
 
-    const { error } = await client
-      .from(table)
+    // Supabaseの型推論が動的テーブル名でneverになる既知の問題のため、型アサーションを使用
+    const { error } = await (client.from(table) as any)
       .update({ attendance_status: statusValue })
       .eq('id', body.id)
 

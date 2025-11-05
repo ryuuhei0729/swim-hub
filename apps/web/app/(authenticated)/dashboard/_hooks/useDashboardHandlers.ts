@@ -8,7 +8,7 @@ import type {
   EntryFormData,
   EntryWithStyle,
   PracticeMenuFormData,
-  RecordFormData
+  RecordFormDataInternal
 } from '@/stores/types'
 import { EntryAPI } from '@apps/shared/api'
 import type { PracticeLogTagInsert, Style } from '@apps/shared/types/database'
@@ -47,9 +47,9 @@ interface UseDashboardHandlersProps {
   closeCompetitionBasicForm: () => void
   closeEntryLogForm: () => void
   closeRecordLogForm: () => void
-  setCreatedEntries: (entries: Array<import('@apps/shared/types/database').Entry & { styleName: string }>) => void
+  setCreatedEntries: (entries: EntryWithStyle[]) => void
   openEntryLogForm: (competitionId: string) => void
-  openRecordLogForm: (competitionId: string | undefined, entries?: Array<import('@apps/shared/types/database').Entry & { styleName: string }>, editData?: EditingData) => void
+  openRecordLogForm: (competitionId: string | undefined, entries?: EntryWithStyle[], editData?: EditingData) => void
   refreshCalendar: () => void
 }
 
@@ -151,9 +151,8 @@ export function useDashboardHandlers({
             practice_log_id: practiceLogId,
             practice_tag_id: tag.id
           }))
-          await supabase
-            .from('practice_log_tags')
-            .insert(tagInserts)
+          // Supabaseの型推論がinsertでneverになる既知の問題のため、型アサーションを使用
+          await (supabase.from('practice_log_tags') as any).insert(tagInserts)
         }
         
         const { data: existingTimes } = await supabase
@@ -203,10 +202,8 @@ export function useDashboardHandlers({
               practice_log_id: createdLog.id,
               practice_tag_id: tag.id
           }))
-          // @ts-ignore: Supabaseの型推論がinsertでneverになる既知の問題のため
-          await supabase
-            .from('practice_log_tags')
-            .insert(tagInserts)
+          // Supabaseの型推論がinsertでneverになる既知の問題のため、型アサーションを使用
+          await (supabase.from('practice_log_tags') as any).insert(tagInserts)
         }
           
           if (menu.times && menu.times.length > 0 && createdLog) {
@@ -415,7 +412,7 @@ export function useDashboardHandlers({
   }, [createdCompetitionId, closeEntryLogForm, openRecordLogForm])
 
   // 記録登録・更新
-  const handleRecordLogSubmit = useCallback(async (formData: RecordFormData) => {
+  const handleRecordLogSubmit = useCallback(async (formData: RecordFormDataInternal) => {
     setLoading(true)
     try {
       const recordInput = {

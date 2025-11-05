@@ -50,13 +50,21 @@ async function getProfile(
 
   if (!data) return null
 
+  const userData = data as {
+    id: string
+    name: string
+    birthday: string | null
+    bio: string | null
+    profile_image_path: string | null
+  }
+
   return {
-    id: data.id,
-    name: data.name,
-    birthday: data.birthday,
-    bio: data.bio,
-    avatar_url: data.profile_image_path,
-    profile_image_path: data.profile_image_path
+    id: userData.id,
+    name: userData.name,
+    birthday: userData.birthday,
+    bio: userData.bio,
+    avatar_url: userData.profile_image_path,
+    profile_image_path: userData.profile_image_path
   }
 }
 
@@ -102,7 +110,8 @@ async function getBestTimes(
   const bestTimesByStyle = new Map<string, BestTime>()
 
   if (data && Array.isArray(data)) {
-    data.forEach((record) => {
+    const records = data as RecordWithRelations[]
+    records.forEach((record) => {
       const styleKey = record.styles?.name_jp || 'Unknown'
 
       if (!bestTimesByStyle.has(styleKey) || record.time < bestTimesByStyle.get(styleKey)!.time) {

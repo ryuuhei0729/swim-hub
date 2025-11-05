@@ -48,7 +48,7 @@ export interface Practice {
   item_type?: CalendarItemType
   item_date?: string
   title?: string
-  location?: string
+  // placeは上で定義済み（string | null）なので削除
   time_result?: number
   pool_type?: PoolType
   tags?: string[]
@@ -158,7 +158,7 @@ export interface Record {
   item_type?: CalendarItemType
   item_date?: string
   title?: string
-  location?: string
+  place?: string
   time_result?: number
   pool_type?: PoolType
   tags?: string[]
@@ -292,9 +292,17 @@ export interface PracticeLogWithTimes extends PracticeLog {
   practice_times: PracticeTime[]
 }
 
-// 練習 with ログ・タイム
+// 練習ログ with タイム & タグ
+export interface PracticeLogWithTags extends PracticeLogWithTimes {
+  practice_log_tags: Array<{
+    practice_tag_id: string
+    practice_tags: PracticeTag
+  }>
+}
+
+// 練習 with ログ・タイム・タグ
 export interface PracticeWithLogs extends Practice {
-  practice_logs: PracticeLogWithTimes[]
+  practice_logs: PracticeLogWithTags[]
 }
 
 // 記録 with 大会・種目・スプリット

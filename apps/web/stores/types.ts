@@ -71,7 +71,7 @@ export interface RecordFormDataInput {
 }
 
 // 内部型（処理済み） - distanceはnumber
-export interface RecordFormData {
+export interface RecordFormDataInternal {
   styleId: string
   time: number
   videoUrl?: string | null
@@ -84,7 +84,7 @@ export interface RecordFormData {
 }
 
 // 型変換関数
-export const convertRecordFormData = (input: RecordFormDataInput): RecordFormData => {
+export const convertRecordFormData = (input: RecordFormDataInput): RecordFormDataInternal => {
   return {
     ...input,
     splitTimes: input.splitTimes

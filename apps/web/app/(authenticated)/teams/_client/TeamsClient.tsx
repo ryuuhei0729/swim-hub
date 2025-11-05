@@ -89,9 +89,9 @@ export default function TeamsClient({
                   )}
                 </div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {membership.teams?.name}
+                  {'teams' in membership ? membership.teams?.name : ''}
                 </h3>
-                {membership.teams?.description && (
+                {'teams' in membership && membership.teams?.description && (
                   <p className="text-sm text-gray-500 line-clamp-2">
                     {membership.teams.description}
                   </p>

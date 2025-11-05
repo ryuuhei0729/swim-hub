@@ -15,7 +15,6 @@ vi.mock('next/navigation', () => ({
 describe('PracticeForm', () => {
   const mockOnClose = vi.fn()
   const mockOnSubmit = vi.fn()
-  const mockSetAvailableTags = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -28,7 +27,6 @@ describe('PracticeForm', () => {
           isOpen={true}
           onClose={mockOnClose}
           onSubmit={mockOnSubmit}
-          setAvailableTags={mockSetAvailableTags}
         />
       )
 
@@ -60,7 +58,6 @@ describe('PracticeForm', () => {
           isOpen={true}
           onClose={mockOnClose}
           onSubmit={mockOnSubmit}
-          setAvailableTags={mockSetAvailableTags}
         />
       )
 
@@ -122,7 +119,6 @@ describe('PracticeForm', () => {
           isOpen={true}
           onClose={mockOnClose}
           onSubmit={mockOnSubmit}
-          setAvailableTags={mockSetAvailableTags}
         />
       )
 
@@ -150,7 +146,6 @@ describe('PracticeForm', () => {
           isOpen={true}
           onClose={mockOnClose}
           onSubmit={mockOnSubmit}
-          setAvailableTags={mockSetAvailableTags}
         />
       )
 
@@ -170,7 +165,6 @@ describe('PracticeForm', () => {
           isOpen={true}
           onClose={mockOnClose}
           onSubmit={mockOnSubmit}
-          setAvailableTags={mockSetAvailableTags}
         />
       )
 
@@ -193,7 +187,6 @@ describe('PracticeForm', () => {
           isOpen={true}
           onClose={mockOnClose}
           onSubmit={mockOnSubmit}
-          setAvailableTags={mockSetAvailableTags}
         />
       )
 
@@ -212,7 +205,6 @@ describe('PracticeForm', () => {
           isOpen={true}
           onClose={mockOnClose}
           onSubmit={mockOnSubmit}
-          setAvailableTags={mockSetAvailableTags}
         />
       )
 
@@ -233,7 +225,6 @@ describe('PracticeForm', () => {
           isOpen={true}
           onClose={mockOnClose}
           onSubmit={mockOnSubmit}
-          setAvailableTags={mockSetAvailableTags}
         />
       )
 
@@ -250,7 +241,6 @@ describe('PracticeForm', () => {
           isOpen={true}
           onClose={mockOnClose}
           onSubmit={mockOnSubmit}
-          setAvailableTags={mockSetAvailableTags}
         />
       )
 

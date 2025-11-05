@@ -49,7 +49,7 @@ export class DashboardAPI {
         type: item.item_type as CalendarItemType,
         date: item.item_date,
         title: item.title,
-        location: item.location,
+        place: item.place || item.location, // 後方互換性のためlocationも許容
         note: item.note,
         metadata: item.metadata || {},
         editData: {

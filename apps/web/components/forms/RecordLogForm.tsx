@@ -11,7 +11,8 @@ type SplitTimeRow = {
   splitTime: number
 }
 
-export interface SplitTimeInput {
+// フォーム内部状態用のスプリットタイム型（入力中はdistanceがnumber | ''）
+interface SplitTimeDraft {
   distance: number | ''
   splitTime: number
   splitTimeDisplayValue?: string
@@ -24,7 +25,7 @@ interface RecordLogFormState {
   time: number
   timeDisplayValue?: string
   isRelaying: boolean
-  splitTimes: SplitTimeInput[]
+  splitTimes: SplitTimeDraft[]
   note: string
   videoUrl?: string
 }

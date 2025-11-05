@@ -92,7 +92,7 @@ export default function PracticeLogForm({
   // フォームデータの初期値
   const [formData, setFormData] = useState({
     practiceDate: format(new Date(), 'yyyy-MM-dd'),
-    location: '',
+    place: '',
     note: ''
   })
 

@@ -9,7 +9,7 @@ import { create } from 'zustand'
 export type RecordFormEdit = {
   id?: string
   recordDate: string
-  location: string
+  place: string
   competitionName: string
   poolType: number
   styleId: number

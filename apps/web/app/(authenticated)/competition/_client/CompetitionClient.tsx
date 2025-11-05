@@ -136,13 +136,14 @@ export default function CompetitionClient({
     setLoading(true)
     try {
       // /competitionページは編集のみなので、常にeditingDataからcompetitionIdを取得
-      const competitionId = editingData && 
-        typeof editingData === 'object' && 
-        editingData !== null &&
-        'competitionId' in editingData &&
-        typeof editingData.competitionId === 'string'
-        ? editingData.competitionId
-        : null
+      let competitionId: string | null = null
+      if (editingData && typeof editingData === 'object' && editingData !== null) {
+        if ('competition_id' in editingData && typeof editingData.competition_id === 'string') {
+          competitionId = editingData.competition_id
+        } else if ('competitionId' in editingData && typeof editingData.competitionId === 'string') {
+          competitionId = editingData.competitionId
+        }
+      }
 
       if (!competitionId) {
         throw new Error('Competition ID が見つかりません')
@@ -154,7 +155,7 @@ export default function CompetitionClient({
         video_url: formData.videoUrl || null,
         note: formData.note || null,
         is_relaying: formData.isRelaying || false,
-        competition_id: competitionId
+        competition_id: competitionId || null
       }
 
       if (editingData && editingData.id) {
@@ -482,22 +483,31 @@ export default function CompetitionClient({
           closeForm()
         }}
         onSubmit={handleRecordSubmit}
-        competitionId={typeof editingData?.competition_id === 'string' ? editingData.competition_id : ''}
+        competitionId={
+          editingData && typeof editingData === 'object' && 'competition_id' in editingData
+            ? (editingData.competition_id as string | null) || ''
+            : editingData && typeof editingData === 'object' && 'competitionId' in editingData
+            ? (editingData.competitionId as string | null | undefined) || ''
+            : ''
+        }
         editData={editingData && typeof editingData === 'object' && 'style_id' in editingData
           ? {
               id: editingData.id,
-              style_id: editingData.style_id,
+              styleId: editingData.style_id,
               time: editingData.time,
-              is_relaying: editingData.is_relaying,
-              split_times: editingData.split_times,
+              isRelaying: editingData.is_relaying,
+              splitTimes: editingData.split_times?.map(st => ({
+                distance: st.distance,
+                splitTime: st.split_time
+              })),
               note: editingData.note ?? undefined,
-              video_url: editingData.video_url ?? undefined
+              videoUrl: editingData.video_url ?? undefined
             }
           : null}
         isLoading={isLoading}
         styles={styles.map(style => ({
           id: style.id.toString(),
-          name_jp: style.name_jp,
+          nameJp: style.name_jp,
           distance: style.distance
         }))}
       />
