@@ -13,7 +13,6 @@ interface CalendarGridProps {
   onDateClick: (date: Date) => void
   onAddClick: (date: Date) => void
   getItemColor: (type: CalendarItemType) => string
-  getDayStatusIndicator: (entries: CalendarItem[]) => React.ReactNode
 }
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
@@ -25,8 +24,7 @@ export default function CalendarGrid({
   isLoading,
   onDateClick,
   onAddClick,
-  getItemColor,
-  getDayStatusIndicator
+  getItemColor
 }: CalendarGridProps) {
   const getDateEntries = (date: Date) => {
     const dateKey = format(date, 'yyyy-MM-dd')
@@ -80,8 +78,6 @@ export default function CalendarGrid({
                 `}
                 onClick={() => onDateClick(day)}
               >
-                {/* 記録状態インジケーター */}
-                {isCurrentMonth && getDayStatusIndicator(dayEntries)}
                 {/* 日付 */}
                 <div className="flex items-center justify-between mb-1">
                   <span className={`

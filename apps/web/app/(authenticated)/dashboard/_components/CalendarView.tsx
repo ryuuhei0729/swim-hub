@@ -145,34 +145,6 @@ export default function CalendarView({
     }
   }
 
-  const getDayStatusIndicator = (entries: CalendarItem[]) => {
-    if (entries.length === 0) return null
-    
-    const hasPractice = entries.some(e => e.type === 'practice' || e.type === 'team_practice' || e.type === 'practice_log')
-    const hasRecord = entries.some(e => e.type === 'record')
-    const hasCompetition = entries.some(e => e.type === 'competition' || e.type === 'team_competition')
-    const hasEntry = entries.some(e => e.type === 'entry')
-    
-    if (hasPractice && (hasRecord || hasCompetition || hasEntry)) {
-      return (
-        <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-gradient-to-r from-green-400 to-blue-400 border border-white shadow-sm"></div>
-      )
-    } else if (hasPractice) {
-      return (
-        <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-green-400 border border-white shadow-sm"></div>
-      )
-    } else if (hasEntry) {
-      return (
-        <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-orange-400 border border-white shadow-sm"></div>
-      )
-    } else if (hasRecord || hasCompetition) {
-      return (
-        <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-blue-400 border border-white shadow-sm"></div>
-      )
-    }
-    
-    return null
-  }
 
   const handleMonthYearSelect = (year: number, month: number) => {
     const newDate = new Date(year, month, 1)
@@ -248,7 +220,6 @@ export default function CalendarView({
         onDateClick={handleDateClick}
         onAddClick={handleAddClick}
         getItemColor={getItemColor}
-        getDayStatusIndicator={getDayStatusIndicator}
       />
 
 
