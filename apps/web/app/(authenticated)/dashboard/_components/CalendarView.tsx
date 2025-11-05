@@ -150,13 +150,13 @@ export default function CalendarView({
     const newDate = new Date(year, month, 1)
     setCurrentDate(newDate)
     setShowMonthSelector(false)
-    setTimeout(() => refetch(), 100)
+    // setCurrentDate内で自動的にデータ再取得が実行されるため、refetch()は不要
   }
 
   const handleTodayClick = () => {
     const today = new Date()
     setCurrentDate(today)
-    setTimeout(() => refetch(), 100)
+    // setCurrentDate内で自動的にデータ再取得が実行されるため、refetch()は不要
   }
 
   // エラー表示

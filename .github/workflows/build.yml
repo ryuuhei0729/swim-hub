@@ -26,11 +26,11 @@ jobs:
     - name: Type check shared package
       run: npm run type-check --workspace=apps/shared
       
-    - name: Build web package
-      run: npm run build --workspace=apps/web
-      
     - name: Run type check
       run: npm run type-check
+      
+    - name: Build web package
+      run: npm run build --workspace=apps/web
       
     - name: Run lint
       run: npm run lint

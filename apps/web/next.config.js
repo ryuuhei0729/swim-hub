@@ -5,11 +5,6 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
   
-  // ESLint設定
-  eslint: {
-    ignoreDuringBuilds: true, // ビルド時にESLintエラーを無視
-  },
-  
   // 環境変数
   env: {
     NEXT_PUBLIC_ENVIRONMENT: process.env.NEXT_PUBLIC_ENVIRONMENT || 'development',
