@@ -3,92 +3,17 @@
 // =============================================================================
 
 import React from 'react'
-import { unstable_cache } from 'next/cache'
-import { createClient } from '@supabase/supabase-js'
 import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-server-auth'
 import { DashboardAPI } from '@apps/shared/api/dashboard'
-import { StyleAPI } from '@apps/shared/api/styles'
+import { getCachedStyles, getUserTags, getUserTeams } from '@/lib/data-loaders/common'
 import { endOfMonth, startOfMonth } from 'date-fns'
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz'
 import DashboardClient from '../_client/DashboardClient'
 import type { Style, PracticeTag, TeamMembership, Team } from '@apps/shared/types/database'
 import type { CalendarItem, MonthlySummary } from '@apps/shared/types/ui'
-import type { Database } from '@/lib/supabase'
 
 interface TeamMembershipWithTeam extends TeamMembership {
   team?: Team
-}
-
-/**
- * Stylesデータをキャッシュ付きで取得
- * Stylesは全ユーザー共通の静的データなので、長時間キャッシュ可能
- */
-async function getCachedStyles() {
-  return unstable_cache(
-    async () => {
-      const supabase = createClient<Database>(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
-      const styleAPI = new StyleAPI(supabase)
-      return await styleAPI.getStyles()
-    },
-    ['dashboard-styles'],
-    {
-      revalidate: 3600,
-      tags: ['styles']
-    }
-  )()
-}
-
-/**
- * Tagsデータを取得
- * Tagsはユーザー固有で頻繁に変更される可能性があるため、キャッシュは使用しない
- */
-async function getTags(
-  supabase: Awaited<ReturnType<typeof createAuthenticatedServerClient>>,
-  userId: string
-): Promise<PracticeTag[]> {
-  const { data, error } = await supabase
-    .from('practice_tags')
-    .select('*')
-    .eq('user_id', userId)
-    .order('name')
-
-  if (error) {
-    console.error('Tags取得エラー:', error)
-    return []
-  }
-
-  return (data || []) as PracticeTag[]
-}
-
-/**
- * チーム情報を取得
- */
-async function getTeams(
-  supabase: Awaited<ReturnType<typeof createAuthenticatedServerClient>>,
-  userId: string
-): Promise<TeamMembershipWithTeam[]> {
-  const { data: memberships, error: membershipError } = await supabase
-    .from('team_memberships')
-    .select(`
-      *,
-      team:teams (
-        id,
-        name,
-        description
-      )
-    `)
-    .eq('user_id', userId)
-    .eq('is_active', true)
-
-  if (membershipError) {
-    console.error('チーム情報の取得に失敗:', membershipError)
-    return []
-  }
-
-  return (memberships || []) as TeamMembershipWithTeam[]
 }
 
 /**
@@ -140,23 +65,23 @@ export default async function DashboardDataLoader({
   // すべてのデータ取得を並行実行（真の並列取得）
   const [stylesResult, tagsResult, teamsResult, calendarResult] = await Promise.all([
     // Styles取得（キャッシュ付き、認証不要）
-    getCachedStyles().catch((error) => {
+    getCachedStyles('dashboard-styles').catch((error) => {
       console.error('Styles取得エラー:', error)
       return [] as Style[]
     }),
     // Tags取得（ユーザー固有、認証必要）
     user
-      ? getTags(supabase, user.id).catch((error) => {
+      ? getUserTags(supabase, user.id).catch((error) => {
           console.error('Tags取得エラー:', error)
           return [] as PracticeTag[]
         })
       : Promise.resolve([] as PracticeTag[]),
     // チーム情報取得（認証必要）
     user
-      ? getTeams(supabase, user.id).catch((error) => {
+      ? getUserTeams(supabase, user.id).catch((error) => {
           console.error('チーム情報取得エラー:', error)
           return [] as TeamMembershipWithTeam[]
-        })
+        }).then(teams => teams as TeamMembershipWithTeam[])
       : Promise.resolve([] as TeamMembershipWithTeam[]),
     // カレンダーデータ取得（認証必要）
     user
