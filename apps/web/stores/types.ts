@@ -14,22 +14,22 @@ export type EditingData =
   | {
       id?: string
       type?: string
-      competition_id?: string | null
-      practice_id?: string
+      competitionId?: string | null
+      practiceId?: string
       entryData?: EntryInfo
       metadata?: {
         practice?: { place?: string }
         competition?: { title?: string; place?: string }
-        record?: { competition_id?: string | null }
+        record?: { competitionId?: string | null }
       }
       date?: string
       note?: string
       style?: string
-      style_id?: number
+      styleId?: number
       time?: number
-      is_relaying?: boolean
-      video_url?: string | null
-      split_times?: Array<{ distance: number; split_time: number }>
+      isRelaying?: boolean
+      videoUrl?: string | null
+      splitTimes?: Array<{ distance: number; splitTime: number }>
     }
   | null
 
@@ -39,7 +39,7 @@ export type EditingData =
 
 export interface PracticeMenuFormData {
   practiceDate?: string
-  location?: string
+  place?: string
   note?: string
   style?: string
   reps?: number
@@ -108,12 +108,12 @@ export const convertRecordFormData = (input: RecordFormDataInput): RecordFormDat
 
 export interface EntryWithStyle {
   id: string
-  competition_id: string
-  user_id: string
-  style_id: number
-  entry_time: number | null
+  competitionId: string
+  userId: string
+  styleId: number
+  entryTime: number | null
   note: string | null
-  team_id?: string | null
+  teamId?: string | null
   styleName?: string
 }
 

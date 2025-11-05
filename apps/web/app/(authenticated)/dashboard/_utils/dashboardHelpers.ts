@@ -24,19 +24,19 @@ function hasStringProperty(obj: Record<string, unknown>, prop: string): boolean 
 }
 
 /**
- * editingDataがcompetition_idを持つオブジェクトかどうかをチェック
+ * editingDataがcompetitionIdを持つオブジェクトかどうかをチェック
  */
-function isEditingDataWithCompetition(value: unknown): value is { competition_id: string | null | undefined } {
-  return isObject(value) && hasStringProperty(value, 'competition_id')
+function isEditingDataWithCompetition(value: unknown): value is { competitionId: string | null | undefined } {
+  return isObject(value) && hasStringProperty(value, 'competitionId')
 }
 
 /**
- * metadataオブジェクトがrecordプロパティを持ち、そのrecordがcompetition_idを持つかチェック
+ * metadataオブジェクトがrecordプロパティを持ち、そのrecordがcompetitionIdを持つかチェック
  */
 function hasMetadataWithRecordCompetition(value: unknown): value is {
   metadata: {
     record?: {
-      competition_id?: string | null
+      competitionId?: string | null
     }
   }
 } {
@@ -69,7 +69,7 @@ export function getCompetitionId(
   if (createdId) return createdId
   
   if (isEditingDataWithCompetition(editingData)) {
-    const competitionId = editingData.competition_id
+    const competitionId = editingData.competitionId
     return typeof competitionId === 'string' ? competitionId : undefined
   }
   
@@ -85,21 +85,21 @@ export function getRecordCompetitionId(
 ): string | null {
   if (createdId) return createdId
   
-  // まず直接competition_idをチェック
+  // まず直接competitionIdをチェック
   if (isEditingDataWithCompetition(editingData)) {
-    const competitionId = editingData.competition_id
+    const competitionId = editingData.competitionId
     if (typeof competitionId === 'string') {
       return competitionId
     }
   }
   
-  // 次にmetadata.record.competition_idをチェック
+  // 次にmetadata.record.competitionIdをチェック
   if (hasMetadataWithRecordCompetition(editingData)) {
     const metadata = editingData.metadata
     if (isObject(metadata) && 'record' in metadata) {
       const record = metadata.record
-      if (isObject(record) && 'competition_id' in record) {
-        const recordCompetitionId = record.competition_id
+      if (isObject(record) && 'competitionId' in record) {
+        const recordCompetitionId = record.competitionId
         if (typeof recordCompetitionId === 'string') {
           return recordCompetitionId
         }
@@ -141,9 +141,9 @@ export function getEntryDataForRecord(
   
   if (createdEntries.length > 0) {
     return {
-      styleId: createdEntries[0].style_id,
+      styleId: createdEntries[0].styleId,
       styleName: String(createdEntries[0].styleName || ''),
-      entryTime: createdEntries[0].entry_time
+      entryTime: createdEntries[0].entryTime
     }
   }
   

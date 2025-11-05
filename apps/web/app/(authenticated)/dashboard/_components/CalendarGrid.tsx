@@ -113,11 +113,11 @@ export default function CalendarGrid({
                     
                     if (item.type === 'practice') {
                       // Practice: 練習場所
-                      displayTitle = item.location || '練習'
+                      displayTitle = item.place || '練習'
                     } else if (item.type === 'team_practice') {
                       // TeamPractice: チーム名 - 練習場所（metadataから動的に取得）
                       const teamName = item.metadata?.team?.name || 'チーム'
-                      displayTitle = `${teamName} - ${item.location || '練習'}`
+                      displayTitle = `${teamName} - ${item.place || '練習'}`
                     } else if (item.type === 'practice_log') {
                       // PracticeLog: 距離×本数×セット数
                       displayTitle = item.title

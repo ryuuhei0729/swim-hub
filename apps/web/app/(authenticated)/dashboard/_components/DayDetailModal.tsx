@@ -130,7 +130,7 @@ export default function DayDetailModal({
                     <PracticeDetails 
                       key={item.id} 
                       practiceId={item.id} 
-                      location={item.location}
+                      place={item.place}
                       isTeamPractice={item.type === 'team_practice'}
                       teamId={item.metadata?.team_id}
                       teamName={isPracticeMetadata(item.metadata) && isTeamInfo(item.metadata.team) ? item.metadata.team.name : undefined}
@@ -163,7 +163,7 @@ export default function DayDetailModal({
                       <PracticeDetails 
                         key={item.id}
                         practiceId={practiceId}
-                        location={item.location}
+                        place={item.place}
                         isTeamPractice={isPracticeMetadata(item.metadata) ? !!item.metadata.team_id : false}
                         teamId={isPracticeMetadata(item.metadata) ? item.metadata.team_id : undefined}
                         teamName={isPracticeMetadata(item.metadata) && isTeamInfo(item.metadata.team) ? item.metadata.team.name : undefined}
@@ -174,7 +174,7 @@ export default function DayDetailModal({
                             type: 'practice' as const,
                             date: item.date || '',
                             title: '練習',
-                            location: item.location || '',
+                            place: item.place || '',
                             note: item.note || undefined,
                             metadata: isPracticeMetadata(item.metadata) ? (item.metadata.practice || {}) : {}
                           }
@@ -214,7 +214,7 @@ export default function DayDetailModal({
                       key={item.id}
                       competitionId={item.id}
                       competitionName={item.title}
-                      location={item.location}
+                      place={item.place}
                       poolType={item.metadata?.competition?.pool_type}
                       note={item.note}
                       isTeamCompetition={item.type === 'team_competition'}
@@ -251,7 +251,7 @@ export default function DayDetailModal({
                       entryId={item.id}
                       competitionId={item.metadata?.competition?.id!} // フィルタリング済みなので非null assertion
                       competitionName={item.metadata?.competition?.title || ''}
-                      location={item.location}
+                      place={item.place}
                       note={item.note}
                       styleId={item.metadata?.style?.id}
                       styleName={item.metadata?.style?.name_jp || ''}
@@ -265,13 +265,13 @@ export default function DayDetailModal({
                           type: 'competition' as const,
                           date: item.date || '',
                           title: item.metadata?.competition?.title || '',
-                          location: item.location || '',
+                          place: item.place || '',
                           note: item.note || undefined,
                           metadata: {
                             competition: {
                               id: item.metadata?.competition?.id!,
                               title: item.metadata?.competition?.title || '',
-                              place: item.location || '',
+                              place: item.place || '',
                               pool_type: item.metadata?.competition?.pool_type || 0
                             }
                           }
@@ -391,7 +391,7 @@ export default function DayDetailModal({
                         key={compId}
                         competitionId={compId}
                         competitionName={record.title}
-                        location={record.location}
+                        place={record.place}
                         poolType={poolType}
                         note={record.note || undefined}
                         records={[record]}
@@ -404,13 +404,13 @@ export default function DayDetailModal({
                             type: 'competition' as const,
                             date: record.date || '',
                             title: record.title || '',
-                            location: record.location || '',
+                            place: record.place || '',
                             note: record.note || undefined,
                             metadata: {
                               competition: {
                                 id: compId,
                                 title: record.title || '',
-                                place: record.location || '',
+                                place: record.place || '',
                                 pool_type: poolType
                               }
                             }
@@ -735,7 +735,7 @@ function AttendanceModal({
 // 練習記録の詳細表示
 function PracticeDetails({ 
   practiceId, 
-  location, 
+  place, 
   onEdit, 
   onDelete,
   onAddPracticeLog,
@@ -747,7 +747,7 @@ function PracticeDetails({
   onShowAttendance
 }: { 
   practiceId: string
-  location?: string
+  place?: string
   onEdit?: () => void
   onDelete?: () => void
   onAddPracticeLog?: (practiceId: string) => void
@@ -927,10 +927,10 @@ function PracticeDetails({
                 <AttendanceButton onClick={onShowAttendance} />
               )}
             </div>
-            {location && (
+            {place && (
               <p className="text-sm text-gray-700 mb-2 flex items-center gap-1">
                 <span className="text-gray-500">📍</span>
-                {location}
+                {place}
               </p>
             )}
           </div>
@@ -1256,7 +1256,7 @@ function RecordSplitTimes({ recordId }: { recordId: string }) {
 function CompetitionDetails({
   competitionId,
   competitionName,
-  location,
+  place,
   poolType,
   note,
   records = [],
@@ -1273,7 +1273,7 @@ function CompetitionDetails({
 }: {
   competitionId: string
   competitionName?: string
-  location?: string
+  place?: string
   poolType?: number
   note?: string
   records?: CalendarItem[]
@@ -1335,7 +1335,7 @@ function CompetitionDetails({
           type: 'record' as const,
           date: record.competition?.date || '',
           title: record.competition?.title || '',
-          location: record.competition?.place || '',
+          place: record.competition?.place || '',
           note: record.note || undefined,
           metadata: {
             record: {
@@ -1397,10 +1397,10 @@ function CompetitionDetails({
                 <AttendanceButton onClick={onShowAttendance} />
               )}
             </div>
-            {location && (
+            {place && (
               <p className="text-sm text-gray-700 mb-2 flex items-center gap-1">
                 <span className="text-gray-500">📍</span>
-                {location}
+                {place}
               </p>
             )}
             {poolType != null && (
@@ -1595,7 +1595,7 @@ function CompetitionWithEntry({
   entryId,
   competitionId,
   competitionName,
-  location,
+  place,
   note,
   styleId,
   styleName,
@@ -1611,7 +1611,7 @@ function CompetitionWithEntry({
   entryId: string
   competitionId: string
   competitionName: string
-  location?: string
+  place?: string
   note?: string
   styleId?: number
   styleName: string
@@ -1720,8 +1720,8 @@ function CompetitionWithEntry({
             )}
           </div>
         </div>
-        {location && (
-          <p className="text-sm text-gray-600 mt-1">📍 {location}</p>
+        {place && (
+          <p className="text-sm text-gray-600 mt-1">📍 {place}</p>
         )}
         {authError && (
           <p className="text-sm text-red-600 mt-2 bg-red-50 border border-red-200 rounded px-3 py-2">

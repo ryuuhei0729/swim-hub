@@ -93,14 +93,17 @@ export function useDashboardHandlers({
   const handlePracticeBasicSubmit = useCallback(async (basicData: { date: string; place: string; note: string }) => {
     setLoading(true)
     try {
+      // 有効なPracticeInsert/Updateフィールドのみを送信
+      const payload = {
+        date: basicData.date,
+        place: basicData.place || null,
+        note: basicData.note || null
+      }
+      
       if (editingData && editingData.id) {
-        await updatePractice(editingData.id, {
-          date: basicData.date,
-          place: basicData.place || null,
-          note: basicData.note || null
-        })
+        await updatePractice(editingData.id, payload)
       } else {
-        await createPractice(basicData)
+        await createPractice(payload)
       }
       
       closePracticeBasicForm()
@@ -372,7 +375,13 @@ export function useDashboardHandlers({
         }
         if (entry) {
           createdEntriesList.push({
-            ...entry,
+            id: entry.id,
+            competitionId: entry.competition_id,
+            userId: entry.user_id,
+            styleId: entry.style_id,
+            entryTime: entry.entry_time,
+            note: entry.note,
+            teamId: entry.team_id,
             styleName: style.name_jp
           })
         }

@@ -21,7 +21,7 @@ async function getTeamData(
   teamId: string,
   userId: string
 ): Promise<{
-  team: Team | null
+  team: TeamWithMembers | null
   membership: TeamMembership | null
 }> {
   const coreAPI = new TeamCoreAPI(supabase)
@@ -45,7 +45,7 @@ async function getTeamData(
     }
 
     return {
-      team: teamData as Team,
+      team: teamData,
       membership: membershipData as TeamMembership | null
     }
   } catch (error) {

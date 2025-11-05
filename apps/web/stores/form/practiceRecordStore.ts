@@ -54,7 +54,7 @@ interface PracticeRecordState {
   showTimeModal: boolean
   selectedPracticeForTime: {
     id: string
-    location?: string | null
+    place?: string | null
   } | null
   
   // マスターデータ
@@ -76,7 +76,7 @@ interface PracticeRecordActions {
   setEditingData: (data: PracticePageEditingData | null) => void
   
   // タイムモーダル
-  openTimeModal: (practice: { id: string; location?: string | null }) => void
+  openTimeModal: (practice: { id: string; place?: string | null }) => void
   closeTimeModal: () => void
   
   // マスターデータ

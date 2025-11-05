@@ -14,7 +14,8 @@ import type {
   PracticeLogWithTimes,
   PracticeTime,
   PracticeLogTagInsert,
-  PracticeWithLogs
+  PracticeWithLogs,
+  Style
 } from '@apps/shared/types/database'
 import {
   usePracticeFilterStore,
@@ -29,7 +30,7 @@ import type { PracticeMenuFormData } from '@/stores/types'
 interface PracticeClientProps {
   // サーバー側で取得したデータ
   initialPractices: PracticeWithLogs[]
-  styles: any[]
+  styles: Style[]
   tags: PracticeTag[]
 }
 
@@ -251,7 +252,7 @@ export default function PracticeClient({
   const handleTimeLog = (log: PracticeLogWithFormattedData) => {
     openTimeModal({
       id: log.practiceId,
-      location: log.practice?.place
+      place: log.practice?.place
     })
   }
   
@@ -265,7 +266,7 @@ export default function PracticeClient({
         const firstMenu = menus[0] || {}
         const practiceInput = {
           date: firstMenu.practiceDate || editingData.date,
-          place: firstMenu.location || editingData.place,
+          place: firstMenu.place || editingData.place,
           note: firstMenu.note || editingData.note
         }
         
@@ -293,7 +294,7 @@ export default function PracticeClient({
         const firstMenu = menus[0] || {}
         const practiceInput = {
           date: firstMenu.practiceDate || new Date().toISOString().split('T')[0],
-          place: firstMenu.location || '',
+          place: firstMenu.place || '',
           note: firstMenu.note || ''
         }
         
@@ -792,7 +793,7 @@ export default function PracticeClient({
           isOpen={showTimeModal}
           onClose={handleTimeModalClose}
           practiceId={selectedPracticeForTime.id}
-          location={selectedPracticeForTime.location || undefined}
+          place={selectedPracticeForTime.place || undefined}
         />
       )}
     </div>

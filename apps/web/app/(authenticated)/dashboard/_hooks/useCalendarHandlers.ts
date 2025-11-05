@@ -117,7 +117,7 @@ export function useCalendarHandlers({
   const onEditPracticeLog = useCallback((log: any) => {
     const editData: EditingData = {
       id: log.id,
-      practice_id: log.practice_id,
+      practiceId: log.practice_id,
       style: log.style,
       note: log.note || undefined
     }
@@ -169,20 +169,20 @@ export function useCalendarHandlers({
   // 記録編集ハンドラー
   const onEditRecord = useCallback((record: RecordForEdit) => {
     const splitTimes = record.split_times || []
-    const convertedSplitTimes: Array<{ distance: number; split_time: number }> = splitTimes.map((st: RecordSplitTime) => ({
+    const convertedSplitTimes: Array<{ distance: number; splitTime: number }> = splitTimes.map((st: RecordSplitTime) => ({
       distance: st.distance,
-      split_time: st.split_time
+      splitTime: st.split_time
     }))
     
     const editData: EditingData = {
       id: record.id,
-      style_id: record.style_id ?? record.style?.id,
+      styleId: record.style_id ?? record.style?.id,
       time: record.time ?? record.time_result,
-      is_relaying: record.is_relaying,
+      isRelaying: record.is_relaying,
       note: record.note ?? undefined,
-      video_url: record.video_url ?? undefined,
-      split_times: convertedSplitTimes,
-      competition_id: record.competition_id ?? undefined
+      videoUrl: record.video_url ?? undefined,
+      splitTimes: convertedSplitTimes,
+      competitionId: record.competition_id ?? undefined
     }
     
     openRecordLogForm(record.competition_id ?? undefined, undefined, editData)

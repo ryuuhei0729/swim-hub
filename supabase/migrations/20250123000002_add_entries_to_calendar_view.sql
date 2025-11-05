@@ -15,7 +15,7 @@ SELECT
   'practice' AS item_type,
   p.date AS item_date,
   '練習' AS title,
-  p.place AS location,
+  p.place,
   p.note,
   jsonb_build_object(
     'practice', row_to_json(p.*),
@@ -32,7 +32,7 @@ SELECT
   'team_practice' AS item_type,
   p.date AS item_date,
   'チーム練習' AS title,
-  p.place AS location,
+  p.place,
   p.note,
   jsonb_build_object(
     'practice', row_to_json(p.*),
@@ -56,7 +56,7 @@ SELECT
   'competition' AS item_type,
   c.date AS item_date,
   c.title,
-  c.place AS location,
+  c.place,
   c.note,
   jsonb_build_object(
     'competition', row_to_json(c.*),
@@ -84,7 +84,7 @@ SELECT
   'team_competition' AS item_type,
   c.date AS item_date,
   c.title,
-  c.place AS location,
+  c.place,
   c.note,
   jsonb_build_object(
     'competition', row_to_json(c.*),
@@ -118,7 +118,7 @@ SELECT
   'entry' AS item_type,
   c.date AS item_date,
   c.title || ' - ' || s.name_jp AS title,
-  c.place AS location,
+  c.place,
   e.note,
   jsonb_build_object(
     'entry', row_to_json(e.*),
@@ -148,7 +148,7 @@ SELECT
   'entry' AS item_type,
   c.date AS item_date,
   c.title || ' - ' || s.name_jp AS title,
-  c.place AS location,
+  c.place,
   e.note,
   jsonb_build_object(
     'entry', row_to_json(e.*),
@@ -184,7 +184,7 @@ SELECT
   'record' AS item_type,
   c.date AS item_date,
   c.title || ' - ' || s.name_jp AS title,
-  c.place AS location,
+  c.place,
   r.note,
   jsonb_build_object(
     'record', row_to_json(r.*),

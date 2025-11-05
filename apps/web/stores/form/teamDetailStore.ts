@@ -4,12 +4,12 @@
 
 import type { TeamTabType } from '@/components/team/TeamTabs'
 import type { MemberDetail } from '@/components/team/MemberDetailModal'
-import type { Team, TeamMembership } from '@apps/shared/types/database'
+import type { Team, TeamMembership, TeamWithMembers } from '@apps/shared/types/database'
 import { create } from 'zustand'
 
 interface TeamDetailState {
   // チーム情報
-  team: Team | null
+  team: TeamWithMembers | null
   membership: TeamMembership | null
   loading: boolean
   
@@ -23,7 +23,7 @@ interface TeamDetailState {
 
 interface TeamDetailActions {
   // チーム情報操作
-  setTeam: (team: Team | null) => void
+  setTeam: (team: TeamWithMembers | null) => void
   setMembership: (membership: TeamMembership | null) => void
   setLoading: (loading: boolean) => void
   

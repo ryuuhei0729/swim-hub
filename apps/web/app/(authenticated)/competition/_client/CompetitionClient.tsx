@@ -72,8 +72,9 @@ export default function CompetitionClient({
   } = useRecords(supabase, {})
 
   // サーバー側で取得した初期データとリアルタイム更新されたデータを統合
-  // リアルタイム更新が有効な場合は、recordsを使用、そうでない場合はinitialRecordsを使用
-  const displayRecords = records.length > 0 ? records : initialRecords
+  // リアルタイムフェッチが完了したら、recordsを優先（空配列でも最新の状態として扱う）
+  // ロード中はinitialRecordsを使用
+  const displayRecords = !loading ? records : initialRecords
   
   // フィルタリングロジック
   const filteredRecords = displayRecords.filter((record: Record) => {
@@ -134,13 +135,13 @@ export default function CompetitionClient({
   const handleRecordSubmit = async (formData: RecordLogFormData) => {
     setLoading(true)
     try {
-      // /competitionページは編集のみなので、常にeditingDataからcompetition_idを取得
+      // /competitionページは編集のみなので、常にeditingDataからcompetitionIdを取得
       const competitionId = editingData && 
         typeof editingData === 'object' && 
         editingData !== null &&
-        'competition_id' in editingData &&
-        typeof editingData.competition_id === 'string'
-        ? editingData.competition_id
+        'competitionId' in editingData &&
+        typeof editingData.competitionId === 'string'
+        ? editingData.competitionId
         : null
 
       if (!competitionId) {
@@ -160,15 +161,13 @@ export default function CompetitionClient({
         // 更新処理
         await updateRecord(editingData.id, recordInput)
         
-        // スプリットタイム更新
-        if (formData.splitTimes && formData.splitTimes.length > 0) {
-          const splitTimesData = formData.splitTimes.map((st) => ({
-            distance: st.distance,
-            split_time: st.splitTime
-          }))
-          
-          await replaceSplitTimes(editingData.id, splitTimesData)
-        }
+        // スプリットタイム更新（空配列でも常に呼び出して既存のスプリットタイムを削除可能にする）
+        const splitTimesData = (formData.splitTimes || []).map((st) => ({
+          distance: st.distance,
+          split_time: st.splitTime
+        }))
+        
+        await replaceSplitTimes(editingData.id, splitTimesData)
         
         // データを再取得
         await _refetch()
@@ -483,13 +482,7 @@ export default function CompetitionClient({
           closeForm()
         }}
         onSubmit={handleRecordSubmit}
-        competitionId={editingData && 
-          typeof editingData === 'object' && 
-          editingData !== null &&
-          'competition_id' in editingData &&
-          typeof editingData.competition_id === 'string'
-          ? editingData.competition_id
-          : ''}
+        competitionId={typeof editingData?.competition_id === 'string' ? editingData.competition_id : ''}
         editData={editingData && typeof editingData === 'object' && 'style_id' in editingData
           ? {
               id: editingData.id,

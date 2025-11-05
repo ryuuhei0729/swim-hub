@@ -104,7 +104,7 @@ export type Database = {
           id: string
           user_id: string
           date: string
-          location: string
+          place: string | null
           note: string | null
           attendance_status?: string | null
         }
@@ -112,7 +112,7 @@ export type Database = {
           id?: string
           user_id: string
           date: string
-          location: string
+          place: string | null
           note?: string | null
           attendance_status?: string | null
         }
@@ -120,7 +120,7 @@ export type Database = {
           id?: string
           user_id?: string
           date?: string
-          location?: string
+          place?: string | null
           note?: string | null
           attendance_status?: string | null
         }

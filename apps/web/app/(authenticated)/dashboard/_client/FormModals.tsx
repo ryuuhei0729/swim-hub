@@ -153,8 +153,8 @@ export function FormModals({
         onClose={closePracticeLogForm}
         onSubmit={onPracticeLogSubmit}
         practiceId={createdPracticeId || 
-          (editingData && typeof editingData === 'object' && 'practice_id' in editingData 
-            ? (editingData.practice_id || '')
+          (editingData && typeof editingData === 'object' && 'practiceId' in editingData 
+            ? (editingData.practiceId || '')
             : '')}
         editData={(() => {
           if (!editingData || typeof editingData !== 'object' || !('style' in editingData)) {
@@ -207,7 +207,7 @@ export function FormModals({
           const data = competitionEditingData as { 
             date?: string; 
             title?: string; 
-            location?: string; 
+            place?: string; 
             note?: string; 
             metadata?: { competition?: { title?: string; place?: string; pool_type?: number } } 
           }
@@ -216,8 +216,7 @@ export function FormModals({
             date: data.date,
             title: data.title,
             competition_name: data.metadata?.competition?.title,
-            place: data.location,
-            location: data.location,
+            place: data.place || data.metadata?.competition?.place || '',
             pool_type: data.metadata?.competition?.pool_type,
             note: data.note || ''
           }
@@ -234,8 +233,8 @@ export function FormModals({
         onSubmit={onEntrySubmit}
         onSkip={onEntrySkip}
         competitionId={createdCompetitionId || 
-          (competitionEditingData && typeof competitionEditingData === 'object' && 'competition_id' in competitionEditingData 
-            ? competitionEditingData.competition_id || ''
+          (competitionEditingData && typeof competitionEditingData === 'object' && 'competitionId' in competitionEditingData 
+            ? competitionEditingData.competitionId || ''
             : '')}
         isLoading={competitionIsLoading}
         styles={styles.map(s => ({ id: s.id.toString(), nameJp: s.name_jp, distance: s.distance }))}
@@ -248,15 +247,15 @@ export function FormModals({
             const data = competitionEditingData as { 
               id?: string; 
               type: string; 
-              style_id?: number; 
-              entry_time?: number; 
+              styleId?: number; 
+              entryTime?: number; 
               note?: string 
             }
             
             return {
               id: data.id,
-              style_id: data.style_id,
-              entry_time: data.entry_time,
+              styleId: data.styleId,
+              entryTime: data.entryTime,
               note: data.note
             }
           }
@@ -273,8 +272,8 @@ export function FormModals({
         onClose={closeRecordLogForm}
         onSubmit={onRecordLogSubmit}
         competitionId={createdCompetitionId || 
-          (competitionEditingData && typeof competitionEditingData === 'object' && 'competition_id' in competitionEditingData 
-            ? competitionEditingData.competition_id || ''
+          (competitionEditingData && typeof competitionEditingData === 'object' && 'competitionId' in competitionEditingData 
+            ? competitionEditingData.competitionId || ''
             : '')}
         editData={(() => {
           if (!competitionEditingData || competitionEditingData === null || typeof competitionEditingData !== 'object' || !('id' in competitionEditingData)) {
@@ -283,30 +282,30 @@ export function FormModals({
           
           const data = competitionEditingData as { 
             id?: string; 
-            style_id?: number; 
+            styleId?: number; 
             time?: number; 
-            is_relaying?: boolean; 
-            split_times?: Array<{ id?: string; record_id?: string; distance: number; split_time: number; created_at?: string }>; 
+            isRelaying?: boolean; 
+            splitTimes?: Array<{ id?: string; recordId?: string; distance: number; splitTime: number; createdAt?: string }>; 
             note?: string; 
-            video_url?: string | null 
+            videoUrl?: string | null 
           }
           
-          const splitTimes = data.split_times?.map(st => ({
+          const splitTimes = data.splitTimes?.map(st => ({
             id: st.id || '', 
-            record_id: st.record_id || '', 
+            recordId: st.recordId || '', 
             distance: st.distance,
-            split_time: st.split_time,
-            created_at: st.created_at || '' 
+            splitTime: st.splitTime,
+            createdAt: st.createdAt || '' 
           }))
           
           return {
             id: data.id,
-            style_id: data.style_id,
+            styleId: data.styleId,
             time: data.time,
-            is_relaying: data.is_relaying,
-            split_times: splitTimes,
+            isRelaying: data.isRelaying,
+            splitTimes: splitTimes,
             note: data.note,
-            video_url: data.video_url === null ? undefined : data.video_url
+            videoUrl: data.videoUrl === null ? undefined : data.videoUrl
           }
         })()}
         isLoading={competitionIsLoading}

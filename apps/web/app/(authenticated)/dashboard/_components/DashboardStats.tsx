@@ -143,7 +143,7 @@ export function UpcomingEventsList() {
     id: string
     title: string
     date: string
-    location?: string
+    place?: string
   }
   
   const events = (data && typeof data === 'object' && 'upcomingEvents' in data 
@@ -164,8 +164,8 @@ export function UpcomingEventsList() {
                 <p className="text-sm text-gray-500">
                   {format(new Date(event.date), 'yyyy年MM月dd日')}
                 </p>
-                {event.location && (
-                  <p className="text-sm text-gray-400">📍 {event.location}</p>
+                {event.place && (
+                  <p className="text-sm text-gray-400">📍 {event.place}</p>
                 )}
               </div>
               <div className="ml-4">

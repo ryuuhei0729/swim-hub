@@ -17,7 +17,7 @@ import {
 import MemberDetailModal from '@/components/team/MemberDetailModal'
 import type { MemberDetail } from '@/components/team/MemberDetailModal'
 import type { TeamTabType } from '@/components/team/TeamTabs'
-import { TeamEvent, AttendanceStatusType, Team, TeamMembership } from '@swim-hub/shared/types/database'
+import { TeamEvent, AttendanceStatusType, Team, TeamMembership, TeamWithMembers } from '@swim-hub/shared/types/database'
 import { useAttendanceTabStore, useTeamDetailStore } from '@/stores'
 
 // 出欠タブコンポーネント（Client Componentとして維持）
@@ -230,7 +230,7 @@ function AttendanceTab({ teamId, isAdmin }: { teamId: string, isAdmin: boolean }
 
 interface TeamDetailClientProps {
   teamId: string
-  initialTeam: Team | null
+  initialTeam: TeamWithMembers | null
   initialMembership: TeamMembership | null
   initialTab?: string
 }

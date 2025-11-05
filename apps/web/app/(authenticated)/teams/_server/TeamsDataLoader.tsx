@@ -34,7 +34,7 @@ export default async function TeamsDataLoader() {
   const teamsResult = user
     ? await getTeams(supabase, user.id).catch((error) => {
         console.error('チーム情報取得エラー:', error)
-        return [] as TeamMembershipWithUser[]
+        throw new Error(`Failed to fetch teams: ${error instanceof Error ? error.message : String(error)}`)
       })
     : ([] as TeamMembershipWithUser[])
 

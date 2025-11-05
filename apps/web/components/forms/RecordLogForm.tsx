@@ -5,7 +5,11 @@ import { Button, Input } from '@/components/ui'
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { formatTime } from '@/utils/formatters'
 import { EntryInfo } from '@apps/shared/types/ui'
-import { SplitTime as SplitTimeRow } from '@apps/shared/types/database'
+// SplitTimeRow型定義（editData用のcamelCase型）
+type SplitTimeRow = {
+  distance: number
+  splitTime: number
+}
 
 export interface SplitTimeInput {
   distance: number | ''
@@ -43,15 +47,15 @@ interface RecordLogFormProps {
   competitionId: string
   editData?: {
     id?: string
-    style_id?: number
+    styleId?: number
     time?: number
-    is_relaying?: boolean
-    split_times?: SplitTimeRow[]
+    isRelaying?: boolean
+    splitTimes?: SplitTimeRow[]
     note?: string
-    video_url?: string
+    videoUrl?: string
   } | null
   isLoading?: boolean
-  styles?: Array<{ id: string | number; name_jp: string; distance: number }>
+  styles?: Array<{ id: string | number; nameJp: string; distance: number }>
   entryData?: EntryInfo // エントリー情報（ある場合は種目固定）
 }
 
@@ -89,25 +93,25 @@ export default function RecordLogForm({
         const timeDisplay = minutes > 0 ? `${minutes}:${seconds.padStart(5, '0')}` : seconds
 
         setFormData({
-          styleId: editData.style_id?.toString() || styles[0]?.id?.toString() || '',
+          styleId: editData.styleId?.toString() || styles[0]?.id?.toString() || '',
           time: editData.time ?? 0,
           timeDisplayValue: timeDisplay,
-          isRelaying: editData.is_relaying || false,
-          splitTimes: editData.split_times?.map((st: SplitTimeRow, index: number) => {
-            const splitSeconds = st.split_time
+          isRelaying: editData.isRelaying || false,
+          splitTimes: editData.splitTimes?.map((st: SplitTimeRow, index: number) => {
+            const splitSeconds = st.splitTime
             const splitMinutes = Math.floor(splitSeconds / 60)
             const splitSecs = (splitSeconds % 60).toFixed(2)
             const splitDisplay = splitMinutes > 0 ? `${splitMinutes}:${splitSecs.padStart(5, '0')}` : splitSecs
             
             return {
               distance: st.distance,
-              splitTime: st.split_time,
+              splitTime: st.splitTime,
               splitTimeDisplayValue: splitDisplay,
               uiKey: `split-${index}`
             }
           }) || [],
           note: editData.note || '',
-          videoUrl: editData.video_url || ''
+          videoUrl: editData.videoUrl || ''
         })
       } else {
         // 新規作成モード
@@ -309,7 +313,7 @@ export default function RecordLogForm({
                     <option value="">種目を選択</option>
                     {styles.map((style) => (
                       <option key={style.id} value={style.id}>
-                        {style.name_jp}
+                        {style.nameJp}
                       </option>
                     ))}
                   </select>

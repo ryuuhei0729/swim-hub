@@ -30,6 +30,82 @@ alwaysApply: true
 - マイグレーションファイルで変更管理
 - 外部キー制約を適切に設定
 
+## 命名規則
+
+### 基本ルール
+
+1. **データベース層（snake_case）**
+   - データベースカラム名: `user_id`, `competition_id`, `practice_id`, `place`, `entry_time`, `split_time`, `pool_type`, `name_jp`
+   - データベーステーブル名: `practices`, `competitions`, `records`, `entries`
+   - データベース型定義（`apps/shared/types/database.ts`）のプロパティ
+   - Supabase型定義（`apps/web/lib/supabase.ts`）のプロパティ
+
+2. **UI層・アプリケーション層（camelCase）**
+   - TypeScript変数名: `userId`, `competitionId`, `practiceId`, `styleId`
+   - 関数パラメータ名: `userId: string`, `competitionId: string`
+   - UI型定義（`apps/shared/types/ui.ts`）のプロパティ
+   - フォーム型定義（`apps/web/stores/types.ts`）のプロパティ
+   - コンポーネントPropsのプロパティ名
+
+3. **場所を示すフィールド: `place`に統一**
+   - `location`は使用しない。データベースもUI層も`place`を使用
+   - 例: `CalendarItem.place`, `Practice.place`, `Competition.place`
+
+### データベース型とUI型の変換
+
+データベースから取得したデータをUI層で使用する際は、必要に応じて`camelCase`に変換：
+
+```typescript
+// ✅ データベースから取得（snake_case）
+const { data: entry } = await supabase.from('entries').select('*').single()
+
+// ✅ UI型に変換（camelCase）
+const entryWithStyle: EntryWithStyle = {
+  id: entry.id,
+  competitionId: entry.competition_id,  // snake_case → camelCase
+  userId: entry.user_id,                // snake_case → camelCase
+  styleId: entry.style_id,              // snake_case → camelCase
+  entryTime: entry.entry_time,          // snake_case → camelCase
+  teamId: entry.team_id                 // snake_case → camelCase
+}
+```
+
+### よくある間違い
+
+```typescript
+// ❌ 間違い: 変数名でsnake_caseを使用
+const user_id = user.id
+const competition_id = data.competition_id
+
+// ✅ 正しい: camelCaseを使用
+const userId = user.id
+const competitionId = data.competitionId
+
+// ❌ 間違い: UI型でsnake_caseを使用
+export interface EditingData {
+  competition_id?: string | null
+  practice_id?: string
+}
+
+// ✅ 正しい: camelCaseを使用
+export interface EditingData {
+  competitionId?: string | null
+  practiceId?: string
+}
+
+// ❌ 間違い: locationを使用
+export interface CalendarItem {
+  location?: string
+}
+
+// ✅ 正しい: placeを使用
+export interface CalendarItem {
+  place?: string
+}
+```
+
+詳細は `docs/NAMING_CONVENTIONS.md` を参照
+
 ## フォーム処理
 - **useState**を使用（React Hook Formは未使用）
 - バリデーションを適切に実装

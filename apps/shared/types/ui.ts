@@ -110,7 +110,7 @@ export interface CalendarItem {
   type: CalendarItemType
   date: string
   title: string
-  location?: string
+  place?: string
   note?: string
   // メタデータ（型別の詳細情報）
   metadata: {

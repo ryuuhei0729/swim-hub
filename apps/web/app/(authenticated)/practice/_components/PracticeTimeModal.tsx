@@ -14,7 +14,7 @@ interface PracticeTimeModalProps {
   isOpen: boolean
   onClose: () => void
   practiceId: string
-  location?: string
+  place?: string
 }
 
 type PracticeLogTagRelation = {
@@ -158,7 +158,7 @@ export default function PracticeTimeModal({
   isOpen,
   onClose,
   practiceId,
-  location
+  place
 }: PracticeTimeModalProps) {
   const [practice, setPractice] = useState<FormattedPractice | null>(null)
   const [loading, setLoading] = useState(true)
@@ -330,10 +330,10 @@ export default function PracticeTimeModal({
                     {/* ヘッダー: 場所、タグ */}
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
-                        {location && (
+                        {place && (
                           <p className="text-sm text-gray-600 mb-2 flex items-center gap-1">
                             <span className="text-gray-400">📍</span>
-                            {location}
+                            {place}
                           </p>
                         )}
                         {log.tags && Array.isArray(log.tags) && log.tags.length > 0 && (
