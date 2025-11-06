@@ -222,7 +222,7 @@ export default function TeamPracticeLogForm({
 
   const handleCreate = async () => {
     let totalCreated = 0
-    let totalErrors = 0
+    let _totalErrors = 0
 
     try {
       // 各メンバーに対して、各メニューのデータを作成
@@ -249,7 +249,7 @@ export default function TeamPracticeLogForm({
 
             if (logError) {
               console.error(`PracticeLog作成エラー (${member.users.name}):`, logError)
-              totalErrors++
+              _totalErrors++
               continue
             }
 
@@ -291,7 +291,7 @@ export default function TeamPracticeLogForm({
             totalCreated++
           } catch (memberError) {
             console.error(`メンバー ${member.users.name} の処理エラー:`, memberError)
-            totalErrors++
+            // エラーはカウントするが変数としては使用しない
           }
         }
       }

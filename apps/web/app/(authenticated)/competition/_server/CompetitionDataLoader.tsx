@@ -14,7 +14,7 @@ import type { Style, RecordWithDetails } from '@apps/shared/types/database'
  */
 async function getRecords(
   supabase: Awaited<ReturnType<typeof createAuthenticatedServerClient>>,
-  userId: string
+  _userId: string
 ): Promise<RecordWithDetails[]> {
   const recordAPI = new RecordAPI(supabase)
   return await recordAPI.getRecords()

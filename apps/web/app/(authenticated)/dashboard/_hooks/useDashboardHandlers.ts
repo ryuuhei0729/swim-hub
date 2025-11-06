@@ -152,7 +152,7 @@ export function useDashboardHandlers({
             practice_tag_id: tag.id
           }))
           
-          const { data, error } = await (supabase
+          const { data: _data, error } = await (supabase
             .from('practice_log_tags') as any)
             .insert(tagInserts)
           
@@ -210,7 +210,7 @@ export function useDashboardHandlers({
               practice_tag_id: tag.id
             }))
             
-            const { data, error } = await (supabase
+            const { data: _data, error } = await (supabase
               .from('practice_log_tags') as any)
               .insert(tagInserts)
             

@@ -40,7 +40,7 @@ export default function EntryLogForm({
   onClose,
   onSubmit,
   onSkip,
-  competitionId,
+  competitionId: _competitionId,
   isLoading = false,
   styles = [],
   editData

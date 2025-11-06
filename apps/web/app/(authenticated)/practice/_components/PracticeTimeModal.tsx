@@ -322,7 +322,7 @@ export default function PracticeTimeModal({
             </div>
 
             <div className="mt-3 space-y-4">
-              {practiceLogs.map((log: FormattedPracticeLog, index: number) => {
+              {practiceLogs.map((log: FormattedPracticeLog, _index: number) => {
                 const allTimes = log.times || []
 
                 return (
@@ -366,11 +366,11 @@ export default function PracticeTimeModal({
                               <span className="text-lg font-semibold text-green-700">{log.setCount}</span>
                             </>
                           )}
-                          {'　'}
+                          {' '}
                           <span className="text-lg font-semibold text-green-700">
                             {log.circle ? `${Math.floor(log.circle / 60)}'${Math.floor(log.circle % 60).toString().padStart(2, '0')}"` : '-'}
                           </span>
-                          <span className="text-lg font-semibold text-green-700">　{log.style}</span>
+                          <span className="text-lg font-semibold text-green-700"> {log.style}</span>
                         </div>
                     </div>
 

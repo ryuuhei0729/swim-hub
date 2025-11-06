@@ -2,17 +2,16 @@
 
 import React, { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths, subMonths, getDay } from 'date-fns'
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, getDay } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { useCalendar } from '@/contexts'
-import { LoadingSpinner } from '@/components/ui'
 import DayDetailModal from './DayDetailModal'
 import CalendarHeader from './CalendarHeader'
 import CalendarGrid from './CalendarGrid'
 import { CalendarItem, CalendarItemType, CalendarProps } from '@/types'
 
-const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
+const _WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
 
 // カレンダー表示コンポーネント（表示ロジック）
 export default function CalendarView({ 
@@ -28,7 +27,7 @@ export default function CalendarView({
   onEditRecord,
   onDeleteRecord,
   isLoading: propLoading = false,
-  userId,
+  userId: _userId,
   openDayDetail
 }: Omit<CalendarProps, 'currentDate' | 'onCurrentDateChange'>) {
   const router = useRouter()
@@ -41,7 +40,7 @@ export default function CalendarView({
   const { 
     currentDate, 
     calendarItems, 
-    monthlySummary, 
+    monthlySummary: _monthlySummary, 
     loading: dataLoading, 
     error, 
     setCurrentDate,

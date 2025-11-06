@@ -72,19 +72,25 @@ export default async function MetadataLoader({
   const user = await getServerUser()
   const supabase = await createAuthenticatedServerClient()
 
+  let styles: Style[] = []
+  let tags: PracticeTag[] = []
+
   try {
     // 並行取得でパフォーマンス最適化
     // Stylesはキャッシュ付き、Tagsは通常取得（ユーザー固有のため）
-    const [styles, tags] = await Promise.all([
+    const [stylesResult, tagsResult] = await Promise.all([
       getCachedStyles(),
       user ? getTags(supabase, user.id) : Promise.resolve([] as PracticeTag[])
     ])
-
-    return <>{children({ styles, tags })}</>
+    styles = stylesResult
+    tags = tagsResult
   } catch (error) {
     console.error('メタデータの取得に失敗:', error)
-    // エラー時は空配列を返す
-    return <>{children({ styles: [], tags: [] })}</>
+    // エラー時は空配列を使用
+    styles = []
+    tags = []
   }
+
+  return <>{children({ styles, tags })}</>
 }
 

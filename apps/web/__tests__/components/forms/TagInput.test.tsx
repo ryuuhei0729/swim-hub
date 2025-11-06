@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import TagInput from '../../../components/forms/TagInput'
@@ -18,7 +18,7 @@ vi.mock('@/lib/supabase', () => ({
 
 // TagManagementModal をモック
 vi.mock('./TagManagementModal', () => ({
-  default: function MockTagManagementModal({ isOpen, onClose, onSave }: any) {
+  default: function MockTagManagementModal({ isOpen, onClose, onSave }: { isOpen: boolean; onClose: () => void; onSave: (tag: { id: string; name: string }) => void }) {
     return isOpen ? (
       <div data-testid="tag-management-modal">
         <button onClick={onClose}>閉じる</button>

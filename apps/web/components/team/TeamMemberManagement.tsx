@@ -33,8 +33,8 @@ export interface TeamMemberManagementProps {
 export default function TeamMemberManagement({ 
   teamId, 
   currentUserId, 
-  isCurrentUserAdmin,
-  onMembershipChange,
+  isCurrentUserAdmin: _isCurrentUserAdmin,
+  onMembershipChange: _onMembershipChange,
   onMemberClick
 }: TeamMemberManagementProps) {
   const { supabase } = useAuth()

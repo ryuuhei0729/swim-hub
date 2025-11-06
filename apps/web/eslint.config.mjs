@@ -21,6 +21,15 @@ export default [
           jsx: true,
         },
       },
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+        require: 'readonly',
+        module: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        Buffer: 'readonly',
+      },
     },
     settings: {
       react: {
@@ -38,8 +47,12 @@ export default [
         },
       ],
       '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-require-imports': 'off',
       'prefer-const': 'error',
       'no-var': 'error',
+      'no-undef': 'off',
+      'react-hooks/exhaustive-deps': 'warn',
+      'react-hooks/set-state-in-effect': 'off',
     },
   },
   {

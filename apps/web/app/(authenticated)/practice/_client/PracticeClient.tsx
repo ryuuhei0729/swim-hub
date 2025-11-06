@@ -13,7 +13,6 @@ import type {
   PracticeTag,
   PracticeLogWithTags,
   PracticeTime,
-  PracticeLogTagInsert,
   PracticeWithLogs,
   Style
 } from '@apps/shared/types/database'
@@ -22,8 +21,7 @@ import {
   usePracticeRecordStore
 } from '@/stores'
 import type {
-  PracticeLogWithFormattedData,
-  PracticePageEditingData
+  PracticeLogWithFormattedData
 } from '@/stores/form/practiceRecordStore'
 import type { PracticeMenuFormData } from '@/stores/types'
 
@@ -54,8 +52,8 @@ export default function PracticeClient({
   
   const {
     isFormOpen,
-    selectedDate,
-    editingLog,
+    selectedDate: _selectedDate,
+    editingLog: _editingLog,
     isLoading,
     editingItem,
     editingData,
@@ -301,7 +299,7 @@ export default function PracticeClient({
     }
   }
 
-  const handleFormClose = () => {
+  const _handleFormClose = () => {
     closeForm()
   }
 

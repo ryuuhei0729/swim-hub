@@ -4,11 +4,12 @@ import { type SupabaseClient } from '@supabase/supabase-js'
 import { getCurrentEnvConfig, getSupabaseConfig } from './env'
 
 // 環境別のSupabase設定を取得
-const { url: supabaseUrl, anonKey: supabaseAnonKey, environment } = getSupabaseConfig()
-const envConfig = getCurrentEnvConfig()
+const { url: _supabaseUrl, anonKey: _supabaseAnonKey, environment: _environment } = getSupabaseConfig()
+const _envConfig = getCurrentEnvConfig()
 
 // 環境情報をログ出力（開発・ステージング環境のみ）
-if (envConfig.debug) {
+if (_envConfig.debug) {
+  // デバッグログの出力
 }
 
 // 型定義

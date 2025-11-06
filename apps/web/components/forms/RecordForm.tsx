@@ -6,11 +6,6 @@ import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { formatTime } from '@/utils/formatters'
 
-interface SplitTime {
-  id: string
-  distance: number
-  splitTime: number
-}
 
 interface RecordSet {
   id: string
@@ -287,7 +282,7 @@ export default function RecordForm({
     updateRecord(recordId, { splitTimes: updatedSplitTimes })
   }
 
-  const getStyleName = (styleId: string) => {
+  const _getStyleName = (styleId: string) => {
     const style = styles.find(s => s.id === styleId)
     return style ? `${style.nameJp} ${style.distance}m` : '種目を選択'
   }

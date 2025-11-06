@@ -7,7 +7,6 @@ import {
   TeamAnnouncements,
   TeamEntrySection,
   TeamTabs,
-  TeamMembers,
   TeamMemberManagement,
   TeamPractices,
   TeamCompetitions,
@@ -17,7 +16,7 @@ import {
 import MemberDetailModal from '@/components/team/MemberDetailModal'
 import type { MemberDetail } from '@/components/team/MemberDetailModal'
 import type { TeamTabType } from '@/components/team/TeamTabs'
-import { TeamEvent, AttendanceStatusType, Team, TeamMembership, TeamWithMembers } from '@swim-hub/shared/types/database'
+import { TeamEvent, AttendanceStatusType, TeamMembership, TeamWithMembers } from '@swim-hub/shared/types/database'
 import { useAttendanceTabStore, useTeamDetailStore } from '@/stores'
 
 // 出欠タブコンポーネント（Client Componentとして維持）

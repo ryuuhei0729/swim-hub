@@ -1,7 +1,6 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react'
-import { User, Session, SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase'
 import type { Database } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -41,6 +40,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // ユーザーが存在しない場合（PGRST116エラー）、デフォルトプロフィールを作成
         if (error.code === 'PGRST116') {
           if (process.env.NODE_ENV === 'development') {
+            // 開発環境でのデバッグ処理
           }
           
           try {
@@ -77,7 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       return data
-    } catch (error) {
+    } catch {
       // プロフィール取得失敗は認証状態に影響しない
       return null
     }

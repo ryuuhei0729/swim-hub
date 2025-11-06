@@ -7,7 +7,7 @@ interface TeamScheduleManagerProps {
 }
 
 // TODO: Supabase直接アクセスで実装する
-export default function TeamScheduleManager({ teamId }: TeamScheduleManagerProps) {
+export default function TeamScheduleManager({ teamId: _teamId }: TeamScheduleManagerProps) {
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-xl font-semibold text-gray-900 mb-4">

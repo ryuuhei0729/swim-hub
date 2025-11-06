@@ -48,7 +48,6 @@ export default function CompetitionClient({
     showDetailModal,
     openForm,
     closeForm,
-    setEditingData,
     openDetailModal,
     closeDetailModal,
     setStyles,

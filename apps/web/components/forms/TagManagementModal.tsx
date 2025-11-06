@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { XMarkIcon, TrashIcon, SwatchIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { Button, Input } from '@/components/ui'
 
 import { PracticeTag } from '@apps/shared/types/database'

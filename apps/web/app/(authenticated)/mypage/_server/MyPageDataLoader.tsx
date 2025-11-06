@@ -5,7 +5,6 @@
 import React from 'react'
 import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-server-auth'
 import MyPageClient from '../_client/MyPageClient'
-import type { UserProfile } from '@apps/shared/types/database'
 
 interface BestTime {
   id: string

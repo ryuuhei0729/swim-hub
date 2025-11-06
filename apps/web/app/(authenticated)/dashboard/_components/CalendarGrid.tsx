@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { PlusIcon } from '@heroicons/react/24/outline'
-import { format, isSameMonth, isSameDay, isToday } from 'date-fns'
+import { format, isSameMonth, isToday } from 'date-fns'
 import { CalendarItem, CalendarItemType } from '@/types'
 
 interface CalendarGridProps {

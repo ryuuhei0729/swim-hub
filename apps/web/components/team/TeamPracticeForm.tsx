@@ -30,8 +30,8 @@ export default function TeamPracticeForm({
 
   // フォーカストラップ用のref
   const modalRef = useRef<HTMLDivElement>(null)
-  const firstFocusableRef = useRef<HTMLButtonElement>(null)
-  const lastFocusableRef = useRef<HTMLButtonElement>(null)
+  const _firstFocusableRef = useRef<HTMLButtonElement>(null)
+  const _lastFocusableRef = useRef<HTMLButtonElement>(null)
 
   // フォーカストラップ機能
   useEffect(() => {

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui'
-import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon } from '@heroicons/react/24/outline'
 
 interface TimeEntry {
   id: string
@@ -112,7 +112,7 @@ export default function TimeInputModal({
     return times.filter(t => t.setNumber === setNumber)
   }
 
-  const getSetTotal = (setNumber: number) => {
+  const _getSetTotal = (setNumber: number) => {
     const setTimes = getTimesBySet(setNumber)
     return setTimes.reduce((sum, t) => sum + t.time, 0)
   }
@@ -124,7 +124,7 @@ export default function TimeInputModal({
     return validTimes.reduce((sum, t) => sum + t.time, 0) / validTimes.length
   }
 
-  const getOverallTotal = () => {
+  const _getOverallTotal = () => {
     return times.reduce((sum, t) => sum + t.time, 0)
   }
 

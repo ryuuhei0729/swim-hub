@@ -4,7 +4,7 @@
 
 import { create } from 'zustand'
 import type { PracticeTag } from '@apps/shared/types/database'
-import type { EditingData, PracticeMenuFormData } from '../types'
+import type { EditingData } from '../types'
 
 interface PracticeFormState {
   // モーダル状態

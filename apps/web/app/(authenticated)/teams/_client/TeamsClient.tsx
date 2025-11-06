@@ -1,8 +1,7 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import React from 'react'
 import Link from 'next/link'
-import { useAuth } from '@/contexts'
 import { UsersIcon } from '@heroicons/react/24/outline'
 import { TeamMembershipWithUser } from '@apps/shared/types/database'
 import { useTeamStore } from '@/stores'
@@ -19,7 +18,6 @@ export default function TeamsClient({
   initialTeams
 }: TeamsClientProps) {
   const { teams, teamsLoading, setTeams, setTeamsLoading } = useTeamStore()
-  const { user, supabase } = useAuth()
 
   // サーバー側から取得したデータをストアに設定
   React.useEffect(() => {

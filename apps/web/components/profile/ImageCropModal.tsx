@@ -1,9 +1,8 @@
 'use client'
 
-import React, { useState, useCallback } from 'react'
+import React, { useCallback } from 'react'
 import { XMarkIcon, CheckIcon } from '@heroicons/react/24/outline'
 import Cropper from 'react-easy-crop'
-import { Area } from 'react-easy-crop'
 import { useImageCrop } from '@/hooks/useImageCrop'
 import { Button } from '@/components/ui'
 

@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '@/contexts'
 import TeamJoinForm from '@/components/forms/TeamJoinForm'
-import { Team, TeamMembership, TeamMembershipInsert, TeamMembershipUpdate } from '@apps/shared/types/database'
+import { Team, TeamMembership, TeamMembershipInsert } from '@apps/shared/types/database'
 import { format } from 'date-fns'
 
 export interface TeamJoinModalProps {

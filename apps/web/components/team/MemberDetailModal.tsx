@@ -6,9 +6,7 @@ import { BaseModal, Avatar } from '@/components/ui'
 import { 
   StarIcon,
   TrashIcon,
-  XMarkIcon,
   TrophyIcon,
-  ClockIcon,
   CalendarIcon
 } from '@heroicons/react/24/outline'
 
@@ -59,7 +57,7 @@ export default function MemberDetailModal({
   onMembershipChange
 }: MemberDetailModalProps) {
   const [bestTimes, setBestTimes] = useState<BestTime[]>([])
-  const [availableStyles, setAvailableStyles] = useState<Array<{ id: number; name_jp: string; distance: number }>>([])
+  const [_availableStyles, setAvailableStyles] = useState<Array<{ id: number; name_jp: string; distance: number }>>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isRemoving, setIsRemoving] = useState(false)

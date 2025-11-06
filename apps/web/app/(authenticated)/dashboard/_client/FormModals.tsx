@@ -9,7 +9,6 @@ import {
   useCompetitionFormStore,
 } from '@/stores'
 import type {
-  EditingData,
   PracticeMenuFormData,
   EntryFormData,
   RecordFormDataInternal,

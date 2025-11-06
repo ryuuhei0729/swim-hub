@@ -204,7 +204,9 @@ export default function AvatarUpload({
         if (typeof imageSrc === 'string' && imageSrc.length > 0) {
           URL.revokeObjectURL(imageSrc)
         }
-      } catch {}
+      } catch {
+        // エラーは無視
+      }
       setIsUploading(false)
       setIsCropModalOpen(false)
       setSelectedImage(null)

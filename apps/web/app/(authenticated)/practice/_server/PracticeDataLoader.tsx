@@ -14,7 +14,7 @@ import type { Style, PracticeTag, PracticeWithLogs } from '@apps/shared/types/da
  */
 async function getPractices(
   supabase: Awaited<ReturnType<typeof createAuthenticatedServerClient>>,
-  userId: string
+  _userId: string
 ): Promise<PracticeWithLogs[]> {
   const practiceAPI = new PracticeAPI(supabase)
   

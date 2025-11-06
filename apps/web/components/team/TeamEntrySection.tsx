@@ -5,7 +5,7 @@ import { ChevronDownIcon, ChevronUpIcon, PencilIcon, TrashIcon } from '@heroicon
 import { formatTime } from '@/utils/formatters'
 import { StyleAPI } from '@apps/shared/api/styles'
 import { EntryAPI } from '@apps/shared/api/entries'
-import { Entry, EntryWithDetails } from '@apps/shared/types/database'
+import { EntryWithDetails } from '@apps/shared/types/database'
 import { useAuth } from '@/contexts/AuthProvider'
 import type { Style } from '@apps/shared/types/database'
 
@@ -34,7 +34,7 @@ interface UserEntry {
   style: Style | null
 }
 
-export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionProps) {
+export default function TeamEntrySection({ teamId, isAdmin: _isAdmin }: TeamEntrySectionProps) {
   const { supabase } = useAuth()
   const [loading, setLoading] = useState(true)
   const [competitions, setCompetitions] = useState<Competition[]>([])
@@ -240,7 +240,6 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
         [competitionId]: convertedEntries
       }))
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err))
       console.error('エントリーの送信に失敗:', err)
     } finally {
       setSubmitting(false)
@@ -290,7 +289,6 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
       
       alert('エントリーを削除しました')
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err))
       console.error('エントリーの削除に失敗:', err)
     } finally {
       setSubmitting(false)

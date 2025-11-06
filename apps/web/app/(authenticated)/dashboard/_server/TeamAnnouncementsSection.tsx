@@ -32,6 +32,8 @@ export default async function TeamAnnouncementsSection({
 
   const supabase = await createAuthenticatedServerClient()
 
+  let teams: TeamMembershipWithTeam[] = []
+
   try {
     // チームメンバーシップを取得（チーム情報を含む）
     const { data: memberships, error: membershipError } = await supabase
@@ -49,15 +51,14 @@ export default async function TeamAnnouncementsSection({
 
     if (membershipError) {
       console.error('チーム情報の取得に失敗:', membershipError)
-      return <>{children({ teams: [] })}</>
+      teams = []
+    } else {
+      teams = (memberships || []) as TeamMembershipWithTeam[]
     }
-
-    const teams = (memberships || []) as TeamMembershipWithTeam[]
-
-    return <>{children({ teams })}</>
   } catch (error) {
     console.error('チームお知らせセクションのエラー:', error)
-    return <>{children({ teams: [] })}</>
+    teams = []
   }
-}
 
+  return <>{children({ teams })}</>
+}

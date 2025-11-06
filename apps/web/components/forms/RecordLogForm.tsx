@@ -64,7 +64,7 @@ export default function RecordLogForm({
   isOpen,
   onClose,
   onSubmit,
-  competitionId,
+  competitionId: _competitionId,
   editData,
   isLoading = false,
   styles = [],

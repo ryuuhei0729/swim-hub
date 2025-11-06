@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
+  const response = NextResponse.next({
     request: {
       headers: request.headers,
     },
@@ -34,10 +34,10 @@ export async function middleware(request: NextRequest) {
   ]
 
   // 認証が必要なルートにアクセスしている場合
-  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
+  const _isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
   
   // 認証が不要なルートにアクセスしている場合
-  const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route))
+  const _isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route))
 
   // NOTE: ここでは認証判定を行わずパスベースの制御のみ。
   // 認証判定はアプリ側で行う（SSR/クライアント）

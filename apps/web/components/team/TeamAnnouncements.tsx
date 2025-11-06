@@ -18,7 +18,7 @@ export const TeamAnnouncements: React.FC<TeamAnnouncementsProps> = ({
   viewOnly = false
 }) => {
   const [showForm, setShowForm] = useState(false)
-  const [showDetail, setShowDetail] = useState(false)
+  const [_showDetail, setShowDetail] = useState(false)
   const [editingAnnouncement, setEditingAnnouncement] = useState<TeamAnnouncement | undefined>()
   const [viewingAnnouncementId, setViewingAnnouncementId] = useState<string | null>(null)
 
@@ -32,7 +32,7 @@ export const TeamAnnouncements: React.FC<TeamAnnouncementsProps> = ({
     setShowForm(true)
   }
 
-  const handleViewDetail = (announcementId: string) => {
+  const _handleViewDetail = (announcementId: string) => {
     setViewingAnnouncementId(announcementId)
     setShowDetail(true)
   }

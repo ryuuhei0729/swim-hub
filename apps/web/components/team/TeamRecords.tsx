@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts'
 import { 
@@ -32,7 +32,7 @@ export interface TeamRecordsProps {
   isAdmin?: boolean
 }
 
-export default function TeamRecords({ teamId, isAdmin = false }: TeamRecordsProps) {
+export default function TeamRecords({ teamId, isAdmin: _isAdmin = false }: TeamRecordsProps) {
   const router = useRouter()
   const [records, setRecords] = useState<TeamRecord[]>([])
   const [loading, setLoading] = useState(true)

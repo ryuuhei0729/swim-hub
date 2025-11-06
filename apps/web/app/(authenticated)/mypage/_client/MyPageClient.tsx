@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from 'react'
 import { useAuth } from '@/contexts'
-import { UserIcon, TrophyIcon } from '@heroicons/react/24/outline'
+import { TrophyIcon } from '@heroicons/react/24/outline'
 import BestTimesTable from '@/components/profile/BestTimesTable'
 import ProfileDisplay from '@/components/profile/ProfileDisplay'
 import ProfileEditModal from '@/components/profile/ProfileEditModal'

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -21,7 +21,7 @@ export default function TeamCompetitionEntryModal({
   onClose,
   competitionId,
   competitionTitle,
-  teamId
+  teamId: _teamId
 }: TeamCompetitionEntryModalProps) {
   const { supabase } = useAuth()
   // TeamAPI への依存は排除
@@ -186,7 +186,6 @@ export default function TeamCompetitionEntryModal({
       if (updateError) throw updateError
       await loadEntries() // 再読み込み
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err))
       console.error('ステータス変更に失敗:', err)
     } finally {
       setUpdatingStatus(false)
