@@ -37,20 +37,6 @@ jobs:
       - name: Build
         run: npm run build --workspace=apps/web
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.24.0'
-          channel: 'stable'
-
-      - name: Install Flutter dependencies
-        run: cd apps/mobile && flutter pub get
-
-      - name: Build Flutter Web app
-        run: npm run build:mobile:web
-        env:
-          FLUTTER_BASE_HREF: /mobile/
-
       - name: Deploy to Vercel (Production)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: amondnet/vercel-action@v25

@@ -151,8 +151,15 @@ export function useDashboardHandlers({
             practice_log_id: practiceLogId,
             practice_tag_id: tag.id
           }))
-          // Supabaseの型推論がinsertでneverになる既知の問題のため、型アサーションを使用
-          await (supabase.from('practice_log_tags') as any).insert(tagInserts)
+          
+          const { data, error } = await (supabase
+            .from('practice_log_tags') as any)
+            .insert(tagInserts)
+          
+          if (error) {
+            console.error('練習ログタグの挿入に失敗しました:', error)
+            throw new Error(`練習ログタグの挿入に失敗しました: ${error.message}`)
+          }
         }
         
         const { data: existingTimes } = await supabase
@@ -201,10 +208,17 @@ export function useDashboardHandlers({
             const tagInserts: PracticeLogTagInsert[] = menu.tags.map(tag => ({
               practice_log_id: createdLog.id,
               practice_tag_id: tag.id
-          }))
-          // Supabaseの型推論がinsertでneverになる既知の問題のため、型アサーションを使用
-          await (supabase.from('practice_log_tags') as any).insert(tagInserts)
-        }
+            }))
+            
+            const { data, error } = await (supabase
+              .from('practice_log_tags') as any)
+              .insert(tagInserts)
+            
+            if (error) {
+              console.error('練習ログタグの挿入に失敗しました:', error)
+              throw new Error(`練習ログタグの挿入に失敗しました: ${error.message}`)
+            }
+          }
           
           if (menu.times && menu.times.length > 0 && createdLog) {
             for (const timeEntry of menu.times) {
