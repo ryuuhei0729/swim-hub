@@ -29,6 +29,9 @@ jobs:
     
     - name: Build web app (for lint)
       run: npm run build --workspace=apps/web
+      env:
+        NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
     
     - name: Lint
       run: npm run lint --workspace=apps/web
@@ -53,6 +56,9 @@ jobs:
     
     - name: Build web app
       run: npm run build:web
+      env:
+        NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
   
   build-packages:
     runs-on: ubuntu-latest
