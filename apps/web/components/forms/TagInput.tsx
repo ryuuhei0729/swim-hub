@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { ChevronDownIcon, XMarkIcon, EllipsisVerticalIcon } from '@heroicons/react/24/outline'
-// @ts-expect-error: TagManagementModalの型定義が不完全なため
 import TagManagementModal from './TagManagementModal'
 import { useAuth } from '@/contexts'
 import { PracticeTag } from '@apps/shared/types/database'
@@ -123,7 +122,6 @@ export default function TagInput({
       if (!user) throw new Error('認証が必要です')
 
       // DBを更新
-      // @ts-expect-error: Supabase型システムの制約を回避
       const { error } = await supabase.from('practice_tags').update({
         name: name.trim(),
         color

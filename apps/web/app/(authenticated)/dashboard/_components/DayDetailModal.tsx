@@ -14,7 +14,8 @@ import type {
   PracticeLogWithTimes,
   PracticeTime,
   PracticeTag,
-  TeamAttendanceWithDetails
+  TeamAttendanceWithDetails,
+  SplitTime
 } from '@apps/shared/types/database'
 import { AttendanceAPI } from '@swim-hub/shared'
 import Link from 'next/link'
