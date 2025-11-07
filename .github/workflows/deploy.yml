@@ -8,13 +8,27 @@ on:
   workflow_dispatch:
 
 jobs:
+  check-secrets:
+    runs-on: ubuntu-latest
+    outputs:
+      has-vercel-secrets: ${{ steps.check.outputs.has-vercel-secrets }}
+
+    steps:
+      - name: Determine secret availability
+        id: check
+        run: |
+          if [ "${{ secrets.VERCEL_TOKEN }}" != "" ] && [ "${{ secrets.VERCEL_ORG_ID }}" != "" ] && [ "${{ secrets.VERCEL_PROJECT_ID }}" != "" ]; then
+            echo "has-vercel-secrets=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has-vercel-secrets=false" >> "$GITHUB_OUTPUT"
+          fi
+
   deploy:
     if: >-
       ${{ github.event.workflow_run.conclusion == 'success' &&
           github.event.workflow_run.head_repository.full_name == github.repository &&
-          secrets.VERCEL_TOKEN != '' &&
-          secrets.VERCEL_ORG_ID != '' &&
-          secrets.VERCEL_PROJECT_ID != '' }}
+          needs.check-secrets.outputs.has-vercel-secrets == 'true' }}
+    needs: check-secrets
     runs-on: ubuntu-latest
     permissions:
       contents: read

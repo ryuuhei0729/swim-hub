@@ -129,7 +129,10 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      HAS_VERCEL_SECRETS: ${{ secrets.VERCEL_TOKEN != '' && secrets.VERCEL_ORG_ID != '' && secrets.VERCEL_PROJECT_ID != '' }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN || '' }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID || '' }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID || '' }}
+      HAS_VERCEL_SECRETS: ${{ (secrets.VERCEL_TOKEN != '' && secrets.VERCEL_ORG_ID != '' && secrets.VERCEL_PROJECT_ID != '') || 'false' }}
 
     steps:
     - uses: actions/checkout@v4
@@ -156,7 +159,7 @@ jobs:
         fi
 
     - name: Pull Vercel project configuration
-      if: ${{ env.HAS_VERCEL_SECRETS == 'true' }}
+      if: ${{ env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != '' }}
       working-directory: apps/web
       env:
         VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -166,14 +169,14 @@ jobs:
       run: npx vercel pull --yes --environment=$VERCEL_ENVIRONMENT
 
     - name: Build Next.js app (fallback)
-      if: ${{ env.HAS_VERCEL_SECRETS != 'true' }}
+      if: ${{ env.VERCEL_TOKEN == '' || env.VERCEL_ORG_ID == '' || env.VERCEL_PROJECT_ID == '' }}
       run: |
         export NEXT_PUBLIC_SUPABASE_URL="https://placeholder.supabase.co"
         export NEXT_PUBLIC_SUPABASE_ANON_KEY="placeholder-anon-key"
         npm run build --workspace=apps/web
 
     - name: Build pre-rendered output with Vercel
-      if: ${{ env.HAS_VERCEL_SECRETS == 'true' }}
+      if: ${{ env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != '' }}
       working-directory: apps/web
       env:
         VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -188,7 +191,7 @@ jobs:
         npx vercel build $EXTRA_ARGS
 
     - name: Upload Next build artifact
-      if: ${{ env.HAS_VERCEL_SECRETS != 'true' }}
+      if: ${{ env.VERCEL_TOKEN == '' || env.VERCEL_ORG_ID == '' || env.VERCEL_PROJECT_ID == '' }}
       uses: actions/upload-artifact@v4
       with:
         name: next-build
@@ -196,7 +199,7 @@ jobs:
         if-no-files-found: error
 
     - name: Upload Vercel prebuilt artifact
-      if: ${{ env.HAS_VERCEL_SECRETS == 'true' }}
+      if: ${{ env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != '' }}
       uses: actions/upload-artifact@v4
       with:
         name: vercel-output
