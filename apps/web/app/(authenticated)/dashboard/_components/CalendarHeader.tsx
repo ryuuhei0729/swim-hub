@@ -23,8 +23,8 @@ export default function CalendarHeader({
   onPrevMonth,
   onNextMonth,
   onTodayClick,
-  onMonthYearSelect,
-  showMonthSelector,
+  onMonthYearSelect: _onMonthYearSelect,
+  showMonthSelector: _showMonthSelector,
   setShowMonthSelector
 }: CalendarHeaderProps) {
   return (

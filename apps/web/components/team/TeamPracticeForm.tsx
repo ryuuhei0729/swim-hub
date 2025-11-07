@@ -30,8 +30,8 @@ export default function TeamPracticeForm({
 
   // フォーカストラップ用のref
   const modalRef = useRef<HTMLDivElement>(null)
-  const firstFocusableRef = useRef<HTMLButtonElement>(null)
-  const lastFocusableRef = useRef<HTMLButtonElement>(null)
+  const _firstFocusableRef = useRef<HTMLButtonElement>(null)
+  const _lastFocusableRef = useRef<HTMLButtonElement>(null)
 
   // フォーカストラップ機能
   useEffect(() => {
@@ -101,13 +101,14 @@ export default function TeamPracticeForm({
       if (!user) throw new Error('認証が必要です')
 
       const practicesAPI = new TeamPracticesAPI(supabase)
-      await practicesAPI.create({
+      const practiceInput: import('@apps/shared/types/database').PracticeInsert = {
         user_id: user.id,
-        team_id: teamId,
         date: formData.date,
         place: formData.place || null,
-        note: formData.note || null
-      } as any)
+        note: formData.note || null,
+        team_id: teamId
+      }
+      await practicesAPI.create(practiceInput)
       
       onSuccess()
       onClose()
@@ -145,7 +146,7 @@ export default function TeamPracticeForm({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+          className="fixed inset-0 bg-black/40 transition-opacity"
           onClick={handleClose}
           aria-hidden="true"
         />

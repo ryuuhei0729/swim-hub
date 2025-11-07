@@ -7,7 +7,7 @@ interface TeamCompetitionManagerProps {
 }
 
 // TODO: Supabase直接アクセスで実装する
-export default function TeamCompetitionManager({ teamId }: TeamCompetitionManagerProps) {
+export default function TeamCompetitionManager({ teamId: _teamId }: TeamCompetitionManagerProps) {
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-xl font-semibold text-gray-900 mb-4">

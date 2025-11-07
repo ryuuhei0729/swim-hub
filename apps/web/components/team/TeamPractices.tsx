@@ -14,6 +14,7 @@ import { ja } from 'date-fns/locale'
 import TeamPracticeForm from './TeamPracticeForm'
 import TeamPracticeLogForm from './TeamPracticeLogForm'
 import { TeamMembersAPI } from '@apps/shared/api/teams/members'
+import { TeamMembershipWithUser, PracticeTime, PracticeTag } from '@apps/shared/types/database'
 
 export interface TeamPractice {
   id: string
@@ -54,8 +55,27 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
   const [showPracticeForm, setShowPracticeForm] = useState(false)
   const [showPracticeLogForm, setShowPracticeLogForm] = useState(false)
   const [selectedPracticeId, setSelectedPracticeId] = useState<string | null>(null)
-  const [teamMembers, setTeamMembers] = useState<any[]>([])
-  const [editData, setEditData] = useState<any>(null)
+  const [teamMembers, setTeamMembers] = useState<import('@apps/shared/types/database').TeamMembershipWithUser[]>([])
+  type EditDataItem = {
+    id: string
+    style: string
+    distance: number
+    rep_count: number
+    set_count: number
+    circle: number | null
+    note: string | null
+    tags: PracticeTag[]
+    times: Array<{
+      memberId: string
+      times: Array<{
+        setNumber: number
+        repNumber: number
+        time: number
+        displayValue: string
+      }>
+    }>
+  }
+  const [editData, setEditData] = useState<EditDataItem[] | null>(null)
 
   // チームの練習記録を取得（関数として抽出）
   const loadTeamPractices = useCallback(async () => {
@@ -93,7 +113,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
 
       if (practicesError) throw practicesError
 
-      setPractices(practicesData || [])
+      setPractices((practicesData || []) as unknown as TeamPractice[])
     } catch (err) {
       console.error('チーム練習情報の取得に失敗:', err)
       setError('チーム練習情報の取得に失敗しました')
@@ -127,7 +147,6 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
         setShowPracticeLogForm(true)
       } catch (err) {
         console.error('チームメンバー取得エラー:', err)
-        alert('チームメンバーの取得に失敗しました')
       }
     }
   }
@@ -181,15 +200,36 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
         }
 
         // 編集データを構築
-        const editData = practiceLogs?.map((log: any) => {
+        type PracticeLogWithTimes = {
+          id: string
+          style: string
+          distance: number
+          rep_count: number
+          set_count: number
+          circle: number | null
+          note: string | null
+          practice_times?: PracticeTime[]
+          practice_log_tags?: Array<{ practice_tags: PracticeTag }>
+        }
+
+        const editData = (practiceLogs as unknown as PracticeLogWithTimes[])?.map((log: PracticeLogWithTimes) => {
           // 各メンバーごとのタイムデータを整理
-          const teamTimes: any[] = []
+          type MemberTimeEntry = {
+            memberId: string
+            times: Array<{
+              setNumber: number
+              repNumber: number
+              time: number
+              displayValue: string
+            }>
+          }
+          const teamTimes: MemberTimeEntry[] = []
           
-          members.forEach((member: any) => {
+          members.forEach((member: TeamMembershipWithUser) => {
             // このメンバーのタイムデータを抽出
             const memberTimes = log.practice_times
-              ?.filter((timeEntry: any) => timeEntry.user_id === member.user_id)
-              ?.map((timeEntry: any) => ({
+              ?.filter((timeEntry: PracticeTime) => timeEntry.user_id === member.user_id)
+              ?.map((timeEntry: PracticeTime) => ({
                 setNumber: timeEntry.set_number,
                 repNumber: timeEntry.rep_number,
                 time: timeEntry.time,
@@ -204,7 +244,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
           
           return {
             ...log,
-            tags: log.practice_log_tags?.map((logTag: any) => logTag.practice_tags) || [],
+            tags: log.practice_log_tags?.map((logTag) => logTag.practice_tags) || [],
             times: teamTimes
           }
         }) || []
@@ -217,7 +257,6 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
         setEditData(editData)
       } catch (err) {
         console.error('練習ログ取得エラー:', err)
-        alert('練習ログの取得に失敗しました')
       }
     }
   }
@@ -378,7 +417,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
           practiceId={selectedPracticeId}
           teamMembers={teamMembers}
           onSuccess={handlePracticeLogCreated}
-          editData={editData}
+          editData={editData ?? undefined}
         />
       )}
     </>

@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useEffect, useState, useMemo } from 'react'
-import { createClient } from '@/lib/supabase'
+import React, { useEffect, useState } from 'react'
+import { useAuth } from '@/contexts'
 import { format } from 'date-fns'
 import { 
   CalendarDaysIcon,
@@ -11,10 +11,10 @@ import {
 } from '@heroicons/react/24/outline'
 
 export default function DashboardStats() {
+  const { supabase } = useAuth()
   const [practiceCount, setPracticeCount] = useState(0)
   const [recordCount, setRecordCount] = useState(0)
   const [loading, setLoading] = useState(true)
-  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const loadStats = async () => {
@@ -139,7 +139,16 @@ export function UpcomingEventsList() {
     )
   }
 
-  const events = (data as any)?.upcomingEvents || []
+  type UpcomingEvent = {
+    id: string
+    title: string
+    date: string
+    place?: string
+  }
+  
+  const events = (data && typeof data === 'object' && 'upcomingEvents' in data 
+    ? (data as { upcomingEvents?: UpcomingEvent[] }).upcomingEvents 
+    : []) || []
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
@@ -148,15 +157,15 @@ export function UpcomingEventsList() {
         <p className="text-gray-500 text-center py-8">今後のイベントはありません</p>
       ) : (
         <div className="space-y-4">
-          {events.slice(0, 5).map((event: any) => (
+          {events.slice(0, 5).map((event: UpcomingEvent) => (
             <div key={event.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
               <div className="flex-1">
                 <h3 className="font-medium text-gray-900">{event.title}</h3>
                 <p className="text-sm text-gray-500">
                   {format(new Date(event.date), 'yyyy年MM月dd日')}
                 </p>
-                {event.location && (
-                  <p className="text-sm text-gray-400">📍 {event.location}</p>
+                {event.place && (
+                  <p className="text-sm text-gray-400">📍 {event.place}</p>
                 )}
               </div>
               <div className="ml-4">

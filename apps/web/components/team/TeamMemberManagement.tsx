@@ -33,8 +33,8 @@ export interface TeamMemberManagementProps {
 export default function TeamMemberManagement({ 
   teamId, 
   currentUserId, 
-  isCurrentUserAdmin,
-  onMembershipChange,
+  isCurrentUserAdmin: _isCurrentUserAdmin,
+  onMembershipChange: _onMembershipChange,
   onMemberClick
 }: TeamMemberManagementProps) {
   const { supabase } = useAuth()
@@ -68,7 +68,7 @@ export default function TeamMemberManagement({
         .order('role', { ascending: false }) // adminを先に表示
 
       if (error) throw error
-      setMembers(data as TeamMember[])
+      setMembers((data ?? []) as unknown as TeamMember[])
     } catch (err) {
       console.error('メンバー情報の取得に失敗:', err)
       setError('メンバー情報の取得に失敗しました')

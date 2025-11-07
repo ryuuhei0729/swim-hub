@@ -12,12 +12,18 @@ interface PracticeBasicData {
   note: string
 }
 
+type EditPracticeBasicData = {
+  date?: string
+  place?: string
+  note?: string
+}
+
 interface PracticeBasicFormProps {
   isOpen: boolean
   onClose: () => void
   onSubmit: (data: PracticeBasicData) => Promise<void>
   selectedDate: Date
-  editData?: any // 編集時のデータ
+  editData?: EditPracticeBasicData // 編集時のデータ
   isLoading?: boolean
 }
 
@@ -33,27 +39,25 @@ export default function PracticeBasicForm({
   const validDate = selectedDate && !isNaN(selectedDate.getTime()) ? selectedDate : new Date()
   
   const [formData, setFormData] = useState<PracticeBasicData>({
-    date: format(validDate, 'yyyy-MM-dd'),
+    date: format(selectedDate, 'yyyy-MM-dd'),
     place: '',
     note: ''
   })
 
-  // フォーム初期化（編集データがある場合とない場合）
+  // selectedDateまたはeditDataが変更された時にフォームを初期化
   useEffect(() => {
     if (isOpen) {
-      const validDate = selectedDate && !isNaN(selectedDate.getTime()) ? selectedDate : new Date()
-      
       if (editData) {
-        // 編集モード: 既存データで初期化
+        // 編集モード
         setFormData({
-          date: editData.date || format(validDate, 'yyyy-MM-dd'),
-          place: editData.place || editData.location || '', // locationもフォールバック
+          date: editData.date || format(selectedDate, 'yyyy-MM-dd'),
+          place: editData.place || '',
           note: editData.note || ''
         })
       } else {
-        // 新規作成モード: デフォルト値で初期化
+        // 新規作成モード
         setFormData({
-          date: format(validDate, 'yyyy-MM-dd'),
+          date: format(selectedDate, 'yyyy-MM-dd'),
           place: '',
           note: ''
         })
@@ -68,7 +72,7 @@ export default function PracticeBasicForm({
     
     // バリデーション
     if (!formData.place.trim()) {
-      alert('練習場所を入力してください')
+      console.error('練習場所を入力してください')
       return
     }
 
@@ -80,14 +84,16 @@ export default function PracticeBasicForm({
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+    <div className="fixed inset-0 z-[60] overflow-y-auto">
+      <div className="flex min-h-screen items-center justify-center p-4">
+        {/* オーバーレイ */}
         <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+          className="fixed inset-0 bg-black/40 transition-opacity"
           onClick={onClose}
         />
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+        {/* モーダルコンテンツ */}
+        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-lg">
           {/* ヘッダー */}
           <div className="bg-white px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">

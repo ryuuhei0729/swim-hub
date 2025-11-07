@@ -5,6 +5,7 @@ import { ChevronDownIcon, ChevronUpIcon, PencilIcon, TrashIcon } from '@heroicon
 import { formatTime } from '@/utils/formatters'
 import { StyleAPI } from '@apps/shared/api/styles'
 import { EntryAPI } from '@apps/shared/api/entries'
+import { EntryWithDetails } from '@apps/shared/types/database'
 import { useAuth } from '@/contexts/AuthProvider'
 import type { Style } from '@apps/shared/types/database'
 
@@ -33,7 +34,7 @@ interface UserEntry {
   style: Style | null
 }
 
-export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionProps) {
+export default function TeamEntrySection({ teamId, isAdmin: _isAdmin }: TeamEntrySectionProps) {
   const { supabase } = useAuth()
   const [loading, setLoading] = useState(true)
   const [competitions, setCompetitions] = useState<Competition[]>([])
@@ -82,8 +83,8 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
           await Promise.all(
             openComps.map(async (comp: Competition) => {
               const entries = await entryAPI.getEntriesByCompetition(comp.id)
-              const mine = (entries || []).filter((e: any) => e.user_id === user.id)
-              const convertedEntries = mine.map((entry: any) => ({
+              const mine = (entries || []).filter((e: EntryWithDetails) => e.user_id === user.id)
+              const convertedEntries = mine.map((entry: EntryWithDetails) => ({
                 ...entry,
                 style: Array.isArray(entry.style) ? entry.style[0] : entry.style
               }))
@@ -172,7 +173,7 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
     const form = getFormData(competitionId)
     
     if (!form.styleId) {
-      alert('種目を選択してください')
+      console.error('種目を選択してください')
       return
     }
 
@@ -210,15 +211,12 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
       if (form.editingEntryId) {
         // 編集モード
         await entryAPI.updateEntry(form.editingEntryId, updatePayload)
-        alert('エントリーを更新しました')
       } else if (existingEntry) {
         // 既存エントリーがある場合は更新
         await entryAPI.updateEntry(existingEntry.id, updatePayload)
-        alert('エントリーを更新しました')
       } else {
         // 新規作成
         await entryAPI.createTeamEntry(teamId, user.id, entryData)
-        alert('エントリーを追加しました')
       }
 
       // フォームをリセット
@@ -232,8 +230,8 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
       // エントリー一覧を再読み込み（自分の分のみ）
       const entryAPIRefetch = new EntryAPI(supabase)
       const allEntries = await entryAPIRefetch.getEntriesByCompetition(competitionId)
-      const mine = (allEntries || []).filter((e: any) => e.user_id === user.id)
-      const convertedEntries = mine.map((entry: any) => ({
+      const mine = (allEntries || []).filter((e: EntryWithDetails) => e.user_id === user.id)
+      const convertedEntries = mine.map((entry: EntryWithDetails) => ({
         ...entry,
         style: Array.isArray(entry.style) ? entry.style[0] : entry.style
       }))
@@ -241,9 +239,8 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
         ...prev,
         [competitionId]: convertedEntries
       }))
-    } catch (error: any) {
-      console.error('エントリーの送信に失敗:', error)
-      alert(error.message || 'エントリーの送信に失敗しました')
+    } catch (err) {
+      console.error('エントリーの送信に失敗:', err)
     } finally {
       setSubmitting(false)
     }
@@ -280,8 +277,8 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
       const allEntries = await entryAPIRefetch.getEntriesByCompetition(competitionId)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('認証が必要です')
-      const mine = (allEntries || []).filter((e: any) => e.user_id === user.id)
-      const convertedEntries = mine.map((entry: any) => ({
+      const mine = (allEntries || []).filter((e: EntryWithDetails) => e.user_id === user.id)
+      const convertedEntries = mine.map((entry: EntryWithDetails) => ({
         ...entry,
         style: Array.isArray(entry.style) ? entry.style[0] : entry.style
       }))
@@ -291,9 +288,8 @@ export default function TeamEntrySection({ teamId, isAdmin }: TeamEntrySectionPr
       }))
       
       alert('エントリーを削除しました')
-    } catch (error: any) {
-      console.error('エントリーの削除に失敗:', error)
-      alert(error.message || 'エントリーの削除に失敗しました')
+    } catch (err) {
+      console.error('エントリーの削除に失敗:', err)
     } finally {
       setSubmitting(false)
     }

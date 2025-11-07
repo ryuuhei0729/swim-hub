@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { PlusIcon } from '@heroicons/react/24/outline'
-import { format, isSameMonth, isSameDay, isToday } from 'date-fns'
+import { format, isSameMonth, isToday } from 'date-fns'
 import { CalendarItem, CalendarItemType } from '@/types'
 
 interface CalendarGridProps {
@@ -13,7 +13,6 @@ interface CalendarGridProps {
   onDateClick: (date: Date) => void
   onAddClick: (date: Date) => void
   getItemColor: (type: CalendarItemType) => string
-  getDayStatusIndicator: (entries: CalendarItem[]) => React.ReactNode
 }
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
@@ -25,8 +24,7 @@ export default function CalendarGrid({
   isLoading,
   onDateClick,
   onAddClick,
-  getItemColor,
-  getDayStatusIndicator
+  getItemColor
 }: CalendarGridProps) {
   const getDateEntries = (date: Date) => {
     const dateKey = format(date, 'yyyy-MM-dd')
@@ -80,8 +78,6 @@ export default function CalendarGrid({
                 `}
                 onClick={() => onDateClick(day)}
               >
-                {/* 記録状態インジケーター */}
-                {isCurrentMonth && getDayStatusIndicator(dayEntries)}
                 {/* 日付 */}
                 <div className="flex items-center justify-between mb-1">
                   <span className={`
@@ -113,11 +109,11 @@ export default function CalendarGrid({
                     
                     if (item.type === 'practice') {
                       // Practice: 練習場所
-                      displayTitle = item.location || '練習'
+                      displayTitle = item.place || '練習'
                     } else if (item.type === 'team_practice') {
                       // TeamPractice: チーム名 - 練習場所（metadataから動的に取得）
-                      const teamName = (item.metadata as any)?.team?.name || 'チーム'
-                      displayTitle = `${teamName} - ${item.location || '練習'}`
+                      const teamName = item.metadata?.team?.name || 'チーム'
+                      displayTitle = `${teamName} - ${item.place || '練習'}`
                     } else if (item.type === 'practice_log') {
                       // PracticeLog: 距離×本数×セット数
                       displayTitle = item.title

@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState } from 'react'
-import { XMarkIcon } from '@heroicons/react/24/outline'
 
 export interface TeamJoinFormProps {
   onSubmit: (inviteId: string) => Promise<void>

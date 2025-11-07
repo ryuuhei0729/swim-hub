@@ -1,10 +1,10 @@
 'use client'
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from 'react'
-import { createClient } from '@/lib/supabase'
+import { useAuth } from '@/contexts'
 import { DashboardAPI } from '@apps/shared/api/dashboard'
 import { CalendarItem, MonthlySummary } from '@apps/shared/types/ui'
-import { endOfMonth, format, startOfMonth } from 'date-fns'
+import { endOfMonth, format, startOfMonth, isSameMonth } from 'date-fns'
 
 interface CalendarContextType {
   // 状態
@@ -24,23 +24,63 @@ interface CalendarContextType {
 
 const CalendarContext = createContext<CalendarContextType | undefined>(undefined)
 
-export function CalendarProvider({ children }: { children: React.ReactNode }) {
-  const [currentDate, setCurrentDate] = useState(new Date())
-  const supabase = useMemo(() => createClient(), [])
+interface CalendarProviderProps {
+  children: React.ReactNode
+  initialCalendarItems?: CalendarItem[]
+  initialMonthlySummary?: MonthlySummary
+  initialDate?: Date // 初期データが取得された月の日付
+}
+
+export function CalendarProvider({ 
+  children,
+  initialCalendarItems = [],
+  initialMonthlySummary = { practiceCount: 0, recordCount: 0 },
+  initialDate = new Date()
+}: CalendarProviderProps) {
+  const { supabase } = useAuth()
+  const [currentDate, setCurrentDateState] = useState(initialDate)
   const api = useMemo(() => new DashboardAPI(supabase), [supabase])
-  const [calendarItems, setCalendarItems] = useState<CalendarItem[]>([])
-  const [monthlySummary, setMonthlySummary] = useState<MonthlySummary>({
-    practiceCount: 0,
-    recordCount: 0
-  })
-  const [loading, setLoading] = useState(true)
+  const [calendarItems, setCalendarItems] = useState<CalendarItem[]>(initialCalendarItems)
+  const [monthlySummary, setMonthlySummary] = useState<MonthlySummary>(initialMonthlySummary)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
   const isLoadingDataRef = useRef(false)
+  const previousMonthRef = useRef<string | null>(null)
+  
+  // 現在の月を文字列で取得（比較用）
+  const getCurrentMonthKey = useCallback((date: Date) => {
+    return format(date, 'yyyy-MM')
+  }, [])
+
+  // 初期データの月をチェックして、現在の月と同じ場合のみ使用
+  const isInitialDataForCurrentMonth = useMemo(() => {
+    if (initialCalendarItems.length === 0) {
+      return false
+    }
+    return isSameMonth(initialDate, currentDate)
+  }, [initialCalendarItems.length, initialDate, currentDate])
+
+  // 初期データが現在の月に対応している場合は使用
+  useEffect(() => {
+    if (isInitialDataForCurrentMonth) {
+      setCalendarItems(initialCalendarItems)
+      setMonthlySummary(initialMonthlySummary)
+      setLoading(false)
+      previousMonthRef.current = getCurrentMonthKey(currentDate)
+    }
+  }, [isInitialDataForCurrentMonth, initialCalendarItems, initialMonthlySummary, currentDate, getCurrentMonthKey])
 
   // データ取得関数（重複実行を防ぐ）
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (targetDate: Date = currentDate) => {
     // 既に実行中の場合はスキップ
     if (isLoadingDataRef.current) {
+      return
+    }
+
+    const monthKey = getCurrentMonthKey(targetDate)
+    
+    // 同じ月のデータを既に取得済みの場合はスキップ
+    if (previousMonthRef.current === monthKey) {
       return
     }
 
@@ -48,8 +88,6 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
       isLoadingDataRef.current = true
       setLoading(true)
       setError(null)
-
-      // SupabaseクライアントとAPIインスタンスは既にメモ化済み
 
       // ユーザー認証チェック
       const { data: { user } } = await supabase.auth.getUser()
@@ -64,20 +102,20 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
       }
 
       // 月の開始日と終了日を計算
-      const monthStart = startOfMonth(currentDate)
-      const monthEnd = endOfMonth(currentDate)
+      const monthStart = startOfMonth(targetDate)
+      const monthEnd = endOfMonth(targetDate)
       const startDate = format(monthStart, 'yyyy-MM-dd')
       const endDate = format(monthEnd, 'yyyy-MM-dd')
 
-
       // カレンダーエントリーと月間サマリーを並行取得
-            const [entries, summary] = await Promise.all([
-              api.getCalendarEntries(startDate, endDate),
-              api.getMonthlySummary(currentDate.getFullYear(), currentDate.getMonth() + 1)
-            ])
-            
-            setCalendarItems(entries)
-            setMonthlySummary(summary)
+      const [entries, summary] = await Promise.all([
+        api.getCalendarEntries(startDate, endDate),
+        api.getMonthlySummary(targetDate.getFullYear(), targetDate.getMonth() + 1)
+      ])
+      
+      setCalendarItems(entries)
+      setMonthlySummary(summary)
+      previousMonthRef.current = monthKey
       
     } catch (err) {
       console.error('Calendar data fetch error:', err)
@@ -88,12 +126,32 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
       setLoading(false)
       isLoadingDataRef.current = false
     }
-  }, [currentDate])
+  }, [currentDate, api, supabase, getCurrentMonthKey])
 
-  // 初回データ取得
+  // 月変更を検知してデータ再取得（楽観的更新）
+  const setCurrentDate = useCallback((newDate: Date) => {
+    const newMonthKey = getCurrentMonthKey(newDate)
+    const currentMonthKey = getCurrentMonthKey(currentDate)
+    
+    // 月が変更された場合のみ更新
+    if (newMonthKey !== currentMonthKey) {
+      // 楽観的更新: すぐに日付を更新（UIを即座に反映）
+      setCurrentDateState(newDate)
+      // バックグラウンドでデータ取得
+      loadData(newDate)
+    } else {
+      // 同じ月の場合は日付のみ更新
+      setCurrentDateState(newDate)
+    }
+  }, [currentDate, getCurrentMonthKey, loadData])
+
+  // 初回データ取得（初期データがない場合、または月が異なる場合のみ）
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    if (!isInitialDataForCurrentMonth) {
+      // 初期データが現在の月に対応していない場合のみ取得
+      loadData()
+    }
+  }, [isInitialDataForCurrentMonth, loadData])
 
   // アイテム操作
   const addItem = useCallback((item: CalendarItem) => {

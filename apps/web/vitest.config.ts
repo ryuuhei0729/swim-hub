@@ -1,5 +1,6 @@
 // @ts-nocheck
 import react from '@vitejs/plugin-react'
+import path from 'path'
 import { defineConfig } from 'vitest/config'
 import { createVitestConfig } from '../../tools/vitest-config/web.js'
 
@@ -33,8 +34,8 @@ export default defineConfig({
       },
     },
     alias: {
-      '@': './',
-      '@apps/shared': '../shared',
+      '@': path.resolve(__dirname, './'),
+      '@apps/shared': path.resolve(__dirname, '../shared'),
     },
   }),
 })

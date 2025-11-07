@@ -1,9 +1,8 @@
 'use client'
 
-import React, { useState, useCallback } from 'react'
+import React, { useCallback } from 'react'
 import { XMarkIcon, CheckIcon } from '@heroicons/react/24/outline'
 import Cropper from 'react-easy-crop'
-import { Area } from 'react-easy-crop'
 import { useImageCrop } from '@/hooks/useImageCrop'
 import { Button } from '@/components/ui'
 
@@ -52,7 +51,7 @@ export default function ImageCropModal({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* オーバーレイ */}
       <div 
-        className="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity"
+        className="fixed inset-0 bg-gray-900/75 transition-opacity"
         onClick={handleClose}
       />
       

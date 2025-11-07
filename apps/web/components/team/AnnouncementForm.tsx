@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { createClient } from '@/lib/supabase'
+import { useState, useEffect } from 'react'
+import { useAuth } from '@/contexts'
 import { useCreateTeamAnnouncement, useUpdateTeamAnnouncement } from '@apps/shared/hooks'
 import type { TeamAnnouncement, CreateTeamAnnouncementInput, UpdateTeamAnnouncementInput } from '@/types'
 
@@ -22,7 +22,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
   const [content, setContent] = useState('')
   const [isPublished, setIsPublished] = useState(false)
 
-  const supabase = useMemo(() => createClient(), [])
+  const { supabase } = useAuth()
   const { create, loading: createLoading } = useCreateTeamAnnouncement(supabase)
   const { update, loading: updateLoading } = useUpdateTeamAnnouncement(supabase)
   const isLoading = createLoading || updateLoading
@@ -44,7 +44,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
     e.preventDefault()
     
     if (!title.trim() || !content.trim()) {
-      alert('タイトルと内容を入力してください')
+      console.error('タイトルと内容を入力してください')
       return
     }
 
@@ -73,7 +73,6 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
       onClose()
     } catch (error) {
       console.error('保存エラー:', error)
-      alert('保存に失敗しました')
     }
   }
 
@@ -86,7 +85,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">

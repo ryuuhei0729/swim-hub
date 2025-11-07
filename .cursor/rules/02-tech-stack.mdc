@@ -14,7 +14,7 @@ swim-hub/
 │   ├── web/           # Next.jsアプリケーション
 │   └── mobile/        # React Native（未実装）
 ├── supabase/          # Supabase設定
-│   ├── functions/     # Edge Functions（GraphQL）
+│   ├── functions/     # Edge Functions（必要に応じて）
 │   └── migrations/    # データベースマイグレーション
 ├── docs/              # ドキュメント
 └── package.json       # ルートpackage.json（workspaces管理）
@@ -24,19 +24,22 @@ swim-hub/
 - **Framework**: Next.js 15 (App Router)
 - **Language**: TypeScript 5
 - **UI**: React 19 + Tailwind CSS 3
-- **State**: Apollo Client (GraphQL) + React Context
+- **State**: React Context + useState/useReducer
+- **Data Access**: Supabase Client (直接アクセス)
 - **Form**: useState (React Hook Formは未使用)
 - **Date**: date-fns 4
 - **Testing**: Playwright (E2E)
 
 ## Backend
 - **Database**: PostgreSQL (Supabase)
-- **API**: GraphQL (Supabase Edge Functions)
+- **API**: Supabase Client (直接アクセス)
 - **Auth**: Supabase Auth
 - **Storage**: Supabase Storage
+- **Security**: Row Level Security (RLS)
 
 ## Mobile (未実装)
 - **Framework**: React Native + Expo
 - **Language**: TypeScript
-- **State**: Apollo Client (GraphQL) + React Context
+- **State**: React Context + useState/useReducer
+- **Data Access**: Supabase Client (直接アクセス)
 - **Navigation**: React Navigation

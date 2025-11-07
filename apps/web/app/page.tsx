@@ -11,7 +11,6 @@ import {
   ChartBarIcon, 
   TrophyIcon,
   ClipboardDocumentListIcon,
-  FlagIcon,
   UsersIcon,
   SpeakerWaveIcon,
   ArrowRightIcon,

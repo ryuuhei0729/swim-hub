@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase'
+import { useAuth } from '@/contexts'
 import { TeamMembersAPI } from '@apps/shared/api/teams/members'
 import { TeamMembershipWithUser } from '@apps/shared/types/database'
 import { Avatar } from '@/components/ui'
@@ -25,7 +25,7 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [inviteCode, setInviteCode] = useState('')
   
-  const supabase = useMemo(() => createClient(), [])
+  const { supabase } = useAuth()
   const api = useMemo(() => new TeamMembersAPI(supabase), [supabase])
 
   // メンバー一覧を取得
@@ -71,7 +71,6 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
 
   const handleCopyInviteCode = () => {
     navigator.clipboard.writeText(inviteCode)
-    alert('招待コードをコピーしました')
   }
 
   if (loading) {
@@ -188,7 +187,7 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div 
-              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+              className="fixed inset-0 bg-black/40 transition-opacity" 
               onClick={() => setShowInviteModal(false)}
             />
             

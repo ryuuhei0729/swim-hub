@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { SupabaseClient } from '@supabase/supabase-js'
+import { CalendarItemType } from '../types/database'
 import { CalendarItem } from '../types/ui'
 
 export class DashboardAPI {
@@ -45,10 +46,10 @@ export class DashboardAPI {
       })
       .map(item => ({
         id: item.id,
-        type: item.item_type as any,
+        type: item.item_type as CalendarItemType,
         date: item.item_date,
         title: item.title,
-        location: item.location,
+        place: item.place || item.location, // 後方互換性のためlocationも許容
         note: item.note,
         metadata: item.metadata || {},
         editData: {

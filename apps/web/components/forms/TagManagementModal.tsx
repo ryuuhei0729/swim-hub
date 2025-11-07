@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { XMarkIcon, TrashIcon, SwatchIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { Button, Input } from '@/components/ui'
 
 import { PracticeTag } from '@apps/shared/types/database'
@@ -90,14 +90,14 @@ export default function TagManagementModal({
 
   const handleUpdate = async () => {
     if (!tagName.trim()) {
-      alert('タグ名を入力してください')
+      console.error('タグ名を入力してください')
       return
     }
 
     // カラーを正規化して検証
     const normalizedColor = normalizeColor(selectedColor)
     if (!isValidColor(selectedColor)) {
-      alert('無効なカラー形式です。有効なHEXカラーを選択してください。')
+      console.error('無効なカラー形式です。有効なHEXカラーを選択してください。')
       return
     }
 
@@ -107,7 +107,6 @@ export default function TagManagementModal({
       onClose()
     } catch (error) {
       console.error('タグ更新エラー:', error)
-      alert('タグの更新に失敗しました')
     } finally {
       setIsUpdating(false)
     }
@@ -120,7 +119,6 @@ export default function TagManagementModal({
       onClose()
     } catch (error) {
       console.error('タグ削除エラー:', error)
-      alert('タグの削除に失敗しました')
     } finally {
       setIsDeleting(false)
       setShowDeleteConfirm(false)
@@ -128,14 +126,14 @@ export default function TagManagementModal({
   }
 
   return (
-    <div className="fixed inset-0 z-60 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+    <div className="fixed inset-0 z-[80] overflow-y-auto">
+      <div className="flex min-h-screen items-center justify-center p-4">
         <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+          className="fixed inset-0 bg-black/40 transition-opacity"
           onClick={onClose}
         />
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
+        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-md">
           {/* ヘッダー */}
           <div className="bg-white px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
@@ -250,11 +248,11 @@ export default function TagManagementModal({
 
       {/* 削除確認モーダル */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-70 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
+        <div className="fixed inset-0 z-[90] overflow-y-auto">
+          <div className="flex min-h-screen items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/40 transition-opacity" />
             
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div className="relative bg-white rounded-lg shadow-2xl border-2 border-red-300 w-full max-w-lg">
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="sm:flex sm:items-start">
                   <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">

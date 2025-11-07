@@ -1,7 +1,6 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react'
-import { User, Session, SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase'
 import type { Database } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -41,19 +40,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // ユーザーが存在しない場合（PGRST116エラー）、デフォルトプロフィールを作成
         if (error.code === 'PGRST116') {
           if (process.env.NODE_ENV === 'development') {
+            // 開発環境でのデバッグ処理
           }
           
           try {
-            const { data: newProfile, error: createError } = await (supabase as any)
+            const userInsert = {
+              id: userId,
+              name: 'ユーザー',
+              gender: 0,
+              bio: '',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            } satisfies Database['public']['Tables']['users']['Insert']
+            
+            const { data: newProfile, error: createError } = await supabase
               .from('users')
-              .insert({
-                id: userId,
-                name: 'ユーザー',
-                gender: 0,
-                bio: '',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              })
+              // @ts-expect-error: Supabaseの型推論がinsertでneverになる既知の問題のため
+              .insert(userInsert)
               .select()
               .single()
             
@@ -74,7 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       return data
-    } catch (error) {
+    } catch {
       // プロフィール取得失敗は認証状態に影響しない
       return null
     }
@@ -90,13 +93,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       
       if (error) {
-        return { data: null, error }
+        return { data: null, error: error as import('@supabase/supabase-js').AuthError }
       }
       
-      return { data, error: null }
+      return { data: data ? { user: data.user, session: data.session } : null, error: null }
     } catch (error) {
       console.error('Sign in error:', error)
-      return { data: null, error }
+      return { data: null, error: error as import('@supabase/supabase-js').AuthError }
     }
   }, [supabase])
 
@@ -116,13 +119,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       
       if (error) {
-        return { data: null, error }
+        return { data: null, error: error as import('@supabase/supabase-js').AuthError }
       }
       
-      return { data, error: null }
+      return { data: data ? { user: data.user, session: data.session } : null, error: null }
     } catch (error) {
       console.error('Sign up error:', error)
-      return { data: null, error }
+      return { data: null, error: error as import('@supabase/supabase-js').AuthError }
     }
   }, [supabase])
 
@@ -132,13 +135,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error } = await supabase.auth.signOut()
       
       if (error) {
-        return { error }
+        return { error: error as import('@supabase/supabase-js').AuthError }
       }
       
       return { error: null }
     } catch (error) {
       console.error('Sign out error:', error)
-      return { error }
+      return { error: error as import('@supabase/supabase-js').AuthError }
     }
   }, [supabase])
 
@@ -150,13 +153,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       
       if (error) {
-        return { error }
+        return { error: error as import('@supabase/supabase-js').AuthError }
       }
       
       return { error: null }
     } catch (error) {
       console.error('Password reset error:', error)
-      return { error }
+      return { error: error as import('@supabase/supabase-js').AuthError }
     }
   }, [supabase])
 
@@ -168,13 +171,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       
       if (error) {
-        return { error }
+        return { error: error as import('@supabase/supabase-js').AuthError }
       }
       
       return { error: null }
     } catch (error) {
       console.error('Password update error:', error)
-      return { error }
+      return { error: error as import('@supabase/supabase-js').AuthError }
     }
   }, [supabase])
 
@@ -182,16 +185,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
     try {
       if (!authState.user) {
-        return { error: new Error('User not authenticated') }
+        return { error: new Error('User not authenticated') as unknown as import('@supabase/supabase-js').AuthError }
       }
       
-      const { error } = await (supabase as any)
+      const userUpdate: Database['public']['Tables']['users']['Update'] = updates
+      const { error } = await supabase
         .from('users')
-        .update(updates)
+        // @ts-expect-error: Supabaseの型推論がupdateでneverになる既知の問題のため
+        .update(userUpdate)
         .eq('id', authState.user.id)
       
       if (error) {
-        return { error }
+        return { error: (error as unknown) as import('@supabase/supabase-js').AuthError }
       }
       
       // プロフィールを再取得
@@ -203,7 +208,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { error: null }
     } catch (error) {
       console.error('Profile update error:', error)
-      return { error }
+      return { error: (error as unknown) as import('@supabase/supabase-js').AuthError }
     }
   }, [authState.user, supabase, fetchUserProfile]) // fetchUserProfileを依存配列に追加
 

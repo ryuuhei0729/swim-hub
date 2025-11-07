@@ -7,7 +7,7 @@ interface TeamPracticeManagerProps {
 }
 
 // TODO: Supabase直接アクセスで実装する
-export default function TeamPracticeManager({ teamId }: TeamPracticeManagerProps) {
+export default function TeamPracticeManager({ teamId: _teamId }: TeamPracticeManagerProps) {
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-xl font-semibold text-gray-900 mb-4">

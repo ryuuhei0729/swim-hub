@@ -2,7 +2,7 @@
 // UI・フォーム関連型定義 - Swim Hub共通パッケージ
 // =============================================================================
 
-import { CalendarItemType, PracticeTag } from './database'
+import { CalendarItemType, PracticeTag, PracticeLog, PracticeLogWithTimes, SplitTime, Record as RecordRow } from './database'
 
 // =============================================================================
 // 1. カレンダー関連
@@ -20,10 +20,10 @@ export interface TeamInfo {
 
 // 練習メタデータ
 export interface PracticeMetadata {
-  practice?: {
+    practice?: {
     id: string
     place: string
-    practice_logs?: any[]
+    practice_logs?: PracticeLog[]
   }
   practice_id?: string
   team_id?: string | null
@@ -85,7 +85,7 @@ export interface RecordMetadata {
       distance: number
     }
     competition_id?: string
-    split_times?: any[]
+    split_times?: SplitTime[]
   }
   competition?: {
     id: string
@@ -110,7 +110,7 @@ export interface CalendarItem {
   type: CalendarItemType
   date: string
   title: string
-  location?: string
+  place?: string
   note?: string
   // メタデータ（型別の詳細情報）
   metadata: {
@@ -118,7 +118,7 @@ export interface CalendarItem {
     practice?: {
       id?: string
       place: string
-      practice_logs?: any[]
+      practice_logs?: PracticeLog[]
     }
     practice_id?: string
     // 大会関連
@@ -156,7 +156,7 @@ export interface CalendarItem {
         distance: number
       }
       competition_id?: string
-      split_times?: any[]
+      split_times?: SplitTime[]
     }
     // 共通フィールド
     team_id?: string | null
@@ -166,7 +166,7 @@ export interface CalendarItem {
     pool_type?: number
   }
   // 編集時に必要な追加フィールド
-  editData?: any
+  editData?: unknown
 }
 
 export interface CalendarDay {
@@ -219,7 +219,7 @@ export interface PracticeSet {
 // 練習ログフォームデータ
 export interface PracticeLogFormData {
   practiceDate: string
-  location: string
+  place: string
   sets: PracticeSet[]
   note: string
 }
@@ -259,7 +259,10 @@ export interface PracticeFormProps {
   onSubmit?: (data: PracticeLogFormData) => Promise<void>
   onDeletePracticeLog?: (practiceLogId: string) => Promise<void>
   initialDate?: Date
-  editData?: any
+  editData?: {
+    practiceId?: string
+    logs?: PracticeLog[]
+  } | null
   isLoading?: boolean
   setAvailableTags?: (tags: PracticeTag[]) => void
 }
@@ -271,7 +274,10 @@ export interface RecordFormProps {
   onSubmit?: (data: RecordFormData) => Promise<void>
   onDeleteRecord?: (recordId: string) => Promise<void>
   initialDate?: Date
-  editData?: any
+  editData?: {
+    recordId?: string
+    splitTimes?: SplitTime[]
+  } | null
   isLoading?: boolean
 }
 
@@ -293,10 +299,10 @@ export interface CalendarProps {
   onEditItem?: (item: CalendarItem) => void
   onDeleteItem?: (itemId: string, itemType: CalendarItemType) => void
   onAddPracticeLog?: (practiceId: string) => void
-  onEditPracticeLog?: (log: any) => void
+  onEditPracticeLog?: (log: PracticeLogWithTimes & { tags?: PracticeTag[] }) => void
   onDeletePracticeLog?: (logId: string) => void
   onAddRecord?: (params: { competitionId?: string; entryData?: EntryInfo }) => void
-  onEditRecord?: (record: any) => void
+  onEditRecord?: (record: RecordRow) => void
   onDeleteRecord?: (recordId: string) => void
   selectedDate?: Date | null
   isLoading?: boolean
@@ -316,17 +322,17 @@ export interface DayDetailModalProps {
   onDeleteItem?: (itemId: string, itemType: CalendarItemType) => void
   onAddItem?: (date: Date, type: CalendarItemType) => void
   onAddPracticeLog?: (practiceId: string) => void
-  onEditPracticeLog?: (log: any) => void
+  onEditPracticeLog?: (log: PracticeLogWithTimes & { tags?: PracticeTag[] }) => void
   onDeletePracticeLog?: (logId: string) => void
   onAddRecord?: (params: { competitionId?: string; entryData?: EntryInfo }) => void
-  onEditRecord?: (record: any) => void
+  onEditRecord?: (record: RecordRow) => void
   onDeleteRecord?: (recordId: string) => void
 }
 
 // ダッシュボード統計
 export interface DashboardStatsProps {
   monthlySummary?: MonthlySummary
-  upcomingEvents?: any[]
+  upcomingEvents?: CalendarItem[]
   isLoading?: boolean
 }
 
@@ -339,53 +345,36 @@ export interface DashboardStatsProps {
 // =============================================================================
 
 // 練習メタデータの型ガード
-export function isPracticeMetadata(metadata: any): metadata is { practice?: any; practice_id?: string; team_id?: string | null; team?: TeamInfo; user_id?: string } {
-  return metadata && (
-    metadata.practice !== undefined ||
-    metadata.practice_id !== undefined ||
-    metadata.team_id !== undefined ||
-    metadata.team !== undefined ||
-    metadata.user_id !== undefined
-  )
+export function isPracticeMetadata(metadata: unknown): metadata is { practice?: { id: string; place: string; practice_logs?: PracticeLog[] }; practice_id?: string; team_id?: string | null; team?: TeamInfo; user_id?: string } {
+  if (!metadata || typeof metadata !== 'object') return false
+  const m = metadata as Record<string, unknown>
+  return 'practice' in m || 'practice_id' in m || 'team_id' in m || 'team' in m || 'user_id' in m
 }
 
 // 大会メタデータの型ガード
-export function isCompetitionMetadata(metadata: any): metadata is { competition?: any; team_id?: string | null; team?: TeamInfo; pool_type?: number } {
-  return metadata && (
-    metadata.competition !== undefined ||
-    metadata.team_id !== undefined ||
-    metadata.team !== undefined ||
-    metadata.pool_type !== undefined
-  )
+export function isCompetitionMetadata(metadata: unknown): metadata is { competition?: { id: string; title: string; place: string | null; pool_type: number; team_id?: string | null }; team_id?: string | null; team?: TeamInfo; pool_type?: number } {
+  if (!metadata || typeof metadata !== 'object') return false
+  const m = metadata as Record<string, unknown>
+  return 'competition' in m || 'team_id' in m || 'team' in m || 'pool_type' in m
 }
 
 // エントリーメタデータの型ガード
-export function isEntryMetadata(metadata: any): metadata is { entry?: any; competition?: any; style?: any; team_id?: string | null; team?: TeamInfo; entry_time?: number | null } {
-  return metadata && (
-    metadata.entry !== undefined ||
-    metadata.competition !== undefined ||
-    metadata.style !== undefined ||
-    metadata.team_id !== undefined ||
-    metadata.team !== undefined ||
-    metadata.entry_time !== undefined
-  )
+export function isEntryMetadata(metadata: unknown): metadata is { entry?: { id: string; competition_id: string; user_id: string; style_id: number; entry_time?: number | null; team_id?: string | null }; competition?: { id: string; title: string; place: string | null; pool_type: number; team_id?: string | null }; style?: { id: number; name_jp: string; distance: number }; team_id?: string | null; team?: TeamInfo; entry_time?: number | null } {
+  if (!metadata || typeof metadata !== 'object') return false
+  const m = metadata as Record<string, unknown>
+  return 'entry' in m || 'competition' in m || 'style' in m || 'team_id' in m || 'team' in m || 'entry_time' in m
 }
 
 // 記録メタデータの型ガード
-export function isRecordMetadata(metadata: any): metadata is { record?: any; competition?: any; style?: any; team_id?: string | null; team?: TeamInfo; pool_type?: number } {
-  return metadata && (
-    metadata.record !== undefined ||
-    metadata.competition !== undefined ||
-    metadata.style !== undefined ||
-    metadata.team_id !== undefined ||
-    metadata.team !== undefined ||
-    metadata.pool_type !== undefined
-  )
+export function isRecordMetadata(metadata: unknown): metadata is { record?: { time: number; time_result?: number; is_relaying: boolean; video_url?: string; style: { id: string; name_jp: string; distance: number }; competition_id?: string; split_times?: SplitTime[] }; competition?: { id: string; title: string; place: string | null; pool_type: number; team_id?: string | null }; style?: { id: number; name_jp: string; distance: number }; team_id?: string | null; team?: TeamInfo; pool_type?: number } {
+  if (!metadata || typeof metadata !== 'object') return false
+  const m = metadata as Record<string, unknown>
+  return 'record' in m || 'competition' in m || 'style' in m || 'team_id' in m || 'team' in m || 'pool_type' in m
 }
 
 // チーム情報の型ガード
-export function isTeamInfo(team: any): team is TeamInfo {
-  return team && typeof team.id === 'string' && typeof team.name === 'string'
+export function isTeamInfo(team: unknown): team is TeamInfo {
+  return !!team && typeof (team as any).id === 'string' && typeof (team as any).name === 'string'
 }
 
 export const DEFAULT_VALUES = {

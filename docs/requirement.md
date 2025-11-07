@@ -600,7 +600,6 @@ records (
 **バージョン**: v2.1
 
 ### 主な変更点（v2.1）
-- **GraphQL脱却**: Apollo ClientからSupabase直接アクセスに完全移行
 - **共通API層の追加**: `packages/shared/api/` に共通API関数を実装
 - **パフォーマンス向上**: レスポンスタイム41%高速化、コード量95%削減
 - **コスト削減**: Edge Function実行コスト100%削減

@@ -4,26 +4,28 @@
 // =============================================================================
 
 import { UserProfile } from '@apps/shared/types/database'
+import { CalendarDay } from '@apps/shared/types/ui'
+import { AuthError, Session, SupabaseClient, User } from '@supabase/supabase-js'
 
 // =============================================================================
 // 1. 認証関連の型定義（Web専用）
 // =============================================================================
 
 export interface AuthState {
-  user: any | null
+  user: User | null
   profile: UserProfile | null
-  session: any | null
+  session: Session | null
   loading: boolean
 }
 
 export interface AuthContextType extends AuthState {
-  supabase: any
-  signIn: (email: string, password: string) => Promise<{ data: any; error: any }>
-  signUp: (email: string, password: string, name?: string) => Promise<{ data: any; error: any }>
-  signOut: () => Promise<{ error: any }>
-  resetPassword: (email: string) => Promise<{ error: any }>
-  updatePassword: (newPassword: string) => Promise<{ error: any }>
-  updateProfile: (updates: Partial<UserProfile>) => Promise<{ error: any }>
+  supabase: SupabaseClient
+  signIn: (email: string, password: string) => Promise<{ data: { user: User | null; session: Session | null } | null; error: AuthError | null }>
+  signUp: (email: string, password: string, name?: string) => Promise<{ data: { user: User | null; session: Session | null } | null; error: AuthError | null }>
+  signOut: () => Promise<{ error: AuthError | null }>
+  resetPassword: (email: string) => Promise<{ error: AuthError | null }>
+  updatePassword: (newPassword: string) => Promise<{ error: AuthError | null }>
+  updateProfile: (updates: Partial<UserProfile>) => Promise<{ error: AuthError | null }>
   isAuthenticated: boolean
   isLoading: boolean
 }
@@ -36,5 +38,5 @@ export interface AuthContextType extends AuthState {
 export interface CalendarData {
   year: number
   month: number
-  days: any[] // CalendarDay[]は共通型から取得
+  days: CalendarDay[]
 }

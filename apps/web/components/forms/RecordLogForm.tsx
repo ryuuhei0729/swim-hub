@@ -5,20 +5,38 @@ import { Button, Input } from '@/components/ui'
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { formatTime } from '@/utils/formatters'
 import { EntryInfo } from '@apps/shared/types/ui'
+// SplitTimeRow型定義（editData用のcamelCase型）
+type SplitTimeRow = {
+  distance: number
+  splitTime: number
+}
 
-interface SplitTimeInput {
+// フォーム内部状態用のスプリットタイム型（入力中はdistanceがnumber | ''）
+interface SplitTimeDraft {
   distance: number | ''
   splitTime: number
   splitTimeDisplayValue?: string
   uiKey?: string
 }
 
-interface RecordLogFormData {
+// フォーム内部状態用（入力中はdistanceがnumber | ''）
+interface RecordLogFormState {
   styleId: string
   time: number
   timeDisplayValue?: string
   isRelaying: boolean
-  splitTimes: SplitTimeInput[]
+  splitTimes: SplitTimeDraft[]
+  note: string
+  videoUrl?: string
+}
+
+// 送信用（distanceはnumber）
+export interface RecordLogFormData {
+  styleId: string
+  time: number
+  timeDisplayValue?: string
+  isRelaying: boolean
+  splitTimes: Array<{ distance: number; splitTime: number }>
   note: string
   videoUrl?: string
 }
@@ -28,9 +46,17 @@ interface RecordLogFormProps {
   onClose: () => void
   onSubmit: (data: RecordLogFormData) => Promise<void>
   competitionId: string
-  editData?: any
+  editData?: {
+    id?: string
+    styleId?: number
+    time?: number
+    isRelaying?: boolean
+    splitTimes?: SplitTimeRow[]
+    note?: string
+    videoUrl?: string
+  } | null
   isLoading?: boolean
-  styles?: Array<{ id: string | number; name_jp: string; distance: number }>
+  styles?: Array<{ id: string | number; nameJp: string; distance: number }>
   entryData?: EntryInfo // エントリー情報（ある場合は種目固定）
 }
 
@@ -38,13 +64,13 @@ export default function RecordLogForm({
   isOpen,
   onClose,
   onSubmit,
-  competitionId,
+  competitionId: _competitionId,
   editData,
   isLoading = false,
   styles = [],
   entryData
 }: RecordLogFormProps) {
-  const [formData, setFormData] = useState<RecordLogFormData>({
+  const [formData, setFormData] = useState<RecordLogFormState>({
     styleId: entryData?.styleId?.toString() || styles[0]?.id?.toString() || '',
     time: 0,
     timeDisplayValue: '',
@@ -62,31 +88,31 @@ export default function RecordLogForm({
     if (isOpen) {
       if (editData) {
         // 編集モード
-        const timeInSeconds = editData.time // DBは秒単位のDECIMAL
+        const timeInSeconds = editData.time ?? 0 // DBは秒単位のDECIMAL
         const minutes = Math.floor(timeInSeconds / 60)
         const seconds = (timeInSeconds % 60).toFixed(2)
         const timeDisplay = minutes > 0 ? `${minutes}:${seconds.padStart(5, '0')}` : seconds
 
         setFormData({
-          styleId: editData.style_id?.toString() || styles[0]?.id?.toString() || '',
-          time: editData.time || 0,
+          styleId: editData.styleId?.toString() || styles[0]?.id?.toString() || '',
+          time: editData.time ?? 0,
           timeDisplayValue: timeDisplay,
-          isRelaying: editData.is_relaying || false,
-          splitTimes: editData.split_times?.map((st: any, index: number) => {
-            const splitSeconds = st.split_time
+          isRelaying: editData.isRelaying || false,
+          splitTimes: editData.splitTimes?.map((st: SplitTimeRow, index: number) => {
+            const splitSeconds = st.splitTime
             const splitMinutes = Math.floor(splitSeconds / 60)
             const splitSecs = (splitSeconds % 60).toFixed(2)
             const splitDisplay = splitMinutes > 0 ? `${splitMinutes}:${splitSecs.padStart(5, '0')}` : splitSecs
             
             return {
               distance: st.distance,
-              splitTime: st.split_time,
+              splitTime: st.splitTime,
               splitTimeDisplayValue: splitDisplay,
               uiKey: `split-${index}`
             }
           }) || [],
           note: editData.note || '',
-          videoUrl: editData.video_url || ''
+          videoUrl: editData.videoUrl || ''
         })
       } else {
         // 新規作成モード
@@ -180,31 +206,31 @@ export default function RecordLogForm({
 
     // バリデーション
     if (!formData.styleId) {
-      alert('種目を選択してください')
+      console.error('種目を選択してください')
       return
     }
     if (formData.time <= 0) {
-      alert('タイムを入力してください（形式: 分:秒.小数 または 秒.小数）')
+      console.error('タイムを入力してください（形式: 分:秒.小数 または 秒.小数）')
       return
     }
 
-    // スプリットタイムのバリデーション
-    // 空のスプリットタイムを除外してから送信
-    const validSplitTimes = formData.splitTimes.filter((st) => {
-      // distanceチェック
-      const distance = typeof st.distance === 'number' ? st.distance : parseInt(st.distance as string)
-      if (isNaN(distance) || distance <= 0) {
-        return false
-      }
-      
-      // splitTimeチェック
-      if (!st.splitTime || st.splitTime <= 0) {
-        return false
-      }
-      
-      return true
-    })
-
+    // スプリットタイムのバリデーション・変換
+    // 空のスプリットタイムを除外し、distanceをnumberに変換
+    const validSplitTimes = formData.splitTimes
+      .map((st) => {
+        // distanceをnumberに変換
+        const distance = typeof st.distance === 'number' ? st.distance : (st.distance === '' ? NaN : parseInt(String(st.distance)))
+        
+        // 有効な値のみ返す
+        if (!isNaN(distance) && distance > 0 && st.splitTime > 0) {
+          return {
+            distance,
+            splitTime: st.splitTime
+          }
+        }
+        return null
+      })
+      .filter((st): st is { distance: number; splitTime: number } => st !== null)
 
     // バリデーション済みのデータを送信
     const submitData = {
@@ -231,11 +257,13 @@ export default function RecordLogForm({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={handleClose}></div>
+    <div className="fixed inset-0 z-[70] overflow-y-auto">
+      <div className="flex min-h-screen items-center justify-center p-4">
+        {/* オーバーレイ */}
+        <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose}></div>
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+        {/* モーダルコンテンツ */}
+        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-2xl">
           {/* ヘッダー */}
           <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div className="flex items-center justify-between mb-4">
@@ -286,7 +314,7 @@ export default function RecordLogForm({
                     <option value="">種目を選択</option>
                     {styles.map((style) => (
                       <option key={style.id} value={style.id}>
-                        {style.name_jp}
+                        {style.nameJp}
                       </option>
                     ))}
                   </select>

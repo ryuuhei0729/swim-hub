@@ -6,11 +6,6 @@ import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { formatTime } from '@/utils/formatters'
 
-interface SplitTime {
-  id: string
-  distance: number
-  splitTime: number
-}
 
 interface RecordSet {
   id: string
@@ -25,7 +20,7 @@ interface RecordSet {
 
 interface RecordFormData {
   recordDate: string
-  location: string
+  place: string
   competitionName: string
   poolType: number // 0: short, 1: long
   records: RecordSet[]
@@ -45,9 +40,36 @@ interface RecordFormProps {
   onClose: () => void
   onSubmit: (data: RecordFormData) => Promise<void>
   initialDate?: Date
-  editData?: any
+  editData?: EditData
   isLoading?: boolean
   styles?: Array<{ id: string; nameJp: string; distance: number }>
+}
+
+// 編集データ用の型
+type EditSplitTime = { distance: number; splitTime: number }
+type EditRecord = {
+  id?: string
+  styleId?: string
+  time?: number
+  isRelaying?: boolean
+  splitTimes?: EditSplitTime[]
+  note?: string
+  videoUrl?: string
+}
+type EditData = {
+  recordDate?: string
+  place?: string
+  competitionName?: string
+  poolType?: number
+  note?: string
+  records?: EditRecord[]
+  // 単一レコード編集ケースのためのフィールド
+  id?: string
+  styleId?: string
+  time?: number
+  isRelaying?: boolean
+  splitTimes?: EditSplitTime[]
+  videoUrl?: string
 }
 
 const POOL_TYPES = [
@@ -66,7 +88,7 @@ export default function RecordForm({
 }: RecordFormProps) {
   const [formData, setFormData] = useState<RecordFormData>({
     recordDate: initialDate ? format(initialDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
-    location: '',
+    place: '',
     competitionName: '',
     poolType: 0,
     records: [{
@@ -98,16 +120,16 @@ export default function RecordForm({
       // 複数のRecordが存在する場合の処理
       if (editData.records && editData.records.length > 0) {
         
-        const records: RecordSet[] = editData.records.map((record: any, index: number) => ({
+        const records: RecordSet[] = editData.records.map((record: EditRecord, index: number) => ({
           id: record.id || `record-${index}`,
           styleId: record.styleId || styles[0]?.id || '',
           time: record.time || 0,
           isRelaying: record.isRelaying || false,
-          splitTimes: (record.splitTimes?.map((st: any) => ({
+          splitTimes: (record.splitTimes?.map((st: EditSplitTime) => ({
             distance: st.distance,
             splitTime: st.splitTime,
             uiKey: (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
-              ? (crypto as any).randomUUID()
+              ? (crypto as Crypto).randomUUID()
               : `split-${Date.now()}-${Math.random()}`
           })) || []),
           note: record.note || '',
@@ -116,7 +138,7 @@ export default function RecordForm({
         
         setFormData({
           recordDate: editData.recordDate || format(new Date(), 'yyyy-MM-dd'),
-          location: editData.location || '',
+          place: editData.place || '',
           competitionName: editData.competitionName || '',
           poolType: editData.poolType || 0,
           records: records,
@@ -128,7 +150,7 @@ export default function RecordForm({
       // 単一のRecordの場合の従来の処理
       setFormData({
         recordDate: editData.recordDate || format(new Date(), 'yyyy-MM-dd'),
-        location: editData.location || '',
+        place: editData.place || '',
         competitionName: editData.competitionName || '',
         poolType: editData.poolType || 0,
         records: [{
@@ -136,11 +158,11 @@ export default function RecordForm({
           styleId: editData.styleId || styles[0]?.id || '',
           time: editData.time || 0,
           isRelaying: editData.isRelaying || false,
-          splitTimes: (editData.splitTimes?.map((st: any) => ({
+          splitTimes: (editData.splitTimes?.map((st: EditSplitTime) => ({
             distance: st.distance,
             splitTime: st.splitTime,
             uiKey: (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
-              ? (crypto as any).randomUUID()
+              ? (crypto as Crypto).randomUUID()
               : `split-${Date.now()}-${Math.random()}`
           })) || []),
           note: editData.note || '',
@@ -152,7 +174,7 @@ export default function RecordForm({
       // 新規作成時はデフォルト値にリセット
       setFormData({
         recordDate: initialDate ? format(initialDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
-        location: '',
+        place: '',
         competitionName: '',
         poolType: 0,
         records: [{
@@ -232,7 +254,7 @@ export default function RecordForm({
       distance: '',
       splitTime: 0,
       uiKey: (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
-        ? (crypto as any).randomUUID()
+        ? (crypto as Crypto).randomUUID()
         : `split-${Date.now()}-${Math.random()}`
     }
     
@@ -260,7 +282,7 @@ export default function RecordForm({
     updateRecord(recordId, { splitTimes: updatedSplitTimes })
   }
 
-  const getStyleName = (styleId: string) => {
+  const _getStyleName = (styleId: string) => {
     const style = styles.find(s => s.id === styleId)
     return style ? `${style.nameJp} ${style.distance}m` : '種目を選択'
   }
@@ -272,11 +294,13 @@ export default function RecordForm({
 
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={onClose}></div>
+    <div className="fixed inset-0 z-[70] overflow-y-auto">
+      <div className="flex min-h-screen items-center justify-center p-4">
+        {/* オーバーレイ */}
+        <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={onClose}></div>
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+        {/* モーダルコンテンツ */}
+        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
           {/* ヘッダー */}
           <div className="bg-white px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
@@ -309,14 +333,14 @@ export default function RecordForm({
               />
             </div>
             <div>
-              <label htmlFor="record-location" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="record-place" className="block text-sm font-medium text-gray-700 mb-2">
                 開催地
               </label>
               <Input
-                id="record-location"
+                id="record-place"
                 type="text"
-                value={formData.location}
-                onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                value={formData.place}
+                onChange={(e) => setFormData(prev => ({ ...prev, place: e.target.value }))}
                 placeholder="例: 東京プール"
                 required
               />

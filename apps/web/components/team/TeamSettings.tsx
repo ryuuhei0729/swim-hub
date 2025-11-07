@@ -51,7 +51,6 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
       })
       
       setIsEditing(false)
-      alert('チーム情報を更新しました')
     } catch (err) {
       console.error('チーム更新エラー:', err)
       setError('チーム情報の更新に失敗しました')
@@ -73,7 +72,6 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
       setError(null)
       
       await membersAPI.leave(teamId)
-      alert('チームから退出しました')
       window.location.href = '/teams'
     } catch (err) {
       console.error('チーム退出エラー:', err)
@@ -168,7 +166,7 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
           <div className="fixed inset-0 z-50 overflow-y-auto">
             <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
               <div 
-                className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+                className="fixed inset-0 bg-black/40 transition-opacity" 
                 onClick={() => setShowLeaveModal(false)}
               />
               
@@ -215,7 +213,7 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
           <div className="fixed inset-0 z-50 overflow-y-auto">
             <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
               <div 
-                className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+                className="fixed inset-0 bg-black/40 transition-opacity" 
                 onClick={() => setShowLastMemberWarning(false)}
               />
               
@@ -430,7 +428,7 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div 
-              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+              className="fixed inset-0 bg-black/40 transition-opacity" 
               onClick={() => setShowLeaveModal(false)}
             />
             
@@ -477,7 +475,7 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div 
-              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+              className="fixed inset-0 bg-black/40 transition-opacity" 
               onClick={() => setShowLastMemberWarning(false)}
             />
             

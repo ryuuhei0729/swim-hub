@@ -50,25 +50,25 @@ export class TeamAttendancesAPI {
     const competitionIds = (teamCompetitions ?? []).map(c => c.id)
 
     // 3) 練習の出欠
-    let practiceAttendance: any[] = []
+    let practiceAttendance: TeamAttendanceWithDetails[] = []
     if (practiceIds.length > 0) {
       const { data, error } = await this.supabase
         .from('team_attendance')
         .select('*, user:users(*), practice:practices(*), competition:competitions(*)')
         .in('practice_id', practiceIds)
       if (error) throw error
-      practiceAttendance = data ?? []
+      practiceAttendance = (data ?? []) as TeamAttendanceWithDetails[]
     }
 
     // 4) 大会の出欠
-    let competitionAttendance: any[] = []
+    let competitionAttendance: TeamAttendanceWithDetails[] = []
     if (competitionIds.length > 0) {
       const { data, error } = await this.supabase
         .from('team_attendance')
         .select('*, user:users(*), practice:practices(*), competition:competitions(*)')
         .in('competition_id', competitionIds)
       if (error) throw error
-      competitionAttendance = data ?? []
+      competitionAttendance = (data ?? []) as TeamAttendanceWithDetails[]
     }
 
     const merged = [
@@ -145,7 +145,7 @@ export class TeamAttendancesAPI {
 
     const { data, error } = await this.supabase
       .from('team_attendance')
-      .upsert(input as any)
+      .upsert(input)
       .select('*')
       .single()
     if (error) throw error
@@ -185,7 +185,7 @@ export class TeamAttendancesAPI {
 
     const { data, error } = await this.supabase
       .from('team_attendance')
-      .update(updates as any)
+      .update(updates)
       .eq('id', id)
       .select('*')
       .single()

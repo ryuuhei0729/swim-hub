@@ -7,8 +7,13 @@ import { SupabaseClient } from '@supabase/supabase-js'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { TeamAnnouncementsAPI, TeamCoreAPI, TeamMembersAPI } from '../api/teams'
 import {
+  Team,
   TeamAnnouncement,
+  TeamAnnouncementInsert,
+  TeamAnnouncementUpdate,
+  TeamInsert,
   TeamMembershipWithUser,
+  TeamUpdate,
   TeamWithMembers
 } from '../types/database'
 
@@ -94,21 +99,21 @@ export function useTeams(
   }, [enableRealtime, teamId, loadData, supabase])
 
   // 操作関数
-  const createTeam = useCallback(async (team: any) => {
-    const newTeam = await core.createTeam(team)
+  const createTeam = useCallback(async (team: TeamInsert) => {
+    const newTeam: Team = await core.createTeam(team)
     await loadData()
     return newTeam
   }, [core, loadData])
 
-  const updateTeam = useCallback(async (id: string, updates: any) => {
-    const updated = await core.updateTeam(id, updates)
+  const updateTeam = useCallback(async (id: string, updates: TeamUpdate) => {
+    const updated: Team = await core.updateTeam(id, updates)
     await loadData()
     return updated
-  }, [loadData])
+  }, [core, loadData])
 
   const deleteTeam = useCallback(async (id: string) => {
     await core.deleteTeam(id)
-    setTeams(prev => prev.filter((t: any) => t.team?.id !== id))
+    setTeams(prev => prev.filter((t) => t.teams.id !== id))
   }, [core])
 
   const joinTeam = useCallback(async (inviteCode: string) => {
@@ -119,7 +124,7 @@ export function useTeams(
 
   const leaveTeam = useCallback(async (id: string) => {
     await membersApi.leave(id)
-    setTeams(prev => prev.filter((t: any) => t.team?.id !== id))
+    setTeams(prev => prev.filter((t) => t.teams.id !== id))
   }, [membersApi])
 
   const updateMemberRole = useCallback(async (
@@ -137,26 +142,14 @@ export function useTeams(
     await loadData()
   }, [membersApi, loadData])
 
-  const createAnnouncement = useCallback(async (announcement: any) => {
-    const newAnnouncement = await announcementsApi.create({
-      team_id: announcement.team_id ?? announcement.teamId,
-      title: announcement.title,
-      content: announcement.content,
-      is_published: announcement.is_published ?? announcement.isPublished ?? false,
-      published_at: announcement.published_at ?? announcement.publishedAt ?? null,
-      created_by: '' // サーバー側で user を付与
-    } as any)
+  const createAnnouncement = useCallback(async (input: TeamAnnouncementInsert) => {
+    const newAnnouncement: TeamAnnouncement = await announcementsApi.create(input)
     setAnnouncements(prev => [newAnnouncement, ...prev])
     return newAnnouncement
   }, [announcementsApi])
 
-  const updateAnnouncement = useCallback(async (id: string, updates: any) => {
-    const updated = await announcementsApi.update(id, {
-      title: updates.title,
-      content: updates.content,
-      is_published: updates.is_published ?? updates.isPublished,
-      published_at: updates.published_at ?? updates.publishedAt
-    } as any)
+  const updateAnnouncement = useCallback(async (id: string, input: TeamAnnouncementUpdate) => {
+    const updated: TeamAnnouncement = await announcementsApi.update(id, input)
     setAnnouncements(prev => prev.map(a => a.id === id ? updated : a))
     return updated
   }, [announcementsApi])

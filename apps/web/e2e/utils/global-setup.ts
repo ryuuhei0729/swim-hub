@@ -60,7 +60,7 @@ async function globalSetup(config: FullConfig) {
   console.log('✅ グローバルセットアップが完了しました')
 }
 
-async function setupTestUsers() {
+async function _setupTestUsers() {
   console.log('👤 テストユーザーのセットアップを開始')
   
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321'

@@ -2,7 +2,6 @@
 
 import React from 'react'
 import { Avatar } from '@/components/ui'
-import { PencilIcon } from '@heroicons/react/24/outline'
 
 interface UserProfile {
   id: string

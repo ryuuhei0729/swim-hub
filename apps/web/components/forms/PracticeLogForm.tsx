@@ -1,12 +1,12 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Button, Input } from '@/components/ui'
 import { XMarkIcon, PlusIcon, TrashIcon, ClockIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import TimeInputModal from './TimeInputModal'
 import TagInput from './TagInput'
-import { createClient } from '@/lib/supabase'
+import { useAuth } from '@/contexts'
 import { PracticeTag } from '@apps/shared/types/database'
 
 type Tag = PracticeTag
@@ -21,19 +21,41 @@ interface PracticeMenu {
   circleSec: number | ''
   note: string
   tags: Tag[]
-  times: any[]
+  times: import('@apps/shared/types/ui').TimeEntry[]
 }
 
 interface PracticeLogFormProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: any[]) => Promise<void>
+  onSubmit: (data: Array<{
+    style: string
+    distance: number
+    reps: number
+    sets: number
+    circleTime: number | null
+    note: string
+    tags: Tag[]
+    times: import('@apps/shared/types/ui').TimeEntry[]
+  }>) => Promise<void>
   practiceId: string
-  editData?: any
+  editData?: {
+    id?: string
+    style?: string
+    distance?: number
+    rep_count?: number
+    set_count?: number
+    circle?: number | null
+    note?: string | null
+    tags?: Tag[]
+    times?: Array<{
+      memberId: string
+      times: import('@apps/shared/types/ui').TimeEntry[]
+    }>
+  } | null
   isLoading?: boolean
   availableTags: Tag[]
   setAvailableTags: (tags: Tag[]) => void
-  styles?: any[]
+  styles?: Array<{ id: string | number; name_jp: string; distance: number }>
 }
 
 // 種目の選択肢
@@ -49,14 +71,14 @@ export default function PracticeLogForm({
   isOpen,
   onClose,
   onSubmit,
-  practiceId,
+  practiceId: _practiceId,
   editData,
   isLoading = false,
   availableTags,
   setAvailableTags,
-  styles = []
+  styles: _styles = []
 }: PracticeLogFormProps) {
-  const supabase = useMemo(() => createClient(), [])
+  const { supabase: _supabase } = useAuth()
 
   // タイム表示のフォーマット関数
   const formatTime = (seconds: number): string => {
@@ -68,9 +90,9 @@ export default function PracticeLogForm({
       : `${remainingSeconds.toFixed(2)}`
   }
   // フォームデータの初期値
-  const [formData, setFormData] = useState({
+  const [_formData, _setFormData] = useState({
     practiceDate: format(new Date(), 'yyyy-MM-dd'),
-    location: '',
+    place: '',
     note: ''
   })
 
@@ -117,7 +139,7 @@ export default function PracticeLogForm({
             circleSec: circleSec || 0,
             note: editData.note || '',
             tags: editData.tags || [],
-            times: editData.times || []
+            times: editData.times?.flatMap(item => item.times) || []
           }
         ])
       } else {
@@ -170,7 +192,7 @@ export default function PracticeLogForm({
   }
 
   // メニュー更新
-  const updateMenu = (id: string, field: keyof PracticeMenu, value: any) => {
+  const updateMenu = (id: string, field: keyof PracticeMenu, value: string | number | '' | Tag[]) => {
     setMenus(
       menus.map(menu =>
         menu.id === id ? { ...menu, [field]: value } : menu
@@ -195,7 +217,7 @@ export default function PracticeLogForm({
   }
 
   // タイムデータを保存
-  const handleTimeSave = (times: any[]) => {
+  const handleTimeSave = (times: import('@apps/shared/types/ui').TimeEntry[]) => {
     if (!currentMenuId) return
     
     setMenus(
@@ -249,14 +271,16 @@ export default function PracticeLogForm({
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+    <div className="fixed inset-0 z-[70] overflow-y-auto">
+      <div className="flex min-h-screen items-center justify-center p-4">
+        {/* オーバーレイ */}
         <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+          className="fixed inset-0 bg-black/40 transition-opacity"
           onClick={onClose}
         />
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full max-h-[90vh] overflow-y-auto">
+        {/* モーダルコンテンツ */}
+        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
           {/* ヘッダー */}
           <div className="bg-white px-6 py-4 border-b border-gray-200 sticky top-0 z-10">
             <div className="flex items-center justify-between">
@@ -465,9 +489,9 @@ export default function PracticeLogForm({
                                   <td className="py-2 px-2 font-medium text-gray-700">{repNumber}本目</td>
                                   {Array.from({ length: Number(menu.sets) || 1 }, (_, setIndex) => {
                                     const setNumber = setIndex + 1
-                                    const time = menu.times.find((t: any) => t.setNumber === setNumber && t.repNumber === repNumber)
-                                    const setTimes = menu.times.filter((t: any) => t.setNumber === setNumber && t.time > 0)
-                                    const setFastest = setTimes.length > 0 ? Math.min(...setTimes.map((t: any) => t.time)) : 0
+                                    const time = menu.times.find((t) => t.setNumber === setNumber && t.repNumber === repNumber)
+                                    const setTimes = menu.times.filter((t) => t.setNumber === setNumber && t.time > 0)
+                                    const setFastest = setTimes.length > 0 ? Math.min(...setTimes.map((t) => t.time)) : 0
                                     const isFastest = time && time.time > 0 && time.time === setFastest
 
                                     return (
@@ -486,9 +510,9 @@ export default function PracticeLogForm({
                               <td className="py-2 px-2 font-medium text-gray-800">平均</td>
                               {Array.from({ length: Number(menu.sets) || 1 }, (_, setIndex) => {
                                 const setNumber = setIndex + 1
-                                const setTimes = menu.times.filter((t: any) => t.setNumber === setNumber && t.time > 0)
+                                const setTimes = menu.times.filter((t) => t.setNumber === setNumber && t.time > 0)
                                 const average = setTimes.length > 0
-                                  ? setTimes.reduce((sum: number, t: any) => sum + t.time, 0) / setTimes.length
+                                  ? setTimes.reduce((sum: number, t) => sum + t.time, 0) / setTimes.length
                                   : 0
                                 return (
                                   <td key={setNumber} className="py-2 px-2 text-center">
@@ -505,9 +529,9 @@ export default function PracticeLogForm({
                               <td className="py-2 px-2 text-center" colSpan={Number(menu.sets) || 1}>
                                 <span className="text-blue-800 font-bold">
                                   {(() => {
-                                    const allValidTimes = menu.times.filter((t: any) => t.time > 0)
+                                    const allValidTimes = menu.times.filter((t) => t.time > 0)
                                     const overallAverage = allValidTimes.length > 0
-                                      ? allValidTimes.reduce((sum: number, t: any) => sum + t.time, 0) / allValidTimes.length
+                                      ? allValidTimes.reduce((sum: number, t) => sum + t.time, 0) / allValidTimes.length
                                       : 0
                                     return overallAverage > 0 ? formatTime(overallAverage) : '-'
                                   })()}
@@ -520,9 +544,9 @@ export default function PracticeLogForm({
                               <td className="py-2 px-2 text-center" colSpan={Number(menu.sets) || 1}>
                                 <span className="text-blue-800 font-bold">
                                   {(() => {
-                                    const allValidTimes = menu.times.filter((t: any) => t.time > 0)
+                                    const allValidTimes = menu.times.filter((t) => t.time > 0)
                                     const overallFastest = allValidTimes.length > 0
-                                      ? Math.min(...allValidTimes.map((t: any) => t.time))
+                                      ? Math.min(...allValidTimes.map((t) => t.time))
                                       : 0
                                     return overallFastest > 0 ? formatTime(overallFastest) : '-'
                                   })()}
@@ -601,7 +625,13 @@ export default function PracticeLogForm({
           onSubmit={handleTimeSave}
           setCount={Number(getCurrentMenu()?.sets) || 1}
           repCount={Number(getCurrentMenu()?.reps) || 1}
-          initialTimes={getCurrentMenu()?.times || []}
+          initialTimes={(getCurrentMenu()?.times || []) as Array<{
+            id: string
+            setNumber: number
+            repNumber: number
+            time: number
+            displayValue?: string
+          }>}
           menuNumber={menus.findIndex(m => m.id === currentMenuId) + 1}
         />
       )}

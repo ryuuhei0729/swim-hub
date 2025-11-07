@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type {
   CreateTeamAnnouncementInput,
   TeamAnnouncement,
+  TeamAnnouncementInsert,
   UpdateTeamAnnouncementInput
 } from '../types/database'
 
@@ -28,17 +29,7 @@ export const useTeamAnnouncements = (supabase: SupabaseClient, teamId: string) =
       if (fetchError) throw fetchError
       if (!data) throw new Error('データが取得できませんでした')
 
-      setAnnouncements(data.map((a: any) => ({
-        id: a.id,
-        team_id: a.team_id,
-        title: a.title,
-        content: a.content,
-        created_by: a.created_by,
-        is_published: a.is_published,
-        published_at: a.published_at,
-        created_at: a.created_at,
-        updated_at: a.updated_at
-      })))
+      setAnnouncements(data as TeamAnnouncement[])
     } catch (err) {
       console.error('お知らせの取得に失敗:', err)
       setError(err as Error)
@@ -107,18 +98,7 @@ export const useTeamAnnouncement = (supabase: SupabaseClient, id: string) => {
         if (fetchError) throw fetchError
         if (!data) throw new Error('データが取得できませんでした')
 
-        const record = data as any
-        setAnnouncement({
-          id: record.id,
-          team_id: record.team_id,
-          title: record.title,
-          content: record.content,
-          created_by: record.created_by,
-          is_published: record.is_published,
-          published_at: record.published_at,
-          created_at: record.created_at,
-          updated_at: record.updated_at
-        })
+        setAnnouncement(data as TeamAnnouncement)
       } catch (err) {
         console.error('お知らせ詳細の取得に失敗:', err)
         setError(err as Error)
@@ -150,33 +130,25 @@ export const useCreateTeamAnnouncement = (supabase: SupabaseClient) => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('認証が必要です')
 
+      const insertData: TeamAnnouncementInsert = {
+        team_id: input.teamId,
+        title: input.title,
+        content: input.content,
+        created_by: user.id,
+        is_published: input.isPublished || false,
+        published_at: input.publishedAt || null
+      }
+
       const { data, error: createError } = await supabase
         .from('announcements')
-        .insert({
-          team_id: input.teamId,
-          title: input.title,
-          content: input.content,
-          created_by: user.id,
-          is_published: input.isPublished || false
-        } as any)
+        .insert(insertData)
         .select()
         .single()
 
       if (createError) throw createError
       if (!data) throw new Error('データが作成できませんでした')
 
-      const record = data as any
-      return {
-        id: record.id,
-        team_id: record.team_id,
-        title: record.title,
-        content: record.content,
-        created_by: record.created_by,
-        is_published: record.is_published,
-        published_at: record.published_at,
-        created_at: record.created_at,
-        updated_at: record.updated_at
-      }
+      return data as TeamAnnouncement
     } catch (err) {
       console.error('お知らせ作成エラー:', err)
       setError(err as Error)
@@ -203,10 +175,11 @@ export const useUpdateTeamAnnouncement = (supabase: SupabaseClient) => {
       setLoading(true)
       setError(null)
 
-      const updateData: any = {
-        title: input.title,
-        content: input.content,
-        is_published: input.isPublished
+      const updateData: Partial<TeamAnnouncementInsert> = {
+        ...(input.title !== undefined && { title: input.title }),
+        ...(input.content !== undefined && { content: input.content }),
+        ...(input.isPublished !== undefined && { is_published: input.isPublished }),
+        ...(input.publishedAt !== undefined && { published_at: input.publishedAt })
       }
 
       const { data, error: updateError } = await supabase
@@ -219,18 +192,7 @@ export const useUpdateTeamAnnouncement = (supabase: SupabaseClient) => {
       if (updateError) throw updateError
       if (!data) throw new Error('データが更新できませんでした')
 
-      const record = data as any
-      return {
-        id: record.id,
-        team_id: record.team_id,
-        title: record.title,
-        content: record.content,
-        created_by: record.created_by,
-        is_published: record.is_published,
-        published_at: record.published_at,
-        created_at: record.created_at,
-        updated_at: record.updated_at
-      }
+      return data as TeamAnnouncement
     } catch (err) {
       console.error('お知らせ更新エラー:', err)
       setError(err as Error)

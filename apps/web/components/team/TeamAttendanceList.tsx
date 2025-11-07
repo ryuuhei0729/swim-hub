@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { createClient } from '@/lib/supabase'
+import { useAuth } from '@/contexts'
 import { AttendanceAPI, TeamAttendanceWithDetails } from '@swim-hub/shared'
 import { AttendanceStatus } from '@swim-hub/shared/types/database'
 
@@ -23,7 +23,7 @@ export default function TeamAttendanceList({
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
   const [noteInput, setNoteInput] = useState<string>('')
   
-  const supabase = useMemo(() => createClient(), [])
+  const { supabase } = useAuth()
   const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase])
 
   useEffect(() => {
@@ -64,9 +64,9 @@ export default function TeamAttendanceList({
       setEditingNoteId(null)
       setNoteInput('')
       loadAttendances()
-    } catch (err: any) {
-      console.error('出欠情報の更新に失敗:', err)
-      alert(`出欠情報の更新に失敗しました: ${err.message || err}`)
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err))
+      console.error('出欠情報の更新に失敗:', error)
     }
   }
 
@@ -74,9 +74,9 @@ export default function TeamAttendanceList({
     try {
       await attendanceAPI.updateAttendance(attendanceId, { status })
       loadAttendances()
-    } catch (err: any) {
-      console.error('出欠情報の更新に失敗:', err)
-      alert(`出欠情報の更新に失敗しました: ${err.message || err}`)
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err))
+      console.error('出欠情報の更新に失敗:', error)
     }
   }
 

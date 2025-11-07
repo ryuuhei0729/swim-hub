@@ -6,9 +6,7 @@ import { BaseModal, Avatar } from '@/components/ui'
 import { 
   StarIcon,
   TrashIcon,
-  XMarkIcon,
   TrophyIcon,
-  ClockIcon,
   CalendarIcon
 } from '@heroicons/react/24/outline'
 
@@ -59,7 +57,7 @@ export default function MemberDetailModal({
   onMembershipChange
 }: MemberDetailModalProps) {
   const [bestTimes, setBestTimes] = useState<BestTime[]>([])
-  const [availableStyles, setAvailableStyles] = useState<any[]>([])
+  const [_availableStyles, setAvailableStyles] = useState<Array<{ id: number; name_jp: string; distance: number }>>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isRemoving, setIsRemoving] = useState(false)
@@ -117,8 +115,18 @@ export default function MemberDetailModal({
       // 種目ごとのベストタイムを取得
       const bestTimesByStyle = new Map<string, BestTime>()
       
-      data?.forEach((record: any) => {
-        const styleKey = record.styles?.name_jp || 'Unknown'
+      type RecordRow = {
+        id: string
+        time: number
+        created_at: string
+        styles: { name_jp: string; distance: number }[] | null
+        competitions: { title: string; date: string }[] | null
+      }
+      ;(data || []).forEach((record: RecordRow) => {
+        const style = record.styles?.[0]
+        const competition = record.competitions?.[0]
+        if (!style) return
+        const styleKey = style.name_jp || 'Unknown'
         
         if (!bestTimesByStyle.has(styleKey) || record.time < bestTimesByStyle.get(styleKey)!.time) {
           bestTimesByStyle.set(styleKey, {
@@ -126,12 +134,12 @@ export default function MemberDetailModal({
             time: record.time,
             created_at: record.created_at,
             style: {
-              name_jp: record.styles?.name_jp || 'Unknown',
-              distance: record.styles?.distance || 0
+              name_jp: style.name_jp || 'Unknown',
+              distance: style.distance || 0
             },
-            competition: record.competitions ? {
-              title: record.competitions.title,
-              date: record.competitions.date
+            competition: competition ? {
+              title: competition.title,
+              date: competition.date
             } : undefined
           })
         }
@@ -164,7 +172,7 @@ export default function MemberDetailModal({
       }
 
       const { error } = await (supabase
-        .from('team_memberships') as any)
+        .from('team_memberships'))
         .update({ role: newRole })
         .eq('id', member.id)
 
@@ -198,7 +206,7 @@ export default function MemberDetailModal({
       }
 
       const { error } = await (supabase
-        .from('team_memberships') as any)
+        .from('team_memberships'))
         .update({ is_active: false })
         .eq('id', member.id)
 

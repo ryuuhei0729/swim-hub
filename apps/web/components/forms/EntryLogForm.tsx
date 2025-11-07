@@ -13,6 +13,17 @@ interface EntryData {
   note: string
 }
 
+// 編集データの型定義
+// Note: style_id (snake_case) はAPIレスポンス形式、styleId (camelCase) は内部形式
+// 両方が存在する場合はどちらでも受け入れ可能（どちらも string | number に変換可能）
+type EditEntryData = {
+  id?: string
+  style_id?: number | string
+  styleId?: string | number
+  entry_time?: number
+  note?: string
+}
+
 interface EntryLogFormProps {
   isOpen: boolean
   onClose: () => void
@@ -21,7 +32,7 @@ interface EntryLogFormProps {
   competitionId: string
   isLoading?: boolean
   styles?: Array<{ id: string; nameJp: string; distance: number }>
-  editData?: any // 編集用の既存データ
+  editData?: EditEntryData // 編集用の既存データ
 }
 
 export default function EntryLogForm({
@@ -29,7 +40,7 @@ export default function EntryLogForm({
   onClose,
   onSubmit,
   onSkip,
-  competitionId,
+  competitionId: _competitionId,
   isLoading = false,
   styles = [],
   editData
@@ -77,14 +88,14 @@ export default function EntryLogForm({
     
     // バリデーション: 少なくとも1つのエントリーが必要
     if (entries.length === 0) {
-      alert('少なくとも1つのエントリーを追加してください')
+      console.error('少なくとも1つのエントリーを追加してください')
       return
     }
 
     // バリデーション: 種目が選択されているか
     const hasInvalidStyle = entries.some(entry => !entry.styleId)
     if (hasInvalidStyle) {
-      alert('すべてのエントリーで種目を選択してください')
+      console.error('すべてのエントリーで種目を選択してください')
       return
     }
 
@@ -150,11 +161,11 @@ export default function EntryLogForm({
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={onClose}></div>
+    <div className="fixed inset-0 z-[70] overflow-y-auto">
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={onClose}></div>
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-3xl">
           {/* ヘッダー */}
           <div className="bg-white px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">

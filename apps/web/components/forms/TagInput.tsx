@@ -1,11 +1,9 @@
 'use client'
 
-import React, { useState, useRef, useEffect, useMemo } from 'react'
-import { ChevronDownIcon, XMarkIcon, EllipsisVerticalIcon, PlusIcon } from '@heroicons/react/24/outline'
-import { Button } from '@/components/ui'
-// @ts-ignore
+import React, { useState, useRef, useEffect } from 'react'
+import { ChevronDownIcon, XMarkIcon, EllipsisVerticalIcon } from '@heroicons/react/24/outline'
 import TagManagementModal from './TagManagementModal'
-import { createClient } from '@/lib/supabase'
+import { useAuth } from '@/contexts'
 import { PracticeTag } from '@apps/shared/types/database'
 
 type Tag = PracticeTag
@@ -32,7 +30,7 @@ export default function TagInput({
   
   const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const supabase = useMemo(() => createClient(), [])
+  const { supabase } = useAuth()
 
   // ドロップダウン外クリックで閉じる
   useEffect(() => {
@@ -92,13 +90,14 @@ export default function TagInput({
       const randomColor = getRandomColor()
       
       // DBに直接挿入
-      const { data, error } = await supabase
+      // TODO: Supabase型推論の制約回避のため一時的にas any
+      const { data, error } = await (supabase as any)
         .from('practice_tags')
         .insert({
           user_id: user.id,
           name: tagName.trim(),
           color: randomColor
-        } as any)
+        })
         .select()
         .single()
 
@@ -123,7 +122,6 @@ export default function TagInput({
       if (!user) throw new Error('認証が必要です')
 
       // DBを更新
-      // @ts-ignore - Supabase型システムの制約を回避
       const { error } = await supabase.from('practice_tags').update({
         name: name.trim(),
         color
@@ -227,7 +225,7 @@ export default function TagInput({
                     e.stopPropagation()
                     onTagsChange(selectedTags.filter(t => t.id !== tag.id))
                   }}
-                  className="hover:bg-black hover:bg-opacity-20 rounded-full p-0.5 transition-colors"
+                  className="hover:bg-black/20 rounded-full p-0.5 transition-colors"
                   title="タグを削除"
                 >
                   <XMarkIcon className="h-3 w-3" />

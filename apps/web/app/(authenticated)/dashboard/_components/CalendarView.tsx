@@ -2,17 +2,16 @@
 
 import React, { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths, subMonths, getDay } from 'date-fns'
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, getDay } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { useCalendar } from '@/contexts'
-import { LoadingSpinner } from '@/components/ui'
 import DayDetailModal from './DayDetailModal'
 import CalendarHeader from './CalendarHeader'
 import CalendarGrid from './CalendarGrid'
 import { CalendarItem, CalendarItemType, CalendarProps } from '@/types'
 
-const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
+const _WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
 
 // カレンダー表示コンポーネント（表示ロジック）
 export default function CalendarView({ 
@@ -28,7 +27,7 @@ export default function CalendarView({
   onEditRecord,
   onDeleteRecord,
   isLoading: propLoading = false,
-  userId,
+  userId: _userId,
   openDayDetail
 }: Omit<CalendarProps, 'currentDate' | 'onCurrentDateChange'>) {
   const router = useRouter()
@@ -41,7 +40,7 @@ export default function CalendarView({
   const { 
     currentDate, 
     calendarItems, 
-    monthlySummary, 
+    monthlySummary: _monthlySummary, 
     loading: dataLoading, 
     error, 
     setCurrentDate,
@@ -92,13 +91,13 @@ export default function CalendarView({
   const handlePrevMonth = () => {
     const newDate = subMonths(currentDate, 1)
     setCurrentDate(newDate)
-    setTimeout(() => refetch(), 100)
+    // setCurrentDate内で自動的にデータ再取得が実行されるため、refetch()は不要
   }
 
   const handleNextMonth = () => {
     const newDate = addMonths(currentDate, 1)
     setCurrentDate(newDate)
-    setTimeout(() => refetch(), 100)
+    // setCurrentDate内で自動的にデータ再取得が実行されるため、refetch()は不要
   }
 
   const handleDateClick = (date: Date) => {
@@ -145,46 +144,18 @@ export default function CalendarView({
     }
   }
 
-  const getDayStatusIndicator = (entries: CalendarItem[]) => {
-    if (entries.length === 0) return null
-    
-    const hasPractice = entries.some(e => e.type === 'practice' || e.type === 'team_practice' || e.type === 'practice_log')
-    const hasRecord = entries.some(e => e.type === 'record')
-    const hasCompetition = entries.some(e => e.type === 'competition' || e.type === 'team_competition')
-    const hasEntry = entries.some(e => e.type === 'entry')
-    
-    if (hasPractice && (hasRecord || hasCompetition || hasEntry)) {
-      return (
-        <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-gradient-to-r from-green-400 to-blue-400 border border-white shadow-sm"></div>
-      )
-    } else if (hasPractice) {
-      return (
-        <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-green-400 border border-white shadow-sm"></div>
-      )
-    } else if (hasEntry) {
-      return (
-        <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-orange-400 border border-white shadow-sm"></div>
-      )
-    } else if (hasRecord || hasCompetition) {
-      return (
-        <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-blue-400 border border-white shadow-sm"></div>
-      )
-    }
-    
-    return null
-  }
 
   const handleMonthYearSelect = (year: number, month: number) => {
     const newDate = new Date(year, month, 1)
     setCurrentDate(newDate)
     setShowMonthSelector(false)
-    setTimeout(() => refetch(), 100)
+    // setCurrentDate内で自動的にデータ再取得が実行されるため、refetch()は不要
   }
 
   const handleTodayClick = () => {
     const today = new Date()
     setCurrentDate(today)
-    setTimeout(() => refetch(), 100)
+    // setCurrentDate内で自動的にデータ再取得が実行されるため、refetch()は不要
   }
 
   // エラー表示
@@ -248,7 +219,6 @@ export default function CalendarView({
         onDateClick={handleDateClick}
         onAddClick={handleAddClick}
         getItemColor={getItemColor}
-        getDayStatusIndicator={getDayStatusIndicator}
       />
 
 
@@ -256,7 +226,7 @@ export default function CalendarView({
       {showMonthSelector && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowMonthSelector(false)}></div>
+            <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={() => setShowMonthSelector(false)}></div>
 
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
@@ -323,7 +293,7 @@ export default function CalendarView({
       {showAddModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowAddModal(false)}></div>
+            <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={() => setShowAddModal(false)}></div>
 
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">

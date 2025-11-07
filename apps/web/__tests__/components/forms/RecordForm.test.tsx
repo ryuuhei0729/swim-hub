@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import RecordForm from '../../../components/forms/RecordForm'
@@ -277,7 +277,7 @@ describe('RecordForm', () => {
 
       expect(mockOnSubmit).toHaveBeenCalledWith({
         recordDate: expect.any(String),
-        location: 'テストプール',
+        place: 'テストプール',
         competitionName: 'テスト大会',
         poolType: 0,
         records: expect.arrayContaining([

@@ -15,7 +15,7 @@ SELECT
   'practice' AS item_type,
   p.date AS item_date,
   '練習' AS title,
-  p.place AS location,
+  p.place,
   p.note,
   jsonb_build_object(
     'practice', to_jsonb(p),
@@ -37,7 +37,7 @@ SELECT
   'team_practice' AS item_type,
   p.date AS item_date,
   'チーム練習' AS title,
-  p.place AS location,
+  p.place,
   p.note,
   jsonb_build_object(
     'practice', to_jsonb(p),
@@ -70,7 +70,7 @@ SELECT
     WHEN pl.set_count = 1 THEN (pl.distance::text || 'm × ' || pl.rep_count::text || '本')
     ELSE (pl.distance::text || 'm × ' || pl.rep_count::text || '本 × ' || pl.set_count::text || 'セット')
   END AS title,
-  p.place AS location,
+  p.place,
   pl.note,
   jsonb_build_object(
     'practice_log', to_jsonb(pl),
@@ -92,7 +92,7 @@ SELECT
     WHEN pl.set_count = 1 THEN (pl.distance::text || 'm × ' || pl.rep_count::text || '本')
     ELSE (pl.distance::text || 'm × ' || pl.rep_count::text || '本 × ' || pl.set_count::text || 'セット')
   END AS title,
-  p.place AS location,
+  p.place,
   pl.note,
   jsonb_build_object(
     'practice_log', to_jsonb(pl),
@@ -120,7 +120,7 @@ SELECT
   'competition' AS item_type,
   c.date AS item_date,
   c.title,
-  c.place AS location,
+  c.place,
   c.note,
   jsonb_build_object(
     'competition', to_jsonb(c),
@@ -148,7 +148,7 @@ SELECT
   'team_competition' AS item_type,
   c.date AS item_date,
   c.title,
-  c.place AS location,
+  c.place,
   c.note,
   jsonb_build_object(
     'competition', to_jsonb(c),
@@ -184,7 +184,7 @@ SELECT
   'entry' AS item_type,
   c.date AS item_date,
   c.title AS title,
-  c.place AS location,
+  c.place,
   NULL AS note,
   jsonb_build_object(
     'competition', to_jsonb(c),
@@ -211,7 +211,7 @@ SELECT
   'entry' AS item_type,
   c.date AS item_date,
   c.title AS title,
-  c.place AS location,
+  c.place,
   NULL AS note,
   jsonb_build_object(
     'competition', to_jsonb(c),
@@ -246,7 +246,7 @@ SELECT
   'record' AS item_type,
   c.date AS item_date,
   c.title AS title,
-  c.place AS location,
+  c.place,
   NULL AS note,
   jsonb_build_object(
     'competition', to_jsonb(c),
@@ -270,7 +270,7 @@ SELECT
   'record' AS item_type,
   c.date AS item_date,
   c.title AS title,
-  c.place AS location,
+  c.place,
   NULL AS note,
   jsonb_build_object(
     'competition', to_jsonb(c),

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { AuthForm } from '@/components/auth'
 import { useAuth } from '@/contexts'
@@ -19,16 +19,16 @@ function LoginPageContent() {
   const isAuthenticated = !!user && !!session
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [hasRedirected, setHasRedirected] = useState(false)
+  const hasRedirectedRef = useRef(false)
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated && !hasRedirected) {
-      setHasRedirected(true)
+    if (!isLoading && isAuthenticated && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true
       // URLパラメータからリダイレクト先を取得
       const redirectTo = searchParams.get('redirect_to') || '/dashboard'
       router.push(redirectTo)
     }
-  }, [isAuthenticated, isLoading, router, hasRedirected, searchParams])
+  }, [isAuthenticated, isLoading, router, searchParams])
 
   if (isLoading) {
     return <FullScreenLoading message="認証情報を確認中..." />

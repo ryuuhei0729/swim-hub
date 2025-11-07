@@ -13,7 +13,7 @@ SELECT
   'practice'::text as item_type,
   p.date as item_date,
   CONCAT('練習 - ', COALESCE(p.place, '場所未設定')) as title,
-  p.place as location,
+  p.place,
   p.note,
   jsonb_build_object(
     'user_id', p.user_id,
@@ -33,7 +33,7 @@ SELECT
   'team_practice'::text as item_type,
   p.date as item_date,
   CONCAT('チーム練習 - ', COALESCE(p.place, '場所未設定')) as title,
-  p.place as location,
+  p.place,
   p.note,
   jsonb_build_object(
     'user_id', p.user_id,
@@ -53,7 +53,7 @@ SELECT
   'record'::text as item_type,
   c.date as item_date,
   CONCAT(s.name_jp, CASE WHEN r.is_relaying THEN 'R' ELSE '' END) as title,
-  c.place as location,
+  c.place,
   r.note,
   jsonb_build_object(
     'time', r.time,
@@ -84,7 +84,7 @@ SELECT
   'competition'::text as item_type,
   c.date as item_date,
   CONCAT('大会 - ', c.title) as title,
-  c.place as location,
+  c.place,
   c.note,
   jsonb_build_object(
     'title', c.title,
@@ -110,7 +110,7 @@ SELECT
   'team_competition'::text as item_type,
   c.date as item_date,
   CONCAT('チーム大会 - ', c.title) as title,
-  c.place as location,
+  c.place,
   c.note,
   jsonb_build_object(
     'title', c.title,

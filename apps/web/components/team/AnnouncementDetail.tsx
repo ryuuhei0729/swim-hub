@@ -1,8 +1,7 @@
 'use client'
 
-import { useMemo } from 'react'
 import { useTeamAnnouncements, useDeleteTeamAnnouncement } from '@apps/shared/hooks'
-import { createClient } from '@/lib/supabase'
+import { useAuth } from '@/contexts'
 import type { TeamAnnouncement } from '@/types'
 
 interface AnnouncementDetailProps {
@@ -18,7 +17,7 @@ export const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({
   onClose,
   onEdit
 }) => {
-  const supabase = useMemo(() => createClient(), [])
+  const { supabase } = useAuth()
   const { announcements, loading, error } = useTeamAnnouncements(supabase, '')
   const announcement = announcements.find(a => a.id === announcementId)
   const { remove, loading: deleteLoading } = useDeleteTeamAnnouncement(supabase)
@@ -31,7 +30,6 @@ export const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({
       onClose()
     } catch (error) {
       console.error('削除エラー:', error)
-      alert('削除に失敗しました')
     }
   }
 
@@ -47,7 +45,7 @@ export const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
           <div className="flex justify-center items-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -59,7 +57,7 @@ export const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({
 
   if (error || !announcement) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
           <div className="text-center py-8">
             <p className="text-red-600 mb-4">お知らせの読み込みに失敗しました</p>
@@ -76,7 +74,7 @@ export const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg w-full max-w-3xl mx-4 max-h-[90vh] overflow-hidden">
         {/* ヘッダー */}
         <div className="flex justify-between items-center p-6 border-b border-gray-200">

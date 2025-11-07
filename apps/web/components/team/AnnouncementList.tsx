@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useTeamAnnouncements, useDeleteTeamAnnouncement } from '@apps/shared/hooks'
-import { createClient } from '@/lib/supabase'
+import { useAuth } from '@/contexts'
 import type { TeamAnnouncement } from '@/types'
 
 interface AnnouncementListProps {
@@ -20,7 +20,7 @@ export const AnnouncementList: React.FC<AnnouncementListProps> = ({
   onEdit,
   viewOnly = false
 }) => {
-  const supabase = useMemo(() => createClient(), [])
+  const { supabase } = useAuth()
   const { announcements, loading, error, refetch } = useTeamAnnouncements(supabase, teamId)
   const { remove, loading: deleteLoading } = useDeleteTeamAnnouncement(supabase)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -39,7 +39,6 @@ export const AnnouncementList: React.FC<AnnouncementListProps> = ({
       await refetch()
     } catch (error) {
       console.error('削除エラー:', error)
-      alert('削除に失敗しました')
     } finally {
       setDeletingId(null)
     }

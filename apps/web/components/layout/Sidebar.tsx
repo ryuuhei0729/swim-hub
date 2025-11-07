@@ -1,11 +1,10 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import type { ComponentType, SVGProps } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { createClient } from '@/lib/supabase'
 import { useAuth } from '@/contexts'
 import { 
   HomeIcon,
@@ -14,7 +13,6 @@ import {
   XMarkIcon,
   ChevronRightIcon,
   UsersIcon,
-  CogIcon,
   UserIcon
 } from '@heroicons/react/24/outline'
 
@@ -64,21 +62,12 @@ const baseNavigation: NavigationItem[] = [
   },
 ]
 
-const adminNavigation: NavigationItem = {
-  name: '統合管理', 
-  href: '/team-admin', 
-  icon: CogIcon,
-  description: 'チームの練習・大会一括管理',
-}
-
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname()
-  const { user } = useAuth()
-  const [hasAdminTeams, setHasAdminTeams] = useState(false)
+  const { user, supabase } = useAuth()
   const [singleTeamId, setSingleTeamId] = useState<string | null>(null)
-  const supabase = useMemo(() => createClient(), [])
   
-  // ユーザーのチーム一覧を取得して管理者権限とチーム数をチェック
+  // ユーザーのチーム一覧を取得してチーム数をチェック
   useEffect(() => {
     const loadTeams = async () => {
       if (!user) return
@@ -86,21 +75,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       try {
         const { data, error } = await supabase
           .from('team_memberships')
-          .select('team_id, role, is_active')
+          .select('team_id, is_active')
           .eq('user_id', user.id)
           .eq('is_active', true)
         
         if (error) throw error
         
-        const hasAdmin = data?.some((membership: any) => 
-          membership.role === 'ADMIN'
-        ) || false
-        
-        setHasAdminTeams(hasAdmin)
-        
         // チームが1つだけの場合はIDを保存
-        if (data?.length === 1) {
-          setSingleTeamId((data[0] as any).team_id)
+        if (data && data.length === 1) {
+          setSingleTeamId(data[0].team_id)
         } else {
           setSingleTeamId(null)
         }
@@ -111,18 +94,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     
     loadTeams()
   }, [user])
-  
-  // 管理者権限がある場合のみ統合管理を追加
-  const filteredNavigation = hasAdminTeams 
-    ? [...baseNavigation, adminNavigation]
-    : baseNavigation
 
   return (
     <>
       {/* モバイル用オーバーレイ */}
       {isOpen && (
         <div 
-          className="fixed top-16 inset-x-0 bottom-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden"
+          className="fixed top-16 inset-x-0 bottom-0 z-40 bg-black/40 lg:hidden"
           onClick={onClose}
         />
       )}
@@ -154,7 +132,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         {/* ナビゲーション */}
         <nav className="mt-6 px-3 pb-6">
           <div className="space-y-2">
-            {filteredNavigation.map((item) => {
+            {baseNavigation.map((item) => {
               const isActive = pathname === item.href
               // チーム管理の場合は、チームが1つだけの場合は直接チームページへ
               const href = (item.name === 'チーム管理' && singleTeamId) 
