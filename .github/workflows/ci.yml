@@ -6,74 +6,207 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+concurrency:
+  group: ci-${{ github.ref }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: 20.x
+  PLAYWRIGHT_BROWSERS_PATH: ~/.cache/ms-playwright
+
 jobs:
-  lint-and-type-check:
+  lint:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
         cache-dependency-path: |
-          **/package-lock.json
-    
+          package-lock.json
+          apps/**/package-lock.json
+
     - name: Install dependencies
       run: npm ci
-    
-    - name: Type check
-      run: npm run type-check
-    
-    - name: Build web app (for lint)
-      run: npm run build --workspace=apps/web
-      env:
-        NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
-    
-    - name: Lint
-      run: npm run lint --workspace=apps/web
+
+    - name: Run lint
+      run: npm run lint --workspaces --if-present
       env:
         CI: true
-      continue-on-error: true
-  
-  build-web:
+
+  type-check:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20.x'
+        node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
-    
+        cache-dependency-path: |
+          package-lock.json
+          apps/**/package-lock.json
+
     - name: Install dependencies
       run: npm ci
-    
-    - name: Build web app
-      run: npm run build:web
+
+    - name: Run type check
+      run: npm run type-check --workspaces --if-present
+
+  unit-tests:
+    needs: [lint, type-check]
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [ 20.x, 22.x ]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: |
+          package-lock.json
+          apps/**/package-lock.json
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run shared package tests
+      run: npm run test --workspace=apps/shared
+
+    - name: Run web package tests
+      run: npm run test --workspace=apps/web
+
+  e2e-tests:
+    needs: unit-tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: |
+          package-lock.json
+          apps/**/package-lock.json
+
+    - name: Restore Playwright browsers cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+        key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+        restore-keys: |
+          playwright-${{ runner.os }}-
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps
+
+    - name: Run E2E tests
+      run: npm run test:e2e --workspace=apps/web
       env:
-        NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
-  
-  build-packages:
+        CI: true
+
+  build:
+    needs: [unit-tests, e2e-tests]
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
+    - name: Check Vercel secrets
+      id: check-vercel-secrets
+      run: |
+        if [[ -n "${{ secrets.VERCEL_TOKEN }}" && -n "${{ secrets.VERCEL_ORG_ID }}" && -n "${{ secrets.VERCEL_PROJECT_ID }}" ]]; then
+          echo "has_vercel_secrets=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "has_vercel_secrets=false" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20.x'
+        node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
-    
+        cache-dependency-path: |
+          package-lock.json
+          apps/**/package-lock.json
+
     - name: Install dependencies
       run: npm ci
-    
-    - name: Type check shared package
-      run: npm run type-check --workspace=apps/shared
+
+    - name: Determine Vercel environment
+      id: vercel-env
+      run: |
+        if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+          echo "vercel_environment=production" >> "$GITHUB_OUTPUT"
+        else
+          echo "vercel_environment=preview" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Pull Vercel project configuration
+      if: ${{ steps.check-vercel-secrets.outputs.has_vercel_secrets == 'true' }}
+      working-directory: apps/web
+      env:
+        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        VERCEL_ENVIRONMENT: ${{ steps.vercel-env.outputs.vercel_environment }}
+      run: npx vercel pull --yes --environment=$VERCEL_ENVIRONMENT
+
+    - name: Build Next.js app (fallback)
+      if: ${{ steps.check-vercel-secrets.outputs.has_vercel_secrets != 'true' }}
+      run: |
+        export NEXT_PUBLIC_SUPABASE_URL="https://placeholder.supabase.co"
+        export NEXT_PUBLIC_SUPABASE_ANON_KEY="placeholder-anon-key"
+        npm run build --workspace=apps/web
+
+    - name: Build pre-rendered output with Vercel
+      if: ${{ steps.check-vercel-secrets.outputs.has_vercel_secrets == 'true' }}
+      working-directory: apps/web
+      env:
+        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        VERCEL_ENVIRONMENT: ${{ steps.vercel-env.outputs.vercel_environment }}
+      run: |
+        EXTRA_ARGS=""
+        if [[ "$VERCEL_ENVIRONMENT" == "production" ]]; then
+          EXTRA_ARGS="--prod"
+        fi
+        npx vercel build $EXTRA_ARGS
+
+    - name: Upload Next build artifact
+      if: ${{ steps.check-vercel-secrets.outputs.has_vercel_secrets != 'true' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: next-build
+        path: apps/web/.next
+        if-no-files-found: error
+
+    - name: Upload Vercel prebuilt artifact
+      if: ${{ steps.check-vercel-secrets.outputs.has_vercel_secrets == 'true' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: vercel-output
+        path: |
+          apps/web/.vercel/project.json
+          apps/web/.vercel/output
+        if-no-files-found: error
