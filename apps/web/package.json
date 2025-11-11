@@ -29,7 +29,7 @@
     "@supabase/supabase-js": "^2.80.0",
     "@swim-hub/shared": "*",
     "@tailwindcss/postcss": "^4.1.17",
-    "@types/react-easy-crop": "^1.16.0",
+    "@types/react-easy-crop": "^2.0.0",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "next": "16.0.1",
