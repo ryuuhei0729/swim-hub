@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import RecordForm from '../../../components/forms/RecordForm'
@@ -81,7 +81,7 @@ describe('RecordForm', () => {
       const addButton = screen.getByText('種目を追加')
       await user.click(addButton)
 
-      expect(screen.getByText('種目 1')).toBeInTheDocument()
+      expect(screen.getByText('種目 2')).toBeInTheDocument()
     })
 
     it('should remove record set', async () => {
@@ -101,14 +101,10 @@ describe('RecordForm', () => {
       await user.click(addButton)
 
       // 削除ボタンをクリック
-      const removeButton = screen.getAllByRole('button').find(button => 
-        button.querySelector('svg[data-slot="icon"]')
-      )
-      if (removeButton) {
-        await user.click(removeButton)
-      }
+      const removeButtons = screen.getAllByRole('button', { name: '種目を削除' })
+      await user.click(removeButtons[1])
 
-      expect(screen.queryByText('記録セット 1')).not.toBeInTheDocument()
+      expect(screen.queryByText('種目 2')).not.toBeInTheDocument()
     })
   })
 
@@ -129,7 +125,8 @@ describe('RecordForm', () => {
       const addButton = screen.getByText('種目を追加')
       await user.click(addButton)
 
-      const timeInput = screen.getByLabelText(/タイム/i)
+      const timeInputs = screen.getAllByLabelText('タイム')
+      const timeInput = timeInputs[timeInputs.length - 1]
       await user.type(timeInput, '1:30.50')
 
       expect(timeInput).toHaveValue('1:30.50')
@@ -151,7 +148,8 @@ describe('RecordForm', () => {
       const addButton = screen.getByText('種目を追加')
       await user.click(addButton)
 
-      const styleSelect = screen.getByLabelText(/種目/i)
+      const styleSelects = screen.getAllByLabelText('種目')
+      const styleSelect = styleSelects[styleSelects.length - 1]
       await user.selectOptions(styleSelect, '1')
 
       expect(styleSelect).toHaveValue('1')
@@ -173,7 +171,8 @@ describe('RecordForm', () => {
       const addButton = screen.getByText('種目を追加')
       await user.click(addButton)
 
-      const relayCheckbox = screen.getByLabelText(/リレー/i)
+      const relayCheckboxes = screen.getAllByLabelText('リレー')
+      const relayCheckbox = relayCheckboxes[relayCheckboxes.length - 1]
       await user.click(relayCheckbox)
 
       expect(relayCheckbox).toBeChecked()
@@ -198,13 +197,14 @@ describe('RecordForm', () => {
       await user.click(addButton)
 
       // リレーモードを有効化
-      const relayCheckbox = screen.getByLabelText(/リレー/i)
+      const relayCheckboxes = screen.getAllByLabelText('リレー')
+      const relayCheckbox = relayCheckboxes[relayCheckboxes.length - 1]
       await user.click(relayCheckbox)
 
-      const addSplitButton = screen.getByText('スプリットを追加')
-      await user.click(addSplitButton)
+      const addSplitButtons = screen.getAllByText('スプリットを追加')
+      await user.click(addSplitButtons[addSplitButtons.length - 1])
 
-      expect(screen.getByText('スプリット 1')).toBeInTheDocument()
+      expect(screen.getAllByPlaceholderText('距離 (m)')).toHaveLength(1)
     })
 
     it('should remove split time', async () => {
@@ -224,18 +224,20 @@ describe('RecordForm', () => {
       await user.click(addButton)
 
       // リレーモードを有効化
-      const relayCheckbox = screen.getByLabelText(/リレー/i)
+      const relayCheckboxes = screen.getAllByLabelText('リレー')
+      const relayCheckbox = relayCheckboxes[relayCheckboxes.length - 1]
       await user.click(relayCheckbox)
 
       // スプリットを追加
-      const addSplitButton = screen.getByText('スプリットを追加')
-      await user.click(addSplitButton)
+      const addSplitButtons = screen.getAllByText('スプリットを追加')
+      await user.click(addSplitButtons[addSplitButtons.length - 1])
 
-      // スプリットを削除
-      const removeSplitButton = screen.getByRole('button', { name: /削除/i })
+      const removeSplitButton = screen.getByRole('button', { name: 'スプリットを削除' })
       await user.click(removeSplitButton)
 
-      expect(screen.queryByText('スプリット 1')).not.toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.queryByPlaceholderText('距離 (m)')).toBeNull()
+      })
     })
   })
 
@@ -260,15 +262,13 @@ describe('RecordForm', () => {
       await user.type(locationInput, 'テストプール')
       await user.type(competitionInput, 'テスト大会')
 
-      // 記録セットを追加
-      const addButton = screen.getByText('種目を追加')
-      await user.click(addButton)
-
       // 記録を入力
-      const timeInput = screen.getByLabelText(/タイム/i)
+      const timeInputs = screen.getAllByLabelText('タイム')
+      const timeInput = timeInputs[0]
       await user.type(timeInput, '1:30.50')
 
-      const styleSelect = screen.getByLabelText(/種目/i)
+      const styleSelects = screen.getAllByLabelText('種目')
+      const styleSelect = styleSelects[0]
       await user.selectOptions(styleSelect, '1')
 
       // 送信
@@ -307,10 +307,10 @@ describe('RecordForm', () => {
         />
       )
 
-      const submitButton = screen.getByRole('button', { name: '保存' })
+      const submitButton = screen.getByRole('button', { name: '保存中...' })
       await user.click(submitButton)
 
-      expect(screen.getByText('保存中...')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '保存中...' })).toBeInTheDocument()
     })
   })
 
@@ -327,7 +327,7 @@ describe('RecordForm', () => {
         />
       )
 
-      const closeButton = screen.getByRole('button', { name: '' })
+      const closeButton = screen.getByRole('button', { name: '閉じる' })
       await user.click(closeButton)
 
       expect(mockOnClose).toHaveBeenCalled()

@@ -1,42 +1,55 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMockSupabaseClient, createMockPractice } from '../../__mocks__/supabase'
+import { PracticeAPI } from '../../api/practices'
 import { usePractices } from '../../hooks/usePractices'
 
-// PracticeAPI をモック
-const mockApi = {
-  getPractices: vi.fn(),
-  createPractice: vi.fn(),
-  updatePractice: vi.fn(),
-  deletePractice: vi.fn(),
-  createPracticeLog: vi.fn(),
-  updatePracticeLog: vi.fn(),
-  deletePracticeLog: vi.fn(),
-  createPracticeTimes: vi.fn(),
-  replacePracticeTimes: vi.fn(),
-  createPracticeTime: vi.fn(),
-  deletePracticeTime: vi.fn(),
-  subscribeToPractices: vi.fn(),
+type PracticeApiMock = {
+  getPractices: ReturnType<typeof vi.fn>
+  createPractice: ReturnType<typeof vi.fn>
+  updatePractice: ReturnType<typeof vi.fn>
+  deletePractice: ReturnType<typeof vi.fn>
+  createPracticeLog: ReturnType<typeof vi.fn>
+  updatePracticeLog: ReturnType<typeof vi.fn>
+  deletePracticeLog: ReturnType<typeof vi.fn>
+  createPracticeTimes: ReturnType<typeof vi.fn>
+  replacePracticeTimes: ReturnType<typeof vi.fn>
+  createPracticeTime: ReturnType<typeof vi.fn>
+  deletePracticeTime: ReturnType<typeof vi.fn>
+  subscribeToPractices: ReturnType<typeof vi.fn>
 }
-
-vi.mock('../api/practices', () => ({
-  PracticeAPI: vi.fn().mockImplementation(() => mockApi),
-}))
 
 describe('usePractices', () => {
   let mockClient: any
+  let practiceApiMock: PracticeApiMock
+  let api: PracticeAPI
 
   beforeEach(() => {
     vi.clearAllMocks()
     mockClient = createMockSupabaseClient()
+    practiceApiMock = {
+      getPractices: vi.fn(),
+      createPractice: vi.fn(),
+      updatePractice: vi.fn(),
+      deletePractice: vi.fn(),
+      createPracticeLog: vi.fn(),
+      updatePracticeLog: vi.fn(),
+      deletePracticeLog: vi.fn(),
+      createPracticeTimes: vi.fn(),
+      replacePracticeTimes: vi.fn(),
+      createPracticeTime: vi.fn(),
+      deletePracticeTime: vi.fn(),
+      subscribeToPractices: vi.fn(),
+    }
+    api = practiceApiMock as unknown as PracticeAPI
   })
 
   describe('初期化', () => {
     it('should initialize with loading state', async () => {
       const mockPractices = [createMockPractice()]
-      mockApi.getPractices.mockResolvedValue(mockPractices)
+      practiceApiMock.getPractices.mockResolvedValue(mockPractices)
 
-      const { result } = renderHook(() => usePractices(mockClient))
+      const { result } = renderHook(() => usePractices(mockClient, { api }))
 
       await act(async () => {
         expect(result.current.loading).toBe(true)
@@ -47,15 +60,15 @@ describe('usePractices', () => {
 
     it('should load practices on mount', async () => {
       const mockPractices = [createMockPractice()]
-      mockApi.getPractices.mockResolvedValue(mockPractices)
+      practiceApiMock.getPractices.mockResolvedValue(mockPractices)
 
-      const { result } = renderHook(() => usePractices(mockClient))
+      const { result } = renderHook(() => usePractices(mockClient, { api }))
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
       })
 
-      expect(mockApi.getPractices).toHaveBeenCalled()
+      expect(practiceApiMock.getPractices).toHaveBeenCalled()
       expect(result.current.practices).toEqual(mockPractices)
     })
   })
@@ -63,12 +76,13 @@ describe('usePractices', () => {
   describe('データ取得', () => {
     it('should fetch practices with date range', async () => {
       const mockPractices = [createMockPractice()]
-      mockApi.getPractices.mockResolvedValue(mockPractices)
+      practiceApiMock.getPractices.mockResolvedValue(mockPractices)
 
       const { result } = renderHook(() =>
         usePractices(mockClient, {
           startDate: '2025-01-01',
           endDate: '2025-01-31',
+          api,
         })
       )
 
@@ -76,14 +90,14 @@ describe('usePractices', () => {
         expect(result.current.loading).toBe(false)
       })
 
-      expect(mockApi.getPractices).toHaveBeenCalledWith('2025-01-01', '2025-01-31')
+      expect(practiceApiMock.getPractices).toHaveBeenCalledWith('2025-01-01', '2025-01-31')
     })
 
     it('should handle fetch error', async () => {
       const error = new Error('Fetch failed')
-      mockApi.getPractices.mockRejectedValue(error)
+      practiceApiMock.getPractices.mockRejectedValue(error)
 
-      const { result } = renderHook(() => usePractices(mockClient))
+      const { result } = renderHook(() => usePractices(mockClient, { api }))
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -104,10 +118,10 @@ describe('usePractices', () => {
       }
       const createdPractice = createMockPractice(newPractice)
       
-      mockApi.getPractices.mockResolvedValue([])
-      mockApi.createPractice.mockResolvedValue(createdPractice)
+      practiceApiMock.getPractices.mockResolvedValue([])
+      practiceApiMock.createPractice.mockResolvedValue(createdPractice)
 
-      const { result } = renderHook(() => usePractices(mockClient))
+      const { result } = renderHook(() => usePractices(mockClient, { api }))
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -117,18 +131,18 @@ describe('usePractices', () => {
         await result.current.createPractice(newPractice)
       })
 
-      expect(mockApi.createPractice).toHaveBeenCalledWith(newPractice)
-      expect(mockApi.getPractices).toHaveBeenCalledTimes(2) // 初回 + 再取得
+      expect(practiceApiMock.createPractice).toHaveBeenCalledWith(newPractice)
+      expect(practiceApiMock.getPractices).toHaveBeenCalledTimes(2) // 初回 + 再取得
     })
 
     it('should update practice', async () => {
       const practiceId = 'practice-1'
       const updates = { place: '更新後プール' }
       
-      mockApi.getPractices.mockResolvedValue([])
-      mockApi.updatePractice.mockResolvedValue(createMockPractice(updates))
+      practiceApiMock.getPractices.mockResolvedValue([])
+      practiceApiMock.updatePractice.mockResolvedValue(createMockPractice(updates))
 
-      const { result } = renderHook(() => usePractices(mockClient))
+      const { result } = renderHook(() => usePractices(mockClient, { api }))
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -138,16 +152,16 @@ describe('usePractices', () => {
         await result.current.updatePractice(practiceId, updates)
       })
 
-      expect(mockApi.updatePractice).toHaveBeenCalledWith(practiceId, updates)
+      expect(practiceApiMock.updatePractice).toHaveBeenCalledWith(practiceId, updates)
     })
 
     it('should delete practice', async () => {
       const practiceId = 'practice-1'
       
-      mockApi.getPractices.mockResolvedValue([])
-      mockApi.deletePractice.mockResolvedValue(undefined)
+      practiceApiMock.getPractices.mockResolvedValue([])
+      practiceApiMock.deletePractice.mockResolvedValue(undefined)
 
-      const { result } = renderHook(() => usePractices(mockClient))
+      const { result } = renderHook(() => usePractices(mockClient, { api }))
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -157,46 +171,49 @@ describe('usePractices', () => {
         await result.current.deletePractice(practiceId)
       })
 
-      expect(mockApi.deletePractice).toHaveBeenCalledWith(practiceId)
+      expect(practiceApiMock.deletePractice).toHaveBeenCalledWith(practiceId)
     })
   })
 
   describe('リアルタイム購読', () => {
     it('should subscribe to realtime updates', async () => {
       const mockChannel = { unsubscribe: vi.fn() }
-      mockApi.subscribeToPractices.mockReturnValue(mockChannel)
-      mockApi.getPractices.mockResolvedValue([])
+      practiceApiMock.subscribeToPractices.mockReturnValue(mockChannel)
+      practiceApiMock.getPractices.mockResolvedValue([])
 
-      const { result } = renderHook(() => usePractices(mockClient))
+      const { result, unmount } = renderHook(() => usePractices(mockClient, { api }))
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
       })
 
-      expect(mockApi.subscribeToPractices).toHaveBeenCalled()
+      expect(practiceApiMock.subscribeToPractices).toHaveBeenCalled()
+
+      unmount()
+      expect(mockClient.removeChannel).toHaveBeenCalledWith(mockChannel)
     })
 
     it('should not subscribe when realtime is disabled', async () => {
-      mockApi.getPractices.mockResolvedValue([])
+      practiceApiMock.getPractices.mockResolvedValue([])
 
       const { result } = renderHook(() =>
-        usePractices(mockClient, { enableRealtime: false })
+        usePractices(mockClient, { enableRealtime: false, api })
       )
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
       })
 
-      expect(mockApi.subscribeToPractices).not.toHaveBeenCalled()
+      expect(practiceApiMock.subscribeToPractices).not.toHaveBeenCalled()
     })
   })
 
   describe('リフレッシュ', () => {
     it('should refresh data', async () => {
       const mockPractices = [createMockPractice()]
-      mockApi.getPractices.mockResolvedValue(mockPractices)
+      practiceApiMock.getPractices.mockResolvedValue(mockPractices)
 
-      const { result } = renderHook(() => usePractices(mockClient))
+      const { result } = renderHook(() => usePractices(mockClient, { api }))
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -207,7 +224,7 @@ describe('usePractices', () => {
         await result.current.refresh()
       })
 
-      expect(mockApi.getPractices).toHaveBeenCalledTimes(2) // 初回 + リフレッシュ
+      expect(practiceApiMock.getPractices).toHaveBeenCalledTimes(2) // 初回 + リフレッシュ
     })
   })
 })

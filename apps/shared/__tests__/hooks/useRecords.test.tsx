@@ -1,29 +1,38 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMockSupabaseClient, createMockRecord } from '../../__mocks__/supabase'
+import { RecordAPI } from '../../api/records'
 import { useRecords } from '../../hooks/useRecords'
+import { RecordInsert } from '../../types/database'
 
-// RecordAPI をモック
-const mockApi = {
-  getRecords: vi.fn(),
-  getCompetitions: vi.fn(),
-  createRecord: vi.fn(),
-  updateRecord: vi.fn(),
-  deleteRecord: vi.fn(),
-  subscribeToRecords: vi.fn(),
-  subscribeToCompetitions: vi.fn(),
+type RecordApiMock = {
+  getRecords: ReturnType<typeof vi.fn>
+  getCompetitions: ReturnType<typeof vi.fn>
+  createRecord: ReturnType<typeof vi.fn>
+  updateRecord: ReturnType<typeof vi.fn>
+  deleteRecord: ReturnType<typeof vi.fn>
+  subscribeToRecords: ReturnType<typeof vi.fn>
+  subscribeToCompetitions: ReturnType<typeof vi.fn>
 }
-
-vi.mock('../api/records', () => ({
-  RecordAPI: vi.fn().mockImplementation(() => mockApi),
-}))
 
 describe('useRecords', () => {
   let mockClient: any
+  let recordApiMock: RecordApiMock
+  let api: RecordAPI
 
   beforeEach(() => {
     vi.clearAllMocks()
     mockClient = createMockSupabaseClient()
+    recordApiMock = {
+      getRecords: vi.fn(),
+      getCompetitions: vi.fn(),
+      createRecord: vi.fn(),
+      updateRecord: vi.fn(),
+      deleteRecord: vi.fn(),
+      subscribeToRecords: vi.fn(),
+      subscribeToCompetitions: vi.fn(),
+    }
+    api = recordApiMock as unknown as RecordAPI
   })
 
   describe('初期化', () => {
@@ -31,10 +40,10 @@ describe('useRecords', () => {
       const mockRecords = [createMockRecord()]
       const mockCompetitions = [{ id: 'comp-1', name: 'テスト大会' }]
       
-      mockApi.getRecords.mockResolvedValue(mockRecords)
-      mockApi.getCompetitions.mockResolvedValue(mockCompetitions)
+      recordApiMock.getRecords.mockResolvedValue(mockRecords)
+      recordApiMock.getCompetitions.mockResolvedValue(mockCompetitions)
 
-      const { result } = renderHook(() => useRecords(mockClient))
+      const { result } = renderHook(() => useRecords(mockClient, { api }))
 
       await act(async () => {
         expect(result.current.loading).toBe(true)
@@ -48,17 +57,17 @@ describe('useRecords', () => {
       const mockRecords = [createMockRecord()]
       const mockCompetitions = [{ id: 'comp-1', name: 'テスト大会' }]
       
-      mockApi.getRecords.mockResolvedValue(mockRecords)
-      mockApi.getCompetitions.mockResolvedValue(mockCompetitions)
+      recordApiMock.getRecords.mockResolvedValue(mockRecords)
+      recordApiMock.getCompetitions.mockResolvedValue(mockCompetitions)
 
-      const { result } = renderHook(() => useRecords(mockClient))
+      const { result } = renderHook(() => useRecords(mockClient, { api }))
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
       })
 
-      expect(mockApi.getRecords).toHaveBeenCalled()
-      expect(mockApi.getCompetitions).toHaveBeenCalled()
+      expect(recordApiMock.getRecords).toHaveBeenCalled()
+      expect(recordApiMock.getCompetitions).toHaveBeenCalled()
       expect(result.current.records).toEqual(mockRecords)
       expect(result.current.competitions).toEqual(mockCompetitions)
     })
@@ -67,16 +76,17 @@ describe('useRecords', () => {
   describe('データ取得', () => {
     it('should fetch records with filters', async () => {
       const mockRecords = [createMockRecord()]
-      const mockCompetitions = []
+      const mockCompetitions: any[] = []
       
-      mockApi.getRecords.mockResolvedValue(mockRecords)
-      mockApi.getCompetitions.mockResolvedValue(mockCompetitions)
+      recordApiMock.getRecords.mockResolvedValue(mockRecords)
+      recordApiMock.getCompetitions.mockResolvedValue(mockCompetitions)
 
       const { result } = renderHook(() =>
         useRecords(mockClient, {
           startDate: '2025-01-01',
           endDate: '2025-01-31',
           styleId: 1,
+          api,
         })
       )
 
@@ -84,14 +94,14 @@ describe('useRecords', () => {
         expect(result.current.loading).toBe(false)
       })
 
-      expect(mockApi.getRecords).toHaveBeenCalledWith('2025-01-01', '2025-01-31', 1)
+      expect(recordApiMock.getRecords).toHaveBeenCalledWith('2025-01-01', '2025-01-31', 1)
     })
 
     it('should handle fetch error', async () => {
       const error = new Error('Fetch failed')
-      mockApi.getRecords.mockRejectedValue(error)
+      recordApiMock.getRecords.mockRejectedValue(error)
 
-      const { result } = renderHook(() => useRecords(mockClient))
+      const { result } = renderHook(() => useRecords(mockClient, { api }))
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -104,20 +114,26 @@ describe('useRecords', () => {
 
   describe('操作関数', () => {
     it('should create record', async () => {
-      const newRecord = {
+      const newRecord: Omit<RecordInsert, 'user_id'> = {
         competition_id: 'comp-1',
-        style_id: 'style-1',
-        time_seconds: 60.5,
-        pool_type: 'long' as const,
-        is_relay: false,
+        style_id: 1,
+        time: 60.5,
+        video_url: null,
+        note: null,
+        is_relaying: false,
       }
-      const createdRecord = createMockRecord(newRecord)
+      const createdRecord = createMockRecord({
+        ...newRecord,
+        style_id: newRecord.style_id,
+        time: newRecord.time,
+        is_relaying: newRecord.is_relaying,
+      })
       
-      mockApi.getRecords.mockResolvedValue([])
-      mockApi.getCompetitions.mockResolvedValue([])
-      mockApi.createRecord.mockResolvedValue(createdRecord)
+      recordApiMock.getRecords.mockResolvedValue([])
+      recordApiMock.getCompetitions.mockResolvedValue([])
+      recordApiMock.createRecord.mockResolvedValue(createdRecord)
 
-      const { result } = renderHook(() => useRecords(mockClient))
+      const { result } = renderHook(() => useRecords(mockClient, { api }))
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -127,18 +143,18 @@ describe('useRecords', () => {
         await result.current.createRecord(newRecord)
       })
 
-      expect(mockApi.createRecord).toHaveBeenCalledWith(newRecord)
+      expect(recordApiMock.createRecord).toHaveBeenCalledWith(newRecord)
     })
 
     it('should update record', async () => {
       const recordId = 'record-1'
-      const updates = { time_seconds: 59.0 }
+      const updates = { time: 59.0 }
       
-      mockApi.getRecords.mockResolvedValue([])
-      mockApi.getCompetitions.mockResolvedValue([])
-      mockApi.updateRecord.mockResolvedValue(createMockRecord(updates))
+      recordApiMock.getRecords.mockResolvedValue([])
+      recordApiMock.getCompetitions.mockResolvedValue([])
+      recordApiMock.updateRecord.mockResolvedValue(createMockRecord(updates))
 
-      const { result } = renderHook(() => useRecords(mockClient))
+      const { result } = renderHook(() => useRecords(mockClient, { api }))
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -148,17 +164,17 @@ describe('useRecords', () => {
         await result.current.updateRecord(recordId, updates)
       })
 
-      expect(mockApi.updateRecord).toHaveBeenCalledWith(recordId, updates)
+      expect(recordApiMock.updateRecord).toHaveBeenCalledWith(recordId, updates)
     })
 
     it('should delete record', async () => {
       const recordId = 'record-1'
       
-      mockApi.getRecords.mockResolvedValue([])
-      mockApi.getCompetitions.mockResolvedValue([])
-      mockApi.deleteRecord.mockResolvedValue(undefined)
+      recordApiMock.getRecords.mockResolvedValue([])
+      recordApiMock.getCompetitions.mockResolvedValue([])
+      recordApiMock.deleteRecord.mockResolvedValue(undefined)
 
-      const { result } = renderHook(() => useRecords(mockClient))
+      const { result } = renderHook(() => useRecords(mockClient, { api }))
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -168,7 +184,7 @@ describe('useRecords', () => {
         await result.current.deleteRecord(recordId)
       })
 
-      expect(mockApi.deleteRecord).toHaveBeenCalledWith(recordId)
+      expect(recordApiMock.deleteRecord).toHaveBeenCalledWith(recordId)
     })
   })
 
@@ -177,35 +193,39 @@ describe('useRecords', () => {
       const mockRecordsChannel = { unsubscribe: vi.fn() }
       const mockCompetitionsChannel = { unsubscribe: vi.fn() }
       
-      mockApi.subscribeToRecords.mockReturnValue(mockRecordsChannel)
-      mockApi.subscribeToCompetitions.mockReturnValue(mockCompetitionsChannel)
-      mockApi.getRecords.mockResolvedValue([])
-      mockApi.getCompetitions.mockResolvedValue([])
+      recordApiMock.subscribeToRecords.mockReturnValue(mockRecordsChannel)
+      recordApiMock.subscribeToCompetitions.mockReturnValue(mockCompetitionsChannel)
+      recordApiMock.getRecords.mockResolvedValue([])
+      recordApiMock.getCompetitions.mockResolvedValue([])
 
-      const { result } = renderHook(() => useRecords(mockClient))
+      const { result, unmount } = renderHook(() => useRecords(mockClient, { api }))
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
       })
 
-      expect(mockApi.subscribeToRecords).toHaveBeenCalled()
-      expect(mockApi.subscribeToCompetitions).toHaveBeenCalled()
+      expect(recordApiMock.subscribeToRecords).toHaveBeenCalled()
+      expect(recordApiMock.subscribeToCompetitions).toHaveBeenCalled()
+
+      unmount()
+      expect(mockClient.removeChannel).toHaveBeenCalledWith(mockRecordsChannel)
+      expect(mockClient.removeChannel).toHaveBeenCalledWith(mockCompetitionsChannel)
     })
 
     it('should not subscribe when realtime is disabled', async () => {
-      mockApi.getRecords.mockResolvedValue([])
-      mockApi.getCompetitions.mockResolvedValue([])
+      recordApiMock.getRecords.mockResolvedValue([])
+      recordApiMock.getCompetitions.mockResolvedValue([])
 
       const { result } = renderHook(() =>
-        useRecords(mockClient, { enableRealtime: false })
+        useRecords(mockClient, { enableRealtime: false, api })
       )
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
       })
 
-      expect(mockApi.subscribeToRecords).not.toHaveBeenCalled()
-      expect(mockApi.subscribeToCompetitions).not.toHaveBeenCalled()
+      expect(recordApiMock.subscribeToRecords).not.toHaveBeenCalled()
+      expect(recordApiMock.subscribeToCompetitions).not.toHaveBeenCalled()
     })
   })
 
@@ -214,10 +234,10 @@ describe('useRecords', () => {
       const mockRecords = [createMockRecord()]
       const mockCompetitions = [{ id: 'comp-1', name: 'テスト大会' }]
       
-      mockApi.getRecords.mockResolvedValue(mockRecords)
-      mockApi.getCompetitions.mockResolvedValue(mockCompetitions)
+      recordApiMock.getRecords.mockResolvedValue(mockRecords)
+      recordApiMock.getCompetitions.mockResolvedValue(mockCompetitions)
 
-      const { result } = renderHook(() => useRecords(mockClient))
+      const { result } = renderHook(() => useRecords(mockClient, { api }))
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -228,8 +248,8 @@ describe('useRecords', () => {
         await result.current.refresh()
       })
 
-      expect(mockApi.getRecords).toHaveBeenCalledTimes(2) // 初回 + リフレッシュ
-      expect(mockApi.getCompetitions).toHaveBeenCalledTimes(2)
+      expect(recordApiMock.getRecords).toHaveBeenCalledTimes(2) // 初回 + リフレッシュ
+      expect(recordApiMock.getCompetitions).toHaveBeenCalledTimes(2)
     })
   })
 })

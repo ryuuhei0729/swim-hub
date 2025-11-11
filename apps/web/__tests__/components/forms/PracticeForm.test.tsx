@@ -87,11 +87,11 @@ describe('PracticeForm', () => {
       expect(dateInput).toHaveValue('2025-01-15')
     })
 
-    it('should initialize with editData', () => {
+    it('should initialize with editData', async () => {
       const editData = {
         date: '2025-01-15',
         place: '編集プール',
-        memo: '編集メモ'
+        note: '編集メモ'
       }
       
       render(
@@ -105,7 +105,9 @@ describe('PracticeForm', () => {
 
       expect(screen.getByLabelText('練習日')).toHaveValue('2025-01-15')
       expect(screen.getByLabelText('練習場所')).toHaveValue('編集プール')
+      await waitFor(() => {
       expect(screen.getByLabelText('メモ')).toHaveValue('編集メモ')
+      })
     })
   })
 
@@ -141,7 +143,7 @@ describe('PracticeForm', () => {
       const user = userEvent.setup()
       mockOnSubmit.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)))
       
-      render(
+      const { rerender } = render(
         <PracticeForm
           isOpen={true}
           onClose={mockOnClose}
@@ -149,10 +151,24 @@ describe('PracticeForm', () => {
         />
       )
 
+      const placeInput = screen.getByLabelText('練習場所')
+      await user.type(placeInput, 'テストプール')
+
       const submitButton = screen.getByRole('button', { name: '保存' })
       await user.click(submitButton)
 
-      expect(screen.getByText('保存中...')).toBeInTheDocument()
+      rerender(
+        <PracticeForm
+          isOpen={true}
+          onClose={mockOnClose}
+          onSubmit={mockOnSubmit}
+          isLoading={true}
+        />
+      )
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: '保存中...' })).toBeInTheDocument()
+      })
     })
 
     it('should handle submission error', async () => {
@@ -167,6 +183,9 @@ describe('PracticeForm', () => {
           onSubmit={mockOnSubmit}
         />
       )
+
+      const placeInput = screen.getByLabelText('練習場所')
+      await user.type(placeInput, 'テストプール')
 
       const submitButton = screen.getByRole('button', { name: '保存' })
       await user.click(submitButton)
@@ -190,8 +209,7 @@ describe('PracticeForm', () => {
         />
       )
 
-      // XMarkIcon ボタンを探す（aria-label がないので role で探す）
-      const closeButton = screen.getByRole('button', { name: '' })
+      const closeButton = screen.getByRole('button', { name: '閉じる' })
       await user.click(closeButton)
 
       expect(mockOnClose).toHaveBeenCalled()
@@ -208,7 +226,7 @@ describe('PracticeForm', () => {
         />
       )
 
-      const placeInput = screen.getByLabelText('場所')
+      const placeInput = screen.getByLabelText('練習場所')
       await user.type(placeInput, 'テストプール')
 
       // フォームを閉じて再度開く

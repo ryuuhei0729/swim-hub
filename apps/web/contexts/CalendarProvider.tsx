@@ -16,7 +16,7 @@ interface CalendarContextType {
   
   // アクション
   setCurrentDate: (date: Date) => void
-  refetch: () => Promise<void>
+  refetch: (date?: Date) => Promise<void>
   addItem: (item: CalendarItem) => void
   updateItem: (id: string, item: Partial<CalendarItem>) => void
   removeItem: (id: string) => void

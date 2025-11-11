@@ -4,7 +4,7 @@
 // =============================================================================
 
 import { SupabaseClient } from '@supabase/supabase-js'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RecordAPI } from '../api/records'
 import {
   Competition,
@@ -21,20 +21,30 @@ export interface UseRecordsOptions {
   endDate?: string
   styleId?: number
   enableRealtime?: boolean
+  api?: RecordAPI
 }
 
 export function useRecords(
   supabase: SupabaseClient,
   options: UseRecordsOptions = {}
 ) {
-  const { startDate, endDate, styleId, enableRealtime = true } = options
+  const {
+    startDate,
+    endDate,
+    styleId,
+    enableRealtime = true,
+    api: providedApi
+  } = options
   
   const [records, setRecords] = useState<RecordWithDetails[]>([])
   const [competitions, setCompetitions] = useState<Competition[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  const api = new RecordAPI(supabase)
+  const api = useMemo(
+    () => providedApi ?? new RecordAPI(supabase),
+    [supabase, providedApi]
+  )
 
   // データ取得関数
   const loadRecords = useCallback(async () => {
@@ -55,7 +65,7 @@ export function useRecords(
     } finally {
       setLoading(false)
     }
-  }, [startDate, endDate, styleId])
+  }, [api, endDate, startDate, styleId])
 
   // 初回データ取得
   useEffect(() => {
@@ -86,7 +96,7 @@ export function useRecords(
       supabase.removeChannel(recordsChannel)
       supabase.removeChannel(competitionsChannel)
     }
-  }, [enableRealtime])
+  }, [api, enableRealtime, loadRecords, supabase])
 
   // 操作関数
   const createRecord = useCallback(async (record: Omit<RecordInsert, 'user_id'>) => {
@@ -104,7 +114,7 @@ export function useRecords(
   const deleteRecord = useCallback(async (id: string) => {
     await api.deleteRecord(id)
     setRecords(prev => prev.filter(r => r.id !== id))
-  }, [])
+  }, [api])
 
   const createCompetition = useCallback(async (competition: Omit<CompetitionInsert, 'user_id'>) => {
     const newCompetition = await api.createCompetition(competition)
@@ -121,7 +131,7 @@ export function useRecords(
   const deleteCompetition = useCallback(async (id: string) => {
     await api.deleteCompetition(id)
     setCompetitions(prev => prev.filter(c => c.id !== id))
-  }, [])
+  }, [api])
 
   const createSplitTimes = useCallback(async (
     recordId: string,

@@ -10,15 +10,24 @@ export interface MockQueryBuilder {
   insert: ReturnType<typeof vi.fn>
   update: ReturnType<typeof vi.fn>
   delete: ReturnType<typeof vi.fn>
+  upsert: ReturnType<typeof vi.fn>
   eq: ReturnType<typeof vi.fn>
   neq: ReturnType<typeof vi.fn>
   gt: ReturnType<typeof vi.fn>
   gte: ReturnType<typeof vi.fn>
   lt: ReturnType<typeof vi.fn>
   lte: ReturnType<typeof vi.fn>
+  is: ReturnType<typeof vi.fn>
+  like: ReturnType<typeof vi.fn>
+  ilike: ReturnType<typeof vi.fn>
   in: ReturnType<typeof vi.fn>
+  contains: ReturnType<typeof vi.fn>
+  overlaps: ReturnType<typeof vi.fn>
+  or: ReturnType<typeof vi.fn>
   order: ReturnType<typeof vi.fn>
   limit: ReturnType<typeof vi.fn>
+  range: ReturnType<typeof vi.fn>
+  returns: ReturnType<typeof vi.fn>
   single: ReturnType<typeof vi.fn>
   maybeSingle: ReturnType<typeof vi.fn>
 }
@@ -35,15 +44,24 @@ export const createMockQueryBuilder = (
     insert: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+    upsert: vi.fn(),
     eq: vi.fn(),
     neq: vi.fn(),
     gt: vi.fn(),
     gte: vi.fn(),
     lt: vi.fn(),
     lte: vi.fn(),
+    is: vi.fn(),
+    like: vi.fn(),
+    ilike: vi.fn(),
     in: vi.fn(),
+    contains: vi.fn(),
+    overlaps: vi.fn(),
+    or: vi.fn(),
     order: vi.fn(),
     limit: vi.fn(),
+    range: vi.fn(),
+    returns: vi.fn(),
     single: vi.fn(),
     maybeSingle: vi.fn(),
   }
@@ -58,6 +76,7 @@ export const createMockQueryBuilder = (
   // single() と maybeSingle() は結果を返す
   mockBuilder.single.mockResolvedValue({ data: returnData, error: returnError })
   mockBuilder.maybeSingle.mockResolvedValue({ data: returnData, error: returnError })
+  mockBuilder.returns.mockReturnValue({ data: returnData, error: returnError })
 
   // デフォルトの Promise 解決（select の最終結果など）
   mockBuilder.then = (resolve: (value: { data: any; error: any }) => any) => {
@@ -102,10 +121,15 @@ export const createMockSupabaseClient = (options: {
       return createMockQueryBuilder(queryData, queryError)
     }),
     rpc: vi.fn().mockResolvedValue({ data: queryData, error: queryError }),
-    channel: vi.fn(() => ({
-      on: vi.fn().mockReturnThis(),
-      subscribe: vi.fn().mockReturnThis(),
-    })),
+    channel: vi.fn(() => {
+      const channel = {
+        on: vi.fn(() => channel),
+        subscribe: vi.fn(() => channel),
+        unsubscribe: vi.fn(),
+        send: vi.fn(() => channel),
+      }
+      return channel
+    }),
     removeChannel: vi.fn(),
   }
 

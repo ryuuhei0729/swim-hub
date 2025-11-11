@@ -40,9 +40,16 @@ describe('DashboardAPI', () => {
       ]
 
       let callCount = 0
-      mockClient.from = vi.fn((table: string) => {
+      mockClient.from = vi.fn(() => {
         callCount++
-        const queryMock = {
+        const data =
+          callCount === 1
+            ? mockPractices
+            : callCount === 2
+              ? mockRecords
+              : mockCompetitions
+
+        const queryMock: any = {
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
           gte: vi.fn().mockReturnThis(),
@@ -50,25 +57,8 @@ describe('DashboardAPI', () => {
           order: vi.fn().mockReturnThis(),
         }
 
-        if (callCount === 1) {
-          // practices
-          queryMock.lte = vi.fn().mockResolvedValue({
-            data: mockPractices,
-            error: null,
-          })
-        } else if (callCount === 2) {
-          // records
-          queryMock.lte = vi.fn().mockResolvedValue({
-            data: mockRecords,
-            error: null,
-          })
-        } else {
-          // competitions
-          queryMock.lte = vi.fn().mockResolvedValue({
-            data: mockCompetitions,
-            error: null,
-          })
-        }
+        queryMock.then = (resolve: (value: { data: unknown; error: null }) => unknown) =>
+          Promise.resolve({ data, error: null }).then(resolve)
 
         return queryMock
       })
