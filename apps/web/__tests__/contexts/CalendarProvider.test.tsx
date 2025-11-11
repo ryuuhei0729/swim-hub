@@ -1,8 +1,8 @@
-import { ReactNode } from 'react'
 import { render, waitFor } from '@testing-library/react'
 import { act } from 'react'
 import { vi, beforeEach, describe, it, expect } from 'vitest'
 import { CalendarProvider, useCalendar } from '@/contexts/CalendarProvider'
+import type { CalendarItem } from '@apps/shared/types/ui'
 
 const mockUseAuth = vi.hoisted(() => vi.fn())
 
@@ -35,7 +35,7 @@ describe('CalendarProvider', () => {
   })
 
   it('uses initial data when provided for current month', () => {
-    const initialItems = [
+    const initialItems: CalendarItem[] = [
       { id: '1', type: 'practice', date: '2025-01-10', title: '朝練', place: '市営プール', note: '', metadata: {}, editData: {} },
     ]
     const initialSummary = { practiceCount: 3, recordCount: 1 }
@@ -59,8 +59,10 @@ describe('CalendarProvider', () => {
     )
 
     expect(mockGetCalendarEntries).not.toHaveBeenCalled()
-    expect(contextValue?.calendarItems).toEqual(initialItems)
-    expect(contextValue?.monthlySummary).toEqual(initialSummary)
+    expect(contextValue).not.toBeNull()
+    const value = contextValue!
+    expect(value.calendarItems).toEqual(initialItems)
+    expect(value.monthlySummary).toEqual(initialSummary)
   })
 
   it('fetches calendar data when initial data is missing and supports optimistic updates', async () => {
@@ -71,7 +73,7 @@ describe('CalendarProvider', () => {
     }
     mockUseAuth.mockReturnValue({ supabase: supabaseMock })
 
-    const fetchedItems = [
+    const fetchedItems: CalendarItem[] = [
       { id: '2', type: 'record', date: '2025-02-03', title: '大会', place: '国立プール', note: '', metadata: {}, editData: {} },
     ]
     const fetchedSummary = { practiceCount: 1, recordCount: 2 }
@@ -102,7 +104,9 @@ describe('CalendarProvider', () => {
     expect(mockGetCalendarEntries).toHaveBeenCalledTimes(currentCallCount)
 
     // 別月に移動すると再取得
-    mockGetCalendarEntries.mockResolvedValue([{ id: '3', type: 'practice', date: '2025-03-01', title: '合宿', place: '海浜', note: '', metadata: {}, editData: {} }])
+    mockGetCalendarEntries.mockResolvedValue([
+      { id: '3', type: 'practice', date: '2025-03-01', title: '合宿', place: '海浜', note: '', metadata: {}, editData: {} },
+    ] as CalendarItem[])
     mockGetMonthlySummary.mockResolvedValue({ practiceCount: 5, recordCount: 0 })
 
     await act(async () => {
@@ -138,7 +142,7 @@ describe('CalendarProvider', () => {
 
     mockGetCalendarEntries.mockResolvedValue([
       { id: '5', type: 'practice', date: '2025-04-01', title: '朝練', place: '学校プール', note: '', metadata: {}, editData: {} },
-    ])
+    ] as CalendarItem[])
     mockGetMonthlySummary.mockResolvedValue({ practiceCount: 2, recordCount: 0 })
 
     let contextValue: ReturnType<typeof useCalendar> | undefined

@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@/lib/supabase-server'
+import { NextRequest, NextResponse } from 'next/server'
 
 type Body = {
   table: 'practices' | 'competitions'

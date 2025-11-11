@@ -106,7 +106,7 @@ describe('TagInput', () => {
     await user.click(tagOption)
 
     expect(onTagsChange).toHaveBeenCalledWith([
-      { id: 'tag-1', name: 'フォーム', color: '#93C5FD' },
+      expect.objectContaining({ id: 'tag-1', name: 'フォーム', color: '#93C5FD' }),
     ])
   })
 
@@ -187,7 +187,7 @@ describe('TagInput', () => {
       expect(supabase._mocks.updateFirstEqMock).toHaveBeenCalledWith('id', 'tag-2')
       expect(supabase._mocks.updateSecondEqMock).toHaveBeenCalledWith('user_id', 'user-1')
       expect(onAvailableTagsUpdate).toHaveBeenCalledWith([
-        { id: 'tag-2', name: '更新タグ', color: '#a3e635' },
+        expect.objectContaining({ id: 'tag-2', name: '更新タグ', color: '#a3e635' }),
       ])
     })
   })

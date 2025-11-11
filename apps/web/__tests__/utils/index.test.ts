@@ -18,14 +18,13 @@ describe('utils/index', () => {
   })
 
   it('generateId should produce stable format when Math.random is mocked', () => {
-    const originalRandom = Math.random
-    Math.random = vi.fn().mockReturnValue(0.123456789)
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.123456789)
 
     const id = generateId()
     expect(id).toHaveLength(9)
     expect(id).toMatch(/^[a-z0-9]+$/)
 
-    Math.random = originalRandom
+    randomSpy.mockRestore()
   })
 
   it('capitalize should capitalize first character', () => {
