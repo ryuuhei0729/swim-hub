@@ -148,7 +148,7 @@ describe('useRecords', () => {
 
     it('should update record', async () => {
       const recordId = 'record-1'
-      const updates = { time_seconds: 59.0 }
+      const updates = { time: 59.0 }
       
       recordApiMock.getRecords.mockResolvedValue([])
       recordApiMock.getCompetitions.mockResolvedValue([])
