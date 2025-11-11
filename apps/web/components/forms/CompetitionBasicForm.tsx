@@ -107,7 +107,7 @@ export default function CompetitionBasicForm({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[60] overflow-y-auto">
+    <div className="fixed inset-0 z-[60] overflow-y-auto" data-testid="competition-form-modal">
       <div className="flex min-h-screen items-center justify-center p-4">
         {/* オーバーレイ */}
         <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose}></div>
@@ -141,6 +141,7 @@ export default function CompetitionBasicForm({
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                   required
                   className="w-full"
+                  data-testid="competition-date"
                 />
               </div>
 
@@ -156,6 +157,7 @@ export default function CompetitionBasicForm({
                   placeholder="例: 全国大会"
                   required
                   className="w-full"
+                  data-testid="competition-title"
                 />
               </div>
 
@@ -171,6 +173,7 @@ export default function CompetitionBasicForm({
                   placeholder="例: 東京アクアティクスセンター"
                   required
                   className="w-full"
+                  data-testid="competition-place"
                 />
               </div>
 
@@ -184,6 +187,7 @@ export default function CompetitionBasicForm({
                   onChange={(e) => setFormData({ ...formData, poolType: parseInt(e.target.value) })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
+                  data-testid="competition-pool-type"
                 >
                   {POOL_TYPES.map((type) => (
                     <option key={type.value} value={type.value}>
@@ -204,6 +208,7 @@ export default function CompetitionBasicForm({
                   placeholder="大会に関するメモ（任意）"
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  data-testid="competition-note"
                 />
               </div>
             </form>

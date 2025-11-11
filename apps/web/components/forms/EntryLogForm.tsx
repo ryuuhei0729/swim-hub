@@ -161,7 +161,7 @@ export default function EntryLogForm({
   }
 
   return (
-    <div className="fixed inset-0 z-[70] overflow-y-auto">
+    <div className="fixed inset-0 z-[70] overflow-y-auto" data-testid="entry-form-modal">
       <div className="flex min-h-screen items-center justify-center p-4">
         <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={onClose}></div>
 
@@ -200,6 +200,7 @@ export default function EntryLogForm({
                   size="sm"
                   className="flex items-center gap-2"
                   disabled={isLoading}
+                  data-testid="entry-add-button"
                 >
                   <PlusIcon className="h-4 w-4" />
                   種目を追加
@@ -216,6 +217,7 @@ export default function EntryLogForm({
                         onClick={() => removeEntry(entry.id)}
                         className="text-red-500 hover:text-red-700"
                         disabled={isLoading}
+                        data-testid={`entry-remove-button-${index + 1}`}
                       >
                         <TrashIcon className="h-4 w-4" />
                       </button>
@@ -234,6 +236,7 @@ export default function EntryLogForm({
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                         disabled={isLoading}
+                        data-testid={`entry-style-${index + 1}`}
                       >
                         <option value="">種目を選択</option>
                         {styles.map(style => (
@@ -271,6 +274,7 @@ export default function EntryLogForm({
                         }}
                         placeholder="例: 1:30.50"
                         disabled={isLoading}
+                        data-testid={`entry-time-${index + 1}`}
                       />
                       <p className="mt-1 text-xs text-gray-500">
                         未記入の場合はエントリータイムなしで登録されます
@@ -289,6 +293,7 @@ export default function EntryLogForm({
                       onChange={(e) => updateEntry(entry.id, { note: e.target.value })}
                       placeholder="特記事項など"
                       disabled={isLoading}
+                      data-testid={`entry-note-${index + 1}`}
                     />
                   </div>
                 </div>
@@ -302,6 +307,7 @@ export default function EntryLogForm({
                 onClick={onSkip}
                 variant="outline"
                 disabled={isLoading}
+                data-testid="entry-skip-button"
               >
                 エントリーをスキップ
               </Button>
@@ -312,12 +318,14 @@ export default function EntryLogForm({
                   onClick={onClose}
                   variant="secondary"
                   disabled={isLoading}
+                  data-testid="entry-cancel-button"
                 >
                   キャンセル
                 </Button>
                 <Button
                   type="submit"
                   disabled={isLoading}
+                  data-testid="entry-submit-button"
                 >
                   {isLoading ? '登録中...' : 'エントリー登録'}
                 </Button>

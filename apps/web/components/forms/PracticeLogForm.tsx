@@ -271,7 +271,7 @@ export default function PracticeLogForm({
   }
 
   return (
-    <div className="fixed inset-0 z-[70] overflow-y-auto">
+    <div className="fixed inset-0 z-[70] overflow-y-auto" data-testid="practice-log-form-modal">
       <div className="flex min-h-screen items-center justify-center p-4">
         {/* オーバーレイ */}
         <div
@@ -350,6 +350,7 @@ export default function PracticeLogForm({
                         }
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
+                        data-testid="practice-style"
                       >
                         {SWIM_STYLES.map(style => (
                           <option key={style.value} value={style.value}>
@@ -373,6 +374,7 @@ export default function PracticeLogForm({
                         placeholder="100"
                         min="1"
                         required
+                        data-testid="practice-distance"
                       />
                     </div>
 
@@ -390,6 +392,7 @@ export default function PracticeLogForm({
                         placeholder="4"
                         min="1"
                         required
+                        data-testid="practice-rep-count"
                       />
                     </div>
 
@@ -407,6 +410,7 @@ export default function PracticeLogForm({
                         placeholder="1"
                         min="1"
                         required
+                        data-testid="practice-set-count"
                       />
                     </div>
 
@@ -454,6 +458,7 @@ export default function PracticeLogForm({
                       onClick={() => openTimeModal(menu.id)}
                       variant="outline"
                       className="w-full flex items-center justify-center gap-2"
+                      data-testid="time-input-button"
                     >
                       <ClockIcon className="h-5 w-5" />
                       {menu.times && menu.times.length > 0

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { XMarkIcon, PencilIcon, TrashIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, PencilIcon, TrashIcon, ClipboardDocumentCheckIcon, ClockIcon } from '@heroicons/react/24/outline'
 import { BoltIcon, TrophyIcon } from '@heroicons/react/24/solid'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -51,6 +51,13 @@ export default function DayDetailModal({
   const recordItems = entries.filter(e => e.type === 'record')
   const competitionItems = entries.filter(e => e.type === 'competition' || e.type === 'team_competition')
   const entryItems = entries.filter(e => e.type === 'entry')
+  const hasPracticeContent = practiceItems.length > 0 || practiceLogItems.length > 0
+  const hasRecordContent = competitionItems.length > 0 || entryItems.length > 0 || recordItems.length > 0
+  const detailTestId = hasPracticeContent
+    ? 'practice-detail-modal'
+    : hasRecordContent
+      ? 'record-detail-modal'
+      : 'day-detail-modal'
   const handleDeleteConfirm = async () => {
     if (showDeleteConfirm) {
       await onDeleteItem?.(showDeleteConfirm.id, showDeleteConfirm.type)
@@ -70,7 +77,7 @@ export default function DayDetailModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto" data-testid={detailTestId}>
       <div className="flex min-h-screen items-center justify-center p-4">
         {/* オーバーレイ */}
         <div 
@@ -484,7 +491,7 @@ export default function DayDetailModal({
           <div className="flex min-h-screen items-center justify-center p-4">
             <div className="fixed inset-0 bg-black/40 transition-opacity"></div>
             
-            <div className="relative bg-white rounded-lg shadow-2xl border-2 border-red-300 w-full max-w-lg">
+            <div className="relative bg-white rounded-lg shadow-2xl border-2 border-red-300 w-full max-w-lg" data-testid="confirm-dialog">
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="sm:flex sm:items-start">
                   <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
@@ -496,7 +503,7 @@ export default function DayDetailModal({
                     </h3>
                     <div className="mt-2">
                       <p className="text-sm text-gray-500">
-                        この記録を削除してもよろしいですか？この操作は取り消せません。
+                        本当に削除しますか？
                       </p>
                     </div>
                   </div>
@@ -507,6 +514,7 @@ export default function DayDetailModal({
                   type="button"
                   className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
                   onClick={handleDeleteConfirm}
+                  data-testid="confirm-delete-button"
                 >
                   削除
                 </button>
@@ -514,6 +522,7 @@ export default function DayDetailModal({
                   type="button"
                   className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                   onClick={() => setShowDeleteConfirm(null)}
+                  data-testid="cancel-delete-button"
                 >
                   キャンセル
                 </button>
@@ -910,7 +919,7 @@ function PracticeDetails({
   return (
     <div className="mt-3">
       {/* Practice全体の枠 */}
-      <div className="bg-green-50 rounded-xl p-3">
+      <div className="bg-green-50 rounded-xl p-3" data-testid="practice-detail-modal">
         {/* Practice全体のヘッダー */}
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -940,6 +949,7 @@ function PracticeDetails({
               onClick={onEdit}
               className="p-2 text-gray-500 hover:text-green-600 rounded-lg hover:bg-green-100 transition-colors"
               title="練習記録を編集"
+              data-testid="edit-practice-button"
             >
               <PencilIcon className="h-5 w-5" />
             </button>
@@ -947,6 +957,7 @@ function PracticeDetails({
               onClick={onDelete}
               className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-red-100 transition-colors"
               title="練習記録を削除"
+              data-testid="delete-practice-button"
             >
               <TrashIcon className="h-5 w-5" />
             </button>
@@ -961,6 +972,7 @@ function PracticeDetails({
               <button
                 onClick={() => onAddPracticeLog?.(practiceId)}
                 className="inline-flex items-center px-4 py-2 border border-green-300 rounded-lg shadow-sm text-sm font-medium text-green-700 bg-white hover:bg-green-50 hover:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+                data-testid="add-practice-log-button"
               >
                 <span className="mr-2">➕</span>
                 練習メニューを追加
@@ -986,6 +998,8 @@ function PracticeDetails({
                 repNumber: number
                 setNumber: number
               }>
+              created_at?: string
+              updated_at?: string
             }
             const formattedLog = log as unknown as FormattedLog
             const allTimes = formattedLog.times || []
@@ -1037,13 +1051,14 @@ function PracticeDetails({
                             times: formattedLog.times || []
                           }],
                           // ログ側の created_at/updated_at を優先（親 practice の値で上書きしない）
-                          created_at: (formattedLog as any).created_at,
-                          updated_at: (formattedLog as any).updated_at
+                          created_at: formattedLog.created_at,
+                          updated_at: formattedLog.updated_at
                         } as unknown as PracticeLogWithTimes & { tags?: PracticeTag[] }
                         onEditPracticeLog?.(formData)
                       }}
                       className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
                       title="練習メニューを編集"
+                      data-testid="edit-practice-log-button"
                     >
                       <PencilIcon className="h-4 w-4" />
                     </button>
@@ -1051,6 +1066,7 @@ function PracticeDetails({
                       onClick={() => onDeletePracticeLog?.(formattedLog.id)}
                       className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-red-100 transition-colors"
                       title="練習メニューを削除"
+                      data-testid="delete-practice-log-button"
                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>
@@ -1380,7 +1396,7 @@ function CompetitionDetails({
   return (
     <div className="mt-3">
       {/* Competition全体の枠 */}
-      <div className="bg-blue-50 rounded-xl p-3">
+      <div className="bg-blue-50 rounded-xl p-3" data-testid="record-detail-modal">
         {/* Competition全体のヘッダー */}
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -1464,6 +1480,52 @@ function CompetitionDetails({
 
           {/* Recordsがある場合の表示 */}
           {!loading && actualRecords.map((record, index: number) => {
+            const openRecordEditor = async () => {
+              const { data: fullRecord } = await supabase
+                .from('records')
+                .select(`
+                  id,
+                  style_id,
+                  time,
+                  video_url,
+                  note,
+                  is_relaying,
+                  competition_id,
+                  split_times (*)
+                `)
+                .eq('id', record.id)
+                .single()
+
+              type FullRecord = {
+                id: string
+                style_id: number
+                time: number
+                is_relaying: boolean
+                note: string | null
+                video_url: string | null
+                competition_id: string
+                split_times: SplitTime[]
+              }
+              if (fullRecord) {
+                const recordData = fullRecord as FullRecord
+                const editData: Record = {
+                  id: recordData.id,
+                  user_id: '',
+                  competition_id: recordData.competition_id,
+                  style_id: recordData.style_id,
+                  time: recordData.time,
+                  video_url: recordData.video_url,
+                  note: recordData.note,
+                  is_relaying: recordData.is_relaying,
+                  created_at: '',
+                  updated_at: '',
+                  split_times: recordData.split_times || []
+                }
+                onEditRecord?.(editData)
+              }
+              onClose?.()
+            }
+
             return (
               <div key={record.id} className="bg-blue-50 rounded-lg p-4">
                 {/* 記録のヘッダー */}
@@ -1475,62 +1537,26 @@ function CompetitionDetails({
                   </div>
                   <div className="flex items-center space-x-2 ml-4">
                     <button
-                      onClick={async () => {
-                        // Record編集時は、DBから最新データを取得してsplit_timesも含める
-                        const { data: fullRecord } = await supabase
-                          .from('records')
-                          .select(`
-                            id,
-                            style_id,
-                            time,
-                            video_url,
-                            note,
-                            is_relaying,
-                            competition_id,
-                            split_times (*)
-                          `)
-                          .eq('id', record.id)
-                          .single()
-                        
-                        type FullRecord = {
-                          id: string
-                          style_id: number
-                          time: number
-                          is_relaying: boolean
-                          note: string | null
-                          video_url: string | null
-                          competition_id: string
-                          split_times: SplitTime[]
-                        }
-                        if (fullRecord) {
-                          // 編集用のデータを構築
-                          const recordData = fullRecord as FullRecord
-                          const editData: Record = {
-                            id: recordData.id,
-                            user_id: '', // Record型に必要だが、編集時は使用しない
-                            competition_id: recordData.competition_id,
-                            style_id: recordData.style_id,
-                            time: recordData.time,
-                            video_url: recordData.video_url,
-                            note: recordData.note,
-                            is_relaying: recordData.is_relaying,
-                            created_at: '',
-                            updated_at: '',
-                            split_times: recordData.split_times || []
-                          }
-                          onEditRecord?.(editData)
-                        }
-                        onClose?.()
-                      }}
+                      onClick={openRecordEditor}
                       className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
                       title="記録を編集"
+                      data-testid="edit-record-button"
                     >
                       <PencilIcon className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={openRecordEditor}
+                      className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                      title="スプリットタイムを入力"
+                      data-testid="split-time-button"
+                    >
+                      <ClockIcon className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => onDeleteRecord?.(record.id)}
                       className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-red-100 transition-colors"
                       title="記録を削除"
+                      data-testid="delete-record-button"
                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>
@@ -1686,7 +1712,7 @@ function CompetitionWithEntry({
 
       fetchEntryData()
     }
-  }, [competitionId, styleId, styleName])
+  }, [competitionId, styleId, styleName, supabase, router])
   return (
     <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
       {/* 大会情報ヘッダー */}

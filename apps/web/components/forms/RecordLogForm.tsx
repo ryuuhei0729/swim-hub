@@ -257,7 +257,7 @@ export default function RecordLogForm({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[70] overflow-y-auto">
+    <div className="fixed inset-0 z-[70] overflow-y-auto" data-testid="record-form-modal">
       <div className="flex min-h-screen items-center justify-center p-4">
         {/* オーバーレイ */}
         <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose}></div>
@@ -310,6 +310,7 @@ export default function RecordLogForm({
                     onChange={(e) => setFormData({ ...formData, styleId: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
+                    data-testid="record-style"
                   >
                     <option value="">種目を選択</option>
                     {styles.map((style) => (
@@ -333,6 +334,7 @@ export default function RecordLogForm({
                   placeholder="例: 1:23.45 または 32.45"
                   required
                   className="w-full"
+                  data-testid="record-time"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   形式: 分:秒.小数（例: 1:23.45）または 秒.小数（例: 32.45）
@@ -347,6 +349,7 @@ export default function RecordLogForm({
                   checked={formData.isRelaying}
                   onChange={(e) => setFormData({ ...formData, isRelaying: e.target.checked })}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  data-testid="record-relay-checkbox"
                 />
                 <label htmlFor="isRelaying" className="ml-2 text-sm text-gray-700">
                   リレー種目
@@ -354,7 +357,7 @@ export default function RecordLogForm({
               </div>
 
               {/* スプリットタイム */}
-              <div>
+              <div data-testid={editData ? 'split-time-modal' : undefined}>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-gray-700">
                     スプリットタイム
@@ -380,6 +383,7 @@ export default function RecordLogForm({
                           onChange={(e) => handleSplitTimeChange(index, 'distance', e.target.value)}
                           placeholder="距離 (m)"
                           className="w-24"
+                          data-testid={`split-distance-${index + 1}`}
                         />
                         <Input
                           type="text"
@@ -387,6 +391,11 @@ export default function RecordLogForm({
                           onChange={(e) => handleSplitTimeChange(index, 'splitTime', e.target.value)}
                           placeholder="例: 28.50 または 0:28.50"
                           className="flex-1"
+                          data-testid={
+                            typeof st.distance === 'number' && st.distance > 0
+                              ? `split-${st.distance}m`
+                              : `split-time-${index + 1}`
+                          }
                         />
                         <button
                           type="button"
@@ -426,6 +435,7 @@ export default function RecordLogForm({
                   placeholder="記録に関するメモ（任意）"
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  data-testid="record-note"
                 />
               </div>
             </form>
@@ -434,9 +444,11 @@ export default function RecordLogForm({
           {/* フッター */}
           <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
             <Button
+              type="submit"
               onClick={handleSubmit}
               disabled={isLoading}
               className="w-full sm:w-auto sm:ml-3"
+              data-testid={editData ? 'update-record-button' : 'save-record-button'}
             >
               {isLoading ? '保存中...' : editData ? '更新' : '保存'}
             </Button>

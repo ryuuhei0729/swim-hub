@@ -105,22 +105,22 @@ export default function TeamMemberManagement({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="bg-white rounded-lg shadow p-6" data-testid="team-member-management">
       {/* ヘッダー */}
       <div className="mb-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-2">
           メンバー管理
         </h2>
         <div className="flex items-center space-x-4 text-sm text-gray-600">
-          <span>総メンバー: <span className="font-medium text-gray-900">{members.length}人</span></span>
-          <span>管理者: <span className="font-medium text-yellow-600">{members.filter(m => m.role === 'admin').length}人</span></span>
-          <span>ユーザー: <span className="font-medium text-gray-700">{members.filter(m => m.role === 'user').length}人</span></span>
+          <span data-testid="team-member-count-total">総メンバー: <span className="font-medium text-gray-900">{members.length}人</span></span>
+          <span data-testid="team-member-count-admin">管理者: <span className="font-medium text-yellow-600">{members.filter(m => m.role === 'admin').length}人</span></span>
+          <span data-testid="team-member-count-user">ユーザー: <span className="font-medium text-gray-700">{members.filter(m => m.role === 'user').length}人</span></span>
         </div>
       </div>
 
       {/* エラー表示 */}
       {error && (
-        <div className="mb-4 rounded-md bg-red-50 p-4">
+        <div className="mb-4 rounded-md bg-red-50 p-4" data-testid="team-member-management-error">
           <div className="flex">
             <div className="ml-3">
               <h3 className="text-sm font-medium text-red-800">
@@ -145,6 +145,7 @@ export default function TeamMemberManagement({
                 ? 'border-blue-200 bg-blue-50' 
                 : 'border-gray-200 hover:bg-gray-50 hover:shadow-sm'
             }`}
+            data-testid={`team-member-item-${member.id}`}
           >
             <div className="flex items-center space-x-3 flex-1">
               {/* ユーザーアイコン */}
@@ -193,7 +194,7 @@ export default function TeamMemberManagement({
         ))}
         
         {members.length === 0 && (
-          <div className="text-center py-8">
+          <div className="text-center py-8" data-testid="team-member-empty-state">
             <Avatar
               avatarUrl={null}
               userName="?"

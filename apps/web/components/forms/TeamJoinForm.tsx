@@ -22,7 +22,7 @@ export default function TeamJoinForm({ onSubmit, isLoading = false, error }: Tea
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4" data-testid="team-join-form">
       <div>
         <label htmlFor="inviteId" className="block text-sm font-medium text-gray-700 mb-2">
           招待コード
@@ -36,6 +36,7 @@ export default function TeamJoinForm({ onSubmit, isLoading = false, error }: Tea
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
           disabled={isLoading}
           required
+          data-testid="team-join-code-input"
         />
         <p className="mt-1 text-sm text-gray-500">
           チーム管理者から提供された招待コードを入力してください
@@ -43,7 +44,7 @@ export default function TeamJoinForm({ onSubmit, isLoading = false, error }: Tea
       </div>
 
       {error && (
-        <div className="rounded-md bg-red-50 p-4">
+        <div className="rounded-md bg-red-50 p-4" data-testid="team-join-error">
           <div className="flex">
             <div className="ml-3">
               <h3 className="text-sm font-medium text-red-800">
@@ -62,6 +63,7 @@ export default function TeamJoinForm({ onSubmit, isLoading = false, error }: Tea
           type="submit"
           disabled={isLoading || !inviteId.trim()}
           className="inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          data-testid="team-join-submit-button"
         >
           {isLoading ? (
             <>

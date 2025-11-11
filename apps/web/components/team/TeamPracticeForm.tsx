@@ -143,7 +143,7 @@ export default function TeamPracticeForm({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto" data-testid="team-practice-modal">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div
           className="fixed inset-0 bg-black/40 transition-opacity"
@@ -157,6 +157,7 @@ export default function TeamPracticeForm({
           aria-modal="true"
           aria-labelledby="modal-title"
           className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full"
+          data-testid="team-practice-dialog"
         >
           {/* ヘッダー */}
           <div className="bg-white px-6 py-4 border-b border-gray-200">
@@ -170,6 +171,7 @@ export default function TeamPracticeForm({
                 className="text-gray-400 hover:text-gray-600"
                 disabled={loading}
                 aria-label="モーダルを閉じる"
+                data-testid="team-practice-close-button"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -179,10 +181,10 @@ export default function TeamPracticeForm({
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <form onSubmit={handleSubmit} className="p-6 space-y-6" data-testid="team-practice-form">
             {/* エラー表示 */}
             {error && (
-              <div className="rounded-md bg-red-50 p-4" role="alert" aria-live="polite">
+              <div className="rounded-md bg-red-50 p-4" role="alert" aria-live="polite" data-testid="team-practice-error">
                 <div className="flex">
                   <div className="ml-3">
                     <h3 className="text-sm font-medium text-red-800">
@@ -208,6 +210,7 @@ export default function TeamPracticeForm({
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 required
                 aria-describedby="practice-date-error"
+                data-testid="team-practice-date"
               />
             </div>
 
@@ -222,6 +225,7 @@ export default function TeamPracticeForm({
                 value={formData.place}
                 onChange={(e) => setFormData({ ...formData, place: e.target.value })}
                 placeholder="例: 市営プール、学校プール"
+                data-testid="team-practice-place"
               />
             </div>
 
@@ -237,6 +241,7 @@ export default function TeamPracticeForm({
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="練習内容や感想など"
+                data-testid="team-practice-note"
               />
             </div>
 
@@ -247,6 +252,7 @@ export default function TeamPracticeForm({
                 onClick={handleClose}
                 variant="secondary"
                 disabled={loading}
+                data-testid="team-practice-cancel-button"
               >
                 キャンセル
               </Button>
@@ -254,6 +260,7 @@ export default function TeamPracticeForm({
                 type="submit"
                 disabled={loading}
                 className="bg-blue-600 hover:bg-blue-700"
+                data-testid="team-practice-submit-button"
               >
                 {loading ? '作成中...' : '作成'}
               </Button>

@@ -135,7 +135,7 @@ export default function TimeInputModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[80] overflow-y-auto">
+    <div className="fixed inset-0 z-[80] overflow-y-auto" data-testid="time-input-modal">
       <div className="flex min-h-screen items-center justify-center p-4">
         <div 
           className="fixed inset-0 bg-black/40 transition-opacity" 
@@ -197,6 +197,7 @@ export default function TimeInputModal({
                               handleTimeChange(timeEntry.id, e.target.value)
                             }}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            data-testid={`time-input-${timeEntry.setNumber}-${timeEntry.repNumber}`}
                           />
                         </div>
                       ))}
@@ -222,6 +223,7 @@ export default function TimeInputModal({
             <Button
               onClick={handleSubmit}
               className="w-full sm:w-auto sm:ml-3"
+              data-testid="save-times-button"
             >
               保存
             </Button>

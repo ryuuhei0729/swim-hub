@@ -84,7 +84,7 @@ export default function PracticeBasicForm({
   }
 
   return (
-    <div className="fixed inset-0 z-[60] overflow-y-auto">
+    <div className="fixed inset-0 z-[60] overflow-y-auto" data-testid="practice-form-modal">
       <div className="flex min-h-screen items-center justify-center p-4">
         {/* オーバーレイ */}
         <div
@@ -126,6 +126,7 @@ export default function PracticeBasicForm({
                   setFormData({ ...formData, date: e.target.value })
                 }
                 required
+                data-testid="practice-date"
               />
             </div>
 
@@ -142,6 +143,7 @@ export default function PracticeBasicForm({
                 }
                 placeholder="例: 市営プール、学校プール"
                 required
+                data-testid="practice-place"
               />
             </div>
 
@@ -158,6 +160,7 @@ export default function PracticeBasicForm({
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="練習に関する特記事項（天候、体調など）"
+                data-testid="practice-note"
               />
             </div>
 
@@ -175,6 +178,7 @@ export default function PracticeBasicForm({
                 type="submit"
                 disabled={isLoading}
                 className="bg-blue-600 hover:bg-blue-700"
+                data-testid={editData ? 'update-practice-button' : 'save-practice-button'}
               >
                 {isLoading ? (editData ? '更新中...' : '作成中...') : (editData ? '練習予定を更新' : '練習予定を作成')}
               </Button>

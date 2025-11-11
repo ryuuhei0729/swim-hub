@@ -92,14 +92,14 @@ export default function TeamCompetitionForm({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto" data-testid="team-competition-modal">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div
           className="fixed inset-0 bg-black/40 transition-opacity"
           onClick={handleClose}
         />
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full" data-testid="team-competition-dialog">
           {/* ヘッダー */}
           <div className="bg-white px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
@@ -111,6 +111,7 @@ export default function TeamCompetitionForm({
                 onClick={handleClose}
                 className="text-gray-400 hover:text-gray-600"
                 disabled={loading}
+                data-testid="team-competition-close-button"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -120,10 +121,10 @@ export default function TeamCompetitionForm({
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <form onSubmit={handleSubmit} className="p-6 space-y-6" data-testid="team-competition-form">
             {/* エラー表示 */}
             {error && (
-              <div className="rounded-md bg-red-50 p-4">
+              <div className="rounded-md bg-red-50 p-4" data-testid="team-competition-error">
                 <div className="flex">
                   <div className="ml-3">
                     <h3 className="text-sm font-medium text-red-800">
@@ -148,6 +149,7 @@ export default function TeamCompetitionForm({
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="例: 県大会"
                 required
+                data-testid="team-competition-title"
               />
             </div>
 
@@ -161,6 +163,7 @@ export default function TeamCompetitionForm({
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 required
+                data-testid="team-competition-date"
               />
             </div>
 
@@ -174,6 +177,7 @@ export default function TeamCompetitionForm({
                 value={formData.place}
                 onChange={(e) => setFormData({ ...formData, place: e.target.value })}
                 placeholder="例: 県立プール"
+                data-testid="team-competition-place"
               />
             </div>
 
@@ -188,6 +192,7 @@ export default function TeamCompetitionForm({
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="大会の詳細や注意事項など"
+                data-testid="team-competition-note"
               />
             </div>
 
@@ -198,6 +203,7 @@ export default function TeamCompetitionForm({
                 onClick={handleClose}
                 variant="secondary"
                 disabled={loading}
+                data-testid="team-competition-cancel-button"
               >
                 キャンセル
               </Button>
@@ -205,6 +211,7 @@ export default function TeamCompetitionForm({
                 type="submit"
                 disabled={loading}
                 className="bg-blue-600 hover:bg-blue-700"
+                data-testid="team-competition-submit-button"
               >
                 {loading ? '作成中...' : '作成'}
               </Button>

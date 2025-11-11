@@ -42,6 +42,7 @@ export default function CalendarHeader({
             className="px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200 hover:border-blue-300"
             disabled={isLoading}
             title="今月に戻る"
+            data-testid="today-button"
           >
             今日
           </button>
@@ -50,6 +51,7 @@ export default function CalendarHeader({
             className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 disabled:opacity-50 transition-colors"
             disabled={isLoading}
             aria-label="前の月"
+            data-testid="prev-month-button"
           >
             <ChevronLeftIcon className="h-5 w-5" />
           </button>
@@ -65,6 +67,7 @@ export default function CalendarHeader({
             className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 disabled:opacity-50 transition-colors"
             disabled={isLoading}
             aria-label="次の月"
+            data-testid="next-month-button"
           >
             <ChevronRightIcon className="h-5 w-5" />
           </button>

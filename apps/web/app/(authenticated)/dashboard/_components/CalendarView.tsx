@@ -197,7 +197,7 @@ export default function CalendarView({
   }
 
   return (
-    <div className="bg-white shadow">
+    <div className="bg-white shadow" data-testid="calendar">
       {/* ヘッダー */}
       <CalendarHeader
         currentDate={currentDate}
@@ -306,6 +306,7 @@ export default function CalendarView({
                       <button
                         onClick={() => handleAddItem('practice')}
                         className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                        data-testid="add-practice-button"
                       >
                         <span className="mr-2">💪</span>
                         練習予定を追加
@@ -313,6 +314,7 @@ export default function CalendarView({
                       <button
                         onClick={() => handleAddItem('record')}
                         className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-blue-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        data-testid="add-record-button"
                       >
                         <span className="mr-2">🏊‍♂️</span>
                         大会記録を追加
