@@ -95,6 +95,7 @@ export default function PracticeForm({
                 type="button"
                 onClick={onClose}
                 className="text-gray-400 hover:text-gray-600"
+                aria-label="閉じる"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>

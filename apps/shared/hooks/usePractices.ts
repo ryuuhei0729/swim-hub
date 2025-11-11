@@ -4,7 +4,7 @@
 // =============================================================================
 
 import { SupabaseClient } from '@supabase/supabase-js'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PracticeAPI } from '../api/practices'
 import {
   Practice,
@@ -21,19 +21,28 @@ export interface UsePracticesOptions {
   startDate?: string
   endDate?: string
   enableRealtime?: boolean
+  api?: PracticeAPI
 }
 
 export function usePractices(
   supabase: SupabaseClient,
   options: UsePracticesOptions = {}
 ) {
-  const { startDate, endDate, enableRealtime = true } = options
+  const {
+    startDate,
+    endDate,
+    enableRealtime = true,
+    api: providedApi
+  } = options
   
   const [practices, setPractices] = useState<PracticeWithLogs[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  const api = new PracticeAPI(supabase)
+  const api = useMemo(
+    () => providedApi ?? new PracticeAPI(supabase),
+    [supabase, providedApi]
+  )
 
   // データ取得関数
   const loadPractices = useCallback(async () => {
@@ -59,7 +68,7 @@ export function usePractices(
     } finally {
       setLoading(false)
     }
-  }, [startDate, endDate])
+  }, [api, startDate, endDate])
 
   // 初回データ取得
   useEffect(() => {
@@ -99,7 +108,7 @@ export function usePractices(
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [enableRealtime, startDate, endDate])
+  }, [api, enableRealtime, endDate, startDate, supabase])
 
   // 操作関数
   const createPractice = useCallback(async (practice: Omit<PracticeInsert, 'user_id'>) => {
@@ -121,7 +130,7 @@ export function usePractices(
   const deletePractice = useCallback(async (id: string) => {
     await api.deletePractice(id)
     setPractices(prev => prev.filter(p => p.id !== id))
-  }, [])
+  }, [api])
 
   const createPracticeLog = useCallback(async (log: Omit<PracticeLogInsert, 'user_id'>) => {
     const newLog = await api.createPracticeLog(log)

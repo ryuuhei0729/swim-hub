@@ -311,6 +311,7 @@ export default function RecordForm({
                 type="button"
                 onClick={onClose}
                 className="text-gray-400 hover:text-gray-600"
+                aria-label="閉じる"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -394,7 +395,12 @@ export default function RecordForm({
               </Button>
             </div>
 
-            {formData.records.map((record, recordIndex) => (
+            {formData.records.map((record, recordIndex) => {
+              const styleId = `record-${record.id}-style`
+              const timeId = `record-${record.id}-time`
+              const relayId = `record-${record.id}-relay`
+
+              return (
               <div key={record.id} className="border border-gray-200 rounded-lg p-4 space-y-4 bg-blue-50">
                 <div className="flex items-center justify-between">
                   <h4 className="font-medium text-gray-700">種目 {recordIndex + 1}</h4>
@@ -403,6 +409,7 @@ export default function RecordForm({
                       type="button"
                       onClick={() => removeRecord(record.id)}
                       className="text-red-500 hover:text-red-700"
+                        aria-label="種目を削除"
                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>
@@ -411,10 +418,11 @@ export default function RecordForm({
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label htmlFor={styleId} className="block text-sm font-medium text-gray-700 mb-2">
                       種目
                     </label>
                     <select
+                        id={styleId}
                       value={record.styleId}
                       onChange={(e) => updateRecord(record.id, { styleId: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -430,10 +438,11 @@ export default function RecordForm({
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      記録
+                      <label htmlFor={timeId} className="block text-sm font-medium text-gray-700 mb-2">
+                        タイム
                     </label>
                     <Input
+                        id={timeId}
                       type="text"
                       value={record.timeDisplayValue !== undefined ? record.timeDisplayValue : (record.time > 0 ? formatTimeDisplay(record.time) : '')}
                       onChange={(e) => {
@@ -456,14 +465,15 @@ export default function RecordForm({
                   </div>
 
                   <div className="flex items-center">
-                    <label className="flex items-center">
                       <input
+                        id={relayId}
                         type="checkbox"
                         checked={record.isRelaying}
                         onChange={(e) => updateRecord(record.id, { isRelaying: e.target.checked })}
                         className="mr-2"
                       />
-                      <span className="text-sm text-gray-700">リレー</span>
+                      <label htmlFor={relayId} className="text-sm text-gray-700">
+                        リレー
                     </label>
                   </div>
                 </div>
@@ -480,7 +490,7 @@ export default function RecordForm({
                       className="text-sm"
                     >
                       <PlusIcon className="h-3 w-3 mr-1" />
-                      追加
+                        スプリットを追加
                     </Button>
                   </div>
                   
@@ -518,6 +528,7 @@ export default function RecordForm({
                         type="button"
                         onClick={() => removeSplitTime(record.id, splitIndex)}
                         className="text-red-500 hover:text-red-700"
+                          aria-label="スプリットを削除"
                       >
                         <TrashIcon className="h-4 w-4" />
                       </button>
@@ -550,7 +561,8 @@ export default function RecordForm({
                   </div>
                 </div>
               </div>
-            ))}
+              )
+            })}
           </div>
 
           {/* 大会メモ */}

@@ -20,13 +20,22 @@ import {
 export interface UseTeamsOptions {
   teamId?: string
   enableRealtime?: boolean
+  coreApi?: TeamCoreAPI
+  membersApi?: TeamMembersAPI
+  announcementsApi?: TeamAnnouncementsAPI
 }
 
 export function useTeams(
   supabase: SupabaseClient,
   options: UseTeamsOptions = {}
 ) {
-  const { teamId, enableRealtime = true } = options
+  const {
+    teamId,
+    enableRealtime = true,
+    coreApi: providedCoreApi,
+    membersApi: providedMembersApi,
+    announcementsApi: providedAnnouncementsApi,
+  } = options
   
   const [teams, setTeams] = useState<TeamMembershipWithUser[]>([])
   const [currentTeam, setCurrentTeam] = useState<TeamWithMembers | null>(null)
@@ -35,9 +44,18 @@ export function useTeams(
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  const core = useMemo(() => new TeamCoreAPI(supabase), [supabase])
-  const membersApi = useMemo(() => new TeamMembersAPI(supabase), [supabase])
-  const announcementsApi = useMemo(() => new TeamAnnouncementsAPI(supabase), [supabase])
+  const core = useMemo(
+    () => providedCoreApi ?? new TeamCoreAPI(supabase),
+    [providedCoreApi, supabase]
+  )
+  const membersApi = useMemo(
+    () => providedMembersApi ?? new TeamMembersAPI(supabase),
+    [providedMembersApi, supabase]
+  )
+  const announcementsApi = useMemo(
+    () => providedAnnouncementsApi ?? new TeamAnnouncementsAPI(supabase),
+    [providedAnnouncementsApi, supabase]
+  )
 
   // データ取得関数
   const loadData = useCallback(async () => {

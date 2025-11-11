@@ -1,296 +1,235 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
-import TagInput from '../../../components/forms/TagInput'
+import { vi } from 'vitest'
+import TagInput from '@/components/forms/TagInput'
+import { PracticeTag } from '@apps/shared/types/database'
 
-// Supabase クライアントをモック
-vi.mock('@/lib/supabase', () => ({
-  createClient: vi.fn(() => ({
-    from: vi.fn(() => ({
-      insert: vi.fn(() => ({
-        select: vi.fn(() => ({
-          single: vi.fn(() => Promise.resolve({ data: { id: 'new-tag', name: '新規タグ' }, error: null }))
-        }))
-      }))
-    }))
+const mockedUseAuth = vi.hoisted(() => vi.fn())
+
+vi.mock('@/contexts', () => ({
+  useAuth: mockedUseAuth,
+}))
+
+const makeTag = (overrides: Partial<PracticeTag> = {}): PracticeTag => ({
+  id: 'tag-default',
+  user_id: 'user-1',
+  name: 'タグ',
+  color: '#93C5FD',
+  created_at: '2025-01-01T00:00:00Z',
+  updated_at: '2025-01-01T00:00:00Z',
+  ...overrides,
+})
+
+const createSupabaseMock = () => {
+  const insertedTag = makeTag({
+    id: 'tag-new',
+    name: '新タグ',
+  })
+
+  const singleMock = vi.fn().mockResolvedValue({ data: insertedTag, error: null })
+  const selectMock = vi.fn(() => ({ single: singleMock }))
+  const insertMock = vi.fn(() => ({ select: selectMock }))
+
+  const updateSecondEqMock = vi.fn().mockResolvedValue({ error: null })
+  const updateFirstEqMock = vi.fn().mockImplementation(() => ({
+    eq: updateSecondEqMock,
   }))
-}))
+  const updateMock = vi.fn(() => ({
+    eq: updateFirstEqMock,
+  }))
 
-// TagManagementModal をモック
-vi.mock('./TagManagementModal', () => ({
-  default: function MockTagManagementModal({ isOpen, onClose, onSave }: { isOpen: boolean; onClose: () => void; onSave: (tag: { id: string; name: string }) => void }) {
-    return isOpen ? (
-      <div data-testid="tag-management-modal">
-        <button onClick={onClose}>閉じる</button>
-        <button onClick={() => onSave({ id: 'edited-tag', name: '編集済みタグ' })}>保存</button>
-      </div>
-    ) : null
+  const deleteEqSecondMock = vi.fn().mockImplementation(() => Promise.resolve({ error: null }))
+  const deleteEqFirstMock = vi.fn().mockImplementation(() => ({
+    eq: deleteEqSecondMock,
+  }))
+  const deleteMock = vi.fn(() => ({
+    eq: deleteEqFirstMock,
+  }))
+
+  const fromMock = vi.fn(() => ({
+    insert: insertMock,
+    update: updateMock,
+    delete: deleteMock,
+  }))
+
+  const getUserMock = vi.fn().mockResolvedValue({
+    data: { user: { id: 'user-1' } },
+  })
+
+  return {
+    auth: {
+      getUser: getUserMock,
+    },
+    from: fromMock,
+    _mocks: {
+      insertedTag,
+      selectMock,
+      insertMock,
+      singleMock,
+      updateFirstEqMock,
+      updateSecondEqMock,
+      deleteEqFirstMock,
+      deleteEqSecondMock,
+    },
   }
-}))
+}
 
-describe.skip('TagInput', () => {
-  const mockOnTagsChange = vi.fn()
-  const mockOnAvailableTagsUpdate = vi.fn()
-  
-  const mockAvailableTags = [
-    { id: '1', name: 'フリー', color: '#3B82F6', user_id: 'user-1', created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z' },
-    { id: '2', name: 'バック', color: '#10B981', user_id: 'user-1', created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z' },
-    { id: '3', name: 'ブレ', color: '#F59E0B', user_id: 'user-1', created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z' },
-  ]
-
-  const mockSelectedTags = [
-    { id: '1', name: 'フリー', color: '#3B82F6', user_id: 'user-1', created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z' }
-  ]
-
+describe('TagInput', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    mockedUseAuth.mockReset()
   })
 
-  describe('レンダリング', () => {
-    it('should render selected tags', () => {
-      render(
-        <TagInput
-          selectedTags={mockSelectedTags}
-          availableTags={mockAvailableTags}
-          onTagsChange={mockOnTagsChange}
-          onAvailableTagsUpdate={mockOnAvailableTagsUpdate}
-        />
-      )
+  it('filters available tags and toggles selection', async () => {
+    const supabase = createSupabaseMock()
+    mockedUseAuth.mockReturnValue({ supabase })
 
-      expect(screen.getByText('フリー')).toBeInTheDocument()
-    })
+    const onTagsChange = vi.fn()
+    const availableTags: PracticeTag[] = [
+      makeTag({ id: 'tag-1', name: 'フォーム', color: '#93C5FD' }),
+      makeTag({ id: 'tag-2', name: 'キック', color: '#A3E635' }),
+    ]
 
-    it('should render placeholder when no tags selected', () => {
-      render(
-        <TagInput
-          selectedTags={[]}
-          availableTags={mockAvailableTags}
-          onTagsChange={mockOnTagsChange}
-          onAvailableTagsUpdate={mockOnAvailableTagsUpdate}
-        />
-      )
+    render(
+      <TagInput
+        selectedTags={[]}
+        availableTags={availableTags}
+        onTagsChange={onTagsChange}
+        onAvailableTagsUpdate={vi.fn()}
+      />
+    )
 
-      expect(screen.getByText('タグを選択または作成')).toBeInTheDocument()
-    })
+    const user = userEvent.setup()
+    const input = screen.getByPlaceholderText('タグを選択または作成')
+    await user.click(input)
+
+    const tagOption = await screen.findByText('フォーム')
+    await user.click(tagOption)
+
+    expect(onTagsChange).toHaveBeenCalledWith([
+      { id: 'tag-1', name: 'フォーム', color: '#93C5FD' },
+    ])
   })
 
-  describe('ドロップダウン', () => {
-    it('should open dropdown when clicked', async () => {
-      const user = userEvent.setup()
-      
-      render(
-        <TagInput
-          selectedTags={[]}
-          availableTags={mockAvailableTags}
-          onTagsChange={mockOnTagsChange}
-          onAvailableTagsUpdate={mockOnAvailableTagsUpdate}
-        />
-      )
+  it('creates a new tag when Enter is pressed', async () => {
+    const supabase = createSupabaseMock()
+    mockedUseAuth.mockReturnValue({ supabase })
 
-      const input = screen.getByRole('textbox')
-      await user.click(input)
+    const onTagsChange = vi.fn()
+    const onAvailableTagsUpdate = vi.fn()
 
-      expect(screen.getByText('フリー')).toBeInTheDocument()
-      expect(screen.getByText('バック')).toBeInTheDocument()
-      expect(screen.getByText('ブレ')).toBeInTheDocument()
+    // 固定カラーを返すために Math.random をモック
+    const originalRandom = Math.random
+    Math.random = vi.fn().mockReturnValue(0)
+
+    render(
+      <TagInput
+        selectedTags={[]}
+        availableTags={[]}
+        onTagsChange={onTagsChange}
+        onAvailableTagsUpdate={onAvailableTagsUpdate}
+      />
+    )
+
+    const user = userEvent.setup()
+    const input = screen.getByPlaceholderText('タグを選択または作成')
+    await user.type(input, '新タグ')
+    await user.keyboard('{Enter}')
+
+    await waitFor(() => {
+      expect(supabase.from).toHaveBeenCalledWith('practice_tags')
+      expect(onAvailableTagsUpdate).toHaveBeenCalledWith([
+        supabase._mocks.insertedTag,
+      ])
+      expect(onTagsChange).toHaveBeenCalledWith([
+        supabase._mocks.insertedTag,
+      ])
+      expect(input).toHaveValue('')
     })
 
-    it('should close dropdown when clicking outside', async () => {
-      const user = userEvent.setup()
-      
-      render(
-        <TagInput
-          selectedTags={[]}
-          availableTags={mockAvailableTags}
-          onTagsChange={mockOnTagsChange}
-          onAvailableTagsUpdate={mockOnAvailableTagsUpdate}
-        />
-      )
-
-      const input = screen.getByRole('textbox')
-      await user.click(input)
-
-      expect(screen.getByText('フリー')).toBeInTheDocument()
-
-      // 外部をクリック
-      await user.click(document.body)
-
-      expect(screen.queryByText('フリー')).not.toBeInTheDocument()
-    })
+    Math.random = originalRandom
   })
 
-  describe('タグ選択', () => {
-    it('should add tag when clicked', async () => {
-      const user = userEvent.setup()
-      
-      render(
-        <TagInput
-          selectedTags={[]}
-          availableTags={mockAvailableTags}
-          onTagsChange={mockOnTagsChange}
-          onAvailableTagsUpdate={mockOnAvailableTagsUpdate}
-        />
-      )
+  it('updates a tag through management modal', async () => {
+    const supabase = createSupabaseMock()
+    mockedUseAuth.mockReturnValue({ supabase })
 
-      const input = screen.getByRole('textbox')
-      await user.click(input)
+    const onTagsChange = vi.fn()
+    const onAvailableTagsUpdate = vi.fn()
 
-      const tagButton = screen.getByText('フリー')
-      await user.click(tagButton)
+    const availableTags: PracticeTag[] = [
+      makeTag({ id: 'tag-2', name: 'キック', color: '#A3E635' }),
+    ]
 
-      expect(mockOnTagsChange).toHaveBeenCalledWith([mockAvailableTags[0]])
-    })
+    render(
+      <TagInput
+        selectedTags={[]}
+        availableTags={availableTags}
+        onTagsChange={onTagsChange}
+        onAvailableTagsUpdate={onAvailableTagsUpdate}
+      />
+    )
 
-    it('should not show already selected tags', async () => {
-      const user = userEvent.setup()
-      
-      render(
-        <TagInput
-          selectedTags={mockSelectedTags}
-          availableTags={mockAvailableTags}
-          onTagsChange={mockOnTagsChange}
-          onAvailableTagsUpdate={mockOnAvailableTagsUpdate}
-        />
-      )
+    const user = userEvent.setup()
+    const input = screen.getByPlaceholderText('タグを選択または作成')
+    await user.click(input)
 
-      const input = screen.getByRole('textbox')
-      await user.click(input)
+    const manageButton = await screen.findByTitle('タグを管理')
+    await user.click(manageButton)
 
-      // 既に選択されているタグは表示されない
-      expect(screen.queryByText('フリー')).not.toBeInTheDocument()
-      expect(screen.getByText('バック')).toBeInTheDocument()
-      expect(screen.getByText('ブレ')).toBeInTheDocument()
+    const modalInput = await screen.findByPlaceholderText('タグ名を入力')
+    await user.clear(modalInput)
+    await user.type(modalInput, '更新タグ')
+
+    const updateButton = screen.getByRole('button', { name: '更新' })
+    await user.click(updateButton)
+
+    await waitFor(() => {
+      expect(supabase._mocks.updateFirstEqMock).toHaveBeenCalledWith('id', 'tag-2')
+      expect(supabase._mocks.updateSecondEqMock).toHaveBeenCalledWith('user_id', 'user-1')
+      expect(onAvailableTagsUpdate).toHaveBeenCalledWith([
+        { id: 'tag-2', name: '更新タグ', color: '#a3e635' },
+      ])
     })
   })
 
-  describe('タグ削除', () => {
-    it('should remove tag when X button is clicked', async () => {
-      const user = userEvent.setup()
-      
-      render(
-        <TagInput
-          selectedTags={mockSelectedTags}
-          availableTags={mockAvailableTags}
-          onTagsChange={mockOnTagsChange}
-          onAvailableTagsUpdate={mockOnAvailableTagsUpdate}
-        />
-      )
+  it('deletes a tag through management modal', async () => {
+    const supabase = createSupabaseMock()
+    mockedUseAuth.mockReturnValue({ supabase })
 
-      const removeButton = screen.getByRole('button', { name: /削除/i })
-      await user.click(removeButton)
+    const onTagsChange = vi.fn()
+    const onAvailableTagsUpdate = vi.fn()
 
-      expect(mockOnTagsChange).toHaveBeenCalledWith([])
-    })
-  })
+    const availableTags: PracticeTag[] = [
+      makeTag({ id: 'tag-2', name: 'キック', color: '#A3E635' }),
+    ]
 
-  describe('タグ検索', () => {
-    it('should filter tags based on input', async () => {
-      const user = userEvent.setup()
-      
-      render(
-        <TagInput
-          selectedTags={[]}
-          availableTags={mockAvailableTags}
-          onTagsChange={mockOnTagsChange}
-          onAvailableTagsUpdate={mockOnAvailableTagsUpdate}
-        />
-      )
+    render(
+      <TagInput
+        selectedTags={[]}
+        availableTags={availableTags}
+        onTagsChange={onTagsChange}
+        onAvailableTagsUpdate={onAvailableTagsUpdate}
+      />
+    )
 
-      const input = screen.getByRole('textbox')
-      await user.click(input)
-      await user.type(input, 'フ')
+    const user = userEvent.setup()
+    const input = screen.getByPlaceholderText('タグを選択または作成')
+    await user.click(input)
 
-      expect(screen.getByText('フリー')).toBeInTheDocument()
-      expect(screen.queryByText('バック')).not.toBeInTheDocument()
-      expect(screen.queryByText('ブレ')).not.toBeInTheDocument()
-    })
+    const manageButton = await screen.findByTitle('タグを管理')
+    await user.click(manageButton)
 
-    it('should show "新規作成" option when no matching tags', async () => {
-      const user = userEvent.setup()
-      
-      render(
-        <TagInput
-          selectedTags={[]}
-          availableTags={mockAvailableTags}
-          onTagsChange={mockOnTagsChange}
-          onAvailableTagsUpdate={mockOnAvailableTagsUpdate}
-        />
-      )
+    const deleteButton = screen.getByRole('button', { name: /削除/ })
+    await user.click(deleteButton)
 
-      const input = screen.getByRole('textbox')
-      await user.click(input)
-      await user.type(input, '新しいタグ')
+    const confirmButtons = await screen.findAllByRole('button', { name: '削除' })
+    await user.click(confirmButtons[1])
 
-      expect(screen.getByText('「新しいタグ」を新規作成')).toBeInTheDocument()
-    })
-  })
-
-  describe('新規タグ作成', () => {
-    it('should create new tag when "新規作成" is clicked', async () => {
-      const user = userEvent.setup()
-      
-      render(
-        <TagInput
-          selectedTags={[]}
-          availableTags={mockAvailableTags}
-          onTagsChange={mockOnTagsChange}
-          onAvailableTagsUpdate={mockOnAvailableTagsUpdate}
-        />
-      )
-
-      const input = screen.getByRole('textbox')
-      await user.click(input)
-      await user.type(input, '新しいタグ')
-
-      const createButton = screen.getByText('「新しいタグ」を新規作成')
-      await user.click(createButton)
-
-      await waitFor(() => {
-        expect(mockOnTagsChange).toHaveBeenCalledWith([
-          expect.objectContaining({ name: '新規タグ' })
-        ])
-      })
-    })
-  })
-
-  describe('タグ管理', () => {
-    it('should open tag management modal', async () => {
-      const user = userEvent.setup()
-      
-      render(
-        <TagInput
-          selectedTags={mockSelectedTags}
-          availableTags={mockAvailableTags}
-          onTagsChange={mockOnTagsChange}
-          onAvailableTagsUpdate={mockOnAvailableTagsUpdate}
-        />
-      )
-
-      const manageButton = screen.getByRole('button', { name: /管理/i })
-      await user.click(manageButton)
-
-      expect(screen.getByTestId('tag-management-modal')).toBeInTheDocument()
-    })
-
-    it('should close tag management modal', async () => {
-      const user = userEvent.setup()
-      
-      render(
-        <TagInput
-          selectedTags={mockSelectedTags}
-          availableTags={mockAvailableTags}
-          onTagsChange={mockOnTagsChange}
-          onAvailableTagsUpdate={mockOnAvailableTagsUpdate}
-        />
-      )
-
-      const manageButton = screen.getByRole('button', { name: /管理/i })
-      await user.click(manageButton)
-
-      const closeButton = screen.getByText('閉じる')
-      await user.click(closeButton)
-
-      expect(screen.queryByTestId('tag-management-modal')).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(supabase._mocks.deleteEqFirstMock).toHaveBeenCalledWith('id', 'tag-2')
+      expect(supabase._mocks.deleteEqSecondMock).toHaveBeenCalledWith('user_id', 'user-1')
+      expect(onAvailableTagsUpdate).toHaveBeenCalledWith([])
+      expect(onTagsChange).toHaveBeenCalledWith([])
     })
   })
 })
