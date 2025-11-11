@@ -42,7 +42,7 @@
   "devDependencies": {
     "@types/node": "^24",
     "typescript": "^5",
-    "turbo": "^2.5.8"
+    "turbo": "^2.6.0"
   },
   "engines": {
     "node": "20.x",
