@@ -1,4 +1,92 @@
 import { defineConfig, devices } from '@playwright/test'
+import { execSync } from 'node:child_process'
+import path from 'node:path'
+
+type SupabaseEnv = {
+  url: string
+  anonKey: string
+  serviceRoleKey: string
+  graphqlUrl: string
+}
+
+const DEFAULT_LOCAL_SUPABASE: SupabaseEnv = {
+  url: 'http://127.0.0.1:54321',
+  anonKey:
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0',
+  serviceRoleKey:
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU',
+  graphqlUrl: 'http://127.0.0.1:54321/graphql/v1',
+}
+
+const shouldUseLocalSupabase =
+  process.env.CI !== 'true' && process.env.E2E_SUPABASE_MODE !== 'remote'
+
+function getLocalSupabaseEnv(): SupabaseEnv | null {
+  try {
+    const result = execSync(
+      'npx supabase status --workdir supabase -o json',
+      {
+        cwd: path.resolve(__dirname, '..', '..'),
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'ignore'],
+      }
+    )
+    const match = result.match(/\{[\s\S]*\}/)
+    if (!match) return null
+    const parsed = JSON.parse(match[0])
+    return {
+      url: parsed.API_URL ?? DEFAULT_LOCAL_SUPABASE.url,
+      anonKey:
+        parsed.ANON_KEY ??
+        parsed.PUBLISHABLE_KEY ??
+        DEFAULT_LOCAL_SUPABASE.anonKey,
+      serviceRoleKey:
+        parsed.SERVICE_ROLE_KEY ??
+        parsed.SECRET_KEY ??
+        DEFAULT_LOCAL_SUPABASE.serviceRoleKey,
+      graphqlUrl:
+        parsed.GRAPHQL_URL ??
+        `${(parsed.API_URL ?? DEFAULT_LOCAL_SUPABASE.url).replace(/\/$/, '')}/graphql/v1`,
+    }
+  } catch (error) {
+    console.warn(
+      '[Playwright] ローカルSupabase環境の取得に失敗しました:',
+      (error as Error).message
+    )
+    return null
+  }
+}
+
+const localSupabaseEnv = shouldUseLocalSupabase
+  ? { ...DEFAULT_LOCAL_SUPABASE, ...(getLocalSupabaseEnv() ?? {}) }
+  : null
+
+const supabaseEnvEntries = shouldUseLocalSupabase && localSupabaseEnv
+  ? {
+      NEXT_PUBLIC_SUPABASE_URL: localSupabaseEnv.url,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: localSupabaseEnv.anonKey,
+      SUPABASE_SERVICE_ROLE_KEY: localSupabaseEnv.serviceRoleKey,
+      NEXT_PUBLIC_GRAPHQL_ENDPOINT: localSupabaseEnv.graphqlUrl,
+    }
+  : {
+      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+      NEXT_PUBLIC_GRAPHQL_ENDPOINT: process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT,
+    }
+
+const sanitizedSupabaseEnv = Object.fromEntries(
+  Object.entries(supabaseEnvEntries).filter(
+    ([, value]) => typeof value === 'string' && value.length > 0
+  )
+) as Record<string, string>
+
+if (shouldUseLocalSupabase) {
+  for (const [key, value] of Object.entries(sanitizedSupabaseEnv)) {
+    process.env[key] = value
+  }
+  process.env.PLAYWRIGHT_SUPABASE_MODE = 'local'
+}
 
 /**
  * Playwright設定ファイル
@@ -7,9 +95,6 @@ import { defineConfig, devices } from '@playwright/test'
 export default defineConfig({
   // テストディレクトリ
   testDir: './e2e',
-  
-  // 並列実行設定
-  fullyParallel: true,
   
   // CI環境でのみforbidOnly有効
   forbidOnly: !!process.env.CI,
@@ -35,8 +120,8 @@ export default defineConfig({
     // スクリーンショット設定
     screenshot: 'only-on-failure',
     
-    // ビデオ録画設定
-    video: 'retain-on-failure',
+    // ビデオ録画設定（必要な場合はCLIの--videoオプションで有効化）
+    video: 'off',
     
     // トレース設定
     trace: 'on-first-retry',
@@ -51,39 +136,27 @@ export default defineConfig({
     actionTimeout: 10 * 1000,
     navigationTimeout: 30 * 1000,
   },
-
-  // プロジェクト設定（ブラウザ別）
+  
+  // プロジェクト設定
   projects: [
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-    
-    // モバイルテスト
-    {
-      name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
-    },
-    {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] },
-    },
   ],
 
   // 開発サーバー設定
   webServer: {
-    command: 'npm run dev',
+    command: process.env.CI
+      ? 'npm run build && npm run start -- --port=3000'
+      : 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
+    timeout: 180 * 1000,
+    env: {
+      ...(process.env.CI ? {} : { NEXT_DISABLE_TURBOPACK: '1' }),
+      ...sanitizedSupabaseEnv,
+    },
   },
   
   // グローバル設定

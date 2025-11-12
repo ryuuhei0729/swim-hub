@@ -156,6 +156,7 @@ export default function DashboardClient({
     closeCompetitionBasicForm,
     closeEntryLogForm,
     closeRecordLogForm,
+    openPracticeLogForm,
     setCreatedEntries,
     openEntryLogForm,
     openRecordLogForm,
@@ -197,8 +198,7 @@ export default function DashboardClient({
         
         {/* カレンダーコンポーネント */}
         <CalendarContainer 
-          key={calendarRefreshKey}
-          entries={initialCalendarItems}
+          refreshKey={calendarRefreshKey}
           initialCalendarItems={initialCalendarItems}
           initialMonthlySummary={initialMonthlySummary}
           onDateClick={onDateClick}

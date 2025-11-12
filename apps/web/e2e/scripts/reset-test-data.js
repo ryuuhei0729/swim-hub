@@ -35,6 +35,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 
 // Playwright のシナリオで作成する可能性があるメールアドレスとパターン
 const STATIC_TEST_EMAILS = new Set([
+  'test@example.com',
   'test@swimhub.com',
   'test-admin@swimhub.com',
   'test-user@swimhub.com',
@@ -44,6 +45,7 @@ const STATIC_TEST_EMAILS = new Set([
   'persistence-test@swimhub.com',
   'reset-test@swimhub.com',
   'single-register@swimhub.com',
+  'attendance-test@swimhub.com',
 ])
 
 const PREFIX_PATTERNS = [

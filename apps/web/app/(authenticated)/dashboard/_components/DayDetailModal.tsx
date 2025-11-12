@@ -923,7 +923,11 @@ function PracticeDetails({
         {/* Practice全体のヘッダー */}
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
+                <div
+                  className="flex items-center gap-2 mb-2"
+                  data-testid="practice-log-summary"
+                  
+                >
               <span className={`text-lg font-semibold px-3 py-1 rounded-lg flex items-center gap-2 ${
                 isTeamPractice 
                   ? 'text-emerald-800 bg-emerald-200' 
@@ -1005,7 +1009,11 @@ function PracticeDetails({
             const allTimes = formattedLog.times || []
         
             return (
-              <div key={formattedLog.id} className="bg-green-50 rounded-lg p-4">
+              <div
+                key={formattedLog.id}
+                className="bg-green-50 rounded-lg p-4"
+                data-testid={`practice-log-item-${index + 1}`}
+              >
                 {/* 練習メニューのヘッダー */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">

@@ -28,6 +28,31 @@ interface FormModalsProps {
 /**
  * すべてのフォームモーダルを管理するClient Component
  */
+const PracticeBasicForm = dynamic(
+  () => import('@/components/forms/PracticeBasicForm'),
+  { ssr: false }
+)
+
+const PracticeLogForm = dynamic(
+  () => import('@/components/forms/PracticeLogForm'),
+  { ssr: false }
+)
+
+const CompetitionBasicForm = dynamic(
+  () => import('@/components/forms/CompetitionBasicForm'),
+  { ssr: false }
+)
+
+const EntryLogForm = dynamic(
+  () => import('@/components/forms/EntryLogForm'),
+  { ssr: false }
+)
+
+const RecordLogForm = dynamic(
+  () => import('@/components/forms/RecordLogForm'),
+  { ssr: false }
+)
+
 export function FormModals({
   onPracticeBasicSubmit,
   onPracticeLogSubmit,
@@ -98,32 +123,6 @@ export function FormModals({
     
     return undefined
   }
-
-  // フォームモーダルを動的インポート（コード分割）
-  const PracticeBasicForm = dynamic(
-    () => import('@/components/forms/PracticeBasicForm'),
-    { ssr: false }
-  )
-
-  const PracticeLogForm = dynamic(
-    () => import('@/components/forms/PracticeLogForm'),
-    { ssr: false }
-  )
-
-  const CompetitionBasicForm = dynamic(
-    () => import('@/components/forms/CompetitionBasicForm'),
-    { ssr: false }
-  )
-
-  const EntryLogForm = dynamic(
-    () => import('@/components/forms/EntryLogForm'),
-    { ssr: false }
-  )
-
-  const RecordLogForm = dynamic(
-    () => import('@/components/forms/RecordLogForm'),
-    { ssr: false }
-  )
 
   return (
     <>

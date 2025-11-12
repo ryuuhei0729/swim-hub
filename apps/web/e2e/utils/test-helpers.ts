@@ -249,6 +249,65 @@ export class FormHelpers {
 }
 
 /**
+ * ダッシュボード操作ヘルパー
+ */
+export class DashboardHelpers {
+  constructor(private page: Page) {}
+
+  private getDayCell(dateIso: string) {
+    return this.page.locator(`[data-testid="calendar-day"][data-date="${dateIso}"]`).first()
+  }
+
+  private async openAddMenu(dateIso: string, type: 'practice' | 'record'): Promise<void> {
+    const dayCell = this.getDayCell(dateIso)
+    await dayCell.hover()
+    await dayCell.locator('[data-testid="day-add-button"]').click()
+
+    const buttonTestId = type === 'practice' ? 'add-practice-button' : 'add-record-button'
+    const modalTestId = type === 'practice' ? 'practice-form-modal' : 'record-form-modal'
+
+    const addMenuModal = this.page.getByTestId('add-menu-modal')
+    await addMenuModal.waitFor({ state: 'visible' })
+    const button = addMenuModal.getByTestId(buttonTestId)
+    await button.focus()
+    await this.page.keyboard.press('Enter')
+    await this.page.getByTestId(modalTestId).waitFor({ state: 'visible' })
+  }
+
+  /**
+   * カレンダーから練習予定追加モーダルを開く
+   */
+  async openAddPracticeModal(dateIso: string): Promise<void> {
+    await this.openAddMenu(dateIso, 'practice')
+  }
+
+  /**
+   * カレンダーから大会記録追加モーダルを開く
+   */
+  async openAddCompetitionModal(dateIso: string): Promise<void> {
+    await this.openAddMenu(dateIso, 'record')
+  }
+
+  /**
+   * 指定日の練習詳細モーダルを開く
+   */
+  async openPracticeDetail(dateIso: string): Promise<void> {
+    const dayCell = this.getDayCell(dateIso)
+    await dayCell.locator('[data-testid="practice-mark"]').first().click()
+    await this.page.getByTestId('practice-detail-modal').waitFor({ state: 'visible' })
+  }
+
+  /**
+   * 指定日の大会記録詳細モーダルを開く
+   */
+  async openRecordDetail(dateIso: string): Promise<void> {
+    const dayCell = this.getDayCell(dateIso)
+    await dayCell.locator('[data-testid="competition-mark"]').first().click()
+    await this.page.getByTestId('record-detail-modal').waitFor({ state: 'visible' })
+  }
+}
+
+/**
  * UI要素の待機ヘルパー
  */
 export class WaitHelpers {
@@ -336,5 +395,6 @@ export function createPageHelpers(page: Page) {
     auth: new AuthHelpers(page),
     form: new FormHelpers(page),
     wait: new WaitHelpers(page),
+    dashboard: new DashboardHelpers(page),
   }
 }

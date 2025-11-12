@@ -54,42 +54,52 @@ export const usePracticeFormStore = create<PracticeFormState & PracticeFormActio
   ...initialState,
   
   // モーダル操作
-  openBasicForm: (date, editData) => set({
-    isBasicFormOpen: true,
-    isLogFormOpen: false,
-    selectedDate: date || null,
-    editingData: editData || null,
-    createdPracticeId: null,
-  }),
+  openBasicForm: (date, editData) => {
+    set({
+      isBasicFormOpen: true,
+      isLogFormOpen: false,
+      selectedDate: date || null,
+      editingData: editData || null,
+      createdPracticeId: null,
+    })
+  },
   
-  openLogForm: (practiceId, editData) => set({
+  openLogForm: (practiceId, editData) => {
+    set({
     isBasicFormOpen: false,
     isLogFormOpen: true,
     editingData: editData || null,
     createdPracticeId: practiceId || null,
-  }),
+    })
+  },
   
-  closeBasicForm: () => set({
+  closeBasicForm: () => {
+    set({
     isBasicFormOpen: false,
     selectedDate: null,
     editingData: null,
     createdPracticeId: null,
-  }),
+    })
+  },
   
-  closeLogForm: () => set({
+  closeLogForm: () => {
+    set({
     isLogFormOpen: false,
     selectedDate: null,
     editingData: null,
     createdPracticeId: null,
-  }),
+    })
+  },
   
-  closeAll: () => set({
+  closeAll: () => {
+    set({
     isBasicFormOpen: false,
     isLogFormOpen: false,
     selectedDate: null,
     editingData: null,
     createdPracticeId: null,
-  }),
+    })
+  },
   
   // データ操作
   setSelectedDate: (date) => set({ selectedDate: date }),

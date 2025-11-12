@@ -110,6 +110,9 @@ export default function TagInput({
       // 選択済みタグにも追加
       onTagsChange([...selectedTags, data])
       setInputValue('')
+      requestAnimationFrame(() => {
+        inputRef.current?.focus()
+      })
     } catch (error) {
       console.error('タグ作成エラー:', error)
     }
@@ -192,11 +195,25 @@ export default function TagInput({
     setInputValue(e.target.value)
   }
 
-  // Enterキーで新規タグ作成
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const stopFormSubmission = (event: React.KeyboardEvent) => {
+    event.preventDefault()
+    event.stopPropagation()
+    if (typeof event.nativeEvent.stopImmediatePropagation === 'function') {
+      event.nativeEvent.stopImmediatePropagation()
+    }
+  }
+
+  // Enterキーで新規タグ作成（フォーム送信を防止）
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && inputValue.trim()) {
-      e.preventDefault()
-      handleCreateTag(inputValue)
+      stopFormSubmission(e)
+      void handleCreateTag(inputValue)
+    }
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      stopFormSubmission(e)
     }
   }
 
@@ -239,6 +256,7 @@ export default function TagInput({
               type="text"
               value={inputValue}
               onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
               onKeyPress={handleKeyPress}
               onFocus={() => setIsOpen(true)}
               placeholder={selectedTags.length === 0 ? placeholder : "タグを検索または作成..."}

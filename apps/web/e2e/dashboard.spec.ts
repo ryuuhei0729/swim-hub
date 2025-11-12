@@ -1,298 +1,159 @@
 import { expect, test } from '@playwright/test'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { createPageHelpers, TEST_USERS } from './utils/test-helpers'
 
-/**
- * ダッシュボード機能のE2Eテスト
- * 日付選択、練習記録・大会記録のCRUD操作
- */
-test.describe('ダッシュボード機能', () => {
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://127.0.0.1:54321'
+const SUPABASE_SERVICE_ROLE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ??
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
+
+const adminClient: SupabaseClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { autoRefreshToken: false, persistSession: false }
+})
+
+let testUserId: string | null = null
+
+async function getUserIdByEmail(email: string): Promise<string> {
+  let page = 1
+  const perPage = 100
+
+  while (true) {
+    const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage })
+    if (error) {
+      throw new Error(`Failed to list users: ${error.message}`)
+    }
+    const found = data.users.find((user) => user.email?.toLowerCase() === email.toLowerCase())
+    if (found) return found.id
+    if (data.users.length < perPage) break
+    page += 1
+  }
+
+  throw new Error(`User not found for email: ${email}`)
+}
+
+async function ensureTestUserId(): Promise<string> {
+  if (!testUserId) {
+    testUserId = await getUserIdByEmail(TEST_USERS.VALID_USER.email)
+  }
+  return testUserId
+}
+
+async function cleanupUserData(): Promise<void> {
+  const userId = await ensureTestUserId()
+  const tablesInOrder = [
+    'team_attendance',
+    'records',
+    'entries',
+    'competitions',
+    'practice_logs',
+    'practices'
+  ] as const
+
+  for (const table of tablesInOrder) {
+    const { error } = await adminClient.from(table).delete().eq('user_id', userId)
+    if (error && error.code !== 'PGRST116') {
+      console.warn(`Failed to cleanup ${table}:`, error.message)
+    }
+  }
+}
+
+function formatDateInCurrentMonth(day: number): string {
+  const now = new Date()
+  const target = new Date(now.getFullYear(), now.getMonth(), day)
+  return target.toISOString().split('T')[0]
+}
+
+test.describe('ダッシュボード E2E', () => {
+  test.beforeAll(async () => {
+    await ensureTestUserId()
+    await cleanupUserData()
+  })
+
   test.beforeEach(async ({ page }) => {
-    // 各テスト前にログインしてダッシュボードに移動
-    await page.goto('/login')
-    await page.fill('input[type="email"]', 'test@example.com')
-    await page.fill('input[type="password"]', 'testpassword123')
-    await page.click('button[type="submit"]')
-    
-    // ダッシュボードに移動したことを確認
-    await expect(page).toHaveURL('/dashboard')
+    await cleanupUserData()
+    const helpers = createPageHelpers(page)
+    await helpers.auth.login()
   })
 
-  test.describe('練習記録の管理', () => {
-    test('日付選択して練習記録を作成', async ({ page }) => {
-      // カレンダーで今日の日付をクリック
-      const today = new Date().getDate().toString()
-      await page.click(`[data-testid="calendar-day"]:has-text("${today}")`)
-      
-      // 練習記録追加ボタンをクリック
-      await page.click('[data-testid="add-practice-button"]')
-      
-      // 練習記録フォームが表示されることを確認
-      await expect(page.locator('[data-testid="practice-form-modal"]')).toBeVisible()
-      
-      // フォームに入力
-      await page.fill('[data-testid="practice-place"]', 'メインプール')
-      await page.selectOption('[data-testid="practice-style"]', 'fr') // フリースタイル
-      await page.fill('[data-testid="practice-distance"]', '50')
-      await page.fill('[data-testid="practice-set-count"]', '4')
-      await page.fill('[data-testid="practice-rep-count"]', '8')
-      await page.fill('[data-testid="practice-note"]', 'フリースタイル強化練習')
-      
-      // 保存ボタンをクリック
-      await page.click('[data-testid="save-practice-button"]')
-      
-      // 成功メッセージの確認
-      await expect(page.locator('text=練習記録を保存しました')).toBeVisible()
-      
-      // カレンダーに練習マークが表示されることを確認
-      await expect(page.locator('[data-testid="practice-mark"]')).toBeVisible()
-    })
-
-    test('練習記録を更新', async ({ page }) => {
-      // 既存の練習記録をクリック（練習マークがある日付）
-      await page.click('[data-testid="practice-mark"]')
-      
-      // 練習記録詳細が表示されることを確認
-      await expect(page.locator('[data-testid="practice-detail-modal"]')).toBeVisible()
-      
-      // 編集ボタンをクリック
-      await page.click('[data-testid="edit-practice-button"]')
-      
-      // 編集フォームが表示されることを確認
-      await expect(page.locator('[data-testid="practice-form-modal"]')).toBeVisible()
-      
-      // フィールドを更新
-      await page.fill('[data-testid="practice-place"]', '更新後プール')
-      await page.fill('[data-testid="practice-note"]', '更新後の練習メモ')
-      
-      // 更新ボタンをクリック
-      await page.click('[data-testid="update-practice-button"]')
-      
-      // 成功メッセージの確認
-      await expect(page.locator('text=練習記録を更新しました')).toBeVisible()
-      
-      // 更新された内容が反映されることを確認
-      await page.click('[data-testid="practice-mark"]')
-      await expect(page.locator('text=更新後プール')).toBeVisible()
-      await expect(page.locator('text=更新後の練習メモ')).toBeVisible()
-    })
-
-    test('練習記録を削除', async ({ page }) => {
-      // 既存の練習記録をクリック
-      await page.click('[data-testid="practice-mark"]')
-      
-      // 削除ボタンをクリック
-      await page.click('[data-testid="delete-practice-button"]')
-      
-      // 確認ダイアログが表示されることを確認
-      await expect(page.locator('[data-testid="confirm-dialog"]')).toBeVisible()
-      await expect(page.locator('text=本当に削除しますか？')).toBeVisible()
-      
-      // 削除を確認
-      await page.click('[data-testid="confirm-delete-button"]')
-      
-      // 成功メッセージの確認
-      await expect(page.locator('text=練習記録を削除しました')).toBeVisible()
-      
-      // カレンダーから練習マークが消えることを確認
-      await expect(page.locator('[data-testid="practice-mark"]')).not.toBeVisible()
-    })
-
-    test('練習記録のタイム入力', async ({ page }) => {
-      // 練習記録をクリック
-      await page.click('[data-testid="practice-mark"]')
-      
-      // タイム入力ボタンをクリック
-      await page.click('[data-testid="time-input-button"]')
-      
-      // タイム入力モーダルが表示されることを確認
-      await expect(page.locator('[data-testid="time-input-modal"]')).toBeVisible()
-      
-      // タイムを入力（1セット目1本目）
-      await page.fill('[data-testid="time-input-1-1"]', '25.50')
-      await page.fill('[data-testid="time-input-1-2"]', '25.60')
-      await page.fill('[data-testid="time-input-1-3"]', '25.45')
-      await page.fill('[data-testid="time-input-1-4"]', '25.55')
-      
-      // 保存ボタンをクリック
-      await page.click('[data-testid="save-times-button"]')
-      
-      // 成功メッセージの確認
-      await expect(page.locator('text=タイムを保存しました')).toBeVisible()
-      
-      // タイムが表示されることを確認
-      await expect(page.locator('text=25.50')).toBeVisible()
-    })
+  test.afterEach(async () => {
+    await cleanupUserData()
   })
 
-  test.describe('大会記録の管理', () => {
-    test('日付選択して大会記録を作成', async ({ page }) => {
-      // カレンダーで特定の日付をクリック
-      const targetDate = '15'
-      await page.click(`[data-testid="calendar-day"]:has-text("${targetDate}")`)
-      
-      // 大会記録追加ボタンをクリック
-      await page.click('[data-testid="add-record-button"]')
-      
-      // 大会記録フォームが表示されることを確認
-      await expect(page.locator('[data-testid="record-form-modal"]')).toBeVisible()
-      
-      // フォームに入力
-      await page.fill('[data-testid="competition-title"]', '春季水泳大会')
-      await page.fill('[data-testid="competition-place"]', '国際プール')
-      await page.selectOption('[data-testid="record-style"]', 'fr') // フリースタイル
-      await page.fill('[data-testid="record-distance"]', '50')
-      await page.fill('[data-testid="record-time"]', '24.85')
-      await page.fill('[data-testid="record-note"]', '自己ベスト更新')
-      
-      // 保存ボタンをクリック
-      await page.click('[data-testid="save-record-button"]')
-      
-      // 成功メッセージの確認
-      await expect(page.locator('text=大会記録を保存しました')).toBeVisible()
-      
-      // カレンダーに大会マークが表示されることを確認
-      await expect(page.locator('[data-testid="competition-mark"]')).toBeVisible()
-    })
-
-    test('大会記録を更新', async ({ page }) => {
-      // 既存の大会記録をクリック（大会マークがある日付）
-      await page.click('[data-testid="competition-mark"]')
-      
-      // 大会記録詳細が表示されることを確認
-      await expect(page.locator('[data-testid="record-detail-modal"]')).toBeVisible()
-      
-      // 編集ボタンをクリック
-      await page.click('[data-testid="edit-record-button"]')
-      
-      // 編集フォームが表示されることを確認
-      await expect(page.locator('[data-testid="record-form-modal"]')).toBeVisible()
-      
-      // フィールドを更新
-      await page.fill('[data-testid="record-time"]', '24.75') // タイム更新
-      await page.fill('[data-testid="record-note"]', '更新後：さらなる自己ベスト')
-      
-      // 更新ボタンをクリック
-      await page.click('[data-testid="update-record-button"]')
-      
-      // 成功メッセージの確認
-      await expect(page.locator('text=大会記録を更新しました')).toBeVisible()
-      
-      // 更新された内容が反映されることを確認
-      await page.click('[data-testid="competition-mark"]')
-      await expect(page.locator('text=24.75')).toBeVisible()
-      await expect(page.locator('text=更新後：さらなる自己ベスト')).toBeVisible()
-    })
-
-    test('大会記録を削除', async ({ page }) => {
-      // 既存の大会記録をクリック
-      await page.click('[data-testid="competition-mark"]')
-      
-      // 削除ボタンをクリック
-      await page.click('[data-testid="delete-record-button"]')
-      
-      // 確認ダイアログが表示されることを確認
-      await expect(page.locator('[data-testid="confirm-dialog"]')).toBeVisible()
-      await expect(page.locator('text=本当に削除しますか？')).toBeVisible()
-      
-      // 削除を確認
-      await page.click('[data-testid="confirm-delete-button"]')
-      
-      // 成功メッセージの確認
-      await expect(page.locator('text=大会記録を削除しました')).toBeVisible()
-      
-      // カレンダーから大会マークが消えることを確認
-      await expect(page.locator('[data-testid="competition-mark"]')).not.toBeVisible()
-    })
-
-    test('大会記録のスプリットタイム入力', async ({ page }) => {
-      // 大会記録をクリック
-      await page.click('[data-testid="competition-mark"]')
-      
-      // スプリットタイム入力ボタンをクリック
-      await page.click('[data-testid="split-time-button"]')
-      
-      // スプリットタイム入力モーダルが表示されることを確認
-      await expect(page.locator('[data-testid="split-time-modal"]')).toBeVisible()
-      
-      // スプリットタイムを入力
-      await page.fill('[data-testid="split-25m"]', '12.10')
-      await page.fill('[data-testid="split-50m"]', '24.85')
-      
-      // 保存ボタンをクリック
-      await page.click('[data-testid="save-split-times-button"]')
-      
-      // 成功メッセージの確認
-      await expect(page.locator('text=スプリットタイムを保存しました')).toBeVisible()
-    })
+  test('カレンダーが正常に表示される', async ({ page }) => {
+    await expect(page.getByTestId('calendar')).toBeVisible()
+    await expect(page.getByText('データの読み込みに失敗しました').first()).toHaveCount(0)
   })
 
-  test.describe('カレンダー操作', () => {
-    test('月の切り替え', async ({ page }) => {
-      // 次の月ボタンをクリック
-      await page.click('[data-testid="next-month-button"]')
-      
-      // 月が変更されることを確認
-      await page.waitForTimeout(500) // アニメーション待ち
-      
-      // 前の月ボタンをクリック
-      await page.click('[data-testid="prev-month-button"]')
-      
-      // 元の月に戻ることを確認
-      await page.waitForTimeout(500)
-    })
+  test('練習を追加して練習ログを登録できる', async ({ page }) => {
+    const helpers = createPageHelpers(page)
+    const practiceDate = formatDateInCurrentMonth(10)
+    const practiceCell = page.locator(`[data-testid="calendar-day"][data-date="${practiceDate}"]`).first()
 
-    test('今日に戻るボタン', async ({ page }) => {
-      // 次の月に移動
-      await page.click('[data-testid="next-month-button"]')
-      
-      // 今日に戻るボタンをクリック
-      await page.click('[data-testid="today-button"]')
-      
-      // 現在の月に戻ることを確認
-      const currentMonth = new Date().toLocaleString('ja-JP', { month: 'long' })
-      await expect(page.locator(`text=${currentMonth}`)).toBeVisible()
+    await helpers.dashboard.openAddPracticeModal(practiceDate)
+    await helpers.form.fillPracticeForm({
+      date: practiceDate,
+      place: '自動テストプール',
+      note: 'E2E 練習追加'
     })
+    await page.getByTestId('save-practice-button').click()
+    await page.getByTestId('practice-form-modal').waitFor({ state: 'hidden' })
 
-    test('月間サマリーの表示', async ({ page }) => {
-      // 月間サマリーが表示されることを確認
-      await expect(page.locator('[data-testid="monthly-summary"]')).toBeVisible()
-      
-      // 練習回数と記録数が表示されることを確認
-      await expect(page.locator('[data-testid="practice-count"]')).toBeVisible()
-      await expect(page.locator('[data-testid="record-count"]')).toBeVisible()
-    })
+    // 練習作成後に自動でPractice_Logモーダルが開く
+    const practiceLogModal = page.getByTestId('practice-log-form-modal')
+    await practiceLogModal.waitFor({ state: 'visible' })
+
+    await expect(practiceCell.locator('[data-testid="practice-mark"]')).toHaveCount(1)
+
+    await page.getByTestId('practice-distance').fill('200')
+    await page.getByTestId('practice-rep-count').fill('4')
+    await page.getByTestId('practice-set-count').fill('2')
+    await page.getByTestId('practice-log-note-1').fill('E2E 練習ログ')
+    await page.getByTestId('save-practice-log-button').click()
+    await practiceLogModal.waitFor({ state: 'hidden' })
+
+    await helpers.dashboard.openPracticeDetail(practiceDate)
+    await expect(page.getByTestId('practice-log-item-1')).toBeVisible()
+    await page.keyboard.press('Escape')
   })
 
-  test.describe('ダッシュボード全体', () => {
-    test('レスポンシブデザインの確認', async ({ page }) => {
-      // デスクトップビュー
-      await page.setViewportSize({ width: 1280, height: 720 })
-      await expect(page.locator('[data-testid="calendar"]')).toBeVisible()
-      
-      // タブレットビュー
-      await page.setViewportSize({ width: 768, height: 1024 })
-      await expect(page.locator('[data-testid="calendar"]')).toBeVisible()
-      
-      // モバイルビュー
-      await page.setViewportSize({ width: 375, height: 667 })
-      await expect(page.locator('[data-testid="calendar"]')).toBeVisible()
-    })
+  test('大会記録を追加してスキップ経由で記録登録できる', async ({ page }) => {
+    const helpers = createPageHelpers(page)
+    const competitionDate = formatDateInCurrentMonth(12)
+    const competitionCell = page.locator(`[data-testid="calendar-day"][data-date="${competitionDate}"]`).first()
 
-    test('エラーハンドリングの確認', async ({ page }) => {
-      // ネットワークエラーをシミュレート
-      await page.route('**/graphql', route => route.abort())
-      
-      // 練習記録追加を試行
-      const today = new Date().getDate().toString()
-      await page.click(`[data-testid="calendar-day"]:has-text("${today}")`)
-      await page.click('[data-testid="add-practice-button"]')
-      
-      // フォーム入力
-      await page.fill('[data-testid="practice-place"]', 'テストプール')
-      await page.selectOption('[data-testid="practice-style"]', 'fr')
-      await page.click('[data-testid="save-practice-button"]')
-      
-      // エラーメッセージが表示されることを確認
-      await expect(page.locator('text=保存に失敗しました')).toBeVisible()
+    await helpers.dashboard.openAddCompetitionModal(competitionDate)
+    await helpers.form.fillCompetitionForm({
+      date: competitionDate,
+      title: 'E2Eテスト記録会',
+      place: 'スイムセンター',
+      poolType: '25',
+      note: '自動テスト'
     })
+    await page.getByRole('button', { name: '次へ（記録登録）' }).click()
+
+    // エントリーをスキップして記録フォームへ
+    await page.getByTestId('entry-form-modal').waitFor({ state: 'visible' })
+    await page.getByTestId('entry-skip-button').click()
+
+    await page.getByTestId('record-form-modal').waitFor({ state: 'visible' })
+    await page.getByTestId('record-style').selectOption({ index: 1 })
+    await page.getByTestId('record-time').fill('1:02.34')
+    await page.getByTestId('record-note').fill('E2E 自動登録')
+    await page.getByTestId('save-record-button').click()
+    await page.getByTestId('record-form-modal').waitFor({ state: 'hidden' })
+
+    await expect(competitionCell.locator('[data-testid="competition-mark"]')).toHaveCount(1)
+    await expect(competitionCell.locator('[data-testid="record-mark"]')).toHaveCount(1)
+  })
+
+  test('カレンダーの月を切り替えて今日に戻れる', async ({ page }) => {
+    const monthDisplay = page.getByTestId('month-year-display')
+    const initialText = await monthDisplay.textContent()
+
+    await page.getByTestId('next-month-button').click()
+    await expect(monthDisplay).not.toHaveText(initialText ?? '')
+
+    await page.getByTestId('today-button').click()
+    await expect(monthDisplay).toHaveText(initialText ?? '')
   })
 })

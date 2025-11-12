@@ -41,9 +41,10 @@
     "supabase:status": "npx supabase status --workdir supabase"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@types/node": "^24",
-    "typescript": "^5",
-    "turbo": "^2.6.0"
+    "turbo": "^2.6.0",
+    "typescript": "^5"
   },
   "engines": {
     "node": "20.x",

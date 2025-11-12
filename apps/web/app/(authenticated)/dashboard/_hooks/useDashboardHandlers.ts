@@ -47,6 +47,7 @@ interface UseDashboardHandlersProps {
   closeCompetitionBasicForm: () => void
   closeEntryLogForm: () => void
   closeRecordLogForm: () => void
+  openPracticeLogForm: (practiceId?: string, editData?: EditingData) => void
   setCreatedEntries: (entries: EntryWithStyle[]) => void
   openEntryLogForm: (competitionId: string) => void
   openRecordLogForm: (competitionId: string | undefined, entries?: EntryWithStyle[], editData?: EditingData) => void
@@ -84,6 +85,7 @@ export function useDashboardHandlers({
   closeCompetitionBasicForm,
   closeEntryLogForm,
   closeRecordLogForm,
+  openPracticeLogForm,
   setCreatedEntries,
   openEntryLogForm,
   openRecordLogForm,
@@ -102,11 +104,13 @@ export function useDashboardHandlers({
       
       if (editingData && editingData.id) {
         await updatePractice(editingData.id, payload)
+        closePracticeBasicForm()
       } else {
-        await createPractice(payload)
+        const createdPractice = await createPractice(payload)
+        closePracticeBasicForm()
+        openPracticeLogForm(createdPractice?.id)
       }
       
-      closePracticeBasicForm()
       await Promise.all([refetch()])
       refreshCalendar()
     } catch (error) {
@@ -114,7 +118,7 @@ export function useDashboardHandlers({
     } finally {
       setLoading(false)
     }
-  }, [editingData, updatePractice, createPractice, closePracticeBasicForm, refetch, refreshCalendar, setLoading])
+  }, [editingData, updatePractice, createPractice, closePracticeBasicForm, openPracticeLogForm, refetch, refreshCalendar, setLoading])
 
   // 練習メニュー作成・更新処理
   const handlePracticeLogSubmit = useCallback(async (formDataArray: PracticeMenuFormData[]) => {

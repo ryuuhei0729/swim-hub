@@ -79,7 +79,7 @@ test.describe('認証機能', () => {
     
     // Step 2: ログイン
     await page.click('text=すでにアカウントをお持ちの方はこちら')
-    await page.fill('input[id="email"]', 'logout-test@swimmanager.com')
+      await page.fill('input[id="email"]', 'logout-test@swimhub.com')
     await page.fill('input[id="password"]', 'LogoutTest123!')
     await page.click('button[type="submit"]')
     
@@ -155,7 +155,7 @@ test.describe('認証機能', () => {
     await expect(page).toHaveURL('/reset-password')
     
     // メールアドレスを入力
-    await page.fill('input[type="email"]', 'reset-test@swimmanager.com')
+    await page.fill('input[type="email"]', 'reset-test@swimhub.com')
     
     // リセットボタンをクリック
     await page.click('button[type="submit"]')

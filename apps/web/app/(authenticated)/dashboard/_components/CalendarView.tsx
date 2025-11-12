@@ -15,7 +15,7 @@ const _WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
 
 // カレンダー表示コンポーネント（表示ロジック）
 export default function CalendarView({ 
-  entries: propEntries, 
+  entries: _propEntries, 
   onDateClick, 
   onAddItem,
   onEditItem,
@@ -56,7 +56,7 @@ export default function CalendarView({
   }, [openDayDetail])
   
   // プロップスのentriesが指定されている場合はそれを優先、そうでなければカレンダーデータを使用
-  const entries = propEntries && propEntries.length > 0 ? propEntries : calendarItems
+  const entries = calendarItems
   const isLoading = propLoading || dataLoading
   
 
@@ -295,7 +295,10 @@ export default function CalendarView({
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={() => setShowAddModal(false)}></div>
 
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div
+              className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full"
+              data-testid="add-menu-modal"
+            >
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="sm:flex sm:items-start">
                   <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">

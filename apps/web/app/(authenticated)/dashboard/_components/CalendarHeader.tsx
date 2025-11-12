@@ -59,6 +59,7 @@ export default function CalendarHeader({
             onClick={() => setShowMonthSelector(true)}
             className="text-base sm:text-lg font-medium text-gray-900 min-w-[100px] sm:min-w-[120px] text-center hover:bg-gray-100 rounded-lg px-3 py-2 transition-colors"
             disabled={isLoading}
+          data-testid="month-year-display"
           >
             {format(currentDate, 'yyyy年M月', { locale: ja })}
           </button>

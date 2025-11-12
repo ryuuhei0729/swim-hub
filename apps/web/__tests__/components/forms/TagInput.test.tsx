@@ -121,34 +121,32 @@ describe('TagInput', () => {
     const originalRandom = Math.random
     Math.random = vi.fn().mockReturnValue(0)
 
-    try {
-      render(
-        <TagInput
-          selectedTags={[]}
-          availableTags={[]}
-          onTagsChange={onTagsChange}
-          onAvailableTagsUpdate={onAvailableTagsUpdate}
-        />
-      )
+    render(
+      <TagInput
+        selectedTags={[]}
+        availableTags={[]}
+        onTagsChange={onTagsChange}
+        onAvailableTagsUpdate={onAvailableTagsUpdate}
+      />
+    )
 
-      const user = userEvent.setup()
-      const input = screen.getByPlaceholderText('タグを選択または作成')
-      await user.type(input, '新タグ')
-      await user.keyboard('{Enter}')
+    const user = userEvent.setup()
+    const input = screen.getByPlaceholderText('タグを選択または作成')
+    await user.type(input, '新タグ')
+    await user.keyboard('{Enter}')
 
-      await waitFor(() => {
-        expect(supabase.from).toHaveBeenCalledWith('practice_tags')
-        expect(onAvailableTagsUpdate).toHaveBeenCalledWith([
-          supabase._mocks.insertedTag,
-        ])
-        expect(onTagsChange).toHaveBeenCalledWith([
-          supabase._mocks.insertedTag,
-        ])
-        expect(input).toHaveValue('')
-      })
-    } finally {
-      Math.random = originalRandom
-    }
+    await waitFor(() => {
+      expect(supabase.from).toHaveBeenCalledWith('practice_tags')
+      expect(onAvailableTagsUpdate).toHaveBeenCalledWith([
+        supabase._mocks.insertedTag,
+      ])
+      expect(onTagsChange).toHaveBeenCalledWith([
+        supabase._mocks.insertedTag,
+      ])
+      expect(input).toHaveValue('')
+    })
+
+    Math.random = originalRandom
   })
 
   it('updates a tag through management modal', async () => {
