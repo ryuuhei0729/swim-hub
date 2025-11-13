@@ -67,6 +67,7 @@ export default function CalendarGrid({
             const isCurrentMonth = isSameMonth(day, currentDate)
             const isTodayDate = isToday(day)
 
+            const dateKey = format(day, 'yyyy-MM-dd')
             return (
               <div
                 key={day.toISOString()}
@@ -77,6 +78,8 @@ export default function CalendarGrid({
                   ${dayEntries.length > 0 && isCurrentMonth ? 'shadow-sm hover:shadow-md' : ''}
                 `}
                 onClick={() => onDateClick(day)}
+                data-testid="calendar-day"
+                data-date={dateKey}
               >
                 {/* 日付 */}
                 <div className="flex items-center justify-between mb-1">
@@ -95,6 +98,7 @@ export default function CalendarGrid({
                       }}
                       className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                       title="記録を追加"
+                      data-testid="day-add-button"
                     >
                       <PlusIcon className="h-3 w-3 sm:h-4 sm:w-4" />
                     </button>
@@ -104,6 +108,17 @@ export default function CalendarGrid({
                 {/* エントリー表示 */}
                 <div className="space-y-1">
                   {dayEntries.slice(0, 2).map((item) => {
+                    const testId =
+                      item.type === 'practice' || item.type === 'team_practice' || item.type === 'practice_log'
+                        ? 'practice-mark'
+                        : item.type === 'competition' || item.type === 'team_competition'
+                        ? 'competition-mark'
+                        : item.type === 'record'
+                        ? 'record-mark'
+                        : item.type === 'entry'
+                        ? 'entry-mark'
+                        : undefined
+
                     // タイトルを生成
                     let displayTitle = item.title
                     
@@ -140,8 +155,9 @@ export default function CalendarGrid({
                         title={displayTitle}
                         onClick={(e) => {
                           e.stopPropagation()
-                          // 詳細表示のためのクリック処理
+                          onDateClick(day)
                         }}
+                        data-testid={testId}
                       >
                         <span className="mr-1"></span>
                         <span className="hidden sm:inline font-medium">

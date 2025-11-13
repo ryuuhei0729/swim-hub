@@ -29,13 +29,15 @@ interface CalendarProviderProps {
   initialCalendarItems?: CalendarItem[]
   initialMonthlySummary?: MonthlySummary
   initialDate?: Date // 初期データが取得された月の日付
+  refreshKey?: number
 }
 
 export function CalendarProvider({ 
   children,
   initialCalendarItems = [],
   initialMonthlySummary = { practiceCount: 0, recordCount: 0 },
-  initialDate = new Date()
+  initialDate = new Date(),
+  refreshKey
 }: CalendarProviderProps) {
   const { supabase } = useAuth()
   const [currentDate, setCurrentDateState] = useState(initialDate)
@@ -46,6 +48,7 @@ export function CalendarProvider({
   const [error, setError] = useState<Error | null>(null)
   const isLoadingDataRef = useRef(false)
   const previousMonthRef = useRef<string | null>(null)
+  const previousRefreshKeyRef = useRef<number | undefined>(refreshKey)
   
   // 現在の月を文字列で取得（比較用）
   const getCurrentMonthKey = useCallback((date: Date) => {
@@ -71,7 +74,8 @@ export function CalendarProvider({
   }, [isInitialDataForCurrentMonth, initialCalendarItems, initialMonthlySummary, currentDate, getCurrentMonthKey])
 
   // データ取得関数（重複実行を防ぐ）
-  const loadData = useCallback(async (targetDate: Date = currentDate) => {
+  const loadData = useCallback(async (targetDate: Date = currentDate, options?: { force?: boolean }) => {
+    const force = options?.force ?? false
     // 既に実行中の場合はスキップ
     if (isLoadingDataRef.current) {
       return
@@ -80,7 +84,7 @@ export function CalendarProvider({
     const monthKey = getCurrentMonthKey(targetDate)
     
     // 同じ月のデータを既に取得済みの場合はスキップ
-    if (previousMonthRef.current === monthKey) {
+    if (!force && previousMonthRef.current === monthKey) {
       return
     }
 
@@ -138,7 +142,7 @@ export function CalendarProvider({
       // 楽観的更新: すぐに日付を更新（UIを即座に反映）
       setCurrentDateState(newDate)
       // バックグラウンドでデータ取得
-      loadData(newDate)
+      void loadData(newDate)
     } else {
       // 同じ月の場合は日付のみ更新
       setCurrentDateState(newDate)
@@ -149,9 +153,26 @@ export function CalendarProvider({
   useEffect(() => {
     if (!isInitialDataForCurrentMonth) {
       // 初期データが現在の月に対応していない場合のみ取得
-      loadData()
+      void loadData()
     }
   }, [isInitialDataForCurrentMonth, loadData])
+
+  // リフレッシュキーの変化を監視して強制的にデータを再取得
+  useEffect(() => {
+    if (refreshKey === undefined) {
+      return
+    }
+
+    if (previousRefreshKeyRef.current === undefined) {
+      previousRefreshKeyRef.current = refreshKey
+      return
+    }
+
+    if (previousRefreshKeyRef.current !== refreshKey) {
+      previousRefreshKeyRef.current = refreshKey
+      void loadData(currentDate, { force: true })
+    }
+  }, [refreshKey, currentDate, loadData])
 
   // アイテム操作
   const addItem = useCallback((item: CalendarItem) => {

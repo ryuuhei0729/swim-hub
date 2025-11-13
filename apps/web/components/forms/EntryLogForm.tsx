@@ -22,6 +22,14 @@ type EditEntryData = {
   styleId?: string | number
   entry_time?: number
   note?: string
+  entries?: Array<{
+    id?: string
+    styleId?: string | number
+    style_id?: string | number
+    entryTime?: number | null
+    entry_time?: number | null
+    note?: string | null
+  }>
 }
 
 interface EntryLogFormProps {
@@ -33,6 +41,7 @@ interface EntryLogFormProps {
   isLoading?: boolean
   styles?: Array<{ id: string; nameJp: string; distance: number }>
   editData?: EditEntryData // 編集用の既存データ
+  initialEntries?: EntryData[]
 }
 
 export default function EntryLogForm({
@@ -43,7 +52,8 @@ export default function EntryLogForm({
   competitionId: _competitionId,
   isLoading = false,
   styles = [],
-  editData
+  editData,
+  initialEntries = []
 }: EntryLogFormProps) {
   const [entries, setEntries] = useState<EntryData[]>([
     {
@@ -57,16 +67,56 @@ export default function EntryLogForm({
   // モーダルが開かれたときにリセットまたは編集データを設定
   useEffect(() => {
     if (isOpen) {
-      if (editData) {
+      if (initialEntries.length > 0) {
+        setEntries(
+          initialEntries.map((entry, index) => ({
+            id: entry.id || `entry-${index + 1}`,
+            styleId: entry.styleId || '',
+            entryTime: entry.entryTime || 0,
+            entryTimeDisplayValue:
+              entry.entryTimeDisplayValue ??
+              (entry.entryTime && entry.entryTime > 0 ? formatTime(entry.entryTime) : ''),
+            note: entry.note || ''
+          }))
+        )
+      } else if (editData) {
         // 編集モード: 既存の値をセット
-        const entryData: EntryData = {
-          id: editData.id || '1',
-          styleId: String(editData.style_id || editData.styleId || styles[0]?.id || ''),
-          entryTime: editData.entry_time || 0,
-          entryTimeDisplayValue: editData.entry_time ? formatTime(editData.entry_time) : '',
-          note: editData.note || ''
-        }
-        setEntries([entryData])
+        const entryDataList: EntryData[] = (() => {
+          // editDataにentries配列が含まれる場合は優先
+          if (typeof editData === 'object' && editData !== null && 'entries' in editData) {
+            const entriesProp = (editData as any).entries as Array<{
+              id?: string
+              styleId?: string | number
+              style_id?: string | number
+              entryTime?: number | null
+              entry_time?: number | null
+              note?: string | null
+            }>
+            if (Array.isArray(entriesProp) && entriesProp.length > 0) {
+              return entriesProp.map((entry, idx) => ({
+                id: entry.id || `entry-${idx + 1}`,
+                styleId: String(entry.styleId ?? entry.style_id ?? styles[0]?.id ?? ''),
+                entryTime: entry.entryTime ?? entry.entry_time ?? 0,
+                entryTimeDisplayValue:
+                  entry.entryTime ?? entry.entry_time
+                    ? formatTime(Number(entry.entryTime ?? entry.entry_time))
+                    : '',
+                note: entry.note || ''
+              }))
+            }
+          }
+
+          return [
+            {
+              id: editData.id || '1',
+              styleId: String(editData.style_id || editData.styleId || styles[0]?.id || ''),
+              entryTime: editData.entry_time || 0,
+              entryTimeDisplayValue: editData.entry_time ? formatTime(editData.entry_time) : '',
+              note: editData.note || ''
+            }
+          ]
+        })()
+        setEntries(entryDataList)
       } else {
         // 新規作成モード
         setEntries([
@@ -79,7 +129,7 @@ export default function EntryLogForm({
         ])
       }
     }
-  }, [isOpen, styles, editData])
+  }, [isOpen, styles, editData, initialEntries])
 
   if (!isOpen) return null
 
@@ -161,7 +211,7 @@ export default function EntryLogForm({
   }
 
   return (
-    <div className="fixed inset-0 z-[70] overflow-y-auto">
+    <div className="fixed inset-0 z-[70] overflow-y-auto" data-testid="entry-form-modal">
       <div className="flex min-h-screen items-center justify-center p-4">
         <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={onClose}></div>
 
@@ -200,6 +250,7 @@ export default function EntryLogForm({
                   size="sm"
                   className="flex items-center gap-2"
                   disabled={isLoading}
+                  data-testid="entry-add-button"
                 >
                   <PlusIcon className="h-4 w-4" />
                   種目を追加
@@ -216,6 +267,7 @@ export default function EntryLogForm({
                         onClick={() => removeEntry(entry.id)}
                         className="text-red-500 hover:text-red-700"
                         disabled={isLoading}
+                        data-testid={`entry-remove-button-${index + 1}`}
                       >
                         <TrashIcon className="h-4 w-4" />
                       </button>
@@ -234,6 +286,7 @@ export default function EntryLogForm({
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                         disabled={isLoading}
+                        data-testid={`entry-style-${index + 1}`}
                       >
                         <option value="">種目を選択</option>
                         {styles.map(style => (
@@ -271,6 +324,7 @@ export default function EntryLogForm({
                         }}
                         placeholder="例: 1:30.50"
                         disabled={isLoading}
+                        data-testid={`entry-time-${index + 1}`}
                       />
                       <p className="mt-1 text-xs text-gray-500">
                         未記入の場合はエントリータイムなしで登録されます
@@ -289,6 +343,7 @@ export default function EntryLogForm({
                       onChange={(e) => updateEntry(entry.id, { note: e.target.value })}
                       placeholder="特記事項など"
                       disabled={isLoading}
+                      data-testid={`entry-note-${index + 1}`}
                     />
                   </div>
                 </div>
@@ -302,6 +357,7 @@ export default function EntryLogForm({
                 onClick={onSkip}
                 variant="outline"
                 disabled={isLoading}
+                data-testid="entry-skip-button"
               >
                 エントリーをスキップ
               </Button>
@@ -312,12 +368,14 @@ export default function EntryLogForm({
                   onClick={onClose}
                   variant="secondary"
                   disabled={isLoading}
+                  data-testid="entry-cancel-button"
                 >
                   キャンセル
                 </Button>
                 <Button
                   type="submit"
                   disabled={isLoading}
+                  data-testid="entry-submit-button"
                 >
                   {isLoading ? '登録中...' : 'エントリー登録'}
                 </Button>

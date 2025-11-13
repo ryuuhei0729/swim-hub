@@ -19,9 +19,44 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 
 const testUsers = [
   {
+    email: 'test@example.com',
+    password: 'testpassword123',
+    name: 'テストユーザー'
+  },
+  {
     email: 'test@swimhub.com',
     password: 'TestPassword123!',
+    name: 'SwimHubデフォルトユーザー'
+  },
+  {
+    email: 'test-admin@swimhub.com',
+    password: 'TestAdmin123!',
+    name: 'テスト管理者'
+  },
+  {
+    email: 'test-user@swimhub.com',
+    password: 'TestUser123!',
     name: 'テストユーザー'
+  },
+  {
+    email: 'logout-test@swimhub.com',
+    password: 'LogoutTest123!',
+    name: 'ログアウトテストユーザー'
+  },
+  {
+    email: 'persistence-test@swimhub.com',
+    password: 'PersistenceTest123!',
+    name: '永続化テストユーザー'
+  },
+  {
+    email: 'reset-test@swimhub.com',
+    password: 'ResetTest123!',
+    name: 'パスワードリセットテストユーザー'
+  },
+  {
+    email: 'single-register@swimhub.com',
+    password: 'SingleRegister123!',
+    name: '単体登録テストユーザー'
   }
 ]
 

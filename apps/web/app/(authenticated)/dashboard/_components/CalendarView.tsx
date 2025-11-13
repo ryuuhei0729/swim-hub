@@ -15,7 +15,7 @@ const _WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
 
 // カレンダー表示コンポーネント（表示ロジック）
 export default function CalendarView({ 
-  entries: propEntries, 
+  entries: _propEntries, 
   onDateClick, 
   onAddItem,
   onEditItem,
@@ -56,7 +56,7 @@ export default function CalendarView({
   }, [openDayDetail])
   
   // プロップスのentriesが指定されている場合はそれを優先、そうでなければカレンダーデータを使用
-  const entries = propEntries && propEntries.length > 0 ? propEntries : calendarItems
+  const entries = calendarItems
   const isLoading = propLoading || dataLoading
   
 
@@ -197,7 +197,7 @@ export default function CalendarView({
   }
 
   return (
-    <div className="bg-white shadow">
+    <div className="bg-white shadow" data-testid="calendar">
       {/* ヘッダー */}
       <CalendarHeader
         currentDate={currentDate}
@@ -295,7 +295,10 @@ export default function CalendarView({
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={() => setShowAddModal(false)}></div>
 
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div
+              className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full"
+              data-testid="add-menu-modal"
+            >
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="sm:flex sm:items-start">
                   <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
@@ -306,6 +309,7 @@ export default function CalendarView({
                       <button
                         onClick={() => handleAddItem('practice')}
                         className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                        data-testid="add-practice-button"
                       >
                         <span className="mr-2">💪</span>
                         練習予定を追加
@@ -313,6 +317,7 @@ export default function CalendarView({
                       <button
                         onClick={() => handleAddItem('record')}
                         className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-blue-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        data-testid="add-record-button"
                       >
                         <span className="mr-2">🏊‍♂️</span>
                         大会記録を追加

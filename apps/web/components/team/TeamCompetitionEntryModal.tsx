@@ -211,11 +211,11 @@ export default function TeamCompetitionEntryModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto" data-testid="team-competition-entry-modal">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={onClose}></div>
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full" data-testid="team-competition-entry-dialog">
           {/* ヘッダー */}
           <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div className="flex items-center justify-between mb-4">
@@ -232,6 +232,7 @@ export default function TeamCompetitionEntryModal({
               <button
                 onClick={onClose}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
+                data-testid="team-competition-entry-close-button"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -245,7 +246,7 @@ export default function TeamCompetitionEntryModal({
             )}
 
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4" data-testid="team-competition-entry-error">
                 <p className="text-red-800">{error}</p>
               </div>
             )}
@@ -266,6 +267,7 @@ export default function TeamCompetitionEntryModal({
                           onChange={(e) => handleStatusChange(e.target.value as 'before' | 'open' | 'closed')}
                           disabled={updatingStatus}
                           className="block w-64 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                          data-testid="team-competition-entry-status-select"
                         >
                           <option value="before">受付前</option>
                           <option value="open">受付中</option>
@@ -298,7 +300,7 @@ export default function TeamCompetitionEntryModal({
                   )}
 
                   {Object.entries(data.entriesByStyle).map(([styleId, styleData]) => (
-                    <div key={styleId} className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div key={styleId} className="border border-gray-200 rounded-lg overflow-hidden" data-testid={`team-competition-entry-style-${styleId}`}>
                       {/* 種目ヘッダー */}
                       <div className="bg-blue-50 px-4 py-3 border-b border-blue-200">
                         <h4 className="font-semibold text-blue-900">
@@ -344,6 +346,7 @@ export default function TeamCompetitionEntryModal({
               type="button"
               onClick={onClose}
               className="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm"
+              data-testid="team-competition-entry-close-action"
             >
               閉じる
             </button>

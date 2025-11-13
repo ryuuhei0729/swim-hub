@@ -126,7 +126,7 @@ export default function TagManagementModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[80] overflow-y-auto">
+    <div className="fixed inset-0 z-[80] overflow-y-auto" data-testid="tag-management-modal">
       <div className="flex min-h-screen items-center justify-center p-4">
         <div
           className="fixed inset-0 bg-black/40 transition-opacity"
@@ -163,11 +163,12 @@ export default function TagManagementModal({
                 onChange={(e) => setTagName(e.target.value)}
                 placeholder="タグ名を入力"
                 className="w-full"
+                data-testid="tag-name-input"
               />
             </div>
 
             {/* 色選択 */}
-            <div>
+              <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 色
               </label>
@@ -188,6 +189,7 @@ export default function TagManagementModal({
                       }`}
                       style={{ backgroundColor: normalizedColor }}
                       title={normalizedColor}
+                      data-testid={`tag-color-${normalizedColor.replace('#', '')}`}
                     />
                   )
                 })}
@@ -217,6 +219,7 @@ export default function TagManagementModal({
               onClick={handleUpdate}
               disabled={isUpdating || !tagName.trim()}
               className="w-full sm:w-auto"
+              data-testid="tag-update-button"
             >
               {isUpdating ? '更新中...' : '更新'}
             </Button>
@@ -228,6 +231,7 @@ export default function TagManagementModal({
               onClick={() => setShowDeleteConfirm(true)}
               disabled={isDeleting}
               className="w-full sm:w-auto mt-2 sm:mt-0"
+              data-testid="tag-delete-button"
             >
               <TrashIcon className="h-4 w-4 mr-2" />
               削除
@@ -239,6 +243,7 @@ export default function TagManagementModal({
               variant="outline"
               onClick={onClose}
               className="w-full sm:w-auto mt-2 sm:mt-0"
+              data-testid="tag-cancel-button"
             >
               キャンセル
             </Button>
@@ -252,7 +257,7 @@ export default function TagManagementModal({
           <div className="flex min-h-screen items-center justify-center p-4">
             <div className="fixed inset-0 bg-black/40 transition-opacity" />
             
-            <div className="relative bg-white rounded-lg shadow-2xl border-2 border-red-300 w-full max-w-lg">
+            <div className="relative bg-white rounded-lg shadow-2xl border-2 border-red-300 w-full max-w-lg" data-testid="tag-delete-confirm">
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="sm:flex sm:items-start">
                   <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">

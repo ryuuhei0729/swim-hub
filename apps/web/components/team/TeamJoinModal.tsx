@@ -128,8 +128,8 @@ export default function TeamJoinModal({ isOpen, onClose, onSuccess }: TeamJoinMo
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-gray-600/50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+    <div className="fixed inset-0 bg-gray-600/50 overflow-y-auto h-full w-full z-50" data-testid="team-join-modal">
+      <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white" data-testid="team-join-dialog">
         <div className="mt-3">
           {/* ヘッダー */}
           <div className="flex items-center justify-between mb-4">
@@ -140,6 +140,7 @@ export default function TeamJoinModal({ isOpen, onClose, onSuccess }: TeamJoinMo
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600"
               disabled={isLoading}
+              data-testid="team-join-close-button"
             >
               <XMarkIcon className="h-6 w-6" />
             </button>

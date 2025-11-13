@@ -345,11 +345,11 @@ export default function TeamPracticeLogForm({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto" data-testid="team-practice-log-modal">
       <div className="flex items-center justify-center min-h-screen pt-1 px-4 pb-1 text-center sm:block sm:p-0 max-h-screen">
         <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose}></div>
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-2 sm:align-middle sm:max-w-4xl sm:w-full max-h-[98vh] overflow-y-auto">
+        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-2 sm:align-middle sm:max-w-4xl sm:w-full max-h-[98vh] overflow-y-auto" data-testid="team-practice-log-dialog">
           {/* ヘッダー */}
           <div className="bg-white px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
@@ -360,6 +360,7 @@ export default function TeamPracticeLogForm({
                 type="button"
                 className="text-gray-400 hover:text-gray-500"
                 onClick={handleClose}
+                data-testid="team-practice-log-close-button"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -367,11 +368,11 @@ export default function TeamPracticeLogForm({
           </div>
 
           {/* フォーム */}
-          <form onSubmit={handleSubmit} className="bg-white">
+          <form onSubmit={handleSubmit} className="bg-white" data-testid="team-practice-log-form">
             <div className="px-6 py-6">
               <div className="space-y-6">
                 {menus.map((menu, index) => (
-                  <div key={menu.id} className="border border-gray-200 rounded-lg p-4">
+                  <div key={menu.id} className="border border-gray-200 rounded-lg p-4" data-testid={`team-practice-log-menu-${index + 1}`}>
                     {/* メニューヘッダー */}
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="text-md font-semibold text-gray-900">
@@ -382,6 +383,7 @@ export default function TeamPracticeLogForm({
                           type="button"
                           onClick={() => removeMenu(menu.id)}
                           className="text-red-600 hover:text-red-800"
+                          data-testid={`team-practice-log-remove-menu-${index + 1}`}
                         >
                           <TrashIcon className="h-5 w-5" />
                         </button>
@@ -399,6 +401,7 @@ export default function TeamPracticeLogForm({
                           value={menu.style}
                           onChange={(e) => updateMenu(menu.id, 'style', e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          data-testid={`team-practice-log-style-${index + 1}`}
                         >
                           {SWIM_STYLES.map(style => (
                             <option key={style.value} value={style.value}>
@@ -420,6 +423,7 @@ export default function TeamPracticeLogForm({
                           className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           min="25"
                           step="25"
+                          data-testid={`team-practice-log-distance-${index + 1}`}
                         />
                       </div>
 
@@ -434,6 +438,7 @@ export default function TeamPracticeLogForm({
                           onChange={(e) => updateMenu(menu.id, 'sets', Number(e.target.value))}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           min="1"
+                          data-testid={`team-practice-log-sets-${index + 1}`}
                         />
                       </div>
 
@@ -448,6 +453,7 @@ export default function TeamPracticeLogForm({
                           onChange={(e) => updateMenu(menu.id, 'reps', Number(e.target.value))}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           min="1"
+                          data-testid={`team-practice-log-reps-${index + 1}`}
                         />
                       </div>
                     </div>
@@ -476,6 +482,7 @@ export default function TeamPracticeLogForm({
                         placeholder="メニューの詳細や注意点など"
                         rows={4}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        data-testid={`team-practice-log-note-${index + 1}`}
                       />
                     </div>
 
@@ -493,6 +500,7 @@ export default function TeamPracticeLogForm({
                           setShowTimeModal(true)
                         }}
                         className="inline-flex items-center"
+                        data-testid={`team-practice-log-time-button-${index + 1}`}
                       >
                         <ClockIcon className="h-4 w-4 mr-2" />
                         タイム入力
@@ -548,6 +556,7 @@ export default function TeamPracticeLogForm({
                   onClick={addMenu}
                   variant="outline"
                   className="w-full"
+                  data-testid="team-practice-log-add-menu-button"
                 >
                   <PlusIcon className="h-4 w-4 mr-2" />
                   メニューを追加
@@ -561,12 +570,14 @@ export default function TeamPracticeLogForm({
                 type="button"
                 onClick={handleClose}
                 variant="secondary"
+                data-testid="team-practice-log-cancel-button"
               >
                 キャンセル
               </Button>
               <Button
                 type="submit"
                 className="bg-blue-600 hover:bg-blue-700"
+                data-testid="team-practice-log-submit-button"
               >
                 {editData ? 'チーム練習ログを更新' : 'チーム練習ログを保存'}
               </Button>

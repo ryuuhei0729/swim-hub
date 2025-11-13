@@ -348,10 +348,10 @@ export default function MemberDetailModal({
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="xl">
-      <div className="w-full max-w-4xl mx-auto p-6">
+      <div className="w-full max-w-4xl mx-auto p-6" data-testid="team-member-detail-modal">
         {/* エラー表示 */}
         {error && (
-          <div className="mb-8 rounded-md bg-red-50 p-4">
+          <div className="mb-8 rounded-md bg-red-50 p-4" data-testid="team-member-detail-error">
             <div className="flex">
               <div className="ml-3">
                 <h3 className="text-sm font-medium text-red-800">
@@ -424,9 +424,9 @@ export default function MemberDetailModal({
         {isCurrentUserAdmin && member.user_id !== currentUserId && (
           <div className="mb-8">
             <h3 className="text-lg font-medium text-gray-900 mb-4">管理者機能</h3>
-            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-4">
               {/* 権限切り替え */}
-              <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                <div className="flex items-center bg-gray-100 rounded-lg p-1" data-testid="team-member-role-toggle">
                 <button
                   onClick={() => handleRoleChange('user')}
                   className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
@@ -434,6 +434,7 @@ export default function MemberDetailModal({
                       ? 'bg-white text-gray-900 shadow-sm'
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
+                    data-testid="team-member-role-user-button"
                 >
                   ユーザー
                 </button>
@@ -444,6 +445,7 @@ export default function MemberDetailModal({
                       ? 'bg-yellow-100 text-yellow-800 shadow-sm'
                       : 'text-gray-600 hover:text-yellow-700'
                   }`}
+                    data-testid="team-member-role-admin-button"
                 >
                   管理者
                 </button>
@@ -454,6 +456,7 @@ export default function MemberDetailModal({
                 onClick={handleRemoveMember}
                 disabled={isRemoving}
                 className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                  data-testid="team-member-remove-button"
               >
                 <TrashIcon className="h-4 w-4" />
                 <span>{isRemoving ? '削除中...' : 'チームから削除'}</span>
@@ -490,6 +493,7 @@ export default function MemberDetailModal({
             <button
               onClick={onClose}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              data-testid="team-member-detail-close-button"
             >
               閉じる
             </button>

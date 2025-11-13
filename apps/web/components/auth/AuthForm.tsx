@@ -24,16 +24,23 @@ export const AuthForm: React.FC<AuthFormProps> = ({
 
   const { signIn, signUp } = useAuth()
 
+  type AuthError = {
+    status?: number
+    message?: string
+    error_description?: string
+    error?: string
+  }
+
   const formatAuthError = (err: unknown, action: 'signin' | 'signup'): string => {
-    const errorObj = err && typeof err === 'object' ? err : {}
-    const status = 'status' in errorObj && typeof (errorObj as any).status === 'number' 
-      ? (errorObj as any).status 
-      : undefined
+    const errorObj: AuthError =
+      err && typeof err === 'object' ? (err as AuthError) : {}
+    const status = typeof errorObj.status === 'number' ? errorObj.status : undefined
     const statusText = status ? ` [status: ${status}]` : ''
-    const errMsg = ('message' in errorObj && typeof errorObj.message === 'string' ? errorObj.message : null)
-      || ('error_description' in errorObj && typeof errorObj.error_description === 'string' ? errorObj.error_description : null)
-      || ('error' in errorObj && typeof errorObj.error === 'string' ? errorObj.error : null)
-      || '不明なエラーが発生しました。'
+    const errMsg =
+      (typeof errorObj.message === 'string' ? errorObj.message : null) ||
+      (typeof errorObj.error_description === 'string' ? errorObj.error_description : null) ||
+      (typeof errorObj.error === 'string' ? errorObj.error : null) ||
+      '不明なエラーが発生しました。'
 
     // エラーメッセージの日本語化と補足ヒント
     if (typeof errMsg === 'string') {
@@ -159,7 +166,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+      <form onSubmit={handleSubmit} className="mt-8 space-y-6" data-testid="auth-form">
         <div className="space-y-5">
           {formMode === 'signup' && (
             <div>
@@ -175,6 +182,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({
                 <input
                   type="text"
                   id="name"
+                  data-testid="signup-name-input"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="pl-10 mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-3 px-3 transition duration-150 ease-in-out"
@@ -198,6 +206,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({
               <input
                 type="email"
                 id="email"
+                data-testid="email-input"
                 required
                 autoFocus
                 autoComplete="email"
@@ -222,6 +231,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({
               <input
                 type="password"
                 id="password"
+                data-testid="password-input"
                 required
                 autoComplete={formMode === 'signin' ? 'current-password' : 'new-password'}
                 value={password}
@@ -240,6 +250,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({
               <input
                 id="remember-me"
                 name="remember-me"
+                data-testid="remember-me-checkbox"
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
@@ -257,6 +268,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({
             type="submit"
             disabled={loading}
             className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transform transition duration-150 ease-in-out hover:scale-[1.02] shadow-md"
+            data-testid={formMode === 'signin' ? 'login-button' : 'signup-button'}
           >
             {loading ? '処理中...' : formMode === 'signin' ? 'ログイン' : 'アカウント作成'}
           </button>
@@ -269,6 +281,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({
             type="button"
             onClick={() => setFormMode(formMode === 'signin' ? 'signup' : 'signin')}
             className="text-indigo-600 hover:text-indigo-800 text-sm font-medium transition duration-150 ease-in-out"
+            data-testid="toggle-auth-mode-button"
           >
             {formMode === 'signin' 
               ? 'アカウントをお持ちでない方はこちら' 

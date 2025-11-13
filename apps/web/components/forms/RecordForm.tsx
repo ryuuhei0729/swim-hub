@@ -294,7 +294,7 @@ export default function RecordForm({
 
 
   return (
-    <div className="fixed inset-0 z-[70] overflow-y-auto">
+    <div className="fixed inset-0 z-[70] overflow-y-auto" data-testid="record-form-modal">
       <div className="flex min-h-screen items-center justify-center p-4">
         {/* オーバーレイ */}
         <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={onClose}></div>
@@ -331,6 +331,7 @@ export default function RecordForm({
                 value={formData.recordDate}
                 onChange={(e) => setFormData(prev => ({ ...prev, recordDate: e.target.value }))}
                 required
+                data-testid="tournament-date"
               />
             </div>
             <div>
@@ -344,6 +345,7 @@ export default function RecordForm({
                 onChange={(e) => setFormData(prev => ({ ...prev, place: e.target.value }))}
                 placeholder="例: 東京プール"
                 required
+                data-testid="tournament-place"
               />
             </div>
           </div>
@@ -360,6 +362,7 @@ export default function RecordForm({
                 onChange={(e) => setFormData(prev => ({ ...prev, competitionName: e.target.value }))}
                 placeholder="例: 第○回水泳大会"
                 required
+                data-testid="tournament-name"
               />
             </div>
             <div>
@@ -371,6 +374,7 @@ export default function RecordForm({
                 onChange={(e) => setFormData(prev => ({ ...prev, poolType: parseInt(e.target.value) }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
+                data-testid="tournament-pool-type"
               >
                 {POOL_TYPES.map(type => (
                   <option key={type.value} value={type.value}>
@@ -389,6 +393,7 @@ export default function RecordForm({
                 type="button"
                 onClick={addRecord}
                 className="flex items-center gap-2"
+                data-testid="record-add-button"
               >
                 <PlusIcon className="h-4 w-4" />
                 種目を追加
@@ -409,7 +414,8 @@ export default function RecordForm({
                       type="button"
                       onClick={() => removeRecord(record.id)}
                       className="text-red-500 hover:text-red-700"
-                        aria-label="種目を削除"
+                      aria-label="種目を削除"
+                      data-testid={`record-remove-button-${recordIndex + 1}`}
                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>
@@ -427,6 +433,7 @@ export default function RecordForm({
                       onChange={(e) => updateRecord(record.id, { styleId: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       required
+                      data-testid={`record-style-${recordIndex + 1}`}
                     >
                       <option value="">種目を選択</option>
                       {styles.map(style => (
@@ -461,16 +468,18 @@ export default function RecordForm({
                       }}
                       placeholder="例: 1:30.50"
                       required
+                      data-testid={`record-time-${recordIndex + 1}`}
                     />
                   </div>
 
-                  <div className="flex items-center">
+                    <div className="flex items-center">
                       <input
                         id={relayId}
                         type="checkbox"
                         checked={record.isRelaying}
                         onChange={(e) => updateRecord(record.id, { isRelaying: e.target.checked })}
                         className="mr-2"
+                        data-testid={`record-relay-${recordIndex + 1}`}
                       />
                       <label htmlFor={relayId} className="text-sm text-gray-700">
                         リレー
@@ -488,6 +497,7 @@ export default function RecordForm({
                       type="button"
                       onClick={() => addSplitTime(record.id)}
                       className="text-sm"
+                      data-testid={`record-split-add-button-${recordIndex + 1}`}
                     >
                       <PlusIcon className="h-3 w-3 mr-1" />
                         スプリットを追加
@@ -502,6 +512,7 @@ export default function RecordForm({
                         value={split.distance}
                         onChange={(e) => updateSplitTime(record.id, splitIndex, { distance: e.target.value === '' ? '' : parseInt(e.target.value) })}
                         className="w-24"
+                        data-testid={`record-split-distance-${recordIndex + 1}-${splitIndex + 1}`}
                       />
                       <span className="text-gray-500">m:</span>
                       <Input
@@ -523,12 +534,14 @@ export default function RecordForm({
                           }
                         }}
                         className="flex-1"
+                        data-testid={`record-split-time-${recordIndex + 1}-${splitIndex + 1}`}
                       />
                       <button
                         type="button"
                         onClick={() => removeSplitTime(record.id, splitIndex)}
                         className="text-red-500 hover:text-red-700"
-                          aria-label="スプリットを削除"
+                        aria-label="スプリットを削除"
+                        data-testid={`record-split-remove-button-${recordIndex + 1}-${splitIndex + 1}`}
                       >
                         <TrashIcon className="h-4 w-4" />
                       </button>
@@ -546,6 +559,7 @@ export default function RecordForm({
                       value={record.videoUrl || ''}
                       onChange={(e) => updateRecord(record.id, { videoUrl: e.target.value })}
                       placeholder="https://..."
+                      data-testid={`record-video-${recordIndex + 1}`}
                     />
                   </div>
                   <div>
@@ -557,6 +571,7 @@ export default function RecordForm({
                       value={record.note}
                       onChange={(e) => updateRecord(record.id, { note: e.target.value })}
                       placeholder="特記事項"
+                      data-testid={`record-note-${recordIndex + 1}`}
                     />
                   </div>
                 </div>
@@ -576,6 +591,7 @@ export default function RecordForm({
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="大会に関する特記事項"
+              data-testid="tournament-note"
             />
           </div>
 
@@ -586,12 +602,14 @@ export default function RecordForm({
               onClick={onClose}
               variant="secondary"
               disabled={isLoading}
+              data-testid="record-form-cancel-button"
             >
               キャンセル
             </Button>
             <Button
               type="submit"
               disabled={isLoading}
+              data-testid="record-form-submit-button"
             >
               {isLoading ? '保存中...' : (editData ? '更新' : '保存')}
             </Button>

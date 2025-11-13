@@ -17,6 +17,7 @@ export type EditingData =
       competitionId?: string | null
       practiceId?: string
       entryData?: EntryInfo
+      entryDataList?: EntryInfo[]
       metadata?: {
         practice?: { place?: string }
         competition?: { title?: string; place?: string }

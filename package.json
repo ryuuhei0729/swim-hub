@@ -24,6 +24,7 @@
     "test:unit": "npm run test --workspace=apps/web && npm run test --workspace=apps/shared",
     "test:watch": "npm run test:watch --workspace=apps/web",
     "test:coverage": "npm run test:coverage --workspaces --if-present",
+    "test:e2e": "npm run test:e2e --workspace=apps/web",
     "test:web": "npm run test --workspace=apps/web",
     "test:mobile": "cd apps/mobile && flutter test",
     "type-check": "npm run type-check --workspaces --if-present",
@@ -40,9 +41,10 @@
     "supabase:status": "npx supabase status --workdir supabase"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@types/node": "^24",
-    "typescript": "^5",
-    "turbo": "^2.6.0"
+    "turbo": "^2.6.0",
+    "typescript": "^5"
   },
   "engines": {
     "node": "20.x",

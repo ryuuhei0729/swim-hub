@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Button, Input } from '@/components/ui'
 import { XMarkIcon, PlusIcon, TrashIcon, ClockIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
@@ -112,6 +112,9 @@ export default function PracticeLogForm({
     }
   ])
 
+  const hasInitializedRef = useRef(false)
+  const initializedKeyRef = useRef<string | null>(null)
+
   // タグデータはpropsから受け取る
   
   // タイム入力モーダルの状態
@@ -120,46 +123,56 @@ export default function PracticeLogForm({
 
   // フォームを初期化（編集データがある場合とない場合）
   useEffect(() => {
-    if (isOpen) {
-      if (editData) {
-        // 編集モード: 既存データで初期化
-        
-        const circleTime = editData.circle || 0
-        const circleMin = Math.floor(circleTime / 60)
-        const circleSec = circleTime % 60
-
-        setMenus([
-          {
-            id: editData.id || '1',
-            style: editData.style || 'Fr',
-            distance: editData.distance || 100,
-            reps: editData.rep_count || 4,
-            sets: editData.set_count || 1,
-            circleMin: circleMin || 0,
-            circleSec: circleSec || 0,
-            note: editData.note || '',
-            tags: editData.tags || [],
-            times: editData.times?.flatMap(item => item.times) || []
-          }
-        ])
-      } else {
-        // 新規作成モード: デフォルト値で初期化
-        setMenus([
-          {
-            id: '1',
-            style: 'Fr',
-            distance: 100,
-            reps: 4,
-            sets: 1,
-            circleMin: 1,
-            circleSec: 30,
-            note: '',
-            tags: [],
-            times: []
-          }
-        ])
-      }
+    if (!isOpen) {
+      hasInitializedRef.current = false
+      initializedKeyRef.current = null
+      return
     }
+
+    const key = editData?.id ?? '__new__'
+
+    if (hasInitializedRef.current && initializedKeyRef.current === key) {
+      return
+    }
+
+    if (editData) {
+      const circleTime = editData.circle || 0
+      const circleMin = Math.floor(circleTime / 60)
+      const circleSec = circleTime % 60
+
+      setMenus([
+        {
+          id: editData.id || '1',
+          style: editData.style || 'Fr',
+          distance: editData.distance || 100,
+          reps: editData.rep_count || 4,
+          sets: editData.set_count || 1,
+          circleMin: circleMin || 0,
+          circleSec: circleSec || 0,
+          note: editData.note || '',
+          tags: editData.tags || [],
+          times: editData.times?.flatMap(item => item.times) || []
+        }
+      ])
+    } else {
+      setMenus([
+        {
+          id: '1',
+          style: 'Fr',
+          distance: 100,
+          reps: 4,
+          sets: 1,
+          circleMin: 1,
+          circleSec: 30,
+          note: '',
+          tags: [],
+          times: []
+        }
+      ])
+    }
+
+    hasInitializedRef.current = true
+    initializedKeyRef.current = key
   }, [isOpen, editData])
 
   if (!isOpen) return null
@@ -167,8 +180,8 @@ export default function PracticeLogForm({
   // メニュー追加
   const addMenu = () => {
     const newId = String(Date.now())
-    setMenus([
-      ...menus,
+    setMenus(prevMenus => [
+      ...prevMenus,
       {
         id: newId,
         style: 'Fr',
@@ -186,15 +199,18 @@ export default function PracticeLogForm({
 
   // メニュー削除
   const removeMenu = (id: string) => {
-    if (menus.length > 1) {
-      setMenus(menus.filter(menu => menu.id !== id))
-    }
+    setMenus(prevMenus => {
+      if (prevMenus.length <= 1) {
+        return prevMenus
+      }
+      return prevMenus.filter(menu => menu.id !== id)
+    })
   }
 
   // メニュー更新
   const updateMenu = (id: string, field: keyof PracticeMenu, value: string | number | '' | Tag[]) => {
-    setMenus(
-      menus.map(menu =>
+    setMenus(prevMenus =>
+      prevMenus.map(menu =>
         menu.id === id ? { ...menu, [field]: value } : menu
       )
     )
@@ -202,8 +218,8 @@ export default function PracticeLogForm({
 
   // タグ選択変更
   const handleTagsChange = (menuId: string, tags: Tag[]) => {
-    setMenus(
-      menus.map(menu =>
+    setMenus(prevMenus =>
+      prevMenus.map(menu =>
         menu.id === menuId ? { ...menu, tags } : menu
       )
     )
@@ -220,8 +236,8 @@ export default function PracticeLogForm({
   const handleTimeSave = (times: import('@apps/shared/types/ui').TimeEntry[]) => {
     if (!currentMenuId) return
     
-    setMenus(
-      menus.map(menu =>
+    setMenus(prevMenus =>
+      prevMenus.map(menu =>
         menu.id === currentMenuId
           ? { ...menu, times }
           : menu
@@ -237,10 +253,7 @@ export default function PracticeLogForm({
   }
 
   // フォーム送信
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-
+  const handleSubmit = async () => {
     // データを整形
     const submitData = menus.map(menu => {
       // サークルタイムを秒に変換
@@ -270,13 +283,22 @@ export default function PracticeLogForm({
     }
   }
 
+  const handleFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+  }
+
+  const handleClose = () => {
+    onClose()
+  }
+
   return (
-    <div className="fixed inset-0 z-[70] overflow-y-auto">
+    <div className="fixed inset-0 z-[70] overflow-y-auto" data-testid="practice-log-form-modal">
       <div className="flex min-h-screen items-center justify-center p-4">
         {/* オーバーレイ */}
         <div
           className="fixed inset-0 bg-black/40 transition-opacity"
-          onClick={onClose}
+          onClick={handleClose}
         />
 
         {/* モーダルコンテンツ */}
@@ -289,7 +311,7 @@ export default function PracticeLogForm({
               </h3>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <XMarkIcon className="h-6 w-6" />
@@ -297,7 +319,7 @@ export default function PracticeLogForm({
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <form onSubmit={handleFormSubmit} className="p-6 space-y-6">
 
             {/* メニューセクション */}
             <div className="space-y-4">
@@ -350,6 +372,7 @@ export default function PracticeLogForm({
                         }
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
+                        data-testid="practice-style"
                       >
                         {SWIM_STYLES.map(style => (
                           <option key={style.value} value={style.value}>
@@ -373,6 +396,7 @@ export default function PracticeLogForm({
                         placeholder="100"
                         min="1"
                         required
+                        data-testid="practice-distance"
                       />
                     </div>
 
@@ -390,6 +414,7 @@ export default function PracticeLogForm({
                         placeholder="4"
                         min="1"
                         required
+                        data-testid="practice-rep-count"
                       />
                     </div>
 
@@ -407,6 +432,7 @@ export default function PracticeLogForm({
                         placeholder="1"
                         min="1"
                         required
+                        data-testid="practice-set-count"
                       />
                     </div>
 
@@ -454,6 +480,7 @@ export default function PracticeLogForm({
                       onClick={() => openTimeModal(menu.id)}
                       variant="outline"
                       className="w-full flex items-center justify-center gap-2"
+                      data-testid="time-input-button"
                     >
                       <ClockIcon className="h-5 w-5" />
                       {menu.times && menu.times.length > 0
@@ -572,6 +599,7 @@ export default function PracticeLogForm({
                       rows={2}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="このメニューに関するメモ"
+                      data-testid={`practice-log-note-${index + 1}`}
                     />
                   </div>
 
@@ -603,9 +631,11 @@ export default function PracticeLogForm({
                 キャンセル
               </Button>
               <Button
-                type="submit"
+                type="button"
                 disabled={isLoading}
+                onClick={() => void handleSubmit()}
                 className="bg-blue-600 hover:bg-blue-700"
+                data-testid={editData ? 'update-practice-log-button' : 'save-practice-log-button'}
               >
                 {isLoading ? (editData ? '更新中...' : '保存中...') : (editData ? '練習記録を更新' : '練習記録を保存')}
               </Button>

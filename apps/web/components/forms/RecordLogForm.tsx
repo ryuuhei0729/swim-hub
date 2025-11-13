@@ -44,7 +44,7 @@ export interface RecordLogFormData {
 interface RecordLogFormProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: RecordLogFormData) => Promise<void>
+  onSubmit: (dataList: RecordLogFormData[]) => Promise<void>
   competitionId: string
   editData?: {
     id?: string
@@ -57,7 +57,7 @@ interface RecordLogFormProps {
   } | null
   isLoading?: boolean
   styles?: Array<{ id: string | number; nameJp: string; distance: number }>
-  entryData?: EntryInfo // エントリー情報（ある場合は種目固定）
+  entryDataList?: EntryInfo[] // エントリー情報（複数種目に対応）
 }
 
 export default function RecordLogForm({
@@ -68,10 +68,12 @@ export default function RecordLogForm({
   editData,
   isLoading = false,
   styles = [],
-  entryData
+  entryDataList: entryDataListProp = []
 }: RecordLogFormProps) {
-  const [formData, setFormData] = useState<RecordLogFormState>({
-    styleId: entryData?.styleId?.toString() || styles[0]?.id?.toString() || '',
+  const entryDataList = entryDataListProp
+
+  const createDefaultState = (styleId: string): RecordLogFormState => ({
+    styleId,
     time: 0,
     timeDisplayValue: '',
     isRelaying: false,
@@ -80,59 +82,53 @@ export default function RecordLogForm({
     videoUrl: ''
   })
 
-  // エントリーモードかどうかを判定
-  const isEntryMode = !!entryData
+  const formatSecondsToDisplay = (seconds?: number): string => {
+    if (!seconds || seconds <= 0) return ''
+    const minutes = Math.floor(seconds / 60)
+    const remainder = (seconds % 60).toFixed(2).padStart(5, '0')
+    return minutes > 0 ? `${minutes}:${remainder}` : remainder
+  }
 
-  // editDataまたはstylesが変更された時にフォームを初期化
+  const [formDataList, setFormDataList] = useState<RecordLogFormState[]>([])
+
   useEffect(() => {
-    if (isOpen) {
-      if (editData) {
-        // 編集モード
-        const timeInSeconds = editData.time ?? 0 // DBは秒単位のDECIMAL
-        const minutes = Math.floor(timeInSeconds / 60)
-        const seconds = (timeInSeconds % 60).toFixed(2)
-        const timeDisplay = minutes > 0 ? `${minutes}:${seconds.padStart(5, '0')}` : seconds
+    if (!isOpen) return
 
-        setFormData({
-          styleId: editData.styleId?.toString() || styles[0]?.id?.toString() || '',
+    if (editData) {
+      const splitTimes =
+        editData.splitTimes?.map((st: SplitTimeRow, index: number) => ({
+          distance: st.distance,
+          splitTime: st.splitTime,
+          splitTimeDisplayValue: formatSecondsToDisplay(st.splitTime),
+          uiKey: `split-${index}`
+        })) ?? []
+
+      const styleId =
+        editData.styleId?.toString() ||
+        entryDataList[0]?.styleId?.toString() ||
+        (styles[0]?.id ? styles[0].id.toString() : '')
+
+      setFormDataList([
+        {
+          styleId,
           time: editData.time ?? 0,
-          timeDisplayValue: timeDisplay,
+          timeDisplayValue: formatSecondsToDisplay(editData.time),
           isRelaying: editData.isRelaying || false,
-          splitTimes: editData.splitTimes?.map((st: SplitTimeRow, index: number) => {
-            const splitSeconds = st.splitTime
-            const splitMinutes = Math.floor(splitSeconds / 60)
-            const splitSecs = (splitSeconds % 60).toFixed(2)
-            const splitDisplay = splitMinutes > 0 ? `${splitMinutes}:${splitSecs.padStart(5, '0')}` : splitSecs
-            
-            return {
-              distance: st.distance,
-              splitTime: st.splitTime,
-              splitTimeDisplayValue: splitDisplay,
-              uiKey: `split-${index}`
-            }
-          }) || [],
+          splitTimes,
           note: editData.note || '',
           videoUrl: editData.videoUrl || ''
-        })
-      } else {
-        // 新規作成モード
-        // entryDataがある場合は、それを使って初期化（エントリー済みの種目を反映）
-        const defaultStyleId = entryData?.styleId 
-          ? String(entryData.styleId) 
-          : (styles[0]?.id ? String(styles[0].id) : '')
-        
-        setFormData({
-          styleId: defaultStyleId,
-          time: 0,
-          timeDisplayValue: '',
-          isRelaying: false,
-          splitTimes: [],
-          note: '',
-          videoUrl: ''
-        })
-      }
+        }
+      ])
+    } else if (entryDataList.length > 0) {
+      setFormDataList(
+        entryDataList.map((entry, index) =>
+          createDefaultState(entry.styleId ? String(entry.styleId) : styles[index]?.id?.toString() || '')
+        )
+      )
+    } else {
+      setFormDataList([createDefaultState(styles[0]?.id ? String(styles[0].id) : '')])
     }
-  }, [isOpen, editData, styles, entryData])
+  }, [isOpen, editData, entryDataList, styles])
 
   const parseTimeToSeconds = (timeStr: string): number => {
     if (!timeStr || timeStr.trim() === '') return 0
@@ -149,16 +145,46 @@ export default function RecordLogForm({
     }
   }
 
-  const handleTimeChange = (value: string) => {
-    setFormData(prev => ({
+  const updateFormData = (index: number, updater: (prev: RecordLogFormState) => RecordLogFormState) => {
+    setFormDataList((prev) =>
+      prev.map((item, i) => {
+        if (i !== index) return item
+        return updater(item)
+      })
+    )
+  }
+
+  const handleTimeChange = (index: number, value: string) => {
+    updateFormData(index, (prev) => ({
       ...prev,
       timeDisplayValue: value,
       time: parseTimeToSeconds(value)
     }))
   }
 
-  const handleAddSplitTime = () => {
-    setFormData(prev => ({
+  const handleToggleRelaying = (index: number, checked: boolean) => {
+    updateFormData(index, (prev) => ({
+      ...prev,
+      isRelaying: checked
+    }))
+  }
+
+  const handleNoteChange = (index: number, value: string) => {
+    updateFormData(index, (prev) => ({
+      ...prev,
+      note: value
+    }))
+  }
+
+  const handleVideoChange = (index: number, value: string) => {
+    updateFormData(index, (prev) => ({
+      ...prev,
+      videoUrl: value
+    }))
+  }
+
+  const handleAddSplitTime = (entryIndex: number) => {
+    updateFormData(entryIndex, (prev) => ({
       ...prev,
       splitTimes: [
         ...prev.splitTimes,
@@ -172,31 +198,32 @@ export default function RecordLogForm({
     }))
   }
 
-  const handleRemoveSplitTime = (index: number) => {
-    setFormData(prev => ({
+  const handleRemoveSplitTime = (entryIndex: number, splitIndex: number) => {
+    updateFormData(entryIndex, (prev) => ({
       ...prev,
-      splitTimes: prev.splitTimes.filter((_, i) => i !== index)
+      splitTimes: prev.splitTimes.filter((_, i) => i !== splitIndex)
     }))
   }
 
-  const handleSplitTimeChange = (index: number, field: 'distance' | 'splitTime', value: string) => {
-    setFormData(prev => ({
+  const handleSplitTimeChange = (
+    entryIndex: number,
+    splitIndex: number,
+    field: 'distance' | 'splitTime',
+    value: string
+  ) => {
+    updateFormData(entryIndex, (prev) => ({
       ...prev,
       splitTimes: prev.splitTimes.map((st, i) => {
-        if (i === index) {
-          if (field === 'distance') {
-            return { ...st, distance: value === '' ? '' : parseInt(value) }
-          } else {
-            // 空文字列の場合はsplitTimeを0にする（後でフィルタリングされる）
-            const parsedTime = value.trim() === '' ? 0 : parseTimeToSeconds(value)
-            return {
-              ...st,
-              splitTimeDisplayValue: value,
-              splitTime: parsedTime
-            }
-          }
+        if (i !== splitIndex) return st
+        if (field === 'distance') {
+          return { ...st, distance: value === '' ? '' : parseInt(value) }
         }
-        return st
+        const parsedTime = value.trim() === '' ? 0 : parseTimeToSeconds(value)
+        return {
+          ...st,
+          splitTimeDisplayValue: value,
+          splitTime: parsedTime
+        }
       })
     }))
   }
@@ -204,251 +231,293 @@ export default function RecordLogForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // バリデーション
-    if (!formData.styleId) {
-      console.error('種目を選択してください')
-      return
-    }
-    if (formData.time <= 0) {
+    let hasStyleError = false
+    const submitList: RecordLogFormData[] = formDataList.reduce<RecordLogFormData[]>((acc, data, index) => {
+      const entryInfo = entryDataList[index]
+      const styleId = entryInfo ? String(entryInfo.styleId) : data.styleId
+
+      if (!styleId) {
+        hasStyleError = true
+        console.error('種目を選択してください')
+        return acc
+      }
+
+      if (data.time <= 0) {
+        // タイム未入力のものはスキップ
+        return acc
+      }
+
+      const validSplitTimes = data.splitTimes
+        .map((st) => {
+          const distance =
+            typeof st.distance === 'number' ? st.distance : st.distance === '' ? NaN : parseInt(String(st.distance))
+          if (!isNaN(distance) && distance > 0 && st.splitTime > 0) {
+            return {
+              distance,
+              splitTime: st.splitTime
+            }
+          }
+          return null
+        })
+        .filter((st): st is { distance: number; splitTime: number } => st !== null)
+
+      acc.push({
+        ...data,
+        styleId,
+        splitTimes: validSplitTimes
+      })
+      return acc
+    }, [])
+
+    if (hasStyleError) return
+
+    if (submitList.length === 0) {
       console.error('タイムを入力してください（形式: 分:秒.小数 または 秒.小数）')
       return
     }
 
-    // スプリットタイムのバリデーション・変換
-    // 空のスプリットタイムを除外し、distanceをnumberに変換
-    const validSplitTimes = formData.splitTimes
-      .map((st) => {
-        // distanceをnumberに変換
-        const distance = typeof st.distance === 'number' ? st.distance : (st.distance === '' ? NaN : parseInt(String(st.distance)))
-        
-        // 有効な値のみ返す
-        if (!isNaN(distance) && distance > 0 && st.splitTime > 0) {
-          return {
-            distance,
-            splitTime: st.splitTime
-          }
-        }
-        return null
-      })
-      .filter((st): st is { distance: number; splitTime: number } => st !== null)
-
-    // バリデーション済みのデータを送信
-    const submitData = {
-      ...formData,
-      splitTimes: validSplitTimes
-    }
-
-    await onSubmit(submitData)
+    await onSubmit(submitList)
   }
 
   const handleClose = () => {
-    setFormData({
-      styleId: styles[0]?.id?.toString() || '',
-      time: 0,
-      timeDisplayValue: '',
-      isRelaying: false,
-      splitTimes: [],
-      note: '',
-      videoUrl: ''
-    })
+    setFormDataList([])
     onClose()
   }
 
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[70] overflow-y-auto">
+    <div className="fixed inset-0 z-[70] overflow-y-auto" data-testid="record-form-modal">
       <div className="flex min-h-screen items-center justify-center p-4">
         {/* オーバーレイ */}
         <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose}></div>
 
         {/* モーダルコンテンツ */}
-        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-2xl">
-          {/* ヘッダー */}
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                {editData ? '記録編集' : '記録登録'}
-              </h3>
-              <button
-                onClick={handleClose}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <XMarkIcon className="h-6 w-6" />
-              </button>
+        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-3xl">
+          <form onSubmit={handleSubmit}>
+            {/* ヘッダー */}
+            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg leading-6 font-medium text-gray-900">
+                  {editData ? '記録編集' : '記録登録'}
+                </h3>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
             </div>
 
-            {/* エントリー情報表示 */}
-            {isEntryMode && entryData && (
-              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <h4 className="text-sm font-medium text-blue-900 mb-2">📝 エントリー情報</h4>
-                <div className="space-y-1 text-sm text-blue-800">
-                  <p><span className="font-medium">種目:</span> {entryData.styleName}</p>
-                  {entryData.entryTime && entryData.entryTime > 0 && (
-                    <p><span className="font-medium">エントリータイム:</span> {formatTime(entryData.entryTime)}</p>
-                  )}
-                </div>
-              </div>
-            )}
+            <div className="px-4 pb-6 sm:px-6 sm:pb-6 space-y-6">
+              {formDataList.map((formData, index) => {
+                const entryInfo = entryDataList[index]
+                const sectionIndex = index + 1
+                const styleOptions = styles.map((style) => ({
+                  id: style.id.toString(),
+                  label: style.nameJp
+                }))
 
-            {/* フォーム */}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* 種目 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  種目 <span className="text-red-500">*</span>
-                </label>
-                {isEntryMode && entryData ? (
-                  // エントリーモード: 種目固定表示
-                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-700">
-                    {entryData.styleName}
-                  </div>
-                ) : (
-                  // 通常モード: 種目選択
-                  <select
-                    value={formData.styleId}
-                    onChange={(e) => setFormData({ ...formData, styleId: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    required
+                return (
+                  <div
+                    key={entryInfo ? `${entryInfo.styleId}-${index}` : `record-${index}`}
+                    className="rounded-xl border border-gray-200 bg-gray-50/60 p-4 sm:p-6 space-y-4"
+                    data-testid={`record-entry-section-${sectionIndex}`}
                   >
-                    <option value="">種目を選択</option>
-                    {styles.map((style) => (
-                      <option key={style.id} value={style.id}>
-                        {style.nameJp}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <h4 className="text-base font-semibold text-gray-900">
+                        記録入力 {sectionIndex}
+                      </h4>
+                      {entryInfo && (
+                        <div className="text-sm text-blue-800 bg-blue-100 px-3 py-1 rounded-full inline-flex items-center gap-2">
+                          <span className="font-medium">{entryInfo.styleName}</span>
+                          {entryInfo.entryTime && entryInfo.entryTime > 0 && (
+                            <span className="text-blue-700">
+                              entry: {formatTime(entryInfo.entryTime)}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
 
-              {/* タイム */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  タイム <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  type="text"
-                  value={formData.timeDisplayValue}
-                  onChange={(e) => handleTimeChange(e.target.value)}
-                  placeholder="例: 1:23.45 または 32.45"
-                  required
-                  className="w-full"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  形式: 分:秒.小数（例: 1:23.45）または 秒.小数（例: 32.45）
-                </p>
-              </div>
+                    {/* 種目 */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        種目 <span className="text-red-500">*</span>
+                      </label>
+                      {entryInfo ? (
+                        <div className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-100 text-gray-700">
+                          {entryInfo.styleName}
+                        </div>
+                      ) : (
+                        <select
+                          value={formData.styleId}
+                          onChange={(e) =>
+                            updateFormData(index, (prev) => ({
+                              ...prev,
+                              styleId: e.target.value
+                            }))
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          required
+                          data-testid={`record-style-${sectionIndex}`}
+                        >
+                          <option value="">種目を選択</option>
+                          {styleOptions.map((option) => (
+                            <option key={option.id} value={option.id}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
 
-              {/* リレー */}
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="isRelaying"
-                  checked={formData.isRelaying}
-                  onChange={(e) => setFormData({ ...formData, isRelaying: e.target.checked })}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="isRelaying" className="ml-2 text-sm text-gray-700">
-                  リレー種目
-                </label>
-              </div>
+                    {/* タイム */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        タイム <span className="text-red-500">*</span>
+                      </label>
+                      <Input
+                        type="text"
+                        value={formData.timeDisplayValue}
+                        onChange={(e) => handleTimeChange(index, e.target.value)}
+                        placeholder="例: 1:23.45 または 32.45"
+                        className="w-full"
+                        data-testid={`record-time-${sectionIndex}`}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        形式: 分:秒.小数（例: 1:23.45）または 秒.小数（例: 32.45）
+                      </p>
+                    </div>
 
-              {/* スプリットタイム */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    スプリットタイム
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleAddSplitTime}
-                    className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-700"
-                  >
-                    <PlusIcon className="h-4 w-4 mr-1" />
-                    追加
-                  </button>
-                </div>
-                {formData.splitTimes.length === 0 ? (
-                  <p className="text-sm text-gray-500">スプリットタイムはありません</p>
-                ) : (
-                  <div className="space-y-2">
-                    {formData.splitTimes.map((st, index) => (
-                      <div key={st.uiKey || index} className="flex items-center space-x-2">
-                        <Input
-                          type="number"
-                          value={st.distance}
-                          onChange={(e) => handleSplitTimeChange(index, 'distance', e.target.value)}
-                          placeholder="距離 (m)"
-                          className="w-24"
-                        />
-                        <Input
-                          type="text"
-                          value={st.splitTimeDisplayValue || ''}
-                          onChange={(e) => handleSplitTimeChange(index, 'splitTime', e.target.value)}
-                          placeholder="例: 28.50 または 0:28.50"
-                          className="flex-1"
-                        />
+                    {/* リレー */}
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={`isRelaying-${sectionIndex}`}
+                        checked={formData.isRelaying}
+                        onChange={(e) => handleToggleRelaying(index, e.target.checked)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        data-testid={`record-relay-${sectionIndex}`}
+                      />
+                      <label htmlFor={`isRelaying-${sectionIndex}`} className="ml-2 text-sm text-gray-700">
+                        リレー種目
+                      </label>
+                    </div>
+
+                    {/* スプリットタイム */}
+                    <div data-testid={editData ? 'split-time-modal' : undefined}>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          スプリットタイム
+                        </label>
                         <button
                           type="button"
-                          onClick={() => handleRemoveSplitTime(index)}
-                          className="p-2 text-red-600 hover:text-red-700"
+                          onClick={() => handleAddSplitTime(index)}
+                          className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-700 disabled:opacity-50"
+                          disabled={isLoading}
                         >
-                          <TrashIcon className="h-5 w-5" />
+                          <PlusIcon className="h-4 w-4 mr-1" />
+                          追加
                         </button>
                       </div>
-                    ))}
+                      {formData.splitTimes.length === 0 ? (
+                        <p className="text-sm text-gray-500">スプリットタイムはありません</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {formData.splitTimes.map((st, splitIndex) => (
+                            <div key={st.uiKey || `${index}-${splitIndex}`} className="flex items-center space-x-2">
+                              <Input
+                                type="number"
+                                value={st.distance}
+                                onChange={(e) =>
+                                  handleSplitTimeChange(index, splitIndex, 'distance', e.target.value)
+                                }
+                                placeholder="距離 (m)"
+                                className="w-24"
+                                data-testid={`record-split-distance-${sectionIndex}-${splitIndex + 1}`}
+                              />
+                              <Input
+                                type="text"
+                                value={st.splitTimeDisplayValue || ''}
+                                onChange={(e) =>
+                                  handleSplitTimeChange(index, splitIndex, 'splitTime', e.target.value)
+                                }
+                                placeholder="例: 28.50 または 0:28.50"
+                                className="flex-1"
+                                data-testid={`record-split-time-${sectionIndex}-${splitIndex + 1}`}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveSplitTime(index, splitIndex)}
+                                className="p-2 text-red-600 hover:text-red-700"
+                                disabled={isLoading}
+                              >
+                                <TrashIcon className="h-5 w-5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ビデオURL */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        ビデオURL
+                      </label>
+                      <Input
+                        type="url"
+                        value={formData.videoUrl}
+                        onChange={(e) => handleVideoChange(index, e.target.value)}
+                        placeholder="https://..."
+                        className="w-full"
+                        data-testid={`record-video-${sectionIndex}`}
+                      />
+                    </div>
+
+                    {/* メモ */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        メモ
+                      </label>
+                      <textarea
+                        value={formData.note}
+                        onChange={(e) => handleNoteChange(index, e.target.value)}
+                        placeholder="記録に関するメモ（任意）"
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        data-testid={`record-note-${sectionIndex}`}
+                      />
+                    </div>
                   </div>
-                )}
-              </div>
+                )
+              })}
+            </div>
 
-              {/* ビデオURL */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  ビデオURL
-                </label>
-                <Input
-                  type="url"
-                  value={formData.videoUrl}
-                  onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
-                  placeholder="https://..."
-                  className="w-full"
-                />
-              </div>
-
-              {/* メモ */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  メモ
-                </label>
-                <textarea
-                  value={formData.note}
-                  onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                  placeholder="記録に関するメモ（任意）"
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </form>
-          </div>
-
-          {/* フッター */}
-          <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <Button
-              onClick={handleSubmit}
-              disabled={isLoading}
-              className="w-full sm:w-auto sm:ml-3"
-            >
-              {isLoading ? '保存中...' : editData ? '更新' : '保存'}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleClose}
-              disabled={isLoading}
-              className="mt-3 w-full sm:mt-0 sm:w-auto"
-            >
-              キャンセル
-            </Button>
-          </div>
+            {/* フッター */}
+            <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full sm:w-auto sm:ml-3"
+                data-testid={editData ? 'update-record-button' : 'save-record-button'}
+              >
+                {isLoading ? '保存中...' : editData ? '更新' : '保存'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClose}
+                disabled={isLoading}
+                className="mt-3 w-full sm:mt-0 sm:w-auto"
+              >
+                キャンセル
+              </Button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

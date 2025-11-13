@@ -14,6 +14,7 @@ import type {
   RecordFormDataInternal,
   EntryWithStyle
 } from '@/stores/types'
+import { convertRecordFormData } from '@/stores/types'
 
 interface FormModalsProps {
   onPracticeBasicSubmit: (basicData: { date: string; place: string; note: string }) => Promise<void>
@@ -21,13 +22,38 @@ interface FormModalsProps {
   onCompetitionBasicSubmit: (basicData: { date: string; title: string; place: string; poolType: number; note: string }) => Promise<void>
   onEntrySubmit: (entriesData: EntryFormData[]) => Promise<void>
   onEntrySkip: () => void
-  onRecordLogSubmit: (formData: RecordFormDataInternal) => Promise<void>
+  onRecordLogSubmit: (formDataList: RecordFormDataInternal[]) => Promise<void>
   styles: Style[]
 }
 
 /**
  * すべてのフォームモーダルを管理するClient Component
  */
+const PracticeBasicForm = dynamic(
+  () => import('@/components/forms/PracticeBasicForm'),
+  { ssr: false }
+)
+
+const PracticeLogForm = dynamic(
+  () => import('@/components/forms/PracticeLogForm'),
+  { ssr: false }
+)
+
+const CompetitionBasicForm = dynamic(
+  () => import('@/components/forms/CompetitionBasicForm'),
+  { ssr: false }
+)
+
+const EntryLogForm = dynamic(
+  () => import('@/components/forms/EntryLogForm'),
+  { ssr: false }
+)
+
+const RecordLogForm = dynamic(
+  () => import('@/components/forms/RecordLogForm'),
+  { ssr: false }
+)
+
 export function FormModals({
   onPracticeBasicSubmit,
   onPracticeLogSubmit,
@@ -64,66 +90,123 @@ export function FormModals({
     closeRecordForm: closeRecordLogForm,
   } = useCompetitionFormStore()
 
-  // EntryInfoを取得するヘルパー関数
-  const getEntryDataForRecord = (editingData: unknown, createdEntries: EntryWithStyle[]): EntryInfo | undefined => {
-    if (editingData && typeof editingData === 'object' && 'entryData' in editingData 
-      && editingData.entryData 
-      && typeof editingData.entryData === 'object' 
-      && editingData.entryData !== null) {
-      const entryData = editingData.entryData
-      if ('styleId' in entryData && 'styleName' in entryData) {
-        const styleId = typeof entryData.styleId === 'number' ? entryData.styleId 
-          : typeof entryData.styleId === 'string' ? Number(entryData.styleId) 
-          : undefined
-        const styleName = typeof entryData.styleName === 'string' ? entryData.styleName : ''
-        const entryTime = 'entryTime' in entryData 
-          ? (typeof entryData.entryTime === 'number' ? entryData.entryTime 
-            : entryData.entryTime === null ? null 
-            : undefined)
-          : undefined
-        
-        if (styleId !== undefined && styleName !== undefined) {
-          return { styleId, styleName, entryTime }
+  // Entryフォーム初期値を取得するヘルパー関数
+  const getEntryInitialEntries = (editingData: unknown): Array<{
+    id: string
+    styleId: string
+    entryTime: number
+    note: string
+  }> => {
+    if (!editingData || typeof editingData !== 'object') {
+      return []
+    }
+
+    // CalendarItem経由で渡される editData.entries を優先
+    if ('editData' in editingData && editingData.editData && typeof editingData.editData === 'object') {
+      const editPayload = editingData.editData as { entries?: Array<any> }
+      if (Array.isArray(editPayload.entries)) {
+        return editPayload.entries.map((entry, index) => ({
+          id: entry.id || `entry-${index + 1}`,
+          styleId: String(entry.styleId ?? entry.style_id ?? ''),
+          entryTime: typeof entry.entryTime === 'number'
+            ? entry.entryTime
+            : typeof entry.entry_time === 'number'
+              ? entry.entry_time
+              : 0,
+          note: entry.note ?? ''
+        }))
+      }
+    }
+
+    // 旧フォーマット（単一エントリー）
+    if ('type' in editingData && (editingData as { type?: string }).type === 'entry') {
+      const legacy = editingData as {
+        id?: string
+        styleId?: number
+        style_id?: number
+        entryTime?: number
+        entry_time?: number | null
+        note?: string | null
+      }
+
+      return [
+        {
+          id: legacy.id || 'entry-1',
+          styleId: String(legacy.styleId ?? legacy.style_id ?? ''),
+          entryTime: legacy.entryTime ?? legacy.entry_time ?? 0,
+          note: legacy.note ?? ''
         }
-      }
+      ]
     }
-    
-    if (createdEntries.length > 0) {
-      return {
-        styleId: createdEntries[0].styleId,
-        styleName: String(createdEntries[0].styleName || ''),
-        entryTime: createdEntries[0].entryTime
-      }
-    }
-    
-    return undefined
+
+    return []
   }
 
-  // フォームモーダルを動的インポート（コード分割）
-  const PracticeBasicForm = dynamic(
-    () => import('@/components/forms/PracticeBasicForm'),
-    { ssr: false }
+  const entryInitialEntries = React.useMemo(
+    () => getEntryInitialEntries(competitionEditingData),
+    [competitionEditingData]
   )
 
-  const PracticeLogForm = dynamic(
-    () => import('@/components/forms/PracticeLogForm'),
-    { ssr: false }
-  )
+  // Recordフォーム用 EntryInfo一覧を取得するヘルパー
+  const getEntryDataListForRecord = (editingData: unknown, createdEntries: EntryWithStyle[]): EntryInfo[] => {
+    if (
+      editingData &&
+      typeof editingData === 'object' &&
+      'entryDataList' in editingData &&
+      Array.isArray((editingData as { entryDataList?: EntryInfo[] }).entryDataList)
+    ) {
+      return (editingData as { entryDataList: EntryInfo[] }).entryDataList
+    }
 
-  const CompetitionBasicForm = dynamic(
-    () => import('@/components/forms/CompetitionBasicForm'),
-    { ssr: false }
-  )
+    if (
+      editingData &&
+      typeof editingData === 'object' &&
+      'editData' in editingData &&
+      editingData.editData &&
+      typeof editingData.editData === 'object'
+    ) {
+      const editPayload = editingData.editData as { entries?: Array<any> }
+      if (Array.isArray(editPayload.entries) && editPayload.entries.length > 0) {
+        return editPayload.entries.map((entry) => ({
+          styleId: Number(entry.styleId ?? entry.style_id),
+          styleName: entry.style?.name_jp ?? String(entry.styleName ?? ''),
+          entryTime:
+            typeof entry.entryTime === 'number'
+              ? entry.entryTime
+              : typeof entry.entry_time === 'number'
+                ? entry.entry_time
+                : undefined
+        }))
+      }
+    }
 
-  const EntryLogForm = dynamic(
-    () => import('@/components/forms/EntryLogForm'),
-    { ssr: false }
-  )
+    if (
+      editingData &&
+      typeof editingData === 'object' &&
+      'entryData' in editingData &&
+      editingData.entryData &&
+      typeof editingData.entryData === 'object'
+    ) {
+      const entryData = (editingData as { entryData: EntryInfo }).entryData
+      return [
+        {
+          styleId: Number(entryData.styleId),
+          styleName: entryData.styleName,
+          entryTime: entryData.entryTime
+        }
+      ]
+    }
 
-  const RecordLogForm = dynamic(
-    () => import('@/components/forms/RecordLogForm'),
-    { ssr: false }
-  )
+    if (createdEntries.length > 0) {
+      return createdEntries.map((entry) => ({
+        styleId: entry.styleId,
+        styleName: String(entry.styleName || ''),
+        entryTime: entry.entryTime ?? undefined
+      }))
+    }
+
+    return []
+  }
 
   return (
     <>
@@ -261,6 +344,7 @@ export function FormModals({
           
           return undefined
         })()}
+        initialEntries={entryInitialEntries}
         />
       </Suspense>
 
@@ -269,7 +353,10 @@ export function FormModals({
         <RecordLogForm
         isOpen={isRecordLogFormOpen}
         onClose={closeRecordLogForm}
-        onSubmit={onRecordLogSubmit}
+        onSubmit={async (formDataList) => {
+          const converted = formDataList.map(convertRecordFormData)
+          await onRecordLogSubmit(converted)
+        }}
         competitionId={createdCompetitionId || 
           (competitionEditingData && typeof competitionEditingData === 'object' && 'competitionId' in competitionEditingData 
             ? competitionEditingData.competitionId || ''
@@ -313,7 +400,7 @@ export function FormModals({
           nameJp: style.name_jp,
           distance: style.distance
         }))}
-        entryData={getEntryDataForRecord(competitionEditingData, createdEntries)}
+        entryDataList={getEntryDataListForRecord(competitionEditingData, createdEntries)}
         />
       </Suspense>
     </>

@@ -76,3 +76,4 @@ apps/web/next-env.d.ts
 /apps/web/e2e/playwright-report/
 /apps/web/blob-report/
 /apps/web/playwright/.cache/
+.playwright-mcp/

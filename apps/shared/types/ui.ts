@@ -301,7 +301,7 @@ export interface CalendarProps {
   onAddPracticeLog?: (practiceId: string) => void
   onEditPracticeLog?: (log: PracticeLogWithTimes & { tags?: PracticeTag[] }) => void
   onDeletePracticeLog?: (logId: string) => void
-  onAddRecord?: (params: { competitionId?: string; entryData?: EntryInfo }) => void
+  onAddRecord?: (params: { competitionId?: string; entryData?: EntryInfo; entryDataList?: EntryInfo[] }) => void
   onEditRecord?: (record: RecordRow) => void
   onDeleteRecord?: (recordId: string) => void
   selectedDate?: Date | null
@@ -324,7 +324,7 @@ export interface DayDetailModalProps {
   onAddPracticeLog?: (practiceId: string) => void
   onEditPracticeLog?: (log: PracticeLogWithTimes & { tags?: PracticeTag[] }) => void
   onDeletePracticeLog?: (logId: string) => void
-  onAddRecord?: (params: { competitionId?: string; entryData?: EntryInfo }) => void
+  onAddRecord?: (params: { competitionId?: string; entryData?: EntryInfo; entryDataList?: EntryInfo[] }) => void
   onEditRecord?: (record: RecordRow) => void
   onDeleteRecord?: (recordId: string) => void
 }

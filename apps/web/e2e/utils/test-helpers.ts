@@ -155,6 +155,156 @@ export class FormHelpers {
   async submitForm(submitButtonTestId: string = 'submit-button'): Promise<void> {
     await this.page.getByTestId(submitButtonTestId).click()
   }
+
+  /**
+   * 大会基本情報フォームの入力
+   */
+  async fillCompetitionForm(data: {
+    date?: string
+    title?: string
+    place?: string
+    poolType?: string
+    note?: string
+  }): Promise<void> {
+    if (data.date) {
+      await this.page.getByTestId('competition-date').fill(data.date)
+    }
+    if (data.title) {
+      await this.page.getByTestId('competition-title').fill(data.title)
+    }
+    if (data.place) {
+      await this.page.getByTestId('competition-place').fill(data.place)
+    }
+    if (data.poolType !== undefined) {
+      await this.page.getByTestId('competition-pool-type').selectOption(data.poolType)
+    }
+    if (data.note) {
+      await this.page.getByTestId('competition-note').fill(data.note)
+    }
+  }
+
+  /**
+   * 記録入力フォームの入力
+   */
+  async fillRecordForm(data: {
+    recordIndex?: number
+    styleId?: string
+    time?: string
+    isRelay?: boolean
+    note?: string
+    videoUrl?: string
+    splitTimes?: Array<{ index: number; distance?: string; time: string }>
+  }): Promise<void> {
+    const recordIndex = data.recordIndex ?? 1
+    if (data.styleId) {
+      await this.page.getByTestId(`record-style-${recordIndex}`).selectOption(data.styleId)
+    }
+    if (data.time) {
+      await this.page.getByTestId(`record-time-${recordIndex}`).fill(data.time)
+    }
+    if (data.isRelay !== undefined) {
+      const relayCheckbox = this.page.getByTestId(`record-relay-${recordIndex}`)
+      const isChecked = await relayCheckbox.isChecked()
+      if (isChecked !== data.isRelay) {
+        await relayCheckbox.click()
+      }
+    }
+    if (data.splitTimes) {
+      for (const split of data.splitTimes) {
+        if (split.distance) {
+          await this.page.getByTestId(`record-split-distance-${recordIndex}-${split.index}`).fill(split.distance)
+        }
+        await this.page.getByTestId(`record-split-time-${recordIndex}-${split.index}`).fill(split.time)
+      }
+    }
+    if (data.videoUrl) {
+      await this.page.getByTestId(`record-video-${recordIndex}`).fill(data.videoUrl)
+    }
+    if (data.note) {
+      await this.page.getByTestId(`record-note-${recordIndex}`).fill(data.note)
+    }
+  }
+
+  /**
+   * エントリーフォームの入力
+   */
+  async fillEntryForm(entries: Array<{ styleId?: string; entryTime?: string; note?: string }>): Promise<void> {
+    for (let i = 0; i < entries.length; i++) {
+      const idx = i + 1
+      if (idx > 1) {
+        await this.page.getByTestId('entry-add-button').click()
+      }
+      const entry = entries[i]
+      if (entry.styleId) {
+        await this.page.getByTestId(`entry-style-${idx}`).selectOption(entry.styleId)
+      }
+      if (entry.entryTime) {
+        await this.page.getByTestId(`entry-time-${idx}`).fill(entry.entryTime)
+      }
+      if (entry.note) {
+        await this.page.getByTestId(`entry-note-${idx}`).fill(entry.note)
+      }
+    }
+  }
+}
+
+/**
+ * ダッシュボード操作ヘルパー
+ */
+export class DashboardHelpers {
+  constructor(private page: Page) {}
+
+  private getDayCell(dateIso: string) {
+    return this.page.locator(`[data-testid="calendar-day"][data-date="${dateIso}"]`).first()
+  }
+
+  private async openAddMenu(dateIso: string, type: 'practice' | 'record'): Promise<void> {
+    const dayCell = this.getDayCell(dateIso)
+    await dayCell.hover()
+    await dayCell.locator('[data-testid="day-add-button"]').click()
+
+    const buttonTestId = type === 'practice' ? 'add-practice-button' : 'add-record-button'
+    const modalTestId = type === 'practice' ? 'practice-form-modal' : 'record-form-modal'
+
+    const addMenuModal = this.page.getByTestId('add-menu-modal')
+    await addMenuModal.waitFor({ state: 'visible' })
+    const button = addMenuModal.getByTestId(buttonTestId)
+    await button.focus()
+    await this.page.keyboard.press('Enter')
+    await this.page.getByTestId(modalTestId).waitFor({ state: 'visible' })
+  }
+
+  /**
+   * カレンダーから練習予定追加モーダルを開く
+   */
+  async openAddPracticeModal(dateIso: string): Promise<void> {
+    await this.openAddMenu(dateIso, 'practice')
+  }
+
+  /**
+   * カレンダーから大会記録追加モーダルを開く
+   */
+  async openAddCompetitionModal(dateIso: string): Promise<void> {
+    await this.openAddMenu(dateIso, 'record')
+  }
+
+  /**
+   * 指定日の練習詳細モーダルを開く
+   */
+  async openPracticeDetail(dateIso: string): Promise<void> {
+    const dayCell = this.getDayCell(dateIso)
+    await dayCell.locator('[data-testid="practice-mark"]').first().click()
+    await this.page.getByTestId('practice-detail-modal').waitFor({ state: 'visible' })
+  }
+
+  /**
+   * 指定日の大会記録詳細モーダルを開く
+   */
+  async openRecordDetail(dateIso: string): Promise<void> {
+    const dayCell = this.getDayCell(dateIso)
+    await dayCell.locator('[data-testid="competition-mark"]').first().click()
+    await this.page.getByTestId('record-detail-modal').waitFor({ state: 'visible' })
+  }
 }
 
 /**
@@ -245,5 +395,6 @@ export function createPageHelpers(page: Page) {
     auth: new AuthHelpers(page),
     form: new FormHelpers(page),
     wait: new WaitHelpers(page),
+    dashboard: new DashboardHelpers(page),
   }
 }

@@ -81,7 +81,7 @@ export function useCalendarHandlers({
     } else {
       setSelectedDate(date)
       setEditingData(null)
-      openCompetitionBasicForm()
+      openCompetitionBasicForm(date)
     }
   }, [openPracticeBasicForm, openCompetitionBasicForm, setSelectedDate, setEditingData])
 
@@ -148,22 +148,26 @@ export function useCalendarHandlers({
   }, [supabase, refetch, refreshCalendar])
 
   // 記録追加ハンドラー
-  const onAddRecord = useCallback((params: { competitionId?: string; entryData?: EntryInfo }) => {
-    const { competitionId, entryData } = params
+  const onAddRecord = useCallback((params: { competitionId?: string; entryData?: EntryInfo; entryDataList?: EntryInfo[] }) => {
+    const { competitionId, entryData, entryDataList } = params
     
     if (!competitionId || competitionId.trim() === '') {
       openCompetitionBasicForm()
       return
     }
     
-      if (entryData) {
-        const editData: EditingData = { entryData }
-        openRecordLogForm(competitionId || undefined, undefined, editData)
-      } else {
-        if (competitionId) {
-          openEntryLogForm(competitionId)
-        }
-      }
+    if (entryDataList && entryDataList.length > 0) {
+      const editData: EditingData = { entryDataList }
+      openRecordLogForm(competitionId || undefined, undefined, editData)
+      return
+    }
+
+    if (entryData) {
+      const editData: EditingData = { entryData }
+      openRecordLogForm(competitionId || undefined, undefined, editData)
+    } else if (competitionId) {
+      openEntryLogForm(competitionId)
+    }
   }, [openCompetitionBasicForm, openRecordLogForm, openEntryLogForm])
 
   // 記録編集ハンドラー
