@@ -325,6 +325,8 @@ export function useDashboardHandlers({
           pool_type: basicData.poolType,
           note: basicData.note
         })
+        await Promise.all([refetchRecords()])
+        refreshCalendar()
         closeCompetitionBasicForm()
         openEntryLogForm(newCompetition.id)
       }
@@ -402,22 +404,21 @@ export function useDashboardHandlers({
         }
       }
 
+      await Promise.all([refetchRecords()])
+      refreshCalendar()
+
       setCreatedEntries(createdEntriesList)
       closeEntryLogForm()
       
-      if (competitionEditingData?.type === 'entry') {
-        refreshCalendar()
-      } else {
-        if (createdEntriesList.length > 0) {
-          openRecordLogForm(createdCompetitionId || undefined, createdEntriesList)
-        }
+      if (competitionEditingData?.type !== 'entry' && createdEntriesList.length > 0) {
+        openRecordLogForm(createdCompetitionId || undefined, createdEntriesList)
       }
     } catch (error) {
       console.error('エントリーの登録に失敗しました:', error)
     } finally {
       setLoading(false)
     }
-  }, [createdCompetitionId, competitionEditingData, supabase, user, styles, setCreatedEntries, closeEntryLogForm, refreshCalendar, openRecordLogForm, setLoading])
+  }, [createdCompetitionId, competitionEditingData, supabase, user, styles, setCreatedEntries, closeEntryLogForm, refreshCalendar, openRecordLogForm, refetchRecords, setLoading])
 
   // エントリーをスキップ
   const handleEntrySkip = useCallback(() => {
@@ -430,39 +431,61 @@ export function useDashboardHandlers({
   }, [createdCompetitionId, closeEntryLogForm, openRecordLogForm])
 
   // 記録登録・更新
-  const handleRecordLogSubmit = useCallback(async (formData: RecordFormDataInternal) => {
+  const handleRecordLogSubmit = useCallback(async (formDataList: RecordFormDataInternal[]) => {
+    const dataArray = Array.isArray(formDataList) ? formDataList : [formDataList]
     setLoading(true)
     try {
-      const recordInput = {
-        style_id: parseInt(formData.styleId),
-        time: formData.time,
-        video_url: formData.videoUrl || null,
-        note: formData.note || null,
-        is_relaying: formData.isRelaying || false,
-        competition_id: getRecordCompetitionId(createdCompetitionId, competitionEditingData)
-      }
+      const competitionId = getRecordCompetitionId(createdCompetitionId, competitionEditingData)
 
       if (competitionEditingData && competitionEditingData.id) {
-        const updates: import('@apps/shared/types/database').RecordUpdate = recordInput
+        const formData = dataArray[0]
+        const updates: import('@apps/shared/types/database').RecordUpdate = {
+          style_id: parseInt(formData.styleId),
+          time: formData.time,
+          video_url: formData.videoUrl || null,
+          note: formData.note || null,
+          is_relaying: formData.isRelaying || false
+        }
+
         await updateRecord(competitionEditingData.id, updates)
-        
+
         if (formData.splitTimes && formData.splitTimes.length > 0) {
           const splitTimesData = formData.splitTimes.map((st) => ({
             distance: st.distance,
             split_time: st.splitTime
           }))
-          await replaceSplitTimes(competitionEditingData.id, splitTimesData as Omit<import('@apps/shared/types/database').SplitTimeInsert, 'record_id'>[])
+          await replaceSplitTimes(
+            competitionEditingData.id,
+            splitTimesData as Omit<import('@apps/shared/types/database').SplitTimeInsert, 'record_id'>[]
+          )
         }
       } else {
-        const recordForCreate: Omit<import('@apps/shared/types/database').RecordInsert, 'user_id'> = recordInput
-        const newRecord = await createRecord(recordForCreate)
-        
-        if (formData.splitTimes && formData.splitTimes.length > 0) {
-          const splitTimesData = formData.splitTimes.map((st) => ({
-            distance: st.distance,
-            split_time: st.splitTime
-          }))
-          await createSplitTimes(newRecord.id, splitTimesData as Array<{ distance: number; split_time?: number; splitTime?: number }>)
+        if (!competitionId) {
+          throw new Error('Competition ID が見つかりません')
+        }
+
+        for (const formData of dataArray) {
+          const recordForCreate: Omit<import('@apps/shared/types/database').RecordInsert, 'user_id'> = {
+            style_id: parseInt(formData.styleId),
+            time: formData.time,
+            video_url: formData.videoUrl || null,
+            note: formData.note || null,
+            is_relaying: formData.isRelaying || false,
+            competition_id: competitionId
+          }
+
+          const newRecord = await createRecord(recordForCreate)
+
+          if (formData.splitTimes && formData.splitTimes.length > 0) {
+            const splitTimesData = formData.splitTimes.map((st) => ({
+              distance: st.distance,
+              split_time: st.splitTime
+            }))
+            await createSplitTimes(
+              newRecord.id,
+              splitTimesData as Array<{ distance: number; split_time?: number; splitTime?: number }>
+            )
+          }
         }
       }
 

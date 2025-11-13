@@ -116,12 +116,13 @@ test.describe('ダッシュボード E2E', () => {
     await page.keyboard.press('Escape')
   })
 
-  test('大会記録を追加してスキップ経由で記録登録できる', async ({ page }) => {
+  test('大会記録を追加してエントリー登録経由で記録登録できる', async ({ page }) => {
     const helpers = createPageHelpers(page)
     const competitionDate = formatDateInCurrentMonth(12)
     const competitionCell = page.locator(`[data-testid="calendar-day"][data-date="${competitionDate}"]`).first()
 
     await helpers.dashboard.openAddCompetitionModal(competitionDate)
+    await expect(page.getByTestId('competition-date')).toHaveValue(competitionDate)
     await helpers.form.fillCompetitionForm({
       date: competitionDate,
       title: 'E2Eテスト記録会',
@@ -131,19 +132,31 @@ test.describe('ダッシュボード E2E', () => {
     })
     await page.getByRole('button', { name: '次へ（記録登録）' }).click()
 
-    // エントリーをスキップして記録フォームへ
+    // エントリーを登録して記録フォームへ
     await page.getByTestId('entry-form-modal').waitFor({ state: 'visible' })
-    await page.getByTestId('entry-skip-button').click()
+    await page.getByTestId('entry-style-1').selectOption({ index: 1 })
+    await page.getByTestId('entry-time-1').fill('1:05.00')
+    await page.getByTestId('entry-note-1').fill('E2E エントリー1')
+    await page.getByTestId('entry-add-button').click()
+    await page.getByTestId('entry-style-2').selectOption({ index: 1 })
+    await page.getByTestId('entry-time-2').fill('1:06.50')
+    await page.getByTestId('entry-note-2').fill('E2E エントリー2')
+    await page.getByTestId('entry-submit-button').click()
+    await page.getByTestId('entry-form-modal').waitFor({ state: 'hidden' })
+    await expect(competitionCell.locator('[data-testid="entry-mark"]')).toHaveCount(1)
 
     await page.getByTestId('record-form-modal').waitFor({ state: 'visible' })
-    await page.getByTestId('record-style').selectOption({ index: 1 })
-    await page.getByTestId('record-time').fill('1:02.34')
-    await page.getByTestId('record-note').fill('E2E 自動登録')
+    await expect(page.getByTestId('record-entry-section-1')).toBeVisible()
+    await expect(page.getByTestId('record-entry-section-2')).toBeVisible()
+    await page.getByTestId('record-time-1').fill('1:02.34')
+    await page.getByTestId('record-note-1').fill('E2E 自動登録1')
+    await page.getByTestId('record-time-2').fill('1:04.50')
+    await page.getByTestId('record-note-2').fill('E2E 自動登録2')
     await page.getByTestId('save-record-button').click()
     await page.getByTestId('record-form-modal').waitFor({ state: 'hidden' })
 
     await expect(competitionCell.locator('[data-testid="competition-mark"]')).toHaveCount(1)
-    await expect(competitionCell.locator('[data-testid="record-mark"]')).toHaveCount(1)
+    await expect(competitionCell.locator('[data-testid="record-mark"]')).toHaveCount(2)
   })
 
   test('カレンダーの月を切り替えて今日に戻れる', async ({ page }) => {

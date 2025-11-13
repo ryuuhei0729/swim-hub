@@ -22,6 +22,14 @@ type EditEntryData = {
   styleId?: string | number
   entry_time?: number
   note?: string
+  entries?: Array<{
+    id?: string
+    styleId?: string | number
+    style_id?: string | number
+    entryTime?: number | null
+    entry_time?: number | null
+    note?: string | null
+  }>
 }
 
 interface EntryLogFormProps {
@@ -33,6 +41,7 @@ interface EntryLogFormProps {
   isLoading?: boolean
   styles?: Array<{ id: string; nameJp: string; distance: number }>
   editData?: EditEntryData // 編集用の既存データ
+  initialEntries?: EntryData[]
 }
 
 export default function EntryLogForm({
@@ -43,7 +52,8 @@ export default function EntryLogForm({
   competitionId: _competitionId,
   isLoading = false,
   styles = [],
-  editData
+  editData,
+  initialEntries = []
 }: EntryLogFormProps) {
   const [entries, setEntries] = useState<EntryData[]>([
     {
@@ -57,16 +67,56 @@ export default function EntryLogForm({
   // モーダルが開かれたときにリセットまたは編集データを設定
   useEffect(() => {
     if (isOpen) {
-      if (editData) {
+      if (initialEntries.length > 0) {
+        setEntries(
+          initialEntries.map((entry, index) => ({
+            id: entry.id || `entry-${index + 1}`,
+            styleId: entry.styleId || '',
+            entryTime: entry.entryTime || 0,
+            entryTimeDisplayValue:
+              entry.entryTimeDisplayValue ??
+              (entry.entryTime && entry.entryTime > 0 ? formatTime(entry.entryTime) : ''),
+            note: entry.note || ''
+          }))
+        )
+      } else if (editData) {
         // 編集モード: 既存の値をセット
-        const entryData: EntryData = {
-          id: editData.id || '1',
-          styleId: String(editData.style_id || editData.styleId || styles[0]?.id || ''),
-          entryTime: editData.entry_time || 0,
-          entryTimeDisplayValue: editData.entry_time ? formatTime(editData.entry_time) : '',
-          note: editData.note || ''
-        }
-        setEntries([entryData])
+        const entryDataList: EntryData[] = (() => {
+          // editDataにentries配列が含まれる場合は優先
+          if (typeof editData === 'object' && editData !== null && 'entries' in editData) {
+            const entriesProp = (editData as any).entries as Array<{
+              id?: string
+              styleId?: string | number
+              style_id?: string | number
+              entryTime?: number | null
+              entry_time?: number | null
+              note?: string | null
+            }>
+            if (Array.isArray(entriesProp) && entriesProp.length > 0) {
+              return entriesProp.map((entry, idx) => ({
+                id: entry.id || `entry-${idx + 1}`,
+                styleId: String(entry.styleId ?? entry.style_id ?? styles[0]?.id ?? ''),
+                entryTime: entry.entryTime ?? entry.entry_time ?? 0,
+                entryTimeDisplayValue:
+                  entry.entryTime ?? entry.entry_time
+                    ? formatTime(Number(entry.entryTime ?? entry.entry_time))
+                    : '',
+                note: entry.note || ''
+              }))
+            }
+          }
+
+          return [
+            {
+              id: editData.id || '1',
+              styleId: String(editData.style_id || editData.styleId || styles[0]?.id || ''),
+              entryTime: editData.entry_time || 0,
+              entryTimeDisplayValue: editData.entry_time ? formatTime(editData.entry_time) : '',
+              note: editData.note || ''
+            }
+          ]
+        })()
+        setEntries(entryDataList)
       } else {
         // 新規作成モード
         setEntries([
@@ -79,7 +129,7 @@ export default function EntryLogForm({
         ])
       }
     }
-  }, [isOpen, styles, editData])
+  }, [isOpen, styles, editData, initialEntries])
 
   if (!isOpen) return null
 

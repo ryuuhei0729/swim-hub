@@ -7,7 +7,7 @@ import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
 import { useAuth } from '@/contexts'
-import { CalendarItemType, DayDetailModalProps, CalendarItem, isPracticeMetadata, isCompetitionMetadata, isRecordMetadata, isTeamInfo } from '@/types'
+import { CalendarItemType, DayDetailModalProps, CalendarItem, EntryInfo, isPracticeMetadata, isCompetitionMetadata, isRecordMetadata, isTeamInfo } from '@/types'
 import type {
   Record,
   Practice,
@@ -292,7 +292,7 @@ export default function DayDetailModal({
                           if (!user) return
 
                           // エントリーデータを取得
-                          const { data: entryData, error } = await supabase
+                        const { data: entryData, error } = await supabase
                             .from('entries')
                             .select(`
                               *,
@@ -301,15 +301,13 @@ export default function DayDetailModal({
                             `)
                             .eq('competition_id', competitionId)
                             .eq('user_id', user.id)
-                            .limit(1)
-                            .single()
-
-                        if (error || !entryData) {
+                        
+                        if (error || !entryData || entryData.length === 0) {
                           console.error('エントリー取得エラー:', error)
                           return
                         }
 
-                        type EntryData = {
+                        type EntryRow = {
                           id: string
                           competition_id: string
                           style_id: number
@@ -325,64 +323,36 @@ export default function DayDetailModal({
                             team_id: string | null
                           }
                         }
-                        const data = entryData as EntryData
 
-                        // EntryLogFormを開くために、parentに編集用データを渡す
-                        const editData = {
-                          id: data.id,
-                          type: 'entry' as const, // typeフィールドを追加
-                          date: data.competition.date, // EntryLogFormで必要なdateフィールド
-                          competition_id: data.competition_id,
-                          style_id: data.style_id,
-                          entry_time: data.entry_time,
-                          note: data.note || '', // メモを追加
-                          style: {
-                            id: data.style.id,
-                            name_jp: data.style.name_jp
-                          },
-                          competition: {
-                            id: data.competition.id,
-                            title: data.competition.title,
-                            date: data.competition.date,
-                            place: data.competition.place,
-                            pool_type: data.competition.pool_type,
-                            team_id: data.competition.team_id
-                          }
+                        const rows = entryData as EntryRow[]
+                        const entryList = rows.map((row) => ({
+                          id: row.id,
+                          styleId: row.style_id,
+                          entryTime: row.entry_time,
+                          note: row.note ?? '',
+                          style: row.style,
+                          competition: row.competition
+                        }))
+
+                        const editPayload = {
+                          type: 'entry' as const,
+                          competitionId,
+                          entries: entryList,
+                          date: rows[0]?.competition.date ?? item.date ?? '',
+                          competition: rows[0]?.competition
                         }
-                        
-                        console.log('CompetitionWithEntry: onEditEntry called', { editData })
-                        
-                        // onEditItemに渡す（EntryLogFormが開かれる）
-                        onEditItem?.(editData as unknown as CalendarItem)
+
+                        onEditItem?.({
+                          ...item,
+                          editData: editPayload
+                        } as CalendarItem)
                         // EntryLogFormを開いた後、モーダルは開いたまま
                       }}
-                      onDeleteEntry={async () => {
-                        // エントリー削除処理
+                      onDeleteEntry={async (entryId) => {
+                        if (!entryId) return
                         const { data: { user } } = await supabase.auth.getUser()
                         if (!user) return
-
-                        // エントリーデータを取得してエントリーIDを特定
-                        const { data: entryData, error } = await supabase
-                          .from('entries')
-                          .select('id')
-                          .eq('competition_id', competitionId)
-                          .eq('user_id', user.id)
-                          .limit(1)
-                          .single()
-
-                        if (error || !entryData) {
-                          console.error('エントリー取得エラー:', error)
-                          return
-                        }
-
-                        // エントリーIDを使って削除確認
-                        type EntryDataForDelete = {
-                          id: string
-                        }
-                        if (entryData) {
-                          const deleteData = entryData as EntryDataForDelete
-                          setShowDeleteConfirm({id: deleteData.id, type: 'entry'})
-                        }
+                        setShowDeleteConfirm({ id: entryId, type: 'entry' })
                       }}
                       onClose={onClose}
                     />
@@ -1626,6 +1596,14 @@ function CompetitionDetails({
 }
 
 // CompetitionWithEntry: エントリー情報付きの大会を表示（パターン2）
+type CompetitionEntryDisplay = {
+  id: string
+  styleId: number
+  styleName: string
+  entryTime?: number | null
+  note?: string | null
+}
+
 function CompetitionWithEntry({
   entryId: _entryId,
   competitionId,
@@ -1652,75 +1630,132 @@ function CompetitionWithEntry({
   styleName: string
   entryTime?: number | null
   isTeamCompetition?: boolean
-  onAddRecord?: (params: { competitionId?: string; entryData?: { styleId: number; styleName: string } }) => void
+  onAddRecord?: (params: { competitionId?: string; entryData?: { styleId: number; styleName: string }; entryDataList?: EntryInfo[] }) => void
   onEditCompetition?: () => void
   onDeleteCompetition?: () => void
   onEditEntry?: () => void
-  onDeleteEntry?: () => void
+  onDeleteEntry?: (entryId: string) => void
   onClose?: () => void
 }) {
   const router = useRouter()
   const { supabase } = useAuth()
-  const [actualStyleId, setActualStyleId] = useState<number | undefined>(styleId)
-  const [actualStyleName, setActualStyleName] = useState<string>(styleName)
-  const [actualEntryTime, setActualEntryTime] = useState<number | null | undefined>(entryTime)
-  const [loading, setLoading] = useState(!styleId || !styleName)
+  const [entries, setEntries] = useState<CompetitionEntryDisplay[]>(() => {
+    if (styleId && styleName) {
+      return [
+        {
+          id: _entryId,
+          styleId,
+          styleName,
+          entryTime,
+          note
+        }
+      ]
+    }
+    return []
+  })
+  const [loading, setLoading] = useState(true)
   const [authError, setAuthError] = useState<string | null>(null)
 
-  // styleIdやstyleNameが欠けている場合、データベースから取得
   useEffect(() => {
-    if (!styleId || !styleName) {
-      const fetchEntryData = async () => {
-        try {
-          const { data: { user } } = await supabase.auth.getUser()
-          if (!user) {
-            setLoading(false)
-            setAuthError('認証が必要です。ログインしてください。')
-            router.replace('/login')
-            return
-          }
+    const fetchEntryData = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+          setLoading(false)
+          setAuthError('認証が必要です。ログインしてください。')
+          router.replace('/login')
+          return
+        }
 
-          // competitionIdから最初のエントリーを取得
-          const { data: entryData, error } = await supabase
-            .from('entries')
-            .select(`
-              id,
-              style_id,
-              entry_time,
-              note,
-              style:styles!inner(id, name_jp)
-            `)
-            .eq('competition_id', competitionId)
-            .eq('user_id', user.id)
-            .limit(1)
-            .single()
+        const { data: entryData, error } = await supabase
+          .from('entries')
+          .select(`
+            id,
+            style_id,
+            entry_time,
+            note,
+            style:styles!inner(id, name_jp)
+          `)
+          .eq('competition_id', competitionId)
+          .eq('user_id', user.id)
 
-          if (error) throw error
+        if (error) throw error
 
-          type EntryData = {
+        if (entryData && entryData.length > 0) {
+          type EntryRow = {
             id: string
             style_id: number
             entry_time: number | null
             note: string | null
             style: { id: number; name_jp: string } | { id: number; name_jp: string }[]
           }
-          if (entryData) {
-            const data = entryData as unknown as EntryData
-            const style = Array.isArray(data.style) ? data.style[0] : data.style
-            setActualStyleId(data.style_id)
-            setActualStyleName(style?.name_jp || '')
-            setActualEntryTime(data.entry_time)
-            setLoading(false)
-          }
-        } catch (err) {
-          console.error('エントリーデータの取得エラー:', err)
-          setLoading(false)
-        }
-      }
 
-      fetchEntryData()
+          const mapped = (entryData as EntryRow[]).map((row) => {
+            const style = Array.isArray(row.style) ? row.style[0] : row.style
+            return {
+              id: row.id,
+              styleId: row.style_id,
+              styleName: style?.name_jp || '',
+              entryTime: row.entry_time,
+              note: row.note
+            } as CompetitionEntryDisplay
+          })
+          setEntries(mapped)
+        } else if (entries.length === 0 && styleId && styleName) {
+          setEntries([
+            {
+              id: _entryId,
+              styleId,
+              styleName,
+              entryTime,
+              note
+            }
+          ])
+        }
+      } catch (err) {
+        console.error('エントリーデータの取得エラー:', err)
+      } finally {
+        setLoading(false)
+      }
     }
-  }, [competitionId, styleId, styleName, supabase, router])
+
+    fetchEntryData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [competitionId, supabase])
+
+  const entryInfoList: EntryInfo[] = entries.map((entry) => ({
+    styleId: entry.styleId,
+    styleName: entry.styleName,
+    entryTime: entry.entryTime ?? undefined
+  }))
+
+  const handleAddRecordClick = () => {
+    if (!onAddRecord) return
+
+    if (entryInfoList.length > 0) {
+      onAddRecord({
+        competitionId,
+        entryDataList: entryInfoList
+      })
+      onClose?.()
+    } else {
+      onAddRecord({ competitionId })
+    }
+  }
+
+  const handleEditEntryClick = () => {
+    if (!onEditEntry) return
+
+    if (entries.length === 0) {
+      onEditEntry()
+      return
+    }
+
+    // 既存のonEditEntryはDayDetailModal内で再度データ取得＆モーダルを開くため、
+    // entriesを最新化するためにmetadataへ埋め込んだデータと合わせて渡す
+    onEditEntry()
+  }
+
   return (
     <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
       {/* 大会情報ヘッダー */}
@@ -1776,32 +1811,60 @@ function CompetitionWithEntry({
             <div className="flex items-center gap-1">
               {onEditEntry && (
                 <button
-                  onClick={onEditEntry}
+                  onClick={handleEditEntryClick}
                   className="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors"
                   title="エントリーを編集"
                 >
                   <PencilIcon className="h-4 w-4" />
                 </button>
               )}
-              <button
-                onClick={onDeleteEntry}
-                className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
-                title="エントリーを削除"
-              >
-                <TrashIcon className="h-4 w-4" />
-              </button>
             </div>
           </div>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-baseline gap-2">
-              <span className="font-semibold text-orange-900 min-w-[80px]">種目:</span>
-              <span className="text-gray-900 font-medium">{loading ? '読み込み中...' : actualStyleName}</span>
-            </div>
-            {actualEntryTime && actualEntryTime > 0 && (
-              <div className="flex items-baseline gap-2">
-                <span className="font-semibold text-orange-900 min-w-[80px]">エントリータイム:</span>
-                <span className="text-gray-900 font-mono font-semibold">{formatTime(actualEntryTime)}</span>
-              </div>
+          <div className="space-y-3 text-sm">
+            {loading ? (
+              <p className="text-gray-500">読み込み中...</p>
+            ) : entries.length === 0 ? (
+              <p className="text-gray-500">エントリー情報が見つかりません</p>
+            ) : (
+              entries.map((entry) => (
+                <div
+                  key={entry.id}
+                  className="flex flex-col gap-1 rounded-md border border-orange-200 bg-white/70 px-3 py-2 shadow-sm"
+                  data-testid={`entry-summary-${entry.id}`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-semibold text-orange-900 min-w-[72px]">種目:</span>
+                        <span className="text-gray-900 font-medium">{entry.styleName}</span>
+                      </div>
+                      {entry.entryTime && entry.entryTime > 0 && (
+                        <div className="flex items-baseline gap-2">
+                          <span className="font-semibold text-orange-900 min-w-[72px]">エントリータイム:</span>
+                          <span className="text-gray-900 font-mono font-semibold">
+                            {formatTime(entry.entryTime)}
+                          </span>
+                        </div>
+                      )}
+                      {entry.note && entry.note.trim().length > 0 && (
+                        <div className="flex items-baseline gap-2">
+                          <span className="font-semibold text-orange-900 min-w-[72px]">メモ:</span>
+                          <span className="text-gray-700">{entry.note}</span>
+                        </div>
+                      )}
+                    </div>
+                    {onDeleteEntry && (
+                      <button
+                        onClick={() => onDeleteEntry(entry.id)}
+                        className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
+                        title="このエントリーを削除"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>
@@ -1816,30 +1879,7 @@ function CompetitionWithEntry({
 
         {/* 記録追加ボタン */}
         <button
-          onClick={() => {
-            // エントリー済みの場合は必ずentryDataを渡す
-            // actualStyleId/actualStyleNameを使用（データ取得後）
-            // エントリータイムは別物なので渡さない
-            const entryDataToPass = (actualStyleId && actualStyleName) ? {
-              styleId: actualStyleId,
-              styleName: actualStyleName
-            } : undefined
-            
-            console.log('CompetitionWithEntry: ボタンクリック', {
-              competitionId,
-              entryData: entryDataToPass,
-              hasStyleId: !!actualStyleId,
-              styleId: actualStyleId,
-              hasStyleName: !!actualStyleName,
-              styleName: actualStyleName
-            })
-            
-            onAddRecord?.({
-              competitionId,
-              entryData: entryDataToPass
-            })
-            onClose?.()
-          }}
+          onClick={handleAddRecordClick}
           disabled={loading}
           className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm font-medium"
         >
