@@ -131,7 +131,7 @@ export default function CompetitionClient({
     }
   }
 
-  const handleRecordSubmit = async (formData: RecordLogFormData) => {
+  const handleRecordSubmit = async (dataList: RecordLogFormData[]) => {
     setLoading(true)
     try {
       // /competitionページは編集のみなので、常にeditingDataからcompetitionIdを取得
@@ -146,6 +146,12 @@ export default function CompetitionClient({
 
       if (!competitionId) {
         throw new Error('Competition ID が見つかりません')
+      }
+
+      // 配列の最初の要素を処理（編集モードでは通常1つの記録のみ）
+      const formData = dataList[0]
+      if (!formData) {
+        throw new Error('記録データが見つかりません')
       }
 
       const recordInput = {

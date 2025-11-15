@@ -1,3 +1,69 @@
+-- ============================================
+-- 開発環境のスキーマを本番環境に1発で適用するSQL
+-- ============================================
+-- ⚠️ 本番環境で実行する前に、必ずバックアップを取ってください
+-- ⚠️ 本番環境はまだ誰も使っていないので、既存のテーブルを削除して再作成します
+-- Supabase Dashboard → 本番環境 → SQL Editor で実行してください
+
+-- ============================================
+-- Step 0: 既存のオブジェクトをすべて削除（CASCADE）
+-- ============================================
+
+-- 既存のテーブルをすべて削除（依存関係も含めて）
+-- 開発環境に存在するテーブル
+DROP TABLE IF EXISTS "public"."announcements" CASCADE;
+DROP TABLE IF EXISTS "public"."competitions" CASCADE;
+DROP TABLE IF EXISTS "public"."entries" CASCADE;
+DROP TABLE IF EXISTS "public"."group_assignments" CASCADE;
+DROP TABLE IF EXISTS "public"."practice_log_tags" CASCADE;
+DROP TABLE IF EXISTS "public"."practice_logs" CASCADE;
+DROP TABLE IF EXISTS "public"."practice_tags" CASCADE;
+DROP TABLE IF EXISTS "public"."practice_times" CASCADE;
+DROP TABLE IF EXISTS "public"."practices" CASCADE;
+DROP TABLE IF EXISTS "public"."records" CASCADE;
+DROP TABLE IF EXISTS "public"."split_times" CASCADE;
+DROP TABLE IF EXISTS "public"."styles" CASCADE;
+DROP TABLE IF EXISTS "public"."team_attendance" CASCADE;
+DROP TABLE IF EXISTS "public"."team_groups" CASCADE;
+DROP TABLE IF EXISTS "public"."team_memberships" CASCADE;
+DROP TABLE IF EXISTS "public"."teams" CASCADE;
+DROP TABLE IF EXISTS "public"."user_sessions" CASCADE;
+DROP TABLE IF EXISTS "public"."users" CASCADE;
+
+-- 本番環境に存在するが開発環境にないテーブル（削除）
+DROP TABLE IF EXISTS "public"."attendance" CASCADE;
+DROP TABLE IF EXISTS "public"."events" CASCADE;
+DROP TABLE IF EXISTS "public"."milestone_reviews" CASCADE;
+DROP TABLE IF EXISTS "public"."milestones" CASCADE;
+DROP TABLE IF EXISTS "public"."objectives" CASCADE;
+DROP TABLE IF EXISTS "public"."race_feedbacks" CASCADE;
+DROP TABLE IF EXISTS "public"."race_goals" CASCADE;
+DROP TABLE IF EXISTS "public"."race_reviews" CASCADE;
+
+-- 既存のビューを削除
+DROP VIEW IF EXISTS "public"."calendar_view" CASCADE;
+
+-- 既存の関数を削除
+DROP FUNCTION IF EXISTS "public"."create_attendance_for_team_competition"() CASCADE;
+DROP FUNCTION IF EXISTS "public"."create_attendance_for_team_practice"() CASCADE;
+DROP FUNCTION IF EXISTS "public"."generate_invite_code"() CASCADE;
+DROP FUNCTION IF EXISTS "public"."handle_new_user"() CASCADE;
+DROP FUNCTION IF EXISTS "public"."replace_practice_log_tags"("p_practice_log_id" "uuid", "p_tag_ids" "uuid"[]) CASCADE;
+DROP FUNCTION IF EXISTS "public"."is_team_member"("target_team_id" "uuid", "target_user_id" "uuid") CASCADE;
+DROP FUNCTION IF EXISTS "public"."is_team_admin"("target_team_id" "uuid", "target_user_id" "uuid") CASCADE;
+DROP FUNCTION IF EXISTS "public"."shares_active_team"("target_user_id" "uuid", "viewer_user_id" "uuid") CASCADE;
+DROP FUNCTION IF EXISTS "public"."set_invite_code"() CASCADE;
+DROP FUNCTION IF EXISTS "public"."set_published_at"() CASCADE;
+DROP FUNCTION IF EXISTS "public"."update_best_times"() CASCADE;
+DROP FUNCTION IF EXISTS "public"."update_updated_at_column"() CASCADE;
+
+-- 既存の型を削除（存在する場合）
+DROP TYPE IF EXISTS "public"."attendance_status_type" CASCADE;
+DROP TYPE IF EXISTS "public"."entry_status_type" CASCADE;
+
+-- 既存のトリガーを削除
+DROP TRIGGER IF EXISTS "on_auth_user_created" ON "auth"."users" CASCADE;
+
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -40,6 +106,7 @@ ALTER TYPE "public"."entry_status_type" OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."create_attendance_for_team_competition"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SET search_path = public
     AS $$
 BEGIN
   IF NEW.team_id IS NOT NULL THEN
@@ -57,6 +124,7 @@ ALTER FUNCTION "public"."create_attendance_for_team_competition"() OWNER TO "pos
 
 CREATE OR REPLACE FUNCTION "public"."create_attendance_for_team_practice"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SET search_path = public
     AS $$
 BEGIN
   IF NEW.team_id IS NOT NULL THEN
@@ -74,6 +142,7 @@ ALTER FUNCTION "public"."create_attendance_for_team_practice"() OWNER TO "postgr
 
 CREATE OR REPLACE FUNCTION "public"."generate_invite_code"() RETURNS "text"
     LANGUAGE "plpgsql"
+    SET search_path = public
     AS $$
 BEGIN
   RETURN upper(substring(md5(random()::text) from 1 for 8));
@@ -84,6 +153,7 @@ ALTER FUNCTION "public"."generate_invite_code"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
+    SET search_path = public
     AS $$
 BEGIN
   INSERT INTO public.users (id, name, gender, birthday, profile_image_path, bio)
@@ -103,6 +173,7 @@ ALTER FUNCTION "public"."handle_new_user"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."replace_practice_log_tags"("p_practice_log_id" "uuid", "p_tag_ids" "uuid"[]) RETURNS "void"
     LANGUAGE "plpgsql"
+    SET search_path = public
     AS $$
 BEGIN
   -- 既存のタグをすべて削除
@@ -178,6 +249,7 @@ COMMENT ON FUNCTION "public"."replace_practice_log_tags"("p_practice_log_id" "uu
 
 CREATE OR REPLACE FUNCTION "public"."set_invite_code"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SET search_path = public
     AS $$
 BEGIN
   IF NEW.invite_code IS NULL THEN
@@ -191,6 +263,7 @@ ALTER FUNCTION "public"."set_invite_code"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."set_published_at"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SET search_path = public
     AS $$
 BEGIN
   IF NEW.is_published = true AND OLD.is_published = false THEN
@@ -206,6 +279,7 @@ ALTER FUNCTION "public"."set_published_at"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."update_best_times"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SET search_path = public
     AS $$
 BEGIN
   -- 新しい記録がベストタイムかチェック
@@ -235,6 +309,7 @@ ALTER FUNCTION "public"."update_best_times"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."update_updated_at_column"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SET search_path = public
     AS $$
 BEGIN
     NEW.updated_at = NOW();
@@ -248,7 +323,7 @@ SET default_tablespace = '';
 
 SET default_table_access_method = "heap";
 
-CREATE TABLE IF NOT EXISTS "public"."announcements" (
+CREATE TABLE "public"."announcements" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "team_id" "uuid" NOT NULL,
     "title" "text" NOT NULL,
@@ -262,7 +337,7 @@ CREATE TABLE IF NOT EXISTS "public"."announcements" (
 
 ALTER TABLE "public"."announcements" OWNER TO "postgres";
 
-CREATE TABLE IF NOT EXISTS "public"."competitions" (
+CREATE TABLE "public"."competitions" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "title" "text" NOT NULL,
     "date" "date" NOT NULL,
@@ -285,8 +360,9 @@ COMMENT ON COLUMN "public"."competitions"."entry_status" IS 'エントリース�
 
 COMMENT ON COLUMN "public"."competitions"."attendance_status" IS '出欠提出ステータス: before=提出前, open=提出受付中, closed=提出締切';
 
-CREATE TABLE IF NOT EXISTS "public"."entries" (
+CREATE TABLE "public"."entries" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "team_id" "uuid",
     "competition_id" "uuid" NOT NULL,
     "user_id" "uuid" NOT NULL,
     "style_id" integer NOT NULL,
@@ -298,18 +374,7 @@ CREATE TABLE IF NOT EXISTS "public"."entries" (
 
 ALTER TABLE "public"."entries" OWNER TO "postgres";
 
--- team_idカラムを追加（既存のテーブルがある場合に備えて）
-DO $$ 
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_schema = 'public' 
-        AND table_name = 'entries' 
-        AND column_name = 'team_id'
-    ) THEN
-        ALTER TABLE "public"."entries" ADD COLUMN "team_id" "uuid";
-    END IF;
-END $$;
+
 
 COMMENT ON TABLE "public"."entries" IS '大会エントリー情報（個人・チーム共通）';
 
@@ -325,7 +390,7 @@ COMMENT ON COLUMN "public"."entries"."entry_time" IS 'エントリータイム�
 
 COMMENT ON COLUMN "public"."entries"."note" IS 'メモ・備考';
 
-CREATE TABLE IF NOT EXISTS "public"."practice_logs" (
+CREATE TABLE "public"."practice_logs" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "user_id" "uuid" NOT NULL,
     "practice_id" "uuid" NOT NULL,
@@ -341,7 +406,7 @@ CREATE TABLE IF NOT EXISTS "public"."practice_logs" (
 
 ALTER TABLE "public"."practice_logs" OWNER TO "postgres";
 
-CREATE TABLE IF NOT EXISTS "public"."practices" (
+CREATE TABLE "public"."practices" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "user_id" "uuid" NOT NULL,
     "date" "date" NOT NULL,
@@ -358,7 +423,7 @@ ALTER TABLE "public"."practices" OWNER TO "postgres";
 
 COMMENT ON COLUMN "public"."practices"."attendance_status" IS '出欠提出ステータス: before=提出前, open=提出受付中, closed=提出締切';
 
-CREATE TABLE IF NOT EXISTS "public"."records" (
+CREATE TABLE "public"."records" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "user_id" "uuid" NOT NULL,
     "competition_id" "uuid",
@@ -374,7 +439,7 @@ CREATE TABLE IF NOT EXISTS "public"."records" (
 
 ALTER TABLE "public"."records" OWNER TO "postgres";
 
-CREATE TABLE IF NOT EXISTS "public"."team_memberships" (
+CREATE TABLE "public"."team_memberships" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "team_id" "uuid" NOT NULL,
     "user_id" "uuid" NOT NULL,
@@ -389,7 +454,7 @@ CREATE TABLE IF NOT EXISTS "public"."team_memberships" (
 
 ALTER TABLE "public"."team_memberships" OWNER TO "postgres";
 
-CREATE TABLE IF NOT EXISTS "public"."teams" (
+CREATE TABLE "public"."teams" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "name" "text" NOT NULL,
     "description" "text",
@@ -553,7 +618,7 @@ ALTER VIEW "public"."calendar_view" OWNER TO "postgres";
 
 COMMENT ON VIEW "public"."calendar_view" IS 'カレンダー表示用の統合ビュー（練習、練習ログ、大会、エントリー、記録を含む）。placeカラムで統一。';
 
-CREATE TABLE IF NOT EXISTS "public"."group_assignments" (
+CREATE TABLE "public"."group_assignments" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "team_group_id" "uuid" NOT NULL,
     "user_id" "uuid" NOT NULL,
@@ -564,7 +629,7 @@ CREATE TABLE IF NOT EXISTS "public"."group_assignments" (
 
 ALTER TABLE "public"."group_assignments" OWNER TO "postgres";
 
-CREATE TABLE IF NOT EXISTS "public"."practice_log_tags" (
+CREATE TABLE "public"."practice_log_tags" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "practice_log_id" "uuid" NOT NULL,
     "practice_tag_id" "uuid" NOT NULL,
@@ -574,7 +639,7 @@ CREATE TABLE IF NOT EXISTS "public"."practice_log_tags" (
 
 ALTER TABLE "public"."practice_log_tags" OWNER TO "postgres";
 
-CREATE TABLE IF NOT EXISTS "public"."practice_tags" (
+CREATE TABLE "public"."practice_tags" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "user_id" "uuid" NOT NULL,
     "name" "text" NOT NULL,
@@ -585,7 +650,7 @@ CREATE TABLE IF NOT EXISTS "public"."practice_tags" (
 
 ALTER TABLE "public"."practice_tags" OWNER TO "postgres";
 
-CREATE TABLE IF NOT EXISTS "public"."practice_times" (
+CREATE TABLE "public"."practice_times" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "user_id" "uuid" NOT NULL,
     "practice_log_id" "uuid" NOT NULL,
@@ -598,7 +663,7 @@ CREATE TABLE IF NOT EXISTS "public"."practice_times" (
 
 ALTER TABLE "public"."practice_times" OWNER TO "postgres";
 
-CREATE TABLE IF NOT EXISTS "public"."split_times" (
+CREATE TABLE "public"."split_times" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "record_id" "uuid" NOT NULL,
     "distance" integer NOT NULL,
@@ -609,7 +674,7 @@ CREATE TABLE IF NOT EXISTS "public"."split_times" (
 
 ALTER TABLE "public"."split_times" OWNER TO "postgres";
 
-CREATE TABLE IF NOT EXISTS "public"."styles" (
+CREATE TABLE "public"."styles" (
     "id" integer NOT NULL,
     "name_jp" "text" NOT NULL,
     "name" "text" NOT NULL,
@@ -620,7 +685,7 @@ CREATE TABLE IF NOT EXISTS "public"."styles" (
 
 ALTER TABLE "public"."styles" OWNER TO "postgres";
 
-CREATE TABLE IF NOT EXISTS "public"."team_attendance" (
+CREATE TABLE "public"."team_attendance" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "user_id" "uuid" NOT NULL,
     "status" "text",
@@ -635,7 +700,7 @@ CREATE TABLE IF NOT EXISTS "public"."team_attendance" (
 
 ALTER TABLE "public"."team_attendance" OWNER TO "postgres";
 
-CREATE TABLE IF NOT EXISTS "public"."team_groups" (
+CREATE TABLE "public"."team_groups" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "team_id" "uuid" NOT NULL,
     "name" "text" NOT NULL,
@@ -647,7 +712,7 @@ CREATE TABLE IF NOT EXISTS "public"."team_groups" (
 
 ALTER TABLE "public"."team_groups" OWNER TO "postgres";
 
-CREATE TABLE IF NOT EXISTS "public"."user_sessions" (
+CREATE TABLE "public"."user_sessions" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "session_id" "text" NOT NULL,
     "user_id" "uuid",
@@ -664,7 +729,7 @@ CREATE TABLE IF NOT EXISTS "public"."user_sessions" (
 
 ALTER TABLE "public"."user_sessions" OWNER TO "postgres";
 
-CREATE TABLE IF NOT EXISTS "public"."users" (
+CREATE TABLE "public"."users" (
     "id" "uuid" NOT NULL,
     "name" "text" NOT NULL,
     "gender" integer DEFAULT 0 NOT NULL,
@@ -791,7 +856,7 @@ CREATE INDEX "idx_entries_competition_id" ON "public"."entries" USING "btree" ("
 CREATE INDEX "idx_entries_style_id" ON "public"."entries" USING "btree" ("style_id");
 
 -- idx_entries_team_idインデックスを追加（存在しない場合のみ）
-CREATE INDEX IF NOT EXISTS "idx_entries_team_id" ON "public"."entries" USING "btree" ("team_id");
+CREATE INDEX "idx_entries_team_id" ON "public"."entries" USING "btree" ("team_id");
 
 CREATE INDEX "idx_entries_user_id" ON "public"."entries" USING "btree" ("user_id");
 
@@ -956,19 +1021,8 @@ ALTER TABLE ONLY "public"."entries"
 ALTER TABLE ONLY "public"."entries"
     ADD CONSTRAINT "entries_style_id_fkey" FOREIGN KEY ("style_id") REFERENCES "public"."styles"("id") ON DELETE CASCADE;
 
--- entries_team_id_fkey制約を追加（存在しない場合のみ）
-DO $$ 
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.table_constraints 
-        WHERE constraint_schema = 'public' 
-        AND table_name = 'entries' 
-        AND constraint_name = 'entries_team_id_fkey'
-    ) THEN
-        ALTER TABLE ONLY "public"."entries"
-            ADD CONSTRAINT "entries_team_id_fkey" FOREIGN KEY ("team_id") REFERENCES "public"."teams"("id") ON DELETE CASCADE;
-    END IF;
-END $$;
+ALTER TABLE ONLY "public"."entries"
+    ADD CONSTRAINT "entries_team_id_fkey" FOREIGN KEY ("team_id") REFERENCES "public"."teams"("id") ON DELETE CASCADE;
 
 ALTER TABLE ONLY "public"."entries"
     ADD CONSTRAINT "entries_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE CASCADE;
@@ -1307,6 +1361,8 @@ ALTER TABLE "public"."records" ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE "public"."split_times" ENABLE ROW LEVEL SECURITY;
 
+ALTER TABLE "public"."styles" ENABLE ROW LEVEL SECURITY;
+
 ALTER TABLE "public"."team_attendance" ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE "public"."team_groups" ENABLE ROW LEVEL SECURITY;
@@ -1328,6 +1384,11 @@ CREATE POLICY "teams_insert_authenticated" ON "public"."teams" FOR INSERT WITH C
 CREATE POLICY "teams_select_members" ON "public"."teams" FOR SELECT USING (public.is_team_member("teams"."id", "auth"."uid"()));
 
 CREATE POLICY "teams_update_creator" ON "public"."teams" FOR UPDATE USING (("created_by" = "auth"."uid"())) WITH CHECK (("created_by" = "auth"."uid"()));
+
+-- team_membershipsとteamsのRLSを有効化（開発環境と同じ設定）
+ALTER TABLE "public"."team_memberships" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "public"."teams" ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE "public"."user_sessions" ENABLE ROW LEVEL SECURITY;
 
@@ -1471,38 +1532,50 @@ drop extension if exists "pg_net";
 
 CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
-  create policy "Profile images are publicly accessible"
-  on "storage"."objects"
-  as permissive
-  for select
-  to public
-using ((bucket_id = 'profile-images'::text));
+-- ============================================
+-- Storageポリシー（既存のポリシーを削除してから作成）
+-- ============================================
 
-  create policy "Users can delete their own profile images"
-  on "storage"."objects"
-  as permissive
-  for delete
-  to public
-using (((bucket_id = 'profile-images'::text) AND ((auth.uid())::text = (string_to_array(name, '/'::text))[2]) AND (auth.uid() IS NOT NULL)));
+-- 既存のstorageポリシーを削除
+DROP POLICY IF EXISTS "Profile images are publicly accessible" ON "storage"."objects";
+DROP POLICY IF EXISTS "Users can delete their own profile images" ON "storage"."objects";
+DROP POLICY IF EXISTS "Users can update their own profile images" ON "storage"."objects";
+DROP POLICY IF EXISTS "Users can upload their own profile images" ON "storage"."objects";
+DROP POLICY IF EXISTS "Users can view profile images" ON "storage"."objects";
 
-  create policy "Users can update their own profile images"
-  on "storage"."objects"
-  as permissive
-  for update
-  to public
-using (((bucket_id = 'profile-images'::text) AND ((auth.uid())::text = (string_to_array(name, '/'::text))[2]) AND (auth.uid() IS NOT NULL)));
+-- Storageポリシーを再作成
+CREATE POLICY "Profile images are publicly accessible"
+  ON "storage"."objects"
+  AS PERMISSIVE
+  FOR SELECT
+  TO public
+USING ((bucket_id = 'profile-images'::text));
 
-  create policy "Users can upload their own profile images"
-  on "storage"."objects"
-  as permissive
-  for insert
-  to public
-with check (((bucket_id = 'profile-images'::text) AND ((auth.uid())::text = (string_to_array(name, '/'::text))[2]) AND (auth.uid() IS NOT NULL)));
+CREATE POLICY "Users can delete their own profile images"
+  ON "storage"."objects"
+  AS PERMISSIVE
+  FOR DELETE
+  TO public
+USING (((bucket_id = 'profile-images'::text) AND ((auth.uid())::text = (string_to_array(name, '/'::text))[2]) AND (auth.uid() IS NOT NULL)));
 
-  create policy "Users can view profile images"
-  on "storage"."objects"
-  as permissive
-  for select
-  to public
-using ((bucket_id = 'profile-images'::text));
+CREATE POLICY "Users can update their own profile images"
+  ON "storage"."objects"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO public
+USING (((bucket_id = 'profile-images'::text) AND ((auth.uid())::text = (string_to_array(name, '/'::text))[2]) AND (auth.uid() IS NOT NULL)));
+
+CREATE POLICY "Users can upload their own profile images"
+  ON "storage"."objects"
+  AS PERMISSIVE
+  FOR INSERT
+  TO public
+WITH CHECK (((bucket_id = 'profile-images'::text) AND ((auth.uid())::text = (string_to_array(name, '/'::text))[2]) AND (auth.uid() IS NOT NULL)));
+
+CREATE POLICY "Users can view profile images"
+  ON "storage"."objects"
+  AS PERMISSIVE
+  FOR SELECT
+  TO public
+USING ((bucket_id = 'profile-images'::text));
 
