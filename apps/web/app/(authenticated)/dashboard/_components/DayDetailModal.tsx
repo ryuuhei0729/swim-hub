@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { XMarkIcon, PencilIcon, TrashIcon, ClipboardDocumentCheckIcon, ClockIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, PencilIcon, TrashIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline'
 import { BoltIcon, TrophyIcon } from '@heroicons/react/24/solid'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -1415,6 +1415,7 @@ function CompetitionDetails({
               onClick={onEdit}
               className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
               title="大会情報を編集"
+              data-testid="edit-competition-button"
             >
               <PencilIcon className="h-5 w-5" />
             </button>
@@ -1521,14 +1522,6 @@ function CompetitionDetails({
                       data-testid="edit-record-button"
                     >
                       <PencilIcon className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={openRecordEditor}
-                      className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
-                      title="スプリットタイムを入力"
-                      data-testid="split-time-button"
-                    >
-                      <ClockIcon className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => onDeleteRecord?.(record.id)}
@@ -1775,6 +1768,7 @@ function CompetitionWithEntry({
                 onClick={onEditCompetition}
                 className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
                 title="大会を編集"
+                data-testid="edit-competition-button"
               >
                 <PencilIcon className="h-5 w-5" />
               </button>
@@ -1814,6 +1808,7 @@ function CompetitionWithEntry({
                   onClick={handleEditEntryClick}
                   className="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors"
                   title="エントリーを編集"
+                  data-testid="edit-entry-button"
                 >
                   <PencilIcon className="h-4 w-4" />
                 </button>

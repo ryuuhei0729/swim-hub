@@ -20,7 +20,10 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:report": "playwright show-report",
-    "test:e2e:codegen": "playwright codegen localhost:3000"
+    "test:e2e:codegen": "playwright codegen localhost:3000",
+    "test:web": "npx playwright test",
+    "test:web:local": "E2E_SUPABASE_MODE=local npx playwright test",
+    "test:web:remote": "E2E_SUPABASE_MODE=remote npx playwright test"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

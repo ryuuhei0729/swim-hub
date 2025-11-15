@@ -26,6 +26,8 @@
     "test:coverage": "npm run test:coverage --workspaces --if-present",
     "test:e2e": "npm run test:e2e --workspace=apps/web",
     "test:web": "npm run test --workspace=apps/web",
+    "test:web:local": "npm run test:web:local --workspace=apps/web",
+    "test:web:remote": "npm run test:web:remote --workspace=apps/web",
     "test:mobile": "cd apps/mobile && flutter test",
     "type-check": "npm run type-check --workspaces --if-present",
     "clean": "npm run clean --workspaces --if-present && rm -rf node_modules",

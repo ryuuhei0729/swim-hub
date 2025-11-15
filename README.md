@@ -335,12 +335,41 @@ Cursor Project Rulesを活用し、以下の3つのモードで開発を進め�
 | `docs/requirement.md` | 要件定義書 |
 | `docs/API_SPECIFICATION.md` | GraphQL API仕様書 |
 | `docs/DEPLOYMENT.md` | デプロイ手順・環境構築 |
+| `docs/DEPLOYMENT_CHECKLIST.md` | デプロイ前チェックリスト |
 
 ---
 
 ## 🤝 開発環境のセットアップ
 
 詳細なセットアップ手順は `docs/DEPLOYMENT.md` を参照してください。
+
+---
+
+## 🚀 本番環境へのデプロイ
+
+### クイックスタート
+
+1. **Supabase本番環境の準備**
+   - Supabase Dashboardで本番プロジェクトを作成
+   - マイグレーションを適用
+   - RLSポリシーを確認
+
+2. **Vercelプロジェクトの作成**
+   - GitHubリポジトリをVercelに連携
+   - Root Directory: `apps/web` を設定
+
+3. **環境変数の設定**
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `NEXT_PUBLIC_APP_URL`
+   - `NEXT_PUBLIC_ENVIRONMENT=production`
+
+4. **デプロイの実行**
+   - `main`ブランチにpushすると自動デプロイ
+
+**詳細な手順**: `docs/DEPLOYMENT.md` を参照  
+**デプロイ前チェックリスト**: `docs/DEPLOYMENT_CHECKLIST.md` を参照
 
 ---
 

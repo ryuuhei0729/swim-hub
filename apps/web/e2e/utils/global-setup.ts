@@ -1,6 +1,4 @@
 import { chromium, type FullConfig } from '@playwright/test'
-import { spawn } from 'node:child_process'
-import path from 'node:path'
 
 /**
  * グローバルセットアップ
@@ -40,33 +38,7 @@ async function globalSetup(config: FullConfig) {
   } finally {
     await browser.close()
   }
-  
-  // テスト用ユーザーのセットアップ
-  await setupTestUsers()
-  
   console.log('✅ グローバルセットアップが完了しました')
-}
-
-async function setupTestUsers() {
-  const scriptPath = path.resolve(process.cwd(), 'e2e/scripts/reset-test-data.js')
-  console.log('♻️ テストデータをリセットします')
-
-  await new Promise<void>((resolve, reject) => {
-    const child = spawn('node', [scriptPath], {
-      stdio: 'inherit',
-      env: process.env
-    })
-
-    child.on('exit', (code) => {
-      if (code === 0) {
-        resolve()
-      } else {
-        reject(new Error(`reset-test-data.js exited with code ${code ?? 'unknown'}`))
-      }
-    })
-
-    child.on('error', reject)
-  })
 }
 
 export default globalSetup
