@@ -106,6 +106,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // サインアップ
   const signUp = useCallback(async (email: string, password: string, name?: string) => {
     try {
+      // 本番環境では環境変数、開発環境ではwindow.location.originを使用
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -114,7 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name: name || ''
           },
           // メール認証後のリダイレクト先を設定
-          emailRedirectTo: `${window.location.origin}/auth/callback?redirect_to=/dashboard`
+          emailRedirectTo: `${appUrl}/auth/callback?redirect_to=/dashboard`
         }
       })
       
@@ -148,8 +151,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // パスワードリセット
   const resetPassword = useCallback(async (email: string) => {
     try {
+      // 本番環境では環境変数、開発環境ではwindow.location.originを使用
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/callback?redirect_to=/update-password`
+        redirectTo: `${appUrl}/auth/callback?redirect_to=/update-password`
       })
       
       if (error) {
