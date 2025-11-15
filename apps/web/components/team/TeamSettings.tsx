@@ -12,7 +12,9 @@ import {
   ArrowRightOnRectangleIcon,
   PencilIcon,
   PlusIcon,
-  UserPlusIcon
+  UserPlusIcon,
+  ClipboardDocumentIcon,
+  CheckIcon
 } from '@heroicons/react/24/outline'
 
 export interface TeamSettingsProps {
@@ -33,6 +35,8 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false)
   const [teamsCount, setTeamsCount] = useState<number>(0)
+  const [inviteCode, setInviteCode] = useState<string>('')
+  const [isCopied, setIsCopied] = useState(false)
   
   const router = useRouter()
   const { supabase } = useAuth()
@@ -57,6 +61,40 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
     }
     loadTeamsCount()
   }, [coreAPI])
+
+  // 招待コードを取得
+  useEffect(() => {
+    const loadInviteCode = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('teams')
+          .select('invite_code')
+          .eq('id', teamId)
+          .single<{ invite_code: string }>()
+
+        if (error) throw error
+        setInviteCode(data?.invite_code || '')
+      } catch (err) {
+        console.error('招待コードの取得に失敗:', err)
+        setInviteCode('')
+      }
+    }
+    loadInviteCode()
+  }, [teamId, supabase])
+
+  // 招待コードをコピー
+  const handleCopyInviteCode = async () => {
+    if (!inviteCode) return
+    
+    try {
+      await navigator.clipboard.writeText(inviteCode)
+      setIsCopied(true)
+      setTimeout(() => setIsCopied(false), 2000)
+    } catch (err) {
+      console.error('コピーに失敗:', err)
+      setError('コピーに失敗しました')
+    }
+  }
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -417,25 +455,110 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
         </div>
       </div>
 
-      {/* チーム作成・参加ボタン（チームが1つ以上ある場合） */}
+      {/* チーム管理・招待コード（チームが1つ以上ある場合） */}
       {teamsCount > 0 && (
         <div className="mt-8 pt-6 border-t border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">チーム管理</h3>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-            >
-              <PlusIcon className="h-5 w-5 mr-2" />
-              新しいチームを作成
-            </button>
-            <button
-              onClick={() => setIsJoinModalOpen(true)}
-              className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-            >
-              <UserPlusIcon className="h-5 w-5 mr-2" />
-              チームに参加
-            </button>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* チーム作成・参加ボタン */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">チーム管理</h3>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                >
+                  <PlusIcon className="h-5 w-5 mr-2" />
+                  新しいチームを作成
+                </button>
+                <button
+                  onClick={() => setIsJoinModalOpen(true)}
+                  className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                >
+                  <UserPlusIcon className="h-5 w-5 mr-2" />
+                  チームに参加
+                </button>
+              </div>
+            </div>
+
+            {/* 招待コード */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">招待コード</h3>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex flex-col space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    チームに参加するための招待コード
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      value={inviteCode}
+                      readOnly
+                      className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-lg font-mono font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <button
+                      onClick={handleCopyInviteCode}
+                      className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                    >
+                      {isCopied ? (
+                        <>
+                          <CheckIcon className="h-5 w-5 mr-2 text-green-600" />
+                          コピー済み
+                        </>
+                      ) : (
+                        <>
+                          <ClipboardDocumentIcon className="h-5 w-5 mr-2" />
+                          コピー
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    このコードを友達に共有すると、友達がこのチームに参加できます
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 招待コード（チームが0個の場合） */}
+      {teamsCount === 0 && (
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">招待コード</h3>
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="flex flex-col space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                チームに参加するための招待コード
+              </label>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="text"
+                  value={inviteCode}
+                  readOnly
+                  className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-lg font-mono font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <button
+                  onClick={handleCopyInviteCode}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                >
+                  {isCopied ? (
+                    <>
+                      <CheckIcon className="h-5 w-5 mr-2 text-green-600" />
+                      コピー済み
+                    </>
+                  ) : (
+                    <>
+                      <ClipboardDocumentIcon className="h-5 w-5 mr-2" />
+                      コピー
+                    </>
+                  )}
+                </button>
+              </div>
+              <p className="text-sm text-gray-500">
+                このコードを友達に共有すると、友達がこのチームに参加できます
+              </p>
+            </div>
           </div>
         </div>
       )}

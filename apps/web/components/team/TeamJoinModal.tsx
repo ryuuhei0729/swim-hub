@@ -58,7 +58,7 @@ export default function TeamJoinModal({ isOpen, onClose, onSuccess }: TeamJoinMo
         .select('id, is_active')
         .eq('team_id', teamData.id)
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
 
       if (membershipError && membershipError.code !== 'PGRST116') {
         throw membershipError
@@ -83,12 +83,10 @@ export default function TeamJoinModal({ isOpen, onClose, onSuccess }: TeamJoinMo
         }
       } else {
         // 新しいメンバーシップを作成
-        const insertData: TeamMembershipInsert = {
+        const insertData: Omit<TeamMembershipInsert, 'member_type' | 'group_name'> = {
           team_id: teamData.id,
           user_id: user.id,
           role: 'user',
-          member_type: null,
-          group_name: null,
           is_active: true,
           joined_at: format(new Date(), 'yyyy-MM-dd'), // 今日の日付
           left_at: null

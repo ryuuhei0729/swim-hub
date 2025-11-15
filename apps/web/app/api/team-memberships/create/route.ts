@@ -30,14 +30,13 @@ export async function POST(req: NextRequest) {
     }
 
     // (3) 型安全な挿入ペイロードの構築
-    const insertPayload: TeamMembershipInsert = {
+    // member_type と group_name はデータベースに存在しないため除外
+    const insertPayload: Omit<TeamMembershipInsert, 'member_type' | 'group_name'> = {
       team_id: body.team_id,
       user_id: user.id,
       role: body.role || 'user',
       is_active: true,
-      joined_at: new Date().toISOString(),
-      member_type: null,
-      group_name: null,
+      joined_at: new Date().toISOString().split('T')[0], // YYYY-MM-DD形式
       left_at: null
     }
 

@@ -69,9 +69,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   
   // ユーザーのチーム一覧を取得してチーム数をチェック
   useEffect(() => {
+    if (!user || !supabase) return
+    
     const loadTeams = async () => {
-      if (!user) return
-      
       try {
         const { data, error } = await supabase
           .from('team_memberships')
@@ -89,11 +89,34 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         }
       } catch (error) {
         console.error('チーム情報の取得に失敗:', error)
+        setSingleTeamId(null)
       }
     }
     
     loadTeams()
-  }, [user])
+
+    // リアルタイム購読: チームメンバーシップの変更を監視
+    const channel = supabase
+      .channel('sidebar-team-memberships')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'team_memberships',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          // チームメンバーシップが変更されたら再取得
+          loadTeams()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user, supabase])
 
   return (
     <>
@@ -133,12 +156,24 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <nav className="mt-6 px-3 pb-6">
           <div className="space-y-2">
             {baseNavigation.map((item) => {
-              const isActive = pathname === item.href
               // チーム管理の場合は、チームが1つだけの場合は直接チームページへ
               const href = (item.name === 'チーム管理' && singleTeamId) 
                 ? `/teams/${singleTeamId}` 
                 : item.href
-              const isActiveTeam = (item.name === 'チーム管理' && singleTeamId && pathname.startsWith('/teams/'))
+              
+              // アクティブ判定
+              let isActive = pathname === item.href
+              
+              // チーム管理の場合は特別処理
+              if (item.name === 'チーム管理') {
+                if (singleTeamId) {
+                  // チームが1つの場合: チーム詳細ページ（/teams/[teamId]）にいる時はアクティブ
+                  isActive = pathname.startsWith(`/teams/${singleTeamId}`)
+                } else {
+                  // チームが0個または2つ以上の場合: /teamsページにいる時はアクティブ
+                  isActive = pathname === '/teams'
+                }
+              }
               
               return (
                 <div key={item.name} className="group">
@@ -146,7 +181,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     href={href}
                     className={`
                       group flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 relative
-                      ${isActive || isActiveTeam
+                      ${isActive
                         ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 shadow-sm border-l-4 border-blue-500'
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50 hover:shadow-sm'
                       }
