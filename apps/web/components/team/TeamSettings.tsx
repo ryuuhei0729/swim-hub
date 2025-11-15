@@ -1,13 +1,18 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthProvider'
 import { TeamCoreAPI } from '@apps/shared/api/teams/core'
 import { TeamMembersAPI } from '@apps/shared/api/teams/members'
+import TeamCreateModal from '@/components/team/TeamCreateModal'
+import TeamJoinModal from '@/components/team/TeamJoinModal'
 import { 
   ExclamationTriangleIcon,
   ArrowRightOnRectangleIcon,
-  PencilIcon
+  PencilIcon,
+  PlusIcon,
+  UserPlusIcon
 } from '@heroicons/react/24/outline'
 
 export interface TeamSettingsProps {
@@ -25,7 +30,11 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
   const [error, setError] = useState<string | null>(null)
   const [showLeaveModal, setShowLeaveModal] = useState(false)
   const [showLastMemberWarning, setShowLastMemberWarning] = useState(false)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false)
+  const [teamsCount, setTeamsCount] = useState<number>(0)
   
+  const router = useRouter()
   const { supabase } = useAuth()
   const coreAPI = useMemo(() => new TeamCoreAPI(supabase), [supabase])
   const membersAPI = useMemo(() => new TeamMembersAPI(supabase), [supabase])
@@ -34,6 +43,20 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
     setName(teamName)
     setDescription(teamDescription || '')
   }, [teamName, teamDescription])
+
+  // チーム一覧を取得してカウントを更新
+  useEffect(() => {
+    const loadTeamsCount = async () => {
+      try {
+        const teams = await coreAPI.getMyTeams()
+        setTeamsCount(teams.length)
+      } catch (err) {
+        console.error('チーム一覧の取得に失敗しました:', err)
+        setTeamsCount(0)
+      }
+    }
+    loadTeamsCount()
+  }, [coreAPI])
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -260,6 +283,49 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
             </div>
           </div>
         )}
+
+        {/* チーム作成・参加ボタン（チームが1つ以上ある場合） */}
+        {teamsCount > 0 && (
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">チーム管理</h3>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+              >
+                <PlusIcon className="h-5 w-5 mr-2" />
+                新しいチームを作成
+              </button>
+              <button
+                onClick={() => setIsJoinModalOpen(true)}
+                className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+              >
+                <UserPlusIcon className="h-5 w-5 mr-2" />
+                チームに参加
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* チーム作成モーダル */}
+        <TeamCreateModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onSuccess={(_newTeamId) => {
+            router.refresh()
+            setIsCreateModalOpen(false)
+          }}
+        />
+
+        {/* チーム参加モーダル */}
+        <TeamJoinModal
+          isOpen={isJoinModalOpen}
+          onClose={() => setIsJoinModalOpen(false)}
+          onSuccess={(_joinedTeamId) => {
+            router.refresh()
+            setIsJoinModalOpen(false)
+          }}
+        />
       </div>
     )
   }
@@ -350,6 +416,29 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
           )}
         </div>
       </div>
+
+      {/* チーム作成・参加ボタン（チームが1つ以上ある場合） */}
+      {teamsCount > 0 && (
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">チーム管理</h3>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+            >
+              <PlusIcon className="h-5 w-5 mr-2" />
+              新しいチームを作成
+            </button>
+            <button
+              onClick={() => setIsJoinModalOpen(true)}
+              className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+            >
+              <UserPlusIcon className="h-5 w-5 mr-2" />
+              チームに参加
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* チーム退出 */}
       <div className="mt-8 pt-6 border-t border-gray-200">
@@ -522,6 +611,26 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
           </div>
         </div>
       )}
+
+      {/* チーム作成モーダル */}
+      <TeamCreateModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={(_newTeamId) => {
+          router.refresh()
+          setIsCreateModalOpen(false)
+        }}
+      />
+
+      {/* チーム参加モーダル */}
+      <TeamJoinModal
+        isOpen={isJoinModalOpen}
+        onClose={() => setIsJoinModalOpen(false)}
+        onSuccess={(_joinedTeamId) => {
+          router.refresh()
+          setIsJoinModalOpen(false)
+        }}
+      />
     </div>
   )
 }
