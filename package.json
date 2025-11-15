@@ -1,37 +1,52 @@
 {
-  "name": "swimmer-management-system",
+  "name": "swim-hub",
   "version": "1.0.0",
   "private": true,
   "description": "水泳選手マネジメントシステム - モノレポ",
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "apps/*"
   ],
   "scripts": {
     "dev": "npm run dev --workspace=apps/web",
     "dev:web": "npm run dev --workspace=apps/web",
+    "dev:mobile": "cd apps/mobile && flutter run",
     "build": "npm run build --workspace=apps/web",
     "build:web": "npm run build --workspace=apps/web",
+    "build:mobile:android": "cd apps/mobile && flutter build apk",
+    "build:mobile:ios": "cd apps/mobile && flutter build ios",
+    "build:mobile:web": "cd apps/mobile && flutter build web --base-href $FLUTTER_BASE_HREF",
     "start": "npm run start --workspace=apps/web",
     "start:web": "npm run start --workspace=apps/web",
     "lint": "npm run lint --workspaces --if-present",
     "lint:web": "npm run lint --workspace=apps/web",
+    "lint:mobile": "cd apps/mobile && flutter analyze",
+    "test": "npm run test --workspaces --if-present",
+    "test:unit": "npm run test --workspace=apps/web && npm run test --workspace=apps/shared",
+    "test:watch": "npm run test:watch --workspace=apps/web",
+    "test:coverage": "npm run test:coverage --workspaces --if-present",
+    "test:e2e": "npm run test:e2e --workspace=apps/web",
+    "test:web": "npm run test --workspace=apps/web",
+    "test:web:local": "npm run test:web:local --workspace=apps/web",
+    "test:web:remote": "npm run test:web:remote --workspace=apps/web",
+    "test:mobile": "cd apps/mobile && flutter test",
     "type-check": "npm run type-check --workspaces --if-present",
     "clean": "npm run clean --workspaces --if-present && rm -rf node_modules",
+    "clean:mobile": "cd apps/mobile && flutter clean",
     "install:all": "npm install",
+    "install:mobile": "cd apps/mobile && flutter pub get",
     "docker:dev": "npm run docker:dev --workspace=apps/web",
     "docker:build": "npm run docker:build --workspace=apps/web",
     "docker:down": "npm run docker:down --workspace=apps/web",
-    "supabase:start": "npx supabase start --workdir apps/supabase",
-    "supabase:stop": "npx supabase stop --workdir apps/supabase",
-    "supabase:reset": "npx supabase db reset --workdir apps/supabase",
-    "supabase:generate-types": "npx supabase gen types typescript --workdir apps/supabase --local > packages/types/src/database.ts",
-    "graphql:codegen": "npm run codegen --workspace=packages/graphql-schema"
+    "supabase:start": "npx supabase start --workdir supabase",
+    "supabase:stop": "npx supabase stop --workdir supabase",
+    "supabase:reset": "npx supabase db reset --workdir supabase",
+    "supabase:status": "npx supabase status --workdir supabase"
   },
   "devDependencies": {
-    "@types/node": "^20",
-    "typescript": "^5",
-    "turbo": "^2.5.0"
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^24",
+    "turbo": "^2.6.0",
+    "typescript": "^5"
   },
   "engines": {
     "node": "20.x",
@@ -39,15 +54,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/swimmer-management-system.git"
+    "url": "https://github.com/your-username/swim-hub.git"
   },
   "keywords": [
     "swimming",
     "management",
     "nextjs",
+    "flutter",
     "supabase",
     "monorepo"
   ],
   "author": "開発チーム",
-  "license": "MIT"
+  "license": "MIT",
+  "packageManager": "pnpm@10.20.0+sha512.cf9998222162dd85864d0a8102e7892e7ba4ceadebbf5a31f9c2fce48dfce317a9c53b9f6464d1ef9042cba2e02ae02a9f7c143a2b438cd93c91840f0192b9dd"
 }

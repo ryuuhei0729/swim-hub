@@ -1,0 +1,75 @@
+// =============================================================================
+// チーム詳細ページ用Zustandストア
+// =============================================================================
+
+import type { TeamTabType } from '@/components/team/TeamTabs'
+import type { MemberDetail } from '@/components/team/MemberDetailModal'
+import type { TeamMembership, TeamWithMembers } from '@apps/shared/types/database'
+import { create } from 'zustand'
+
+interface TeamDetailState {
+  // チーム情報
+  team: TeamWithMembers | null
+  membership: TeamMembership | null
+  loading: boolean
+  
+  // タブ
+  activeTab: TeamTabType
+  
+  // モーダル
+  selectedMember: MemberDetail | null
+  isMemberModalOpen: boolean
+}
+
+interface TeamDetailActions {
+  // チーム情報操作
+  setTeam: (team: TeamWithMembers | null) => void
+  setMembership: (membership: TeamMembership | null) => void
+  setLoading: (loading: boolean) => void
+  
+  // タブ操作
+  setActiveTab: (tab: TeamTabType) => void
+  
+  // モーダル操作
+  setSelectedMember: (member: MemberDetail | null) => void
+  setIsMemberModalOpen: (open: boolean) => void
+  openMemberModal: (member: MemberDetail) => void
+  closeMemberModal: () => void
+  
+  reset: () => void
+}
+
+const initialState: TeamDetailState = {
+  team: null,
+  membership: null,
+  loading: true,
+  activeTab: 'announcements',
+  selectedMember: null,
+  isMemberModalOpen: false,
+}
+
+export const useTeamDetailStore = create<TeamDetailState & TeamDetailActions>()((set) => ({
+  ...initialState,
+  
+  // チーム情報操作
+  setTeam: (team) => set({ team }),
+  setMembership: (membership) => set({ membership }),
+  setLoading: (loading) => set({ loading }),
+  
+  // タブ操作
+  setActiveTab: (tab: TeamTabType) => set({ activeTab: tab }),
+  
+  // モーダル操作
+  setSelectedMember: (member) => set({ selectedMember: member }),
+  setIsMemberModalOpen: (open) => set({ isMemberModalOpen: open }),
+  openMemberModal: (member) => set({ 
+    selectedMember: member, 
+    isMemberModalOpen: true 
+  }),
+  closeMemberModal: () => set({ 
+    isMemberModalOpen: false, 
+    selectedMember: null 
+  }),
+  
+  reset: () => set(initialState),
+}))

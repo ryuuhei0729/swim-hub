@@ -1,0 +1,114 @@
+{
+  "users": {
+    "testUser": {
+      "email": "test@example.com",
+      "password": "testpassword123",
+      "name": "テストユーザー"
+    },
+    "adminUser": {
+      "email": "admin@example.com",
+      "password": "adminpassword123",
+      "name": "管理者ユーザー"
+    }
+  },
+  "practices": {
+    "freestyle": {
+      "date": "2024-09-16",
+      "place": "メインプール",
+      "style": "fr",
+      "distance": "50",
+      "setCount": "4",
+      "repCount": "8",
+      "note": "フリースタイル練習"
+    },
+    "butterfly": {
+      "date": "2024-09-17",
+      "place": "サブプール",
+      "style": "fly",
+      "distance": "25",
+      "setCount": "6",
+      "repCount": "4",
+      "note": "バタフライ強化練習"
+    },
+    "medley": {
+      "date": "2024-09-18",
+      "place": "メインプール",
+      "style": "im",
+      "distance": "100",
+      "setCount": "3",
+      "repCount": "5",
+      "note": "個人メドレー練習"
+    }
+  },
+  "times": {
+    "freestyle50": [
+      "0:25.10",
+      "0:25.20",
+      "0:25.05",
+      "0:25.15"
+    ],
+    "butterfly25": [
+      "0:12.50",
+      "0:12.45",
+      "0:12.60",
+      "0:12.40"
+    ]
+  },
+  "competitions": {
+    "springMeet": {
+      "title": "春季大会",
+      "date": "2024-04-15",
+      "place": "国際プール",
+      "poolType": "50m"
+    },
+    "summerMeet": {
+      "title": "夏季大会",
+      "date": "2024-08-20",
+      "place": "屋外プール",
+      "poolType": "50m"
+    }
+  },
+  "records": {
+    "freestyle50PB": {
+      "style": "fr",
+      "distance": "50",
+      "time": "0:24.85",
+      "date": "2024-08-20",
+      "competition": "summerMeet"
+    },
+    "butterfly25PB": {
+      "style": "fly",
+      "distance": "25",
+      "time": "0:12.30",
+      "date": "2024-04-15",
+      "competition": "springMeet"
+    }
+  },
+  "styles": [
+    {
+      "id": "fr",
+      "name": "フリースタイル",
+      "nameJp": "自由形"
+    },
+    {
+      "id": "br",
+      "name": "ブレストストローク",
+      "nameJp": "平泳ぎ"
+    },
+    {
+      "id": "ba",
+      "name": "バックストローク",
+      "nameJp": "背泳ぎ"
+    },
+    {
+      "id": "fly",
+      "name": "バタフライ",
+      "nameJp": "バタフライ"
+    },
+    {
+      "id": "im",
+      "name": "インディビジュアルメドレー",
+      "nameJp": "個人メドレー"
+    }
+  ]
+}

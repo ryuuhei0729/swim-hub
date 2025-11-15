@@ -1,0 +1,118 @@
+/**
+ * 画像処理ユーティリティ関数
+ */
+
+/**
+ * ファイルを画像として読み込む
+ */
+export const createImage = (url: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const image = new Image()
+    image.addEventListener('load', () => resolve(image))
+    image.addEventListener('error', (error) => reject(error))
+    image.setAttribute('crossOrigin', 'anonymous')
+    image.src = url
+  })
+}
+
+/**
+ * トリミングした画像をCanvasで生成
+ */
+export const getCroppedImg = (
+  image: HTMLImageElement,
+  crop: { x: number; y: number; width: number; height: number },
+  fileName: string
+): Promise<File> => {
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')
+
+  if (!ctx) {
+    throw new Error('Canvas context not available')
+  }
+
+  // 出力サイズ（小さめの正方形）- プロフィール画像用
+  const outputSize = 200
+  canvas.width = outputSize
+  canvas.height = outputSize
+
+  // 画像のスムージングを無効化（シャープな画像のため）
+  ctx.imageSmoothingEnabled = false
+
+  // トリミング範囲をCanvasに描画
+  ctx.drawImage(
+    image,
+    crop.x,
+    crop.y,
+    crop.width,
+    crop.height,
+    0,
+    0,
+    outputSize,
+    outputSize
+  )
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error('Canvas is empty'))
+          return
+        }
+        
+        // Fileオブジェクトに変換
+        const file = new File([blob], fileName, {
+          type: 'image/jpeg',
+          lastModified: Date.now(),
+        })
+        resolve(file)
+      },
+      'image/jpeg',
+      0.7 // 品質70%（より強力な圧縮）
+    )
+  })
+}
+
+/**
+ * 画像ファイルのサイズをチェック
+ */
+export const validateImageFile = (file: File): { valid: boolean; error?: string } => {
+  // ファイルサイズチェック（5MB以下）
+  const maxSize = 5 * 1024 * 1024 // 5MB
+  if (file.size > maxSize) {
+    return { valid: false, error: 'ファイルサイズは5MB以下にしてください' }
+  }
+
+  // ファイル形式チェック（JPEG・PNGのみ）
+  const allowedTypes = ['image/jpeg', 'image/png']
+  if (!allowedTypes.includes(file.type)) {
+    return { valid: false, error: 'JPEG、PNG形式の画像ファイルを選択してください' }
+  }
+
+  return { valid: true }
+}
+
+/**
+ * 画像のアスペクト比を計算
+ */
+export const getAspectRatio = (width: number, height: number): number => {
+  return width / height
+}
+
+/**
+ * 画像の最大サイズを計算（表示用）
+ */
+export const getMaxImageSize = (imageWidth: number, imageHeight: number, maxSize: number = 800): { width: number; height: number } => {
+  const aspectRatio = getAspectRatio(imageWidth, imageHeight)
+  
+  if (imageWidth > imageHeight) {
+    return {
+      width: maxSize,
+      height: maxSize / aspectRatio
+    }
+  } else {
+    return {
+      width: maxSize * aspectRatio,
+      height: maxSize
+    }
+  }
+}

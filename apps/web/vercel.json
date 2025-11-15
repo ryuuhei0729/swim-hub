@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "cd ../.. && npm run graphql:codegen && cd apps/web && npm run build",
+  "buildCommand": "cd ../.. && cd apps/web && npm run build",
   "installCommand": "cd ../.. && npm install --frozen-lockfile",
   "framework": "nextjs",
   "ignoreCommand": "git diff --quiet HEAD^ HEAD ./",

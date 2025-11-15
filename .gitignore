@@ -5,6 +5,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # Production builds
+.next/
 /apps/web/.next/
 /apps/web/out/
 /packages/*/dist/
@@ -12,11 +13,15 @@ yarn-error.log*
 
 # Generated files
 /packages/graphql-schema/generated/
+*.tsbuildinfo
 
 # Environment variables
 .env
 .env.*
 .env.*.local
+
+# MCP Configuration (contains sensitive tokens)
+.mcp.json
 
 # IDE
 .vscode/
@@ -45,6 +50,11 @@ pids
 
 # Coverage directory used by tools like istanbul
 coverage/
+.nyc_output/
+
+# Vitest
+**/coverage/
+**/.vitest/
 
 
 # Temporary folders
@@ -53,4 +63,17 @@ temp/
 
 # Supabase
 /apps/supabase/.branches
-/apps/supabase/.temp
+/apps/supabase/.temp.next/
+/supabase/.branches
+/supabase/.temp
+
+# Next.js auto-generated files
+next-env.d.ts
+apps/web/next-env.d.ts
+
+# Playwright E2E Testing
+/apps/web/test-results/
+/apps/web/e2e/playwright-report/
+/apps/web/blob-report/
+/apps/web/playwright/.cache/
+.playwright-mcp/
