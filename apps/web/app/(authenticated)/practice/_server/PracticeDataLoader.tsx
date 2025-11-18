@@ -38,9 +38,13 @@ export default async function PracticeDataLoader() {
 
   // すべてのデータ取得を並行実行（真の並列取得）
   const [stylesResult, tagsResult, practicesResult] = await Promise.all([
-    // Styles取得（キャッシュ付き、認証不要）
-    getCachedStyles('practice-styles').catch((error) => {
-      console.error('Styles取得エラー:', error)
+    // Styles取得（キャッシュ付き、認証なしクライアントを使用 - 全ユーザー共通）
+    getCachedStyles('practice-styles', 3600).catch((error) => {
+      console.error('[PracticeDataLoader] Styles取得エラー:', {
+        error,
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      })
       return [] as Style[]
     }),
     // Tags取得（ユーザー固有、認証必要）
