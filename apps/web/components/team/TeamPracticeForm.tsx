@@ -156,7 +156,7 @@ export default function TeamPracticeForm({
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-title"
-          className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full"
+          className="relative inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full"
           data-testid="team-practice-dialog"
         >
           {/* ヘッダー */}

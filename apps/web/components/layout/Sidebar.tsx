@@ -182,7 +182,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     className={`
                       group flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 relative
                       ${isActive
-                        ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 shadow-sm border-l-4 border-blue-500'
+                        ? 'bg-linear-to-r from-blue-50 to-indigo-50 text-blue-700 shadow-sm border-l-4 border-blue-500'
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50 hover:shadow-sm'
                       }
                     `}
@@ -190,7 +190,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   >
                     <item.icon
                       className={`
-                        mr-3 h-5 w-5 flex-shrink-0 transition-colors duration-200
+                        mr-3 h-5 w-5 shrink-0 transition-colors duration-200
                         ${isActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'}
                       `}
                       aria-hidden="true"

@@ -7,10 +7,11 @@ import {
   ClockIcon, 
   TrophyIcon, 
   CogIcon,
-  ClipboardDocumentCheckIcon
+  ClipboardDocumentCheckIcon,
+  DocumentArrowUpIcon
 } from '@heroicons/react/24/outline'
 
-export type TeamTabType = 'announcements' | 'members' | 'practices' | 'competitions' | 'attendance' | 'settings'
+export type TeamTabType = 'announcements' | 'members' | 'practices' | 'competitions' | 'attendance' | 'bulk-register' | 'settings'
 
 export interface TeamTab {
   id: TeamTabType
@@ -51,6 +52,11 @@ const tabs: TeamTab[] = [
     icon: ClipboardDocumentCheckIcon
   },
   {
+    id: 'bulk-register',
+    name: '一括登録',
+    icon: DocumentArrowUpIcon
+  },
+  {
     id: 'settings',
     name: '設定',
     icon: CogIcon
@@ -58,8 +64,10 @@ const tabs: TeamTab[] = [
 ]
 
 export default function TeamTabs({ activeTab, onTabChange, isAdmin = false }: TeamTabsProps) {
-  // 管理者以外は設定タブを非表示
-  const visibleTabs = isAdmin ? tabs : tabs.filter(tab => tab.id !== 'settings')
+  // 管理者以外は設定タブと一括登録タブを非表示
+  const visibleTabs = isAdmin 
+    ? tabs 
+    : tabs.filter(tab => tab.id !== 'settings' && tab.id !== 'bulk-register')
 
   return (
     <div className="bg-white rounded-lg shadow">
