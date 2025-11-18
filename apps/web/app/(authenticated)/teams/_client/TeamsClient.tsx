@@ -126,7 +126,7 @@ export default function TeamsClient({
       <TeamCreateModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={(teamId) => {
+        onSuccess={(_teamId) => {
           // ページをリフレッシュしてチーム一覧を更新
           router.refresh()
           setIsCreateModalOpen(false)
@@ -137,7 +137,7 @@ export default function TeamsClient({
       <TeamJoinModal
         isOpen={isJoinModalOpen}
         onClose={() => setIsJoinModalOpen(false)}
-        onSuccess={(teamId) => {
+        onSuccess={(_teamId) => {
           // ページをリフレッシュしてチーム一覧を更新
           router.refresh()
           setIsJoinModalOpen(false)
