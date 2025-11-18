@@ -11,7 +11,8 @@ import {
   TeamPractices,
   TeamCompetitions,
   TeamSettings,
-  TeamAttendanceList
+  TeamAttendanceList,
+  TeamBulkRegister
 } from '@/components/team'
 import MemberDetailModal from '@/components/team/MemberDetailModal'
 import type { MemberDetail } from '@/components/team/MemberDetailModal'
@@ -272,7 +273,7 @@ export default function TeamDetailClient({
   // URLパラメータからタブを取得
   useEffect(() => {
     const tabParam = searchParams.get('tab') || initialTab
-    if (tabParam && ['announcements', 'members', 'practices', 'competitions', 'attendance', 'settings'].includes(tabParam)) {
+    if (tabParam && ['announcements', 'members', 'practices', 'competitions', 'attendance', 'bulk-register', 'settings'].includes(tabParam)) {
       setActiveTab(tabParam as TeamTabType)
     }
   }, [searchParams, initialTab, setActiveTab])
@@ -349,6 +350,8 @@ export default function TeamDetailClient({
         return <TeamCompetitions teamId={teamId} isAdmin={isAdmin} />
       case 'attendance':
         return <AttendanceTab teamId={teamId} isAdmin={isAdmin} />
+      case 'bulk-register':
+        return <TeamBulkRegister teamId={teamId} isAdmin={isAdmin} />
       case 'settings':
         return (
           <TeamSettings 
