@@ -281,7 +281,7 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
               <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
                 <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                   <div className="flex items-start">
-                    <ExclamationTriangleIcon className="h-6 w-6 text-orange-600 flex-shrink-0 mt-0.5" />
+                    <ExclamationTriangleIcon className="h-6 w-6 text-orange-600 shrink-0 mt-0.5" />
                     <div className="ml-3">
                       <h3 className="text-lg font-medium text-gray-900">
                         チーム閉鎖の警告
@@ -694,7 +694,7 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="flex items-start">
-                  <ExclamationTriangleIcon className="h-6 w-6 text-orange-600 flex-shrink-0 mt-0.5" />
+                  <ExclamationTriangleIcon className="h-6 w-6 text-orange-600 shrink-0 mt-0.5" />
                   <div className="ml-3">
                     <h3 className="text-lg font-medium text-gray-900">
                       チーム閉鎖の警告
