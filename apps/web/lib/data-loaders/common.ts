@@ -3,16 +3,21 @@
 // 各ページで共通して使用するデータ取得パターンを抽象化
 // =============================================================================
 
-import { unstable_cache } from 'next/cache'
-import { createClient } from '@supabase/supabase-js'
+import type { Database } from '@/lib/supabase'
 import { createAuthenticatedServerClient } from '@/lib/supabase-server-auth'
 import { StyleAPI } from '@apps/shared/api/styles'
-import type { Style, PracticeTag } from '@apps/shared/types/database'
-import type { Database } from '@/lib/supabase'
+import type { PracticeTag, Style } from '@apps/shared/types/database'
+import { createClient } from '@supabase/supabase-js'
+import { unstable_cache } from 'next/cache'
 
 /**
  * Stylesデータをキャッシュ付きで取得
  * Stylesは全ユーザー共通の静的データなので、長時間キャッシュ可能
+ * 
+ * Next.jsのキャッシュ戦略に従い、認証なしクライアントを使用：
+ * - 全ユーザー間でキャッシュを共有できる（パフォーマンス向上）
+ * - RLSポリシー「Everyone can view styles」により認証なしでも取得可能
+ * - 認証情報を含まないリクエストは`unstable_cache`に適している
  * 
  * @param cacheKey - キャッシュキー（ページ固有のキーを指定）
  * @param revalidate - キャッシュの再検証時間（秒）、デフォルト: 3600（1時間）
@@ -23,12 +28,25 @@ export async function getCachedStyles(
 ): Promise<Style[]> {
   return unstable_cache(
     async () => {
+      // 認証なしクライアントを使用（全ユーザー共通のキャッシュを実現）
+      // RLSポリシー「Everyone can view styles」により取得可能
       const supabase = createClient<Database>(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       )
       const styleAPI = new StyleAPI(supabase)
-      return await styleAPI.getStyles()
+      try {
+        const styles = await styleAPI.getStyles()
+        // データが空の場合は警告を出力
+        if (!styles || styles.length === 0) {
+          console.warn(`[getCachedStyles] 種目データが空です。キャッシュキー: ${cacheKey}`)
+        }
+        return styles
+      } catch (error) {
+        console.error(`[getCachedStyles] 種目取得エラー (キャッシュキー: ${cacheKey}):`, error)
+        // エラーを再スローして、呼び出し元で適切に処理できるようにする
+        throw error
+      }
     },
     [cacheKey],
     {

@@ -21,18 +21,32 @@ interface MetadataLoaderProps {
 /**
  * Stylesデータをキャッシュ付きで取得
  * Stylesは全ユーザー共通の静的データなので、長時間キャッシュ可能
- * 認証不要のため、認証なしのクライアントを使用
+ * 
+ * Next.jsのキャッシュ戦略に従い、認証なしクライアントを使用：
+ * - 全ユーザー間でキャッシュを共有できる（パフォーマンス向上）
+ * - RLSポリシー「Everyone can view styles」により認証なしでも取得可能
  */
 async function getCachedStyles() {
   return unstable_cache(
     async () => {
-      // Stylesは認証不要なので、認証なしのクライアントを使用
+      // 認証なしクライアントを使用（全ユーザー共通のキャッシュを実現）
+      // RLSポリシー「Everyone can view styles」により取得可能
       const supabase = createClient<Database>(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       )
       const styleAPI = new StyleAPI(supabase)
-      return await styleAPI.getStyles()
+      try {
+        const styles = await styleAPI.getStyles()
+        // データが空の場合は警告を出力
+        if (!styles || styles.length === 0) {
+          console.warn('[MetadataLoader] 種目データが空です')
+        }
+        return styles
+      } catch (error) {
+        console.error('[MetadataLoader] 種目取得エラー:', error)
+        throw error
+      }
     },
     ['dashboard-styles'], // キャッシュキー
     {
@@ -79,13 +93,20 @@ export default async function MetadataLoader({
     // 並行取得でパフォーマンス最適化
     // Stylesはキャッシュ付き、Tagsは通常取得（ユーザー固有のため）
     const [stylesResult, tagsResult] = await Promise.all([
-      getCachedStyles(),
+      getCachedStyles().catch((error) => {
+        console.error('[MetadataLoader] Styles取得エラー:', {
+          error,
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        })
+        return [] as Style[]
+      }),
       user ? getTags(supabase, user.id) : Promise.resolve([] as PracticeTag[])
     ])
     styles = stylesResult
     tags = tagsResult
   } catch (error) {
-    console.error('メタデータの取得に失敗:', error)
+    console.error('[MetadataLoader] メタデータの取得に失敗:', error)
     // エラー時は空配列を使用
     styles = []
     tags = []
