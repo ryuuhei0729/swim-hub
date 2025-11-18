@@ -8,7 +8,6 @@ import { useAuth } from '@/contexts'
 import { Avatar } from '@/components/ui'
 import { 
   Bars3Icon, 
-  BellIcon, 
   ChevronDownIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
@@ -23,7 +22,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const { user, profile, signOut } = useAuth()
   const router = useRouter()
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
-  const [notificationCount] = useState(3) // 仮の通知数
   const userMenuRef = useRef<HTMLDivElement>(null)
 
   const handleLogout = async () => {
@@ -81,25 +79,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
           </div>
         </div>
 
-        {/* 右側：通知とユーザー情報 */}
+        {/* 右側：ユーザー情報 */}
         <div className="flex items-center space-x-2">
-          {/* 通知ベル */}
-          <button
-            type="button"
-            className="relative p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors duration-200"
-            onClick={() => router.push('/dashboard')}
-          >
-            <span className="sr-only">通知を表示</span>
-            <BellIcon className="h-6 w-6" aria-hidden="true" />
-            {notificationCount > 0 && (
-              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 flex items-center justify-center">
-                <span className="text-xs font-medium text-white">
-                  {notificationCount > 9 ? '9+' : notificationCount}
-                </span>
-              </span>
-            )}
-          </button>
-
           {/* ユーザー情報ドロップダウン */}
           <div className="relative" ref={userMenuRef}>
             <button

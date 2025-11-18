@@ -58,7 +58,7 @@ export default function TeamJoinModal({ isOpen, onClose, onSuccess }: TeamJoinMo
         .select('id, is_active')
         .eq('team_id', teamData.id)
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
 
       if (membershipError && membershipError.code !== 'PGRST116') {
         throw membershipError
@@ -83,12 +83,10 @@ export default function TeamJoinModal({ isOpen, onClose, onSuccess }: TeamJoinMo
         }
       } else {
         // 新しいメンバーシップを作成
-        const insertData: TeamMembershipInsert = {
+        const insertData: Omit<TeamMembershipInsert, 'member_type' | 'group_name'> = {
           team_id: teamData.id,
           user_id: user.id,
           role: 'user',
-          member_type: null,
-          group_name: null,
           is_active: true,
           joined_at: format(new Date(), 'yyyy-MM-dd'), // 今日の日付
           left_at: null
@@ -125,33 +123,51 @@ export default function TeamJoinModal({ isOpen, onClose, onSuccess }: TeamJoinMo
     }
   }
 
+  // モーダルクローズ時の処理
+  const handleClose = () => {
+    if (isLoading) return // ローディング中はクローズできない
+    
+    setError(null)
+    onClose()
+  }
+
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-gray-600/50 overflow-y-auto h-full w-full z-50" data-testid="team-join-modal">
-      <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white" data-testid="team-join-dialog">
-        <div className="mt-3">
-          {/* ヘッダー */}
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-medium text-gray-900">
-              チームに参加
-            </h3>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600"
-              disabled={isLoading}
-              data-testid="team-join-close-button"
-            >
-              <XMarkIcon className="h-6 w-6" />
-            </button>
-          </div>
+    <div className="fixed inset-0 z-50 overflow-y-auto" data-testid="team-join-modal">
+      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        {/* オーバーレイ */}
+        <div 
+          className="fixed inset-0 bg-black/40 transition-opacity" 
+          onClick={handleClose}
+        />
 
-          {/* フォーム */}
-          <TeamJoinForm
-            onSubmit={handleSubmit}
-            isLoading={isLoading}
-            error={error}
-          />
+        {/* モーダルコンテンツ */}
+        <div className="relative inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full" data-testid="team-join-dialog">
+          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+            {/* ヘッダー */}
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-900">
+                チームに参加
+              </h3>
+              <button
+                type="button"
+                onClick={handleClose}
+                className="text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600"
+                disabled={isLoading}
+                data-testid="team-join-close-button"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* フォーム */}
+            <TeamJoinForm
+              onSubmit={handleSubmit}
+              isLoading={isLoading}
+              error={error}
+            />
+          </div>
         </div>
       </div>
     </div>

@@ -1,10 +1,13 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
-import { UsersIcon } from '@heroicons/react/24/outline'
+import { useRouter } from 'next/navigation'
+import { UsersIcon, PlusIcon, UserPlusIcon } from '@heroicons/react/24/outline'
 import { TeamMembershipWithUser } from '@apps/shared/types/database'
 import { useTeamStore } from '@/stores'
+import TeamCreateModal from '@/components/team/TeamCreateModal'
+import TeamJoinModal from '@/components/team/TeamJoinModal'
 
 interface TeamsClientProps {
   // サーバー側で取得したデータ
@@ -18,6 +21,9 @@ export default function TeamsClient({
   initialTeams
 }: TeamsClientProps) {
   const { teams, teamsLoading, setTeams, setTeamsLoading } = useTeamStore()
+  const router = useRouter()
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false)
 
   // サーバー側から取得したデータをストアに設定
   React.useEffect(() => {
@@ -62,12 +68,28 @@ export default function TeamsClient({
       {displayTeams.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-12 text-center">
           <UsersIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">
+          <h3 className="mt-4 text-lg font-medium text-gray-900">
             参加中のチームがありません
           </h3>
-          <p className="mt-1 text-sm text-gray-500">
-            設定ページからチームに参加または作成してください
+          <p className="mt-2 text-sm text-gray-500 mb-8">
+            チームを作成するか、招待コードでチームに参加してください
           </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+            >
+              <PlusIcon className="h-5 w-5 mr-2" />
+              チームを作成
+            </button>
+            <button
+              onClick={() => setIsJoinModalOpen(true)}
+              className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+            >
+              <UserPlusIcon className="h-5 w-5 mr-2" />
+              チームに参加
+            </button>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -99,6 +121,28 @@ export default function TeamsClient({
           ))}
         </div>
       )}
+
+      {/* チーム作成モーダル */}
+      <TeamCreateModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={(_teamId) => {
+          // ページをリフレッシュしてチーム一覧を更新
+          router.refresh()
+          setIsCreateModalOpen(false)
+        }}
+      />
+
+      {/* チーム参加モーダル */}
+      <TeamJoinModal
+        isOpen={isJoinModalOpen}
+        onClose={() => setIsJoinModalOpen(false)}
+        onSuccess={(_teamId) => {
+          // ページをリフレッシュしてチーム一覧を更新
+          router.refresh()
+          setIsJoinModalOpen(false)
+        }}
+      />
     </div>
   )
 }
