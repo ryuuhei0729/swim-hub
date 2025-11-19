@@ -144,94 +144,121 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
 
   if (!isAdmin) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          チーム設定
-        </h2>
-        <div className="text-center py-8">
-          <p className="text-gray-600 mb-6">
-            チーム設定を変更するには管理者権限が必要です。
-          </p>
-          
-          {/* 退出ボタン */}
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-start">
-              <ExclamationTriangleIcon className="h-5 w-5 text-red-400 mt-0.5" />
-              <div className="ml-3 flex-1">
-                <h4 className="text-sm font-medium text-red-800">チームから退出</h4>
-                <p className="mt-1 text-sm text-red-700">
-                  このチームから退出します。退出後は再度招待を受ける必要があります。
-                </p>
-                <button
-                  onClick={async () => {
-                    try {
-                      const { data: adminList, error: adminErr } = await supabase
-                        .from('team_memberships')
-                        .select('id')
-                        .eq('team_id', teamId)
-                        .eq('role', 'admin')
-                        .eq('is_active', true)
-                      if (adminErr) throw adminErr
-                      const adminCount = adminList?.length || 0
+      <>
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            チーム設定
+          </h2>
+          <div className="text-center py-8">
+            <p className="text-gray-600 mb-6">
+              チーム設定を変更するには管理者権限が必要です。
+            </p>
+            
+            {/* 退出ボタン */}
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <ExclamationTriangleIcon className="h-5 w-5 text-red-400 mt-0.5" />
+                <div className="ml-3 flex-1">
+                  <h4 className="text-sm font-medium text-red-800">チームから退出</h4>
+                  <p className="mt-1 text-sm text-red-700">
+                    このチームから退出します。退出後は再度招待を受ける必要があります。
+                  </p>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const { data: adminList, error: adminErr } = await supabase
+                          .from('team_memberships')
+                          .select('id')
+                          .eq('team_id', teamId)
+                          .eq('role', 'admin')
+                          .eq('is_active', true)
+                        if (adminErr) throw adminErr
+                        const adminCount = adminList?.length || 0
 
-                      const { data: totalList, error: totalErr } = await supabase
-                        .from('team_memberships')
-                        .select('id')
-                        .eq('team_id', teamId)
-                        .eq('is_active', true)
-                      if (totalErr) throw totalErr
-                      const totalMemberCount = totalList?.length || 0
+                        const { data: totalList, error: totalErr } = await supabase
+                          .from('team_memberships')
+                          .select('id')
+                          .eq('team_id', teamId)
+                          .eq('is_active', true)
+                        if (totalErr) throw totalErr
+                        const totalMemberCount = totalList?.length || 0
 
-                      const { data: { user } } = await supabase.auth.getUser()
-                      if (!user) throw new Error('認証が必要です')
-                      const { data: myMembership } = await supabase
-                        .from('team_memberships')
-                        .select('role')
-                        .eq('team_id', teamId)
-                        .eq('user_id', user.id)
-                        .eq('is_active', true)
-                        .maybeSingle()
-                      const isCurrentUserAdmin = myMembership?.role === 'admin'
-                      
-                      // 管理者が最後の1人で、かつ他にメンバーがいる場合は退出不可
-                      if (isCurrentUserAdmin && adminCount === 1 && totalMemberCount > 1) {
-                        setError('チームには最低1人の管理者が必要です。他のメンバーを管理者に任命してから退出してください。')
-                        return
+                        const { data: { user } } = await supabase.auth.getUser()
+                        if (!user) throw new Error('認証が必要です')
+                        const { data: myMembership } = await supabase
+                          .from('team_memberships')
+                          .select('role')
+                          .eq('team_id', teamId)
+                          .eq('user_id', user.id)
+                          .eq('is_active', true)
+                          .maybeSingle()
+                        const isCurrentUserAdmin = myMembership?.role === 'admin'
+                        
+                        // 管理者が最後の1人で、かつ他にメンバーがいる場合は退出不可
+                        if (isCurrentUserAdmin && adminCount === 1 && totalMemberCount > 1) {
+                          setError('チームには最低1人の管理者が必要です。他のメンバーを管理者に任命してから退出してください。')
+                          return
+                        }
+                        
+                        // 自分が最後のメンバーの場合は警告を表示
+                        if (totalMemberCount === 1) {
+                          setShowLastMemberWarning(true)
+                          return
+                        }
+                        
+                        setShowLeaveModal(true)
+                      } catch (err) {
+                        console.error('管理者チェックエラー:', err)
+                        setError('管理者情報の取得に失敗しました')
                       }
-                      
-                      // 自分が最後のメンバーの場合は警告を表示
-                      if (totalMemberCount === 1) {
-                        setShowLastMemberWarning(true)
-                        return
-                      }
-                      
-                      setShowLeaveModal(true)
-                    } catch (err) {
-                      console.error('管理者チェックエラー:', err)
-                      setError('管理者情報の取得に失敗しました')
-                    }
-                  }}
-                  disabled={loading}
-                  className="mt-3 inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ArrowRightOnRectangleIcon className="h-4 w-4 mr-2" />
-                  チームから退出
-                </button>
+                    }}
+                    disabled={loading}
+                    className="mt-3 inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ArrowRightOnRectangleIcon className="h-4 w-4 mr-2" />
+                    チームから退出
+                  </button>
+                </div>
               </div>
             </div>
           </div>
+
+          {/* チーム作成・参加ボタン（チームが1つ以上ある場合） */}
+          {teamsCount > 0 && (
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">チーム管理</h3>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                >
+                  <PlusIcon className="h-5 w-5 mr-2" />
+                  新しいチームを作成
+                </button>
+                <button
+                  onClick={() => setIsJoinModalOpen(true)}
+                  className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                >
+                  <UserPlusIcon className="h-5 w-5 mr-2" />
+                  チームに参加
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 退出確認モーダル */}
         {showLeaveModal && (
-          <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="fixed inset-0 z-[60] overflow-y-auto">
             <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+              {/* オーバーレイ */}
               <div 
                 className="fixed inset-0 bg-black/40 transition-opacity" 
                 onClick={() => setShowLeaveModal(false)}
               />
               
-              <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              {/* モーダルコンテンツ */}
+              <div className="relative inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
                 <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                   <div className="flex items-center">
                     <ExclamationTriangleIcon className="h-6 w-6 text-red-600" />
@@ -271,14 +298,16 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
 
         {/* 最後のメンバー退出警告モーダル */}
         {showLastMemberWarning && (
-          <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="fixed inset-0 z-[60] overflow-y-auto">
             <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+              {/* オーバーレイ */}
               <div 
                 className="fixed inset-0 bg-black/40 transition-opacity" 
                 onClick={() => setShowLastMemberWarning(false)}
               />
               
-              <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              {/* モーダルコンテンツ */}
+              <div className="relative inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
                 <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                   <div className="flex items-start">
                     <ExclamationTriangleIcon className="h-6 w-6 text-orange-600 shrink-0 mt-0.5" />
@@ -322,29 +351,6 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
           </div>
         )}
 
-        {/* チーム作成・参加ボタン（チームが1つ以上ある場合） */}
-        {teamsCount > 0 && (
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">チーム管理</h3>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-              >
-                <PlusIcon className="h-5 w-5 mr-2" />
-                新しいチームを作成
-              </button>
-              <button
-                onClick={() => setIsJoinModalOpen(true)}
-                className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-              >
-                <UserPlusIcon className="h-5 w-5 mr-2" />
-                チームに参加
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* チーム作成モーダル */}
         <TeamCreateModal
           isOpen={isCreateModalOpen}
@@ -364,12 +370,13 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
             setIsJoinModalOpen(false)
           }}
         />
-      </div>
+      </>
     )
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <>
+      <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-xl font-semibold text-gray-900 mb-6">
         チーム設定
       </h2>
@@ -634,17 +641,20 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
           </div>
         </div>
       </div>
+      </div>
 
       {/* 退出確認モーダル */}
       {showLeaveModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="fixed inset-0 z-[60] overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            {/* オーバーレイ */}
             <div 
               className="fixed inset-0 bg-black/40 transition-opacity" 
               onClick={() => setShowLeaveModal(false)}
             />
             
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            {/* モーダルコンテンツ */}
+            <div className="relative inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="flex items-center">
                   <ExclamationTriangleIcon className="h-6 w-6 text-red-600" />
@@ -684,14 +694,16 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
 
       {/* 最後のメンバー退出警告モーダル */}
       {showLastMemberWarning && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="fixed inset-0 z-[60] overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            {/* オーバーレイ */}
             <div 
               className="fixed inset-0 bg-black/40 transition-opacity" 
               onClick={() => setShowLastMemberWarning(false)}
             />
             
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            {/* モーダルコンテンツ */}
+            <div className="relative inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="flex items-start">
                   <ExclamationTriangleIcon className="h-6 w-6 text-orange-600 shrink-0 mt-0.5" />
@@ -754,6 +766,6 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
           setIsJoinModalOpen(false)
         }}
       />
-    </div>
+    </>
   )
 }
