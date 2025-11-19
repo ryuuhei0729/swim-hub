@@ -1,69 +1,3 @@
--- ============================================
--- 開発環境のスキーマを本番環境に1発で適用するSQL
--- ============================================
--- ⚠️ 本番環境で実行する前に、必ずバックアップを取ってください
--- ⚠️ 本番環境はまだ誰も使っていないので、既存のテーブルを削除して再作成します
--- Supabase Dashboard → 本番環境 → SQL Editor で実行してください
-
--- ============================================
--- Step 0: 既存のオブジェクトをすべて削除（CASCADE）
--- ============================================
-
--- 既存のテーブルをすべて削除（依存関係も含めて）
--- 開発環境に存在するテーブル
-DROP TABLE IF EXISTS "public"."announcements" CASCADE;
-DROP TABLE IF EXISTS "public"."competitions" CASCADE;
-DROP TABLE IF EXISTS "public"."entries" CASCADE;
-DROP TABLE IF EXISTS "public"."group_assignments" CASCADE;
-DROP TABLE IF EXISTS "public"."practice_log_tags" CASCADE;
-DROP TABLE IF EXISTS "public"."practice_logs" CASCADE;
-DROP TABLE IF EXISTS "public"."practice_tags" CASCADE;
-DROP TABLE IF EXISTS "public"."practice_times" CASCADE;
-DROP TABLE IF EXISTS "public"."practices" CASCADE;
-DROP TABLE IF EXISTS "public"."records" CASCADE;
-DROP TABLE IF EXISTS "public"."split_times" CASCADE;
-DROP TABLE IF EXISTS "public"."styles" CASCADE;
-DROP TABLE IF EXISTS "public"."team_attendance" CASCADE;
-DROP TABLE IF EXISTS "public"."team_groups" CASCADE;
-DROP TABLE IF EXISTS "public"."team_memberships" CASCADE;
-DROP TABLE IF EXISTS "public"."teams" CASCADE;
-DROP TABLE IF EXISTS "public"."user_sessions" CASCADE;
-DROP TABLE IF EXISTS "public"."users" CASCADE;
-
--- 本番環境に存在するが開発環境にないテーブル（削除）
-DROP TABLE IF EXISTS "public"."attendance" CASCADE;
-DROP TABLE IF EXISTS "public"."events" CASCADE;
-DROP TABLE IF EXISTS "public"."milestone_reviews" CASCADE;
-DROP TABLE IF EXISTS "public"."milestones" CASCADE;
-DROP TABLE IF EXISTS "public"."objectives" CASCADE;
-DROP TABLE IF EXISTS "public"."race_feedbacks" CASCADE;
-DROP TABLE IF EXISTS "public"."race_goals" CASCADE;
-DROP TABLE IF EXISTS "public"."race_reviews" CASCADE;
-
--- 既存のビューを削除
-DROP VIEW IF EXISTS "public"."calendar_view" CASCADE;
-
--- 既存の関数を削除
-DROP FUNCTION IF EXISTS "public"."create_attendance_for_team_competition"() CASCADE;
-DROP FUNCTION IF EXISTS "public"."create_attendance_for_team_practice"() CASCADE;
-DROP FUNCTION IF EXISTS "public"."generate_invite_code"() CASCADE;
-DROP FUNCTION IF EXISTS "public"."handle_new_user"() CASCADE;
-DROP FUNCTION IF EXISTS "public"."replace_practice_log_tags"("p_practice_log_id" "uuid", "p_tag_ids" "uuid"[]) CASCADE;
-DROP FUNCTION IF EXISTS "public"."is_team_member"("target_team_id" "uuid", "target_user_id" "uuid") CASCADE;
-DROP FUNCTION IF EXISTS "public"."is_team_admin"("target_team_id" "uuid", "target_user_id" "uuid") CASCADE;
-DROP FUNCTION IF EXISTS "public"."shares_active_team"("target_user_id" "uuid", "viewer_user_id" "uuid") CASCADE;
-DROP FUNCTION IF EXISTS "public"."set_invite_code"() CASCADE;
-DROP FUNCTION IF EXISTS "public"."set_published_at"() CASCADE;
-DROP FUNCTION IF EXISTS "public"."update_best_times"() CASCADE;
-DROP FUNCTION IF EXISTS "public"."update_updated_at_column"() CASCADE;
-
--- 既存の型を削除（存在する場合）
-DROP TYPE IF EXISTS "public"."attendance_status_type" CASCADE;
-DROP TYPE IF EXISTS "public"."entry_status_type" CASCADE;
-
--- 既存のトリガーを削除
-DROP TRIGGER IF EXISTS "on_auth_user_created" ON "auth"."users" CASCADE;
-
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -77,6 +11,33 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 COMMENT ON SCHEMA "public" IS 'standard public schema';
+
+-- Drop all existing tables if they exist (CASCADE to handle foreign key constraints)
+DROP TABLE IF EXISTS "public"."practice_log_tags" CASCADE;
+DROP TABLE IF EXISTS "public"."practice_times" CASCADE;
+DROP TABLE IF EXISTS "public"."practice_logs" CASCADE;
+DROP TABLE IF EXISTS "public"."split_times" CASCADE;
+DROP TABLE IF EXISTS "public"."group_assignments" CASCADE;
+DROP TABLE IF EXISTS "public"."team_attendance" CASCADE;
+DROP TABLE IF EXISTS "public"."entries" CASCADE;
+DROP TABLE IF EXISTS "public"."records" CASCADE;
+DROP TABLE IF EXISTS "public"."announcements" CASCADE;
+DROP TABLE IF EXISTS "public"."team_groups" CASCADE;
+DROP TABLE IF EXISTS "public"."team_memberships" CASCADE;
+DROP TABLE IF EXISTS "public"."competitions" CASCADE;
+DROP TABLE IF EXISTS "public"."practices" CASCADE;
+DROP TABLE IF EXISTS "public"."practice_tags" CASCADE;
+DROP TABLE IF EXISTS "public"."user_sessions" CASCADE;
+DROP TABLE IF EXISTS "public"."teams" CASCADE;
+DROP TABLE IF EXISTS "public"."users" CASCADE;
+DROP TABLE IF EXISTS "public"."styles" CASCADE;
+
+-- Drop functions if they exist
+DROP FUNCTION IF EXISTS "public"."update_best_times"() CASCADE;
+
+-- Drop types if they exist
+DROP TYPE IF EXISTS "public"."attendance_status_type" CASCADE;
+DROP TYPE IF EXISTS "public"."entry_status_type" CASCADE;
 
 CREATE EXTENSION IF NOT EXISTS "pg_graphql" WITH SCHEMA "graphql";
 
@@ -277,35 +238,6 @@ $$;
 
 ALTER FUNCTION "public"."set_published_at"() OWNER TO "postgres";
 
-CREATE OR REPLACE FUNCTION "public"."update_best_times"() RETURNS "trigger"
-    LANGUAGE "plpgsql"
-    SET search_path = public
-    AS $$
-BEGIN
-  -- 新しい記録がベストタイムかチェック
-  INSERT INTO best_times (user_id, style_id, pool_type, best_time, record_id, achieved_date)
-  VALUES (NEW.user_id, NEW.style_id, NEW.pool_type, NEW.time, NEW.id, NEW.record_date)
-  ON CONFLICT (user_id, style_id, pool_type)
-  DO UPDATE SET
-    best_time = CASE
-      WHEN EXCLUDED.best_time < best_times.best_time THEN EXCLUDED.best_time
-      ELSE best_times.best_time
-    END,
-    record_id = CASE
-      WHEN EXCLUDED.best_time < best_times.best_time THEN EXCLUDED.record_id
-      ELSE best_times.record_id
-    END,
-    achieved_date = CASE
-      WHEN EXCLUDED.best_time < best_times.best_time THEN EXCLUDED.achieved_date
-      ELSE best_times.achieved_date
-    END,
-    updated_at = NOW();
-
-  RETURN NEW;
-END;
-$$;
-
-ALTER FUNCTION "public"."update_best_times"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."update_updated_at_column"() RETURNS "trigger"
     LANGUAGE "plpgsql"
@@ -373,8 +305,6 @@ CREATE TABLE "public"."entries" (
 );
 
 ALTER TABLE "public"."entries" OWNER TO "postgres";
-
-
 
 COMMENT ON TABLE "public"."entries" IS '大会エントリー情報（個人・チーム共通）';
 
@@ -444,12 +374,15 @@ CREATE TABLE "public"."team_memberships" (
     "team_id" "uuid" NOT NULL,
     "user_id" "uuid" NOT NULL,
     "role" "text" DEFAULT 'user'::"text" NOT NULL,
+    "member_type" "text",
+    "group_name" "text",
     "joined_at" "date" DEFAULT CURRENT_DATE,
     "left_at" "date",
     "is_active" boolean DEFAULT true,
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
-    CONSTRAINT "team_memberships_role_check" CHECK (("role" = ANY (ARRAY['admin'::"text", 'user'::"text"])))
+    CONSTRAINT "team_memberships_role_check" CHECK (("role" = ANY (ARRAY['admin'::"text", 'user'::"text"]))),
+    CONSTRAINT "team_memberships_member_type_check" CHECK ((("member_type" IS NULL) OR ("member_type" = ANY (ARRAY['swimmer'::"text", 'coach'::"text", 'director'::"text", 'manager'::"text"]))))
 );
 
 ALTER TABLE "public"."team_memberships" OWNER TO "postgres";
@@ -475,7 +408,7 @@ SELECT "p"."id",
     "p"."note",
     "jsonb_build_object"('practice', "to_jsonb"("p".*), 'user_id', "p"."user_id") AS "metadata"
   FROM "public"."practices" "p"
-  WHERE (("p"."user_id" = "auth"."uid"()) AND ("p"."team_id" IS NULL) AND (NOT (EXISTS ( SELECT 1
+  WHERE (("p"."user_id" = (SELECT "auth"."uid"())) AND ("p"."team_id" IS NULL) AND (NOT (EXISTS ( SELECT 1
           FROM "public"."practice_logs" "pl"
           WHERE ("pl"."practice_id" = "p"."id")))))
 UNION ALL
@@ -492,7 +425,7 @@ SELECT "p"."id",
           FROM "public"."practice_logs" "pl"
           WHERE ("pl"."practice_id" = "p"."id")))) AND (EXISTS ( SELECT 1
           FROM "public"."team_memberships" "tm"
-          WHERE (("tm"."team_id" = "p"."team_id") AND ("tm"."user_id" = "auth"."uid"()) AND ("tm"."is_active" = true)))))
+          WHERE (("tm"."team_id" = "p"."team_id") AND ("tm"."user_id" = (SELECT "auth"."uid"())) AND ("tm"."is_active" = true)))))
 UNION ALL
 SELECT "pl"."id",
     'practice_log'::"text" AS "item_type",
@@ -506,7 +439,7 @@ SELECT "pl"."id",
     "jsonb_build_object"('practice_log', "to_jsonb"("pl".*), 'practice', "to_jsonb"("p".*), 'user_id', "pl"."user_id") AS "metadata"
   FROM ("public"."practice_logs" "pl"
     JOIN "public"."practices" "p" ON (("p"."id" = "pl"."practice_id")))
-  WHERE (("pl"."user_id" = "auth"."uid"()) AND ("p"."team_id" IS NULL))
+  WHERE (("pl"."user_id" = (SELECT "auth"."uid"())) AND ("p"."team_id" IS NULL))
 UNION ALL
 SELECT "pl"."id",
     'practice_log'::"text" AS "item_type",
@@ -523,7 +456,7 @@ SELECT "pl"."id",
     JOIN "public"."teams" "t" ON (("t"."id" = "p"."team_id")))
   WHERE (("p"."team_id" IS NOT NULL) AND (EXISTS ( SELECT 1
           FROM "public"."team_memberships" "tm"
-          WHERE (("tm"."team_id" = "p"."team_id") AND ("tm"."user_id" = "auth"."uid"()) AND ("tm"."is_active" = true)))))
+          WHERE (("tm"."team_id" = "p"."team_id") AND ("tm"."user_id" = (SELECT "auth"."uid"())) AND ("tm"."is_active" = true)))))
 UNION ALL
 SELECT "c"."id",
     'competition'::"text" AS "item_type",
@@ -533,11 +466,11 @@ SELECT "c"."id",
     "c"."note",
     "jsonb_build_object"('competition', "to_jsonb"("c".*), 'user_id', "c"."user_id", 'pool_type', "c"."pool_type") AS "metadata"
   FROM "public"."competitions" "c"
-  WHERE (("c"."user_id" = "auth"."uid"()) AND ("c"."team_id" IS NULL) AND (NOT (EXISTS ( SELECT 1
+  WHERE (("c"."user_id" = (SELECT "auth"."uid"())) AND ("c"."team_id" IS NULL) AND (NOT (EXISTS ( SELECT 1
           FROM "public"."records" "r"
-          WHERE (("r"."competition_id" = "c"."id") AND ("r"."user_id" = "auth"."uid"()))))) AND (NOT (EXISTS ( SELECT 1
+          WHERE (("r"."competition_id" = "c"."id") AND ("r"."user_id" = (SELECT "auth"."uid"())))))) AND (NOT (EXISTS ( SELECT 1
           FROM "public"."entries" "e"
-          WHERE (("e"."competition_id" = "c"."id") AND ("e"."user_id" = "auth"."uid"()) AND ("e"."team_id" IS NULL))))))
+          WHERE (("e"."competition_id" = "c"."id") AND ("e"."user_id" = (SELECT "auth"."uid"())) AND ("e"."team_id" IS NULL))))))
 UNION ALL
 SELECT "c"."id",
     'team_competition'::"text" AS "item_type",
@@ -550,11 +483,11 @@ SELECT "c"."id",
     JOIN "public"."teams" "t" ON (("t"."id" = "c"."team_id")))
   WHERE (("c"."team_id" IS NOT NULL) AND (EXISTS ( SELECT 1
           FROM "public"."team_memberships" "tm"
-          WHERE (("tm"."team_id" = "c"."team_id") AND ("tm"."user_id" = "auth"."uid"()) AND ("tm"."is_active" = true)))) AND (NOT (EXISTS ( SELECT 1
+          WHERE (("tm"."team_id" = "c"."team_id") AND ("tm"."user_id" = (SELECT "auth"."uid"())) AND ("tm"."is_active" = true)))) AND (NOT (EXISTS ( SELECT 1
           FROM "public"."records" "r"
-          WHERE (("r"."competition_id" = "c"."id") AND ("r"."user_id" = "auth"."uid"()))))) AND (NOT (EXISTS ( SELECT 1
+          WHERE (("r"."competition_id" = "c"."id") AND ("r"."user_id" = (SELECT "auth"."uid"())))))) AND (NOT (EXISTS ( SELECT 1
           FROM "public"."entries" "e"
-          WHERE (("e"."competition_id" = "c"."id") AND ("e"."user_id" = "auth"."uid"()) AND ("e"."team_id" IS NOT NULL))))))
+          WHERE (("e"."competition_id" = "c"."id") AND ("e"."user_id" = (SELECT "auth"."uid"())) AND ("e"."team_id" IS NOT NULL))))))
 UNION ALL
 SELECT "c"."id",
     'entry'::"text" AS "item_type",
@@ -564,11 +497,11 @@ SELECT "c"."id",
     NULL::"text" AS "note",
     "jsonb_build_object"('competition', "to_jsonb"("c".*), 'user_id', "c"."user_id") AS "metadata"
   FROM "public"."competitions" "c"
-  WHERE (("c"."user_id" = "auth"."uid"()) AND ("c"."team_id" IS NULL) AND (NOT (EXISTS ( SELECT 1
+  WHERE (("c"."user_id" = (SELECT "auth"."uid"())) AND ("c"."team_id" IS NULL) AND (NOT (EXISTS ( SELECT 1
           FROM "public"."records" "r"
-          WHERE (("r"."competition_id" = "c"."id") AND ("r"."user_id" = "auth"."uid"()))))) AND (EXISTS ( SELECT 1
+          WHERE (("r"."competition_id" = "c"."id") AND ("r"."user_id" = (SELECT "auth"."uid"())))))) AND (EXISTS ( SELECT 1
           FROM "public"."entries" "e"
-          WHERE (("e"."competition_id" = "c"."id") AND ("e"."user_id" = "auth"."uid"()) AND ("e"."team_id" IS NULL)))))
+          WHERE (("e"."competition_id" = "c"."id") AND ("e"."user_id" = (SELECT "auth"."uid"())) AND ("e"."team_id" IS NULL)))))
 UNION ALL
 SELECT "c"."id",
     'entry'::"text" AS "item_type",
@@ -581,11 +514,11 @@ SELECT "c"."id",
     JOIN "public"."teams" "t" ON (("t"."id" = "c"."team_id")))
   WHERE (("c"."team_id" IS NOT NULL) AND (EXISTS ( SELECT 1
           FROM "public"."team_memberships" "tm"
-          WHERE (("tm"."team_id" = "c"."team_id") AND ("tm"."user_id" = "auth"."uid"()) AND ("tm"."is_active" = true)))) AND (NOT (EXISTS ( SELECT 1
+          WHERE (("tm"."team_id" = "c"."team_id") AND ("tm"."user_id" = (SELECT "auth"."uid"())) AND ("tm"."is_active" = true)))) AND (NOT (EXISTS ( SELECT 1
           FROM "public"."records" "r"
-          WHERE (("r"."competition_id" = "c"."id") AND ("r"."user_id" = "auth"."uid"()))))) AND (EXISTS ( SELECT 1
+          WHERE (("r"."competition_id" = "c"."id") AND ("r"."user_id" = (SELECT "auth"."uid"())))))) AND (EXISTS ( SELECT 1
           FROM "public"."entries" "e"
-          WHERE (("e"."competition_id" = "c"."id") AND ("e"."user_id" = "auth"."uid"()) AND ("e"."team_id" IS NOT NULL)))))
+          WHERE (("e"."competition_id" = "c"."id") AND ("e"."user_id" = (SELECT "auth"."uid"())) AND ("e"."team_id" IS NOT NULL)))))
 UNION ALL
 SELECT "c"."id",
     'record'::"text" AS "item_type",
@@ -595,9 +528,9 @@ SELECT "c"."id",
     NULL::"text" AS "note",
     "jsonb_build_object"('competition', "to_jsonb"("c".*), 'user_id', "c"."user_id", 'pool_type', "c"."pool_type") AS "metadata"
   FROM "public"."competitions" "c"
-  WHERE (("c"."user_id" = "auth"."uid"()) AND ("c"."team_id" IS NULL) AND (EXISTS ( SELECT 1
+  WHERE (("c"."user_id" = (SELECT "auth"."uid"())) AND ("c"."team_id" IS NULL) AND (EXISTS ( SELECT 1
           FROM "public"."records" "r"
-          WHERE (("r"."competition_id" = "c"."id") AND ("r"."user_id" = "auth"."uid"())))))
+          WHERE (("r"."competition_id" = "c"."id") AND ("r"."user_id" = (SELECT "auth"."uid"()))))))
 UNION ALL
 SELECT "c"."id",
     'record'::"text" AS "item_type",
@@ -610,9 +543,9 @@ SELECT "c"."id",
     JOIN "public"."teams" "t" ON (("t"."id" = "c"."team_id")))
   WHERE (("c"."team_id" IS NOT NULL) AND (EXISTS ( SELECT 1
           FROM "public"."team_memberships" "tm"
-          WHERE (("tm"."team_id" = "c"."team_id") AND ("tm"."user_id" = "auth"."uid"()) AND ("tm"."is_active" = true)))) AND (EXISTS ( SELECT 1
+          WHERE (("tm"."team_id" = "c"."team_id") AND ("tm"."user_id" = (SELECT "auth"."uid"())) AND ("tm"."is_active" = true)))) AND (EXISTS ( SELECT 1
           FROM "public"."records" "r"
-          WHERE (("r"."competition_id" = "c"."id") AND ("r"."user_id" = "auth"."uid"())))));
+          WHERE (("r"."competition_id" = "c"."id") AND ("r"."user_id" = (SELECT "auth"."uid"()))))));
 
 ALTER VIEW "public"."calendar_view" OWNER TO "postgres";
 
@@ -855,7 +788,6 @@ CREATE INDEX "idx_entries_competition_id" ON "public"."entries" USING "btree" ("
 
 CREATE INDEX "idx_entries_style_id" ON "public"."entries" USING "btree" ("style_id");
 
--- idx_entries_team_idインデックスを追加（存在しない場合のみ）
 CREATE INDEX "idx_entries_team_id" ON "public"."entries" USING "btree" ("team_id");
 
 CREATE INDEX "idx_entries_user_id" ON "public"."entries" USING "btree" ("user_id");
@@ -960,45 +892,65 @@ CREATE INDEX "idx_users_gender" ON "public"."users" USING "btree" ("gender");
 
 CREATE INDEX "idx_users_name" ON "public"."users" USING "btree" ("name");
 
-CREATE OR REPLACE TRIGGER "create_attendance_on_team_competition" AFTER INSERT ON "public"."competitions" FOR EACH ROW EXECUTE FUNCTION "public"."create_attendance_for_team_competition"();
+DROP TRIGGER IF EXISTS "create_attendance_on_team_competition" ON "public"."competitions";
+CREATE TRIGGER "create_attendance_on_team_competition" AFTER INSERT ON "public"."competitions" FOR EACH ROW EXECUTE FUNCTION "public"."create_attendance_for_team_competition"();
 
-CREATE OR REPLACE TRIGGER "create_attendance_on_team_practice" AFTER INSERT ON "public"."practices" FOR EACH ROW EXECUTE FUNCTION "public"."create_attendance_for_team_practice"();
+DROP TRIGGER IF EXISTS "create_attendance_on_team_practice" ON "public"."practices";
+CREATE TRIGGER "create_attendance_on_team_practice" AFTER INSERT ON "public"."practices" FOR EACH ROW EXECUTE FUNCTION "public"."create_attendance_for_team_practice"();
 
-CREATE OR REPLACE TRIGGER "set_announcement_published_at" BEFORE UPDATE ON "public"."announcements" FOR EACH ROW EXECUTE FUNCTION "public"."set_published_at"();
+DROP TRIGGER IF EXISTS "set_announcement_published_at" ON "public"."announcements";
+CREATE TRIGGER "set_announcement_published_at" BEFORE UPDATE ON "public"."announcements" FOR EACH ROW EXECUTE FUNCTION "public"."set_published_at"();
 
-CREATE OR REPLACE TRIGGER "set_team_invite_code" BEFORE INSERT ON "public"."teams" FOR EACH ROW EXECUTE FUNCTION "public"."set_invite_code"();
+DROP TRIGGER IF EXISTS "set_team_invite_code" ON "public"."teams";
+CREATE TRIGGER "set_team_invite_code" BEFORE INSERT ON "public"."teams" FOR EACH ROW EXECUTE FUNCTION "public"."set_invite_code"();
 
-CREATE OR REPLACE TRIGGER "update_announcements_updated_at" BEFORE UPDATE ON "public"."announcements" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+DROP TRIGGER IF EXISTS "update_announcements_updated_at" ON "public"."announcements";
+CREATE TRIGGER "update_announcements_updated_at" BEFORE UPDATE ON "public"."announcements" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
-CREATE OR REPLACE TRIGGER "update_competitions_updated_at" BEFORE UPDATE ON "public"."competitions" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+DROP TRIGGER IF EXISTS "update_competitions_updated_at" ON "public"."competitions";
+CREATE TRIGGER "update_competitions_updated_at" BEFORE UPDATE ON "public"."competitions" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
-CREATE OR REPLACE TRIGGER "update_entries_updated_at" BEFORE UPDATE ON "public"."entries" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+DROP TRIGGER IF EXISTS "update_entries_updated_at" ON "public"."entries";
+CREATE TRIGGER "update_entries_updated_at" BEFORE UPDATE ON "public"."entries" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
-CREATE OR REPLACE TRIGGER "update_practice_log_tags_updated_at" BEFORE UPDATE ON "public"."practice_log_tags" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+DROP TRIGGER IF EXISTS "update_practice_log_tags_updated_at" ON "public"."practice_log_tags";
+CREATE TRIGGER "update_practice_log_tags_updated_at" BEFORE UPDATE ON "public"."practice_log_tags" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
-CREATE OR REPLACE TRIGGER "update_practice_logs_updated_at" BEFORE UPDATE ON "public"."practice_logs" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+DROP TRIGGER IF EXISTS "update_practice_logs_updated_at" ON "public"."practice_logs";
+CREATE TRIGGER "update_practice_logs_updated_at" BEFORE UPDATE ON "public"."practice_logs" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
-CREATE OR REPLACE TRIGGER "update_practice_tags_updated_at" BEFORE UPDATE ON "public"."practice_tags" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+DROP TRIGGER IF EXISTS "update_practice_tags_updated_at" ON "public"."practice_tags";
+CREATE TRIGGER "update_practice_tags_updated_at" BEFORE UPDATE ON "public"."practice_tags" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
-CREATE OR REPLACE TRIGGER "update_practice_times_updated_at" BEFORE UPDATE ON "public"."practice_times" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+DROP TRIGGER IF EXISTS "update_practice_times_updated_at" ON "public"."practice_times";
+CREATE TRIGGER "update_practice_times_updated_at" BEFORE UPDATE ON "public"."practice_times" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
-CREATE OR REPLACE TRIGGER "update_practices_updated_at" BEFORE UPDATE ON "public"."practices" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+DROP TRIGGER IF EXISTS "update_practices_updated_at" ON "public"."practices";
+CREATE TRIGGER "update_practices_updated_at" BEFORE UPDATE ON "public"."practices" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
-CREATE OR REPLACE TRIGGER "update_records_updated_at" BEFORE UPDATE ON "public"."records" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+DROP TRIGGER IF EXISTS "update_records_updated_at" ON "public"."records";
+CREATE TRIGGER "update_records_updated_at" BEFORE UPDATE ON "public"."records" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
-CREATE OR REPLACE TRIGGER "update_split_times_updated_at" BEFORE UPDATE ON "public"."split_times" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+DROP TRIGGER IF EXISTS "update_split_times_updated_at" ON "public"."split_times";
+CREATE TRIGGER "update_split_times_updated_at" BEFORE UPDATE ON "public"."split_times" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
-CREATE OR REPLACE TRIGGER "update_team_attendance_updated_at" BEFORE UPDATE ON "public"."team_attendance" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+DROP TRIGGER IF EXISTS "update_team_attendance_updated_at" ON "public"."team_attendance";
+CREATE TRIGGER "update_team_attendance_updated_at" BEFORE UPDATE ON "public"."team_attendance" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
-CREATE OR REPLACE TRIGGER "update_team_groups_updated_at" BEFORE UPDATE ON "public"."team_groups" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+DROP TRIGGER IF EXISTS "update_team_groups_updated_at" ON "public"."team_groups";
+CREATE TRIGGER "update_team_groups_updated_at" BEFORE UPDATE ON "public"."team_groups" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
-CREATE OR REPLACE TRIGGER "update_team_memberships_updated_at" BEFORE UPDATE ON "public"."team_memberships" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+DROP TRIGGER IF EXISTS "update_team_memberships_updated_at" ON "public"."team_memberships";
+CREATE TRIGGER "update_team_memberships_updated_at" BEFORE UPDATE ON "public"."team_memberships" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
-CREATE OR REPLACE TRIGGER "update_teams_updated_at" BEFORE UPDATE ON "public"."teams" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+DROP TRIGGER IF EXISTS "update_teams_updated_at" ON "public"."teams";
+CREATE TRIGGER "update_teams_updated_at" BEFORE UPDATE ON "public"."teams" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
-CREATE OR REPLACE TRIGGER "update_user_sessions_updated_at" BEFORE UPDATE ON "public"."user_sessions" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+DROP TRIGGER IF EXISTS "update_user_sessions_updated_at" ON "public"."user_sessions";
+CREATE TRIGGER "update_user_sessions_updated_at" BEFORE UPDATE ON "public"."user_sessions" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
-CREATE OR REPLACE TRIGGER "update_users_updated_at" BEFORE UPDATE ON "public"."users" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+DROP TRIGGER IF EXISTS "update_users_updated_at" ON "public"."users";
+CREATE TRIGGER "update_users_updated_at" BEFORE UPDATE ON "public"."users" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
 ALTER TABLE ONLY "public"."announcements"
     ADD CONSTRAINT "announcements_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE CASCADE;
@@ -1111,233 +1063,386 @@ ALTER TABLE ONLY "public"."user_sessions"
 ALTER TABLE ONLY "public"."users"
     ADD CONSTRAINT "users_id_fkey" FOREIGN KEY ("id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
 
-CREATE POLICY "Authenticated users can delete competitions" ON "public"."competitions" FOR DELETE USING (("auth"."uid"() IS NOT NULL));
 
-CREATE POLICY "Authenticated users can insert competitions" ON "public"."competitions" FOR INSERT WITH CHECK (("auth"."uid"() IS NOT NULL));
+CREATE POLICY "Users can insert team memberships" ON "public"."team_memberships" FOR INSERT WITH CHECK (
+  ((SELECT "auth"."uid"()) = "user_id")
+  OR
+  (
+    EXISTS (
+      SELECT 1
+      FROM "public"."teams"
+      WHERE (
+        ("teams"."id" = "team_memberships"."team_id")
+        AND
+        ("teams"."created_by" = (SELECT "auth"."uid"()))
+      )
+    )
+  )
+);
 
-CREATE POLICY "Authenticated users can join teams" ON "public"."team_memberships" FOR INSERT WITH CHECK ((("auth"."uid"() IS NOT NULL) AND ("auth"."uid"() = "user_id")));
 
-CREATE POLICY "Authenticated users can update competitions" ON "public"."competitions" FOR UPDATE USING (("auth"."uid"() IS NOT NULL));
-
-CREATE POLICY "Everyone can view competitions" ON "public"."competitions" FOR SELECT USING (true);
 
 CREATE POLICY "Everyone can view styles" ON "public"."styles" FOR SELECT USING (true);
 
-CREATE POLICY "Team admins can create announcements" ON "public"."announcements" FOR INSERT WITH CHECK (public.is_team_admin("announcements"."team_id", "auth"."uid"()));
+CREATE POLICY "Team admins can create announcements" ON "public"."announcements" FOR INSERT WITH CHECK (public.is_team_admin("announcements"."team_id", (SELECT "auth"."uid"())));
 
-CREATE POLICY "Team admins can delete announcements" ON "public"."announcements" FOR DELETE USING (public.is_team_admin("announcements"."team_id", "auth"."uid"()));
+CREATE POLICY "Team admins can delete announcements" ON "public"."announcements" FOR DELETE USING (public.is_team_admin("announcements"."team_id", (SELECT "auth"."uid"())));
 
 CREATE POLICY "Team admins can delete group assignments" ON "public"."group_assignments" FOR DELETE USING (public.is_team_admin((
   SELECT "tg"."team_id"
   FROM "public"."team_groups" "tg"
   WHERE "tg"."id" = "group_assignments"."team_group_id"
-), "auth"."uid"()));
+), (SELECT "auth"."uid"())));
 
-CREATE POLICY "Team admins can delete groups" ON "public"."team_groups" FOR DELETE USING (public.is_team_admin("team_groups"."team_id", "auth"."uid"()));
+CREATE POLICY "Team admins can delete groups" ON "public"."team_groups" FOR DELETE USING (public.is_team_admin("team_groups"."team_id", (SELECT "auth"."uid"())));
 
-CREATE POLICY "Team admins can delete memberships" ON "public"."team_memberships" FOR DELETE USING (public.is_team_admin("team_memberships"."team_id", "auth"."uid"()));
+CREATE POLICY "Users can delete team memberships" ON "public"."team_memberships" FOR DELETE USING (
+  public.is_team_admin("team_memberships"."team_id", (SELECT "auth"."uid"()))
+  OR
+  (
+    EXISTS (
+      SELECT 1
+      FROM "public"."teams"
+      WHERE (
+        ("teams"."id" = "team_memberships"."team_id")
+        AND
+        ("teams"."created_by" = (SELECT "auth"."uid"()))
+      )
+    )
+  )
+);
 
-CREATE POLICY "Team admins can manage all attendance" ON "public"."team_attendance" FOR INSERT WITH CHECK (((( "practice_id" IS NOT NULL) AND (
-  SELECT public.is_team_admin("p"."team_id", "auth"."uid"())
-  FROM "public"."practices" "p"
-  WHERE "p"."id" = "team_attendance"."practice_id"
-  LIMIT 1
-)) OR (("competition_id" IS NOT NULL) AND (
-  SELECT public.is_team_admin("c"."team_id", "auth"."uid"())
-  FROM "public"."competitions" "c"
-  WHERE "c"."id" = "team_attendance"."competition_id"
-  LIMIT 1
-))));
+CREATE POLICY "Users can manage own attendance" ON "public"."team_attendance" FOR INSERT WITH CHECK (
+  ("user_id" = (SELECT "auth"."uid"()))
+  OR
+  (
+    (
+      ("practice_id" IS NOT NULL)
+      AND
+      (
+        SELECT public.is_team_admin("p"."team_id", (SELECT "auth"."uid"()))
+        FROM "public"."practices" "p"
+        WHERE "p"."id" = "team_attendance"."practice_id"
+        LIMIT 1
+      )
+    )
+    OR
+    (
+      ("competition_id" IS NOT NULL)
+      AND
+      (
+        SELECT public.is_team_admin("c"."team_id", (SELECT "auth"."uid"()))
+        FROM "public"."competitions" "c"
+        WHERE "c"."id" = "team_attendance"."competition_id"
+        LIMIT 1
+      )
+    )
+  )
+);
 
-CREATE POLICY "Team admins can manage all team entries" ON "public"."entries" USING (public.is_team_admin("entries"."team_id", "auth"."uid"())) WITH CHECK (public.is_team_admin("entries"."team_id", "auth"."uid"()));
 
 CREATE POLICY "Team admins can manage group assignments" ON "public"."group_assignments" FOR INSERT WITH CHECK (public.is_team_admin((
   SELECT "tg"."team_id"
   FROM "public"."team_groups" "tg"
   WHERE "tg"."id" = "group_assignments"."team_group_id"
-), "auth"."uid"()));
+), (SELECT "auth"."uid"())));
 
-CREATE POLICY "Team admins can manage groups" ON "public"."team_groups" FOR INSERT WITH CHECK (public.is_team_admin("team_groups"."team_id", "auth"."uid"()));
+CREATE POLICY "Team admins can manage groups" ON "public"."team_groups" FOR INSERT WITH CHECK (public.is_team_admin("team_groups"."team_id", (SELECT "auth"."uid"())));
 
-CREATE POLICY "Team admins can update all attendance" ON "public"."team_attendance" FOR UPDATE USING (((( "practice_id" IS NOT NULL) AND (
-  SELECT public.is_team_admin("p"."team_id", "auth"."uid"())
-  FROM "public"."practices" "p"
-  WHERE "p"."id" = "team_attendance"."practice_id"
-  LIMIT 1
-)) OR (("competition_id" IS NOT NULL) AND (
-  SELECT public.is_team_admin("c"."team_id", "auth"."uid"())
-  FROM "public"."competitions" "c"
-  WHERE "c"."id" = "team_attendance"."competition_id"
-  LIMIT 1
-))));
+CREATE POLICY "Users can update own attendance" ON "public"."team_attendance" FOR UPDATE USING (
+  ("user_id" = (SELECT "auth"."uid"()))
+  OR
+  (
+    (
+      ("practice_id" IS NOT NULL)
+      AND
+      (
+        SELECT public.is_team_admin("p"."team_id", (SELECT "auth"."uid"()))
+        FROM "public"."practices" "p"
+        WHERE "p"."id" = "team_attendance"."practice_id"
+        LIMIT 1
+      )
+    )
+    OR
+    (
+      ("competition_id" IS NOT NULL)
+      AND
+      (
+        SELECT public.is_team_admin("c"."team_id", (SELECT "auth"."uid"()))
+        FROM "public"."competitions" "c"
+        WHERE "c"."id" = "team_attendance"."competition_id"
+        LIMIT 1
+      )
+    )
+  )
+);
 
-CREATE POLICY "Team admins can update announcements" ON "public"."announcements" FOR UPDATE USING (public.is_team_admin("announcements"."team_id", "auth"."uid"()));
+CREATE POLICY "Team admins can update announcements" ON "public"."announcements" FOR UPDATE USING (public.is_team_admin("announcements"."team_id", (SELECT "auth"."uid"())));
 
 CREATE POLICY "Team admins can update group assignments" ON "public"."group_assignments" FOR UPDATE USING (public.is_team_admin((
   SELECT "tg"."team_id"
   FROM "public"."team_groups" "tg"
   WHERE "tg"."id" = "group_assignments"."team_group_id"
-), "auth"."uid"()));
+), (SELECT "auth"."uid"())));
 
-CREATE POLICY "Team admins can update groups" ON "public"."team_groups" FOR UPDATE USING (public.is_team_admin("team_groups"."team_id", "auth"."uid"()));
+CREATE POLICY "Team admins can update groups" ON "public"."team_groups" FOR UPDATE USING (public.is_team_admin("team_groups"."team_id", (SELECT "auth"."uid"())));
 
-CREATE POLICY "Team admins can update memberships" ON "public"."team_memberships" FOR UPDATE USING (public.is_team_admin("team_memberships"."team_id", "auth"."uid"()));
+CREATE POLICY "Users can update team memberships" ON "public"."team_memberships" FOR UPDATE USING (
+  public.is_team_admin("team_memberships"."team_id", (SELECT "auth"."uid"()))
+  OR
+  ("user_id" = (SELECT "auth"."uid"()))
+  OR
+  (
+    EXISTS (
+      SELECT 1
+      FROM "public"."teams"
+      WHERE (
+        ("teams"."id" = "team_memberships"."team_id")
+        AND
+        ("teams"."created_by" = (SELECT "auth"."uid"()))
+      )
+    )
+  )
+) WITH CHECK (
+  public.is_team_admin("team_memberships"."team_id", (SELECT "auth"."uid"()))
+  OR
+  ("user_id" = (SELECT "auth"."uid"()))
+  OR
+  (
+    EXISTS (
+      SELECT 1
+      FROM "public"."teams"
+      WHERE (
+        ("teams"."id" = "team_memberships"."team_id")
+        AND
+        ("teams"."created_by" = (SELECT "auth"."uid"()))
+      )
+    )
+  )
+);
 
-CREATE POLICY "Team members can view announcements" ON "public"."announcements" FOR SELECT USING (public.is_team_member("announcements"."team_id", "auth"."uid"()));
+CREATE POLICY "Team members can view announcements" ON "public"."announcements" FOR SELECT USING (public.is_team_member("announcements"."team_id", (SELECT "auth"."uid"())));
 
-CREATE POLICY "Team members can view attendance" ON "public"."team_attendance" FOR SELECT USING (((("practice_id" IS NOT NULL) AND (
-  SELECT public.is_team_member("p"."team_id", "auth"."uid"())
-  FROM "public"."practices" "p"
-  WHERE "p"."id" = "team_attendance"."practice_id"
-  LIMIT 1
-)) OR (("competition_id" IS NOT NULL) AND (
-  SELECT public.is_team_member("c"."team_id", "auth"."uid"())
-  FROM "public"."competitions" "c"
-  WHERE "c"."id" = "team_attendance"."competition_id"
-  LIMIT 1
-))));
+CREATE POLICY "Team members can view attendance" ON "public"."team_attendance" FOR SELECT USING (
+  (
+    ("practice_id" IS NOT NULL)
+    AND
+    (
+      SELECT public.is_team_member("p"."team_id", (SELECT "auth"."uid"()))
+      FROM "public"."practices" "p"
+      WHERE "p"."id" = "team_attendance"."practice_id"
+      LIMIT 1
+    )
+  )
+  OR
+  (
+    ("competition_id" IS NOT NULL)
+    AND
+    (
+      SELECT public.is_team_member("c"."team_id", (SELECT "auth"."uid"()))
+      FROM "public"."competitions" "c"
+      WHERE "c"."id" = "team_attendance"."competition_id"
+      LIMIT 1
+    )
+  )
+);
 
 CREATE POLICY "Team members can view group assignments" ON "public"."group_assignments" FOR SELECT USING (public.is_team_member((
   SELECT "tg"."team_id"
   FROM "public"."team_groups" "tg"
   WHERE "tg"."id" = "group_assignments"."team_group_id"
-), "auth"."uid"()));
+), (SELECT "auth"."uid"())));
 
-CREATE POLICY "Team members can view groups" ON "public"."team_groups" FOR SELECT USING (public.is_team_member("team_groups"."team_id", "auth"."uid"()));
+CREATE POLICY "Team members can view groups" ON "public"."team_groups" FOR SELECT USING (public.is_team_member("team_groups"."team_id", (SELECT "auth"."uid"())));
 
-CREATE POLICY "Users can create own competitions" ON "public"."competitions" FOR INSERT WITH CHECK (("user_id" = "auth"."uid"()));
+CREATE POLICY "Users can create own competitions" ON "public"."competitions" FOR INSERT WITH CHECK (("user_id" = (SELECT "auth"."uid"())));
 
-CREATE POLICY "Users can create own entries" ON "public"."entries" FOR INSERT WITH CHECK ((("user_id" = "auth"."uid"()) AND (("team_id" IS NULL) OR public.is_team_member("entries"."team_id", "auth"."uid"()))));
+CREATE POLICY "Users can create own entries" ON "public"."entries" FOR INSERT WITH CHECK (
+  public.is_team_admin("entries"."team_id", (SELECT "auth"."uid"()))
+  OR
+  (
+    ("user_id" = (SELECT "auth"."uid"()))
+    AND
+    (
+      ("team_id" IS NULL)
+      OR
+      public.is_team_member("entries"."team_id", (SELECT "auth"."uid"()))
+    )
+  )
+);
 
-CREATE POLICY "Users can delete own competitions" ON "public"."competitions" FOR DELETE USING (("user_id" = "auth"."uid"()));
+CREATE POLICY "Users can delete own competitions" ON "public"."competitions" FOR DELETE USING (("user_id" = (SELECT "auth"."uid"())));
 
-CREATE POLICY "Users can delete own entries" ON "public"."entries" FOR DELETE USING ((("user_id" = "auth"."uid"()) AND (("team_id" IS NULL) OR public.is_team_member("entries"."team_id", "auth"."uid"()))));
+CREATE POLICY "Users can delete own entries" ON "public"."entries" FOR DELETE USING (
+  public.is_team_admin("entries"."team_id", (SELECT "auth"."uid"()))
+  OR
+  (
+    ("user_id" = (SELECT "auth"."uid"()))
+    AND
+    (
+      ("team_id" IS NULL)
+      OR
+      public.is_team_member("entries"."team_id", (SELECT "auth"."uid"()))
+    )
+  )
+);
 
 CREATE POLICY "Users can delete own practice_log_tags" ON "public"."practice_log_tags" FOR DELETE USING ((EXISTS ( SELECT 1
   FROM ("public"."practice_logs" "pl"
     JOIN "public"."practices" "p" ON (("p"."id" = "pl"."practice_id")))
-  WHERE (("pl"."id" = "practice_log_tags"."practice_log_id") AND ("p"."user_id" = "auth"."uid"())))));
+  WHERE (("pl"."id" = "practice_log_tags"."practice_log_id") AND ("p"."user_id" = (SELECT "auth"."uid"()))))));
 
 CREATE POLICY "Users can delete own practice_logs" ON "public"."practice_logs" FOR DELETE USING ((EXISTS ( SELECT 1
   FROM "public"."practices"
-  WHERE (("practices"."id" = "practice_logs"."practice_id") AND ("practices"."user_id" = "auth"."uid"())))));
+  WHERE (("practices"."id" = "practice_logs"."practice_id") AND ("practices"."user_id" = (SELECT "auth"."uid"()))))));
 
-CREATE POLICY "Users can delete own practice_tags" ON "public"."practice_tags" FOR DELETE USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can delete own practice_tags" ON "public"."practice_tags" FOR DELETE USING (((SELECT "auth"."uid"()) = "user_id"));
 
 CREATE POLICY "Users can delete own practice_times" ON "public"."practice_times" FOR DELETE USING ((EXISTS ( SELECT 1
   FROM ("public"."practice_logs" "pl"
     JOIN "public"."practices" "p" ON (("p"."id" = "pl"."practice_id")))
-  WHERE (("pl"."id" = "practice_times"."practice_log_id") AND ("p"."user_id" = "auth"."uid"())))));
+  WHERE (("pl"."id" = "practice_times"."practice_log_id") AND ("p"."user_id" = (SELECT "auth"."uid"()))))));
 
-CREATE POLICY "Users can delete own practices" ON "public"."practices" FOR DELETE USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can delete own practices" ON "public"."practices" FOR DELETE USING (((SELECT "auth"."uid"()) = "user_id"));
 
-CREATE POLICY "Users can delete own profile" ON "public"."users" FOR DELETE USING (("auth"."uid"() = "id"));
+CREATE POLICY "Users can delete own profile" ON "public"."users" FOR DELETE USING (((SELECT "auth"."uid"()) = "id"));
 
-CREATE POLICY "Users can delete own records" ON "public"."records" FOR DELETE USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can delete own records" ON "public"."records" FOR DELETE USING (((SELECT "auth"."uid"()) = "user_id"));
 
-CREATE POLICY "Users can delete own sessions" ON "public"."user_sessions" FOR DELETE USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can delete own sessions" ON "public"."user_sessions" FOR DELETE USING (((SELECT "auth"."uid"()) = "user_id"));
 
 CREATE POLICY "Users can delete own split_times" ON "public"."split_times" FOR DELETE USING ((EXISTS ( SELECT 1
   FROM "public"."records"
-  WHERE (("records"."id" = "split_times"."record_id") AND ("records"."user_id" = "auth"."uid"())))));
+  WHERE (("records"."id" = "split_times"."record_id") AND ("records"."user_id" = (SELECT "auth"."uid"()))))));
 
 CREATE POLICY "Users can insert own practice_log_tags" ON "public"."practice_log_tags" FOR INSERT WITH CHECK ((EXISTS ( SELECT 1
   FROM ("public"."practice_logs" "pl"
     JOIN "public"."practices" "p" ON (("p"."id" = "pl"."practice_id")))
-  WHERE (("pl"."id" = "practice_log_tags"."practice_log_id") AND ("p"."user_id" = "auth"."uid"())))));
+  WHERE (("pl"."id" = "practice_log_tags"."practice_log_id") AND ("p"."user_id" = (SELECT "auth"."uid"()))))));
 
 CREATE POLICY "Users can insert own practice_logs" ON "public"."practice_logs" FOR INSERT WITH CHECK ((EXISTS ( SELECT 1
   FROM "public"."practices"
-  WHERE (("practices"."id" = "practice_logs"."practice_id") AND ("practices"."user_id" = "auth"."uid"())))));
+  WHERE (("practices"."id" = "practice_logs"."practice_id") AND ("practices"."user_id" = (SELECT "auth"."uid"()))))));
 
-CREATE POLICY "Users can insert own practice_tags" ON "public"."practice_tags" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can insert own practice_tags" ON "public"."practice_tags" FOR INSERT WITH CHECK (((SELECT "auth"."uid"()) = "user_id"));
 
 CREATE POLICY "Users can insert own practice_times" ON "public"."practice_times" FOR INSERT WITH CHECK ((EXISTS ( SELECT 1
   FROM ("public"."practice_logs" "pl"
     JOIN "public"."practices" "p" ON (("p"."id" = "pl"."practice_id")))
-  WHERE (("pl"."id" = "practice_times"."practice_log_id") AND ("p"."user_id" = "auth"."uid"())))));
+  WHERE (("pl"."id" = "practice_times"."practice_log_id") AND ("p"."user_id" = (SELECT "auth"."uid"()))))));
 
-CREATE POLICY "Users can insert own practices" ON "public"."practices" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can insert own practices" ON "public"."practices" FOR INSERT WITH CHECK (((SELECT "auth"."uid"()) = "user_id"));
 
-CREATE POLICY "Users can insert own profile" ON "public"."users" FOR INSERT WITH CHECK (("auth"."uid"() = "id"));
+CREATE POLICY "Users can insert own profile" ON "public"."users" FOR INSERT WITH CHECK (((SELECT "auth"."uid"()) = "id"));
 
-CREATE POLICY "Users can insert own records" ON "public"."records" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can insert own records" ON "public"."records" FOR INSERT WITH CHECK (((SELECT "auth"."uid"()) = "user_id"));
 
-CREATE POLICY "Users can insert own sessions" ON "public"."user_sessions" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can insert own sessions" ON "public"."user_sessions" FOR INSERT WITH CHECK (((SELECT "auth"."uid"()) = "user_id"));
 
 CREATE POLICY "Users can insert own split_times" ON "public"."split_times" FOR INSERT WITH CHECK ((EXISTS ( SELECT 1
   FROM "public"."records"
-  WHERE (("records"."id" = "split_times"."record_id") AND ("records"."user_id" = "auth"."uid"())))));
+  WHERE (("records"."id" = "split_times"."record_id") AND ("records"."user_id" = (SELECT "auth"."uid"()))))));
 
-CREATE POLICY "Users can manage own attendance" ON "public"."team_attendance" FOR INSERT WITH CHECK (("user_id" = "auth"."uid"()));
 
-CREATE POLICY "Users can update own attendance" ON "public"."team_attendance" FOR UPDATE USING (("user_id" = "auth"."uid"()));
+CREATE POLICY "Users can update own competitions" ON "public"."competitions" FOR UPDATE USING ((("user_id" = (SELECT "auth"."uid"())) OR public.is_team_admin("competitions"."team_id", (SELECT "auth"."uid"()))));
 
-CREATE POLICY "Users can update own competitions" ON "public"."competitions" FOR UPDATE USING ((("user_id" = "auth"."uid"()) OR public.is_team_admin("competitions"."team_id", "auth"."uid"())));
-
-CREATE POLICY "Users can update own entries" ON "public"."entries" FOR UPDATE USING ((("user_id" = "auth"."uid"()) AND (("team_id" IS NULL) OR public.is_team_member("entries"."team_id", "auth"."uid"())))) WITH CHECK ((("user_id" = "auth"."uid"()) AND (("team_id" IS NULL) OR public.is_team_member("entries"."team_id", "auth"."uid"()))));
+CREATE POLICY "Users can update own entries" ON "public"."entries" FOR UPDATE USING (
+  public.is_team_admin("entries"."team_id", (SELECT "auth"."uid"()))
+  OR
+  (
+    ("user_id" = (SELECT "auth"."uid"()))
+    AND
+    (
+      ("team_id" IS NULL)
+      OR
+      public.is_team_member("entries"."team_id", (SELECT "auth"."uid"()))
+    )
+  )
+) WITH CHECK (
+  public.is_team_admin("entries"."team_id", (SELECT "auth"."uid"()))
+  OR
+  (
+    ("user_id" = (SELECT "auth"."uid"()))
+    AND
+    (
+      ("team_id" IS NULL)
+      OR
+      public.is_team_member("entries"."team_id", (SELECT "auth"."uid"()))
+    )
+  )
+);
 
 CREATE POLICY "Users can update own practice_log_tags" ON "public"."practice_log_tags" FOR UPDATE USING ((EXISTS ( SELECT 1
   FROM ("public"."practice_logs" "pl"
     JOIN "public"."practices" "p" ON (("p"."id" = "pl"."practice_id")))
-  WHERE (("pl"."id" = "practice_log_tags"."practice_log_id") AND ("p"."user_id" = "auth"."uid"())))));
+  WHERE (("pl"."id" = "practice_log_tags"."practice_log_id") AND ("p"."user_id" = (SELECT "auth"."uid"()))))));
 
 CREATE POLICY "Users can update own practice_logs" ON "public"."practice_logs" FOR UPDATE USING ((EXISTS ( SELECT 1
   FROM "public"."practices"
-  WHERE (("practices"."id" = "practice_logs"."practice_id") AND ("practices"."user_id" = "auth"."uid"())))));
+  WHERE (("practices"."id" = "practice_logs"."practice_id") AND ("practices"."user_id" = (SELECT "auth"."uid"()))))));
 
-CREATE POLICY "Users can update own practice_tags" ON "public"."practice_tags" FOR UPDATE USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can update own practice_tags" ON "public"."practice_tags" FOR UPDATE USING (((SELECT "auth"."uid"()) = "user_id"));
 
 CREATE POLICY "Users can update own practice_times" ON "public"."practice_times" FOR UPDATE USING ((EXISTS ( SELECT 1
   FROM ("public"."practice_logs" "pl"
     JOIN "public"."practices" "p" ON (("p"."id" = "pl"."practice_id")))
-  WHERE (("pl"."id" = "practice_times"."practice_log_id") AND ("p"."user_id" = "auth"."uid"())))));
+  WHERE (("pl"."id" = "practice_times"."practice_log_id") AND ("p"."user_id" = (SELECT "auth"."uid"()))))));
 
-CREATE POLICY "Users can update own practices" ON "public"."practices" FOR UPDATE USING ((("user_id" = "auth"."uid"()) OR public.is_team_admin("practices"."team_id", "auth"."uid"())));
+CREATE POLICY "Users can update own practices" ON "public"."practices" FOR UPDATE USING ((("user_id" = (SELECT "auth"."uid"())) OR public.is_team_admin("practices"."team_id", (SELECT "auth"."uid"()))));
 
-CREATE POLICY "Users can update own profile" ON "public"."users" FOR UPDATE USING (("auth"."uid"() = "id"));
+CREATE POLICY "Users can update own profile" ON "public"."users" FOR UPDATE USING (((SELECT "auth"."uid"()) = "id"));
 
-CREATE POLICY "Users can update own records" ON "public"."records" FOR UPDATE USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can update own records" ON "public"."records" FOR UPDATE USING (((SELECT "auth"."uid"()) = "user_id"));
 
-CREATE POLICY "Users can update own sessions" ON "public"."user_sessions" FOR UPDATE USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can update own sessions" ON "public"."user_sessions" FOR UPDATE USING (((SELECT "auth"."uid"()) = "user_id"));
 
 CREATE POLICY "Users can update own split_times" ON "public"."split_times" FOR UPDATE USING ((EXISTS ( SELECT 1
   FROM "public"."records"
-  WHERE (("records"."id" = "split_times"."record_id") AND ("records"."user_id" = "auth"."uid"())))));
+  WHERE (("records"."id" = "split_times"."record_id") AND ("records"."user_id" = (SELECT "auth"."uid"()))))));
 
-CREATE POLICY "Users can view competitions" ON "public"."competitions" FOR SELECT USING ((("team_id" IS NULL) OR public.is_team_member("competitions"."team_id", "auth"."uid"())));
+CREATE POLICY "Users can view competitions" ON "public"."competitions" FOR SELECT USING (true);
 
-CREATE POLICY "Users can view own competitions" ON "public"."competitions" FOR SELECT USING ((("user_id" = "auth"."uid"()) OR ("team_id" IS NOT NULL)));
-
-CREATE POLICY "Users can view own entries" ON "public"."entries" FOR SELECT USING (((("team_id" IS NULL) AND ("user_id" = "auth"."uid"())) OR public.is_team_member("entries"."team_id", "auth"."uid"())));
+CREATE POLICY "Users can view own entries" ON "public"."entries" FOR SELECT USING (
+  (
+    public.is_team_admin("entries"."team_id", (SELECT "auth"."uid"()))
+    OR
+    (
+      (
+        ("team_id" IS NULL) AND ("user_id" = (SELECT "auth"."uid"()))
+      )
+      OR
+      public.is_team_member("entries"."team_id", (SELECT "auth"."uid"()))
+    )
+  )
+);
 
 CREATE POLICY "Users can view own practice_log_tags" ON "public"."practice_log_tags" FOR SELECT USING ((EXISTS ( SELECT 1
   FROM ("public"."practice_logs" "pl"
     JOIN "public"."practices" "p" ON (("p"."id" = "pl"."practice_id")))
-  WHERE (("pl"."id" = "practice_log_tags"."practice_log_id") AND ("p"."user_id" = "auth"."uid"())))));
+  WHERE (("pl"."id" = "practice_log_tags"."practice_log_id") AND ("p"."user_id" = (SELECT "auth"."uid"()))))));
 
 CREATE POLICY "Users can view own practice_logs" ON "public"."practice_logs" FOR SELECT USING ((EXISTS ( SELECT 1
   FROM "public"."practices"
-  WHERE (("practices"."id" = "practice_logs"."practice_id") AND ("practices"."user_id" = "auth"."uid"())))));
+  WHERE (("practices"."id" = "practice_logs"."practice_id") AND ("practices"."user_id" = (SELECT "auth"."uid"()))))));
 
-CREATE POLICY "Users can view own practice_tags" ON "public"."practice_tags" FOR SELECT USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can view own practice_tags" ON "public"."practice_tags" FOR SELECT USING (((SELECT "auth"."uid"()) = "user_id"));
 
 CREATE POLICY "Users can view own practice_times" ON "public"."practice_times" FOR SELECT USING ((EXISTS ( SELECT 1
   FROM ("public"."practice_logs" "pl"
     JOIN "public"."practices" "p" ON (("p"."id" = "pl"."practice_id")))
-  WHERE (("pl"."id" = "practice_times"."practice_log_id") AND ("p"."user_id" = "auth"."uid"())))));
+  WHERE (("pl"."id" = "practice_times"."practice_log_id") AND ("p"."user_id" = (SELECT "auth"."uid"()))))));
 
-CREATE POLICY "Users can view own profile and team members" ON "public"."users" FOR SELECT USING ((("auth"."uid"() = "id") OR public.shares_active_team("users"."id", "auth"."uid"())));
+CREATE POLICY "Users can view own profile and team members" ON "public"."users" FOR SELECT USING ((((SELECT "auth"."uid"()) = "id") OR public.shares_active_team("users"."id", (SELECT "auth"."uid"()))));
 
-CREATE POLICY "Users can view own records" ON "public"."records" FOR SELECT USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can view own records" ON "public"."records" FOR SELECT USING (((SELECT "auth"."uid"()) = "user_id"));
 
-CREATE POLICY "Users can view own sessions" ON "public"."user_sessions" FOR SELECT USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can view own sessions" ON "public"."user_sessions" FOR SELECT USING (((SELECT "auth"."uid"()) = "user_id"));
 
 CREATE POLICY "Users can view own split_times" ON "public"."split_times" FOR SELECT USING ((EXISTS ( SELECT 1
   FROM "public"."records"
-  WHERE (("records"."id" = "split_times"."record_id") AND ("records"."user_id" = "auth"."uid"())))));
+  WHERE (("records"."id" = "split_times"."record_id") AND ("records"."user_id" = (SELECT "auth"."uid"()))))));
 
-CREATE POLICY "Users can view practices" ON "public"."practices" FOR SELECT USING (((("team_id" IS NULL) AND ("auth"."uid"() = "user_id")) OR public.is_team_member("practices"."team_id", "auth"."uid"())));
+CREATE POLICY "Users can view practices" ON "public"."practices" FOR SELECT USING (((("team_id" IS NULL) AND ((SELECT "auth"."uid"()) = "user_id")) OR public.is_team_member("practices"."team_id", (SELECT "auth"."uid"()))));
 
 ALTER TABLE "public"."announcements" ENABLE ROW LEVEL SECURITY;
 
@@ -1361,34 +1466,43 @@ ALTER TABLE "public"."records" ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE "public"."split_times" ENABLE ROW LEVEL SECURITY;
 
-ALTER TABLE "public"."styles" ENABLE ROW LEVEL SECURITY;
-
 ALTER TABLE "public"."team_attendance" ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE "public"."team_groups" ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "team_memberships_all_for_team_creator" ON "public"."team_memberships" USING ((EXISTS ( SELECT 1
-  FROM "public"."teams"
-  WHERE (("teams"."id" = "team_memberships"."team_id") AND ("teams"."created_by" = "auth"."uid"()))))) WITH CHECK ((EXISTS ( SELECT 1
-  FROM "public"."teams"
-  WHERE (("teams"."id" = "team_memberships"."team_id") AND ("teams"."created_by" = "auth"."uid"())))));
-
-CREATE POLICY "team_memberships_select_own" ON "public"."team_memberships" FOR SELECT USING (("user_id" = "auth"."uid"()));
-
-CREATE POLICY "team_memberships_update_own" ON "public"."team_memberships" FOR UPDATE USING (("user_id" = "auth"."uid"())) WITH CHECK (("user_id" = "auth"."uid"()));
-
-CREATE POLICY "teams_delete_creator" ON "public"."teams" FOR DELETE USING (("created_by" = "auth"."uid"()));
-
-CREATE POLICY "teams_insert_authenticated" ON "public"."teams" FOR INSERT WITH CHECK (("auth"."uid"() = "created_by"));
-
-CREATE POLICY "teams_select_members" ON "public"."teams" FOR SELECT USING (public.is_team_member("teams"."id", "auth"."uid"()));
-
-CREATE POLICY "teams_update_creator" ON "public"."teams" FOR UPDATE USING (("created_by" = "auth"."uid"())) WITH CHECK (("created_by" = "auth"."uid"()));
-
--- team_membershipsとteamsのRLSを有効化（開発環境と同じ設定）
 ALTER TABLE "public"."team_memberships" ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE "public"."teams" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "public"."styles" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "Users can view team memberships" ON "public"."team_memberships" FOR SELECT USING (
+  ("user_id" = (SELECT "auth"."uid"()))
+  OR
+  public.is_team_member("team_memberships"."team_id", (SELECT "auth"."uid"()))
+  OR
+  (
+    EXISTS (
+      SELECT 1
+      FROM "public"."teams"
+      WHERE (
+        ("teams"."id" = "team_memberships"."team_id")
+        AND
+        ("teams"."created_by" = (SELECT "auth"."uid"()))
+      )
+    )
+  )
+);
+
+
+CREATE POLICY "teams_delete_creator" ON "public"."teams" FOR DELETE USING (("created_by" = (SELECT "auth"."uid"())));
+
+CREATE POLICY "teams_insert_authenticated" ON "public"."teams" FOR INSERT WITH CHECK (((SELECT "auth"."uid"()) = "created_by"));
+
+CREATE POLICY "teams_select_members" ON "public"."teams" FOR SELECT USING ((public.is_team_member("teams"."id", (SELECT "auth"."uid"())) OR ("created_by" = (SELECT "auth"."uid"()))));
+
+CREATE POLICY "teams_update_creator" ON "public"."teams" FOR UPDATE USING (("created_by" = (SELECT "auth"."uid"()))) WITH CHECK (("created_by" = (SELECT "auth"."uid"())));
 
 ALTER TABLE "public"."user_sessions" ENABLE ROW LEVEL SECURITY;
 
@@ -1428,10 +1542,6 @@ GRANT ALL ON FUNCTION "public"."set_invite_code"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."set_published_at"() TO "anon";
 GRANT ALL ON FUNCTION "public"."set_published_at"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_published_at"() TO "service_role";
-
-GRANT ALL ON FUNCTION "public"."update_best_times"() TO "anon";
-GRANT ALL ON FUNCTION "public"."update_best_times"() TO "authenticated";
-GRANT ALL ON FUNCTION "public"."update_best_times"() TO "service_role";
 
 GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "authenticated";
@@ -1530,20 +1640,22 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 
 drop extension if exists "pg_net";
 
+-- Storageバケット作成: profile-images
+-- dev環境と同じ設定: ファイルサイズ制限なし、MIMEタイプ制限なし
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'profile-images',
+  'profile-images',
+  true,
+  NULL, -- ファイルサイズ制限なし（dev環境と同じ）
+  NULL  -- MIMEタイプ制限なし（dev環境と同じ）
+)
+ON CONFLICT (id) DO NOTHING;
+
+DROP TRIGGER IF EXISTS "on_auth_user_created" ON "auth"."users";
 CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- ============================================
--- Storageポリシー（既存のポリシーを削除してから作成）
--- ============================================
-
--- 既存のstorageポリシーを削除
 DROP POLICY IF EXISTS "Profile images are publicly accessible" ON "storage"."objects";
-DROP POLICY IF EXISTS "Users can delete their own profile images" ON "storage"."objects";
-DROP POLICY IF EXISTS "Users can update their own profile images" ON "storage"."objects";
-DROP POLICY IF EXISTS "Users can upload their own profile images" ON "storage"."objects";
-DROP POLICY IF EXISTS "Users can view profile images" ON "storage"."objects";
-
--- Storageポリシーを再作成
 CREATE POLICY "Profile images are publicly accessible"
   ON "storage"."objects"
   AS PERMISSIVE
@@ -1551,27 +1663,31 @@ CREATE POLICY "Profile images are publicly accessible"
   TO public
 USING ((bucket_id = 'profile-images'::text));
 
+DROP POLICY IF EXISTS "Users can delete their own profile images" ON "storage"."objects";
 CREATE POLICY "Users can delete their own profile images"
   ON "storage"."objects"
   AS PERMISSIVE
   FOR DELETE
   TO public
-USING (((bucket_id = 'profile-images'::text) AND ((auth.uid())::text = (string_to_array(name, '/'::text))[2]) AND (auth.uid() IS NOT NULL)));
+USING (((bucket_id = 'profile-images'::text) AND (((SELECT auth.uid()))::text = (string_to_array(name, '/'::text))[2]) AND ((SELECT auth.uid()) IS NOT NULL)));
 
+DROP POLICY IF EXISTS "Users can update their own profile images" ON "storage"."objects";
 CREATE POLICY "Users can update their own profile images"
   ON "storage"."objects"
   AS PERMISSIVE
   FOR UPDATE
   TO public
-USING (((bucket_id = 'profile-images'::text) AND ((auth.uid())::text = (string_to_array(name, '/'::text))[2]) AND (auth.uid() IS NOT NULL)));
+USING (((bucket_id = 'profile-images'::text) AND (((SELECT auth.uid()))::text = (string_to_array(name, '/'::text))[2]) AND ((SELECT auth.uid()) IS NOT NULL)));
 
+DROP POLICY IF EXISTS "Users can upload their own profile images" ON "storage"."objects";
 CREATE POLICY "Users can upload their own profile images"
   ON "storage"."objects"
   AS PERMISSIVE
   FOR INSERT
   TO public
-WITH CHECK (((bucket_id = 'profile-images'::text) AND ((auth.uid())::text = (string_to_array(name, '/'::text))[2]) AND (auth.uid() IS NOT NULL)));
+WITH CHECK (((bucket_id = 'profile-images'::text) AND (((SELECT auth.uid()))::text = (string_to_array(name, '/'::text))[2]) AND ((SELECT auth.uid()) IS NOT NULL)));
 
+DROP POLICY IF EXISTS "Users can view profile images" ON "storage"."objects";
 CREATE POLICY "Users can view profile images"
   ON "storage"."objects"
   AS PERMISSIVE
@@ -1579,3 +1695,33 @@ CREATE POLICY "Users can view profile images"
   TO public
 USING ((bucket_id = 'profile-images'::text));
 
+-- stylesテーブルに固定データを挿入
+DELETE FROM "public"."styles";
+INSERT INTO "public"."styles" ("id", "name_jp", "name", "style", "distance") VALUES
+(1, '25m自由形', '25Fr', 'fr', 25),
+(2, '50m自由形', '50Fr', 'fr', 50),
+(3, '100m自由形', '100Fr', 'fr', 100),
+(4, '200m自由形', '200Fr', 'fr', 200),
+(5, '400m自由形', '400Fr', 'fr', 400),
+(6, '800m自由形', '800Fr', 'fr', 800),
+(7, '1500m自由形', '1500Fr', 'fr', 1500),
+(8, '25m平泳ぎ', '25Br', 'br', 25),
+(9, '50m平泳ぎ', '50Br', 'br', 50),
+(10, '100m平泳ぎ', '100Br', 'br', 100),
+(11, '200m平泳ぎ', '200Br', 'br', 200),
+(12, '25m背泳ぎ', '25Ba', 'ba', 25),
+(13, '50m背泳ぎ', '50Ba', 'ba', 50),
+(14, '100m背泳ぎ', '100Ba', 'ba', 100),
+(15, '200m背泳ぎ', '200Ba', 'ba', 200),
+(16, '25mバタフライ', '25Fly', 'fly', 25),
+(17, '50mバタフライ', '50Fly', 'fly', 50),
+(18, '100mバタフライ', '100Fly', 'fly', 100),
+(19, '200mバタフライ', '200Fly', 'fly', 200),
+(20, '100m個人メドレー', '100IM', 'im', 100),
+(21, '200m個人メドレー', '200IM', 'im', 200),
+(22, '400m個人メドレー', '400IM', 'im', 400);
+
+-- テーブル一覧を確認
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+ORDER BY table_name;

@@ -1,0 +1,50 @@
+%% SwimHub System Architecture Diagram
+flowchart TB
+    %% Clients
+    subgraph client_side["クライアント"]
+        Client["ブラウザ / モバイルWeb"]
+    end
+
+    %% Frontend Hosting
+    subgraph vercel["Vercel (Next.js 15)"]
+        NextApp["Next.js アプリケーション"]
+    end
+
+    %% Backend (Supabase)
+    subgraph supabase["Supabase"]
+        direction TB
+        Auth["Auth"]
+        DB["PostgreSQL (Database)"]
+        Storage["Storage (オブジェクト)"]
+    end
+
+    %% CI/CD
+    subgraph github["GitHub + GitHub Actions"]
+        Repo["GitHub Repository"]
+        Actions["GitHub Actions CI/CD"]
+    end
+
+    %% Monitoring
+    subgraph monitoring["Monitoring"]
+        Uptime["UptimeRobot\nURL Monitoring"]
+        Sentry["Sentry\nError Monitoring"]
+    end
+
+    %% Developer
+    Developer["Developer (Docker)"]
+
+    %% Flows
+    Client -->|"HTTPS"| NextApp
+    NextApp -->|"Supabase Client"| Auth
+    NextApp --> DB
+    NextApp --> Storage
+
+    Developer -->|"Push"| Repo
+    Repo -->|"Hook"| Actions
+    Actions -->|"Deploy"| NextApp
+
+    monitoring -->|"監視対象"| NextApp
+    monitoring -->|"監視対象"| supabase
+
+    NextApp <-.->|"GitHub Hook"| Repo
+
