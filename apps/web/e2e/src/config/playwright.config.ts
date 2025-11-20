@@ -26,7 +26,7 @@ function getLocalSupabaseEnv(): SupabaseEnv | null {
     const result = execSync(
       'npx supabase status --workdir supabase -o json',
       {
-        cwd: path.resolve(__dirname, '..', '..'),
+        cwd: path.resolve(__dirname, '../../../..'),
         encoding: 'utf8',
         stdio: ['pipe', 'pipe', 'ignore'],
       }
@@ -93,8 +93,8 @@ if (shouldUseLocalSupabase) {
  * 水泳管理システムのE2Eテスト設定
  */
 export default defineConfig({
-  // テストディレクトリ
-  testDir: './e2e',
+  // テストディレクトリ（このファイルからの相対パス）
+  testDir: '../tests',
   
   // CI環境でのみforbidOnly有効
   forbidOnly: !!process.env.CI,
@@ -107,8 +107,8 @@ export default defineConfig({
   
   // レポート設定
   reporter: [
-    ['html', { outputFolder: 'e2e/playwright-report' }],
-    ['junit', { outputFile: 'test-results/results.xml' }],
+    ['html', { outputFolder: '../../playwright-report' }],
+    ['junit', { outputFile: '../../test-results/results.xml' }],
     ['list']
   ],
   
@@ -160,8 +160,8 @@ export default defineConfig({
   },
   
   // グローバル設定
-  globalSetup: './e2e/utils/global-setup.ts',
-  globalTeardown: './e2e/utils/global-teardown.ts',
+  globalSetup: './global-setup.ts',
+  globalTeardown: './global-teardown.ts',
 
   // 出力ディレクトリ
   outputDir: 'test-results/',
