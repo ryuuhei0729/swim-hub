@@ -105,10 +105,8 @@ export default defineConfig({
   // ワーカー数設定
   workers: process.env.CI ? 1 : undefined,
   
-  // レポート設定
+  // レポート設定（コンソール出力のみ）
   reporter: [
-    ['html', { outputFolder: '../../playwright-report' }],
-    ['junit', { outputFile: '../../test-results/results.xml' }],
     ['list']
   ],
   
@@ -163,8 +161,8 @@ export default defineConfig({
   globalSetup: './global-setup.ts',
   globalTeardown: './global-teardown.ts',
 
-  // 出力ディレクトリ
-  outputDir: 'test-results/',
+  // 出力ディレクトリ（無効化）
+  // outputDir: 'test-results/',
   
   // 失敗時の最大ログ
   maxFailures: process.env.CI ? 10 : undefined,
