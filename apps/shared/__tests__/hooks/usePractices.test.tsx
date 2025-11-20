@@ -45,7 +45,7 @@ describe('usePractices', () => {
   })
 
   describe('初期化', () => {
-    it('should initialize with loading state', async () => {
+    it('初期表示でローディング状態になる', async () => {
       const mockPractices = [createMockPractice()]
       practiceApiMock.getPractices.mockResolvedValue(mockPractices)
 
@@ -58,7 +58,7 @@ describe('usePractices', () => {
       })
     })
 
-    it('should load practices on mount', async () => {
+    it('マウント時に練習記録を読み込む', async () => {
       const mockPractices = [createMockPractice()]
       practiceApiMock.getPractices.mockResolvedValue(mockPractices)
 
@@ -74,7 +74,7 @@ describe('usePractices', () => {
   })
 
   describe('データ取得', () => {
-    it('should fetch practices with date range', async () => {
+    it('日付範囲を指定したとき該当期間の練習記録を取得できる', async () => {
       const mockPractices = [createMockPractice()]
       practiceApiMock.getPractices.mockResolvedValue(mockPractices)
 
@@ -93,7 +93,7 @@ describe('usePractices', () => {
       expect(practiceApiMock.getPractices).toHaveBeenCalledWith('2025-01-01', '2025-01-31')
     })
 
-    it('should handle fetch error', async () => {
+    it('取得エラーが発生したときエラーを処理できる', async () => {
       const error = new Error('Fetch failed')
       practiceApiMock.getPractices.mockRejectedValue(error)
 
@@ -109,7 +109,7 @@ describe('usePractices', () => {
   })
 
   describe('操作関数', () => {
-    it('should create practice', async () => {
+    it('練習記録を作成できる', async () => {
       const newPractice = {
         date: '2025-01-15',
         place: 'テストプール',
@@ -135,7 +135,7 @@ describe('usePractices', () => {
       expect(practiceApiMock.getPractices).toHaveBeenCalledTimes(2) // 初回 + 再取得
     })
 
-    it('should update practice', async () => {
+    it('練習記録を更新できる', async () => {
       const practiceId = 'practice-1'
       const updates = { place: '更新後プール' }
       
@@ -155,7 +155,7 @@ describe('usePractices', () => {
       expect(practiceApiMock.updatePractice).toHaveBeenCalledWith(practiceId, updates)
     })
 
-    it('should delete practice', async () => {
+    it('練習記録を削除できる', async () => {
       const practiceId = 'practice-1'
       
       practiceApiMock.getPractices.mockResolvedValue([])
@@ -176,7 +176,7 @@ describe('usePractices', () => {
   })
 
   describe('リアルタイム購読', () => {
-    it('should subscribe to realtime updates', async () => {
+    it('リアルタイム更新を購読できる', async () => {
       const mockChannel = { unsubscribe: vi.fn() }
       practiceApiMock.subscribeToPractices.mockReturnValue(mockChannel)
       practiceApiMock.getPractices.mockResolvedValue([])
@@ -193,7 +193,7 @@ describe('usePractices', () => {
       expect(mockClient.removeChannel).toHaveBeenCalledWith(mockChannel)
     })
 
-    it('should not subscribe when realtime is disabled', async () => {
+    it('リアルタイムが無効のとき購読しない', async () => {
       practiceApiMock.getPractices.mockResolvedValue([])
 
       const { result } = renderHook(() =>
@@ -209,7 +209,7 @@ describe('usePractices', () => {
   })
 
   describe('リフレッシュ', () => {
-    it('should refresh data', async () => {
+    it('データをリフレッシュできる', async () => {
       const mockPractices = [createMockPractice()]
       practiceApiMock.getPractices.mockResolvedValue(mockPractices)
 

@@ -65,7 +65,7 @@ describe('CalendarProvider', () => {
     expect(value.monthlySummary).toEqual(initialSummary)
   })
 
-  it('fetches calendar data when initial data is missing and supports optimistic updates', async () => {
+  it('初期データが不足しているときカレンダーデータを取得し、楽観的更新をサポートする', async () => {
     const supabaseMock = {
       auth: {
         getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-1' } } }),

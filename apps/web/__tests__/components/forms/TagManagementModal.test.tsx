@@ -22,7 +22,7 @@ const baseProps = () => ({
 })
 
 describe('TagManagementModal', () => {
-  it('should normalize custom color and render when open', () => {
+  it('カスタムカラーが正規化され、開いているときに表示される', () => {
     const props = baseProps()
     render(<TagManagementModal {...props} />)
 
@@ -34,7 +34,7 @@ describe('TagManagementModal', () => {
     expect(screen.getByText('ストローク')).toBeInTheDocument()
   })
 
-  it('should call onUpdateTag with normalized color and close modal', async () => {
+  it('正規化されたカラーとともにonUpdateTagが呼ばれ、モーダルが閉じられる', async () => {
     const user = userEvent.setup()
     const props = baseProps()
     render(<TagManagementModal {...props} />)
@@ -58,7 +58,7 @@ describe('TagManagementModal', () => {
     })
   })
 
-  it('should open delete confirmation modal and execute deletion', async () => {
+  it('削除確認モーダルが開き、削除が実行される', async () => {
     const user = userEvent.setup()
     const props = baseProps()
     render(<TagManagementModal {...props} />)
@@ -77,7 +77,7 @@ describe('TagManagementModal', () => {
     })
   })
 
-  it('should not render anything when closed', () => {
+  it('閉じているとき何も表示されない', () => {
     const props = baseProps()
     render(<TagManagementModal {...props} isOpen={false} />)
 

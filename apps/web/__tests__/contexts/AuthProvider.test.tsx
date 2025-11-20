@@ -177,7 +177,7 @@ describe('AuthProvider', () => {
     expect(currentSupabase.auth.updateUser).toHaveBeenCalledWith({ password: 'new-password' })
   })
 
-  it('updates profile and refreshes local state', async () => {
+  it('プロフィールを更新し、ローカル状態をリフレッシュする', async () => {
     let contextValue: ReturnType<typeof useAuth> | undefined
 
     render(
