@@ -21,7 +21,13 @@ test.describe('チーム基本機能', () => {
 
     // Assert: 結果検証
     await expect(page).toHaveURL(new RegExp(`.*/teams`))
-    // ページが正常に読み込まれることを確認（具体的な要素は実装に応じて調整）
+    // ページが正常に読み込まれることを確認（body要素が存在することを確認）
+    await expect(page.locator('body')).toBeVisible()
+    // ページタイトルまたは主要な要素が表示されることを確認
+    const pageTitle = await page.locator('h1, h2').first()
+    if (await pageTitle.count() > 0) {
+      await expect(pageTitle).toBeVisible()
+    }
   })
 })
 

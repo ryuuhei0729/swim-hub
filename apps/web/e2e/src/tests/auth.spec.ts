@@ -4,6 +4,7 @@ import { SignupAction } from '../actions/SignupAction'
 import { TIMEOUTS, URLS } from '../config/constants'
 import { EnvConfig } from '../config/env'
 import { LoginPage } from '../pages/LoginPage'
+import { TestCredentialsFactory } from '../utils/test-data'
 
 test.describe('認証機能', () => {
   test.beforeEach(async ({ page }) => {
@@ -21,9 +22,8 @@ test.describe('認証機能', () => {
     const loginAction = new LoginAction(page)
     const loginPage = new LoginPage(page)
     
-    const testEmail = `e2e-test-${Date.now()}@swimhub.com`
-    const testPassword = 'E2ETest123!'
-    const testName = 'E2Eテストユーザー'
+    const { email: testEmail, password: testPassword, name: testName } = 
+      TestCredentialsFactory.forSignupLoginFlow()
 
     // Act: 操作実行
     // Step 1: 新規登録
@@ -53,8 +53,8 @@ test.describe('認証機能', () => {
     const loginAction = new LoginAction(page)
     const loginPage = new LoginPage(page)
 
-    // Act: 操作実行
-    await loginAction.execute(env.baseUrl, 'invalid@example.com', 'wrongpassword')
+    // Act: 操作実行（失敗を期待するためexpectSuccess=falseを指定）
+    await loginAction.execute(env.baseUrl, 'invalid@example.com', 'wrongpassword', { expectSuccess: false })
 
     // Assert: 結果検証
     const errorMessage = await loginPage.getErrorMessage()
@@ -69,9 +69,8 @@ test.describe('認証機能', () => {
     const loginAction = new LoginAction(page)
     const loginPage = new LoginPage(page)
     
-    const testEmail = `logout-test-${Date.now()}@swimhub.com`
-    const testPassword = 'LogoutTest123!'
-    const testName = 'ログアウトテストユーザー'
+    const { email: testEmail, password: testPassword, name: testName } = 
+      TestCredentialsFactory.forLogoutTest()
 
     // Act: 操作実行
     // Step 1: 新規登録
@@ -113,9 +112,8 @@ test.describe('認証機能', () => {
     const loginAction = new LoginAction(page)
     const loginPage = new LoginPage(page)
     
-    const testEmail = `persistence-test-${Date.now()}@swimhub.com`
-    const testPassword = 'PersistenceTest123!'
-    const testName = '永続化テストユーザー'
+    const { email: testEmail, password: testPassword, name: testName } = 
+      TestCredentialsFactory.forPersistenceTest()
 
     // Act: 操作実行
     // Step 1: 新規登録
@@ -146,9 +144,8 @@ test.describe('認証機能', () => {
     const signupAction = new SignupAction(page)
     const loginPage = new LoginPage(page)
     
-    const testEmail = `reset-test-${Date.now()}@swimhub.com`
-    const testPassword = 'ResetTest123!'
-    const testName = 'リセットテストユーザー'
+    const { email: testEmail, password: testPassword, name: testName } = 
+      TestCredentialsFactory.forPasswordResetTest()
 
     // Act: 操作実行
     // Step 1: 新規登録
@@ -177,9 +174,8 @@ test.describe('認証機能', () => {
     const signupAction = new SignupAction(page)
     const loginPage = new LoginPage(page)
     
-    const testEmail = `single-register-${Date.now()}@swimhub.com`
-    const testPassword = 'SingleRegister123!'
-    const testName = '単体登録テストユーザー'
+    const { email: testEmail, password: testPassword, name: testName } = 
+      TestCredentialsFactory.forSingleRegisterTest()
 
     // Act: 操作実行
     await signupAction.execute(env.baseUrl, testName, testEmail, testPassword)

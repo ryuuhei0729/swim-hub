@@ -2,9 +2,9 @@ import * as dotenv from 'dotenv'
 import path from 'node:path'
 
 // .envファイルを読み込む（相対パスで解決）
-// 実行時のカレントディレクトリから相対的に解決
-const envLocalPath = path.resolve(process.cwd(), 'apps/web/.env.local')
-const envPath = path.resolve(process.cwd(), 'apps/web/.env')
+// process.cwd()はapps/webディレクトリなので、直接.env.local/.envを参照
+const envLocalPath = path.resolve(process.cwd(), '.env.local')
+const envPath = path.resolve(process.cwd(), '.env')
 
 dotenv.config({ path: envLocalPath })
 dotenv.config({ path: envPath })

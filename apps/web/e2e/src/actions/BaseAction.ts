@@ -35,5 +35,16 @@ export class BaseAction {
     // エラーを再スロー
     throw error
   }
+
+  /**
+   * 日付を現在月の指定日にフォーマット
+   * @param day 日（1-31）
+   * @returns ISO形式の日付文字列（YYYY-MM-DD）
+   */
+  formatDateInCurrentMonth(day: number): string {
+    const now = new Date()
+    const target = new Date(now.getFullYear(), now.getMonth(), day)
+    return target.toISOString().split('T')[0]
+  }
 }
 

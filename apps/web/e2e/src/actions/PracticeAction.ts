@@ -15,15 +15,6 @@ export class PracticeAction extends BaseAction {
   }
 
   /**
-   * 日付を現在月の指定日にフォーマット
-   */
-  formatDateInCurrentMonth(day: number): string {
-    const now = new Date()
-    const target = new Date(now.getFullYear(), now.getMonth(), day)
-    return target.toISOString().split('T')[0]
-  }
-
-  /**
    * 練習を追加して練習ログを登録
    */
   async addPracticeWithLog(

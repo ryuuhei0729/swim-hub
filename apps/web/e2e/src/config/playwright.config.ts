@@ -9,6 +9,11 @@ type SupabaseEnv = {
   graphqlUrl: string
 }
 
+/**
+ * ローカル開発環境専用のSupabaseデフォルト設定
+ * 注意: これらのキーはローカル開発環境（Supabase CLI）のデフォルト値です。
+ * 本番環境やリモート環境では使用しないでください。
+ */
 const DEFAULT_LOCAL_SUPABASE: SupabaseEnv = {
   url: 'http://127.0.0.1:54321',
   anonKey:
@@ -19,14 +24,17 @@ const DEFAULT_LOCAL_SUPABASE: SupabaseEnv = {
 }
 
 const shouldUseLocalSupabase =
-  process.env.CI !== 'true' && process.env.E2E_SUPABASE_MODE !== 'remote'
+  process.env.E2E_SUPABASE_MODE === 'local' ||
+  (process.env.CI !== 'true' && process.env.E2E_SUPABASE_MODE !== 'remote')
 
 function getLocalSupabaseEnv(): SupabaseEnv | null {
   try {
+    // __dirnameは apps/web/e2e/src/config なので、
+    // リポジトリルート（supabase/ がある場所）に到達するには ../../../../.. が必要
     const result = execSync(
       'npx supabase status --workdir supabase -o json',
       {
-        cwd: path.resolve(__dirname, '../../../..'),
+        cwd: path.resolve(__dirname, '../../../../..'),
         encoding: 'utf8',
         stdio: ['pipe', 'pipe', 'ignore'],
       }

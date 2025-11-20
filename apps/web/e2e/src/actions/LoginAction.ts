@@ -19,8 +19,17 @@ export class LoginAction extends BaseAction {
    * @param baseUrl ベースURL
    * @param email メールアドレス
    * @param password パスワード
+   * @param options オプション設定
+   * @param options.expectSuccess 成功を期待するか（デフォルト: true）。falseの場合、リダイレクト待ちをスキップ
    */
-  async execute(baseUrl: string, email: string, password: string): Promise<void> {
+  async execute(
+    baseUrl: string,
+    email: string,
+    password: string,
+    options: { expectSuccess?: boolean } = {}
+  ): Promise<void> {
+    const { expectSuccess = true } = options
+
     try {
       console.log('🔐 ログインフロー開始')
 
@@ -38,16 +47,29 @@ export class LoginAction extends BaseAction {
       console.log('🔑 ログインボタンをクリック')
       await this.loginPage.clickLogin()
 
-      // Step 4: ダッシュボードへのリダイレクトを待つ
-      console.log('⏳ ダッシュボードへのリダイレクトを待機')
-      await this.page.waitForURL(new RegExp(`.*${URLS.DASHBOARD}`), { 
-        timeout: TIMEOUTS.LONG 
-      })
-      await this.page.waitForLoadState('networkidle')
-      await this.page.waitForTimeout(TIMEOUTS.SPA_RENDERING)
-
-      console.log('✅ ログインフロー完了')
+      // Step 4: 成功を期待する場合のみ、ダッシュボードへのリダイレクトを待つ
+      if (expectSuccess) {
+        console.log('⏳ ダッシュボードへのリダイレクトを待機')
+        await this.page.waitForURL(new RegExp(`.*${URLS.DASHBOARD}`), { 
+          timeout: TIMEOUTS.LONG 
+        })
+        await this.page.waitForLoadState('networkidle')
+        await this.page.waitForTimeout(TIMEOUTS.SPA_RENDERING)
+        console.log('✅ ログインフロー完了')
+      } else {
+        // 失敗ケース: エラーメッセージが表示されるまで待機
+        console.log('⏳ エラーメッセージの表示を待機')
+        await this.page.waitForLoadState('networkidle')
+        // ログインページに留まることを確認（リダイレクトされない）
+        await this.page.waitForTimeout(TIMEOUTS.SHORT)
+        console.log('✅ ログイン失敗フロー完了（エラー検証可能）')
+      }
     } catch (error) {
+      // expectSuccess=falseの場合、リダイレクト待ちのタイムアウトエラーは無視
+      if (!expectSuccess && error instanceof Error && error.message.includes('waiting for URL')) {
+        console.log('⚠️ リダイレクト待ちタイムアウト（期待通り）')
+        return
+      }
       await this.handleError(error as Error, 'Login')
     }
   }
