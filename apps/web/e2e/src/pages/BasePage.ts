@@ -16,9 +16,9 @@ export class BasePage {
    * ページに遷移
    */
   async goto(url: string): Promise<void> {
-    await this.page.goto(url)
-    // SPAのため、networkidle後もレンダリング遅延がある
-    await this.page.waitForLoadState('networkidle')
+    await this.page.goto(url, { waitUntil: 'domcontentloaded' })
+    // SPAのため、networkidle後もレンダリング遅延がある（短縮）
+    await this.page.waitForLoadState('networkidle', { timeout: 5000 })
     await this.page.waitForTimeout(TIMEOUTS.SPA_RENDERING)
   }
 
@@ -40,7 +40,7 @@ export class BasePage {
    * ページの準備完了を待つ
    */
   async waitForReady(): Promise<void> {
-    await this.page.waitForLoadState('networkidle')
+    await this.page.waitForLoadState('networkidle', { timeout: 5000 })
     await this.page.waitForTimeout(TIMEOUTS.SPA_RENDERING)
   }
 

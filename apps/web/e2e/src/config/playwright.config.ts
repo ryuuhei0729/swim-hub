@@ -107,11 +107,11 @@ export default defineConfig({
   // CI環境でのみforbidOnly有効
   forbidOnly: !!process.env.CI,
   
-  // CI環境でのリトライ設定
-  retries: process.env.CI ? 2 : 0,
+  // CI環境でのリトライ設定（1回に削減）
+  retries: process.env.CI ? 1 : 0,
   
-  // ワーカー数設定
-  workers: process.env.CI ? 1 : undefined,
+  // ワーカー数設定（並列実行で高速化）
+  workers: process.env.CI ? 4 : undefined,
   
   // レポート設定（コンソール出力のみ）
   reporter: [
@@ -138,9 +138,9 @@ export default defineConfig({
     // タイムゾーン設定
     timezoneId: 'Asia/Tokyo',
     
-    // デフォルトタイムアウト
-    actionTimeout: 10 * 1000,
-    navigationTimeout: 30 * 1000,
+    // デフォルトタイムアウト（短縮して高速化）
+    actionTimeout: 5 * 1000,
+    navigationTimeout: 15 * 1000,
   },
   
   // プロジェクト設定
@@ -158,7 +158,7 @@ export default defineConfig({
       : 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
-    timeout: 180 * 1000,
+    timeout: 120 * 1000, // ビルドタイムアウトを短縮
     env: {
       ...(process.env.CI ? {} : { NEXT_DISABLE_TURBOPACK: '1' }),
       ...sanitizedSupabaseEnv,
@@ -177,8 +177,8 @@ export default defineConfig({
 
   // 期待値設定
   expect: {
-    // アサーションタイムアウト
-    timeout: 10 * 1000,
+    // アサーションタイムアウト（短縮して高速化）
+    timeout: 5 * 1000,
     
     // スクリーンショット比較のしきい値
     toHaveScreenshot: { threshold: 0.3 },

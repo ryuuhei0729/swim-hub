@@ -60,14 +60,14 @@ async function globalSetup(config: FullConfig) {
     const page = await browser.newPage()
     
     console.log(`📡 ${baseURL} への接続をテスト中...`)
-    await page.goto(baseURL)
+    await page.goto(baseURL, { waitUntil: 'domcontentloaded', timeout: 15000 })
     
     // ページタイトルチェック
     const title = await page.title()
     console.log(`✅ ページタイトル: ${title}`)
     
-    // アプリケーションが正常に読み込まれているかチェック
-    await page.waitForSelector('body', { timeout: 30000 })
+    // アプリケーションが正常に読み込まれているかチェック（タイムアウト短縮）
+    await page.waitForSelector('body', { timeout: 10000 })
     console.log('✅ アプリケーションが正常に読み込まれました')
     
     await page.close()
