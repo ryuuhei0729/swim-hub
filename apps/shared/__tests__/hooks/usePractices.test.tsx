@@ -26,6 +26,8 @@ describe('usePractices', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    // console.errorをモックしてstderrへの出力を抑制
+    vi.spyOn(console, 'error').mockImplementation(() => {})
     mockClient = createMockSupabaseClient()
     practiceApiMock = {
       getPractices: vi.fn(),

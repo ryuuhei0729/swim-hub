@@ -42,6 +42,8 @@ describe('useTeams', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    // console.errorをモックしてstderrへの出力を抑制
+    vi.spyOn(console, 'error').mockImplementation(() => {})
     mockClient = createMockSupabaseClient()
     coreApiMock = {
       getMyTeams: vi.fn(),
