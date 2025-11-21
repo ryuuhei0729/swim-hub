@@ -142,14 +142,19 @@ jobs:
       env:
         SUPABASE_DB_PASSWORD: postgres
 
-    - name: Restart PostgREST to refresh schema cache
+    - name: Refresh PostgREST schema cache
       run: |
-        # PostgRESTを再起動してスキーマキャッシュをリフレッシュ
-        npx supabase stop --workdir supabase
-        sleep 1
-        npx supabase start --workdir supabase
-        # PostgRESTが起動するまで待機（タイムアウト短縮）
-        timeout 15 bash -c 'until curl -f http://127.0.0.1:54321/rest/v1/; do sleep 0.5; done'
+        echo "📡 PostgRESTスキーマキャッシュをリフレッシュ中..."
+        # PostgreSQL経由でPostgRESTにスキーマリロードを通知
+        docker exec supabase_db_swim-hub psql -U postgres -d postgres -c "NOTIFY pgrst, 'reload schema';"
+        # スキーマキャッシュ更新の待機
+        sleep 2
+        echo "✅ スキーマキャッシュをリフレッシュしました"
+        
+        # 念のため接続確認
+        echo "📡 PostgREST接続確認..."
+        timeout 10 bash -c 'until curl -s http://127.0.0.1:54321/rest/v1/ > /dev/null; do sleep 0.5; done'
+        echo "✅ PostgRESTが応答しています"
 
     - name: Create test users
       run: node apps/web/e2e/scripts/create-test-user.js
