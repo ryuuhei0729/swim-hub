@@ -103,8 +103,8 @@ export default defineConfig({
   // CI環境でのリトライ設定（1回に削減）
   retries: process.env.CI ? 1 : 0,
   
-  // ワーカー数設定（並列実行で高速化）
-  workers: process.env.CI ? 4 : undefined,
+  // ワーカー数設定（開発環境では1、CIでは2）
+  workers: process.env.CI ? 2 : 1,
   
   // レポート設定（コンソール出力のみ）
   reporter: [

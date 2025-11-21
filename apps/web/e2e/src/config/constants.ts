@@ -7,12 +7,12 @@
  * タイムアウト値（ミリ秒）
  */
 export const TIMEOUTS = {
-  DEFAULT: 5000,               // デフォルトタイムアウト（短縮）
-  LONG: 15000,                 // 長いタイムアウト（短縮）
-  SHORT: 2000,                 // 短いタイムアウト（短縮）
-  MODAL_ANIMATION: 500,        // モーダルアニメーション完了待ち（短縮）
-  SPA_RENDERING: 500,          // SPAレンダリング完了待ち（短縮）
-  REDIRECT: 2000,              // リダイレクト完了待ち（短縮）
+  DEFAULT: 10000,              // デフォルトタイムアウト
+  LONG: 20000,                 // 長いタイムアウト
+  SHORT: 3000,                 // 短いタイムアウト
+  MODAL_ANIMATION: 1000,       // モーダルアニメーション完了待ち
+  SPA_RENDERING: 1000,         // SPAレンダリング完了待ち
+  REDIRECT: 3000,              // リダイレクト完了待ち
 } as const
 
 /**

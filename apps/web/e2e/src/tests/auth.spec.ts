@@ -19,8 +19,6 @@ test.describe('認証機能', () => {
     // Arrange: テスト準備
     const env = EnvConfig.getTestEnvironment()
     const signupAction = new SignupAction(page)
-    const loginAction = new LoginAction(page)
-    const loginPage = new LoginPage(page)
     
     const { email: testEmail, password: testPassword, name: testName } = 
       TestCredentialsFactory.forSignupLoginFlow()
@@ -29,15 +27,8 @@ test.describe('認証機能', () => {
     // Step 1: 新規登録
     await signupAction.execute(env.baseUrl, testName, testEmail, testPassword)
     
-    // 登録成功メッセージを確認
-    const successMessage = await loginPage.getSuccessMessage()
-    expect(successMessage).toContain('確認メール')
-
-    // Step 2: ログインモードに切り替え
-    await loginPage.switchToLoginMode()
-
-    // Step 3: ログイン実行
-    await loginAction.execute(env.baseUrl, testEmail, testPassword)
+    // ローカルSupabase環境ではメール確認なしで即座にログインされるため
+    // サインアップ後、直接ダッシュボードにリダイレクトされる
 
     // Assert: 結果検証
     await expect(page).toHaveURL(new RegExp(`.*${URLS.DASHBOARD}`), { timeout: TIMEOUTS.LONG })

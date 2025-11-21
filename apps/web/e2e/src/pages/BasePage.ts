@@ -17,8 +17,9 @@ export class BasePage {
    */
   async goto(url: string): Promise<void> {
     await this.page.goto(url, { waitUntil: 'domcontentloaded' })
-    // SPAのため、networkidle後もレンダリング遅延がある（短縮）
-    await this.page.waitForLoadState('networkidle', { timeout: 5000 })
+    // Supabaseのリアルタイム接続により networkidle/load は不安定
+    // 代わりにbody要素の存在を確認してからSPAレンダリング完了を待つ
+    await this.page.locator('body').waitFor({ state: 'attached' })
     await this.page.waitForTimeout(TIMEOUTS.SPA_RENDERING)
   }
 
@@ -40,7 +41,7 @@ export class BasePage {
    * ページの準備完了を待つ
    */
   async waitForReady(): Promise<void> {
-    await this.page.waitForLoadState('networkidle', { timeout: 5000 })
+    await this.page.locator('body').waitFor({ state: 'attached' })
     await this.page.waitForTimeout(TIMEOUTS.SPA_RENDERING)
   }
 

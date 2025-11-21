@@ -43,7 +43,6 @@
     "supabase:status": "npx supabase status --workdir supabase"
   },
   "devDependencies": {
-    "@mermaid-js/mermaid-cli": "^11.12.0",
     "@playwright/test": "^1.56.1",
     "@types/node": "^24",
     "dotenv": "^17.2.3",

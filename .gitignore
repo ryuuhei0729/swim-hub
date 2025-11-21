@@ -14,8 +14,9 @@ yarn-error.log*
 
 # Environment variables
 .env
-.env.*
+.env.local
 .env.*.local
+# .env.development, .env.production, .env.example はgit管理（共有設定）
 
 # MCP Configuration (contains sensitive tokens)
 .mcp.json
@@ -74,4 +75,5 @@ apps/web/next-env.d.ts
 /apps/web/e2e/test-results/
 /apps/web/blob-report/
 /apps/web/playwright/.cache/
+/apps/web/screenshots/
 .playwright-mcp/

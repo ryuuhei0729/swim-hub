@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test'
 import { TIMEOUTS, URLS } from '../config/constants'
-import { BaseAction } from './BaseAction'
 import { LoginPage } from '../pages/LoginPage'
+import { BaseAction } from './BaseAction'
 
 /**
  * ログインフローを実行するAction
@@ -53,13 +53,13 @@ export class LoginAction extends BaseAction {
         await this.page.waitForURL(new RegExp(`.*${URLS.DASHBOARD}`), { 
           timeout: TIMEOUTS.LONG 
         })
-        await this.page.waitForLoadState('networkidle')
+        await this.page.locator('body').waitFor({ state: 'attached' })
         await this.page.waitForTimeout(TIMEOUTS.SPA_RENDERING)
         console.log('✅ ログインフロー完了')
       } else {
         // 失敗ケース: エラーメッセージが表示されるまで待機
         console.log('⏳ エラーメッセージの表示を待機')
-        await this.page.waitForLoadState('networkidle')
+        await this.page.locator('body').waitFor({ state: 'attached' })
         // ログインページに留まることを確認（リダイレクトされない）
         await this.page.waitForTimeout(TIMEOUTS.SHORT)
         console.log('✅ ログイン失敗フロー完了（エラー検証可能）')
