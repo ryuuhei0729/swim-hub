@@ -75,7 +75,7 @@ swim-hub/
 ```
 
 ## システム構成図
-![System Architecture](./docs/assets/readme/system-architecture.png)
+![System Architecture](./docs/assets/readme/system-architecture.jpeg)
 
 ## データベース / ER 図
 
