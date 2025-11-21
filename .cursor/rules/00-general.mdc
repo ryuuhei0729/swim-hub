@@ -26,7 +26,6 @@ alwaysApply: true
 - Next.js 15 + TypeScript (Web)
 - React Native + Expo (Mobile - 未実装)
 - Supabase (Backend)
-- GraphQL (API)
 - Apollo Client (状態管理)
 
 ## 言語設定

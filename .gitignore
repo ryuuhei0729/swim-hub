@@ -11,9 +11,6 @@ yarn-error.log*
 /packages/*/dist/
 /packages/*/build/
 
-# Generated files
-/packages/graphql-schema/generated/
-*.tsbuildinfo
 
 # Environment variables
 .env

@@ -142,6 +142,52 @@ jobs:
       env:
         SUPABASE_DB_PASSWORD: postgres
 
+    - name: Refresh PostgREST schema cache
+      run: |
+        echo "📡 PostgRESTスキーマキャッシュをリフレッシュ中..."
+        
+        # デバッグ: すべてのSupabaseコンテナを確認
+        echo "🔍 実行中のSupabaseコンテナ一覧:"
+        docker ps --format "{{.Names}}" | grep -E "supabase|postgres" || echo "コンテナが見つかりません"
+        
+        # 最も確実な方法: PostgRESTコンテナを再起動してスキーマキャッシュを強制的にリフレッシュ
+        # supabase_restで始まるコンテナを検索（PostgRESTコンテナ）
+        PGRST_CONTAINER=$(docker ps --filter "name=supabase_rest" --format "{{.Names}}" | head -n 1)
+        
+        # もし見つからない場合、restを含むコンテナを検索
+        if [ -z "$PGRST_CONTAINER" ]; then
+          PGRST_CONTAINER=$(docker ps --format "{{.Names}}" | grep -i "rest" | head -n 1)
+        fi
+        
+        if [ -n "$PGRST_CONTAINER" ]; then
+          echo "🔄 PostgRESTコンテナを再起動: $PGRST_CONTAINER"
+          docker restart "$PGRST_CONTAINER"
+          echo "⏳ PostgRESTの再起動を待機中..."
+          sleep 5
+        else
+          echo "⚠️ PostgRESTコンテナが見つかりません。代替方法を試します..."
+          # 代替方法: PostgreSQL経由でNOTIFYを送る
+          DB_CONTAINER=$(docker ps --filter "name=supabase_db" --format "{{.Names}}" | head -n 1)
+          if [ -n "$DB_CONTAINER" ]; then
+            echo "📦 データベースコンテナ: $DB_CONTAINER"
+            docker exec "$DB_CONTAINER" psql -U postgres -d postgres -c "NOTIFY pgrst, 'reload schema';" || true
+            sleep 3
+          else
+            echo "⚠️ コンテナが見つかりません。スキップします。"
+          fi
+        fi
+        
+        # PostgRESTが応答するまで待機（最大30秒）
+        echo "📡 PostgREST接続確認..."
+        for i in {1..30}; do
+          if curl -s -f http://127.0.0.1:54321/rest/v1/ > /dev/null 2>&1; then
+            echo "✅ PostgRESTが応答しています"
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "⚠️ PostgRESTの応答確認がタイムアウトしましたが、続行します"
+
     - name: Create test users
       run: node apps/web/e2e/scripts/create-test-user.js
       env:

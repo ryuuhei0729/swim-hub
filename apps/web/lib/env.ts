@@ -107,14 +107,6 @@ export function getSupabaseConfig() {
 }
 
 /**
- * GraphQL エンドポイントを取得
- */
-export function getGraphQLEndpoint() {
-  const { url } = getSupabaseConfig()
-  return process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT || `${url}/functions/v1/graphql`
-}
-
-/**
  * 開発環境かどうかを判定
  */
 export function isDevelopment() {

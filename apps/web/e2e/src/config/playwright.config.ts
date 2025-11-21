@@ -6,7 +6,6 @@ type SupabaseEnv = {
   url: string
   anonKey: string
   serviceRoleKey: string
-  graphqlUrl: string
 }
 
 /**
@@ -20,7 +19,6 @@ const DEFAULT_LOCAL_SUPABASE: SupabaseEnv = {
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0',
   serviceRoleKey:
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU',
-  graphqlUrl: 'http://127.0.0.1:54321/graphql/v1',
 }
 
 const shouldUseLocalSupabase =
@@ -52,9 +50,6 @@ function getLocalSupabaseEnv(): SupabaseEnv | null {
         parsed.SERVICE_ROLE_KEY ??
         parsed.SECRET_KEY ??
         DEFAULT_LOCAL_SUPABASE.serviceRoleKey,
-      graphqlUrl:
-        parsed.GRAPHQL_URL ??
-        `${(parsed.API_URL ?? DEFAULT_LOCAL_SUPABASE.url).replace(/\/$/, '')}/graphql/v1`,
     }
   } catch (error) {
     console.warn(
@@ -74,13 +69,11 @@ const supabaseEnvEntries = shouldUseLocalSupabase && localSupabaseEnv
       NEXT_PUBLIC_SUPABASE_URL: localSupabaseEnv.url,
       NEXT_PUBLIC_SUPABASE_ANON_KEY: localSupabaseEnv.anonKey,
       SUPABASE_SERVICE_ROLE_KEY: localSupabaseEnv.serviceRoleKey,
-      NEXT_PUBLIC_GRAPHQL_ENDPOINT: localSupabaseEnv.graphqlUrl,
     }
   : {
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
       NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-      NEXT_PUBLIC_GRAPHQL_ENDPOINT: process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT,
     }
 
 const sanitizedSupabaseEnv = Object.fromEntries(

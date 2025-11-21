@@ -27,6 +27,8 @@ jobs:
     if: >-
       ${{ github.event.workflow_run.conclusion == 'success' &&
           github.event.workflow_run.head_repository.full_name == github.repository &&
+          github.event.workflow_run.event == 'push' &&
+          github.event.workflow_run.head_branch == 'main' &&
           needs.check-secrets.outputs.has-vercel-secrets == 'true' }}
     needs: check-secrets
     runs-on: ubuntu-latest
@@ -58,13 +60,17 @@ jobs:
       - name: Determine deploy target
         id: strategy
         run: |
+          # mainブランチへのpushのみ本番デプロイ（--prodフラグ付き）
+          # このジョブはmainブランチへのpushのみ実行されるため、常に本番デプロイ
           branch="${{ github.event.workflow_run.head_branch }}"
           event="${{ github.event.workflow_run.event }}"
           echo "branch=$branch" >> "$GITHUB_OUTPUT"
           if [[ "$branch" == "main" && "$event" == "push" ]]; then
             echo "vercel_args=--prod" >> "$GITHUB_OUTPUT"
+            echo "✅ 本番環境へのデプロイを実行します"
           else
             echo "vercel_args=" >> "$GITHUB_OUTPUT"
+            echo "⚠️ プレビュー環境へのデプロイを実行します"
           fi
 
       - name: Download prebuilt artifact

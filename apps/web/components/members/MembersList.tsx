@@ -7,7 +7,7 @@ interface MembersListProps {
   teamId?: string
 }
 
-// TODO: GraphQL移行完了後に実装する
+// TODO: 実装予定
 export default function MembersList({ teamId: _teamId }: MembersListProps) {
   return (
     <div className="bg-white rounded-lg shadow p-6">
@@ -20,9 +20,6 @@ export default function MembersList({ teamId: _teamId }: MembersListProps) {
       <div className="text-center py-8">
         <p className="text-gray-600">
           この機能は現在実装中です。
-        </p>
-        <p className="text-sm text-gray-500 mt-2">
-          GraphQL移行完了後に利用可能になります。
         </p>
       </div>
     </div>
