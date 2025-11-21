@@ -70,7 +70,7 @@ swim-hub/
 │   ├── web/ (Next.js 15, App Router)
 │   ├── mobile/ (React Native + Expo, 開発予定)
 │   └── shared/（API, hooks, typesを共通化）
-├── supabase/（DDL, Edge Functions, seeds）
+├── supabase/（DDL, seeds）
 └── docs/（仕様, ルール, 開発プロセス）
 ```
 
