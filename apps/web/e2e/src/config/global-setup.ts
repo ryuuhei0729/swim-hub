@@ -30,15 +30,23 @@ async function globalSetup(config: FullConfig) {
     console.log(`✅ テストユーザー: ${testEnv.credentials.email}`)
   } catch (error) {
     console.warn('⚠️  環境変数の確認で警告:', (error as Error).message)
-    // CI環境では既に設定されているはずなので、警告のみ
-    // storageStateの保存はスキップ
+    // 環境変数が設定されていない場合、標準テストユーザーを使用
+    const baseUrl = config.projects[0].use.baseURL || 'http://localhost:3000'
+    testEnv = {
+      baseUrl,
+      credentials: {
+        email: 'e2e-test@swimhub.com',
+        password: 'E2ETest123!',
+      },
+    }
+    console.log(`✅ 標準テストユーザーを使用: ${testEnv.credentials.email}`)
   }
 
-  // Supabase接続確認（ローカル環境の場合）
+  // Supabase接続確認とテストユーザー作成
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321'
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   
-  if (supabaseServiceKey && supabaseUrl.includes('127.0.0.1')) {
+  if (supabaseServiceKey) {
     try {
       console.log('📡 Supabase接続を確認中...')
       const supabase = createClient(supabaseUrl, supabaseServiceKey, {
@@ -49,11 +57,53 @@ async function globalSetup(config: FullConfig) {
       })
       
       // 簡単な接続テスト（ユーザー一覧取得）
-      const { error } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1 })
-      if (error) {
-        console.warn(`⚠️  Supabase接続確認で警告: ${error.message}`)
+      const { error: listError } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1 })
+      if (listError) {
+        console.warn(`⚠️  Supabase接続確認で警告: ${listError.message}`)
       } else {
         console.log('✅ Supabase接続を確認しました')
+      }
+      
+      // テストユーザーの存在確認と作成（存在しない場合のみ作成）
+      if (testEnv) {
+        const { data: users } = await supabase.auth.admin.listUsers()
+        const existingUser = users?.users.find(u => u.email === testEnv!.credentials.email)
+        
+        if (!existingUser) {
+          console.log(`👤 テストユーザーを作成中: ${testEnv.credentials.email}`)
+          const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+            email: testEnv.credentials.email,
+            password: testEnv.credentials.password,
+            email_confirm: true,
+            user_metadata: {
+              name: 'E2Eテストユーザー',
+            },
+          })
+          
+          if (createError) {
+            console.warn(`⚠️  テストユーザー作成で警告: ${createError.message}`)
+          } else if (newUser) {
+            console.log(`✅ テストユーザーを作成しました: ${testEnv.credentials.email}`)
+            
+            // users テーブルにプロフィール情報を追加（エラーは無視）
+            try {
+              await supabase
+                .from('users')
+                .insert({
+                  id: newUser.user.id,
+                  name: 'E2Eテストユーザー',
+                  gender: 0,
+                  bio: 'E2Eテスト用ユーザー',
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                })
+            } catch {
+              // プロフィール作成エラーは無視（既に存在する場合など）
+            }
+          }
+        } else {
+          console.log(`✅ テストユーザーは既に存在します: ${testEnv.credentials.email}`)
+        }
       }
     } catch (error) {
       console.warn('⚠️  Supabase接続確認をスキップ:', (error as Error).message)
