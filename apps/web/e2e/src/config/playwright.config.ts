@@ -21,9 +21,8 @@ const DEFAULT_LOCAL_SUPABASE: SupabaseEnv = {
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU',
 }
 
-const shouldUseLocalSupabase =
-  process.env.E2E_SUPABASE_MODE === 'local' ||
-  (process.env.CI !== 'true' && process.env.E2E_SUPABASE_MODE !== 'remote')
+// デフォルトでローカルSupabaseを使用し、明示的にremote指定されたときのみ切り替える
+const shouldUseLocalSupabase = process.env.E2E_SUPABASE_MODE !== 'remote'
 
 function getLocalSupabaseEnv(): SupabaseEnv | null {
   try {
