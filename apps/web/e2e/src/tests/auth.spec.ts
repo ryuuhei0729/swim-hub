@@ -10,10 +10,12 @@ import { ResetPasswordPage } from '../pages/ResetPasswordPage'
 import { TestCredentialsFactory } from '../utils/test-data'
 
 test.describe('認証機能', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, baseURL }) => {
     // 各テスト前にログインページに明示的に遷移
     // プロジェクト間の切り替え時にブラウザがabout:blankになるため、常に遷移する
-    await page.goto(URLS.LOGIN, { waitUntil: 'domcontentloaded' })
+    // baseURLが設定されていない場合に備えて、絶対URLを使用
+    const loginUrl = baseURL ? `${baseURL}${URLS.LOGIN}` : 'http://localhost:3000/login'
+    await page.goto(loginUrl, { waitUntil: 'domcontentloaded' })
     await page.getByTestId('email-input').waitFor({ state: 'visible' })
   })
 
@@ -52,7 +54,7 @@ test.describe('認証機能', () => {
     await expect(page).toHaveURL(new RegExp(`.*${URLS.LOGIN}`))
   })
 
-  test('ログアウト機能', async ({ page }) => {
+  test('ログアウト機能', async ({ page, baseURL }) => {
     // Arrange: テスト準備
     const signupAction = new SignupAction(page)
     const loginAction = new LoginAction(page)
@@ -83,20 +85,22 @@ test.describe('認証機能', () => {
     
     // ログイン状態がクリアされていることを確認
     // ダッシュボードにアクセスして、middlewareでログインページにリダイレクトされることを確認
-    await page.goto(URLS.DASHBOARD)
+    const dashboardUrl = baseURL ? `${baseURL}${URLS.DASHBOARD}` : 'http://localhost:3000/dashboard'
+    await page.goto(dashboardUrl)
     await expect(page).toHaveURL(new RegExp(`.*${URLS.LOGIN}(\\?redirect_to=.*)?`), { timeout: TIMEOUTS.DEFAULT })
   })
 
-  test('未認証状態での保護されたページアクセス', async ({ page }) => {
+  test('未認証状態での保護されたページアクセス', async ({ page, baseURL }) => {
     // Act: 操作実行
-    await page.goto(URLS.DASHBOARD)
+    const dashboardUrl = baseURL ? `${baseURL}${URLS.DASHBOARD}` : 'http://localhost:3000/dashboard'
+    await page.goto(dashboardUrl)
 
     // Assert: 結果検証
     // middlewareでログインページにリダイレクトされることを確認
     await expect(page).toHaveURL(new RegExp(`.*${URLS.LOGIN}(\\?redirect_to=.*)?`), { timeout: TIMEOUTS.DEFAULT })
   })
 
-  test('ログイン状態の永続化', async ({ page, context }) => {
+  test('ログイン状態の永続化', async ({ page, context, baseURL }) => {
     // Arrange: テスト準備
     const signupAction = new SignupAction(page)
     const logoutAction = new LogoutAction(page)
@@ -122,7 +126,8 @@ test.describe('認証機能', () => {
     // Step 4: 新しいタブでセッション確認
     const newPage = await context.newPage()
     const newDashboardPage = new DashboardPage(newPage)
-    await newPage.goto(URLS.DASHBOARD)
+    const dashboardUrl = baseURL ? `${baseURL}${URLS.DASHBOARD}` : 'http://localhost:3000/dashboard'
+    await newPage.goto(dashboardUrl)
 
     // Assert: 結果検証
     await expect(newPage).toHaveURL(new RegExp(`.*${URLS.DASHBOARD}`), { timeout: TIMEOUTS.SHORT })
