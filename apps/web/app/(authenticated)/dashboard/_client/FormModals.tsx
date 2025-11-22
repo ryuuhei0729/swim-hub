@@ -217,13 +217,32 @@ export function FormModals({
         onClose={closePracticeBasicForm}
         onSubmit={onPracticeBasicSubmit}
         selectedDate={selectedDate || new Date()}
-        editData={editingData && typeof editingData === 'object' && 'metadata' in editingData && editingData.metadata
-          ? {
+        editData={(() => {
+          if (!editingData || typeof editingData !== 'object') {
+            return undefined
+          }
+          
+          // CalendarItem型の場合
+          if ('type' in editingData && (editingData.type === 'practice' || editingData.type === 'team_practice')) {
+            const item = editingData as { date?: string; place?: string; note?: string; metadata?: { practice?: { place?: string } } }
+            return {
+              date: item.date,
+              place: item.place || item.metadata?.practice?.place || '',
+              note: item.note || ''
+            }
+          }
+          
+          // EditingData型の場合（旧フォーマット）
+          if ('metadata' in editingData && editingData.metadata) {
+            return {
               date: editingData.date,
               place: editingData.metadata.practice?.place || '',
               note: editingData.note || ''
             }
-          : undefined}
+          }
+          
+          return undefined
+        })()}
         isLoading={isLoading}
         />
       </Suspense>

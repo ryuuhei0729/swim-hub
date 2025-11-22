@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { TIMEOUTS, URLS } from '../config/constants'
+import { TIMEOUTS, URLS } from '../config/config'
 import { LoginPage } from '../pages/LoginPage'
 import { BaseAction } from './BaseAction'
 
@@ -16,14 +16,12 @@ export class LoginAction extends BaseAction {
 
   /**
    * ログインフローを実行
-   * @param baseUrl ベースURL
    * @param email メールアドレス
    * @param password パスワード
    * @param options オプション設定
    * @param options.expectSuccess 成功を期待するか（デフォルト: true）。falseの場合、リダイレクト待ちをスキップ
    */
   async execute(
-    baseUrl: string,
     email: string,
     password: string,
     options: { expectSuccess?: boolean } = {}
@@ -33,9 +31,9 @@ export class LoginAction extends BaseAction {
     try {
       console.log('🔐 ログインフロー開始')
 
-      // Step 1: ログインページに遷移
+      // Step 1: ログインページに遷移（相対パスを使用、PlaywrightのbaseURL設定が自動適用される）
       console.log('📄 ログインページへ遷移')
-      await this.loginPage.goto(`${baseUrl}${URLS.LOGIN}`)
+      await this.loginPage.goto(URLS.LOGIN)
       await this.loginPage.waitForReady()
 
       // Step 2: 認証情報を入力

@@ -103,8 +103,9 @@ export default defineConfig({
   // CI環境でのリトライ設定（1回に削減）
   retries: process.env.CI ? 1 : 0,
   
-  // ワーカー数設定（開発環境では1、CIでは2）
-  workers: process.env.CI ? 2 : 1,
+  // ワーカー数設定（開発環境では1、CIでは4）
+  // 推奨値: 論理CPUコア数 - 1（CI環境では4を推奨）
+  workers: process.env.CI ? 4 : 1,
   
   // レポート設定（コンソール出力のみ）
   reporter: [
@@ -115,6 +116,11 @@ export default defineConfig({
   use: {
     // ベースURL（開発サーバー）
     baseURL: 'http://localhost:3000',
+    
+    // ヘッドレス実行設定（高速化）
+    // CI環境ではヘッドレスモードで実行（'new'は型エラーのためtrueを使用）
+    // ローカル環境ではブラウザを表示
+    headless: process.env.CI ? true : false,
     
     // スクリーンショット設定
     screenshot: 'only-on-failure',
@@ -140,7 +146,33 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { 
+        ...devices['Desktop Chrome'],
+        // ログイン状態の再利用（storageState）
+        // global-setup.tsで保存されたログイン状態を読み込む
+        // ファイルが存在しない場合は、各テストで個別にログイン処理が実行される
+        storageState: (() => {
+          const authFile = path.resolve(
+            __dirname,
+            '../../playwright/.auth/user.json'
+          )
+          const fs = require('fs')
+          // ファイルが存在する場合のみ設定（存在しない場合はundefinedで各テストでログイン）
+          return fs.existsSync(authFile) ? authFile : undefined
+        })(),
+      },
+      // auth.spec.ts以外のテストファイルに適用
+      testIgnore: /.*auth\.spec\.ts/,
+    },
+    {
+      name: 'chromium-auth',
+      use: { 
+        ...devices['Desktop Chrome'],
+        // 認証テストではstorageStateを使用しない（未認証状態のテストのため）
+        storageState: undefined,
+      },
+      // auth.spec.tsのみに適用
+      testMatch: /.*auth\.spec\.ts/,
     },
   ],
 

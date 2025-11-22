@@ -1,5 +1,5 @@
 import type { Locator, Page } from '@playwright/test'
-import { TIMEOUTS } from '../config/constants'
+import { TIMEOUTS } from '../config/config'
 import { BasePage } from './BasePage'
 
 /**
@@ -21,18 +21,19 @@ export class RecordPage extends BasePage {
   }
 
   /**
-   * 大会追加モーダルを開く
+   * 大会追加モーダルを開く（DayDetailModalを開く）
    */
   async openAddCompetitionModal(dateIso: string): Promise<void> {
     const dayCell = this.page.locator(`[data-testid="calendar-day"][data-date="${dateIso}"]`).first()
     await dayCell.hover()
     await dayCell.locator('[data-testid="day-add-button"]').click()
     
-    const addMenuModal = this.page.getByTestId('add-menu-modal')
-    await addMenuModal.waitFor({ state: 'visible', timeout: TIMEOUTS.SHORT })
+    // DayDetailModalが開く（記録がない場合はday-detail-modal、記録がある場合はpractice-detail-modalまたはrecord-detail-modal）
+    await this.page.getByTestId(/^(day-detail-modal|practice-detail-modal|record-detail-modal)$/).first().waitFor({ state: 'visible', timeout: TIMEOUTS.SHORT })
     await this.page.waitForTimeout(TIMEOUTS.MODAL_ANIMATION)
     
-    const addButton = addMenuModal.getByTestId('add-record-button')
+    // DayDetailModal内のボタンをクリック
+    const addButton = this.page.getByTestId('add-record-button').first()
     await addButton.focus()
     await this.page.keyboard.press('Enter')
     await this.competitionFormModal.waitFor({ state: 'visible', timeout: TIMEOUTS.SHORT })
@@ -154,7 +155,7 @@ export class RecordPage extends BasePage {
    */
   async editCompetition(): Promise<void> {
     const detailModal = this.recordDetailModal.first()
-    await detailModal.getByTestId('edit-competition-button').click()
+    await detailModal.getByTestId('edit-competition-button').first().click()
     await this.competitionFormModal.waitFor({ state: 'visible', timeout: TIMEOUTS.SHORT })
     await this.page.waitForTimeout(TIMEOUTS.MODAL_ANIMATION)
   }
@@ -186,10 +187,36 @@ export class RecordPage extends BasePage {
   }
 
   /**
-   * モーダルを閉じる（ESCキー）
+   * モーダルを閉じる（バツボタン）
    */
   async closeModal(): Promise<void> {
-    await this.page.keyboard.press('Escape')
+    const modal = this.recordDetailModal
+      .filter({ has: this.page.getByTestId('modal-close-button') })
+      .first()
+    await modal.waitFor({ state: 'visible', timeout: TIMEOUTS.SHORT })
+    await modal.getByTestId('modal-close-button').first().click()
+    await modal.waitFor({ state: 'hidden', timeout: TIMEOUTS.DEFAULT })
+  }
+
+  /**
+   * 大会を削除
+   */
+  async deleteCompetition(): Promise<void> {
+    const detailModal = this.recordDetailModal.first()
+    // 大会削除ボタンをクリック（title属性で探す）
+    const deleteButton = detailModal.getByTitle('大会を削除').first()
+    await deleteButton.click()
+    
+    // 削除確認ダイアログを待つ
+    const confirmDialog = this.page.getByTestId('confirm-dialog')
+    await confirmDialog.waitFor({ state: 'visible', timeout: TIMEOUTS.SHORT })
+    await this.page.waitForTimeout(TIMEOUTS.MODAL_ANIMATION)
+    
+    // 削除確認ボタンをクリック
+    await this.page.getByTestId('confirm-delete-button').click()
+    
+    // ダイアログが閉じられるまで待つ
+    await confirmDialog.waitFor({ state: 'hidden', timeout: TIMEOUTS.DEFAULT })
   }
 }
 

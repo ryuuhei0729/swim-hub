@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { TIMEOUTS } from '../config/constants'
+import { TIMEOUTS } from '../config/config'
 
 /**
  * Page Objectsの基底クラス

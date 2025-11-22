@@ -149,6 +149,151 @@ npm run test:e2e --workspace=apps/web
 - Playwrightブラウザのキャッシュを活用することで、ブラウザインストール時間を短縮できます
 - 並列実行を検討することで、全体の実行時間を短縮できます
 
+## パフォーマンス最適化
+
+CI環境でのE2Eテスト実行速度を改善するための設定とテクニックを説明します。
+
+### 1. ヘッドレス実行＋高速モード
+
+Playwrightではブラウザをヘッドレスで起動するだけで大きな高速化が可能です。
+
+**設定**: `playwright.config.ts`で`headless: 'new'`を設定
+
+```typescript
+use: {
+  headless: 'new',  // 'new'は従来のtrueより高速かつ安定
+}
+```
+
+**効果**:
+- CIでは必ず有効化（GUIが不要なため）
+- ローカルでもGUIが不要な場合は推奨
+
+### 2. テストの並列実行（workers）
+
+テストファイル単位で並列実行することにより、処理時間を大幅に削減できます。
+
+**設定**: `playwright.config.ts`で`workers`を設定
+
+```typescript
+workers: process.env.CI ? 4 : 1,
+```
+
+**推奨値**:
+- CI環境: 論理CPUコア数 - 1（例: 4コア → 3-4 workers）
+- ローカル環境: 1（デバッグしやすいため）
+
+**注意**: マシン性能に応じて要調整。リソース不足の場合は減らす。
+
+### 3. テスト対象の絞り込み
+
+すべてのテストを毎回実行するのは非効率です。開発中は特定のテストのみ実行しましょう。
+
+**方法1: `.only`を使用**
+
+```typescript
+test.only('ログインできること', async ({ page }) => {
+  // テスト本体
+});
+```
+
+**方法2: `--grep`オプションを使用**
+
+```bash
+# スモークテストのみ実行
+npx playwright test --grep '@smoke'
+
+# 特定のテストファイルのみ実行
+npx playwright test src/tests/personal/dashboard-practice.spec.ts
+```
+
+**効果**: 開発中の迅速なフィードバックが可能
+
+### 4. CI環境向け最適化設定
+
+CI環境では、デバッグ用のログやトレースの記録がボトルネックになることがあります。
+
+**設定**: `playwright.config.ts`でCI環境向けに最適化
+
+```typescript
+use: {
+  // trace: デバッグ時以外オフに
+  trace: process.env.CI ? 'off' : 'on-first-retry',
+  
+  // video: 失敗時のみ記録
+  video: process.env.CI ? 'retain-on-failure' : 'off',
+  
+  // screenshot: 失敗時のみ記録
+  screenshot: 'only-on-failure',
+}
+```
+
+**効果**: ログやトレースの記録時間を削減
+
+### 5. ログイン状態の保存（実装済み）
+
+毎回のログインはテストを遅くします。ログイン状態を保存して再利用することで高速化できます。
+
+**実装方法**:
+
+`global-setup.ts`で一度だけログイン処理を実行し、ログイン状態を`playwright/.auth/user.json`に保存します。
+
+```typescript
+// global-setup.tsで一度だけログイン＆保存
+const loginAction = new LoginAction(loginPage)
+await loginAction.execute(baseUrl, email, password)
+await context.storageState({ path: 'playwright/.auth/user.json' })
+```
+
+`playwright.config.ts`で保存したログイン状態を読み込みます。
+
+```typescript
+use: {
+  // ファイルが存在する場合のみ設定（存在しない場合は各テストでログイン）
+  storageState: fs.existsSync('playwright/.auth/user.json') 
+    ? 'playwright/.auth/user.json' 
+    : undefined,
+}
+```
+
+**効果**: 
+- ログイン処理をスキップしてテスト開始時間を短縮
+- 各テストで個別にログイン処理を実行する必要がなくなる
+- テスト実行時間が大幅に短縮される
+
+**注意**: 
+- `playwright/.auth/user.json`は認証情報を含むため、`.gitignore`に追加済み
+- ファイルが存在しない場合は、各テストで個別にログイン処理が実行される（後方互換性）
+
+### 6. 不要な静的待機を排除
+
+固定待機（`waitForTimeout`）は無駄な時間を生みます。状態変化を検知できるセレクタを使いましょう。
+
+**推奨パターン**:
+
+```typescript
+// ❌ 悪い例: 固定待機
+await page.waitForTimeout(2000);
+
+// ✅ 良い例: 状態ベース待機
+await page.locator('text=保存しました').waitFor();
+```
+
+**詳細**: [e2e_Patterns.md § 2](./e2e_Patterns.md) - 待機処理パターン
+
+### パフォーマンス改善のまとめ
+
+| テクニック | 効果 | 実装状況 |
+|----------|------|---------|
+| ヘッドレス実行（`headless: 'new'`） | 大 | ✅ 実装済み |
+| 並列実行（`workers`） | 大 | ✅ 実装済み（CI: 2, ローカル: 1） |
+| テスト絞り込み（`.only` / `--grep`） | 中 | ✅ 利用可能 |
+| CI環境向け最適化（trace/video） | 中 | ✅ 実装済み |
+| ログイン状態保存 | 大 | ✅ 実装済み |
+| 静的待機の排除 | 小 | ✅ 推奨パターンあり |
+
+**参考**: [Playwright実行速度改善テクニック](https://qiita.com/Yasushi-Mo/items/b8133ac92975545a4d6c)
+
 ## 参考資料
 
 - [Playwright公式ドキュメント](https://playwright.dev/)
@@ -161,4 +306,8 @@ npm run test:e2e --workspace=apps/web
 - `apps/web/e2e/src/config/playwright.config.ts` - Playwright設定ファイル
 - `apps/web/e2e/src/config/env.ts` - 環境変数設定
 - `apps/web/e2e/scripts/create-test-user.js` - テストユーザー作成スクリプト
+
+## 参考資料
+
+- [Playwright実行速度改善テクニック](https://qiita.com/Yasushi-Mo/items/b8133ac92975545a4d6c) - パフォーマンス最適化の参考記事
 

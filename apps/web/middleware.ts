@@ -1,11 +1,44 @@
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import type { Database } from './lib/supabase'
 
 export async function middleware(request: NextRequest) {
-  const response = NextResponse.next({
-    request: {
-      headers: request.headers,
+  // Cookie操作を記録するための配列
+  const cookiesToSet: Array<{
+    name: string
+    value: string
+    options?: {
+      domain?: string
+      expires?: Date
+      httpOnly?: boolean
+      maxAge?: number
+      path?: string
+      sameSite?: boolean | 'lax' | 'strict' | 'none'
+      secure?: boolean
+    }
+  }> = []
+
+  // Supabaseクライアントを作成（middleware用）
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll().map((cookie) => ({
+            name: cookie.name,
+            value: cookie.value
+          }))
+        },
+        setAll(cookies) {
+          cookiesToSet.push(...cookies)
+        },
     },
-  })
+    }
+  )
+
+  // ユーザー認証状態を取得
+  const { data: { user } } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
 
@@ -21,26 +54,53 @@ export async function middleware(request: NextRequest) {
     '/attendance',
     '/announcements',
     '/settings',
-    '/profile'
+    '/profile',
+    '/mypage'
   ]
 
-  // 認証が不要なルート
-  const publicRoutes = [
-    '/',
+  // 認証が不要なルート（認証済みユーザーがアクセスした場合はリダイレクト）
+  const authRoutes = [
     '/login',
     '/signup',
-    '/reset-password',
-    '/auth/callback'
+    '/reset-password'
   ]
 
-  // 認証が必要なルートにアクセスしている場合
-  const _isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
-  
-  // 認証が不要なルートにアクセスしている場合
-  const _isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route))
+  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
+  const isAuthRoute = authRoutes.some(route => pathname.startsWith(route))
 
-  // NOTE: ここでは認証判定を行わずパスベースの制御のみ。
-  // 認証判定はアプリ側で行う（SSR/クライアント）
+  // 保護されたルートに未認証でアクセスした場合
+  if (isProtectedRoute && !user) {
+    const redirectUrl = new URL('/login', request.url)
+    redirectUrl.searchParams.set('redirect_to', pathname)
+    const response = NextResponse.redirect(redirectUrl)
+    // Cookieを設定
+    cookiesToSet.forEach((cookie) => {
+      response.cookies.set(cookie.name, cookie.value, cookie.options)
+    })
+    return response
+  }
+
+  // 認証済みユーザーが認証ページにアクセスした場合
+  if (isAuthRoute && user) {
+    const response = NextResponse.redirect(new URL('/dashboard', request.url))
+    // Cookieを設定
+    cookiesToSet.forEach((cookie) => {
+      response.cookies.set(cookie.name, cookie.value, cookie.options)
+    })
+    return response
+  }
+
+  // 通常のレスポンス
+  const response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  })
+
+  // Cookieを設定
+  cookiesToSet.forEach((cookie) => {
+    response.cookies.set(cookie.name, cookie.value, cookie.options)
+  })
 
   return response
 }

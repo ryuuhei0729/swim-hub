@@ -1,5 +1,5 @@
 import type { Locator, Page } from '@playwright/test'
-import { SELECTORS, TIMEOUTS } from '../config/constants'
+import { SELECTORS, TIMEOUTS } from '../config/config'
 import { BasePage } from './BasePage'
 
 /**

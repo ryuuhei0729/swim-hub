@@ -257,10 +257,6 @@ export function useDashboardHandlers({
       return
     }
 
-    if (!confirm('この記録を削除してもよろしいですか？')) {
-      return
-    }
-
     try {
       if (itemType === 'practice' || itemType === 'team_practice') {
         const { error } = await supabase
@@ -296,7 +292,6 @@ export function useDashboardHandlers({
 
       await Promise.all([refetch(), refetchRecords()])
       refreshCalendar()
-      alert('アイテムを削除しました')
     } catch (error) {
       console.error('記録の削除に失敗しました:', error)
     }

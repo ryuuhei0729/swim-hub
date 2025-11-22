@@ -1,16 +1,9 @@
 import { expect, test } from '@playwright/test'
-import { EnvConfig } from '../../config/env'
-import { LoginAction } from '../../actions/LoginAction'
+import { EnvConfig } from '../../config/config'
 
 test.describe('チーム出欠', () => {
-  test.beforeEach(async ({ page }) => {
-    // Arrange: テスト準備
-    const env = EnvConfig.getTestEnvironment()
-    const loginAction = new LoginAction(page)
-    
-    // Act: ログイン
-    await loginAction.execute(env.baseUrl, env.credentials.email, env.credentials.password)
-  })
+  // 注意: ログイン状態はglobal-setup.tsで保存されたstorageStateが自動的に使用されます
+  // 各テストで個別にログイン処理を実行する必要はありません
 
   test('チーム出欠ページが正常に表示される', async ({ page }) => {
     // Arrange: テスト準備
