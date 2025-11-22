@@ -105,7 +105,8 @@ async function globalSetup(config: FullConfig) {
     if (testEnv) {
       try {
         console.log('🔐 ログイン状態を保存中...')
-        const context = await browser.newContext()
+        // baseURLを設定してコンテキストを作成（相対パスを使用するため）
+        const context = await browser.newContext({ baseURL })
         const loginPage = await context.newPage()
         
         // コンソールエラーを監視（Supabaseエラーを検出）
