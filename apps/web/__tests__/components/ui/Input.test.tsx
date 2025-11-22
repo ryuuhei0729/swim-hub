@@ -5,26 +5,26 @@ import Input from '../../../components/ui/Input'
 
 describe('Input', () => {
   describe('レンダリング', () => {
-    it('should render input without label', () => {
+    it('ラベルなしで入力フィールドが表示される', () => {
       render(<Input placeholder="プレースホルダー" />)
       const input = screen.getByPlaceholderText('プレースホルダー')
       expect(input).toBeInTheDocument()
     })
 
-    it('should render input with label', () => {
+    it('ラベル付きで入力フィールドが表示される', () => {
       render(<Input label="テストラベル" />)
       expect(screen.getByText('テストラベル')).toBeInTheDocument()
       expect(screen.getByLabelText('テストラベル')).toBeInTheDocument()
     })
 
-    it('should render required indicator', () => {
+    it('必須マーカーが表示される', () => {
       render(<Input label="必須フィールド" required />)
       expect(screen.getByText('*')).toBeInTheDocument()
     })
   })
 
   describe('入力', () => {
-    it('should handle text input', async () => {
+    it('テキスト入力が処理される', async () => {
       const user = userEvent.setup()
       
       render(<Input placeholder="入力してください" />)
@@ -35,7 +35,7 @@ describe('Input', () => {
       expect(input).toHaveValue('テスト入力')
     })
 
-    it('should handle controlled input', () => {
+    it('制御された入力が処理される', () => {
       const handleChange = vi.fn()
       
       render(<Input value="初期値" onChange={handleChange} />)
@@ -46,43 +46,43 @@ describe('Input', () => {
   })
 
   describe('エラー状態', () => {
-    it('should show error message', () => {
+    it('エラーメッセージが表示される', () => {
       render(<Input error="エラーメッセージ" />)
       expect(screen.getByText('エラーメッセージ')).toBeInTheDocument()
     })
 
-    it('should apply error styles', () => {
+    it('エラースタイルが適用される', () => {
       render(<Input error="エラーメッセージ" />)
       const input = screen.getByRole('textbox')
       expect(input).toHaveClass('border-red-500', 'focus:ring-red-500')
     })
 
-    it('should not show helper text when error is present', () => {
+    it('エラーがあるときヘルパーテキストが表示されない', () => {
       render(<Input error="エラーメッセージ" helperText="ヘルプテキスト" />)
       expect(screen.queryByText('ヘルプテキスト')).not.toBeInTheDocument()
     })
   })
 
   describe('ヘルパーテキスト', () => {
-    it('should show helper text when no error', () => {
+    it('エラーがないときヘルパーテキストが表示される', () => {
       render(<Input helperText="ヘルプテキスト" />)
       expect(screen.getByText('ヘルプテキスト')).toBeInTheDocument()
     })
 
-    it('should not show helper text when error is present', () => {
+    it('エラーがあるときヘルパーテキストが表示されない', () => {
       render(<Input error="エラーメッセージ" helperText="ヘルプテキスト" />)
       expect(screen.queryByText('ヘルプテキスト')).not.toBeInTheDocument()
     })
   })
 
   describe('無効状態', () => {
-    it('should be disabled when disabled prop is true', () => {
+    it('disabledプロパティがtrueのとき無効になる', () => {
       render(<Input disabled />)
       const input = screen.getByRole('textbox')
       expect(input).toBeDisabled()
     })
 
-    it('should have disabled styles when disabled', () => {
+    it('無効のとき無効スタイルが適用される', () => {
       render(<Input disabled />)
       const input = screen.getByRole('textbox')
       expect(input).toHaveClass('disabled:cursor-not-allowed', 'disabled:opacity-50')
@@ -90,7 +90,7 @@ describe('Input', () => {
   })
 
   describe('イベントハンドリング', () => {
-    it('should call onChange when input changes', async () => {
+    it('入力が変更されたときonChangeが呼ばれる', async () => {
       const user = userEvent.setup()
       const handleChange = vi.fn()
       
@@ -102,7 +102,7 @@ describe('Input', () => {
       expect(handleChange).toHaveBeenCalled()
     })
 
-    it('should call onFocus when focused', async () => {
+    it('フォーカスされたときonFocusが呼ばれる', async () => {
       const user = userEvent.setup()
       const handleFocus = vi.fn()
       
@@ -114,7 +114,7 @@ describe('Input', () => {
       expect(handleFocus).toHaveBeenCalled()
     })
 
-    it('should call onBlur when blurred', async () => {
+    it('フォーカスが外れたときonBlurが呼ばれる', async () => {
       const user = userEvent.setup()
       const handleBlur = vi.fn()
       
@@ -129,19 +129,19 @@ describe('Input', () => {
   })
 
   describe('タイプ', () => {
-    it('should render email input', () => {
+    it('メール入力フィールドが表示される', () => {
       render(<Input type="email" />)
       const input = screen.getByRole('textbox')
       expect(input).toHaveAttribute('type', 'email')
     })
 
-    it('should render password input', () => {
+    it('パスワード入力フィールドが表示される', () => {
       render(<Input type="password" />)
       const input = screen.getByDisplayValue('')
       expect(input).toHaveAttribute('type', 'password')
     })
 
-    it('should render number input', () => {
+    it('数値入力フィールドが表示される', () => {
       render(<Input type="number" />)
       const input = screen.getByRole('spinbutton')
       expect(input).toHaveAttribute('type', 'number')
@@ -149,7 +149,7 @@ describe('Input', () => {
   })
 
   describe('カスタムクラス', () => {
-    it('should apply custom className', () => {
+    it('カスタムclassNameが適用される', () => {
       render(<Input className="custom-class" />)
       const input = screen.getByRole('textbox')
       expect(input).toHaveClass('custom-class')
@@ -157,7 +157,7 @@ describe('Input', () => {
   })
 
   describe('ref', () => {
-    it('should forward ref', () => {
+    it('refが転送される', () => {
       const ref = vi.fn()
       render(<Input ref={ref} />)
       expect(ref).toHaveBeenCalled()
@@ -165,13 +165,13 @@ describe('Input', () => {
   })
 
   describe('ID生成', () => {
-    it('should generate unique ID when not provided', () => {
+    it('IDが指定されていないときユニークなIDが生成される', () => {
       render(<Input label="ラベル" />)
       const input = screen.getByLabelText('ラベル')
       expect(input).toHaveAttribute('id')
     })
 
-    it('should use provided ID', () => {
+    it('指定されたIDが使用される', () => {
       render(<Input id="custom-id" label="ラベル" />)
       const input = screen.getByLabelText('ラベル')
       expect(input).toHaveAttribute('id', 'custom-id')

@@ -83,6 +83,9 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
+    - name: Ensure Rollup native binaries are installed
+      run: npm install --no-save @rollup/rollup-linux-x64-gnu
+
     - name: Run shared package tests
       run: npm run test --workspace=apps/shared
 
@@ -92,6 +95,7 @@ jobs:
   e2e-tests:
     needs: unit-tests
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
     - uses: actions/checkout@v4
@@ -113,16 +117,94 @@ jobs:
         restore-keys: |
           playwright-${{ runner.os }}-
 
+    - name: Restore Next.js build cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          apps/web/.next/cache
+          apps/web/node_modules/.cache
+        key: nextjs-${{ runner.os }}-${{ hashFiles('apps/web/package-lock.json') }}-${{ hashFiles('apps/web/**/*.{ts,tsx,js,jsx}') }}
+        restore-keys: |
+          nextjs-${{ runner.os }}-${{ hashFiles('apps/web/package-lock.json') }}-
+
     - name: Install dependencies
       run: npm ci
 
     - name: Install Playwright browsers
       run: npx playwright install --with-deps
 
+    - name: Start Supabase stack
+      run: npx supabase start --workdir supabase
+      timeout-minutes: 5
+
+    - name: Run migrations and seed database
+      run: npx supabase db reset --workdir supabase
+      env:
+        SUPABASE_DB_PASSWORD: postgres
+
+    - name: Refresh PostgREST schema cache
+      run: |
+        echo "📡 PostgRESTスキーマキャッシュをリフレッシュ中..."
+        
+        # デバッグ: すべてのSupabaseコンテナを確認
+        echo "🔍 実行中のSupabaseコンテナ一覧:"
+        docker ps --format "{{.Names}}" | grep -E "supabase|postgres" || echo "コンテナが見つかりません"
+        
+        # 最も確実な方法: PostgRESTコンテナを再起動してスキーマキャッシュを強制的にリフレッシュ
+        # supabase_restで始まるコンテナを検索（PostgRESTコンテナ）
+        PGRST_CONTAINER=$(docker ps --filter "name=supabase_rest" --format "{{.Names}}" | head -n 1)
+        
+        # もし見つからない場合、restを含むコンテナを検索
+        if [ -z "$PGRST_CONTAINER" ]; then
+          PGRST_CONTAINER=$(docker ps --format "{{.Names}}" | grep -i "rest" | head -n 1)
+        fi
+        
+        if [ -n "$PGRST_CONTAINER" ]; then
+          echo "🔄 PostgRESTコンテナを再起動: $PGRST_CONTAINER"
+          docker restart "$PGRST_CONTAINER"
+          echo "⏳ PostgRESTの再起動を待機中..."
+          sleep 5
+        else
+          echo "⚠️ PostgRESTコンテナが見つかりません。代替方法を試します..."
+          # 代替方法: PostgreSQL経由でNOTIFYを送る
+          DB_CONTAINER=$(docker ps --filter "name=supabase_db" --format "{{.Names}}" | head -n 1)
+          if [ -n "$DB_CONTAINER" ]; then
+            echo "📦 データベースコンテナ: $DB_CONTAINER"
+            docker exec "$DB_CONTAINER" psql -U postgres -d postgres -c "NOTIFY pgrst, 'reload schema';" || true
+            sleep 3
+          else
+            echo "⚠️ コンテナが見つかりません。スキップします。"
+          fi
+        fi
+        
+        # PostgRESTが応答するまで待機（最大30秒）
+        echo "📡 PostgREST接続確認..."
+        for i in {1..30}; do
+          if curl -s -f http://127.0.0.1:54321/rest/v1/ > /dev/null 2>&1; then
+            echo "✅ PostgRESTが応答しています"
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "⚠️ PostgRESTの応答確認がタイムアウトしましたが、続行します"
+
+    - name: Create test users
+      run: node apps/web/e2e/scripts/create-test-user.js
+      env:
+        NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+        SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+
     - name: Run E2E tests
       run: npm run test:e2e --workspace=apps/web
       env:
         CI: true
+        E2E_SUPABASE_MODE: local
+        E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
+        E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+
+    - name: Stop Supabase stack
+      if: always()
+      run: npx supabase stop --workdir supabase
 
   build:
     needs: [unit-tests, e2e-tests]

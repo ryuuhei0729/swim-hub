@@ -284,25 +284,59 @@ export class LoginPage extends BasePage {
 
 #### 優先順位（理想的な環境）
 
+**⚠️ 重要：必ず`data-testid`を優先使用してください**
+
 | 優先度 | ロケーター種類 | 例 | 理由 |
 |--------|--------------|-----|------|
-| 1 | data-testid | `page.getByTestId('login-button')` | 最も安定 |
-| 2 | セマンティック | `page.getByRole('button', { name: 'Login' })` | アクセシビリティ |
-| 3 | label | `page.getByLabel('Email')` | フォーム要素 |
-| 4 | CSS + text | `page.locator('button:has-text("Login")')` | 代替手段 |
+| 1 | **data-testid** | `page.getByTestId('login-button')` | **最も安定・保守性が最高** |
+| 2 | セマンティック | `page.getByRole('button', { name: 'Login' })` | アクセシビリティ向上 |
+| 3 | label | `page.getByLabel('Email')` | フォーム要素に有効 |
+| 4 | CSS + text | `page.locator('button:has-text("Login")')` | **代替手段（data-testidがない場合のみ）** |
+
+**実装例**：
+
+```typescript
+// ✅ 最優先：data-testid（最も推奨）
+export class LoginPage extends BasePage {
+  readonly emailInput: Locator
+  readonly passwordInput: Locator
+  readonly loginButton: Locator
+
+  constructor(page: Page) {
+    super(page)
+    
+    // data-testidで要素を特定（最も安定）
+    this.emailInput = page.getByTestId('email-input')
+    this.passwordInput = page.getByTestId('password-input')
+    this.loginButton = page.getByTestId('login-button')
+  }
+}
+
+// ✅ 次善策：セマンティックロケータ
+page.getByRole('button', { name: 'ログイン' })
+page.getByLabel('メールアドレス')
+
+// ⚠️ 代替策：CSSセレクタ（data-testidがない場合のみ）
+page.locator('button:has-text("ログイン")')
+```
 
 #### プロジェクト固有の調整
 
 実際のHTMLに`data-testid`や`aria-label`が不足している場合は：
 
-1. **e2e_Main-rule.mdに記載**：
+1. **最優先：開発チームに依頼**：
+   - `data-testid`属性の追加を依頼（最も推奨）
+   - `aria-label`属性の追加を依頼
+
+2. **次善策：e2e_Main-rule.mdに記載**：
    - 使用できないロケーター種類
-   - 代替セレクタ戦略
+   - 代替セレクタ戦略（CSSセレクタ等）
    - constants.tsでのセレクタ定義方針
 
-2. **開発チームに依頼**：
-   - `data-testid`属性の追加
-   - `aria-label`属性の追加
+**重要**：可能な限り、フロントエンドチームに`data-testid`の追加を依頼してください。これにより：
+- テストの安定性が向上
+- 保守性が向上
+- UI変更時の影響を最小化
 
 ### 3.5 定数管理
 

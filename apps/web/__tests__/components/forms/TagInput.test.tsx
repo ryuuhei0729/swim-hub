@@ -79,7 +79,7 @@ describe('TagInput', () => {
     mockedUseAuth.mockReset()
   })
 
-  it('filters available tags and toggles selection', async () => {
+  it('利用可能なタグをフィルタリングし、選択を切り替えられる', async () => {
     const supabase = createSupabaseMock()
     mockedUseAuth.mockReturnValue({ supabase })
 
@@ -110,7 +110,7 @@ describe('TagInput', () => {
     ])
   })
 
-  it('creates a new tag when Enter is pressed', async () => {
+  it('Enterキーが押されたとき新しいタグを作成する', async () => {
     const supabase = createSupabaseMock()
     mockedUseAuth.mockReturnValue({ supabase })
 
@@ -149,7 +149,7 @@ describe('TagInput', () => {
     Math.random = originalRandom
   })
 
-  it('updates a tag through management modal', async () => {
+  it('管理モーダルを通じてタグを更新する', async () => {
     const supabase = createSupabaseMock()
     mockedUseAuth.mockReturnValue({ supabase })
 
@@ -192,7 +192,7 @@ describe('TagInput', () => {
     })
   })
 
-  it('deletes a tag through management modal', async () => {
+  it('管理モーダルを通じてタグを削除する', async () => {
     const supabase = createSupabaseMock()
     mockedUseAuth.mockReturnValue({ supabase })
 

@@ -12,8 +12,8 @@ describe('StyleAPI', () => {
     api = new StyleAPI(mockClient)
   })
 
-  describe('getStyles', () => {
-    it('should fetch all styles', async () => {
+  describe('種目取得', () => {
+    it('すべての種目を取得できる', async () => {
       const mockStyles = [
         createMockStyle({ id: '1', name_en: 'freestyle', distance: 50 }),
         createMockStyle({ id: '2', name_en: 'freestyle', distance: 100 }),
@@ -33,7 +33,7 @@ describe('StyleAPI', () => {
       expect(result).toEqual(mockStyles)
     })
 
-    it('should throw error if query fails', async () => {
+    it('クエリが失敗したときエラーが発生する', async () => {
       const error = new Error('Query failed')
       mockClient.from = vi.fn(() => ({
         select: vi.fn().mockReturnThis(),
@@ -47,8 +47,8 @@ describe('StyleAPI', () => {
     })
   })
 
-  describe('getStyle', () => {
-    it('should fetch specific style by ID', async () => {
+  describe('種目取得（ID指定）', () => {
+    it('IDを指定したとき該当種目を取得できる', async () => {
       const mockStyle = createMockStyle({ id: '1', distance: 100 })
 
       mockClient.from = vi.fn(() => ({
@@ -67,8 +67,8 @@ describe('StyleAPI', () => {
     })
   })
 
-  describe('getStylesByStroke', () => {
-    it('should fetch styles filtered by stroke', async () => {
+  describe('種目取得（ストローク指定）', () => {
+    it('ストロークを指定したとき該当種目を取得できる', async () => {
       const mockStyles = [
         createMockStyle({ name_en: 'freestyle', distance: 50 }),
         createMockStyle({ name_en: 'freestyle', distance: 100 }),

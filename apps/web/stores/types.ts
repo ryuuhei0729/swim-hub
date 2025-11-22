@@ -31,6 +31,13 @@ export type EditingData =
       isRelaying?: boolean
       videoUrl?: string | null
       splitTimes?: Array<{ distance: number; splitTime: number }>
+      // 練習ログ編集用のプロパティ
+      distance?: number
+      rep_count?: number
+      set_count?: number
+      circle?: number | null
+      tags?: PracticeTag[]
+      times?: TimeEntry[]
     }
   | null
 

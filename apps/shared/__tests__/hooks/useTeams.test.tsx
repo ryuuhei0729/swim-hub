@@ -42,6 +42,8 @@ describe('useTeams', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    // console.errorをモックしてstderrへの出力を抑制
+    vi.spyOn(console, 'error').mockImplementation(() => {})
     mockClient = createMockSupabaseClient()
     coreApiMock = {
       getMyTeams: vi.fn(),
@@ -66,7 +68,7 @@ describe('useTeams', () => {
   })
 
   describe('初期化', () => {
-    it('should initialize with loading state', async () => {
+    it('初期表示でローディング状態になる', async () => {
       const mockTeams = [{ id: 'team-1', team: createMockTeam() }]
       coreApiMock.getMyTeams.mockResolvedValue(mockTeams)
 
@@ -80,7 +82,7 @@ describe('useTeams', () => {
       })
     })
 
-    it('should load teams on mount', async () => {
+    it('マウント時にチームを読み込む', async () => {
       const mockTeams = [{ id: 'team-1', team: createMockTeam() }]
       coreApiMock.getMyTeams.mockResolvedValue(mockTeams)
 
@@ -96,7 +98,7 @@ describe('useTeams', () => {
   })
 
   describe('特定チームのデータ取得', () => {
-    it('should load team details when teamId is provided', async () => {
+    it('teamIdが指定されたときチーム詳細を読み込む', async () => {
       const teamId = 'team-1'
       const mockTeam = createMockTeam()
       const membersResponse = [{ id: 'member-1', user: { name: 'テストユーザー' } }]
@@ -123,7 +125,7 @@ describe('useTeams', () => {
       expect(result.current.announcements).toEqual(announcementsResponse)
     })
 
-    it('should handle team access error', async () => {
+    it('チームアクセスエラーが発生したときエラーを処理できる', async () => {
       const teamId = 'team-1'
       const error = new Error('チームへのアクセス権限がありません')
 
@@ -143,7 +145,7 @@ describe('useTeams', () => {
   })
 
   describe('操作関数', () => {
-    it('should create team', async () => {
+    it('チームを作成できる', async () => {
       const newTeam = {
         name: '新規チーム',
         description: 'チームの説明',
@@ -166,7 +168,7 @@ describe('useTeams', () => {
       expect(coreApiMock.createTeam).toHaveBeenCalledWith(newTeam)
     })
 
-    it('should join team', async () => {
+    it('チームに参加できる', async () => {
       const inviteCode = 'ABC123'
       const membership = { id: 'membership-1', team_id: 'team-1' }
       
@@ -186,7 +188,7 @@ describe('useTeams', () => {
       expect(membersApiMock.join).toHaveBeenCalledWith(inviteCode)
     })
 
-    it('should leave team', async () => {
+    it('チームを退会できる', async () => {
       const teamId = 'team-1'
       
       coreApiMock.getMyTeams.mockResolvedValue([])
@@ -207,7 +209,7 @@ describe('useTeams', () => {
   })
 
   describe('リアルタイム購読', () => {
-    it('should subscribe to realtime updates when teamId is provided', async () => {
+    it('teamIdが指定されたときリアルタイム更新を購読できる', async () => {
       const teamId = 'team-1'
 
       coreApiMock.getMyTeams.mockResolvedValue([])
@@ -238,7 +240,7 @@ describe('useTeams', () => {
       expect(mockClient.removeChannel).toHaveBeenCalledWith(memberChannel)
     })
 
-    it('should not subscribe when realtime is disabled', async () => {
+    it('リアルタイムが無効のとき購読しない', async () => {
       const teamId = 'team-1'
       
       coreApiMock.getMyTeams.mockResolvedValue([])
@@ -257,7 +259,7 @@ describe('useTeams', () => {
       expect(mockClient.channel).not.toHaveBeenCalled()
     })
 
-    it('should not subscribe when teamId is not provided', async () => {
+    it('teamIdが指定されていないとき購読しない', async () => {
       coreApiMock.getMyTeams.mockResolvedValue([])
 
       const { result } = renderHook(() => useTeams(mockClient, createOptions()))
@@ -271,7 +273,7 @@ describe('useTeams', () => {
   })
 
   describe('リフレッシュ', () => {
-    it('should refresh data', async () => {
+    it('データをリフレッシュできる', async () => {
       const mockTeams = [{ id: 'team-1', team: createMockTeam() }]
       coreApiMock.getMyTeams.mockResolvedValue(mockTeams)
 

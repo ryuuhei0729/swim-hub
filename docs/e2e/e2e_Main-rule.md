@@ -245,6 +245,19 @@ src/
 
 ### 4.1 HTML構造の特徴
 
+**⚠️ 注意：このセクションはAuth0プロジェクト向けの内容です**
+
+**プロジェクトによるセレクタ戦略の違い**：
+
+| プロジェクト | `data-testid`の有無 | 推奨セレクタ戦略 |
+|------------|-------------------|----------------|
+| **Swim Hub** | ✅ 利用可能 | **data-testid優先** (`getByTestId()`) |
+| **Auth0プロジェクト** | ❌ 存在しない | CSSセレクタ + `:has-text()` |
+
+---
+
+#### Auth0プロジェクトの場合（参考）
+
 **ルール化の背景**：
 - **日付**: 2025-10-01
 - **発見**: Playwrightの推奨セレクタ（data-testid、セマンティック）が使えない
@@ -252,7 +265,7 @@ src/
 - **試行錯誤**: フロントエンドチームに属性追加を依頼したが、優先度の問題で対応困難
 - **結論**: CSSセレクタで実装する方針
 
-**このプロジェクトでの制約**：
+**制約**：
 - ❌ `data-testid`属性がほぼ存在しない
 - ❌ `aria-label`、`label`要素が不足
 - ❌ セマンティックロケータ（getByRole等）が動作しない
@@ -261,6 +274,50 @@ src/
 - ✅ CSSセレクタ + `:has-text()` / `:text-is()`
 - ✅ 属性セレクタ（name, type）
 - ✅ 親要素で絞り込み
+
+---
+
+#### Swim Hubプロジェクトの場合（推奨）
+
+**状況**：
+- ✅ `data-testid`属性が適切に設定されている
+- ✅ Playwright推奨のセレクタ戦略が使用可能
+
+**推奨セレクタ戦略（優先順位順）**：
+
+```typescript
+// ✅ 最優先：data-testid（最も安定）
+page.getByTestId('email-input')
+page.getByTestId('login-button')
+
+// ✅ 次善策：セマンティックロケータ（アクセシビリティにも貢献）
+page.getByRole('button', { name: 'ログイン' })
+page.getByLabel('メールアドレス')
+
+// ⚠️ 代替策：CSSセレクタ（data-testidがない場合のみ）
+page.locator('button:has-text("ログイン")')
+page.locator('input[name="email"]')
+```
+
+**実装例**：
+
+```typescript
+export class LoginPage extends BasePage {
+  // ✅ data-testidを優先使用
+  readonly emailInput: Locator
+  readonly passwordInput: Locator
+  readonly loginButton: Locator
+
+  constructor(page: Page) {
+    super(page)
+    
+    // data-testidで要素を特定
+    this.emailInput = page.getByTestId('email-input')
+    this.passwordInput = page.getByTestId('password-input')
+    this.loginButton = page.getByTestId('login-button')
+  }
+}
+```
 
 **詳細**：👉 **[e2e_Selectors.md § 1-2](./e2e_Selectors.md)**
 
@@ -444,7 +501,126 @@ npm run test:ui             # Playwright UI モード
 
 # レポート表示
 npm run report              # HTML レポート表示
+
+# テスト対象の絞り込み（高速化）
+npx playwright test --grep '@smoke'              # スモークテストのみ
+npx playwright test src/tests/personal/          # 特定ディレクトリのみ
+npx playwright test --grep 'ログイン'            # 特定キーワードを含むテストのみ
 ```
+
+## ⚡ § 8.5. パフォーマンス最適化ルール
+
+### 8.5.1 ヘッドレス実行（必須）
+
+**ルール**: CI環境では必ずヘッドレスモードで実行すること
+
+**設定**: `playwright.config.ts`で`headless: 'new'`を設定
+
+```typescript
+use: {
+  headless: 'new',  // 'new'は従来のtrueより高速かつ安定
+}
+```
+
+**理由**:
+- GUIが不要なCI環境では必須
+- 実行速度が大幅に向上
+- ローカルでもGUIが不要な場合は推奨
+
+### 8.5.2 並列実行（推奨）
+
+**ルール**: テストファイル単位で並列実行すること
+
+**設定**: `playwright.config.ts`で`workers`を設定
+
+```typescript
+workers: process.env.CI ? 4 : 1,
+```
+
+**推奨値**:
+- CI環境: 論理CPUコア数 - 1（例: 4コア → 3-4 workers）
+- ローカル環境: 1（デバッグしやすいため）
+
+**注意**: マシン性能に応じて要調整。リソース不足の場合は減らす。
+
+### 8.5.3 テスト対象の絞り込み（開発時推奨）
+
+**ルール**: 開発中は特定のテストのみ実行すること
+
+**方法1: `.only`を使用**
+
+```typescript
+test.only('ログインできること', async ({ page }) => {
+  // テスト本体
+});
+```
+
+**方法2: `--grep`オプションを使用**
+
+```bash
+# スモークテストのみ実行
+npx playwright test --grep '@smoke'
+
+# 特定のテストファイルのみ実行
+npx playwright test src/tests/personal/dashboard-practice.spec.ts
+```
+
+**効果**: 開発中の迅速なフィードバックが可能
+
+**注意**: CI環境では`.only`は禁止（`forbidOnly: !!process.env.CI`で検出）
+
+### 8.5.4 静的待機の排除（推奨）
+
+**ルール**: 固定待機（`waitForTimeout`）は最小限にし、状態ベース待機を優先すること
+
+```typescript
+// ❌ 悪い例: 固定待機
+await page.waitForTimeout(2000);
+
+// ✅ 良い例: 状態ベース待機
+await page.locator('text=保存しました').waitFor();
+```
+
+**詳細**: [e2e_Patterns.md § 2](./e2e_Patterns.md) - 待機処理パターン
+
+### 8.5.5 CI環境向け最適化（必須）
+
+**ルール**: CI環境ではデバッグ用のログやトレースを最小限にすること
+
+**設定**: `playwright.config.ts`でCI環境向けに最適化
+
+```typescript
+use: {
+  // trace: デバッグ時以外オフに
+  trace: process.env.CI ? 'off' : 'on-first-retry',
+  
+  // video: 失敗時のみ記録
+  video: process.env.CI ? 'retain-on-failure' : 'off',
+  
+  // screenshot: 失敗時のみ記録
+  screenshot: 'only-on-failure',
+}
+```
+
+**効果**: ログやトレースの記録時間を削減
+
+**詳細**: [CI_SETUP.md § パフォーマンス最適化](./CI_SETUP.md#パフォーマンス最適化)
+
+### 8.5.6 ログイン状態の保存（実装済み）
+
+**ルール**: ログイン状態を保存して再利用すること
+
+**実装**: `global-setup.ts`で一度だけログイン処理を実行し、ログイン状態を`playwright/.auth/user.json`に保存
+
+**効果**: 
+- 各テストで個別にログイン処理を実行する必要がなくなる
+- テスト実行時間が大幅に短縮される
+
+**注意**: 
+- `playwright/.auth/user.json`は認証情報を含むため、`.gitignore`に追加済み
+- ファイルが存在しない場合は、各テストで個別にログイン処理が実行される（後方互換性）
+
+**詳細**: [CI_SETUP.md § 5](./CI_SETUP.md#5-ログイン状態の保存実装済み)、[e2e_Patterns.md § 6.3](./e2e_Patterns.md#63-ログイン状態の保存実装済み)
 
 ---
 

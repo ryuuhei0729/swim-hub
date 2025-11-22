@@ -501,7 +501,161 @@ async clickWithRetry(locator: Locator, maxRetries: number = 3): Promise<void> {
 
 ---
 
-## § 6. 新パターン追記エリア
+## § 6. パフォーマンス改善パターン
+
+### 6.1 ルール化の背景
+
+**日付**: 2025-01-XX  
+**参考**: [Playwright実行速度改善テクニック](https://qiita.com/Yasushi-Mo/items/b8133ac92975545a4d6c)  
+**目的**: E2Eテストの実行速度を改善し、開発フローを高速化する
+
+---
+
+### 6.2 静的待機 → 状態ベース待機への置き換え
+
+**問題**: 固定待機（`waitForTimeout`）は無駄な時間を生みます
+
+**解決策**: 状態変化を検知できるセレクタを使い、不要な待機をゼロに
+
+```typescript
+// ❌ 悪い例: 固定待機
+await page.waitForTimeout(2000);
+
+// ✅ 良い例: 状態ベース待機
+await page.locator('text=保存しました').waitFor();
+```
+
+**実装パターン**:
+
+```typescript
+// 成功メッセージの表示を待つ
+await page.locator('text=保存しました').waitFor({ timeout: TIMEOUTS.DEFAULT });
+
+// ローディング完了を待つ
+await page.locator('[data-testid="loading"]').waitFor({ state: 'hidden' });
+
+// モーダルの表示を待つ
+await page.locator(SELECTORS.MODAL).waitFor({ state: 'visible' });
+```
+
+**注意**: SPAのレンダリング待機など、やむを得ない場合は`waitForTimeout`を使用（理由をコメントで明記）
+
+**詳細**: § 2 - 待機処理パターン
+
+---
+
+### 6.3 ログイン状態の保存（実装済み）
+
+**問題**: 毎回のログインはテストを遅くします
+
+**解決策**: ログイン状態を保存して再利用することで高速化
+
+**実装方法**:
+
+`global-setup.ts`で一度だけログイン処理を実行し、ログイン状態を保存します。
+
+```typescript
+// global-setup.tsで一度だけログイン＆保存
+const context = await browser.newContext()
+const loginPage = await context.newPage()
+
+// ログイン処理
+const loginAction = new LoginAction(loginPage)
+await loginAction.execute(baseUrl, email, password)
+
+// ログイン状態を保存
+const authDir = path.resolve(__dirname, '../../playwright/.auth')
+const authFile = path.join(authDir, 'user.json')
+if (!fs.existsSync(authDir)) {
+  fs.mkdirSync(authDir, { recursive: true })
+}
+await context.storageState({ path: authFile })
+```
+
+**playwright.config.tsでの再利用**:
+
+```typescript
+use: {
+  // ファイルが存在する場合のみ設定（存在しない場合は各テストでログイン）
+  storageState: (() => {
+    const authFile = path.resolve(__dirname, '../playwright/.auth/user.json')
+    const fs = require('fs')
+    return fs.existsSync(authFile) ? authFile : undefined
+  })(),
+}
+```
+
+**効果**: 
+- ログイン処理をスキップしてテスト開始時間を短縮
+- 各テストで個別にログイン処理を実行する必要がなくなる
+- テスト実行時間が大幅に短縮される
+
+**注意**: 
+- `playwright/.auth/user.json`は認証情報を含むため、`.gitignore`に追加済み
+- ファイルが存在しない場合は、各テストで個別にログイン処理が実行される（後方互換性）
+- テスト間で状態が干渉しないよう注意が必要
+
+**詳細**: [CI_SETUP.md § 5](./CI_SETUP.md#5-ログイン状態の保存実装済み)
+
+---
+
+### 6.4 テストの並列実行
+
+**問題**: テストファイルを順次実行すると時間がかかる
+
+**解決策**: テストファイル単位で並列実行
+
+**設定**: `playwright.config.ts`
+
+```typescript
+workers: process.env.CI ? 4 : 1,
+```
+
+**推奨値**:
+- CI環境: 論理CPUコア数 - 1（例: 4コア → 3-4 workers）
+- ローカル環境: 1（デバッグしやすいため）
+
+**注意**: 
+- テスト間で状態が干渉しないよう注意
+- リソース不足の場合はworkers数を減らす
+
+**詳細**: [CI_SETUP.md § パフォーマンス最適化](./CI_SETUP.md#パフォーマンス最適化)
+
+---
+
+### 6.5 テスト対象の絞り込み
+
+**問題**: すべてのテストを毎回実行するのは非効率
+
+**解決策**: 開発中は特定のテストのみ実行
+
+**方法1: `.only`を使用**
+
+```typescript
+test.only('ログインできること', async ({ page }) => {
+  // テスト本体
+});
+```
+
+**方法2: `--grep`オプションを使用**
+
+```bash
+# スモークテストのみ実行
+npx playwright test --grep '@smoke'
+
+# 特定のテストファイルのみ実行
+npx playwright test src/tests/personal/dashboard-practice.spec.ts
+```
+
+**効果**: 開発中の迅速なフィードバックが可能
+
+**注意**: CI環境では`.only`は禁止（`forbidOnly: !!process.env.CI`で検出）
+
+**詳細**: [e2e_Main-rule.md § 8.5.3](./e2e_Main-rule.md#853-テスト対象の絞り込み開発時推奨)
+
+---
+
+## § 7. 新パターン追記エリア
 
 ### [日付] - [パターン名]
 
@@ -514,11 +668,18 @@ async clickWithRetry(locator: Locator, maxRetries: number = 3): Promise<void> {
 
 ## § 7. パターン改善ログ
 
+### 2025-01-XX
+- パフォーマンス改善パターンを追加（§ 6）
+- 静的待機 → 状態ベース待機への置き換えパターン
+- ログイン状態保存パターン（将来実装予定）
+- テスト並列実行パターン
+- テスト対象絞り込みパターン
+
 ### 2025-11-06
 - 初版作成
 - test2, test_fujioka, test5の成功パターンを記録
 
 ---
 
-**最終更新**: 2025-11-06  
+**最終更新**: 2025-01-XX  
 **管理者**: QA Team

@@ -22,6 +22,8 @@ describe('useRecords', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    // console.errorをモックしてstderrへの出力を抑制
+    vi.spyOn(console, 'error').mockImplementation(() => {})
     mockClient = createMockSupabaseClient()
     recordApiMock = {
       getRecords: vi.fn(),
@@ -36,7 +38,7 @@ describe('useRecords', () => {
   })
 
   describe('初期化', () => {
-    it('should initialize with loading state', async () => {
+    it('初期表示でローディング状態になる', async () => {
       const mockRecords = [createMockRecord()]
       const mockCompetitions = [{ id: 'comp-1', name: 'テスト大会' }]
       
@@ -53,7 +55,7 @@ describe('useRecords', () => {
       })
     })
 
-    it('should load records and competitions on mount', async () => {
+    it('マウント時に記録と大会を読み込む', async () => {
       const mockRecords = [createMockRecord()]
       const mockCompetitions = [{ id: 'comp-1', name: 'テスト大会' }]
       
@@ -74,7 +76,7 @@ describe('useRecords', () => {
   })
 
   describe('データ取得', () => {
-    it('should fetch records with filters', async () => {
+    it('フィルタを指定したとき該当記録を取得できる', async () => {
       const mockRecords = [createMockRecord()]
       const mockCompetitions: any[] = []
       
@@ -97,7 +99,7 @@ describe('useRecords', () => {
       expect(recordApiMock.getRecords).toHaveBeenCalledWith('2025-01-01', '2025-01-31', 1)
     })
 
-    it('should handle fetch error', async () => {
+    it('取得エラーが発生したときエラーを処理できる', async () => {
       const error = new Error('Fetch failed')
       recordApiMock.getRecords.mockRejectedValue(error)
 
@@ -113,7 +115,7 @@ describe('useRecords', () => {
   })
 
   describe('操作関数', () => {
-    it('should create record', async () => {
+    it('記録を作成できる', async () => {
       const newRecord: Omit<RecordInsert, 'user_id'> = {
         competition_id: 'comp-1',
         style_id: 1,
@@ -146,7 +148,7 @@ describe('useRecords', () => {
       expect(recordApiMock.createRecord).toHaveBeenCalledWith(newRecord)
     })
 
-    it('should update record', async () => {
+    it('記録を更新できる', async () => {
       const recordId = 'record-1'
       const updates = { time: 59.0 }
       
@@ -167,7 +169,7 @@ describe('useRecords', () => {
       expect(recordApiMock.updateRecord).toHaveBeenCalledWith(recordId, updates)
     })
 
-    it('should delete record', async () => {
+    it('記録を削除できる', async () => {
       const recordId = 'record-1'
       
       recordApiMock.getRecords.mockResolvedValue([])
@@ -189,7 +191,7 @@ describe('useRecords', () => {
   })
 
   describe('リアルタイム購読', () => {
-    it('should subscribe to realtime updates', async () => {
+    it('リアルタイム更新を購読できる', async () => {
       const mockRecordsChannel = { unsubscribe: vi.fn() }
       const mockCompetitionsChannel = { unsubscribe: vi.fn() }
       
@@ -212,7 +214,7 @@ describe('useRecords', () => {
       expect(mockClient.removeChannel).toHaveBeenCalledWith(mockCompetitionsChannel)
     })
 
-    it('should not subscribe when realtime is disabled', async () => {
+    it('リアルタイムが無効のとき購読しない', async () => {
       recordApiMock.getRecords.mockResolvedValue([])
       recordApiMock.getCompetitions.mockResolvedValue([])
 
@@ -230,7 +232,7 @@ describe('useRecords', () => {
   })
 
   describe('リフレッシュ', () => {
-    it('should refresh data', async () => {
+    it('データをリフレッシュできる', async () => {
       const mockRecords = [createMockRecord()]
       const mockCompetitions = [{ id: 'comp-1', name: 'テスト大会' }]
       

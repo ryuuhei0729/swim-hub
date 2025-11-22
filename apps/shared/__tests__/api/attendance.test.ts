@@ -89,8 +89,8 @@ describe('AttendanceAPI', () => {
     api = new AttendanceAPI(supabaseMock.client as any)
   })
 
-  describe('getAttendanceByPractice', () => {
-    it('チーム練習の出欠一覧を取得できる', async () => {
+  describe('練習出欠取得', () => {
+    it('チーム練習のとき出欠一覧を取得できる', async () => {
       const attendanceRow = createAttendanceRow()
 
       supabaseMock.queueTable('practices', [{ data: { team_id: 'team-1' } }])
@@ -131,8 +131,8 @@ describe('AttendanceAPI', () => {
     })
   })
 
-  describe('getAttendanceByCompetition', () => {
-    it('チーム大会の出欠一覧を取得できる', async () => {
+  describe('大会出欠取得', () => {
+    it('チーム大会のとき出欠一覧を取得できる', async () => {
       const attendanceRow = createAttendanceRow({
         practice_id: null,
         competition_id: 'competition-1',

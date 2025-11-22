@@ -12,8 +12,8 @@ describe('DashboardAPI', () => {
     api = new DashboardAPI(mockClient)
   })
 
-  describe('getCalendarEntries', () => {
-    it('should fetch calendar entries for date range', async () => {
+  describe('カレンダーエントリー取得', () => {
+    it('日付範囲を指定したとき該当期間のカレンダーエントリーを取得できる', async () => {
       const mockPractices = [
         {
           id: 'practice-1',
@@ -69,7 +69,7 @@ describe('DashboardAPI', () => {
       expect(Array.isArray(result)).toBe(true)
     })
 
-    it('should throw error if not authenticated', async () => {
+    it('認証されていないときエラーになる', async () => {
       mockClient = createMockSupabaseClient({ userId: '' })
       api = new DashboardAPI(mockClient)
 
