@@ -66,8 +66,26 @@ async function globalSetup(config: FullConfig) {
       
       // テストユーザーの存在確認と作成（存在しない場合のみ作成）
       if (testEnv) {
-        const { data: users } = await supabase.auth.admin.listUsers()
-        const existingUser = users?.users.find(u => u.email === testEnv!.credentials.email)
+        const targetEmail = testEnv.credentials.email.toLowerCase()
+        const findUserByEmail = async () => {
+          let page = 1
+          const perPage = 500
+          while (true) {
+            const { data, error } = await supabase.auth.admin.listUsers({ page, perPage })
+            if (error) {
+              throw error
+            }
+            const match = data?.users.find((user) => user.email?.toLowerCase() === targetEmail)
+            if (match) {
+              return match
+            }
+            if (!data || data.users.length < perPage) {
+              return null
+            }
+            page += 1
+          }
+        }
+        const existingUser = await findUserByEmail()
         
         if (!existingUser) {
           console.log(`👤 テストユーザーを作成中: ${testEnv.credentials.email}`)
@@ -103,6 +121,46 @@ async function globalSetup(config: FullConfig) {
           }
         } else {
           console.log(`✅ テストユーザーは既に存在します: ${testEnv.credentials.email}`)
+          
+          // 既存ユーザーのパスワードとメール確認状態を最新化
+          const { error: updateError } = await supabase.auth.admin.updateUserById(existingUser.id, {
+            password: testEnv.credentials.password,
+            email_confirm: true,
+            user_metadata: {
+              ...(existingUser.user_metadata || {}),
+              name: existingUser.user_metadata?.name ?? 'E2Eテストユーザー',
+            },
+          })
+          
+          if (updateError) {
+            console.warn(`⚠️  テストユーザーの更新で警告: ${updateError.message}`)
+          } else {
+            console.log('🔄 既存テストユーザーのパスワードを同期しました')
+          }
+          
+          // プロフィールが存在しない場合のみ作成
+          const { data: profile } = await supabase
+            .from('users')
+            .select('id')
+            .eq('id', existingUser.id)
+            .single()
+          
+          if (!profile) {
+            try {
+              await supabase
+                .from('users')
+                .insert({
+                  id: existingUser.id,
+                  name: 'E2Eテストユーザー',
+                  gender: 0,
+                  bio: 'E2Eテスト用ユーザー',
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                })
+            } catch {
+              // 既に存在するなどのエラーは無視
+            }
+          }
         }
       }
     } catch (error) {
