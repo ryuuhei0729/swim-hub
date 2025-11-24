@@ -23,17 +23,20 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Setup Node.js and Install dependencies
+      uses: ./.github/actions/setup-node
       with:
         node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
-        cache-dependency-path: |
-          package-lock.json
-          apps/**/package-lock.json
 
-    - name: Install dependencies
-      run: npm ci
+    - name: Upload node_modules artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: node-modules
+        path: |
+          node_modules
+          apps/*/node_modules
+        retention-days: 1
+        compression-level: 9
 
   lint:
     needs: setup
@@ -42,17 +45,16 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Download node_modules artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: node-modules
+        path: .
+
+    - name: Setup Node.js and Install dependencies
+      uses: ./.github/actions/setup-node
       with:
         node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
-        cache-dependency-path: |
-          package-lock.json
-          apps/**/package-lock.json
-
-    - name: Install dependencies
-      run: npm ci
 
     - name: Run lint
       run: npm run lint --workspaces --if-present
@@ -66,17 +68,16 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Download node_modules artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: node-modules
+        path: .
+
+    - name: Setup Node.js and Install dependencies
+      uses: ./.github/actions/setup-node
       with:
         node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
-        cache-dependency-path: |
-          package-lock.json
-          apps/**/package-lock.json
-
-    - name: Install dependencies
-      run: npm ci
 
     - name: Run type check
       run: npm run type-check --workspaces --if-present
@@ -93,17 +94,16 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Download node_modules artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: node-modules
+        path: .
+
+    - name: Setup Node.js and Install dependencies
+      uses: ./.github/actions/setup-node
       with:
         node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-        cache-dependency-path: |
-          package-lock.json
-          apps/**/package-lock.json
-
-    - name: Install dependencies
-      run: npm ci
 
     - name: Ensure Rollup native binaries are installed
       run: npm install --no-save @rollup/rollup-linux-x64-gnu
@@ -153,8 +153,16 @@ jobs:
         restore-keys: |
           nextjs-${{ runner.os }}-${{ hashFiles('apps/web/package-lock.json') }}-
 
-    - name: Install dependencies
-      run: npm ci
+    - name: Download node_modules artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: node-modules
+        path: .
+
+    - name: Setup Node.js and Install dependencies
+      uses: ./.github/actions/setup-node
+      with:
+        node-version: ${{ env.NODE_VERSION }}
 
     - name: Install Playwright browsers
       run: npx playwright install --with-deps
@@ -248,17 +256,16 @@ jobs:
           echo "has_vercel_secrets=false" >> "$GITHUB_OUTPUT"
         fi
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Download node_modules artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: node-modules
+        path: .
+
+    - name: Setup Node.js and Install dependencies
+      uses: ./.github/actions/setup-node
       with:
         node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
-        cache-dependency-path: |
-          package-lock.json
-          apps/**/package-lock.json
-
-    - name: Install dependencies
-      run: npm ci
 
     - name: Determine Vercel environment
       id: vercel-env
@@ -309,6 +316,20 @@ jobs:
         name: next-build
         path: apps/web/.next
         if-no-files-found: error
+        retention-days: 7
+
+    - name: Verify Vercel output exists
+      if: ${{ steps.check-vercel-secrets.outputs.has_vercel_secrets == 'true' }}
+      run: |
+        if [ ! -d "apps/web/.vercel/output" ]; then
+          echo "Error: Vercel output directory not found" >&2
+          exit 1
+        fi
+        if [ ! -f "apps/web/.vercel/project.json" ]; then
+          echo "Error: Vercel project.json not found" >&2
+          exit 1
+        fi
+        echo "✅ Vercel output verified"
 
     - name: Upload Vercel prebuilt artifact
       if: ${{ steps.check-vercel-secrets.outputs.has_vercel_secrets == 'true' }}
@@ -319,3 +340,4 @@ jobs:
           apps/web/.vercel/project.json
           apps/web/.vercel/output
         if-no-files-found: error
+        retention-days: 7

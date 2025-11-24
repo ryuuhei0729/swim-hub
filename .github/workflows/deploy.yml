@@ -5,13 +5,18 @@ on:
     workflows: [CI]
     types:
       - completed
-  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
 
 jobs:
   check-secrets:
     runs-on: ubuntu-latest
     outputs:
       has-vercel-secrets: ${{ steps.check.outputs.has-vercel-secrets }}
+      deploy-environment: ${{ steps.env.outputs.environment }}
+      deploy-branch: ${{ steps.env.outputs.branch }}
 
     steps:
       - name: Determine secret availability
@@ -23,39 +28,43 @@ jobs:
             echo "has-vercel-secrets=false" >> "$GITHUB_OUTPUT"
           fi
 
-  deploy-production:
+      - name: Determine deployment environment
+        id: env
+        run: |
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+          if [ "$BRANCH" == "main" ]; then
+            echo "environment=production" >> "$GITHUB_OUTPUT"
+            echo "branch=main" >> "$GITHUB_OUTPUT"
+          elif [ "$BRANCH" == "develop" ]; then
+            echo "environment=preview" >> "$GITHUB_OUTPUT"
+            echo "branch=develop" >> "$GITHUB_OUTPUT"
+          else
+            echo "environment=none" >> "$GITHUB_OUTPUT"
+            echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy:
     if: >-
       ${{ github.event.workflow_run.conclusion == 'success' &&
           github.event.workflow_run.head_repository.full_name == github.repository &&
-          github.event.workflow_run.event == 'push' &&
-          github.event.workflow_run.head_branch == 'main' &&
-          needs.check-secrets.outputs.has-vercel-secrets == 'true' }}
+          needs.check-secrets.outputs.has-vercel-secrets == 'true' &&
+          needs.check-secrets.outputs.deploy-environment != 'none' }}
     needs: check-secrets
     runs-on: ubuntu-latest
     permissions:
       contents: read
       deployments: write
+      pull-requests: write
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      VERCEL_ENVIRONMENT: ${{ needs.check-secrets.outputs.deploy-environment }}
 
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.x'
-          cache: 'npm'
-          cache-dependency-path: |
-            package-lock.json
-            apps/**/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
 
       - name: Download prebuilt artifact
         id: download-prebuilt
@@ -84,7 +93,13 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: npx vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+        run: npx vercel pull --yes --environment=$VERCEL_ENVIRONMENT --token=$VERCEL_TOKEN
+
+      - name: Setup Node.js and Install dependencies
+        if: ${{ steps.download-prebuilt.outcome != 'success' }}
+        uses: ./.github/actions/setup-node
+        with:
+          node-version: '20.x'
 
       - name: Build with Vercel (if no artifact)
         if: ${{ steps.download-prebuilt.outcome != 'success' }}
@@ -97,12 +112,26 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: npm run build
 
-      - name: Deploy to production
+      - name: Determine Vercel args
+        id: vercel-args
+        run: |
+          ARGS=""
+          if [ "${{ steps.download-prebuilt.outcome }}" == "success" ]; then
+            ARGS="--prebuilt"
+          fi
+          if [ "${{ needs.check-secrets.outputs.deploy-environment }}" == "production" ]; then
+            ARGS="$ARGS --prod"
+          fi
+          echo "args=$ARGS" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy to Vercel
+        id: deploy
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: ${{ steps.download-prebuilt.outcome == 'success' && '--prebuilt --prod' || '--prod' }}
+          vercel-args: ${{ steps.vercel-args.outputs.args }}
           working-directory: apps/web
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-comment: ${{ needs.check-secrets.outputs.deploy-environment == 'preview' }}
