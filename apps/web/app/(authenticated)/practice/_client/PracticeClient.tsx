@@ -8,7 +8,15 @@ import PracticeTimeModal from '../_components/PracticeTimeModal'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { useAuth } from '@/contexts'
-import { usePractices } from '@apps/shared/hooks/usePractices'
+import {
+  usePracticesQuery,
+  useCreatePracticeMutation,
+  useUpdatePracticeMutation,
+  useDeletePracticeMutation,
+  useCreatePracticeLogMutation,
+  useUpdatePracticeLogMutation,
+  useDeletePracticeLogMutation,
+} from '@apps/shared/hooks/queries/practices'
 import type {
   PracticeTag,
   PracticeLogWithTags,
@@ -80,21 +88,25 @@ export default function PracticeClient({
 
   // 練習記録を取得（リアルタイム更新用）
   const {
-    practices,
-    loading,
+    data: practices = [],
+    isLoading: loading,
     error,
-    createPractice,
-    updatePractice,
-    deletePractice,
-    createPracticeLog,
-    updatePracticeLog,
-    deletePracticeLog,
     refetch
-  } = usePractices(supabase, {})
+  } = usePracticesQuery(supabase, {
+    initialData: initialPractices,
+  })
+
+  // ミューテーションフック
+  const createPracticeMutation = useCreatePracticeMutation(supabase)
+  const updatePracticeMutation = useUpdatePracticeMutation(supabase)
+  const deletePracticeMutation = useDeletePracticeMutation(supabase)
+  const createPracticeLogMutation = useCreatePracticeLogMutation(supabase)
+  const updatePracticeLogMutation = useUpdatePracticeLogMutation(supabase)
+  const deletePracticeLogMutation = useDeletePracticeLogMutation(supabase)
 
   // サーバー側で取得した初期データとリアルタイム更新されたデータを統合
-  // リアルタイム更新が有効な場合は、practicesを使用、そうでない場合はinitialPracticesを使用
-  const displayPractices = practices.length > 0 ? practices : initialPractices
+  // React Queryのキャッシュを使用
+  const displayPractices = practices
 
   // practice_logsを平坦化し、タグデータを整形
   const practiceLogs: PracticeLogWithFormattedData[] = displayPractices.flatMap(practice => 
@@ -238,7 +250,10 @@ export default function PracticeClient({
           note: firstMenu.note || editingData.note
         }
         
-        await updatePractice(editingData.practiceId, practiceInput)
+        await updatePracticeMutation.mutateAsync({
+          id: editingData.practiceId,
+          updates: practiceInput
+        })
         
         // Practice_log更新
         for (const menu of menus) {
@@ -252,7 +267,10 @@ export default function PracticeClient({
             note: menu.note || ''
           }
           
-          await updatePracticeLog(editingData.id, logInput)
+          await updatePracticeLogMutation.mutateAsync({
+            id: editingData.id,
+            updates: logInput
+          })
           
           // タグの保存
           await savePracticeLogTags(editingData.id, menu.tags || [])
@@ -266,7 +284,7 @@ export default function PracticeClient({
           note: firstMenu.note || ''
         }
         
-        const newPractice = await createPractice(practiceInput)
+        const newPractice = await createPracticeMutation.mutateAsync(practiceInput)
 
         // 各メニューをPracticeLogとして作成
         for (const menu of menus) {
@@ -280,7 +298,7 @@ export default function PracticeClient({
             note: menu.note || ''
           }
           
-          const newLog = await createPracticeLog(logInput)
+          const newLog = await createPracticeLogMutation.mutateAsync(logInput)
           
           // タグの保存
           if (menu.tags && menu.tags.length > 0) {
@@ -316,7 +334,7 @@ export default function PracticeClient({
         const practiceId = logToDelete?.practiceId
 
         // Practice_Logを削除
-        await deletePracticeLog(logId)
+        await deletePracticeLogMutation.mutateAsync(logId)
 
         // Practice_Log削除後、そのPracticeに紐づく他のPractice_Logがあるかチェック
         if (practiceId) {
@@ -327,7 +345,7 @@ export default function PracticeClient({
           // 紐づくPractice_Logがない場合は、Practiceも削除
           if (remainingLogs.length === 0) {
             try {
-              await deletePractice(practiceId)
+              await deletePracticeMutation.mutateAsync(practiceId)
             } catch (practiceDeleteError) {
               console.error('Practiceの削除に失敗しました:', practiceDeleteError)
             }
@@ -344,7 +362,7 @@ export default function PracticeClient({
     }
   }
 
-  if (loading || isLoading) {
+  if (loading || isLoading || createPracticeMutation.isPending || updatePracticeMutation.isPending || deletePracticeMutation.isPending || createPracticeLogMutation.isPending || updatePracticeLogMutation.isPending || deletePracticeLogMutation.isPending) {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-lg shadow p-6">
@@ -368,13 +386,15 @@ export default function PracticeClient({
     )
   }
 
-  if (error) {
+  const errorMessage = error?.message || createPracticeMutation.error?.message || updatePracticeMutation.error?.message || deletePracticeMutation.error?.message || createPracticeLogMutation.error?.message || updatePracticeLogMutation.error?.message || deletePracticeLogMutation.error?.message
+
+  if (errorMessage && !loading) {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-lg shadow p-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">練習記録</h1>
           <div className="text-red-600">
-            エラーが発生しました: {error.message}
+            エラーが発生しました: {errorMessage}
           </div>
         </div>
       </div>

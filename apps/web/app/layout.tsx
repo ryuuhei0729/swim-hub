@@ -2,6 +2,7 @@ import React from 'react'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { AuthProvider } from '../contexts'
+import { QueryProvider } from '../providers/QueryProvider'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -31,9 +32,11 @@ export default function RootLayout({
     <html lang="ja">
       <body className={inter.className}>
         <AuthProvider>
+          <QueryProvider>
           <div className="min-h-screen bg-gray-50">
             {children}
           </div>
+          </QueryProvider>
         </AuthProvider>
       </body>
     </html>

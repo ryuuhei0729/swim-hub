@@ -8,7 +8,12 @@ import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
 import { useAuth } from '@/contexts'
-import { useRecords } from '@apps/shared/hooks/useRecords'
+import {
+  useRecordsQuery,
+  useUpdateRecordMutation,
+  useDeleteRecordMutation,
+  useReplaceSplitTimesMutation,
+} from '@apps/shared/hooks/queries/records'
 import type { Record, Competition, Style, SplitTime, RecordWithDetails } from '@apps/shared/types/database'
 import { 
   useCompetitionFilterStore, 
@@ -61,19 +66,23 @@ export default function CompetitionClient({
 
   // 大会記録を取得（リアルタイム更新用）
   const {
-    records,
-    loading,
+    records = [],
+    isLoading: loading,
+    isError,
     error,
-    updateRecord,
-    deleteRecord: deleteRecordFn,
-    replaceSplitTimes,
     refetch: _refetch
-  } = useRecords(supabase, {})
+  } = useRecordsQuery(supabase, {
+    initialRecords,
+  })
+
+  // ミューテーションフック
+  const updateRecordMutation = useUpdateRecordMutation(supabase)
+  const deleteRecordMutation = useDeleteRecordMutation(supabase)
+  const replaceSplitTimesMutation = useReplaceSplitTimesMutation(supabase)
 
   // サーバー側で取得した初期データとリアルタイム更新されたデータを統合
-  // リアルタイムフェッチが完了したら、recordsを優先（空配列でも最新の状態として扱う）
-  // ロード中はinitialRecordsを使用
-  const displayRecords = !loading ? records : initialRecords
+  // React Queryのキャッシュを使用
+  const displayRecords = records
   
   // フィルタリングロジック
   const filteredRecords = displayRecords.filter((record: Record) => {
@@ -122,7 +131,7 @@ export default function CompetitionClient({
     if (confirm('この大会記録を削除しますか？')) {
       setLoading(true)
       try {
-        await deleteRecordFn(recordId)
+        await deleteRecordMutation.mutateAsync(recordId)
       } catch (error) {
         console.error('削除エラー:', error)
       } finally {
@@ -165,7 +174,10 @@ export default function CompetitionClient({
 
       if (editingData && editingData.id) {
         // 更新処理
-        await updateRecord(editingData.id, recordInput)
+        await updateRecordMutation.mutateAsync({
+          id: editingData.id,
+          updates: recordInput
+        })
         
         // スプリットタイム更新（空配列でも常に呼び出して既存のスプリットタイムを削除可能にする）
         const splitTimesData = (formData.splitTimes || []).map((st) => ({
@@ -173,10 +185,10 @@ export default function CompetitionClient({
           split_time: st.splitTime
         }))
         
-        await replaceSplitTimes(editingData.id, splitTimesData)
-        
-        // データを再取得
-        await _refetch()
+        await replaceSplitTimesMutation.mutateAsync({
+          recordId: editingData.id,
+          splitTimes: splitTimesData
+        })
       }
       
       closeForm()
@@ -187,7 +199,7 @@ export default function CompetitionClient({
     }
   }
 
-  if (loading || isLoading) {
+  if (loading || isLoading || updateRecordMutation.isPending || deleteRecordMutation.isPending || replaceSplitTimesMutation.isPending) {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-lg shadow p-6">
@@ -211,13 +223,15 @@ export default function CompetitionClient({
     )
   }
 
-  if (error) {
+  const errorMessage = error?.message || updateRecordMutation.error?.message || deleteRecordMutation.error?.message || replaceSplitTimesMutation.error?.message
+
+  if (errorMessage && !loading) {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-lg shadow p-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">大会記録</h1>
           <div className="text-red-600">
-            エラーが発生しました: {error.message}
+            エラーが発生しました: {errorMessage}
           </div>
         </div>
       </div>

@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts'
-import { useCreateTeamAnnouncement, useUpdateTeamAnnouncement } from '@apps/shared/hooks'
-import type { TeamAnnouncement, CreateTeamAnnouncementInput, UpdateTeamAnnouncementInput } from '@/types'
+import {
+  useCreateTeamAnnouncementMutation,
+  useUpdateTeamAnnouncementMutation,
+} from '@apps/shared/hooks/queries/announcements'
+import type { TeamAnnouncement } from '@/types'
 
 interface AnnouncementFormProps {
   isOpen: boolean
@@ -23,9 +26,9 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
   const [isPublished, setIsPublished] = useState(false)
 
   const { supabase } = useAuth()
-  const { create, loading: createLoading } = useCreateTeamAnnouncement(supabase)
-  const { update, loading: updateLoading } = useUpdateTeamAnnouncement(supabase)
-  const isLoading = createLoading || updateLoading
+  const createAnnouncementMutation = useCreateTeamAnnouncementMutation(supabase)
+  const updateAnnouncementMutation = useUpdateTeamAnnouncementMutation(supabase)
+  const isLoading = createAnnouncementMutation.isPending || updateAnnouncementMutation.isPending
 
   // 編集データがある場合はフォームに設定
   useEffect(() => {
@@ -52,22 +55,28 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
 
       if (editData) {
         // 更新
-        const input: UpdateTeamAnnouncementInput = {
+        await updateAnnouncementMutation.mutateAsync({
           id: editData.id,
+          input: {
           title: title.trim(),
           content: content.trim(),
-          isPublished
+            is_published: isPublished,
+            published_at: isPublished ? new Date().toISOString() : null,
         }
-        await update(editData.id, input)
+        })
       } else {
         // 新規作成
-        const input: CreateTeamAnnouncementInput = {
-          teamId,
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) throw new Error('認証が必要です')
+        
+        await createAnnouncementMutation.mutateAsync({
+          team_id: teamId,
           title: title.trim(),
           content: content.trim(),
-          isPublished
-        }
-        await create(input)
+          is_published: isPublished,
+          published_at: isPublished ? new Date().toISOString() : null,
+          created_by: user.id,
+        })
       }
 
       onClose()
