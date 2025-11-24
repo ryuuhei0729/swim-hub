@@ -291,12 +291,13 @@ jobs:
         VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         VERCEL_ENVIRONMENT: ${{ steps.vercel-env.outputs.vercel_environment }}
+        NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
       run: |
-        EXTRA_ARGS=""
-        if [[ "$VERCEL_ENVIRONMENT" == "production" ]]; then
-          EXTRA_ARGS="--prod"
-        fi
-        npx vercel build $EXTRA_ARGS --token=$VERCEL_TOKEN
+        # Next.jsアプリをビルド
+        npm run build
+        # Vercelの出力形式に変換（--prebuiltオプション用）
+        npx vercel build --prebuilt ${{ steps.vercel-env.outputs.vercel_environment == 'production' && '--prod' || '' }} --token=$VERCEL_TOKEN || true
 
     - name: Upload Next build artifact
       if: ${{ steps.check-vercel-secrets.outputs.has_vercel_secrets != 'true' }}
