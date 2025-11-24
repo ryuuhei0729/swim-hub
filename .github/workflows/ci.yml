@@ -7,7 +7,10 @@ on:
     branches: [ main, develop ]
 
 concurrency:
-  group: ci-${{ github.ref }}-${{ github.event.pull_request.number || github.run_id }}
+  # PRの場合はPR番号を使用、pushの場合はrefを使用
+  # PRのブランチへのpushイベントは、pull_requestイベントと重複するため、
+  # すべてのジョブでpushイベントをスキップする（main/developブランチへのpushのみ実行）
+  group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:

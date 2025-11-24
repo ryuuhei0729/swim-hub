@@ -90,7 +90,7 @@ jobs:
           rsync -a artifacts/apps/web/.vercel apps/web/
 
       - name: Pull Vercel project configuration
-        if: ${{ steps.download-prebuilt.outcome != 'success' }}
+        if: ${{ steps.download-prebuilt.outcome != 'success' && github.event_name == 'workflow_run' }}
         working-directory: apps/web
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -107,7 +107,13 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-        run: npm run build
+        run: |
+          # vercel pullで作成された.envファイルを削除（環境変数の上書きを防ぐ）
+          rm -f .vercel/.env.preview .vercel/.env.local 2>/dev/null || true
+          # 環境変数を明示的に設定
+          export NEXT_PUBLIC_SUPABASE_URL="${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}"
+          export NEXT_PUBLIC_SUPABASE_ANON_KEY="${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}"
+          npm run build
 
       - name: Deploy preview to Vercel
         id: deploy
