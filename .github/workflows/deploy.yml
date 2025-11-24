@@ -17,6 +17,8 @@ jobs:
       has-vercel-secrets: ${{ steps.check.outputs.has-vercel-secrets }}
       deploy-environment: ${{ steps.env.outputs.environment }}
       deploy-branch: ${{ steps.env.outputs.branch }}
+      supabase-url: ${{ steps.env.outputs.supabase-url }}
+      supabase-key: ${{ steps.env.outputs.supabase-key }}
 
     steps:
       - name: Determine secret availability
@@ -35,9 +37,13 @@ jobs:
           if [ "$BRANCH" == "main" ]; then
             echo "environment=production" >> "$GITHUB_OUTPUT"
             echo "branch=main" >> "$GITHUB_OUTPUT"
+            echo "supabase-url=${{ secrets.PROD_SUPABASE_URL }}" >> "$GITHUB_OUTPUT"
+            echo "supabase-key=${{ secrets.PROD_SUPABASE_ANON_KEY }}" >> "$GITHUB_OUTPUT"
           elif [ "$BRANCH" == "develop" ]; then
             echo "environment=preview" >> "$GITHUB_OUTPUT"
             echo "branch=develop" >> "$GITHUB_OUTPUT"
+            echo "supabase-url=${{ secrets.PREVIEW_SUPABASE_URL }}" >> "$GITHUB_OUTPUT"
+            echo "supabase-key=${{ secrets.PREVIEW_SUPABASE_ANON_KEY }}" >> "$GITHUB_OUTPUT"
           else
             echo "environment=none" >> "$GITHUB_OUTPUT"
             echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
@@ -56,8 +62,8 @@ jobs:
       deployments: write
       pull-requests: write
     env:
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ needs.check-secrets.outputs.supabase-url }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ needs.check-secrets.outputs.supabase-key }}
       VERCEL_ENVIRONMENT: ${{ needs.check-secrets.outputs.deploy-environment }}
 
     steps:
@@ -108,8 +114,8 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ needs.check-secrets.outputs.supabase-url }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ needs.check-secrets.outputs.supabase-key }}
         run: npm run build
 
       - name: Determine Vercel args
