@@ -274,7 +274,7 @@ jobs:
         VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         VERCEL_ENVIRONMENT: ${{ steps.vercel-env.outputs.vercel_environment }}
-      run: npx vercel pull --yes --environment=$VERCEL_ENVIRONMENT
+      run: npx vercel pull --yes --environment=$VERCEL_ENVIRONMENT --token=$VERCEL_TOKEN
 
     - name: Build Next.js app (fallback)
       if: ${{ steps.check-vercel-secrets.outputs.has_vercel_secrets != 'true' }}
@@ -296,7 +296,7 @@ jobs:
         if [[ "$VERCEL_ENVIRONMENT" == "production" ]]; then
           EXTRA_ARGS="--prod"
         fi
-        npx vercel build $EXTRA_ARGS
+        npx vercel build $EXTRA_ARGS --token=$VERCEL_TOKEN
 
     - name: Upload Next build artifact
       if: ${{ steps.check-vercel-secrets.outputs.has_vercel_secrets != 'true' }}

@@ -96,7 +96,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: npx vercel pull --yes --environment=preview
+        run: npx vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
 
       - name: Build with Vercel (if no artifact)
         if: ${{ steps.download-prebuilt.outcome != 'success' || github.event_name == 'push' }}
@@ -105,7 +105,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: npx vercel build
+        run: npx vercel build --token=$VERCEL_TOKEN
 
       - name: Deploy preview to Vercel
         id: deploy

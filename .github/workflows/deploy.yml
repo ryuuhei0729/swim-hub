@@ -84,7 +84,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: npx vercel pull --yes --environment=production
+        run: npx vercel pull --yes --environment=production --token=$VERCEL_TOKEN
 
       - name: Build with Vercel (if no artifact)
         if: ${{ steps.download-prebuilt.outcome != 'success' }}
@@ -93,7 +93,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: npx vercel build --prod
+        run: npx vercel build --prod --token=$VERCEL_TOKEN
 
       - name: Deploy to production
         uses: amondnet/vercel-action@v25
