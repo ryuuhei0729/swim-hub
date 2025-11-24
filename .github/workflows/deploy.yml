@@ -142,3 +142,26 @@ jobs:
           working-directory: apps/web
           github-token: ${{ secrets.GITHUB_TOKEN }}
           github-comment: ${{ needs.check-secrets.outputs.deploy-environment == 'preview' }}
+
+      - name: Report deployment status to GitHub
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const deployOutcome = '${{ steps.deploy.outcome }}';
+            const status = deployOutcome === 'success' ? 'success' : 'failure';
+            const deploymentUrl = '${{ steps.deploy.outputs.preview-url || steps.deploy.outputs.production-url || '' }}';
+            const description = status === 'success' 
+              ? `Deployment ${deploymentUrl ? `to ${deploymentUrl}` : 'completed'} successfully`
+              : 'Deployment failed';
+            
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: '${{ github.event.workflow_run.head_sha }}',
+              state: status,
+              target_url: deploymentUrl || `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              description: description,
+              context: 'deploy'
+            });

@@ -59,6 +59,9 @@ coverage/
 tmp/
 temp/
 
+# Scraping
+/scraping/
+
 # Supabase
 /apps/supabase/.branches
 /apps/supabase/.temp.next/
