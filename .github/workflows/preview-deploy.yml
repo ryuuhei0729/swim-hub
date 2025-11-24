@@ -1,11 +1,18 @@
-name: Deploy to Vercel
+name: Preview Deploy to Vercel
 
 on:
   workflow_run:
     workflows: [CI]
     types:
       - completed
-  workflow_dispatch:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+  push:
+    branches:
+      - develop
 
 jobs:
   check-secrets:
@@ -23,18 +30,22 @@ jobs:
             echo "has-vercel-secrets=false" >> "$GITHUB_OUTPUT"
           fi
 
-  deploy-production:
+  deploy-preview:
     if: >-
-      ${{ github.event.workflow_run.conclusion == 'success' &&
-          github.event.workflow_run.head_repository.full_name == github.repository &&
-          github.event.workflow_run.event == 'push' &&
-          github.event.workflow_run.head_branch == 'main' &&
-          needs.check-secrets.outputs.has-vercel-secrets == 'true' }}
+      ${{ needs.check-secrets.outputs.has-vercel-secrets == 'true' &&
+          ((github.event_name == 'workflow_run' && 
+            github.event.workflow_run.conclusion == 'success' &&
+            github.event.workflow_run.head_repository.full_name == github.repository &&
+            (github.event.workflow_run.event == 'pull_request' || 
+             (github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'develop'))) ||
+           (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
+           (github.event_name == 'push' && github.ref == 'refs/heads/develop')) }}
     needs: check-secrets
     runs-on: ubuntu-latest
     permissions:
       contents: read
       deployments: write
+      pull-requests: write
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
@@ -43,7 +54,7 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -57,13 +68,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Determine source workflow run ID
+        id: workflow-run
+        if: github.event_name == 'workflow_run'
+        run: |
+          echo "run_id=${{ github.event.workflow_run.id }}" >> "$GITHUB_OUTPUT"
+
       - name: Download prebuilt artifact
         id: download-prebuilt
+        if: github.event_name == 'workflow_run'
         uses: actions/download-artifact@v4
         with:
           name: vercel-output
           path: artifacts
-          run-id: ${{ github.event.workflow_run.id }}
+          run-id: ${{ steps.workflow-run.outputs.run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: true
 
@@ -84,7 +102,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: npx vercel pull --yes --environment=production
+        run: npx vercel pull --yes --environment=preview
 
       - name: Build with Vercel (if no artifact)
         if: ${{ steps.download-prebuilt.outcome != 'success' }}
@@ -93,14 +111,32 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: npx vercel build --prod
+        run: npx vercel build
 
-      - name: Deploy to production
+      - name: Deploy preview to Vercel
+        id: deploy
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: ${{ steps.download-prebuilt.outcome == 'success' && '--prebuilt --prod' || '--prod' }}
+          vercel-args: ${{ steps.download-prebuilt.outcome == 'success' && '--prebuilt' || '' }}
           working-directory: apps/web
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-comment: true
+
+      - name: Comment PR with preview URL
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const previewUrl = '${{ steps.deploy.outputs.preview-url }}';
+            if (previewUrl) {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `🚀 プレビューデプロイが完了しました！\n\n🔗 [プレビューURL](${previewUrl})`
+              });
+            }
+
