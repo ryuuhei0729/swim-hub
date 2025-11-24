@@ -390,7 +390,6 @@ export function useDashboardHandlers({
         }
       }
 
-      await Promise.all([refetchRecords()])
       refreshCalendar()
 
       setCreatedEntries(createdEntriesList)
@@ -475,7 +474,6 @@ export function useDashboardHandlers({
         }
       }
 
-      await Promise.all([refetchRecords()])
       refreshCalendar()
     } catch (error) {
       console.error('記録の処理に失敗しました:', error)
