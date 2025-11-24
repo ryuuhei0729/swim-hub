@@ -307,12 +307,25 @@ export default function PracticeClient({
         }
       }
 
+      // 成功時にミューテーションのエラー状態をリセット
+      createPracticeMutation.reset()
+      updatePracticeMutation.reset()
+      createPracticeLogMutation.reset()
+      updatePracticeLogMutation.reset()
+
       // データを再取得
       await refetch()
     } catch (error) {
       console.error('練習記録の保存に失敗しました:', error)
+      const errorMessage = error instanceof Error ? error.message : '練習記録の保存に失敗しました'
+      alert(`エラー: ${errorMessage}`)
     } finally {
       setLoading(false)
+      // フォームを閉じる時にミューテーションのエラー状態をリセット
+      createPracticeMutation.reset()
+      updatePracticeMutation.reset()
+      createPracticeLogMutation.reset()
+      updatePracticeLogMutation.reset()
       closeForm()
     }
   }
@@ -346,16 +359,24 @@ export default function PracticeClient({
           if (remainingLogs.length === 0) {
             try {
               await deletePracticeMutation.mutateAsync(practiceId)
+              deletePracticeMutation.reset()
             } catch (practiceDeleteError) {
               console.error('Practiceの削除に失敗しました:', practiceDeleteError)
+              const errorMessage = practiceDeleteError instanceof Error ? practiceDeleteError.message : 'Practiceの削除に失敗しました'
+              alert(`エラー: ${errorMessage}`)
             }
           }
         }
+
+        // 成功時にミューテーションのエラー状態をリセット
+        deletePracticeLogMutation.reset()
 
         // 明示的にrefetchを実行
         await refetch()
       } catch (error) {
         console.error('削除エラー:', error)
+        const errorMessage = error instanceof Error ? error.message : '削除に失敗しました'
+        alert(`エラー: ${errorMessage}`)
       } finally {
         setLoading(false)
       }
@@ -386,15 +407,16 @@ export default function PracticeClient({
     )
   }
 
-  const errorMessage = error?.message || createPracticeMutation.error?.message || updatePracticeMutation.error?.message || deletePracticeMutation.error?.message || createPracticeLogMutation.error?.message || updatePracticeLogMutation.error?.message || deletePracticeLogMutation.error?.message
+  // クエリエラーのみをページレベルのエラーとして扱う
+  const queryErrorMessage = error?.message
 
-  if (errorMessage && !loading) {
+  if (queryErrorMessage && !loading) {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-lg shadow p-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">練習記録</h1>
           <div className="text-red-600">
-            エラーが発生しました: {errorMessage}
+            エラーが発生しました: {queryErrorMessage}
           </div>
         </div>
       </div>
@@ -747,6 +769,11 @@ export default function PracticeClient({
       <PracticeLogForm
         isOpen={isFormOpen}
         onClose={() => {
+          // フォームを閉じる時にミューテーションのエラー状態をリセット
+          createPracticeMutation.reset()
+          updatePracticeMutation.reset()
+          createPracticeLogMutation.reset()
+          updatePracticeLogMutation.reset()
           closeForm()
         }}
         onSubmit={handlePracticeSubmit}

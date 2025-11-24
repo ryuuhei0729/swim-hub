@@ -41,8 +41,6 @@ interface UseCalendarHandlersProps {
   setSelectedDate: (date: Date) => void
   setEditingData: (data: EditingData | null) => void
   handleDeleteItem: (itemId: string, itemType?: CalendarItemType) => Promise<void>
-  refetch: () => Promise<void>
-  refetchRecords: () => Promise<void>
   refreshCalendar: () => void
 }
 
@@ -59,8 +57,6 @@ export function useCalendarHandlers({
   setSelectedDate,
   setEditingData,
   handleDeleteItem,
-  refetch,
-  refetchRecords,
   refreshCalendar
 }: UseCalendarHandlersProps) {
   // タイムゾーンを考慮した日付パース
@@ -140,12 +136,11 @@ export function useCalendarHandlers({
 
       if (error) throw error
 
-      await Promise.all([refetch()])
       refreshCalendar()
     } catch (error) {
       console.error('練習ログの削除に失敗しました:', error)
     }
-  }, [supabase, refetch, refreshCalendar])
+  }, [supabase, refreshCalendar])
 
   // 記録追加ハンドラー
   const onAddRecord = useCallback((params: { competitionId?: string; entryData?: EntryInfo; entryDataList?: EntryInfo[] }) => {
@@ -202,12 +197,11 @@ export function useCalendarHandlers({
 
       if (error) throw error
 
-      await Promise.all([refetchRecords()])
       refreshCalendar()
     } catch (error) {
       console.error('大会記録の削除に失敗しました:', error)
     }
-  }, [supabase, refetchRecords, refreshCalendar])
+  }, [supabase, refreshCalendar])
 
   return {
     onDateClick,

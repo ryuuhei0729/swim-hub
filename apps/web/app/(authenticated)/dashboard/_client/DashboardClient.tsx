@@ -146,10 +146,6 @@ export default function DashboardClient({
   const deletePracticeTime = async (id: string) => {
     return await deletePracticeTimeMutation.mutateAsync(id)
   }
-  const refetch = async () => {
-    // React Queryは自動的にキャッシュを更新するため、明示的なrefetchは不要
-    // 必要に応じてqueryClient.invalidateQueriesを使用
-  }
 
   const createRecord = async (record: Parameters<typeof createRecordMutation.mutateAsync>[0]) => {
     return await createRecordMutation.mutateAsync(record)
@@ -163,14 +159,11 @@ export default function DashboardClient({
   const updateCompetition = async (id: string, updates: Parameters<typeof updateCompetitionMutation.mutateAsync>[0]['updates']) => {
     return await updateCompetitionMutation.mutateAsync({ id, updates })
   }
-  const createSplitTimes = async (recordId: string, splitTimes: Array<{ distance: number; split_time?: number; splitTime?: number }>) => {
-    return await createSplitTimesMutation.mutateAsync({ recordId, splitTimes })
+  const createSplitTimes = async (params: Parameters<typeof createSplitTimesMutation.mutateAsync>[0]) => {
+    return await createSplitTimesMutation.mutateAsync(params)
   }
-  const replaceSplitTimes = async (recordId: string, splitTimes: Omit<import('@apps/shared/types/database').SplitTimeInsert, 'record_id'>[]) => {
-    return await replaceSplitTimesMutation.mutateAsync({ recordId, splitTimes })
-  }
-  const refetchRecords = async () => {
-    // React Queryは自動的にキャッシュを更新するため、明示的なrefetchは不要
+  const replaceSplitTimes = async (params: Parameters<typeof replaceSplitTimesMutation.mutateAsync>[0]) => {
+    return await replaceSplitTimesMutation.mutateAsync(params)
   }
 
   // ハンドラー関数は useDashboardHandlers カスタムフックから取得
@@ -192,14 +185,12 @@ export default function DashboardClient({
     updatePracticeLog,
     createPracticeTime,
     deletePracticeTime,
-    refetch,
     createRecord,
     updateRecord,
     createCompetition,
     updateCompetition,
     createSplitTimes,
     replaceSplitTimes,
-    refetchRecords,
     editingData,
     createdPracticeId,
     competitionEditingData,
@@ -239,8 +230,6 @@ export default function DashboardClient({
     setSelectedDate,
     setEditingData,
     handleDeleteItem,
-    refetch,
-    refetchRecords,
     refreshCalendar
   })
 
