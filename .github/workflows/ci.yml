@@ -314,10 +314,36 @@ jobs:
         NEXT_PUBLIC_SUPABASE_URL: ${{ steps.supabase-env.outputs.supabase_url }}
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase-env.outputs.supabase_key }}
       run: |
-        # Next.jsアプリをビルド
-        npm run build
-        # Vercelの出力形式に変換（--prebuiltオプション用）
-        npx vercel build --prebuilt ${{ steps.vercel-env.outputs.vercel_environment == 'production' && '--prod' || '' }} --token=$VERCEL_TOKEN || true
+        # .vercel/project.jsonが存在することを確認（vercel pullで生成される）
+        if [ ! -f ".vercel/project.json" ]; then
+          echo "Error: .vercel/project.json not found. vercel pull may have failed." >&2
+          exit 1
+        fi
+        
+        # Vercelのビルドコマンドを使用して.vercel/outputを生成
+        # vercel buildはVercelのビルド環境で実行され、.vercel/outputを生成する
+        echo "Building with Vercel CLI..."
+        echo "Environment: $VERCEL_ENVIRONMENT"
+        echo "Supabase URL: ${NEXT_PUBLIC_SUPABASE_URL:0:30}..."
+        
+        if [ "${{ steps.vercel-env.outputs.vercel_environment }}" == "production" ]; then
+          npx vercel build --prod --token=$VERCEL_TOKEN
+        else
+          npx vercel build --token=$VERCEL_TOKEN
+        fi
+        
+        # ビルド結果を確認
+        echo "Checking build output..."
+        if [ -d ".vercel/output" ]; then
+          echo "✅ .vercel/output directory created successfully"
+          ls -la .vercel/output/ | head -20
+        else
+          echo "❌ .vercel/output directory not found after vercel build" >&2
+          echo "Listing .vercel directory contents:" >&2
+          ls -la .vercel/ || echo "No .vercel directory found" >&2
+          echo "This might indicate that vercel build failed or output format changed" >&2
+          exit 1
+        fi
 
     - name: Upload Next build artifact
       if: ${{ steps.check-vercel-secrets.outputs.has_vercel_secrets != 'true' }}
@@ -330,12 +356,16 @@ jobs:
 
     - name: Verify Vercel output exists
       if: ${{ steps.check-vercel-secrets.outputs.has_vercel_secrets == 'true' }}
+      working-directory: apps/web
       run: |
-        if [ ! -d "apps/web/.vercel/output" ]; then
+        if [ ! -d ".vercel/output" ]; then
           echo "Error: Vercel output directory not found" >&2
+          echo "Current directory: $(pwd)" >&2
+          echo "Contents of apps/web/.vercel:" >&2
+          ls -la .vercel/ || echo "No .vercel directory found" >&2
           exit 1
         fi
-        if [ ! -f "apps/web/.vercel/project.json" ]; then
+        if [ ! -f ".vercel/project.json" ]; then
           echo "Error: Vercel project.json not found" >&2
           exit 1
         fi
