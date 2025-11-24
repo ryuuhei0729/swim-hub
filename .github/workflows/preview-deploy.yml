@@ -5,11 +5,6 @@ on:
     workflows: [CI]
     types:
       - completed
-  pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
   push:
     branches:
       - develop
@@ -38,7 +33,6 @@ jobs:
             github.event.workflow_run.head_repository.full_name == github.repository &&
             (github.event.workflow_run.event == 'pull_request' || 
              (github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'develop'))) ||
-           (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
            (github.event_name == 'push' && github.ref == 'refs/heads/develop')) }}
     needs: check-secrets
     runs-on: ubuntu-latest
@@ -54,7 +48,7 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -105,7 +99,7 @@ jobs:
         run: npx vercel pull --yes --environment=preview
 
       - name: Build with Vercel (if no artifact)
-        if: ${{ steps.download-prebuilt.outcome != 'success' }}
+        if: ${{ steps.download-prebuilt.outcome != 'success' || github.event_name == 'push' }}
         working-directory: apps/web
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -124,19 +118,4 @@ jobs:
           working-directory: apps/web
           github-token: ${{ secrets.GITHUB_TOKEN }}
           github-comment: true
-
-      - name: Comment PR with preview URL
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const previewUrl = '${{ steps.deploy.outputs.preview-url }}';
-            if (previewUrl) {
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: `🚀 プレビューデプロイが完了しました！\n\n🔗 [プレビューURL](${previewUrl})`
-              });
-            }
 
