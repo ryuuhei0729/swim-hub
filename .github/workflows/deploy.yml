@@ -61,6 +61,7 @@ jobs:
       contents: read
       deployments: write
       pull-requests: write
+      statuses: write
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ needs.check-secrets.outputs.supabase-url }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ needs.check-secrets.outputs.supabase-key }}
