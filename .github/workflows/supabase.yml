@@ -2,7 +2,7 @@ name: Supabase Database
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
     paths:
       - 'supabase/migrations/**'
       - 'supabase/functions/**'
