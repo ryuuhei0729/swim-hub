@@ -68,6 +68,7 @@ export default function CompetitionClient({
   const {
     records = [],
     isLoading: loading,
+    error,
     refetch: _refetch
   } = useRecordsQuery(supabase, {
     initialRecords,
