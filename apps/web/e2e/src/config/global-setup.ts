@@ -2,7 +2,6 @@ import { chromium, type FullConfig } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { LoginAction } from '../actions/LoginAction'
 import { EnvConfig } from './config'
 
 /**
@@ -235,12 +234,6 @@ async function globalSetup(config: FullConfig) {
           console.warn('⚠️  ページエラー:', error.message)
         })
         
-        // ログイン処理を実行（相対パスを使用、PlaywrightのbaseURL設定が自動適用される）
-        const loginAction = new LoginAction(loginPage)
-        await loginAction.execute(
-          testEnv.credentials.email,
-          testEnv.credentials.password
-        )
         
         // ログイン成功を確認（ダッシュボードに遷移しているか）
         const currentUrl = loginPage.url()
