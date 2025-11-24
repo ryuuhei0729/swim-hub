@@ -4,8 +4,9 @@ import React, { useState } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '@/contexts'
 import TeamJoinForm from '@/components/forms/TeamJoinForm'
-import { Team, TeamMembership, TeamMembershipInsert } from '@apps/shared/types/database'
+import { Team, TeamMembership } from '@apps/shared/types/database'
 import { format } from 'date-fns'
+import { joinTeam, reactivateTeamMembership } from '@/app/(authenticated)/teams/_actions/actions'
 
 export interface TeamJoinModalProps {
   isOpen: boolean
@@ -70,36 +71,20 @@ export default function TeamJoinModal({ isOpen, onClose, onSuccess }: TeamJoinMo
         if (membershipData.is_active) {
           throw new Error('既にこのチームに参加しています')
         } else {
-          // 非アクティブなメンバーシップを復活（Server Route経由）
-          const res = await fetch('/api/team-memberships/reactivate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: membershipData.id, joinedAt: format(new Date(), 'yyyy-MM-dd') })
-          })
-          if (!res.ok) {
-            const { error } = await res.json().catch(() => ({ error: 'Unknown error' }))
-            throw new Error(error)
+          // 非アクティブなメンバーシップを復活（Server Action経由）
+          const result = await reactivateTeamMembership(
+            membershipData.id,
+            format(new Date(), 'yyyy-MM-dd')
+          )
+          if (!result.success) {
+            throw new Error(result.error || 'メンバーシップの再アクティブ化に失敗しました')
           }
         }
       } else {
-        // 新しいメンバーシップを作成
-        const insertData: Omit<TeamMembershipInsert, 'member_type' | 'group_name'> = {
-          team_id: teamData.id,
-          user_id: user.id,
-          role: 'user',
-          is_active: true,
-          joined_at: format(new Date(), 'yyyy-MM-dd'), // 今日の日付
-          left_at: null
-        }
-
-        const res = await fetch('/api/team-memberships/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(insertData)
-        })
-        if (!res.ok) {
-          const { error } = await res.json().catch(() => ({ error: 'Unknown error' }))
-          throw new Error(error)
+        // 新しいメンバーシップを作成（Server Action経由）
+        const result = await joinTeam(inviteId)
+        if (!result.success) {
+          throw new Error(result.error || 'チームの参加に失敗しました')
         }
       }
 

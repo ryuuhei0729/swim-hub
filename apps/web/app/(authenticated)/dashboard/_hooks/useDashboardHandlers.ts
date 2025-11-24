@@ -27,15 +27,13 @@ interface UseDashboardHandlersProps {
   updatePracticeLog: (id: string, updates: import('@apps/shared/types/database').PracticeLogUpdate) => Promise<import('@apps/shared/types/database').PracticeLog>
   createPracticeTime: (time: import('@apps/shared/types/database').PracticeTimeInsert) => Promise<import('@apps/shared/types/database').PracticeTime>
   deletePracticeTime: (id: string) => Promise<void>
-  refetch: () => Promise<void>
   // Record hooks（実際の型に合わせる）
   createRecord: (record: Omit<import('@apps/shared/types/database').RecordInsert, 'user_id'>) => Promise<import('@apps/shared/types/database').Record>
   updateRecord: (id: string, updates: import('@apps/shared/types/database').RecordUpdate) => Promise<import('@apps/shared/types/database').Record>
   createCompetition: (competition: Omit<import('@apps/shared/types/database').CompetitionInsert, 'user_id'>) => Promise<import('@apps/shared/types/database').Competition>
   updateCompetition: (id: string, updates: import('@apps/shared/types/database').CompetitionUpdate) => Promise<import('@apps/shared/types/database').Competition>
-  createSplitTimes: (recordId: string, splitTimes: Array<{ distance: number; split_time?: number; splitTime?: number }>) => Promise<import('@apps/shared/types/database').SplitTime[]>
-  replaceSplitTimes: (recordId: string, splitTimes: Omit<import('@apps/shared/types/database').SplitTimeInsert, 'record_id'>[]) => Promise<import('@apps/shared/types/database').SplitTime[]>
-  refetchRecords: () => Promise<void>
+  createSplitTimes: (params: { recordId: string; splitTimes: Array<{ distance: number; split_time?: number; splitTime?: number }> }) => Promise<import('@apps/shared/types/database').SplitTime[]>
+  replaceSplitTimes: (params: { recordId: string; splitTimes: Omit<import('@apps/shared/types/database').SplitTimeInsert, 'record_id'>[] }) => Promise<import('@apps/shared/types/database').SplitTime[]>
   // Form store actions
   editingData: EditingData | null
   createdPracticeId: string | null
@@ -67,14 +65,12 @@ export function useDashboardHandlers({
   updatePracticeLog,
   createPracticeTime,
   deletePracticeTime,
-  refetch,
   createRecord,
   updateRecord,
   createCompetition,
   updateCompetition,
   createSplitTimes,
   replaceSplitTimes,
-  refetchRecords,
   editingData,
   createdPracticeId,
   competitionEditingData,
@@ -111,14 +107,13 @@ export function useDashboardHandlers({
         openPracticeLogForm(createdPractice?.id)
       }
       
-      await Promise.all([refetch()])
       refreshCalendar()
     } catch (error) {
       console.error('練習予定の処理に失敗しました:', error)
     } finally {
       setLoading(false)
     }
-  }, [editingData, updatePractice, createPractice, closePracticeBasicForm, openPracticeLogForm, refetch, refreshCalendar, setLoading])
+  }, [editingData, updatePractice, createPractice, closePracticeBasicForm, openPracticeLogForm, refreshCalendar, setLoading])
 
   // 練習メニュー作成・更新処理
   const handlePracticeLogSubmit = useCallback(async (formDataArray: PracticeMenuFormData[]) => {
@@ -240,7 +235,6 @@ export function useDashboardHandlers({
         }
       }
 
-      await Promise.all([refetch()])
       refreshCalendar()
     } catch (error) {
       console.error('練習記録の処理に失敗しました:', error)
@@ -248,7 +242,7 @@ export function useDashboardHandlers({
       setLoading(false)
       closePracticeLogForm()
     }
-  }, [editingData, createdPracticeId, supabase, user, updatePracticeLog, createPracticeLog, deletePracticeTime, createPracticeTime, refetch, refreshCalendar, setLoading, closePracticeLogForm])
+  }, [editingData, createdPracticeId, supabase, user, updatePracticeLog, createPracticeLog, deletePracticeTime, createPracticeTime, refreshCalendar, setLoading, closePracticeLogForm])
 
   // アイテム削除ハンドラー
   const handleDeleteItem = useCallback(async (itemId: string, itemType?: 'practice' | 'team_practice' | 'practice_log' | 'competition' | 'team_competition' | 'entry' | 'record') => {
@@ -290,12 +284,11 @@ export function useDashboardHandlers({
         if (error) throw error
       }
 
-      await Promise.all([refetch(), refetchRecords()])
       refreshCalendar()
     } catch (error) {
       console.error('記録の削除に失敗しました:', error)
     }
-  }, [supabase, refetch, refetchRecords, refreshCalendar])
+  }, [supabase, refreshCalendar])
 
   // 大会情報作成・更新
   const handleCompetitionBasicSubmit = useCallback(async (basicData: { date: string; title: string; place: string; poolType: number; note: string }) => {
@@ -310,7 +303,6 @@ export function useDashboardHandlers({
           note: basicData.note
         })
         closeCompetitionBasicForm()
-        await Promise.all([refetchRecords()])
         refreshCalendar()
       } else {
         const newCompetition = await createCompetition({
@@ -320,7 +312,6 @@ export function useDashboardHandlers({
           pool_type: basicData.poolType,
           note: basicData.note
         })
-        await Promise.all([refetchRecords()])
         refreshCalendar()
         closeCompetitionBasicForm()
         openEntryLogForm(newCompetition.id)
@@ -330,7 +321,7 @@ export function useDashboardHandlers({
     } finally {
       setLoading(false)
     }
-  }, [competitionEditingData, updateCompetition, createCompetition, closeCompetitionBasicForm, refetchRecords, refreshCalendar, openEntryLogForm, setLoading])
+  }, [competitionEditingData, updateCompetition, createCompetition, closeCompetitionBasicForm, refreshCalendar, openEntryLogForm, setLoading])
 
   // エントリー登録
   const handleEntrySubmit = useCallback(async (entriesData: EntryFormData[]) => {
@@ -399,7 +390,6 @@ export function useDashboardHandlers({
         }
       }
 
-      await Promise.all([refetchRecords()])
       refreshCalendar()
 
       setCreatedEntries(createdEntriesList)
@@ -413,7 +403,7 @@ export function useDashboardHandlers({
     } finally {
       setLoading(false)
     }
-  }, [createdCompetitionId, competitionEditingData, supabase, user, styles, setCreatedEntries, closeEntryLogForm, refreshCalendar, openRecordLogForm, refetchRecords, setLoading])
+  }, [createdCompetitionId, competitionEditingData, supabase, user, styles, setCreatedEntries, closeEntryLogForm, refreshCalendar, openRecordLogForm, setLoading])
 
   // エントリーをスキップ
   const handleEntrySkip = useCallback(() => {
@@ -449,10 +439,10 @@ export function useDashboardHandlers({
             distance: st.distance,
             split_time: st.splitTime
           }))
-          await replaceSplitTimes(
-            competitionEditingData.id,
-            splitTimesData as Omit<import('@apps/shared/types/database').SplitTimeInsert, 'record_id'>[]
-          )
+          await replaceSplitTimes({
+            recordId: competitionEditingData.id,
+            splitTimes: splitTimesData as Omit<import('@apps/shared/types/database').SplitTimeInsert, 'record_id'>[]
+          })
         }
       } else {
         if (!competitionId) {
@@ -476,15 +466,14 @@ export function useDashboardHandlers({
               distance: st.distance,
               split_time: st.splitTime
             }))
-            await createSplitTimes(
-              newRecord.id,
-              splitTimesData as Array<{ distance: number; split_time?: number; splitTime?: number }>
-            )
+          await createSplitTimes({
+            recordId: newRecord.id,
+            splitTimes: splitTimesData as Array<{ distance: number; split_time?: number; splitTime?: number }>
+          })
           }
         }
       }
 
-      await Promise.all([refetchRecords()])
       refreshCalendar()
     } catch (error) {
       console.error('記録の処理に失敗しました:', error)
@@ -492,7 +481,7 @@ export function useDashboardHandlers({
       setLoading(false)
       closeRecordLogForm()
     }
-  }, [createdCompetitionId, competitionEditingData, updateRecord, createRecord, replaceSplitTimes, createSplitTimes, refetchRecords, refreshCalendar, setLoading, closeRecordLogForm])
+  }, [createdCompetitionId, competitionEditingData, updateRecord, createRecord, replaceSplitTimes, createSplitTimes, refreshCalendar, setLoading, closeRecordLogForm])
 
   return {
     handlePracticeBasicSubmit,

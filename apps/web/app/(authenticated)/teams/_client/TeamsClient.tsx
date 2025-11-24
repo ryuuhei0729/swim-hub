@@ -2,10 +2,10 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { UsersIcon, PlusIcon, UserPlusIcon } from '@heroicons/react/24/outline'
 import { TeamMembershipWithUser } from '@apps/shared/types/database'
-import { useTeamStore } from '@/stores'
+import { useAuth } from '@/contexts'
+import { useTeamsQuery } from '@apps/shared/hooks/queries/teams'
 import TeamCreateModal from '@/components/team/TeamCreateModal'
 import TeamJoinModal from '@/components/team/TeamJoinModal'
 
@@ -20,22 +20,20 @@ interface TeamsClientProps {
 export default function TeamsClient({
   initialTeams
 }: TeamsClientProps) {
-  const { teams, teamsLoading, setTeams, setTeamsLoading } = useTeamStore()
-  const router = useRouter()
+  const { supabase } = useAuth()
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false)
 
-  // サーバー側から取得したデータをストアに設定
-  React.useEffect(() => {
-    setTeams(initialTeams)
-    setTeamsLoading(false)
-  }, [initialTeams, setTeams, setTeamsLoading])
+  // チーム一覧を取得（リアルタイム更新用）
+  const {
+    teams = [],
+    isLoading: teamsLoading
+  } = useTeamsQuery(supabase, {
+    initialTeams,
+  })
 
-  // リアルタイム更新用（必要に応じてuseTeamsフックを使用）
-  // 今回はシンプルに初期データのみ使用
-
-  // 表示用のデータ（ストアから取得、なければ初期データを使用）
-  const displayTeams = teams.length > 0 ? teams : initialTeams
+  // 表示用のデータ（React Queryのキャッシュを使用）
+  const displayTeams = teams
 
   if (teamsLoading && displayTeams.length === 0) {
     return (
@@ -127,8 +125,7 @@ export default function TeamsClient({
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={(_teamId) => {
-          // ページをリフレッシュしてチーム一覧を更新
-          router.refresh()
+          // React Queryが自動的にキャッシュを更新するため、リフレッシュは不要
           setIsCreateModalOpen(false)
         }}
       />
@@ -138,8 +135,7 @@ export default function TeamsClient({
         isOpen={isJoinModalOpen}
         onClose={() => setIsJoinModalOpen(false)}
         onSuccess={(_teamId) => {
-          // ページをリフレッシュしてチーム一覧を更新
-          router.refresh()
+          // React Queryが自動的にキャッシュを更新するため、リフレッシュは不要
           setIsJoinModalOpen(false)
         }}
       />

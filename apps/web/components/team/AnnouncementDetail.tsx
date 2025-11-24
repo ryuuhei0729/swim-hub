@@ -1,10 +1,14 @@
 'use client'
 
-import { useTeamAnnouncements, useDeleteTeamAnnouncement } from '@apps/shared/hooks'
+import {
+  useTeamAnnouncementQuery,
+  useDeleteTeamAnnouncementMutation,
+} from '@apps/shared/hooks/queries/announcements'
 import { useAuth } from '@/contexts'
 import type { TeamAnnouncement } from '@/types'
 
 interface AnnouncementDetailProps {
+  teamId: string
   announcementId: string
   isAdmin: boolean
   onClose: () => void
@@ -12,21 +16,25 @@ interface AnnouncementDetailProps {
 }
 
 export const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({
+  teamId,
   announcementId,
   isAdmin,
   onClose,
   onEdit
 }) => {
   const { supabase } = useAuth()
-  const { announcements, loading, error } = useTeamAnnouncements(supabase, '')
-  const announcement = announcements.find(a => a.id === announcementId)
-  const { remove, loading: deleteLoading } = useDeleteTeamAnnouncement(supabase)
+  const {
+    data: announcement,
+    isLoading: loading,
+    error
+  } = useTeamAnnouncementQuery(supabase, teamId, announcementId)
+  const deleteAnnouncementMutation = useDeleteTeamAnnouncementMutation(supabase)
 
   const handleDelete = async () => {
     if (!announcement || !confirm('このお知らせを削除しますか？')) return
     
     try {
-      await remove(announcement.id)
+      await deleteAnnouncementMutation.mutateAsync({ id: announcement.id, teamId })
       onClose()
     } catch (error) {
       console.error('削除エラー:', error)
@@ -91,10 +99,10 @@ export const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({
             {isAdmin && (
               <button
                 onClick={handleDelete}
-                disabled={deleteLoading}
+                disabled={deleteAnnouncementMutation.isPending}
                 className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
               >
-                {deleteLoading ? '削除中...' : '削除'}
+                {deleteAnnouncementMutation.isPending ? '削除中...' : '削除'}
               </button>
             )}
             <button

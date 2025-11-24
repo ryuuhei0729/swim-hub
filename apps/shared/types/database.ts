@@ -322,7 +322,7 @@ export interface EntryWithDetails extends Entry {
 
 // チーム with メンバー
 export interface TeamWithMembers extends Team {
-  team_membershipships: (TeamMembership & {
+  team_memberships: (TeamMembership & {
     user: UserProfile
   })[]
 }

@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts'
+import { useUserQuery } from '@apps/shared/hooks'
 import { Avatar } from '@/components/ui'
 import { 
   Bars3Icon, 
@@ -19,7 +20,8 @@ interface HeaderProps {
 }
 
 export default function Header({ onMenuClick }: HeaderProps) {
-  const { user, profile, signOut } = useAuth()
+  const { user, supabase, signOut } = useAuth()
+  const { profile } = useUserQuery(supabase, { userId: user?.id })
   const router = useRouter()
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)

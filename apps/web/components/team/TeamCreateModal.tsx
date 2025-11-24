@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { useAuth } from '@/contexts'
-import { useTeams } from '@apps/shared/hooks/useTeams'
+import { useCreateTeamMutation } from '@apps/shared/hooks/queries/teams'
 import TeamCreateForm, { TeamCreateFormData } from '@/components/forms/TeamCreateForm'
 
 export interface TeamCreateModalProps {
@@ -19,7 +19,7 @@ export default function TeamCreateModal({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { user, supabase } = useAuth()
-  const { createTeam } = useTeams(supabase, {})
+  const createTeamMutation = useCreateTeamMutation(supabase)
 
   // チーム作成処理
   const handleSubmit = async (data: TeamCreateFormData) => {
@@ -32,7 +32,7 @@ export default function TeamCreateModal({
     setError(null)
 
     try {
-      const newTeam = await createTeam({
+      const newTeam = await createTeamMutation.mutateAsync({
         name: data.name.trim(),
         description: data.description.trim() || null
       })
