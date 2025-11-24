@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { CalendarProvider } from '@/contexts'
+import { CalendarProvider } from '../_providers/CalendarProvider'
 import CalendarView from './CalendarView'
 import { CalendarProps } from '@/types'
 import type { CalendarItem, MonthlySummary } from '@apps/shared/types/ui'

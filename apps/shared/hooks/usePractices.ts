@@ -3,13 +3,13 @@
 // Web/Mobile共通で使用するカスタムフック
 // =============================================================================
 
+'use client'
+
 import { SupabaseClient } from '@supabase/supabase-js'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PracticeAPI } from '../api/practices'
 import {
-  Practice,
   PracticeInsert,
-  PracticeLog,
   PracticeLogInsert,
   PracticeLogUpdate,
   PracticeTimeInsert,

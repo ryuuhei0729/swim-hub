@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { SupabaseClient } from '@supabase/supabase-js'
-import { TeamAttendance, TeamAttendanceInsert, TeamAttendanceUpdate, TeamAttendanceWithDetails } from '../../types/database'
+import { TeamAttendance, TeamAttendanceInsert, TeamAttendanceUpdate, TeamAttendanceWithDetails, AttendanceStatusType } from '../../types/database'
 
 export class TeamAttendancesAPI {
   constructor(private supabase: SupabaseClient) {}
@@ -26,6 +26,20 @@ export class TeamAttendancesAPI {
       .eq('is_active', true)
       .single()
     if (!membership) throw new Error('チームへのアクセス権限がありません')
+  }
+
+  // チーム管理者権限必須ガード
+  private async requireTeamAdmin(teamId: string, userId?: string): Promise<void> {
+    const uid = userId ?? (await this.requireAuth())
+    const { data: membership } = await this.supabase
+      .from('team_memberships')
+      .select('role')
+      .eq('team_id', teamId)
+      .eq('user_id', uid)
+      .eq('is_active', true)
+      .eq('role', 'admin')
+      .single()
+    if (!membership) throw new Error('管理者権限が必要です')
   }
 
   async listByTeam(teamId: string): Promise<TeamAttendanceWithDetails[]> {
@@ -191,6 +205,72 @@ export class TeamAttendancesAPI {
       .single()
     if (error) throw error
     return data as TeamAttendance
+  }
+
+  /**
+   * 練習の出欠提出ステータスを更新（管理者用）
+   */
+  async updatePracticeAttendanceStatus(
+    practiceId: string,
+    status: AttendanceStatusType | null
+  ): Promise<void> {
+    const userId = await this.requireAuth()
+    
+    // practiceからteam_idを取得
+    const { data: practice, error: pErr } = await this.supabase
+      .from('practices')
+      .select('team_id')
+      .eq('id', practiceId)
+      .single()
+    
+    if (pErr) throw pErr
+    if (!practice?.team_id) {
+      throw new Error('チーム練習ではありません')
+    }
+    
+    // 管理者権限確認
+    await this.requireTeamAdmin(practice.team_id, userId)
+    
+    // attendance_statusを更新
+    const { error } = await this.supabase
+      .from('practices')
+      .update({ attendance_status: status })
+      .eq('id', practiceId)
+    
+    if (error) throw error
+  }
+
+  /**
+   * 大会の出欠提出ステータスを更新（管理者用）
+   */
+  async updateCompetitionAttendanceStatus(
+    competitionId: string,
+    status: AttendanceStatusType | null
+  ): Promise<void> {
+    const userId = await this.requireAuth()
+    
+    // competitionからteam_idを取得
+    const { data: competition, error: cErr } = await this.supabase
+      .from('competitions')
+      .select('team_id')
+      .eq('id', competitionId)
+      .single()
+    
+    if (cErr) throw cErr
+    if (!competition?.team_id) {
+      throw new Error('チーム大会ではありません')
+    }
+    
+    // 管理者権限確認
+    await this.requireTeamAdmin(competition.team_id, userId)
+    
+    // attendance_statusを更新
+    const { error } = await this.supabase
+      .from('competitions')
+      .update({ attendance_status: status })
+      .eq('id', competitionId)
+    
+    if (error) throw error
   }
 }
 

@@ -239,6 +239,154 @@ describe('TeamAttendancesAPI', () => {
       await expect(api.update('attendance-1', { status: 'present' as const })).rejects.toThrow('認証が必要です')
     })
   })
+
+  describe('updatePracticeAttendanceStatus', () => {
+    it('管理者は練習の出欠提出ステータスを更新できる', async () => {
+      const practiceId = 'practice-1'
+      const status = 'open' as const
+
+      supabaseMock.queueTable('practices', [
+        { data: { team_id: 'team-1' } },
+        {
+          data: null,
+          configure: builder => {
+            builder.update.mockReturnValue(builder)
+          }
+        }
+      ])
+      supabaseMock.queueTable('team_memberships', [{ data: { role: 'admin' } }])
+
+      await expect(api.updatePracticeAttendanceStatus(practiceId, status)).resolves.toBeUndefined()
+
+      const builder = supabaseMock.getBuilderHistory('practices')[1]
+      expect(builder.update).toHaveBeenCalledWith({ attendance_status: status })
+      expect(builder.eq).toHaveBeenCalledWith('id', practiceId)
+    })
+
+    it('nullステータスに更新できる', async () => {
+      const practiceId = 'practice-1'
+
+      supabaseMock.queueTable('practices', [
+        { data: { team_id: 'team-1' } },
+        {
+          data: null,
+          configure: builder => {
+            builder.update.mockReturnValue(builder)
+          }
+        }
+      ])
+      supabaseMock.queueTable('team_memberships', [{ data: { role: 'admin' } }])
+
+      await expect(api.updatePracticeAttendanceStatus(practiceId, null)).resolves.toBeUndefined()
+
+      const builder = supabaseMock.getBuilderHistory('practices')[1]
+      expect(builder.update).toHaveBeenCalledWith({ attendance_status: null })
+    })
+
+    it('チーム練習でない場合はエラーとなる', async () => {
+      supabaseMock.queueTable('practices', [{ data: { team_id: null } }])
+
+      await expect(api.updatePracticeAttendanceStatus('practice-1', 'open')).rejects.toThrow(
+        'チーム練習ではありません'
+      )
+    })
+
+    it('管理者権限がない場合はエラーとなる', async () => {
+      supabaseMock.queueTable('practices', [{ data: { team_id: 'team-1' } }])
+      supabaseMock.queueTable('team_memberships', [{ data: null }])
+
+      await expect(api.updatePracticeAttendanceStatus('practice-1', 'open')).rejects.toThrow(
+        '管理者権限が必要です'
+      )
+    })
+
+    it('未認証の場合はエラーとなる', async () => {
+      supabaseMock = createSupabaseMock({ userId: '' })
+      api = new TeamAttendancesAPI(supabaseMock.client as any)
+
+      await expect(api.updatePracticeAttendanceStatus('practice-1', 'open')).rejects.toThrow('認証が必要です')
+    })
+
+    it('練習が存在しない場合はエラーとなる', async () => {
+      supabaseMock.queueTable('practices', [{ data: null, error: { message: 'not found' } }])
+
+      await expect(api.updatePracticeAttendanceStatus('practice-1', 'open')).rejects.toThrow()
+    })
+  })
+
+  describe('updateCompetitionAttendanceStatus', () => {
+    it('管理者は大会の出欠提出ステータスを更新できる', async () => {
+      const competitionId = 'competition-1'
+      const status = 'closed' as const
+
+      supabaseMock.queueTable('competitions', [
+        { data: { team_id: 'team-1' } },
+        {
+          data: null,
+          configure: builder => {
+            builder.update.mockReturnValue(builder)
+          }
+        }
+      ])
+      supabaseMock.queueTable('team_memberships', [{ data: { role: 'admin' } }])
+
+      await expect(api.updateCompetitionAttendanceStatus(competitionId, status)).resolves.toBeUndefined()
+
+      const builder = supabaseMock.getBuilderHistory('competitions')[1]
+      expect(builder.update).toHaveBeenCalledWith({ attendance_status: status })
+      expect(builder.eq).toHaveBeenCalledWith('id', competitionId)
+    })
+
+    it('nullステータスに更新できる', async () => {
+      const competitionId = 'competition-1'
+
+      supabaseMock.queueTable('competitions', [
+        { data: { team_id: 'team-1' } },
+        {
+          data: null,
+          configure: builder => {
+            builder.update.mockReturnValue(builder)
+          }
+        }
+      ])
+      supabaseMock.queueTable('team_memberships', [{ data: { role: 'admin' } }])
+
+      await expect(api.updateCompetitionAttendanceStatus(competitionId, null)).resolves.toBeUndefined()
+
+      const builder = supabaseMock.getBuilderHistory('competitions')[1]
+      expect(builder.update).toHaveBeenCalledWith({ attendance_status: null })
+    })
+
+    it('チーム大会でない場合はエラーとなる', async () => {
+      supabaseMock.queueTable('competitions', [{ data: { team_id: null } }])
+
+      await expect(api.updateCompetitionAttendanceStatus('competition-1', 'open')).rejects.toThrow(
+        'チーム大会ではありません'
+      )
+    })
+
+    it('管理者権限がない場合はエラーとなる', async () => {
+      supabaseMock.queueTable('competitions', [{ data: { team_id: 'team-1' } }])
+      supabaseMock.queueTable('team_memberships', [{ data: null }])
+
+      await expect(api.updateCompetitionAttendanceStatus('competition-1', 'open')).rejects.toThrow(
+        '管理者権限が必要です'
+      )
+    })
+
+    it('未認証の場合はエラーとなる', async () => {
+      supabaseMock = createSupabaseMock({ userId: '' })
+      api = new TeamAttendancesAPI(supabaseMock.client as any)
+
+      await expect(api.updateCompetitionAttendanceStatus('competition-1', 'open')).rejects.toThrow('認証が必要です')
+    })
+
+    it('大会が存在しない場合はエラーとなる', async () => {
+      supabaseMock.queueTable('competitions', [{ data: null, error: { message: 'not found' } }])
+
+      await expect(api.updateCompetitionAttendanceStatus('competition-1', 'open')).rejects.toThrow()
+    })
+  })
 })
 
 

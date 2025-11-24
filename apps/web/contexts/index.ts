@@ -1,3 +1,2 @@
-export { AuthProvider, useAuth } from './AuthProvider';
-export { CalendarProvider, useCalendar } from './CalendarProvider';
+export { AuthProvider, useAuth } from './AuthProvider'
 

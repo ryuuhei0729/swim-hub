@@ -1,3 +1,5 @@
+'use client'
+
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { useCallback, useEffect, useState } from 'react'
 import type {

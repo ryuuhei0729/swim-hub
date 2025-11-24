@@ -117,7 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name: name || ''
           },
           // メール認証後のリダイレクト先を設定
-          emailRedirectTo: `${appUrl}/auth/callback?redirect_to=/dashboard`
+          emailRedirectTo: `${appUrl}/api/auth/callback?redirect_to=/dashboard`
         }
       })
       
@@ -155,7 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${appUrl}/auth/callback?redirect_to=/update-password`
+        redirectTo: `${appUrl}/api/auth/callback?redirect_to=/update-password`
       })
       
       if (error) {
