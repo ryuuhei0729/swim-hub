@@ -92,6 +92,7 @@ export default function MyPageClient({
       // React Queryのキャッシュを無効化して再取得
       if (user) {
         queryClient.invalidateQueries({ queryKey: userKeys.profile(user.id) })
+        queryClient.invalidateQueries({ queryKey: userKeys.currentProfile() })
       }
     } catch (err) {
       console.error('プロフィール更新エラー:', err)
@@ -113,6 +114,7 @@ export default function MyPageClient({
       // React Queryのキャッシュを無効化して再取得
       if (user) {
         queryClient.invalidateQueries({ queryKey: userKeys.profile(user.id) })
+        queryClient.invalidateQueries({ queryKey: userKeys.currentProfile() })
       }
     } catch (err) {
       console.error('アバター更新エラー:', err)

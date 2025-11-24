@@ -8,7 +8,8 @@ import { SupabaseClient } from '@supabase/supabase-js'
 import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import type { TeamMembershipWithUser, UserProfile } from '../../types/database'
-import { userKeys } from './keys'
+import { teamKeys, userKeys } from './keys'
+import { useTeamsQuery } from './teams'
 
 export interface UseUserQueryOptions {
   userId?: string
@@ -41,7 +42,7 @@ export function useUserQuery(
 
   // プロフィール取得クエリ
   const profileQuery = useQuery({
-    queryKey: userId ? userKeys.profile(userId) : userKeys.current(),
+    queryKey: userId ? userKeys.profile(userId) : userKeys.currentProfile(),
     queryFn: async () => {
       let targetUserId = userId
       if (!targetUserId) {
@@ -96,43 +97,12 @@ export function useUserQuery(
     staleTime: 5 * 60 * 1000, // 5分
   })
 
-  // チーム情報取得クエリ
-  const teamsQuery = useQuery({
-    queryKey: userId ? userKeys.teams(userId) : userKeys.current(),
-    queryFn: async () => {
-      let targetUserId = userId
-      if (!targetUserId) {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return []
-        targetUserId = user.id
-      }
-
-      const { data, error } = await supabase
-        .from('team_memberships')
-        .select(`
-          *,
-          users:users (
-            id,
-            name,
-            profile_image_path
-          ),
-          teams:teams (
-            id,
-            name,
-            description,
-            invite_code
-          )
-        `)
-        .eq('user_id', targetUserId)
-        .eq('is_active', true)
-        .order('joined_at', { ascending: false })
-
-      if (error) throw error
-      return (data || []) as TeamMembershipWithUser[]
-    },
-    enabled: !!profileQuery.data || !!userId,
-    initialData: initialTeams,
-    staleTime: 5 * 60 * 1000, // 5分
+  // チーム情報取得クエリ（useTeamsQueryに委譲）
+  // useTeamsQueryのenableRealtimeはteamIdが指定されている場合のみ動作するため、
+  // useUserQueryではenableRealtimeをfalseにして、独自にリアルタイム購読を設定する
+  const teamsQueryResult = useTeamsQuery(supabase, {
+    initialTeams,
+    enableRealtime: false, // useUserQueryで独自にリアルタイム購読を設定するため無効化
   })
 
   // リアルタイム購読（プロフィール更新）
@@ -150,8 +120,12 @@ export function useUserQuery(
           filter: `id=eq.${profileQuery.data.id}`,
         },
         () => {
+          // 具体的なIDが分かっているので、IDベースのキーとcurrentProfileキーの両方を無効化
           queryClient.invalidateQueries({
             queryKey: userKeys.profile(profileQuery.data!.id),
+          })
+          queryClient.invalidateQueries({
+            queryKey: userKeys.currentProfile(),
           })
         }
       )
@@ -163,6 +137,7 @@ export function useUserQuery(
   }, [enableRealtime, profileQuery.data, queryClient, supabase])
 
   // リアルタイム購読（チームメンバーシップ更新）
+  // useTeamsQueryのクエリキー（teamKeys.list()）を無効化してキャッシュを更新
   useEffect(() => {
     if (!enableRealtime || !profileQuery.data) return
 
@@ -177,9 +152,20 @@ export function useUserQuery(
           filter: `user_id=eq.${profileQuery.data.id}`,
         },
         () => {
+          // useTeamsQueryのクエリキーを無効化
           queryClient.invalidateQueries({
-            queryKey: userKeys.teams(profileQuery.data!.id),
+            queryKey: teamKeys.list(),
           })
+          // 具体的なIDが分かっているので、IDベースのキーとcurrentTeamsキーの両方を無効化
+          if (userId) {
+            queryClient.invalidateQueries({
+              queryKey: userKeys.teams(userId),
+            })
+          } else {
+            queryClient.invalidateQueries({
+              queryKey: userKeys.currentTeams(),
+            })
+          }
         }
       )
       .subscribe()
@@ -187,14 +173,14 @@ export function useUserQuery(
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [enableRealtime, profileQuery.data, queryClient, supabase])
+  }, [enableRealtime, profileQuery.data, userId, queryClient, supabase])
 
   return {
     profile: profileQuery.data ?? null,
-    teams: teamsQuery.data ?? [],
-    isLoading: profileQuery.isLoading || teamsQuery.isLoading,
-    isError: profileQuery.isError || teamsQuery.isError,
-    error: profileQuery.error || teamsQuery.error,
+    teams: teamsQueryResult.teams ?? [],
+    isLoading: profileQuery.isLoading || teamsQueryResult.isLoading,
+    isError: profileQuery.isError || teamsQueryResult.isError,
+    error: profileQuery.error || teamsQueryResult.error || null,
   }
 }
 
@@ -206,7 +192,7 @@ export function useUserProfileQuery(
   userId?: string
 ): UseQueryResult<UserProfile | null, Error> {
   return useQuery({
-    queryKey: userId ? userKeys.profile(userId) : userKeys.current(),
+    queryKey: userId ? userKeys.profile(userId) : userKeys.currentProfile(),
     queryFn: async () => {
       let targetUserId = userId
       if (!targetUserId) {

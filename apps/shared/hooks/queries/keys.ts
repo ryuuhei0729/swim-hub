@@ -74,5 +74,7 @@ export const userKeys = {
   profile: (userId: string) => [...userKeys.all, 'profile', userId] as const,
   teams: (userId: string) => [...userKeys.all, 'teams', userId] as const,
   current: () => [...userKeys.all, 'current'] as const,
+  currentProfile: () => [...userKeys.all, 'current', 'profile'] as const,
+  currentTeams: () => [...userKeys.all, 'current', 'teams'] as const,
 } as const
 
