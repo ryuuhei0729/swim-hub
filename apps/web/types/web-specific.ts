@@ -3,7 +3,6 @@
 // Next.js App Router専用の型定義
 // =============================================================================
 
-import { UserProfile } from '@apps/shared/types/database'
 import { CalendarDay } from '@apps/shared/types/ui'
 import { AuthError, Session, SupabaseClient, User } from '@supabase/supabase-js'
 
@@ -13,7 +12,6 @@ import { AuthError, Session, SupabaseClient, User } from '@supabase/supabase-js'
 
 export interface AuthState {
   user: User | null
-  profile: UserProfile | null
   session: Session | null
   loading: boolean
 }
@@ -25,7 +23,7 @@ export interface AuthContextType extends AuthState {
   signOut: () => Promise<{ error: AuthError | null }>
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>
   updatePassword: (newPassword: string) => Promise<{ error: AuthError | null }>
-  updateProfile: (updates: Partial<UserProfile>) => Promise<{ error: AuthError | null }>
+  updateProfile: (updates: Partial<import('@apps/shared/types/database').UserProfile>) => Promise<{ error: AuthError | null }>
   isAuthenticated: boolean
   isLoading: boolean
 }

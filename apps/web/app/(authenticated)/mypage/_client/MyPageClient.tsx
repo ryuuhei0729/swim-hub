@@ -2,6 +2,8 @@
 
 import React, { useState, useCallback } from 'react'
 import { useAuth } from '@/contexts'
+import { useUserQuery, userKeys } from '@apps/shared/hooks'
+import { useQueryClient } from '@tanstack/react-query'
 import { TrophyIcon } from '@heroicons/react/24/outline'
 import BestTimesTable from '@/components/profile/BestTimesTable'
 import ProfileDisplay from '@/components/profile/ProfileDisplay'
@@ -45,15 +47,28 @@ export default function MyPageClient({
   initialBestTimes
 }: MyPageClientProps) {
   const { user, supabase } = useAuth()
-  const [profile, setProfile] = useState<UserProfile | null>(initialProfile)
+  const queryClient = useQueryClient()
+  const { profile: queryProfile } = useUserQuery(supabase, {
+    userId: user?.id,
+    initialProfile: initialProfile as import('@apps/shared/types/database').UserProfile | null,
+  })
   const [bestTimes, setBestTimes] = useState<BestTime[]>(initialBestTimes)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
   // サーバー側から取得した初期データを設定
   React.useEffect(() => {
-    setProfile(initialProfile)
     setBestTimes(initialBestTimes)
-  }, [initialProfile, initialBestTimes])
+  }, [initialBestTimes])
+
+  // queryProfileをUserProfile型に変換
+  const profile: UserProfile | null = queryProfile ? {
+    id: queryProfile.id,
+    name: queryProfile.name,
+    birthday: queryProfile.birthday,
+    bio: queryProfile.bio,
+    avatar_url: queryProfile.profile_image_path,
+    profile_image_path: queryProfile.profile_image_path,
+  } : null
 
   const handleProfileUpdate = useCallback(async (updatedProfile: Partial<UserProfile>) => {
     if (!user) return
@@ -74,16 +89,15 @@ export default function MyPageClient({
 
       if (error) throw error
 
-      setProfile(prev => prev ? { 
-        ...prev, 
-        ...updatedProfile,
-        profile_image_path: updatedProfile.profile_image_path ?? updatedProfile.avatar_url ?? prev.profile_image_path
-      } : null)
+      // React Queryのキャッシュを無効化して再取得
+      if (user) {
+        queryClient.invalidateQueries({ queryKey: userKeys.profile(user.id) })
+      }
     } catch (err) {
       console.error('プロフィール更新エラー:', err)
       throw err
     }
-  }, [user, supabase])
+  }, [user, supabase, queryClient])
 
   const handleAvatarChange = useCallback(async (newAvatarUrl: string | null) => {
     if (!user) return
@@ -96,16 +110,15 @@ export default function MyPageClient({
 
       if (error) throw error
 
-      setProfile(prev => prev ? { 
-        ...prev, 
-        avatar_url: newAvatarUrl,
-        profile_image_path: newAvatarUrl
-      } : null)
+      // React Queryのキャッシュを無効化して再取得
+      if (user) {
+        queryClient.invalidateQueries({ queryKey: userKeys.profile(user.id) })
+      }
     } catch (err) {
       console.error('アバター更新エラー:', err)
       throw err
     }
-  }, [user, supabase])
+  }, [user, supabase, queryClient])
 
   return (
     <div className="space-y-6">

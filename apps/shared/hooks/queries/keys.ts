@@ -66,3 +66,13 @@ export const styleKeys = {
   byStroke: (stroke: string) => [...styleKeys.all, 'stroke', stroke] as const,
 } as const
 
+/**
+ * ユーザーのクエリキー
+ */
+export const userKeys = {
+  all: ['user'] as const,
+  profile: (userId: string) => [...userKeys.all, 'profile', userId] as const,
+  teams: (userId: string) => [...userKeys.all, 'teams', userId] as const,
+  current: () => [...userKeys.all, 'current'] as const,
+} as const
+

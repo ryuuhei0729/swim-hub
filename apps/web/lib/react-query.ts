@@ -9,20 +9,24 @@ import { QueryClient } from '@tanstack/react-query'
  * 
  * 設定内容:
  * - staleTime: 5分 - データが新鮮とみなされる時間
- * - gcTime: 10分 - キャッシュが保持される時間（旧cacheTime）
- * - refetchOnWindowFocus: false - ウィンドウフォーカス時の自動再取得を無効化
- * - retry: 1 - エラー時のリトライ回数
+ * - gcTime: 24時間 - キャッシュが保持される時間（旧cacheTime）
+ * - refetchOnWindowFocus: true - ウィンドウフォーカス時の自動再取得を有効化
+ * - refetchOnMount: true - マウント時の自動再取得を有効化
+ * - refetchOnReconnect: true - 再接続時の自動再取得を有効化
+ * - retry: 3 - エラー時のリトライ回数
  */
-export const queryClient = new QueryClient({
+export const createQueryClient = () => new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5分
-      gcTime: 10 * 60 * 1000, // 10分（旧cacheTime）
-      refetchOnWindowFocus: false,
-      retry: 1,
+      staleTime: 1000 * 60 * 5, // 5分
+      gcTime: 1000 * 60 * 60 * 24, // 24時間
+      refetchOnWindowFocus: true,
+      refetchOnMount: true,
+      refetchOnReconnect: true,
+      retry: 3,
     },
     mutations: {
-      retry: 1,
+      retry: 0,
     },
   },
 })

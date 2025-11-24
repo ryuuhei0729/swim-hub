@@ -133,7 +133,6 @@ describe('AuthProvider', () => {
     await waitFor(() => {
       expect(contextValue?.isLoading).toBe(false)
       expect(contextValue?.user?.id).toBe('user-1')
-      expect(contextValue?.profile?.name).toBe('ユーザー')
     })
 
     expect(refreshMock).toHaveBeenCalled()
@@ -177,7 +176,7 @@ describe('AuthProvider', () => {
     expect(currentSupabase.auth.updateUser).toHaveBeenCalledWith({ password: 'new-password' })
   })
 
-  it('プロフィールを更新し、ローカル状態をリフレッシュする', async () => {
+  it('プロフィールを更新する', async () => {
     let contextValue: ReturnType<typeof useAuth> | undefined
 
     render(
@@ -202,10 +201,6 @@ describe('AuthProvider', () => {
     })
     expect(result?.error).toBeNull()
     expect(currentSupabase._mocks.updateMock).toHaveBeenCalledWith({ name: '更新済み' })
-
-    await waitFor(() => {
-      expect(contextValue?.profile?.name).toBe('更新済み')
-    })
   })
 })
 
