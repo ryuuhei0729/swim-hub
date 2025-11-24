@@ -57,7 +57,7 @@ describe('useTeamsQuery', () => {
     vi.spyOn(mockCoreApi, 'getMyTeams').mockResolvedValue([])
     vi.spyOn(mockCoreApi, 'getTeam').mockResolvedValue({
       ...mockTeam,
-      team_membershipships: []
+      team_memberships: []
     })
     vi.spyOn(mockMembersApi, 'list').mockResolvedValue([])
     vi.spyOn(mockAnnouncementsApi, 'list').mockResolvedValue([])
