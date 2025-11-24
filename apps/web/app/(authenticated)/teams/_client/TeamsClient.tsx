@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { UsersIcon, PlusIcon, UserPlusIcon } from '@heroicons/react/24/outline'
 import { TeamMembershipWithUser } from '@apps/shared/types/database'
 import { useAuth } from '@/contexts'
@@ -22,15 +21,13 @@ export default function TeamsClient({
   initialTeams
 }: TeamsClientProps) {
   const { supabase } = useAuth()
-  const router = useRouter()
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false)
 
   // チーム一覧を取得（リアルタイム更新用）
   const {
     teams = [],
-    isLoading: teamsLoading,
-    error
+    isLoading: teamsLoading
   } = useTeamsQuery(supabase, {
     initialTeams,
   })
