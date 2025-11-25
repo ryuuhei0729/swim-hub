@@ -2,12 +2,14 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
     branches: [ main, develop ]
 
 concurrency:
-  group: ci-${{ github.ref }}-${{ github.event.pull_request.number || github.run_id }}
+  # PRの場合はPR番号を使用、pushの場合はrefを使用
+  # developブランチへのpushはPRイベントのみで処理（2重実行を防止）
+  group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:
@@ -15,23 +17,43 @@ env:
   PLAYWRIGHT_BROWSERS_PATH: ~/.cache/ms-playwright
 
 jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js and Install dependencies
+      uses: ./.github/actions/setup-node
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Upload node_modules artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: node-modules
+        path: |
+          node_modules
+          apps/*/node_modules
+        retention-days: 1
+        compression-level: 9
+
   lint:
+    needs: setup
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Download node_modules artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: node-modules
+        path: .
+
+    - name: Setup Node.js and Install dependencies
+      uses: ./.github/actions/setup-node
       with:
         node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
-        cache-dependency-path: |
-          package-lock.json
-          apps/**/package-lock.json
-
-    - name: Install dependencies
-      run: npm ci
 
     - name: Run lint
       run: npm run lint --workspaces --if-present
@@ -39,22 +61,22 @@ jobs:
         CI: true
 
   type-check:
+    needs: setup
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Download node_modules artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: node-modules
+        path: .
+
+    - name: Setup Node.js and Install dependencies
+      uses: ./.github/actions/setup-node
       with:
         node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
-        cache-dependency-path: |
-          package-lock.json
-          apps/**/package-lock.json
-
-    - name: Install dependencies
-      run: npm ci
 
     - name: Run type check
       run: npm run type-check --workspaces --if-present
@@ -71,17 +93,19 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Download node_modules artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: node-modules
+        path: .
+
+    - name: Setup Node.js and Install dependencies
+      uses: ./.github/actions/setup-node
       with:
         node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-        cache-dependency-path: |
-          package-lock.json
-          apps/**/package-lock.json
 
-    - name: Install dependencies
-      run: npm ci
+    - name: Ensure Rollup native binaries are installed
+      run: npm install --no-save @rollup/rollup-linux-x64-gnu
 
     - name: Run shared package tests
       run: npm run test --workspace=apps/shared
@@ -92,6 +116,11 @@ jobs:
   e2e-tests:
     needs: unit-tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
 
     steps:
     - uses: actions/checkout@v4
@@ -113,16 +142,102 @@ jobs:
         restore-keys: |
           playwright-${{ runner.os }}-
 
-    - name: Install dependencies
-      run: npm ci
+    - name: Restore Next.js build cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          apps/web/.next/cache
+          apps/web/node_modules/.cache
+        key: nextjs-${{ runner.os }}-${{ hashFiles('apps/web/package-lock.json') }}-${{ hashFiles('apps/web/**/*.{ts,tsx,js,jsx}') }}
+        restore-keys: |
+          nextjs-${{ runner.os }}-${{ hashFiles('apps/web/package-lock.json') }}-
+
+    - name: Download node_modules artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: node-modules
+        path: .
+
+    - name: Setup Node.js and Install dependencies
+      uses: ./.github/actions/setup-node
+      with:
+        node-version: ${{ env.NODE_VERSION }}
 
     - name: Install Playwright browsers
       run: npx playwright install --with-deps
 
-    - name: Run E2E tests
-      run: npm run test:e2e --workspace=apps/web
+    - name: Start Supabase stack
+      run: npx supabase start --workdir supabase
+      timeout-minutes: 5
+
+    - name: Run migrations and seed database
+      run: npx supabase db reset --workdir supabase
+      env:
+        SUPABASE_DB_PASSWORD: postgres
+
+    - name: Refresh PostgREST schema cache
+      run: |
+        echo "📡 PostgRESTスキーマキャッシュをリフレッシュ中..."
+        
+        # デバッグ: すべてのSupabaseコンテナを確認
+        echo "🔍 実行中のSupabaseコンテナ一覧:"
+        docker ps --format "{{.Names}}" | grep -E "supabase|postgres" || echo "コンテナが見つかりません"
+        
+        # 最も確実な方法: PostgRESTコンテナを再起動してスキーマキャッシュを強制的にリフレッシュ
+        # supabase_restで始まるコンテナを検索（PostgRESTコンテナ）
+        PGRST_CONTAINER=$(docker ps --filter "name=supabase_rest" --format "{{.Names}}" | head -n 1)
+        
+        # もし見つからない場合、restを含むコンテナを検索
+        if [ -z "$PGRST_CONTAINER" ]; then
+          PGRST_CONTAINER=$(docker ps --format "{{.Names}}" | grep -i "rest" | head -n 1)
+        fi
+        
+        if [ -n "$PGRST_CONTAINER" ]; then
+          echo "🔄 PostgRESTコンテナを再起動: $PGRST_CONTAINER"
+          docker restart "$PGRST_CONTAINER"
+          echo "⏳ PostgRESTの再起動を待機中..."
+          sleep 5
+        else
+          echo "⚠️ PostgRESTコンテナが見つかりません。代替方法を試します..."
+          # 代替方法: PostgreSQL経由でNOTIFYを送る
+          DB_CONTAINER=$(docker ps --filter "name=supabase_db" --format "{{.Names}}" | head -n 1)
+          if [ -n "$DB_CONTAINER" ]; then
+            echo "📦 データベースコンテナ: $DB_CONTAINER"
+            docker exec "$DB_CONTAINER" psql -U postgres -d postgres -c "NOTIFY pgrst, 'reload schema';" || true
+            sleep 3
+          else
+            echo "⚠️ コンテナが見つかりません。スキップします。"
+          fi
+        fi
+        
+        # PostgRESTが応答するまで待機（最大30秒）
+        echo "📡 PostgREST接続確認..."
+        for i in {1..30}; do
+          if curl -s -f http://127.0.0.1:54321/rest/v1/ > /dev/null 2>&1; then
+            echo "✅ PostgRESTが応答しています"
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "⚠️ PostgRESTの応答確認がタイムアウトしましたが、続行します"
+
+    - name: Create test users
+      run: node apps/web/e2e/scripts/create-test-user.js
+      env:
+        NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+        SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+
+    - name: Run E2E tests (shard ${{ matrix.shard }}/2)
+      run: npm run test:e2e --workspace=apps/web -- --shard=${{ matrix.shard }}/2
       env:
         CI: true
+        E2E_SUPABASE_MODE: local
+        E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
+        E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+
+    - name: Stop Supabase stack
+      if: always()
+      run: npx supabase stop --workdir supabase
 
   build:
     needs: [unit-tests, e2e-tests]
@@ -140,17 +255,16 @@ jobs:
           echo "has_vercel_secrets=false" >> "$GITHUB_OUTPUT"
         fi
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Download node_modules artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: node-modules
+        path: .
+
+    - name: Setup Node.js and Install dependencies
+      uses: ./.github/actions/setup-node
       with:
         node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
-        cache-dependency-path: |
-          package-lock.json
-          apps/**/package-lock.json
-
-    - name: Install dependencies
-      run: npm ci
 
     - name: Determine Vercel environment
       id: vercel-env
@@ -161,6 +275,17 @@ jobs:
           echo "vercel_environment=preview" >> "$GITHUB_OUTPUT"
         fi
 
+    - name: Determine Supabase environment variables
+      id: supabase-env
+      run: |
+        if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+          echo "supabase_url=${{ secrets.PROD_SUPABASE_URL }}" >> "$GITHUB_OUTPUT"
+          echo "supabase_key=${{ secrets.PROD_SUPABASE_ANON_KEY }}" >> "$GITHUB_OUTPUT"
+        else
+          echo "supabase_url=${{ secrets.PREVIEW_SUPABASE_URL }}" >> "$GITHUB_OUTPUT"
+          echo "supabase_key=${{ secrets.PREVIEW_SUPABASE_ANON_KEY }}" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Pull Vercel project configuration
       if: ${{ steps.check-vercel-secrets.outputs.has_vercel_secrets == 'true' }}
       working-directory: apps/web
@@ -169,14 +294,14 @@ jobs:
         VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         VERCEL_ENVIRONMENT: ${{ steps.vercel-env.outputs.vercel_environment }}
-      run: npx vercel pull --yes --environment=$VERCEL_ENVIRONMENT
+      run: npx vercel pull --yes --environment=$VERCEL_ENVIRONMENT --token=$VERCEL_TOKEN
 
     - name: Build Next.js app (fallback)
       if: ${{ steps.check-vercel-secrets.outputs.has_vercel_secrets != 'true' }}
-      run: |
-        export NEXT_PUBLIC_SUPABASE_URL="https://placeholder.supabase.co"
-        export NEXT_PUBLIC_SUPABASE_ANON_KEY="placeholder-anon-key"
-        npm run build --workspace=apps/web
+      env:
+        NEXT_PUBLIC_SUPABASE_URL: ${{ steps.supabase-env.outputs.supabase_url || 'https://placeholder.supabase.co' }}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase-env.outputs.supabase_key || 'placeholder-anon-key' }}
+      run: npm run build --workspace=apps/web
 
     - name: Build pre-rendered output with Vercel
       if: ${{ steps.check-vercel-secrets.outputs.has_vercel_secrets == 'true' }}
@@ -186,12 +311,62 @@ jobs:
         VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         VERCEL_ENVIRONMENT: ${{ steps.vercel-env.outputs.vercel_environment }}
+        NEXT_PUBLIC_SUPABASE_URL: ${{ steps.supabase-env.outputs.supabase_url }}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase-env.outputs.supabase_key }}
       run: |
-        EXTRA_ARGS=""
-        if [[ "$VERCEL_ENVIRONMENT" == "production" ]]; then
-          EXTRA_ARGS="--prod"
+        # .vercel/project.jsonが存在することを確認（vercel pullで生成される）
+        if [ ! -f ".vercel/project.json" ]; then
+          echo "Error: .vercel/project.json not found. vercel pull may have failed." >&2
+          exit 1
         fi
-        npx vercel build $EXTRA_ARGS
+        
+        # Next.jsアプリをビルド（.nextディレクトリを生成）
+        echo "Building Next.js app..."
+        echo "Environment: $VERCEL_ENVIRONMENT"
+        echo "Supabase URL: ${NEXT_PUBLIC_SUPABASE_URL:0:30}..."
+        npm run build
+        
+        # .nextディレクトリが存在することを確認
+        if [ ! -d ".next" ]; then
+          echo "Error: .next directory not found after build" >&2
+          exit 1
+        fi
+        
+        # Vercelの出力形式に変換（--prebuiltオプションで.nextから.vercel/outputを生成）
+        echo "Converting .next to .vercel/output format..."
+        if [ "${{ steps.vercel-env.outputs.vercel_environment }}" == "production" ]; then
+          npx vercel build --prebuilt --prod --token=$VERCEL_TOKEN || {
+            echo "Warning: vercel build --prebuilt failed, trying alternative method..." >&2
+            # フォールバック: vercel buildを試す
+            npx vercel build --prod --token=$VERCEL_TOKEN || true
+          }
+        else
+          npx vercel build --prebuilt --token=$VERCEL_TOKEN || {
+            echo "Warning: vercel build --prebuilt failed, trying alternative method..." >&2
+            # フォールバック: vercel buildを試す
+            npx vercel build --token=$VERCEL_TOKEN || true
+          }
+        fi
+        
+        # ビルド結果を確認
+        echo "Checking build output..."
+        if [ -d ".vercel/output" ]; then
+          echo "✅ .vercel/output directory created successfully"
+          ls -la .vercel/output/ | head -20
+        else
+          echo "⚠️ .vercel/output directory not found after vercel build" >&2
+          echo "Listing .vercel directory contents:" >&2
+          ls -la .vercel/ || echo "No .vercel directory found" >&2
+          echo "Note: .vercel/output may not be generated in CI environment" >&2
+          echo "The deploy workflow will rebuild if artifact is not available" >&2
+          # .vercel/outputが生成されない場合でも、.nextディレクトリがあれば続行
+          if [ -d ".next" ]; then
+            echo "✅ .next directory exists, deploy workflow can rebuild" >&2
+          else
+            echo "❌ Neither .vercel/output nor .next directory found" >&2
+            exit 1
+          fi
+        fi
 
     - name: Upload Next build artifact
       if: ${{ steps.check-vercel-secrets.outputs.has_vercel_secrets != 'true' }}
@@ -200,6 +375,24 @@ jobs:
         name: next-build
         path: apps/web/.next
         if-no-files-found: error
+        retention-days: 7
+
+    - name: Verify Vercel output exists
+      if: ${{ steps.check-vercel-secrets.outputs.has_vercel_secrets == 'true' }}
+      working-directory: apps/web
+      run: |
+        if [ ! -d ".vercel/output" ]; then
+          echo "Error: Vercel output directory not found" >&2
+          echo "Current directory: $(pwd)" >&2
+          echo "Contents of apps/web/.vercel:" >&2
+          ls -la .vercel/ || echo "No .vercel directory found" >&2
+          exit 1
+        fi
+        if [ ! -f ".vercel/project.json" ]; then
+          echo "Error: Vercel project.json not found" >&2
+          exit 1
+        fi
+        echo "✅ Vercel output verified"
 
     - name: Upload Vercel prebuilt artifact
       if: ${{ steps.check-vercel-secrets.outputs.has_vercel_secrets == 'true' }}
@@ -210,3 +403,4 @@ jobs:
           apps/web/.vercel/project.json
           apps/web/.vercel/output
         if-no-files-found: error
+        retention-days: 7

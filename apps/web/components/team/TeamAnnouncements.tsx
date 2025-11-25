@@ -68,6 +68,7 @@ export const TeamAnnouncements: React.FC<TeamAnnouncementsProps> = ({
       {/* お知らせ詳細表示 */}
       {viewingAnnouncementId && (
         <AnnouncementDetail
+          teamId={teamId}
           announcementId={viewingAnnouncementId}
           isAdmin={isAdmin}
           onClose={handleCloseDetail}

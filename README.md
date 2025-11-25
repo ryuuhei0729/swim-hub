@@ -2,7 +2,7 @@
 
 ## 🔗 サービスURL / トライアル
 下記アカウントでお試しいただくこともできます。
-- サービスURL: **https://swim-hub.vercel.app/**  
+- サービスURL: **https://swim-hub-dev.vercel.app/**  
 - トライアルアカウント: `test@test.test` / `Pass1234`  
 
 
@@ -70,12 +70,12 @@ swim-hub/
 │   ├── web/ (Next.js 15, App Router)
 │   ├── mobile/ (React Native + Expo, 開発予定)
 │   └── shared/（API, hooks, typesを共通化）
-├── supabase/（DDL, Edge Functions, seeds）
+├── supabase/（DDL, seeds）
 └── docs/（仕様, ルール, 開発プロセス）
 ```
 
 ## システム構成図
-![System Architecture](./docs/assets/readme/system-architecture.png)
+![System Architecture](./docs/assets/readme/system-architecture.jpeg)
 
 ## データベース / ER 図
 

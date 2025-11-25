@@ -35,7 +35,7 @@ describe('RecordForm', () => {
   })
 
   describe('レンダリング', () => {
-    it('should render form when open', () => {
+    it('フォームが開いているときに表示される', () => {
       render(
         <RecordForm
           isOpen={true}
@@ -51,7 +51,7 @@ describe('RecordForm', () => {
       expect(screen.getByLabelText('大会名')).toBeInTheDocument()
     })
 
-    it('should not render form when closed', () => {
+    it('フォームが閉じているときに表示されない', () => {
       render(
         <RecordForm
           isOpen={false}
@@ -66,7 +66,7 @@ describe('RecordForm', () => {
   })
 
   describe('記録セットの管理', () => {
-    it('should add new record set', async () => {
+    it('新しい記録セットを追加できる', async () => {
       const user = userEvent.setup()
       
       render(
@@ -84,7 +84,7 @@ describe('RecordForm', () => {
       expect(screen.getByText('種目 2')).toBeInTheDocument()
     })
 
-    it('should remove record set', async () => {
+    it('記録セットを削除できる', async () => {
       const user = userEvent.setup()
       
       render(
@@ -109,7 +109,7 @@ describe('RecordForm', () => {
   })
 
   describe('記録入力', () => {
-    it('should update record time', async () => {
+    it('記録タイムを更新できる', async () => {
       const user = userEvent.setup()
       
       render(
@@ -132,7 +132,7 @@ describe('RecordForm', () => {
       expect(timeInput).toHaveValue('1:30.50')
     })
 
-    it('should select style', async () => {
+    it('種目を選択できる', async () => {
       const user = userEvent.setup()
       
       render(
@@ -155,7 +155,7 @@ describe('RecordForm', () => {
       expect(styleSelect).toHaveValue('1')
     })
 
-    it('should toggle relay mode', async () => {
+    it('リレーモードを切り替えられる', async () => {
       const user = userEvent.setup()
       
       render(
@@ -180,7 +180,7 @@ describe('RecordForm', () => {
   })
 
   describe('スプリットタイム', () => {
-    it('should add split time', async () => {
+    it('スプリットタイムを追加できる', async () => {
       const user = userEvent.setup()
       
       render(
@@ -207,7 +207,7 @@ describe('RecordForm', () => {
       expect(screen.getAllByPlaceholderText('距離 (m)')).toHaveLength(1)
     })
 
-    it('should remove split time', async () => {
+    it('スプリットタイムを削除できる', async () => {
       const user = userEvent.setup()
       
       render(
@@ -242,7 +242,7 @@ describe('RecordForm', () => {
   })
 
   describe('フォーム送信', () => {
-    it('should call onSubmit with form data', async () => {
+    it('フォームデータとともにonSubmitが呼ばれる', async () => {
       const user = userEvent.setup()
       mockOnSubmit.mockResolvedValue(undefined)
       
@@ -293,7 +293,7 @@ describe('RecordForm', () => {
       })
     })
 
-    it('should show loading state when submitting', async () => {
+    it('送信中はローディング状態が表示される', async () => {
       const user = userEvent.setup()
       mockOnSubmit.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)))
       
@@ -315,7 +315,7 @@ describe('RecordForm', () => {
   })
 
   describe('フォームクローズ', () => {
-    it('should call onClose when close button is clicked', async () => {
+    it('閉じるボタンをクリックしたときonCloseが呼ばれる', async () => {
       const user = userEvent.setup()
       
       render(

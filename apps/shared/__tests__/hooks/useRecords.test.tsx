@@ -1,255 +1,178 @@
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createMockSupabaseClient, createMockRecord } from '../../__mocks__/supabase'
+import { createMockSupabaseClient, createMockRecordWithDetails, createMockRecord, createMockCompetition } from '../../__mocks__/supabase'
 import { RecordAPI } from '../../api/records'
-import { useRecords } from '../../hooks/useRecords'
-import { RecordInsert } from '../../types/database'
+import { useRecordsQuery, useCreateRecordMutation, useUpdateRecordMutation, useDeleteRecordMutation } from '../../hooks/queries/records'
+import React from 'react'
 
-type RecordApiMock = {
-  getRecords: ReturnType<typeof vi.fn>
-  getCompetitions: ReturnType<typeof vi.fn>
-  createRecord: ReturnType<typeof vi.fn>
-  updateRecord: ReturnType<typeof vi.fn>
-  deleteRecord: ReturnType<typeof vi.fn>
-  subscribeToRecords: ReturnType<typeof vi.fn>
-  subscribeToCompetitions: ReturnType<typeof vi.fn>
+// React Queryのテスト用ラッパー
+const createWrapper = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  })
+  return ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  )
 }
 
-describe('useRecords', () => {
+describe('useRecordsQuery', () => {
   let mockClient: any
-  let recordApiMock: RecordApiMock
-  let api: RecordAPI
+  let mockApi: RecordAPI
 
   beforeEach(() => {
     vi.clearAllMocks()
     mockClient = createMockSupabaseClient()
-    recordApiMock = {
-      getRecords: vi.fn(),
-      getCompetitions: vi.fn(),
-      createRecord: vi.fn(),
-      updateRecord: vi.fn(),
-      deleteRecord: vi.fn(),
-      subscribeToRecords: vi.fn(),
-      subscribeToCompetitions: vi.fn(),
-    }
-    api = recordApiMock as unknown as RecordAPI
+    mockApi = new RecordAPI(mockClient)
   })
 
-  describe('初期化', () => {
-    it('should initialize with loading state', async () => {
-      const mockRecords = [createMockRecord()]
-      const mockCompetitions = [{ id: 'comp-1', name: 'テスト大会' }]
-      
-      recordApiMock.getRecords.mockResolvedValue(mockRecords)
-      recordApiMock.getCompetitions.mockResolvedValue(mockCompetitions)
+  it('大会記録一覧を取得できる', async () => {
+    const mockRecord = createMockRecordWithDetails()
+    vi.spyOn(mockApi, 'getRecords').mockResolvedValue([mockRecord])
+    vi.spyOn(mockApi, 'getCompetitions').mockResolvedValue([])
 
-      const { result } = renderHook(() => useRecords(mockClient, { api }))
+    const { result } = renderHook(
+      () => useRecordsQuery(mockClient, { api: mockApi }),
+      { wrapper: createWrapper() }
+    )
 
-      await act(async () => {
-        expect(result.current.loading).toBe(true)
-        expect(result.current.records).toEqual([])
-        expect(result.current.competitions).toEqual([])
-        expect(result.current.error).toBeNull()
-      })
-    })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    it('should load records and competitions on mount', async () => {
-      const mockRecords = [createMockRecord()]
-      const mockCompetitions = [{ id: 'comp-1', name: 'テスト大会' }]
-      
-      recordApiMock.getRecords.mockResolvedValue(mockRecords)
-      recordApiMock.getCompetitions.mockResolvedValue(mockCompetitions)
-
-      const { result } = renderHook(() => useRecords(mockClient, { api }))
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
-
-      expect(recordApiMock.getRecords).toHaveBeenCalled()
-      expect(recordApiMock.getCompetitions).toHaveBeenCalled()
-      expect(result.current.records).toEqual(mockRecords)
-      expect(result.current.competitions).toEqual(mockCompetitions)
-    })
+    expect(result.current.records).toEqual([mockRecord])
+    expect(mockApi.getRecords).toHaveBeenCalled()
   })
 
-  describe('データ取得', () => {
-    it('should fetch records with filters', async () => {
-      const mockRecords = [createMockRecord()]
-      const mockCompetitions: any[] = []
-      
-      recordApiMock.getRecords.mockResolvedValue(mockRecords)
-      recordApiMock.getCompetitions.mockResolvedValue(mockCompetitions)
+  it('日付範囲を指定して大会記録を取得できる', async () => {
+    const mockRecord = createMockRecordWithDetails()
+    vi.spyOn(mockApi, 'getRecords').mockResolvedValue([mockRecord])
+    vi.spyOn(mockApi, 'getCompetitions').mockResolvedValue([])
 
-      const { result } = renderHook(() =>
-        useRecords(mockClient, {
-          startDate: '2025-01-01',
-          endDate: '2025-01-31',
-          styleId: 1,
-          api,
-        })
-      )
+    const { result } = renderHook(
+      () => useRecordsQuery(mockClient, {
+        startDate: '2025-01-01',
+        endDate: '2025-01-31',
+        api: mockApi
+      }),
+      { wrapper: createWrapper() }
+    )
 
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-      expect(recordApiMock.getRecords).toHaveBeenCalledWith('2025-01-01', '2025-01-31', 1)
-    })
-
-    it('should handle fetch error', async () => {
-      const error = new Error('Fetch failed')
-      recordApiMock.getRecords.mockRejectedValue(error)
-
-      const { result } = renderHook(() => useRecords(mockClient, { api }))
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
-
-      expect(result.current.error).toEqual(error)
-      expect(result.current.records).toEqual([])
-    })
+    expect(result.current.records).toEqual([mockRecord])
+    expect(mockApi.getRecords).toHaveBeenCalledWith('2025-01-01', '2025-01-31', undefined)
   })
 
-  describe('操作関数', () => {
-    it('should create record', async () => {
-      const newRecord: Omit<RecordInsert, 'user_id'> = {
-        competition_id: 'comp-1',
-        style_id: 1,
-        time: 60.5,
-        video_url: null,
-        note: null,
-        is_relaying: false,
-      }
-      const createdRecord = createMockRecord({
-        ...newRecord,
-        style_id: newRecord.style_id,
-        time: newRecord.time,
-        is_relaying: newRecord.is_relaying,
-      })
-      
-      recordApiMock.getRecords.mockResolvedValue([])
-      recordApiMock.getCompetitions.mockResolvedValue([])
-      recordApiMock.createRecord.mockResolvedValue(createdRecord)
+  it('種目IDでフィルタリングできる', async () => {
+    const mockRecord = createMockRecordWithDetails()
+    vi.spyOn(mockApi, 'getRecords').mockResolvedValue([mockRecord])
+    vi.spyOn(mockApi, 'getCompetitions').mockResolvedValue([])
 
-      const { result } = renderHook(() => useRecords(mockClient, { api }))
+    const { result } = renderHook(
+      () => useRecordsQuery(mockClient, {
+        styleId: 1,
+        api: mockApi
+      }),
+      { wrapper: createWrapper() }
+    )
 
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-      await act(async () => {
-        await result.current.createRecord(newRecord)
-      })
-
-      expect(recordApiMock.createRecord).toHaveBeenCalledWith(newRecord)
-    })
-
-    it('should update record', async () => {
-      const recordId = 'record-1'
-      const updates = { time: 59.0 }
-      
-      recordApiMock.getRecords.mockResolvedValue([])
-      recordApiMock.getCompetitions.mockResolvedValue([])
-      recordApiMock.updateRecord.mockResolvedValue(createMockRecord(updates))
-
-      const { result } = renderHook(() => useRecords(mockClient, { api }))
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
-
-      await act(async () => {
-        await result.current.updateRecord(recordId, updates)
-      })
-
-      expect(recordApiMock.updateRecord).toHaveBeenCalledWith(recordId, updates)
-    })
-
-    it('should delete record', async () => {
-      const recordId = 'record-1'
-      
-      recordApiMock.getRecords.mockResolvedValue([])
-      recordApiMock.getCompetitions.mockResolvedValue([])
-      recordApiMock.deleteRecord.mockResolvedValue(undefined)
-
-      const { result } = renderHook(() => useRecords(mockClient, { api }))
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
-
-      await act(async () => {
-        await result.current.deleteRecord(recordId)
-      })
-
-      expect(recordApiMock.deleteRecord).toHaveBeenCalledWith(recordId)
-    })
-  })
-
-  describe('リアルタイム購読', () => {
-    it('should subscribe to realtime updates', async () => {
-      const mockRecordsChannel = { unsubscribe: vi.fn() }
-      const mockCompetitionsChannel = { unsubscribe: vi.fn() }
-      
-      recordApiMock.subscribeToRecords.mockReturnValue(mockRecordsChannel)
-      recordApiMock.subscribeToCompetitions.mockReturnValue(mockCompetitionsChannel)
-      recordApiMock.getRecords.mockResolvedValue([])
-      recordApiMock.getCompetitions.mockResolvedValue([])
-
-      const { result, unmount } = renderHook(() => useRecords(mockClient, { api }))
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
-
-      expect(recordApiMock.subscribeToRecords).toHaveBeenCalled()
-      expect(recordApiMock.subscribeToCompetitions).toHaveBeenCalled()
-
-      unmount()
-      expect(mockClient.removeChannel).toHaveBeenCalledWith(mockRecordsChannel)
-      expect(mockClient.removeChannel).toHaveBeenCalledWith(mockCompetitionsChannel)
-    })
-
-    it('should not subscribe when realtime is disabled', async () => {
-      recordApiMock.getRecords.mockResolvedValue([])
-      recordApiMock.getCompetitions.mockResolvedValue([])
-
-      const { result } = renderHook(() =>
-        useRecords(mockClient, { enableRealtime: false, api })
-      )
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
-
-      expect(recordApiMock.subscribeToRecords).not.toHaveBeenCalled()
-      expect(recordApiMock.subscribeToCompetitions).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('リフレッシュ', () => {
-    it('should refresh data', async () => {
-      const mockRecords = [createMockRecord()]
-      const mockCompetitions = [{ id: 'comp-1', name: 'テスト大会' }]
-      
-      recordApiMock.getRecords.mockResolvedValue(mockRecords)
-      recordApiMock.getCompetitions.mockResolvedValue(mockCompetitions)
-
-      const { result } = renderHook(() => useRecords(mockClient, { api }))
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
-
-      // リフレッシュ実行
-      await act(async () => {
-        await result.current.refresh()
-      })
-
-      expect(recordApiMock.getRecords).toHaveBeenCalledTimes(2) // 初回 + リフレッシュ
-      expect(recordApiMock.getCompetitions).toHaveBeenCalledTimes(2)
-    })
+    expect(mockApi.getRecords).toHaveBeenCalledWith(undefined, undefined, 1)
   })
 })
+
+describe('useCreateRecordMutation', () => {
+  let mockClient: any
+  let mockApi: RecordAPI
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockClient = createMockSupabaseClient()
+    mockApi = new RecordAPI(mockClient)
+  })
+
+  it('大会記録を作成できる', async () => {
+    const newRecord = {
+      competition_id: 'competition-id',
+      style_id: 1,
+      time: 60.5,
+      note: 'テスト記録',
+      video_url: null,
+      is_relaying: false,
+    }
+    const createdRecord = createMockRecordWithDetails(newRecord)
+    vi.spyOn(mockApi, 'createRecord').mockResolvedValue(createdRecord)
+
+    const { result } = renderHook(
+      () => useCreateRecordMutation(mockClient, mockApi),
+      { wrapper: createWrapper() }
+    )
+
+    await result.current.mutateAsync(newRecord)
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(mockApi.createRecord).toHaveBeenCalledWith(newRecord)
+  })
+})
+
+describe('useUpdateRecordMutation', () => {
+  let mockClient: any
+  let mockApi: RecordAPI
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockClient = createMockSupabaseClient()
+    mockApi = new RecordAPI(mockClient)
+  })
+
+  it('大会記録を更新できる', async () => {
+    const updates = {
+      time: 59.5,
+      note: '更新された記録'
+    }
+    const updatedRecord = createMockRecord(updates)
+    vi.spyOn(mockApi, 'updateRecord').mockResolvedValue(updatedRecord)
+
+    const { result } = renderHook(
+      () => useUpdateRecordMutation(mockClient, mockApi),
+      { wrapper: createWrapper() }
+    )
+
+    await result.current.mutateAsync({ id: 'record-id', updates })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(mockApi.updateRecord).toHaveBeenCalledWith('record-id', updates)
+  })
+})
+
+describe('useDeleteRecordMutation', () => {
+  let mockClient: any
+  let mockApi: RecordAPI
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockClient = createMockSupabaseClient()
+    mockApi = new RecordAPI(mockClient)
+  })
+
+  it('大会記録を削除できる', async () => {
+    vi.spyOn(mockApi, 'deleteRecord').mockResolvedValue(undefined)
+
+    const { result } = renderHook(
+      () => useDeleteRecordMutation(mockClient, mockApi),
+      { wrapper: createWrapper() }
+    )
+
+    await result.current.mutateAsync('record-id')
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(mockApi.deleteRecord).toHaveBeenCalledWith('record-id')
+  })
+})
+

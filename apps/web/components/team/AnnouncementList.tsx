@@ -1,7 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { useTeamAnnouncements, useDeleteTeamAnnouncement } from '@apps/shared/hooks'
+import {
+  useTeamAnnouncementsQuery,
+  useDeleteTeamAnnouncementMutation,
+} from '@apps/shared/hooks/queries/announcements'
 import { useAuth } from '@/contexts'
 import type { TeamAnnouncement } from '@/types'
 
@@ -21,8 +24,13 @@ export const AnnouncementList: React.FC<AnnouncementListProps> = ({
   viewOnly = false
 }) => {
   const { supabase } = useAuth()
-  const { announcements, loading, error, refetch } = useTeamAnnouncements(supabase, teamId)
-  const { remove, loading: deleteLoading } = useDeleteTeamAnnouncement(supabase)
+  const {
+    data: announcements = [],
+    isLoading: loading,
+    error,
+    refetch
+  } = useTeamAnnouncementsQuery(supabase, { teamId })
+  const deleteAnnouncementMutation = useDeleteTeamAnnouncementMutation(supabase)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   // viewOnlyの場合は公開済みのものだけをフィルタリング
@@ -35,8 +43,7 @@ export const AnnouncementList: React.FC<AnnouncementListProps> = ({
     
     try {
       setDeletingId(id)
-      await remove(id)
-      await refetch()
+      await deleteAnnouncementMutation.mutateAsync({ id, teamId })
     } catch (error) {
       console.error('削除エラー:', error)
     } finally {
@@ -139,7 +146,7 @@ export const AnnouncementList: React.FC<AnnouncementListProps> = ({
                     {isAdmin && (
                       <button
                         onClick={() => handleDelete(announcement.id)}
-                        disabled={deletingId === announcement.id || deleteLoading}
+                        disabled={deletingId === announcement.id || deleteAnnouncementMutation.isPending}
                         className="text-red-600 hover:text-red-800 text-sm disabled:opacity-50"
                       >
                         {deletingId === announcement.id ? '削除中...' : '削除'}

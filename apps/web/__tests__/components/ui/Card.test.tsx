@@ -4,18 +4,18 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 
 describe('Card', () => {
   describe('Card', () => {
-    it('should render card with children', () => {
+    it('子要素付きでカードが表示される', () => {
       render(<Card>カードコンテンツ</Card>)
       expect(screen.getByText('カードコンテンツ')).toBeInTheDocument()
     })
 
-    it('should apply default styles', () => {
+    it('デフォルトスタイルが適用される', () => {
       render(<Card>カード</Card>)
       const card = screen.getByText('カード')
       expect(card).toHaveClass('rounded-lg', 'border', 'border-gray-200', 'bg-white', 'shadow-sm')
     })
 
-    it('should apply custom className', () => {
+    it('カスタムclassNameが適用される', () => {
       render(<Card className="custom-class">カード</Card>)
       const card = screen.getByText('カード')
       expect(card).toHaveClass('custom-class')
@@ -23,7 +23,7 @@ describe('Card', () => {
   })
 
   describe('CardHeader', () => {
-    it('should render card header with children', () => {
+    it('子要素付きでカードヘッダーが表示される', () => {
       render(
         <Card>
           <CardHeader>ヘッダーコンテンツ</CardHeader>
@@ -32,7 +32,7 @@ describe('Card', () => {
       expect(screen.getByText('ヘッダーコンテンツ')).toBeInTheDocument()
     })
 
-    it('should apply default styles', () => {
+    it('デフォルトスタイルが適用される', () => {
       render(
         <Card>
           <CardHeader>ヘッダー</CardHeader>
@@ -42,7 +42,7 @@ describe('Card', () => {
       expect(header).toHaveClass('flex', 'flex-col', 'space-y-1.5', 'p-6')
     })
 
-    it('should apply custom className', () => {
+    it('カスタムclassNameが適用される', () => {
       render(
         <Card>
           <CardHeader className="custom-header">ヘッダー</CardHeader>
@@ -54,7 +54,7 @@ describe('Card', () => {
   })
 
   describe('CardTitle', () => {
-    it('should render card title with children', () => {
+    it('子要素付きでカードタイトルが表示される', () => {
       render(
         <Card>
           <CardHeader>
@@ -65,7 +65,7 @@ describe('Card', () => {
       expect(screen.getByText('カードタイトル')).toBeInTheDocument()
     })
 
-    it('should apply default styles', () => {
+    it('デフォルトスタイルが適用される', () => {
       render(
         <Card>
           <CardHeader>
@@ -77,7 +77,7 @@ describe('Card', () => {
       expect(title).toHaveClass('text-lg', 'font-semibold', 'leading-none', 'tracking-tight', 'text-gray-900')
     })
 
-    it('should apply custom className', () => {
+    it('カスタムclassNameが適用される', () => {
       render(
         <Card>
           <CardHeader>
@@ -91,7 +91,7 @@ describe('Card', () => {
   })
 
   describe('CardDescription', () => {
-    it('should render card description with children', () => {
+    it('子要素付きでカード説明が表示される', () => {
       render(
         <Card>
           <CardHeader>
@@ -102,7 +102,7 @@ describe('Card', () => {
       expect(screen.getByText('カード説明')).toBeInTheDocument()
     })
 
-    it('should apply default styles', () => {
+    it('デフォルトスタイルが適用される', () => {
       render(
         <Card>
           <CardHeader>
@@ -114,7 +114,7 @@ describe('Card', () => {
       expect(description).toHaveClass('text-sm', 'text-gray-600')
     })
 
-    it('should apply custom className', () => {
+    it('カスタムclassNameが適用される', () => {
       render(
         <Card>
           <CardHeader>
@@ -128,7 +128,7 @@ describe('Card', () => {
   })
 
   describe('CardContent', () => {
-    it('should render card content with children', () => {
+    it('子要素付きでカードコンテンツが表示される', () => {
       render(
         <Card>
           <CardContent>コンテンツ</CardContent>
@@ -137,7 +137,7 @@ describe('Card', () => {
       expect(screen.getByText('コンテンツ')).toBeInTheDocument()
     })
 
-    it('should apply default styles', () => {
+    it('デフォルトスタイルが適用される', () => {
       render(
         <Card>
           <CardContent>コンテンツ</CardContent>
@@ -147,7 +147,7 @@ describe('Card', () => {
       expect(content).toHaveClass('p-6', 'pt-0')
     })
 
-    it('should apply custom className', () => {
+    it('カスタムclassNameが適用される', () => {
       render(
         <Card>
           <CardContent className="custom-content">コンテンツ</CardContent>
@@ -159,7 +159,7 @@ describe('Card', () => {
   })
 
   describe('CardFooter', () => {
-    it('should render card footer with children', () => {
+    it('子要素付きでカードフッターが表示される', () => {
       render(
         <Card>
           <CardFooter>フッター</CardFooter>
@@ -168,7 +168,7 @@ describe('Card', () => {
       expect(screen.getByText('フッター')).toBeInTheDocument()
     })
 
-    it('should apply default styles', () => {
+    it('デフォルトスタイルが適用される', () => {
       render(
         <Card>
           <CardFooter>フッター</CardFooter>
@@ -178,7 +178,7 @@ describe('Card', () => {
       expect(footer).toHaveClass('flex', 'items-center', 'p-6', 'pt-0')
     })
 
-    it('should apply custom className', () => {
+    it('カスタムclassNameが適用される', () => {
       render(
         <Card>
           <CardFooter className="custom-footer">フッター</CardFooter>
@@ -190,7 +190,7 @@ describe('Card', () => {
   })
 
   describe('複合使用', () => {
-    it('should render complete card structure', () => {
+    it('完全なカード構造が表示される', () => {
       render(
         <Card>
           <CardHeader>

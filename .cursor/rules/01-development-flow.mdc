@@ -42,10 +42,7 @@ alwaysApply: true
    - RLSポリシー設定
    - インデックス設定
    
-4. GraphQLスキーマ設計
-   - Query/Mutation定義
-   - 型定義（types/index.ts）
-   - Resolver実装
+
 ```
 
 ### Phase 3: TDD実践（最重要）
@@ -58,7 +55,6 @@ alwaysApply: true
       - 例: ログイン → 練習記録追加 → 確認
       
    b) 統合テスト（必要に応じて）
-      - GraphQL APIのテスト
       - データベース操作のテスト
       
    c) ユニットテスト（必要に応じて）

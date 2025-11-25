@@ -1,292 +1,168 @@
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createMockSupabaseClient, createMockTeam } from '../../__mocks__/supabase'
-import { TeamAnnouncementsAPI, TeamCoreAPI, TeamMembersAPI } from '../../api/teams'
-import { useTeams } from '../../hooks/useTeams'
+import { createMockSupabaseClient, createMockTeam, createMockTeamMembershipWithUser } from '../../__mocks__/supabase'
+import { TeamCoreAPI, TeamMembersAPI, TeamAnnouncementsAPI } from '../../api/teams'
+import { useTeamsQuery, useCreateTeamMutation, useUpdateTeamMutation, useDeleteTeamMutation } from '../../hooks/queries/teams'
+import React from 'react'
 
-type CoreApiMock = {
-  getMyTeams: ReturnType<typeof vi.fn>
-  getTeam: ReturnType<typeof vi.fn>
-  createTeam: ReturnType<typeof vi.fn>
-  updateTeam: ReturnType<typeof vi.fn>
-  deleteTeam: ReturnType<typeof vi.fn>
-}
-
-type MembersApiMock = {
-  list: ReturnType<typeof vi.fn>
-  join: ReturnType<typeof vi.fn>
-  leave: ReturnType<typeof vi.fn>
-  updateRole: ReturnType<typeof vi.fn>
-  remove: ReturnType<typeof vi.fn>
-}
-
-type AnnouncementsApiMock = {
-  list: ReturnType<typeof vi.fn>
-  create: ReturnType<typeof vi.fn>
-  update: ReturnType<typeof vi.fn>
-  remove: ReturnType<typeof vi.fn>
-}
-
-describe('useTeams', () => {
-  let mockClient: any
-  let coreApiMock: CoreApiMock
-  let membersApiMock: MembersApiMock
-  let announcementsApiMock: AnnouncementsApiMock
-
-  const createOptions = (overrides: Parameters<typeof useTeams>[1] = {}) => ({
-    coreApi: coreApiMock as unknown as TeamCoreAPI,
-    membersApi: membersApiMock as unknown as TeamMembersAPI,
-    announcementsApi: announcementsApiMock as unknown as TeamAnnouncementsAPI,
-    ...overrides,
+// React Queryのテスト用ラッパー
+const createWrapper = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
   })
+  return ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  )
+}
+
+describe('useTeamsQuery', () => {
+  let mockClient: any
+  let mockCoreApi: TeamCoreAPI
+  let mockMembersApi: TeamMembersAPI
+  let mockAnnouncementsApi: TeamAnnouncementsAPI
 
   beforeEach(() => {
     vi.clearAllMocks()
     mockClient = createMockSupabaseClient()
-    coreApiMock = {
-      getMyTeams: vi.fn(),
-      getTeam: vi.fn(),
-      createTeam: vi.fn(),
-      updateTeam: vi.fn(),
-      deleteTeam: vi.fn(),
-    }
-    membersApiMock = {
-      list: vi.fn(),
-      join: vi.fn(),
-      leave: vi.fn(),
-      updateRole: vi.fn(),
-      remove: vi.fn(),
-    }
-    announcementsApiMock = {
-      list: vi.fn(),
-      create: vi.fn(),
-      update: vi.fn(),
-      remove: vi.fn(),
-    }
+    mockCoreApi = new TeamCoreAPI(mockClient)
+    mockMembersApi = new TeamMembersAPI(mockClient)
+    mockAnnouncementsApi = new TeamAnnouncementsAPI(mockClient)
   })
 
-  describe('初期化', () => {
-    it('should initialize with loading state', async () => {
-      const mockTeams = [{ id: 'team-1', team: createMockTeam() }]
-      coreApiMock.getMyTeams.mockResolvedValue(mockTeams)
+  it('チーム一覧を取得できる', async () => {
+    const mockMembership = createMockTeamMembershipWithUser()
+    vi.spyOn(mockCoreApi, 'getMyTeams').mockResolvedValue([mockMembership])
 
-      const { result } = renderHook(() => useTeams(mockClient, createOptions()))
+    const { result } = renderHook(
+      () => useTeamsQuery(mockClient, {
+        coreApi: mockCoreApi,
+        membersApi: mockMembersApi,
+        announcementsApi: mockAnnouncementsApi
+      }),
+      { wrapper: createWrapper() }
+    )
 
-      await act(async () => {
-        expect(result.current.loading).toBe(true)
-        expect(result.current.teams).toEqual([])
-        expect(result.current.currentTeam).toBeNull()
-        expect(result.current.error).toBeNull()
-      })
-    })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    it('should load teams on mount', async () => {
-      const mockTeams = [{ id: 'team-1', team: createMockTeam() }]
-      coreApiMock.getMyTeams.mockResolvedValue(mockTeams)
-
-      const { result } = renderHook(() => useTeams(mockClient, createOptions()))
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
-
-      expect(coreApiMock.getMyTeams).toHaveBeenCalled()
-      expect(result.current.teams).toEqual(mockTeams)
-    })
+    expect(result.current.teams).toEqual([mockMembership])
+    expect(mockCoreApi.getMyTeams).toHaveBeenCalled()
   })
 
-  describe('特定チームのデータ取得', () => {
-    it('should load team details when teamId is provided', async () => {
-      const teamId = 'team-1'
-      const mockTeam = createMockTeam()
-      const membersResponse = [{ id: 'member-1', user: { name: 'テストユーザー' } }]
-      const announcementsResponse = [{ id: 'ann-1', title: 'テストお知らせ' }]
-
-      coreApiMock.getMyTeams.mockResolvedValue([])
-      coreApiMock.getTeam.mockResolvedValue(mockTeam)
-      membersApiMock.list.mockResolvedValue(membersResponse)
-      announcementsApiMock.list.mockResolvedValue(announcementsResponse)
-
-      const { result } = renderHook(() =>
-        useTeams(mockClient, createOptions({ teamId }))
-      )
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
-
-      expect(coreApiMock.getTeam).toHaveBeenCalledWith(teamId)
-      expect(membersApiMock.list).toHaveBeenCalledWith(teamId)
-      expect(announcementsApiMock.list).toHaveBeenCalledWith(teamId)
-      expect(result.current.currentTeam).toEqual(mockTeam)
-      expect(result.current.members).toEqual(membersResponse)
-      expect(result.current.announcements).toEqual(announcementsResponse)
+  it('teamIdを指定してチーム詳細を取得できる', async () => {
+    const mockTeam = createMockTeam()
+    vi.spyOn(mockCoreApi, 'getMyTeams').mockResolvedValue([])
+    vi.spyOn(mockCoreApi, 'getTeam').mockResolvedValue({
+      ...mockTeam,
+      team_memberships: []
     })
+    vi.spyOn(mockMembersApi, 'list').mockResolvedValue([])
+    vi.spyOn(mockAnnouncementsApi, 'list').mockResolvedValue([])
 
-    it('should handle team access error', async () => {
-      const teamId = 'team-1'
-      const error = new Error('チームへのアクセス権限がありません')
+    const { result } = renderHook(
+      () => useTeamsQuery(mockClient, {
+        teamId: mockTeam.id,
+        coreApi: mockCoreApi,
+        membersApi: mockMembersApi,
+        announcementsApi: mockAnnouncementsApi
+      }),
+      { wrapper: createWrapper() }
+    )
 
-      coreApiMock.getMyTeams.mockResolvedValue([])
-      coreApiMock.getTeam.mockRejectedValue(error)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-      const { result } = renderHook(() =>
-        useTeams(mockClient, createOptions({ teamId }))
-      )
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
-
-      expect(result.current.error).toEqual(error)
-    })
-  })
-
-  describe('操作関数', () => {
-    it('should create team', async () => {
-      const newTeam = {
-        name: '新規チーム',
-        description: 'チームの説明',
-      }
-      const createdTeam = createMockTeam(newTeam)
-      
-      coreApiMock.getMyTeams.mockResolvedValue([])
-      coreApiMock.createTeam.mockResolvedValue(createdTeam)
-
-      const { result } = renderHook(() => useTeams(mockClient, createOptions()))
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
-
-      await act(async () => {
-        await result.current.createTeam(newTeam)
-      })
-
-      expect(coreApiMock.createTeam).toHaveBeenCalledWith(newTeam)
-    })
-
-    it('should join team', async () => {
-      const inviteCode = 'ABC123'
-      const membership = { id: 'membership-1', team_id: 'team-1' }
-      
-      coreApiMock.getMyTeams.mockResolvedValue([])
-      membersApiMock.join.mockResolvedValue(membership)
-
-      const { result } = renderHook(() => useTeams(mockClient, createOptions()))
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
-
-      await act(async () => {
-        await result.current.joinTeam(inviteCode)
-      })
-
-      expect(membersApiMock.join).toHaveBeenCalledWith(inviteCode)
-    })
-
-    it('should leave team', async () => {
-      const teamId = 'team-1'
-      
-      coreApiMock.getMyTeams.mockResolvedValue([])
-      membersApiMock.leave.mockResolvedValue(undefined)
-
-      const { result } = renderHook(() => useTeams(mockClient, createOptions()))
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
-
-      await act(async () => {
-        await result.current.leaveTeam(teamId)
-      })
-
-      expect(membersApiMock.leave).toHaveBeenCalledWith(teamId)
-    })
-  })
-
-  describe('リアルタイム購読', () => {
-    it('should subscribe to realtime updates when teamId is provided', async () => {
-      const teamId = 'team-1'
-
-      coreApiMock.getMyTeams.mockResolvedValue([])
-      coreApiMock.getTeam.mockResolvedValue(createMockTeam())
-      membersApiMock.list.mockResolvedValue([])
-      announcementsApiMock.list.mockResolvedValue([])
-
-      const { result, unmount } = renderHook(() =>
-        useTeams(mockClient, createOptions({ teamId }))
-      )
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
-
-      expect(mockClient.channel).toHaveBeenCalledWith(`team-announcements-${teamId}`)
-      expect(mockClient.channel).toHaveBeenCalledWith(`team-members-${teamId}`)
-
-      const [annChannel, memberChannel] = mockClient.channel.mock.results.map(
-        (call: any) => call.value
-      )
-
-      expect(annChannel.subscribe).toHaveBeenCalled()
-      expect(memberChannel.subscribe).toHaveBeenCalled()
-
-      unmount()
-      expect(mockClient.removeChannel).toHaveBeenCalledWith(annChannel)
-      expect(mockClient.removeChannel).toHaveBeenCalledWith(memberChannel)
-    })
-
-    it('should not subscribe when realtime is disabled', async () => {
-      const teamId = 'team-1'
-      
-      coreApiMock.getMyTeams.mockResolvedValue([])
-      coreApiMock.getTeam.mockResolvedValue(createMockTeam())
-      membersApiMock.list.mockResolvedValue([])
-      announcementsApiMock.list.mockResolvedValue([])
-
-      const { result } = renderHook(() =>
-        useTeams(mockClient, createOptions({ teamId, enableRealtime: false }))
-      )
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
-
-      expect(mockClient.channel).not.toHaveBeenCalled()
-    })
-
-    it('should not subscribe when teamId is not provided', async () => {
-      coreApiMock.getMyTeams.mockResolvedValue([])
-
-      const { result } = renderHook(() => useTeams(mockClient, createOptions()))
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
-
-      expect(mockClient.channel).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('リフレッシュ', () => {
-    it('should refresh data', async () => {
-      const mockTeams = [{ id: 'team-1', team: createMockTeam() }]
-      coreApiMock.getMyTeams.mockResolvedValue(mockTeams)
-
-      const { result } = renderHook(() => useTeams(mockClient, createOptions()))
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
-
-      // リフレッシュ実行
-      await act(async () => {
-        await result.current.refresh()
-      })
-
-      expect(coreApiMock.getMyTeams).toHaveBeenCalledTimes(2) // 初回 + リフレッシュ
-    })
+    expect(result.current.currentTeam).toBeTruthy()
+    expect(mockCoreApi.getTeam).toHaveBeenCalledWith(mockTeam.id)
   })
 })
+
+describe('useCreateTeamMutation', () => {
+  let mockClient: any
+  let mockCoreApi: TeamCoreAPI
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockClient = createMockSupabaseClient()
+    mockCoreApi = new TeamCoreAPI(mockClient)
+  })
+
+  it('チームを作成できる', async () => {
+    const newTeam = {
+      name: 'テストチーム',
+      description: 'テストチームの説明',
+    }
+    const createdTeam = createMockTeam(newTeam)
+    vi.spyOn(mockCoreApi, 'createTeam').mockResolvedValue(createdTeam)
+
+    const { result } = renderHook(
+      () => useCreateTeamMutation(mockClient, mockCoreApi),
+      { wrapper: createWrapper() }
+    )
+
+    await result.current.mutateAsync(newTeam)
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(mockCoreApi.createTeam).toHaveBeenCalledWith(newTeam)
+  })
+})
+
+describe('useUpdateTeamMutation', () => {
+  let mockClient: any
+  let mockCoreApi: TeamCoreAPI
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockClient = createMockSupabaseClient()
+    mockCoreApi = new TeamCoreAPI(mockClient)
+  })
+
+  it('チームを更新できる', async () => {
+    const updates = {
+      name: '更新されたチーム名'
+    }
+    const updatedTeam = createMockTeam(updates)
+    vi.spyOn(mockCoreApi, 'updateTeam').mockResolvedValue(updatedTeam)
+
+    const { result } = renderHook(
+      () => useUpdateTeamMutation(mockClient, mockCoreApi),
+      { wrapper: createWrapper() }
+    )
+
+    await result.current.mutateAsync({ id: 'team-id', updates })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(mockCoreApi.updateTeam).toHaveBeenCalledWith('team-id', updates)
+  })
+})
+
+describe('useDeleteTeamMutation', () => {
+  let mockClient: any
+  let mockCoreApi: TeamCoreAPI
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockClient = createMockSupabaseClient()
+    mockCoreApi = new TeamCoreAPI(mockClient)
+  })
+
+  it('チームを削除できる', async () => {
+    vi.spyOn(mockCoreApi, 'deleteTeam').mockResolvedValue(undefined)
+
+    const { result } = renderHook(
+      () => useDeleteTeamMutation(mockClient, mockCoreApi),
+      { wrapper: createWrapper() }
+    )
+
+    await result.current.mutateAsync('team-id')
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(mockCoreApi.deleteTeam).toHaveBeenCalledWith('team-id')
+  })
+})
+

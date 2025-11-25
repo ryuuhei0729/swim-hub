@@ -18,6 +18,7 @@ import MemberDetailModal from '@/components/team/MemberDetailModal'
 import type { MemberDetail } from '@/components/team/MemberDetailModal'
 import type { TeamTabType } from '@/components/team/TeamTabs'
 import { TeamEvent, AttendanceStatusType, TeamMembership, TeamWithMembers } from '@swim-hub/shared/types/database'
+import { TeamAttendancesAPI } from '@swim-hub/shared'
 import { useAttendanceTabStore, useTeamDetailStore } from '@/stores'
 
 // 出欠タブコンポーネント（Client Componentとして維持）
@@ -32,6 +33,8 @@ function AttendanceTab({ teamId, isAdmin }: { teamId: string, isAdmin: boolean }
     setEvents,
     setLoading
   } = useAttendanceTabStore()
+  
+  const teamAttendancesAPI = React.useMemo(() => new TeamAttendancesAPI(supabase), [supabase])
 
   const loadEvents = useCallback(async () => {
     try {
@@ -85,14 +88,10 @@ function AttendanceTab({ teamId, isAdmin }: { teamId: string, isAdmin: boolean }
     newStatus: AttendanceStatusType
   ) => {
     try {
-      const res = await fetch('/api/attendance/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ table: eventType === 'practice' ? 'practices' : 'competitions', id: eventId, status: newStatus })
-      })
-      if (!res.ok) {
-        const { error } = await res.json().catch(() => ({ error: 'Unknown error' }))
-        throw new Error(error)
+      if (eventType === 'practice') {
+        await teamAttendancesAPI.updatePracticeAttendanceStatus(eventId, newStatus)
+      } else {
+        await teamAttendancesAPI.updateCompetitionAttendanceStatus(eventId, newStatus)
       }
       await loadEvents()
     } catch (error) {

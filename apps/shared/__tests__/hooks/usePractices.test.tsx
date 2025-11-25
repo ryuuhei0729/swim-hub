@@ -1,230 +1,170 @@
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createMockSupabaseClient, createMockPractice } from '../../__mocks__/supabase'
+import { createMockSupabaseClient, createMockPractice, createMockPracticeWithLogs } from '../../__mocks__/supabase'
 import { PracticeAPI } from '../../api/practices'
-import { usePractices } from '../../hooks/usePractices'
+import { usePracticesQuery, useCreatePracticeMutation, useUpdatePracticeMutation, useDeletePracticeMutation } from '../../hooks/queries/practices'
+import React from 'react'
 
-type PracticeApiMock = {
-  getPractices: ReturnType<typeof vi.fn>
-  createPractice: ReturnType<typeof vi.fn>
-  updatePractice: ReturnType<typeof vi.fn>
-  deletePractice: ReturnType<typeof vi.fn>
-  createPracticeLog: ReturnType<typeof vi.fn>
-  updatePracticeLog: ReturnType<typeof vi.fn>
-  deletePracticeLog: ReturnType<typeof vi.fn>
-  createPracticeTimes: ReturnType<typeof vi.fn>
-  replacePracticeTimes: ReturnType<typeof vi.fn>
-  createPracticeTime: ReturnType<typeof vi.fn>
-  deletePracticeTime: ReturnType<typeof vi.fn>
-  subscribeToPractices: ReturnType<typeof vi.fn>
+// React Queryのテスト用ラッパー
+const createWrapper = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  })
+  return ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  )
 }
 
-describe('usePractices', () => {
+describe('usePracticesQuery', () => {
   let mockClient: any
-  let practiceApiMock: PracticeApiMock
-  let api: PracticeAPI
+  let mockApi: PracticeAPI
 
   beforeEach(() => {
     vi.clearAllMocks()
     mockClient = createMockSupabaseClient()
-    practiceApiMock = {
-      getPractices: vi.fn(),
-      createPractice: vi.fn(),
-      updatePractice: vi.fn(),
-      deletePractice: vi.fn(),
-      createPracticeLog: vi.fn(),
-      updatePracticeLog: vi.fn(),
-      deletePracticeLog: vi.fn(),
-      createPracticeTimes: vi.fn(),
-      replacePracticeTimes: vi.fn(),
-      createPracticeTime: vi.fn(),
-      deletePracticeTime: vi.fn(),
-      subscribeToPractices: vi.fn(),
-    }
-    api = practiceApiMock as unknown as PracticeAPI
+    mockApi = new PracticeAPI(mockClient)
   })
 
-  describe('初期化', () => {
-    it('should initialize with loading state', async () => {
-      const mockPractices = [createMockPractice()]
-      practiceApiMock.getPractices.mockResolvedValue(mockPractices)
+  it('練習記録一覧を取得できる', async () => {
+    const mockPractice = createMockPracticeWithLogs()
+    vi.spyOn(mockApi, 'getPractices').mockResolvedValue([mockPractice])
 
-      const { result } = renderHook(() => usePractices(mockClient, { api }))
+    const { result } = renderHook(
+      () => usePracticesQuery(mockClient, { api: mockApi }),
+      { wrapper: createWrapper() }
+    )
 
-      await act(async () => {
-        expect(result.current.loading).toBe(true)
-        expect(result.current.practices).toEqual([])
-        expect(result.current.error).toBeNull()
-      })
-    })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
-    it('should load practices on mount', async () => {
-      const mockPractices = [createMockPractice()]
-      practiceApiMock.getPractices.mockResolvedValue(mockPractices)
-
-      const { result } = renderHook(() => usePractices(mockClient, { api }))
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
-
-      expect(practiceApiMock.getPractices).toHaveBeenCalled()
-      expect(result.current.practices).toEqual(mockPractices)
-    })
+    expect(result.current.data).toEqual([mockPractice])
+    expect(mockApi.getPractices).toHaveBeenCalled()
   })
 
-  describe('データ取得', () => {
-    it('should fetch practices with date range', async () => {
-      const mockPractices = [createMockPractice()]
-      practiceApiMock.getPractices.mockResolvedValue(mockPractices)
+  it('日付範囲を指定して練習記録を取得できる', async () => {
+    const mockPractice = createMockPracticeWithLogs()
+    vi.spyOn(mockApi, 'getPractices').mockResolvedValue([mockPractice])
 
-      const { result } = renderHook(() =>
-        usePractices(mockClient, {
-          startDate: '2025-01-01',
-          endDate: '2025-01-31',
-          api,
-        })
-      )
+    const { result } = renderHook(
+      () => usePracticesQuery(mockClient, {
+        startDate: '2025-01-01',
+        endDate: '2025-01-31',
+        api: mockApi
+      }),
+      { wrapper: createWrapper() }
+    )
 
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
-      expect(practiceApiMock.getPractices).toHaveBeenCalledWith('2025-01-01', '2025-01-31')
-    })
-
-    it('should handle fetch error', async () => {
-      const error = new Error('Fetch failed')
-      practiceApiMock.getPractices.mockRejectedValue(error)
-
-      const { result } = renderHook(() => usePractices(mockClient, { api }))
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
-
-      expect(result.current.error).toEqual(error)
-      expect(result.current.practices).toEqual([])
-    })
+    expect(result.current.data).toEqual([mockPractice])
+    expect(mockApi.getPractices).toHaveBeenCalledWith('2025-01-01', '2025-01-31')
   })
 
-  describe('操作関数', () => {
-    it('should create practice', async () => {
-      const newPractice = {
-        date: '2025-01-15',
-        place: 'テストプール',
-        memo: 'テスト練習',
-        note: 'テスト練習のメモ',
-      }
-      const createdPractice = createMockPractice(newPractice)
-      
-      practiceApiMock.getPractices.mockResolvedValue([])
-      practiceApiMock.createPractice.mockResolvedValue(createdPractice)
+  it('エラー時にエラー状態を返す', async () => {
+    const error = new Error('Database error')
+    vi.spyOn(mockApi, 'getPractices').mockRejectedValue(error)
 
-      const { result } = renderHook(() => usePractices(mockClient, { api }))
+    const { result } = renderHook(
+      () => usePracticesQuery(mockClient, { api: mockApi }),
+      { wrapper: createWrapper() }
+    )
 
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
+    await waitFor(() => expect(result.current.isError).toBe(true))
 
-      await act(async () => {
-        await result.current.createPractice(newPractice)
-      })
-
-      expect(practiceApiMock.createPractice).toHaveBeenCalledWith(newPractice)
-      expect(practiceApiMock.getPractices).toHaveBeenCalledTimes(2) // 初回 + 再取得
-    })
-
-    it('should update practice', async () => {
-      const practiceId = 'practice-1'
-      const updates = { place: '更新後プール' }
-      
-      practiceApiMock.getPractices.mockResolvedValue([])
-      practiceApiMock.updatePractice.mockResolvedValue(createMockPractice(updates))
-
-      const { result } = renderHook(() => usePractices(mockClient, { api }))
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
-
-      await act(async () => {
-        await result.current.updatePractice(practiceId, updates)
-      })
-
-      expect(practiceApiMock.updatePractice).toHaveBeenCalledWith(practiceId, updates)
-    })
-
-    it('should delete practice', async () => {
-      const practiceId = 'practice-1'
-      
-      practiceApiMock.getPractices.mockResolvedValue([])
-      practiceApiMock.deletePractice.mockResolvedValue(undefined)
-
-      const { result } = renderHook(() => usePractices(mockClient, { api }))
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
-
-      await act(async () => {
-        await result.current.deletePractice(practiceId)
-      })
-
-      expect(practiceApiMock.deletePractice).toHaveBeenCalledWith(practiceId)
-    })
-  })
-
-  describe('リアルタイム購読', () => {
-    it('should subscribe to realtime updates', async () => {
-      const mockChannel = { unsubscribe: vi.fn() }
-      practiceApiMock.subscribeToPractices.mockReturnValue(mockChannel)
-      practiceApiMock.getPractices.mockResolvedValue([])
-
-      const { result, unmount } = renderHook(() => usePractices(mockClient, { api }))
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
-
-      expect(practiceApiMock.subscribeToPractices).toHaveBeenCalled()
-
-      unmount()
-      expect(mockClient.removeChannel).toHaveBeenCalledWith(mockChannel)
-    })
-
-    it('should not subscribe when realtime is disabled', async () => {
-      practiceApiMock.getPractices.mockResolvedValue([])
-
-      const { result } = renderHook(() =>
-        usePractices(mockClient, { enableRealtime: false, api })
-      )
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
-
-      expect(practiceApiMock.subscribeToPractices).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('リフレッシュ', () => {
-    it('should refresh data', async () => {
-      const mockPractices = [createMockPractice()]
-      practiceApiMock.getPractices.mockResolvedValue(mockPractices)
-
-      const { result } = renderHook(() => usePractices(mockClient, { api }))
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
-
-      // リフレッシュ実行
-      await act(async () => {
-        await result.current.refresh()
-      })
-
-      expect(practiceApiMock.getPractices).toHaveBeenCalledTimes(2) // 初回 + リフレッシュ
-    })
+    expect(result.current.error).toEqual(error)
   })
 })
+
+describe('useCreatePracticeMutation', () => {
+  let mockClient: any
+  let mockApi: PracticeAPI
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockClient = createMockSupabaseClient()
+    mockApi = new PracticeAPI(mockClient)
+  })
+
+  it('練習記録を作成できる', async () => {
+    const newPractice = {
+      date: '2025-01-15',
+      place: 'テストプール',
+      note: 'テストメモ'
+    }
+    const createdPractice = createMockPractice(newPractice)
+    vi.spyOn(mockApi, 'createPractice').mockResolvedValue(createdPractice)
+
+    const { result } = renderHook(
+      () => useCreatePracticeMutation(mockClient, mockApi),
+      { wrapper: createWrapper() }
+    )
+
+    await result.current.mutateAsync(newPractice)
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(mockApi.createPractice).toHaveBeenCalledWith(newPractice)
+  })
+})
+
+describe('useUpdatePracticeMutation', () => {
+  let mockClient: any
+  let mockApi: PracticeAPI
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockClient = createMockSupabaseClient()
+    mockApi = new PracticeAPI(mockClient)
+  })
+
+  it('練習記録を更新できる', async () => {
+    const updates = {
+      date: '2025-01-16',
+      place: '更新されたプール',
+      note: '更新されたメモ'
+    }
+    const updatedPractice = createMockPractice(updates)
+    vi.spyOn(mockApi, 'updatePractice').mockResolvedValue(updatedPractice)
+
+    const { result } = renderHook(
+      () => useUpdatePracticeMutation(mockClient, mockApi),
+      { wrapper: createWrapper() }
+    )
+
+    await result.current.mutateAsync({ id: 'practice-id', updates })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(mockApi.updatePractice).toHaveBeenCalledWith('practice-id', updates)
+  })
+})
+
+describe('useDeletePracticeMutation', () => {
+  let mockClient: any
+  let mockApi: PracticeAPI
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockClient = createMockSupabaseClient()
+    mockApi = new PracticeAPI(mockClient)
+  })
+
+  it('練習記録を削除できる', async () => {
+    vi.spyOn(mockApi, 'deletePractice').mockResolvedValue(undefined)
+
+    const { result } = renderHook(
+      () => useDeletePracticeMutation(mockClient, mockApi),
+      { wrapper: createWrapper() }
+    )
+
+    await result.current.mutateAsync('practice-id')
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(mockApi.deletePractice).toHaveBeenCalledWith('practice-id')
+  })
+})
+

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  createMockPractice,
-  createMockPracticeLog,
-  createMockSupabaseClient,
+    createMockPractice,
+    createMockPracticeLog,
+    createMockSupabaseClient,
 } from '../../__mocks__/supabase'
 import { PracticeAPI } from '../../api/practices'
 
@@ -16,8 +16,8 @@ describe('PracticeAPI', () => {
     api = new PracticeAPI(mockClient)
   })
 
-  describe('getPractices', () => {
-    it('should fetch practices for authenticated user', async () => {
+  describe('練習記録取得', () => {
+    it('認証済みユーザーのとき練習記録一覧を取得できる', async () => {
       const mockPractice = createMockPractice()
       mockClient.from = vi.fn(() => ({
         select: vi.fn().mockReturnThis(),
@@ -37,14 +37,14 @@ describe('PracticeAPI', () => {
       expect(result).toEqual([mockPractice])
     })
 
-    it('should throw error if not authenticated', async () => {
+    it('認証されていないときエラーになる', async () => {
       mockClient = createMockSupabaseClient({ userId: '' })
       api = new PracticeAPI(mockClient)
 
       await expect(api.getPractices('2025-01-01', '2025-01-31')).rejects.toThrow('認証が必要です')
     })
 
-    it('should throw error if query fails', async () => {
+    it('クエリが失敗したときエラーが発生する', async () => {
       const error = new Error('Database error')
       mockClient.from = vi.fn(() => ({
         select: vi.fn().mockReturnThis(),
@@ -61,8 +61,8 @@ describe('PracticeAPI', () => {
     })
   })
 
-  describe('getPracticesByDate', () => {
-    it('should fetch practices for specific date', async () => {
+  describe('練習記録取得（日付指定）', () => {
+    it('日付を指定したとき該当日の練習記録を取得できる', async () => {
       const mockPractice = createMockPractice({ date: '2025-01-15' })
       mockClient.from = vi.fn(() => ({
         select: vi.fn().mockReturnThis(),
@@ -78,8 +78,8 @@ describe('PracticeAPI', () => {
     })
   })
 
-  describe('createPractice', () => {
-    it('should create practice for authenticated user', async () => {
+  describe('練習記録作成', () => {
+    it('認証済みユーザーのとき練習記録を作成できる', async () => {
       const newPractice = {
         date: '2025-01-15',
         place: 'テストプール',
@@ -102,7 +102,7 @@ describe('PracticeAPI', () => {
       expect(result).toEqual(createdPractice)
     })
 
-    it('should throw error if not authenticated', async () => {
+    it('認証されていないときエラーになる', async () => {
       mockClient = createMockSupabaseClient({ userId: '' })
       api = new PracticeAPI(mockClient)
 
@@ -112,8 +112,8 @@ describe('PracticeAPI', () => {
     })
   })
 
-  describe('updatePractice', () => {
-    it('should update practice', async () => {
+  describe('練習記録更新', () => {
+    it('練習記録を更新できる', async () => {
       const updatedPractice = createMockPractice({ place: '更新後プール' })
 
       mockClient.from = vi.fn(() => ({
@@ -132,7 +132,7 @@ describe('PracticeAPI', () => {
       expect(result).toEqual(updatedPractice)
     })
 
-    it('should throw error if update fails', async () => {
+    it('更新が失敗したときエラーが発生する', async () => {
       const error = new Error('Update failed')
       mockClient.from = vi.fn(() => ({
         update: vi.fn().mockReturnThis(),
@@ -150,8 +150,8 @@ describe('PracticeAPI', () => {
     })
   })
 
-  describe('deletePractice', () => {
-    it('should delete practice', async () => {
+  describe('練習記録削除', () => {
+    it('練習記録を削除できる', async () => {
       mockClient.from = vi.fn(() => ({
         delete: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({
@@ -165,7 +165,7 @@ describe('PracticeAPI', () => {
       expect(mockClient.from).toHaveBeenCalledWith('practices')
     })
 
-    it('should throw error if delete fails', async () => {
+    it('削除が失敗したときエラーが発生する', async () => {
       const error = new Error('Delete failed')
       mockClient.from = vi.fn(() => ({
         delete: vi.fn().mockReturnThis(),
@@ -179,8 +179,8 @@ describe('PracticeAPI', () => {
     })
   })
 
-  describe('createPracticeLog', () => {
-    it('should create practice log', async () => {
+  describe('練習ログ作成', () => {
+    it('練習ログを作成できる', async () => {
       const newLog = {
         practice_id: 'practice-1',
         distance: 100,
@@ -209,8 +209,8 @@ describe('PracticeAPI', () => {
     })
   })
 
-  describe('createPracticeLogs', () => {
-    it('should create multiple practice logs', async () => {
+  describe('練習ログ一括作成', () => {
+    it('複数の練習ログを作成できる', async () => {
       const newLogs = [
         {
           practice_id: 'practice-1',
@@ -252,8 +252,8 @@ describe('PracticeAPI', () => {
     })
   })
 
-  describe('updatePracticeLog', () => {
-    it('should update practice log', async () => {
+  describe('練習ログ更新', () => {
+    it('練習ログを更新できる', async () => {
       const updatedLog = createMockPracticeLog({ distance: 200 })
 
       mockClient.from = vi.fn(() => ({
@@ -273,8 +273,8 @@ describe('PracticeAPI', () => {
     })
   })
 
-  describe('deletePracticeLog', () => {
-    it('should delete practice log', async () => {
+  describe('練習ログ削除', () => {
+    it('練習ログを削除できる', async () => {
       mockClient.from = vi.fn(() => ({
         delete: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({

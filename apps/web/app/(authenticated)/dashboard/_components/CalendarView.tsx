@@ -4,8 +4,7 @@ import React, { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, getDay } from 'date-fns'
-import { ja } from 'date-fns/locale'
-import { useCalendar } from '@/contexts'
+import { useCalendar } from '../_providers/CalendarProvider'
 import DayDetailModal from './DayDetailModal'
 import CalendarHeader from './CalendarHeader'
 import CalendarGrid from './CalendarGrid'
@@ -32,7 +31,6 @@ export default function CalendarView({
 }: Omit<CalendarProps, 'currentDate' | 'onCurrentDateChange'>) {
   const router = useRouter()
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
-  const [showAddModal, setShowAddModal] = useState(false)
   const [showMonthSelector, setShowMonthSelector] = useState(false)
   const [showDayDetail, setShowDayDetail] = useState(false)
 
@@ -108,15 +106,7 @@ export default function CalendarView({
 
   const handleAddClick = (date: Date) => {
     setSelectedDate(date)
-    setShowAddModal(true)
-  }
-
-  const handleAddItem = (type: 'practice' | 'record') => {
-    if (selectedDate && onAddItem) {
-      onAddItem(selectedDate, type)
-    }
-    setShowAddModal(false)
-    setSelectedDate(null)
+    setShowDayDetail(true)
   }
 
   const getDateEntries = (date: Date) => {
@@ -282,57 +272,6 @@ export default function CalendarView({
                   type="button"
                   className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                   onClick={() => setShowMonthSelector(false)}
-                >
-                  キャンセル
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 記録追加モーダル */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={() => setShowAddModal(false)}></div>
-
-            <div
-              className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full"
-              data-testid="add-menu-modal"
-            >
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="sm:flex sm:items-start">
-                  <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                      記録を追加 - {selectedDate && format(selectedDate, 'M月d日', { locale: ja })}
-                    </h3>
-                    <div className="space-y-3">
-                      <button
-                        onClick={() => handleAddItem('practice')}
-                        className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500"
-                        data-testid="add-practice-button"
-                      >
-                        <span className="mr-2">💪</span>
-                        練習予定を追加
-                      </button>
-                      <button
-                        onClick={() => handleAddItem('record')}
-                        className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-blue-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        data-testid="add-record-button"
-                      >
-                        <span className="mr-2">🏊‍♂️</span>
-                        大会記録を追加
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button
-                  type="button"
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                  onClick={() => setShowAddModal(false)}
                 >
                   キャンセル
                 </button>

@@ -144,7 +144,7 @@ export const createMockPractice = (overrides = {}) => ({
   user_id: 'test-user-id',
   date: '2025-01-15',
   place: 'テストプール',
-  memo: 'テスト練習',
+  note: 'テスト練習',
   created_at: '2025-01-15T10:00:00Z',
   updated_at: '2025-01-15T10:00:00Z',
   ...overrides,
@@ -152,15 +152,22 @@ export const createMockPractice = (overrides = {}) => ({
 
 export const createMockPracticeLog = (overrides = {}) => ({
   id: 'log-1',
+  user_id: 'test-user-id',
   practice_id: 'practice-1',
   distance: 100,
   rep_count: 4,
   set_count: 2,
-  circle_time: 90,
+  circle: 90,
   style: 'freestyle',
-  memo: 'テストログ',
+  note: 'テストログ',
   created_at: '2025-01-15T10:00:00Z',
   updated_at: '2025-01-15T10:00:00Z',
+  ...overrides,
+})
+
+export const createMockPracticeWithLogs = (overrides = {}) => ({
+  ...createMockPractice(),
+  practice_logs: [],
   ...overrides,
 })
 
@@ -168,14 +175,44 @@ export const createMockRecord = (overrides = {}) => ({
   id: 'record-1',
   user_id: 'test-user-id',
   competition_id: 'comp-1',
-  style_id: 'style-1',
-  time_seconds: 60.5,
-  pool_type: 'long',
-  is_relay: false,
-  memo: 'テスト記録',
+  style_id: 1,
+  time: 60.5,
+  is_relaying: false,
+  note: 'テスト記録',
   video_url: null,
   created_at: '2025-01-15T10:00:00Z',
   updated_at: '2025-01-15T10:00:00Z',
+  ...overrides,
+})
+
+export const createMockCompetition = (overrides = {}) => ({
+  id: 'comp-1',
+  user_id: 'test-user-id',
+  team_id: null,
+  title: 'テスト大会',
+  date: '2025-01-15',
+  place: 'テスト会場',
+  pool_type: 1,
+  note: '大会メモ',
+  created_at: '2025-01-15T09:00:00Z',
+  updated_at: '2025-01-15T09:00:00Z',
+  ...overrides,
+})
+
+export const createMockStyle = (overrides = {}) => ({
+  id: 1,
+  name_jp: '自由形',
+  name: 'freestyle',
+  style: 'fr' as const,
+  distance: 100,
+  ...overrides,
+})
+
+export const createMockRecordWithDetails = (overrides = {}) => ({
+  ...createMockRecord(),
+  competition: createMockCompetition(),
+  style: createMockStyle(),
+  split_times: [],
   ...overrides,
 })
 
@@ -184,19 +221,34 @@ export const createMockTeam = (overrides = {}) => ({
   name: 'テストチーム',
   description: 'テストチームの説明',
   invite_code: 'ABC123',
-  created_by: 'test-user-id',
   created_at: '2025-01-15T10:00:00Z',
   updated_at: '2025-01-15T10:00:00Z',
   ...overrides,
 })
 
-export const createMockStyle = (overrides = {}) => ({
-  id: 'style-1',
-  name_en: 'freestyle',
-  name_ja: '自由形',
-  distance: 100,
-  stroke: 'freestyle',
-  created_at: '2025-01-15T10:00:00Z',
+export const createMockTeamMembershipWithUser = (overrides = {}) => ({
+  id: 'membership-1',
+  team_id: 'team-1',
+  user_id: 'test-user-id',
+  role: 'admin' as const,
+  member_type: null,
+  group_name: null,
+  is_active: true,
+  joined_at: '2025-01-01T00:00:00Z',
+  left_at: null,
+  created_at: '2025-01-01T00:00:00Z',
+  updated_at: '2025-01-01T00:00:00Z',
+  users: {
+    id: 'test-user-id',
+    name: 'テストユーザー',
+    gender: 0,
+    birthday: null,
+    profile_image_path: null,
+    bio: null,
+    created_at: '2025-01-01T00:00:00Z',
+    updated_at: '2025-01-01T00:00:00Z',
+  },
+  teams: createMockTeam(),
   ...overrides,
 })
 

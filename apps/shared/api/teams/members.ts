@@ -82,6 +82,42 @@ export class TeamMembersAPI {
       .eq('user_id', userId)
     if (error) throw error
   }
+
+  /**
+   * 非アクティブなメンバーシップを再アクティブ化
+   */
+  async reactivateMembership(membershipId: string, joinedAt: string): Promise<TeamMembership> {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+
+    // メンバーシップが存在し、現在のユーザーのものであることを確認
+    const { data: membership, error: fetchError } = await this.supabase
+      .from('team_memberships')
+      .select('id, user_id, team_id')
+      .eq('id', membershipId)
+      .single()
+
+    if (fetchError) throw fetchError
+    if (!membership) throw new Error('メンバーシップが見つかりません')
+    if (membership.user_id !== user.id) {
+      throw new Error('自分のメンバーシップのみ再アクティブ化できます')
+    }
+
+    // 再アクティブ化
+    const { data: updated, error } = await this.supabase
+      .from('team_memberships')
+      .update({ 
+        is_active: true, 
+        joined_at: joinedAt,
+        left_at: null
+      })
+      .eq('id', membershipId)
+      .select('*')
+      .single()
+
+    if (error) throw error
+    return updated as TeamMembership
+  }
 }
 
 export type { TeamMembership }

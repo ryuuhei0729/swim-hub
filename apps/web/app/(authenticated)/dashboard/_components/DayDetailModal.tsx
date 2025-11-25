@@ -95,7 +95,8 @@ export default function DayDetailModal({
               </h3>
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="close-button text-gray-400 hover:text-gray-600 transition-colors"
+                data-testid="modal-close-button"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -109,6 +110,7 @@ export default function DayDetailModal({
                   <button
                     onClick={() => onAddItem?.(date, 'practice')}
                     className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    data-testid="add-practice-button"
                   >
                     <span className="mr-2">💪</span>
                     練習予定を追加
@@ -116,6 +118,7 @@ export default function DayDetailModal({
                   <button
                     onClick={() => onAddItem?.(date, 'record')}
                     className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-blue-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    data-testid="add-record-button"
                   >
                     <span className="mr-2">🏊‍♂️</span>
                     大会記録を追加
@@ -426,6 +429,7 @@ export default function DayDetailModal({
                   <button
                     onClick={() => onAddItem?.(date, 'practice')}
                     className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    data-testid="add-practice-button"
                   >
                     <span className="mr-2">💪</span>
                     練習記録
@@ -433,6 +437,7 @@ export default function DayDetailModal({
                   <button
                     onClick={() => onAddItem?.(date, 'record')}
                     className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-blue-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    data-testid="add-record-button"
                   >
                     <span className="mr-2">🏊‍♂️</span>
                     大会記録

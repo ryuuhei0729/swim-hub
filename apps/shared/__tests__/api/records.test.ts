@@ -12,8 +12,8 @@ describe('RecordAPI', () => {
     api = new RecordAPI(mockClient)
   })
 
-  describe('getRecords', () => {
-    it('should fetch records for authenticated user', async () => {
+  describe('記録取得', () => {
+    it('認証済みユーザーのとき記録一覧を取得できる', async () => {
       const mockRecord = createMockRecord()
       mockClient.from = vi.fn(() => ({
         select: vi.fn().mockReturnThis(),
@@ -31,7 +31,7 @@ describe('RecordAPI', () => {
       expect(result).toEqual([mockRecord])
     })
 
-    it('should filter by date range', async () => {
+    it('日付範囲を指定したとき該当期間の記録を取得できる', async () => {
       const mockRecord = createMockRecord()
       mockClient.from = vi.fn(() => ({
         select: vi.fn(() => ({
@@ -53,7 +53,7 @@ describe('RecordAPI', () => {
       expect(mockClient.from).toHaveBeenCalledWith('records')
     })
 
-    it('should filter by style', async () => {
+    it('種目を指定したとき該当種目の記録を取得できる', async () => {
       const mockRecord = createMockRecord()
       mockClient.from = vi.fn(() => ({
         select: vi.fn(() => ({
@@ -73,7 +73,7 @@ describe('RecordAPI', () => {
       expect(mockClient.from).toHaveBeenCalledWith('records')
     })
 
-    it('should throw error if not authenticated', async () => {
+    it('認証されていないときエラーになる', async () => {
       mockClient = createMockSupabaseClient({ userId: '' })
       api = new RecordAPI(mockClient)
 
@@ -81,8 +81,8 @@ describe('RecordAPI', () => {
     })
   })
 
-  describe('createRecord', () => {
-    it('should create record for authenticated user', async () => {
+  describe('記録作成', () => {
+    it('認証済みユーザーのとき記録を作成できる', async () => {
       const newRecord = {
         competition_id: 'comp-1',
         style_id: 1,
@@ -108,7 +108,7 @@ describe('RecordAPI', () => {
       expect(result).toEqual(createdRecord)
     })
 
-    it('should throw error if not authenticated', async () => {
+    it('認証されていないときエラーになる', async () => {
       mockClient = createMockSupabaseClient({ userId: '' })
       api = new RecordAPI(mockClient)
 
@@ -125,8 +125,8 @@ describe('RecordAPI', () => {
     })
   })
 
-  describe('updateRecord', () => {
-    it('should update record', async () => {
+  describe('記録更新', () => {
+    it('記録を更新できる', async () => {
       const updatedRecord = createMockRecord({ time_seconds: 59.0 })
 
       mockClient.from = vi.fn(() => ({
@@ -145,7 +145,7 @@ describe('RecordAPI', () => {
       expect(result).toEqual(updatedRecord)
     })
 
-    it('should throw error if update fails', async () => {
+    it('更新が失敗したときエラーが発生する', async () => {
       const error = new Error('Update failed')
       mockClient.from = vi.fn(() => ({
         update: vi.fn().mockReturnThis(),
@@ -163,8 +163,8 @@ describe('RecordAPI', () => {
     })
   })
 
-  describe('deleteRecord', () => {
-    it('should delete record', async () => {
+  describe('記録削除', () => {
+    it('記録を削除できる', async () => {
       mockClient.from = vi.fn(() => ({
         delete: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({
@@ -178,7 +178,7 @@ describe('RecordAPI', () => {
       expect(mockClient.from).toHaveBeenCalledWith('records')
     })
 
-    it('should throw error if delete fails', async () => {
+    it('削除が失敗したときエラーが発生する', async () => {
       const error = new Error('Delete failed')
       mockClient.from = vi.fn(() => ({
         delete: vi.fn().mockReturnThis(),
@@ -192,8 +192,8 @@ describe('RecordAPI', () => {
     })
   })
 
-  describe('getCompetitions', () => {
-    it('should fetch competitions for authenticated user', async () => {
+  describe('大会取得', () => {
+    it('認証済みユーザーのとき大会一覧を取得できる', async () => {
       const mockCompetition = {
         id: 'comp-1',
         name: 'テスト大会',
@@ -220,8 +220,8 @@ describe('RecordAPI', () => {
     })
   })
 
-  describe('createCompetition', () => {
-    it('should create competition', async () => {
+  describe('大会作成', () => {
+    it('大会を作成できる', async () => {
       const newCompetition = {
         title: '新規大会',
         date: '2025-02-01',
@@ -251,8 +251,8 @@ describe('RecordAPI', () => {
     })
   })
 
-  describe('updateCompetition', () => {
-    it('should update competition', async () => {
+  describe('大会更新', () => {
+    it('大会を更新できる', async () => {
       const updatedCompetition = {
         id: 'comp-1',
         name: '更新後大会名',
@@ -276,8 +276,8 @@ describe('RecordAPI', () => {
     })
   })
 
-  describe('deleteCompetition', () => {
-    it('should delete competition', async () => {
+  describe('大会削除', () => {
+    it('大会を削除できる', async () => {
       mockClient.from = vi.fn(() => ({
         delete: vi.fn(() => ({
           eq: vi.fn(() => ({

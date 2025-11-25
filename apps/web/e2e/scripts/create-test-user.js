@@ -57,6 +57,11 @@ const testUsers = [
     email: 'single-register@swimhub.com',
     password: 'SingleRegister123!',
     name: '単体登録テストユーザー'
+  },
+  {
+    email: 'e2e-test@swimhub.com',
+    password: 'E2ETest123!',
+    name: 'E2Eテストユーザー'
   }
 ]
 

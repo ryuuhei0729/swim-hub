@@ -21,7 +21,7 @@ describe('PracticeForm', () => {
   })
 
   describe('レンダリング', () => {
-    it('should render form when open', () => {
+    it('フォームが開いているときに表示される', () => {
       render(
         <PracticeForm
           isOpen={true}
@@ -36,7 +36,7 @@ describe('PracticeForm', () => {
       expect(screen.getByLabelText('メモ')).toBeInTheDocument()
     })
 
-    it('should not render form when closed', () => {
+    it('フォームが閉じているときに表示されない', () => {
       render(
         <PracticeForm
           isOpen={false}
@@ -50,7 +50,7 @@ describe('PracticeForm', () => {
   })
 
   describe('フォーム入力', () => {
-    it('should update form data when user types', async () => {
+    it('ユーザーが入力したときフォームデータが更新される', async () => {
       const user = userEvent.setup()
       
       render(
@@ -71,7 +71,7 @@ describe('PracticeForm', () => {
       expect(noteInput).toHaveValue('テスト練習')
     })
 
-    it('should initialize with initialDate', () => {
+    it('初期日付を指定したときその日付で初期化される', () => {
       const initialDate = new Date('2025-01-15')
       
       render(
@@ -87,7 +87,7 @@ describe('PracticeForm', () => {
       expect(dateInput).toHaveValue('2025-01-15')
     })
 
-    it('should initialize with editData', async () => {
+    it('編集データを指定したときそのデータで初期化される', async () => {
       const editData = {
         date: '2025-01-15',
         place: '編集プール',
@@ -112,7 +112,7 @@ describe('PracticeForm', () => {
   })
 
   describe('フォーム送信', () => {
-    it('should call onSubmit with form data', async () => {
+    it('フォームデータとともにonSubmitが呼ばれる', async () => {
       const user = userEvent.setup()
       mockOnSubmit.mockResolvedValue(undefined)
       
@@ -139,7 +139,7 @@ describe('PracticeForm', () => {
       })
     })
 
-    it('should show loading state when submitting', async () => {
+    it('送信中はローディング状態が表示される', async () => {
       const user = userEvent.setup()
       mockOnSubmit.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)))
       
@@ -171,7 +171,7 @@ describe('PracticeForm', () => {
       })
     })
 
-    it('should handle submission error', async () => {
+    it('送信エラーが発生したときエラーを処理できる', async () => {
       const user = userEvent.setup()
       const error = new Error('保存に失敗しました')
       mockOnSubmit.mockRejectedValue(error)
@@ -198,7 +198,7 @@ describe('PracticeForm', () => {
   })
 
   describe('フォームクローズ', () => {
-    it('should call onClose when close button is clicked', async () => {
+    it('閉じるボタンをクリックしたときonCloseが呼ばれる', async () => {
       const user = userEvent.setup()
       
       render(
@@ -215,7 +215,7 @@ describe('PracticeForm', () => {
       expect(mockOnClose).toHaveBeenCalled()
     })
 
-    it('should reset form when closed', async () => {
+    it('フォームが閉じられたときフォームがリセットされる', async () => {
       const user = userEvent.setup()
       
       const { rerender } = render(
@@ -251,7 +251,7 @@ describe('PracticeForm', () => {
   })
 
   describe('バリデーション', () => {
-    it('should show error for empty required fields', async () => {
+    it('必須項目が空のときエラーが表示される', async () => {
       const user = userEvent.setup()
       
       render(

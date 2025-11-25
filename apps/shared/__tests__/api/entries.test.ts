@@ -12,8 +12,8 @@ describe('EntryAPI', () => {
     api = new EntryAPI(mockClient)
   })
 
-  describe('getEntriesByUser', () => {
-    it('should fetch entries for authenticated user', async () => {
+  describe('ユーザーエントリー取得', () => {
+    it('認証済みユーザーのときエントリー一覧を取得できる', async () => {
       const mockEntries = [
         {
           id: 'entry-1',
@@ -46,14 +46,14 @@ describe('EntryAPI', () => {
       expect(result).toEqual(mockEntries)
     })
 
-    it('should throw error if not authenticated', async () => {
+    it('認証されていないときエラーになる', async () => {
       mockClient = createMockSupabaseClient({ userId: '' })
       api = new EntryAPI(mockClient)
 
       await expect(api.getEntriesByUser()).rejects.toThrow('認証が必要です')
     })
 
-    it('should handle database errors', async () => {
+    it('データベースエラーが発生したときエラーを処理できる', async () => {
       const dbError = new Error('Database connection failed')
       
       mockClient.from = vi.fn(() => ({
@@ -68,7 +68,7 @@ describe('EntryAPI', () => {
       await expect(api.getEntriesByUser()).rejects.toThrow(dbError)
     })
 
-    it('should return empty array when no entries found', async () => {
+    it('エントリーが見つからないとき空配列を返す', async () => {
       mockClient.from = vi.fn(() => ({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
@@ -83,7 +83,7 @@ describe('EntryAPI', () => {
       expect(result).toEqual([])
     })
 
-    it('should only fetch entries for the authenticated user', async () => {
+    it('認証済みユーザーのエントリーのみを取得する', async () => {
       const mockEntries = [
         {
           id: 'entry-1',
@@ -119,8 +119,8 @@ describe('EntryAPI', () => {
     })
   })
 
-  describe('getEntriesByCompetition', () => {
-    it('should fetch entries for a specific competition', async () => {
+  describe('大会エントリー取得', () => {
+    it('大会を指定したとき該当大会のエントリーを取得できる', async () => {
       const mockEntries = [
         {
           id: 'entry-1',
@@ -153,7 +153,7 @@ describe('EntryAPI', () => {
       expect(result).toEqual(mockEntries)
     })
 
-    it('should throw error if not authenticated', async () => {
+    it('認証されていないときエラーになる', async () => {
       mockClient = createMockSupabaseClient({ userId: '' })
       api = new EntryAPI(mockClient)
 
@@ -161,8 +161,8 @@ describe('EntryAPI', () => {
     })
   })
 
-  describe('getEntriesByTeam', () => {
-    it('should fetch entries for team members', async () => {
+  describe('チームエントリー取得', () => {
+    it('チームメンバーのときエントリー一覧を取得できる', async () => {
       const mockMembership = {
         id: 'membership-1',
         team_id: 'team-1',
@@ -216,7 +216,7 @@ describe('EntryAPI', () => {
       expect(result).toEqual(mockEntries)
     })
 
-    it('should throw error if user is not team member', async () => {
+    it('チームメンバーでないときエラーになる', async () => {
       mockClient.from = vi.fn((table: string) => {
         if (table === 'team_memberships') {
           return {
@@ -235,8 +235,8 @@ describe('EntryAPI', () => {
     })
   })
 
-  describe('getEntry', () => {
-    it('should fetch entry if user is the owner', async () => {
+  describe('エントリー取得', () => {
+    it('ユーザーが所有者のときエントリーを取得できる', async () => {
       const mockEntry = {
         id: 'entry-1',
         user_id: 'test-user-id',
@@ -272,7 +272,7 @@ describe('EntryAPI', () => {
       expect(result).toEqual(mockEntry)
     })
 
-    it('should fetch entry if user is team admin', async () => {
+    it('ユーザーがチーム管理者のときエントリーを取得できる', async () => {
       const mockEntry = {
         id: 'entry-1',
         user_id: 'other-user-id',
@@ -321,7 +321,7 @@ describe('EntryAPI', () => {
       expect(result).toEqual(mockEntry)
     })
 
-    it('should throw error if user is not owner and not team admin', async () => {
+    it('ユーザーが所有者でもチーム管理者でもないときエラーになる', async () => {
       const mockEntry = {
         id: 'entry-1',
         user_id: 'other-user-id',
@@ -364,7 +364,7 @@ describe('EntryAPI', () => {
       await expect(api.getEntry('entry-1')).rejects.toThrow('アクセスが拒否されました')
     })
 
-    it('should throw error if user is team member but not admin', async () => {
+    it('ユーザーがチームメンバーだが管理者でないときエラーになる', async () => {
       const mockEntry = {
         id: 'entry-1',
         user_id: 'other-user-id',
@@ -411,14 +411,14 @@ describe('EntryAPI', () => {
       await expect(api.getEntry('entry-1')).rejects.toThrow('アクセスが拒否されました')
     })
 
-    it('should throw error if not authenticated', async () => {
+    it('認証されていないときエラーになる', async () => {
       mockClient = createMockSupabaseClient({ userId: '' })
       api = new EntryAPI(mockClient)
 
       await expect(api.getEntry('entry-1')).rejects.toThrow('認証が必要です')
     })
 
-    it('should handle database errors when fetching entry', async () => {
+    it('エントリー取得時にデータベースエラーが発生したときエラーを処理できる', async () => {
       const dbError = new Error('Database connection failed')
       
       mockClient.from = vi.fn(() => ({
@@ -433,7 +433,7 @@ describe('EntryAPI', () => {
       await expect(api.getEntry('entry-1')).rejects.toThrow(dbError)
     })
 
-    it('should handle team membership query errors gracefully', async () => {
+    it('チームメンバーシップクエリエラーを適切に処理できる', async () => {
       const mockEntry = {
         id: 'entry-1',
         user_id: 'other-user-id',
@@ -479,8 +479,8 @@ describe('EntryAPI', () => {
     })
   })
 
-  describe('createTeamEntry', () => {
-    it('should create team entry if user is team admin', async () => {
+  describe('チームエントリー作成', () => {
+    it('ユーザーがチーム管理者のときチームエントリーを作成できる', async () => {
       const mockEntry = {
         id: 'entry-1',
         user_id: 'other-user-id',
@@ -533,7 +533,7 @@ describe('EntryAPI', () => {
       expect(result).toEqual(mockEntry)
     })
 
-    it('should create team entry if user creates their own entry', async () => {
+    it('ユーザーが自分のエントリーを作成するときチームエントリーを作成できる', async () => {
       const mockEntry = {
         id: 'entry-1',
         user_id: 'test-user-id',
@@ -586,7 +586,7 @@ describe('EntryAPI', () => {
       expect(result).toEqual(mockEntry)
     })
 
-    it('should throw error if non-admin user tries to create entry for other user', async () => {
+    it('非管理者ユーザーが他のユーザーのエントリーを作成しようとしたときエラーになる', async () => {
       const mockMembership = {
         id: 'membership-1',
         role: 'user', // 一般メンバー
@@ -617,7 +617,7 @@ describe('EntryAPI', () => {
         .rejects.toThrow('自分のエントリーのみ作成可能です')
     })
 
-    it('should throw error if user is not team member', async () => {
+    it('チームメンバーでないときエラーになる', async () => {
       mockClient.from = vi.fn((table: string) => {
         if (table === 'team_memberships') {
           return {
@@ -643,7 +643,7 @@ describe('EntryAPI', () => {
         .rejects.toThrow('チームへのアクセス権限がありません')
     })
 
-    it('should throw error if not authenticated', async () => {
+    it('認証されていないときエラーになる', async () => {
       mockClient = createMockSupabaseClient({ userId: '' })
       api = new EntryAPI(mockClient)
 
@@ -658,7 +658,7 @@ describe('EntryAPI', () => {
         .rejects.toThrow('認証が必要です')
     })
 
-    it('should handle database errors when creating entry', async () => {
+    it('エントリー作成時にデータベースエラーが発生したときエラーを処理できる', async () => {
       const mockMembership = {
         id: 'membership-1',
         role: 'admin',
@@ -701,8 +701,8 @@ describe('EntryAPI', () => {
     })
   })
 
-  describe('updateEntry', () => {
-    it('should update entry if user is the owner', async () => {
+  describe('エントリー更新', () => {
+    it('ユーザーが所有者のときエントリーを更新できる', async () => {
       const existingEntry = {
         id: 'entry-1',
         user_id: 'test-user-id',
@@ -759,7 +759,7 @@ describe('EntryAPI', () => {
       expect(result).toEqual(updatedEntry)
     })
 
-    it('should update entry if user is team admin', async () => {
+    it('ユーザーがチーム管理者のときエントリーを更新できる', async () => {
       const existingEntry = {
         id: 'entry-1',
         user_id: 'other-user-id',
@@ -829,7 +829,7 @@ describe('EntryAPI', () => {
       expect(result).toEqual(updatedEntry)
     })
 
-    it('should throw error if user is not owner and not team admin', async () => {
+    it('ユーザーが所有者でもチーム管理者でもないときエラーになる', async () => {
       const existingEntry = {
         id: 'entry-1',
         user_id: 'other-user-id',
@@ -873,7 +873,7 @@ describe('EntryAPI', () => {
       await expect(api.updateEntry('entry-1', updates)).rejects.toThrow('アクセスが拒否されました')
     })
 
-    it('should throw error if user is team member but not admin', async () => {
+    it('ユーザーがチームメンバーだが管理者でないときエラーになる', async () => {
       const existingEntry = {
         id: 'entry-1',
         user_id: 'other-user-id',
@@ -921,7 +921,7 @@ describe('EntryAPI', () => {
       await expect(api.updateEntry('entry-1', updates)).rejects.toThrow('アクセスが拒否されました')
     })
 
-    it('should throw error if trying to update competition_id', async () => {
+    it('competition_idを更新しようとしたときエラーになる', async () => {
       const existingEntry = {
         id: 'entry-1',
         user_id: 'test-user-id',
@@ -957,7 +957,7 @@ describe('EntryAPI', () => {
       await expect(api.updateEntry('entry-1', updates)).rejects.toThrow('competition_idの更新は許可されていません')
     })
 
-    it('should throw error if trying to update user_id', async () => {
+    it('user_idを更新しようとしたときエラーになる', async () => {
       const existingEntry = {
         id: 'entry-1',
         user_id: 'test-user-id',
@@ -993,7 +993,7 @@ describe('EntryAPI', () => {
       await expect(api.updateEntry('entry-1', updates)).rejects.toThrow('user_idの更新は許可されていません')
     })
 
-    it('should throw error if entry not found', async () => {
+    it('エントリーが見つからないときエラーになる', async () => {
       mockClient.from = vi.fn((table: string) => {
         if (table === 'entries') {
           return {
@@ -1015,7 +1015,7 @@ describe('EntryAPI', () => {
       await expect(api.updateEntry('entry-1', updates)).rejects.toThrow('エントリーが見つかりません')
     })
 
-    it('should throw error if not authenticated', async () => {
+    it('認証されていないときエラーになる', async () => {
       mockClient = createMockSupabaseClient({ userId: '' })
       api = new EntryAPI(mockClient)
 
@@ -1026,7 +1026,7 @@ describe('EntryAPI', () => {
       await expect(api.updateEntry('entry-1', updates)).rejects.toThrow('認証が必要です')
     })
 
-    it('should handle database errors when fetching entry', async () => {
+    it('エントリー取得時にデータベースエラーが発生したときエラーを処理できる', async () => {
       const dbError = new Error('Database connection failed')
       
       mockClient.from = vi.fn((table: string) => {
@@ -1051,8 +1051,8 @@ describe('EntryAPI', () => {
     })
   })
 
-  describe('deleteEntry', () => {
-    it('should delete entry if user is the owner', async () => {
+  describe('エントリー削除', () => {
+    it('ユーザーが所有者のときエントリーを削除できる', async () => {
       const existingEntry = {
         user_id: 'test-user-id',
         team_id: null,
@@ -1078,7 +1078,7 @@ describe('EntryAPI', () => {
       expect(mockClient.from).toHaveBeenCalledWith('entries')
     })
 
-    it('should delete entry if user is team admin', async () => {
+    it('ユーザーがチーム管理者のときエントリーを削除できる', async () => {
       const existingEntry = {
         user_id: 'other-user-id',
         team_id: 'team-1',
@@ -1117,7 +1117,7 @@ describe('EntryAPI', () => {
       expect(mockClient.from).toHaveBeenCalledWith('entries')
     })
 
-    it('should throw error if user is not owner and not team admin', async () => {
+    it('ユーザーが所有者でもチーム管理者でもないときエラーになる', async () => {
       const existingEntry = {
         user_id: 'other-user-id',
         team_id: 'team-1',
@@ -1149,7 +1149,7 @@ describe('EntryAPI', () => {
       await expect(api.deleteEntry('entry-1')).rejects.toThrow('アクセスが拒否されました')
     })
 
-    it('should throw error if user is team member but not admin', async () => {
+    it('ユーザーがチームメンバーだが管理者でないときエラーになる', async () => {
       const existingEntry = {
         user_id: 'other-user-id',
         team_id: 'team-1',
@@ -1185,7 +1185,7 @@ describe('EntryAPI', () => {
       await expect(api.deleteEntry('entry-1')).rejects.toThrow('アクセスが拒否されました')
     })
 
-    it('should throw error if entry not found', async () => {
+    it('エントリーが見つからないときエラーになる', async () => {
       mockClient.from = vi.fn((table: string) => {
         if (table === 'entries') {
           return {
@@ -1203,14 +1203,14 @@ describe('EntryAPI', () => {
       await expect(api.deleteEntry('entry-1')).rejects.toThrow('エントリーが見つかりません')
     })
 
-    it('should throw error if not authenticated', async () => {
+    it('認証されていないときエラーになる', async () => {
       mockClient = createMockSupabaseClient({ userId: '' })
       api = new EntryAPI(mockClient)
 
       await expect(api.deleteEntry('entry-1')).rejects.toThrow('認証が必要です')
     })
 
-    it('should handle database errors when fetching entry', async () => {
+    it('エントリー取得時にデータベースエラーが発生したときエラーを処理できる', async () => {
       const dbError = new Error('Database connection failed')
       
       mockClient.from = vi.fn((table: string) => {
@@ -1230,7 +1230,7 @@ describe('EntryAPI', () => {
       await expect(api.deleteEntry('entry-1')).rejects.toThrow(dbError)
     })
 
-    it('should handle database errors when deleting entry', async () => {
+    it('エントリー削除時にデータベースエラーが発生したときエラーを処理できる', async () => {
       const existingEntry = {
         user_id: 'test-user-id',
         team_id: null,
@@ -1263,8 +1263,8 @@ describe('EntryAPI', () => {
     })
   })
 
-  describe('deleteEntriesByCompetition', () => {
-    it('should delete entries if user is team admin', async () => {
+  describe('大会エントリー一括削除', () => {
+    it('ユーザーがチーム管理者のときエントリーを一括削除できる', async () => {
       const mockCompetition = {
         team_id: 'team-1',
       }
@@ -1310,7 +1310,7 @@ describe('EntryAPI', () => {
       expect(mockClient.from).toHaveBeenCalledWith('entries')
     })
 
-    it('should throw error if user is not team admin', async () => {
+    it('ユーザーがチーム管理者でないときエラーになる', async () => {
       const mockCompetition = {
         team_id: 'team-1',
       }
@@ -1345,7 +1345,7 @@ describe('EntryAPI', () => {
       await expect(api.deleteEntriesByCompetition('comp-1')).rejects.toThrow('管理者権限が必要です')
     })
 
-    it('should throw error if user is not team member', async () => {
+    it('チームメンバーでないときエラーになる', async () => {
       const mockCompetition = {
         team_id: 'team-1',
       }
@@ -1376,7 +1376,7 @@ describe('EntryAPI', () => {
       await expect(api.deleteEntriesByCompetition('comp-1')).rejects.toThrow('管理者権限が必要です')
     })
 
-    it('should throw error if competition is not a team competition', async () => {
+    it('チーム大会でないときエラーになる', async () => {
       const mockCompetition = {
         team_id: null, // 個人大会
       }
@@ -1398,7 +1398,7 @@ describe('EntryAPI', () => {
       await expect(api.deleteEntriesByCompetition('comp-1')).rejects.toThrow('チーム大会ではありません')
     })
 
-    it('should throw error if competition not found', async () => {
+    it('大会が見つからないときエラーになる', async () => {
       mockClient.from = vi.fn((table: string) => {
         if (table === 'competitions') {
           return {
@@ -1416,14 +1416,14 @@ describe('EntryAPI', () => {
       await expect(api.deleteEntriesByCompetition('comp-1')).rejects.toThrow('チーム大会ではありません')
     })
 
-    it('should throw error if not authenticated', async () => {
+    it('認証されていないときエラーになる', async () => {
       mockClient = createMockSupabaseClient({ userId: '' })
       api = new EntryAPI(mockClient)
 
       await expect(api.deleteEntriesByCompetition('comp-1')).rejects.toThrow('認証が必要です')
     })
 
-    it('should handle database errors when fetching competition', async () => {
+    it('大会取得時にデータベースエラーが発生したときエラーを処理できる', async () => {
       const dbError = new Error('Database connection failed')
       
       mockClient.from = vi.fn((table: string) => {
@@ -1443,7 +1443,7 @@ describe('EntryAPI', () => {
       await expect(api.deleteEntriesByCompetition('comp-1')).rejects.toThrow(dbError)
     })
 
-    it('should handle database errors when deleting entries', async () => {
+    it('エントリー削除時にデータベースエラーが発生したときエラーを処理できる', async () => {
       const mockCompetition = {
         team_id: 'team-1',
       }
@@ -1489,8 +1489,8 @@ describe('EntryAPI', () => {
     })
   })
 
-  describe('createPersonalEntry', () => {
-    it('should create personal entry for authenticated user', async () => {
+  describe('個人エントリー作成', () => {
+    it('認証済みユーザーのとき個人エントリーを作成できる', async () => {
       const mockEntry = {
         id: 'entry-1',
         user_id: 'test-user-id',
@@ -1524,7 +1524,7 @@ describe('EntryAPI', () => {
       expect(result).toEqual(mockEntry)
     })
 
-    it('should throw error if not authenticated', async () => {
+    it('認証されていないときエラーになる', async () => {
       mockClient = createMockSupabaseClient({ userId: '' })
       api = new EntryAPI(mockClient)
 

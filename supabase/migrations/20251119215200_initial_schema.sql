@@ -39,8 +39,6 @@ DROP FUNCTION IF EXISTS "public"."update_best_times"() CASCADE;
 DROP TYPE IF EXISTS "public"."attendance_status_type" CASCADE;
 DROP TYPE IF EXISTS "public"."entry_status_type" CASCADE;
 
-CREATE EXTENSION IF NOT EXISTS "pg_graphql" WITH SCHEMA "graphql";
-
 CREATE EXTENSION IF NOT EXISTS "pg_stat_statements" WITH SCHEMA "extensions";
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA "extensions";

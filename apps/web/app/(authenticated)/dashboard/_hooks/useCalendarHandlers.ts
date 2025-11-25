@@ -41,8 +41,6 @@ interface UseCalendarHandlersProps {
   setSelectedDate: (date: Date) => void
   setEditingData: (data: EditingData | null) => void
   handleDeleteItem: (itemId: string, itemType?: CalendarItemType) => Promise<void>
-  refetch: () => Promise<void>
-  refetchRecords: () => Promise<void>
   refreshCalendar: () => void
 }
 
@@ -59,8 +57,6 @@ export function useCalendarHandlers({
   setSelectedDate,
   setEditingData,
   handleDeleteItem,
-  refetch,
-  refetchRecords,
   refreshCalendar
 }: UseCalendarHandlersProps) {
   // タイムゾーンを考慮した日付パース
@@ -117,19 +113,21 @@ export function useCalendarHandlers({
   const onEditPracticeLog = useCallback((log: any) => {
     const editData: EditingData = {
       id: log.id,
-      practiceId: log.practice_id,
+      practiceId: log.practice_id || log.practiceId,
       style: log.style,
-      note: log.note || undefined
+      distance: log.distance,
+      rep_count: log.rep_count,
+      set_count: log.set_count,
+      circle: log.circle,
+      note: log.note || undefined,
+      tags: log.tags,
+      times: log.times
     }
     openPracticeLogForm(undefined, editData)
   }, [openPracticeLogForm])
 
   // 練習ログ削除ハンドラー
   const onDeletePracticeLog = useCallback(async (logId: string) => {
-    if (!confirm('この練習ログを削除してもよろしいですか？')) {
-      return
-    }
-    
     try {
       const { error } = await supabase
         .from('practice_logs')
@@ -138,14 +136,11 @@ export function useCalendarHandlers({
 
       if (error) throw error
 
-      await Promise.all([refetch()])
       refreshCalendar()
-
-      alert('練習ログを削除しました')
     } catch (error) {
       console.error('練習ログの削除に失敗しました:', error)
     }
-  }, [supabase, refetch, refreshCalendar])
+  }, [supabase, refreshCalendar])
 
   // 記録追加ハンドラー
   const onAddRecord = useCallback((params: { competitionId?: string; entryData?: EntryInfo; entryDataList?: EntryInfo[] }) => {
@@ -194,10 +189,6 @@ export function useCalendarHandlers({
 
   // 記録削除ハンドラー
   const onDeleteRecord = useCallback(async (recordId: string) => {
-    if (!confirm('この大会記録を削除してもよろしいですか？')) {
-      return
-    }
-    
     try {
       const { error } = await supabase
         .from('records')
@@ -206,14 +197,11 @@ export function useCalendarHandlers({
 
       if (error) throw error
 
-      await Promise.all([refetchRecords()])
       refreshCalendar()
-
-      alert('大会記録を削除しました')
     } catch (error) {
       console.error('大会記録の削除に失敗しました:', error)
     }
-  }, [supabase, refetchRecords, refreshCalendar])
+  }, [supabase, refreshCalendar])
 
   return {
     onDateClick,
