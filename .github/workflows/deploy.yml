@@ -83,15 +83,40 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: true
 
+      - name: Debug artifact structure
+        if: ${{ steps.download-prebuilt.outcome == 'success' }}
+        run: |
+          echo "Artifact structure:"
+          find artifacts -type f -o -type d | head -20 || true
+          echo "Checking for .vercel directory:"
+          find artifacts -name ".vercel" -type d || true
+
       - name: Prepare prebuilt artifact
         if: ${{ steps.download-prebuilt.outcome == 'success' }}
         run: |
-          if [ ! -d artifacts/apps/web/.vercel ]; then
-            echo "Expected prebuilt artifact structure not found" >&2
+          # アーティファクトの構造を確認して適切なパスを決定
+          if [ -d "artifacts/apps/web/.vercel" ]; then
+            echo "Found artifacts/apps/web/.vercel"
+            rm -rf apps/web/.vercel
+            rsync -a artifacts/apps/web/.vercel apps/web/
+          elif [ -d "artifacts/.vercel" ]; then
+            echo "Found artifacts/.vercel"
+            rm -rf apps/web/.vercel
+            mkdir -p apps/web
+            rsync -a artifacts/.vercel apps/web/
+          elif [ -f "artifacts/project.json" ] && [ -d "artifacts/output" ]; then
+            echo "Found flat structure in artifacts/"
+            rm -rf apps/web/.vercel
+            mkdir -p apps/web/.vercel
+            cp artifacts/project.json apps/web/.vercel/
+            rsync -a artifacts/output apps/web/.vercel/
+          else
+            echo "Error: Expected prebuilt artifact structure not found" >&2
+            echo "Contents of artifacts directory:" >&2
+            ls -la artifacts/ || echo "artifacts directory does not exist" >&2
+            find artifacts -type f -o -type d | head -20 >&2 || true
             exit 1
           fi
-          rm -rf apps/web/.vercel
-          rsync -a artifacts/apps/web/.vercel apps/web/
 
       - name: Pull Vercel project configuration
         if: ${{ steps.download-prebuilt.outcome != 'success' }}
