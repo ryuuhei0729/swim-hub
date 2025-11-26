@@ -125,15 +125,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
-        cache-dependency-path: |
-          package-lock.json
-          apps/**/package-lock.json
-
     - name: Restore Playwright browsers cache
       uses: actions/cache@v4
       with:
@@ -273,29 +264,6 @@ jobs:
         NEXT_PUBLIC_SUPABASE_URL: ${{ steps.supabase-env.outputs.supabase_url || 'https://placeholder.supabase.co' }}
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase-env.outputs.supabase_key || 'placeholder-anon-key' }}
       run: npm run build --workspace=apps/web
-
-    - name: Debug: Check directory structure after build
-      run: |
-        echo "📁 Current working directory:"
-        pwd
-        echo ""
-        echo "📁 Root directory contents:"
-        ls -la | head -20
-        echo ""
-        echo "📁 apps/web directory contents:"
-        ls -la apps/web/ | head -20
-        echo ""
-        echo "🔍 Searching for .next directories:"
-        find . -name ".next" -type d 2>/dev/null || echo "No .next directories found"
-        echo ""
-        echo "🔍 Checking if apps/web/.next exists:"
-        if [ -d "apps/web/.next" ]; then
-          echo "✅ apps/web/.next exists"
-          echo "📊 Contents:"
-          ls -la apps/web/.next/ | head -10
-        else
-          echo "❌ apps/web/.next does NOT exist"
-        fi
 
     - name: Verify build output
       run: |
