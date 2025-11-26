@@ -95,7 +95,6 @@ jobs:
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-args: ${{ steps.strategy.outputs.vercel_args }} --prebuilt
-          working-directory: apps/web
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build Next.js app (fallback)
@@ -113,5 +112,4 @@ jobs:
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-args: ${{ steps.strategy.outputs.vercel_args }}
-          working-directory: apps/web
           github-token: ${{ secrets.GITHUB_TOKEN }}
