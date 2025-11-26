@@ -272,11 +272,17 @@ jobs:
           exit 1
         fi
         echo "✅ Build output verified: .next directory exists"
+        echo "📁 Checking .next directory contents:"
+        ls -la apps/web/.next/ || echo "⚠️ Cannot list .next directory"
+        echo "📊 Directory size:"
+        du -sh apps/web/.next/ || echo "⚠️ Cannot get directory size"
+        echo "📄 File count:"
+        find apps/web/.next -type f | wc -l || echo "⚠️ Cannot count files"
 
     - name: Upload Next build artifact
       uses: actions/upload-artifact@v4
       with:
         name: next-build
-        path: apps/web/.next
+        path: apps/web/.next/**
         if-no-files-found: error
         retention-days: 7
