@@ -283,6 +283,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: next-build
-        path: apps/web/.next/**
+        path: apps/web/.next
         if-no-files-found: error
         retention-days: 7
+        include-hidden-files: true
