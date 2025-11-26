@@ -10,6 +10,8 @@ on:
 jobs:
   check-secrets:
     runs-on: ubuntu-latest
+    permissions:
+      statuses: write
     outputs:
       has-vercel-secrets: ${{ steps.check.outputs.has-vercel-secrets }}
 
@@ -33,6 +35,7 @@ jobs:
     permissions:
       contents: read
       deployments: write
+      statuses: write
 
     steps:
       - name: Checkout source
