@@ -114,8 +114,7 @@ jobs:
                 fi
               fi
               
-              # apps/webディレクトリに移動してからビルド
-              cd apps/web
+              # production環境でビルド（working-directoryで既にapps/webにいる）
               VERCEL=1 vercel build --token ${{ secrets.VERCEL_TOKEN }} --yes
               
               # ビルド結果を確認
