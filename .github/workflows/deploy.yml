@@ -75,25 +75,45 @@ jobs:
           
           branch="${{ github.event.workflow_run.head_branch }}"
           event="${{ github.event.workflow_run.event }}"
-          commit_msg="${{ github.event.workflow_run.head_commit.message }}"
+          commit_msg="${{ github.event.workflow_run.head_commit.message || '' }}"
           
-          echo "Build environment: $BUILD_ENV"
-          echo "Branch: $branch"
-          echo "Event: $event"
-          echo "Commit message: $commit_msg"
-          
-          # mainブランチへのpushまたはマージの場合、production環境でビルドが必要
-          # workflow_runイベントの場合、head_branchは元のブランチを指すため、
-          # コミットメッセージからマージ先を推測する
-          NEEDS_PRODUCTION=false
-          if [[ "$branch" == "main" && "$event" == "push" ]]; then
-            NEEDS_PRODUCTION=true
-          elif echo "$commit_msg" | grep -qE "Merge pull request.*into main|Merge.*into main"; then
-            # PRがmainブランチにマージされた場合
-            NEEDS_PRODUCTION=true
+          # Gitのコミット履歴から実際のマージ先ブランチを確認
+          # チェックアウトしたコミットがmainブランチに含まれているか確認
+          git fetch origin main:main 2>/dev/null || true
+          IS_IN_MAIN=false
+          if git merge-base --is-ancestor HEAD origin/main 2>/dev/null; then
+            IS_IN_MAIN=true
           fi
           
+          echo "=== Debug Information ==="
+          echo "Build environment: $BUILD_ENV"
+          echo "Head branch: $branch"
+          echo "Event: $event"
+          echo "Commit message: $commit_msg"
+          echo "Is commit in main branch: $IS_IN_MAIN"
+          echo "Current directory: $(pwd)"
+          echo "========================="
+          
+          # mainブランチへのpushまたはマージの場合、production環境でビルドが必要
+          NEEDS_PRODUCTION=false
+          if [[ "$branch" == "main" && "$event" == "push" ]]; then
+            echo "✅ Detected: main branch push"
+            NEEDS_PRODUCTION=true
+          elif [[ "$IS_IN_MAIN" == "true" ]]; then
+            echo "✅ Detected: commit is in main branch"
+            NEEDS_PRODUCTION=true
+          elif echo "$commit_msg" | grep -qiE "into main"; then
+            echo "✅ Detected: PR merged into main (from commit message)"
+            NEEDS_PRODUCTION=true
+          else
+            echo "ℹ️ Not detected as main branch deployment"
+          fi
+          
+          echo "NEEDS_PRODUCTION: $NEEDS_PRODUCTION"
+          
+          # production環境でビルドが必要な場合
           if [[ "$NEEDS_PRODUCTION" == "true" ]]; then
+            # ビルド環境がproductionでない場合、必ず再ビルド
             if [[ "$BUILD_ENV" != "production" ]]; then
               echo "⚠️ Build was done in $BUILD_ENV environment, but deploying to main requires production"
               echo "Rebuilding in production environment..."
@@ -115,6 +135,7 @@ jobs:
               fi
               
               # production環境でビルド（working-directoryで既にapps/webにいる）
+              echo "🔨 Building in production environment..."
               VERCEL=1 vercel build --token ${{ secrets.VERCEL_TOKEN }} --yes
               
               # ビルド結果を確認
@@ -125,6 +146,11 @@ jobs:
               echo "✅ Rebuilt in production environment"
               echo "📁 Checking .vercel/output directory contents:"
               ls -la .vercel/output/ || echo "⚠️ Cannot list .vercel/output directory"
+              
+              # ビルド環境情報を更新
+              echo "production" > .vercel/build-env.txt
+            else
+              echo "✅ Build environment is already production, no rebuild needed"
             fi
             echo "vercel_args=--prebuilt --prod" >> "$GITHUB_OUTPUT"
             echo "Deploying to production"
