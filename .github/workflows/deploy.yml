@@ -62,13 +62,28 @@ jobs:
 
       - name: Determine deploy strategy
         id: strategy
+        working-directory: apps/web
         run: |
+          # CIでビルドされた環境を確認
+          BUILD_ENV="preview"
+          if [ -f .vercel/build-env.txt ]; then
+            BUILD_ENV=$(cat .vercel/build-env.txt)
+          fi
+          
           branch="${{ github.event.workflow_run.head_branch }}"
           event="${{ github.event.workflow_run.event }}"
-          if [[ "$branch" == "main" && "$event" == "push" ]]; then
+          
+          echo "Build environment: $BUILD_ENV"
+          echo "Branch: $branch"
+          echo "Event: $event"
+          
+          # ビルドされた環境に合わせてデプロイ
+          if [[ "$BUILD_ENV" == "production" ]]; then
             echo "vercel_args=--prebuilt --prod" >> "$GITHUB_OUTPUT"
+            echo "Deploying to production (matched build environment)"
           else
             echo "vercel_args=--prebuilt" >> "$GITHUB_OUTPUT"
+            echo "Deploying to preview (matched build environment)"
           fi
 
       - name: Deploy to Vercel

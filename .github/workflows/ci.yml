@@ -332,6 +332,11 @@ jobs:
         echo "📁 Checking .vercel/output directory contents:"
         ls -la .vercel/output/ || echo "⚠️ Cannot list .vercel/output directory"
 
+    - name: Save build environment info
+      working-directory: apps/web
+      run: |
+        echo "${{ steps.vercel-env.outputs.environment }}" > .vercel/build-env.txt
+
     - name: Upload Vercel build artifact
       uses: actions/upload-artifact@v4
       with:
