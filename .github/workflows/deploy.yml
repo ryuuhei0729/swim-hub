@@ -5,20 +5,15 @@ on:
     workflows: [CI]
     types:
       - completed
-
-concurrency:
-  group: deploy-${{ github.event.workflow_run.head_branch }}
-  cancel-in-progress: false
+  workflow_dispatch:
 
 jobs:
   check-secrets:
     runs-on: ubuntu-latest
+    permissions:
+      statuses: write
     outputs:
       has-vercel-secrets: ${{ steps.check.outputs.has-vercel-secrets }}
-      deploy-environment: ${{ steps.env.outputs.environment }}
-      deploy-branch: ${{ steps.env.outputs.branch }}
-      supabase-url: ${{ steps.env.outputs.supabase-url }}
-      supabase-key: ${{ steps.env.outputs.supabase-key }}
 
     steps:
       - name: Determine secret availability
@@ -30,42 +25,17 @@ jobs:
             echo "has-vercel-secrets=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Determine deployment environment
-        id: env
-        run: |
-          BRANCH="${{ github.event.workflow_run.head_branch }}"
-          if [ "$BRANCH" == "main" ]; then
-            echo "environment=production" >> "$GITHUB_OUTPUT"
-            echo "branch=main" >> "$GITHUB_OUTPUT"
-            echo "supabase-url=${{ secrets.PROD_SUPABASE_URL }}" >> "$GITHUB_OUTPUT"
-            echo "supabase-key=${{ secrets.PROD_SUPABASE_ANON_KEY }}" >> "$GITHUB_OUTPUT"
-          elif [ "$BRANCH" == "develop" ]; then
-            echo "environment=preview" >> "$GITHUB_OUTPUT"
-            echo "branch=develop" >> "$GITHUB_OUTPUT"
-            echo "supabase-url=${{ secrets.PREVIEW_SUPABASE_URL }}" >> "$GITHUB_OUTPUT"
-            echo "supabase-key=${{ secrets.PREVIEW_SUPABASE_ANON_KEY }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "environment=none" >> "$GITHUB_OUTPUT"
-            echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
-          fi
-
   deploy:
     if: >-
       ${{ github.event.workflow_run.conclusion == 'success' &&
           github.event.workflow_run.head_repository.full_name == github.repository &&
-          needs.check-secrets.outputs.has-vercel-secrets == 'true' &&
-          needs.check-secrets.outputs.deploy-environment != 'none' }}
+          needs.check-secrets.outputs.has-vercel-secrets == 'true' }}
     needs: check-secrets
     runs-on: ubuntu-latest
     permissions:
       contents: read
       deployments: write
-      pull-requests: write
       statuses: write
-    env:
-      NEXT_PUBLIC_SUPABASE_URL: ${{ needs.check-secrets.outputs.supabase-url }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ needs.check-secrets.outputs.supabase-key }}
-      VERCEL_ENVIRONMENT: ${{ needs.check-secrets.outputs.deploy-environment }}
 
     steps:
       - name: Checkout source
@@ -73,120 +43,40 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      - name: Download prebuilt artifact
-        id: download-prebuilt
+      - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
-          name: vercel-output
-          path: artifacts
-          run-id: ${{ github.event.workflow_run.id }}
+          name: vercel-build
+          path: apps/web/.vercel
           github-token: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
+          run-id: ${{ github.event.workflow_run.id }}
 
-      - name: Debug artifact structure
-        if: ${{ steps.download-prebuilt.outcome == 'success' }}
-        run: |
-          echo "Artifact structure:"
-          find artifacts -type f -o -type d | head -20 || true
-          echo "Checking for .vercel directory:"
-          find artifacts -name ".vercel" -type d || true
-
-      - name: Prepare prebuilt artifact
-        if: ${{ steps.download-prebuilt.outcome == 'success' }}
-        run: |
-          # アーティファクトの構造を確認して適切なパスを決定
-          if [ -d "artifacts/apps/web/.vercel" ]; then
-            echo "Found artifacts/apps/web/.vercel"
-            rm -rf apps/web/.vercel
-            rsync -a artifacts/apps/web/.vercel apps/web/
-          elif [ -d "artifacts/.vercel" ]; then
-            echo "Found artifacts/.vercel"
-            rm -rf apps/web/.vercel
-            mkdir -p apps/web
-            rsync -a artifacts/.vercel apps/web/
-          elif [ -f "artifacts/project.json" ] && [ -d "artifacts/output" ]; then
-            echo "Found flat structure in artifacts/"
-            rm -rf apps/web/.vercel
-            mkdir -p apps/web/.vercel
-            cp artifacts/project.json apps/web/.vercel/
-            rsync -a artifacts/output apps/web/.vercel/
-          else
-            echo "Error: Expected prebuilt artifact structure not found" >&2
-            echo "Contents of artifacts directory:" >&2
-            ls -la artifacts/ || echo "artifacts directory does not exist" >&2
-            find artifacts -type f -o -type d | head -20 >&2 || true
-            exit 1
-          fi
-
-      - name: Pull Vercel project configuration
-        if: ${{ steps.download-prebuilt.outcome != 'success' }}
-        working-directory: apps/web
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: npx vercel pull --yes --environment=$VERCEL_ENVIRONMENT --token=$VERCEL_TOKEN
-
-      - name: Setup Node.js and Install dependencies
-        if: ${{ steps.download-prebuilt.outcome != 'success' }}
-        uses: ./.github/actions/setup-node
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '20.x'
+          cache: 'npm'
 
-      - name: Build with Vercel (if no artifact)
-        if: ${{ steps.download-prebuilt.outcome != 'success' }}
-        working-directory: apps/web
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ needs.check-secrets.outputs.supabase-url }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ needs.check-secrets.outputs.supabase-key }}
-        run: npm run build
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Determine Vercel args
-        id: vercel-args
+      - name: Determine deploy strategy
+        id: strategy
         run: |
-          ARGS=""
-          if [ "${{ steps.download-prebuilt.outcome }}" == "success" ]; then
-            ARGS="--prebuilt"
+          branch="${{ github.event.workflow_run.head_branch }}"
+          event="${{ github.event.workflow_run.event }}"
+          if [[ "$branch" == "main" && "$event" == "push" ]]; then
+            echo "vercel_args=--prebuilt --prod" >> "$GITHUB_OUTPUT"
+          else
+            echo "vercel_args=--prebuilt" >> "$GITHUB_OUTPUT"
           fi
-          if [ "${{ needs.check-secrets.outputs.deploy-environment }}" == "production" ]; then
-            ARGS="$ARGS --prod"
-          fi
-          echo "args=$ARGS" >> "$GITHUB_OUTPUT"
 
       - name: Deploy to Vercel
-        id: deploy
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: ${{ steps.vercel-args.outputs.args }}
+          vercel-args: ${{ steps.strategy.outputs.vercel_args }}
           working-directory: apps/web
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          github-comment: ${{ needs.check-secrets.outputs.deploy-environment == 'preview' }}
-
-      - name: Report deployment status to GitHub
-        if: always()
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const deployOutcome = '${{ steps.deploy.outcome }}';
-            const status = deployOutcome === 'success' ? 'success' : 'failure';
-            const deploymentUrl = '${{ steps.deploy.outputs.preview-url || steps.deploy.outputs.production-url || '' }}';
-            const description = status === 'success' 
-              ? `Deployment ${deploymentUrl ? `to ${deploymentUrl}` : 'completed'} successfully`
-              : 'Deployment failed';
-            
-            await github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: '${{ github.event.workflow_run.head_sha }}',
-              state: status,
-              target_url: deploymentUrl || `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
-              description: description,
-              context: 'deploy'
-            });

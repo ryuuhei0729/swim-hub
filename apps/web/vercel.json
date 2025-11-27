@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "buildCommand": "cd ../.. && cd apps/web && npm run build",
-  "installCommand": "cd ../.. && npm install --frozen-lockfile",
+  "buildCommand": "",
+  "installCommand": "",
   "framework": "nextjs",
   "ignoreCommand": "git diff --quiet HEAD^ HEAD ./",
   "env": {
@@ -14,8 +14,8 @@
   },
   "git": {
     "deploymentEnabled": {
-      "main": true,
-      "develop": true
+      "main": false,
+      "develop": false
     }
   }
 }

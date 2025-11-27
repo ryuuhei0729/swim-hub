@@ -125,15 +125,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
-        cache-dependency-path: |
-          package-lock.json
-          apps/**/package-lock.json
-
     - name: Restore Playwright browsers cache
       uses: actions/cache@v4
       with:
@@ -246,15 +237,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Check Vercel secrets
-      id: check-vercel-secrets
-      run: |
-        if [[ -n "${{ secrets.VERCEL_TOKEN }}" && -n "${{ secrets.VERCEL_ORG_ID }}" && -n "${{ secrets.VERCEL_PROJECT_ID }}" ]]; then
-          echo "has_vercel_secrets=true" >> "$GITHUB_OUTPUT"
-        else
-          echo "has_vercel_secrets=false" >> "$GITHUB_OUTPUT"
-        fi
-
     - name: Download node_modules artifact
       uses: actions/download-artifact@v4
       with:
@@ -265,15 +247,6 @@ jobs:
       uses: ./.github/actions/setup-node
       with:
         node-version: ${{ env.NODE_VERSION }}
-
-    - name: Determine Vercel environment
-      id: vercel-env
-      run: |
-        if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
-          echo "vercel_environment=production" >> "$GITHUB_OUTPUT"
-        else
-          echo "vercel_environment=preview" >> "$GITHUB_OUTPUT"
-        fi
 
     - name: Determine Supabase environment variables
       id: supabase-env
@@ -286,121 +259,75 @@ jobs:
           echo "supabase_key=${{ secrets.PREVIEW_SUPABASE_ANON_KEY }}" >> "$GITHUB_OUTPUT"
         fi
 
+    - name: Install Vercel CLI
+      run: npm install --global vercel@latest
+
     - name: Pull Vercel project configuration
-      if: ${{ steps.check-vercel-secrets.outputs.has_vercel_secrets == 'true' }}
       working-directory: apps/web
       env:
-        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        VERCEL_ENVIRONMENT: ${{ steps.vercel-env.outputs.vercel_environment }}
-      run: npx vercel pull --yes --environment=$VERCEL_ENVIRONMENT --token=$VERCEL_TOKEN
+      run: |
+        # .vercelディレクトリをクリーンアップ（既存の設定を削除）
+        rm -rf .vercel
+        # vercel pullでプロジェクト設定を取得
+        vercel pull --yes --environment=preview --token ${{ secrets.VERCEL_TOKEN }}
+        # .vercel/project.jsonを確認・修正
+        if [ -f .vercel/project.json ]; then
+          echo "📄 .vercel/project.json contents (before fix):"
+          cat .vercel/project.json
+          # project.jsonのrootDirectoryとsettings.rootDirectoryを明示的に設定（モノレポ対応）
+          # jqが使える場合は修正、使えない場合はPythonで修正
+          if command -v jq &> /dev/null; then
+            # rootDirectoryとsettings.rootDirectoryの両方を修正
+            jq '.rootDirectory = "." | .settings.rootDirectory = "."' .vercel/project.json > .vercel/project.json.tmp && mv .vercel/project.json.tmp .vercel/project.json
+          elif command -v python3 &> /dev/null; then
+            # Pythonで修正（1行で実行）
+            python3 -c "import json; data = json.load(open('.vercel/project.json')); data['rootDirectory'] = '.'; data.setdefault('settings', {})['rootDirectory'] = '.'; json.dump(data, open('.vercel/project.json', 'w'), indent=2); print('✅ Updated .vercel/project.json')" || echo "⚠️ Failed to update .vercel/project.json"
+          fi
+          echo "📄 .vercel/project.json contents (after fix):"
+          cat .vercel/project.json
+        fi
 
-    - name: Build Next.js app (fallback)
-      if: ${{ steps.check-vercel-secrets.outputs.has_vercel_secrets != 'true' }}
+    - name: Build with Vercel
+      working-directory: apps/web
       env:
+        VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         NEXT_PUBLIC_SUPABASE_URL: ${{ steps.supabase-env.outputs.supabase_url || 'https://placeholder.supabase.co' }}
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase-env.outputs.supabase_key || 'placeholder-anon-key' }}
-      run: npm run build --workspace=apps/web
-
-    - name: Build pre-rendered output with Vercel
-      if: ${{ steps.check-vercel-secrets.outputs.has_vercel_secrets == 'true' }}
-      working-directory: apps/web
-      env:
-        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-        VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        VERCEL_ENVIRONMENT: ${{ steps.vercel-env.outputs.vercel_environment }}
-        NEXT_PUBLIC_SUPABASE_URL: ${{ steps.supabase-env.outputs.supabase_url }}
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase-env.outputs.supabase_key }}
       run: |
-        # .vercel/project.jsonが存在することを確認（vercel pullで生成される）
-        if [ ! -f ".vercel/project.json" ]; then
-          echo "Error: .vercel/project.json not found. vercel pull may have failed." >&2
-          exit 1
+        # 現在のディレクトリを確認
+        CURRENT_DIR=$(pwd)
+        echo "Current directory: $CURRENT_DIR"
+        echo "Package.json location: $(realpath package.json)"
+        # .vercel/project.jsonが存在する場合、rootDirectoryを確認
+        if [ -f .vercel/project.json ]; then
+          echo "📄 Checking .vercel/project.json:"
+          cat .vercel/project.json
         fi
-        
-        # Next.jsアプリをビルド（.nextディレクトリを生成）
-        echo "Building Next.js app..."
-        echo "Environment: $VERCEL_ENVIRONMENT"
-        echo "Supabase URL: ${NEXT_PUBLIC_SUPABASE_URL:0:30}..."
-        npm run build
-        
-        # .nextディレクトリが存在することを確認
-        if [ ! -d ".next" ]; then
-          echo "Error: .next directory not found after build" >&2
-          exit 1
-        fi
-        
-        # Vercelの出力形式に変換（--prebuiltオプションで.nextから.vercel/outputを生成）
-        echo "Converting .next to .vercel/output format..."
-        if [ "${{ steps.vercel-env.outputs.vercel_environment }}" == "production" ]; then
-          npx vercel build --prebuilt --prod --token=$VERCEL_TOKEN || {
-            echo "Warning: vercel build --prebuilt failed, trying alternative method..." >&2
-            # フォールバック: vercel buildを試す
-            npx vercel build --prod --token=$VERCEL_TOKEN || true
-          }
-        else
-          npx vercel build --prebuilt --token=$VERCEL_TOKEN || {
-            echo "Warning: vercel build --prebuilt failed, trying alternative method..." >&2
-            # フォールバック: vercel buildを試す
-            npx vercel build --token=$VERCEL_TOKEN || true
-          }
-        fi
-        
-        # ビルド結果を確認
-        echo "Checking build output..."
-        if [ -d ".vercel/output" ]; then
-          echo "✅ .vercel/output directory created successfully"
-          ls -la .vercel/output/ | head -20
-        else
-          echo "⚠️ .vercel/output directory not found after vercel build" >&2
-          echo "Listing .vercel directory contents:" >&2
-          ls -la .vercel/ || echo "No .vercel directory found" >&2
-          echo "Note: .vercel/output may not be generated in CI environment" >&2
-          echo "The deploy workflow will rebuild if artifact is not available" >&2
-          # .vercel/outputが生成されない場合でも、.nextディレクトリがあれば続行
-          if [ -d ".next" ]; then
-            echo "✅ .next directory exists, deploy workflow can rebuild" >&2
-          else
-            echo "❌ Neither .vercel/output nor .next directory found" >&2
-            exit 1
-          fi
-        fi
+        # vercel buildを実行
+        # 環境変数を明示的に設定して、パスの問題を回避
+        VERCEL=1 vercel build --token ${{ secrets.VERCEL_TOKEN }} --yes
 
-    - name: Upload Next build artifact
-      if: ${{ steps.check-vercel-secrets.outputs.has_vercel_secrets != 'true' }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: next-build
-        path: apps/web/.next
-        if-no-files-found: error
-        retention-days: 7
-
-    - name: Verify Vercel output exists
-      if: ${{ steps.check-vercel-secrets.outputs.has_vercel_secrets == 'true' }}
+    - name: Verify build output
       working-directory: apps/web
       run: |
         if [ ! -d ".vercel/output" ]; then
-          echo "Error: Vercel output directory not found" >&2
-          echo "Current directory: $(pwd)" >&2
-          echo "Contents of apps/web/.vercel:" >&2
-          ls -la .vercel/ || echo "No .vercel directory found" >&2
+          echo "❌ Error: .vercel/output directory not found after build"
           exit 1
         fi
-        if [ ! -f ".vercel/project.json" ]; then
-          echo "Error: Vercel project.json not found" >&2
-          exit 1
-        fi
-        echo "✅ Vercel output verified"
+        echo "✅ Build output verified: .vercel/output directory exists"
+        echo "📁 Checking .vercel directory contents:"
+        ls -la .vercel/ || echo "⚠️ Cannot list .vercel directory"
+        echo "📁 Checking .vercel/output directory contents:"
+        ls -la .vercel/output/ || echo "⚠️ Cannot list .vercel/output directory"
 
-    - name: Upload Vercel prebuilt artifact
-      if: ${{ steps.check-vercel-secrets.outputs.has_vercel_secrets == 'true' }}
+    - name: Upload Vercel build artifact
       uses: actions/upload-artifact@v4
       with:
-        name: vercel-output
-        path: |
-          apps/web/.vercel/project.json
-          apps/web/.vercel/output
+        name: vercel-build
+        path: apps/web/.vercel
         if-no-files-found: error
         retention-days: 7
+        include-hidden-files: true
