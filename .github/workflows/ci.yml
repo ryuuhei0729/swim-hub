@@ -262,19 +262,52 @@ jobs:
     - name: Install Vercel CLI
       run: npm install --global vercel@latest
 
+    - name: Pull Vercel project configuration
+      working-directory: apps/web
+      env:
+        VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      run: |
+        # .vercelディレクトリをクリーンアップ（既存の設定を削除）
+        rm -rf .vercel
+        # vercel pullでプロジェクト設定を取得
+        vercel pull --yes --environment=preview --token ${{ secrets.VERCEL_TOKEN }}
+        # .vercel/project.jsonを確認・修正
+        if [ -f .vercel/project.json ]; then
+          echo "📄 .vercel/project.json contents (before fix):"
+          cat .vercel/project.json
+          # project.jsonのrootDirectoryを明示的に設定（モノレポ対応）
+          # jqが使える場合は修正、使えない場合はsedで修正
+          if command -v jq &> /dev/null; then
+            jq '.rootDirectory = "."' .vercel/project.json > .vercel/project.json.tmp && mv .vercel/project.json.tmp .vercel/project.json
+          else
+            # jqがない場合、sedで修正（JSONの構造を保持）
+            sed -i 's/"rootDirectory":\s*"[^"]*"/"rootDirectory": "."/g' .vercel/project.json || true
+          fi
+          echo "📄 .vercel/project.json contents (after fix):"
+          cat .vercel/project.json
+        fi
+
     - name: Build with Vercel
+      working-directory: apps/web
       env:
         VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         NEXT_PUBLIC_SUPABASE_URL: ${{ steps.supabase-env.outputs.supabase_url || 'https://placeholder.supabase.co' }}
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase-env.outputs.supabase_key || 'placeholder-anon-key' }}
       run: |
-        echo "Current directory: $(pwd)"
-        cd apps/web
-        echo "After cd apps/web: $(pwd)"
-        echo "Checking package.json exists:"
-        ls -la package.json || echo "package.json not found"
-        vercel build --token ${{ secrets.VERCEL_TOKEN }} --yes
+        # 現在のディレクトリを確認
+        CURRENT_DIR=$(pwd)
+        echo "Current directory: $CURRENT_DIR"
+        echo "Package.json location: $(realpath package.json)"
+        # .vercel/project.jsonが存在する場合、rootDirectoryを確認
+        if [ -f .vercel/project.json ]; then
+          echo "📄 Checking .vercel/project.json:"
+          cat .vercel/project.json
+        fi
+        # vercel buildを実行
+        # 環境変数を明示的に設定して、パスの問題を回避
+        VERCEL=1 vercel build --token ${{ secrets.VERCEL_TOKEN }} --yes
 
     - name: Verify build output
       working-directory: apps/web
