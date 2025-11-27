@@ -259,31 +259,37 @@ jobs:
           echo "supabase_key=${{ secrets.PREVIEW_SUPABASE_ANON_KEY }}" >> "$GITHUB_OUTPUT"
         fi
 
-    - name: Build Next.js app
+    - name: Install Vercel CLI
+      run: npm install --global vercel@latest
+
+    - name: Build with Vercel
+      working-directory: apps/web
       env:
+        VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         NEXT_PUBLIC_SUPABASE_URL: ${{ steps.supabase-env.outputs.supabase_url || 'https://placeholder.supabase.co' }}
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase-env.outputs.supabase_key || 'placeholder-anon-key' }}
-      run: npm run build --workspace=apps/web
+      run: |
+        vercel build --token ${{ secrets.VERCEL_TOKEN }} --yes
 
     - name: Verify build output
+      working-directory: apps/web
       run: |
-        if [ ! -d "apps/web/.next" ]; then
-          echo "❌ Error: .next directory not found after build"
+        if [ ! -d ".vercel/output" ]; then
+          echo "❌ Error: .vercel/output directory not found after build"
           exit 1
         fi
-        echo "✅ Build output verified: .next directory exists"
-        echo "📁 Checking .next directory contents:"
-        ls -la apps/web/.next/ || echo "⚠️ Cannot list .next directory"
-        echo "📊 Directory size:"
-        du -sh apps/web/.next/ || echo "⚠️ Cannot get directory size"
-        echo "📄 File count:"
-        find apps/web/.next -type f | wc -l || echo "⚠️ Cannot count files"
+        echo "✅ Build output verified: .vercel/output directory exists"
+        echo "📁 Checking .vercel directory contents:"
+        ls -la .vercel/ || echo "⚠️ Cannot list .vercel directory"
+        echo "📁 Checking .vercel/output directory contents:"
+        ls -la .vercel/output/ || echo "⚠️ Cannot list .vercel/output directory"
 
-    - name: Upload Next build artifact
+    - name: Upload Vercel build artifact
       uses: actions/upload-artifact@v4
       with:
-        name: next-build
-        path: apps/web/.next
+        name: vercel-build
+        path: apps/web/.vercel
         if-no-files-found: error
         retention-days: 7
         include-hidden-files: true

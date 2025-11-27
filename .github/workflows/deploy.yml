@@ -46,8 +46,8 @@ jobs:
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
-          name: next-build
-          path: apps/web/.next
+          name: vercel-build
+          path: apps/web/.vercel
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id }}
 
