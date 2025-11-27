@@ -75,13 +75,25 @@ jobs:
           
           branch="${{ github.event.workflow_run.head_branch }}"
           event="${{ github.event.workflow_run.event }}"
+          commit_msg="${{ github.event.workflow_run.head_commit.message }}"
           
           echo "Build environment: $BUILD_ENV"
           echo "Branch: $branch"
           echo "Event: $event"
+          echo "Commit message: $commit_msg"
           
-          # mainブランチへのpushの場合、production環境でビルドが必要
+          # mainブランチへのpushまたはマージの場合、production環境でビルドが必要
+          # workflow_runイベントの場合、head_branchは元のブランチを指すため、
+          # コミットメッセージからマージ先を推測する
+          NEEDS_PRODUCTION=false
           if [[ "$branch" == "main" && "$event" == "push" ]]; then
+            NEEDS_PRODUCTION=true
+          elif echo "$commit_msg" | grep -qE "Merge pull request.*into main|Merge.*into main"; then
+            # PRがmainブランチにマージされた場合
+            NEEDS_PRODUCTION=true
+          fi
+          
+          if [[ "$NEEDS_PRODUCTION" == "true" ]]; then
             if [[ "$BUILD_ENV" != "production" ]]; then
               echo "⚠️ Build was done in $BUILD_ENV environment, but deploying to main requires production"
               echo "Rebuilding in production environment..."
@@ -102,10 +114,18 @@ jobs:
                 fi
               fi
               
-              # production環境でビルド
+              # apps/webディレクトリに移動してからビルド
+              cd apps/web
               VERCEL=1 vercel build --token ${{ secrets.VERCEL_TOKEN }} --yes
               
+              # ビルド結果を確認
+              if [ ! -d ".vercel/output" ]; then
+                echo "❌ Error: .vercel/output directory not found after rebuild"
+                exit 1
+              fi
               echo "✅ Rebuilt in production environment"
+              echo "📁 Checking .vercel/output directory contents:"
+              ls -la .vercel/output/ || echo "⚠️ Cannot list .vercel/output directory"
             fi
             echo "vercel_args=--prebuilt --prod" >> "$GITHUB_OUTPUT"
             echo "Deploying to production"
