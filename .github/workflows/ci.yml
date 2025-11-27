@@ -276,13 +276,14 @@ jobs:
         if [ -f .vercel/project.json ]; then
           echo "📄 .vercel/project.json contents (before fix):"
           cat .vercel/project.json
-          # project.jsonのrootDirectoryを明示的に設定（モノレポ対応）
-          # jqが使える場合は修正、使えない場合はsedで修正
+          # project.jsonのrootDirectoryとsettings.rootDirectoryを明示的に設定（モノレポ対応）
+          # jqが使える場合は修正、使えない場合はPythonで修正
           if command -v jq &> /dev/null; then
-            jq '.rootDirectory = "."' .vercel/project.json > .vercel/project.json.tmp && mv .vercel/project.json.tmp .vercel/project.json
-          else
-            # jqがない場合、sedで修正（JSONの構造を保持）
-            sed -i 's/"rootDirectory":\s*"[^"]*"/"rootDirectory": "."/g' .vercel/project.json || true
+            # rootDirectoryとsettings.rootDirectoryの両方を修正
+            jq '.rootDirectory = "." | .settings.rootDirectory = "."' .vercel/project.json > .vercel/project.json.tmp && mv .vercel/project.json.tmp .vercel/project.json
+          elif command -v python3 &> /dev/null; then
+            # Pythonで修正（1行で実行）
+            python3 -c "import json; data = json.load(open('.vercel/project.json')); data['rootDirectory'] = '.'; data.setdefault('settings', {})['rootDirectory'] = '.'; json.dump(data, open('.vercel/project.json', 'w'), indent=2); print('✅ Updated .vercel/project.json')" || echo "⚠️ Failed to update .vercel/project.json"
           fi
           echo "📄 .vercel/project.json contents (after fix):"
           cat .vercel/project.json

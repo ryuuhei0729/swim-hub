@@ -3,7 +3,6 @@
   "buildCommand": "",
   "installCommand": "",
   "framework": "nextjs",
-  "rootDirectory": ".",
   "ignoreCommand": "git diff --quiet HEAD^ HEAD ./",
   "env": {
     "NEXT_PUBLIC_ENVIRONMENT": "production"
@@ -15,8 +14,8 @@
   },
   "git": {
     "deploymentEnabled": {
-      "main": true,
-      "develop": true
+      "main": false,
+      "develop": false
     }
   }
 }
