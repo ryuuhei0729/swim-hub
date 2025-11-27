@@ -60,9 +60,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Determine deploy strategy
+      - name: Determine deploy strategy and rebuild if needed
         id: strategy
         working-directory: apps/web
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           # CIでビルドされた環境を確認
           BUILD_ENV="preview"
@@ -77,13 +80,44 @@ jobs:
           echo "Branch: $branch"
           echo "Event: $event"
           
-          # ビルドされた環境に合わせてデプロイ
-          if [[ "$BUILD_ENV" == "production" ]]; then
+          # mainブランチへのpushの場合、production環境でビルドが必要
+          if [[ "$branch" == "main" && "$event" == "push" ]]; then
+            if [[ "$BUILD_ENV" != "production" ]]; then
+              echo "⚠️ Build was done in $BUILD_ENV environment, but deploying to main requires production"
+              echo "Rebuilding in production environment..."
+              
+              # Vercel CLIをインストール
+              npm install --global vercel@latest
+              
+              # production環境で設定を取得
+              rm -rf .vercel
+              vercel pull --yes --environment=production --token ${{ secrets.VERCEL_TOKEN }}
+              
+              # rootDirectoryを修正
+              if [ -f .vercel/project.json ]; then
+                if command -v jq &> /dev/null; then
+                  jq '.rootDirectory = "." | .settings.rootDirectory = "."' .vercel/project.json > .vercel/project.json.tmp && mv .vercel/project.json.tmp .vercel/project.json
+                elif command -v python3 &> /dev/null; then
+                  python3 -c "import json; data = json.load(open('.vercel/project.json')); data['rootDirectory'] = '.'; data.setdefault('settings', {})['rootDirectory'] = '.'; json.dump(data, open('.vercel/project.json', 'w'), indent=2)"
+                fi
+              fi
+              
+              # production環境でビルド
+              VERCEL=1 vercel build --token ${{ secrets.VERCEL_TOKEN }} --yes
+              
+              echo "✅ Rebuilt in production environment"
+            fi
             echo "vercel_args=--prebuilt --prod" >> "$GITHUB_OUTPUT"
-            echo "Deploying to production (matched build environment)"
+            echo "Deploying to production"
           else
-            echo "vercel_args=--prebuilt" >> "$GITHUB_OUTPUT"
-            echo "Deploying to preview (matched build environment)"
+            # ビルドされた環境に合わせてデプロイ
+            if [[ "$BUILD_ENV" == "production" ]]; then
+              echo "vercel_args=--prebuilt --prod" >> "$GITHUB_OUTPUT"
+              echo "Deploying to production (matched build environment)"
+            else
+              echo "vercel_args=--prebuilt" >> "$GITHUB_OUTPUT"
+              echo "Deploying to preview (matched build environment)"
+            fi
           fi
 
       - name: Deploy to Vercel
