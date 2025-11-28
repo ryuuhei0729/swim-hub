@@ -418,6 +418,7 @@ export default function RecordLogForm({
                           onClick={() => handleAddSplitTime(index)}
                           className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-700 disabled:opacity-50"
                           disabled={isLoading}
+                          data-testid={`record-split-add-button-${sectionIndex}`}
                         >
                           <PlusIcon className="h-4 w-4 mr-1" />
                           追加
@@ -454,6 +455,7 @@ export default function RecordLogForm({
                                 onClick={() => handleRemoveSplitTime(index, splitIndex)}
                                 className="p-2 text-red-600 hover:text-red-700"
                                 disabled={isLoading}
+                                data-testid={`record-split-remove-button-${sectionIndex}-${splitIndex + 1}`}
                               >
                                 <TrashIcon className="h-5 w-5" />
                               </button>

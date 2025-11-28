@@ -11,7 +11,7 @@ import type {
   RecordFormDataInternal
 } from '@/stores/types'
 import { EntryAPI } from '@apps/shared/api'
-import type { PracticeLogTagInsert, Style } from '@apps/shared/types/database'
+import type { Style } from '@apps/shared/types/database'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { useCallback } from 'react'
 import { getCompetitionId, getRecordCompetitionId } from '../_utils/dashboardHelpers'
@@ -83,9 +83,9 @@ export function useDashboardHandlers({
   closeRecordLogForm,
   openPracticeLogForm,
   setCreatedEntries,
-  openEntryLogForm,
-  openRecordLogForm,
-  refreshCalendar
+    openEntryLogForm,
+    openRecordLogForm,
+    refreshCalendar
 }: UseDashboardHandlersProps) {
   // 練習予定作成・更新
   const handlePracticeBasicSubmit = useCallback(async (basicData: { date: string; place: string; note: string }) => {
@@ -146,18 +146,21 @@ export function useDashboardHandlers({
           .eq('practice_log_id', practiceLogId)
         
         if (menu.tags && menu.tags.length > 0) {
-          const tagInserts: PracticeLogTagInsert[] = menu.tags.map(tag => ({
-            practice_log_id: practiceLogId,
-            practice_tag_id: tag.id
-          }))
-          
-          const { data: _data, error } = await (supabase
-            .from('practice_log_tags') as any)
-            .insert(tagInserts)
-          
-          if (error) {
-            console.error('練習ログタグの挿入に失敗しました:', error)
-            throw new Error(`練習ログタグの挿入に失敗しました: ${error.message}`)
+          for (const tag of menu.tags) {
+            const insertData: Database['public']['Tables']['practice_log_tags']['Insert'] = {
+              practice_log_id: practiceLogId,
+              practice_tag_id: tag.id
+            }
+            // Supabaseの型推論が正しく機能しないため、型アサーションを使用
+            const queryBuilder = supabase.from('practice_log_tags') as unknown as {
+              insert: (values: Database['public']['Tables']['practice_log_tags']['Insert']) => Promise<{ error: { message: string } | null }>
+            }
+            const { error } = await queryBuilder.insert(insertData)
+            
+            if (error) {
+              console.error('練習ログタグの挿入に失敗しました:', error)
+              throw new Error(`練習ログタグの挿入に失敗しました: ${error.message}`)
+            }
           }
         }
         
@@ -204,18 +207,21 @@ export function useDashboardHandlers({
           const createdLog = await createPracticeLog(logInput)
           
           if (menu.tags && menu.tags.length > 0 && createdLog) {
-            const tagInserts: PracticeLogTagInsert[] = menu.tags.map(tag => ({
-              practice_log_id: createdLog.id,
-              practice_tag_id: tag.id
-            }))
-            
-            const { data: _data, error } = await (supabase
-              .from('practice_log_tags') as any)
-              .insert(tagInserts)
-            
-            if (error) {
-              console.error('練習ログタグの挿入に失敗しました:', error)
-              throw new Error(`練習ログタグの挿入に失敗しました: ${error.message}`)
+            for (const tag of menu.tags) {
+              const insertData: Database['public']['Tables']['practice_log_tags']['Insert'] = {
+                practice_log_id: createdLog.id,
+                practice_tag_id: tag.id
+              }
+              // Supabaseの型推論が正しく機能しないため、型アサーションを使用
+              const queryBuilder = supabase.from('practice_log_tags') as unknown as {
+                insert: (values: Database['public']['Tables']['practice_log_tags']['Insert']) => Promise<{ error: { message: string } | null }>
+              }
+              const { error } = await queryBuilder.insert(insertData)
+              
+              if (error) {
+                console.error('練習ログタグの挿入に失敗しました:', error)
+                throw new Error(`練習ログタグの挿入に失敗しました: ${error.message}`)
+              }
             }
           }
           
@@ -235,12 +241,12 @@ export function useDashboardHandlers({
         }
       }
 
+      closePracticeLogForm()
       refreshCalendar()
     } catch (error) {
       console.error('練習記録の処理に失敗しました:', error)
     } finally {
       setLoading(false)
-      closePracticeLogForm()
     }
   }, [editingData, createdPracticeId, supabase, user, updatePracticeLog, createPracticeLog, deletePracticeTime, createPracticeTime, refreshCalendar, setLoading, closePracticeLogForm])
 

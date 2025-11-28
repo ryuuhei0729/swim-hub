@@ -37,7 +37,8 @@ export default function DayDetailModal({
   onDeleteRecord
 }: DayDetailModalProps) {
   const { supabase } = useAuth()
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<{id: string, type: CalendarItemType} | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<{id: string, type: CalendarItemType, competitionId?: string} | null>(null)
+  const [deletedEntryIds, setDeletedEntryIds] = useState<string[]>([])
   const [showAttendanceModal, setShowAttendanceModal] = useState<{
     eventId: string
     eventType: 'practice' | 'competition'
@@ -61,6 +62,12 @@ export default function DayDetailModal({
   const handleDeleteConfirm = async () => {
     if (showDeleteConfirm) {
       await onDeleteItem?.(showDeleteConfirm.id, showDeleteConfirm.type)
+      
+      // エントリー削除の場合、削除されたIDを記録
+      if (showDeleteConfirm.type === 'entry') {
+        setDeletedEntryIds(prev => [...prev, showDeleteConfirm.id])
+      }
+      
       setShowDeleteConfirm(null)
       
       // 削除後、残りのエントリーがない場合はモーダルを閉じる
@@ -105,7 +112,7 @@ export default function DayDetailModal({
             {/* エントリーがない場合 */}
             {entries.length === 0 && (
               <div className="text-center py-8">
-                <p className="text-gray-500 mb-4">この日の記録はありません</p>
+                <p className="text-gray-500 mb-4" data-testid="empty-day-message">この日の記録はありません</p>
                 <div className="space-y-2">
                   <button
                     onClick={() => onAddItem?.(date, 'practice')}
@@ -165,11 +172,29 @@ export default function DayDetailModal({
                       : null
                     if (!practiceId) return null
                     
+                    // practice_logの更新を検知するために、practice_logのupdated_atを含めた文字列を取得
+                    const practiceLogUpdateKey = practiceLogItems
+                      .filter(p => {
+                        const pid = isPracticeMetadata(p.metadata) 
+                          ? (p.metadata.practice?.id || p.metadata.practice_id)
+                          : null
+                        return pid === practiceId
+                      })
+                      .map(p => {
+                        // metadata.practice_log.updated_atを取得
+                        const practiceLog = (p.metadata as any)?.practice_log
+                        const updatedAt = practiceLog?.updated_at || p.id
+                        return `${p.id}:${updatedAt}`
+                      })
+                      .sort()
+                      .join(',')
+                    
                     return (
                       <PracticeDetails 
                         key={item.id}
                         practiceId={practiceId}
                         place={item.place}
+                        practiceLogUpdateKey={practiceLogUpdateKey}
                         isTeamPractice={isPracticeMetadata(item.metadata) ? !!item.metadata.team_id : false}
                         teamId={isPracticeMetadata(item.metadata) ? item.metadata.team_id : undefined}
                         teamName={isPracticeMetadata(item.metadata) && isTeamInfo(item.metadata.team) ? item.metadata.team.name : undefined}
@@ -267,6 +292,7 @@ export default function DayDetailModal({
                         styleName={item.metadata?.style?.name_jp || ''}
                         entryTime={item.metadata?.entry_time}
                         isTeamCompetition={!!item.metadata?.team_id}
+                        deletedEntryIds={deletedEntryIds}
                         onAddRecord={onAddRecord}
                         onEditCompetition={() => {
                           // 大会情報を編集
@@ -355,7 +381,7 @@ export default function DayDetailModal({
                         if (!entryId) return
                         const { data: { user } } = await supabase.auth.getUser()
                         if (!user) return
-                        setShowDeleteConfirm({ id: entryId, type: 'entry' })
+                        setShowDeleteConfirm({ id: entryId, type: 'entry', competitionId })
                       }}
                       onClose={onClose}
                     />
@@ -721,6 +747,7 @@ function AttendanceModal({
 function PracticeDetails({ 
   practiceId, 
   place, 
+  practiceLogUpdateKey,
   onEdit, 
   onDelete,
   onAddPracticeLog,
@@ -733,6 +760,7 @@ function PracticeDetails({
 }: { 
   practiceId: string
   place?: string
+  practiceLogUpdateKey?: string
   onEdit?: () => void
   onDelete?: () => void
   onAddPracticeLog?: (practiceId: string) => void
@@ -838,7 +866,7 @@ function PracticeDetails({
     }
 
     loadPractice()
-  }, [practiceId, supabase])
+  }, [practiceId, supabase, practiceLogUpdateKey])
 
   if (loading) {
     return (
@@ -1005,6 +1033,7 @@ function PracticeDetails({
                               backgroundColor: tag.color,
                               color: getTextColor(tag.color)
                             }}
+                            data-testid={`selected-tag-${tag.id}`}
                           >
                             {tag.name}
                           </span>
@@ -1060,7 +1089,7 @@ function PracticeDetails({
                 <div className="bg-white rounded-lg p-3 mb-3 border border-green-300">
                   <div className="text-xs font-medium text-gray-500 mb-1">練習内容</div>
                     <div className="text-sm text-gray-800">
-                      <span className="text-lg font-semibold text-green-700">{formattedLog.distance}</span>m ×
+                      <span className="text-lg font-semibold text-green-700">{formattedLog.distance}</span>m ×{' '}
                       <span className="text-lg font-semibold text-green-700">{formattedLog.repCount}</span>
                       {formattedLog.setCount > 1 && (
                         <>
@@ -1068,11 +1097,12 @@ function PracticeDetails({
                           <span className="text-lg font-semibold text-green-700">{formattedLog.setCount}</span>
                         </>
                       )}
-                      {' '}
+                      {'　　'}
                       <span className="text-lg font-semibold text-green-700">
                         {formattedLog.circle ? `${Math.floor(formattedLog.circle / 60)}'${Math.floor(formattedLog.circle % 60).toString().padStart(2, '0')}"` : '-'}
                       </span>
-                      <span className="text-lg font-semibold text-green-700"> {formattedLog.style}</span>
+                      {'　'}
+                      <span className="text-lg font-semibold text-green-700">{formattedLog.style}</span>
                     </div>
                 </div>
 
@@ -1388,7 +1418,7 @@ function CompetitionDetails({
                 isTeamCompetition 
                   ? 'text-violet-800 bg-violet-200' 
                   : 'text-blue-800 bg-blue-200'
-              }`}>
+              }`} data-testid="competition-title-display">
                 <TrophyIcon className="h-5 w-5" />
                 {competitionName}
                 {isTeamCompetition && teamName && <span className="text-sm">({teamName})</span>}
@@ -1398,7 +1428,7 @@ function CompetitionDetails({
               )}
             </div>
             {place && (
-              <p className="text-sm text-gray-700 mb-2 flex items-center gap-1">
+              <p className="text-sm text-gray-700 mb-2 flex items-center gap-1" data-testid="competition-place-display">
                 <span className="text-gray-500">📍</span>
                 {place}
               </p>
@@ -1428,6 +1458,7 @@ function CompetitionDetails({
               onClick={onDelete}
               className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-red-100 transition-colors"
               title="大会を削除"
+              data-testid="delete-competition-button"
             >
               <TrashIcon className="h-5 w-5" />
             </button>
@@ -1550,7 +1581,7 @@ function CompetitionDetails({
                   {record.metadata?.record?.time && (
                     <>
                       <div className="text-xs font-medium text-gray-500 mb-1">タイム</div>
-                      <div className="text-2xl font-bold text-blue-700 mb-3">
+                      <div className="text-2xl font-bold text-blue-700 mb-3" data-testid="record-time-display">
                         ⏱️ {formatTime(record.metadata.record.time)}
                       </div>
                     </>
@@ -1612,6 +1643,7 @@ function CompetitionWithEntry({
   styleName,
   entryTime,
   isTeamCompetition = false,
+  deletedEntryIds,
   onAddRecord,
   onEditCompetition,
   onDeleteCompetition,
@@ -1628,6 +1660,7 @@ function CompetitionWithEntry({
   styleName: string
   entryTime?: number | null
   isTeamCompetition?: boolean
+  deletedEntryIds?: string[]
   onAddRecord?: (params: { competitionId?: string; entryData?: { styleId: number; styleName: string }; entryDataList?: EntryInfo[] }) => void
   onEditCompetition?: () => void
   onDeleteCompetition?: () => void
@@ -1719,7 +1752,7 @@ function CompetitionWithEntry({
 
     fetchEntryData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [competitionId, supabase])
+  }, [competitionId, supabase, deletedEntryIds?.length])
 
   const entryInfoList: EntryInfo[] = entries.map((entry) => ({
     styleId: entry.styleId,
@@ -1760,7 +1793,7 @@ function CompetitionWithEntry({
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-blue-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h5 className="font-semibold text-gray-900">{competitionName}</h5>
+            <h5 className="font-semibold text-gray-900" data-testid="competition-title-display">{competitionName}</h5>
             {isTeamCompetition && (
               <span className="text-xs bg-violet-100 text-violet-700 px-2 py-1 rounded-full">
                 チーム
@@ -1783,6 +1816,7 @@ function CompetitionWithEntry({
                 onClick={onDeleteCompetition}
                 className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
                 title="大会を削除"
+                data-testid="delete-competition-button"
               >
                 <TrashIcon className="h-5 w-5" />
               </button>
@@ -1790,7 +1824,7 @@ function CompetitionWithEntry({
           </div>
         </div>
         {place && (
-          <p className="text-sm text-gray-600 mt-1">📍 {place}</p>
+          <p className="text-sm text-gray-600 mt-1" data-testid="competition-place-display">📍 {place}</p>
         )}
         {authError && (
           <p className="text-sm text-red-600 mt-2 bg-red-50 border border-red-200 rounded px-3 py-2">
@@ -1801,7 +1835,7 @@ function CompetitionWithEntry({
 
       {/* エントリー情報ボックス */}
       <div className="p-4">
-        <div className="bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 border border-orange-200 rounded-lg p-4 mb-3">
+        <div className="bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 border border-orange-200 rounded-lg p-4 mb-3" data-testid="entry-section">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <span className="text-lg">📝</span>
@@ -1858,6 +1892,7 @@ function CompetitionWithEntry({
                         onClick={() => onDeleteEntry(entry.id)}
                         className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
                         title="このエントリーを削除"
+                        data-testid={`delete-entry-button-${entry.id}`}
                       >
                         <TrashIcon className="h-4 w-4" />
                       </button>

@@ -191,6 +191,12 @@ export function CalendarProvider({
     setCalendarItems(prev => prev.filter(item => item.id !== id))
   }, [])
 
+  // refetch関数: 常に強制的にデータを再取得
+  const refetch = useCallback(async (date?: Date) => {
+    const targetDate = date || currentDate
+    await loadData(targetDate, { force: true })
+  }, [currentDate, loadData])
+
   const value: CalendarContextType = {
     currentDate,
     calendarItems,
@@ -198,7 +204,7 @@ export function CalendarProvider({
     loading,
     error,
     setCurrentDate,
-    refetch: loadData,
+    refetch,
     addItem,
     updateItem,
     removeItem

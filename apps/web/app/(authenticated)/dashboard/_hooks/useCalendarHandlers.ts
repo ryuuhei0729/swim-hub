@@ -36,7 +36,7 @@ interface UseCalendarHandlersProps {
   openPracticeBasicForm: (date?: Date, item?: CalendarItem) => void
   openPracticeLogForm: (practiceId?: string, editData?: EditingData) => void
   openCompetitionBasicForm: (date?: Date, item?: CalendarItem) => void
-  openEntryLogForm: (competitionId: string, item?: CalendarItem) => void
+  openEntryLogForm: (competitionId?: string, editData?: EditingData) => void
   openRecordLogForm: (competitionId: string | undefined, entries?: EntryWithStyle[], editData?: EditingData) => void
   setSelectedDate: (date: Date) => void
   setEditingData: (data: EditingData | null) => void
@@ -90,14 +90,32 @@ export function useCalendarHandlers({
     } else if (item.type === 'practice_log') {
       openPracticeLogForm(undefined, item)
     } else if (item.type === 'entry') {
-      const competitionId = item.metadata?.entry?.competition_id
+      // editDataからcompetitionIdを取得（DayDetailModalから渡される場合）
+      let competitionId: string | undefined
+      let editData: EditingData | undefined
+      
+      if (item.editData && typeof item.editData === 'object') {
+        // editDataが存在する場合、そこからcompetitionIdを取得
+        if ('competitionId' in item.editData) {
+          competitionId = item.editData.competitionId as string
+        }
+        // editDataをEditingDataとして使用
+        editData = item.editData as EditingData
+      }
+      
+      // フォールバック: metadataから取得
+      if (!competitionId) {
+        competitionId = item.metadata?.entry?.competition_id || item.metadata?.competition?.id
+      }
+      
       if (competitionId) {
-        openEntryLogForm(competitionId, item)
+        // editDataをEditingDataとして渡す
+        openEntryLogForm(competitionId, editData)
       }
     } else if (item.type === 'competition' || item.type === 'team_competition') {
       openCompetitionBasicForm(dateObj, item)
     }
-  }, [parseDateString, openPracticeBasicForm, openPracticeLogForm, openEntryLogForm, openCompetitionBasicForm])
+  }, [parseDateString, openPracticeBasicForm, openPracticeLogForm, openEntryLogForm, openCompetitionBasicForm, setEditingData])
 
   // アイテム削除ハンドラー（handleDeleteItemを使用）
   const onDeleteItem = useCallback(async (itemId: string, itemType?: CalendarItemType) => {
