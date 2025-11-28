@@ -281,6 +281,7 @@ export default function TagManagementModal({
                   onClick={handleDelete}
                   disabled={isDeleting}
                   className="w-full sm:w-auto sm:ml-3 bg-red-600 hover:bg-red-700"
+                  data-testid="confirm-delete-button"
                 >
                   {isDeleting ? '削除中...' : '削除'}
                 </Button>

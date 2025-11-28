@@ -97,7 +97,7 @@ test.describe('個人練習記録のテスト', () => {
     await page.waitForSelector('[data-testid="practice-log-form-modal"]', { timeout: 10000 })
     
     // ステップ7: 「メニューを追加」ボタンをクリック
-    const addMenuButton = page.locator('button:has-text("メニューを追加")')
+    const addMenuButton = page.locator('[data-testid="add-menu-button"]')
     const menuCountBefore = await page.locator('[data-testid="practice-menu-container"]').count()
     await addMenuButton.click()
     
@@ -123,17 +123,9 @@ test.describe('個人練習記録のテスト', () => {
     await page.fill('[data-testid="practice-rep-count"]', '2')
     await page.fill('[data-testid="practice-set-count"]', '2')
     
-    // サークル（分）とサークル（秒）の入力欄を探す
-    // ラベルテキストを使用してより正確に特定
-    const circleMinLabel = page.locator('label:has-text("サークル（分）")')
-    const circleSecLabel = page.locator('label:has-text("サークル（秒）")')
-    
-    // ラベルの次のinput要素を取得
-    const circleMin = circleMinLabel.locator('..').locator('input[type="number"]')
-    const circleSec = circleSecLabel.locator('..').locator('input[type="number"]')
-    
-    await circleMin.fill('2')
-    await circleSec.fill('30')
+    // サークル（分）とサークル（秒）の入力欄を入力
+    await page.fill('[data-testid="practice-circle-min"]', '2')
+    await page.fill('[data-testid="practice-circle-sec"]', '30')
     
     // ステップ13: 種目を選択
     await page.selectOption('[data-testid="practice-style"]', 'Fr')
@@ -196,14 +188,14 @@ test.describe('個人練習記録のテスト', () => {
     await page.waitForSelector('[data-testid="practice-log-form-modal"]', { timeout: 5000 })
     
     // ステップ20: タイムが記録されていることを確認（平均、最速が表示されている）
-    await page.waitForSelector('text=全体平均', { timeout: 5000 })
-    await page.waitForSelector('text=全体最速', { timeout: 5000 })
+    await page.waitForSelector('[data-testid="practice-overall-average"]', { timeout: 5000 })
+    await page.waitForSelector('[data-testid="practice-overall-fastest"]', { timeout: 5000 })
     
     // ステップ21: メモを入力
     await page.fill('[data-testid="practice-log-note-1"]', '前に追いついてしまった')
     
     // ステップ22: タグ入力欄に入力してエンター
-    const tagInput = page.locator('input[placeholder="タグを選択または作成"]')
+    const tagInput = page.locator('[data-testid="tag-input"]')
     await tagInput.click()
     await tagInput.fill('AN')
     await tagInput.press('Enter')
@@ -229,7 +221,9 @@ test.describe('個人練習記録のテスト', () => {
     
     // 先ほどの登録内容が登録されていることを確認
     await page.waitForSelector('[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"]', { timeout: 5000 })
-    await expect(page.locator('text=○○プール').first()).toBeVisible()
+    // モーダル内で場所が表示されていることを確認
+    const modal = page.locator('[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"]').first()
+    await expect(modal.locator('text=○○プール').first()).toBeVisible()
   })
 
   /**
@@ -315,14 +309,10 @@ test.describe('個人練習記録のテスト', () => {
     await page.fill('[data-testid="practice-set-count"]', '3')
     
     // ステップ7: サークル（分）を変更（2分 → 3分）
-    const circleMinLabel = page.locator('label:has-text("サークル（分）")')
-    const circleMin = circleMinLabel.locator('..').locator('input[type="number"]')
-    await circleMin.fill('3')
+    await page.fill('[data-testid="practice-circle-min"]', '3')
     
     // ステップ8: サークル（秒）を変更（30秒 → 45秒）
-    const circleSecLabel = page.locator('label:has-text("サークル（秒）")')
-    const circleSec = circleSecLabel.locator('..').locator('input[type="number"]')
-    await circleSec.fill('45')
+    await page.fill('[data-testid="practice-circle-sec"]', '45')
     
     // ステップ9: 種目を変更（フリー → バタフライ）
     await page.selectOption('[data-testid="practice-style"]', 'Fly')
@@ -374,7 +364,7 @@ test.describe('個人練習記録のテスト', () => {
     await page.waitForTimeout(1000) // フォームのレンダリングを待つ
     
     // タイムテーブルに既存のタイムが表示されていることを確認
-    const hasTimeTable = await page.locator('text=全体平均').count() > 0 || await page.locator('text=全体最速').count() > 0
+    const hasTimeTable = await page.locator('[data-testid="practice-overall-average"]').count() > 0 || await page.locator('[data-testid="practice-overall-fastest"]').count() > 0
     expect(hasTimeTable).toBeTruthy()
     
     // ステップ4: 「タイムを編集」ボタンをクリック
@@ -419,8 +409,8 @@ test.describe('個人練習記録のテスト', () => {
     // タイムテーブルに変更後のタイムと平均、最速が表示されていることを確認
     // モーダル内の要素を特定するため、より具体的なセレクタを使用
     const practiceLogForm = page.locator('[data-testid="practice-log-form-modal"]')
-    await expect(practiceLogForm.locator('text=全体平均').first()).toBeVisible({ timeout: 5000 })
-    await expect(practiceLogForm.locator('text=全体最速').first()).toBeVisible({ timeout: 5000 })
+    await expect(practiceLogForm.locator('[data-testid="practice-overall-average"]').first()).toBeVisible({ timeout: 5000 })
+    await expect(practiceLogForm.locator('[data-testid="practice-overall-fastest"]').first()).toBeVisible({ timeout: 5000 })
     
     // ステップ12: 「練習記録を更新」ボタンをクリック
     await page.click('[data-testid="update-practice-log-button"]')
@@ -468,37 +458,35 @@ test.describe('個人練習記録のテスト', () => {
     
     // ステップ1: ANタグが選択されている場合は、バツボタンをクリックして選択を解除
     await page.waitForTimeout(500) // フォームのレンダリングを待つ
-    const selectedAnTag = page.locator('[data-testid="practice-log-form-modal"] span:has-text("AN")').filter({ 
-      has: page.locator('button[title="タグを削除"]')
+    const selectedAnTag = page.locator('[data-testid="practice-log-form-modal"] [data-testid^="selected-tag-"]').filter({ 
+      hasText: 'AN'
     }).first()
     
     if (await selectedAnTag.count() > 0) {
       // ANタグが選択されている場合、バツボタンをクリックして選択を解除
-      const removeButton = selectedAnTag.locator('button[title="タグを削除"]').first()
+      const removeButton = selectedAnTag.locator('[data-testid^="remove-tag-button-"]').first()
       await removeButton.click()
       await page.waitForTimeout(500) // タグ削除の反映を待つ
     }
     
     // ステップ2: タグ入力欄（TagInput）をクリックして既存タグの一覧を表示
-    const tagInput = page.locator('[data-testid="practice-log-form-modal"] input[type="text"]').filter({ 
-      hasNot: page.locator('[data-testid^="time-input-"]')
-    }).last()
+    const tagInput = page.locator('[data-testid="practice-log-form-modal"] [data-testid="tag-input"]')
     await tagInput.waitFor({ state: 'visible', timeout: 5000 })
     await tagInput.click()
     
     // ステップ3: 既存のタグ一覧が表示されていることを確認
     await page.waitForTimeout(500) // ドロップダウンの表示を待つ
-    const tagList = page.locator('[role="listbox"], .absolute.bg-white')
+    const tagList = page.locator('[data-testid="tag-dropdown"]')
     await expect(tagList.first()).toBeVisible({ timeout: 5000 })
     
     // ステップ4: 既存のタグ（ANタグ）の3点リーダーボタンをクリック
     await page.waitForTimeout(1000) // ドロップダウンの完全な表示を待つ
     
     // ANタグを含む行を探し、その3点リーダーボタンをクリック
-    const anTagRow = page.locator('div:has-text("AN")').filter({ has: page.locator('button[title="タグを管理"]') }).first()
+    const anTagRow = page.locator('[data-testid^="tag-row-"]').filter({ hasText: 'AN' }).first()
     await anTagRow.waitFor({ state: 'visible', timeout: 5000 })
     
-    const tagManagementButton = anTagRow.locator('button[title="タグを管理"]').first()
+    const tagManagementButton = anTagRow.locator('[data-testid^="manage-tag-button-"]').first()
     await tagManagementButton.click()
     
     // ステップ5: タグ管理モーダルが開くことを確認
@@ -541,7 +529,7 @@ test.describe('個人練習記録のテスト', () => {
     // ステップ9: プレビューエリアで変更内容が確認できることを確認
     await page.waitForTimeout(500)
     const tagModal = page.locator('[data-testid="tag-management-modal"]')
-    const previewTag = tagModal.locator('span:has-text("AN_EDITED")').first()
+    const previewTag = tagModal.locator('span').filter({ hasText: 'AN_EDITED' }).first()
     await expect(previewTag).toBeVisible({ timeout: 5000 })
     
     // ステップ10: 「更新」ボタンをクリック
@@ -559,13 +547,12 @@ test.describe('個人練習記録のテスト', () => {
     await page.waitForTimeout(500) // ドロップダウンの表示を待つ
     
     // ドロップダウンが表示されていることを確認
-    const tagListAfter = page.locator('.absolute.z-60.w-full').filter({ has: page.locator('div:has-text("AN_EDITED")') }).first()
+    const tagListAfter = page.locator('[data-testid="tag-dropdown"]')
     await expect(tagListAfter).toBeVisible({ timeout: 5000 })
     
     // 更新されたタグ（AN_EDITED）を含む行を探す
-    // タグ行は div.flex.items-center.justify-between で、spanにタグ名が含まれている
-    const updatedTagRow = tagListAfter.locator('div.flex.items-center.justify-between').filter({ 
-      has: page.locator('span:has-text("AN_EDITED")')
+    const updatedTagRow = tagListAfter.locator('[data-testid^="tag-row-"]').filter({ 
+      hasText: 'AN_EDITED'
     }).first()
     await expect(updatedTagRow).toBeVisible({ timeout: 5000 })
     
@@ -575,8 +562,8 @@ test.describe('個人練習記録のテスト', () => {
     await page.waitForTimeout(500) // タグ追加の反映を待つ
     
     // タグが追加されたことを確認（選択済みタグとして表示されている）
-    const selectedTag = page.locator('[data-testid="practice-log-form-modal"] span:has-text("AN_EDITED")').filter({ 
-      has: page.locator('button[title="タグを削除"]')
+    const selectedTag = page.locator('[data-testid="practice-log-form-modal"] [data-testid^="selected-tag-"]').filter({ 
+      hasText: 'AN_EDITED'
     }).first()
     await expect(selectedTag).toBeVisible({ timeout: 5000 })
     
@@ -589,7 +576,8 @@ test.describe('個人練習記録のテスト', () => {
     await page.waitForTimeout(2000)
     
     // 更新されたタグが表示されていることを確認
-    await expect(page.locator('text=AN_EDITED')).toBeVisible({ timeout: 5000 })
+    const dayDetailModal = page.locator('[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"]').first()
+    await expect(dayDetailModal.locator('[data-testid^="selected-tag-"]').filter({ hasText: 'AN_EDITED' }).first()).toBeVisible({ timeout: 5000 })
   })
 
   /**
@@ -621,34 +609,32 @@ test.describe('個人練習記録のテスト', () => {
     
     // ステップ3: 選択されているタグがあれば、バツボタンを押して選択状態を解除
     await page.waitForTimeout(500) // フォームのレンダリングを待つ
-    const selectedTags = page.locator('[data-testid="practice-log-form-modal"] span:has(button[title="タグを削除"])')
+    const selectedTags = page.locator('[data-testid="practice-log-form-modal"] [data-testid^="selected-tag-"]')
     const selectedTagCount = await selectedTags.count()
     
     if (selectedTagCount > 0) {
       // 選択されているタグのバツボタンをクリックして選択を解除
       for (let i = 0; i < selectedTagCount; i++) {
         const selectedTag = selectedTags.nth(i)
-        const removeButton = selectedTag.locator('button[title="タグを削除"]').first()
+        const removeButton = selectedTag.locator('[data-testid^="remove-tag-button-"]').first()
         await removeButton.click()
         await page.waitForTimeout(300) // タグ削除の反映を待つ
       }
     }
     
     // ステップ4: タグ入力欄をクリックしてタグ一覧を表示
-    const tagInput = page.locator('[data-testid="practice-log-form-modal"] input[type="text"]').filter({ 
-      hasNot: page.locator('[data-testid^="time-input-"]')
-    }).last()
+    const tagInput = page.locator('[data-testid="practice-log-form-modal"] [data-testid="tag-input"]')
     await tagInput.waitFor({ state: 'visible', timeout: 5000 })
     await tagInput.click()
     await page.waitForTimeout(500) // ドロップダウンの表示を待つ
     
     // タグ一覧が表示されていることを確認
-    const tagList = page.locator('.absolute.z-60.w-full').first()
+    const tagList = page.locator('[data-testid="tag-dropdown"]').first()
     await expect(tagList).toBeVisible({ timeout: 5000 })
     
     // ステップ5: タグの3点リーダーボタンをクリックしてタグ管理モーダルを開く
     await page.waitForTimeout(1000)
-    const tagManagementButton = page.locator('button[title="タグを管理"]').first()
+    const tagManagementButton = page.locator('[data-testid^="manage-tag-button-"]').first()
     await tagManagementButton.waitFor({ state: 'visible', timeout: 5000 })
     await tagManagementButton.click()
     
@@ -660,20 +646,17 @@ test.describe('個人練習記録のテスト', () => {
     
     // 削除確認モーダルが表示されることを確認
     await page.waitForTimeout(500)
-    const confirmDeleteButtons = page.locator('button:has-text("削除")')
-    const confirmDeleteButtonCount = await confirmDeleteButtons.count()
-    expect(confirmDeleteButtonCount).toBeGreaterThan(0)
+    await page.waitForSelector('[data-testid="confirm-delete-button"]', { timeout: 5000 })
     
     // ステップ7: 削除確認モーダルで「削除」をクリック
-    // 2つ目の削除ボタンが確認モーダル内の削除ボタン
-    await confirmDeleteButtons.nth(1).click()
+    await page.click('[data-testid="confirm-delete-button"]')
     
     // タグ管理モーダルが閉じることを確認
     await page.waitForSelector('[data-testid="tag-management-modal"]', { state: 'hidden', timeout: 5000 })
     
     // ステップ8: 練習ログ編集モーダルを閉じて日別詳細モーダルに戻る
     await page.waitForTimeout(500)
-    const cancelButton = page.locator('[data-testid="practice-log-form-modal"] button:has-text("キャンセル")').first()
+    const cancelButton = page.locator('[data-testid="practice-log-form-modal"] [data-testid="practice-log-cancel-button"]').first()
     if (await cancelButton.count() > 0) {
       await cancelButton.click()
     } else {
@@ -728,9 +711,6 @@ test.describe('個人練習記録のテスト', () => {
       
       // 削除確認ダイアログで「削除」をクリック
       await practiceDeleteConfirmButtons.first().click()
-      
-      // 削除処理の完了を待つ
-      await page.waitForTimeout(2000)
     }
     
     // ステップ14: 日別詳細モーダルが閉じていることを確認

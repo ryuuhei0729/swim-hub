@@ -330,6 +330,7 @@ export default function PracticeLogForm({
                   onClick={addMenu}
                   className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
                   disabled={isLoading}
+                  data-testid="add-menu-button"
                 >
                   <PlusIcon className="h-4 w-4" />
                   メニューを追加
@@ -451,6 +452,7 @@ export default function PracticeLogForm({
                         }
                         placeholder="1"
                         min="0"
+                        data-testid="practice-circle-min"
                       />
                     </div>
 
@@ -468,6 +470,7 @@ export default function PracticeLogForm({
                         placeholder="30"
                         min="0"
                         max="59"
+                        data-testid="practice-circle-sec"
                       />
                     </div>
                   </div>
@@ -554,7 +557,7 @@ export default function PracticeLogForm({
                             </tr>
                             {/* 全体平均行 */}
                             <tr className="border-t-2 border-gray-300 bg-blue-50">
-                              <td className="py-2 px-2 font-medium text-blue-800">全体平均</td>
+                              <td className="py-2 px-2 font-medium text-blue-800" data-testid="practice-overall-average">全体平均</td>
                               <td className="py-2 px-2 text-center" colSpan={Number(menu.sets) || 1}>
                                 <span className="text-blue-800 font-bold">
                                   {(() => {
@@ -569,7 +572,7 @@ export default function PracticeLogForm({
                             </tr>
                             {/* 全体最速行 */}
                             <tr className="bg-blue-50">
-                              <td className="py-2 px-2 font-medium text-blue-800">全体最速</td>
+                              <td className="py-2 px-2 font-medium text-blue-800" data-testid="practice-overall-fastest">全体最速</td>
                               <td className="py-2 px-2 text-center" colSpan={Number(menu.sets) || 1}>
                                 <span className="text-blue-800 font-bold">
                                   {(() => {
@@ -629,6 +632,7 @@ export default function PracticeLogForm({
                 onClick={onClose}
                 variant="secondary"
                 disabled={isLoading}
+                data-testid="practice-log-cancel-button"
               >
                 キャンセル
               </Button>

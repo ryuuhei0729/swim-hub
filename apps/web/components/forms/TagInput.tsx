@@ -234,6 +234,7 @@ export default function TagInput({
                   backgroundColor: tag.color,
                   animationDelay: `${index * 50}ms` // 順次表示のアニメーション
                 }}
+                data-testid={`selected-tag-${tag.id}`}
               >
                 {tag.name}
                 <button
@@ -244,6 +245,7 @@ export default function TagInput({
                   }}
                   className="hover:bg-black/20 rounded-full p-0.5 transition-colors"
                   title="タグを削除"
+                  data-testid={`remove-tag-button-${tag.id}`}
                 >
                   <XMarkIcon className="h-3 w-3" />
                 </button>
@@ -261,6 +263,7 @@ export default function TagInput({
               onFocus={() => setIsOpen(true)}
               placeholder={selectedTags.length === 0 ? placeholder : "タグを検索または作成..."}
               className="flex-1 min-w-[120px] text-sm border-none outline-none bg-transparent"
+              data-testid="tag-input"
             />
           </div>
           
@@ -274,7 +277,7 @@ export default function TagInput({
 
         {/* ドロップダウンメニュー */}
         {isOpen && (
-          <div className="absolute z-60 w-full bottom-full mb-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+          <div className="absolute z-60 w-full bottom-full mb-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto" data-testid="tag-dropdown">
             {/* タグ一覧 */}
             <div className="py-1">
               {filteredTags.length > 0 ? (
@@ -283,6 +286,7 @@ export default function TagInput({
                     key={tag.id}
                     className="flex items-center justify-between px-3 py-2 hover:bg-blue-50 cursor-pointer transition-colors group"
                     onClick={() => handleTagToggle(tag)}
+                    data-testid={`tag-row-${tag.id}`}
                   >
                     <div className="flex items-center gap-2">
                       <div
@@ -300,6 +304,7 @@ export default function TagInput({
                         onClick={(e) => handleTagManagement(tag, e)}
                         className="p-1 hover:bg-blue-100 rounded transition-colors"
                         title="タグを管理"
+                        data-testid={`manage-tag-button-${tag.id}`}
                       >
                         <EllipsisVerticalIcon className="h-4 w-4 text-gray-500 hover:text-blue-600 transition-colors" />
                       </button>
