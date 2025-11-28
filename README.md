@@ -16,7 +16,7 @@
 
 ## アプリケーションのイメージ
 
-gif画像ここにはる
+![gif画像](/docs/assets/readme/app_view.gif) 
 
 
 
@@ -24,23 +24,23 @@ gif画像ここにはる
 ## 機能一覧
 | トップ画面 |　ログイン画面 |
 | ---- | ---- |
-| ![Top画面](/docs/img/app-view/welcome_1.1.png) | ![ログイン画面](/docs/img/app-view/login_1.1.png) |
+| ![Top画面](/docs/assets/readme/app_view_welcome.png) | ![ログイン画面](/docs/assets/readme/app_view_login.png) |
 | サービスの概要について記載した、ブランディング用のLPページです。 | メールアドレスとパスワードでの認証機能を実装しました。 |
 
-| ダッシュボード画面 |　練習記録一覧画面 |
+| ダッシュボード画面 |　記録入力画面 |
 | ---- | ---- |
-| ![ダッシュボード画面](/docs/img/app-view/select-business_1.1.png) | ![練習記録一覧画面](/docs/img/app-view/create-invoice_1.1.png) |
-| 自分の予定をカレンダービューで確認、登録、編集、削除ができます。 | 自分の練習記録を一覧で確認し、ソートやフィルタリングができます。 |
+| ![ダッシュボード画面](/docs/assets/readme/app_view_dashboad.png) | ![記録入力画面](/docs/assets/readme/app_view_input.png) |
+| 自分の予定をカレンダービューで確認、登録、編集、削除ができます。 | 大会や練習の結果が入力ができる画面です。 |
 
-| 大会記録一覧画面 |　マイページ画面 |
+| 練習記録一覧画面 |　大会記録一覧画面 |
 | ---- | ---- |
-| ![大会記録一覧画面](/docs/img/app-view/invoice-detail_1.1.png) | ![　マイページ画面](/docs/img/app-view/print-invoice_1.1.png) |
-| 自分の大会の記録を一覧で確認し、ソートやフィルタリングができます。 | 自分のプロフィールの編集、ベストタイム表の確認ができます。 |
+| ![練習記録一覧画面](/docs/assets/readme/app_view_practice.png) | ![大会記録一覧画面](/docs/assets/readme/app_view_record.png) |
+| 自分の練習記録を一覧で確認し、ソートやフィルタリングができます。 | 自分の大会の記録を一覧で確認し、ソートやフィルタリングができます。 |
 
-| チーム管理画面 |　チーム詳細画面 |
+| マイページ画面 |　チーム詳細画面 |
 | ---- | ---- |
-| ![チーム管理画面](/docs/img/app-view/select-master_1.1.png) | ![　チーム詳細画面](/docs/img/app-view/master-register-form_1.1.png) |
-| チームの新規作成、参加ができる画面です。 | チームのadminであれば、お知らせの発報やチームメンバーの練習、大会記録の一括代理登録等ができます。 |
+| ![　マイページ画面](/docs/assets/readme/app_view_mypage.png) | ![　チーム詳細画面](/docs/assets/readme/app_view_team.png) |
+| 自分のプロフィールの編集、ベストタイム表の確認ができます。 | チームのadminであれば、お知らせの発報やチームメンバーの練習、大会記録の一括代理登録等ができます。 |
 
 <br />
 
