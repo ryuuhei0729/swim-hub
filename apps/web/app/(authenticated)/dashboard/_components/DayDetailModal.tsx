@@ -165,11 +165,29 @@ export default function DayDetailModal({
                       : null
                     if (!practiceId) return null
                     
+                    // practice_logの更新を検知するために、practice_logのupdated_atを含めた文字列を取得
+                    const practiceLogUpdateKey = practiceLogItems
+                      .filter(p => {
+                        const pid = isPracticeMetadata(p.metadata) 
+                          ? (p.metadata.practice?.id || p.metadata.practice_id)
+                          : null
+                        return pid === practiceId
+                      })
+                      .map(p => {
+                        // metadata.practice_log.updated_atを取得
+                        const practiceLog = (p.metadata as any)?.practice_log
+                        const updatedAt = practiceLog?.updated_at || p.id
+                        return `${p.id}:${updatedAt}`
+                      })
+                      .sort()
+                      .join(',')
+                    
                     return (
                       <PracticeDetails 
                         key={item.id}
                         practiceId={practiceId}
                         place={item.place}
+                        practiceLogUpdateKey={practiceLogUpdateKey}
                         isTeamPractice={isPracticeMetadata(item.metadata) ? !!item.metadata.team_id : false}
                         teamId={isPracticeMetadata(item.metadata) ? item.metadata.team_id : undefined}
                         teamName={isPracticeMetadata(item.metadata) && isTeamInfo(item.metadata.team) ? item.metadata.team.name : undefined}
@@ -721,6 +739,7 @@ function AttendanceModal({
 function PracticeDetails({ 
   practiceId, 
   place, 
+  practiceLogUpdateKey,
   onEdit, 
   onDelete,
   onAddPracticeLog,
@@ -733,6 +752,7 @@ function PracticeDetails({
 }: { 
   practiceId: string
   place?: string
+  practiceLogUpdateKey?: string
   onEdit?: () => void
   onDelete?: () => void
   onAddPracticeLog?: (practiceId: string) => void
@@ -838,7 +858,7 @@ function PracticeDetails({
     }
 
     loadPractice()
-  }, [practiceId, supabase])
+  }, [practiceId, supabase, practiceLogUpdateKey])
 
   if (loading) {
     return (
@@ -1060,7 +1080,7 @@ function PracticeDetails({
                 <div className="bg-white rounded-lg p-3 mb-3 border border-green-300">
                   <div className="text-xs font-medium text-gray-500 mb-1">練習内容</div>
                     <div className="text-sm text-gray-800">
-                      <span className="text-lg font-semibold text-green-700">{formattedLog.distance}</span>m ×
+                      <span className="text-lg font-semibold text-green-700">{formattedLog.distance}</span>m ×{' '}
                       <span className="text-lg font-semibold text-green-700">{formattedLog.repCount}</span>
                       {formattedLog.setCount > 1 && (
                         <>
@@ -1068,11 +1088,12 @@ function PracticeDetails({
                           <span className="text-lg font-semibold text-green-700">{formattedLog.setCount}</span>
                         </>
                       )}
-                      {' '}
+                      {'　　'}
                       <span className="text-lg font-semibold text-green-700">
                         {formattedLog.circle ? `${Math.floor(formattedLog.circle / 60)}'${Math.floor(formattedLog.circle % 60).toString().padStart(2, '0')}"` : '-'}
                       </span>
-                      <span className="text-lg font-semibold text-green-700"> {formattedLog.style}</span>
+                      {'　'}
+                      <span className="text-lg font-semibold text-green-700">{formattedLog.style}</span>
                     </div>
                 </div>
 

@@ -26,8 +26,7 @@ export default function CalendarView({
   onEditRecord,
   onDeleteRecord,
   isLoading: propLoading = false,
-  userId: _userId,
-  openDayDetail
+  userId: _userId
 }: Omit<CalendarProps, 'currentDate' | 'onCurrentDateChange'>) {
   const router = useRouter()
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
@@ -44,14 +43,6 @@ export default function CalendarView({
     setCurrentDate,
     refetch 
   } = useCalendar()
-  
-  // openDayDetailが変更された時に記録モーダルを開く
-  React.useEffect(() => {
-    if (openDayDetail) {
-      setSelectedDate(openDayDetail)
-      setShowDayDetail(true)
-    }
-  }, [openDayDetail])
   
   // プロップスのentriesが指定されている場合はそれを優先、そうでなければカレンダーデータを使用
   const entries = calendarItems

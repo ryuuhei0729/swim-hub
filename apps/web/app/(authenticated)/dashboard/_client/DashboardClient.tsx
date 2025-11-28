@@ -59,7 +59,7 @@ export default function DashboardClient({
   tags
 }: DashboardClientProps) {
   const { user, supabase } = useAuth()
-
+  
   // Zustandストア
   const {
     calendarRefreshKey,
@@ -254,7 +254,6 @@ export default function DashboardClient({
           onAddRecord={onAddRecord}
           onEditRecord={onEditRecord}
           onDeleteRecord={onDeleteRecord}
-          openDayDetail={null}
         />
 
         {/* フォームモーダル */}

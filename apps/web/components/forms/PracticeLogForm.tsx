@@ -340,6 +340,7 @@ export default function PracticeLogForm({
                 <div
                   key={menu.id}
                   className="border border-gray-200 rounded-lg p-4 space-y-4 bg-blue-50"
+                  data-testid="practice-menu-container"
                 >
                   {/* メニューヘッダー */}
                   <div className="flex items-center justify-between">
@@ -352,6 +353,7 @@ export default function PracticeLogForm({
                         onClick={() => removeMenu(menu.id)}
                         className="text-red-500 hover:text-red-700"
                         disabled={isLoading}
+                        data-testid={`practice-menu-remove-button-${index + 1}`}
                       >
                         <TrashIcon className="h-5 w-5" />
                       </button>

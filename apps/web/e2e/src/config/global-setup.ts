@@ -234,6 +234,21 @@ async function globalSetup(config: FullConfig) {
           console.warn('⚠️  ページエラー:', error.message)
         })
         
+        // ログインページに移動
+        await loginPage.goto('/login', { waitUntil: 'domcontentloaded', timeout: 15000 })
+        
+        // ログインフォームが表示されるまで待つ
+        await loginPage.waitForSelector('[data-testid="email-input"]', { timeout: 10000 })
+        
+        // メールアドレスとパスワードを入力
+        await loginPage.fill('[data-testid="email-input"]', testEnv.credentials.email)
+        await loginPage.fill('[data-testid="password-input"]', testEnv.credentials.password)
+        
+        // ログインボタンをクリック
+        await loginPage.click('[data-testid="login-button"]')
+        
+        // ダッシュボードにリダイレクトされるまで待つ
+        await loginPage.waitForURL('**/dashboard', { timeout: 15000 })
         
         // ログイン成功を確認（ダッシュボードに遷移しているか）
         const currentUrl = loginPage.url()
