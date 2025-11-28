@@ -220,6 +220,7 @@ export default function CompetitionBasicForm({
               onClick={handleSubmit}
               disabled={isLoading}
               className="w-full sm:w-auto sm:ml-3"
+              data-testid={editData ? 'competition-update-button' : 'competition-next-button'}
             >
               {isLoading ? '保存中...' : editData ? '更新' : '次へ（記録登録）'}
             </Button>

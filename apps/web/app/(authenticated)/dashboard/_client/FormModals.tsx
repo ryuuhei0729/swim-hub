@@ -118,6 +118,21 @@ export function FormModals({
       }
     }
 
+    // editingDataが直接entriesプロパティを持っている場合（DayDetailModalから渡される場合）
+    if ('entries' in editingData && Array.isArray((editingData as { entries?: Array<any> }).entries)) {
+      const entries = (editingData as { entries: Array<any> }).entries
+      return entries.map((entry, index) => ({
+        id: entry.id || `entry-${index + 1}`,
+        styleId: String(entry.styleId ?? entry.style_id ?? ''),
+        entryTime: typeof entry.entryTime === 'number'
+          ? entry.entryTime
+          : typeof entry.entry_time === 'number'
+            ? entry.entry_time
+            : 0,
+        note: entry.note ?? ''
+      }))
+    }
+
     // 旧フォーマット（単一エントリー）
     if ('type' in editingData && (editingData as { type?: string }).type === 'entry') {
       const legacy = editingData as {
