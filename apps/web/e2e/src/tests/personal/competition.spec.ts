@@ -157,30 +157,28 @@ test.describe('個人大会記録のテスト', () => {
     const splitAddButton = page.locator('[data-testid="record-split-add-button-1"]')
     await splitAddButton.click()
     
-    // ステップ22: 1つ目のスプリット距離を入力
-    await page.waitForTimeout(500)
+    // ステップ22: 1つ目のスプリット距離を入力（新しい入力フィールドが表示されるのを待つ）
+    await page.waitForSelector('[data-testid="record-split-distance-1-1"]', { state: 'visible', timeout: 5000 })
     await page.fill('[data-testid="record-split-distance-1-1"]', '50')
     
     // ステップ23: 1つ目のスプリットタイムを入力
     await page.fill('[data-testid="record-split-time-1-1"]', '28.00')
     
     // ステップ24: さらに「スプリットを追加」ボタンをクリック
-    await page.waitForTimeout(500)
     await splitAddButton.click()
     
-    // ステップ25: 2つ目のスプリット距離を入力
-    await page.waitForTimeout(500)
+    // ステップ25: 2つ目のスプリット距離を入力（新しい入力フィールドが表示されるのを待つ）
+    await page.waitForSelector('[data-testid="record-split-distance-1-2"]', { state: 'visible', timeout: 5000 })
     await page.fill('[data-testid="record-split-distance-1-2"]', '100')
     
     // ステップ26: 2つ目のスプリットタイムを入力
     await page.fill('[data-testid="record-split-time-1-2"]', '1:00.00')
     
     // ステップ27: さらに「スプリットを追加」ボタンをクリック
-    await page.waitForTimeout(500)
     await splitAddButton.click()
     
-    // ステップ28: 3つ目のスプリット距離を入力
-    await page.waitForTimeout(500)
+    // ステップ28: 3つ目のスプリット距離を入力（新しい入力フィールドが表示されるのを待つ）
+    await page.waitForSelector('[data-testid="record-split-distance-1-3"]', { state: 'visible', timeout: 5000 })
     await page.fill('[data-testid="record-split-distance-1-3"]', '150')
     
     // ステップ29: 3つ目のスプリットタイムを入力
@@ -192,8 +190,7 @@ test.describe('個人大会記録のテスト', () => {
     // ステップ31: フォームが閉じる
     await page.waitForSelector('[data-testid="record-form-modal"]', { state: 'hidden', timeout: 10000 })
     
-    // ステップ32: カレンダーに大会記録のマーカーが表示されることを確認
-    await page.waitForTimeout(2000) // データの反映を待つ
+    // ステップ32: カレンダーに大会記録のマーカーが表示されることを確認（データの反映を待つ）
     const todayCellAfter = page.locator(`[data-testid="calendar-day"][data-date="${todayKey}"]`)
     // 大会記録のマーカーを探す（record-mark、entry-mark、competition-markのいずれか）
     const recordMark = todayCellAfter.locator('[data-testid="record-mark"]')
@@ -334,9 +331,9 @@ test.describe('個人大会記録のテスト', () => {
     // ステップ10: スプリットタイムを追加
     const splitAddButton = page.locator('[data-testid="record-split-add-button-1"]')
     await splitAddButton.click()
-    await page.waitForTimeout(500)
     
-    // ステップ11: 追加したスプリットタイムの距離とタイムを入力
+    // ステップ11: 追加したスプリットタイムの距離とタイムを入力（新しい入力フィールドが表示されるのを待つ）
+    await page.waitForSelector('[data-testid="record-split-distance-1-4"]', { state: 'visible', timeout: 5000 })
     await page.fill('[data-testid="record-split-distance-1-4"]', '200')
     await page.fill('[data-testid="record-split-time-1-4"]', '1:58.50')
     
@@ -344,8 +341,12 @@ test.describe('個人大会記録のテスト', () => {
     // 2つ目のスプリットタイムを削除
     const removeSplitButton = page.locator('[data-testid="record-split-remove-button-1-2"]')
     if (await removeSplitButton.count() > 0) {
-      await removeSplitButton.click()
-      await page.waitForTimeout(500)
+      // 削除ボタンをクリックし、要素が削除されるのを待つ
+      const splitDistance2 = page.locator('[data-testid="record-split-distance-1-2"]')
+      await Promise.all([
+        splitDistance2.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {}),
+        removeSplitButton.click()
+      ])
     }
     
     // ステップ13: 「保存」ボタンをクリック
@@ -355,8 +356,8 @@ test.describe('個人大会記録のテスト', () => {
     await page.waitForSelector('[data-testid="record-form-modal"]', { state: 'hidden', timeout: 10000 })
     
     // フォームが閉じた後、日別詳細モーダルが開くか、または日付を再度クリックしてモーダルを開く
-    await page.waitForTimeout(1000)
-    const modalVisible = await page.locator('[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"], [data-testid="record-detail-modal"]').first().isVisible({ timeout: 3000 }).catch(() => false)
+    const modal = page.locator('[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"], [data-testid="record-detail-modal"]').first()
+    const modalVisible = await modal.isVisible({ timeout: 3000 }).catch(() => false)
     
     if (!modalVisible) {
       // モーダルが開かない場合は、日付を再度クリックしてモーダルを開く
@@ -408,8 +409,8 @@ test.describe('個人大会記録のテスト', () => {
       }
     } else {
       // ダイアログが表示されない場合は、直接削除が実行される
-      // 削除処理の完了を待つ
-      await page.waitForTimeout(1000)
+      // 削除処理の完了を待つ（エントリーセクションが表示されるのを待つ）
+      await page.waitForSelector('[data-testid="entry-section"]', { state: 'visible', timeout: 5000 })
     }
     
     // ステップ6: 「エントリー済み（記録未登録）」セクションが表示されていることを確認
@@ -496,11 +497,9 @@ test.describe('個人大会記録のテスト', () => {
     
     // ステップ11: フォームが閉じ、日別詳細モーダルが自動で開く
     await page.waitForSelector('[data-testid="entry-form-modal"]', { state: 'hidden', timeout: 10000 })
-    // モーダルが開くのを待つ（エントリー編集の場合はRecordLogFormは開かない）
-    await page.waitForTimeout(1000)
-    // 日別詳細モーダルが表示されていることを確認
+    // 日別詳細モーダルが表示されていることを確認（エントリー編集の場合はRecordLogFormは開かない）
     const modal = page.locator('[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"], [data-testid="record-detail-modal"]').first()
-    await modal.waitFor({ timeout: 5000 })
+    await modal.waitFor({ state: 'visible', timeout: 5000 })
     
     // ステップ12: 変更された内容が反映されていることを確認
     // エントリーサマリー内のタイム表示を確認（より確実な方法）
@@ -590,9 +589,6 @@ test.describe('個人大会記録のテスト', () => {
       // 確認モーダルが閉じるのを待つ
       await expect(confirmDialog2).toBeHidden({ timeout: 5000 })
       
-      // 削除処理の完了を待つ（データの反映を待つ）
-      await page.waitForTimeout(2000)
-      
       // 2つ目のエントリーが削除されたことを確認（要素が存在しないことを確認）
       // エントリーサマリーが0個になるまで待つ（カレンダーのリフレッシュとCompetitionWithEntryの再取得を待つ）
       const remainingEntrySummaryAfter = page.locator(`[data-testid="entry-summary-${remainingEntryId}"]`)
@@ -644,16 +640,16 @@ test.describe('個人大会記録のテスト', () => {
     // ステップ4: 日別詳細モーダルが閉じていることを確認
     await page.waitForSelector('[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"], [data-testid="record-detail-modal"]', { state: 'hidden', timeout: 10000 })
     
-    // ステップ5: カレンダーのマーカーが更新されていることを確認
-    await page.waitForTimeout(2000)
+    // ステップ5: カレンダーのマーカーが更新されていることを確認（マーカーが存在しないことを確認）
     const todayCellAfter = page.locator(`[data-testid="calendar-day"][data-date="${todayKey}"]`)
     const competitionMark = todayCellAfter.locator('[data-testid="competition-mark"]')
-    const hasMarker = await competitionMark.count()
-    expect(hasMarker).toBe(0)
+    // マーカーが削除されるのを待つ（最大10秒）
+    await expect(competitionMark).toHaveCount(0, { timeout: 10000 })
     
     // ステップ6: 該当日付をクリックしても大会記録が表示されないことを確認
     await todayCellAfter.click()
-    await page.waitForTimeout(1000)
+    // モーダルが表示されるのを待つ（空のモーダルまたはday-detail-modal）
+    await page.waitForSelector('[data-testid="day-detail-modal"], [data-testid="practice-detail-modal"], [data-testid="record-detail-modal"]', { timeout: 5000 })
     // モーダルが表示されないか、または空のモーダルが表示される
     const modal = page.locator('[data-testid="day-detail-modal"]')
     if (await modal.count() > 0) {

@@ -101,19 +101,20 @@ test.describe('個人練習記録のテスト', () => {
     const menuCountBefore = await page.locator('[data-testid="practice-menu-container"]').count()
     await addMenuButton.click()
     
-    // メニューが追加されたことを確認
-    await page.waitForTimeout(500)
+    // メニューが追加されたことを確認（新しいメニューコンテナが表示されるのを待つ）
+    await page.waitForSelector(`[data-testid="practice-menu-container"]:nth-child(${menuCountBefore + 1})`, { state: 'visible', timeout: 5000 })
     const menuCountAfter = await page.locator('[data-testid="practice-menu-container"]').count()
     expect(menuCountAfter).toBe(menuCountBefore + 1)
     
     // ステップ8: ゴミ箱アイコンをクリック（メニューが2つ以上ある場合のみ表示される）
     // メニューが2つ以上ある場合のみゴミ箱アイコンが表示されるため、その条件を確認
     if (menuCountAfter > 1) {
-      await page.waitForTimeout(500) // メニュー追加後のアニメーション待ち
-      // 最初のゴミ箱ボタンをクリック
-      await page.locator('[data-testid="practice-menu-remove-button-1"]').click()
-      await page.waitForTimeout(500)
-      // メニューが削除されたことを確認
+      // ゴミ箱ボタンが表示されるのを待つ
+      const removeButton = page.locator('[data-testid="practice-menu-remove-button-1"]')
+      await removeButton.waitFor({ state: 'visible', timeout: 5000 })
+      await removeButton.click()
+      // メニューが削除されたことを確認（メニューコンテナが減るのを待つ）
+      await page.waitForSelector(`[data-testid="practice-menu-container"]:nth-child(${menuCountAfter})`, { state: 'detached', timeout: 5000 }).catch(() => {})
       const menuCountAfterDelete = await page.locator('[data-testid="practice-menu-container"]').count()
       expect(menuCountAfterDelete).toBe(menuCountAfter - 1)
     }
@@ -130,14 +131,11 @@ test.describe('個人練習記録のテスト', () => {
     // ステップ13: 種目を選択
     await page.selectOption('[data-testid="practice-style"]', 'Fr')
     
-    // 入力値が反映されるまで待つ
-    await page.waitForTimeout(1000)
-    
-    // 本数とセット数の値が正しく設定されていることを確認
-    const repCountValue = await page.locator('[data-testid="practice-rep-count"]').inputValue()
-    const setCountValue = await page.locator('[data-testid="practice-set-count"]').inputValue()
-    expect(repCountValue).toBe('2')
-    expect(setCountValue).toBe('2')
+    // 本数とセット数の値が正しく設定されていることを確認（値が反映されるのを待つ）
+    const repCountInput = page.locator('[data-testid="practice-rep-count"]')
+    const setCountInput = page.locator('[data-testid="practice-set-count"]')
+    await expect(repCountInput).toHaveValue('2', { timeout: 5000 })
+    await expect(setCountInput).toHaveValue('2', { timeout: 5000 })
     
     // ステップ14: 「タイムを入力」ボタンをクリック
     await page.click('[data-testid="time-input-button"]')
@@ -147,7 +145,8 @@ test.describe('個人練習記録のテスト', () => {
     
     // 入力欄が本数×セット数の数だけ表示されていることを確認
     // 本数2 × セット数2 = 4 の入力欄が表示されるはず
-    await page.waitForTimeout(500) // モーダル内の要素がレンダリングされるまで待つ
+    // モーダル内の要素がレンダリングされるまで待つ（最初の入力欄が表示されるのを待つ）
+    await page.waitForSelector('[data-testid="time-input-1-1"]', { state: 'visible', timeout: 5000 })
     const timeInputs = page.locator('[data-testid^="time-input-"]')
     const timeInputCount = await timeInputs.count()
     // 実際の値に応じて調整（本数2 × セット数2 = 4を期待）
@@ -200,8 +199,8 @@ test.describe('個人練習記録のテスト', () => {
     await tagInput.fill('AN')
     await tagInput.press('Enter')
     
-    // タグが登録されるのを待つ
-    await page.waitForTimeout(1000)
+    // タグが登録されるのを待つ（選択済みタグとして表示されるのを待つ）
+    await page.waitForSelector('[data-testid^="selected-tag-"]', { state: 'visible', timeout: 5000 })
     
     // ステップ23: 「練習記録を保存」ボタンをクリック
     await page.click('[data-testid="save-practice-log-button"]')
@@ -209,12 +208,11 @@ test.describe('個人練習記録のテスト', () => {
     // ステップ24: フォームが閉じる
     await page.waitForSelector('[data-testid="practice-log-form-modal"]', { state: 'hidden', timeout: 10000 })
     
-    // ステップ25: カレンダーに練習記録のマーカーが表示されることを確認
-    await page.waitForTimeout(2000) // データの反映を待つ
+    // ステップ25: カレンダーに練習記録のマーカーが表示されることを確認（データの反映を待つ）
     const todayCellAfter = page.locator(`[data-testid="calendar-day"][data-date="${todayKey}"]`)
     // 練習記録のマーカーを探す（data-testid="practice-mark"または緑色のマーカー）
     const practiceMark = todayCellAfter.locator('[data-testid="practice-mark"]')
-    expect(practiceMark).toBeVisible()
+    await expect(practiceMark).toBeVisible({ timeout: 10000 })
     
     // ステップ26: ダッシュボードのカレンダーで今日の日付をクリック
     await todayCellAfter.click()
@@ -258,10 +256,9 @@ test.describe('個人練習記録のテスト', () => {
     
     // 自動でモーダルが閉じ、再度練習内容が表示されることを確認
     await page.waitForSelector('[data-testid="practice-form-modal"]', { state: 'hidden', timeout: 10000 })
-    await page.waitForTimeout(2000)
     
     // 日別詳細モーダルが再度表示されていることを確認
-    await page.waitForSelector('[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"]', { timeout: 5000 })
+    await page.waitForSelector('[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"]', { state: 'visible', timeout: 5000 })
   })
 
   /**
@@ -280,8 +277,9 @@ test.describe('個人練習記録のテスト', () => {
     await page.waitForSelector('[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"]', { timeout: 5000 })
     
     // ステップ2: 練習ログ（下の方）の「編集」ボタン（鉛筆アイコン）をクリック
-    await page.waitForTimeout(1000) // データの反映を待つ
+    // データの反映を待つ（編集ボタンが表示されるのを待つ）
     const editLogButton = page.locator('[data-testid="edit-practice-log-button"]')
+    await editLogButton.first().waitFor({ state: 'visible', timeout: 5000 })
     const editLogButtonCount = await editLogButton.count()
     
     if (editLogButtonCount === 0) {
@@ -349,8 +347,9 @@ test.describe('個人練習記録のテスト', () => {
     await page.waitForSelector('[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"]', { timeout: 5000 })
     
     // ステップ2: 練習ログ（practice_log）の「編集」ボタン（鉛筆アイコン）をクリック
-    await page.waitForTimeout(1000) // データの反映を待つ
+    // データの反映を待つ（編集ボタンが表示されるのを待つ）
     const editLogButton = page.locator('[data-testid="edit-practice-log-button"]')
+    await editLogButton.first().waitFor({ state: 'visible', timeout: 5000 })
     const editLogButtonCount = await editLogButton.count()
     
     if (editLogButtonCount === 0) {
@@ -361,7 +360,8 @@ test.describe('個人練習記録のテスト', () => {
     
     // ステップ3: 既存のタイムが表示されていることを確認
     await page.waitForSelector('[data-testid="practice-log-form-modal"]', { timeout: 5000 })
-    await page.waitForTimeout(1000) // フォームのレンダリングを待つ
+    // フォームのレンダリングを待つ（タイムテーブルが表示されるのを待つ）
+    await page.waitForSelector('[data-testid="practice-overall-average"], [data-testid="practice-overall-fastest"]', { state: 'visible', timeout: 5000 })
     
     // タイムテーブルに既存のタイムが表示されていることを確認
     const hasTimeTable = await page.locator('[data-testid="practice-overall-average"]').count() > 0 || await page.locator('[data-testid="practice-overall-fastest"]').count() > 0
@@ -372,7 +372,8 @@ test.describe('個人練習記録のテスト', () => {
     
     // ステップ5: 既存のタイムが入力欄に表示されていることを確認
     await page.waitForSelector('[data-testid="time-input-modal"]', { timeout: 5000 })
-    await page.waitForTimeout(500) // モーダル内の要素がレンダリングされるまで待つ
+    // モーダル内の要素がレンダリングされるまで待つ（最初の入力欄が表示されるのを待つ）
+    await page.waitForSelector('[data-testid="time-input-1-1"]', { state: 'visible', timeout: 5000 })
     
     // 既存のタイムが入力されていることを確認（少なくとも1つの入力欄に値がある）
     const timeInput11 = page.locator('[data-testid="time-input-1-1"]')
@@ -404,11 +405,12 @@ test.describe('個人練習記録のテスト', () => {
     // ステップ11: 変更されたタイムが表示されていることを確認
     await page.waitForSelector('[data-testid="time-input-modal"]', { state: 'hidden', timeout: 5000 })
     await page.waitForSelector('[data-testid="practice-log-form-modal"]', { timeout: 5000 })
-    await page.waitForTimeout(1000) // タイムテーブルの更新を待つ
+    // タイムテーブルの更新を待つ（平均タイムが再計算されて表示されるのを待つ）
+    const practiceLogForm = page.locator('[data-testid="practice-log-form-modal"]')
+    await practiceLogForm.locator('[data-testid="practice-overall-average"]').first().waitFor({ state: 'visible', timeout: 5000 })
     
     // タイムテーブルに変更後のタイムと平均、最速が表示されていることを確認
     // モーダル内の要素を特定するため、より具体的なセレクタを使用
-    const practiceLogForm = page.locator('[data-testid="practice-log-form-modal"]')
     await expect(practiceLogForm.locator('[data-testid="practice-overall-average"]').first()).toBeVisible({ timeout: 5000 })
     await expect(practiceLogForm.locator('[data-testid="practice-overall-fastest"]').first()).toBeVisible({ timeout: 5000 })
     
@@ -419,10 +421,8 @@ test.describe('個人練習記録のテスト', () => {
     await page.waitForSelector('[data-testid="practice-log-form-modal"]', { state: 'hidden', timeout: 10000 })
     
     // ステップ14: 変更されたタイムが反映されていることを確認
-    await page.waitForTimeout(2000) // データの反映を待つ
-    
     // 日別詳細モーダルが開いていることを確認（自動的に開いているはず）
-    await page.waitForSelector('[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"]', { timeout: 5000 })
+    await page.waitForSelector('[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"]', { state: 'visible', timeout: 5000 })
     
     // 変更されたタイムが表示されていることを確認
     // タイムテーブル内の1:25を探す（より具体的なセレクタ）
@@ -444,9 +444,9 @@ test.describe('個人練習記録のテスト', () => {
     
     await page.waitForSelector('[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"]', { timeout: 5000 })
     
-    // 練習ログの編集ボタンをクリック
-    await page.waitForTimeout(1000)
+    // 練習ログの編集ボタンをクリック（編集ボタンが表示されるのを待つ）
     const editLogButton = page.locator('[data-testid="edit-practice-log-button"]')
+    await editLogButton.first().waitFor({ state: 'visible', timeout: 5000 })
     const editLogButtonCount = await editLogButton.count()
     
     if (editLogButtonCount === 0) {
@@ -457,7 +457,10 @@ test.describe('個人練習記録のテスト', () => {
     await page.waitForSelector('[data-testid="practice-log-form-modal"]', { timeout: 5000 })
     
     // ステップ1: ANタグが選択されている場合は、バツボタンをクリックして選択を解除
-    await page.waitForTimeout(500) // フォームのレンダリングを待つ
+    // フォームのレンダリングを待つ（タグ入力欄が表示されるのを待つ）
+    const tagInput = page.locator('[data-testid="practice-log-form-modal"] [data-testid="tag-input"]')
+    await tagInput.waitFor({ state: 'visible', timeout: 5000 })
+    
     const selectedAnTag = page.locator('[data-testid="practice-log-form-modal"] [data-testid^="selected-tag-"]').filter({ 
       hasText: 'AN'
     }).first()
@@ -466,21 +469,18 @@ test.describe('個人練習記録のテスト', () => {
       // ANタグが選択されている場合、バツボタンをクリックして選択を解除
       const removeButton = selectedAnTag.locator('[data-testid^="remove-tag-button-"]').first()
       await removeButton.click()
-      await page.waitForTimeout(500) // タグ削除の反映を待つ
+      // タグ削除の反映を待つ（選択済みタグが削除されるのを待つ）
+      await selectedAnTag.waitFor({ state: 'detached', timeout: 5000 }).catch(() => {})
     }
     
     // ステップ2: タグ入力欄（TagInput）をクリックして既存タグの一覧を表示
-    const tagInput = page.locator('[data-testid="practice-log-form-modal"] [data-testid="tag-input"]')
-    await tagInput.waitFor({ state: 'visible', timeout: 5000 })
     await tagInput.click()
     
     // ステップ3: 既存のタグ一覧が表示されていることを確認
-    await page.waitForTimeout(500) // ドロップダウンの表示を待つ
     const tagList = page.locator('[data-testid="tag-dropdown"]')
     await expect(tagList.first()).toBeVisible({ timeout: 5000 })
     
     // ステップ4: 既存のタグ（ANタグ）の3点リーダーボタンをクリック
-    await page.waitForTimeout(1000) // ドロップダウンの完全な表示を待つ
     
     // ANタグを含む行を探し、その3点リーダーボタンをクリック
     const anTagRow = page.locator('[data-testid^="tag-row-"]').filter({ hasText: 'AN' }).first()
@@ -527,7 +527,6 @@ test.describe('個人練習記録のテスト', () => {
     }
     
     // ステップ9: プレビューエリアで変更内容が確認できることを確認
-    await page.waitForTimeout(500)
     const tagModal = page.locator('[data-testid="tag-management-modal"]')
     const previewTag = tagModal.locator('span').filter({ hasText: 'AN_EDITED' }).first()
     await expect(previewTag).toBeVisible({ timeout: 5000 })
@@ -540,11 +539,11 @@ test.describe('個人練習記録のテスト', () => {
     
     // ステップ12: タグ選択画面に戻り、更新されたタグが新しい名前と色で表示されていることを確認
     // タグ管理モーダルが閉じた後、ドロップダウンも閉じている可能性があるため、再度タグ入力欄をクリック
-    await page.waitForTimeout(500)
+    // タグ管理モーダルが閉じるのを待つ
+    await page.waitForSelector('[data-testid="tag-management-modal"]', { state: 'hidden', timeout: 5000 })
     
     // タグ入力欄を再度クリックしてドロップダウンを開く
     await tagInput.click()
-    await page.waitForTimeout(500) // ドロップダウンの表示を待つ
     
     // ドロップダウンが表示されていることを確認
     const tagListAfter = page.locator('[data-testid="tag-dropdown"]')
@@ -559,21 +558,17 @@ test.describe('個人練習記録のテスト', () => {
     // ステップ13: 更新されたタグ（AN_EDITED）をクリックして追加
     // タグ行全体をクリック（onClickでhandleTagToggleが呼ばれる）
     await updatedTagRow.click()
-    await page.waitForTimeout(500) // タグ追加の反映を待つ
-    
-    // タグが追加されたことを確認（選択済みタグとして表示されている）
+    // タグ追加の反映を待つ（選択済みタグとして表示されるのを待つ）
     const selectedTag = page.locator('[data-testid="practice-log-form-modal"] [data-testid^="selected-tag-"]').filter({ 
       hasText: 'AN_EDITED'
     }).first()
     await expect(selectedTag).toBeVisible({ timeout: 5000 })
     
     // ステップ14: 「練習記録を更新」ボタンをクリック
-    await page.waitForTimeout(500)
     await page.click('[data-testid="update-practice-log-button"]')
     
     // ステップ15: ダッシュボードの日別詳細モーダルで更新されたタグが新しい名前と色で表示されていることを確認
     await page.waitForSelector('[data-testid="practice-log-form-modal"]', { state: 'hidden', timeout: 10000 })
-    await page.waitForTimeout(2000)
     
     // 更新されたタグが表示されていることを確認
     const dayDetailModal = page.locator('[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"]').first()
@@ -596,8 +591,9 @@ test.describe('個人練習記録のテスト', () => {
     await page.waitForSelector('[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"]', { timeout: 5000 })
     
     // ステップ2: 練習ログの編集ボタンをクリックして編集モーダルを開く
-    await page.waitForTimeout(1000) // データの反映を待つ
+    // データの反映を待つ（編集ボタンが表示されるのを待つ）
     const editLogButton = page.locator('[data-testid="edit-practice-log-button"]')
+    await editLogButton.first().waitFor({ state: 'visible', timeout: 5000 })
     const editLogButtonCount = await editLogButton.count()
     
     if (editLogButtonCount === 0) {
@@ -608,7 +604,10 @@ test.describe('個人練習記録のテスト', () => {
     await page.waitForSelector('[data-testid="practice-log-form-modal"]', { timeout: 5000 })
     
     // ステップ3: 選択されているタグがあれば、バツボタンを押して選択状態を解除
-    await page.waitForTimeout(500) // フォームのレンダリングを待つ
+    // フォームのレンダリングを待つ（タグ入力欄が表示されるのを待つ）
+    const tagInput = page.locator('[data-testid="practice-log-form-modal"] [data-testid="tag-input"]')
+    await tagInput.waitFor({ state: 'visible', timeout: 5000 })
+    
     const selectedTags = page.locator('[data-testid="practice-log-form-modal"] [data-testid^="selected-tag-"]')
     const selectedTagCount = await selectedTags.count()
     
@@ -618,22 +617,19 @@ test.describe('個人練習記録のテスト', () => {
         const selectedTag = selectedTags.nth(i)
         const removeButton = selectedTag.locator('[data-testid^="remove-tag-button-"]').first()
         await removeButton.click()
-        await page.waitForTimeout(300) // タグ削除の反映を待つ
+        // タグ削除の反映を待つ（選択済みタグが削除されるのを待つ）
+        await selectedTag.waitFor({ state: 'detached', timeout: 3000 }).catch(() => {})
       }
     }
     
     // ステップ4: タグ入力欄をクリックしてタグ一覧を表示
-    const tagInput = page.locator('[data-testid="practice-log-form-modal"] [data-testid="tag-input"]')
-    await tagInput.waitFor({ state: 'visible', timeout: 5000 })
     await tagInput.click()
-    await page.waitForTimeout(500) // ドロップダウンの表示を待つ
     
     // タグ一覧が表示されていることを確認
     const tagList = page.locator('[data-testid="tag-dropdown"]').first()
     await expect(tagList).toBeVisible({ timeout: 5000 })
     
     // ステップ5: タグの3点リーダーボタンをクリックしてタグ管理モーダルを開く
-    await page.waitForTimeout(1000)
     const tagManagementButton = page.locator('[data-testid^="manage-tag-button-"]').first()
     await tagManagementButton.waitFor({ state: 'visible', timeout: 5000 })
     await tagManagementButton.click()
@@ -645,8 +641,7 @@ test.describe('個人練習記録のテスト', () => {
     await page.click('[data-testid="tag-delete-button"]')
     
     // 削除確認モーダルが表示されることを確認
-    await page.waitForTimeout(500)
-    await page.waitForSelector('[data-testid="confirm-delete-button"]', { timeout: 5000 })
+    await page.waitForSelector('[data-testid="confirm-delete-button"]', { state: 'visible', timeout: 5000 })
     
     // ステップ7: 削除確認モーダルで「削除」をクリック
     await page.click('[data-testid="confirm-delete-button"]')
@@ -655,8 +650,9 @@ test.describe('個人練習記録のテスト', () => {
     await page.waitForSelector('[data-testid="tag-management-modal"]', { state: 'hidden', timeout: 5000 })
     
     // ステップ8: 練習ログ編集モーダルを閉じて日別詳細モーダルに戻る
-    await page.waitForTimeout(500)
+    // タグ管理モーダルが閉じた後、キャンセルボタンがクリック可能になるのを待つ
     const cancelButton = page.locator('[data-testid="practice-log-form-modal"] [data-testid="practice-log-cancel-button"]').first()
+    await cancelButton.waitFor({ state: 'visible', timeout: 5000 })
     if (await cancelButton.count() > 0) {
       await cancelButton.click()
     } else {
@@ -670,42 +666,36 @@ test.describe('個人練習記録のテスト', () => {
     
     // 日別詳細モーダルが表示されていることを確認
     await page.waitForSelector('[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"]', { timeout: 5000 })
-    await page.waitForTimeout(1000) // データの反映を待つ
     
     // ステップ9: Practice_logの削除アイコンをクリック
     const deleteLogButton = page.locator('[data-testid="delete-practice-log-button"]')
-    const deleteLogButtonCount = await deleteLogButton.count()
-    
-    if (deleteLogButtonCount === 0) {
-      throw new Error('練習ログの削除ボタンが見つかりません。')
-    }
+    await deleteLogButton.first().waitFor({ state: 'visible', timeout: 5000 })
     
     await deleteLogButton.first().click()
     
-    // 削除処理の完了を待つ
-    await page.waitForTimeout(2000)
+    // 削除処理の完了を待つ（削除ボタンが存在しなくなるのを待つ）
+    await deleteLogButton.first().waitFor({ state: 'detached', timeout: 10000 }).catch(() => {})
     
     // ステップ11: 「練習メニューを追加」ボタンが表示されていることを確認
-    await page.waitForSelector('[data-testid="add-practice-log-button"]', { state: 'visible', timeout: 5000 })
-    await expect(page.locator('[data-testid="add-practice-log-button"]')).toBeVisible({ timeout: 5000 })
+    const addPracticeLogButton = page.locator('[data-testid="add-practice-log-button"]')
+    await expect(addPracticeLogButton).toBeVisible({ timeout: 5000 })
     
     // ステップ12: Practice_Logが0件であることを確認（削除ボタンが存在しないことを確認）
     const remainingDeleteLogButtons = page.locator('[data-testid="delete-practice-log-button"]')
-    const remainingDeleteLogButtonCount = await remainingDeleteLogButtons.count()
-    expect(remainingDeleteLogButtonCount).toBe(0)
+    await expect(remainingDeleteLogButtons).toHaveCount(0, { timeout: 5000 })
     
     // 日別詳細モーダルが表示されていることを確認
     const modalVisible = await page.locator('[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"]').first().isVisible().catch(() => false)
     
     // ステップ13: Practiceの削除アイコンをクリック
     if (modalVisible) {
-      await page.waitForTimeout(1000) // データの反映を待つ
+      // データの反映を待つ（削除ボタンが表示されるのを待つ）
       const deletePracticeButton = page.locator('[data-testid="delete-practice-button"]')
+      await deletePracticeButton.first().waitFor({ state: 'visible', timeout: 5000 })
 
       await deletePracticeButton.first().click()
       
       // 削除確認ダイアログが表示されることを確認
-      await page.waitForTimeout(500)
       const practiceDeleteConfirmButtons = page.locator('button:has-text("削除")')
       await expect(practiceDeleteConfirmButtons.first()).toBeVisible({ timeout: 5000 })
       
