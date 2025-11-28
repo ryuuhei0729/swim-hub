@@ -27,20 +27,8 @@ async function loginIfNeeded(page: Page) {
   // ログインページにリダイレクトされているか確認
   const currentUrl = page.url()
   if (currentUrl.includes('/login')) {
-    // ログイン情報を取得
-    let testEnv
-    try {
-      testEnv = EnvConfig.getTestEnvironment()
-    } catch {
-      // 環境変数が設定されていない場合はデフォルト値を使用
-      testEnv = {
-        baseUrl: 'http://localhost:3000',
-        credentials: {
-          email: 'e2e-test@swimhub.com',
-          password: 'E2ETest123!',
-        },
-      }
-    }
+    // ログイン情報を取得（環境変数が必須）
+    const testEnv = EnvConfig.getTestEnvironment()
     
     // ログインフォームが表示されるまで待つ
     await page.waitForSelector('[data-testid="email-input"]', { timeout: 10000 })
@@ -58,7 +46,19 @@ async function loginIfNeeded(page: Page) {
   }
 }
 
+// テスト開始前に環境変数を検証
+let hasRequiredEnvVars = false
+try {
+  EnvConfig.getTestEnvironment()
+  hasRequiredEnvVars = true
+} catch (error) {
+  console.error('環境変数の検証に失敗しました:', error instanceof Error ? error.message : error)
+}
+
 test.describe('個人大会記録のテスト', () => {
+  // 環境変数が不足している場合はテストスイートをスキップ
+  test.skip(!hasRequiredEnvVars, '必要な環境変数が設定されていません。E2E_BASE_URL, E2E_EMAIL, E2E_PASSWORD を設定してください。')
+
   test.beforeEach(async ({ page }) => {
     // ログインが必要な場合はログイン処理を実行
     await loginIfNeeded(page)
