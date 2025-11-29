@@ -471,7 +471,7 @@ export function useDashboardHandlers({
           throw competitionError || new Error('大会情報の取得に失敗しました')
         }
 
-        const competitionPoolType = (competition.pool_type ?? 0) as 0 | 1
+        const competitionPoolType = (competition as { pool_type: 0 | 1 }).pool_type
 
         for (const formData of dataArray) {
           const recordForCreate: Omit<import('@apps/shared/types/database').RecordInsert, 'user_id'> = {

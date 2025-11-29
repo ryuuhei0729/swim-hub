@@ -202,12 +202,12 @@ export default function TeamRecords({ teamId, isAdmin: _isAdmin = false }: TeamR
             className="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200"
           >
             {/* 順位 */}
-            <div className="flex-shrink-0 w-8">
+            <div className="shrink-0 w-8">
               {getRankIcon(index)}
             </div>
             
             {/* ユーザーアイコン */}
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               <div className="h-10 w-10 bg-gray-300 rounded-full flex items-center justify-center">
                 <UserIcon className="h-6 w-6 text-gray-600" />
               </div>
@@ -234,7 +234,7 @@ export default function TeamRecords({ teamId, isAdmin: _isAdmin = false }: TeamR
             </div>
             
             {/* タイム */}
-            <div className="flex-shrink-0 text-right">
+            <div className="shrink-0 text-right">
               <p className="text-lg font-bold text-gray-900">
                 {formatTime(record.time)}
               </p>
