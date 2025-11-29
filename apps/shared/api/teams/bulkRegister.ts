@@ -14,6 +14,7 @@ export interface BulkRegisterInput {
   competitions: Array<{
     title: string
     date: string
+    end_date?: string | null // 終了日（複数日開催の場合）
     place: string
     pool_type: number
     note: string | null
@@ -94,6 +95,7 @@ export class TeamBulkRegisterAPI {
           team_id: teamId,
           title: competition.title,
           date: competition.date,
+          end_date: competition.end_date || null, // 終了日（複数日開催の場合）
           place: competition.place,
           pool_type: competition.pool_type,
           note: competition.note,

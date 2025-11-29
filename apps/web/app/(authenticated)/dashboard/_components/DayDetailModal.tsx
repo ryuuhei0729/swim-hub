@@ -307,6 +307,8 @@ export default function DayDetailModal({
                               competition: {
                                 id: competitionId,
                                 title: item.metadata?.competition?.title || '',
+                                date: item.metadata?.competition?.date || item.date,
+                                end_date: item.metadata?.competition?.end_date || null,
                                 place: item.place || '',
                                 pool_type: item.metadata?.competition?.pool_type || 0
                               }
@@ -417,6 +419,8 @@ export default function DayDetailModal({
                               competition: {
                                 id: compId,
                                 title: record.title || '',
+                                date: record.metadata?.competition?.date || record.date,
+                                end_date: record.metadata?.competition?.end_date || null,
                                 place: record.place || '',
                                 pool_type: poolType
                               }

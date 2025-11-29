@@ -297,12 +297,16 @@ export function useDashboardHandlers({
   }, [supabase, refreshCalendar])
 
   // 大会情報作成・更新
-  const handleCompetitionBasicSubmit = useCallback(async (basicData: { date: string; title: string; place: string; poolType: number; note: string }) => {
+  const handleCompetitionBasicSubmit = useCallback(async (basicData: { date: string; endDate: string; title: string; place: string; poolType: number; note: string }) => {
     setLoading(true)
     try {
+      // 終了日は空文字の場合はnullに変換
+      const endDate = basicData.endDate ? basicData.endDate : null
+      
       if (competitionEditingData && competitionEditingData.id) {
         await updateCompetition(competitionEditingData.id, {
           date: basicData.date,
+          end_date: endDate,
           title: basicData.title,
           place: basicData.place,
           pool_type: basicData.poolType,
@@ -313,6 +317,7 @@ export function useDashboardHandlers({
       } else {
         const newCompetition = await createCompetition({
           date: basicData.date,
+          end_date: endDate,
           title: basicData.title,
           place: basicData.place,
           pool_type: basicData.poolType,
