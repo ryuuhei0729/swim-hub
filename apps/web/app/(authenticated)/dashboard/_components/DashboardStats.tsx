@@ -84,7 +84,7 @@ export default function DashboardStats() {
       {stats.map((stat, index) => (
         <div key={index} className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <div className={`flex-shrink-0 p-3 rounded-lg ${stat.color}`}>
+            <div className={`shrink-0 p-3 rounded-lg ${stat.color}`}>
               <stat.icon className="h-6 w-6 text-white" aria-hidden="true" />
             </div>
             <div className="ml-4 flex-1">

@@ -161,7 +161,7 @@ export interface Record {
   title?: string
   place?: string
   time_result?: number
-  pool_type?: PoolType
+  pool_type: PoolType // DB上はNOT NULL
   tags?: string[]
   competition_name?: string
   team_practice?: boolean

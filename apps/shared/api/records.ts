@@ -116,6 +116,7 @@ export class RecordAPI {
       time: number
       is_relaying: boolean
       note: string | null
+      pool_type: number
     }>
   ): Promise<{ created: number; errors: string[] }> {
     const { data: { user } } = await this.supabase.auth.getUser()
@@ -135,6 +136,7 @@ export class RecordAPI {
         time: record.time,
         is_relaying: record.is_relaying,
         note: record.note,
+        pool_type: record.pool_type,
         competition_id: null, // 大会に紐づけない
         team_id: null, // 個人記録
         video_url: null

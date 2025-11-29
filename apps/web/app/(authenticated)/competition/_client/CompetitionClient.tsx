@@ -100,11 +100,11 @@ export default function CompetitionClient({
       return false
     }
     
-    // プール種別フィルタ
-    if (filterPoolType === 'long' && record.competition?.pool_type !== 1) {
+    // プール種別フィルタ（records.pool_type を使用）
+    if (filterPoolType === 'long' && record.pool_type !== 1) {
       return false
     }
-    if (filterPoolType === 'short' && record.competition?.pool_type !== 0) {
+    if (filterPoolType === 'short' && record.pool_type !== 0) {
       return false
     }
     
@@ -449,7 +449,7 @@ export default function CompetitionClient({
                       ) : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {(record.competition as Competition)?.pool_type === 1 ? '長水路' : (record.competition as Competition)?.pool_type === 0 ? '短水路' : '-'}
+                      {record.pool_type === 1 ? '長水路' : record.pool_type === 0 ? '短水路' : '-'}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
                       {record.note || '-'}
@@ -589,9 +589,9 @@ export default function CompetitionClient({
                             📍 {selectedRecord.competition.place}
                           </p>
                         )}
-                        {selectedRecord.competition?.pool_type != null && (
+                        {selectedRecord.pool_type != null && (
                           <p className="text-sm text-gray-600 mb-1">
-                            🏊‍♀️ {selectedRecord.competition.pool_type === 1 ? '長水路(50m)' : '短水路(25m)'}
+                            🏊‍♀️ {selectedRecord.pool_type === 1 ? '長水路(50m)' : '短水路(25m)'}
                           </p>
                         )}
                         {selectedRecord.time && (

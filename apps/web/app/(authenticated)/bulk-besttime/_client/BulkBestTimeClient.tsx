@@ -1,125 +1,315 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts'
 import { RecordAPI } from '@apps/shared/api/records'
-import { 
-  downloadBestTimeTemplate, 
-  parseBestTimeExcel, 
-  formatTimeFromSeconds,
-  type ParsedBestTimeData 
-} from '@/utils/bestTimeExcel'
 import {
-  ArrowDownTrayIcon,
-  DocumentArrowUpIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
   ArrowLeftIcon
 } from '@heroicons/react/24/outline'
 
+// =============================================================================
+// 型定義
+// =============================================================================
+
+// 種目タブ
+type StyleTab = 'fr' | 'br' | 'ba' | 'fly' | 'im'
+
+// 種目定義
+interface StyleDefinition {
+  id: number
+  nameJp: string
+  style: string
+  distance: number
+}
+
+// 入力データ
+interface BestTimeInput {
+  time: string      // 入力値（文字列）
+  note: string      // 備考
+  timeInSeconds?: number  // パース済みタイム（秒）
+  error?: string    // エラーメッセージ
+}
+
+// =============================================================================
+// 定数定義
+// =============================================================================
+
+// 種目マスターデータ（stylesテーブルと同期）
+const STYLES: StyleDefinition[] = [
+  { id: 1, nameJp: '25m自由形', style: 'fr', distance: 25 },
+  { id: 2, nameJp: '50m自由形', style: 'fr', distance: 50 },
+  { id: 3, nameJp: '100m自由形', style: 'fr', distance: 100 },
+  { id: 4, nameJp: '200m自由形', style: 'fr', distance: 200 },
+  { id: 5, nameJp: '400m自由形', style: 'fr', distance: 400 },
+  { id: 6, nameJp: '800m自由形', style: 'fr', distance: 800 },
+  { id: 7, nameJp: '1500m自由形', style: 'fr', distance: 1500 },
+  { id: 8, nameJp: '25m平泳ぎ', style: 'br', distance: 25 },
+  { id: 9, nameJp: '50m平泳ぎ', style: 'br', distance: 50 },
+  { id: 10, nameJp: '100m平泳ぎ', style: 'br', distance: 100 },
+  { id: 11, nameJp: '200m平泳ぎ', style: 'br', distance: 200 },
+  { id: 12, nameJp: '25m背泳ぎ', style: 'ba', distance: 25 },
+  { id: 13, nameJp: '50m背泳ぎ', style: 'ba', distance: 50 },
+  { id: 14, nameJp: '100m背泳ぎ', style: 'ba', distance: 100 },
+  { id: 15, nameJp: '200m背泳ぎ', style: 'ba', distance: 200 },
+  { id: 16, nameJp: '25mバタフライ', style: 'fly', distance: 25 },
+  { id: 17, nameJp: '50mバタフライ', style: 'fly', distance: 50 },
+  { id: 18, nameJp: '100mバタフライ', style: 'fly', distance: 100 },
+  { id: 19, nameJp: '200mバタフライ', style: 'fly', distance: 200 },
+  { id: 20, nameJp: '100m個人メドレー', style: 'im', distance: 100 },
+  { id: 21, nameJp: '200m個人メドレー', style: 'im', distance: 200 },
+  { id: 22, nameJp: '400m個人メドレー', style: 'im', distance: 400 },
+]
+
+// 種目タブ定義
+const STYLE_TABS: Array<{ id: StyleTab; name: string; color: string }> = [
+  { id: 'fr', name: '自由形', color: 'yellow' },
+  { id: 'br', name: '平泳ぎ', color: 'green' },
+  { id: 'ba', name: '背泳ぎ', color: 'red' },
+  { id: 'fly', name: 'バタフライ', color: 'blue' },
+  { id: 'im', name: '個人メドレー', color: 'purple' },
+]
+
+// 種目別距離定義
+const DISTANCES_BY_STYLE: Record<StyleTab, number[]> = {
+  fr: [25, 50, 100, 200, 400, 800, 1500],
+  br: [25, 50, 100, 200],
+  ba: [25, 50, 100, 200],
+  fly: [25, 50, 100, 200],
+  im: [100, 200, 400],
+}
+
+// プール種別定義
+const POOL_TYPES = [
+  { value: 0, label: '短水路', shortLabel: '短水路' },
+  { value: 1, label: '長水路', shortLabel: '長水路' },
+] as const
+
+// =============================================================================
+// ユーティリティ関数
+// =============================================================================
+
+/**
+ * タイム文字列を秒数に変換
+ */
+function parseTimeToSeconds(timeStr: string): number | null {
+  if (!timeStr || typeof timeStr !== 'string') return null
+  
+  const cleanStr = timeStr.trim()
+  if (!cleanStr) return null
+  
+  // 形式1: m:ss.00 または mm:ss.00
+  const colonFormat2Decimal = /^(\d{1,2}):(\d{2})\.(\d{2})$/
+  const colonMatch2Decimal = cleanStr.match(colonFormat2Decimal)
+  if (colonMatch2Decimal) {
+    const minutes = parseInt(colonMatch2Decimal[1], 10)
+    const seconds = parseInt(colonMatch2Decimal[2], 10)
+    const centiseconds = parseInt(colonMatch2Decimal[3], 10)
+    if (seconds >= 60) return null
+    return minutes * 60 + seconds + centiseconds / 100
+  }
+  
+  // 形式2: m:ss.0 または mm:ss.0
+  const colonFormat1Decimal = /^(\d{1,2}):(\d{2})\.(\d{1})$/
+  const colonMatch1Decimal = cleanStr.match(colonFormat1Decimal)
+  if (colonMatch1Decimal) {
+    const minutes = parseInt(colonMatch1Decimal[1], 10)
+    const seconds = parseInt(colonMatch1Decimal[2], 10)
+    const deciseconds = parseInt(colonMatch1Decimal[3], 10)
+    if (seconds >= 60) return null
+    return minutes * 60 + seconds + deciseconds / 10
+  }
+  
+  // 形式3: m:ss または mm:ss
+  const colonFormatNoDecimal = /^(\d{1,2}):(\d{2})$/
+  const colonMatchNoDecimal = cleanStr.match(colonFormatNoDecimal)
+  if (colonMatchNoDecimal) {
+    const minutes = parseInt(colonMatchNoDecimal[1], 10)
+    const seconds = parseInt(colonMatchNoDecimal[2], 10)
+    if (seconds >= 60) return null
+    return minutes * 60 + seconds
+  }
+  
+  // 形式4: ss.00
+  const simpleFormat2Decimal = /^(\d{1,2})\.(\d{2})$/
+  const simpleMatch2Decimal = cleanStr.match(simpleFormat2Decimal)
+  if (simpleMatch2Decimal) {
+    const totalSeconds = parseInt(simpleMatch2Decimal[1], 10)
+    const centiseconds = parseInt(simpleMatch2Decimal[2], 10)
+    return totalSeconds + centiseconds / 100
+  }
+  
+  // 形式5: ss.0
+  const simpleFormat1Decimal = /^(\d{1,2})\.(\d{1})$/
+  const simpleMatch1Decimal = cleanStr.match(simpleFormat1Decimal)
+  if (simpleMatch1Decimal) {
+    const totalSeconds = parseInt(simpleMatch1Decimal[1], 10)
+    const deciseconds = parseInt(simpleMatch1Decimal[2], 10)
+    return totalSeconds + deciseconds / 10
+  }
+  
+  // 形式6: ss
+  const simpleFormatNoDecimal = /^(\d{1,2})$/
+  const simpleMatchNoDecimal = cleanStr.match(simpleFormatNoDecimal)
+  if (simpleMatchNoDecimal) {
+    const totalSeconds = parseInt(simpleMatchNoDecimal[1], 10)
+    return totalSeconds
+  }
+  
+  return null
+}
+
+/**
+ * style_idを取得
+ */
+function getStyleId(styleCode: string, distance: number): number | null {
+  const style = STYLES.find(s => s.style === styleCode && s.distance === distance)
+  return style ? style.id : null
+}
+
+/**
+ * 長水路で有効な種目かチェック
+ */
+function isValidForLongCourse(styleCode: string, distance: number): boolean {
+  // 25mは長水路では存在しない
+  if (distance === 25) return false
+  // 長水路の100m個人メドレーは存在しない
+  if (styleCode === 'im' && distance === 100) return false
+  return true
+}
+
+/**
+ * リレイングが可能な種目かチェック
+ */
+function canRelay(styleCode: string, distance: number): boolean {
+  // リレーメドレーは全てリレイング可能
+  if (styleCode === 'relay') return true
+  // 背泳ぎと個人メドレーはリレイング不可
+  if (styleCode === 'ba' || styleCode === 'im') return false
+  // 200m以上は自由形のみリレイング可能
+  if (distance >= 200 && styleCode !== 'fr') return false
+  return true
+}
+
+// =============================================================================
+// メインコンポーネント
+// =============================================================================
+
 export default function BulkBestTimeClient() {
   const router = useRouter()
   const { supabase } = useAuth()
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [parsedData, setParsedData] = useState<ParsedBestTimeData | null>(null)
+  const [activeTab, setActiveTab] = useState<StyleTab>('fr')
+  const [inputs, setInputs] = useState<Map<string, BestTimeInput>>(new Map())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const [registerResult, setRegisterResult] = useState<{
-    created: number
-    errors: string[]
-  } | null>(null)
 
   const recordAPI = useMemo(() => {
     if (!supabase) return null
     return new RecordAPI(supabase)
   }, [supabase])
 
-  const handleDownloadTemplate = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      await downloadBestTimeTemplate()
-    } catch (err) {
-      setError('テンプレートのダウンロードに失敗しました')
-      console.error('テンプレートダウンロードエラー:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // 入力キーの生成
+  const getInputKey = useCallback((styleId: number, poolType: number, isRelaying: boolean) => {
+    return `${styleId}_${poolType}_${isRelaying ? '1' : '0'}`
+  }, [])
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    // Excelファイルかチェック
-    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
-      setError('Excelファイル（.xlsx または .xls）を選択してください')
-      return
-    }
-
-    setSelectedFile(file)
-    setError(null)
-    setSuccess(null)
-    setRegisterResult(null)
-    setLoading(true)
-
-    try {
-      const data = await parseBestTimeExcel(file)
-      setParsedData(data)
-      
-      if (data.errors.length > 0) {
-        setError(`${data.errors.length}件のエラーが見つかりました。プレビューを確認してください。`)
+  // 入力値の更新
+  const handleInputChange = useCallback((
+    styleId: number,
+    poolType: number,
+    isRelaying: boolean,
+    field: 'time' | 'note',
+    value: string
+  ) => {
+    const key = getInputKey(styleId, poolType, isRelaying)
+    const current = inputs.get(key) || { time: '', note: '' }
+    
+    const updated = { ...current, [field]: value }
+    
+    // タイムが変更された場合、バリデーション
+    if (field === 'time') {
+      if (value.trim()) {
+        const timeInSeconds = parseTimeToSeconds(value)
+        if (timeInSeconds === null || timeInSeconds <= 0) {
+          updated.error = 'タイム形式が不正です（例: 1:23.45 または 23.45）'
+          updated.timeInSeconds = undefined
+        } else {
+          updated.error = undefined
+          updated.timeInSeconds = timeInSeconds
+        }
+      } else {
+        updated.error = undefined
+        updated.timeInSeconds = undefined
       }
-    } catch (err) {
-      setError('ファイルの読み込みに失敗しました')
-      console.error('ファイル読み込みエラー:', err)
-      setParsedData(null)
-    } finally {
-      setLoading(false)
     }
-  }
+    
+    const newInputs = new Map(inputs)
+    if (updated.time || updated.note) {
+      newInputs.set(key, updated)
+    } else {
+      newInputs.delete(key)
+    }
+    setInputs(newInputs)
+  }, [inputs, getInputKey])
 
-  const handleBulkRegister = async () => {
-    if (!parsedData || !recordAPI) return
+  // 入力済み件数のカウント
+  const validInputCount = useMemo(() => {
+    let count = 0
+    inputs.forEach((input) => {
+      if (input.time && !input.error && input.timeInSeconds !== undefined) {
+        count++
+      }
+    })
+    return count
+  }, [inputs])
 
-    if (parsedData.records.length === 0) {
+  // 一括登録処理
+  const handleBulkRegister = useCallback(async () => {
+    if (!recordAPI) return
+    
+    // 有効な入力のみを抽出
+    const records: Array<{
+      style_id: number
+      time: number
+      is_relaying: boolean
+      note: string | null
+      pool_type: number
+    }> = []
+    
+    inputs.forEach((input, key) => {
+      if (input.time && !input.error && input.timeInSeconds !== undefined) {
+        const [styleIdStr, poolTypeStr, isRelayingStr] = key.split('_')
+        records.push({
+          style_id: parseInt(styleIdStr, 10),
+          time: input.timeInSeconds,
+          is_relaying: isRelayingStr === '1',
+          note: input.note.trim() || null,
+          pool_type: Number(poolTypeStr),
+        })
+      }
+    })
+    
+    if (records.length === 0) {
       setError('登録するデータがありません')
       return
     }
-
-    if (parsedData.errors.length > 0) {
-      const confirmed = window.confirm(
-        `${parsedData.errors.length}件のエラーがありますが、エラーのないデータのみ登録しますか？`
-      )
-      if (!confirmed) return
-    }
-
+    
     setLoading(true)
     setError(null)
     setSuccess(null)
-    setRegisterResult(null)
-
+    
     try {
-      const result = await recordAPI.createBulkRecords(
-        parsedData.records.map(record => ({
-          style_id: record.styleId,
-          time: record.time,
-          is_relaying: record.isRelaying,
-          note: record.note
-        }))
-      )
-
-      setRegisterResult(result)
-
+      const result = await recordAPI.createBulkRecords(records)
+      
       if (result.errors.length === 0) {
         setSuccess(`${result.created}件の記録を登録しました`)
-        // ファイル選択をリセット
-        setSelectedFile(null)
-        setParsedData(null)
+        // 入力をクリア
+        setInputs(new Map())
       } else {
-        setError(`一部の登録に失敗しました`)
+        setError(`一部の登録に失敗しました: ${result.errors.join(', ')}`)
       }
     } catch (err) {
       setError('一括登録に失敗しました')
@@ -127,24 +317,11 @@ export default function BulkBestTimeClient() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [inputs, recordAPI])
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     router.push('/mypage')
-  }
-
-  // プレビューデータをシート別に整理
-  const groupedRecords = useMemo(() => {
-    if (!parsedData) return null
-    
-    const groups = {
-      shortCourse: parsedData.records.filter(r => r.poolType === 0 && !r.isRelaying),
-      shortRelay: parsedData.records.filter(r => r.poolType === 0 && r.isRelaying),
-      longCourse: parsedData.records.filter(r => r.poolType === 1 && !r.isRelaying),
-      longRelay: parsedData.records.filter(r => r.poolType === 1 && r.isRelaying),
-    }
-    return groups
-  }, [parsedData])
+  }, [router])
 
   return (
     <div className="space-y-6">
@@ -163,16 +340,16 @@ export default function BulkBestTimeClient() {
               ベストタイム一括入力
             </h1>
             <p className="text-gray-600 mt-1">
-              Excelファイルを使用して、過去のベストタイムを一括で登録できます
+              種目ごとにベストタイムを直接入力できます
             </p>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-lg shadow">
         {/* エラー表示 */}
         {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="p-4 bg-red-50 border-b border-red-200">
             <div className="flex">
               <ExclamationTriangleIcon className="h-5 w-5 text-red-400 shrink-0" />
               <div className="ml-3">
@@ -184,7 +361,7 @@ export default function BulkBestTimeClient() {
 
         {/* 成功表示 */}
         {success && (
-          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="p-4 bg-green-50 border-b border-green-200">
             <div className="flex">
               <CheckCircleIcon className="h-5 w-5 text-green-400 shrink-0" />
               <div className="ml-3">
@@ -194,257 +371,323 @@ export default function BulkBestTimeClient() {
           </div>
         )}
 
-        {/* ステップ1: テンプレートダウンロード */}
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
-            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-sm mr-2">1</span>
-            テンプレートをダウンロード
-          </h2>
-          <p className="text-sm text-gray-600 mb-4">
-            まず、Excelテンプレートをダウンロードしてください。テンプレートには以下の4シートが含まれます：
-          </p>
-          <ul className="text-sm text-gray-600 mb-4 ml-4 list-disc">
-            <li><strong>短水路</strong>：25mプールでの記録（通常）</li>
-            <li><strong>短水路（引き継ぎ有）</strong>：25mプールでのリレーイング記録</li>
-            <li><strong>長水路</strong>：50mプールでの記録（通常）</li>
-            <li><strong>長水路（引き継ぎ有）</strong>：50mプールでのリレーイング記録</li>
-          </ul>
-          <button
-            onClick={handleDownloadTemplate}
-            disabled={loading}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-          >
-            <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
-            テンプレートをダウンロード
-          </button>
-        </div>
-
-        {/* ステップ2: ファイルアップロード */}
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
-            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-sm mr-2">2</span>
-            記録を入力してアップロード
-          </h2>
-          <p className="text-sm text-gray-600 mb-4">
-            テンプレートに記録を入力し、ファイルをアップロードしてください。
-            <br />
-            タイム形式：<code className="bg-gray-100 px-1 py-0.5 rounded">1:23.45</code>（分:秒.00）または <code className="bg-gray-100 px-1 py-0.5 rounded">23.45</code>（秒.00）
-          </p>
-          <div className="flex items-center space-x-4">
-            <label
-              htmlFor="file-upload"
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
-            >
-              <DocumentArrowUpIcon className="h-5 w-5 mr-2" />
-              ファイルを選択
-            </label>
-            <input
-              id="file-upload"
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleFileSelect}
-              className="hidden"
-              disabled={loading}
-            />
-            {selectedFile && (
-              <span className="text-sm text-gray-700">
-                {selectedFile.name}
-              </span>
-            )}
-          </div>
-          {loading && !parsedData && (
-            <p className="mt-2 text-sm text-gray-600">
-              ファイルを読み込んでいます...
-            </p>
-          )}
-        </div>
-
-        {/* プレビュー */}
-        {parsedData && (
-          <div className="mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-sm mr-2">3</span>
-              プレビュー
-            </h2>
-
-            {/* エラー一覧 */}
-            {parsedData.errors.length > 0 && (
-              <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <div className="flex items-start">
-                  <ExclamationTriangleIcon className="h-5 w-5 text-yellow-400 shrink-0 mt-0.5" />
-                  <div className="ml-3 flex-1">
-                    <h4 className="text-sm font-medium text-yellow-800 mb-2">
-                      エラー ({parsedData.errors.length}件)
-                    </h4>
-                    <div className="max-h-40 overflow-y-auto">
-                      <ul className="list-disc list-inside text-sm text-yellow-700 space-y-1">
-                        {parsedData.errors.slice(0, 20).map((err, index) => (
-                          <li key={index}>
-                            {err.sheet}シート {err.row}行目: {err.message}
-                          </li>
-                        ))}
-                        {parsedData.errors.length > 20 && (
-                          <li className="text-yellow-600">
-                            他 {parsedData.errors.length - 20}件のエラーがあります
-                          </li>
-                        )}
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 登録予定データ */}
-            <div className="space-y-6">
-              {/* 短水路 */}
-              {groupedRecords?.shortCourse && groupedRecords.shortCourse.length > 0 && (
-                <RecordPreviewTable 
-                  title="短水路" 
-                  records={groupedRecords.shortCourse} 
-                />
-              )}
-
-              {/* 短水路（引き継ぎ有） */}
-              {groupedRecords?.shortRelay && groupedRecords.shortRelay.length > 0 && (
-                <RecordPreviewTable 
-                  title="短水路（引き継ぎ有）" 
-                  records={groupedRecords.shortRelay} 
-                />
-              )}
-
-              {/* 長水路 */}
-              {groupedRecords?.longCourse && groupedRecords.longCourse.length > 0 && (
-                <RecordPreviewTable 
-                  title="長水路" 
-                  records={groupedRecords.longCourse} 
-                />
-              )}
-
-              {/* 長水路（引き継ぎ有） */}
-              {groupedRecords?.longRelay && groupedRecords.longRelay.length > 0 && (
-                <RecordPreviewTable 
-                  title="長水路（引き継ぎ有）" 
-                  records={groupedRecords.longRelay} 
-                />
-              )}
-
-              {parsedData.records.length === 0 && (
-                <p className="text-gray-600 text-center py-4">
-                  登録可能なデータがありません
-                </p>
-              )}
-
-              {/* 登録ボタン */}
-              {parsedData.records.length > 0 && (
-                <div className="pt-4 border-t border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-gray-600">
-                      合計 <strong>{parsedData.records.length}件</strong> の記録を登録します
-                    </p>
-                    <button
-                      onClick={handleBulkRegister}
-                      disabled={loading}
-                      className="inline-flex items-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {loading ? (
-                        <>
-                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          登録中...
-                        </>
-                      ) : (
-                        '一括登録する'
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* 登録結果 */}
-        {registerResult && (
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h4 className="text-md font-medium text-blue-800 mb-2">
-              登録結果
-            </h4>
-            <ul className="list-disc list-inside text-sm text-blue-700 space-y-1">
-              <li>登録件数: {registerResult.created}件</li>
-              {registerResult.errors.length > 0 && (
-                <li className="text-red-700">
-                  エラー: {registerResult.errors.join(', ')}
-                </li>
-              )}
-            </ul>
-            {registerResult.errors.length === 0 && (
+        {/* 種目タブ */}
+        <div className="border-b border-gray-200">
+          <nav className="flex -mb-px overflow-x-auto" aria-label="種目タブ">
+            {STYLE_TABS.map((tab) => (
               <button
-                onClick={handleBack}
-                className="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`
+                  whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors
+                  ${activeTab === tab.id
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }
+                `}
               >
-                マイページで確認する
+                {tab.name}
               </button>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// プレビューテーブルコンポーネント
-interface RecordPreviewTableProps {
-  title: string
-  records: ParsedBestTimeData['records']
-}
-
-function RecordPreviewTable({ title, records }: RecordPreviewTableProps) {
-  return (
-    <div>
-      <h4 className="text-md font-medium text-gray-800 mb-2">
-        {title} ({records.length}件)
-      </h4>
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                種目
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                タイム
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                備考
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {records.slice(0, 10).map((record, index) => (
-              <tr key={index}>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                  {record.styleName}
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {formatTimeFromSeconds(record.time)}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-500">
-                  {record.note || '-'}
-                </td>
-              </tr>
             ))}
-          </tbody>
-        </table>
-        {records.length > 10 && (
-          <p className="mt-2 text-sm text-gray-600">
-            他 {records.length - 10}件のデータがあります
-          </p>
-        )}
+          </nav>
+        </div>
+
+        {/* テーブル */}
+        <div className="p-6">
+          <BestTimeTable
+            styleTab={activeTab}
+            inputs={inputs}
+            onInputChange={handleInputChange}
+            getInputKey={getInputKey}
+          />
+        </div>
+
+        {/* フッター */}
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              入力済み: <strong className="text-gray-900">{validInputCount}件</strong>
+            </p>
+            <button
+              onClick={handleBulkRegister}
+              disabled={loading || validInputCount === 0}
+              className="inline-flex items-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {loading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  登録中...
+                </>
+              ) : (
+                '一括登録する'
+              )}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )
 }
 
+// =============================================================================
+// サブコンポーネント: ベストタイムテーブル
+// =============================================================================
+
+interface BestTimeTableProps {
+  styleTab: StyleTab
+  inputs: Map<string, BestTimeInput>
+  onInputChange: (
+    styleId: number,
+    poolType: number,
+    isRelaying: boolean,
+    field: 'time' | 'note',
+    value: string
+  ) => void
+  getInputKey: (styleId: number, poolType: number, isRelaying: boolean) => string
+}
+
+function BestTimeTable({ styleTab, inputs, onInputChange, getInputKey }: BestTimeTableProps) {
+  const distances = DISTANCES_BY_STYLE[styleTab]
+  
+  // リレイング列を表示するか
+  const showRelaying = styleTab !== 'ba' && styleTab !== 'im'
+  
+  return (
+    <div className="overflow-x-auto">
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+              距離
+            </th>
+            {POOL_TYPES.map((poolType) => {
+              const colSpan = showRelaying ? 4 : 2
+              return (
+                <th
+                  key={poolType.value}
+                  colSpan={colSpan}
+                  className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200"
+                >
+                  {poolType.label}
+                </th>
+              )
+            })}
+          </tr>
+          <tr>
+            <th className="px-4 py-3 border-r border-gray-200"></th>
+            {POOL_TYPES.map((poolType) => (
+              <React.Fragment key={poolType.value}>
+                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">
+                  タイム
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase border-r border-gray-200">
+                  備考
+                </th>
+                {showRelaying && (
+                  <>
+                    <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">
+                  引き継ぎ
+                    </th>
+                    <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase border-r border-gray-200">
+                      備考
+                    </th>
+                  </>
+                )}
+              </React.Fragment>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {distances.map((distance) => {
+            const styleId = getStyleId(styleTab, distance)
+            if (!styleId) return null
+            
+            return (
+              <tr key={distance} className="hover:bg-gray-50">
+                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-200">
+                  {distance}m
+                </td>
+                {POOL_TYPES.map((poolType) => {
+                  // 長水路で無効な種目はスキップ
+                  const isValid = poolType.value === 0 || isValidForLongCourse(styleTab, distance)
+                  const canRelayThis = canRelay(styleTab, distance)
+                  
+                  return (
+                    <React.Fragment key={poolType.value}>
+                      {/* 通常タイム */}
+                      <TimeInputCell
+                        styleId={styleId}
+                        poolType={poolType.value}
+                        isRelaying={false}
+                        inputs={inputs}
+                        onInputChange={onInputChange}
+                        getInputKey={getInputKey}
+                        disabled={!isValid}
+                      />
+                      <NoteInputCell
+                        styleId={styleId}
+                        poolType={poolType.value}
+                        isRelaying={false}
+                        inputs={inputs}
+                        onInputChange={onInputChange}
+                        getInputKey={getInputKey}
+                        disabled={!isValid}
+                        isLast={!showRelaying}
+                      />
+                      
+                      {/* リレイングタイム */}
+                      {showRelaying && (
+                        <>
+                          <TimeInputCell
+                            styleId={styleId}
+                            poolType={poolType.value}
+                            isRelaying={true}
+                            inputs={inputs}
+                            onInputChange={onInputChange}
+                            getInputKey={getInputKey}
+                            disabled={!isValid || !canRelayThis}
+                          />
+                          <NoteInputCell
+                            styleId={styleId}
+                            poolType={poolType.value}
+                            isRelaying={true}
+                            inputs={inputs}
+                            onInputChange={onInputChange}
+                            getInputKey={getInputKey}
+                            disabled={!isValid || !canRelayThis}
+                            isLast={true}
+                          />
+                        </>
+                      )}
+                    </React.Fragment>
+                  )
+                })}
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// =============================================================================
+// サブコンポーネント: タイム入力セル
+// =============================================================================
+
+interface TimeInputCellProps {
+  styleId: number
+  poolType: number
+  isRelaying: boolean
+  inputs: Map<string, BestTimeInput>
+  onInputChange: (
+    styleId: number,
+    poolType: number,
+    isRelaying: boolean,
+    field: 'time' | 'note',
+    value: string
+  ) => void
+  getInputKey: (styleId: number, poolType: number, isRelaying: boolean) => string
+  disabled?: boolean
+}
+
+function TimeInputCell({
+  styleId,
+  poolType,
+  isRelaying,
+  inputs,
+  onInputChange,
+  getInputKey,
+  disabled = false
+}: TimeInputCellProps) {
+  const key = getInputKey(styleId, poolType, isRelaying)
+  const input = inputs.get(key)
+  const hasError = input?.error
+
+  if (disabled) {
+    return (
+      <td className="px-3 py-2 text-center bg-gray-100">
+        <span className="text-gray-400">━</span>
+      </td>
+    )
+  }
+
+  return (
+    <td className="px-3 py-2">
+      <input
+        type="text"
+        value={input?.time || ''}
+        onChange={(e) => onInputChange(styleId, poolType, isRelaying, 'time', e.target.value)}
+        placeholder="1:23.45"
+        className={`
+          w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 placeholder-gray-400
+          ${hasError
+            ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+            : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+          }
+        `}
+      />
+      {hasError && (
+        <p className="mt-1 text-xs text-red-600">{input.error}</p>
+      )}
+    </td>
+  )
+}
+
+// =============================================================================
+// サブコンポーネント: 備考入力セル
+// =============================================================================
+
+interface NoteInputCellProps {
+  styleId: number
+  poolType: number
+  isRelaying: boolean
+  inputs: Map<string, BestTimeInput>
+  onInputChange: (
+    styleId: number,
+    poolType: number,
+    isRelaying: boolean,
+    field: 'time' | 'note',
+    value: string
+  ) => void
+  getInputKey: (styleId: number, poolType: number, isRelaying: boolean) => string
+  disabled?: boolean
+  isLast?: boolean
+}
+
+function NoteInputCell({
+  styleId,
+  poolType,
+  isRelaying,
+  inputs,
+  onInputChange,
+  getInputKey,
+  disabled = false,
+  isLast = false
+}: NoteInputCellProps) {
+  const key = getInputKey(styleId, poolType, isRelaying)
+  const input = inputs.get(key)
+
+  if (disabled) {
+    return (
+      <td className={`px-3 py-2 text-center bg-gray-100 ${isLast ? 'border-r border-gray-200' : ''}`}>
+        <span className="text-gray-400">━</span>
+      </td>
+    )
+  }
+
+  return (
+    <td className={`px-3 py-2 ${isLast ? 'border-r border-gray-200' : ''}`}>
+      <input
+        type="text"
+        value={input?.note || ''}
+        onChange={(e) => onInputChange(styleId, poolType, isRelaying, 'note', e.target.value)}
+        placeholder="大会名など"
+        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+      />
+    </td>
+  )
+}

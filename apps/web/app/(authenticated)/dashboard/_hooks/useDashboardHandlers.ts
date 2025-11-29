@@ -460,6 +460,19 @@ export function useDashboardHandlers({
           throw new Error('Competition ID が見つかりません')
         }
 
+        // 大会のプール種別を取得（records.pool_type に保存するため）
+        const { data: competition, error: competitionError } = await supabase
+          .from('competitions')
+          .select('pool_type')
+          .eq('id', competitionId)
+          .single()
+
+        if (competitionError || !competition) {
+          throw competitionError || new Error('大会情報の取得に失敗しました')
+        }
+
+        const competitionPoolType = (competition.pool_type ?? 0) as 0 | 1
+
         for (const formData of dataArray) {
           const recordForCreate: Omit<import('@apps/shared/types/database').RecordInsert, 'user_id'> = {
             style_id: parseInt(formData.styleId),
@@ -467,7 +480,8 @@ export function useDashboardHandlers({
             video_url: formData.videoUrl || null,
             note: formData.note || null,
             is_relaying: formData.isRelaying || false,
-            competition_id: competitionId
+            competition_id: competitionId,
+            pool_type: competitionPoolType
           }
 
           const newRecord = await createRecord(recordForCreate)
