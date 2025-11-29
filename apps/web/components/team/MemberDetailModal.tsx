@@ -369,7 +369,7 @@ export default function MemberDetailModal({
         <div className="mb-10">
           <div className="flex items-start space-x-8">
             {/* プロフィール画像 */}
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               <Avatar
                 avatarUrl={member.users?.profile_image_path || null}
                 userName={member.users?.name || 'Unknown User'}

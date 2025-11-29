@@ -149,7 +149,7 @@ export default function TeamMemberManagement({
           >
             <div className="flex items-center space-x-3 flex-1">
               {/* ユーザーアイコン */}
-              <div className="flex-shrink-0">
+              <div className="shrink-0">
                 <Avatar
                   avatarUrl={member.users?.profile_image_path || null}
                   userName={member.users?.name || 'Unknown User'}

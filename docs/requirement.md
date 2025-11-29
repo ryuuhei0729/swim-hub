@@ -414,7 +414,7 @@ SwimHub
 #### フロントエンド（Web）
 - **フレームワーク**: Next.js 15 (App Router)
 - **言語**: TypeScript 5
-- **UI**: React 19 + Tailwind CSS 3
+- **UI**: React 19 + Tailwind CSS 4
 - **状態管理**: React Hooks + Context API
 - **認証**: Supabase Auth
 - **日付処理**: date-fns 4

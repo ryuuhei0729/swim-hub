@@ -2,13 +2,16 @@
 
 import React, { useState, useMemo } from 'react'
 import { useAuth } from '@/contexts'
-import { TeamBulkRegisterAPI } from '@apps/shared/api/teams/bulkRegister'
-import { downloadExcelTemplate, parseExcelFile, type ParsedBulkData } from '@/utils/excel'
+import { TeamBulkRegisterAPI, BulkRegisterInput } from '@apps/shared/api/teams/bulkRegister'
+import { downloadPracticeExcelTemplate, parsePracticeExcelFile, type ParsedPracticeData } from '@/utils/practiceExcel'
+import { downloadCompetitionExcelTemplate, parseCompetitionExcelFile, type ParsedCompetitionData } from '@/utils/competitionExcel'
 import {
   ArrowDownTrayIcon,
   DocumentArrowUpIcon,
   CheckCircleIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  ClockIcon,
+  TrophyIcon
 } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -18,11 +21,21 @@ export interface TeamBulkRegisterProps {
   isAdmin?: boolean
 }
 
+// パース結果の共通型
+type ParsedData = {
+  type: 'practice'
+  data: ParsedPracticeData
+} | {
+  type: 'competition'
+  data: ParsedCompetitionData
+}
+
 export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRegisterProps) {
   const { supabase } = useAuth()
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
+  const [selectedPracticeYear, setSelectedPracticeYear] = useState<number>(new Date().getFullYear())
+  const [selectedCompetitionYear, setSelectedCompetitionYear] = useState<number>(new Date().getFullYear())
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [parsedData, setParsedData] = useState<ParsedBulkData | null>(null)
+  const [parsedData, setParsedData] = useState<ParsedData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -53,13 +66,26 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
     )
   }
 
-  const handleDownloadTemplate = async () => {
+  const handleDownloadPracticeTemplate = async () => {
     try {
       setLoading(true)
-      await downloadExcelTemplate(selectedYear)
+      await downloadPracticeExcelTemplate(selectedPracticeYear)
       setError(null)
     } catch (err) {
-      setError('テンプレートのダウンロードに失敗しました')
+      setError('練習テンプレートのダウンロードに失敗しました')
+      console.error('テンプレートダウンロードエラー:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDownloadCompetitionTemplate = async () => {
+    try {
+      setLoading(true)
+      await downloadCompetitionExcelTemplate(selectedCompetitionYear)
+      setError(null)
+    } catch (err) {
+      setError('大会テンプレートのダウンロードに失敗しました')
       console.error('テンプレートダウンロードエラー:', err)
     } finally {
       setLoading(false)
@@ -83,11 +109,55 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
     setLoading(true)
 
     try {
-      const data = await parseExcelFile(file)
-      setParsedData(data)
+      // ファイル名で練習か大会かを判別
+      const fileName = file.name.toLowerCase()
       
-      if (data.errors.length > 0) {
-        setError(`${data.errors.length}件のエラーが見つかりました。プレビューを確認してください。`)
+      if (fileName.includes('練習') || fileName.includes('practice')) {
+        // 練習ファイルとしてパース
+        const data = await parsePracticeExcelFile(file)
+        setParsedData({ type: 'practice', data })
+        
+        if (data.errors.length > 0) {
+          setError(`${data.errors.length}件のエラーが見つかりました。プレビューを確認してください。`)
+        }
+      } else if (fileName.includes('大会') || fileName.includes('competition')) {
+        // 大会ファイルとしてパース
+        const data = await parseCompetitionExcelFile(file)
+        setParsedData({ type: 'competition', data })
+        
+        if (data.errors.length > 0) {
+          setError(`${data.errors.length}件のエラーが見つかりました。プレビューを確認してください。`)
+        }
+      } else {
+        // 自動判別：両方試してみる
+        try {
+          const practiceData = await parsePracticeExcelFile(file)
+          if (practiceData.practices.length > 0) {
+            setParsedData({ type: 'practice', data: practiceData })
+            if (practiceData.errors.length > 0) {
+              setError(`${practiceData.errors.length}件のエラーが見つかりました。プレビューを確認してください。`)
+            }
+            return
+          }
+        } catch {
+          // 練習パースに失敗
+        }
+        
+        try {
+          const competitionData = await parseCompetitionExcelFile(file)
+          if (competitionData.competitions.length > 0) {
+            setParsedData({ type: 'competition', data: competitionData })
+            if (competitionData.errors.length > 0) {
+              setError(`${competitionData.errors.length}件のエラーが見つかりました。プレビューを確認してください。`)
+            }
+            return
+          }
+        } catch {
+          // 大会パースに失敗
+        }
+        
+        setError('ファイルの形式を判別できませんでした。「練習一括登録」または「大会一括登録」のテンプレートを使用してください。')
+        setParsedData(null)
       }
     } catch (err) {
       setError('ファイルの読み込みに失敗しました')
@@ -101,15 +171,22 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
   const handleBulkRegister = async () => {
     if (!parsedData || !bulkRegisterAPI) return
 
-    const totalItems = parsedData.practices.length + parsedData.competitions.length
+    const totalItems = parsedData.type === 'practice' 
+      ? parsedData.data.practices.length 
+      : parsedData.data.competitions.length
+
     if (totalItems === 0) {
       setError('登録するデータがありません')
       return
     }
 
-    if (parsedData.errors.length > 0) {
+    const errors = parsedData.type === 'practice' 
+      ? parsedData.data.errors 
+      : parsedData.data.errors
+
+    if (errors.length > 0) {
       const confirmed = window.confirm(
-        `${parsedData.errors.length}件のエラーがありますが、エラーのないデータのみ登録しますか？`
+        `${errors.length}件のエラーがありますが、エラーのないデータのみ登録しますか？`
       )
       if (!confirmed) return
     }
@@ -120,10 +197,13 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
     setRegisterResult(null)
 
     try {
-      const result = await bulkRegisterAPI.bulkRegister(teamId, {
-        practices: parsedData.practices,
-        competitions: parsedData.competitions
-      })
+      // 登録データを構築
+      const input: BulkRegisterInput = {
+        practices: parsedData.type === 'practice' ? parsedData.data.practices : [],
+        competitions: parsedData.type === 'competition' ? parsedData.data.competitions : []
+      }
+
+      const result = await bulkRegisterAPI.bulkRegister(teamId, input)
 
       setRegisterResult({
         practicesCreated: result.practicesCreated,
@@ -132,9 +212,10 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
       })
 
       if (result.success) {
-        setSuccess(
-          `登録が完了しました（練習: ${result.practicesCreated}件、大会: ${result.competitionsCreated}件）`
-        )
+        const message = parsedData.type === 'practice'
+          ? `練習 ${result.practicesCreated}件の登録が完了しました`
+          : `大会 ${result.competitionsCreated}件の登録が完了しました`
+        setSuccess(message)
         // ファイル選択をリセット
         setSelectedFile(null)
         setParsedData(null)
@@ -152,7 +233,7 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-xl font-semibold text-gray-900 mb-6">
-        一括登録
+        スケジュール一括登録
       </h2>
 
       {/* エラー表示 */}
@@ -184,31 +265,71 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
         <h3 className="text-lg font-medium text-gray-900 mb-4">
           Excelテンプレートのダウンロード
         </h3>
-        <div className="flex items-center space-x-4">
-          <label htmlFor="year-select" className="text-sm font-medium text-gray-700">
-            年を選択:
-          </label>
-          <select
-            id="year-select"
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value={2025}>2025年</option>
-            <option value={2026}>2026年</option>
-            <option value={2027}>2027年</option>
-          </select>
-          <button
-            onClick={handleDownloadTemplate}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
-            Excelファイルをダウンロード
-          </button>
+        
+        {/* 練習・大会テンプレート（横並び） */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* 練習テンプレート */}
+          <div className="p-4 bg-white rounded-lg border border-gray-200">
+            <div className="flex items-center mb-3">
+              <ClockIcon className="h-5 w-5 text-green-600 mr-2" />
+              <h4 className="text-md font-medium text-gray-800">練習一括登録</h4>
+            </div>
+            <div className="flex items-center space-x-2 mb-3">
+              <select
+                id="year-select-practice"
+                value={selectedPracticeYear}
+                onChange={(e) => setSelectedPracticeYear(Number(e.target.value))}
+                className="w-24 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
+              >
+                <option value={2025}>2025年</option>
+                <option value={2026}>2026年</option>
+                <option value={2027}>2027年</option>
+              </select>
+              <button
+                onClick={handleDownloadPracticeTemplate}
+                disabled={loading}
+                className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+              >
+                <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
+                ダウンロード
+              </button>
+            </div>
+            <p className="text-xs text-gray-500">
+              列: 日付 | 曜日 | 場所 | 備考
+            </p>
+          </div>
+
+          {/* 大会テンプレート */}
+          <div className="p-4 bg-white rounded-lg border border-gray-200">
+            <div className="flex items-center mb-3">
+              <TrophyIcon className="h-5 w-5 text-blue-600 mr-2" />
+              <h4 className="text-md font-medium text-gray-800">大会一括登録</h4>
+            </div>
+            <div className="flex items-center space-x-2 mb-3">
+              <select
+                id="year-select-competition"
+                value={selectedCompetitionYear}
+                onChange={(e) => setSelectedCompetitionYear(Number(e.target.value))}
+                className="w-24 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              >
+                <option value={2025}>2025年</option>
+                <option value={2026}>2026年</option>
+                <option value={2027}>2027年</option>
+              </select>
+              <button
+                onClick={handleDownloadCompetitionTemplate}
+                disabled={loading}
+                className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              >
+                <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
+                ダウンロード
+              </button>
+            </div>
+            <p className="text-xs text-gray-500">
+              列: 開始日 | 終了日 | 大会名 | 場所 | プール種別 | 備考
+            </p>
+          </div>
         </div>
-        <p className="mt-2 text-sm text-gray-600">
-          テンプレートをダウンロードして、練習・大会の情報を入力してください。
-        </p>
       </div>
 
       {/* ファイルアップロード */}
@@ -238,6 +359,9 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
             </span>
           )}
         </div>
+        <p className="mt-2 text-sm text-gray-500">
+          上記テンプレートからファイルを作成し、アップロードしてください
+        </p>
         {loading && (
           <p className="mt-2 text-sm text-gray-600">
             ファイルを読み込んでいます...
@@ -250,27 +374,31 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
         <div className="mb-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">
             プレビュー
+            <span className="ml-2 text-sm font-normal text-gray-500">
+              ({parsedData.type === 'practice' ? '練習' : '大会'}データ)
+            </span>
           </h3>
 
           {/* エラー一覧 */}
-          {parsedData.errors.length > 0 && (
+          {((parsedData.type === 'practice' && parsedData.data.errors.length > 0) ||
+            (parsedData.type === 'competition' && parsedData.data.errors.length > 0)) && (
             <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
               <div className="flex items-start">
                 <ExclamationTriangleIcon className="h-5 w-5 text-yellow-400 shrink-0 mt-0.5" />
                 <div className="ml-3 flex-1">
                   <h4 className="text-sm font-medium text-yellow-800 mb-2">
-                    エラー ({parsedData.errors.length}件)
+                    エラー ({parsedData.type === 'practice' ? parsedData.data.errors.length : parsedData.data.errors.length}件)
                   </h4>
                   <div className="max-h-40 overflow-y-auto">
                     <ul className="list-disc list-inside text-sm text-yellow-700 space-y-1">
-                      {parsedData.errors.slice(0, 20).map((err, index) => (
+                      {(parsedData.type === 'practice' ? parsedData.data.errors : parsedData.data.errors).slice(0, 20).map((err, index) => (
                         <li key={index}>
                           {err.sheet}シート {err.row}行目: {err.message}
                         </li>
                       ))}
-                      {parsedData.errors.length > 20 && (
+                      {(parsedData.type === 'practice' ? parsedData.data.errors : parsedData.data.errors).length > 20 && (
                         <li className="text-yellow-600">
-                          他 {parsedData.errors.length - 20}件のエラーがあります
+                          他 {(parsedData.type === 'practice' ? parsedData.data.errors : parsedData.data.errors).length - 20}件のエラーがあります
                         </li>
                       )}
                     </ul>
@@ -283,10 +411,10 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
           {/* 登録予定データ */}
           <div className="space-y-4">
             {/* 練習データ */}
-            {parsedData.practices.length > 0 && (
+            {parsedData.type === 'practice' && parsedData.data.practices.length > 0 && (
               <div>
                 <h4 className="text-md font-medium text-gray-800 mb-2">
-                  練習 ({parsedData.practices.length}件)
+                  練習 ({parsedData.data.practices.length}件)
                 </h4>
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
@@ -304,7 +432,7 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {parsedData.practices.slice(0, 10).map((practice, index) => (
+                      {parsedData.data.practices.slice(0, 10).map((practice, index) => (
                         <tr key={index}>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                             {format(new Date(practice.date), 'yyyy年MM月dd日', { locale: ja })}
@@ -319,9 +447,9 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
                       ))}
                     </tbody>
                   </table>
-                  {parsedData.practices.length > 10 && (
+                  {parsedData.data.practices.length > 10 && (
                     <p className="mt-2 text-sm text-gray-600">
-                      他 {parsedData.practices.length - 10}件の練習データがあります
+                      他 {parsedData.data.practices.length - 10}件の練習データがあります
                     </p>
                   )}
                 </div>
@@ -329,17 +457,20 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
             )}
 
             {/* 大会データ */}
-            {parsedData.competitions.length > 0 && (
+            {parsedData.type === 'competition' && parsedData.data.competitions.length > 0 && (
               <div>
                 <h4 className="text-md font-medium text-gray-800 mb-2">
-                  大会 ({parsedData.competitions.length}件)
+                  大会 ({parsedData.data.competitions.length}件)
                 </h4>
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          日付
+                          開始日
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          終了日
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           大会名
@@ -356,10 +487,16 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {parsedData.competitions.slice(0, 10).map((competition, index) => (
+                      {parsedData.data.competitions.slice(0, 10).map((competition, index) => (
                         <tr key={index}>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                             {format(new Date(competition.date), 'yyyy年MM月dd日', { locale: ja })}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                            {competition.end_date 
+                              ? format(new Date(competition.end_date), 'yyyy年MM月dd日', { locale: ja })
+                              : '-'
+                            }
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                             {competition.title}
@@ -377,9 +514,9 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
                       ))}
                     </tbody>
                   </table>
-                  {parsedData.competitions.length > 10 && (
+                  {parsedData.data.competitions.length > 10 && (
                     <p className="mt-2 text-sm text-gray-600">
-                      他 {parsedData.competitions.length - 10}件の大会データがあります
+                      他 {parsedData.data.competitions.length - 10}件の大会データがあります
                     </p>
                   )}
                 </div>
@@ -387,7 +524,8 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
             )}
 
             {/* 登録ボタン */}
-            {(parsedData.practices.length > 0 || parsedData.competitions.length > 0) && (
+            {((parsedData.type === 'practice' && parsedData.data.practices.length > 0) || 
+              (parsedData.type === 'competition' && parsedData.data.competitions.length > 0)) && (
               <div className="pt-4 border-t border-gray-200">
                 <button
                   onClick={handleBulkRegister}
@@ -403,7 +541,7 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
                       登録中...
                     </>
                   ) : (
-                    '一括登録をする'
+                    `${parsedData.type === 'practice' ? '練習' : '大会'}を一括登録`
                   )}
                 </button>
               </div>
@@ -419,8 +557,12 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
             登録結果
           </h4>
           <ul className="list-disc list-inside text-sm text-blue-700 space-y-1">
-            <li>練習: {registerResult.practicesCreated}件登録</li>
-            <li>大会: {registerResult.competitionsCreated}件登録</li>
+            {registerResult.practicesCreated > 0 && (
+              <li>練習: {registerResult.practicesCreated}件登録</li>
+            )}
+            {registerResult.competitionsCreated > 0 && (
+              <li>大会: {registerResult.competitionsCreated}件登録</li>
+            )}
             {registerResult.errors.length > 0 && (
               <li className="text-red-700">
                 エラー: {registerResult.errors.join(', ')}
@@ -432,4 +574,3 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
     </div>
   )
 }
-

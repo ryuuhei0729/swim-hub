@@ -297,12 +297,16 @@ export function useDashboardHandlers({
   }, [supabase, refreshCalendar])
 
   // 大会情報作成・更新
-  const handleCompetitionBasicSubmit = useCallback(async (basicData: { date: string; title: string; place: string; poolType: number; note: string }) => {
+  const handleCompetitionBasicSubmit = useCallback(async (basicData: { date: string; endDate: string; title: string; place: string; poolType: number; note: string }) => {
     setLoading(true)
     try {
+      // 終了日は空文字の場合はnullに変換
+      const endDate = basicData.endDate ? basicData.endDate : null
+      
       if (competitionEditingData && competitionEditingData.id) {
         await updateCompetition(competitionEditingData.id, {
           date: basicData.date,
+          end_date: endDate,
           title: basicData.title,
           place: basicData.place,
           pool_type: basicData.poolType,
@@ -313,6 +317,7 @@ export function useDashboardHandlers({
       } else {
         const newCompetition = await createCompetition({
           date: basicData.date,
+          end_date: endDate,
           title: basicData.title,
           place: basicData.place,
           pool_type: basicData.poolType,
@@ -455,6 +460,19 @@ export function useDashboardHandlers({
           throw new Error('Competition ID が見つかりません')
         }
 
+        // 大会のプール種別を取得（records.pool_type に保存するため）
+        const { data: competition, error: competitionError } = await supabase
+          .from('competitions')
+          .select('pool_type')
+          .eq('id', competitionId)
+          .single()
+
+        if (competitionError || !competition) {
+          throw competitionError || new Error('大会情報の取得に失敗しました')
+        }
+
+        const competitionPoolType = (competition as { pool_type: 0 | 1 }).pool_type
+
         for (const formData of dataArray) {
           const recordForCreate: Omit<import('@apps/shared/types/database').RecordInsert, 'user_id'> = {
             style_id: parseInt(formData.styleId),
@@ -462,7 +480,8 @@ export function useDashboardHandlers({
             video_url: formData.videoUrl || null,
             note: formData.note || null,
             is_relaying: formData.isRelaying || false,
-            competition_id: competitionId
+            competition_id: competitionId,
+            pool_type: competitionPoolType
           }
 
           const newRecord = await createRecord(recordForCreate)

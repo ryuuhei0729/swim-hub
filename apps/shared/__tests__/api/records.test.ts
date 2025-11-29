@@ -90,6 +90,7 @@ describe('RecordAPI', () => {
         video_url: null,
         note: 'テストメモ',
         is_relaying: false,
+        pool_type: 0 as 0,
       }
       const createdRecord = createMockRecord(newRecord)
 
@@ -120,6 +121,7 @@ describe('RecordAPI', () => {
           video_url: null,
           note: 'テストメモ',
           is_relaying: false,
+          pool_type: 0 as 0,
         })
       ).rejects.toThrow('認証が必要です')
     })

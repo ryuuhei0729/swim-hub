@@ -107,6 +107,56 @@ export class RecordAPI {
     if (error) throw error
   }
 
+  /**
+   * 記録一括作成（ベストタイム一括入力用）
+   */
+  async createBulkRecords(
+    records: Array<{
+      style_id: number
+      time: number
+      is_relaying: boolean
+      note: string | null
+      pool_type: number
+    }>
+  ): Promise<{ created: number; errors: string[] }> {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+
+    const results = {
+      created: 0,
+      errors: [] as string[]
+    }
+
+    // バッチ処理（1度に100件ずつ）
+    const batchSize = 100
+    for (let i = 0; i < records.length; i += batchSize) {
+      const batch = records.slice(i, i + batchSize).map(record => ({
+        user_id: user.id,
+        style_id: record.style_id,
+        time: record.time,
+        is_relaying: record.is_relaying,
+        note: record.note,
+        pool_type: record.pool_type,
+        competition_id: null, // 大会に紐づけない
+        team_id: null, // 個人記録
+        video_url: null
+      }))
+
+      const { data, error } = await this.supabase
+        .from('records')
+        .insert(batch)
+        .select()
+
+      if (error) {
+        results.errors.push(`バッチ ${Math.floor(i / batchSize) + 1} の登録に失敗: ${error.message}`)
+      } else {
+        results.created += data.length
+      }
+    }
+
+    return results
+  }
+
   // =========================================================================
   // 大会の操作
   // =========================================================================
