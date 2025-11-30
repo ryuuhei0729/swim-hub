@@ -7,7 +7,9 @@ import {
   PlusIcon, 
   CalendarDaysIcon,
   MapPinIcon,
-  TrophyIcon
+  TrophyIcon,
+  PencilSquareIcon,
+  ClipboardDocumentListIcon
 } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -136,6 +138,18 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
     loadTeamCompetitions()
   }
 
+  // 記録入力ページへ遷移
+  const handleRecordClick = (e: React.MouseEvent, competitionId: string) => {
+    e.stopPropagation() // 親要素のクリックイベントを停止
+    router.push(`/teams/${teamId}/competitions/${competitionId}/records`)
+  }
+
+  // エントリー管理モーダルを開く
+  const handleEntryClick = (competition: TeamCompetition) => {
+    setSelectedCompetition(competition)
+    setShowEntryModal(true)
+  }
+
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
@@ -195,11 +209,7 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
         {competitions.map((competition) => (
           <div 
             key={competition.id}
-            className="border border-gray-200 rounded-lg p-4 transition-colors duration-200 hover:bg-gray-50 cursor-pointer"
-            onClick={() => {
-              setSelectedCompetition(competition)
-              setShowEntryModal(true)
-            }}
+            className="border border-gray-200 rounded-lg p-4 transition-colors duration-200 hover:bg-gray-50"
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">
@@ -241,11 +251,29 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
                 )}
                 
                 {/* 記録情報 */}
-                {competition.records && competition.records.length > 0 && (
-                  <div className="mt-2">
-                    <span className="text-sm text-gray-600">
+                {competition.records && competition.records.length > 0 ? (
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-sm text-green-600 font-medium">
                       📊 登録記録: {competition.records.length}件
                     </span>
+                    {isAdmin && (
+                      <span className="text-xs text-gray-500 flex items-center">
+                        <PencilSquareIcon className="h-3 w-3 mr-1" />
+                        編集可能
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-sm text-gray-500">
+                      📊 登録記録なし
+                    </span>
+                    {isAdmin && (
+                      <span className="text-xs text-blue-600 flex items-center">
+                        <PlusIcon className="h-3 w-3 mr-1" />
+                        追加可能
+                      </span>
+                    )}
                   </div>
                 )}
                 
@@ -265,10 +293,35 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
                 </div>
               </div>
               
-              <div className="text-right">
+              <div className="flex flex-col items-end gap-2">
                 <p className="text-xs text-gray-500">
                   {format(new Date(competition.created_at), 'M/d HH:mm')}
                 </p>
+                
+                {/* アクションボタン */}
+                <div className="flex gap-2">
+                  {/* エントリー管理ボタン */}
+                  <button
+                    onClick={() => handleEntryClick(competition)}
+                    className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                    title="エントリー管理"
+                  >
+                    <ClipboardDocumentListIcon className="h-4 w-4 mr-1" />
+                    エントリー
+                  </button>
+                  
+                  {/* 記録入力ボタン（adminのみ） */}
+                  {isAdmin && (
+                    <button
+                      onClick={(e) => handleRecordClick(e, competition.id)}
+                      className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                      title="記録を入力"
+                    >
+                      <PencilSquareIcon className="h-4 w-4 mr-1" />
+                      記録入力
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -317,4 +370,3 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
     </>
   )
 }
-

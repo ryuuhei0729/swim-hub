@@ -1,20 +1,18 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthProvider'
 import { 
   PlusIcon, 
   CalendarDaysIcon,
   MapPinIcon,
-  ClockIcon
+  ClockIcon,
+  PencilSquareIcon
 } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import TeamPracticeForm from './TeamPracticeForm'
-import TeamPracticeLogForm from './TeamPracticeLogForm'
-import { TeamMembersAPI } from '@apps/shared/api/teams/members'
-import { TeamMembershipWithUser, PracticeTime, PracticeTag } from '@apps/shared/types/database'
 
 export interface TeamPractice {
   id: string
@@ -47,35 +45,11 @@ export interface TeamPracticesProps {
 
 export default function TeamPractices({ teamId, isAdmin = false }: TeamPracticesProps) {
   const { supabase } = useAuth()
-  const membersAPI = useMemo(() => new TeamMembersAPI(supabase), [supabase])
   const router = useRouter()
   const [practices, setPractices] = useState<TeamPractice[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showPracticeForm, setShowPracticeForm] = useState(false)
-  const [showPracticeLogForm, setShowPracticeLogForm] = useState(false)
-  const [selectedPracticeId, setSelectedPracticeId] = useState<string | null>(null)
-  const [teamMembers, setTeamMembers] = useState<import('@apps/shared/types/database').TeamMembershipWithUser[]>([])
-  type EditDataItem = {
-    id: string
-    style: string
-    distance: number
-    rep_count: number
-    set_count: number
-    circle: number | null
-    note: string | null
-    tags: PracticeTag[]
-    times: Array<{
-      memberId: string
-      times: Array<{
-        setNumber: number
-        repNumber: number
-        time: number
-        displayValue: string
-      }>
-    }>
-  }
-  const [editData, setEditData] = useState<EditDataItem[] | null>(null)
 
   // チームの練習記録を取得（関数として抽出）
   const loadTeamPractices = useCallback(async () => {
@@ -136,134 +110,11 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
     loadTeamPractices()
   }
 
-  const handlePracticeClick = async (practiceId: string) => {
+  // 練習ログ入力ページへ遷移
+  const handlePracticeClick = (practiceId: string) => {
     if (isAdmin) {
-      try {
-        // チームメンバーを取得
-        const members = await membersAPI.list(teamId)
-        
-        setTeamMembers(members)
-        setSelectedPracticeId(practiceId)
-        setShowPracticeLogForm(true)
-      } catch (err) {
-        console.error('チームメンバー取得エラー:', err)
-      }
+      router.push(`/teams/${teamId}/practices/${practiceId}/logs`)
     }
-  }
-
-  // 既存のPractice_Logを取得して編集モードで開く
-  const handleEditPracticeLog = async (practiceId: string) => {
-    if (isAdmin) {
-      try {
-        // 既存のPractice_Logを取得
-        const { data: practiceLogs, error: logsError } = await supabase
-          .from('practice_logs')
-          .select(`
-            id,
-            style,
-            distance,
-            rep_count,
-            set_count,
-            note,
-            practice_log_tags (
-              practice_tags (
-                id,
-                name,
-                color,
-                user_id
-              )
-            ),
-            practice_times (
-              id,
-              user_id,
-              set_number,
-              rep_number,
-              time
-            )
-          `)
-          .eq('practice_id', practiceId)
-          .order('created_at', { ascending: true })
-
-        if (logsError) throw logsError
-
-        // チームメンバーを取得
-        const members = await membersAPI.list(teamId)
-
-        // 秒数を表示用フォーマットに変換する関数
-        const formatTimeFromSeconds = (seconds: number) => {
-          if (seconds === 0) return ''
-          const minutes = Math.floor(seconds / 60)
-          const remainingSeconds = seconds % 60
-          return minutes > 0 
-            ? `${minutes}:${remainingSeconds.toFixed(2).padStart(5, '0')}`
-            : `${remainingSeconds.toFixed(2)}`
-        }
-
-        // 編集データを構築
-        type PracticeLogWithTimes = {
-          id: string
-          style: string
-          distance: number
-          rep_count: number
-          set_count: number
-          circle: number | null
-          note: string | null
-          practice_times?: PracticeTime[]
-          practice_log_tags?: Array<{ practice_tags: PracticeTag }>
-        }
-
-        const editData = (practiceLogs as unknown as PracticeLogWithTimes[])?.map((log: PracticeLogWithTimes) => {
-          // 各メンバーごとのタイムデータを整理
-          type MemberTimeEntry = {
-            memberId: string
-            times: Array<{
-              setNumber: number
-              repNumber: number
-              time: number
-              displayValue: string
-            }>
-          }
-          const teamTimes: MemberTimeEntry[] = []
-          
-          members.forEach((member: TeamMembershipWithUser) => {
-            // このメンバーのタイムデータを抽出
-            const memberTimes = log.practice_times
-              ?.filter((timeEntry: PracticeTime) => timeEntry.user_id === member.user_id)
-              ?.map((timeEntry: PracticeTime) => ({
-                setNumber: timeEntry.set_number,
-                repNumber: timeEntry.rep_number,
-                time: timeEntry.time,
-                displayValue: formatTimeFromSeconds(timeEntry.time)
-              })) || []
-            
-            teamTimes.push({
-              memberId: member.id,
-              times: memberTimes
-            })
-          })
-          
-          return {
-            ...log,
-            tags: log.practice_log_tags?.map((logTag) => logTag.practice_tags) || [],
-            times: teamTimes
-          }
-        }) || []
-
-        setTeamMembers(members)
-        setSelectedPracticeId(practiceId)
-        setShowPracticeLogForm(true)
-        
-        // 編集データを状態に保存（後でTeamPracticeLogFormに渡す）
-        setEditData(editData)
-      } catch (err) {
-        console.error('練習ログ取得エラー:', err)
-      }
-    }
-  }
-
-  const handlePracticeLogCreated = () => {
-    // 練習記録一覧を再読み込み（画面全体ではなくデータのみ）
-    loadTeamPractices()
   }
 
   if (loading) {
@@ -325,15 +176,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
         {practices.map((practice) => (
           <div 
             key={practice.id}
-            onClick={() => {
-              if (practice.practice_logs && practice.practice_logs.length > 0) {
-                // 既存のPractice_Logがある場合は編集モード
-                handleEditPracticeLog(practice.id)
-              } else {
-                // 既存のPractice_Logがない場合は新規作成モード
-                handlePracticeClick(practice.id)
-              }
-            }}
+            onClick={() => handlePracticeClick(practice.id)}
             className={`border border-gray-200 rounded-lg p-4 transition-colors duration-200 ${
               isAdmin ? 'cursor-pointer hover:bg-gray-50' : ''
             }`}
@@ -361,12 +204,31 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
                   <p className="text-sm text-gray-600 mb-2">{practice.note}</p>
                 )}
                 
-                {practice.practice_logs && practice.practice_logs.length > 0 && (
+                {practice.practice_logs && practice.practice_logs.length > 0 ? (
+                  <div className="flex items-center space-x-2">
+                    <ClockIcon className="h-4 w-4 text-green-500" />
+                    <span className="text-sm text-green-600 font-medium">
+                      {practice.practice_logs.length}セットの練習記録あり
+                    </span>
+                    {isAdmin && (
+                      <span className="text-xs text-gray-500 flex items-center">
+                        <PencilSquareIcon className="h-3 w-3 mr-1" />
+                        クリックで編集
+                      </span>
+                    )}
+                  </div>
+                ) : (
                   <div className="flex items-center space-x-2">
                     <ClockIcon className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">
-                      {practice.practice_logs.length}セットの練習
+                    <span className="text-sm text-gray-500">
+                      練習記録なし
                     </span>
+                    {isAdmin && (
+                      <span className="text-xs text-blue-600 flex items-center">
+                        <PlusIcon className="h-3 w-3 mr-1" />
+                        クリックで追加
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
@@ -404,22 +266,6 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
         teamId={teamId}
         onSuccess={handlePracticeCreated}
       />
-
-      {/* チーム練習ログ作成モーダル */}
-      {selectedPracticeId && (
-        <TeamPracticeLogForm
-          isOpen={showPracticeLogForm}
-          onClose={() => {
-            setShowPracticeLogForm(false)
-            setSelectedPracticeId(null)
-            setEditData(null)
-          }}
-          practiceId={selectedPracticeId}
-          teamMembers={teamMembers}
-          onSuccess={handlePracticeLogCreated}
-          editData={editData ?? undefined}
-        />
-      )}
     </>
   )
 }
