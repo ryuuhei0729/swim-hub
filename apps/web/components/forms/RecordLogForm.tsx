@@ -5,6 +5,7 @@ import { Button, Input } from '@/components/ui'
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { formatTime } from '@/utils/formatters'
 import { EntryInfo } from '@apps/shared/types/ui'
+import { LapTimeDisplay } from './LapTimeDisplay'
 // SplitTimeRow型定義（editData用のcamelCase型）
 type SplitTimeRow = {
   distance: number
@@ -155,11 +156,49 @@ export default function RecordLogForm({
   }
 
   const handleTimeChange = (index: number, value: string) => {
-    updateFormData(index, (prev) => ({
-      ...prev,
-      timeDisplayValue: value,
-      time: parseTimeToSeconds(value)
-    }))
+    updateFormData(index, (prev) => {
+      const newTime = parseTimeToSeconds(value)
+      const entryInfo = entryDataList[index]
+      const styleId = entryInfo ? String(entryInfo.styleId) : prev.styleId
+      const style = styles.find(s => s.id.toString() === styleId)
+      const raceDistance = style?.distance
+
+      let updatedSplitTimes = [...prev.splitTimes]
+
+      // タイムが変更された場合、種目の距離と同じ距離のsplit-timeを自動追加/更新
+      if (raceDistance && newTime > 0) {
+        const existingSplitIndex = updatedSplitTimes.findIndex(
+          st => typeof st.distance === 'number' && st.distance === raceDistance
+        )
+
+        if (existingSplitIndex >= 0) {
+          // 既存のsplit-timeを更新
+          updatedSplitTimes = updatedSplitTimes.map((st, idx) =>
+            idx === existingSplitIndex
+              ? { ...st, splitTime: newTime, splitTimeDisplayValue: formatSecondsToDisplay(newTime) }
+              : st
+          )
+        } else {
+          // 新しいsplit-timeを追加
+          updatedSplitTimes = [
+            ...updatedSplitTimes,
+            {
+              distance: raceDistance,
+              splitTime: newTime,
+              splitTimeDisplayValue: formatSecondsToDisplay(newTime),
+              uiKey: `split-${Date.now()}`
+            }
+          ]
+        }
+      }
+
+      return {
+        ...prev,
+        timeDisplayValue: value,
+        time: newTime,
+        splitTimes: updatedSplitTimes
+      }
+    })
   }
 
   const handleToggleRelaying = (index: number, checked: boolean) => {
@@ -198,6 +237,43 @@ export default function RecordLogForm({
     }))
   }
 
+  const handleAddSplitTimesEvery25m = (entryIndex: number) => {
+    updateFormData(entryIndex, (prev) => {
+      const entryInfo = entryDataList[entryIndex]
+      const styleId = entryInfo ? String(entryInfo.styleId) : prev.styleId
+      const style = styles.find(s => s.id.toString() === styleId)
+      if (!style || !style.distance) return prev
+
+      const raceDistance = style.distance
+      const existingDistances = new Set(
+        prev.splitTimes
+          .map(st => typeof st.distance === 'number' ? st.distance : st.distance === '' ? null : parseInt(String(st.distance)) || null)
+          .filter((d): d is number => d !== null)
+      )
+
+      // 25m間隔で種目の距離までsplit-timeを追加
+      const newSplitTimes: SplitTimeDraft[] = []
+      for (let distance = 25; distance <= raceDistance; distance += 25) {
+        // 既に存在する距離はスキップ
+        if (!existingDistances.has(distance)) {
+          newSplitTimes.push({
+            distance,
+            splitTime: 0,
+            splitTimeDisplayValue: '',
+            uiKey: `split-${Date.now()}-${distance}`
+          })
+        }
+      }
+
+      if (newSplitTimes.length === 0) return prev
+
+      return {
+        ...prev,
+        splitTimes: [...prev.splitTimes, ...newSplitTimes]
+      }
+    })
+  }
+
   const handleRemoveSplitTime = (entryIndex: number, splitIndex: number) => {
     updateFormData(entryIndex, (prev) => ({
       ...prev,
@@ -211,9 +287,13 @@ export default function RecordLogForm({
     field: 'distance' | 'splitTime',
     value: string
   ) => {
-    updateFormData(entryIndex, (prev) => ({
-      ...prev,
-      splitTimes: prev.splitTimes.map((st, i) => {
+    updateFormData(entryIndex, (prev) => {
+      const entryInfo = entryDataList[entryIndex]
+      const styleId = entryInfo ? String(entryInfo.styleId) : prev.styleId
+      const style = styles.find(s => s.id.toString() === styleId)
+      const raceDistance = style?.distance
+
+      const updatedSplitTimes = prev.splitTimes.map((st, i) => {
         if (i !== splitIndex) return st
         if (field === 'distance') {
           return { ...st, distance: value === '' ? '' : parseInt(value) }
@@ -225,7 +305,29 @@ export default function RecordLogForm({
           splitTime: parsedTime
         }
       })
-    }))
+
+      // split-timeが変更された場合、種目の距離と同じ距離のsplit-timeならタイムも更新
+      const updatedSplit = updatedSplitTimes[splitIndex]
+      if (
+        field === 'splitTime' &&
+        raceDistance &&
+        typeof updatedSplit.distance === 'number' &&
+        updatedSplit.distance === raceDistance
+      ) {
+        // 種目の距離と同じ距離のsplit-timeが変更されたら、タイムも同期
+        return {
+          ...prev,
+          splitTimes: updatedSplitTimes,
+          time: updatedSplit.splitTime,
+          timeDisplayValue: updatedSplit.splitTimeDisplayValue || formatSecondsToDisplay(updatedSplit.splitTime)
+        }
+      }
+
+      return {
+        ...prev,
+        splitTimes: updatedSplitTimes
+      }
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -413,46 +515,68 @@ export default function RecordLogForm({
                         <label className="block text-sm font-medium text-gray-700">
                           スプリットタイム
                         </label>
-                        <button
-                          type="button"
-                          onClick={() => handleAddSplitTime(index)}
-                          className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-700 disabled:opacity-50"
-                          disabled={isLoading}
-                          data-testid={`record-split-add-button-${sectionIndex}`}
-                        >
-                          <PlusIcon className="h-4 w-4 mr-1" />
-                          追加
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleAddSplitTimesEvery25m(index)}
+                            className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-700 disabled:opacity-50 border border-blue-300 rounded"
+                            disabled={isLoading || !(entryInfo ? styles.find(s => s.id.toString() === entryInfo.styleId?.toString())?.distance : styles.find(s => s.id.toString() === formData.styleId)?.distance)}
+                            data-testid={`record-split-add-25m-button-${sectionIndex}`}
+                          >
+                            <PlusIcon className="h-4 w-4 mr-1" />
+                            追加(25mごと)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleAddSplitTime(index)}
+                            className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-700 disabled:opacity-50 border border-blue-300 rounded"
+                            disabled={isLoading}
+                            data-testid={`record-split-add-button-${sectionIndex}`}
+                          >
+                            <PlusIcon className="h-4 w-4 mr-1" />
+                            追加
+                          </button>
+                        </div>
                       </div>
                       {formData.splitTimes.length === 0 ? (
                         <p className="text-sm text-gray-500">スプリットタイムはありません</p>
                       ) : (
                         <div className="space-y-2">
-                          {formData.splitTimes.map((st, splitIndex) => (
-                            <div key={st.uiKey || `${index}-${splitIndex}`} className="flex items-center space-x-2">
+                          {[...formData.splitTimes]
+                            .sort((a, b) => {
+                              const distA = typeof a.distance === 'number' ? a.distance : a.distance === '' ? 0 : parseInt(String(a.distance)) || 0
+                              const distB = typeof b.distance === 'number' ? b.distance : b.distance === '' ? 0 : parseInt(String(b.distance)) || 0
+                              return distA - distB
+                            })
+                            .map((st) => {
+                              const originalIndex = formData.splitTimes.findIndex(s => s.uiKey === st.uiKey)
+                              return { st, originalIndex }
+                            })
+                            .map(({ st, originalIndex }, splitIndex) => (
+                            <div key={st.uiKey || `${index}-${originalIndex}`} className="flex items-center space-x-2">
                               <Input
                                 type="number"
                                 value={st.distance}
                                 onChange={(e) =>
-                                  handleSplitTimeChange(index, splitIndex, 'distance', e.target.value)
+                                  handleSplitTimeChange(index, originalIndex, 'distance', e.target.value)
                                 }
                                 placeholder="距離 (m)"
                                 className="w-24"
-                                data-testid={`record-split-distance-${sectionIndex}-${splitIndex + 1}`}
+                                data-testid={`record-split-distance-${sectionIndex}-${originalIndex + 1}`}
                               />
                               <Input
                                 type="text"
                                 value={st.splitTimeDisplayValue || ''}
                                 onChange={(e) =>
-                                  handleSplitTimeChange(index, splitIndex, 'splitTime', e.target.value)
+                                  handleSplitTimeChange(index, originalIndex, 'splitTime', e.target.value)
                                 }
                                 placeholder="例: 28.50 または 0:28.50"
                                 className="flex-1"
-                                data-testid={`record-split-time-${sectionIndex}-${splitIndex + 1}`}
+                                data-testid={`record-split-time-${sectionIndex}-${originalIndex + 1}`}
                               />
                               <button
                                 type="button"
-                                onClick={() => handleRemoveSplitTime(index, splitIndex)}
+                                onClick={() => handleRemoveSplitTime(index, originalIndex)}
                                 className="p-2 text-red-600 hover:text-red-700"
                                 disabled={isLoading}
                                 data-testid={`record-split-remove-button-${sectionIndex}-${splitIndex + 1}`}
@@ -463,6 +587,19 @@ export default function RecordLogForm({
                           ))}
                         </div>
                       )}
+                      
+                      {/* Lap-Time表示 */}
+                      <LapTimeDisplay
+                        splitTimes={formData.splitTimes.map(st => ({
+                          distance: st.distance,
+                          splitTime: st.splitTime
+                        }))}
+                        raceDistance={
+                          entryInfo
+                            ? styles.find(s => s.id.toString() === entryInfo.styleId?.toString())?.distance
+                            : styles.find(s => s.id.toString() === formData.styleId)?.distance
+                        }
+                      />
                     </div>
 
                     {/* ビデオURL */}

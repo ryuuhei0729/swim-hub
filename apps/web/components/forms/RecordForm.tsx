@@ -5,6 +5,7 @@ import { Button, Input } from '@/components/ui'
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { formatTime } from '@/utils/formatters'
+import { LapTimeDisplay } from './LapTimeDisplay'
 
 
 interface RecordSet {
@@ -241,12 +242,47 @@ export default function RecordForm({
   }
 
   const updateRecord = (recordId: string, updates: Partial<RecordSet>) => {
-    setFormData(prev => ({
-      ...prev,
-      records: prev.records.map(record =>
-        record.id === recordId ? { ...record, ...updates } : record
-      )
-    }))
+    setFormData(prev => {
+      const record = prev.records.find(r => r.id === recordId)
+      if (!record) return prev
+
+      const updatedRecord = { ...record, ...updates }
+      const style = styles.find(s => s.id === updatedRecord.styleId)
+      const raceDistance = style?.distance
+
+      // タイムが変更された場合、種目の距離と同じ距離のsplit-timeを自動追加/更新
+      if (updates.time !== undefined && raceDistance && updatedRecord.time > 0) {
+        const existingSplitIndex = updatedRecord.splitTimes.findIndex(
+          st => typeof st.distance === 'number' && st.distance === raceDistance
+        )
+
+        if (existingSplitIndex >= 0) {
+          // 既存のsplit-timeを更新
+          updatedRecord.splitTimes = updatedRecord.splitTimes.map((st, idx) =>
+            idx === existingSplitIndex
+              ? { ...st, splitTime: updatedRecord.time, splitTimeDisplayValue: undefined }
+              : st
+          )
+        } else {
+          // 新しいsplit-timeを追加
+          const newSplitTime: SplitTimeInput = {
+            distance: raceDistance,
+            splitTime: updatedRecord.time,
+            uiKey: (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+              ? (crypto as Crypto).randomUUID()
+              : `split-${Date.now()}-${Math.random()}`
+          }
+          updatedRecord.splitTimes = [...updatedRecord.splitTimes, newSplitTime]
+        }
+      }
+
+      return {
+        ...prev,
+        records: prev.records.map(record =>
+          record.id === recordId ? updatedRecord : record
+        )
+      }
+    })
   }
 
   const addSplitTime = (recordId: string) => {
@@ -263,15 +299,70 @@ export default function RecordForm({
     })
   }
 
+  const addSplitTimesEvery25m = (recordId: string) => {
+    const record = formData.records.find(r => r.id === recordId)
+    if (!record) return
+
+    const style = styles.find(s => s.id === record.styleId)
+    if (!style || !style.distance) return
+
+    const raceDistance = style.distance
+    const existingDistances = new Set(
+      record.splitTimes
+        .map(st => typeof st.distance === 'number' ? st.distance : null)
+        .filter((d): d is number => d !== null)
+    )
+
+    // 25m間隔で種目の距離までsplit-timeを追加
+    const newSplitTimes: SplitTimeInput[] = []
+    for (let distance = 25; distance <= raceDistance; distance += 25) {
+      // 既に存在する距離はスキップ
+      if (!existingDistances.has(distance)) {
+        newSplitTimes.push({
+          distance,
+          splitTime: 0,
+          uiKey: (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+            ? (crypto as Crypto).randomUUID()
+            : `split-${Date.now()}-${distance}-${Math.random()}`
+        })
+      }
+    }
+
+    if (newSplitTimes.length > 0) {
+      updateRecord(recordId, {
+        splitTimes: [...record.splitTimes, ...newSplitTimes]
+      })
+    }
+  }
+
   const updateSplitTime = (recordId: string, splitIndex: number, updates: Partial<SplitTimeInput>) => {
     const record = formData.records.find(r => r.id === recordId)
     if (!record) return
+    
+    const style = styles.find(s => s.id === record.styleId)
+    const raceDistance = style?.distance
     
     const updatedSplitTimes = record.splitTimes.map((split, index) =>
       index === splitIndex ? { ...split, ...updates } : split
     )
     
-    updateRecord(recordId, { splitTimes: updatedSplitTimes })
+    // split-timeが変更された場合、種目の距離と同じ距離のsplit-timeならタイムも更新
+    const updatedSplit = updatedSplitTimes[splitIndex]
+    if (
+      raceDistance &&
+      typeof updatedSplit.distance === 'number' &&
+      updatedSplit.distance === raceDistance &&
+      updates.splitTime !== undefined
+    ) {
+      // 種目の距離と同じ距離のsplit-timeが変更されたら、タイムも同期
+      updateRecord(recordId, {
+        splitTimes: updatedSplitTimes,
+        time: updates.splitTime,
+        timeDisplayValue: undefined
+      })
+    } else {
+      updateRecord(recordId, { splitTimes: updatedSplitTimes })
+    }
   }
 
   const removeSplitTime = (recordId: string, splitIndex: number) => {
@@ -463,6 +554,7 @@ export default function RecordForm({
                           updateRecord(record.id, { time: 0, timeDisplayValue: undefined })
                         } else {
                           const time = parseTimeString(timeStr)
+                          // updateRecord内で自動的にsplit-timeも同期される
                           updateRecord(record.id, { time, timeDisplayValue: undefined })
                         }
                       }}
@@ -493,26 +585,51 @@ export default function RecordForm({
                     <label className="block text-sm font-medium text-gray-700">
                       スプリットタイム
                     </label>
-                    <Button
-                      type="button"
-                      onClick={() => addSplitTime(record.id)}
-                      className="text-sm"
-                      data-testid={`record-split-add-button-${recordIndex + 1}`}
-                    >
-                      <PlusIcon className="h-3 w-3 mr-1" />
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        onClick={() => addSplitTimesEvery25m(record.id)}
+                        className="text-sm"
+                        variant="outline"
+                        disabled={!styles.find(s => s.id === record.styleId)?.distance}
+                        data-testid={`record-split-add-25m-button-${recordIndex + 1}`}
+                      >
+                        <PlusIcon className="h-3 w-3 mr-1" />
+                        追加(25mごと)
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => addSplitTime(record.id)}
+                        className="text-sm"
+                        variant="outline"
+                        data-testid={`record-split-add-button-${recordIndex + 1}`}
+                      >
+                        <PlusIcon className="h-3 w-3 mr-1" />
                         スプリットを追加
-                    </Button>
+                      </Button>
+                    </div>
                   </div>
                   
-                  {record.splitTimes.map((split, splitIndex) => (
+                  {[...record.splitTimes]
+                    .sort((a, b) => {
+                      const distA = typeof a.distance === 'number' ? a.distance : 0
+                      const distB = typeof b.distance === 'number' ? b.distance : 0
+                      return distA - distB
+                    })
+                    .map((split, splitIndex) => {
+                      // ソート後の元のインデックスを取得
+                      const originalIndex = record.splitTimes.findIndex(st => st.uiKey === split.uiKey)
+                      return { split, originalIndex }
+                    })
+                    .map(({ split, originalIndex }) => (
                     <div key={split.uiKey} className="flex items-center gap-2 mb-2">
                       <Input
                         type="text"
                         placeholder="距離 (m)"
                         value={split.distance}
-                        onChange={(e) => updateSplitTime(record.id, splitIndex, { distance: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                        onChange={(e) => updateSplitTime(record.id, originalIndex, { distance: e.target.value === '' ? '' : parseInt(e.target.value) })}
                         className="w-24"
-                        data-testid={`record-split-distance-${recordIndex + 1}-${splitIndex + 1}`}
+                        data-testid={`record-split-distance-${recordIndex + 1}-${originalIndex + 1}`}
                       />
                       <span className="text-gray-500">m:</span>
                       <Input
@@ -522,31 +639,40 @@ export default function RecordForm({
                         onChange={(e) => {
                           const timeStr = e.target.value
                           // 入力中は文字列をそのまま保持
-                          updateSplitTime(record.id, splitIndex, { splitTimeDisplayValue: timeStr })
+                          updateSplitTime(record.id, originalIndex, { splitTimeDisplayValue: timeStr })
                         }}
                         onBlur={(e) => {
                           const timeStr = e.target.value
                           if (timeStr === '') {
-                            updateSplitTime(record.id, splitIndex, { splitTime: 0, splitTimeDisplayValue: undefined })
+                            updateSplitTime(record.id, originalIndex, { splitTime: 0, splitTimeDisplayValue: undefined })
                           } else {
                             const time = parseTimeString(timeStr)
-                            updateSplitTime(record.id, splitIndex, { splitTime: time, splitTimeDisplayValue: undefined })
+                            updateSplitTime(record.id, originalIndex, { splitTime: time, splitTimeDisplayValue: undefined })
                           }
                         }}
                         className="flex-1"
-                        data-testid={`record-split-time-${recordIndex + 1}-${splitIndex + 1}`}
+                        data-testid={`record-split-time-${recordIndex + 1}-${originalIndex + 1}`}
                       />
                       <button
                         type="button"
-                        onClick={() => removeSplitTime(record.id, splitIndex)}
+                        onClick={() => removeSplitTime(record.id, originalIndex)}
                         className="text-red-500 hover:text-red-700"
                         aria-label="スプリットを削除"
-                        data-testid={`record-split-remove-button-${recordIndex + 1}-${splitIndex + 1}`}
+                        data-testid={`record-split-remove-button-${recordIndex + 1}-${originalIndex + 1}`}
                       >
                         <TrashIcon className="h-4 w-4" />
                       </button>
                     </div>
                   ))}
+                  
+                  {/* Lap-Time表示 */}
+                  <LapTimeDisplay
+                    splitTimes={record.splitTimes.map(st => ({
+                      distance: st.distance,
+                      splitTime: st.splitTime
+                    }))}
+                    raceDistance={styles.find(s => s.id === record.styleId)?.distance}
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

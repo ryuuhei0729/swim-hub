@@ -9,6 +9,7 @@ import { Competition, Style } from '@apps/shared/types/database'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { formatTime, parseTimeToSeconds } from '@/utils/formatters'
+import { LapTimeDisplay } from '@/components/forms/LapTimeDisplay'
 
 interface TeamMember {
   id: string
@@ -241,10 +242,58 @@ export default function RecordClient({
   }
 
   const handleTimeChange = (entryId: string, memberUserId: string, value: string) => {
-    updateMemberRecord(entryId, memberUserId, {
-      timeDisplayValue: value,
-      time: parseTimeToSeconds(value)
-    })
+    const entry = styleEntries.find(e => e.id === entryId)
+    if (!entry) return
+
+    const style = styles.find(s => s.id === entry.styleId)
+    const raceDistance = style?.distance
+    const newTime = parseTimeToSeconds(value)
+
+    setStyleEntries(prev => prev.map(e => {
+      if (e.id !== entryId) return e
+      return {
+        ...e,
+        memberRecords: e.memberRecords.map(mr => {
+          if (mr.memberUserId !== memberUserId) return mr
+
+          let updatedSplitTimes = [...mr.splitTimes]
+
+          // タイムが変更された場合、種目の距離と同じ距離のsplit-timeを自動追加/更新
+          if (raceDistance && newTime > 0) {
+            const existingSplitIndex = updatedSplitTimes.findIndex(
+              st => typeof st.distance === 'number' && st.distance === raceDistance
+            )
+
+            if (existingSplitIndex >= 0) {
+              // 既存のsplit-timeを更新
+              updatedSplitTimes = updatedSplitTimes.map((st, idx) =>
+                idx === existingSplitIndex
+                  ? { ...st, splitTime: newTime, displayValue: formatTime(newTime) }
+                  : st
+              )
+            } else {
+              // 新しいsplit-timeを追加
+              updatedSplitTimes = [
+                ...updatedSplitTimes,
+                {
+                  id: Date.now().toString(),
+                  distance: raceDistance,
+                  splitTime: newTime,
+                  displayValue: formatTime(newTime)
+                }
+              ]
+            }
+          }
+
+          return {
+            ...mr,
+            timeDisplayValue: value,
+            time: newTime,
+            splitTimes: updatedSplitTimes
+          }
+        })
+      }
+    }))
   }
 
   const addSplitTime = (entryId: string, memberUserId: string) => {
@@ -271,6 +320,53 @@ export default function RecordClient({
     }))
   }
 
+  const addSplitTimesEvery25m = (entryId: string, memberUserId: string) => {
+    const entry = styleEntries.find(e => e.id === entryId)
+    if (!entry) return
+
+    const style = styles.find(s => s.id === entry.styleId)
+    if (!style || !style.distance) return
+
+    const raceDistance = style.distance
+
+    setStyleEntries(prev => prev.map(e => {
+      if (e.id !== entryId) return e
+      return {
+        ...e,
+        memberRecords: e.memberRecords.map(mr => {
+          if (mr.memberUserId !== memberUserId) return mr
+
+          const existingDistances = new Set(
+            mr.splitTimes
+              .map(st => typeof st.distance === 'number' ? st.distance : 0)
+              .filter(d => d > 0)
+          )
+
+          // 25m間隔で種目の距離までsplit-timeを追加
+          const newSplitTimes: SplitTimeEntry[] = []
+          for (let distance = 25; distance <= raceDistance; distance += 25) {
+            // 既に存在する距離はスキップ
+            if (!existingDistances.has(distance)) {
+              newSplitTimes.push({
+                id: `${Date.now()}-${distance}`,
+                distance,
+                splitTime: 0,
+                displayValue: ''
+              })
+            }
+          }
+
+          if (newSplitTimes.length === 0) return mr
+
+          return {
+            ...mr,
+            splitTimes: [...mr.splitTimes, ...newSplitTimes]
+          }
+        })
+      }
+    }))
+  }
+
   const removeSplitTime = (entryId: string, memberUserId: string, splitId: string) => {
     setStyleEntries(prev => prev.map(entry => {
       if (entry.id !== entryId) return entry
@@ -288,25 +384,52 @@ export default function RecordClient({
   }
 
   const updateSplitTime = (entryId: string, memberUserId: string, splitId: string, field: 'distance' | 'splitTime', value: string) => {
-    setStyleEntries(prev => prev.map(entry => {
-      if (entry.id !== entryId) return entry
+    const entry = styleEntries.find(e => e.id === entryId)
+    if (!entry) return
+
+    const style = styles.find(s => s.id === entry.styleId)
+    const raceDistance = style?.distance
+
+    setStyleEntries(prev => prev.map(e => {
+      if (e.id !== entryId) return e
       return {
-        ...entry,
-        memberRecords: entry.memberRecords.map(mr => {
+        ...e,
+        memberRecords: e.memberRecords.map(mr => {
           if (mr.memberUserId !== memberUserId) return mr
+
+          const updatedSplitTimes = mr.splitTimes.map(st => {
+            if (st.id !== splitId) return st
+            if (field === 'distance') {
+              return { ...st, distance: value === '' ? '' : parseInt(value) }
+            }
+            return {
+              ...st,
+              displayValue: value,
+              splitTime: parseTimeToSeconds(value)
+            }
+          })
+
+          // split-timeが変更された場合、種目の距離と同じ距離のsplit-timeならタイムも更新
+          const updatedSplit = updatedSplitTimes.find(st => st.id === splitId)
+          if (
+            field === 'splitTime' &&
+            raceDistance &&
+            updatedSplit &&
+            typeof updatedSplit.distance === 'number' &&
+            updatedSplit.distance === raceDistance
+          ) {
+            // 種目の距離と同じ距離のsplit-timeが変更されたら、タイムも同期
+            return {
+              ...mr,
+              splitTimes: updatedSplitTimes,
+              time: updatedSplit.splitTime,
+              timeDisplayValue: updatedSplit.displayValue || formatTime(updatedSplit.splitTime)
+            }
+          }
+
           return {
             ...mr,
-            splitTimes: mr.splitTimes.map(st => {
-              if (st.id !== splitId) return st
-              if (field === 'distance') {
-                return { ...st, distance: value === '' ? '' : parseInt(value) }
-              }
-              return {
-                ...st,
-                displayValue: value,
-                splitTime: parseTimeToSeconds(value)
-              }
-            })
+            splitTimes: updatedSplitTimes
           }
         })
       }
@@ -605,19 +728,37 @@ export default function RecordClient({
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <label className="text-xs font-medium text-gray-600">スプリットタイム</label>
-                          <Button
-                            type="button"
-                            onClick={() => addSplitTime(entry.id, mr.memberUserId)}
-                            variant="outline"
-                            className="text-xs py-1 px-2"
-                          >
-                            <PlusIcon className="h-3 w-3 mr-1" />
-                            追加
-                          </Button>
+                          <div className="flex gap-1">
+                            <Button
+                              type="button"
+                              onClick={() => addSplitTimesEvery25m(entry.id, mr.memberUserId)}
+                              variant="outline"
+                              className="text-xs py-1 px-2"
+                              disabled={!styles.find(s => s.id === entry.styleId)?.distance}
+                            >
+                              <PlusIcon className="h-3 w-3 mr-1" />
+                              追加(25mごと)
+                            </Button>
+                            <Button
+                              type="button"
+                              onClick={() => addSplitTime(entry.id, mr.memberUserId)}
+                              variant="outline"
+                              className="text-xs py-1 px-2"
+                            >
+                              <PlusIcon className="h-3 w-3 mr-1" />
+                              追加
+                            </Button>
+                          </div>
                         </div>
                         {mr.splitTimes.length > 0 && (
                           <div className="space-y-2">
-                            {mr.splitTimes.map((split) => (
+                            {[...mr.splitTimes]
+                              .sort((a, b) => {
+                                const distA = typeof a.distance === 'number' ? a.distance : 0
+                                const distB = typeof b.distance === 'number' ? b.distance : 0
+                                return distA - distB
+                              })
+                              .map((split) => (
                               <div key={split.id} className="flex items-center gap-2">
                                 <input
                                   type="number"
@@ -644,6 +785,17 @@ export default function RecordClient({
                               </div>
                             ))}
                           </div>
+                        )}
+                        
+                        {/* Lap-Time表示 */}
+                        {mr.splitTimes.length > 0 && (
+                          <LapTimeDisplay
+                            splitTimes={mr.splitTimes.map(st => ({
+                              distance: st.distance,
+                              splitTime: st.splitTime
+                            }))}
+                            raceDistance={styles.find(s => s.id === entry.styleId)?.distance}
+                          />
                         )}
                       </div>
                     </div>

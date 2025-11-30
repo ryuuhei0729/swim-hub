@@ -8,6 +8,8 @@ import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
 import { useAuth } from '@/contexts'
+import { LapTimeDisplay } from '@/components/forms/LapTimeDisplay'
+import { useState, useEffect } from 'react'
 import {
   useRecordsQuery,
   useUpdateRecordMutation,
@@ -24,6 +26,92 @@ interface CompetitionClientProps {
   // サーバー側で取得したデータ
   initialRecords: RecordWithDetails[]
   styles: Style[]
+}
+
+// ベストタイム更新チェック
+function BestTimeBadge({ 
+  recordId, 
+  styleId, 
+  currentTime, 
+  recordDate,
+  poolType,
+  isRelaying
+}: { 
+  recordId: string
+  styleId?: number
+  currentTime: number
+  recordDate?: string
+  poolType?: number | null
+  isRelaying?: boolean
+}) {
+  const { supabase } = useAuth()
+  const [isBestTime, setIsBestTime] = useState<boolean | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const checkBestTime = async () => {
+      if (!styleId || recordDate === undefined) {
+        setLoading(false)
+        return
+      }
+
+      try {
+        setLoading(true)
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+          setLoading(false)
+          return
+        }
+
+        // その大会実施日より前の同じ条件（種目・プール種別・引き継ぎ有無）の記録を取得
+        // competitionsテーブルとJOINして、大会実施日で比較
+        let query = supabase
+          .from('records')
+          .select(`
+            id, 
+            time,
+            competitions!inner(date)
+          `)
+          .eq('user_id', user.id)
+          .eq('style_id', styleId)
+          .eq('is_relaying', isRelaying || false)
+          .neq('id', recordId) // 現在の記録を除外
+          .lt('competitions.date', recordDate) // その大会実施日より前
+          .order('time', { ascending: true })
+          .limit(1)
+
+        // pool_typeが指定されている場合は条件に追加
+        if (poolType !== null && poolType !== undefined) {
+          query = query.eq('pool_type', poolType)
+        }
+
+        const { data: previousRecords, error } = await query
+
+        if (error) throw error
+
+        // 以前の記録がない、または現在のタイムが以前のベストより速い場合
+        const isBest = !previousRecords || previousRecords.length === 0 || currentTime < previousRecords[0].time
+        setIsBestTime(isBest)
+      } catch (err) {
+        console.error('ベストタイムチェックエラー:', err)
+        setIsBestTime(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    checkBestTime()
+  }, [recordId, styleId, currentTime, recordDate, poolType, isRelaying, supabase])
+
+  if (loading || isBestTime === null || !isBestTime) {
+    return null
+  }
+
+  return (
+    <div className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-100 border border-yellow-400 rounded-md">
+      <span className="text-xs font-bold text-yellow-800">🏆 Best time更新！</span>
+    </div>
+  )
 }
 
 /**
@@ -595,9 +683,19 @@ export default function CompetitionClient({
                           </p>
                         )}
                         {selectedRecord.time && (
-                          <p className="text-lg font-semibold text-blue-700 mb-1">
-                            ⏱️ {formatTime(selectedRecord.time)}{selectedRecord.is_relaying && <span className="font-bold text-red-600 ml-1">R</span>}
-                          </p>
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-lg font-semibold text-blue-700">
+                              ⏱️ {formatTime(selectedRecord.time)}{selectedRecord.is_relaying && <span className="font-bold text-red-600 ml-1">R</span>}
+                            </p>
+                            <BestTimeBadge
+                              recordId={selectedRecord.id}
+                              styleId={selectedRecord.style_id}
+                              currentTime={selectedRecord.time}
+                              recordDate={selectedRecord.competition?.date}
+                              poolType={selectedRecord.pool_type}
+                              isRelaying={selectedRecord.is_relaying}
+                            />
+                          </div>
                         )}
                         {selectedRecord.note && (
                           <p className="text-sm text-gray-600 mt-2">
@@ -605,21 +703,16 @@ export default function CompetitionClient({
                           </p>
                         )}
                         
-                        {/* スプリットタイム */}
+                        {/* 距離別Lap表示 */}
                         {selectedRecord.split_times && selectedRecord.split_times.length > 0 && (
                           <div className="mt-3">
-                            <p className="text-sm font-medium text-blue-800 mb-1">スプリット</p>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                              {selectedRecord.split_times
-                                .slice()
-                                .sort((a: SplitTime, b: SplitTime) => (a.distance || 0) - (b.distance || 0))
-                                .map((st: SplitTime) => (
-                                  <div key={st.id} className="text-xs text-blue-900 bg-blue-100 rounded px-2 py-1">
-                                    <span className="mr-2">{st.distance}m</span>
-                                    <span className="font-semibold">{formatTime(st.split_time)}</span>
-                                  </div>
-                                ))}
-                            </div>
+                            <LapTimeDisplay
+                              splitTimes={selectedRecord.split_times.map(st => ({
+                                distance: st.distance,
+                                splitTime: st.split_time
+                              }))}
+                              raceDistance={selectedRecord.styles?.distance}
+                            />
                           </div>
                         )}
                       </div>
