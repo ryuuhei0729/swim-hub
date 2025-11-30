@@ -146,9 +146,9 @@ export function useCreateTeamAnnouncementMutation(
             return key[1] === 'list' && key[2] === newAnnouncement.team_id
           }
         },
-        (old: unknown) => {
+        (old: TeamAnnouncement[] | undefined) => {
           // oldが配列でない場合は新しい配列を返す
-          if (!Array.isArray(old)) return [newAnnouncement]
+          if (!old || !Array.isArray(old)) return [newAnnouncement]
           return [newAnnouncement, ...old]
         }
       )
@@ -191,9 +191,9 @@ export function useUpdateTeamAnnouncementMutation(
             return key[1] === 'list' && key[2] === updated.team_id
           }
         },
-        (old: unknown) => {
+        (old: TeamAnnouncement[] | undefined) => {
           // oldが配列でない場合はそのまま返す（型が合わない場合など）
-          if (!Array.isArray(old)) return old
+          if (!old || !Array.isArray(old)) return old
           return old.map((a: TeamAnnouncement) => a.id === updated.id ? updated : a)
         }
       )
@@ -241,9 +241,9 @@ export function useDeleteTeamAnnouncementMutation(
             return key[1] === 'list' && key[2] === teamId
           }
         },
-        (old: unknown) => {
+        (old: TeamAnnouncement[] | undefined) => {
           // oldが配列でない場合はそのまま返す
-          if (!Array.isArray(old)) return old
+          if (!old || !Array.isArray(old)) return old
           return old.filter((a: TeamAnnouncement) => a.id !== id)
         }
       )
