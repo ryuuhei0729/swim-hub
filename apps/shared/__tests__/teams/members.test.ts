@@ -52,13 +52,16 @@ describe('TeamMembersAPI', () => {
         left_at: null
       }
 
-      // 1. teamsテーブルからチームを取得
-      supabaseMock.queueTable('teams', [{ 
+      // 1. RPC関数でチームを取得（find_team_by_invite_code）
+      const rpcMock = vi.fn().mockResolvedValue({
         data: { id: 'team-1', invite_code: 'CODE' },
-        configure: builder => {
-          builder.single.mockResolvedValue({ data: { id: 'team-1', invite_code: 'CODE' }, error: null })
-        }
-      }])
+        error: null
+      })
+      const rpcBuilder = {
+        single: vi.fn().mockResolvedValue({ data: { id: 'team-1', invite_code: 'CODE' }, error: null })
+      }
+      rpcMock.mockReturnValue(rpcBuilder)
+      supabaseMock.client.rpc = rpcMock
       // 2. team_membershipsテーブルへの2つのクエリを順番に設定
       //    - 1つ目: maybeSingle()で既存メンバーシップをチェック（存在しない場合はnull）
       //    - 2つ目: insert().select().single()で新しいメンバーシップを挿入
@@ -103,7 +106,15 @@ describe('TeamMembersAPI', () => {
     })
 
     it('招待コードが無効な場合はエラーとなる', async () => {
-      supabaseMock.queueTable('teams', [{ data: null }])
+      const rpcMock = vi.fn().mockResolvedValue({
+        data: null,
+        error: null
+      })
+      const rpcBuilder = {
+        single: vi.fn().mockResolvedValue({ data: null, error: null })
+      }
+      rpcMock.mockReturnValue(rpcBuilder)
+      supabaseMock.client.rpc = rpcMock
 
       await expect(api.join('INVALID')).rejects.toThrow('招待コードが無効です')
     })

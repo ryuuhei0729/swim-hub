@@ -24,12 +24,10 @@ export class TeamMembersAPI {
     const { data: { user } } = await this.supabase.auth.getUser()
     if (!user) throw new Error('認証が必要です')
 
-    // 招待コードでチームを検索
+    // 招待コードでチームを安全に検索（RPC関数を使用）
     const { data: team, error: teamError } = await this.supabase
-      .from('teams')
-      .select('id, invite_code')
-      .eq('invite_code', inviteCode)
-      .single()
+      .rpc('find_team_by_invite_code', { p_invite_code: inviteCode })
+      .single<{ id: string; invite_code: string }>()
     
     if (teamError) {
       if (teamError.code === 'PGRST116') {
@@ -38,7 +36,7 @@ export class TeamMembersAPI {
       throw teamError
     }
     
-    if (!team) throw new Error('招待コードが無効です')
+    if (!team || !team.id) throw new Error('招待コードが無効です')
 
     // 既に参加しているかチェック
     const { data: existingMembership, error: membershipError } = await this.supabase

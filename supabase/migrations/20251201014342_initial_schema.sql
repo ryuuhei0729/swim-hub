@@ -165,6 +165,36 @@ $$;
 
 COMMENT ON FUNCTION "public"."is_team_member"("target_team_id" "uuid", "target_user_id" "uuid") IS '指定したユーザーがチームに所属しているかを判定する（RLS回避用）';
 
+-- invite_codeでチームを安全に検索する関数
+-- 認証されたユーザーが特定のinvite_codeでチームを検索できる
+-- セキュリティのため、idとinvite_codeのみを返す
+CREATE OR REPLACE FUNCTION "public"."find_team_by_invite_code"("p_invite_code" "text")
+RETURNS TABLE("id" "uuid", "invite_code" "text")
+    LANGUAGE "plpgsql"
+    SECURITY DEFINER
+    SET search_path = public
+    AS $$
+BEGIN
+  -- 認証チェック
+  IF (SELECT "auth"."uid"()) IS NULL THEN
+    RAISE EXCEPTION '認証が必要です';
+  END IF;
+  
+  -- invite_codeに一致するチームを返す（idとinvite_codeのみ）
+  RETURN QUERY
+  SELECT 
+    t.id,
+    t.invite_code
+  FROM public.teams t
+  WHERE t.invite_code = p_invite_code
+  LIMIT 1;
+END;
+$$;
+
+ALTER FUNCTION "public"."find_team_by_invite_code"("p_invite_code" "text") OWNER TO "postgres";
+
+COMMENT ON FUNCTION "public"."find_team_by_invite_code"("p_invite_code" "text") IS 'invite_codeでチームを安全に検索する。認証されたユーザーのみが使用でき、idとinvite_codeのみを返す。';
+
 CREATE OR REPLACE FUNCTION "public"."is_team_admin"("target_team_id" "uuid", "target_user_id" "uuid") RETURNS boolean
     LANGUAGE "sql"
     STABLE
@@ -220,8 +250,32 @@ DECLARE
   v_tag_id uuid;
   v_result jsonb;
   v_error_message text;
+  v_index integer := 0;
 BEGIN
   -- トランザクション開始（関数全体が自動的にトランザクション内で実行される）
+  
+  -- 入力データのバリデーション
+  -- 1. p_logs_dataが配列であることを確認
+  IF jsonb_typeof(p_logs_data) != 'array' THEN
+    v_result := jsonb_build_object(
+      'success', false,
+      'error', 'p_logs_data must be a JSON array',
+      'field', 'p_logs_data',
+      'index', -1
+    );
+    RETURN v_result;
+  END IF;
+  
+  -- 2. 配列が空でないことを確認
+  IF jsonb_array_length(p_logs_data) = 0 THEN
+    v_result := jsonb_build_object(
+      'success', false,
+      'error', 'p_logs_data must be a non-empty array',
+      'field', 'p_logs_data',
+      'index', -1
+    );
+    RETURN v_result;
+  END IF;
   
   -- 既存のpractice_logsと関連データを削除
   -- CASCADEにより、practice_timesとpractice_log_tagsも自動削除される
@@ -231,6 +285,168 @@ BEGIN
   -- 新しいログデータを挿入
   FOR v_log_data IN SELECT * FROM jsonb_array_elements(p_logs_data)
   LOOP
+    -- 各エントリのバリデーション
+    -- user_idの存在と型チェック
+    IF v_log_data->'user_id' IS NULL THEN
+      v_result := jsonb_build_object(
+        'success', false,
+        'error', 'user_id is required',
+        'field', 'user_id',
+        'index', v_index
+      );
+      RETURN v_result;
+    END IF;
+    
+    IF jsonb_typeof(v_log_data->'user_id') != 'string' THEN
+      v_result := jsonb_build_object(
+        'success', false,
+        'error', 'user_id must be a string',
+        'field', 'user_id',
+        'index', v_index
+      );
+      RETURN v_result;
+    END IF;
+    
+    -- user_idがUUIDに変換可能か確認
+    BEGIN
+      PERFORM (v_log_data->>'user_id')::uuid;
+    EXCEPTION
+      WHEN OTHERS THEN
+        v_result := jsonb_build_object(
+          'success', false,
+          'error', 'user_id must be a valid UUID',
+          'field', 'user_id',
+          'index', v_index
+        );
+        RETURN v_result;
+    END;
+    
+    -- styleの存在と型チェック
+    IF v_log_data->'style' IS NULL THEN
+      v_result := jsonb_build_object(
+        'success', false,
+        'error', 'style is required',
+        'field', 'style',
+        'index', v_index
+      );
+      RETURN v_result;
+    END IF;
+    
+    IF jsonb_typeof(v_log_data->'style') != 'string' THEN
+      v_result := jsonb_build_object(
+        'success', false,
+        'error', 'style must be a string',
+        'field', 'style',
+        'index', v_index
+      );
+      RETURN v_result;
+    END IF;
+    
+    -- rep_countの存在と型チェック
+    IF v_log_data->'rep_count' IS NULL THEN
+      v_result := jsonb_build_object(
+        'success', false,
+        'error', 'rep_count is required',
+        'field', 'rep_count',
+        'index', v_index
+      );
+      RETURN v_result;
+    END IF;
+    
+    IF jsonb_typeof(v_log_data->'rep_count') NOT IN ('number', 'string') THEN
+      v_result := jsonb_build_object(
+        'success', false,
+        'error', 'rep_count must be a number or numeric string',
+        'field', 'rep_count',
+        'index', v_index
+      );
+      RETURN v_result;
+    END IF;
+    
+    -- rep_countが整数に変換可能か確認
+    BEGIN
+      PERFORM (v_log_data->>'rep_count')::integer;
+    EXCEPTION
+      WHEN OTHERS THEN
+        v_result := jsonb_build_object(
+          'success', false,
+          'error', 'rep_count must be a valid integer',
+          'field', 'rep_count',
+          'index', v_index
+        );
+        RETURN v_result;
+    END;
+    
+    -- set_countの存在と型チェック
+    IF v_log_data->'set_count' IS NULL THEN
+      v_result := jsonb_build_object(
+        'success', false,
+        'error', 'set_count is required',
+        'field', 'set_count',
+        'index', v_index
+      );
+      RETURN v_result;
+    END IF;
+    
+    IF jsonb_typeof(v_log_data->'set_count') NOT IN ('number', 'string') THEN
+      v_result := jsonb_build_object(
+        'success', false,
+        'error', 'set_count must be a number or numeric string',
+        'field', 'set_count',
+        'index', v_index
+      );
+      RETURN v_result;
+    END IF;
+    
+    -- set_countが整数に変換可能か確認
+    BEGIN
+      PERFORM (v_log_data->>'set_count')::integer;
+    EXCEPTION
+      WHEN OTHERS THEN
+        v_result := jsonb_build_object(
+          'success', false,
+          'error', 'set_count must be a valid integer',
+          'field', 'set_count',
+          'index', v_index
+        );
+        RETURN v_result;
+    END;
+    
+    -- distanceの存在と型チェック
+    IF v_log_data->'distance' IS NULL THEN
+      v_result := jsonb_build_object(
+        'success', false,
+        'error', 'distance is required',
+        'field', 'distance',
+        'index', v_index
+      );
+      RETURN v_result;
+    END IF;
+    
+    IF jsonb_typeof(v_log_data->'distance') NOT IN ('number', 'string') THEN
+      v_result := jsonb_build_object(
+        'success', false,
+        'error', 'distance must be a number or numeric string',
+        'field', 'distance',
+        'index', v_index
+      );
+      RETURN v_result;
+    END IF;
+    
+    -- distanceが整数に変換可能か確認
+    BEGIN
+      PERFORM (v_log_data->>'distance')::integer;
+    EXCEPTION
+      WHEN OTHERS THEN
+        v_result := jsonb_build_object(
+          'success', false,
+          'error', 'distance must be a valid integer',
+          'field', 'distance',
+          'index', v_index
+        );
+        RETURN v_result;
+    END;
+    
     -- practice_logsを挿入
     INSERT INTO practice_logs (
       practice_id,
@@ -284,6 +500,9 @@ BEGIN
         );
       END LOOP;
     END IF;
+    
+    -- インデックスをインクリメント
+    v_index := v_index + 1;
   END LOOP;
   
   -- 成功レスポンスを返す
@@ -1749,13 +1968,6 @@ CREATE POLICY "teams_delete_creator" ON "public"."teams" FOR DELETE USING (("cre
 CREATE POLICY "teams_insert_authenticated" ON "public"."teams" FOR INSERT WITH CHECK (((SELECT "auth"."uid"()) = "created_by"));
 
 CREATE POLICY "teams_select_members" ON "public"."teams" FOR SELECT USING ((public.is_team_member("teams"."id", (SELECT "auth"."uid"())) OR ("created_by" = (SELECT "auth"."uid"()))));
-
--- 認証済みユーザーはinvite_codeでチームを検索できる
-CREATE POLICY "teams_select_by_invite_code" ON "public"."teams" 
-FOR SELECT 
-USING (
-  (SELECT "auth"."uid"()) IS NOT NULL
-);
 
 CREATE POLICY "teams_update_creator" ON "public"."teams" FOR UPDATE USING (("created_by" = (SELECT "auth"."uid"()))) WITH CHECK (("created_by" = (SELECT "auth"."uid"())));
 

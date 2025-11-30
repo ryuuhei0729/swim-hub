@@ -247,7 +247,7 @@ export default function RecordForm({
       })
       setIsInitialized(true)
     }
-  }, [editData, isOpen, initialDate, isInitialized])
+  }, [editData, isOpen, initialDate, isInitialized, styles])
 
   if (!isOpen) return null
 

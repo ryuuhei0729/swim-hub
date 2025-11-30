@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Button, Input } from '@/components/ui'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
@@ -61,6 +61,8 @@ export default function CompetitionBasicForm({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   // 送信済みフラグ（送信後は警告を出さない）
   const [isSubmitted, setIsSubmitted] = useState(false)
+  // 初期値を保存（初期化時の変更を無視するため）
+  const initialFormDataRef = useRef<CompetitionBasicFormData | null>(null)
 
   // モーダルが閉じた時に初期化フラグをリセット
   useEffect(() => {
@@ -68,14 +70,17 @@ export default function CompetitionBasicForm({
       setIsInitialized(false)
       setHasUnsavedChanges(false)
       setIsSubmitted(false)
+      initialFormDataRef.current = null
     }
   }, [isOpen])
 
-  // フォームに変更があったことを記録
+  // フォームに変更があったことを記録（初期値と比較して、実際にユーザーが変更した場合のみ）
   useEffect(() => {
-    if (isOpen && isInitialized) {
-      setHasUnsavedChanges(true)
-    }
+    if (!isOpen || !isInitialized || !initialFormDataRef.current) return
+
+    // 初期値と現在の値を比較
+    const hasChanged = JSON.stringify(formData) !== JSON.stringify(initialFormDataRef.current)
+    setHasUnsavedChanges(hasChanged)
   }, [formData, isOpen, isInitialized])
 
   // ブラウザバックや閉じるボタンでの離脱を防ぐ
@@ -111,29 +116,33 @@ export default function CompetitionBasicForm({
   useEffect(() => {
     if (!isOpen || isInitialized) return
 
+    let initialData: CompetitionBasicFormData
     if (editData) {
       // 編集モード
-      setFormData({
+      initialData = {
         date: editData.date || format(selectedDate, 'yyyy-MM-dd'),
         endDate: editData.end_date || '',
         title: editData.title || editData.competition_name || '',
         place: editData.place || '',
         poolType: editData.pool_type ?? 0,
         note: editData.note || ''
-      })
-      setIsInitialized(true)
+      }
     } else {
       // 新規作成モード
-      setFormData({
+      initialData = {
         date: format(selectedDate, 'yyyy-MM-dd'),
         endDate: '',
         title: '',
         place: '',
         poolType: 0,
         note: ''
-      })
-      setIsInitialized(true)
+      }
     }
+    
+    setFormData(initialData)
+    // 初期値を保存（初期化時の変更を無視するため）
+    initialFormDataRef.current = { ...initialData }
+    setIsInitialized(true)
   }, [isOpen, selectedDate, editData, isInitialized])
 
   const handleSubmit = async (e: React.FormEvent) => {

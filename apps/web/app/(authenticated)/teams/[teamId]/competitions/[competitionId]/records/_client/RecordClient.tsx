@@ -489,9 +489,8 @@ export default function RecordClient({
 
             if (splitDeleteError) {
               console.error('スプリットタイム削除エラー:', splitDeleteError)
-              hasError = true
-              // 重要な削除エラーなので早期リターン
-              return
+              // 致命的な削除エラーなのでthrowして外側のcatchブロックで処理
+              throw new Error(`スプリットタイムの削除に失敗しました: ${splitDeleteError.message}`)
             }
           }
         }
@@ -504,9 +503,8 @@ export default function RecordClient({
 
         if (deleteError) {
           console.error('既存のレコード削除エラー:', deleteError)
-          hasError = true
-          // 重要な削除エラーなので早期リターン
-          return
+          // 致命的な削除エラーなのでthrowして外側のcatchブロックで処理
+          throw new Error(`既存レコードの削除に失敗しました: ${deleteError.message}`)
         }
       }
 

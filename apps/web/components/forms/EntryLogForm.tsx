@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Button, Input } from '@/components/ui'
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { formatTime } from '@/utils/formatters'
@@ -70,6 +70,8 @@ export default function EntryLogForm({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   // 送信済みフラグ（送信後は警告を出さない）
   const [isSubmitted, setIsSubmitted] = useState(false)
+  // 初期値を保存（初期化時の変更を無視するため）
+  const initialEntriesRef = useRef<EntryData[] | null>(null)
 
   // モーダルが閉じた時に初期化フラグをリセット
   useEffect(() => {
@@ -77,14 +79,17 @@ export default function EntryLogForm({
       setIsInitialized(false)
       setHasUnsavedChanges(false)
       setIsSubmitted(false)
+      initialEntriesRef.current = null
     }
   }, [isOpen])
 
-  // フォームに変更があったことを記録
+  // フォームに変更があったことを記録（初期値と比較して、実際にユーザーが変更した場合のみ）
   useEffect(() => {
-    if (isOpen && isInitialized) {
-      setHasUnsavedChanges(true)
-    }
+    if (!isOpen || !isInitialized || !initialEntriesRef.current) return
+
+    // 初期値と現在の値を比較（深い比較）
+    const hasChanged = JSON.stringify(entries) !== JSON.stringify(initialEntriesRef.current)
+    setHasUnsavedChanges(hasChanged)
   }, [entries, isOpen, isInitialized])
 
   // ブラウザバックや閉じるボタンでの離脱を防ぐ
@@ -120,22 +125,20 @@ export default function EntryLogForm({
   useEffect(() => {
     if (!isOpen || isInitialized) return
 
+    let initialEntriesData: EntryData[]
     if (initialEntries.length > 0) {
-      setEntries(
-        initialEntries.map((entry, index) => ({
-          id: entry.id || `entry-${index + 1}`,
-          styleId: entry.styleId || '',
-          entryTime: entry.entryTime || 0,
-          entryTimeDisplayValue:
-            entry.entryTimeDisplayValue ??
-            (entry.entryTime && entry.entryTime > 0 ? formatTime(entry.entryTime) : ''),
-          note: entry.note || ''
-        }))
-      )
-      setIsInitialized(true)
+      initialEntriesData = initialEntries.map((entry, index) => ({
+        id: entry.id || `entry-${index + 1}`,
+        styleId: entry.styleId || '',
+        entryTime: entry.entryTime || 0,
+        entryTimeDisplayValue:
+          entry.entryTimeDisplayValue ??
+          (entry.entryTime && entry.entryTime > 0 ? formatTime(entry.entryTime) : ''),
+        note: entry.note || ''
+      }))
     } else if (editData) {
       // 編集モード: 既存の値をセット
-      const entryDataList: EntryData[] = (() => {
+      initialEntriesData = (() => {
         // editDataにentries配列が含まれる場合は優先
         if (typeof editData === 'object' && editData !== null && 'entries' in editData) {
           const entriesProp = (editData as any).entries as Array<{
@@ -170,20 +173,22 @@ export default function EntryLogForm({
           }
         ]
       })()
-      setEntries(entryDataList)
-      setIsInitialized(true)
     } else {
       // 新規作成モード
-      setEntries([
+      initialEntriesData = [
         {
           id: '1',
           styleId: styles[0]?.id || '',
           entryTime: 0,
           note: ''
         }
-      ])
-      setIsInitialized(true)
+      ]
     }
+    
+    setEntries(initialEntriesData)
+    // 初期値を保存（初期化時の変更を無視するため）
+    initialEntriesRef.current = initialEntriesData.map(entry => ({ ...entry }))
+    setIsInitialized(true)
   }, [isOpen, styles, editData, initialEntries, isInitialized])
 
   if (!isOpen) return null

@@ -106,12 +106,6 @@ export default function RecordLogForm({
     }
   }, [isOpen])
 
-  // フォームに変更があったことを記録
-  useEffect(() => {
-    if (isOpen && isInitialized) {
-      setHasUnsavedChanges(true)
-    }
-  }, [formDataList, isOpen, isInitialized])
 
   // ブラウザバックや閉じるボタンでの離脱を防ぐ
   useEffect(() => {
@@ -199,6 +193,7 @@ export default function RecordLogForm({
     }
   }
 
+  // ユーザー操作による更新用のヘルパー（hasUnsavedChangesも設定）
   const updateFormData = (index: number, updater: (prev: RecordLogFormState) => RecordLogFormState) => {
     setFormDataList((prev) =>
       prev.map((item, i) => {
@@ -206,6 +201,7 @@ export default function RecordLogForm({
         return updater(item)
       })
     )
+    setHasUnsavedChanges(true)
   }
 
   const handleTimeChange = (index: number, value: string) => {
