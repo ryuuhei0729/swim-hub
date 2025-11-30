@@ -117,6 +117,14 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
     }
   }
 
+  // キーボード操作ハンドラー
+  const handlePracticeKeyDown = (e: React.KeyboardEvent, practiceId: string) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      handlePracticeClick(practiceId)
+    }
+  }
+
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
@@ -173,74 +181,134 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
 
       {/* 練習記録一覧 */}
       <div className="space-y-4">
-        {practices.map((practice) => (
-          <div 
-            key={practice.id}
-            onClick={() => handlePracticeClick(practice.id)}
-            className={`border border-gray-200 rounded-lg p-4 transition-colors duration-200 ${
-              isAdmin ? 'cursor-pointer hover:bg-gray-50' : ''
-            }`}
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center space-x-2 mb-2">
-                  <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
-                  <span className="text-lg font-medium text-gray-900">
-                    {format(new Date(practice.date), 'M月d日(E)', { locale: ja })}
-                  </span>
-                  <span className="text-sm text-gray-500">
-                    by {practice.users?.name || practice.created_by_user?.name || 'Unknown'}
-                  </span>
+        {practices.map((practice) => {
+          const practiceDate = format(new Date(practice.date), 'M月d日(E)', { locale: ja })
+          const hasLogs = practice.practice_logs && practice.practice_logs.length > 0
+          const ariaLabel = isAdmin 
+            ? `${practiceDate}の練習記録${hasLogs ? 'を編集' : 'を追加'}`
+            : undefined
+
+          if (isAdmin) {
+            return (
+              <button
+                key={practice.id}
+                onClick={() => handlePracticeClick(practice.id)}
+                onKeyDown={(e) => handlePracticeKeyDown(e, practice.id)}
+                aria-label={ariaLabel}
+                className="w-full text-left border border-gray-200 rounded-lg p-4 transition-colors duration-200 cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
+                      <span className="text-lg font-medium text-gray-900">
+                        {practiceDate}
+                      </span>
+                      <span className="text-sm text-gray-500">
+                        by {practice.users?.name || practice.created_by_user?.name || 'Unknown'}
+                      </span>
+                    </div>
+                    
+                    {practice.place && (
+                      <div className="flex items-center space-x-2 mb-1">
+                        <MapPinIcon className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm text-gray-600">{practice.place}</span>
+                      </div>
+                    )}
+                    
+                    {practice.note && (
+                      <p className="text-sm text-gray-600 mb-2">{practice.note}</p>
+                    )}
+                    
+                    {hasLogs ? (
+                      <div className="flex items-center space-x-2">
+                        <ClockIcon className="h-4 w-4 text-green-500" />
+                        <span className="text-sm text-green-600 font-medium">
+                          {practice.practice_logs!.length}セットの練習記録あり
+                        </span>
+                        <span className="text-xs text-gray-500 flex items-center">
+                          <PencilSquareIcon className="h-3 w-3 mr-1" />
+                          クリックで編集
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-2">
+                        <ClockIcon className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm text-gray-500">
+                          練習記録なし
+                        </span>
+                        <span className="text-xs text-blue-600 flex items-center">
+                          <PlusIcon className="h-3 w-3 mr-1" />
+                          クリックで追加
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500">
+                      {format(new Date(practice.created_at), 'M/d HH:mm')}
+                    </p>
+                  </div>
                 </div>
-                
-                {practice.place && (
-                  <div className="flex items-center space-x-2 mb-1">
-                    <MapPinIcon className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">{practice.place}</span>
-                  </div>
-                )}
-                
-                {practice.note && (
-                  <p className="text-sm text-gray-600 mb-2">{practice.note}</p>
-                )}
-                
-                {practice.practice_logs && practice.practice_logs.length > 0 ? (
-                  <div className="flex items-center space-x-2">
-                    <ClockIcon className="h-4 w-4 text-green-500" />
-                    <span className="text-sm text-green-600 font-medium">
-                      {practice.practice_logs.length}セットの練習記録あり
-                    </span>
-                    {isAdmin && (
-                      <span className="text-xs text-gray-500 flex items-center">
-                        <PencilSquareIcon className="h-3 w-3 mr-1" />
-                        クリックで編集
+              </button>
+            )
+          } else {
+            return (
+              <div
+                key={practice.id}
+                className="border border-gray-200 rounded-lg p-4"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
+                      <span className="text-lg font-medium text-gray-900">
+                        {practiceDate}
                       </span>
+                      <span className="text-sm text-gray-500">
+                        by {practice.users?.name || practice.created_by_user?.name || 'Unknown'}
+                      </span>
+                    </div>
+                    
+                    {practice.place && (
+                      <div className="flex items-center space-x-2 mb-1">
+                        <MapPinIcon className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm text-gray-600">{practice.place}</span>
+                      </div>
+                    )}
+                    
+                    {practice.note && (
+                      <p className="text-sm text-gray-600 mb-2">{practice.note}</p>
+                    )}
+                    
+                    {hasLogs ? (
+                      <div className="flex items-center space-x-2">
+                        <ClockIcon className="h-4 w-4 text-green-500" />
+                        <span className="text-sm text-green-600 font-medium">
+                          {practice.practice_logs!.length}セットの練習記録あり
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-2">
+                        <ClockIcon className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm text-gray-500">
+                          練習記録なし
+                        </span>
+                      </div>
                     )}
                   </div>
-                ) : (
-                  <div className="flex items-center space-x-2">
-                    <ClockIcon className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-500">
-                      練習記録なし
-                    </span>
-                    {isAdmin && (
-                      <span className="text-xs text-blue-600 flex items-center">
-                        <PlusIcon className="h-3 w-3 mr-1" />
-                        クリックで追加
-                      </span>
-                    )}
+                  
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500">
+                      {format(new Date(practice.created_at), 'M/d HH:mm')}
+                    </p>
                   </div>
-                )}
+                </div>
               </div>
-              
-              <div className="text-right">
-                <p className="text-xs text-gray-500">
-                  {format(new Date(practice.created_at), 'M/d HH:mm')}
-                </p>
-              </div>
-            </div>
-          </div>
-        ))}
+            )
+          }
+        })}
         
         {practices.length === 0 && (
           <div className="text-center py-8">

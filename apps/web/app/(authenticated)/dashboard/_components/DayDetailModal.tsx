@@ -1249,7 +1249,7 @@ function BestTimeBadge({
 
   useEffect(() => {
     const checkBestTime = async () => {
-      if (!styleId || recordDate === undefined) {
+      if (!styleId || !recordDate || recordDate === '') {
         setLoading(false)
         return
       }

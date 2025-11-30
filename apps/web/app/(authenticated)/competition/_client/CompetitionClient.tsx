@@ -16,7 +16,7 @@ import {
   useDeleteRecordMutation,
   useReplaceSplitTimesMutation,
 } from '@apps/shared/hooks/queries/records'
-import type { Record, Competition, Style, SplitTime, RecordWithDetails } from '@apps/shared/types/database'
+import type { Record, Competition, Style, RecordWithDetails } from '@apps/shared/types/database'
 import { 
   useCompetitionFilterStore, 
   useCompetitionRecordStore 

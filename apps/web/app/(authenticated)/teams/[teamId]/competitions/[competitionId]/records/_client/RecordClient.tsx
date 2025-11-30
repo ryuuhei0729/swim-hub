@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthProvider'
 import { Button } from '@/components/ui'
-import { ArrowLeftIcon, PlusIcon, TrashIcon, CalendarDaysIcon, MapPinIcon, UserGroupIcon, XMarkIcon, CheckIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, PlusIcon, TrashIcon, CalendarDaysIcon, MapPinIcon, UserGroupIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { Competition, Style } from '@apps/shared/types/database'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -93,7 +93,7 @@ export default function RecordClient({
   teamId,
   competitionId,
   competition,
-  teamName,
+  teamName: _teamName,
   members,
   existingRecords,
   styles
@@ -440,6 +440,8 @@ export default function RecordClient({
     e.preventDefault()
     setSaving(true)
 
+    let hasError = false
+
     try {
       // 有効なレコードを収集
       const validRecords: Array<{
@@ -487,6 +489,9 @@ export default function RecordClient({
 
             if (splitDeleteError) {
               console.error('スプリットタイム削除エラー:', splitDeleteError)
+              hasError = true
+              // 重要な削除エラーなので早期リターン
+              return
             }
           }
         }
@@ -499,6 +504,8 @@ export default function RecordClient({
 
         if (deleteError) {
           console.error('既存のレコード削除エラー:', deleteError)
+          hasError = true
+          // 重要な削除エラーなので早期リターン
           return
         }
       }
@@ -522,6 +529,7 @@ export default function RecordClient({
 
         if (recordError) {
           console.error(`Record作成エラー (${record.memberName}):`, recordError)
+          hasError = true
           continue
         }
 
@@ -539,13 +547,21 @@ export default function RecordClient({
 
           if (splitError) {
             console.error(`SplitTime作成エラー (${record.memberName}):`, splitError)
+            hasError = true
           }
         }
+      }
+
+      // エラーが発生した場合はリダイレクトしない
+      if (hasError) {
+        alert('保存中にエラーが発生しました。もう一度お試しください。')
+        return
       }
 
       router.push(`/teams/${teamId}?tab=competitions`)
     } catch (err) {
       console.error('チーム大会記録作成エラー:', err)
+      alert('保存中にエラーが発生しました。もう一度お試しください。')
     } finally {
       setSaving(false)
     }

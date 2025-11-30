@@ -258,21 +258,21 @@ export default function PracticeLogClient({
     setSaving(true)
 
     try {
-      // 編集モードの場合は既存データを削除
-      if (isEditMode) {
-        const { error: deleteError } = await supabase
-          .from('practice_logs')
-          .delete()
-          .eq('practice_id', practiceId)
-
-        if (deleteError) {
-          console.error('既存の練習ログ削除エラー:', deleteError)
-          return
-        }
-      }
-
-      // 新規作成
-      let totalCreated = 0
+      // ログデータを準備
+      const logsData: Array<{
+        user_id: string
+        style: string
+        rep_count: number
+        set_count: number
+        distance: number
+        note: string
+        practice_times: Array<{
+          set_number: number
+          rep_number: number
+          time: number
+        }>
+        tag_ids: string[]
+      }> = []
 
       for (const menu of menus) {
         // 対象ユーザーのみにログを作成
@@ -281,72 +281,59 @@ export default function PracticeLogClient({
         for (const member of targetMembers) {
           const memberTimes = menu.times.find(t => t.memberId === member.id)?.times || []
 
-          try {
-            // PracticeLogを作成
-            const { data: practiceLog, error: logError } = await supabase
-              .from('practice_logs')
-              .insert({
-                practice_id: practiceId,
-                user_id: member.user_id,
-                style: menu.style,
-                rep_count: Number(menu.reps) || 1,
-                set_count: Number(menu.sets) || 1,
-                distance: Number(menu.distance) || 100,
-                note: menu.note
-              })
-              .select('id')
-              .single()
-
-            if (logError) {
-              console.error(`PracticeLog作成エラー (${member.users.name}):`, logError)
-              continue
-            }
-
-            // PracticeTimeを作成（タイムがある場合のみ）
-            if (memberTimes.length > 0) {
-              const practiceTimes = memberTimes.map((timeEntry) => ({
-                practice_log_id: practiceLog.id,
-                user_id: member.user_id,
-                set_number: timeEntry.setNumber,
-                rep_number: timeEntry.repNumber,
-                time: timeEntry.time
-              }))
-
-              const { error: timesError } = await supabase
-                .from('practice_times')
-                .insert(practiceTimes)
-
-              if (timesError) {
-                console.error(`PracticeTime作成エラー (${member.users.name}):`, timesError)
-              }
-            }
-
-            // PracticeLogTagを作成
-            for (const tag of menu.tags) {
-              const { error: tagError } = await supabase
-                .from('practice_log_tags')
-                .insert({
-                  practice_log_id: practiceLog.id,
-                  practice_tag_id: tag.id
-                })
-
-              if (tagError) {
-                console.error(`PracticeLogTag作成エラー:`, tagError)
-              }
-            }
-
-            totalCreated++
-          } catch (memberError) {
-            console.error(`メンバー ${member.users.name} の処理エラー:`, memberError)
-          }
+          logsData.push({
+            user_id: member.user_id,
+            style: menu.style,
+            rep_count: Number(menu.reps) || 1,
+            set_count: Number(menu.sets) || 1,
+            distance: Number(menu.distance) || 100,
+            note: menu.note || '',
+            practice_times: memberTimes.map((timeEntry) => ({
+              set_number: timeEntry.setNumber,
+              rep_number: timeEntry.repNumber,
+              time: timeEntry.time
+            })),
+            tag_ids: menu.tags.map(tag => tag.id)
+          })
         }
       }
 
-      if (totalCreated > 0) {
-        router.push(`/teams/${teamId}?tab=practices`)
+      if (logsData.length === 0) {
+        alert('少なくとも1つの記録を入力してください')
+        setSaving(false)
+        return
       }
+
+      // RPC関数を呼び出して原子性のある操作を実行
+      const { data: result, error: rpcError } = await supabase
+        .rpc('replace_practice_logs', {
+          p_practice_id: practiceId,
+          p_logs_data: logsData
+        })
+
+      if (rpcError) {
+        console.error('練習ログ保存エラー:', rpcError)
+        alert('保存中にエラーが発生しました。もう一度お試しください。')
+        setSaving(false)
+        return
+      }
+
+      // RPC関数の戻り値を確認
+      if (result && typeof result === 'object' && 'success' in result) {
+        if (!result.success) {
+          const errorMessage = result.error || '保存中にエラーが発生しました。'
+          console.error('練習ログ保存エラー:', errorMessage)
+          alert(`保存中にエラーが発生しました: ${errorMessage}`)
+          setSaving(false)
+          return
+        }
+      }
+
+      // 成功時はリダイレクト
+      router.push(`/teams/${teamId}?tab=practices`)
     } catch (err) {
       console.error('チーム練習ログ作成エラー:', err)
+      alert('保存中にエラーが発生しました。もう一度お試しください。')
     } finally {
       setSaving(false)
     }

@@ -129,7 +129,7 @@ export default function RecordForm({
       e.returnValue = ''
     }
 
-    const handlePopState = (e: PopStateEvent) => {
+    const handlePopState = (_e: PopStateEvent) => {
       if (hasUnsavedChanges && !isSubmitted) {
         const confirmed = window.confirm('入力内容が保存されていません。このまま戻りますか？')
         if (!confirmed) {
@@ -158,6 +158,13 @@ export default function RecordForm({
       }))
     }
   }, [isOpen, initialDate])
+
+  // フォームに変更があったことを記録
+  useEffect(() => {
+    if (isOpen && isInitialized) {
+      setHasUnsavedChanges(true)
+    }
+  }, [formData, isOpen, isInitialized])
 
   // 編集データがある場合、フォームを初期化（モーダルが開かれた時だけ）
   useEffect(() => {
@@ -304,13 +311,6 @@ export default function RecordForm({
       }))
     }
   }
-
-  // フォームに変更があったことを記録
-  useEffect(() => {
-    if (isOpen && isInitialized) {
-      setHasUnsavedChanges(true)
-    }
-  }, [formData, isOpen, isInitialized])
 
   const updateRecord = (recordId: string, updates: Partial<RecordSet>) => {
     setFormData(prev => {
@@ -687,7 +687,7 @@ export default function RecordForm({
                       const distB = typeof b.distance === 'number' ? b.distance : 0
                       return distA - distB
                     })
-                    .map((split, splitIndex) => {
+                    .map((split, _splitIndex) => {
                       // ソート後の元のインデックスを取得
                       const originalIndex = record.splitTimes.findIndex(st => st.uiKey === split.uiKey)
                       return { split, originalIndex }

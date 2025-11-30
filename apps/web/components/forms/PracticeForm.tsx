@@ -72,7 +72,7 @@ export default function PracticeForm({
       e.returnValue = ''
     }
 
-    const handlePopState = (e: PopStateEvent) => {
+    const handlePopState = (_e: PopStateEvent) => {
       if (hasUnsavedChanges && !isSubmitted) {
         const confirmed = window.confirm('入力内容が保存されていません。このまま戻りますか？')
         if (!confirmed) {
