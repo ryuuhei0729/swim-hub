@@ -33,10 +33,15 @@ export class DashboardAPI {
 
     // データをCalendarItem形式に変換
     // 注意: calendar_viewは既にauth.uid()でフィルタリングされていますが、
-    // 多層防御として、metadataのuser_idが現在のユーザーと一致することを確認
+    // 多層防御として、個人のデータのみmetadataのuser_idが現在のユーザーと一致することを確認
+    // チームのデータ（team_idが存在する場合）は、チームメンバーシップで既にフィルタリングされているためスキップ
     const result = calendarData
       ?.filter(item => {
-        // metadataにuser_idが含まれている場合のみ検証
+        // チームのデータの場合は、チームメンバーシップで既にフィルタリングされているためスキップ
+        if (item.metadata?.team_id) {
+          return true
+        }
+        // 個人のデータの場合のみ、user_idを検証
         const userId = item.metadata?.user_id
         if (userId) {
           return userId === user.id
