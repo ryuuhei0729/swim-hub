@@ -434,8 +434,18 @@ describe('AttendanceAPI', () => {
 
     it('canSubmitAttendance は今日の日付の場合は提出可能（openの場合）', async () => {
       // 今日の日付 + open → true
+      // 実装では eventDateObj < today の場合にfalseを返すため、
+      // eventDateObj >= today の場合はtrueを返す
+      // タイムゾーンの問題を避けるため、ローカル時間で今日の日付を取得
+      // 実装では new Date(eventDate) でパースし、setHours(0,0,0,0) でローカル時間の00:00:00に設定
+      // テストでも同じ方法で日付を生成する
       const today = new Date()
-      const todayStr = today.toISOString().split('T')[0]
+      today.setHours(0, 0, 0, 0)
+      // YYYY-MM-DD形式の文字列を生成（ローカル時間で）
+      const year = today.getFullYear()
+      const month = String(today.getMonth() + 1).padStart(2, '0')
+      const day = String(today.getDate()).padStart(2, '0')
+      const todayStr = `${year}-${month}-${day}`
       
       supabaseMock.queueTable('practices', [{ 
         data: { 

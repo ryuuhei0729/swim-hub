@@ -200,6 +200,8 @@ describe('PracticeForm', () => {
   describe('フォームクローズ', () => {
     it('閉じるボタンをクリックしたときonCloseが呼ばれる', async () => {
       const user = userEvent.setup()
+      // window.confirmをモック（未保存の変更がない場合は確認なし）
+      window.confirm = vi.fn(() => true)
       
       render(
         <PracticeForm
@@ -209,7 +211,7 @@ describe('PracticeForm', () => {
         />
       )
 
-      const closeButton = screen.getByRole('button', { name: '閉じる' })
+      const closeButton = screen.getByRole('button', { name: 'キャンセル' })
       await user.click(closeButton)
 
       expect(mockOnClose).toHaveBeenCalled()
