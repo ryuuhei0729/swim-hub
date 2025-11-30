@@ -49,7 +49,7 @@
 
 | Category | Technology Stack |
 | --- | --- |
-| Frontend | TypeScript 5, Next.js 15 (App Router), React 19, Tailwind CSS 3|
+| Frontend | TypeScript 5, Next.js 15 (App Router), React 19, Tailwind CSS 4|
 | Backend | Supabase Auth / Storage / Realtime, Row Level Security |
 | Infrastructure | Vercel (web), Supabase (DB/Storage) |
 | Database | PostgreSQL (Supabase) |

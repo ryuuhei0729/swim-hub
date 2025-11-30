@@ -16,11 +16,11 @@ export default function AppError({ error, reset }: ErrorProps) {
   }, [error])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-linear-to-br from-red-50 to-orange-50 flex items-center justify中心 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 text-center">
         {/* エラーアイコン */}
         <div className="flex justify-center">
-          <div className="w-20 h-20 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center shadow-lg">
+          <div className="w-20 h-20 bg-linear-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center shadow-lg">
             <ExclamationTriangleIcon className="w-10 h-10 text-white" />
           </div>
         </div>

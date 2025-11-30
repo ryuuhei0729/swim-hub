@@ -7,6 +7,7 @@ import { format } from 'date-fns'
 
 interface CompetitionBasicFormData {
   date: string
+  endDate: string // 終了日（複数日開催の場合）。空文字の場合は単日開催
   title: string
   place: string
   poolType: number
@@ -15,6 +16,7 @@ interface CompetitionBasicFormData {
 
 type EditCompetitionBasicData = {
   date?: string
+  end_date?: string | null // 終了日（複数日開催の場合）
   title?: string
   competition_name?: string
   place?: string
@@ -46,6 +48,7 @@ export default function CompetitionBasicForm({
 }: CompetitionBasicFormProps) {
   const [formData, setFormData] = useState<CompetitionBasicFormData>({
     date: format(selectedDate, 'yyyy-MM-dd'),
+    endDate: '',
     title: '',
     place: '',
     poolType: 0,
@@ -59,6 +62,7 @@ export default function CompetitionBasicForm({
         // 編集モード
         setFormData({
           date: editData.date || format(selectedDate, 'yyyy-MM-dd'),
+          endDate: editData.end_date || '',
           title: editData.title || editData.competition_name || '',
           place: editData.place || '',
           poolType: editData.pool_type ?? 0,
@@ -68,6 +72,7 @@ export default function CompetitionBasicForm({
         // 新規作成モード
         setFormData({
           date: format(selectedDate, 'yyyy-MM-dd'),
+          endDate: '',
           title: '',
           place: '',
           poolType: 0,
@@ -89,6 +94,11 @@ export default function CompetitionBasicForm({
       console.error('場所を入力してください')
       return
     }
+    // 終了日が設定されている場合、開始日以降であることを確認
+    if (formData.endDate && formData.endDate < formData.date) {
+      console.error('終了日は開始日以降の日付を指定してください')
+      return
+    }
 
     await onSubmit(formData)
   }
@@ -96,6 +106,7 @@ export default function CompetitionBasicForm({
   const handleClose = () => {
     setFormData({
       date: format(new Date(), 'yyyy-MM-dd'),
+      endDate: '',
       title: '',
       place: '',
       poolType: 0,
@@ -130,19 +141,34 @@ export default function CompetitionBasicForm({
 
             {/* フォーム */}
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* 日付 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  日付 <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  required
-                  className="w-full"
-                  data-testid="competition-date"
-                />
+              {/* 日付（開始日・終了日） */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    開始日 <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    required
+                    className="w-full"
+                    data-testid="competition-date"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    終了日 <span className="text-gray-400 text-xs">（複数日の場合）</span>
+                  </label>
+                  <Input
+                    type="date"
+                    value={formData.endDate}
+                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                    min={formData.date}
+                    className="w-full"
+                    data-testid="competition-end-date"
+                  />
+                </div>
               </div>
 
               {/* 大会名 */}

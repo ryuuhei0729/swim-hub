@@ -79,7 +79,7 @@ export default function TeamStatsCards({ stats, isLoading = false }: TeamStatsCa
           className="bg-white rounded-lg shadow hover:shadow-md transition-shadow duration-200 p-6"
         >
           <div className="flex items-center">
-            <div className={`flex-shrink-0 p-3 rounded-lg ${stat.bgColor}`}>
+            <div className={`shrink-0 p-3 rounded-lg ${stat.bgColor}`}>
               <stat.icon className={`h-6 w-6 ${stat.textColor}`} />
             </div>
             <div className="ml-4">

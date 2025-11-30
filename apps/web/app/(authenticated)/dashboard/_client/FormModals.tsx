@@ -19,7 +19,7 @@ import { convertRecordFormData } from '@/stores/types'
 interface FormModalsProps {
   onPracticeBasicSubmit: (basicData: { date: string; place: string; note: string }) => Promise<void>
   onPracticeLogSubmit: (formDataArray: PracticeMenuFormData[]) => Promise<void>
-  onCompetitionBasicSubmit: (basicData: { date: string; title: string; place: string; poolType: number; note: string }) => Promise<void>
+  onCompetitionBasicSubmit: (basicData: { date: string; endDate: string; title: string; place: string; poolType: number; note: string }) => Promise<void>
   onEntrySubmit: (entriesData: EntryFormData[]) => Promise<void>
   onEntrySkip: () => void
   onRecordLogSubmit: (formDataList: RecordFormDataInternal[]) => Promise<void>

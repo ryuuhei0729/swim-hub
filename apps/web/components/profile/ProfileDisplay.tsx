@@ -30,7 +30,7 @@ export default function ProfileDisplay({ profile }: ProfileDisplayProps) {
       {/* プロフィール - 左: 画像 / 右: 名前, 生年月日, 自己紹介 */}
       <div className="flex items-start space-x-8">
         {/* 左カラム: プロフィール画像（表示のみ） */}
-        <div className="flex-shrink-0 mt-3 ml-3">
+        <div className="shrink-0 mt-3 ml-3">
           <Avatar
             avatarUrl={profile.profile_image_path || null}
             userName={profile.name}
