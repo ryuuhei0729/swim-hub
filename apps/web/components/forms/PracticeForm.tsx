@@ -40,6 +40,58 @@ export default function PracticeForm({
     note: ''
   })
 
+  // 初期化済みフラグ（モーダルが開かれた時だけ初期化するため）
+  const [isInitialized, setIsInitialized] = useState(false)
+  // フォームに変更があるかどうかを追跡
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  // 送信済みフラグ（送信後は警告を出さない）
+  const [isSubmitted, setIsSubmitted] = useState(false)
+
+  // モーダルが閉じた時に初期化フラグをリセット
+  useEffect(() => {
+    if (!isOpen) {
+      setIsInitialized(false)
+      setHasUnsavedChanges(false)
+      setIsSubmitted(false)
+    }
+  }, [isOpen])
+
+  // フォームに変更があったことを記録
+  useEffect(() => {
+    if (isOpen && isInitialized) {
+      setHasUnsavedChanges(true)
+    }
+  }, [formData, isOpen, isInitialized])
+
+  // ブラウザバックや閉じるボタンでの離脱を防ぐ
+  useEffect(() => {
+    if (!isOpen || !hasUnsavedChanges || isSubmitted) return
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+
+    const handlePopState = (e: PopStateEvent) => {
+      if (hasUnsavedChanges && !isSubmitted) {
+        const confirmed = window.confirm('入力内容が保存されていません。このまま戻りますか？')
+        if (!confirmed) {
+          // 履歴を戻す
+          window.history.pushState(null, '', window.location.href)
+        }
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.history.pushState(null, '', window.location.href)
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [isOpen, hasUnsavedChanges, isSubmitted])
+
   // initialDateが変更された時にフォームデータを更新
   useEffect(() => {
     if (isOpen && initialDate) {
@@ -50,39 +102,57 @@ export default function PracticeForm({
     }
   }, [isOpen, initialDate])
 
-  // 編集データがある場合、フォームを初期化
+  // 編集データがある場合、フォームを初期化（モーダルが開かれた時だけ）
   useEffect(() => {
-    if (editData && isOpen) {
+    if (!isOpen || isInitialized) return
+
+    if (editData) {
       setFormData({
         practiceDate: editData.date || format(new Date(), 'yyyy-MM-dd'),
         place: editData.place || '',
         note: editData.note || ''
       })
-    } else if (!editData && isOpen) {
+      setIsInitialized(true)
+    } else {
       // 新規作成時はデフォルト値にリセット
       setFormData({
         practiceDate: initialDate ? format(initialDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
         place: '',
         note: ''
       })
+      setIsInitialized(true)
     }
-  }, [editData, isOpen, initialDate])
+  }, [editData, isOpen, initialDate, isInitialized])
 
   if (!isOpen) return null
 
+  const handleClose = () => {
+    if (hasUnsavedChanges && !isSubmitted) {
+      const confirmed = window.confirm('入力内容が保存されていません。このまま閉じますか？')
+      if (!confirmed) {
+        return
+      }
+    }
+    onClose()
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsSubmitted(true)
     try {
       await onSubmit(formData)
+      setHasUnsavedChanges(false)
+      onClose()
     } catch (error) {
       console.error('フォーム送信エラー:', error)
+      setIsSubmitted(false)
     }
   }
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={onClose}></div>
+        <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose}></div>
 
         <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
           {/* ヘッダー */}
@@ -93,7 +163,7 @@ export default function PracticeForm({
               </h3>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 className="text-gray-400 hover:text-gray-600"
                 aria-label="閉じる"
               >
@@ -151,7 +221,7 @@ export default function PracticeForm({
             <div className="flex justify-end gap-3 pt-6 border-t">
               <Button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 variant="secondary"
                 disabled={isLoading}
               >

@@ -61,7 +61,7 @@ export function LapTimeDisplay({ splitTimes, raceDistance }: LapTimeDisplayProps
 
   return (
     <div className="mt-4 bg-gray-50 rounded-lg border border-gray-200">
-      <Tabs tabs={tabs} activeTabId={activeTab} onTabChange={setActiveTab} className="px-4" />
+      <Tabs tabs={tabs} activeTabId={activeTab} onTabChange={(tabId) => setActiveTab(tabId as 'all' | 'race')} className="px-4" />
       
       <div className="p-4">
         {activeTab === 'all' && (

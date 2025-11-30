@@ -64,74 +64,139 @@ export default function EntryLogForm({
     }
   ])
 
-  // モーダルが開かれたときにリセットまたは編集データを設定
-  useEffect(() => {
-    if (isOpen) {
-      if (initialEntries.length > 0) {
-        setEntries(
-          initialEntries.map((entry, index) => ({
-            id: entry.id || `entry-${index + 1}`,
-            styleId: entry.styleId || '',
-            entryTime: entry.entryTime || 0,
-            entryTimeDisplayValue:
-              entry.entryTimeDisplayValue ??
-              (entry.entryTime && entry.entryTime > 0 ? formatTime(entry.entryTime) : ''),
-            note: entry.note || ''
-          }))
-        )
-      } else if (editData) {
-        // 編集モード: 既存の値をセット
-        const entryDataList: EntryData[] = (() => {
-          // editDataにentries配列が含まれる場合は優先
-          if (typeof editData === 'object' && editData !== null && 'entries' in editData) {
-            const entriesProp = (editData as any).entries as Array<{
-              id?: string
-              styleId?: string | number
-              style_id?: string | number
-              entryTime?: number | null
-              entry_time?: number | null
-              note?: string | null
-            }>
-            if (Array.isArray(entriesProp) && entriesProp.length > 0) {
-              return entriesProp.map((entry, idx) => ({
-                id: entry.id || `entry-${idx + 1}`,
-                styleId: String(entry.styleId ?? entry.style_id ?? styles[0]?.id ?? ''),
-                entryTime: entry.entryTime ?? entry.entry_time ?? 0,
-                entryTimeDisplayValue:
-                  entry.entryTime ?? entry.entry_time
-                    ? formatTime(Number(entry.entryTime ?? entry.entry_time))
-                    : '',
-                note: entry.note || ''
-              }))
-            }
-          }
+  // 初期化済みフラグ（モーダルが開かれた時だけ初期化するため）
+  const [isInitialized, setIsInitialized] = useState(false)
+  // フォームに変更があるかどうかを追跡
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  // 送信済みフラグ（送信後は警告を出さない）
+  const [isSubmitted, setIsSubmitted] = useState(false)
 
-          return [
-            {
-              id: editData.id || '1',
-              styleId: String(editData.style_id || editData.styleId || styles[0]?.id || ''),
-              entryTime: editData.entry_time || 0,
-              entryTimeDisplayValue: editData.entry_time ? formatTime(editData.entry_time) : '',
-              note: editData.note || ''
-            }
-          ]
-        })()
-        setEntries(entryDataList)
-      } else {
-        // 新規作成モード
-        setEntries([
-          {
-            id: '1',
-            styleId: styles[0]?.id || '',
-            entryTime: 0,
-            note: ''
-          }
-        ])
+  // モーダルが閉じた時に初期化フラグをリセット
+  useEffect(() => {
+    if (!isOpen) {
+      setIsInitialized(false)
+      setHasUnsavedChanges(false)
+      setIsSubmitted(false)
+    }
+  }, [isOpen])
+
+  // フォームに変更があったことを記録
+  useEffect(() => {
+    if (isOpen && isInitialized) {
+      setHasUnsavedChanges(true)
+    }
+  }, [entries, isOpen, isInitialized])
+
+  // ブラウザバックや閉じるボタンでの離脱を防ぐ
+  useEffect(() => {
+    if (!isOpen || !hasUnsavedChanges || isSubmitted) return
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+
+    const handlePopState = (e: PopStateEvent) => {
+      if (hasUnsavedChanges && !isSubmitted) {
+        const confirmed = window.confirm('入力内容が保存されていません。このまま戻りますか？')
+        if (!confirmed) {
+          // 履歴を戻す
+          window.history.pushState(null, '', window.location.href)
+        }
       }
     }
-  }, [isOpen, styles, editData, initialEntries])
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.history.pushState(null, '', window.location.href)
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [isOpen, hasUnsavedChanges, isSubmitted])
+
+  // モーダルが開かれたときにリセットまたは編集データを設定（モーダルが開かれた時だけ）
+  useEffect(() => {
+    if (!isOpen || isInitialized) return
+
+    if (initialEntries.length > 0) {
+      setEntries(
+        initialEntries.map((entry, index) => ({
+          id: entry.id || `entry-${index + 1}`,
+          styleId: entry.styleId || '',
+          entryTime: entry.entryTime || 0,
+          entryTimeDisplayValue:
+            entry.entryTimeDisplayValue ??
+            (entry.entryTime && entry.entryTime > 0 ? formatTime(entry.entryTime) : ''),
+          note: entry.note || ''
+        }))
+      )
+      setIsInitialized(true)
+    } else if (editData) {
+      // 編集モード: 既存の値をセット
+      const entryDataList: EntryData[] = (() => {
+        // editDataにentries配列が含まれる場合は優先
+        if (typeof editData === 'object' && editData !== null && 'entries' in editData) {
+          const entriesProp = (editData as any).entries as Array<{
+            id?: string
+            styleId?: string | number
+            style_id?: string | number
+            entryTime?: number | null
+            entry_time?: number | null
+            note?: string | null
+          }>
+          if (Array.isArray(entriesProp) && entriesProp.length > 0) {
+            return entriesProp.map((entry, idx) => ({
+              id: entry.id || `entry-${idx + 1}`,
+              styleId: String(entry.styleId ?? entry.style_id ?? styles[0]?.id ?? ''),
+              entryTime: entry.entryTime ?? entry.entry_time ?? 0,
+              entryTimeDisplayValue:
+                entry.entryTime ?? entry.entry_time
+                  ? formatTime(Number(entry.entryTime ?? entry.entry_time))
+                  : '',
+              note: entry.note || ''
+            }))
+          }
+        }
+
+        return [
+          {
+            id: editData.id || '1',
+            styleId: String(editData.style_id || editData.styleId || styles[0]?.id || ''),
+            entryTime: editData.entry_time || 0,
+            entryTimeDisplayValue: editData.entry_time ? formatTime(editData.entry_time) : '',
+            note: editData.note || ''
+          }
+        ]
+      })()
+      setEntries(entryDataList)
+      setIsInitialized(true)
+    } else {
+      // 新規作成モード
+      setEntries([
+        {
+          id: '1',
+          styleId: styles[0]?.id || '',
+          entryTime: 0,
+          note: ''
+        }
+      ])
+      setIsInitialized(true)
+    }
+  }, [isOpen, styles, editData, initialEntries, isInitialized])
 
   if (!isOpen) return null
+
+  const handleClose = () => {
+    if (hasUnsavedChanges && !isSubmitted) {
+      const confirmed = window.confirm('入力内容が保存されていません。このまま閉じますか？')
+      if (!confirmed) {
+        return
+      }
+    }
+    onClose()
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -149,10 +214,14 @@ export default function EntryLogForm({
       return
     }
 
+    setIsSubmitted(true)
     try {
       await onSubmit(entries)
+      setHasUnsavedChanges(false)
+      onClose()
     } catch (error) {
       console.error('エントリー送信エラー:', error)
+      setIsSubmitted(false)
     }
   }
 
@@ -213,7 +282,7 @@ export default function EntryLogForm({
   return (
     <div className="fixed inset-0 z-[70] overflow-y-auto" data-testid="entry-form-modal">
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={onClose}></div>
+        <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose}></div>
 
         <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-3xl">
           {/* ヘッダー */}
@@ -224,7 +293,7 @@ export default function EntryLogForm({
               </h3>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 className="text-gray-400 hover:text-gray-600"
                 disabled={isLoading}
               >
@@ -365,7 +434,7 @@ export default function EntryLogForm({
               <div className="flex gap-3">
                 <Button
                   type="button"
-                  onClick={onClose}
+                  onClick={handleClose}
                   variant="secondary"
                   disabled={isLoading}
                   data-testid="entry-cancel-button"

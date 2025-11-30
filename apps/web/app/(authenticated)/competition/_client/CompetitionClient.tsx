@@ -685,8 +685,8 @@ export default function CompetitionClient({
                         {selectedRecord.time && (
                           <div className="flex items-center gap-2 mb-1">
                             <p className="text-lg font-semibold text-blue-700">
-                              ⏱️ {formatTime(selectedRecord.time)}{selectedRecord.is_relaying && <span className="font-bold text-red-600 ml-1">R</span>}
-                            </p>
+                            ⏱️ {formatTime(selectedRecord.time)}{selectedRecord.is_relaying && <span className="font-bold text-red-600 ml-1">R</span>}
+                          </p>
                             <BestTimeBadge
                               recordId={selectedRecord.id}
                               styleId={selectedRecord.style_id}
@@ -711,7 +711,7 @@ export default function CompetitionClient({
                                 distance: st.distance,
                                 splitTime: st.split_time
                               }))}
-                              raceDistance={selectedRecord.styles?.distance}
+                              raceDistance={selectedRecord.style?.distance}
                             />
                           </div>
                         )}

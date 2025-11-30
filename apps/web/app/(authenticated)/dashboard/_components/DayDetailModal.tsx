@@ -1677,13 +1677,16 @@ function CompetitionDetails({
                       <div className="text-xs font-medium text-gray-500 mb-1">タイム</div>
                       <div className="flex items-center gap-2 mb-3">
                         <div className="text-2xl font-bold text-blue-700" data-testid="record-time-display">
-                          ⏱️ {formatTime(record.metadata.record.time)}
+                        ⏱️ {formatTime(record.metadata.record.time)}
                         </div>
                         <BestTimeBadge
                           recordId={record.id}
-                          styleId={record.metadata?.style?.id || record.metadata?.record?.style?.id}
+                          styleId={(() => {
+                            const id = record.metadata?.style?.id || record.metadata?.record?.style?.id
+                            return typeof id === 'number' ? id : undefined
+                          })()}
                           currentTime={record.metadata.record.time}
-                          recordDate={record.item_date || record.metadata?.competition?.date}
+                          recordDate={record.metadata?.competition?.date}
                           poolType={record.metadata?.competition?.pool_type ?? record.metadata?.pool_type}
                           isRelaying={record.metadata?.record?.is_relaying}
                         />

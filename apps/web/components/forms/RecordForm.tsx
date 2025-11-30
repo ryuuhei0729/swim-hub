@@ -104,6 +104,51 @@ export default function RecordForm({
     note: ''
   })
 
+  // 初期化済みフラグ（モーダルが開かれた時だけ初期化するため）
+  const [isInitialized, setIsInitialized] = useState(false)
+  // フォームに変更があるかどうかを追跡
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  // 送信済みフラグ（送信後は警告を出さない）
+  const [isSubmitted, setIsSubmitted] = useState(false)
+
+  // モーダルが閉じた時に初期化フラグをリセット
+  useEffect(() => {
+    if (!isOpen) {
+      setIsInitialized(false)
+      setHasUnsavedChanges(false)
+      setIsSubmitted(false)
+    }
+  }, [isOpen])
+
+  // ブラウザバックや閉じるボタンでの離脱を防ぐ
+  useEffect(() => {
+    if (!isOpen || !hasUnsavedChanges || isSubmitted) return
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+
+    const handlePopState = (e: PopStateEvent) => {
+      if (hasUnsavedChanges && !isSubmitted) {
+        const confirmed = window.confirm('入力内容が保存されていません。このまま戻りますか？')
+        if (!confirmed) {
+          // 履歴を戻す
+          window.history.pushState(null, '', window.location.href)
+        }
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.history.pushState(null, '', window.location.href)
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [isOpen, hasUnsavedChanges, isSubmitted])
+
   // initialDateが変更された時にフォームデータを更新
   useEffect(() => {
     if (isOpen && initialDate) {
@@ -114,9 +159,11 @@ export default function RecordForm({
     }
   }, [isOpen, initialDate])
 
-  // 編集データがある場合、フォームを初期化
+  // 編集データがある場合、フォームを初期化（モーダルが開かれた時だけ）
   useEffect(() => {
-    if (editData && isOpen) {
+    if (!isOpen || isInitialized) return
+
+    if (editData) {
       
       // 複数のRecordが存在する場合の処理
       if (editData.records && editData.records.length > 0) {
@@ -145,6 +192,7 @@ export default function RecordForm({
           records: records,
           note: editData.note || ''
         })
+        setIsInitialized(true)
         return
       }
       
@@ -171,6 +219,7 @@ export default function RecordForm({
         }],
         note: editData.note || ''
       })
+      setIsInitialized(true)
     } else if (!editData && isOpen) {
       // 新規作成時はデフォルト値にリセット
       setFormData({
@@ -189,13 +238,25 @@ export default function RecordForm({
         }],
         note: ''
       })
+      setIsInitialized(true)
     }
-  }, [editData, isOpen, initialDate, styles])
+  }, [editData, isOpen, initialDate, isInitialized])
 
   if (!isOpen) return null
 
+  const handleClose = () => {
+    if (hasUnsavedChanges && !isSubmitted) {
+      const confirmed = window.confirm('入力内容が保存されていません。このまま閉じますか？')
+      if (!confirmed) {
+        return
+      }
+    }
+    onClose()
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsSubmitted(true)
     try {
       // 送信前にUI専用プロパティを除去
       const sanitizedData = {
@@ -210,8 +271,11 @@ export default function RecordForm({
       }
       
       await onSubmit(sanitizedData)
+      setHasUnsavedChanges(false)
+      onClose()
     } catch (error) {
       console.error('フォーム送信エラー:', error)
+      setIsSubmitted(false)
     }
   }
 
@@ -240,6 +304,13 @@ export default function RecordForm({
       }))
     }
   }
+
+  // フォームに変更があったことを記録
+  useEffect(() => {
+    if (isOpen && isInitialized) {
+      setHasUnsavedChanges(true)
+    }
+  }, [formData, isOpen, isInitialized])
 
   const updateRecord = (recordId: string, updates: Partial<RecordSet>) => {
     setFormData(prev => {
@@ -277,10 +348,10 @@ export default function RecordForm({
       }
 
       return {
-        ...prev,
-        records: prev.records.map(record =>
+      ...prev,
+      records: prev.records.map(record =>
           record.id === recordId ? updatedRecord : record
-        )
+      )
       }
     })
   }
@@ -361,7 +432,7 @@ export default function RecordForm({
         timeDisplayValue: undefined
       })
     } else {
-      updateRecord(recordId, { splitTimes: updatedSplitTimes })
+    updateRecord(recordId, { splitTimes: updatedSplitTimes })
     }
   }
 
@@ -388,7 +459,7 @@ export default function RecordForm({
     <div className="fixed inset-0 z-[70] overflow-y-auto" data-testid="record-form-modal">
       <div className="flex min-h-screen items-center justify-center p-4">
         {/* オーバーレイ */}
-        <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={onClose}></div>
+        <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose}></div>
 
         {/* モーダルコンテンツ */}
         <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -400,7 +471,7 @@ export default function RecordForm({
               </h3>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 className="text-gray-400 hover:text-gray-600"
                 aria-label="閉じる"
               >
@@ -597,16 +668,16 @@ export default function RecordForm({
                         <PlusIcon className="h-3 w-3 mr-1" />
                         追加(25mごと)
                       </Button>
-                      <Button
-                        type="button"
-                        onClick={() => addSplitTime(record.id)}
-                        className="text-sm"
+                    <Button
+                      type="button"
+                      onClick={() => addSplitTime(record.id)}
+                      className="text-sm"
                         variant="outline"
-                        data-testid={`record-split-add-button-${recordIndex + 1}`}
-                      >
-                        <PlusIcon className="h-3 w-3 mr-1" />
+                      data-testid={`record-split-add-button-${recordIndex + 1}`}
+                    >
+                      <PlusIcon className="h-3 w-3 mr-1" />
                         スプリットを追加
-                      </Button>
+                    </Button>
                     </div>
                   </div>
                   
@@ -725,7 +796,7 @@ export default function RecordForm({
           <div className="flex justify-end gap-3 pt-6 border-t">
             <Button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               variant="secondary"
               disabled={isLoading}
               data-testid="record-form-cancel-button"

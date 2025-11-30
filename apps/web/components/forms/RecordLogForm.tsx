@@ -14,7 +14,7 @@ type SplitTimeRow = {
 
 // フォーム内部状態用のスプリットタイム型（入力中はdistanceがnumber | ''）
 interface SplitTimeDraft {
-  distance: number | ''
+  distance: number
   splitTime: number
   splitTimeDisplayValue?: string
   uiKey?: string
@@ -91,9 +91,59 @@ export default function RecordLogForm({
   }
 
   const [formDataList, setFormDataList] = useState<RecordLogFormState[]>([])
+  const [isInitialized, setIsInitialized] = useState(false)
+  // フォームに変更があるかどうかを追跡
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  // 送信済みフラグ（送信後は警告を出さない）
+  const [isSubmitted, setIsSubmitted] = useState(false)
+
+  // モーダルが閉じた時に初期化フラグをリセット
+  useEffect(() => {
+    if (!isOpen) {
+      setIsInitialized(false)
+      setHasUnsavedChanges(false)
+      setIsSubmitted(false)
+    }
+  }, [isOpen])
+
+  // フォームに変更があったことを記録
+  useEffect(() => {
+    if (isOpen && isInitialized) {
+      setHasUnsavedChanges(true)
+    }
+  }, [formDataList, isOpen, isInitialized])
+
+  // ブラウザバックや閉じるボタンでの離脱を防ぐ
+  useEffect(() => {
+    if (!isOpen || !hasUnsavedChanges || isSubmitted) return
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+
+    const handlePopState = (e: PopStateEvent) => {
+      if (hasUnsavedChanges && !isSubmitted) {
+        const confirmed = window.confirm('入力内容が保存されていません。このまま戻りますか？')
+        if (!confirmed) {
+          // 履歴を戻す
+          window.history.pushState(null, '', window.location.href)
+        }
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.history.pushState(null, '', window.location.href)
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [isOpen, hasUnsavedChanges, isSubmitted])
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen || isInitialized) return
 
     if (editData) {
       const splitTimes =
@@ -120,16 +170,19 @@ export default function RecordLogForm({
           videoUrl: editData.videoUrl || ''
         }
       ])
+      setIsInitialized(true)
     } else if (entryDataList.length > 0) {
       setFormDataList(
         entryDataList.map((entry, index) =>
           createDefaultState(entry.styleId ? String(entry.styleId) : styles[index]?.id?.toString() || '')
         )
       )
+      setIsInitialized(true)
     } else {
       setFormDataList([createDefaultState(styles[0]?.id ? String(styles[0].id) : '')])
+      setIsInitialized(true)
     }
-  }, [isOpen, editData, entryDataList, styles])
+  }, [isOpen, editData, entryDataList, isInitialized])
 
   const parseTimeToSeconds = (timeStr: string): number => {
     if (!timeStr || timeStr.trim() === '') return 0
@@ -193,8 +246,8 @@ export default function RecordLogForm({
       }
 
       return {
-        ...prev,
-        timeDisplayValue: value,
+      ...prev,
+      timeDisplayValue: value,
         time: newTime,
         splitTimes: updatedSplitTimes
       }
@@ -228,7 +281,7 @@ export default function RecordLogForm({
       splitTimes: [
         ...prev.splitTimes,
         {
-          distance: '',
+          distance: 0,
           splitTime: 0,
           splitTimeDisplayValue: '',
           uiKey: `split-${Date.now()}`
@@ -296,7 +349,7 @@ export default function RecordLogForm({
       const updatedSplitTimes = prev.splitTimes.map((st, i) => {
         if (i !== splitIndex) return st
         if (field === 'distance') {
-          return { ...st, distance: value === '' ? '' : parseInt(value) }
+          return { ...st, distance: value === '' ? 0 : parseInt(value) || 0 }
         }
         const parsedTime = value.trim() === '' ? 0 : parseTimeToSeconds(value)
         return {
@@ -332,6 +385,7 @@ export default function RecordLogForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsSubmitted(true)
 
     let hasStyleError = false
     const submitList: RecordLogFormData[] = formDataList.reduce<RecordLogFormData[]>((acc, data, index) => {
@@ -378,10 +432,22 @@ export default function RecordLogForm({
       return
     }
 
-    await onSubmit(submitList)
+    try {
+      await onSubmit(submitList)
+      setHasUnsavedChanges(false)
+    } catch (error) {
+      console.error('フォーム送信エラー:', error)
+      setIsSubmitted(false)
+    }
   }
 
   const handleClose = () => {
+    if (hasUnsavedChanges && !isSubmitted) {
+      const confirmed = window.confirm('入力内容が保存されていません。このまま閉じますか？')
+      if (!confirmed) {
+        return
+      }
+    }
     setFormDataList([])
     onClose()
   }
@@ -526,16 +592,16 @@ export default function RecordLogForm({
                             <PlusIcon className="h-4 w-4 mr-1" />
                             追加(25mごと)
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => handleAddSplitTime(index)}
+                        <button
+                          type="button"
+                          onClick={() => handleAddSplitTime(index)}
                             className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-700 disabled:opacity-50 border border-blue-300 rounded"
-                            disabled={isLoading}
-                            data-testid={`record-split-add-button-${sectionIndex}`}
-                          >
-                            <PlusIcon className="h-4 w-4 mr-1" />
-                            追加
-                          </button>
+                          disabled={isLoading}
+                          data-testid={`record-split-add-button-${sectionIndex}`}
+                        >
+                          <PlusIcon className="h-4 w-4 mr-1" />
+                          追加
+                        </button>
                         </div>
                       </div>
                       {formData.splitTimes.length === 0 ? (

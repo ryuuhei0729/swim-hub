@@ -56,7 +56,7 @@ interface RecordWithDetails {
 
 interface SplitTimeEntry {
   id: string
-  distance: number | ''
+  distance: number
   splitTime: number
   displayValue: string
 }
@@ -287,11 +287,11 @@ export default function RecordClient({
 
           return {
             ...mr,
-            timeDisplayValue: value,
+      timeDisplayValue: value,
             time: newTime,
             splitTimes: updatedSplitTimes
           }
-        })
+    })
       }
     }))
   }
@@ -309,7 +309,7 @@ export default function RecordClient({
               ...mr.splitTimes,
               {
                 id: Date.now().toString(),
-                distance: '',
+                distance: 0,
                 splitTime: 0,
                 displayValue: ''
               }
@@ -398,16 +398,16 @@ export default function RecordClient({
           if (mr.memberUserId !== memberUserId) return mr
 
           const updatedSplitTimes = mr.splitTimes.map(st => {
-            if (st.id !== splitId) return st
-            if (field === 'distance') {
-              return { ...st, distance: value === '' ? '' : parseInt(value) }
-            }
-            return {
-              ...st,
-              displayValue: value,
-              splitTime: parseTimeToSeconds(value)
-            }
-          })
+              if (st.id !== splitId) return st
+              if (field === 'distance') {
+                return { ...st, distance: value === '' ? 0 : parseInt(value) || 0 }
+              }
+              return {
+                ...st,
+                displayValue: value,
+                splitTime: parseTimeToSeconds(value)
+              }
+            })
 
           // split-timeが変更された場合、種目の距離と同じ距離のsplit-timeならタイムも更新
           const updatedSplit = updatedSplitTimes.find(st => st.id === splitId)
@@ -525,7 +525,7 @@ export default function RecordClient({
           continue
         }
 
-        const validSplitTimes = record.splitTimes.filter(st => st.distance !== '' && st.splitTime > 0)
+        const validSplitTimes = record.splitTimes.filter(st => st.distance > 0 && st.splitTime > 0)
         if (validSplitTimes.length > 0 && newRecord) {
           const splitTimesData = validSplitTimes.map(st => ({
             record_id: newRecord.id,
@@ -739,15 +739,15 @@ export default function RecordClient({
                               <PlusIcon className="h-3 w-3 mr-1" />
                               追加(25mごと)
                             </Button>
-                            <Button
-                              type="button"
-                              onClick={() => addSplitTime(entry.id, mr.memberUserId)}
-                              variant="outline"
-                              className="text-xs py-1 px-2"
-                            >
-                              <PlusIcon className="h-3 w-3 mr-1" />
-                              追加
-                            </Button>
+                          <Button
+                            type="button"
+                            onClick={() => addSplitTime(entry.id, mr.memberUserId)}
+                            variant="outline"
+                            className="text-xs py-1 px-2"
+                          >
+                            <PlusIcon className="h-3 w-3 mr-1" />
+                            追加
+                          </Button>
                           </div>
                         </div>
                         {mr.splitTimes.length > 0 && (
