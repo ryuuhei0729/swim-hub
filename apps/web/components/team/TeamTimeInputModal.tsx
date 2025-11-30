@@ -137,7 +137,7 @@ export default function TeamTimeInputModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-60 overflow-y-auto" data-testid="team-time-input-modal">
+    <div className="fixed inset-0 z-[70] overflow-y-auto" data-testid="team-time-input-modal">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div 
           className="fixed inset-0 bg-black/40 transition-opacity" 

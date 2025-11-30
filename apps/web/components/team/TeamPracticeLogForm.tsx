@@ -345,11 +345,11 @@ export default function TeamPracticeLogForm({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto" data-testid="team-practice-log-modal">
+    <div className="fixed inset-0 z-[60] overflow-y-auto" data-testid="team-practice-log-modal">
       <div className="flex items-center justify-center min-h-screen pt-1 px-4 pb-1 text-center sm:block sm:p-0 max-h-screen">
-        <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose}></div>
+        <div className="fixed inset-0 bg-black/40 transition-opacity z-[10]" onClick={handleClose}></div>
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-2 sm:align-middle sm:max-w-4xl sm:w-full max-h-[98vh] overflow-y-auto" data-testid="team-practice-log-dialog">
+        <div className="relative z-[20] inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-2 sm:align-middle sm:max-w-4xl sm:w-full max-h-[98vh] overflow-y-auto" data-testid="team-practice-log-dialog">
           {/* ヘッダー */}
           <div className="bg-white px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
