@@ -253,7 +253,7 @@ export interface UpdateTeamAnnouncementInput {
 
 // 出欠管理
 export type AttendanceStatus = 'present' | 'absent' | 'other'
-export type AttendanceStatusType = 'before' | 'open' | 'closed'
+export type AttendanceStatusType = 'open' | 'closed'
 
 export interface TeamAttendance {
   id: string

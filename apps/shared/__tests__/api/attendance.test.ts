@@ -4,13 +4,13 @@ import {
   createMockSupabaseClient,
   type MockQueryBuilder
 } from '../../__mocks__/supabase'
+import { AttendanceAPI } from '../../api/attendance'
 import {
   type AttendanceStatus,
   type TeamAttendance,
   type TeamAttendanceInsert,
   type TeamAttendanceUpdate
 } from '../../types/database'
-import { AttendanceAPI } from '../../api/attendance'
 
 type TableResponse = {
   data: any
@@ -367,19 +367,128 @@ describe('AttendanceAPI', () => {
     })
 
     it('canSubmitAttendance は練習の提出状況を判定する', async () => {
-      supabaseMock.queueTable('practices', [{ data: { attendance_status: 'open' } }])
+      // 未来の日付 + open → true
+      const futureDate = new Date()
+      futureDate.setDate(futureDate.getDate() + 1)
+      supabaseMock.queueTable('practices', [{ 
+        data: { 
+          attendance_status: 'open',
+          date: futureDate.toISOString().split('T')[0]
+        } 
+      }])
       expect(await api.canSubmitAttendance('practice-1', null)).toBe(true)
 
-      supabaseMock.queueTable('practices', [{ data: { attendance_status: 'closed' } }])
+      // closed → false
+      supabaseMock.queueTable('practices', [{ 
+        data: { 
+          attendance_status: 'closed',
+          date: futureDate.toISOString().split('T')[0]
+        } 
+      }])
       expect(await api.canSubmitAttendance('practice-1', null)).toBe(false)
     })
 
     it('canSubmitAttendance は大会の提出状況を判定する', async () => {
-      supabaseMock.queueTable('competitions', [{ data: { attendance_status: 'open' } }])
+      // 未来の日付 + open → true
+      const futureDate = new Date()
+      futureDate.setDate(futureDate.getDate() + 1)
+      supabaseMock.queueTable('competitions', [{ 
+        data: { 
+          attendance_status: 'open',
+          date: futureDate.toISOString().split('T')[0]
+        } 
+      }])
       expect(await api.canSubmitAttendance(null, 'competition-1')).toBe(true)
 
-      supabaseMock.queueTable('competitions', [{ data: { attendance_status: 'before' } }])
+      // closed → false
+      supabaseMock.queueTable('competitions', [{ 
+        data: { 
+          attendance_status: 'closed',
+          date: futureDate.toISOString().split('T')[0]
+        } 
+      }])
       expect(await api.canSubmitAttendance(null, 'competition-1')).toBe(false)
+    })
+
+    it('canSubmitAttendance は過去の日付の場合は提出不可（openでもfalse）', async () => {
+      // 過去の日付 + open → false（自動的に締切扱い）
+      const pastDate = new Date()
+      pastDate.setDate(pastDate.getDate() - 1)
+      
+      supabaseMock.queueTable('practices', [{ 
+        data: { 
+          attendance_status: 'open',
+          date: pastDate.toISOString().split('T')[0]
+        } 
+      }])
+      expect(await api.canSubmitAttendance('practice-1', null)).toBe(false)
+
+      supabaseMock.queueTable('competitions', [{ 
+        data: { 
+          attendance_status: 'open',
+          date: pastDate.toISOString().split('T')[0]
+        } 
+      }])
+      expect(await api.canSubmitAttendance(null, 'competition-1')).toBe(false)
+    })
+
+    it('canSubmitAttendance は今日の日付の場合は提出可能（openの場合）', async () => {
+      // 今日の日付 + open → true
+      const today = new Date()
+      const todayStr = today.toISOString().split('T')[0]
+      
+      supabaseMock.queueTable('practices', [{ 
+        data: { 
+          attendance_status: 'open',
+          date: todayStr
+        } 
+      }])
+      expect(await api.canSubmitAttendance('practice-1', null)).toBe(true)
+
+      supabaseMock.queueTable('competitions', [{ 
+        data: { 
+          attendance_status: 'open',
+          date: todayStr
+        } 
+      }])
+      expect(await api.canSubmitAttendance(null, 'competition-1')).toBe(true)
+    })
+
+    it('canSubmitAttendance は未来の日付の場合は提出可能（openの場合）', async () => {
+      // 未来の日付 + open → true
+      const futureDate = new Date()
+      futureDate.setDate(futureDate.getDate() + 7)
+      const futureStr = futureDate.toISOString().split('T')[0]
+      
+      supabaseMock.queueTable('practices', [{ 
+        data: { 
+          attendance_status: 'open',
+          date: futureStr
+        } 
+      }])
+      expect(await api.canSubmitAttendance('practice-1', null)).toBe(true)
+
+      supabaseMock.queueTable('competitions', [{ 
+        data: { 
+          attendance_status: 'open',
+          date: futureStr
+        } 
+      }])
+      expect(await api.canSubmitAttendance(null, 'competition-1')).toBe(true)
+    })
+
+    it('canSubmitAttendance は過去の日付 + closed の場合は提出不可', async () => {
+      // 過去の日付 + closed → false
+      const pastDate = new Date()
+      pastDate.setDate(pastDate.getDate() - 1)
+      
+      supabaseMock.queueTable('practices', [{ 
+        data: { 
+          attendance_status: 'closed',
+          date: pastDate.toISOString().split('T')[0]
+        } 
+      }])
+      expect(await api.canSubmitAttendance('practice-1', null)).toBe(false)
     })
 
     it('canSubmitAttendance はIDが無い場合は false を返す', async () => {
@@ -387,11 +496,10 @@ describe('AttendanceAPI', () => {
     })
 
     it('getAttendanceStatusLabel は提出ステータスのラベルを返す', () => {
-      expect(api.getAttendanceStatusLabel('before')).toBe('提出前')
       expect(api.getAttendanceStatusLabel('open')).toBe('提出受付中')
       expect(api.getAttendanceStatusLabel('closed')).toBe('提出締切')
       expect(api.getAttendanceStatusLabel(null)).toBe('未設定')
-      expect(api.getAttendanceStatusLabel(undefined as unknown as 'before')).toBe('未設定')
+      expect(api.getAttendanceStatusLabel(undefined as unknown as 'open')).toBe('未設定')
     })
   })
 })

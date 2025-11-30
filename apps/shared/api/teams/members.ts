@@ -24,13 +24,46 @@ export class TeamMembersAPI {
     const { data: { user } } = await this.supabase.auth.getUser()
     if (!user) throw new Error('認証が必要です')
 
-    const { data: team } = await this.supabase
+    // 招待コードでチームを検索
+    const { data: team, error: teamError } = await this.supabase
       .from('teams')
       .select('id, invite_code')
       .eq('invite_code', inviteCode)
       .single()
+    
+    if (teamError) {
+      if (teamError.code === 'PGRST116') {
+        throw new Error('招待コードが正しくありません')
+      }
+      throw teamError
+    }
+    
     if (!team) throw new Error('招待コードが無効です')
 
+    // 既に参加しているかチェック
+    const { data: existingMembership, error: membershipError } = await this.supabase
+      .from('team_memberships')
+      .select('id, is_active')
+      .eq('team_id', team.id)
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (membershipError && membershipError.code !== 'PGRST116') {
+      throw membershipError
+    }
+
+    // 既存のメンバーシップがある場合
+    if (existingMembership) {
+      if (existingMembership.is_active) {
+        throw new Error('既にこのチームに参加しています')
+      } else {
+        // 非アクティブなメンバーシップを再アクティブ化
+        const joinedAt = new Date().toISOString().split('T')[0]
+        return await this.reactivateMembership(existingMembership.id, joinedAt)
+      }
+    }
+
+    // 新しいメンバーシップを作成
     const input: TeamMembershipInsert = {
       team_id: team.id,
       user_id: user.id,

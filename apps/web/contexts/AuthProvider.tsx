@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { createClient } from '@/lib/supabase'
 import type { Database } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { getQueryClient } from '@/providers/QueryProvider'
 import { AuthState, AuthContextType } from '@/types'
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -74,6 +75,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) {
         return { error: error as import('@supabase/supabase-js').AuthError }
       }
+      
+      // React Queryのキャッシュをクリア（セキュリティとデータ整合性のため）
+      const queryClient = getQueryClient()
+      queryClient.clear()
       
       return { error: null }
     } catch (error) {
@@ -164,6 +169,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // ログイン/ログアウト時にページをリフレッシュ
         if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+          // ログアウト時はReact Queryのキャッシュをクリア（セキュリティとデータ整合性のため）
+          if (event === 'SIGNED_OUT') {
+            const queryClient = getQueryClient()
+            queryClient.clear()
+          }
+          
           const currentPath = window.location.pathname
           const authPages = ['/login', '/signup', '/reset-password', '/auth/callback']
           const isAuthPage = authPages.some(page => currentPath.startsWith(page))
