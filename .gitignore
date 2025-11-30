@@ -18,6 +18,18 @@ yarn-error.log*
 .env.*.local
 # .env.development, .env.production, .env.example はgit管理（共有設定）
 
+# Google Cloud Service Account Keys (機密情報)
+*-*.json
+swimhub-*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!**/tsconfig*.json
+!**/package*.json
+!**/.vercel/project.json
+!**/extensions.json
+!**/settings.json
+
 # MCP Configuration (contains sensitive tokens)
 .mcp.json
 

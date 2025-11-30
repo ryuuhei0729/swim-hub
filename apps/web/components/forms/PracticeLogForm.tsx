@@ -6,8 +6,10 @@ import { XMarkIcon, PlusIcon, TrashIcon, ClockIcon } from '@heroicons/react/24/o
 import { format } from 'date-fns'
 import TimeInputModal from './TimeInputModal'
 import TagInput from './TagInput'
+import OcrImageUpload from './OcrImageUpload'
 import { useAuth } from '@/contexts'
 import { PracticeTag } from '@apps/shared/types/database'
+import { ParsedOcrResult } from '@/utils/ocrParser'
 
 type Tag = PracticeTag
 
@@ -247,6 +249,43 @@ export default function PracticeLogForm({
     setCurrentMenuId(null)
   }
 
+  // OCR結果をフォームに反映
+  const handleOcrComplete = (result: ParsedOcrResult) => {
+    if (!result.menus || result.menus.length === 0) {
+      return
+    }
+
+    // OCR結果からメニューを作成
+    const newMenus: PracticeMenu[] = result.menus.map((parsedMenu, index) => {
+      // サークルタイムを分と秒に分割
+      const circleTime = parsedMenu.circleTime || 0
+      const circleMin = Math.floor(circleTime / 60)
+      const circleSec = circleTime % 60
+
+      return {
+        id: String(Date.now() + index),
+        style: parsedMenu.style,
+        distance: parsedMenu.distance,
+        reps: parsedMenu.reps,
+        sets: parsedMenu.sets,
+        circleMin: circleMin || '',
+        circleSec: circleSec || '',
+        note: '',
+        tags: [],
+        times: parsedMenu.times
+      }
+    })
+
+    // 既存のメニューに追加（または置き換え）
+    if (menus.length === 1 && menus[0].times.length === 0 && menus[0].distance === 100 && menus[0].reps === 4) {
+      // デフォルトメニューのみの場合、置き換え
+      setMenus(newMenus)
+    } else {
+      // 既存メニューがある場合、追加
+      setMenus(prevMenus => [...prevMenus, ...newMenus])
+    }
+  }
+
   // 現在編集中のメニューを取得
   const getCurrentMenu = () => {
     return menus.find(m => m.id === currentMenuId)
@@ -320,6 +359,14 @@ export default function PracticeLogForm({
           </div>
 
           <form onSubmit={handleFormSubmit} className="p-6 space-y-6">
+
+            {/* OCR画像アップロードセクション */}
+            <div className="border-b border-gray-200 pb-6">
+              <OcrImageUpload
+                onOcrComplete={handleOcrComplete}
+                disabled={isLoading}
+              />
+            </div>
 
             {/* メニューセクション */}
             <div className="space-y-4">

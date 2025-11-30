@@ -39,7 +39,8 @@
     "react-dom": "19.2.0",
     "react-easy-crop": "^5.5.3",
     "zustand": "^5.0.8",
-    "@tanstack/react-query": "^5.90.10"
+    "@tanstack/react-query": "^5.90.10",
+    "@google-cloud/vision": "^4.1.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
