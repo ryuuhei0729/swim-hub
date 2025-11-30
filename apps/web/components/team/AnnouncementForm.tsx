@@ -24,11 +24,24 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [isPublished, setIsPublished] = useState(false)
+  const [startAt, setStartAt] = useState<string>('')
+  const [endAt, setEndAt] = useState<string>('')
+  const [errors, setErrors] = useState<{ startAt?: string; endAt?: string }>({})
 
   const { supabase } = useAuth()
   const createAnnouncementMutation = useCreateTeamAnnouncementMutation(supabase)
   const updateAnnouncementMutation = useUpdateTeamAnnouncementMutation(supabase)
   const isLoading = createAnnouncementMutation.isPending || updateAnnouncementMutation.isPending
+
+  // ローカル時刻をdatetime-local形式に変換するヘルパー関数
+  const formatLocalDateTime = (date: Date): string => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    return `${year}-${month}-${day}T${hours}:${minutes}`
+  }
 
   // 編集データがある場合はフォームに設定
   useEffect(() => {
@@ -36,12 +49,46 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
       setTitle(editData.title)
       setContent(editData.content)
       setIsPublished(editData.is_published)
+      // start_atとend_atをdatetime-local形式に変換（ローカル時刻で表示）
+      setStartAt(editData.start_at ? formatLocalDateTime(new Date(editData.start_at)) : '')
+      setEndAt(editData.end_at ? formatLocalDateTime(new Date(editData.end_at)) : '')
     } else {
       setTitle('')
       setContent('')
       setIsPublished(false)
+      // デフォルト値: 現在時刻から1週間後まで（ローカル時刻）
+      const now = new Date()
+      const oneWeekLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+      setStartAt(formatLocalDateTime(now))
+      setEndAt(formatLocalDateTime(oneWeekLater))
     }
+    setErrors({})
   }, [editData, isOpen])
+
+  const validateDates = (): boolean => {
+    const newErrors: { startAt?: string; endAt?: string } = {}
+    const now = new Date()
+
+    // end_atのバリデーション
+    if (endAt) {
+      const endDate = new Date(endAt)
+      if (endDate < now) {
+        newErrors.endAt = '表示終了日時は現在時刻より後の日時を指定してください'
+      }
+    }
+
+    // start_atとend_atの両方が設定されている場合のバリデーション
+    if (startAt && endAt) {
+      const startDate = new Date(startAt)
+      const endDate = new Date(endAt)
+      if (endDate < startDate) {
+        newErrors.endAt = '表示終了日時は表示開始日時より後の日時を指定してください'
+      }
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -51,7 +98,14 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
       return
     }
 
+    // 日時のバリデーション
+    if (!validateDates()) {
+      return
+    }
+
     try {
+      const startAtValue = startAt ? new Date(startAt).toISOString() : null
+      const endAtValue = endAt ? new Date(endAt).toISOString() : null
 
       if (editData) {
         // 更新
@@ -61,7 +115,8 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
           title: title.trim(),
           content: content.trim(),
             is_published: isPublished,
-            published_at: isPublished ? new Date().toISOString() : null,
+            start_at: startAtValue,
+            end_at: endAtValue,
         }
         })
       } else {
@@ -74,7 +129,8 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
           title: title.trim(),
           content: content.trim(),
           is_published: isPublished,
-          published_at: isPublished ? new Date().toISOString() : null,
+          start_at: startAtValue,
+          end_at: endAtValue,
           created_by: user.id,
         })
       }
@@ -82,6 +138,10 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
       onClose()
     } catch (error) {
       console.error('保存エラー:', error)
+      // API側のバリデーションエラーを表示
+      if (error instanceof Error) {
+        setErrors({ endAt: error.message })
+      }
     }
   }
 
@@ -155,19 +215,89 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
             <p className="text-xs text-gray-500 mt-1">{content.length}/2000</p>
           </div>
 
-          {/* 公開設定 */}
-          <div className="flex items-center">
+          {/* 公開状態 */}
+          <div className="space-y-3 border-t border-gray-200 pt-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                公開状態
+              </label>
+              <div className="space-y-2">
+                <label className="flex items-center cursor-pointer">
             <input
-              type="checkbox"
-              id="isPublished"
+                    type="radio"
+                    name="publishStatus"
               checked={isPublished}
-              onChange={(e) => setIsPublished(e.target.checked)}
+                    onChange={() => setIsPublished(true)}
+                    disabled={isLoading}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">
+                    <span className="font-medium">公開する</span>
+                    <span className="text-gray-500 ml-1">（メンバーに表示されます）</span>
+                  </span>
+                </label>
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="radio"
+                    name="publishStatus"
+                    checked={!isPublished}
+                    onChange={() => setIsPublished(false)}
+                    disabled={isLoading}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">
+                    <span className="font-medium">下書きとして保存</span>
+                    <span className="text-gray-500 ml-1">（管理者のみ表示されます）</span>
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* 表示期間設定 */}
+          <div className="space-y-4 border-t border-gray-200 pt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* 表示開始日時 */}
+              <div>
+                <label htmlFor="startAt" className="block text-sm font-medium text-gray-700 mb-1">
+                  開始日時
+                </label>
+                <input
+                  type="datetime-local"
+                  id="startAt"
+                  value={startAt}
+                  onChange={(e) => {
+                    setStartAt(e.target.value)
+                    setErrors({ ...errors, startAt: undefined })
+                  }}
               disabled={isLoading}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
             />
-            <label htmlFor="isPublished" className="ml-2 text-sm text-gray-700">
-              すぐに公開する
+              </div>
+
+              {/* 表示終了日時 */}
+              <div>
+                <label htmlFor="endAt" className="block text-sm font-medium text-gray-700 mb-1">
+                  終了日時
             </label>
+                <input
+                  type="datetime-local"
+                  id="endAt"
+                  value={endAt}
+                  onChange={(e) => {
+                    setEndAt(e.target.value)
+                    setErrors({ ...errors, endAt: undefined })
+                  }}
+                  disabled={isLoading}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 ${
+                    errors.endAt ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
+              </div>
+            </div>
+            {errors.endAt && (
+              <p className="text-xs text-red-500">{errors.endAt}</p>
+            )}
           </div>
 
           {/* ボタン */}

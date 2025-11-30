@@ -29,14 +29,12 @@ export const AnnouncementList: React.FC<AnnouncementListProps> = ({
     isLoading: loading,
     error,
     refetch
-  } = useTeamAnnouncementsQuery(supabase, { teamId })
+  } = useTeamAnnouncementsQuery(supabase, { teamId, viewOnly })
   const deleteAnnouncementMutation = useDeleteTeamAnnouncementMutation(supabase)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  // viewOnlyの場合は公開済みのものだけをフィルタリング
-  const filteredAnnouncements = viewOnly 
-    ? announcements.filter((a: TeamAnnouncement) => a.is_published)
-    : announcements
+  // サーバー側でフィルタリング済みなので、そのまま使用
+  const filteredAnnouncements = announcements
 
   const handleDelete = async (id: string) => {
     if (!confirm('このお知らせを削除しますか？')) return

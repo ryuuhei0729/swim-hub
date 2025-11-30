@@ -128,13 +128,45 @@ export const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({
                 </span>
               )}
               <span>作成: {formatDate(announcement.created_at)}</span>
-              {announcement.published_at && (
-                <span>公開: {formatDate(announcement.published_at)}</span>
-              )}
               {announcement.updated_at !== announcement.created_at && (
                 <span>更新: {formatDate(announcement.updated_at)}</span>
               )}
             </div>
+            
+            {/* 表示期間 */}
+            {(announcement.start_at || announcement.end_at) && (
+              <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                <p className="text-sm font-medium text-gray-700 mb-1">表示期間</p>
+                <div className="text-sm text-gray-600">
+                  {announcement.start_at ? (
+                    <span>開始: {formatDate(announcement.start_at)}</span>
+                  ) : (
+                    <span>開始: 制限なし</span>
+                  )}
+                  {announcement.start_at && announcement.end_at && <span className="mx-2">〜</span>}
+                  {announcement.end_at ? (
+                    <span>終了: {formatDate(announcement.end_at)}</span>
+                  ) : (
+                    <span>終了: 制限なし</span>
+                  )}
+                </div>
+                {/* 期間外の場合は警告表示 */}
+                {announcement.is_published && (() => {
+                  const now = new Date()
+                  const startAt = announcement.start_at ? new Date(announcement.start_at) : null
+                  const endAt = announcement.end_at ? new Date(announcement.end_at) : null
+                  const isOutOfPeriod = 
+                    (startAt && startAt > now) || 
+                    (endAt && endAt < now)
+                  
+                  return isOutOfPeriod ? (
+                    <p className="text-xs text-orange-600 mt-1">
+                      ⚠️ 現在は表示期間外です
+                    </p>
+                  ) : null
+                })()}
+              </div>
+            )}
           </div>
 
           {/* 内容 */}
