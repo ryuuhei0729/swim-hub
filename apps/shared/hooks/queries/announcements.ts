@@ -20,6 +20,7 @@ export interface UseTeamAnnouncementsQueryOptions {
   enableRealtime?: boolean
   initialData?: TeamAnnouncement[]
   api?: TeamAnnouncementsAPI
+  viewOnly?: boolean
 }
 
 /**
@@ -33,7 +34,8 @@ export function useTeamAnnouncementsQuery(
     teamId,
     enableRealtime = true,
     initialData,
-    api: providedApi
+    api: providedApi,
+    viewOnly = false
   } = options
 
   const api = useMemo(
@@ -44,9 +46,9 @@ export function useTeamAnnouncementsQuery(
   const queryClient = useQueryClient()
 
   const query = useQuery({
-    queryKey: announcementKeys.list(teamId),
+    queryKey: announcementKeys.list(teamId, viewOnly),
     queryFn: async () => {
-      return await api.list(teamId)
+      return await api.list(teamId, viewOnly)
     },
     enabled: !!teamId,
     initialData,
@@ -68,7 +70,14 @@ export function useTeamAnnouncementsQuery(
           filter: `team_id=eq.${teamId}`
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: announcementKeys.list(teamId) })
+          // viewOnlyの違いに関わらず、同じteamIdのクエリを全て無効化
+          queryClient.invalidateQueries({ 
+            queryKey: announcementKeys.lists(),
+            predicate: (query) => {
+              const key = query.queryKey
+              return key[1] === 'list' && key[2] === teamId
+            }
+          })
         }
       )
       .subscribe()
@@ -128,13 +137,29 @@ export function useCreateTeamAnnouncementMutation(
       return await announcementsApi.create(input)
     },
     onSuccess: (newAnnouncement: TeamAnnouncement) => {
+      // viewOnlyの違いに関わらず、同じteamIdのクエリを全て更新
       queryClient.setQueriesData<TeamAnnouncement[]>(
-        { queryKey: announcementKeys.list(newAnnouncement.team_id) },
-        (old: TeamAnnouncement[] | undefined) => {
-          if (!old) return [newAnnouncement]
+        { 
+          queryKey: announcementKeys.lists(),
+          predicate: (query) => {
+            const key = query.queryKey
+            return key[1] === 'list' && key[2] === newAnnouncement.team_id
+          }
+        },
+        (old: unknown) => {
+          // oldが配列でない場合は新しい配列を返す
+          if (!Array.isArray(old)) return [newAnnouncement]
           return [newAnnouncement, ...old]
         }
       )
+      // キャッシュにないクエリも含めて、全てのクエリを無効化して再取得させる
+      queryClient.invalidateQueries({ 
+        queryKey: announcementKeys.lists(),
+        predicate: (query) => {
+          const key = query.queryKey
+          return key[1] === 'list' && key[2] === newAnnouncement.team_id
+        }
+      })
     },
   })
 }
@@ -157,10 +182,18 @@ export function useUpdateTeamAnnouncementMutation(
       return await announcementsApi.update(id, input)
     },
     onSuccess: (updated: TeamAnnouncement) => {
+      // viewOnlyの違いに関わらず、同じteamIdのクエリを全て更新
       queryClient.setQueriesData<TeamAnnouncement[]>(
-        { queryKey: announcementKeys.list(updated.team_id) },
-        (old: TeamAnnouncement[] | undefined) => {
-          if (!old) return old
+        { 
+          queryKey: announcementKeys.lists(),
+          predicate: (query) => {
+            const key = query.queryKey
+            return key[1] === 'list' && key[2] === updated.team_id
+          }
+        },
+        (old: unknown) => {
+          // oldが配列でない場合はそのまま返す（型が合わない場合など）
+          if (!Array.isArray(old)) return old
           return old.map((a: TeamAnnouncement) => a.id === updated.id ? updated : a)
         }
       )
@@ -168,6 +201,14 @@ export function useUpdateTeamAnnouncementMutation(
         announcementKeys.detail(updated.team_id, updated.id),
         updated
       )
+      // キャッシュにないクエリも含めて、全てのクエリを無効化して再取得させる
+      queryClient.invalidateQueries({ 
+        queryKey: announcementKeys.lists(),
+        predicate: (query) => {
+          const key = query.queryKey
+          return key[1] === 'list' && key[2] === updated.team_id
+        }
+      })
     },
   })
 }
@@ -191,14 +232,30 @@ export function useDeleteTeamAnnouncementMutation(
       return { id, teamId }
     },
     onSuccess: ({ id, teamId }: { id: string; teamId: string }) => {
+      // viewOnlyの違いに関わらず、同じteamIdのクエリを全て更新
       queryClient.setQueriesData<TeamAnnouncement[]>(
-        { queryKey: announcementKeys.list(teamId) },
-        (old: TeamAnnouncement[] | undefined) => {
-          if (!old) return old
+        { 
+          queryKey: announcementKeys.lists(),
+          predicate: (query) => {
+            const key = query.queryKey
+            return key[1] === 'list' && key[2] === teamId
+          }
+        },
+        (old: unknown) => {
+          // oldが配列でない場合はそのまま返す
+          if (!Array.isArray(old)) return old
           return old.filter((a: TeamAnnouncement) => a.id !== id)
         }
       )
       queryClient.removeQueries({ queryKey: announcementKeys.detail(teamId, id) })
+      // キャッシュにないクエリも含めて、全てのクエリを無効化して再取得させる
+      queryClient.invalidateQueries({ 
+        queryKey: announcementKeys.lists(),
+        predicate: (query) => {
+          const key = query.queryKey
+          return key[1] === 'list' && key[2] === teamId
+        }
+      })
     },
   })
 }

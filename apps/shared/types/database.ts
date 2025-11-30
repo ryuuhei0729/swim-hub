@@ -225,7 +225,8 @@ export interface TeamAnnouncement {
   content: string
   created_by: string
   is_published: boolean
-  published_at: string | null
+  start_at: string | null
+  end_at: string | null
   created_at: string
   updated_at: string
 }
