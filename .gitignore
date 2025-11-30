@@ -21,6 +21,10 @@ yarn-error.log*
 # MCP Configuration (contains sensitive tokens)
 .mcp.json
 
+# Google Cloud Platform Service Account Keys
+swimhub-479706-fa49932fb92d.json
+swimhub-*-*.json
+
 # IDE
 .vscode/
 .idea/
