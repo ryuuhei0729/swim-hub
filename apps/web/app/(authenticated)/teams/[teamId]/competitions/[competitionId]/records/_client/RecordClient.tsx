@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthProvider'
 import { Button } from '@/components/ui'
-import { ArrowLeftIcon, PlusIcon, TrashIcon, CalendarDaysIcon, MapPinIcon, UserIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, PlusIcon, TrashIcon, CalendarDaysIcon, MapPinIcon, UserGroupIcon, XMarkIcon, CheckIcon } from '@heroicons/react/24/outline'
 import { Competition, Style } from '@apps/shared/types/database'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -60,18 +60,22 @@ interface SplitTimeEntry {
   displayValue: string
 }
 
-interface RecordEntry {
+interface MemberRecord {
   id: string
-  memberId: string
   memberUserId: string
   memberName: string
-  styleId: number | ''
   time: number
   timeDisplayValue: string
   isRelaying: boolean
-  videoUrl: string
   note: string
   splitTimes: SplitTimeEntry[]
+}
+
+interface StyleEntry {
+  id: string
+  styleId: number | ''
+  styleName: string
+  memberRecords: MemberRecord[]
 }
 
 interface RecordClientProps {
@@ -97,132 +101,212 @@ export default function RecordClient({
   const { supabase } = useAuth()
   
   const [saving, setSaving] = useState(false)
+  const [showMemberSelectModal, setShowMemberSelectModal] = useState(false)
+  const [currentStyleEntryId, setCurrentStyleEntryId] = useState<string | null>(null)
+  const [tempSelectedUserIds, setTempSelectedUserIds] = useState<string[]>([])
 
-  // 既存データからレコードエントリを構築
-  const buildRecordsFromExisting = (): RecordEntry[] => {
+  // 既存データから種目エントリを構築
+  const buildStyleEntriesFromExisting = (): StyleEntry[] => {
     if (existingRecords.length === 0) {
-      // 新規作成時: メンバーごとに1つの空レコードを作成
-      return members.map((member, index) => ({
-        id: String(index + 1),
-        memberId: member.id,
-        memberUserId: member.user_id,
-        memberName: member.users.name,
+      // 新規作成時: 空のエントリを1つ作成
+      return [{
+        id: '1',
         styleId: '',
-        time: 0,
-        timeDisplayValue: '',
-        isRelaying: false,
-        videoUrl: '',
-        note: '',
-        splitTimes: []
-      }))
+        styleName: '',
+        memberRecords: []
+      }]
     }
 
-    // 既存データがある場合
-    return existingRecords.map((record, index) => {
-      const member = members.find(m => m.user_id === record.user_id)
-      return {
-        id: record.id || String(index + 1),
-        memberId: member?.id || '',
+    // 既存データがある場合: 種目ごとにグループ化
+    const styleMap = new Map<number, StyleEntry>()
+    
+    for (const record of existingRecords) {
+      const styleId = record.style_id
+      const style = styles.find(s => s.id === styleId)
+      
+      if (!styleMap.has(styleId)) {
+        styleMap.set(styleId, {
+          id: String(styleId),
+          styleId: styleId,
+          styleName: style?.name_jp || '',
+          memberRecords: []
+        })
+      }
+      
+      const entry = styleMap.get(styleId)!
+      entry.memberRecords.push({
+        id: record.id,
         memberUserId: record.user_id,
-        memberName: record.users?.name || member?.users.name || 'Unknown',
-        styleId: record.style_id,
+        memberName: record.users?.name || 'Unknown',
         time: record.time,
         timeDisplayValue: formatTime(record.time),
         isRelaying: record.is_relaying,
-        videoUrl: record.video_url || '',
         note: record.note || '',
-        splitTimes: (record.split_times || []).map((st, stIdx) => ({
-          id: st.id || String(stIdx + 1),
+        splitTimes: (record.split_times || []).map((st, idx) => ({
+          id: st.id || String(idx + 1),
           distance: st.distance,
           splitTime: st.split_time,
           displayValue: formatTime(st.split_time)
         }))
-      }
-    })
+      })
+    }
+    
+    return Array.from(styleMap.values())
   }
 
-  const [records, setRecords] = useState<RecordEntry[]>(buildRecordsFromExisting)
+  const [styleEntries, setStyleEntries] = useState<StyleEntry[]>(buildStyleEntriesFromExisting)
   const isEditMode = existingRecords.length > 0
 
-  const addRecord = (memberId: string) => {
-    const member = members.find(m => m.id === memberId)
-    if (!member) return
-
-    const newRecord: RecordEntry = {
+  const addStyleEntry = () => {
+    const newEntry: StyleEntry = {
       id: Date.now().toString(),
-      memberId: member.id,
-      memberUserId: member.user_id,
-      memberName: member.users.name,
       styleId: '',
-      time: 0,
-      timeDisplayValue: '',
-      isRelaying: false,
-      videoUrl: '',
-      note: '',
-      splitTimes: []
+      styleName: '',
+      memberRecords: []
     }
-    setRecords(prev => [...prev, newRecord])
+    setStyleEntries(prev => [...prev, newEntry])
   }
 
-  const removeRecord = (recordId: string) => {
-    setRecords(prev => prev.filter(r => r.id !== recordId))
+  const removeStyleEntry = (entryId: string) => {
+    if (styleEntries.length > 1) {
+      setStyleEntries(prev => prev.filter(e => e.id !== entryId))
+    }
   }
 
-  const updateRecord = (recordId: string, updates: Partial<RecordEntry>) => {
-    setRecords(prev => prev.map(record => 
-      record.id === recordId ? { ...record, ...updates } : record
+  const updateStyleEntry = (entryId: string, styleId: number) => {
+    const style = styles.find(s => s.id === styleId)
+    setStyleEntries(prev => prev.map(entry => 
+      entry.id === entryId 
+        ? { ...entry, styleId, styleName: style?.name_jp || '' }
+        : entry
     ))
   }
 
-  const handleTimeChange = (recordId: string, value: string) => {
-    updateRecord(recordId, {
+  const openMemberSelectModal = (entryId: string) => {
+    const entry = styleEntries.find(e => e.id === entryId)
+    if (entry) {
+      setCurrentStyleEntryId(entryId)
+      setTempSelectedUserIds(entry.memberRecords.map(mr => mr.memberUserId))
+      setShowMemberSelectModal(true)
+    }
+  }
+
+  const confirmMemberSelection = () => {
+    if (!currentStyleEntryId) return
+    
+    setStyleEntries(prev => prev.map(entry => {
+      if (entry.id !== currentStyleEntryId) return entry
+      
+      // 新しく選択されたメンバーを追加、削除されたメンバーを除去
+      const newMemberRecords: MemberRecord[] = []
+      
+      for (const userId of tempSelectedUserIds) {
+        const existing = entry.memberRecords.find(mr => mr.memberUserId === userId)
+        if (existing) {
+          newMemberRecords.push(existing)
+        } else {
+          const member = members.find(m => m.user_id === userId)
+          if (member) {
+            newMemberRecords.push({
+              id: Date.now().toString() + userId,
+              memberUserId: userId,
+              memberName: member.users.name,
+              time: 0,
+              timeDisplayValue: '',
+              isRelaying: false,
+              note: '',
+              splitTimes: []
+            })
+          }
+        }
+      }
+      
+      return { ...entry, memberRecords: newMemberRecords }
+    }))
+    
+    setShowMemberSelectModal(false)
+    setCurrentStyleEntryId(null)
+  }
+
+  const updateMemberRecord = (entryId: string, memberUserId: string, updates: Partial<MemberRecord>) => {
+    setStyleEntries(prev => prev.map(entry => {
+      if (entry.id !== entryId) return entry
+      return {
+        ...entry,
+        memberRecords: entry.memberRecords.map(mr =>
+          mr.memberUserId === memberUserId ? { ...mr, ...updates } : mr
+        )
+      }
+    }))
+  }
+
+  const handleTimeChange = (entryId: string, memberUserId: string, value: string) => {
+    updateMemberRecord(entryId, memberUserId, {
       timeDisplayValue: value,
       time: parseTimeToSeconds(value)
     })
   }
 
-  const addSplitTime = (recordId: string) => {
-    setRecords(prev => prev.map(record => {
-      if (record.id !== recordId) return record
+  const addSplitTime = (entryId: string, memberUserId: string) => {
+    setStyleEntries(prev => prev.map(entry => {
+      if (entry.id !== entryId) return entry
       return {
-        ...record,
-        splitTimes: [
-          ...record.splitTimes,
-          {
-            id: Date.now().toString(),
-            distance: '',
-            splitTime: 0,
-            displayValue: ''
-          }
-        ]
-      }
-    }))
-  }
-
-  const removeSplitTime = (recordId: string, splitId: string) => {
-    setRecords(prev => prev.map(record => {
-      if (record.id !== recordId) return record
-      return {
-        ...record,
-        splitTimes: record.splitTimes.filter(st => st.id !== splitId)
-      }
-    }))
-  }
-
-  const updateSplitTime = (recordId: string, splitId: string, field: 'distance' | 'splitTime', value: string) => {
-    setRecords(prev => prev.map(record => {
-      if (record.id !== recordId) return record
-      return {
-        ...record,
-        splitTimes: record.splitTimes.map(st => {
-          if (st.id !== splitId) return st
-          if (field === 'distance') {
-            return { ...st, distance: value === '' ? '' : parseInt(value) }
-          }
+        ...entry,
+        memberRecords: entry.memberRecords.map(mr => {
+          if (mr.memberUserId !== memberUserId) return mr
           return {
-            ...st,
-            displayValue: value,
-            splitTime: parseTimeToSeconds(value)
+            ...mr,
+            splitTimes: [
+              ...mr.splitTimes,
+              {
+                id: Date.now().toString(),
+                distance: '',
+                splitTime: 0,
+                displayValue: ''
+              }
+            ]
+          }
+        })
+      }
+    }))
+  }
+
+  const removeSplitTime = (entryId: string, memberUserId: string, splitId: string) => {
+    setStyleEntries(prev => prev.map(entry => {
+      if (entry.id !== entryId) return entry
+      return {
+        ...entry,
+        memberRecords: entry.memberRecords.map(mr => {
+          if (mr.memberUserId !== memberUserId) return mr
+          return {
+            ...mr,
+            splitTimes: mr.splitTimes.filter(st => st.id !== splitId)
+          }
+        })
+      }
+    }))
+  }
+
+  const updateSplitTime = (entryId: string, memberUserId: string, splitId: string, field: 'distance' | 'splitTime', value: string) => {
+    setStyleEntries(prev => prev.map(entry => {
+      if (entry.id !== entryId) return entry
+      return {
+        ...entry,
+        memberRecords: entry.memberRecords.map(mr => {
+          if (mr.memberUserId !== memberUserId) return mr
+          return {
+            ...mr,
+            splitTimes: mr.splitTimes.map(st => {
+              if (st.id !== splitId) return st
+              if (field === 'distance') {
+                return { ...st, distance: value === '' ? '' : parseInt(value) }
+              }
+              return {
+                ...st,
+                displayValue: value,
+                splitTime: parseTimeToSeconds(value)
+              }
+            })
           }
         })
       }
@@ -234,8 +318,34 @@ export default function RecordClient({
     setSaving(true)
 
     try {
-      // 有効なレコードのみをフィルタリング（種目とタイムが入力されているもの）
-      const validRecords = records.filter(r => r.styleId !== '' && r.time > 0)
+      // 有効なレコードを収集
+      const validRecords: Array<{
+        styleId: number
+        memberUserId: string
+        memberName: string
+        time: number
+        isRelaying: boolean
+        note: string
+        splitTimes: SplitTimeEntry[]
+      }> = []
+
+      for (const entry of styleEntries) {
+        if (entry.styleId === '') continue
+        
+        for (const mr of entry.memberRecords) {
+          if (mr.time > 0) {
+            validRecords.push({
+              styleId: entry.styleId as number,
+              memberUserId: mr.memberUserId,
+              memberName: mr.memberName,
+              time: mr.time,
+              isRelaying: mr.isRelaying,
+              note: mr.note,
+              splitTimes: mr.splitTimes
+            })
+          }
+        }
+      }
 
       if (validRecords.length === 0) {
         alert('少なくとも1つの記録を入力してください')
@@ -245,7 +355,6 @@ export default function RecordClient({
 
       // 編集モードの場合は既存データを削除
       if (isEditMode) {
-        // 既存のスプリットタイムを削除
         for (const record of existingRecords) {
           if (record.split_times && record.split_times.length > 0) {
             const { error: splitDeleteError } = await supabase
@@ -259,7 +368,6 @@ export default function RecordClient({
           }
         }
 
-        // 既存のレコードを削除
         const { error: deleteError } = await supabase
           .from('records')
           .delete()
@@ -280,9 +388,8 @@ export default function RecordClient({
             competition_id: competitionId,
             user_id: record.memberUserId,
             team_id: teamId,
-            style_id: record.styleId as number,
+            style_id: record.styleId,
             time: record.time,
-            video_url: record.videoUrl || null,
             note: record.note || null,
             is_relaying: record.isRelaying,
             pool_type: competition.pool_type
@@ -295,7 +402,6 @@ export default function RecordClient({
           continue
         }
 
-        // スプリットタイムを作成
         const validSplitTimes = record.splitTimes.filter(st => st.distance !== '' && st.splitTime > 0)
         if (validSplitTimes.length > 0 && newRecord) {
           const splitTimesData = validSplitTimes.map(st => ({
@@ -326,12 +432,6 @@ export default function RecordClient({
     router.push(`/teams/${teamId}?tab=competitions`)
   }
 
-  // メンバーごとにレコードをグループ化
-  const recordsByMember = members.map(member => ({
-    member,
-    records: records.filter(r => r.memberId === member.id)
-  }))
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
@@ -350,7 +450,7 @@ export default function RecordClient({
               {isEditMode ? 'チーム大会記録を編集' : 'チーム大会記録を追加'}
             </h1>
             <p className="text-gray-600 mb-4">
-              {teamName}のメンバー分の大会記録を入力できます
+              種目ごとにメンバーの記録を入力できます
             </p>
             
             {/* 大会情報 */}
@@ -379,144 +479,164 @@ export default function RecordClient({
 
         {/* フォーム */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          {recordsByMember.map(({ member, records: memberRecords }) => (
-            <div key={member.id} className="bg-white rounded-lg shadow p-6">
-              {/* メンバーヘッダー */}
+          {styleEntries.map((entry, entryIndex) => (
+            <div key={entry.id} className="bg-white rounded-lg shadow p-6">
+              {/* 種目ヘッダー */}
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <UserIcon className="h-5 w-5 text-gray-400" />
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    {member.users.name}
-                  </h2>
-                  {member.role === 'admin' && (
-                    <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">
-                      管理者
-                    </span>
-                  )}
-                </div>
-                <Button
-                  type="button"
-                  onClick={() => addRecord(member.id)}
-                  variant="outline"
-                  className="text-sm"
-                >
-                  <PlusIcon className="h-4 w-4 mr-1" />
-                  種目追加
-                </Button>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  種目 {entryIndex + 1}
+                </h2>
+                {styleEntries.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeStyleEntry(entry.id)}
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    <TrashIcon className="h-5 w-5" />
+                  </button>
+                )}
               </div>
 
-              {memberRecords.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
-                  <p>このメンバーの記録はありません</p>
-                  <Button
+              {/* 種目選択 */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  種目
+                </label>
+                <select
+                  value={entry.styleId}
+                  onChange={(e) => updateStyleEntry(entry.id, parseInt(e.target.value))}
+                  className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">選択してください</option>
+                  {styles.map(style => (
+                    <option key={style.id} value={style.id}>
+                      {style.name_jp}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 対象メンバー選択 */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  対象メンバー
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
                     type="button"
-                    onClick={() => addRecord(member.id)}
-                    variant="outline"
-                    className="mt-2"
+                    onClick={() => openMemberSelectModal(entry.id)}
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <PlusIcon className="h-4 w-4 mr-1" />
-                    記録を追加
-                  </Button>
+                    <UserGroupIcon className="h-4 w-4 mr-2" />
+                    メンバーを選択
+                  </button>
+                  <span className="text-sm text-gray-600">
+                    {entry.memberRecords.length}名選択中
+                  </span>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {memberRecords.map((record, index) => (
-                    <div key={record.id} className="border border-gray-200 rounded-lg p-4">
+                {entry.memberRecords.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {entry.memberRecords.map(mr => (
+                      <span
+                        key={mr.memberUserId}
+                        className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                      >
+                        {mr.memberName}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* メンバーごとの記録入力 */}
+              {entry.memberRecords.length > 0 && (
+                <div className="space-y-4 border-t pt-4">
+                  <h3 className="text-sm font-medium text-gray-700">記録入力</h3>
+                  {entry.memberRecords.map((mr) => (
+                    <div key={mr.memberUserId} className="bg-gray-50 rounded-lg p-4">
                       <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-sm font-medium text-gray-700">種目 {index + 1}</h3>
-                        <button
-                          type="button"
-                          onClick={() => removeRecord(record.id)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          <TrashIcon className="h-4 w-4" />
-                        </button>
+                        <span className="font-medium text-gray-900">{mr.memberName}</span>
                       </div>
-
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                        {/* 種目 */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            種目
-                          </label>
-                          <select
-                            value={record.styleId}
-                            onChange={(e) => updateRecord(record.id, { styleId: e.target.value === '' ? '' : parseInt(e.target.value) })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          >
-                            <option value="">選択してください</option>
-                            {styles.map(style => (
-                              <option key={style.id} value={style.id}>
-                                {style.name_jp}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
+                      
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-3">
                         {/* タイム */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
                             タイム
                           </label>
                           <input
                             type="text"
-                            value={record.timeDisplayValue}
-                            onChange={(e) => handleTimeChange(record.id, e.target.value)}
+                            value={mr.timeDisplayValue}
+                            onChange={(e) => handleTimeChange(entry.id, mr.memberUserId, e.target.value)}
                             placeholder="例: 1:30.50"
                             className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
                         </div>
 
                         {/* リレー */}
-                        <div className="flex items-end">
+                        <div className="flex items-end pb-2">
                           <label className="flex items-center gap-2 text-sm">
                             <input
                               type="checkbox"
-                              checked={record.isRelaying}
-                              onChange={(e) => updateRecord(record.id, { isRelaying: e.target.checked })}
+                              checked={mr.isRelaying}
+                              onChange={(e) => updateMemberRecord(entry.id, mr.memberUserId, { isRelaying: e.target.checked })}
                               className="rounded border-gray-300"
                             />
                             リレー
                           </label>
                         </div>
+
+                        {/* メモ */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            メモ
+                          </label>
+                          <input
+                            type="text"
+                            value={mr.note}
+                            onChange={(e) => updateMemberRecord(entry.id, mr.memberUserId, { note: e.target.value })}
+                            placeholder="メモ"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
                       </div>
 
                       {/* スプリットタイム */}
-                      <div className="mb-4">
+                      <div>
                         <div className="flex items-center justify-between mb-2">
-                          <label className="text-sm font-medium text-gray-700">スプリットタイム</label>
+                          <label className="text-xs font-medium text-gray-600">スプリットタイム</label>
                           <Button
                             type="button"
-                            onClick={() => addSplitTime(record.id)}
+                            onClick={() => addSplitTime(entry.id, mr.memberUserId)}
                             variant="outline"
-                            className="text-xs"
+                            className="text-xs py-1 px-2"
                           >
                             <PlusIcon className="h-3 w-3 mr-1" />
                             追加
                           </Button>
                         </div>
-                        {record.splitTimes.length > 0 && (
+                        {mr.splitTimes.length > 0 && (
                           <div className="space-y-2">
-                            {record.splitTimes.map((split, splitIdx) => (
+                            {mr.splitTimes.map((split) => (
                               <div key={split.id} className="flex items-center gap-2">
                                 <input
                                   type="number"
                                   value={split.distance}
-                                  onChange={(e) => updateSplitTime(record.id, split.id, 'distance', e.target.value)}
-                                  placeholder="距離 (m)"
-                                  className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
+                                  onChange={(e) => updateSplitTime(entry.id, mr.memberUserId, split.id, 'distance', e.target.value)}
+                                  placeholder="距離"
+                                  className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
                                 />
-                                <span className="text-gray-500">m:</span>
+                                <span className="text-gray-500 text-sm">m:</span>
                                 <input
                                   type="text"
                                   value={split.displayValue}
-                                  onChange={(e) => updateSplitTime(record.id, split.id, 'splitTime', e.target.value)}
+                                  onChange={(e) => updateSplitTime(entry.id, mr.memberUserId, split.id, 'splitTime', e.target.value)}
                                   placeholder="例: 30.50"
                                   className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
                                 />
                                 <button
                                   type="button"
-                                  onClick={() => removeSplitTime(record.id, split.id)}
+                                  onClick={() => removeSplitTime(entry.id, mr.memberUserId, split.id)}
                                   className="text-red-500 hover:text-red-700"
                                 >
                                   <TrashIcon className="h-4 w-4" />
@@ -526,26 +646,23 @@ export default function RecordClient({
                           </div>
                         )}
                       </div>
-
-                      {/* メモ */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          メモ
-                        </label>
-                        <input
-                          type="text"
-                          value={record.note}
-                          onChange={(e) => updateRecord(record.id, { note: e.target.value })}
-                          placeholder="メモ"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
           ))}
+
+          {/* 種目追加ボタン */}
+          <Button
+            type="button"
+            onClick={addStyleEntry}
+            variant="outline"
+            className="w-full"
+          >
+            <PlusIcon className="h-4 w-4 mr-2" />
+            種目を追加
+          </Button>
 
           {/* 送信ボタン */}
           <div className="flex justify-end gap-3 pt-6">
@@ -566,7 +683,115 @@ export default function RecordClient({
           </div>
         </form>
       </div>
+
+      {/* メンバー選択モーダル */}
+      {showMemberSelectModal && currentStyleEntryId && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-screen items-center justify-center p-4">
+            <div 
+              className="fixed inset-0 bg-black/40 transition-opacity"
+              onClick={() => setShowMemberSelectModal(false)}
+            />
+            <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 max-w-lg w-full max-h-[80vh] flex flex-col">
+              {/* モーダルヘッダー */}
+              <div className="flex items-center justify-between p-4 border-b">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  対象メンバーを選択
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowMemberSelectModal(false)}
+                  className="text-gray-400 hover:text-gray-500"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              {/* 一括選択ボタン */}
+              <div className="flex gap-2 p-4 border-b bg-gray-50">
+                <button
+                  type="button"
+                  onClick={() => setTempSelectedUserIds(members.map(m => m.user_id))}
+                  className="px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 rounded transition-colors"
+                >
+                  全員選択
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTempSelectedUserIds([])}
+                  className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                >
+                  選択解除
+                </button>
+              </div>
+
+              {/* メンバーリスト */}
+              <div className="flex-1 overflow-y-auto p-4">
+                <div className="space-y-2">
+                  {members.map(member => {
+                    const isSelected = tempSelectedUserIds.includes(member.user_id)
+                    
+                    return (
+                      <label
+                        key={member.id}
+                        className={`flex items-center p-3 rounded-lg border cursor-pointer transition-colors ${
+                          isSelected 
+                            ? 'border-blue-500 bg-blue-50' 
+                            : 'border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setTempSelectedUserIds(prev => [...prev, member.user_id])
+                            } else {
+                              setTempSelectedUserIds(prev => prev.filter(id => id !== member.user_id))
+                            }
+                          }}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <span className="ml-3 flex-1 text-sm font-medium text-gray-900">
+                          {member.users.name}
+                        </span>
+                        {member.role === 'admin' && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                            管理者
+                          </span>
+                        )}
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* モーダルフッター */}
+              <div className="flex items-center justify-between p-4 border-t bg-gray-50">
+                <span className="text-sm text-gray-600">
+                  {tempSelectedUserIds.length}名選択中
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setShowMemberSelectModal(false)}
+                  >
+                    キャンセル
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={confirmMemberSelection}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    決定
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
-

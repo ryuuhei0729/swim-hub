@@ -2,7 +2,7 @@ import { redirect, notFound } from 'next/navigation'
 import { createAuthenticatedServerClient } from '@/lib/supabase-server-auth'
 import { getServerUser } from '@/lib/supabase-server'
 import PracticeLogClient from '../_client/PracticeLogClient'
-import { TeamMembershipWithUser, PracticeTag, Practice } from '@apps/shared/types/database'
+import { PracticeTag, Practice } from '@apps/shared/types/database'
 
 interface PracticeLogDataLoaderProps {
   teamId: string
@@ -47,6 +47,12 @@ interface PracticeLogWithDetails {
   }[]
 }
 
+interface AttendanceRecord {
+  id: string
+  user_id: string
+  status: string | null
+}
+
 export default async function PracticeLogDataLoader({ teamId, practiceId }: PracticeLogDataLoaderProps) {
   const [user, supabase] = await Promise.all([
     getServerUser(),
@@ -58,7 +64,7 @@ export default async function PracticeLogDataLoader({ teamId, practiceId }: Prac
   }
 
   // 並行でデータ取得
-  const [membershipResult, practiceResult, membersResult, practiceLogsResult, tagsResult] = await Promise.all([
+  const [membershipResult, practiceResult, membersResult, practiceLogsResult, tagsResult, attendanceResult] = await Promise.all([
     // 現在ユーザーのメンバーシップを取得（admin権限チェック）
     supabase
       .from('team_memberships')
@@ -139,7 +145,13 @@ export default async function PracticeLogDataLoader({ teamId, practiceId }: Prac
     supabase
       .from('practice_tags')
       .select('id, name, color, user_id')
-      .order('name')
+      .order('name'),
+    
+    // 出席情報を取得
+    supabase
+      .from('team_attendance')
+      .select('id, user_id, status')
+      .eq('practice_id', practiceId)
   ])
 
   // エラーチェック
@@ -166,6 +178,12 @@ export default async function PracticeLogDataLoader({ teamId, practiceId }: Prac
   const members = (membersResult.data || []) as unknown as TeamMember[]
   const practiceLogs = (practiceLogsResult.data || []) as unknown as PracticeLogWithDetails[]
   const tags = (tagsResult.data || []) as PracticeTag[]
+  const attendance = (attendanceResult.data || []) as AttendanceRecord[]
+
+  // 出席しているメンバーのuser_idリストを作成
+  const presentUserIds = attendance
+    .filter(a => a.status === 'present')
+    .map(a => a.user_id)
 
   return (
     <PracticeLogClient
@@ -176,6 +194,7 @@ export default async function PracticeLogDataLoader({ teamId, practiceId }: Prac
       members={members}
       existingLogs={practiceLogs}
       availableTags={tags}
+      presentUserIds={presentUserIds}
     />
   )
 }

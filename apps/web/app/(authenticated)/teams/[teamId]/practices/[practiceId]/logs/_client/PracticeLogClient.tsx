@@ -1,10 +1,10 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthProvider'
 import { Button } from '@/components/ui'
-import { ArrowLeftIcon, PlusIcon, TrashIcon, ClockIcon, CalendarDaysIcon, MapPinIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, PlusIcon, TrashIcon, ClockIcon, CalendarDaysIcon, MapPinIcon, UserGroupIcon, XMarkIcon, CheckIcon } from '@heroicons/react/24/outline'
 import TagInput from '@/components/forms/TagInput'
 import TeamTimeInputModal, { TeamTimeEntry } from '@/components/team/TeamTimeInputModal'
 import { PracticeTag, Practice } from '@apps/shared/types/database'
@@ -34,6 +34,7 @@ interface PracticeMenu {
   note: string
   tags: Tag[]
   times: TeamTimeEntry[]
+  targetUserIds: string[] // 対象ユーザーのuser_idリスト
 }
 
 interface PracticeWithDetails extends Practice {
@@ -72,6 +73,7 @@ interface PracticeLogClientProps {
   members: TeamMember[]
   existingLogs: PracticeLogWithDetails[]
   availableTags: PracticeTag[]
+  presentUserIds: string[] // 出席しているメンバーのuser_idリスト
 }
 
 // 種目の選択肢
@@ -87,16 +89,19 @@ export default function PracticeLogClient({
   teamId,
   practiceId,
   practice,
-  teamName,
   members,
   existingLogs,
-  availableTags: initialTags
+  availableTags: initialTags,
+  presentUserIds
 }: PracticeLogClientProps) {
   const router = useRouter()
   const { supabase } = useAuth()
   
   const [availableTags, setAvailableTags] = useState<Tag[]>(initialTags)
   const [saving, setSaving] = useState(false)
+  const [showUserSelectModal, setShowUserSelectModal] = useState(false)
+  const [currentMenuIdForUserSelect, setCurrentMenuIdForUserSelect] = useState<string | null>(null)
+  const [tempSelectedUserIds, setTempSelectedUserIds] = useState<string[]>([])
 
   // 秒数を表示用フォーマットに変換
   const formatTime = (seconds: number) => {
@@ -111,6 +116,7 @@ export default function PracticeLogClient({
   // 既存データからメニューを構築
   const buildMenusFromLogs = (): PracticeMenu[] => {
     if (existingLogs.length === 0) {
+      // 新規作成時は出席者をデフォルト選択
       return [{
         id: '1',
         style: 'Fr',
@@ -121,7 +127,8 @@ export default function PracticeLogClient({
         circleSec: 30,
         note: '',
         tags: [],
-        times: []
+        times: [],
+        targetUserIds: presentUserIds.length > 0 ? presentUserIds : members.map(m => m.user_id)
       }]
     }
 
@@ -135,6 +142,7 @@ export default function PracticeLogClient({
       note: string | null
       tags: PracticeTag[]
       times: TeamTimeEntry[]
+      targetUserIds: string[]
     }>()
 
     for (const log of existingLogs) {
@@ -153,14 +161,20 @@ export default function PracticeLogClient({
           circle: log.circle,
           note: log.note,
           tags,
-          times: []
+          times: [],
+          targetUserIds: []
         })
+      }
+
+      // このログのuser_idを対象ユーザーに追加
+      const group = menuGroups.get(key)!
+      if (!group.targetUserIds.includes(log.user_id)) {
+        group.targetUserIds.push(log.user_id)
       }
 
       // メンバーのタイムを追加
       const member = members.find(m => m.user_id === log.user_id)
       if (member && log.practice_times && log.practice_times.length > 0) {
-        const group = menuGroups.get(key)!
         const existingMemberTime = group.times.find(t => t.memberId === member.id)
         
         const memberTimes = log.practice_times.map(pt => ({
@@ -191,7 +205,8 @@ export default function PracticeLogClient({
       circleSec: group.circle ? group.circle % 60 : 30,
       note: group.note || '',
       tags: group.tags,
-      times: group.times
+      times: group.times,
+      targetUserIds: group.targetUserIds
     }))
   }
 
@@ -216,7 +231,8 @@ export default function PracticeLogClient({
       circleSec: 30,
       note: '',
       tags: [],
-      times: []
+      times: [],
+      targetUserIds: presentUserIds.length > 0 ? presentUserIds : members.map(m => m.user_id)
     }
     setMenus(prev => [...prev, newMenu])
   }
@@ -259,7 +275,10 @@ export default function PracticeLogClient({
       let totalCreated = 0
 
       for (const menu of menus) {
-        for (const member of members) {
+        // 対象ユーザーのみにログを作成
+        const targetMembers = members.filter(m => menu.targetUserIds.includes(m.user_id))
+        
+        for (const member of targetMembers) {
           const memberTimes = menu.times.find(t => t.memberId === member.id)?.times || []
 
           try {
@@ -362,7 +381,7 @@ export default function PracticeLogClient({
               {isEditMode ? 'チーム練習ログを編集' : 'チーム練習ログを追加'}
             </h1>
             <p className="text-gray-600 mb-4">
-              {teamName}のメンバー全員分の練習記録を入力できます
+              練習参加者の記録を代理で一括入力できます
             </p>
             
             {/* 練習情報 */}
@@ -377,10 +396,6 @@ export default function PracticeLogClient({
                   <span>{practice.place}</span>
                 </div>
               )}
-              <div className="flex items-center gap-1">
-                <span className="font-medium">対象メンバー:</span>
-                <span>{members.length}名</span>
-              </div>
             </div>
           </div>
         </div>
@@ -472,6 +487,52 @@ export default function PracticeLogClient({
                     data-testid={`team-practice-log-reps-${index + 1}`}
                   />
                 </div>
+              </div>
+
+              {/* 対象ユーザー */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  対象ユーザー
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentMenuIdForUserSelect(menu.id)
+                      setTempSelectedUserIds(menu.targetUserIds)
+                      setShowUserSelectModal(true)
+                    }}
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    data-testid={`team-practice-log-select-users-${index + 1}`}
+                  >
+                    <UserGroupIcon className="h-4 w-4 mr-2" />
+                    ユーザーを選択
+                  </button>
+                  <span className="text-sm text-gray-600">
+                    {menu.targetUserIds.length}名選択中
+                  </span>
+                </div>
+                {/* 選択されたユーザーの表示 */}
+                {menu.targetUserIds.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {menu.targetUserIds.slice(0, 5).map(userId => {
+                      const member = members.find(m => m.user_id === userId)
+                      return member ? (
+                        <span
+                          key={userId}
+                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                        >
+                          {member.users.name}
+                        </span>
+                      ) : null
+                    })}
+                    {menu.targetUserIds.length > 5 && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                        +{menu.targetUserIds.length - 5}名
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* タグ */}
@@ -611,10 +672,140 @@ export default function PracticeLogClient({
           onSubmit={(times: TeamTimeEntry[]) => handleTimeSave(currentMenuId, times)}
           setCount={getCurrentMenu()?.sets || 1}
           repCount={getCurrentMenu()?.reps || 1}
-          teamMembers={teamMembersForModal}
+          teamMembers={teamMembersForModal.filter(m => 
+            getCurrentMenu()?.targetUserIds.includes(m.user_id)
+          )}
           menuNumber={menus.findIndex(m => m.id === currentMenuId) + 1}
           initialTimes={getCurrentMenu()?.times || []}
         />
+      )}
+
+      {/* ユーザー選択モーダル */}
+      {showUserSelectModal && currentMenuIdForUserSelect && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-screen items-center justify-center p-4">
+            <div 
+              className="fixed inset-0 bg-black/40 transition-opacity"
+              onClick={() => setShowUserSelectModal(false)}
+            />
+            <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 max-w-lg w-full max-h-[80vh] flex flex-col">
+              {/* モーダルヘッダー */}
+              <div className="flex items-center justify-between p-4 border-b">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  対象ユーザーを選択
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowUserSelectModal(false)}
+                  className="text-gray-400 hover:text-gray-500"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              {/* 一括選択ボタン */}
+              <div className="flex gap-2 p-4 border-b bg-gray-50">
+                <button
+                  type="button"
+                  onClick={() => setTempSelectedUserIds(members.map(m => m.user_id))}
+                  className="px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 rounded transition-colors"
+                >
+                  全員選択
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTempSelectedUserIds(presentUserIds)}
+                  className="px-3 py-1.5 text-sm font-medium text-green-700 bg-green-100 hover:bg-green-200 rounded transition-colors"
+                  disabled={presentUserIds.length === 0}
+                >
+                  出席者のみ ({presentUserIds.length}名)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTempSelectedUserIds([])}
+                  className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                >
+                  選択解除
+                </button>
+              </div>
+
+              {/* メンバーリスト */}
+              <div className="flex-1 overflow-y-auto p-4">
+                <div className="space-y-2">
+                  {members.map(member => {
+                    const isSelected = tempSelectedUserIds.includes(member.user_id)
+                    const isPresent = presentUserIds.includes(member.user_id)
+                    
+                    return (
+                      <label
+                        key={member.id}
+                        className={`flex items-center p-3 rounded-lg border cursor-pointer transition-colors ${
+                          isSelected 
+                            ? 'border-blue-500 bg-blue-50' 
+                            : 'border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setTempSelectedUserIds(prev => [...prev, member.user_id])
+                            } else {
+                              setTempSelectedUserIds(prev => prev.filter(id => id !== member.user_id))
+                            }
+                          }}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <span className="ml-3 flex-1 text-sm font-medium text-gray-900">
+                          {member.users.name}
+                        </span>
+                        {isPresent && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                            <CheckIcon className="h-3 w-3 mr-1" />
+                            出席
+                          </span>
+                        )}
+                        {member.role === 'admin' && (
+                          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                            管理者
+                          </span>
+                        )}
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* モーダルフッター */}
+              <div className="flex items-center justify-between p-4 border-t bg-gray-50">
+                <span className="text-sm text-gray-600">
+                  {tempSelectedUserIds.length}名選択中
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setShowUserSelectModal(false)}
+                  >
+                    キャンセル
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      updateMenu(currentMenuIdForUserSelect, 'targetUserIds', tempSelectedUserIds)
+                      setShowUserSelectModal(false)
+                      setCurrentMenuIdForUserSelect(null)
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    決定
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
