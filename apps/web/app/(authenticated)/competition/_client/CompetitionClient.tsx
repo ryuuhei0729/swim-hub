@@ -9,7 +9,6 @@ import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
 import { useAuth } from '@/contexts'
 import { LapTimeDisplay } from '@/components/forms/LapTimeDisplay'
-import { useState } from 'react'
 import {
   useRecordsQuery,
   useUpdateRecordMutation,

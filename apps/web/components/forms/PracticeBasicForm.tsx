@@ -144,7 +144,8 @@ export default function PracticeBasicForm({
     try {
       await onSubmit(formData)
       setHasUnsavedChanges(false)
-      onClose()
+      // onClose()は呼ばない - handlePracticeBasicSubmitが適切にモーダルを管理する
+      // (編集時・新規作成時: closePracticeBasicForm(), 新規作成時は続けてopenPracticeLogForm())
     } catch (error) {
       console.error('練習記録の保存に失敗しました:', error)
       setIsSubmitted(false)

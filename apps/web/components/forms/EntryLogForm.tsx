@@ -128,14 +128,14 @@ export default function EntryLogForm({
     let initialEntriesData: EntryData[]
     if (initialEntries.length > 0) {
       initialEntriesData = initialEntries.map((entry, index) => ({
-        id: entry.id || `entry-${index + 1}`,
-        styleId: entry.styleId || '',
-        entryTime: entry.entryTime || 0,
-        entryTimeDisplayValue:
-          entry.entryTimeDisplayValue ??
-          (entry.entryTime && entry.entryTime > 0 ? formatTime(entry.entryTime) : ''),
-        note: entry.note || ''
-      }))
+          id: entry.id || `entry-${index + 1}`,
+          styleId: entry.styleId || '',
+          entryTime: entry.entryTime || 0,
+          entryTimeDisplayValue:
+            entry.entryTimeDisplayValue ??
+            (entry.entryTime && entry.entryTime > 0 ? formatTime(entry.entryTime) : ''),
+          note: entry.note || ''
+        }))
     } else if (editData) {
       // 編集モード: 既存の値をセット
       initialEntriesData = (() => {
@@ -223,7 +223,8 @@ export default function EntryLogForm({
     try {
       await onSubmit(entries)
       setHasUnsavedChanges(false)
-      onClose()
+      // onClose()は呼ばない - handleEntrySubmitが適切にモーダルを管理する
+      // (closeEntryLogForm() → openRecordLogForm())
     } catch (error) {
       console.error('エントリー送信エラー:', error)
       setIsSubmitted(false)

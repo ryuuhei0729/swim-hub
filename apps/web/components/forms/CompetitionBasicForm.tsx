@@ -167,7 +167,8 @@ export default function CompetitionBasicForm({
     try {
       await onSubmit(formData)
       setHasUnsavedChanges(false)
-      onClose()
+      // onClose()は呼ばない - handleCompetitionBasicSubmitが適切にモーダルを管理する
+      // (編集時: closeCompetitionBasicForm(), 新規作成時: openEntryLogForm())
     } catch (error) {
       console.error('フォーム送信エラー:', error)
       setIsSubmitted(false)

@@ -3,18 +3,19 @@
 // =============================================================================
 
 import type { Database } from '@/lib/supabase'
+import { useCompetitionFormStore, usePracticeFormStore } from '@/stores'
 import type {
-  EditingData,
-  EntryFormData,
-  EntryWithStyle,
-  PracticeMenuFormData,
-  RecordFormDataInternal
+    EditingData,
+    EntryFormData,
+    EntryWithStyle,
+    PracticeMenuFormData,
+    RecordFormDataInternal
 } from '@/stores/types'
 import { EntryAPI } from '@apps/shared/api'
 import type { Style } from '@apps/shared/types/database'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { useCallback } from 'react'
-import { getCompetitionId, getRecordCompetitionId } from '../_utils/dashboardHelpers'
+import { getCompetitionId, getPracticeId, getRecordCompetitionId } from '../_utils/dashboardHelpers'
 
 interface UseDashboardHandlersProps {
   supabase: SupabaseClient<Database>
@@ -189,13 +190,16 @@ export function useDashboardHandlers({
           }
         }
       } else {
-        if (!createdPracticeId) {
+        // ストアから直接最新の値を取得（useCallbackのクロージャー問題を回避）
+        const { createdPracticeId: storePracticeId, editingData: storeEditingData } = usePracticeFormStore.getState()
+        const practiceId = getPracticeId(storePracticeId, storeEditingData) || getPracticeId(createdPracticeId, editingData)
+        if (!practiceId) {
           throw new Error('Practice ID が見つかりません')
         }
 
         for (const menu of menus) {
           const logInput = {
-            practice_id: createdPracticeId,
+            practice_id: practiceId,
             style: menu.style || 'fr',
             rep_count: Number(menu.reps) || 1,
             set_count: Number(menu.sets) || 1,
@@ -324,7 +328,8 @@ export function useDashboardHandlers({
           note: basicData.note
         })
         refreshCalendar()
-        closeCompetitionBasicForm()
+        // openEntryLogFormがisBasicFormOpen: falseをセットするので、closeCompetitionBasicFormは不要
+        // closeCompetitionBasicFormを呼ぶとcreatedCompetitionIdがnullにリセットされてしまう
         openEntryLogForm(newCompetition.id)
       }
     } catch (error) {
@@ -342,7 +347,9 @@ export function useDashboardHandlers({
     
     setLoading(true)
     try {
-      const competitionId = getCompetitionId(createdCompetitionId, competitionEditingData)
+      // ストアから直接最新の値を取得（useCallbackのクロージャー問題を回避）
+      const { createdCompetitionId: storeCompetitionId, editingData: storeEditingData } = useCompetitionFormStore.getState()
+      const competitionId = getCompetitionId(storeCompetitionId, storeEditingData) || getCompetitionId(createdCompetitionId, competitionEditingData)
       
       if (!competitionId) {
         throw new Error('Competition ID が見つかりません')
@@ -407,7 +414,8 @@ export function useDashboardHandlers({
       closeEntryLogForm()
       
       if (competitionEditingData?.type !== 'entry' && createdEntriesList.length > 0) {
-        openRecordLogForm(createdCompetitionId || undefined, createdEntriesList)
+        // competitionIdを使う（createdCompetitionIdではなく、getCompetitionIdで取得した値）
+        openRecordLogForm(competitionId || undefined, createdEntriesList)
       }
     } catch (error) {
       console.error('エントリーの登録に失敗しました:', error)
@@ -418,22 +426,30 @@ export function useDashboardHandlers({
 
   // エントリーをスキップ
   const handleEntrySkip = useCallback(() => {
-    if (!createdCompetitionId) {
+    // ストアから直接最新の値を取得（useCallbackのクロージャー問題を回避）
+    const { createdCompetitionId: storeCompetitionId, editingData: storeEditingData } = useCompetitionFormStore.getState()
+    const competitionId = getCompetitionId(storeCompetitionId, storeEditingData) || getCompetitionId(createdCompetitionId, competitionEditingData)
+    if (!competitionId) {
       console.error('大会IDが取得できませんでした。エントリーを先に登録してください。')
       return
     }
     closeEntryLogForm()
-    openRecordLogForm(createdCompetitionId, [])
-  }, [createdCompetitionId, closeEntryLogForm, openRecordLogForm])
+    openRecordLogForm(competitionId, [])
+  }, [createdCompetitionId, competitionEditingData, closeEntryLogForm, openRecordLogForm])
 
   // 記録登録・更新
   const handleRecordLogSubmit = useCallback(async (formDataList: RecordFormDataInternal[]) => {
     const dataArray = Array.isArray(formDataList) ? formDataList : [formDataList]
     setLoading(true)
     try {
-      const competitionId = getRecordCompetitionId(createdCompetitionId, competitionEditingData)
+      // ストアから直接最新の値を取得（useCallbackのクロージャー問題を回避）
+      const { createdCompetitionId: storeCompetitionId, editingData: storeEditingData } = useCompetitionFormStore.getState()
+      const competitionId = getRecordCompetitionId(storeCompetitionId, storeEditingData) || getRecordCompetitionId(createdCompetitionId, competitionEditingData)
 
-      if (competitionEditingData && competitionEditingData.id) {
+      // 編集データもストアから取得（競合を避けるため、引数の値を優先しつつストアの値もフォールバックとして使用）
+      const effectiveEditingData = competitionEditingData || storeEditingData
+
+      if (effectiveEditingData && effectiveEditingData.id) {
         const formData = dataArray[0]
         const updates: import('@apps/shared/types/database').RecordUpdate = {
           style_id: parseInt(formData.styleId),
@@ -443,7 +459,7 @@ export function useDashboardHandlers({
           is_relaying: formData.isRelaying || false
         }
 
-        await updateRecord(competitionEditingData.id, updates)
+        await updateRecord(effectiveEditingData.id, updates)
 
         if (formData.splitTimes && formData.splitTimes.length > 0) {
           const splitTimesData = formData.splitTimes.map((st) => ({
@@ -451,7 +467,7 @@ export function useDashboardHandlers({
             split_time: st.splitTime
           }))
           await replaceSplitTimes({
-            recordId: competitionEditingData.id,
+            recordId: effectiveEditingData.id,
             splitTimes: splitTimesData as Omit<import('@apps/shared/types/database').SplitTimeInsert, 'record_id'>[]
           })
         }
@@ -506,7 +522,7 @@ export function useDashboardHandlers({
       setLoading(false)
       closeRecordLogForm()
     }
-  }, [createdCompetitionId, competitionEditingData, updateRecord, createRecord, replaceSplitTimes, createSplitTimes, refreshCalendar, setLoading, closeRecordLogForm])
+  }, [createdCompetitionId, competitionEditingData, supabase, updateRecord, createRecord, replaceSplitTimes, createSplitTimes, refreshCalendar, setLoading, closeRecordLogForm])
 
   return {
     handlePracticeBasicSubmit,
