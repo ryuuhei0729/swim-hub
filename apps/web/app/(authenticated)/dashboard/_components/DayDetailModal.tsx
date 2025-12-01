@@ -8,6 +8,8 @@ import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
 import { useAuth } from '@/contexts'
 import { CalendarItemType, DayDetailModalProps, CalendarItem, EntryInfo, isPracticeMetadata, isCompetitionMetadata, isRecordMetadata, isTeamInfo } from '@/types'
+import { LapTimeDisplay } from '@/components/forms/LapTimeDisplay'
+import { BestTimeBadge } from '@/components/ui'
 import type {
   Record,
   Practice,
@@ -1226,8 +1228,9 @@ function PracticeDetails({
   )
 }
 
+
 // 大会記録のスプリットタイム一覧
-function RecordSplitTimes({ recordId }: { recordId: string }) {
+function RecordSplitTimes({ recordId, raceDistance }: { recordId: string; raceDistance?: number }) {
   const { supabase } = useAuth()
   const [splits, setSplits] = useState<SplitTime[]>([])
   const [loading, setLoading] = useState(true)
@@ -1274,15 +1277,16 @@ function RecordSplitTimes({ recordId }: { recordId: string }) {
 
   return (
     <div className="mt-3">
-      <p className="text-sm font-medium text-blue-800 mb-1">スプリット</p>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {splits.map((st: SplitTime) => (
-          <div key={st.id} className="text-xs text-blue-900 bg-blue-100 rounded px-2 py-1">
-            <span className="mr-2">{st.distance}m</span>
-            <span className="font-semibold">{formatTime(st.split_time)}</span>
-          </div>
-        ))}
-      </div>
+      {/* 距離別Lap表示 */}
+      {splits.length > 0 && (
+        <LapTimeDisplay
+          splitTimes={splits.map(st => ({
+            distance: st.distance,
+            splitTime: st.split_time
+          }))}
+          raceDistance={raceDistance}
+        />
+      )}
     </div>
   )
 }
@@ -1587,8 +1591,21 @@ function CompetitionDetails({
                   {record.metadata?.record?.time && (
                     <>
                       <div className="text-xs font-medium text-gray-500 mb-1">タイム</div>
-                      <div className="text-2xl font-bold text-blue-700 mb-3" data-testid="record-time-display">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="text-2xl font-bold text-blue-700" data-testid="record-time-display">
                         ⏱️ {formatTime(record.metadata.record.time)}
+                        </div>
+                        <BestTimeBadge
+                          recordId={record.id}
+                          styleId={(() => {
+                            const id = record.metadata?.style?.id || record.metadata?.record?.style?.id
+                            return typeof id === 'number' ? id : undefined
+                          })()}
+                          currentTime={record.metadata.record.time}
+                          recordDate={record.metadata?.competition?.date}
+                          poolType={record.metadata?.competition?.pool_type ?? record.metadata?.pool_type}
+                          isRelaying={record.metadata?.record?.is_relaying}
+                        />
                       </div>
                     </>
                   )}
@@ -1604,7 +1621,10 @@ function CompetitionDetails({
                 </div>
 
                 {/* スプリットタイム */}
-                <RecordSplitTimes recordId={record.id} />
+                <RecordSplitTimes 
+                  recordId={record.id}
+                  raceDistance={record.metadata?.style?.distance || record.metadata?.record?.style?.distance}
+                />
               </div>
             )
           })}

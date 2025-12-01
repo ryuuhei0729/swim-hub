@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Button, Input } from '@/components/ui'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
@@ -55,32 +55,95 @@ export default function CompetitionBasicForm({
     note: ''
   })
 
-  // selectedDateまたはeditDataが変更された時にフォームを初期化
+  // 初期化済みフラグ（モーダルが開かれた時だけ初期化するため）
+  const [isInitialized, setIsInitialized] = useState(false)
+  // フォームに変更があるかどうかを追跡
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  // 送信済みフラグ（送信後は警告を出さない）
+  const [isSubmitted, setIsSubmitted] = useState(false)
+  // 初期値を保存（初期化時の変更を無視するため）
+  const initialFormDataRef = useRef<CompetitionBasicFormData | null>(null)
+
+  // モーダルが閉じた時に初期化フラグをリセット
   useEffect(() => {
-    if (isOpen) {
-      if (editData) {
-        // 編集モード
-        setFormData({
-          date: editData.date || format(selectedDate, 'yyyy-MM-dd'),
-          endDate: editData.end_date || '',
-          title: editData.title || editData.competition_name || '',
-          place: editData.place || '',
-          poolType: editData.pool_type ?? 0,
-          note: editData.note || ''
-        })
-      } else {
-        // 新規作成モード
-        setFormData({
-          date: format(selectedDate, 'yyyy-MM-dd'),
-          endDate: '',
-          title: '',
-          place: '',
-          poolType: 0,
-          note: ''
-        })
+    if (!isOpen) {
+      setIsInitialized(false)
+      setHasUnsavedChanges(false)
+      setIsSubmitted(false)
+      initialFormDataRef.current = null
+    }
+  }, [isOpen])
+
+  // フォームに変更があったことを記録（初期値と比較して、実際にユーザーが変更した場合のみ）
+  useEffect(() => {
+    if (!isOpen || !isInitialized || !initialFormDataRef.current) return
+
+    // 初期値と現在の値を比較
+    const hasChanged = JSON.stringify(formData) !== JSON.stringify(initialFormDataRef.current)
+    setHasUnsavedChanges(hasChanged)
+  }, [formData, isOpen, isInitialized])
+
+  // ブラウザバックや閉じるボタンでの離脱を防ぐ
+  useEffect(() => {
+    if (!isOpen || !hasUnsavedChanges || isSubmitted) return
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+
+    const handlePopState = (_e: PopStateEvent) => {
+      if (hasUnsavedChanges && !isSubmitted) {
+        const confirmed = window.confirm('入力内容が保存されていません。このまま戻りますか？')
+        if (!confirmed) {
+          // 履歴を戻す
+          window.history.pushState(null, '', window.location.href)
+        }
       }
     }
-  }, [isOpen, selectedDate, editData])
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.history.pushState(null, '', window.location.href)
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [isOpen, hasUnsavedChanges, isSubmitted])
+
+  // selectedDateまたはeditDataが変更された時にフォームを初期化（モーダルが開かれた時だけ）
+  useEffect(() => {
+    if (!isOpen || isInitialized) return
+
+    let initialData: CompetitionBasicFormData
+    if (editData) {
+      // 編集モード
+      initialData = {
+        date: editData.date || format(selectedDate, 'yyyy-MM-dd'),
+        endDate: editData.end_date || '',
+        title: editData.title || editData.competition_name || '',
+        place: editData.place || '',
+        poolType: editData.pool_type ?? 0,
+        note: editData.note || ''
+      }
+    } else {
+      // 新規作成モード
+      initialData = {
+        date: format(selectedDate, 'yyyy-MM-dd'),
+        endDate: '',
+        title: '',
+        place: '',
+        poolType: 0,
+        note: ''
+      }
+    }
+    
+    setFormData(initialData)
+    // 初期値を保存（初期化時の変更を無視するため）
+    initialFormDataRef.current = { ...initialData }
+    setIsInitialized(true)
+  }, [isOpen, selectedDate, editData, isInitialized])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -100,10 +163,25 @@ export default function CompetitionBasicForm({
       return
     }
 
-    await onSubmit(formData)
+    setIsSubmitted(true)
+    try {
+      await onSubmit(formData)
+      setHasUnsavedChanges(false)
+      // onClose()は呼ばない - handleCompetitionBasicSubmitが適切にモーダルを管理する
+      // (編集時: closeCompetitionBasicForm(), 新規作成時: openEntryLogForm())
+    } catch (error) {
+      console.error('フォーム送信エラー:', error)
+      setIsSubmitted(false)
+    }
   }
 
   const handleClose = () => {
+    if (hasUnsavedChanges && !isSubmitted) {
+      const confirmed = window.confirm('入力内容が保存されていません。このまま閉じますか？')
+      if (!confirmed) {
+        return
+      }
+    }
     setFormData({
       date: format(new Date(), 'yyyy-MM-dd'),
       endDate: '',

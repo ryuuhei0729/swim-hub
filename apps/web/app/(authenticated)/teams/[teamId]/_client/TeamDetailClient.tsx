@@ -65,9 +65,26 @@ function AttendanceTab({ teamId, isAdmin }: { teamId: string, isAdmin: boolean }
       if (practicesResult.error) throw practicesResult.error
       if (competitionsResult.error) throw competitionsResult.error
 
-      // 練習と大会を統合し、日付順にソート
-      const practices: TeamEvent[] = (practicesResult.data || []).map((p) => Object.assign(p, { type: 'practice' as const }))
-      const competitions: TeamEvent[] = (competitionsResult.data || []).map((c) => Object.assign(c, { type: 'competition' as const }))
+      // 練習と大会を統合し、過去の日付を除外して日付順にソート
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      
+      const practices: TeamEvent[] = (practicesResult.data || [])
+        .map((p) => Object.assign(p, { type: 'practice' as const }))
+        .filter((p) => {
+          const eventDate = new Date(p.date)
+          eventDate.setHours(0, 0, 0, 0)
+          return eventDate >= today
+        })
+      
+      const competitions: TeamEvent[] = (competitionsResult.data || [])
+        .map((c) => Object.assign(c, { type: 'competition' as const }))
+        .filter((c) => {
+          const eventDate = new Date(c.date)
+          eventDate.setHours(0, 0, 0, 0)
+          return eventDate >= today
+        })
+      
       const allEvents: TeamEvent[] = [...practices, ...competitions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
       setEvents(allEvents)
@@ -129,8 +146,6 @@ function AttendanceTab({ teamId, isAdmin }: { teamId: string, isAdmin: boolean }
               {events.map((event) => {
                 const getStatusBadge = (status: AttendanceStatusType | null | undefined) => {
                   switch (status) {
-                    case 'before':
-                      return <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">提出前</span>
                     case 'open':
                       return <span className="text-xs px-2 py-0.5 rounded-full bg-blue-200 text-blue-800">提出受付中</span>
                     case 'closed':
@@ -185,7 +200,7 @@ function AttendanceTab({ teamId, isAdmin }: { teamId: string, isAdmin: boolean }
                       <div className="flex items-center gap-2">
                         {isAdmin && (
                           <select
-                            value={event.attendance_status || 'before'}
+                            value={event.attendance_status || 'open'}
                             onChange={(e) => {
                               e.stopPropagation()
                               handleAttendanceStatusChange(
@@ -197,7 +212,6 @@ function AttendanceTab({ teamId, isAdmin }: { teamId: string, isAdmin: boolean }
                             onClick={(e) => e.stopPropagation()}
                             className="text-xs border border-gray-300 rounded px-2 py-1 bg-white hover:bg-gray-50"
                           >
-                            <option value="before">提出前</option>
                             <option value="open">提出受付中</option>
                             <option value="closed">提出締切</option>
                           </select>

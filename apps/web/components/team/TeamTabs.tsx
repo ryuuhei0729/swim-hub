@@ -64,10 +64,10 @@ const tabs: TeamTab[] = [
 ]
 
 export default function TeamTabs({ activeTab, onTabChange, isAdmin = false }: TeamTabsProps) {
-  // 管理者以外は設定タブと一括登録タブを非表示
+  // 管理者以外は一括登録タブのみ非表示（設定タブはメンバーにも表示）
   const visibleTabs = isAdmin 
     ? tabs 
-    : tabs.filter(tab => tab.id !== 'settings' && tab.id !== 'bulk-register')
+    : tabs.filter(tab => tab.id !== 'bulk-register')
 
   return (
     <div className="bg-white rounded-lg shadow">

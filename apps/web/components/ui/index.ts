@@ -1,7 +1,10 @@
 export { default as Avatar } from './Avatar'
 export { default as BaseModal } from './BaseModal'
+export { default as BestTimeBadge } from './BestTimeBadge'
 export { default as Button } from './Button'
 export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './Card'
 export { default as Input } from './Input'
 export { FullScreenLoading, default as LoadingSpinner } from './LoadingSpinner'
+export { Tabs } from './Tabs'
+export type { Tab } from './Tabs'
 

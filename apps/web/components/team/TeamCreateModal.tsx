@@ -79,7 +79,7 @@ export default function TeamCreateModal({
     <div>
       {/* エラー表示 */}
       {error && (
-        <div className="fixed top-4 right-4 z-50 bg-red-50 border border-red-200 rounded-lg p-4 max-w-md">
+        <div className="fixed top-4 right-4 z-[70] bg-red-50 border border-red-200 rounded-lg p-4 max-w-md">
           <div className="flex">
             <div className="shrink-0">
               <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">

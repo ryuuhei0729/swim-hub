@@ -4,9 +4,7 @@ import React, { useState } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '@/contexts'
 import TeamJoinForm from '@/components/forms/TeamJoinForm'
-import { Team, TeamMembership } from '@apps/shared/types/database'
-import { format } from 'date-fns'
-import { joinTeam, reactivateTeamMembership } from '@/app/(authenticated)/teams/_actions/actions'
+import { joinTeam } from '@/app/(authenticated)/teams/_actions/actions'
 
 export interface TeamJoinModalProps {
   isOpen: boolean
@@ -14,14 +12,10 @@ export interface TeamJoinModalProps {
   onSuccess: (teamId: string) => void
 }
 
-// Supabaseクエリから返される型
-type TeamSelectResult = Pick<Team, 'id' | 'name' | 'description' | 'invite_code'>
-type TeamMembershipSelectResult = Pick<TeamMembership, 'id' | 'is_active'>
-
 export default function TeamJoinModal({ isOpen, onClose, onSuccess }: TeamJoinModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { user, supabase } = useAuth()
+  const { user } = useAuth()
 
   const handleSubmit = async (inviteId: string) => {
     if (!user) {
@@ -33,64 +27,21 @@ export default function TeamJoinModal({ isOpen, onClose, onSuccess }: TeamJoinMo
       setIsLoading(true)
       setError(null)
 
-      // 招待コードでチームを検索
-      const { data: team, error: teamError } = await supabase
-        .from('teams')
-        .select('id, name, description, invite_code')
-        .eq('invite_code', inviteId)
-        .single()
-
-      if (teamError) {
-        if (teamError.code === 'PGRST116') {
-          throw new Error('招待コードが正しくありません')
-        }
-        throw teamError
+      // Server Action経由でチームに参加（既存メンバーシップチェックと再アクティブ化も含む）
+      const result = await joinTeam(inviteId)
+      
+      if (!result.success) {
+        throw new Error(result.error || 'チームの参加に失敗しました')
       }
 
-      if (!team) {
-        throw new Error('チームが見つかりません')
-      }
-
-      const teamData = team as TeamSelectResult
-
-      // 既に参加しているかチェック
-      const { data: existingMembership, error: membershipError } = await supabase
-        .from('team_memberships')
-        .select('id, is_active')
-        .eq('team_id', teamData.id)
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      if (membershipError && membershipError.code !== 'PGRST116') {
-        throw membershipError
-      }
-
-      if (existingMembership) {
-        const membershipData = existingMembership as TeamMembershipSelectResult
-        
-        if (membershipData.is_active) {
-          throw new Error('既にこのチームに参加しています')
-        } else {
-          // 非アクティブなメンバーシップを復活（Server Action経由）
-          const result = await reactivateTeamMembership(
-            membershipData.id,
-            format(new Date(), 'yyyy-MM-dd')
-          )
-          if (!result.success) {
-            throw new Error(result.error || 'メンバーシップの再アクティブ化に失敗しました')
-          }
-        }
+      // 成功時の処理（team_idを取得するために、membershipから取得）
+      const teamId = result.membership?.team_id
+      if (teamId) {
+        onSuccess(teamId)
+        onClose()
       } else {
-        // 新しいメンバーシップを作成（Server Action経由）
-        const result = await joinTeam(inviteId)
-        if (!result.success) {
-          throw new Error(result.error || 'チームの参加に失敗しました')
-        }
+        throw new Error('チームIDの取得に失敗しました')
       }
-
-      // 成功時の処理
-      onSuccess(teamData.id)
-      onClose()
     } catch (err) {
       console.error('チーム参加エラー:', err)
       
@@ -119,7 +70,7 @@ export default function TeamJoinModal({ isOpen, onClose, onSuccess }: TeamJoinMo
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto" data-testid="team-join-modal">
+    <div className="fixed inset-0 z-[60] overflow-y-auto" data-testid="team-join-modal">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         {/* オーバーレイ */}
         <div 

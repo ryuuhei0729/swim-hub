@@ -5,6 +5,22 @@ export const formatTime = (seconds: number): string => {
   return minutes > 0 ? `${minutes}:${remainingSeconds.padStart(5, '0')}` : remainingSeconds
 }
 
+// 時間文字列を秒に変換（"1:23.45" → 83.45）
+export const parseTimeToSeconds = (timeStr: string): number => {
+  if (!timeStr || timeStr.trim() === '') return 0
+  
+  const trimmed = timeStr.trim()
+  
+  // "分:秒.ミリ秒" 形式 (例: "1:23.45")
+  if (trimmed.includes(':')) {
+    const [minutes, seconds] = trimmed.split(':')
+    return parseInt(minutes, 10) * 60 + parseFloat(seconds)
+  }
+  
+  // 秒のみ (例: "23.45")
+  return parseFloat(trimmed)
+}
+
 // 日付フォーマッター
 export const formatDate = (date: string | Date, format: 'short' | 'long' | 'time' = 'short'): string => {
   const d = new Date(date)

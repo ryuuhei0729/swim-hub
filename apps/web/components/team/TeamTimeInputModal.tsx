@@ -137,14 +137,14 @@ export default function TeamTimeInputModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-60 overflow-y-auto" data-testid="team-time-input-modal">
+    <div className="fixed inset-0 z-[70] overflow-y-auto" data-testid="team-time-input-modal">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div 
           className="fixed inset-0 bg-black/40 transition-opacity" 
           onClick={onClose}
         ></div>
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full" data-testid="team-time-input-dialog">
+        <div className="relative inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-2xl border-2 border-gray-300 transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full" data-testid="team-time-input-dialog">
           {/* ヘッダー */}
           <div className="bg-white px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">

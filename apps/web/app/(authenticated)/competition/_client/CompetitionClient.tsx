@@ -2,19 +2,20 @@
 
 import React from 'react'
 import { TrophyIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
-import { Button } from '@/components/ui'
+import { Button, BestTimeBadge } from '@/components/ui'
 import RecordLogForm, { type RecordLogFormData } from '@/components/forms/RecordLogForm'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
 import { useAuth } from '@/contexts'
+import { LapTimeDisplay } from '@/components/forms/LapTimeDisplay'
 import {
   useRecordsQuery,
   useUpdateRecordMutation,
   useDeleteRecordMutation,
   useReplaceSplitTimesMutation,
 } from '@apps/shared/hooks/queries/records'
-import type { Record, Competition, Style, SplitTime, RecordWithDetails } from '@apps/shared/types/database'
+import type { Record, Competition, Style, RecordWithDetails } from '@apps/shared/types/database'
 import { 
   useCompetitionFilterStore, 
   useCompetitionRecordStore 
@@ -25,6 +26,7 @@ interface CompetitionClientProps {
   initialRecords: RecordWithDetails[]
   styles: Style[]
 }
+
 
 /**
  * 大会記録ページのインタラクティブ部分を担当するClient Component
@@ -595,9 +597,19 @@ export default function CompetitionClient({
                           </p>
                         )}
                         {selectedRecord.time && (
-                          <p className="text-lg font-semibold text-blue-700 mb-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-lg font-semibold text-blue-700">
                             ⏱️ {formatTime(selectedRecord.time)}{selectedRecord.is_relaying && <span className="font-bold text-red-600 ml-1">R</span>}
                           </p>
+                            <BestTimeBadge
+                              recordId={selectedRecord.id}
+                              styleId={selectedRecord.style_id}
+                              currentTime={selectedRecord.time}
+                              recordDate={selectedRecord.competition?.date}
+                              poolType={selectedRecord.pool_type}
+                              isRelaying={selectedRecord.is_relaying}
+                            />
+                          </div>
                         )}
                         {selectedRecord.note && (
                           <p className="text-sm text-gray-600 mt-2">
@@ -605,21 +617,16 @@ export default function CompetitionClient({
                           </p>
                         )}
                         
-                        {/* スプリットタイム */}
+                        {/* 距離別Lap表示 */}
                         {selectedRecord.split_times && selectedRecord.split_times.length > 0 && (
                           <div className="mt-3">
-                            <p className="text-sm font-medium text-blue-800 mb-1">スプリット</p>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                              {selectedRecord.split_times
-                                .slice()
-                                .sort((a: SplitTime, b: SplitTime) => (a.distance || 0) - (b.distance || 0))
-                                .map((st: SplitTime) => (
-                                  <div key={st.id} className="text-xs text-blue-900 bg-blue-100 rounded px-2 py-1">
-                                    <span className="mr-2">{st.distance}m</span>
-                                    <span className="font-semibold">{formatTime(st.split_time)}</span>
-                                  </div>
-                                ))}
-                            </div>
+                            <LapTimeDisplay
+                              splitTimes={selectedRecord.split_times.map(st => ({
+                                distance: st.distance,
+                                splitTime: st.split_time
+                              }))}
+                              raceDistance={selectedRecord.style?.distance}
+                            />
                           </div>
                         )}
                       </div>

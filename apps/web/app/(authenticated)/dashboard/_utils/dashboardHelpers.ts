@@ -31,33 +31,68 @@ function isEditingDataWithCompetition(value: unknown): value is { competitionId:
 }
 
 /**
- * metadataオブジェクトがrecordプロパティを持ち、そのrecordがcompetitionIdを持つかチェック
+ * editingDataがpracticeIdを持つオブジェクトかどうかをチェック
  */
-function hasMetadataWithRecordCompetition(value: unknown): value is {
-  metadata: {
-    record?: {
-      competitionId?: string | null
-    }
-  }
+function isEditingDataWithPractice(value: unknown): value is { practiceId: string | null | undefined } {
+  return isObject(value) && hasStringProperty(value, 'practiceId')
+}
+
+/**
+ * metadataオブジェクトを持つかチェック
+ */
+function hasMetadata(value: unknown): value is {
+  metadata: Record<string, unknown>
 } {
   if (!isObject(value) || !('metadata' in value)) {
     return false
   }
-  const metadata = value.metadata
-  if (!isObject(metadata)) {
-    return false
-  }
-  // recordプロパティが存在する場合、オブジェクトまたはnull/undefinedであることを確認
-  if ('record' in metadata) {
-    const record = metadata.record
-    return record === null || record === undefined || isObject(record)
-  }
-  return false
+  return isObject(value.metadata)
 }
 
 // =============================================================================
 // ヘルパー関数
 // =============================================================================
+
+/**
+ * 練習IDを取得するヘルパー関数
+ */
+export function getPracticeId(
+  createdId: string | null,
+  editingData: unknown
+): string | undefined {
+  if (createdId) return createdId
+  
+  // 直接practiceIdをチェック
+  if (isEditingDataWithPractice(editingData)) {
+    const practiceId = editingData.practiceId
+    if (typeof practiceId === 'string') {
+      return practiceId
+    }
+  }
+  
+  // CalendarItemの場合: metadata.practice.id または metadata.practice_id をチェック
+  if (hasMetadata(editingData)) {
+    const metadata = editingData.metadata
+    
+    // metadata.practice.id をチェック
+    if ('practice' in metadata && isObject(metadata.practice) && 'id' in metadata.practice) {
+      const practiceId = metadata.practice.id
+      if (typeof practiceId === 'string') {
+        return practiceId
+      }
+    }
+    
+    // metadata.practice_id をチェック
+    if ('practice_id' in metadata) {
+      const practiceId = metadata.practice_id
+      if (typeof practiceId === 'string') {
+        return practiceId
+      }
+    }
+  }
+  
+  return undefined
+}
 
 /**
  * 大会IDを取得するヘルパー関数
@@ -68,9 +103,33 @@ export function getCompetitionId(
 ): string | undefined {
   if (createdId) return createdId
   
+  // 直接competitionIdをチェック
   if (isEditingDataWithCompetition(editingData)) {
     const competitionId = editingData.competitionId
-    return typeof competitionId === 'string' ? competitionId : undefined
+    if (typeof competitionId === 'string') {
+      return competitionId
+    }
+  }
+  
+  // CalendarItemの場合: metadata.competition.id または metadata.entry.competition_id をチェック
+  if (hasMetadata(editingData)) {
+    const metadata = editingData.metadata
+    
+    // metadata.competition.id をチェック
+    if ('competition' in metadata && isObject(metadata.competition) && 'id' in metadata.competition) {
+      const competitionId = metadata.competition.id
+      if (typeof competitionId === 'string') {
+        return competitionId
+      }
+    }
+    
+    // metadata.entry.competition_id をチェック
+    if ('entry' in metadata && isObject(metadata.entry) && 'competition_id' in metadata.entry) {
+      const competitionId = metadata.entry.competition_id
+      if (typeof competitionId === 'string') {
+        return competitionId
+      }
+    }
   }
   
   return undefined
@@ -93,16 +152,31 @@ export function getRecordCompetitionId(
     }
   }
   
-  // 次にmetadata.record.competitionIdをチェック
-  if (hasMetadataWithRecordCompetition(editingData)) {
+  // CalendarItemの場合: metadata内の各プロパティをチェック
+  if (hasMetadata(editingData)) {
     const metadata = editingData.metadata
-    if (isObject(metadata) && 'record' in metadata) {
-      const record = metadata.record
-      if (isObject(record) && 'competitionId' in record) {
-        const recordCompetitionId = record.competitionId
-        if (typeof recordCompetitionId === 'string') {
-          return recordCompetitionId
-        }
+    
+    // metadata.record.competition_id をチェック
+    if ('record' in metadata && isObject(metadata.record) && 'competition_id' in metadata.record) {
+      const competitionId = metadata.record.competition_id
+      if (typeof competitionId === 'string') {
+        return competitionId
+      }
+    }
+    
+    // metadata.competition.id をチェック
+    if ('competition' in metadata && isObject(metadata.competition) && 'id' in metadata.competition) {
+      const competitionId = metadata.competition.id
+      if (typeof competitionId === 'string') {
+        return competitionId
+      }
+    }
+    
+    // metadata.entry.competition_id をチェック
+    if ('entry' in metadata && isObject(metadata.entry) && 'competition_id' in metadata.entry) {
+      const competitionId = metadata.entry.competition_id
+      if (typeof competitionId === 'string') {
+        return competitionId
       }
     }
   }

@@ -13,6 +13,75 @@
 -- =============================================================================
 
 -- =============================================================================
+-- 前提データの作成（ユーザーとチーム）
+-- =============================================================================
+
+-- ユーザーの作成（存在しない場合のみ）
+INSERT INTO users (
+    id,
+    name,
+    gender,
+    birthday,
+    created_at,
+    updated_at
+) VALUES (
+    '8d16b82e-5f22-46af-85dd-f746a0d1dba5',
+    'テストユーザー',
+    0,
+    '2000-01-01',
+    NOW(),
+    NOW()
+) ON CONFLICT (id) DO NOTHING;
+
+-- チームの作成（存在しない場合のみ）
+INSERT INTO teams (
+    id,
+    name,
+    description,
+    invite_code,
+    created_by,
+    created_at,
+    updated_at
+) VALUES (
+    '3654f61a-b7ca-4cda-8f40-cebabd91890b',
+    'テストチーム',
+    'テスト用のチームです',
+    'TEST123',
+    '8d16b82e-5f22-46af-85dd-f746a0d1dba5',
+    NOW(),
+    NOW()
+) ON CONFLICT (id) DO NOTHING;
+
+-- チームメンバーシップの作成（存在しない場合のみ）
+INSERT INTO team_memberships (
+    team_id,
+    user_id,
+    role,
+    member_type,
+    group_name,
+    is_active,
+    joined_at,
+    left_at,
+    created_at,
+    updated_at
+) VALUES (
+    '3654f61a-b7ca-4cda-8f40-cebabd91890b',
+    '8d16b82e-5f22-46af-85dd-f746a0d1dba5',
+    'admin',
+    NULL,
+    NULL,
+    true,
+    CURRENT_DATE,
+    NULL,
+    NOW(),
+    NOW()
+) ON CONFLICT (team_id, user_id) DO UPDATE SET
+    is_active = true,
+    role = 'admin',
+    left_at = NULL,
+    updated_at = NOW();
+
+-- =============================================================================
 -- 既存データの削除（依存関係の順序で削除）
 -- =============================================================================
 
@@ -168,7 +237,7 @@ BEGIN
                     'チーム練習 ' || to_char(v_date, 'YYYY-MM-DD'),
                     v_team_id,
                     v_user_id,
-                    'before',
+                    'open',
                     v_date::timestamp,
                     v_date::timestamp
                 ) RETURNING id INTO v_practice_id;
@@ -462,6 +531,7 @@ BEGIN
                     competition_id,
                     style_id,
                     time,
+                    pool_type,
                     team_id,
                     video_url,
                     note,
@@ -473,6 +543,7 @@ BEGIN
                     v_competition_id,
                     v_entry_style_ids[i],
                     v_record_time,
+                    floor(random() * 2)::smallint, -- 0: short, 1: long
                     v_team_id,
                     NULL,
                     '大会記録 ' || to_char(v_date, 'YYYY-MM-DD'),
@@ -647,6 +718,7 @@ BEGIN
                     competition_id,
                     style_id,
                     time,
+                    pool_type,
                     team_id,
                     video_url,
                     note,
@@ -658,6 +730,7 @@ BEGIN
                     v_competition_id,
                     v_entry_style_ids[i],
                     v_record_time,
+                    floor(random() * 2)::smallint, -- 0: short, 1: long
                     v_team_id,
                     NULL,
                     '大会記録 ' || to_char(v_date, 'YYYY-MM-DD'),

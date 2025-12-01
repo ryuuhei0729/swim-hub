@@ -48,7 +48,6 @@ CREATE EXTENSION IF NOT EXISTS "supabase_vault" WITH SCHEMA "vault";
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
 
 CREATE TYPE "public"."attendance_status_type" AS ENUM (
-    'before',
     'open',
     'closed'
 );
@@ -166,6 +165,36 @@ $$;
 
 COMMENT ON FUNCTION "public"."is_team_member"("target_team_id" "uuid", "target_user_id" "uuid") IS '指定したユーザーがチームに所属しているかを判定する（RLS回避用）';
 
+-- invite_codeでチームを安全に検索する関数
+-- 認証されたユーザーが特定のinvite_codeでチームを検索できる
+-- セキュリティのため、idとinvite_codeのみを返す
+CREATE OR REPLACE FUNCTION "public"."find_team_by_invite_code"("p_invite_code" "text")
+RETURNS TABLE("id" "uuid", "invite_code" "text")
+    LANGUAGE "plpgsql"
+    SECURITY DEFINER
+    SET search_path = public
+    AS $$
+BEGIN
+  -- 認証チェック
+  IF (SELECT "auth"."uid"()) IS NULL THEN
+    RAISE EXCEPTION '認証が必要です';
+  END IF;
+  
+  -- invite_codeに一致するチームを返す（idとinvite_codeのみ）
+  RETURN QUERY
+  SELECT 
+    t.id,
+    t.invite_code
+  FROM public.teams t
+  WHERE t.invite_code = p_invite_code
+  LIMIT 1;
+END;
+$$;
+
+ALTER FUNCTION "public"."find_team_by_invite_code"("p_invite_code" "text") OWNER TO "postgres";
+
+COMMENT ON FUNCTION "public"."find_team_by_invite_code"("p_invite_code" "text") IS 'invite_codeでチームを安全に検索する。認証されたユーザーのみが使用でき、idとinvite_codeのみを返す。';
+
 CREATE OR REPLACE FUNCTION "public"."is_team_admin"("target_team_id" "uuid", "target_user_id" "uuid") RETURNS boolean
     LANGUAGE "sql"
     STABLE
@@ -206,6 +235,300 @@ COMMENT ON FUNCTION "public"."shares_active_team"("target_user_id" "uuid", "view
 
 COMMENT ON FUNCTION "public"."replace_practice_log_tags"("p_practice_log_id" "uuid", "p_tag_ids" "uuid"[]) IS 'practice_log_tags を原子性のある操作で置き換える。既存のタグを削除してから新しいタグを挿入する。';
 
+CREATE OR REPLACE FUNCTION "public"."replace_practice_logs"(
+  "p_practice_id" "uuid",
+  "p_logs_data" "jsonb"
+) RETURNS "jsonb"
+    LANGUAGE "plpgsql"
+    SECURITY DEFINER
+    SET search_path = public
+    AS $$
+DECLARE
+  v_log_data jsonb;
+  v_practice_log_id uuid;
+  v_time_data jsonb;
+  v_tag_id uuid;
+  v_result jsonb;
+  v_error_message text;
+  v_index integer := 0;
+BEGIN
+  -- トランザクション開始（関数全体が自動的にトランザクション内で実行される）
+  
+  -- 入力データのバリデーション
+  -- 1. p_logs_dataが配列であることを確認
+  IF jsonb_typeof(p_logs_data) != 'array' THEN
+    v_result := jsonb_build_object(
+      'success', false,
+      'error', 'p_logs_data must be a JSON array',
+      'field', 'p_logs_data',
+      'index', -1
+    );
+    RETURN v_result;
+  END IF;
+  
+  -- 2. 配列が空でないことを確認
+  IF jsonb_array_length(p_logs_data) = 0 THEN
+    v_result := jsonb_build_object(
+      'success', false,
+      'error', 'p_logs_data must be a non-empty array',
+      'field', 'p_logs_data',
+      'index', -1
+    );
+    RETURN v_result;
+  END IF;
+  
+  -- 既存のpractice_logsと関連データを削除
+  -- CASCADEにより、practice_timesとpractice_log_tagsも自動削除される
+  DELETE FROM practice_logs
+  WHERE practice_id = p_practice_id;
+  
+  -- 新しいログデータを挿入
+  FOR v_log_data IN SELECT * FROM jsonb_array_elements(p_logs_data)
+  LOOP
+    -- 各エントリのバリデーション
+    -- user_idの存在と型チェック
+    IF v_log_data->'user_id' IS NULL THEN
+      v_result := jsonb_build_object(
+        'success', false,
+        'error', 'user_id is required',
+        'field', 'user_id',
+        'index', v_index
+      );
+      RETURN v_result;
+    END IF;
+    
+    IF jsonb_typeof(v_log_data->'user_id') != 'string' THEN
+      v_result := jsonb_build_object(
+        'success', false,
+        'error', 'user_id must be a string',
+        'field', 'user_id',
+        'index', v_index
+      );
+      RETURN v_result;
+    END IF;
+    
+    -- user_idがUUIDに変換可能か確認
+    BEGIN
+      PERFORM (v_log_data->>'user_id')::uuid;
+    EXCEPTION
+      WHEN OTHERS THEN
+        v_result := jsonb_build_object(
+          'success', false,
+          'error', 'user_id must be a valid UUID',
+          'field', 'user_id',
+          'index', v_index
+        );
+        RETURN v_result;
+    END;
+    
+    -- styleの存在と型チェック
+    IF v_log_data->'style' IS NULL THEN
+      v_result := jsonb_build_object(
+        'success', false,
+        'error', 'style is required',
+        'field', 'style',
+        'index', v_index
+      );
+      RETURN v_result;
+    END IF;
+    
+    IF jsonb_typeof(v_log_data->'style') != 'string' THEN
+      v_result := jsonb_build_object(
+        'success', false,
+        'error', 'style must be a string',
+        'field', 'style',
+        'index', v_index
+      );
+      RETURN v_result;
+    END IF;
+    
+    -- rep_countの存在と型チェック
+    IF v_log_data->'rep_count' IS NULL THEN
+      v_result := jsonb_build_object(
+        'success', false,
+        'error', 'rep_count is required',
+        'field', 'rep_count',
+        'index', v_index
+      );
+      RETURN v_result;
+    END IF;
+    
+    IF jsonb_typeof(v_log_data->'rep_count') NOT IN ('number', 'string') THEN
+      v_result := jsonb_build_object(
+        'success', false,
+        'error', 'rep_count must be a number or numeric string',
+        'field', 'rep_count',
+        'index', v_index
+      );
+      RETURN v_result;
+    END IF;
+    
+    -- rep_countが整数に変換可能か確認
+    BEGIN
+      PERFORM (v_log_data->>'rep_count')::integer;
+    EXCEPTION
+      WHEN OTHERS THEN
+        v_result := jsonb_build_object(
+          'success', false,
+          'error', 'rep_count must be a valid integer',
+          'field', 'rep_count',
+          'index', v_index
+        );
+        RETURN v_result;
+    END;
+    
+    -- set_countの存在と型チェック
+    IF v_log_data->'set_count' IS NULL THEN
+      v_result := jsonb_build_object(
+        'success', false,
+        'error', 'set_count is required',
+        'field', 'set_count',
+        'index', v_index
+      );
+      RETURN v_result;
+    END IF;
+    
+    IF jsonb_typeof(v_log_data->'set_count') NOT IN ('number', 'string') THEN
+      v_result := jsonb_build_object(
+        'success', false,
+        'error', 'set_count must be a number or numeric string',
+        'field', 'set_count',
+        'index', v_index
+      );
+      RETURN v_result;
+    END IF;
+    
+    -- set_countが整数に変換可能か確認
+    BEGIN
+      PERFORM (v_log_data->>'set_count')::integer;
+    EXCEPTION
+      WHEN OTHERS THEN
+        v_result := jsonb_build_object(
+          'success', false,
+          'error', 'set_count must be a valid integer',
+          'field', 'set_count',
+          'index', v_index
+        );
+        RETURN v_result;
+    END;
+    
+    -- distanceの存在と型チェック
+    IF v_log_data->'distance' IS NULL THEN
+      v_result := jsonb_build_object(
+        'success', false,
+        'error', 'distance is required',
+        'field', 'distance',
+        'index', v_index
+      );
+      RETURN v_result;
+    END IF;
+    
+    IF jsonb_typeof(v_log_data->'distance') NOT IN ('number', 'string') THEN
+      v_result := jsonb_build_object(
+        'success', false,
+        'error', 'distance must be a number or numeric string',
+        'field', 'distance',
+        'index', v_index
+      );
+      RETURN v_result;
+    END IF;
+    
+    -- distanceが整数に変換可能か確認
+    BEGIN
+      PERFORM (v_log_data->>'distance')::integer;
+    EXCEPTION
+      WHEN OTHERS THEN
+        v_result := jsonb_build_object(
+          'success', false,
+          'error', 'distance must be a valid integer',
+          'field', 'distance',
+          'index', v_index
+        );
+        RETURN v_result;
+    END;
+    
+    -- practice_logsを挿入
+    INSERT INTO practice_logs (
+      practice_id,
+      user_id,
+      style,
+      rep_count,
+      set_count,
+      distance,
+      note
+    ) VALUES (
+      p_practice_id,
+      (v_log_data->>'user_id')::uuid,
+      v_log_data->>'style',
+      (v_log_data->>'rep_count')::integer,
+      (v_log_data->>'set_count')::integer,
+      (v_log_data->>'distance')::integer,
+      NULLIF(v_log_data->>'note', '')
+    )
+    RETURNING id INTO v_practice_log_id;
+    
+    -- practice_timesを挿入（存在する場合）
+    IF v_log_data->'practice_times' IS NOT NULL AND jsonb_array_length(v_log_data->'practice_times') > 0 THEN
+      FOR v_time_data IN SELECT * FROM jsonb_array_elements(v_log_data->'practice_times')
+      LOOP
+        INSERT INTO practice_times (
+          practice_log_id,
+          user_id,
+          set_number,
+          rep_number,
+          time
+        ) VALUES (
+          v_practice_log_id,
+          (v_log_data->>'user_id')::uuid,
+          (v_time_data->>'set_number')::integer,
+          (v_time_data->>'rep_number')::integer,
+          (v_time_data->>'time')::numeric
+        );
+      END LOOP;
+    END IF;
+    
+    -- practice_log_tagsを挿入（存在する場合）
+    IF v_log_data->'tag_ids' IS NOT NULL AND jsonb_array_length(v_log_data->'tag_ids') > 0 THEN
+      FOR v_tag_id IN SELECT value::uuid FROM jsonb_array_elements_text(v_log_data->'tag_ids')
+      LOOP
+        INSERT INTO practice_log_tags (
+          practice_log_id,
+          practice_tag_id
+        ) VALUES (
+          v_practice_log_id,
+          v_tag_id
+        );
+      END LOOP;
+    END IF;
+    
+    -- インデックスをインクリメント
+    v_index := v_index + 1;
+  END LOOP;
+  
+  -- 成功レスポンスを返す
+  v_result := jsonb_build_object(
+    'success', true,
+    'message', '練習ログを正常に保存しました'
+  );
+  
+  RETURN v_result;
+  
+EXCEPTION
+  WHEN OTHERS THEN
+    -- エラーが発生した場合、ロールバックされ、エラーレスポンスを返す
+    v_error_message := SQLERRM;
+    v_result := jsonb_build_object(
+      'success', false,
+      'error', v_error_message
+    );
+    RETURN v_result;
+END;
+$$;
+
+ALTER FUNCTION "public"."replace_practice_logs"("p_practice_id" "uuid", "p_logs_data" "jsonb") OWNER TO "postgres";
+
+COMMENT ON FUNCTION "public"."replace_practice_logs"("p_practice_id" "uuid", "p_logs_data" "jsonb") IS 'practice_logsを原子性のある操作で置き換える。既存のログを削除してから新しいログを挿入する。トランザクション内で実行されるため、エラー時は自動的にロールバックされる。';
+
 CREATE OR REPLACE FUNCTION "public"."set_invite_code"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET search_path = public
@@ -220,21 +543,6 @@ $$;
 
 ALTER FUNCTION "public"."set_invite_code"() OWNER TO "postgres";
 
-CREATE OR REPLACE FUNCTION "public"."set_published_at"() RETURNS "trigger"
-    LANGUAGE "plpgsql"
-    SET search_path = public
-    AS $$
-BEGIN
-  IF NEW.is_published = true AND OLD.is_published = false THEN
-    NEW.published_at := NOW();
-  ELSIF NEW.is_published = false THEN
-    NEW.published_at := NULL;
-  END IF;
-  RETURN NEW;
-END;
-$$;
-
-ALTER FUNCTION "public"."set_published_at"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."update_updated_at_column"() RETURNS "trigger"
@@ -260,17 +568,23 @@ CREATE TABLE "public"."announcements" (
     "content" "text" NOT NULL,
     "created_by" "uuid" NOT NULL,
     "is_published" boolean DEFAULT false,
-    "published_at" timestamp with time zone,
+    "start_at" timestamp with time zone,
+    "end_at" timestamp with time zone,
     "created_at" timestamp with time zone DEFAULT "now"(),
-    "updated_at" timestamp with time zone DEFAULT "now"()
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    CONSTRAINT "announcements_end_at_check" CHECK (("end_at" IS NULL) OR ("start_at" IS NULL) OR ("end_at" >= "start_at"))
 );
 
 ALTER TABLE "public"."announcements" OWNER TO "postgres";
+
+COMMENT ON COLUMN "public"."announcements"."start_at" IS '表示開始日時（NULLの場合は期間制限なし）';
+COMMENT ON COLUMN "public"."announcements"."end_at" IS '表示終了日時（NULLの場合は期間制限なし）';
 
 CREATE TABLE "public"."competitions" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "title" "text" NOT NULL,
     "date" "date" NOT NULL,
+    "end_date" "date",
     "place" "text",
     "pool_type" integer DEFAULT 0,
     "note" "text",
@@ -280,15 +594,18 @@ CREATE TABLE "public"."competitions" (
     "created_by" "uuid",
     "user_id" "uuid",
     "entry_status" "public"."entry_status_type" DEFAULT 'before'::"public"."entry_status_type" NOT NULL,
-    "attendance_status" "public"."attendance_status_type" DEFAULT 'before'::"public"."attendance_status_type",
-    CONSTRAINT "competitions_pool_type_check" CHECK (("pool_type" = ANY (ARRAY[0, 1])))
+    "attendance_status" "public"."attendance_status_type" DEFAULT 'open'::"public"."attendance_status_type",
+    CONSTRAINT "competitions_pool_type_check" CHECK (("pool_type" = ANY (ARRAY[0, 1]))),
+    CONSTRAINT "competitions_end_date_check" CHECK (("end_date" IS NULL) OR ("end_date" >= "date"))
 );
 
 ALTER TABLE "public"."competitions" OWNER TO "postgres";
 
 COMMENT ON COLUMN "public"."competitions"."entry_status" IS 'エントリーステータス: before=エントリー前, open=エントリー受付中, closed=エントリー締切';
 
-COMMENT ON COLUMN "public"."competitions"."attendance_status" IS '出欠提出ステータス: before=提出前, open=提出受付中, closed=提出締切';
+COMMENT ON COLUMN "public"."competitions"."attendance_status" IS '出欠提出ステータス: open=提出受付中, closed=提出締切';
+
+COMMENT ON COLUMN "public"."competitions"."end_date" IS '大会終了日（複数日開催の場合）。NULLの場合は単日開催。';
 
 CREATE TABLE "public"."entries" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -344,12 +661,12 @@ CREATE TABLE "public"."practices" (
     "updated_at" timestamp with time zone DEFAULT "now"(),
     "team_id" "uuid",
     "created_by" "uuid",
-    "attendance_status" "public"."attendance_status_type" DEFAULT 'before'::"public"."attendance_status_type"
+    "attendance_status" "public"."attendance_status_type" DEFAULT 'open'::"public"."attendance_status_type"
 );
 
 ALTER TABLE "public"."practices" OWNER TO "postgres";
 
-COMMENT ON COLUMN "public"."practices"."attendance_status" IS '出欠提出ステータス: before=提出前, open=提出受付中, closed=提出締切';
+COMMENT ON COLUMN "public"."practices"."attendance_status" IS '出欠提出ステータス: open=提出受付中, closed=提出締切';
 
 CREATE TABLE "public"."records" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -357,6 +674,7 @@ CREATE TABLE "public"."records" (
     "competition_id" "uuid",
     "style_id" integer NOT NULL,
     "time" numeric(10,2) NOT NULL,
+    "pool_type" smallint NOT NULL,
     "video_url" "text",
     "note" "text",
     "is_relaying" boolean DEFAULT false NOT NULL,
@@ -366,6 +684,8 @@ CREATE TABLE "public"."records" (
 );
 
 ALTER TABLE "public"."records" OWNER TO "postgres";
+
+COMMENT ON COLUMN "public"."records"."pool_type" IS '0: 短水路(25m), 1: 長水路(50m)';
 
 CREATE TABLE "public"."team_memberships" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -398,6 +718,7 @@ CREATE TABLE "public"."teams" (
 ALTER TABLE "public"."teams" OWNER TO "postgres";
 
 CREATE OR REPLACE VIEW "public"."calendar_view" WITH ("security_invoker"='true') AS
+-- 個人練習（練習ログなし）
 SELECT "p"."id",
     'practice'::"text" AS "item_type",
     "p"."date" AS "item_date",
@@ -410,6 +731,7 @@ SELECT "p"."id",
           FROM "public"."practice_logs" "pl"
           WHERE ("pl"."practice_id" = "p"."id")))))
 UNION ALL
+-- チーム練習（練習ログなし）
 SELECT "p"."id",
     'team_practice'::"text" AS "item_type",
     "p"."date" AS "item_date",
@@ -425,6 +747,7 @@ SELECT "p"."id",
           FROM "public"."team_memberships" "tm"
           WHERE (("tm"."team_id" = "p"."team_id") AND ("tm"."user_id" = (SELECT "auth"."uid"())) AND ("tm"."is_active" = true)))))
 UNION ALL
+-- 個人練習ログ
 SELECT "pl"."id",
     'practice_log'::"text" AS "item_type",
     "p"."date" AS "item_date",
@@ -439,6 +762,7 @@ SELECT "pl"."id",
     JOIN "public"."practices" "p" ON (("p"."id" = "pl"."practice_id")))
   WHERE (("pl"."user_id" = (SELECT "auth"."uid"())) AND ("p"."team_id" IS NULL))
 UNION ALL
+-- チーム練習ログ
 SELECT "pl"."id",
     'practice_log'::"text" AS "item_type",
     "p"."date" AS "item_date",
@@ -456,98 +780,110 @@ SELECT "pl"."id",
           FROM "public"."team_memberships" "tm"
           WHERE (("tm"."team_id" = "p"."team_id") AND ("tm"."user_id" = (SELECT "auth"."uid"())) AND ("tm"."is_active" = true)))))
 UNION ALL
+-- 個人大会（記録・エントリーなし）- 複数日展開対応
 SELECT "c"."id",
     'competition'::"text" AS "item_type",
-    "c"."date" AS "item_date",
+    "d"."date"::date AS "item_date",
     "c"."title",
     "c"."place",
     "c"."note",
-    "jsonb_build_object"('competition', "to_jsonb"("c".*), 'user_id', "c"."user_id", 'pool_type', "c"."pool_type") AS "metadata"
+    "jsonb_build_object"('competition', "to_jsonb"("c".*), 'user_id', "c"."user_id", 'pool_type', "c"."pool_type", 'is_multi_day', "c"."end_date" IS NOT NULL) AS "metadata"
   FROM "public"."competitions" "c"
+  CROSS JOIN LATERAL generate_series("c"."date", COALESCE("c"."end_date", "c"."date"), '1 day'::interval) AS "d"("date")
   WHERE (("c"."user_id" = (SELECT "auth"."uid"())) AND ("c"."team_id" IS NULL) AND (NOT (EXISTS ( SELECT 1
           FROM "public"."records" "r"
           WHERE (("r"."competition_id" = "c"."id") AND ("r"."user_id" = (SELECT "auth"."uid"())))))) AND (NOT (EXISTS ( SELECT 1
           FROM "public"."entries" "e"
           WHERE (("e"."competition_id" = "c"."id") AND ("e"."user_id" = (SELECT "auth"."uid"())) AND ("e"."team_id" IS NULL))))))
 UNION ALL
+-- チーム大会（記録・エントリーなし）- 複数日展開対応
 SELECT "c"."id",
     'team_competition'::"text" AS "item_type",
-    "c"."date" AS "item_date",
+    "d"."date"::date AS "item_date",
     "c"."title",
     "c"."place",
     "c"."note",
-    "jsonb_build_object"('competition', "to_jsonb"("c".*), 'user_id', "c"."user_id", 'team_id', "c"."team_id", 'team', "to_jsonb"("t".*), 'pool_type', "c"."pool_type") AS "metadata"
+    "jsonb_build_object"('competition', "to_jsonb"("c".*), 'user_id', "c"."user_id", 'team_id', "c"."team_id", 'team', "to_jsonb"("t".*), 'pool_type', "c"."pool_type", 'is_multi_day', "c"."end_date" IS NOT NULL) AS "metadata"
   FROM ("public"."competitions" "c"
     JOIN "public"."teams" "t" ON (("t"."id" = "c"."team_id")))
+  CROSS JOIN LATERAL generate_series("c"."date", COALESCE("c"."end_date", "c"."date"), '1 day'::interval) AS "d"("date")
   WHERE (("c"."team_id" IS NOT NULL) AND (EXISTS ( SELECT 1
           FROM "public"."team_memberships" "tm"
           WHERE (("tm"."team_id" = "c"."team_id") AND ("tm"."user_id" = (SELECT "auth"."uid"())) AND ("tm"."is_active" = true)))) AND (NOT (EXISTS ( SELECT 1
           FROM "public"."records" "r"
-          WHERE (("r"."competition_id" = "c"."id") AND ("r"."user_id" = (SELECT "auth"."uid"())))))) AND (NOT (EXISTS ( SELECT 1
+          WHERE ("r"."competition_id" = "c"."id")))) AND (NOT (EXISTS ( SELECT 1
           FROM "public"."entries" "e"
-          WHERE (("e"."competition_id" = "c"."id") AND ("e"."user_id" = (SELECT "auth"."uid"())) AND ("e"."team_id" IS NOT NULL))))))
+          WHERE (("e"."competition_id" = "c"."id") AND ("e"."team_id" IS NOT NULL))))))
 UNION ALL
+-- 個人エントリー（記録なし）- 複数日展開対応
 SELECT "c"."id",
     'entry'::"text" AS "item_type",
-    "c"."date" AS "item_date",
+    "d"."date"::date AS "item_date",
     "c"."title",
     "c"."place",
     NULL::"text" AS "note",
-    "jsonb_build_object"('competition', "to_jsonb"("c".*), 'user_id', "c"."user_id") AS "metadata"
+    "jsonb_build_object"('competition', "to_jsonb"("c".*), 'user_id', "c"."user_id", 'is_multi_day', "c"."end_date" IS NOT NULL) AS "metadata"
   FROM "public"."competitions" "c"
+  CROSS JOIN LATERAL generate_series("c"."date", COALESCE("c"."end_date", "c"."date"), '1 day'::interval) AS "d"("date")
   WHERE (("c"."user_id" = (SELECT "auth"."uid"())) AND ("c"."team_id" IS NULL) AND (NOT (EXISTS ( SELECT 1
           FROM "public"."records" "r"
           WHERE (("r"."competition_id" = "c"."id") AND ("r"."user_id" = (SELECT "auth"."uid"())))))) AND (EXISTS ( SELECT 1
           FROM "public"."entries" "e"
           WHERE (("e"."competition_id" = "c"."id") AND ("e"."user_id" = (SELECT "auth"."uid"())) AND ("e"."team_id" IS NULL)))))
 UNION ALL
+-- チームエントリー（記録なし）- 複数日展開対応
 SELECT "c"."id",
     'entry'::"text" AS "item_type",
-    "c"."date" AS "item_date",
+    "d"."date"::date AS "item_date",
     "c"."title",
     "c"."place",
     NULL::"text" AS "note",
-    "jsonb_build_object"('competition', "to_jsonb"("c".*), 'user_id', "c"."user_id", 'team_id', "c"."team_id", 'team', "to_jsonb"("t".*)) AS "metadata"
+    "jsonb_build_object"('competition', "to_jsonb"("c".*), 'user_id', "c"."user_id", 'team_id', "c"."team_id", 'team', "to_jsonb"("t".*), 'is_multi_day', "c"."end_date" IS NOT NULL) AS "metadata"
   FROM ("public"."competitions" "c"
     JOIN "public"."teams" "t" ON (("t"."id" = "c"."team_id")))
+  CROSS JOIN LATERAL generate_series("c"."date", COALESCE("c"."end_date", "c"."date"), '1 day'::interval) AS "d"("date")
   WHERE (("c"."team_id" IS NOT NULL) AND (EXISTS ( SELECT 1
           FROM "public"."team_memberships" "tm"
           WHERE (("tm"."team_id" = "c"."team_id") AND ("tm"."user_id" = (SELECT "auth"."uid"())) AND ("tm"."is_active" = true)))) AND (NOT (EXISTS ( SELECT 1
           FROM "public"."records" "r"
-          WHERE (("r"."competition_id" = "c"."id") AND ("r"."user_id" = (SELECT "auth"."uid"())))))) AND (EXISTS ( SELECT 1
+          WHERE ("r"."competition_id" = "c"."id")))) AND (EXISTS ( SELECT 1
           FROM "public"."entries" "e"
-          WHERE (("e"."competition_id" = "c"."id") AND ("e"."user_id" = (SELECT "auth"."uid"())) AND ("e"."team_id" IS NOT NULL)))))
+          WHERE (("e"."competition_id" = "c"."id") AND ("e"."team_id" IS NOT NULL)))))
 UNION ALL
+-- 個人記録 - 複数日展開対応
 SELECT "c"."id",
     'record'::"text" AS "item_type",
-    "c"."date" AS "item_date",
+    "d"."date"::date AS "item_date",
     "c"."title",
     "c"."place",
     NULL::"text" AS "note",
-    "jsonb_build_object"('competition', "to_jsonb"("c".*), 'user_id', "c"."user_id", 'pool_type', "c"."pool_type") AS "metadata"
+    "jsonb_build_object"('competition', "to_jsonb"("c".*), 'user_id', "c"."user_id", 'pool_type', "c"."pool_type", 'is_multi_day', "c"."end_date" IS NOT NULL) AS "metadata"
   FROM "public"."competitions" "c"
+  CROSS JOIN LATERAL generate_series("c"."date", COALESCE("c"."end_date", "c"."date"), '1 day'::interval) AS "d"("date")
   WHERE (("c"."user_id" = (SELECT "auth"."uid"())) AND ("c"."team_id" IS NULL) AND (EXISTS ( SELECT 1
           FROM "public"."records" "r"
           WHERE (("r"."competition_id" = "c"."id") AND ("r"."user_id" = (SELECT "auth"."uid"()))))))
 UNION ALL
+-- チーム記録 - 複数日展開対応
 SELECT "c"."id",
     'record'::"text" AS "item_type",
-    "c"."date" AS "item_date",
+    "d"."date"::date AS "item_date",
     "c"."title",
     "c"."place",
     NULL::"text" AS "note",
-    "jsonb_build_object"('competition', "to_jsonb"("c".*), 'user_id', "c"."user_id", 'team_id', "c"."team_id", 'team', "to_jsonb"("t".*), 'pool_type', "c"."pool_type") AS "metadata"
+    "jsonb_build_object"('competition', "to_jsonb"("c".*), 'user_id', "c"."user_id", 'team_id', "c"."team_id", 'team', "to_jsonb"("t".*), 'pool_type', "c"."pool_type", 'is_multi_day', "c"."end_date" IS NOT NULL) AS "metadata"
   FROM ("public"."competitions" "c"
     JOIN "public"."teams" "t" ON (("t"."id" = "c"."team_id")))
+  CROSS JOIN LATERAL generate_series("c"."date", COALESCE("c"."end_date", "c"."date"), '1 day'::interval) AS "d"("date")
   WHERE (("c"."team_id" IS NOT NULL) AND (EXISTS ( SELECT 1
           FROM "public"."team_memberships" "tm"
           WHERE (("tm"."team_id" = "c"."team_id") AND ("tm"."user_id" = (SELECT "auth"."uid"())) AND ("tm"."is_active" = true)))) AND (EXISTS ( SELECT 1
           FROM "public"."records" "r"
-          WHERE (("r"."competition_id" = "c"."id") AND ("r"."user_id" = (SELECT "auth"."uid"()))))));
+          WHERE ("r"."competition_id" = "c"."id"))));
 
 ALTER VIEW "public"."calendar_view" OWNER TO "postgres";
 
-COMMENT ON VIEW "public"."calendar_view" IS 'カレンダー表示用の統合ビュー（練習、練習ログ、大会、エントリー、記録を含む）。placeカラムで統一。';
+COMMENT ON VIEW "public"."calendar_view" IS 'カレンダー表示用の統合ビュー（練習、練習ログ、大会、エントリー、記録を含む）。placeカラムで統一。複数日開催の大会は各日に展開される。チームのcompetition/recordは、チームメンバーであれば誰が登録したものでも表示される。';
 
 CREATE TABLE "public"."group_assignments" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -762,7 +1098,9 @@ CREATE INDEX "idx_announcements_created_by" ON "public"."announcements" USING "b
 
 CREATE INDEX "idx_announcements_is_published" ON "public"."announcements" USING "btree" ("is_published");
 
-CREATE INDEX "idx_announcements_published_at" ON "public"."announcements" USING "btree" ("published_at");
+CREATE INDEX "idx_announcements_start_at" ON "public"."announcements" USING "btree" ("start_at");
+
+CREATE INDEX "idx_announcements_end_at" ON "public"."announcements" USING "btree" ("end_at");
 
 CREATE INDEX "idx_announcements_team_id" ON "public"."announcements" USING "btree" ("team_id");
 
@@ -771,6 +1109,8 @@ CREATE INDEX "idx_competitions_attendance_status" ON "public"."competitions" USI
 CREATE INDEX "idx_competitions_created_at" ON "public"."competitions" USING "btree" ("created_at");
 
 CREATE INDEX "idx_competitions_date" ON "public"."competitions" USING "btree" ("date");
+
+CREATE INDEX "idx_competitions_end_date" ON "public"."competitions" USING "btree" ("end_date");
 
 CREATE INDEX "idx_competitions_team_id" ON "public"."competitions" USING "btree" ("team_id");
 
@@ -896,8 +1236,6 @@ CREATE TRIGGER "create_attendance_on_team_competition" AFTER INSERT ON "public".
 DROP TRIGGER IF EXISTS "create_attendance_on_team_practice" ON "public"."practices";
 CREATE TRIGGER "create_attendance_on_team_practice" AFTER INSERT ON "public"."practices" FOR EACH ROW EXECUTE FUNCTION "public"."create_attendance_for_team_practice"();
 
-DROP TRIGGER IF EXISTS "set_announcement_published_at" ON "public"."announcements";
-CREATE TRIGGER "set_announcement_published_at" BEFORE UPDATE ON "public"."announcements" FOR EACH ROW EXECUTE FUNCTION "public"."set_published_at"();
 
 DROP TRIGGER IF EXISTS "set_team_invite_code" ON "public"."teams";
 CREATE TRIGGER "set_team_invite_code" BEFORE INSERT ON "public"."teams" FOR EACH ROW EXECUTE FUNCTION "public"."set_invite_code"();
@@ -1434,11 +1772,142 @@ CREATE POLICY "Users can view own profile and team members" ON "public"."users" 
 
 CREATE POLICY "Users can view own records" ON "public"."records" FOR SELECT USING (((SELECT "auth"."uid"()) = "user_id"));
 
+-- チームメンバーはチーム記録を閲覧可能
+CREATE POLICY "Team members can view team records" ON "public"."records"
+FOR SELECT USING (
+  team_id IS NOT NULL
+  AND
+  EXISTS (
+    SELECT 1 FROM public.team_memberships tm
+    WHERE tm.team_id = records.team_id
+    AND tm.user_id = (SELECT auth.uid())
+    AND tm.is_active = true
+  )
+);
+
+-- チーム管理者による代理INSERT
+CREATE POLICY "Team admins can insert team member records" ON "public"."records"
+FOR INSERT WITH CHECK (
+  team_id IS NOT NULL
+  AND
+  EXISTS (
+    SELECT 1 FROM public.team_memberships tm
+    WHERE tm.team_id = records.team_id
+    AND tm.user_id = (SELECT auth.uid())
+    AND tm.role = 'admin'
+    AND tm.is_active = true
+  )
+  AND
+  EXISTS (
+    SELECT 1 FROM public.team_memberships tm
+    WHERE tm.team_id = records.team_id
+    AND tm.user_id = records.user_id
+    AND tm.is_active = true
+  )
+);
+
+-- チーム管理者による代理UPDATE
+CREATE POLICY "Team admins can update team member records" ON "public"."records"
+FOR UPDATE USING (
+  team_id IS NOT NULL
+  AND
+  EXISTS (
+    SELECT 1 FROM public.team_memberships tm
+    WHERE tm.team_id = records.team_id
+    AND tm.user_id = (SELECT auth.uid())
+    AND tm.role = 'admin'
+    AND tm.is_active = true
+  )
+  AND
+  EXISTS (
+    SELECT 1 FROM public.team_memberships tm
+    WHERE tm.team_id = records.team_id
+    AND tm.user_id = records.user_id
+    AND tm.is_active = true
+  )
+);
+
+-- チーム管理者による代理DELETE
+CREATE POLICY "Team admins can delete team member records" ON "public"."records"
+FOR DELETE USING (
+  team_id IS NOT NULL
+  AND
+  EXISTS (
+    SELECT 1 FROM public.team_memberships tm
+    WHERE tm.team_id = records.team_id
+    AND tm.user_id = (SELECT auth.uid())
+    AND tm.role = 'admin'
+    AND tm.is_active = true
+  )
+  AND
+  EXISTS (
+    SELECT 1 FROM public.team_memberships tm
+    WHERE tm.team_id = records.team_id
+    AND tm.user_id = records.user_id
+    AND tm.is_active = true
+  )
+);
+
 CREATE POLICY "Users can view own sessions" ON "public"."user_sessions" FOR SELECT USING (((SELECT "auth"."uid"()) = "user_id"));
 
 CREATE POLICY "Users can view own split_times" ON "public"."split_times" FOR SELECT USING ((EXISTS ( SELECT 1
   FROM "public"."records"
   WHERE (("records"."id" = "split_times"."record_id") AND ("records"."user_id" = (SELECT "auth"."uid"()))))));
+
+-- チームメンバーはチーム記録のスプリットを閲覧可能
+CREATE POLICY "Team members can view team split_times" ON "public"."split_times"
+FOR SELECT USING (
+  EXISTS (
+    SELECT 1 FROM public.records r
+    JOIN public.team_memberships tm ON tm.team_id = r.team_id
+    WHERE r.id = split_times.record_id
+    AND r.team_id IS NOT NULL
+    AND tm.user_id = (SELECT auth.uid())
+    AND tm.is_active = true
+  )
+);
+
+-- チーム管理者による代理INSERT
+CREATE POLICY "Team admins can insert team member split_times" ON "public"."split_times"
+FOR INSERT WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.records r
+    JOIN public.team_memberships tm ON tm.team_id = r.team_id
+    WHERE r.id = split_times.record_id
+    AND r.team_id IS NOT NULL
+    AND tm.user_id = (SELECT auth.uid())
+    AND tm.role = 'admin'
+    AND tm.is_active = true
+  )
+);
+
+-- チーム管理者による代理UPDATE
+CREATE POLICY "Team admins can update team member split_times" ON "public"."split_times"
+FOR UPDATE USING (
+  EXISTS (
+    SELECT 1 FROM public.records r
+    JOIN public.team_memberships tm ON tm.team_id = r.team_id
+    WHERE r.id = split_times.record_id
+    AND r.team_id IS NOT NULL
+    AND tm.user_id = (SELECT auth.uid())
+    AND tm.role = 'admin'
+    AND tm.is_active = true
+  )
+);
+
+-- チーム管理者による代理DELETE
+CREATE POLICY "Team admins can delete team member split_times" ON "public"."split_times"
+FOR DELETE USING (
+  EXISTS (
+    SELECT 1 FROM public.records r
+    JOIN public.team_memberships tm ON tm.team_id = r.team_id
+    WHERE r.id = split_times.record_id
+    AND r.team_id IS NOT NULL
+    AND tm.user_id = (SELECT auth.uid())
+    AND tm.role = 'admin'
+    AND tm.is_active = true
+  )
+);
 
 CREATE POLICY "Users can view practices" ON "public"."practices" FOR SELECT USING (((("team_id" IS NULL) AND ((SELECT "auth"."uid"()) = "user_id")) OR public.is_team_member("practices"."team_id", (SELECT "auth"."uid"()))));
 
@@ -1533,13 +2002,14 @@ GRANT ALL ON FUNCTION "public"."replace_practice_log_tags"("p_practice_log_id" "
 GRANT ALL ON FUNCTION "public"."replace_practice_log_tags"("p_practice_log_id" "uuid", "p_tag_ids" "uuid"[]) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."replace_practice_log_tags"("p_practice_log_id" "uuid", "p_tag_ids" "uuid"[]) TO "service_role";
 
+GRANT ALL ON FUNCTION "public"."replace_practice_logs"("p_practice_id" "uuid", "p_logs_data" "jsonb") TO "anon";
+GRANT ALL ON FUNCTION "public"."replace_practice_logs"("p_practice_id" "uuid", "p_logs_data" "jsonb") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."replace_practice_logs"("p_practice_id" "uuid", "p_logs_data" "jsonb") TO "service_role";
+
 GRANT ALL ON FUNCTION "public"."set_invite_code"() TO "anon";
 GRANT ALL ON FUNCTION "public"."set_invite_code"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_invite_code"() TO "service_role";
 
-GRANT ALL ON FUNCTION "public"."set_published_at"() TO "anon";
-GRANT ALL ON FUNCTION "public"."set_published_at"() TO "authenticated";
-GRANT ALL ON FUNCTION "public"."set_published_at"() TO "service_role";
 
 GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "authenticated";
