@@ -8,6 +8,8 @@ import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
 import { useAuth } from '@/contexts'
 import { CalendarItemType, DayDetailModalProps, CalendarItem, EntryInfo, isPracticeMetadata, isCompetitionMetadata, isRecordMetadata, isTeamInfo } from '@/types'
+import { LapTimeDisplay } from '@/components/forms/LapTimeDisplay'
+import { BestTimeBadge } from '@/components/ui'
 import type {
   Record,
   Practice,
@@ -15,7 +17,8 @@ import type {
   PracticeTime,
   PracticeTag,
   TeamAttendanceWithDetails,
-  SplitTime
+  SplitTime,
+  PoolType
 } from '@apps/shared/types/database'
 import { AttendanceAPI } from '@swim-hub/shared'
 import Link from 'next/link'
@@ -307,6 +310,8 @@ export default function DayDetailModal({
                               competition: {
                                 id: competitionId,
                                 title: item.metadata?.competition?.title || '',
+                                date: item.metadata?.competition?.date || item.date,
+                                end_date: item.metadata?.competition?.end_date || null,
                                 place: item.place || '',
                                 pool_type: item.metadata?.competition?.pool_type || 0
                               }
@@ -417,6 +422,8 @@ export default function DayDetailModal({
                               competition: {
                                 id: compId,
                                 title: record.title || '',
+                                date: record.metadata?.competition?.date || record.date,
+                                end_date: record.metadata?.competition?.end_date || null,
                                 place: record.place || '',
                                 pool_type: poolType
                               }
@@ -495,7 +502,7 @@ export default function DayDetailModal({
             <div className="relative bg-white rounded-lg shadow-2xl border-2 border-red-300 w-full max-w-lg" data-testid="confirm-dialog">
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="sm:flex sm:items-start">
-                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                  <div className="mx-auto shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
                     <TrashIcon className="h-6 w-6 text-red-600" />
                   </div>
                   <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
@@ -1108,7 +1115,7 @@ function PracticeDetails({
 
             {/* メモ */}
             {formattedLog.note && (
-              <div className="bg-gradient-to-r from-slate-50 to-gray-50 rounded-lg p-3 mb-3 border border-slate-200">
+              <div className="bg-liner-to-r from-slate-50 to-gray-50 rounded-lg p-3 mb-3 border border-slate-200">
                 <div className="text-xs font-medium text-gray-500 mb-1">メモ</div>
                 <div className="text-sm text-gray-700">
                   {formattedLog.note}
@@ -1221,8 +1228,9 @@ function PracticeDetails({
   )
 }
 
+
 // 大会記録のスプリットタイム一覧
-function RecordSplitTimes({ recordId }: { recordId: string }) {
+function RecordSplitTimes({ recordId, raceDistance }: { recordId: string; raceDistance?: number }) {
   const { supabase } = useAuth()
   const [splits, setSplits] = useState<SplitTime[]>([])
   const [loading, setLoading] = useState(true)
@@ -1269,15 +1277,16 @@ function RecordSplitTimes({ recordId }: { recordId: string }) {
 
   return (
     <div className="mt-3">
-      <p className="text-sm font-medium text-blue-800 mb-1">スプリット</p>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {splits.map((st: SplitTime) => (
-          <div key={st.id} className="text-xs text-blue-900 bg-blue-100 rounded px-2 py-1">
-            <span className="mr-2">{st.distance}m</span>
-            <span className="font-semibold">{formatTime(st.split_time)}</span>
-          </div>
-        ))}
-      </div>
+      {/* 距離別Lap表示 */}
+      {splits.length > 0 && (
+        <LapTimeDisplay
+          splitTimes={splits.map(st => ({
+            distance: st.distance,
+            splitTime: st.split_time
+          }))}
+          raceDistance={raceDistance}
+        />
+      )}
     </div>
   )
 }
@@ -1534,6 +1543,7 @@ function CompetitionDetails({
                   is_relaying: recordData.is_relaying,
                   created_at: '',
                   updated_at: '',
+                  pool_type: ((record.metadata as { pool_type?: number } | undefined)?.pool_type ?? 0) as PoolType,
                   split_times: recordData.split_times || []
                 }
                 onEditRecord?.(editData)
@@ -1581,8 +1591,21 @@ function CompetitionDetails({
                   {record.metadata?.record?.time && (
                     <>
                       <div className="text-xs font-medium text-gray-500 mb-1">タイム</div>
-                      <div className="text-2xl font-bold text-blue-700 mb-3" data-testid="record-time-display">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="text-2xl font-bold text-blue-700" data-testid="record-time-display">
                         ⏱️ {formatTime(record.metadata.record.time)}
+                        </div>
+                        <BestTimeBadge
+                          recordId={record.id}
+                          styleId={(() => {
+                            const id = record.metadata?.style?.id || record.metadata?.record?.style?.id
+                            return typeof id === 'number' ? id : undefined
+                          })()}
+                          currentTime={record.metadata.record.time}
+                          recordDate={record.metadata?.competition?.date}
+                          poolType={record.metadata?.competition?.pool_type ?? record.metadata?.pool_type}
+                          isRelaying={record.metadata?.record?.is_relaying}
+                        />
                       </div>
                     </>
                   )}
@@ -1598,7 +1621,10 @@ function CompetitionDetails({
                 </div>
 
                 {/* スプリットタイム */}
-                <RecordSplitTimes recordId={record.id} />
+                <RecordSplitTimes 
+                  recordId={record.id}
+                  raceDistance={record.metadata?.style?.distance || record.metadata?.record?.style?.distance}
+                />
               </div>
             )
           })}
@@ -1790,7 +1816,7 @@ function CompetitionWithEntry({
   return (
     <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
       {/* 大会情報ヘッダー */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-blue-200">
+      <div className="bg-linear-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-blue-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h5 className="font-semibold text-gray-900" data-testid="competition-title-display">{competitionName}</h5>
@@ -1835,7 +1861,7 @@ function CompetitionWithEntry({
 
       {/* エントリー情報ボックス */}
       <div className="p-4">
-        <div className="bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 border border-orange-200 rounded-lg p-4 mb-3" data-testid="entry-section">
+        <div className="bg-linear-to-br from-orange-50 via-amber-50 to-yellow-50 border border-orange-200 rounded-lg p-4 mb-3" data-testid="entry-section">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <span className="text-lg">📝</span>
@@ -1916,7 +1942,7 @@ function CompetitionWithEntry({
         <button
           onClick={handleAddRecordClick}
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm font-medium"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-linear-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm font-medium"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />

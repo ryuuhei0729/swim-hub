@@ -26,6 +26,7 @@ export default function TeamCompetitionForm({
   const [formData, setFormData] = useState({
     title: '',
     date: new Date().toISOString().split('T')[0], // YYYY-MM-DD形式
+    endDate: '', // 終了日（複数日開催の場合）
     place: '',
     note: ''
   })
@@ -35,6 +36,12 @@ export default function TeamCompetitionForm({
     
     if (!formData.title || !formData.date) {
       setError('大会名と日付は必須です')
+      return
+    }
+    
+    // 終了日が設定されている場合、開始日以降であることを確認
+    if (formData.endDate && formData.endDate < formData.date) {
+      setError('終了日は開始日以降の日付を指定してください')
       return
     }
 
@@ -50,6 +57,7 @@ export default function TeamCompetitionForm({
         user_id: user.id,
         title: formData.title,
         date: formData.date,
+        end_date: formData.endDate || null, // 終了日（空文字の場合はnull）
         place: formData.place || null,
         note: formData.note || null,
         pool_type: 0,
@@ -64,6 +72,7 @@ export default function TeamCompetitionForm({
       setFormData({
         title: '',
         date: new Date().toISOString().split('T')[0],
+        endDate: '',
         place: '',
         note: ''
       })
@@ -82,6 +91,7 @@ export default function TeamCompetitionForm({
       setFormData({
         title: '',
         date: new Date().toISOString().split('T')[0],
+        endDate: '',
         place: '',
         note: ''
       })
@@ -92,14 +102,14 @@ export default function TeamCompetitionForm({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto" data-testid="team-competition-modal">
+    <div className="fixed inset-0 z-[60] overflow-y-auto" data-testid="team-competition-modal">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div
-          className="fixed inset-0 bg-black/40 transition-opacity"
+          className="fixed inset-0 bg-black/40 transition-opacity z-[10]"
           onClick={handleClose}
         />
 
-        <div className="relative inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full" data-testid="team-competition-dialog">
+        <div className="relative z-[20] inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full" data-testid="team-competition-dialog">
           {/* ヘッダー */}
           <div className="bg-white px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
@@ -153,18 +163,32 @@ export default function TeamCompetitionForm({
               />
             </div>
 
-            {/* 大会日 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                大会日 <span className="text-red-500">*</span>
-              </label>
-              <Input
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                required
-                data-testid="team-competition-date"
-              />
+            {/* 大会日（開始日・終了日） */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  開始日 <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  required
+                  data-testid="team-competition-date"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  終了日 <span className="text-gray-400 text-xs">（複数日の場合）</span>
+                </label>
+                <Input
+                  type="date"
+                  value={formData.endDate}
+                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                  min={formData.date}
+                  data-testid="team-competition-end-date"
+                />
+              </div>
             </div>
 
             {/* 場所 */}

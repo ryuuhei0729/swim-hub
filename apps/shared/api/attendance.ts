@@ -328,39 +328,61 @@ export class AttendanceAPI {
 
   /**
    * 出欠提出可能かチェック
+   * attendance_statusが'open'かつ未来の日付の場合のみtrueを返す
    */
   async canSubmitAttendance(
     practiceId: string | null,
     competitionId: string | null
   ): Promise<boolean> {
+    let eventDate: string | null = null
+    let attendanceStatus: 'open' | 'closed' | null = null
+
     if (practiceId) {
       const { data } = await this.supabase
         .from('practices')
-        .select('attendance_status')
+        .select('attendance_status, date')
         .eq('id', practiceId)
         .single()
 
-      return data?.attendance_status === 'open'
+      eventDate = data?.date || null
+      attendanceStatus = data?.attendance_status || null
     } else if (competitionId) {
       const { data } = await this.supabase
         .from('competitions')
-        .select('attendance_status')
+        .select('attendance_status, date')
         .eq('id', competitionId)
         .single()
 
-      return data?.attendance_status === 'open'
+      eventDate = data?.date || null
+      attendanceStatus = data?.attendance_status || null
     }
 
-    return false
+    // attendance_statusが'open'でない場合は提出不可
+    if (attendanceStatus !== 'open') {
+      return false
+    }
+
+    // 過去の日付の場合は提出不可（自動的に締切扱い）
+    if (eventDate) {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const eventDateObj = new Date(eventDate)
+      eventDateObj.setHours(0, 0, 0, 0)
+
+      // 過去の日付の場合は自動的に締切扱い
+      if (eventDateObj < today) {
+        return false
+      }
+    }
+
+    return true
   }
 
   /**
    * 出欠提出ステータスのラベル取得
    */
-  getAttendanceStatusLabel(status: 'before' | 'open' | 'closed' | null): string {
+  getAttendanceStatusLabel(status: 'open' | 'closed' | null): string {
     switch (status) {
-      case 'before':
-        return '提出前'
       case 'open':
         return '提出受付中'
       case 'closed':

@@ -136,7 +136,7 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
             className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200"
           >
             <div className="flex items-center space-x-3">
-              <div className="flex-shrink-0">
+              <div className="shrink-0">
                 <Avatar
                   avatarUrl={member.users?.profile_image_path || null}
                   userName={member.users?.name || 'Unknown User'}

@@ -50,9 +50,9 @@ export const teamKeys = {
 export const announcementKeys = {
   all: ['announcements'] as const,
   lists: () => [...announcementKeys.all, 'list'] as const,
-  list: (teamId: string) => [...announcementKeys.lists(), teamId] as const,
+  list: (teamId: string, viewOnly?: boolean) => [...announcementKeys.lists(), teamId, { viewOnly }] as const,
   detail: (teamId: string, id: string) =>
-    [...announcementKeys.list(teamId), 'detail', id] as const,
+    [...announcementKeys.lists(), teamId, 'detail', id] as const,
 } as const
 
 /**

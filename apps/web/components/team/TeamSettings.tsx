@@ -142,19 +142,110 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
     }
   }
 
+  // メンバー向けの表示（チーム名・説明の編集以外）
   if (!isAdmin) {
     return (
       <>
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">
             チーム設定
           </h2>
-          <div className="text-center py-8">
-            <p className="text-gray-600 mb-6">
-              チーム設定を変更するには管理者権限が必要です。
-            </p>
+
+          {/* エラー表示 */}
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex">
+                <ExclamationTriangleIcon className="h-5 w-5 text-red-400" />
+                <div className="ml-3">
+                  <p className="text-sm text-red-800">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* チーム情報（読み取り専用） */}
+          <div className="space-y-6 mb-8">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                チーム名
+              </label>
+              <p className="text-lg font-medium text-gray-900">{name}</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                説明
+              </label>
+              <p className="text-gray-900">{description || '説明がありません'}</p>
+            </div>
+          </div>
+
+          {/* 招待コード */}
+          <div className="mb-8 pt-6 border-t border-gray-200">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">招待コード</h3>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex flex-col space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  チームに参加するための招待コード
+                </label>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="text"
+                    value={inviteCode}
+                    readOnly
+                    className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-lg font-mono font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <button
+                    onClick={handleCopyInviteCode}
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                  >
+                    {isCopied ? (
+                      <>
+                        <CheckIcon className="h-5 w-5 mr-2 text-green-600" />
+                        コピー済み
+                      </>
+                    ) : (
+                      <>
+                        <ClipboardDocumentIcon className="h-5 w-5 mr-2" />
+                        コピー
+                      </>
+                    )}
+                  </button>
+                </div>
+                <p className="text-sm text-gray-500">
+                  このコードを友達に共有すると、友達がこのチームに参加できます
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* チーム管理・招待コード（チームが1つ以上ある場合） */}
+          {teamsCount > 0 && (
+            <div className="mb-8 pt-6 border-t border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">チーム管理</h3>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                >
+                  <PlusIcon className="h-5 w-5 mr-2" />
+                  新しいチームを作成
+                </button>
+                <button
+                  onClick={() => setIsJoinModalOpen(true)}
+                  className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                >
+                  <UserPlusIcon className="h-5 w-5 mr-2" />
+                  チームに参加
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* チーム退出 */}
+          <div className="pt-6 border-t border-gray-200">
+            <h3 className="text-lg font-medium text-red-600 mb-4">チーム退出</h3>
             
-            {/* 退出ボタン */}
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <div className="flex items-start">
                 <ExclamationTriangleIcon className="h-5 w-5 text-red-400 mt-0.5" />
@@ -222,29 +313,6 @@ export default function TeamSettings({ teamId, teamName, teamDescription, isAdmi
               </div>
             </div>
           </div>
-
-          {/* チーム作成・参加ボタン（チームが1つ以上ある場合） */}
-          {teamsCount > 0 && (
-            <div className="mt-8 pt-6 border-t border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">チーム管理</h3>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <button
-                  onClick={() => setIsCreateModalOpen(true)}
-                  className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-                >
-                  <PlusIcon className="h-5 w-5 mr-2" />
-                  新しいチームを作成
-                </button>
-                <button
-                  onClick={() => setIsJoinModalOpen(true)}
-                  className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-                >
-                  <UserPlusIcon className="h-5 w-5 mr-2" />
-                  チームに参加
-                </button>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* 退出確認モーダル */}

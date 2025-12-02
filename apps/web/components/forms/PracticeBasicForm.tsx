@@ -44,28 +44,92 @@ export default function PracticeBasicForm({
     note: ''
   })
 
-  // selectedDateまたはeditDataが変更された時にフォームを初期化
+  // 初期化済みフラグ（モーダルが開かれた時だけ初期化するため）
+  const [isInitialized, setIsInitialized] = useState(false)
+  // フォームに変更があるかどうかを追跡
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  // 送信済みフラグ（送信後は警告を出さない）
+  const [isSubmitted, setIsSubmitted] = useState(false)
+
+  // モーダルが閉じた時に初期化フラグをリセット
   useEffect(() => {
-    if (isOpen) {
-      if (editData) {
-        // 編集モード
-        setFormData({
-          date: editData.date || format(selectedDate, 'yyyy-MM-dd'),
-          place: editData.place || '',
-          note: editData.note || ''
-        })
-      } else {
-        // 新規作成モード
-        setFormData({
-          date: format(selectedDate, 'yyyy-MM-dd'),
-          place: '',
-          note: ''
-        })
+    if (!isOpen) {
+      setIsInitialized(false)
+      setHasUnsavedChanges(false)
+      setIsSubmitted(false)
+    }
+  }, [isOpen])
+
+  // フォームに変更があったことを記録
+  useEffect(() => {
+    if (isOpen && isInitialized) {
+      setHasUnsavedChanges(true)
+    }
+  }, [formData, isOpen, isInitialized])
+
+  // ブラウザバックや閉じるボタンでの離脱を防ぐ
+  useEffect(() => {
+    if (!isOpen || !hasUnsavedChanges || isSubmitted) return
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+
+    const handlePopState = (_e: PopStateEvent) => {
+      if (hasUnsavedChanges && !isSubmitted) {
+        const confirmed = window.confirm('入力内容が保存されていません。このまま戻りますか？')
+        if (!confirmed) {
+          // 履歴を戻す
+          window.history.pushState(null, '', window.location.href)
+        }
       }
     }
-  }, [isOpen, selectedDate, editData])
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.history.pushState(null, '', window.location.href)
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [isOpen, hasUnsavedChanges, isSubmitted])
+
+  // selectedDateまたはeditDataが変更された時にフォームを初期化（モーダルが開かれた時だけ）
+  useEffect(() => {
+    if (!isOpen || isInitialized) return
+
+    if (editData) {
+      // 編集モード
+      setFormData({
+        date: editData.date || format(selectedDate, 'yyyy-MM-dd'),
+        place: editData.place || '',
+        note: editData.note || ''
+      })
+      setIsInitialized(true)
+    } else {
+      // 新規作成モード
+      setFormData({
+        date: format(selectedDate, 'yyyy-MM-dd'),
+        place: '',
+        note: ''
+      })
+      setIsInitialized(true)
+    }
+  }, [isOpen, selectedDate, editData, isInitialized])
 
   if (!isOpen) return null
+
+  const handleClose = () => {
+    if (hasUnsavedChanges && !isSubmitted) {
+      const confirmed = window.confirm('入力内容が保存されていません。このまま閉じますか？')
+      if (!confirmed) {
+        return
+      }
+    }
+    onClose()
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -76,10 +140,15 @@ export default function PracticeBasicForm({
       return
     }
 
+    setIsSubmitted(true)
     try {
       await onSubmit(formData)
+      setHasUnsavedChanges(false)
+      // onClose()は呼ばない - handlePracticeBasicSubmitが適切にモーダルを管理する
+      // (編集時・新規作成時: closePracticeBasicForm(), 新規作成時は続けてopenPracticeLogForm())
     } catch (error) {
       console.error('練習記録の保存に失敗しました:', error)
+      setIsSubmitted(false)
     }
   }
 
@@ -102,7 +171,7 @@ export default function PracticeBasicForm({
               </h3>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <XMarkIcon className="h-6 w-6" />
@@ -168,7 +237,7 @@ export default function PracticeBasicForm({
             <div className="flex justify-end gap-3 pt-6 border-t">
               <Button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 variant="secondary"
                 disabled={isLoading}
               >

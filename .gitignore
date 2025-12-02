@@ -21,6 +21,10 @@ yarn-error.log*
 # MCP Configuration (contains sensitive tokens)
 .mcp.json
 
+# Google Cloud Platform Service Account Keys
+swimhub-479706-fa49932fb92d.json
+swimhub-*-*.json
+
 # IDE
 .vscode/
 .idea/
@@ -81,3 +85,4 @@ apps/web/next-env.d.ts
 /apps/web/e2e/playwright/.auth/  # ログイン状態（認証情報を含むためGit管理外）
 /apps/web/screenshots/
 .playwright-mcp/
+apps/web/next-env.d.ts

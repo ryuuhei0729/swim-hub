@@ -10,7 +10,11 @@ import { createQueryClient } from '@/lib/react-query'
 
 let browserQueryClient: QueryClient | undefined = undefined
 
-function getQueryClient() {
+/**
+ * QueryClientを取得する関数
+ * ブラウザ環境ではシングルトンインスタンスを返す
+ */
+export function getQueryClient() {
   if (typeof window === 'undefined') {
     // Server: always make a new query client
     return createQueryClient()

@@ -1,12 +1,13 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Button, Input } from '@/components/ui'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 
 interface CompetitionBasicFormData {
   date: string
+  endDate: string // 終了日（複数日開催の場合）。空文字の場合は単日開催
   title: string
   place: string
   poolType: number
@@ -15,6 +16,7 @@ interface CompetitionBasicFormData {
 
 type EditCompetitionBasicData = {
   date?: string
+  end_date?: string | null // 終了日（複数日開催の場合）
   title?: string
   competition_name?: string
   place?: string
@@ -46,36 +48,102 @@ export default function CompetitionBasicForm({
 }: CompetitionBasicFormProps) {
   const [formData, setFormData] = useState<CompetitionBasicFormData>({
     date: format(selectedDate, 'yyyy-MM-dd'),
+    endDate: '',
     title: '',
     place: '',
     poolType: 0,
     note: ''
   })
 
-  // selectedDateまたはeditDataが変更された時にフォームを初期化
+  // 初期化済みフラグ（モーダルが開かれた時だけ初期化するため）
+  const [isInitialized, setIsInitialized] = useState(false)
+  // フォームに変更があるかどうかを追跡
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  // 送信済みフラグ（送信後は警告を出さない）
+  const [isSubmitted, setIsSubmitted] = useState(false)
+  // 初期値を保存（初期化時の変更を無視するため）
+  const initialFormDataRef = useRef<CompetitionBasicFormData | null>(null)
+
+  // モーダルが閉じた時に初期化フラグをリセット
   useEffect(() => {
-    if (isOpen) {
-      if (editData) {
-        // 編集モード
-        setFormData({
-          date: editData.date || format(selectedDate, 'yyyy-MM-dd'),
-          title: editData.title || editData.competition_name || '',
-          place: editData.place || '',
-          poolType: editData.pool_type ?? 0,
-          note: editData.note || ''
-        })
-      } else {
-        // 新規作成モード
-        setFormData({
-          date: format(selectedDate, 'yyyy-MM-dd'),
-          title: '',
-          place: '',
-          poolType: 0,
-          note: ''
-        })
+    if (!isOpen) {
+      setIsInitialized(false)
+      setHasUnsavedChanges(false)
+      setIsSubmitted(false)
+      initialFormDataRef.current = null
+    }
+  }, [isOpen])
+
+  // フォームに変更があったことを記録（初期値と比較して、実際にユーザーが変更した場合のみ）
+  useEffect(() => {
+    if (!isOpen || !isInitialized || !initialFormDataRef.current) return
+
+    // 初期値と現在の値を比較
+    const hasChanged = JSON.stringify(formData) !== JSON.stringify(initialFormDataRef.current)
+    setHasUnsavedChanges(hasChanged)
+  }, [formData, isOpen, isInitialized])
+
+  // ブラウザバックや閉じるボタンでの離脱を防ぐ
+  useEffect(() => {
+    if (!isOpen || !hasUnsavedChanges || isSubmitted) return
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+
+    const handlePopState = (_e: PopStateEvent) => {
+      if (hasUnsavedChanges && !isSubmitted) {
+        const confirmed = window.confirm('入力内容が保存されていません。このまま戻りますか？')
+        if (!confirmed) {
+          // 履歴を戻す
+          window.history.pushState(null, '', window.location.href)
+        }
       }
     }
-  }, [isOpen, selectedDate, editData])
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.history.pushState(null, '', window.location.href)
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [isOpen, hasUnsavedChanges, isSubmitted])
+
+  // selectedDateまたはeditDataが変更された時にフォームを初期化（モーダルが開かれた時だけ）
+  useEffect(() => {
+    if (!isOpen || isInitialized) return
+
+    let initialData: CompetitionBasicFormData
+    if (editData) {
+      // 編集モード
+      initialData = {
+        date: editData.date || format(selectedDate, 'yyyy-MM-dd'),
+        endDate: editData.end_date || '',
+        title: editData.title || editData.competition_name || '',
+        place: editData.place || '',
+        poolType: editData.pool_type ?? 0,
+        note: editData.note || ''
+      }
+    } else {
+      // 新規作成モード
+      initialData = {
+        date: format(selectedDate, 'yyyy-MM-dd'),
+        endDate: '',
+        title: '',
+        place: '',
+        poolType: 0,
+        note: ''
+      }
+    }
+    
+    setFormData(initialData)
+    // 初期値を保存（初期化時の変更を無視するため）
+    initialFormDataRef.current = { ...initialData }
+    setIsInitialized(true)
+  }, [isOpen, selectedDate, editData, isInitialized])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -89,13 +157,34 @@ export default function CompetitionBasicForm({
       console.error('場所を入力してください')
       return
     }
+    // 終了日が設定されている場合、開始日以降であることを確認
+    if (formData.endDate && formData.endDate < formData.date) {
+      console.error('終了日は開始日以降の日付を指定してください')
+      return
+    }
 
-    await onSubmit(formData)
+    setIsSubmitted(true)
+    try {
+      await onSubmit(formData)
+      setHasUnsavedChanges(false)
+      // onClose()は呼ばない - handleCompetitionBasicSubmitが適切にモーダルを管理する
+      // (編集時: closeCompetitionBasicForm(), 新規作成時: openEntryLogForm())
+    } catch (error) {
+      console.error('フォーム送信エラー:', error)
+      setIsSubmitted(false)
+    }
   }
 
   const handleClose = () => {
+    if (hasUnsavedChanges && !isSubmitted) {
+      const confirmed = window.confirm('入力内容が保存されていません。このまま閉じますか？')
+      if (!confirmed) {
+        return
+      }
+    }
     setFormData({
       date: format(new Date(), 'yyyy-MM-dd'),
+      endDate: '',
       title: '',
       place: '',
       poolType: 0,
@@ -130,19 +219,34 @@ export default function CompetitionBasicForm({
 
             {/* フォーム */}
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* 日付 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  日付 <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  required
-                  className="w-full"
-                  data-testid="competition-date"
-                />
+              {/* 日付（開始日・終了日） */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    開始日 <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    required
+                    className="w-full"
+                    data-testid="competition-date"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    終了日 <span className="text-gray-400 text-xs">（複数日の場合）</span>
+                  </label>
+                  <Input
+                    type="date"
+                    value={formData.endDate}
+                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                    min={formData.date}
+                    className="w-full"
+                    data-testid="competition-end-date"
+                  />
+                </div>
               </div>
 
               {/* 大会名 */}

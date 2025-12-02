@@ -130,6 +130,7 @@ export interface Competition {
   team_id?: string | null
   title: string
   date: string
+  end_date?: string | null // 大会終了日（複数日開催の場合）。NULLの場合は単日開催。
   place: string | null
   pool_type: number // 0: 短水路, 1: 長水路
   entry_status?: 'before' | 'open' | 'closed' // エントリーステータス（デフォルト: before）
@@ -160,7 +161,7 @@ export interface Record {
   title?: string
   place?: string
   time_result?: number
-  pool_type?: PoolType
+  pool_type: PoolType // DB上はNOT NULL
   tags?: string[]
   competition_name?: string
   team_practice?: boolean
@@ -224,7 +225,8 @@ export interface TeamAnnouncement {
   content: string
   created_by: string
   is_published: boolean
-  published_at: string | null
+  start_at: string | null
+  end_at: string | null
   created_at: string
   updated_at: string
 }
@@ -251,7 +253,7 @@ export interface UpdateTeamAnnouncementInput {
 
 // 出欠管理
 export type AttendanceStatus = 'present' | 'absent' | 'other'
-export type AttendanceStatusType = 'before' | 'open' | 'closed'
+export type AttendanceStatusType = 'open' | 'closed'
 
 export interface TeamAttendance {
   id: string

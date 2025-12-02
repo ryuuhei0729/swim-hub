@@ -28,7 +28,7 @@ export default function Avatar({
   const initials = userName.charAt(0) || '?'
 
   return (
-    <div className={`${sizeClass} ${className} rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden ${
+    <div className={`${sizeClass} ${className} rounded-full flex items-center justify-center shrink-0 overflow-hidden ${
       avatarUrl ? 'bg-gray-100' : 'bg-blue-500'
     }`}>
       {avatarUrl ? (

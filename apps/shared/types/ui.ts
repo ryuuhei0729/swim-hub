@@ -2,7 +2,7 @@
 // UI・フォーム関連型定義 - Swim Hub共通パッケージ
 // =============================================================================
 
-import { CalendarItemType, PracticeTag, PracticeLog, PracticeLogWithTimes, SplitTime, Record as RecordRow } from './database'
+import { CalendarItemType, PracticeLog, PracticeLogWithTimes, PracticeTag, Record as RecordRow, SplitTime } from './database'
 
 // =============================================================================
 // 1. カレンダー関連
@@ -36,6 +36,8 @@ export interface CompetitionMetadata {
   competition?: {
     id: string
     title: string
+    date: string
+    end_date?: string | null // 大会終了日（複数日開催の場合）
     place: string | null
     pool_type: number
     team_id?: string | null
@@ -43,6 +45,7 @@ export interface CompetitionMetadata {
   team_id?: string | null
   team?: TeamInfo
   pool_type?: number
+  is_multi_day?: boolean // 複数日開催フラグ
 }
 
 // エントリーメタデータ
@@ -58,6 +61,8 @@ export interface EntryMetadata {
   competition?: {
     id: string
     title: string
+    date: string
+    end_date?: string | null // 大会終了日（複数日開催の場合）
     place: string | null
     pool_type: number
     team_id?: string | null
@@ -70,6 +75,7 @@ export interface EntryMetadata {
   team_id?: string | null
   team?: TeamInfo
   entry_time?: number | null
+  is_multi_day?: boolean // 複数日開催フラグ
 }
 
 // 記録メタデータ
@@ -125,6 +131,8 @@ export interface CalendarItem {
     competition?: {
       id: string
       title: string
+      date: string
+      end_date?: string | null // 大会終了日（複数日開催の場合）
       place: string | null
       pool_type: number
       team_id?: string | null
@@ -164,6 +172,7 @@ export interface CalendarItem {
     user_id?: string
     entry_time?: number | null
     pool_type?: number
+    is_multi_day?: boolean // 複数日開催フラグ
   }
   // 編集時に必要な追加フィールド
   editData?: unknown

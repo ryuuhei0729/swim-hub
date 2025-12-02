@@ -15,11 +15,12 @@ import type {
   EntryWithStyle
 } from '@/stores/types'
 import { convertRecordFormData } from '@/stores/types'
+import { getCompetitionId } from '../_utils/dashboardHelpers'
 
 interface FormModalsProps {
   onPracticeBasicSubmit: (basicData: { date: string; place: string; note: string }) => Promise<void>
   onPracticeLogSubmit: (formDataArray: PracticeMenuFormData[]) => Promise<void>
-  onCompetitionBasicSubmit: (basicData: { date: string; title: string; place: string; poolType: number; note: string }) => Promise<void>
+  onCompetitionBasicSubmit: (basicData: { date: string; endDate: string; title: string; place: string; poolType: number; note: string }) => Promise<void>
   onEntrySubmit: (entriesData: EntryFormData[]) => Promise<void>
   onEntrySkip: () => void
   onRecordLogSubmit: (formDataList: RecordFormDataInternal[]) => Promise<void>
@@ -89,6 +90,11 @@ export function FormModals({
     closeEntryForm: closeEntryLogForm,
     closeRecordForm: closeRecordLogForm,
   } = useCompetitionFormStore()
+
+  // competitionIdを計算（createdCompetitionIdまたはcompetitionEditingDataから取得）
+  const computedCompetitionId = React.useMemo(() => {
+    return getCompetitionId(createdCompetitionId, competitionEditingData) || ''
+  }, [createdCompetitionId, competitionEditingData])
 
   // Entryフォーム初期値を取得するヘルパー関数
   const getEntryInitialEntries = (editingData: unknown): Array<{
@@ -348,10 +354,7 @@ export function FormModals({
         onClose={closeEntryLogForm}
         onSubmit={onEntrySubmit}
         onSkip={onEntrySkip}
-        competitionId={createdCompetitionId || 
-          (competitionEditingData && typeof competitionEditingData === 'object' && 'competitionId' in competitionEditingData 
-            ? competitionEditingData.competitionId || ''
-            : '')}
+        competitionId={computedCompetitionId}
         isLoading={competitionIsLoading}
         styles={styles.map(s => ({ id: s.id.toString(), nameJp: s.name_jp, distance: s.distance }))}
         editData={(() => {
@@ -391,10 +394,7 @@ export function FormModals({
           const converted = formDataList.map(convertRecordFormData)
           await onRecordLogSubmit(converted)
         }}
-        competitionId={createdCompetitionId || 
-          (competitionEditingData && typeof competitionEditingData === 'object' && 'competitionId' in competitionEditingData 
-            ? competitionEditingData.competitionId || ''
-            : '')}
+        competitionId={computedCompetitionId}
         editData={(() => {
           if (!competitionEditingData || competitionEditingData === null || typeof competitionEditingData !== 'object' || !('id' in competitionEditingData)) {
             return null

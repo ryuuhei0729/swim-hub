@@ -6,6 +6,8 @@ import { UsersIcon, PlusIcon, UserPlusIcon } from '@heroicons/react/24/outline'
 import { TeamMembershipWithUser } from '@apps/shared/types/database'
 import { useAuth } from '@/contexts'
 import { useTeamsQuery } from '@apps/shared/hooks/queries/teams'
+import { teamKeys } from '@apps/shared/hooks/queries/keys'
+import { useQueryClient } from '@tanstack/react-query'
 import TeamCreateModal from '@/components/team/TeamCreateModal'
 import TeamJoinModal from '@/components/team/TeamJoinModal'
 
@@ -21,6 +23,7 @@ export default function TeamsClient({
   initialTeams
 }: TeamsClientProps) {
   const { supabase } = useAuth()
+  const queryClient = useQueryClient()
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false)
 
@@ -125,7 +128,8 @@ export default function TeamsClient({
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={(_teamId) => {
-          // React Queryが自動的にキャッシュを更新するため、リフレッシュは不要
+          // チーム一覧のキャッシュを無効化して再取得
+          queryClient.invalidateQueries({ queryKey: teamKeys.list() })
           setIsCreateModalOpen(false)
         }}
       />
@@ -135,7 +139,8 @@ export default function TeamsClient({
         isOpen={isJoinModalOpen}
         onClose={() => setIsJoinModalOpen(false)}
         onSuccess={(_teamId) => {
-          // React Queryが自動的にキャッシュを更新するため、リフレッシュは不要
+          // チーム一覧のキャッシュを無効化して再取得
+          queryClient.invalidateQueries({ queryKey: teamKeys.list() })
           setIsJoinModalOpen(false)
         }}
       />
