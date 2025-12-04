@@ -78,7 +78,7 @@ export const createMockQueryBuilder = (
   // single() と maybeSingle() は結果を返す
   mockBuilder.single.mockResolvedValue({ data: returnData, error: returnError, count })
   mockBuilder.maybeSingle.mockResolvedValue({ data: returnData, error: returnError, count })
-  mockBuilder.returns.mockReturnValue({ data: returnData, error: returnError, count })
+  // returns()はチェーンメソッドとして動作するため、mockBuilderを返す（ループで既に設定されている）
 
   // デフォルトの Promise 解決（select の最終結果など）
   mockBuilder.then = (resolve: (value: { data: any; error: any; count?: number }) => any) => {

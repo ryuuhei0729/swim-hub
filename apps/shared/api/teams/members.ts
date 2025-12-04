@@ -191,7 +191,7 @@ export class TeamMembersAPI {
       .eq('is_active', true)
       .single()
     
-    if (!membership || (membership.role !== 'admin' && membership.role !== 'owner')) {
+    if (!membership || membership.role !== 'admin') {
       throw new Error('管理者権限が必要です')
     }
     
@@ -222,7 +222,7 @@ export class TeamMembersAPI {
       .eq('is_active', true)
       .single()
     
-    if (!membership || (membership.role !== 'admin' && membership.role !== 'owner')) {
+    if (!membership || membership.role !== 'admin') {
       throw new Error('管理者権限が必要です')
     }
     
@@ -265,7 +265,7 @@ export class TeamMembersAPI {
       .eq('is_active', true)
       .single()
     
-    if (!adminMembership || (adminMembership.role !== 'admin' && adminMembership.role !== 'owner')) {
+    if (!adminMembership || adminMembership.role !== 'admin') {
       throw new Error('管理者権限が必要です')
     }
 
@@ -315,7 +315,7 @@ export class TeamMembersAPI {
       .eq('is_active', true)
       .single()
     
-    if (!adminMembership || (adminMembership.role !== 'admin' && adminMembership.role !== 'owner')) {
+    if (!adminMembership || adminMembership.role !== 'admin') {
       throw new Error('管理者権限が必要です')
     }
 
