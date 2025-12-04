@@ -1816,7 +1816,7 @@ function CompetitionWithEntry({
   return (
     <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
       {/* 大会情報ヘッダー */}
-      <div className="bg-linear-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-blue-200">
+      <div className="bg-blue-50 px-4 py-3 border-b border-blue-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h5 className="font-semibold text-gray-900" data-testid="competition-title-display">{competitionName}</h5>
@@ -1861,7 +1861,7 @@ function CompetitionWithEntry({
 
       {/* エントリー情報ボックス */}
       <div className="p-4">
-        <div className="bg-linear-to-br from-orange-50 via-amber-50 to-yellow-50 border border-orange-200 rounded-lg p-4 mb-3" data-testid="entry-section">
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-3" data-testid="entry-section">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <span className="text-lg">📝</span>
@@ -1942,7 +1942,7 @@ function CompetitionWithEntry({
         <button
           onClick={handleAddRecordClick}
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-linear-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm font-medium"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-sm font-medium"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />

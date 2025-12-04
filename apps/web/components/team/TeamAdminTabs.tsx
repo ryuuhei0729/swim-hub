@@ -6,24 +6,25 @@ import {
   UsersIcon, 
   ClockIcon, 
   TrophyIcon, 
-  ClipboardDocumentCheckIcon
+  CogIcon,
+  ClipboardDocumentCheckIcon,
+  DocumentArrowUpIcon
 } from '@heroicons/react/24/outline'
 
-export type TeamTabType = 'announcements' | 'members' | 'practices' | 'competitions' | 'attendance'
+export type TeamAdminTabType = 'announcements' | 'members' | 'practices' | 'competitions' | 'attendance' | 'bulk-register' | 'settings'
 
-export interface TeamTab {
-  id: TeamTabType
+export interface TeamAdminTab {
+  id: TeamAdminTabType
   name: string
   icon: React.ComponentType<{ className?: string }>
 }
 
-export interface TeamTabsProps {
-  activeTab: TeamTabType
-  onTabChange: (tab: TeamTabType) => void
-  isAdmin?: boolean
+export interface TeamAdminTabsProps {
+  activeTab: TeamAdminTabType
+  onTabChange: (tab: TeamAdminTabType) => void
 }
 
-const tabs: TeamTab[] = [
+const adminTabs: TeamAdminTab[] = [
   {
     id: 'announcements',
     name: 'お知らせ',
@@ -48,19 +49,26 @@ const tabs: TeamTab[] = [
     id: 'attendance',
     name: '出欠',
     icon: ClipboardDocumentCheckIcon
+  },
+  {
+    id: 'bulk-register',
+    name: '一括登録',
+    icon: DocumentArrowUpIcon
+  },
+  {
+    id: 'settings',
+    name: '設定',
+    icon: CogIcon
   }
 ]
 
-export default function TeamTabs({ activeTab, onTabChange, isAdmin = false }: TeamTabsProps) {
-  // 一般ページは閲覧専用のため、全てのタブを表示（isAdminは使用しない）
-  const visibleTabs = tabs
-
+export default function TeamAdminTabs({ activeTab, onTabChange }: TeamAdminTabsProps) {
   return (
     <div className="bg-white rounded-lg shadow">
       {/* タブナビゲーション */}
       <div className="border-b border-gray-200">
         <nav className="flex space-x-8 px-6" aria-label="Tabs">
-          {visibleTabs.map((tab) => {
+          {adminTabs.map((tab) => {
             const Icon = tab.icon
             const isActive = activeTab === tab.id
             
@@ -86,3 +94,5 @@ export default function TeamTabs({ activeTab, onTabChange, isAdmin = false }: Te
     </div>
   )
 }
+
+

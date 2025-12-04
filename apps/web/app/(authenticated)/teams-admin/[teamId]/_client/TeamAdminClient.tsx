@@ -1,23 +1,25 @@
 'use client'
 
-import React, { useEffect, useCallback } from 'react'
+import React, { useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts'
 import { 
   TeamAnnouncements,
-  TeamTabs,
   TeamMemberManagement,
   TeamPractices,
-  TeamCompetitions
+  TeamCompetitions,
+  TeamSettings,
+  TeamBulkRegister
 } from '@/components/team'
+import TeamAdminTabs from '@/components/team/TeamAdminTabs'
+import type { TeamAdminTabType } from '@/components/team/TeamAdminTabs'
 import MyMonthlyAttendance from '@/components/team/MyMonthlyAttendance'
 import MemberDetailModal from '@/components/team/MemberDetailModal'
 import type { MemberDetail } from '@/components/team/MemberDetailModal'
-import type { TeamTabType } from '@/components/team/TeamTabs'
 import { TeamMembership, TeamWithMembers } from '@swim-hub/shared/types/database'
-import { useTeamDetailStore } from '@/stores'
+import { useTeamAdminStore } from '@/stores/form/teamAdminStore'
 
-interface TeamDetailClientProps {
+interface TeamAdminClientProps {
   teamId: string
   initialTeam: TeamWithMembers | null
   initialMembership: TeamMembership | null
@@ -25,14 +27,14 @@ interface TeamDetailClientProps {
 }
 
 /**
- * チーム詳細ページのインタラクティブ部分を担当するClient Component
+ * チーム管理ページのインタラクティブ部分を担当するClient Component
  */
-export default function TeamDetailClient({
+export default function TeamAdminClient({
   teamId,
   initialTeam,
   initialMembership,
   initialTab
-}: TeamDetailClientProps) {
+}: TeamAdminClientProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { user } = useAuth()
@@ -50,7 +52,7 @@ export default function TeamDetailClient({
     setActiveTab,
     openMemberModal,
     closeMemberModal
-  } = useTeamDetailStore()
+  } = useTeamAdminStore()
 
   // サーバー側から取得したデータをストアに設定
   useEffect(() => {
@@ -62,8 +64,8 @@ export default function TeamDetailClient({
   // URLパラメータからタブを取得
   useEffect(() => {
     const tabParam = searchParams.get('tab') || initialTab
-    if (tabParam && ['announcements', 'members', 'practices', 'competitions', 'attendance'].includes(tabParam)) {
-      setActiveTab(tabParam as TeamTabType)
+    if (tabParam && ['announcements', 'members', 'practices', 'competitions', 'attendance', 'bulk-register', 'settings'].includes(tabParam)) {
+      setActiveTab(tabParam as TeamAdminTabType)
     }
   }, [searchParams, initialTab, setActiveTab])
 
@@ -99,8 +101,21 @@ export default function TeamDetailClient({
     )
   }
 
-  // 一般ページは閲覧専用のため、isAdminは常にfalse
-  const isAdmin = false
+  // 管理者権限チェック（このページは管理者専用）
+  if (displayMembership?.role !== 'admin') {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            アクセス権限がありません
+          </h1>
+          <p className="text-gray-600">
+            このページにアクセスするには管理者権限が必要です。
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   const handleMemberClick = (member: MemberDetail) => {
     openMemberModal(member)
@@ -110,15 +125,15 @@ export default function TeamDetailClient({
     closeMemberModal()
   }
 
-  // アクティブなタブのコンテンツをレンダリング（閲覧専用）
+  // アクティブなタブのコンテンツをレンダリング（管理者モード）
   const renderTabContent = () => {
     switch (activeTab) {
       case 'announcements':
         return (
           <TeamAnnouncements 
             teamId={teamId}
-            isAdmin={false}
-            viewOnly={true}
+            isAdmin={true}
+            viewOnly={false}
           />
         )
       case 'members':
@@ -126,7 +141,7 @@ export default function TeamDetailClient({
           <TeamMemberManagement 
             teamId={teamId}
             currentUserId={user?.id || ''}
-            isCurrentUserAdmin={false}
+            isCurrentUserAdmin={true}
             onMembershipChange={() => {
               // メンバー情報を再読み込み
               router.refresh()
@@ -135,11 +150,22 @@ export default function TeamDetailClient({
           />
         )
       case 'practices':
-        return <TeamPractices teamId={teamId} isAdmin={false} />
+        return <TeamPractices teamId={teamId} isAdmin={true} />
       case 'competitions':
-        return <TeamCompetitions teamId={teamId} isAdmin={false} />
+        return <TeamCompetitions teamId={teamId} isAdmin={true} />
       case 'attendance':
         return <MyMonthlyAttendance teamId={teamId} />
+      case 'bulk-register':
+        return <TeamBulkRegister teamId={teamId} isAdmin={true} />
+      case 'settings':
+        return (
+          <TeamSettings 
+            teamId={teamId}
+            teamName={displayTeam.name}
+            teamDescription={displayTeam.description || undefined}
+            isAdmin={true}
+          />
+        )
       default:
         return null
     }
@@ -158,8 +184,8 @@ export default function TeamDetailClient({
               <p className="text-gray-600 mb-4">{displayTeam.description}</p>
             )}
             <div className="flex items-center space-x-2">
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                メンバー
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                管理者
               </span>
             </div>
           </div>
@@ -168,15 +194,14 @@ export default function TeamDetailClient({
 
       {/* タブナビゲーション */}
       <div className="mt-4">
-        <TeamTabs 
+        <TeamAdminTabs 
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          isAdmin={false}
         />
       </div>
 
       {/* タブコンテンツ */}
-      <div className="bg-white rounded-lg shadow">
+      <div className="bg-white rounded-lg shadow mt-4">
         {renderTabContent()}
       </div>
 
@@ -186,7 +211,7 @@ export default function TeamDetailClient({
         onClose={handleCloseMemberModal}
         member={selectedMember}
         currentUserId={user?.id || ''}
-        isCurrentUserAdmin={false}
+        isCurrentUserAdmin={true}
         onMembershipChange={() => {
           // メンバー情報を再読み込み
           router.refresh()
@@ -195,4 +220,5 @@ export default function TeamDetailClient({
     </div>
   )
 }
+
 

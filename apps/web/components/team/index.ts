@@ -20,5 +20,6 @@ export { default as TeamScheduleManager } from './TeamScheduleManager'
 export { default as TeamSettings } from './TeamSettings'
 export { default as TeamStatsCards } from './TeamStatsCards'
 export { default as TeamTabs } from './TeamTabs'
+export { default as TeamAdminTabs } from './TeamAdminTabs'
 export { default as TeamTimeInputModal } from './TeamTimeInputModal'
 

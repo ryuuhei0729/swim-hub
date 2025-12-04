@@ -5,11 +5,11 @@
 
 import { SupabaseClient } from '@supabase/supabase-js'
 import {
-  AttendanceStatus,
-  TeamAttendance,
-  TeamAttendanceInsert,
-  TeamAttendanceUpdate,
-  TeamAttendanceWithDetails
+    AttendanceStatus,
+    TeamAttendance,
+    TeamAttendanceInsert,
+    TeamAttendanceUpdate,
+    TeamAttendanceWithDetails
 } from '../types/database'
 
 export class AttendanceAPI {
@@ -120,6 +120,179 @@ export class AttendanceAPI {
   }
 
   /**
+   * 自分の月別出欠情報を取得
+   */
+  async getMyAttendancesByMonth(
+    teamId: string,
+    year: number,
+    month: number
+  ): Promise<TeamAttendanceWithDetails[]> {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+
+    // チームメンバーシップ確認
+    const { data: membership } = await this.supabase
+      .from('team_memberships')
+      .select('id')
+      .eq('team_id', teamId)
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single()
+
+    if (!membership) {
+      throw new Error('チームへのアクセス権限がありません')
+    }
+
+    // 月の開始日と終了日を計算
+    const startDate = new Date(year, month - 1, 1)
+    const endDate = new Date(year, month, 0, 23, 59, 59)
+    const startDateStr = startDate.toISOString().split('T')[0]
+    const endDateStr = endDate.toISOString().split('T')[0]
+
+    // 指定月の練習IDを取得
+    const { data: practices, error: practicesError } = await this.supabase
+      .from('practices')
+      .select('id')
+      .eq('team_id', teamId)
+      .gte('date', startDateStr)
+      .lte('date', endDateStr)
+
+    if (practicesError) throw practicesError
+
+    // 指定月の大会IDを取得
+    const { data: competitions, error: competitionsError } = await this.supabase
+      .from('competitions')
+      .select('id')
+      .eq('team_id', teamId)
+      .gte('date', startDateStr)
+      .lte('date', endDateStr)
+
+    if (competitionsError) throw competitionsError
+
+    const practiceIds = (practices || []).map(p => p.id)
+    const competitionIds = (competitions || []).map(c => c.id)
+
+    // 練習の出欠情報を取得
+    const { data: practiceAttendances, error: practiceError } = practiceIds.length > 0
+      ? await this.supabase
+          .from('team_attendance')
+          .select(`
+            *,
+            user:users(*),
+            practice:practices(*)
+          `)
+          .eq('user_id', user.id)
+          .in('practice_id', practiceIds)
+      : { data: [], error: null }
+
+    if (practiceError) throw practiceError
+
+    // 大会の出欠情報を取得
+    const { data: competitionAttendances, error: competitionError } = competitionIds.length > 0
+      ? await this.supabase
+          .from('team_attendance')
+          .select(`
+            *,
+            user:users(*),
+            competition:competitions(*)
+          `)
+          .eq('user_id', user.id)
+          .in('competition_id', competitionIds)
+      : { data: [], error: null }
+
+    if (competitionError) throw competitionError
+
+    // 練習と大会の出欠情報を統合
+    const allAttendances = [
+      ...(practiceAttendances || []),
+      ...(competitionAttendances || [])
+    ] as TeamAttendanceWithDetails[]
+
+    // team_idを追加して返す
+    return allAttendances.map(item => ({
+      ...item,
+      team_id: teamId
+    }))
+  }
+
+  /**
+   * 自分の出欠情報を一括更新
+   */
+  async bulkUpdateMyAttendances(
+    updates: Array<{
+      attendanceId: string
+      status: AttendanceStatus | null
+      note: string | null
+    }>
+  ): Promise<TeamAttendance[]> {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+
+    if (updates.length === 0) {
+      return []
+    }
+
+    // 全ての出欠情報が自分のものか確認
+    const attendanceIds = updates.map(u => u.attendanceId)
+    const { data: existingAttendances, error: checkError } = await this.supabase
+      .from('team_attendance')
+      .select('id, user_id, practice_id, competition_id')
+      .in('id', attendanceIds)
+
+    if (checkError) throw checkError
+
+    if (!existingAttendances || existingAttendances.length !== attendanceIds.length) {
+      throw new Error('一部の出欠情報が見つかりません')
+    }
+
+    // 全て自分の出欠情報か確認
+    const allOwned = existingAttendances.every(a => a.user_id === user.id)
+    if (!allOwned) {
+      throw new Error('自分の出欠情報のみ更新可能です')
+    }
+
+    // 各出欠情報について、close後の編集日時追加処理を行う
+    const updatePromises = updates.map(async (update) => {
+      const existing = existingAttendances.find(a => a.id === update.attendanceId)
+      if (!existing) {
+        throw new Error(`出欠情報 ${update.attendanceId} が見つかりません`)
+      }
+
+      // イベントがclosedかチェック
+      const isClosed = await this.isEventClosed(
+        existing.practice_id,
+        existing.competition_id
+      )
+
+      let finalNote = update.note
+      if (isClosed && update.note) {
+        // close後の編集の場合、編集日時を追加
+        const now = new Date()
+        const editMark = ` (${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} 編集済)`
+        
+        // 既存の編集済みマークを削除してから追加
+        const existingNote = update.note.replace(/\s*\(\d{4}\/\d{2}\/\d{2}\s+\d{2}:\d{2}\s+編集済\)\s*$/, '')
+        finalNote = existingNote + editMark
+      }
+
+      const { data, error } = await this.supabase
+        .from('team_attendance')
+        .update({
+          status: update.status,
+          note: finalNote
+        })
+        .eq('id', update.attendanceId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data as TeamAttendance
+    })
+
+    return Promise.all(updatePromises)
+  }
+
+  /**
    * 自分の出欠情報を更新
    */
   async updateMyAttendance(
@@ -140,19 +313,34 @@ export class AttendanceAPI {
       throw new Error('自分の出欠情報のみ更新可能です')
     }
 
-    // 出欠提出期間かチェック
+    // 出欠提出期間かチェック（管理者がcloseした後でも編集可能）
     const canSubmit = await this.canSubmitAttendance(
       existingAttendance.practice_id,
       existingAttendance.competition_id
     )
 
-    if (!canSubmit) {
-      throw new Error('出欠提出期間外です')
+    // close後の編集かチェック
+    const isClosed = await this.isEventClosed(
+      existingAttendance.practice_id,
+      existingAttendance.competition_id
+    )
+
+    let finalUpdates = { ...updates }
+    
+    // close後の編集の場合、noteに編集日時を追加
+    if (isClosed && updates.note) {
+      const now = new Date()
+      const editMark = ` (${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} 編集済)`
+      
+      // 既存の編集済みマークを削除してから追加
+      const existingNote = updates.note.replace(/\s*\(\d{4}\/\d{2}\/\d{2}\s+\d{2}:\d{2}\s+編集済\)\s*$/, '')
+      finalUpdates.note = existingNote + editMark
     }
 
+    // canSubmitがfalseでも更新可能（close後でも編集可能）
     const { data, error } = await this.supabase
       .from('team_attendance')
-      .update(updates)
+      .update(finalUpdates)
       .eq('id', attendanceId)
       .select()
       .single()
@@ -324,6 +512,36 @@ export class AttendanceAPI {
       { value: 'absent', label: '欠席' },
       { value: 'other', label: 'その他' }
     ] as const
+  }
+
+  /**
+   * イベントがclosed状態かチェック
+   */
+  private async isEventClosed(
+    practiceId: string | null,
+    competitionId: string | null
+  ): Promise<boolean> {
+    let attendanceStatus: 'open' | 'closed' | null = null
+
+    if (practiceId) {
+      const { data } = await this.supabase
+        .from('practices')
+        .select('attendance_status')
+        .eq('id', practiceId)
+        .single()
+
+      attendanceStatus = data?.attendance_status || null
+    } else if (competitionId) {
+      const { data } = await this.supabase
+        .from('competitions')
+        .select('attendance_status')
+        .eq('id', competitionId)
+        .single()
+
+      attendanceStatus = data?.attendance_status || null
+    }
+
+    return attendanceStatus === 'closed'
   }
 
   /**

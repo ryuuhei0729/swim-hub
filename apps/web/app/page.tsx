@@ -95,19 +95,19 @@ export default function Home() {
       icon: UserIcon,
       title: '個人で始められる',
       description: 'チームに所属していなくても、今すぐ自分の記録管理を始められます。',
-      gradient: 'from-blue-500 to-cyan-500'
+      bgColor: 'bg-blue-500'
     },
     {
       icon: ChartBarIcon,
       title: 'データで成長を可視化',
       description: 'タイムの推移、練習記録を一目で確認。自分の成長を実感できます。',
-      gradient: 'from-purple-500 to-pink-500'
+      bgColor: 'bg-purple-500'
     },
     {
       icon: UsersIcon,
       title: 'チームにも対応',
       description: '個人利用を続けながら、必要に応じてチーム機能も追加できます。',
-      gradient: 'from-green-500 to-emerald-500'
+      bgColor: 'bg-green-500'
     }
   ]
 
@@ -158,7 +158,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       {/* ヒーローセクション */}
-      <section className="relative overflow-hidden bg-linear-to-br from-blue-50 via-cyan-50 to-teal-50">
+      <section className="relative overflow-hidden bg-blue-50">
         <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-32">
           <div className="text-center">
@@ -178,7 +178,7 @@ export default function Home() {
             
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 mb-6 animate-fade-in">
               <span className="block mb-2">水泳選手のための</span>
-              <span className="block text-transparent bg-clip-text bg-linear-to-r from-blue-600 to-cyan-600">
+              <span className="block text-blue-600">
                 記録管理システム
               </span>
             </h1>
@@ -196,7 +196,7 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in">
               <Link
                 href="/signup"
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-linear-to-r from-blue-600 to-cyan-600 rounded-lg shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 hover-lift"
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-blue-600 rounded-lg shadow-lg hover:shadow-xl hover:bg-blue-700 transition-all duration-200 hover-lift"
               >
                 無料で始める
                 <ArrowRightIcon className="ml-2 h-5 w-5" />
@@ -228,10 +228,10 @@ export default function Home() {
             {values.map((value, index) => (
               <div
                 key={value.title}
-                className="relative p-8 rounded-2xl bg-linear-to-br from-white to-gray-50 border border-gray-200 hover:shadow-xl transition-all duration-300 hover-lift animate-fade-in"
+                className="relative p-8 rounded-2xl bg-white border border-gray-200 hover:shadow-xl transition-all duration-300 hover-lift animate-fade-in"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                <div className={`w-14 h-14 rounded-xl bg-linear-to-br ${value.gradient} flex items-center justify-center mb-6 shadow-lg`}>
+                <div className={`w-14 h-14 rounded-xl ${value.bgColor} flex items-center justify-center mb-6 shadow-lg`}>
                   <value.icon className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-3">
@@ -328,7 +328,7 @@ export default function Home() {
             {useCases.map((useCase, index) => (
               <div
                 key={useCase.persona}
-                className="bg-linear-to-br from-gray-50 to-white rounded-2xl p-8 border-2 border-gray-200 hover:border-blue-300 transition-all duration-300 hover-lift animate-fade-in"
+                className="bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-blue-300 transition-all duration-300 hover-lift animate-fade-in"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
                 <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-6">
@@ -358,7 +358,7 @@ export default function Home() {
       </section>
 
       {/* 特徴セクション */}
-      <section className="py-20 bg-linear-to-br from-gray-900 to-gray-800 text-white">
+      <section className="py-20 bg-gray-900 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
@@ -376,7 +376,7 @@ export default function Home() {
                 className="text-center animate-fade-in"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                <div className="w-16 h-16 rounded-2xl bg-linear-to-br from-blue-500 to-cyan-500 flex items-center justify-center mx-auto mb-6 shadow-xl">
+                <div className="w-16 h-16 rounded-2xl bg-blue-500 flex items-center justify-center mx-auto mb-6 shadow-xl">
                   <highlight.icon className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="text-xl font-bold text-white mb-3">
@@ -392,7 +392,7 @@ export default function Home() {
       </section>
 
       {/* CTAセクション */}
-      <section className="py-20 bg-linear-to-r from-blue-600 to-cyan-600">
+      <section className="py-20 bg-blue-600">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-6">
             今すぐ記録を始めよう
