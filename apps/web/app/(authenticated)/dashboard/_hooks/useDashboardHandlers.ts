@@ -89,12 +89,13 @@ export function useDashboardHandlers({
     refreshCalendar
 }: UseDashboardHandlersProps) {
   // 練習予定作成・更新
-  const handlePracticeBasicSubmit = useCallback(async (basicData: { date: string; place: string; note: string }) => {
+  const handlePracticeBasicSubmit = useCallback(async (basicData: { date: string; title: string; place: string; note: string }) => {
     setLoading(true)
     try {
       // 有効なPracticeInsert/Updateフィールドのみを送信
       const payload = {
         date: basicData.date,
+        title: basicData.title || null,
         place: basicData.place || null,
         note: basicData.note || null
       }
@@ -311,10 +312,10 @@ export function useDashboardHandlers({
         await updateCompetition(competitionEditingData.id, {
           date: basicData.date,
           end_date: endDate,
-          title: basicData.title,
-          place: basicData.place,
+          title: basicData.title || null,
+          place: basicData.place || null,
           pool_type: basicData.poolType,
-          note: basicData.note
+          note: basicData.note || null
         })
         closeCompetitionBasicForm()
         refreshCalendar()
@@ -322,10 +323,10 @@ export function useDashboardHandlers({
         const newCompetition = await createCompetition({
           date: basicData.date,
           end_date: endDate,
-          title: basicData.title,
-          place: basicData.place,
+          title: basicData.title || null,
+          place: basicData.place || null,
           pool_type: basicData.poolType,
-          note: basicData.note
+          note: basicData.note || null
         })
         refreshCalendar()
         // openEntryLogFormがisBasicFormOpen: falseをセットするので、closeCompetitionBasicFormは不要

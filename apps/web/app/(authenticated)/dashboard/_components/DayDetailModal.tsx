@@ -247,7 +247,7 @@ export default function DayDetailModal({
                     <CompetitionDetails
                       key={item.id}
                       competitionId={item.id}
-                      competitionName={item.title}
+                      competitionName={item.title || '大会'}
                       place={item.place}
                       poolType={item.metadata?.competition?.pool_type}
                       note={item.note}
@@ -288,7 +288,7 @@ export default function DayDetailModal({
                         key={item.id}
                         entryId={item.id}
                         competitionId={competitionId}
-                        competitionName={item.metadata?.competition?.title || ''}
+                        competitionName={item.metadata?.competition?.title || '大会'}
                         place={item.place}
                         note={item.note}
                         styleId={item.metadata?.style?.id}
@@ -402,7 +402,7 @@ export default function DayDetailModal({
                       <CompetitionDetails
                         key={compId}
                         competitionId={compId}
-                        competitionName={record.title}
+                        competitionName={record.title || '大会'}
                         place={record.place}
                         poolType={poolType}
                         note={record.note || undefined}
@@ -1210,7 +1210,7 @@ function PracticeDetails({
 
             {/* メモ */}
             {formattedLog.note && (
-              <div className="bg-liner-to-r from-slate-50 to-gray-50 rounded-lg p-3 mb-1 border border-slate-200">
+              <div className="from-slate-50 to-gray-50 rounded-lg p-3 mb-1 border border-slate-200">
                 <div className="text-xs font-medium text-gray-500 mb-1">メモ</div>
                 <div className="text-sm text-gray-700">
                   {formattedLog.note}
@@ -1325,7 +1325,7 @@ function CompetitionDetails({
   teamName?: string | undefined
   onShowAttendance?: () => void
 }) {
-  const { supabase } = useAuth()
+  const { supabase, user } = useAuth()
   const [actualRecords, setActualRecords] = useState<CalendarItem[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -1333,7 +1333,7 @@ function CompetitionDetails({
     const loadRecords = async () => {
       try {
         setLoading(true)
-        const { data, error } = await supabase
+        let query = supabase
           .from('records')
           .select(`
             *,
@@ -1342,6 +1342,13 @@ function CompetitionDetails({
             split_times(*)
           `)
           .eq('competition_id', competitionId)
+
+        // チーム大会の場合は自分の記録だけを表示
+        if (isTeamCompetition && user?.id) {
+          query = query.eq('user_id', user.id)
+        }
+
+        const { data, error } = await query
 
         if (error) throw error
 
@@ -1407,7 +1414,7 @@ function CompetitionDetails({
     }
 
     loadRecords()
-  }, [competitionId, supabase])
+  }, [competitionId, supabase, isTeamCompetition, user?.id])
 
   const _getPoolTypeText = (poolType: number) => {
     return poolType === 1 ? '長水路(50m)' : '短水路(25m)'
@@ -1427,24 +1434,28 @@ function CompetitionDetails({
                   : 'text-blue-800 bg-blue-200'
               }`} data-testid="competition-title-display">
                 <TrophyIcon className="h-5 w-5" />
-                {competitionName}
+                {competitionName || '大会'}
                 {isTeamCompetition && teamName && <span className="text-sm">({teamName})</span>}
               </span>
               {isTeamCompetition && teamId && onShowAttendance && (
                 <AttendanceButton onClick={onShowAttendance} />
               )}
             </div>
-            {place && (
-              <p className="text-sm text-gray-700 mb-2 flex items-center gap-1" data-testid="competition-place-display">
-                <span className="text-gray-500">📍</span>
-                {place}
-              </p>
-            )}
-            {poolType != null && (
-              <p className="text-sm text-gray-700 mb-2 flex items-center gap-1">
-                <span className="text-gray-500">🏊‍♀️</span>
-                {_getPoolTypeText(poolType)}
-              </p>
+            {(place || poolType != null) && (
+              <div className="text-sm text-gray-700 mb-2 flex flex-wrap items-center gap-3">
+                {place && (
+                  <span className="flex items-center gap-1" data-testid="competition-place-display">
+                    <span className="text-gray-500">📍</span>
+                    {place}
+                  </span>
+                )}
+                {poolType != null && (
+                  <span className="flex items-center gap-1">
+                    <span className="text-gray-500">🏊‍♀️</span>
+                    {_getPoolTypeText(poolType)}
+                  </span>
+                )}
+              </div>
             )}
             {note && (
               <p className="text-sm text-gray-600 mt-2">
@@ -1613,7 +1624,7 @@ function CompetitionDetails({
 
                 {/* メモ */}
                 {(record.note) && (
-                  <div className="bg-liner-to-r from-slate-50 to-gray-50 rounded-lg p-3 mb-1 border border-slate-200 mt-2">
+                  <div className=" from-slate-50 to-gray-50 rounded-lg p-3 mb-1 border border-slate-200 mt-2">
                     <div className="text-xs font-medium text-gray-500 mb-1">メモ</div>
                     <div className="text-sm text-gray-700">
                       {record.note}
@@ -1814,7 +1825,14 @@ function CompetitionWithEntry({
       <div className="bg-blue-50 px-4 py-3 border-b border-blue-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h5 className="font-semibold text-gray-900" data-testid="competition-title-display">{competitionName}</h5>
+            <span className={`text-lg font-semibold px-3 py-1 rounded-lg flex items-center gap-2 ${
+              isTeamCompetition 
+                ? 'text-violet-800 bg-violet-200' 
+                : 'text-blue-800 bg-blue-200'
+            }`} data-testid="competition-title-display">
+              <TrophyIcon className="h-5 w-5" />
+              {competitionName || '大会'}
+            </span>
             {isTeamCompetition && (
               <span className="text-xs bg-violet-100 text-violet-700 px-2 py-1 rounded-full">
                 チーム

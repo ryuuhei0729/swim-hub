@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts'
 import { 
@@ -18,6 +18,7 @@ import MemberDetailModal from '@/components/team/MemberDetailModal'
 import type { MemberDetail } from '@/components/team/MemberDetailModal'
 import { TeamMembership, TeamWithMembers } from '@swim-hub/shared/types/database'
 import { useTeamAdminStore } from '@/stores/form/teamAdminStore'
+import { ClipboardDocumentIcon, CheckIcon } from '@heroicons/react/24/outline'
 
 interface TeamAdminClientProps {
   teamId: string
@@ -38,6 +39,7 @@ export default function TeamAdminClient({
   const searchParams = useSearchParams()
   const router = useRouter()
   const { user } = useAuth()
+  const [isCopied, setIsCopied] = useState(false)
   
   const {
     team,
@@ -174,14 +176,14 @@ export default function TeamAdminClient({
   return (
     <div>
       {/* チームヘッダー */}
-      <div className="bg-white rounded-lg shadow p-6 mb-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-4">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-6">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 break-words">
               {displayTeam.name}
             </h1>
             {displayTeam.description && (
-              <p className="text-gray-600 mb-4">{displayTeam.description}</p>
+              <p className="text-sm sm:text-base text-gray-600 mb-4 break-words">{displayTeam.description}</p>
             )}
             <div className="flex items-center space-x-2">
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -189,6 +191,48 @@ export default function TeamAdminClient({
               </span>
             </div>
           </div>
+          {displayTeam.invite_code && (
+            <div className="w-full md:w-auto md:shrink-0 md:ml-6">
+              <div className="bg-gray-50 rounded-lg p-3 sm:p-4 w-full md:w-[400px]">
+                <div className="flex flex-col space-y-2">
+                  <label className="block text-xs font-medium text-gray-700">
+                    招待コード
+                  </label>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2 sm:space-x-0">
+                    <input
+                      type="text"
+                      value={displayTeam.invite_code}
+                      readOnly
+                      className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-xs sm:text-sm font-mono font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(displayTeam.invite_code)
+                        setIsCopied(true)
+                        setTimeout(() => setIsCopied(false), 2000)
+                      }}
+                      className="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-gray-300 rounded-md shadow-sm text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 whitespace-nowrap"
+                    >
+                      {isCopied ? (
+                        <>
+                          <CheckIcon className="h-4 w-4 sm:mr-2 text-green-600" />
+                          <span className="hidden sm:inline">コピー済み</span>
+                        </>
+                      ) : (
+                        <>
+                          <ClipboardDocumentIcon className="h-4 w-4 sm:mr-2" />
+                          <span className="hidden sm:inline">コピー</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    このコードを友達に共有すると、友達がこのチームに参加できます
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

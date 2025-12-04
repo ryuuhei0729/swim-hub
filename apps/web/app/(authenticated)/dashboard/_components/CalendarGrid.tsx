@@ -120,27 +120,20 @@ export default function CalendarGrid({
                         : undefined
 
                     // タイトルを生成
+                    // calendar_viewで既にCOALESCEでデフォルト値（「練習」「大会」）が設定されているため、
+                    // item.titleをそのまま使用する
                     let displayTitle = item.title
                     
-                    if (item.type === 'practice') {
-                      // Practice: 練習場所
-                      displayTitle = item.place || '練習'
-                    } else if (item.type === 'team_practice') {
-                      // TeamPractice: チーム名 - 練習場所（metadataから動的に取得）
+                    if (item.type === 'team_practice') {
+                      // TeamPractice: チーム名 - タイトル（metadataから動的に取得）
                       const teamName = item.metadata?.team?.name || 'チーム'
-                      displayTitle = `${teamName} - ${item.place || '練習'}`
-                    } else if (item.type === 'practice_log') {
-                      // PracticeLog: 距離×本数×セット数
-                      displayTitle = item.title
-                    } else if (item.type === 'competition' || item.type === 'team_competition') {
-                      // Competition/TeamCompetition: 大会の名前
-                      displayTitle = item.title
+                      displayTitle = `${teamName} - ${item.title}`
                     } else if (item.type === 'entry') {
-                      // Entry: 大会の名前
-                      displayTitle = item.metadata?.competition?.title || item.title
+                      // Entry: 大会の名前（metadataから取得、なければtitleを使用、それもなければ「大会」）
+                      displayTitle = item.metadata?.competition?.title || item.title || '大会'
                     } else if (item.type === 'record') {
-                      // Record: 大会の名前
-                      displayTitle = item.metadata?.competition?.title || item.title
+                      // Record: 大会の名前（metadataから取得、なければtitleを使用、それもなければ「大会」）
+                      displayTitle = item.metadata?.competition?.title || item.title || '大会'
                     }
                     
                     return (

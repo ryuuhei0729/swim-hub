@@ -148,15 +148,7 @@ export default function CompetitionBasicForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // バリデーション
-    if (!formData.title.trim()) {
-      console.error('大会名を入力してください')
-      return
-    }
-    if (!formData.place.trim()) {
-      console.error('場所を入力してください')
-      return
-    }
+    // バリデーション（dateとpoolTypeのみ必須）
     // 終了日が設定されている場合、開始日以降であることを確認
     if (formData.endDate && formData.endDate < formData.date) {
       console.error('終了日は開始日以降の日付を指定してください')
@@ -252,14 +244,13 @@ export default function CompetitionBasicForm({
               {/* 大会名 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  大会名 <span className="text-red-500">*</span>
+                  大会名
                 </label>
                 <Input
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="例: 全国大会"
-                  required
+                  placeholder="例: 全国大会, 対抗戦, タイムトライアル"
                   className="w-full"
                   data-testid="competition-title"
                 />
@@ -268,14 +259,13 @@ export default function CompetitionBasicForm({
               {/* 場所 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  場所 <span className="text-red-500">*</span>
+                  場所
                 </label>
                 <Input
                   type="text"
                   value={formData.place}
                   onChange={(e) => setFormData({ ...formData, place: e.target.value })}
                   placeholder="例: 東京アクアティクスセンター"
-                  required
                   className="w-full"
                   data-testid="competition-place"
                 />

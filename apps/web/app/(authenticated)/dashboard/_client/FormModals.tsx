@@ -96,6 +96,20 @@ export function FormModals({
     return getCompetitionId(createdCompetitionId, competitionEditingData) || ''
   }, [createdCompetitionId, competitionEditingData])
 
+  // 大会のtitleを取得（competitionEditingDataから）
+  const computedCompetitionTitle = React.useMemo(() => {
+    if (!competitionEditingData || typeof competitionEditingData !== 'object') {
+      return undefined
+    }
+    
+    const data = competitionEditingData as { 
+      title?: string
+      metadata?: { competition?: { title?: string } } 
+    }
+    
+    return data.metadata?.competition?.title || data.title || undefined
+  }, [competitionEditingData])
+
   // Entryフォーム初期値を取得するヘルパー関数
   const getEntryInitialEntries = (editingData: unknown): Array<{
     id: string
@@ -355,6 +369,7 @@ export function FormModals({
         onSubmit={onEntrySubmit}
         onSkip={onEntrySkip}
         competitionId={computedCompetitionId}
+        competitionTitle={computedCompetitionTitle}
         isLoading={competitionIsLoading}
         styles={styles.map(s => ({ id: s.id.toString(), nameJp: s.name_jp, distance: s.distance }))}
         editData={(() => {

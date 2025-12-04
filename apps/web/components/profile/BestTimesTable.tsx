@@ -241,7 +241,7 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
   return (
     <div>
       {/* タブとチェックボックス */}
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-3 sm:mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
         <Tabs
           tabs={tabs}
           activeTabId={activeTab}
@@ -252,9 +252,9 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
             type="checkbox"
             checked={includeRelaying}
             onChange={(e) => setIncludeRelaying(e.target.checked)}
-            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
           />
-          <span className="text-sm text-gray-700">引き継ぎタイムも含めて表示</span>
+          <span className="text-xs sm:text-sm text-gray-700">引き継ぎタイムも含めて表示</span>
         </label>
       </div>
 
@@ -262,13 +262,13 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
         <table className="min-w-full table-fixed border-separate border-spacing-0">
         <thead className="sticky top-0 z-10">
           <tr>
-            <th className="px-3 py-2 text-left text-xs md:text-sm font-semibold text-gray-700 border-r border-gray-300 min-w-[64px] w-[72px] h-[44px] tracking-wide">
+            <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-left text-[10px] sm:text-xs md:text-sm font-semibold text-gray-700 border-r border-gray-300 min-w-[48px] sm:min-w-[64px] w-[56px] sm:w-[72px] h-[32px] sm:h-[44px] tracking-wide">
               距離
             </th>
             {STYLES.map((style) => (
               <th
                 key={style}
-                className={`px-3 py-2 text-center text-xs md:text-sm font-semibold text-gray-800 border-r border-gray-300 last:border-r-0 min-w-[110px] h-[44px] ${styleHeaderBgClass[style]}`}
+                className={`px-1.5 sm:px-3 py-1 sm:py-2 text-center text-[10px] sm:text-xs md:text-sm font-semibold text-gray-800 border-r border-gray-300 last:border-r-0 min-w-[80px] sm:min-w-[110px] h-[32px] sm:h-[44px] ${styleHeaderBgClass[style]}`}
               >
                 {style}
               </th>
@@ -278,7 +278,7 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
         <tbody className="bg-white">
           {DISTANCES.map((distance, rowIdx) => (
             <tr key={distance}>
-              <td className={`px-3 py-3 text-xs md:text-sm font-semibold text-gray-600 border-r border-gray-300 bg-gray-50 min-w-[64px] w-[72px] h-[64px] ${rowIdx > 0 ? 'border-t border-gray-300' : ''}`}>
+              <td className={`px-1.5 sm:px-3 py-1.5 sm:py-3 text-[10px] sm:text-xs md:text-sm font-semibold text-gray-600 border-r border-gray-300 bg-gray-50 min-w-[48px] sm:min-w-[64px] w-[56px] sm:w-[72px] h-[48px] sm:h-[64px] ${rowIdx > 0 ? 'border-t border-gray-300' : ''}`}>
                 {distance}m
               </td>
               {STYLES.map((style) => {
@@ -286,23 +286,23 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
                 return (
                   <td
                     key={style}
-                    className={`px-3 py-3 text-center text-xs md:text-sm text-gray-900 border-r border-gray-300 last:border-r-0 min-w-[110px] h-[64px] ${rowIdx > 0 ? 'border-t border-gray-300' : ''} ${isInvalidCombination(style, distance) ? 'bg-gray-200' : styleCellBgClass[style]}`}
+                    className={`px-1.5 sm:px-3 py-1.5 sm:py-3 text-center text-[10px] sm:text-xs md:text-sm text-gray-900 border-r border-gray-300 last:border-r-0 min-w-[80px] sm:min-w-[110px] h-[48px] sm:h-[64px] ${rowIdx > 0 ? 'border-t border-gray-300' : ''} ${isInvalidCombination(style, distance) ? 'bg-gray-200' : styleCellBgClass[style]}`}
                   >
                     {bestTime ? (
-                      <div className={`group relative inline-block pt-2 ${(() => {
+                      <div className={`group relative inline-block pt-1 sm:pt-2 ${(() => {
                         const createdAt = parseISO(bestTime.created_at)
                         const isNew = differenceInDays(new Date(), createdAt) <= 30
-                        return isNew ? 'pr-6' : ''
+                        return isNew ? 'pr-4 sm:pr-6' : ''
                       })()}`}>
                         {(() => {
                           const createdAt = parseISO(bestTime.created_at)
                           const isNew = differenceInDays(new Date(), createdAt) <= 30
                           return isNew ? (
-                            <span className="absolute -top-1 -right-3 text-[10px] md:text-xs bg-red-500 text-white px-1.5 py-0.5 rounded-full shadow">New</span>
+                            <span className="absolute -top-0.5 sm:-top-1 -right-2 sm:-right-3 text-[8px] sm:text-[10px] md:text-xs bg-red-500 text-white px-1 sm:px-1.5 py-0.5 rounded-full shadow">New</span>
                           ) : null
                         })()}
                         {/* 通常表示：ベストタイム */}
-                        <span className={`font-semibold text-base md:text-lg ${(() => {
+                        <span className={`font-semibold text-xs sm:text-base md:text-lg ${(() => {
                           const createdAt = parseISO(bestTime.created_at)
                           return differenceInDays(new Date(), createdAt) <= 30 ? 'text-red-600' : 'text-gray-900'
                         })()}`}>
@@ -312,7 +312,7 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
                               <>
                                 {display.main}
                                 {display.suffix && (
-                                  <span className="text-xs ml-1">{display.suffix}</span>
+                                  <span className="text-[8px] sm:text-xs ml-0.5 sm:ml-1">{display.suffix}</span>
                                 )}
                               </>
                             )
@@ -347,9 +347,8 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
       </div>
       
       {/* 注釈 */}
-      <div className="mt-3 text-sm text-red-600 flex items-center justify-end space-x-4">
-        <span>※ L: 長水路</span>
-        <span>R: 引き継ぎあり</span>
+      <div className="mt-2 sm:mt-3 text-xs sm:text-sm text-red-600 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-1 sm:gap-0 sm:space-x-4">
+        <span>※ L: 長水路,   R: 引き継ぎあり</span>
       </div>
     </div>
   )

@@ -593,7 +593,7 @@ export default function RecordClient({
             {/* 大会情報 */}
             <div className="flex flex-wrap gap-4 text-sm text-gray-600 border-t pt-4">
               <div className="flex items-center gap-1">
-                <span className="font-medium">{competition.title}</span>
+                <span className="font-medium">{competition.title || '大会'}</span>
               </div>
               <div className="flex items-center gap-1">
                 <CalendarDaysIcon className="h-4 w-4" />

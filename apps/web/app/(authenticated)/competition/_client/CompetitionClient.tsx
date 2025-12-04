@@ -581,9 +581,9 @@ export default function CompetitionClient({
                             </>
                           ) : '-'}
                         </h5>
-                        {selectedRecord.competition?.title && (
+                        {selectedRecord.competition && (
                           <p className="text-sm text-gray-600 mb-1">
-                            🏆 {selectedRecord.competition.title}
+                            🏆 {selectedRecord.competition.title || '大会'}
                           </p>
                         )}
                         {selectedRecord.competition?.place && (

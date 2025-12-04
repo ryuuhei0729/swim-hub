@@ -11,6 +11,7 @@ import {
     TeamAttendanceUpdate,
     TeamAttendanceWithDetails
 } from '../types/database'
+import { getMonthDateRange } from '../utils/date'
 
 export class AttendanceAPI {
   constructor(private supabase: SupabaseClient) {}
@@ -144,10 +145,7 @@ export class AttendanceAPI {
     }
 
     // 月の開始日と終了日を計算
-    const startDate = new Date(year, month - 1, 1)
-    const endDate = new Date(year, month, 0, 23, 59, 59)
-    const startDateStr = startDate.toISOString().split('T')[0]
-    const endDateStr = endDate.toISOString().split('T')[0]
+    const [startDateStr, endDateStr] = getMonthDateRange(year, month)
 
     // 指定月の練習IDを取得
     const { data: practices, error: practicesError } = await this.supabase

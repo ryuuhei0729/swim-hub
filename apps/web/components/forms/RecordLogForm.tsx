@@ -12,9 +12,9 @@ type SplitTimeRow = {
   splitTime: number
 }
 
-// フォーム内部状態用のスプリットタイム型（入力中はdistanceがnumber | ''）
+// フォーム内部状態用のスプリットタイム型（入力中はdistanceがnumber | string）
 interface SplitTimeDraft {
-  distance: number
+  distance: number | string
   splitTime: number
   splitTimeDisplayValue?: string
   uiKey?: string
@@ -345,7 +345,13 @@ export default function RecordLogForm({
       const updatedSplitTimes = prev.splitTimes.map((st, i) => {
         if (i !== splitIndex) return st
         if (field === 'distance') {
-          return { ...st, distance: value === '' ? 0 : parseInt(value) || 0 }
+          // 空文字列の場合は空文字列のまま保持（バックキーで削除可能にする）
+          if (value === '') {
+            return { ...st, distance: '' }
+          }
+          // 数値に変換可能な場合は数値に、そうでない場合は文字列のまま保持
+          const numValue = parseInt(value)
+          return { ...st, distance: isNaN(numValue) ? value : numValue }
         }
         const parsedTime = value.trim() === '' ? 0 : parseTimeToSeconds(value)
         return {
@@ -617,11 +623,17 @@ export default function RecordLogForm({
                             .map(({ st, originalIndex }, splitIndex) => (
                             <div key={st.uiKey || `${index}-${originalIndex}`} className="flex items-center space-x-2">
                               <Input
-                                type="number"
-                                value={st.distance}
-                                onChange={(e) =>
-                                  handleSplitTimeChange(index, originalIndex, 'distance', e.target.value)
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                value={st.distance === 0 || st.distance === '' ? '' : String(st.distance)}
+                                onChange={(e) => {
+                                  const value = e.target.value
+                                  // 数値のみを許可（空文字列も許可）
+                                  if (value === '' || /^\d+$/.test(value)) {
+                                    handleSplitTimeChange(index, originalIndex, 'distance', value)
                                 }
+                                }}
                                 placeholder="距離 (m)"
                                 className="w-24"
                                 data-testid={`record-split-distance-${sectionIndex}-${originalIndex + 1}`}

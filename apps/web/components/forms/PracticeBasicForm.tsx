@@ -8,12 +8,14 @@ import { ja } from 'date-fns/locale'
 
 interface PracticeBasicData {
   date: string
+  title: string
   place: string
   note: string
 }
 
 type EditPracticeBasicData = {
   date?: string
+  title?: string | null
   place?: string
   note?: string
 }
@@ -40,6 +42,7 @@ export default function PracticeBasicForm({
   
   const [formData, setFormData] = useState<PracticeBasicData>({
     date: format(selectedDate, 'yyyy-MM-dd'),
+    title: '',
     place: '',
     note: ''
   })
@@ -104,6 +107,7 @@ export default function PracticeBasicForm({
       // 編集モード
       setFormData({
         date: editData.date || format(selectedDate, 'yyyy-MM-dd'),
+        title: editData.title || '',
         place: editData.place || '',
         note: editData.note || ''
       })
@@ -112,6 +116,7 @@ export default function PracticeBasicForm({
       // 新規作成モード
       setFormData({
         date: format(selectedDate, 'yyyy-MM-dd'),
+        title: '',
         place: '',
         note: ''
       })
@@ -134,11 +139,7 @@ export default function PracticeBasicForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // バリデーション
-    if (!formData.place.trim()) {
-      console.error('練習場所を入力してください')
-      return
-    }
+    // バリデーション（dateのみ必須）
 
     setIsSubmitted(true)
     try {
@@ -186,7 +187,7 @@ export default function PracticeBasicForm({
             {/* 練習日 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                練習日
+                練習日 <span className="text-red-500">*</span>
               </label>
               <Input
                 type="date"
@@ -199,10 +200,26 @@ export default function PracticeBasicForm({
               />
             </div>
 
+            {/* 練習タイトル */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                練習タイトル
+              </label>
+              <Input
+                type="text"
+                value={formData.title}
+                onChange={(e) =>
+                  setFormData({ ...formData, title: e.target.value })
+                }
+                placeholder="例: Swim, AM, 16:00"
+                data-testid="practice-title"
+              />
+            </div>
+
             {/* 練習場所 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                練習場所 <span className="text-red-500">*</span>
+                練習場所
               </label>
               <Input
                 type="text"
@@ -211,7 +228,6 @@ export default function PracticeBasicForm({
                   setFormData({ ...formData, place: e.target.value })
                 }
                 placeholder="例: 市営プール、学校プール"
-                required
                 data-testid="practice-place"
               />
             </div>

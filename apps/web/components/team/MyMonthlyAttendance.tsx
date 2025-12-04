@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAuth } from '@/contexts'
 import { AttendanceAPI, TeamAttendanceWithDetails } from '@swim-hub/shared'
 import { AttendanceStatus, TeamEvent } from '@swim-hub/shared/types/database'
+import { getMonthDateRange } from '@swim-hub/shared/utils/date'
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 
 export interface MyMonthlyAttendanceProps {
@@ -40,10 +41,7 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
       setError(null)
 
       // 月の開始日と終了日を計算
-      const startDate = new Date(currentYear, currentMonth - 1, 1)
-      const endDate = new Date(currentYear, currentMonth, 0, 23, 59, 59)
-      const startDateStr = startDate.toISOString().split('T')[0]
-      const endDateStr = endDate.toISOString().split('T')[0]
+      const [startDateStr, endDateStr] = getMonthDateRange(currentYear, currentMonth)
 
       // 練習と大会を取得
       const [practicesResult, competitionsResult] = await Promise.all([

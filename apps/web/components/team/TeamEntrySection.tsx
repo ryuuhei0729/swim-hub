@@ -337,7 +337,7 @@ export default function TeamEntrySection({ teamId, isAdmin: _isAdmin }: TeamEntr
                 <div className="flex items-center space-x-3">
                   <span className="text-xl">🏆</span>
                   <div className="text-left">
-                    <h3 className="font-semibold text-gray-900">{competition.title}</h3>
+                    <h3 className="font-semibold text-gray-900">{competition.title || '大会'}</h3>
                     <div className="flex items-center space-x-3 text-sm text-gray-600 mt-1">
                       <span>📅 {new Date(competition.date).toLocaleDateString('ja-JP')}</span>
                       {competition.place && <span>📍 {competition.place}</span>}

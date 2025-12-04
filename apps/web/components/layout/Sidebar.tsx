@@ -38,16 +38,16 @@ const baseNavigation: NavigationItem[] = [
     description: 'お知らせとスケジュール',
   },
   { 
-    name: '練習管理', 
+    name: '練習履歴', 
     href: '/practice', 
     icon: ChartBarIcon,
     description: '練習内容とタイム記録',
   },
   { 
-    name: '大会管理', 
+    name: '大会履歴', 
     href: '/competition', 
     icon: TrophyIcon,
-    description: '大会結果とエントリー',
+    description: '大会結果とタイム記録',
   },
   { 
     name: 'マイページ', 

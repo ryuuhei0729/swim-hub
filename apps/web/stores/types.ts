@@ -47,6 +47,7 @@ export type EditingData =
 
 export interface PracticeMenuFormData {
   practiceDate?: string
+  title?: string
   place?: string
   note?: string
   style?: string

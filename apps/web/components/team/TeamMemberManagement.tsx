@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthProvider'
 import { Avatar } from '@/components/ui'
 import { 
@@ -51,11 +51,6 @@ export interface BestTime {
   }
 }
 
-interface MemberBestTimes {
-  memberId: string
-  userId: string
-  bestTimes: BestTime[]
-}
 
 export interface TeamMemberManagementProps {
   teamId: string
@@ -79,6 +74,9 @@ export default function TeamMemberManagement({
   const [memberBestTimes, setMemberBestTimes] = useState<Map<string, BestTime[]>>(new Map())
   const [loadingBestTimes, setLoadingBestTimes] = useState(false)
   const [includeRelaying, setIncludeRelaying] = useState<boolean>(false)
+  const [sortStyle, setSortStyle] = useState<string | null>(null)
+  const [sortDistance, setSortDistance] = useState<number | null>(null)
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
 
   const loadMembers = async () => {
     try {
@@ -327,7 +325,7 @@ export default function TeamMemberManagement({
   }
 
   // メンバーのベストタイムを取得（ALLタブロジック）
-  const getBestTimeForMember = (memberId: string, style: string, distance: number): BestTime | null => {
+  const getBestTimeForMember = useCallback((memberId: string, style: string, distance: number): BestTime | null => {
     const bestTimes = memberBestTimes.get(memberId) || []
     const dbStyleName = `${distance}m${style}`
     
@@ -392,7 +390,7 @@ export default function TeamMemberManagement({
     return candidates.reduce((best, current) => 
       current.time < best.time ? current : best
     )
-  }
+  }, [memberBestTimes, includeRelaying])
 
   // タイム表示用のヘルパー関数
   const getTimeDisplay = (bestTime: BestTime) => {
@@ -419,6 +417,42 @@ export default function TeamMemberManagement({
   const getDistancesForStyle = (style: string): number[] => {
     return DISTANCES.filter(distance => !isInvalidCombination(style, distance))
   }
+
+  // ソート処理
+  const handleSort = (style: string, distance: number) => {
+    if (sortStyle === style && sortDistance === distance) {
+      // 同じセルをクリックした場合はソートを解除
+      setSortStyle(null)
+      setSortDistance(null)
+      setSortOrder('asc')
+    } else {
+      // 新しいセルをクリックした場合は昇順でソート
+      setSortStyle(style)
+      setSortDistance(distance)
+      setSortOrder('asc')
+    }
+  }
+
+  // ソートされたメンバーリストを取得
+  const getSortedMembers = useMemo(() => {
+    if (!sortStyle || sortDistance === null) {
+      return members
+    }
+
+    return [...members].sort((a, b) => {
+      const timeA = getBestTimeForMember(a.id, sortStyle, sortDistance)
+      const timeB = getBestTimeForMember(b.id, sortStyle, sortDistance)
+
+      // タイムがない場合は最後に配置
+      if (!timeA && !timeB) return 0
+      if (!timeA) return 1
+      if (!timeB) return -1
+
+      // タイムで比較
+      const comparison = timeA.time - timeB.time
+      return sortOrder === 'asc' ? comparison : -comparison
+    })
+  }, [members, sortStyle, sortDistance, sortOrder, getBestTimeForMember])
 
   if (loading) {
     return (
@@ -526,20 +560,31 @@ export default function TeamMemberManagement({
               <tr>
                 {STYLES.map((style) => {
                   const distances = getDistancesForStyle(style)
-                  return distances.map((distance) => (
-                    <th
-                      key={`${style}-${distance}`}
-                      className={`px-2 py-2 text-center text-xs font-semibold text-gray-700 border-r border-gray-300 last:border-r-0 ${styleHeaderBgClass[style]}`}
-                    >
-                      {distance}m
-                    </th>
-                  ))
+                  return distances.map((distance) => {
+                    const isSorted = sortStyle === style && sortDistance === distance
+                    return (
+                      <th
+                        key={`${style}-${distance}`}
+                        onClick={() => handleSort(style, distance)}
+                        className={`px-2 py-2 text-center text-xs font-semibold text-gray-700 border-r border-gray-300 last:border-r-0 cursor-pointer hover:bg-opacity-80 transition-colors ${styleHeaderBgClass[style]} ${isSorted ? 'ring-2 ring-blue-500' : ''}`}
+                        title="クリックでソート"
+                      >
+                        <div className="flex items-center justify-center space-x-1">
+                          <span>{distance}m</span>
+                          {isSorted && (
+                            <span className="text-blue-600">
+                              {sortOrder === 'asc' ? '↑' : '↓'}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                    )
+                  })
                 })}
               </tr>
             </thead>
             <tbody className="bg-white">
-              {members.map((member, memberIdx) => {
-                const bestTimes = memberBestTimes.get(member.id) || []
+              {getSortedMembers.map((member, memberIdx) => {
                 return (
                   <tr 
                     key={member.id}
@@ -565,7 +610,7 @@ export default function TeamMemberManagement({
                               {member.users?.name || 'Unknown User'}
                             </p>
                             {member.role === 'admin' && (
-                              <StarIcon className="h-3 w-3 text-yellow-500 flex-shrink-0" />
+                              <StarIcon className="h-3 w-3 text-yellow-500 shrink-0" />
                             )}
                           </div>
                           {member.user_id === currentUserId && (

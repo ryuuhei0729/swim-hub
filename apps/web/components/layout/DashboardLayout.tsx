@@ -22,9 +22,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     setSidebarOpen(false)
   }
 
-  // パス変更時にHeaderの下端（64px）までスクロール
+  // パス変更時にHeaderの下端までスクロール
   useEffect(() => {
-    // Headerの高さは64px（pt-16 = 4rem = 64px）
+    // Headerの高さは0
     const headerHeight = 0
     window.scrollTo({
       top: headerHeight,
