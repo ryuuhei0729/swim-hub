@@ -1210,7 +1210,7 @@ function PracticeDetails({
 
             {/* メモ */}
             {formattedLog.note && (
-              <div className="from-slate-50 to-gray-50 rounded-lg p-3 mb-1 border border-slate-200">
+              <div className="rounded-lg p-3 mb-1 border border-slate-200">
                 <div className="text-xs font-medium text-gray-500 mb-1">メモ</div>
                 <div className="text-sm text-gray-700">
                   {formattedLog.note}
@@ -1624,7 +1624,7 @@ function CompetitionDetails({
 
                 {/* メモ */}
                 {(record.note) && (
-                  <div className=" from-slate-50 to-gray-50 rounded-lg p-3 mb-1 border border-slate-200 mt-2">
+                  <div className=" rounded-lg p-3 mb-1 border border-slate-200 mt-2">
                     <div className="text-xs font-medium text-gray-500 mb-1">メモ</div>
                     <div className="text-sm text-gray-700">
                       {record.note}
@@ -1825,14 +1825,7 @@ function CompetitionWithEntry({
       <div className="bg-blue-50 px-4 py-3 border-b border-blue-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className={`text-lg font-semibold px-3 py-1 rounded-lg flex items-center gap-2 ${
-              isTeamCompetition 
-                ? 'text-violet-800 bg-violet-200' 
-                : 'text-blue-800 bg-blue-200'
-            }`} data-testid="competition-title-display">
-              <TrophyIcon className="h-5 w-5" />
-              {competitionName || '大会'}
-            </span>
+            <h5 className="font-semibold text-gray-900" data-testid="competition-title-display">{competitionName || '大会'}</h5>
             {isTeamCompetition && (
               <span className="text-xs bg-violet-100 text-violet-700 px-2 py-1 rounded-full">
                 チーム

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-    createMockPractice,
-    createMockPracticeLog,
-    createMockSupabaseClient,
+  createMockPractice,
+  createMockPracticeLog,
+  createMockSupabaseClient,
 } from '../../__mocks__/supabase'
 import { PracticeAPI } from '../../api/practices'
 
@@ -82,6 +82,7 @@ describe('PracticeAPI', () => {
     it('認証済みユーザーのとき練習記録を作成できる', async () => {
       const newPractice = {
         date: '2025-01-15',
+        title: 'テスト練習',
         place: 'テストプール',
         memo: 'テスト練習',
       }
@@ -107,7 +108,7 @@ describe('PracticeAPI', () => {
       api = new PracticeAPI(mockClient)
 
       await expect(
-        api.createPractice({ date: '2025-01-15', place: 'プール', note: 'テストメモ' })
+        api.createPractice({ date: '2025-01-15', title: 'テスト練習', place: 'プール', note: 'テストメモ' })
       ).rejects.toThrow('認証が必要です')
     })
   })
