@@ -8,12 +8,12 @@ import ExcelJS from 'exceljs'
 // パース済みデータの型定義
 export interface ParsedCompetitionData {
   competitions: Array<{
-    title: string
+    title?: string | null
     date: string
-    end_date: string | null // 終了日（複数日開催の場合）
-    place: string
+    end_date?: string | null // 終了日（複数日開催の場合）
+    place?: string | null
     pool_type: number // 0: 25m, 1: 50m
-    note: string | null
+    note?: string | null
   }>
   errors: Array<{
     row: number
@@ -337,12 +337,7 @@ function processCompetitionRow(
   const poolType = String(poolTypeCell.value || '').trim()
   const note = String(noteCell.value || '').trim()
 
-  // 大会名が入力されていない行はスキップ
-  if (!title) {
-    return
-  }
-
-  // バリデーション
+  // バリデーション（dateとpool_typeのみ必須）
   const errors: string[] = []
 
   if (!startDate) {
@@ -364,9 +359,7 @@ function processCompetitionRow(
     }
   }
 
-  if (!place) {
-    errors.push('場所は必須です')
-  }
+  // placeは任意（nullable）
 
   if (!poolType) {
     errors.push('プール種別は必須です')
@@ -386,10 +379,10 @@ function processCompetitionRow(
   }
 
   result.competitions.push({
-    title: title,
+    title: title || null,
     date: startDate,
     end_date: endDate || null,
-    place: place,
+    place: place || null,
     pool_type: poolType === '25m' ? 0 : 1,
     note: note || null
   })

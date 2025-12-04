@@ -312,7 +312,7 @@ export default function TeamEntrySection({ teamId, isAdmin: _isAdmin }: TeamEntr
   }
 
   return (
-    <div className="bg-linear-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-lg shadow-md p-6">
+    <div className="bg-orange-50 border border-orange-200 rounded-lg shadow-md p-6">
       <div className="flex items-center mb-4">
         <span className="text-2xl mr-2">📝</span>
         <h2 className="text-xl font-bold text-orange-900">エントリー受付中の大会</h2>
@@ -337,7 +337,7 @@ export default function TeamEntrySection({ teamId, isAdmin: _isAdmin }: TeamEntr
                 <div className="flex items-center space-x-3">
                   <span className="text-xl">🏆</span>
                   <div className="text-left">
-                    <h3 className="font-semibold text-gray-900">{competition.title}</h3>
+                    <h3 className="font-semibold text-gray-900">{competition.title || '大会'}</h3>
                     <div className="flex items-center space-x-3 text-sm text-gray-600 mt-1">
                       <span>📅 {new Date(competition.date).toLocaleDateString('ja-JP')}</span>
                       {competition.place && <span>📍 {competition.place}</span>}
@@ -465,7 +465,7 @@ export default function TeamEntrySection({ teamId, isAdmin: _isAdmin }: TeamEntr
                         <button
                           onClick={() => handleSubmitEntry(competition.id)}
                           disabled={submitting || !form.styleId}
-                          className="flex-1 px-4 py-2 bg-linear-to-r from-orange-600 to-amber-600 text-white rounded-md hover:from-orange-700 hover:to-amber-700 transition-all shadow-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-all shadow-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {submitting ? '送信中...' : form.editingEntryId ? '更新する' : 'エントリーする'}
                         </button>

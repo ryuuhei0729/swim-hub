@@ -8,16 +8,17 @@ import { PracticeInsert, CompetitionInsert } from '../../types/database'
 export interface BulkRegisterInput {
   practices: Array<{
     date: string
-    place: string
-    note: string | null
+    title?: string | null
+    place?: string | null
+    note?: string | null
   }>
   competitions: Array<{
-    title: string
+    title?: string | null
     date: string
     end_date?: string | null // 終了日（複数日開催の場合）
-    place: string
+    place?: string | null
     pool_type: number
-    note: string | null
+    note?: string | null
   }>
 }
 
@@ -67,8 +68,9 @@ export class TeamBulkRegisterAPI {
         const practiceInserts: PracticeInsert[] = input.practices.map(practice => ({
           user_id: user.id,
           date: practice.date,
-          place: practice.place,
-          note: practice.note,
+          title: practice.title || null,
+          place: practice.place || null,
+          note: practice.note || null,
           team_id: teamId
         }))
 
@@ -93,12 +95,12 @@ export class TeamBulkRegisterAPI {
         const competitionInserts: CompetitionInsert[] = input.competitions.map(competition => ({
           user_id: null,
           team_id: teamId,
-          title: competition.title,
+          title: competition.title || null,
           date: competition.date,
           end_date: competition.end_date || null, // 終了日（複数日開催の場合）
-          place: competition.place,
+          place: competition.place || null,
           pool_type: competition.pool_type,
-          note: competition.note,
+          note: competition.note || null,
           entry_status: 'before'
         }))
 

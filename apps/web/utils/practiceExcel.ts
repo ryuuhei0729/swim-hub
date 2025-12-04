@@ -9,8 +9,9 @@ import ExcelJS from 'exceljs'
 export interface ParsedPracticeData {
   practices: Array<{
     date: string
-    place: string
-    note: string | null
+    title?: string | null
+    place?: string | null
+    note?: string | null
   }>
   errors: Array<{
     row: number
@@ -274,12 +275,7 @@ export function parsePracticeExcelFile(file: File): Promise<ParsedPracticeData> 
             const place = String(placeCell.value || '').trim()
             const note = String(noteCell.value || '').trim()
 
-            // 場所が入力されていない行はスキップ
-            if (!place) {
-              return
-            }
-
-            // バリデーション
+            // バリデーション（dateのみ必須）
             const errors: string[] = []
 
             if (!dateValue) {
@@ -304,7 +300,8 @@ export function parsePracticeExcelFile(file: File): Promise<ParsedPracticeData> 
 
             result.practices.push({
               date: dateValue,
-              place: place,
+              title: null, // Excelフォーマットにはtitleカラムがないため、null
+              place: place || null,
               note: note || null
             })
           })

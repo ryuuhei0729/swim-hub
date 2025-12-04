@@ -1,14 +1,16 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthProvider'
-import { BaseModal, Avatar } from '@/components/ui'
+import { BaseModal, Avatar, Tabs } from '@/components/ui'
 import { 
   StarIcon,
   TrashIcon,
   TrophyIcon,
   CalendarIcon
 } from '@heroicons/react/24/outline'
+import { differenceInDays, parseISO } from 'date-fns'
+import { formatTime, formatDate } from '@/utils/formatters'
 
 export interface MemberDetail {
   id: string
@@ -29,6 +31,8 @@ export interface BestTime {
   id: string
   time: number
   created_at: string
+  pool_type: number // 0: 短水路, 1: 長水路
+  is_relaying: boolean
   style: {
     name_jp: string
     distance: number
@@ -36,6 +40,16 @@ export interface BestTime {
   competition?: {
     title: string
     date: string
+  }
+  // 引き継ぎありのタイム（オプショナル）
+  relayingTime?: {
+    id: string
+    time: number
+    created_at: string
+    competition?: {
+      title: string
+      date: string
+    }
   }
 }
 
@@ -69,6 +83,7 @@ export default function MemberDetailModal({
       loadAvailableStyles()
       loadBestTimes()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, member])
 
   const loadAvailableStyles = async () => {
@@ -98,6 +113,8 @@ export default function MemberDetailModal({
           id,
           time,
           created_at,
+          pool_type,
+          is_relaying,
           styles!records_style_id_fkey (
             name_jp,
             distance
@@ -112,40 +129,121 @@ export default function MemberDetailModal({
 
       if (error) throw error
 
-      // 種目ごとのベストタイムを取得
-      const bestTimesByStyle = new Map<string, BestTime>()
-      
-      type RecordRow = {
+      // 引き継ぎなしのベストタイム（種目、プール種別ごと）
+      const bestTimesByStyleAndPool = new Map<string, BestTime>()
+      // 引き継ぎありのベストタイム（種目、プール種別ごと）
+      const relayingBestTimesByStyleAndPool = new Map<string, {
         id: string
         time: number
         created_at: string
-        styles: { name_jp: string; distance: number }[] | null
-        competitions: { title: string; date: string }[] | null
+        competition?: {
+          title: string
+          date: string
+        }
+      }>()
+
+      if (data && Array.isArray(data)) {
+        data.forEach((record: {
+          id: string
+          time: number
+          created_at: string
+          pool_type: number
+          is_relaying: boolean
+          styles?: { name_jp: string; distance: number } | null | { name_jp: string; distance: number }[]
+          competitions?: { title: string; date: string } | null | { title: string; date: string }[]
+        }) => {
+          const style = Array.isArray(record.styles) ? record.styles[0] : record.styles
+          const competition = Array.isArray(record.competitions) ? record.competitions[0] : record.competitions
+          const styleKey = style?.name_jp || 'Unknown'
+          const poolType = record.pool_type ?? 0
+          const key = `${styleKey}_${poolType}`
+
+          if (record.is_relaying) {
+            // 引き継ぎありのタイム
+            if (!relayingBestTimesByStyleAndPool.has(key) || 
+                record.time < relayingBestTimesByStyleAndPool.get(key)!.time) {
+              relayingBestTimesByStyleAndPool.set(key, {
+                id: record.id,
+                time: record.time,
+                created_at: record.created_at,
+                competition: competition ? {
+                  title: competition.title,
+                  date: competition.date
+                } : undefined
+              })
+            }
+          } else {
+            // 引き継ぎなしのタイム
+            if (!bestTimesByStyleAndPool.has(key) || 
+                record.time < bestTimesByStyleAndPool.get(key)!.time) {
+              bestTimesByStyleAndPool.set(key, {
+                id: record.id,
+                time: record.time,
+                created_at: record.created_at,
+                pool_type: poolType,
+                is_relaying: false,
+                style: {
+                  name_jp: style?.name_jp || 'Unknown',
+                  distance: style?.distance || 0
+                },
+                competition: competition ? {
+                  title: competition.title,
+                  date: competition.date
+                } : undefined
+              })
+            }
+          }
+        })
       }
-      ;(data || []).forEach((record: RecordRow) => {
-        const style = record.styles?.[0]
-        const competition = record.competitions?.[0]
-        if (!style) return
-        const styleKey = style.name_jp || 'Unknown'
-        
-        if (!bestTimesByStyle.has(styleKey) || record.time < bestTimesByStyle.get(styleKey)!.time) {
-          bestTimesByStyle.set(styleKey, {
-            id: record.id,
-            time: record.time,
-            created_at: record.created_at,
-            style: {
-              name_jp: style.name_jp || 'Unknown',
-              distance: style.distance || 0
-            },
-            competition: competition ? {
-              title: competition.title,
-              date: competition.date
-            } : undefined
+
+      // 引き継ぎなしのタイムに、引き継ぎありのタイムを紐付ける
+      const result: BestTime[] = []
+      bestTimesByStyleAndPool.forEach((bestTime, key) => {
+        const relayingTime = relayingBestTimesByStyleAndPool.get(key)
+        result.push({
+          ...bestTime,
+          relayingTime: relayingTime
+        })
+      })
+
+      // 引き継ぎありのみのタイム（引き継ぎなしがない場合）も追加
+      relayingBestTimesByStyleAndPool.forEach((relayingTime, key) => {
+        if (!bestTimesByStyleAndPool.has(key)) {
+          const [styleName, poolTypeStr] = key.split('_')
+          const poolType = parseInt(poolTypeStr, 10)
+
+          const record = data?.find((r: {
+            id: string
+            pool_type: number
+            is_relaying: boolean
+            styles?: { name_jp: string; distance: number } | null | { name_jp: string; distance: number }[]
+          }) => {
+            const style = Array.isArray(r.styles) ? r.styles[0] : r.styles
+            return (style?.name_jp || 'Unknown') === styleName &&
+              (r.pool_type ?? 0) === poolType &&
+              r.is_relaying &&
+              r.id === relayingTime.id
           })
+
+          if (record) {
+            const style = Array.isArray(record.styles) ? record.styles[0] : record.styles
+            result.push({
+              id: relayingTime.id,
+              time: relayingTime.time,
+              created_at: relayingTime.created_at,
+              pool_type: poolType,
+              is_relaying: true,
+              style: {
+                name_jp: styleName,
+                distance: style?.distance || 0
+              },
+              competition: relayingTime.competition
+            })
+          }
         }
       })
 
-      setBestTimes(Array.from(bestTimesByStyle.values()))
+      setBestTimes(result)
     } catch (err) {
       console.error('ベストタイム取得エラー:', err)
       setError('ベストタイムの取得に失敗しました')
@@ -222,21 +320,13 @@ export default function MemberDetailModal({
     }
   }
 
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60)
-    const seconds = time - minutes * 60
-    if (minutes === 0) {
-      return seconds.toFixed(2)
-    }
-    return `${minutes}:${seconds.toFixed(2).padStart(5, '0')}`
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ja-JP')
-  }
 
   // ベストタイム表コンポーネント
   const BestTimesTable = ({ bestTimes }: { bestTimes: BestTime[] }) => {
+    type TabType = 'all' | 'short' | 'long'
+    const [activeTab, setActiveTab] = useState<TabType>('all')
+    const [includeRelaying, setIncludeRelaying] = useState<boolean>(false)
+
     const styleHeaderBgClass: Record<string, string> = {
       '自由形': 'bg-yellow-100',
       '平泳ぎ': 'bg-green-100',
@@ -259,87 +349,250 @@ export default function MemberDetailModal({
       if ((style === '平泳ぎ' || style === '背泳ぎ' || style === 'バタフライ') && (distance === 400 || distance === 800)) return true
       return false
     }
-    const getBestTime = (style: string, distance: number) => {
-      // データベースの種目名形式（例：50m自由形）で検索
+
+    // タブごとにフィルタリングされたベストタイムを取得
+    const filteredBestTimes = useMemo(() => {
+      if (activeTab === 'short') {
+        return bestTimes.filter(bt => bt.pool_type === 0)
+      } else if (activeTab === 'long') {
+        return bestTimes.filter(bt => bt.pool_type === 1)
+      } else {
+        return bestTimes
+      }
+    }, [bestTimes, activeTab])
+
+    const getBestTime = (style: string, distance: number): BestTime | null => {
       const dbStyleName = `${distance}m${style}`
-      return bestTimes.find(bt => bt.style.name_jp === dbStyleName)
+      
+      if (activeTab === 'all') {
+        const candidates: BestTime[] = []
+        
+        // 短水路のタイムを取得
+        const shortCourseTimes = bestTimes.filter(bt => 
+          bt.style.name_jp === dbStyleName && 
+          bt.pool_type === 0
+        )
+        
+        shortCourseTimes.forEach(bt => {
+          if (!bt.is_relaying) {
+            candidates.push(bt)
+            if (includeRelaying && bt.relayingTime) {
+              candidates.push({
+                ...bt,
+                id: bt.relayingTime.id,
+                time: bt.relayingTime.time,
+                created_at: bt.relayingTime.created_at,
+                is_relaying: true,
+                competition: bt.relayingTime.competition
+              })
+            }
+          } else {
+            if (includeRelaying) {
+              candidates.push(bt)
+            }
+          }
+        })
+        
+        // 長水路のタイムを取得
+        const longCourseTimes = bestTimes.filter(bt => 
+          bt.style.name_jp === dbStyleName && 
+          bt.pool_type === 1
+        )
+        
+        longCourseTimes.forEach(bt => {
+          if (!bt.is_relaying) {
+            candidates.push(bt)
+            if (includeRelaying && bt.relayingTime) {
+              candidates.push({
+                ...bt,
+                id: bt.relayingTime.id,
+                time: bt.relayingTime.time,
+                created_at: bt.relayingTime.created_at,
+                is_relaying: true,
+                competition: bt.relayingTime.competition
+              })
+            }
+          } else {
+            if (includeRelaying) {
+              candidates.push(bt)
+            }
+          }
+        })
+        
+        if (candidates.length === 0) return null
+        return candidates.reduce((best, current) => 
+          current.time < best.time ? current : best
+        )
+      } else {
+        const candidates: BestTime[] = []
+        const matchingTimes = filteredBestTimes.filter(bt => bt.style.name_jp === dbStyleName)
+        
+        matchingTimes.forEach(bt => {
+          if (!bt.is_relaying) {
+            candidates.push(bt)
+            if (includeRelaying && bt.relayingTime) {
+              candidates.push({
+                ...bt,
+                id: bt.relayingTime.id,
+                time: bt.relayingTime.time,
+                created_at: bt.relayingTime.created_at,
+                is_relaying: true,
+                competition: bt.relayingTime.competition
+              })
+            }
+          } else {
+            if (includeRelaying) {
+              candidates.push(bt)
+            }
+          }
+        })
+        
+        if (candidates.length === 0) return null
+        return candidates.reduce((best, current) => 
+          current.time < best.time ? current : best
+        )
+      }
+    }
+
+    // タイム表示用のヘルパー関数
+    const getTimeDisplay = (bestTime: BestTime) => {
+      const timeStr = formatTime(bestTime.time)
+      const suffixes: string[] = []
+      
+      if (activeTab === 'all' && bestTime.pool_type === 1) {
+        suffixes.push('L')
+      }
+      
+      if (bestTime.is_relaying) {
+        suffixes.push('R')
+      }
+      
+      return {
+        main: timeStr,
+        suffix: suffixes.join('')
+      }
+    }
+
+    const tabs = [
+      { id: 'all', label: 'ALL' },
+      { id: 'short', label: '短水路' },
+      { id: 'long', label: '長水路' }
+    ]
+
+    if (bestTimes.length === 0) {
+      return (
+        <div className="text-center py-6">
+          <TrophyIcon className="h-10 w-10 text-gray-400 mx-auto mb-3" />
+          <p className="text-sm text-gray-600">記録がありません</p>
+          <p className="text-xs text-gray-500 mt-1">
+            このメンバーはまだ記録を登録していません
+          </p>
+        </div>
+      )
     }
 
     return (
-      <div className="overflow-x-auto bg-white rounded-xl shadow border border-gray-300">
-        <table className="min-w-full table-fixed border-separate border-spacing-0">
-          <thead className="sticky top-0 z-10">
-            <tr>
-              <th className="px-3 py-2 text-left text-xs md:text-sm font-semibold text-gray-700 border-r border-gray-300 min-w-[64px] w-[72px] h-[44px] tracking-wide">
-                距離
-              </th>
-              {STYLES.map((style) => (
-                <th
-                  key={style}
-                  className={`px-3 py-2 text-center text-xs md:text-sm font-semibold text-gray-800 border-r border-gray-300 last:border-r-0 min-w-[110px] h-[44px] ${styleHeaderBgClass[style]}`}
-                >
-                  {style}
+      <div>
+        {/* タブとチェックボックス */}
+        <div className="mb-3 flex items-center justify-between">
+          <Tabs
+            tabs={tabs}
+            activeTabId={activeTab}
+            onTabChange={(tabId) => setActiveTab(tabId as TabType)}
+          />
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={includeRelaying}
+              onChange={(e) => setIncludeRelaying(e.target.checked)}
+              className="w-3.5 h-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-xs text-gray-700">引き継ぎタイムも含めて表示</span>
+          </label>
+        </div>
+
+        <div className="overflow-x-auto bg-white rounded-lg shadow border border-gray-300">
+          <table className="min-w-full table-fixed border-separate border-spacing-0">
+            <thead className="sticky top-0 z-10">
+              <tr>
+                <th className="px-2 py-1.5 text-left text-xs font-semibold text-gray-700 border-r border-gray-300 min-w-[48px] w-[56px] h-[36px] tracking-wide">
+                  距離
                 </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="bg-white">
-            {DISTANCES.map((distance, rowIdx) => (
-              <tr key={distance}>
-                <td className={`px-3 py-3 text-xs md:text-sm font-semibold text-gray-900 border-r border-gray-300 bg-gray-50 min-w-[64px] w-[72px] h-[64px] ${rowIdx > 0 ? 'border-t border-gray-300' : ''}`}>
-                  {distance}m
-                </td>
-                {STYLES.map((style) => {
-                  const bestTime = getBestTime(style, distance)
-                  return (
-                    <td
-                      key={style}
-                      className={`px-3 py-3 text-center text-xs md:text-sm text-gray-900 border-r border-gray-300 last:border-r-0 min-w-[110px] h-[64px] ${rowIdx > 0 ? 'border-t border-gray-300' : ''} ${isInvalidCombination(style, distance) ? 'bg-gray-200' : styleCellBgClass[style]}`}
-                    >
-                      {bestTime ? (
-                        <div className="group relative inline-block pr-6 pt-2">
-                          {(() => {
-                            const createdAt = new Date(bestTime.created_at)
-                            const now = new Date()
-                            const diffDays = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24)
-                            const isNew = diffDays <= 30
-                            return isNew ? (
-                              <span className="absolute -top-1 -right-3 text-[10px] md:text-xs bg-red-500 text-white px-1.5 py-0.5 rounded-full shadow">New</span>
-                            ) : null
-                          })()}
-                          {/* 通常表示：ベストタイムのみ */}
-                          <span className={`font-semibold text-base md:text-lg ${(() => {
-                            const createdAt = new Date(bestTime.created_at)
-                            const now = new Date()
-                            const diffDays = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24)
-                            return diffDays <= 30 ? 'text-red-600' : 'text-gray-900'
-                          })()}`}>{formatTime(bestTime.time)}</span>
-                          
-                          {/* ホバー時の詳細情報 */}
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-[11px] md:text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                            <div className="flex items-center space-x-1 mb-1">
-                              <CalendarIcon className="h-3 w-3" />
-                              <span>{formatDate(bestTime.created_at)}</span>
-                            </div>
-                            {bestTime.competition && (
-                              <div className="text-blue-300">
-                                {bestTime.competition.title}
-                              </div>
-                            )}
-                            {/* 矢印 */}
-                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="inline-block text-gray-300">—</span>
-                      )}
-                    </td>
-                  )
-                })}
+                {STYLES.map((style) => (
+                  <th
+                    key={style}
+                    className={`px-2 py-1.5 text-center text-xs font-semibold text-gray-800 border-r border-gray-300 last:border-r-0 min-w-[90px] h-[36px] ${styleHeaderBgClass[style]}`}
+                  >
+                    {style}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="bg-white">
+              {DISTANCES.map((distance, rowIdx) => (
+                <tr key={distance}>
+                  <td className={`px-2 py-2 text-xs font-semibold text-gray-600 border-r border-gray-300 bg-gray-50 min-w-[48px] w-[56px] h-[48px] ${rowIdx > 0 ? 'border-t border-gray-300' : ''}`}>
+                    {distance}m
+                  </td>
+                  {STYLES.map((style) => {
+                    const bestTime = getBestTime(style, distance)
+                    const createdAt = bestTime ? parseISO(bestTime.created_at) : null
+                    const isNew = createdAt ? differenceInDays(new Date(), createdAt) <= 30 : false
+                    return (
+                      <td
+                        key={style}
+                        className={`px-2 py-2 text-center text-xs text-gray-900 border-r border-gray-300 last:border-r-0 min-w-[90px] h-[48px] ${rowIdx > 0 ? 'border-t border-gray-300' : ''} ${isInvalidCombination(style, distance) ? 'bg-gray-200' : styleCellBgClass[style]}`}
+                      >
+                        {bestTime ? (
+                          <div className={`group relative inline-block pt-1 ${isNew ? 'pr-5' : ''}`}>
+                            {isNew && (
+                              <span className="absolute -top-0.5 -right-2.5 text-[9px] bg-red-500 text-white px-1 py-0.5 rounded-full shadow">New</span>
+                            )}
+                            <span className={`font-semibold text-sm ${isNew ? 'text-red-600' : 'text-gray-900'}`}>
+                              {(() => {
+                                const display = getTimeDisplay(bestTime)
+                                return (
+                                  <>
+                                    {display.main}
+                                    {display.suffix && (
+                                      <span className="text-[10px] ml-0.5">{display.suffix}</span>
+                                    )}
+                                  </>
+                                )
+                              })()}
+                            </span>
+                            
+                            {/* ホバー時の詳細情報 */}
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1.5 bg-gray-900 text-white text-[10px] rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                              <div className="flex items-center space-x-1 mb-1">
+                                <CalendarIcon className="h-2.5 w-2.5" />
+                                <span>{formatDate(bestTime.created_at)}</span>
+                              </div>
+                              {bestTime.competition && (
+                                <div className="text-blue-300">
+                                  {bestTime.competition.title}
+                                </div>
+                              )}
+                              <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="inline-block text-gray-300">—</span>
+                        )}
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* 注釈 */}
+        <div className="mt-2 text-xs text-gray-400 flex items-center justify-end space-x-3">
+          <span>※ L: 長水路</span>
+          <span>R: 引き継ぎあり</span>
+        </div>
       </div>
     )
   }

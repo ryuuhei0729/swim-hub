@@ -326,7 +326,7 @@ export default function PracticeTimeModal({
                 const allTimes = log.times || []
 
                 return (
-                  <div key={log.id} className="bg-linear-to-br from-emerald-50 via-green-50 to-teal-50 border-0 rounded-lg p-4">
+                  <div key={log.id} className="bg-emerald-50 border-0 rounded-lg p-4">
                     {/* ヘッダー: 場所、タグ */}
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
@@ -376,7 +376,7 @@ export default function PracticeTimeModal({
 
                     {/* メモ */}
                     {log.note && (
-                      <div className="bg-linear-to-r from-slate-50 to-gray-50 rounded-lg p-3 mb-3 border border-slate-200">
+                      <div className="bg-slate-50 rounded-lg p-3 mb-3 border border-slate-200">
                         <div className="text-xs font-medium text-gray-500 mb-1">メモ</div>
                         <div className="text-sm text-slate-700">
                           {log.note}

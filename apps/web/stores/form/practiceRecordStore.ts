@@ -22,6 +22,7 @@ export type PracticePageEditingData = {
   id: string
   practiceId: string
   date: string
+  title?: string
   place: string
   note: string
   style: string

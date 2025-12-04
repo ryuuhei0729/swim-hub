@@ -28,14 +28,15 @@ export default function TeamCompetitionForm({
     date: new Date().toISOString().split('T')[0], // YYYY-MM-DD形式
     endDate: '', // 終了日（複数日開催の場合）
     place: '',
+    poolType: 0, // プール種別（0: 短水路, 1: 長水路）
     note: ''
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!formData.title || !formData.date) {
-      setError('大会名と日付は必須です')
+    if (!formData.date) {
+      setError('日付は必須です')
       return
     }
     
@@ -55,12 +56,12 @@ export default function TeamCompetitionForm({
 
       const competitionInput: import('@apps/shared/types/database').CompetitionInsert = {
         user_id: user.id,
-        title: formData.title,
+        title: formData.title || null,
         date: formData.date,
         end_date: formData.endDate || null, // 終了日（空文字の場合はnull）
         place: formData.place || null,
         note: formData.note || null,
-        pool_type: 0,
+        pool_type: formData.poolType,
         team_id: teamId
       }
       await recordsAPI.create(competitionInput)
@@ -74,6 +75,7 @@ export default function TeamCompetitionForm({
         date: new Date().toISOString().split('T')[0],
         endDate: '',
         place: '',
+        poolType: 0,
         note: ''
       })
     } catch (err) {
@@ -93,6 +95,7 @@ export default function TeamCompetitionForm({
         date: new Date().toISOString().split('T')[0],
         endDate: '',
         place: '',
+        poolType: 0,
         note: ''
       })
       setError(null)
@@ -151,14 +154,13 @@ export default function TeamCompetitionForm({
             {/* 大会名 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                大会名 <span className="text-red-500">*</span>
+                大会名
               </label>
               <Input
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="例: 県大会"
-                required
+                placeholder="例: 県大会（空欄の場合は「大会」と表示）"
                 data-testid="team-competition-title"
               />
             </div>
@@ -203,6 +205,23 @@ export default function TeamCompetitionForm({
                 placeholder="例: 県立プール"
                 data-testid="team-competition-place"
               />
+            </div>
+
+            {/* プール種別 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                プール種別 <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.poolType}
+                onChange={(e) => setFormData({ ...formData, poolType: parseInt(e.target.value) })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+                data-testid="team-competition-pool-type"
+              >
+                <option value={0}>短水路 (25m)</option>
+                <option value={1}>長水路 (50m)</option>
+              </select>
             </div>
 
             {/* メモ */}

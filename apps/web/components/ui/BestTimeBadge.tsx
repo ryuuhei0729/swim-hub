@@ -90,7 +90,7 @@ export default function BestTimeBadge({
 
   return (
     <div className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-100 border border-yellow-400 rounded-md">
-      <span className="text-xs font-bold text-yellow-800">🏆 Best time更新！</span>
+      <span className="text-xs font-bold text-yellow-800">🏆 Best time！</span>
     </div>
   )
 }

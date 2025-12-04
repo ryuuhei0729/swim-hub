@@ -1,5 +1,6 @@
 // =============================================================================
-// React Query設定 - Swim Hub Webアプリケーション
+// React Query設定 - Swim Hub共通パッケージ
+// Web/Mobile共通で使用するReact Query設定
 // =============================================================================
 
 import { QueryClient } from '@tanstack/react-query'

@@ -44,3 +44,45 @@ export async function reactivateTeamMembership(membershipId: string, joinedAt: s
   }
 }
 
+/**
+ * メンバーシップを承認するServer Action
+ */
+export async function approveMembership(membershipId: string, teamId: string) {
+  const supabase = await createAuthenticatedServerClient()
+  const api = new TeamMembersAPI(supabase)
+  
+  try {
+    const membership = await api.approve(membershipId)
+    
+    // キャッシュを無効化
+    revalidatePath('/teams')
+    revalidatePath(`/teams-admin/${teamId}`)
+    
+    return { success: true, membership }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'メンバーシップの承認に失敗しました'
+    return { success: false, error: message }
+  }
+}
+
+/**
+ * メンバーシップを拒否するServer Action
+ */
+export async function rejectMembership(membershipId: string, teamId: string) {
+  const supabase = await createAuthenticatedServerClient()
+  const api = new TeamMembersAPI(supabase)
+  
+  try {
+    const membership = await api.reject(membershipId)
+    
+    // キャッシュを無効化
+    revalidatePath('/teams')
+    revalidatePath(`/teams-admin/${teamId}`)
+    
+    return { success: true, membership }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'メンバーシップの拒否に失敗しました'
+    return { success: false, error: message }
+  }
+}
+
