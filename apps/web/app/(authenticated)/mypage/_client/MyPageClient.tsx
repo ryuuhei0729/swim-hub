@@ -4,6 +4,7 @@ import React, { useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts'
 import { useUserQuery, userKeys } from '@apps/shared/hooks'
+import { TeamCoreAPI } from '@apps/shared/api/teams'
 import { useQueryClient } from '@tanstack/react-query'
 import { TrophyIcon, DocumentArrowUpIcon } from '@heroicons/react/24/outline'
 import BestTimesTable from '@/components/profile/BestTimesTable'
@@ -65,6 +66,29 @@ export default function MyPageClient({
     userId: user?.id,
     initialProfile: initialProfile as import('@apps/shared/types/database').UserProfile | null,
   })
+  
+  // チーム一覧を直接取得（useTeamsQueryが空配列を返す問題の回避）
+  const [teams, setTeams] = React.useState<import('@apps/shared/types/database').TeamMembershipWithUser[]>([])
+
+  React.useEffect(() => {
+    if (!user || !supabase) {
+      setTeams([])
+      return
+    }
+    
+    const loadTeams = async () => {
+      try {
+        const coreApi = new TeamCoreAPI(supabase)
+        const loadedTeams = await coreApi.getMyTeams()
+        setTeams(loadedTeams)
+      } catch (error) {
+        console.error('MyPageClient - getMyTeams error:', error)
+        setTeams([])
+      }
+    }
+    
+    loadTeams()
+  }, [user, supabase])
   const [bestTimes, setBestTimes] = useState<BestTime[]>(initialBestTimes)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
@@ -164,6 +188,7 @@ export default function MyPageClient({
           {profile && (
             <ProfileDisplay
               profile={profile}
+              teams={teams}
             />
           )}
         </div>

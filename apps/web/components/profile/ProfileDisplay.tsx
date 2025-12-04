@@ -1,7 +1,9 @@
 'use client'
 
 import React from 'react'
+import Link from 'next/link'
 import { Avatar } from '@/components/ui'
+import type { TeamMembershipWithUser } from '@apps/shared/types/database'
 
 interface UserProfile {
   id: string
@@ -13,9 +15,10 @@ interface UserProfile {
 
 interface ProfileDisplayProps {
   profile: UserProfile
+  teams?: TeamMembershipWithUser[]
 }
 
-export default function ProfileDisplay({ profile }: ProfileDisplayProps) {
+export default function ProfileDisplay({ profile, teams = [] }: ProfileDisplayProps) {
   const formatBirthday = (birthday: string | null | undefined) => {
     if (!birthday) return '未設定'
     return new Date(birthday).toLocaleDateString('ja-JP', {
@@ -24,6 +27,11 @@ export default function ProfileDisplay({ profile }: ProfileDisplayProps) {
       day: 'numeric'
     })
   }
+
+  // 承認済みかつアクティブなチームのみフィルタリング
+  const approvedTeams = teams.filter(
+    (membership) => membership.status === 'approved' && membership.is_active === true
+  )
 
   return (
     <div className="space-y-3 sm:space-y-6">
@@ -54,12 +62,45 @@ export default function ProfileDisplay({ profile }: ProfileDisplayProps) {
           </h3>
           
 
-          {/* 生年月日 */}
-          <div className="mt-2 sm:mt-4">
-            <dt className="text-xs sm:text-sm font-medium text-gray-500">生年月日</dt>
-            <dd className="mt-1 text-xs sm:text-sm text-gray-900">
-              {formatBirthday(profile.birthday)}
-            </dd>
+          {/* 生年月日と参加チーム（横並び） */}
+          <div className="mt-2 sm:mt-4 flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6">
+            {/* 生年月日 */}
+            <div className="flex-1">
+              <dt className="text-xs sm:text-sm font-medium text-gray-500">生年月日</dt>
+              <dd className="mt-1 text-xs sm:text-sm text-gray-900">
+                {formatBirthday(profile.birthday)}
+              </dd>
+            </div>
+
+            {/* 参加チーム */}
+            <div className="flex-1">
+              <dt className="text-xs sm:text-sm font-medium text-gray-500">参加チーム</dt>
+              <dd className="mt-1">
+                {approvedTeams.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {approvedTeams.map((membership) => {
+                      const teamName = 'teams' in membership && membership.teams?.name
+                        ? membership.teams.name
+                        : 'チーム名不明'
+                      const teamId = membership.team_id
+
+                      return (
+                        <Link
+                          key={membership.id}
+                          href={`/teams/${teamId}`}
+                          className="inline-flex items-center px-2.5 py-1 rounded-full text-xs sm:text-sm font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors truncate max-w-[200px] sm:max-w-none"
+                          title={teamName}
+                        >
+                          {teamName}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <span className="text-xs sm:text-sm text-gray-500">参加しているチームはありません</span>
+                )}
+              </dd>
+            </div>
           </div>
 
           {/* 自己紹介 */}

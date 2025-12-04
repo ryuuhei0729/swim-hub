@@ -674,7 +674,7 @@ export default function RecordLogForm({
                             if (!isNaN(distance) && distance > 0 && st.splitTime > 0) {
                               return {
                                 distance,
-                                splitTime: st.splitTime
+                          splitTime: st.splitTime
                               }
                             }
                             return null

@@ -297,9 +297,9 @@ export default function EntryLogForm({
           <div className="bg-white px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg leading-6 font-medium text-gray-900">
-                  エントリー登録
-                </h3>
+              <h3 className="text-lg leading-6 font-medium text-gray-900">
+                エントリー登録
+              </h3>
                 {competitionTitle && (
                   <p className="text-sm text-gray-600 mt-1">
                     {competitionTitle || '大会'}
