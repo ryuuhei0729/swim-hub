@@ -334,91 +334,72 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
                     : 'bg-white border-gray-200'
                 }`}
               >
-                {/* イベント情報 */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full ${
-                          event.type === 'competition'
-                            ? 'bg-purple-200 text-purple-800'
-                            : 'bg-green-200 text-green-800'
-                        }`}
-                      >
-                        {event.type === 'competition' ? '大会' : '練習'}
-                      </span>
-                      {getStatusBadge(event.attendance_status)}
-                      <h3 className="font-medium text-gray-900">
-                        {event.type === 'competition' ? event.title : '練習'}
-                      </h3>
-                    </div>
-                    <p className="text-sm text-gray-700 font-medium">
+                {/* イベント情報と出欠選択を横並び */}
+                <div className="flex items-center justify-between gap-4">
+                  {/* 左側：日付、タイトル、場所を1行で */}
+                  <div className="flex-1 flex items-center gap-3">
+                    <span className="text-lg font-bold text-gray-900 whitespace-nowrap">
                       {new Date(event.date).toLocaleDateString('ja-JP', {
-                        year: 'numeric',
                         month: 'long',
                         day: 'numeric',
                         weekday: 'short'
                       })}
-                    </p>
+                    </span>
+                    <h3 className="font-medium text-gray-900">
+                      {event.type === 'competition' ? event.title : '練習'}
+                    </h3>
                     {event.place && (
-                      <p className="text-sm text-gray-600 mt-1">@{event.place}</p>
+                      <span className="text-sm text-gray-600">@{event.place}</span>
                     )}
                   </div>
-                </div>
 
-                {/* 出欠選択 */}
-                <div className="flex items-center gap-2 mb-3">
-                  <button
-                    onClick={() => handleStatusChange(event.id, 'present')}
-                    className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                      editState.status === 'present'
-                        ? 'bg-green-100 text-green-800 border-2 border-green-500'
-                        : 'bg-gray-100 text-gray-600 hover:bg-green-50 border-2 border-transparent'
-                    }`}
-                  >
-                    出席
-                  </button>
-                  <button
-                    onClick={() => handleStatusChange(event.id, 'absent')}
-                    className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                      editState.status === 'absent'
-                        ? 'bg-red-100 text-red-800 border-2 border-red-500'
-                        : 'bg-gray-100 text-gray-600 hover:bg-red-50 border-2 border-transparent'
-                    }`}
-                  >
-                    欠席
-                  </button>
-                  <button
-                    onClick={() => handleStatusChange(event.id, 'other')}
-                    className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                      editState.status === 'other'
-                        ? 'bg-yellow-100 text-yellow-800 border-2 border-yellow-500'
-                        : 'bg-gray-100 text-gray-600 hover:bg-yellow-50 border-2 border-transparent'
-                    }`}
-                  >
-                    その他
-                  </button>
-                  <button
-                    onClick={() => handleStatusChange(event.id, null)}
-                    className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                      editState.status === null
-                        ? 'bg-gray-200 text-gray-800 border-2 border-gray-500'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border-2 border-transparent'
-                    }`}
-                  >
-                    未回答
-                  </button>
-                </div>
-
-                {/* 備考入力 */}
-                <div>
-                  <input
-                    type="text"
-                    value={editState.note}
-                    onChange={(e) => handleNoteChange(event.id, e.target.value)}
-                    placeholder="備考を入力（任意）"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
+                  {/* 右側：ステータスバッジ、出欠選択と備考 */}
+                  <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                    {/* ステータスバッジ */}
+                    <div>
+                      {getStatusBadge(event.attendance_status)}
+                    </div>
+                    {/* 出欠選択と備考 */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleStatusChange(event.id, 'present')}
+                        className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                          editState.status === 'present'
+                            ? 'bg-green-100 text-green-800 border-2 border-green-500'
+                            : 'bg-gray-100 text-gray-600 hover:bg-green-50 border-2 border-transparent'
+                        }`}
+                      >
+                        出席
+                      </button>
+                      <button
+                        onClick={() => handleStatusChange(event.id, 'absent')}
+                        className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                          editState.status === 'absent'
+                            ? 'bg-red-100 text-red-800 border-2 border-red-500'
+                            : 'bg-gray-100 text-gray-600 hover:bg-red-50 border-2 border-transparent'
+                        }`}
+                      >
+                        欠席
+                      </button>
+                      <button
+                        onClick={() => handleStatusChange(event.id, 'other')}
+                        className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                          editState.status === 'other'
+                            ? 'bg-yellow-100 text-yellow-800 border-2 border-yellow-500'
+                            : 'bg-gray-100 text-gray-600 hover:bg-yellow-50 border-2 border-transparent'
+                        }`}
+                      >
+                        その他
+                      </button>
+                      <input
+                        type="text"
+                        value={editState.note}
+                        onChange={(e) => handleNoteChange(event.id, e.target.value)}
+                        placeholder="備考を入力（任意）"
+                        className="w-48 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             )

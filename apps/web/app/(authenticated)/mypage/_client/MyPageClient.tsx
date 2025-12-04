@@ -15,6 +15,8 @@ interface BestTime {
   id: string
   time: number
   created_at: string
+  pool_type: number // 0: 短水路, 1: 長水路
+  is_relaying: boolean
   style: {
     name_jp: string
     distance: number
@@ -22,6 +24,16 @@ interface BestTime {
   competition?: {
     title: string
     date: string
+  }
+  // 引き継ぎありのタイム（オプショナル）
+  relayingTime?: {
+    id: string
+    time: number
+    created_at: string
+    competition?: {
+      title: string
+      date: string
+    }
   }
 }
 

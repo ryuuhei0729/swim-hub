@@ -51,7 +51,7 @@ const tabs: TeamTab[] = [
   }
 ]
 
-export default function TeamTabs({ activeTab, onTabChange, isAdmin = false }: TeamTabsProps) {
+export default function TeamTabs({ activeTab, onTabChange }: TeamTabsProps) {
   // 一般ページは閲覧専用のため、全てのタブを表示（isAdminは使用しない）
   const visibleTabs = tabs
 

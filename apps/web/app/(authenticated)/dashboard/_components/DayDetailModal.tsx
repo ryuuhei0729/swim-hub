@@ -1027,9 +1027,6 @@ function PracticeDetails({
                 {/* 練習メニューのヘッダー */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm font-semibold text-green-800 bg-green-100 px-3 py-1 rounded-lg">📋 練習メニュー {index + 1}</span>
-                    </div>
                     {formattedLog.tags && Array.isArray(formattedLog.tags) && formattedLog.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1">
                         {formattedLog.tags.map((tag: PracticeTag) => (
@@ -1048,7 +1045,12 @@ function PracticeDetails({
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center space-x-2 ml-4">
+                </div>
+            
+                {/* 練習内容: 距離 × 本数 × セット数 サークル 泳法 */}
+                <div className="bg-white rounded-lg p-3 mb-3 border border-green-300 relative">
+                  {/* 編集・削除ボタン（右上） */}
+                  <div className="absolute top-3 right-3 flex items-center space-x-2">
                     <button
                       onClick={() => {
                         // 編集に必要な情報を保持したまま渡す
@@ -1090,10 +1092,6 @@ function PracticeDetails({
                       <TrashIcon className="h-4 w-4" />
                     </button>
                   </div>
-                </div>
-            
-                {/* 練習内容: 距離 × 本数 × セット数 サークル 泳法 */}
-                <div className="bg-white rounded-lg p-3 mb-3 border border-green-300">
                   <div className="text-xs font-medium text-gray-500 mb-1">練習内容</div>
                     <div className="text-sm text-gray-800">
                       <span className="text-lg font-semibold text-green-700">{formattedLog.distance}</span>m ×{' '}
@@ -1112,16 +1110,6 @@ function PracticeDetails({
                       <span className="text-lg font-semibold text-green-700">{formattedLog.style}</span>
                     </div>
                 </div>
-
-            {/* メモ */}
-            {formattedLog.note && (
-              <div className="bg-liner-to-r from-slate-50 to-gray-50 rounded-lg p-3 mb-3 border border-slate-200">
-                <div className="text-xs font-medium text-gray-500 mb-1">メモ</div>
-                <div className="text-sm text-gray-700">
-                  {formattedLog.note}
-                </div>
-              </div>
-            )}
 
             {/* タイム表示 */}
             {allTimes.length > 0 && (
@@ -1216,6 +1204,16 @@ function PracticeDetails({
                       </tr>
                     </tbody>
                   </table>
+                </div>
+              </div>
+            )}
+
+            {/* メモ */}
+            {formattedLog.note && (
+              <div className="bg-liner-to-r from-slate-50 to-gray-50 rounded-lg p-3 mb-1 border border-slate-200">
+                <div className="text-xs font-medium text-gray-500 mb-1">メモ</div>
+                <div className="text-sm text-gray-700">
+                  {formattedLog.note}
                 </div>
               </div>
             )}
@@ -1503,7 +1501,7 @@ function CompetitionDetails({
           )}
 
           {/* Recordsがある場合の表示 */}
-          {!loading && actualRecords.map((record, index: number) => {
+          {!loading && actualRecords.map((record, _index: number) => {
             const openRecordEditor = async () => {
               const { data: fullRecord } = await supabase
                 .from('records')
@@ -1553,14 +1551,10 @@ function CompetitionDetails({
 
             return (
               <div key={record.id} className="bg-blue-50 rounded-lg p-4">
-                {/* 記録のヘッダー */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm font-semibold text-blue-800 bg-blue-100 px-3 py-1 rounded-lg">🏊‍♂️ 記録 {index + 1}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2 ml-4">
+                {/* 記録内容 */}
+                <div className="bg-white rounded-lg p-3 mb-3 border border-blue-300 relative">
+                  {/* 編集・削除ボタン（右上） */}
+                  <div className="absolute top-3 right-3 flex items-center space-x-2">
                     <button
                       onClick={openRecordEditor}
                       className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
@@ -1578,22 +1572,22 @@ function CompetitionDetails({
                       <TrashIcon className="h-4 w-4" />
                     </button>
                   </div>
-                </div>
-
-                {/* 記録内容 */}
-                <div className="bg-white rounded-lg p-3 mb-3 border border-blue-300">
-                  <div className="text-xs font-medium text-gray-500 mb-1">種目</div>
-                  <div className="text-sm text-gray-800 mb-3">
-                    <span className="text-base font-semibold text-blue-700">{record.metadata?.style?.name_jp || record.metadata?.record?.style?.name_jp || record.title}</span>
-                    {record.metadata?.record?.is_relaying && <span className="font-bold text-red-600 ml-2">R</span>}
+                  {/* 1行目：カラム名 */}
+                  <div className="grid grid-cols-2 gap-4 mb-2">
+                    <div className="text-xs font-medium text-gray-500">種目</div>
+                    <div className="text-xs font-medium text-gray-500">タイム</div>
                   </div>
                   
-                  {record.metadata?.record?.time && (
-                    <>
-                      <div className="text-xs font-medium text-gray-500 mb-1">タイム</div>
-                      <div className="flex items-center gap-2 mb-3">
+                  {/* 2行目：種目名とタイム（横並び、タイムの大きさに揃える） */}
+                  <div className="grid grid-cols-2 gap-4 items-center">
+                    <div className="text-xl font-bold text-blue-700">
+                      {record.metadata?.style?.name_jp || record.metadata?.record?.style?.name_jp || record.title}
+                      {record.metadata?.record?.is_relaying && <span className="font-bold text-red-600 ml-2">R</span>}
+                    </div>
+                    {record.metadata?.record?.time && (
+                      <div className="flex items-center gap-2">
                         <div className="text-2xl font-bold text-blue-700" data-testid="record-time-display">
-                        ⏱️ {formatTime(record.metadata.record.time)}
+                          {formatTime(record.metadata.record.time)}
                         </div>
                         <BestTimeBadge
                           recordId={record.id}
@@ -1607,17 +1601,8 @@ function CompetitionDetails({
                           isRelaying={record.metadata?.record?.is_relaying}
                         />
                       </div>
-                    </>
-                  )}
-
-                  {(record.note) && (
-                    <>
-                      <div className="text-xs font-medium text-gray-500 mb-1">メモ</div>
-                      <div className="text-sm text-gray-700">
-                        {record.note}
-                      </div>
-                    </>
-                  )}
+                    )}
+                  </div>
                 </div>
 
                 {/* スプリットタイム */}
@@ -1625,6 +1610,16 @@ function CompetitionDetails({
                   recordId={record.id}
                   raceDistance={record.metadata?.style?.distance || record.metadata?.record?.style?.distance}
                 />
+
+                {/* メモ */}
+                {(record.note) && (
+                  <div className="bg-liner-to-r from-slate-50 to-gray-50 rounded-lg p-3 mb-1 border border-slate-200 mt-2">
+                    <div className="text-xs font-medium text-gray-500 mb-1">メモ</div>
+                    <div className="text-sm text-gray-700">
+                      {record.note}
+                    </div>
+                  </div>
+                )}
               </div>
             )
           })}
