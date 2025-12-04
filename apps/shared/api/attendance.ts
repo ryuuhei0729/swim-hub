@@ -4,12 +4,13 @@
 // =============================================================================
 
 import { SupabaseClient } from '@supabase/supabase-js'
+import { format } from 'date-fns'
 import {
-    AttendanceStatus,
-    TeamAttendance,
-    TeamAttendanceInsert,
-    TeamAttendanceUpdate,
-    TeamAttendanceWithDetails
+  AttendanceStatus,
+  TeamAttendance,
+  TeamAttendanceInsert,
+  TeamAttendanceUpdate,
+  TeamAttendanceWithDetails
 } from '../types/database'
 import { getMonthDateRange } from '../utils/date'
 
@@ -286,12 +287,7 @@ export class AttendanceAPI {
       let finalNote = update.note
       if (isClosed && update.note) {
         // close後の編集の場合、編集日時を追加
-        const now = new Date()
-        const editMark = ` (${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} 編集済)`
-        
-        // 既存の編集済みマークを削除してから追加
-        const existingNote = update.note.replace(/\s*\(\d{4}\/\d{2}\/\d{2}\s+\d{2}:\d{2}\s+編集済\)\s*$/, '')
-        finalNote = existingNote + editMark
+        finalNote = this.addEditMark(update.note)
       }
 
       const { data, error } = await this.supabase
@@ -353,12 +349,7 @@ export class AttendanceAPI {
     
     // close後の編集の場合、noteに編集日時を追加
     if (isClosed && updates.note) {
-      const now = new Date()
-      const editMark = ` (${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} 編集済)`
-      
-      // 既存の編集済みマークを削除してから追加
-      const existingNote = updates.note.replace(/\s*\(\d{4}\/\d{2}\/\d{2}\s+\d{2}:\d{2}\s+編集済\)\s*$/, '')
-      finalUpdates.note = existingNote + editMark
+      finalUpdates.note = this.addEditMark(updates.note)
     }
     const { data, error } = await this.supabase
       .from('team_attendance')
@@ -466,6 +457,16 @@ export class AttendanceAPI {
   // =========================================================================
   // ヘルパー関数
   // =========================================================================
+
+  /**
+   * 編集済みマークを追加
+   */
+  private addEditMark(note: string): string {
+    const now = new Date()
+    const editMark = ` (${format(now, 'yyyy/MM/dd HH:mm')} 編集済)`
+    const cleanedNote = note.replace(/\s*\(\d{4}\/\d{2}\/\d{2}\s+\d{2}:\d{2}\s+編集済\)\s*$/, '')
+    return cleanedNote + editMark
+  }
 
   /**
    * 出欠情報からteam_idを取得

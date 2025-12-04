@@ -182,6 +182,19 @@ export class TeamMembersAPI {
     const { data: { user } } = await this.supabase.auth.getUser()
     if (!user) throw new Error('認証が必要です')
     
+    // 管理者権限チェック
+    const { data: membership } = await this.supabase
+      .from('team_memberships')
+      .select('role')
+      .eq('team_id', teamId)
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single()
+    
+    if (!membership || (membership.role !== 'admin' && membership.role !== 'owner')) {
+      throw new Error('管理者権限が必要です')
+    }
+    
     const { data, error } = await this.supabase
       .from('team_memberships')
       .select('*, users:users(*), teams:teams(*)')
@@ -199,6 +212,19 @@ export class TeamMembersAPI {
   async countPending(teamId: string): Promise<number> {
     const { data: { user } } = await this.supabase.auth.getUser()
     if (!user) throw new Error('認証が必要です')
+    
+    // 管理者権限チェック
+    const { data: membership } = await this.supabase
+      .from('team_memberships')
+      .select('role')
+      .eq('team_id', teamId)
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single()
+    
+    if (!membership || (membership.role !== 'admin' && membership.role !== 'owner')) {
+      throw new Error('管理者権限が必要です')
+    }
     
     const { count, error } = await this.supabase
       .from('team_memberships')
@@ -228,6 +254,19 @@ export class TeamMembersAPI {
     if (!membership) throw new Error('メンバーシップが見つかりません')
     if (membership.status !== 'pending') {
       throw new Error('承認待ちのメンバーシップのみ承認できます')
+    }
+
+    // 管理者権限チェック
+    const { data: adminMembership } = await this.supabase
+      .from('team_memberships')
+      .select('role')
+      .eq('team_id', membership.team_id)
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single()
+    
+    if (!adminMembership || (adminMembership.role !== 'admin' && adminMembership.role !== 'owner')) {
+      throw new Error('管理者権限が必要です')
     }
 
     // 承認
@@ -265,6 +304,19 @@ export class TeamMembersAPI {
     if (!membership) throw new Error('メンバーシップが見つかりません')
     if (membership.status !== 'pending') {
       throw new Error('承認待ちのメンバーシップのみ拒否できます')
+    }
+
+    // 管理者権限チェック
+    const { data: adminMembership } = await this.supabase
+      .from('team_memberships')
+      .select('role')
+      .eq('team_id', membership.team_id)
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single()
+    
+    if (!adminMembership || (adminMembership.role !== 'admin' && adminMembership.role !== 'owner')) {
+      throw new Error('管理者権限が必要です')
     }
 
     // 拒否

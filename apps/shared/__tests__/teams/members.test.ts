@@ -229,21 +229,49 @@ describe('TeamMembersAPI', () => {
         { id: 'membership-2', team_id: 'team-1', user_id: 'user-2', status: 'pending' }
       ]
 
-      supabaseMock.queueTable('team_memberships', [{ data: pendingMembers }])
+      const adminMembership = { role: 'admin' }
+
+      supabaseMock.queueTable('team_memberships', [
+        {
+          // 1つ目: 管理者権限チェック
+          data: adminMembership,
+          configure: builder => {
+            builder.single.mockResolvedValue({ data: adminMembership, error: null })
+          }
+        },
+        {
+          // 2つ目: 承認待ちメンバーシップ一覧
+          data: pendingMembers
+        }
+      ])
 
       const result = await api.listPending('team-1')
 
       expect(result).toEqual(pendingMembers)
-      const builder = supabaseMock.getBuilderHistory('team_memberships')[0]
-      expect(builder.eq).toHaveBeenCalledWith('team_id', 'team-1')
-      expect(builder.eq).toHaveBeenCalledWith('status', 'pending')
+      const adminBuilder = supabaseMock.getBuilderHistory('team_memberships')[0]
+      expect(adminBuilder.eq).toHaveBeenCalledWith('team_id', 'team-1')
+      expect(adminBuilder.eq).toHaveBeenCalledWith('user_id', 'test-user-id')
+      expect(adminBuilder.eq).toHaveBeenCalledWith('is_active', true)
+      const listBuilder = supabaseMock.getBuilderHistory('team_memberships')[1]
+      expect(listBuilder.eq).toHaveBeenCalledWith('team_id', 'team-1')
+      expect(listBuilder.eq).toHaveBeenCalledWith('status', 'pending')
     })
   })
 
   describe('countPending', () => {
     it('承認待ちのメンバーシップ数を取得できる', async () => {
+      const adminMembership = { role: 'admin' }
+
       supabaseMock.queueTable('team_memberships', [
         {
+          // 1つ目: 管理者権限チェック
+          data: adminMembership,
+          configure: builder => {
+            builder.single.mockResolvedValue({ data: adminMembership, error: null })
+          }
+        },
+        {
+          // 2つ目: カウント取得
           data: null,
           error: null,
           configure: builder => {
@@ -251,6 +279,7 @@ describe('TeamMembersAPI', () => {
             builder.select.mockImplementation((columns, options) => {
               if (options && 'count' in options && options.count === 'exact') {
                 // then()でcountを含むレスポンスを返す
+                /* biome-ignore lint/suspicious/noThenProperty: Supabaseのthenableクエリビルダーをモックするため */
                 builder.then = (resolve: (value: { data: any; error: any; count?: number }) => any) => {
                   return Promise.resolve({ data: null, error: null, count: 3 }).then(resolve)
                 }
@@ -264,9 +293,13 @@ describe('TeamMembersAPI', () => {
       const result = await api.countPending('team-1')
 
       expect(result).toBe(3)
-      const builder = supabaseMock.getBuilderHistory('team_memberships')[0]
-      expect(builder.eq).toHaveBeenCalledWith('team_id', 'team-1')
-      expect(builder.eq).toHaveBeenCalledWith('status', 'pending')
+      const adminBuilder = supabaseMock.getBuilderHistory('team_memberships')[0]
+      expect(adminBuilder.eq).toHaveBeenCalledWith('team_id', 'team-1')
+      expect(adminBuilder.eq).toHaveBeenCalledWith('user_id', 'test-user-id')
+      expect(adminBuilder.eq).toHaveBeenCalledWith('is_active', true)
+      const countBuilder = supabaseMock.getBuilderHistory('team_memberships')[1]
+      expect(countBuilder.eq).toHaveBeenCalledWith('team_id', 'team-1')
+      expect(countBuilder.eq).toHaveBeenCalledWith('status', 'pending')
     })
   })
 
@@ -285,7 +318,11 @@ describe('TeamMembersAPI', () => {
         is_active: true
       }
 
+      const adminMembership = { role: 'admin' }
+
       // 1つ目: メンバーシップを取得
+      // 2つ目: 管理者権限チェック
+      // 3つ目: 更新
       supabaseMock.queueTable('team_memberships', [
         {
           data: membership,
@@ -294,7 +331,13 @@ describe('TeamMembersAPI', () => {
           }
         },
         {
-          // 2つ目: 更新
+          data: adminMembership,
+          configure: builder => {
+            builder.single.mockResolvedValue({ data: adminMembership, error: null })
+          }
+        },
+        {
+          // 3つ目: 更新
           data: approvedMembership,
           configure: builder => {
             builder.update.mockReturnValue(builder)
@@ -308,7 +351,7 @@ describe('TeamMembersAPI', () => {
       const result = await api.approve('membership-1')
 
       expect(result).toEqual(approvedMembership)
-      const updateBuilder = supabaseMock.getBuilderHistory('team_memberships')[1]
+      const updateBuilder = supabaseMock.getBuilderHistory('team_memberships')[2]
       expect(updateBuilder.update).toHaveBeenCalledWith(
         expect.objectContaining({
           status: 'approved',
@@ -353,7 +396,11 @@ describe('TeamMembersAPI', () => {
         is_active: false
       }
 
+      const adminMembership = { role: 'admin' }
+
       // 1つ目: メンバーシップを取得
+      // 2つ目: 管理者権限チェック
+      // 3つ目: 更新
       supabaseMock.queueTable('team_memberships', [
         {
           data: membership,
@@ -362,7 +409,13 @@ describe('TeamMembersAPI', () => {
           }
         },
         {
-          // 2つ目: 更新
+          data: adminMembership,
+          configure: builder => {
+            builder.single.mockResolvedValue({ data: adminMembership, error: null })
+          }
+        },
+        {
+          // 3つ目: 更新
           data: rejectedMembership,
           configure: builder => {
             builder.update.mockReturnValue(builder)
@@ -376,7 +429,7 @@ describe('TeamMembersAPI', () => {
       const result = await api.reject('membership-1')
 
       expect(result).toEqual(rejectedMembership)
-      const updateBuilder = supabaseMock.getBuilderHistory('team_memberships')[1]
+      const updateBuilder = supabaseMock.getBuilderHistory('team_memberships')[2]
       expect(updateBuilder.update).toHaveBeenCalledWith(
         expect.objectContaining({
           status: 'rejected',

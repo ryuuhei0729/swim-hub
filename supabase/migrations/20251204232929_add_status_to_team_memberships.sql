@@ -42,7 +42,7 @@ BEGIN
     ) THEN
         UPDATE "public"."team_memberships"
         SET "status" = 'approved'::"public"."membership_status_type"
-        WHERE "is_active" = true AND "status" IS NULL;
+        WHERE "is_active" = true AND "status" = 'pending'::"public"."membership_status_type";
 
         -- is_active: falseのメンバーシップはrejectedに設定（既に退会しているため）
         UPDATE "public"."team_memberships"

@@ -23,7 +23,7 @@ describe('TeamCoreAPI', () => {
       expect(result).toEqual(memberships)
       const builder = supabaseMock.getBuilderHistory('team_memberships')[0]
       expect(builder.eq).toHaveBeenCalledWith('user_id', 'test-user-id')
-      expect(builder.eq).toHaveBeenCalledWith('is_active', true)
+      expect(builder.in).toHaveBeenCalledWith('status', ['approved', 'pending'])
     })
 
     it('未認証の場合はエラーとなる', async () => {
