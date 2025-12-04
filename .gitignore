@@ -74,7 +74,7 @@ temp/
 
 # Next.js auto-generated files
 next-env.d.ts
-apps/web/next-env.d.ts
+**/next-env.d.ts
 
 # Playwright E2E Testing
 /apps/web/test-results/
@@ -85,4 +85,4 @@ apps/web/next-env.d.ts
 /apps/web/e2e/playwright/.auth/  # ログイン状態（認証情報を含むためGit管理外）
 /apps/web/screenshots/
 .playwright-mcp/
-apps/web/next-env.d.ts
+　

@@ -18,7 +18,7 @@ import { convertRecordFormData } from '@/stores/types'
 import { getCompetitionId } from '../_utils/dashboardHelpers'
 
 interface FormModalsProps {
-  onPracticeBasicSubmit: (basicData: { date: string; place: string; note: string }) => Promise<void>
+  onPracticeBasicSubmit: (basicData: { date: string; title: string; place: string; note: string }) => Promise<void>
   onPracticeLogSubmit: (formDataArray: PracticeMenuFormData[]) => Promise<void>
   onCompetitionBasicSubmit: (basicData: { date: string; endDate: string; title: string; place: string; poolType: number; note: string }) => Promise<void>
   onEntrySubmit: (entriesData: EntryFormData[]) => Promise<void>

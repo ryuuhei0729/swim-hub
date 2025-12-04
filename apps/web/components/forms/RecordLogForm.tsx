@@ -664,10 +664,22 @@ export default function RecordLogForm({
                       
                       {/* Lap-Time表示 */}
                       <LapTimeDisplay
-                        splitTimes={formData.splitTimes.map(st => ({
-                          distance: st.distance,
-                          splitTime: st.splitTime
-                        }))}
+                        splitTimes={formData.splitTimes
+                          .map(st => {
+                            const distance = typeof st.distance === 'number' 
+                              ? st.distance 
+                              : st.distance === '' 
+                                ? NaN 
+                                : parseInt(String(st.distance))
+                            if (!isNaN(distance) && distance > 0 && st.splitTime > 0) {
+                              return {
+                                distance,
+                                splitTime: st.splitTime
+                              }
+                            }
+                            return null
+                          })
+                          .filter((st): st is { distance: number; splitTime: number } => st !== null)}
                         raceDistance={
                           entryInfo
                             ? styles.find(s => s.id.toString() === entryInfo.styleId?.toString())?.distance
