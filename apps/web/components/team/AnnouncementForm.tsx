@@ -23,7 +23,6 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
 }) => {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
-  const [isPublished, setIsPublished] = useState(false)
   const [startAt, setStartAt] = useState<string>('')
   const [endAt, setEndAt] = useState<string>('')
   const [errors, setErrors] = useState<{ startAt?: string; endAt?: string }>({})
@@ -48,14 +47,12 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
     if (editData) {
       setTitle(editData.title)
       setContent(editData.content)
-      setIsPublished(editData.is_published)
       // start_atとend_atをdatetime-local形式に変換（ローカル時刻で表示）
       setStartAt(editData.start_at ? formatLocalDateTime(new Date(editData.start_at)) : '')
       setEndAt(editData.end_at ? formatLocalDateTime(new Date(editData.end_at)) : '')
     } else {
       setTitle('')
       setContent('')
-      setIsPublished(false)
       // デフォルト値: 現在時刻から1週間後まで（ローカル時刻）
       const now = new Date()
       const oneWeekLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
@@ -90,7 +87,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent | React.MouseEvent, publishStatus: boolean) => {
     e.preventDefault()
     
     if (!title.trim() || !content.trim()) {
@@ -114,7 +111,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
           input: {
           title: title.trim(),
           content: content.trim(),
-            is_published: isPublished,
+            is_published: publishStatus,
             start_at: startAtValue,
             end_at: endAtValue,
         }
@@ -128,7 +125,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
           team_id: teamId,
           title: title.trim(),
           content: content.trim(),
-          is_published: isPublished,
+          is_published: publishStatus,
           start_at: startAtValue,
           end_at: endAtValue,
           created_by: user.id,
@@ -178,7 +175,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
           {/* タイトル */}
           <div>
             <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
@@ -213,45 +210,6 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
               maxLength={2000}
             />
             <p className="text-xs text-gray-500 mt-1">{content.length}/2000</p>
-          </div>
-
-          {/* 公開状態 */}
-          <div className="space-y-3 border-t border-gray-200 pt-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                公開状態
-              </label>
-              <div className="space-y-2">
-                <label className="flex items-center cursor-pointer">
-            <input
-                    type="radio"
-                    name="publishStatus"
-              checked={isPublished}
-                    onChange={() => setIsPublished(true)}
-                    disabled={isLoading}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">
-                    <span className="font-medium">公開する</span>
-                    <span className="text-gray-500 ml-1">（メンバーに表示されます）</span>
-                  </span>
-                </label>
-                <label className="flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="publishStatus"
-                    checked={!isPublished}
-                    onChange={() => setIsPublished(false)}
-                    disabled={isLoading}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">
-                    <span className="font-medium">下書きとして保存</span>
-                    <span className="text-gray-500 ml-1">（管理者のみ表示されます）</span>
-                  </span>
-                </label>
-              </div>
-            </div>
           </div>
 
           {/* 表示期間設定 */}
@@ -301,7 +259,15 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
           </div>
 
           {/* ボタン */}
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex items-center gap-3 pt-4">
+            <button
+              type="button"
+              onClick={(e) => handleSubmit(e, false)}
+              disabled={isLoading || !title.trim() || !content.trim()}
+              className="mr-auto px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? '保存中...' : '下書きとして保存'}
+            </button>
             <button
               type="button"
               onClick={handleClose}
@@ -311,11 +277,12 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
               キャンセル
             </button>
             <button
-              type="submit"
+              type="button"
+              onClick={(e) => handleSubmit(e, true)}
               disabled={isLoading || !title.trim() || !content.trim()}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? '保存中...' : editData ? '更新' : '作成'}
+              {isLoading ? '保存中...' : editData ? '公開して更新' : '公開して作成'}
             </button>
           </div>
         </form>

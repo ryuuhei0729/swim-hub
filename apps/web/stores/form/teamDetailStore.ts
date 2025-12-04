@@ -43,7 +43,7 @@ const initialState: TeamDetailState = {
   team: null,
   membership: null,
   loading: true,
-  activeTab: 'announcements',
+  activeTab: 'members',
   selectedMember: null,
   isMemberModalOpen: false,
 }

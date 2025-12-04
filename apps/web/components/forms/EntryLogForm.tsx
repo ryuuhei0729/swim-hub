@@ -38,6 +38,7 @@ interface EntryLogFormProps {
   onSubmit: (entries: EntryData[]) => Promise<void>
   onSkip: () => void // SKIP機能
   competitionId: string
+  competitionTitle?: string // 大会名（nullの場合は「大会」と表示）
   isLoading?: boolean
   styles?: Array<{ id: string; nameJp: string; distance: number }>
   editData?: EditEntryData // 編集用の既存データ
@@ -50,6 +51,7 @@ export default function EntryLogForm({
   onSubmit,
   onSkip,
   competitionId: _competitionId,
+  competitionTitle,
   isLoading = false,
   styles = [],
   editData,
@@ -294,9 +296,16 @@ export default function EntryLogForm({
           {/* ヘッダー */}
           <div className="bg-white px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
+              <div>
               <h3 className="text-lg leading-6 font-medium text-gray-900">
                 エントリー登録
               </h3>
+                {competitionTitle && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    {competitionTitle || '大会'}
+                  </p>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={handleClose}

@@ -38,6 +38,7 @@ export interface Practice {
   id: string
   user_id: string
   date: string
+  title: string | null // 練習タイトル（NULLの場合は「練習」と表示）
   place: string | null
   note: string | null
   team_id?: string | null
@@ -47,7 +48,6 @@ export interface Practice {
   // CalendarItemとの互換性のための追加プロパティ
   item_type?: CalendarItemType
   item_date?: string
-  title?: string
   // placeは上で定義済み（string | null）なので削除
   time_result?: number
   pool_type?: PoolType
@@ -128,11 +128,11 @@ export interface Competition {
   id: string
   user_id: string | null
   team_id?: string | null
-  title: string
+  title: string | null // 大会名（NULLの場合は「大会」と表示）
   date: string
   end_date?: string | null // 大会終了日（複数日開催の場合）。NULLの場合は単日開催。
   place: string | null
-  pool_type: number // 0: 短水路, 1: 長水路
+  pool_type: number // 0: 短水路, 1: 長水路（NOT NULL）
   entry_status?: 'before' | 'open' | 'closed' // エントリーステータス（デフォルト: before）
   attendance_status?: AttendanceStatusType | null // 出欠提出ステータス
   note: string | null
@@ -207,6 +207,7 @@ export interface TeamMembership {
   role: 'admin' | 'user'
   member_type: 'swimmer' | 'coach' | 'director' | 'manager' | null
   group_name: string | null
+  status: 'pending' | 'approved' | 'rejected'
   is_active: boolean
   joined_at: string
   left_at: string | null

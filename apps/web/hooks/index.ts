@@ -4,8 +4,8 @@
 
 // useCalendarData moved to app/(authenticated)/dashboard/_hooks/
 // useTeamAnnouncements moved to packages/shared/hooks/
+// useAsyncState moved to @apps/shared/hooks
 
-export * from './useAsyncState'
 export * from './useDebounce'
 export * from './useLocalStorage'
 

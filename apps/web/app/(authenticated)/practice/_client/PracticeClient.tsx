@@ -246,6 +246,7 @@ export default function PracticeClient({
         const firstMenu = menus[0] || {}
         const practiceInput = {
           date: firstMenu.practiceDate || editingData.date,
+          title: firstMenu.title || editingData.title || null,
           place: firstMenu.place || editingData.place,
           note: firstMenu.note || editingData.note
         }
@@ -280,8 +281,9 @@ export default function PracticeClient({
         const firstMenu = menus[0] || {}
         const practiceInput = {
           date: firstMenu.practiceDate || new Date().toISOString().split('T')[0],
-          place: firstMenu.place || '',
-          note: firstMenu.note || ''
+          title: firstMenu.title || null,
+          place: firstMenu.place || null,
+          note: firstMenu.note || null
         }
         
         const newPractice = await createPracticeMutation.mutateAsync(practiceInput)

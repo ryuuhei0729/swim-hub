@@ -15,6 +15,7 @@ export class TeamMembersAPI {
       .from('team_memberships')
       .select('*, users:users(*), teams:teams(*)')
       .eq('team_id', teamId)
+      .eq('status', 'approved')
       .eq('is_active', true)
     if (error) throw error
     return data as unknown as TeamMembershipWithUser[]
@@ -41,7 +42,7 @@ export class TeamMembersAPI {
     // 既に参加しているかチェック
     const { data: existingMembership, error: membershipError } = await this.supabase
       .from('team_memberships')
-      .select('id, is_active')
+      .select('id, is_active, status')
       .eq('team_id', team.id)
       .eq('user_id', user.id)
       .maybeSingle()
@@ -52,23 +53,46 @@ export class TeamMembersAPI {
 
     // 既存のメンバーシップがある場合
     if (existingMembership) {
-      if (existingMembership.is_active) {
+      // 承認済みでアクティブな場合は既に参加している
+      if (existingMembership.status === 'approved' && existingMembership.is_active) {
         throw new Error('既にこのチームに参加しています')
-      } else {
-        // 非アクティブなメンバーシップを再アクティブ化
+      }
+      // 承認待ちの場合は既に申請済み
+      if (existingMembership.status === 'pending') {
+        throw new Error('既に参加申請中です。承認をお待ちください')
+      }
+      // 拒否された場合は再申請（pendingに更新）
+      if (existingMembership.status === 'rejected') {
+        const { data: updated, error: updateError } = await this.supabase
+          .from('team_memberships')
+          .update({
+            status: 'pending',
+            is_active: false,
+            joined_at: new Date().toISOString(),
+            left_at: null
+          })
+          .eq('id', existingMembership.id)
+          .select('*')
+          .single()
+        if (updateError) throw updateError
+        return updated as TeamMembership
+      }
+      // 非アクティブな承認済みメンバーシップを再アクティブ化
+      if (existingMembership.status === 'approved' && !existingMembership.is_active) {
         const joinedAt = new Date().toISOString().split('T')[0]
         return await this.reactivateMembership(existingMembership.id, joinedAt)
       }
     }
 
-    // 新しいメンバーシップを作成
+    // 新しいメンバーシップを作成（承認待ち）
     const input: TeamMembershipInsert = {
       team_id: team.id,
       user_id: user.id,
       role: 'user',
       member_type: null,
       group_name: null,
-      is_active: true,
+      status: 'pending',
+      is_active: false,
       joined_at: new Date().toISOString(),
       left_at: null
     }
@@ -138,9 +162,169 @@ export class TeamMembersAPI {
     const { data: updated, error } = await this.supabase
       .from('team_memberships')
       .update({ 
+        status: 'approved',
         is_active: true, 
         joined_at: joinedAt,
         left_at: null
+      })
+      .eq('id', membershipId)
+      .select('*')
+      .single()
+
+    if (error) throw error
+    return updated as TeamMembership
+  }
+
+  /**
+   * 承認待ちのメンバーシップ一覧を取得（管理者のみ）
+   */
+  async listPending(teamId: string): Promise<TeamMembershipWithUser[]> {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+    
+    // 管理者権限チェック
+    const { data: membership } = await this.supabase
+      .from('team_memberships')
+      .select('role')
+      .eq('team_id', teamId)
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single()
+    
+    if (!membership || membership.role !== 'admin') {
+      throw new Error('管理者権限が必要です')
+    }
+    
+    const { data, error } = await this.supabase
+      .from('team_memberships')
+      .select('*, users:users(*), teams:teams(*)')
+      .eq('team_id', teamId)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+    
+    if (error) throw error
+    return data as unknown as TeamMembershipWithUser[]
+  }
+
+  /**
+   * 承認待ちのメンバーシップ数を取得（管理者のみ）
+   */
+  async countPending(teamId: string): Promise<number> {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+    
+    // 管理者権限チェック
+    const { data: membership } = await this.supabase
+      .from('team_memberships')
+      .select('role')
+      .eq('team_id', teamId)
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single()
+    
+    if (!membership || membership.role !== 'admin') {
+      throw new Error('管理者権限が必要です')
+    }
+    
+    const { count, error } = await this.supabase
+      .from('team_memberships')
+      .select('*', { count: 'exact', head: true })
+      .eq('team_id', teamId)
+      .eq('status', 'pending')
+    
+    if (error) throw error
+    return count || 0
+  }
+
+  /**
+   * メンバーシップを承認
+   */
+  async approve(membershipId: string): Promise<TeamMembership> {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+
+    // メンバーシップを取得してチームIDを確認
+    const { data: membership, error: fetchError } = await this.supabase
+      .from('team_memberships')
+      .select('id, team_id, status')
+      .eq('id', membershipId)
+      .single()
+
+    if (fetchError) throw fetchError
+    if (!membership) throw new Error('メンバーシップが見つかりません')
+    if (membership.status !== 'pending') {
+      throw new Error('承認待ちのメンバーシップのみ承認できます')
+    }
+
+    // 管理者権限チェック
+    const { data: adminMembership } = await this.supabase
+      .from('team_memberships')
+      .select('role')
+      .eq('team_id', membership.team_id)
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single()
+    
+    if (!adminMembership || adminMembership.role !== 'admin') {
+      throw new Error('管理者権限が必要です')
+    }
+
+    // 承認
+    const { data: updated, error } = await this.supabase
+      .from('team_memberships')
+      .update({
+        status: 'approved',
+        is_active: true,
+        joined_at: new Date().toISOString(),
+        left_at: null
+      })
+      .eq('id', membershipId)
+      .select('*')
+      .single()
+
+    if (error) throw error
+    return updated as TeamMembership
+  }
+
+  /**
+   * メンバーシップを拒否
+   */
+  async reject(membershipId: string): Promise<TeamMembership> {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+
+    // メンバーシップを取得してチームIDを確認
+    const { data: membership, error: fetchError } = await this.supabase
+      .from('team_memberships')
+      .select('id, team_id, status')
+      .eq('id', membershipId)
+      .single()
+
+    if (fetchError) throw fetchError
+    if (!membership) throw new Error('メンバーシップが見つかりません')
+    if (membership.status !== 'pending') {
+      throw new Error('承認待ちのメンバーシップのみ拒否できます')
+    }
+
+    // 管理者権限チェック
+    const { data: adminMembership } = await this.supabase
+      .from('team_memberships')
+      .select('role')
+      .eq('team_id', membership.team_id)
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single()
+    
+    if (!adminMembership || adminMembership.role !== 'admin') {
+      throw new Error('管理者権限が必要です')
+    }
+
+    // 拒否
+    const { data: updated, error } = await this.supabase
+      .from('team_memberships')
+      .update({
+        status: 'rejected',
+        is_active: false
       })
       .eq('id', membershipId)
       .select('*')

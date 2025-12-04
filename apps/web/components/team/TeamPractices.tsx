@@ -18,6 +18,7 @@ export interface TeamPractice {
   id: string
   user_id: string
   date: string
+  title: string | null
   place: string | null
   note: string | null
   created_at: string
@@ -64,6 +65,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
           id,
           user_id,
           date,
+          title,
           place,
           note,
           created_at,
@@ -208,6 +210,12 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
                         by {practice.users?.name || practice.created_by_user?.name || 'Unknown'}
                       </span>
                     </div>
+                    
+                    {practice.title && (
+                      <div className="flex items-center space-x-2 mb-1">
+                        <span className="text-sm font-medium text-gray-900">{practice.title}</span>
+                      </div>
+                    )}
                     
                     {practice.place && (
                       <div className="flex items-center space-x-2 mb-1">

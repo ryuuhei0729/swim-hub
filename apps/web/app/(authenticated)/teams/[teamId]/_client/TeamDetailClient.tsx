@@ -1,245 +1,21 @@
 'use client'
 
-import React, { useEffect, useCallback } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts'
 import { 
-  TeamAnnouncements,
-  TeamEntrySection,
   TeamTabs,
   TeamMemberManagement,
   TeamPractices,
-  TeamCompetitions,
-  TeamSettings,
-  TeamAttendanceList,
-  TeamBulkRegister
+  TeamCompetitions
 } from '@/components/team'
+import MyMonthlyAttendance from '@/components/team/MyMonthlyAttendance'
 import MemberDetailModal from '@/components/team/MemberDetailModal'
 import type { MemberDetail } from '@/components/team/MemberDetailModal'
 import type { TeamTabType } from '@/components/team/TeamTabs'
-import { TeamEvent, AttendanceStatusType, TeamMembership, TeamWithMembers } from '@swim-hub/shared/types/database'
-import { TeamAttendancesAPI } from '@swim-hub/shared'
-import { useAttendanceTabStore, useTeamDetailStore } from '@/stores'
-
-// 出欠タブコンポーネント（Client Componentとして維持）
-function AttendanceTab({ teamId, isAdmin }: { teamId: string, isAdmin: boolean }) {
-  const { supabase } = useAuth()
-  const {
-    selectedEventId,
-    selectedEventType,
-    events,
-    loading,
-    setSelectedEvent,
-    setEvents,
-    setLoading
-  } = useAttendanceTabStore()
-  
-  const teamAttendancesAPI = React.useMemo(() => new TeamAttendancesAPI(supabase), [supabase])
-
-  const loadEvents = useCallback(async () => {
-    try {
-      setLoading(true)
-      
-      // 管理者は全てのステータス、ユーザーはopenのみ
-      const practicesQuery = supabase
-        .from('practices')
-        .select('*')
-        .eq('team_id', teamId)
-      
-      const competitionsQuery = supabase
-        .from('competitions')
-        .select('*')
-        .eq('team_id', teamId)
-
-      // ユーザーの場合はopenのみフィルタ
-      if (!isAdmin) {
-        practicesQuery.eq('attendance_status', 'open')
-        competitionsQuery.eq('attendance_status', 'open')
-      }
-
-      const [practicesResult, competitionsResult] = await Promise.all([
-        practicesQuery,
-        competitionsQuery
-      ])
-
-      if (practicesResult.error) throw practicesResult.error
-      if (competitionsResult.error) throw competitionsResult.error
-
-      // 練習と大会を統合し、過去の日付を除外して日付順にソート
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      
-      const practices: TeamEvent[] = (practicesResult.data || [])
-        .map((p) => Object.assign(p, { type: 'practice' as const }))
-        .filter((p) => {
-          const eventDate = new Date(p.date)
-          eventDate.setHours(0, 0, 0, 0)
-          return eventDate >= today
-        })
-      
-      const competitions: TeamEvent[] = (competitionsResult.data || [])
-        .map((c) => Object.assign(c, { type: 'competition' as const }))
-        .filter((c) => {
-          const eventDate = new Date(c.date)
-          eventDate.setHours(0, 0, 0, 0)
-          return eventDate >= today
-        })
-      
-      const allEvents: TeamEvent[] = [...practices, ...competitions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-
-      setEvents(allEvents)
-    } catch (error) {
-      console.error('イベント取得エラー:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [teamId, isAdmin, supabase, setLoading, setEvents])
-
-  useEffect(() => {
-    loadEvents()
-  }, [loadEvents])
-
-  const handleAttendanceStatusChange = async (
-    eventId: string, 
-    eventType: 'practice' | 'competition',
-    newStatus: AttendanceStatusType
-  ) => {
-    try {
-      if (eventType === 'practice') {
-        await teamAttendancesAPI.updatePracticeAttendanceStatus(eventId, newStatus)
-      } else {
-        await teamAttendancesAPI.updateCompetitionAttendanceStatus(eventId, newStatus)
-      }
-      await loadEvents()
-    } catch (error) {
-      console.error('ステータス更新エラー:', error)
-    }
-  }
-  
-  return (
-    <div className="p-6 space-y-4">
-      {selectedEventId && selectedEventType ? (
-        <div>
-          <button
-            onClick={() => {
-              setSelectedEvent(null, null)
-            }}
-            className="mb-4 text-blue-600 hover:text-blue-800 flex items-center"
-          >
-            ← 一覧に戻る
-          </button>
-          <TeamAttendanceList 
-            practiceId={selectedEventType === 'practice' ? selectedEventId : undefined}
-            competitionId={selectedEventType === 'competition' ? selectedEventId : undefined}
-            isAdmin={isAdmin} 
-          />
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {loading ? (
-            <div className="text-center py-8">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-              <p className="mt-2 text-gray-500">読み込み中...</p>
-            </div>
-          ) : events.length > 0 ? (
-            <div className="grid gap-4">
-              {events.map((event) => {
-                const getStatusBadge = (status: AttendanceStatusType | null | undefined) => {
-                  switch (status) {
-                    case 'open':
-                      return <span className="text-xs px-2 py-0.5 rounded-full bg-blue-200 text-blue-800">提出受付中</span>
-                    case 'closed':
-                      return <span className="text-xs px-2 py-0.5 rounded-full bg-red-200 text-red-800">提出締切</span>
-                    default:
-                      return <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">未設定</span>
-                  }
-                }
-
-                return (
-                  <div
-                    key={`${event.type}-${event.id}`}
-                    className={`border rounded-lg p-4 transition-colors ${
-                      event.type === 'competition'
-                        ? 'bg-purple-50 border-purple-200'
-                        : 'bg-white border-gray-200'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div 
-                        className="flex-1 cursor-pointer"
-                        onClick={() => {
-                          setSelectedEvent(event.id, event.type)
-                        }}
-                      >
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${
-                            event.type === 'competition'
-                              ? 'bg-purple-200 text-purple-800'
-                              : 'bg-green-200 text-green-800'
-                          }`}>
-                            {event.type === 'competition' ? '大会' : '練習'}
-                          </span>
-                          {getStatusBadge(event.attendance_status)}
-                          <h3 className="font-medium text-gray-900">
-                            {event.type === 'competition' ? event.title : '練習'}
-                          </h3>
-                        </div>
-                        <p className="text-sm text-gray-700 font-medium">
-                          {new Date(event.date).toLocaleDateString('ja-JP', { 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric',
-                            weekday: 'short'
-                          })}
-                        </p>
-                        {event.place && (
-                          <p className="text-sm text-gray-600 mt-1">{event.place}</p>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        {isAdmin && (
-                          <select
-                            value={event.attendance_status || 'open'}
-                            onChange={(e) => {
-                              e.stopPropagation()
-                              handleAttendanceStatusChange(
-                                event.id, 
-                                event.type, 
-                                e.target.value as AttendanceStatusType
-                              )
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-xs border border-gray-300 rounded px-2 py-1 bg-white hover:bg-gray-50"
-                          >
-                            <option value="open">提出受付中</option>
-                            <option value="closed">提出締切</option>
-                          </select>
-                        )}
-                        <button
-                          onClick={() => {
-                            setSelectedEvent(event.id, event.type)
-                          }}
-                          className="text-sm text-blue-600 hover:text-blue-800 whitespace-nowrap"
-                        >
-                          出欠を確認 →
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          ) : (
-            <div className="bg-gray-50 rounded-lg p-8 text-center">
-              <p className="text-gray-600">出欠受付中のイベントがありません</p>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
+import { TeamMembership, TeamWithMembers } from '@swim-hub/shared/types/database'
+import { useTeamDetailStore } from '@/stores'
+import { ClipboardDocumentIcon, CheckIcon } from '@heroicons/react/24/outline'
 
 interface TeamDetailClientProps {
   teamId: string
@@ -260,10 +36,10 @@ export default function TeamDetailClient({
   const searchParams = useSearchParams()
   const router = useRouter()
   const { user } = useAuth()
+  const [isCopied, setIsCopied] = useState(false)
   
   const {
     team,
-    membership,
     loading,
     activeTab,
     selectedMember,
@@ -286,14 +62,13 @@ export default function TeamDetailClient({
   // URLパラメータからタブを取得
   useEffect(() => {
     const tabParam = searchParams.get('tab') || initialTab
-    if (tabParam && ['announcements', 'members', 'practices', 'competitions', 'attendance', 'bulk-register', 'settings'].includes(tabParam)) {
+    if (tabParam && ['members', 'practices', 'competitions', 'attendance'].includes(tabParam)) {
       setActiveTab(tabParam as TeamTabType)
     }
   }, [searchParams, initialTab, setActiveTab])
 
   // 表示用のデータ（ストアから取得、なければ初期データを使用）
   const displayTeam = team || initialTeam
-  const displayMembership = membership || initialMembership
 
   if (loading && !displayTeam) {
     return (
@@ -323,8 +98,6 @@ export default function TeamDetailClient({
     )
   }
 
-  const isAdmin = displayMembership?.role === 'admin'
-
   const handleMemberClick = (member: MemberDetail) => {
     openMemberModal(member)
   }
@@ -333,23 +106,15 @@ export default function TeamDetailClient({
     closeMemberModal()
   }
 
-  // アクティブなタブのコンテンツをレンダリング
+  // アクティブなタブのコンテンツをレンダリング（閲覧専用）
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'announcements':
-        return (
-          <TeamAnnouncements 
-            teamId={teamId}
-            isAdmin={isAdmin}
-            viewOnly={false}
-          />
-        )
       case 'members':
         return (
           <TeamMemberManagement 
             teamId={teamId}
             currentUserId={user?.id || ''}
-            isCurrentUserAdmin={isAdmin}
+            isCurrentUserAdmin={false}
             onMembershipChange={() => {
               // メンバー情報を再読み込み
               router.refresh()
@@ -358,22 +123,11 @@ export default function TeamDetailClient({
           />
         )
       case 'practices':
-        return <TeamPractices teamId={teamId} isAdmin={isAdmin} />
+        return <TeamPractices teamId={teamId} isAdmin={false} />
       case 'competitions':
-        return <TeamCompetitions teamId={teamId} isAdmin={isAdmin} />
+        return <TeamCompetitions teamId={teamId} isAdmin={false} />
       case 'attendance':
-        return <AttendanceTab teamId={teamId} isAdmin={isAdmin} />
-      case 'bulk-register':
-        return <TeamBulkRegister teamId={teamId} isAdmin={isAdmin} />
-      case 'settings':
-        return (
-          <TeamSettings 
-            teamId={teamId}
-            teamName={displayTeam.name}
-            teamDescription={displayTeam.description || undefined}
-            isAdmin={isAdmin}
-          />
-        )
+        return <MyMonthlyAttendance teamId={teamId} />
       default:
         return null
     }
@@ -382,32 +136,49 @@ export default function TeamDetailClient({
   return (
     <div>
       {/* チームヘッダー */}
-      <div className="bg-white rounded-lg shadow p-6 mb-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+      <div className="bg-white rounded-lg shadow p-3 sm:p-4 mb-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 wrap-break-word">
               {displayTeam.name}
             </h1>
             {displayTeam.description && (
-              <p className="text-gray-600 mb-4">{displayTeam.description}</p>
+              <p className="text-xs sm:text-sm text-gray-600 wrap-break-word">{displayTeam.description}</p>
             )}
-            <div className="flex items-center space-x-2">
-              {isAdmin && (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  管理者
-                </span>
-              )}
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                メンバー
-              </span>
-            </div>
           </div>
+          {displayTeam.invite_code && (
+            <div className="w-full md:w-auto md:shrink-0">
+              <div className="bg-gray-50 rounded-lg p-2 sm:p-2.5 w-full md:w-auto">
+                <div className="flex flex-row items-center gap-2">
+                  <label className="block text-xs font-medium text-gray-700 whitespace-nowrap">
+                    招待コード:
+                  </label>
+                  <input
+                    type="text"
+                    value={displayTeam.invite_code}
+                    readOnly
+                    className="flex-1 px-2 py-1 bg-white border border-gray-300 rounded-md shadow-sm text-xs font-mono font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(displayTeam.invite_code)
+                      setIsCopied(true)
+                      setTimeout(() => setIsCopied(false), 2000)
+                    }}
+                    className="inline-flex items-center justify-center px-2 py-1 border border-gray-300 rounded-md shadow-sm text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                    title="コピー"
+                  >
+                    {isCopied ? (
+                      <CheckIcon className="h-3 w-3 text-green-600" />
+                    ) : (
+                      <ClipboardDocumentIcon className="h-3 w-3" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      </div>
-
-      {/* エントリーフォームセクション */}
-      <div className="mb-0">
-        <TeamEntrySection teamId={teamId} isAdmin={isAdmin} />
       </div>
 
       {/* タブナビゲーション */}
@@ -415,7 +186,7 @@ export default function TeamDetailClient({
         <TeamTabs 
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          isAdmin={isAdmin}
+          isAdmin={false}
         />
       </div>
 
@@ -430,7 +201,7 @@ export default function TeamDetailClient({
         onClose={handleCloseMemberModal}
         member={selectedMember}
         currentUserId={user?.id || ''}
-        isCurrentUserAdmin={isAdmin}
+        isCurrentUserAdmin={false}
         onMembershipChange={() => {
           // メンバー情報を再読み込み
           router.refresh()

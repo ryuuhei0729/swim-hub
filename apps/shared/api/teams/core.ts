@@ -12,11 +12,13 @@ export class TeamCoreAPI {
   async getMyTeams(): Promise<TeamMembershipWithUser[]> {
     const { data: { user } } = await this.supabase.auth.getUser()
     if (!user) throw new Error('認証が必要です')
+    // 承認済み（status='approved' && is_active=true）と承認待ち（status='pending'）の両方を取得
+    // RLSポリシーにより、自分のメンバーシップ（user_id = auth.uid()）は全て取得可能
     const { data, error } = await this.supabase
       .from('team_memberships')
       .select(`*, teams:teams(*), users:users(*)`)
       .eq('user_id', user.id)
-      .eq('is_active', true)
+      .in('status', ['approved', 'pending'])
       .order('joined_at', { ascending: false })
     if (error) throw error
     return data as TeamMembershipWithUser[]

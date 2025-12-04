@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
-import { UsersIcon, PlusIcon, UserPlusIcon } from '@heroicons/react/24/outline'
+import { UsersIcon, PlusIcon, UserPlusIcon, ClockIcon } from '@heroicons/react/24/outline'
 import { TeamMembershipWithUser } from '@apps/shared/types/database'
 import { useAuth } from '@/contexts'
 import { useTeamsQuery } from '@apps/shared/hooks/queries/teams'
@@ -10,6 +10,11 @@ import { teamKeys } from '@apps/shared/hooks/queries/keys'
 import { useQueryClient } from '@tanstack/react-query'
 import TeamCreateModal from '@/components/team/TeamCreateModal'
 import TeamJoinModal from '@/components/team/TeamJoinModal'
+
+interface PendingTeamWithInviteCode {
+  membership: TeamMembershipWithUser
+  inviteCode: string | null
+}
 
 interface TeamsClientProps {
   // サーバー側で取得したデータ
@@ -36,7 +41,67 @@ export default function TeamsClient({
   })
 
   // 表示用のデータ（React Queryのキャッシュを使用）
-  const displayTeams = teams
+  // 承認済みと承認待ちを分ける
+  const { approvedTeams, pendingTeams } = useMemo(() => {
+    const approved: TeamMembershipWithUser[] = []
+    const pending: TeamMembershipWithUser[] = []
+    
+    teams.forEach((membership) => {
+      if (membership.status === 'approved' && membership.is_active) {
+        approved.push(membership)
+      } else if (membership.status === 'pending') {
+        pending.push(membership)
+      }
+    })
+    
+    return {
+      approvedTeams: approved,
+      pendingTeams: pending
+    }
+  }, [teams])
+  
+  const displayTeams = approvedTeams
+
+  // 承認待ちチームの招待コードを取得
+  const [pendingTeamsWithInviteCode, setPendingTeamsWithInviteCode] = useState<PendingTeamWithInviteCode[]>([])
+  const [loadingInviteCodes, setLoadingInviteCodes] = useState(false)
+
+  useEffect(() => {
+    const loadInviteCodes = async () => {
+      if (pendingTeams.length === 0) {
+        setPendingTeamsWithInviteCode([])
+        return
+      }
+
+      setLoadingInviteCodes(true)
+      try {
+        const results = await Promise.all(
+          pendingTeams.map(async (membership) => {
+            try {
+              const { data, error } = await supabase
+                .rpc('get_invite_code_by_team_id', { p_team_id: membership.team_id })
+              
+              if (error) {
+                return { membership, inviteCode: null }
+              }
+              
+              return { membership, inviteCode: data || null }
+            } catch {
+              return { membership, inviteCode: null }
+            }
+          })
+        )
+        setPendingTeamsWithInviteCode(results)
+      } catch {
+        // エラー時は空配列を設定
+        setPendingTeamsWithInviteCode([])
+      } finally {
+        setLoadingInviteCodes(false)
+      }
+    }
+
+    loadInviteCodes()
+  }, [pendingTeams, supabase])
 
   if (teamsLoading && displayTeams.length === 0) {
     return (
@@ -65,8 +130,45 @@ export default function TeamsClient({
         </div>
       </div>
 
-      {/* チーム一覧 */}
-      {displayTeams.length === 0 ? (
+      {/* 承認待ちチームセクション */}
+      {pendingTeams.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            承認待ち ({pendingTeams.length}件)
+          </h2>
+          <div className="space-y-4">
+            {loadingInviteCodes ? (
+              <div className="text-sm text-gray-500">読み込み中...</div>
+            ) : (
+              pendingTeamsWithInviteCode.map(({ membership, inviteCode }) => (
+                <div
+                  key={membership.team_id}
+                  className="bg-yellow-50 border border-yellow-200 rounded-lg p-4"
+                >
+                  <div className="flex items-center space-x-3">
+                    <ClockIcon className="h-5 w-5 text-yellow-600" />
+                    <div className="flex-1">
+                      <p className="text-sm text-yellow-800">
+                        {inviteCode ? (
+                          <>
+                            <span className="font-medium">招待コード: {inviteCode}</span>
+                            <span className="ml-2">ただいま承認待ちです</span>
+                          </>
+                        ) : (
+                          <span>ただいま承認待ちです</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 参加中のチーム一覧 */}
+      {displayTeams.length === 0 && pendingTeams.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-12 text-center">
           <UsersIcon className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-4 text-lg font-medium text-gray-900">

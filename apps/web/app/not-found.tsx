@@ -6,7 +6,7 @@ import { HomeIcon, ArrowLeftIcon } from '@heroicons/react/24/outline'
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-linear-to-br from-swim-50 to-blue-50 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-blue-50 flex items-center justify-center px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 text-center">
         {/* ロゴ */}
         <div className="flex justify-center">

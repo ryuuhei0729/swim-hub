@@ -424,6 +424,9 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
                           日付
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          タイトル
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           場所
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -438,7 +441,10 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
                             {format(new Date(practice.date), 'yyyy年MM月dd日', { locale: ja })}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                            {practice.place}
+                            {practice.title || '-'}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                            {practice.place || '-'}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-500">
                             {practice.note || '-'}
@@ -499,10 +505,10 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
                             }
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                            {competition.title}
+                            {competition.title || '-'}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                            {competition.place}
+                            {competition.place || '-'}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                             {competition.pool_type === 0 ? '25m' : '50m'}

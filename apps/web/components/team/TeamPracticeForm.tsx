@@ -24,6 +24,7 @@ export default function TeamPracticeForm({
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0], // YYYY-MM-DD形式
+    title: '',
     place: '',
     note: ''
   })
@@ -104,6 +105,7 @@ export default function TeamPracticeForm({
       const practiceInput: import('@apps/shared/types/database').PracticeInsert = {
         user_id: user.id,
         date: formData.date,
+        title: formData.title || null,
         place: formData.place || null,
         note: formData.note || null,
         team_id: teamId
@@ -116,6 +118,7 @@ export default function TeamPracticeForm({
       // フォームをリセット
       setFormData({
         date: new Date().toISOString().split('T')[0],
+        title: '',
         place: '',
         note: ''
       })
@@ -133,6 +136,7 @@ export default function TeamPracticeForm({
       // フォームをリセット
       setFormData({
         date: new Date().toISOString().split('T')[0],
+        title: '',
         place: '',
         note: ''
       })
@@ -211,6 +215,21 @@ export default function TeamPracticeForm({
                 required
                 aria-describedby="practice-date-error"
                 data-testid="team-practice-date"
+              />
+            </div>
+
+            {/* 練習タイトル */}
+            <div>
+              <label htmlFor="practice-title" className="block text-sm font-medium text-gray-700 mb-2">
+                練習タイトル
+              </label>
+              <Input
+                id="practice-title"
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="例: 基礎練習、スプリント練習（空欄の場合は「チーム練習」と表示）"
+                data-testid="team-practice-title"
               />
             </div>
 

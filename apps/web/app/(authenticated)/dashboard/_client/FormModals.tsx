@@ -18,7 +18,7 @@ import { convertRecordFormData } from '@/stores/types'
 import { getCompetitionId } from '../_utils/dashboardHelpers'
 
 interface FormModalsProps {
-  onPracticeBasicSubmit: (basicData: { date: string; place: string; note: string }) => Promise<void>
+  onPracticeBasicSubmit: (basicData: { date: string; title: string; place: string; note: string }) => Promise<void>
   onPracticeLogSubmit: (formDataArray: PracticeMenuFormData[]) => Promise<void>
   onCompetitionBasicSubmit: (basicData: { date: string; endDate: string; title: string; place: string; poolType: number; note: string }) => Promise<void>
   onEntrySubmit: (entriesData: EntryFormData[]) => Promise<void>
@@ -95,6 +95,20 @@ export function FormModals({
   const computedCompetitionId = React.useMemo(() => {
     return getCompetitionId(createdCompetitionId, competitionEditingData) || ''
   }, [createdCompetitionId, competitionEditingData])
+
+  // 大会のtitleを取得（competitionEditingDataから）
+  const computedCompetitionTitle = React.useMemo(() => {
+    if (!competitionEditingData || typeof competitionEditingData !== 'object') {
+      return undefined
+    }
+    
+    const data = competitionEditingData as { 
+      title?: string
+      metadata?: { competition?: { title?: string } } 
+    }
+    
+    return data.metadata?.competition?.title || data.title || undefined
+  }, [competitionEditingData])
 
   // Entryフォーム初期値を取得するヘルパー関数
   const getEntryInitialEntries = (editingData: unknown): Array<{
@@ -355,6 +369,7 @@ export function FormModals({
         onSubmit={onEntrySubmit}
         onSkip={onEntrySkip}
         competitionId={computedCompetitionId}
+        competitionTitle={computedCompetitionTitle}
         isLoading={competitionIsLoading}
         styles={styles.map(s => ({ id: s.id.toString(), nameJp: s.name_jp, distance: s.distance }))}
         editData={(() => {

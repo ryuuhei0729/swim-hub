@@ -30,6 +30,7 @@ export interface MockQueryBuilder {
   returns: ReturnType<typeof vi.fn>
   single: ReturnType<typeof vi.fn>
   maybeSingle: ReturnType<typeof vi.fn>
+  then: <T>(resolve: (value: { data: any; error: any; count?: number }) => T) => Promise<T>
 }
 
 /**
@@ -37,7 +38,8 @@ export interface MockQueryBuilder {
  */
 export const createMockQueryBuilder = (
   returnData: any = [],
-  returnError: any = null
+  returnError: any = null,
+  count?: number
 ): MockQueryBuilder => {
   const mockBuilder: any = {
     select: vi.fn(),
@@ -74,13 +76,13 @@ export const createMockQueryBuilder = (
   })
 
   // single() と maybeSingle() は結果を返す
-  mockBuilder.single.mockResolvedValue({ data: returnData, error: returnError })
-  mockBuilder.maybeSingle.mockResolvedValue({ data: returnData, error: returnError })
-  mockBuilder.returns.mockReturnValue({ data: returnData, error: returnError })
+  mockBuilder.single.mockResolvedValue({ data: returnData, error: returnError, count })
+  mockBuilder.maybeSingle.mockResolvedValue({ data: returnData, error: returnError, count })
+  // returns()はチェーンメソッドとして動作するため、mockBuilderを返す（ループで既に設定されている）
 
   // デフォルトの Promise 解決（select の最終結果など）
-  mockBuilder.then = (resolve: (value: { data: any; error: any }) => any) => {
-    return Promise.resolve({ data: returnData, error: returnError }).then(resolve)
+  mockBuilder.then = (resolve: (value: { data: any; error: any; count?: number }) => any) => {
+    return Promise.resolve({ data: returnData, error: returnError, count }).then(resolve)
   }
 
   return mockBuilder

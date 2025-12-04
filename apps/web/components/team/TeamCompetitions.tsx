@@ -216,7 +216,7 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <TrophyIcon className="h-5 w-5 text-blue-500" />
                   <span className="text-lg font-medium text-gray-900">
-                    {competition.title}
+                    {competition.title || '大会'}
                   </span>
                   {/* エントリーステータスバッジ */}
                   {competition.entry_status && (
@@ -363,7 +363,7 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
             loadTeamCompetitions()
           }}
           competitionId={selectedCompetition.id}
-          competitionTitle={selectedCompetition.title}
+          competitionTitle={selectedCompetition.title || '大会'}
           teamId={teamId}
         />
       )}

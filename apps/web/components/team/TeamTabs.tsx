@@ -2,16 +2,13 @@
 
 import React from 'react'
 import { 
-  MegaphoneIcon, 
   UsersIcon, 
   ClockIcon, 
   TrophyIcon, 
-  CogIcon,
-  ClipboardDocumentCheckIcon,
-  DocumentArrowUpIcon
+  ClipboardDocumentCheckIcon
 } from '@heroicons/react/24/outline'
 
-export type TeamTabType = 'announcements' | 'members' | 'practices' | 'competitions' | 'attendance' | 'bulk-register' | 'settings'
+export type TeamTabType = 'members' | 'practices' | 'competitions' | 'attendance'
 
 export interface TeamTab {
   id: TeamTabType
@@ -26,11 +23,6 @@ export interface TeamTabsProps {
 }
 
 const tabs: TeamTab[] = [
-  {
-    id: 'announcements',
-    name: 'お知らせ',
-    icon: MegaphoneIcon
-  },
   {
     id: 'members',
     name: 'メンバー',
@@ -50,24 +42,12 @@ const tabs: TeamTab[] = [
     id: 'attendance',
     name: '出欠',
     icon: ClipboardDocumentCheckIcon
-  },
-  {
-    id: 'bulk-register',
-    name: '一括登録',
-    icon: DocumentArrowUpIcon
-  },
-  {
-    id: 'settings',
-    name: '設定',
-    icon: CogIcon
   }
 ]
 
-export default function TeamTabs({ activeTab, onTabChange, isAdmin = false }: TeamTabsProps) {
-  // 管理者以外は一括登録タブのみ非表示（設定タブはメンバーにも表示）
-  const visibleTabs = isAdmin 
-    ? tabs 
-    : tabs.filter(tab => tab.id !== 'bulk-register')
+export default function TeamTabs({ activeTab, onTabChange }: TeamTabsProps) {
+  // 一般ページは閲覧専用のため、全てのタブを表示（isAdminは使用しない）
+  const visibleTabs = tabs
 
   return (
     <div className="bg-white rounded-lg shadow">
