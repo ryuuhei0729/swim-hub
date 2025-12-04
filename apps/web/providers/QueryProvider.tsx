@@ -6,7 +6,7 @@
 
 import React from 'react'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
-import { createQueryClient } from '@/lib/react-query'
+import { createQueryClient } from '@apps/shared/lib/react-query'
 
 let browserQueryClient: QueryClient | undefined = undefined
 

@@ -311,11 +311,16 @@ export class AttendanceAPI {
       throw new Error('自分の出欠情報のみ更新可能です')
     }
 
-    // 出欠提出期間かチェック（管理者がcloseした後でも編集可能）
+    // 出欠提出期間かチェック
     const canSubmit = await this.canSubmitAttendance(
       existingAttendance.practice_id,
       existingAttendance.competition_id
     )
+
+    // 提出期間外の場合は更新不可
+    if (!canSubmit) {
+      throw new Error('出欠提出期間外です')
+    }
 
     // close後の編集かチェック
     const isClosed = await this.isEventClosed(
@@ -334,8 +339,6 @@ export class AttendanceAPI {
       const existingNote = updates.note.replace(/\s*\(\d{4}\/\d{2}\/\d{2}\s+\d{2}:\d{2}\s+編集済\)\s*$/, '')
       finalUpdates.note = existingNote + editMark
     }
-
-    // canSubmitがfalseでも更新可能（close後でも編集可能）
     const { data, error } = await this.supabase
       .from('team_attendance')
       .update(finalUpdates)
