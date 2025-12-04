@@ -19,6 +19,7 @@ import type { MemberDetail } from '@/components/team/MemberDetailModal'
 import { TeamMembership, TeamWithMembers } from '@swim-hub/shared/types/database'
 import { useTeamAdminStore } from '@/stores/form/teamAdminStore'
 import { ClipboardDocumentIcon, CheckIcon } from '@heroicons/react/24/outline'
+import { TeamMembersAPI } from '@apps/shared/api/teams/members'
 
 interface TeamAdminClientProps {
   teamId: string
@@ -38,8 +39,9 @@ export default function TeamAdminClient({
 }: TeamAdminClientProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, supabase } = useAuth()
   const [isCopied, setIsCopied] = useState(false)
+  const [pendingCount, setPendingCount] = useState(0)
   
   const {
     team,
@@ -63,6 +65,10 @@ export default function TeamAdminClient({
     setLoading(false)
   }, [initialTeam, initialMembership, setTeam, setMembership, setLoading])
 
+  // 表示用のデータ（ストアから取得、なければ初期データを使用）
+  const displayTeam = team || initialTeam
+  const displayMembership = membership || initialMembership
+
   // URLパラメータからタブを取得
   useEffect(() => {
     const tabParam = searchParams.get('tab') || initialTab
@@ -71,9 +77,24 @@ export default function TeamAdminClient({
     }
   }, [searchParams, initialTab, setActiveTab])
 
-  // 表示用のデータ（ストアから取得、なければ初期データを使用）
-  const displayTeam = team || initialTeam
-  const displayMembership = membership || initialMembership
+  // 承認待ち数を取得
+  useEffect(() => {
+    const loadPendingCount = async () => {
+      if (displayMembership?.role !== 'admin') return
+      
+      try {
+        const api = new TeamMembersAPI(supabase)
+        const count = await api.countPending(teamId)
+        setPendingCount(count)
+      } catch (err) {
+        console.error('承認待ち数の取得に失敗:', err)
+      }
+    }
+    
+    if (displayTeam && displayMembership?.role === 'admin') {
+      loadPendingCount()
+    }
+  }, [teamId, displayTeam, displayMembership, supabase])
 
   if (loading && !displayTeam) {
     return (
@@ -179,11 +200,11 @@ export default function TeamAdminClient({
       <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-4">
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-6">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 break-words">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 wrap-break-word">
               {displayTeam.name}
             </h1>
             {displayTeam.description && (
-              <p className="text-sm sm:text-base text-gray-600 mb-4 break-words">{displayTeam.description}</p>
+              <p className="text-sm sm:text-base text-gray-600 mb-4 wrap-break-word">{displayTeam.description}</p>
             )}
             <div className="flex items-center space-x-2">
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -241,6 +262,7 @@ export default function TeamAdminClient({
         <TeamAdminTabs 
           activeTab={activeTab}
           onTabChange={setActiveTab}
+          pendingCount={pendingCount}
         />
       </div>
 

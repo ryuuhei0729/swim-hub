@@ -30,12 +30,14 @@ async function getTeamData(
     // チーム情報を取得（メンバー情報も含む）
     const teamData = await coreAPI.getTeam(teamId)
     
-    // 現在のユーザーのメンバーシップ情報を取得
+    // 現在のユーザーのメンバーシップ情報を取得（承認済みのみ）
+    // 承認待ちのメンバーはこのページにアクセスできない
     const { data: membershipData, error: membershipError } = await supabase
       .from('team_memberships')
       .select('*')
       .eq('team_id', teamId)
       .eq('user_id', userId)
+      .eq('status', 'approved')
       .eq('is_active', true)
       .single()
 

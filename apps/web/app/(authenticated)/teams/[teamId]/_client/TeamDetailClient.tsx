@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts'
 import { 
-  TeamAnnouncements,
   TeamTabs,
   TeamMemberManagement,
   TeamPractices,
@@ -63,7 +62,7 @@ export default function TeamDetailClient({
   // URLパラメータからタブを取得
   useEffect(() => {
     const tabParam = searchParams.get('tab') || initialTab
-    if (tabParam && ['announcements', 'members', 'practices', 'competitions', 'attendance'].includes(tabParam)) {
+    if (tabParam && ['members', 'practices', 'competitions', 'attendance'].includes(tabParam)) {
       setActiveTab(tabParam as TeamTabType)
     }
   }, [searchParams, initialTab, setActiveTab])
@@ -110,14 +109,6 @@ export default function TeamDetailClient({
   // アクティブなタブのコンテンツをレンダリング（閲覧専用）
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'announcements':
-        return (
-          <TeamAnnouncements 
-            teamId={teamId}
-            isAdmin={false}
-            viewOnly={true}
-          />
-        )
       case 'members':
         return (
           <TeamMemberManagement 
@@ -145,59 +136,44 @@ export default function TeamDetailClient({
   return (
     <div>
       {/* チームヘッダー */}
-      <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-4">
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-6">
+      <div className="bg-white rounded-lg shadow p-3 sm:p-4 mb-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 break-words">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 wrap-break-word">
               {displayTeam.name}
             </h1>
             {displayTeam.description && (
-              <p className="text-sm sm:text-base text-gray-600 mb-4 break-words">{displayTeam.description}</p>
+              <p className="text-xs sm:text-sm text-gray-600 wrap-break-word">{displayTeam.description}</p>
             )}
-            <div className="flex items-center space-x-2">
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                メンバー
-              </span>
-            </div>
           </div>
           {displayTeam.invite_code && (
-            <div className="w-full md:w-auto md:shrink-0 md:ml-6">
-              <div className="bg-gray-50 rounded-lg p-3 sm:p-4 w-full md:w-[400px]">
-                <div className="flex flex-col space-y-2">
-                  <label className="block text-xs font-medium text-gray-700">
-                    招待コード
+            <div className="w-full md:w-auto md:shrink-0">
+              <div className="bg-gray-50 rounded-lg p-2 sm:p-2.5 w-full md:w-auto">
+                <div className="flex flex-row items-center gap-2">
+                  <label className="block text-xs font-medium text-gray-700 whitespace-nowrap">
+                    招待コード:
                   </label>
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2 sm:space-x-0">
-                    <input
-                      type="text"
-                      value={displayTeam.invite_code}
-                      readOnly
-                      className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-xs sm:text-sm font-mono font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(displayTeam.invite_code)
-                        setIsCopied(true)
-                        setTimeout(() => setIsCopied(false), 2000)
-                      }}
-                      className="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-gray-300 rounded-md shadow-sm text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 whitespace-nowrap"
-                    >
-                      {isCopied ? (
-                        <>
-                          <CheckIcon className="h-4 w-4 sm:mr-2 text-green-600" />
-                          <span className="hidden sm:inline">コピー済み</span>
-                        </>
-                      ) : (
-                        <>
-                          <ClipboardDocumentIcon className="h-4 w-4 sm:mr-2" />
-                          <span className="hidden sm:inline">コピー</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    このコードを友達に共有すると、友達がこのチームに参加できます
-                  </p>
+                  <input
+                    type="text"
+                    value={displayTeam.invite_code}
+                    readOnly
+                    className="flex-1 px-2 py-1 bg-white border border-gray-300 rounded-md shadow-sm text-xs font-mono font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(displayTeam.invite_code)
+                      setIsCopied(true)
+                      setTimeout(() => setIsCopied(false), 2000)
+                    }}
+                    className="inline-flex items-center justify-center px-2 py-1 border border-gray-300 rounded-md shadow-sm text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                    title="コピー"
+                  >
+                    {isCopied ? (
+                      <CheckIcon className="h-3 w-3 text-green-600" />
+                    ) : (
+                      <ClipboardDocumentIcon className="h-3 w-3" />
+                    )}
+                  </button>
                 </div>
               </div>
             </div>

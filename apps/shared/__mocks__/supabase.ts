@@ -30,6 +30,7 @@ export interface MockQueryBuilder {
   returns: ReturnType<typeof vi.fn>
   single: ReturnType<typeof vi.fn>
   maybeSingle: ReturnType<typeof vi.fn>
+  then: <T>(resolve: (value: { data: any; error: any; count?: number }) => T) => Promise<T>
 }
 
 /**

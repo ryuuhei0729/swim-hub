@@ -5,17 +5,23 @@ import { useAuth } from '@/contexts/AuthProvider'
 import { Avatar } from '@/components/ui'
 import { 
   StarIcon,
-  CalendarIcon
+  CalendarIcon,
+  CheckCircleIcon,
+  XCircleIcon
 } from '@heroicons/react/24/outline'
 import { formatTime, formatDate } from '@/utils/formatters'
 import { differenceInDays, parseISO } from 'date-fns'
+import { approveMembership, rejectMembership } from '@/app/(authenticated)/teams/_actions/actions'
+import { useRouter } from 'next/navigation'
 
 export interface TeamMember {
   id: string
   user_id: string
   role: 'admin' | 'user'
+  status?: 'pending' | 'approved' | 'rejected'
   is_active: boolean
   joined_at: string
+  created_at?: string
   users: {
     id: string
     name: string
@@ -63,13 +69,15 @@ export interface TeamMemberManagementProps {
 export default function TeamMemberManagement({ 
   teamId, 
   currentUserId, 
-  isCurrentUserAdmin: _isCurrentUserAdmin,
-  onMembershipChange: _onMembershipChange,
+  isCurrentUserAdmin,
+  onMembershipChange,
   onMemberClick
 }: TeamMemberManagementProps) {
   const { supabase } = useAuth()
   const [members, setMembers] = useState<TeamMember[]>([])
+  const [pendingMembers, setPendingMembers] = useState<TeamMember[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingPending, setLoadingPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [memberBestTimes, setMemberBestTimes] = useState<Map<string, BestTime[]>>(new Map())
   const [loadingBestTimes, setLoadingBestTimes] = useState(false)
@@ -90,6 +98,7 @@ export default function TeamMemberManagement({
           user_id,
           role,
           is_active,
+          status,
           joined_at,
           users!team_memberships_user_id_fkey (
             id,
@@ -100,6 +109,7 @@ export default function TeamMemberManagement({
           )
         `)
         .eq('team_id', teamId)
+        .eq('status', 'approved')
         .eq('is_active', true)
         .order('role', { ascending: false }) // adminを先に表示
 
@@ -110,6 +120,44 @@ export default function TeamMemberManagement({
       setError('メンバー情報の取得に失敗しました')
     } finally {
       setLoading(false)
+    }
+  }
+
+  // 承認待ちのメンバーシップを取得（管理者のみ）
+  const loadPendingMembers = async () => {
+    if (!isCurrentUserAdmin) return
+    
+    try {
+      setLoadingPending(true)
+      
+      const { data, error } = await supabase
+        .from('team_memberships')
+        .select(`
+          id,
+          user_id,
+          role,
+          is_active,
+          status,
+          joined_at,
+          created_at,
+          users!team_memberships_user_id_fkey (
+            id,
+            name,
+            birthday,
+            bio,
+            profile_image_path
+          )
+        `)
+        .eq('team_id', teamId)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setPendingMembers((data ?? []) as unknown as TeamMember[])
+    } catch (err) {
+      console.error('承認待ちメンバー情報の取得に失敗:', err)
+    } finally {
+      setLoadingPending(false)
     }
   }
 
@@ -284,16 +332,68 @@ export default function TeamMemberManagement({
     }
   }
 
+  const router = useRouter()
+
   useEffect(() => {
     loadMembers()
-  }, [teamId])
+    if (isCurrentUserAdmin) {
+      loadPendingMembers()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teamId, isCurrentUserAdmin])
 
   // メンバーが読み込まれたらベストタイムを取得
   useEffect(() => {
     if (members.length > 0) {
       loadAllBestTimes(members)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [members])
+
+  // 承認処理
+  const handleApprove = async (membershipId: string) => {
+    try {
+      const result = await approveMembership(membershipId, teamId)
+      if (result.success) {
+        // 再読み込み
+        await loadMembers()
+        await loadPendingMembers()
+        if (onMembershipChange) {
+          onMembershipChange()
+        }
+        router.refresh()
+      } else {
+        setError(result.error || '承認に失敗しました')
+      }
+    } catch (err) {
+      console.error('承認エラー:', err)
+      setError('承認に失敗しました')
+    }
+  }
+
+  // 拒否処理
+  const handleReject = async (membershipId: string) => {
+    if (!confirm('この参加申請を拒否しますか？')) {
+      return
+    }
+    
+    try {
+      const result = await rejectMembership(membershipId, teamId)
+      if (result.success) {
+        // 再読み込み
+        await loadPendingMembers()
+        if (onMembershipChange) {
+          onMembershipChange()
+        }
+        router.refresh()
+      } else {
+        setError(result.error || '拒否に失敗しました')
+      }
+    } catch (err) {
+      console.error('拒否エラー:', err)
+      setError('拒否に失敗しました')
+    }
+  }
 
   // 静的距離リスト（50m, 100m, 200m, 400m, 800m）
   const DISTANCES = [50, 100, 200, 400, 800]
@@ -489,6 +589,69 @@ export default function TeamMemberManagement({
           <span data-testid="team-member-count-user">ユーザー: <span className="font-medium text-gray-700">{members.filter(m => m.role === 'user').length}人</span></span>
         </div>
       </div>
+
+      {/* 承認待ちセクション（管理者のみ、0件の時は非表示） */}
+      {isCurrentUserAdmin && pendingMembers.length > 0 && (
+        <div className="mb-6 border-b border-gray-200 pb-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            承認待ち ({pendingMembers.length}件)
+          </h3>
+          {loadingPending ? (
+            <div className="animate-pulse space-y-3">
+              {[...Array(2)].map((_, index) => (
+                <div key={index} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg">
+                  <div className="h-10 w-10 bg-gray-200 rounded-full"></div>
+                  <div className="flex-1">
+                    <div className="h-4 bg-gray-200 rounded w-32 mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-20"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {pendingMembers.map((pendingMember) => (
+                <div
+                  key={pendingMember.id}
+                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center space-x-3">
+                    <Avatar
+                      avatarUrl={pendingMember.users?.profile_image_path || null}
+                      userName={pendingMember.users?.name || 'Unknown User'}
+                      size="md"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {pendingMember.users?.name || 'Unknown User'}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        申請日: {new Date(pendingMember.created_at || pendingMember.joined_at).toLocaleDateString('ja-JP')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handleApprove(pendingMember.id)}
+                      className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    >
+                      <CheckCircleIcon className="h-4 w-4 mr-1" />
+                      承認
+                    </button>
+                    <button
+                      onClick={() => handleReject(pendingMember.id)}
+                      className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    >
+                      <XCircleIcon className="h-4 w-4 mr-1" />
+                      拒否
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* エラー表示 */}
       {error && (

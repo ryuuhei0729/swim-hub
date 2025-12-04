@@ -207,6 +207,7 @@ export interface TeamMembership {
   role: 'admin' | 'user'
   member_type: 'swimmer' | 'coach' | 'director' | 'manager' | null
   group_name: string | null
+  status: 'pending' | 'approved' | 'rejected'
   is_active: boolean
   joined_at: string
   left_at: string | null

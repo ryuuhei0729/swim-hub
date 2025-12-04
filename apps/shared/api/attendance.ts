@@ -230,8 +230,19 @@ export class AttendanceAPI {
       return []
     }
 
+    // 重複したattendanceIdを除去し、最後の更新を使用するマップを作成
+    const updateMap = new Map<string, { status: AttendanceStatus | null; note: string | null }>()
+    for (const update of updates) {
+      updateMap.set(update.attendanceId, {
+        status: update.status,
+        note: update.note
+      })
+    }
+
+    // 重複除去したattendanceIdsを取得
+    const attendanceIds = Array.from(new Set(updates.map(u => u.attendanceId)))
+
     // 全ての出欠情報が自分のものか確認
-    const attendanceIds = updates.map(u => u.attendanceId)
     const { data: existingAttendances, error: checkError } = await this.supabase
       .from('team_attendance')
       .select('id, user_id, practice_id, competition_id')
@@ -249,11 +260,21 @@ export class AttendanceAPI {
       throw new Error('自分の出欠情報のみ更新可能です')
     }
 
-    // 各出欠情報について、close後の編集日時追加処理を行う
-    const updatePromises = updates.map(async (update) => {
-      const existing = existingAttendances.find(a => a.id === update.attendanceId)
+    // 各出欠情報について、提出期限チェックとclose後の編集日時追加処理を行う
+    const updatePromises = Array.from(updateMap.entries()).map(async ([attendanceId, update]) => {
+      const existing = existingAttendances.find(a => a.id === attendanceId)
       if (!existing) {
-        throw new Error(`出欠情報 ${update.attendanceId} が見つかりません`)
+        throw new Error(`出欠情報 ${attendanceId} が見つかりません`)
+      }
+
+      // 提出期限チェック
+      const canSubmit = await this.canSubmitAttendance(
+        existing.practice_id,
+        existing.competition_id
+      )
+
+      if (!canSubmit) {
+        throw new Error('出欠提出期間外です')
       }
 
       // イベントがclosedかチェック
@@ -279,7 +300,7 @@ export class AttendanceAPI {
           status: update.status,
           note: finalNote
         })
-        .eq('id', update.attendanceId)
+        .eq('id', attendanceId)
         .select()
         .single()
 
@@ -525,21 +546,23 @@ export class AttendanceAPI {
     let attendanceStatus: 'open' | 'closed' | null = null
 
     if (practiceId) {
-      const { data } = await this.supabase
+      const { data, error } = await this.supabase
         .from('practices')
         .select('attendance_status')
         .eq('id', practiceId)
         .single()
 
-      attendanceStatus = data?.attendance_status || null
+      if (error) throw error
+      attendanceStatus = data?.attendance_status ?? null
     } else if (competitionId) {
-      const { data } = await this.supabase
+      const { data, error } = await this.supabase
         .from('competitions')
         .select('attendance_status')
         .eq('id', competitionId)
         .single()
 
-      attendanceStatus = data?.attendance_status || null
+      if (error) throw error
+      attendanceStatus = data?.attendance_status ?? null
     }
 
     return attendanceStatus === 'closed'
@@ -557,23 +580,25 @@ export class AttendanceAPI {
     let attendanceStatus: 'open' | 'closed' | null = null
 
     if (practiceId) {
-      const { data } = await this.supabase
+      const { data, error } = await this.supabase
         .from('practices')
         .select('attendance_status, date')
         .eq('id', practiceId)
         .single()
 
-      eventDate = data?.date || null
-      attendanceStatus = data?.attendance_status || null
+      if (error) throw error
+      eventDate = data?.date ?? null
+      attendanceStatus = data?.attendance_status ?? null
     } else if (competitionId) {
-      const { data } = await this.supabase
+      const { data, error } = await this.supabase
         .from('competitions')
         .select('attendance_status, date')
         .eq('id', competitionId)
         .single()
 
-      eventDate = data?.date || null
-      attendanceStatus = data?.attendance_status || null
+      if (error) throw error
+      eventDate = data?.date ?? null
+      attendanceStatus = data?.attendance_status ?? null
     }
 
     // attendance_statusが'open'でない場合は提出不可

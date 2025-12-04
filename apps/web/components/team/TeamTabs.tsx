@@ -2,14 +2,13 @@
 
 import React from 'react'
 import { 
-  MegaphoneIcon, 
   UsersIcon, 
   ClockIcon, 
   TrophyIcon, 
   ClipboardDocumentCheckIcon
 } from '@heroicons/react/24/outline'
 
-export type TeamTabType = 'announcements' | 'members' | 'practices' | 'competitions' | 'attendance'
+export type TeamTabType = 'members' | 'practices' | 'competitions' | 'attendance'
 
 export interface TeamTab {
   id: TeamTabType
@@ -24,11 +23,6 @@ export interface TeamTabsProps {
 }
 
 const tabs: TeamTab[] = [
-  {
-    id: 'announcements',
-    name: 'お知らせ',
-    icon: MegaphoneIcon
-  },
   {
     id: 'members',
     name: 'メンバー',

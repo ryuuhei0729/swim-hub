@@ -22,6 +22,7 @@ export interface TeamAdminTab {
 export interface TeamAdminTabsProps {
   activeTab: TeamAdminTabType
   onTabChange: (tab: TeamAdminTabType) => void
+  pendingCount?: number
 }
 
 const adminTabs: TeamAdminTab[] = [
@@ -62,7 +63,7 @@ const adminTabs: TeamAdminTab[] = [
   }
 ]
 
-export default function TeamAdminTabs({ activeTab, onTabChange }: TeamAdminTabsProps) {
+export default function TeamAdminTabs({ activeTab, onTabChange, pendingCount = 0 }: TeamAdminTabsProps) {
   return (
     <div className="bg-white rounded-lg shadow">
       {/* タブナビゲーション */}
@@ -71,13 +72,14 @@ export default function TeamAdminTabs({ activeTab, onTabChange }: TeamAdminTabsP
           {adminTabs.map((tab) => {
             const Icon = tab.icon
             const isActive = activeTab === tab.id
+            const showBadge = tab.id === 'members' && pendingCount > 0
             
             return (
               <button
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
                 className={`
-                  flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200
+                  flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 relative
                   ${isActive
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -86,6 +88,11 @@ export default function TeamAdminTabs({ activeTab, onTabChange }: TeamAdminTabsP
               >
                 <Icon className={`h-5 w-5 mr-2 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
                 {tab.name}
+                {showBadge && (
+                  <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
+                    {pendingCount}
+                  </span>
+                )}
               </button>
             )
           })}
