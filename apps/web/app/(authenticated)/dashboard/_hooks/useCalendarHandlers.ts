@@ -26,6 +26,7 @@ export interface RecordForEdit {
   is_relaying?: boolean
   note?: string | null
   video_url?: string | null
+  reaction_time?: number | null
   split_times?: RecordSplitTime[]
   competition_id?: string | null
 }
@@ -198,6 +199,7 @@ export function useCalendarHandlers({
       isRelaying: record.is_relaying,
       note: record.note ?? undefined,
       videoUrl: record.video_url ?? undefined,
+      reactionTime: record.reaction_time ?? undefined,
       splitTimes: convertedSplitTimes,
       competitionId: record.competition_id ?? undefined
     }

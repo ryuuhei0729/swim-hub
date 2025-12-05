@@ -67,6 +67,7 @@ interface MemberRecord {
   memberName: string
   time: number
   timeDisplayValue: string
+  reactionTime: string // 反応時間（秒単位、0.40~1.00程度）
   isRelaying: boolean
   note: string
   splitTimes: SplitTimeEntry[]
@@ -141,6 +142,7 @@ export default function RecordClient({
         memberName: record.users?.name || 'Unknown',
         time: record.time,
         timeDisplayValue: formatTime(record.time),
+        reactionTime: record.reaction_time?.toString() || '',
         isRelaying: record.is_relaying,
         note: record.note || '',
         splitTimes: (record.split_times || []).map((st, idx) => ({
@@ -208,12 +210,13 @@ export default function RecordClient({
         } else {
           const member = members.find(m => m.user_id === userId)
           if (member) {
-            newMemberRecords.push({
-              id: Date.now().toString() + userId,
-              memberUserId: userId,
-              memberName: member.users.name,
-              time: 0,
-              timeDisplayValue: '',
+          newMemberRecords.push({
+            id: Date.now().toString() + userId,
+            memberUserId: userId,
+            memberName: member.users.name,
+            time: 0,
+            timeDisplayValue: '',
+            reactionTime: '',
               isRelaying: false,
               note: '',
               splitTimes: []
@@ -451,6 +454,7 @@ export default function RecordClient({
         time: number
         isRelaying: boolean
         note: string
+        reactionTime: string
         splitTimes: SplitTimeEntry[]
       }> = []
 
@@ -466,6 +470,7 @@ export default function RecordClient({
               time: mr.time,
               isRelaying: mr.isRelaying,
               note: mr.note,
+              reactionTime: mr.reactionTime || '',
               splitTimes: mr.splitTimes
             })
           }
@@ -520,7 +525,10 @@ export default function RecordClient({
             time: record.time,
             note: record.note || null,
             is_relaying: record.isRelaying,
-            pool_type: competition.pool_type
+            pool_type: competition.pool_type,
+            reaction_time: record.reactionTime && record.reactionTime.trim() !== '' 
+              ? parseFloat(record.reactionTime) 
+              : null
           })
           .select('id')
           .single()
@@ -696,18 +704,37 @@ export default function RecordClient({
                       </div>
                       
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-3">
-                        {/* タイム */}
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
-                            タイム
-                          </label>
-                          <input
-                            type="text"
-                            value={mr.timeDisplayValue}
-                            onChange={(e) => handleTimeChange(entry.id, mr.memberUserId, e.target.value)}
-                            placeholder="例: 1:30.50"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
+                        {/* タイムとリアクションタイム */}
+                        <div className="md:col-span-2">
+                          <div className="grid grid-cols-[1fr_auto] gap-2 items-start">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                タイム
+                              </label>
+                              <input
+                                type="text"
+                                value={mr.timeDisplayValue}
+                                onChange={(e) => handleTimeChange(entry.id, mr.memberUserId, e.target.value)}
+                                placeholder="例: 1:30.50"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                            <div className="w-36">
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                リアクションタイム
+                              </label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0.40"
+                                max="1.00"
+                                value={mr.reactionTime || ''}
+                                onChange={(e) => updateMemberRecord(entry.id, mr.memberUserId, { reactionTime: e.target.value })}
+                                placeholder="0.65"
+                                className="w-full px-2 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                          </div>
                         </div>
 
                         {/* リレー */}

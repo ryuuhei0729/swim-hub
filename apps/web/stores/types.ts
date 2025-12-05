@@ -30,6 +30,7 @@ export type EditingData =
       time?: number
       isRelaying?: boolean
       videoUrl?: string | null
+      reactionTime?: number | null
       splitTimes?: Array<{ distance: number; splitTime: number }>
       // 練習ログ編集用のプロパティ
       distance?: number
@@ -73,6 +74,7 @@ export interface RecordFormDataInput {
   videoUrl?: string | null
   note?: string | null
   isRelaying: boolean
+  reactionTime?: string // 反応時間（秒単位、0.40~1.00程度）
   splitTimes: Array<{
     distance: string | number
     splitTime: number
@@ -86,6 +88,7 @@ export interface RecordFormDataInternal {
   videoUrl?: string | null
   note?: string | null
   isRelaying: boolean
+  reactionTime?: string // 反応時間（秒単位、0.40~1.00程度）
   splitTimes: Array<{
     distance: number
     splitTime: number
