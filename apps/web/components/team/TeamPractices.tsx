@@ -13,6 +13,7 @@ import {
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import TeamPracticeForm from './TeamPracticeForm'
+import { Pagination } from '@/components/ui'
 
 export interface TeamPractice {
   id: string
@@ -51,12 +52,26 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showPracticeForm, setShowPracticeForm] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const pageSize = 20
 
   // チームの練習記録を取得（関数として抽出）
   const loadTeamPractices = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
+      
+      const offset = (currentPage - 1) * pageSize
+      
+      // 総件数を取得
+      const { count, error: countError } = await supabase
+        .from('practices')
+        .select('*', { count: 'exact', head: true })
+        .eq('team_id', teamId)
+
+      if (countError) throw countError
+      setTotalCount(count || 0)
       
       // チームIDが設定された練習記録を取得
       const { data: practicesData, error: practicesError } = await supabase
@@ -85,7 +100,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
         `)
         .eq('team_id', teamId)
         .order('date', { ascending: false })
-        .limit(20) // 最新20件のみ
+        .range(offset, offset + pageSize - 1)
 
       if (practicesError) throw practicesError
 
@@ -96,9 +111,9 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
     } finally {
       setLoading(false)
     }
-  }, [teamId, supabase])
+  }, [teamId, supabase, currentPage, pageSize])
 
-  // 初回読み込み
+  // 初回読み込みとページ変更時の読み込み
   useEffect(() => {
     loadTeamPractices()
   }, [loadTeamPractices])
@@ -109,7 +124,14 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
 
   const handlePracticeCreated = () => {
     // 練習記録一覧を再読み込み（画面全体ではなくデータのみ）
+    // 新しいデータが追加された場合、最初のページに戻る
+    setCurrentPage(1)
     loadTeamPractices()
+  }
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    // loadTeamPracticesはuseEffectで自動実行される
   }
 
   // 練習ログ入力ページへ遷移
@@ -318,7 +340,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
           }
         })}
         
-        {practices.length === 0 && (
+        {practices.length === 0 && !loading && (
           <div className="text-center py-8">
             <ClockIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600">練習記録がありません</p>
@@ -333,6 +355,19 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
           </div>
         )}
       </div>
+
+      {/* ページング */}
+      {totalCount > 0 && (
+        <div className="mt-4 pt-4 px-4 sm:px-6 pb-6 border-t border-gray-200">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(totalCount / pageSize)}
+            totalItems={totalCount}
+            itemsPerPage={pageSize}
+            onPageChange={handlePageChange}
+          />
+        </div>
+      )}
       </div>
 
       {/* チーム練習記録作成モーダル */}

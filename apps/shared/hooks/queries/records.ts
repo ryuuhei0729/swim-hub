@@ -25,6 +25,8 @@ export interface UseRecordsQueryOptions {
   startDate?: string
   endDate?: string
   styleId?: number
+  page?: number
+  pageSize?: number
   enableRealtime?: boolean
   initialRecords?: RecordWithDetails[]
   initialCompetitions?: Competition[]
@@ -42,6 +44,8 @@ export function useRecordsQuery(
     startDate,
     endDate,
     styleId,
+    page = 1,
+    pageSize = 20,
     enableRealtime = true,
     initialRecords,
     initialCompetitions,
@@ -55,11 +59,14 @@ export function useRecordsQuery(
 
   const queryClient = useQueryClient()
 
+  // ページング計算
+  const offset = useMemo(() => (page - 1) * pageSize, [page, pageSize])
+
   // 記録取得クエリ
   const recordsQuery = useQuery({
-    queryKey: recordKeys.list({ startDate, endDate, styleId }),
+    queryKey: recordKeys.list({ startDate, endDate, styleId, page, pageSize }),
     queryFn: async () => {
-      return await api.getRecords(startDate, endDate, styleId)
+      return await api.getRecords(startDate, endDate, styleId, pageSize, offset)
     },
     initialData: initialRecords,
     staleTime: 5 * 60 * 1000, // 5分
@@ -81,13 +88,13 @@ export function useRecordsQuery(
 
     const recordsChannel = api.subscribeToRecords(() => {
       // 関連するクエリを無効化して再取得（リレーションデータも含める）
-      queryClient.invalidateQueries({ queryKey: recordKeys.list({ startDate, endDate, styleId }) })
+      queryClient.invalidateQueries({ queryKey: recordKeys.lists() })
     })
 
     return () => {
       supabase.removeChannel(recordsChannel)
     }
-  }, [api, enableRealtime, queryClient, startDate, endDate, styleId, recordsQuery.data, supabase])
+  }, [api, enableRealtime, queryClient, recordsQuery.data, supabase])
 
   // リアルタイム購読（大会）
   useEffect(() => {
@@ -297,6 +304,29 @@ export function useReplaceSplitTimesMutation(supabase: SupabaseClient, api?: Rec
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: recordKeys.lists() })
     },
+  })
+}
+
+/**
+ * 大会記録の総件数を取得するクエリ
+ */
+export function useRecordsCountQuery(
+  supabase: SupabaseClient,
+  options: { startDate?: string; endDate?: string; styleId?: number; api?: RecordAPI } = {}
+): ReturnType<typeof useQuery<number, Error>> {
+  const { startDate, endDate, styleId, api: providedApi } = options
+
+  const api = useMemo(
+    () => providedApi ?? new RecordAPI(supabase),
+    [supabase, providedApi]
+  )
+
+  return useQuery({
+    queryKey: recordKeys.count({ startDate, endDate, styleId }),
+    queryFn: async () => {
+      return await api.countRecords(startDate, endDate, styleId)
+    },
+    staleTime: 5 * 60 * 1000, // 5分
   })
 }
 

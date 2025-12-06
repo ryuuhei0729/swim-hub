@@ -8,8 +8,10 @@
 export const practiceKeys = {
   all: ['practices'] as const,
   lists: () => [...practiceKeys.all, 'list'] as const,
-  list: (filters?: { startDate?: string; endDate?: string }) =>
+  list: (filters?: { startDate?: string; endDate?: string; page?: number; pageSize?: number }) =>
     [...practiceKeys.lists(), filters] as const,
+  count: (filters?: { startDate?: string; endDate?: string }) =>
+    [...practiceKeys.all, 'count', filters] as const,
   detail: (id: string) => [...practiceKeys.all, 'detail', id] as const,
   byDate: (date: string) => [...practiceKeys.all, 'date', date] as const,
   tags: () => [...practiceKeys.all, 'tags'] as const,
@@ -21,8 +23,10 @@ export const practiceKeys = {
 export const recordKeys = {
   all: ['records'] as const,
   lists: () => [...recordKeys.all, 'list'] as const,
-  list: (filters?: { startDate?: string; endDate?: string; styleId?: number }) =>
+  list: (filters?: { startDate?: string; endDate?: string; styleId?: number; page?: number; pageSize?: number }) =>
     [...recordKeys.lists(), filters] as const,
+  count: (filters?: { startDate?: string; endDate?: string; styleId?: number }) =>
+    [...recordKeys.all, 'count', filters] as const,
   detail: (id: string) => [...recordKeys.all, 'detail', id] as const,
   competitions: () => [...recordKeys.all, 'competitions'] as const,
   competitionsList: (filters?: { startDate?: string; endDate?: string }) =>

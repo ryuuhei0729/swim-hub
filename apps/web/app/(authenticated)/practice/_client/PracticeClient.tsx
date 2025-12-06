@@ -1,11 +1,11 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useMemo } from 'react'
 import { CalendarDaysIcon, ClockIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
-import { Button } from '@/components/ui'
+import { Button, Pagination } from '@/components/ui'
 import PracticeLogForm from '@/components/forms/PracticeLogForm'
 import PracticeTimeModal from '../_components/PracticeTimeModal'
-import { format } from 'date-fns'
+import { format, isAfter, startOfDay } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { useAuth } from '@/contexts'
 import {
@@ -49,6 +49,8 @@ export default function PracticeClient({
   tags
 }: PracticeClientProps) {
   const { supabase } = useAuth()
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 20
   
   // Zustandストア
   const {
@@ -128,8 +130,20 @@ export default function PracticeClient({
     })
   )
 
-  // タグフィルタリングロジック
+  // 今日の日付（時刻を0時0分0秒にリセット）
+  const today = useMemo(() => startOfDay(new Date()), [])
+
+  // タグフィルタリングロジック + 日付フィルタリング（今日以前のみ）
   const filteredPracticeLogs = practiceLogs.filter((log) => {
+    // 日付フィルタリング：今日より未来の日付は除外
+    if (log.practice?.date) {
+      const practiceDate = startOfDay(new Date(log.practice.date))
+      if (isAfter(practiceDate, today)) {
+        return false
+      }
+    }
+    
+    // タグフィルタリング
     if (selectedTagIds.length === 0) return true
     
     const logTagIds = (log.tags || []).map((tag) => tag.id)
@@ -137,11 +151,33 @@ export default function PracticeClient({
   })
   
   // 日付の降順でソート
-  const sortedPracticeLogs = [...filteredPracticeLogs].sort((a, b) => {
-    const dateA = new Date(a.practice?.date || a.created_at)
-    const dateB = new Date(b.practice?.date || b.created_at)
-    return dateB.getTime() - dateA.getTime()
-  })
+  const sortedPracticeLogs = useMemo(() => {
+    return [...filteredPracticeLogs].sort((a, b) => {
+      const dateA = new Date(a.practice?.date || a.created_at)
+      const dateB = new Date(b.practice?.date || b.created_at)
+      return dateB.getTime() - dateA.getTime()
+    })
+  }, [filteredPracticeLogs])
+
+  // ページング適用
+  const paginatedPracticeLogs = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize
+    const endIndex = startIndex + pageSize
+    return sortedPracticeLogs.slice(startIndex, endIndex)
+  }, [sortedPracticeLogs, currentPage, pageSize])
+
+  const totalPages = Math.ceil(sortedPracticeLogs.length / pageSize)
+
+  // フィルタ変更時にページをリセット
+  React.useEffect(() => {
+    setCurrentPage(1)
+  }, [selectedTagIds])
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    // ページトップにスクロール
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   // セットごとの平均タイムを計算する関数
   const calculateSetAverages = (times: PracticeTime[], repCount: number, setCount: number) => {
@@ -428,7 +464,7 @@ export default function PracticeClient({
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* ヘッダー */}
-      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+      <div className="bg-white rounded-lg shadow p-5 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
@@ -495,7 +531,7 @@ export default function PracticeClient({
 
       {/* 統計情報 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <div className="bg-white rounded-lg shadow p-5 sm:p-6">
           <div className="flex items-center">
             <div className="p-2 bg-blue-100 rounded-lg">
               <CalendarDaysIcon className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
@@ -512,12 +548,6 @@ export default function PracticeClient({
 
       {/* 練習記録一覧（表形式） */}
       <div className="bg-white rounded-lg shadow">
-        <div className="px-3 sm:px-4 py-3 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
-            練習記録一覧
-          </h2>
-        </div>
-        
         {practiceLogs.length === 0 ? (
           <div className="p-12 text-center">
             <CalendarDaysIcon className="mx-auto h-12 w-12 text-gray-400" />
@@ -537,58 +567,59 @@ export default function PracticeClient({
         ) : (
           <>
             {/* デスクトップ表示（テーブル） */}
-            <div className="hidden lg:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
+            <div className="hidden lg:block overflow-x-auto -mx-4 sm:mx-0">
+              <div className="inline-block min-w-full align-middle px-4 sm:px-0">
+                <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       日付
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       場所
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       距離・本数・セット
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       サークル
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       種目
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       タグ
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       タイム
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       メモ
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       操作
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {sortedPracticeLogs.map((log) => (
+                  {paginatedPracticeLogs.map((log) => (
                     <tr key={log.id} className="hover:bg-gray-50">
-                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                         {log.practice?.date ? format(new Date(log.practice.date), 'MM/dd', { locale: ja }) : '-'}
                       </td>
-                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                         {log.practice?.place || '-'}
                       </td>
-                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                         {log.distance}m × {log.rep_count}本 × {log.set_count}セット
                       </td>
-                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                         {log.circle ? `${Math.floor(log.circle / 60)}'${Math.floor(log.circle % 60).toString().padStart(2, '0')}"` : '-'}
                       </td>
-                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                         {log.style}
                       </td>
-                      <td className="px-3 py-3 whitespace-nowrap">
+                      <td className="px-4 py-4 whitespace-nowrap">
                         {log.tags && log.tags.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {log.tags.map((tag: PracticeTag) => (
@@ -607,7 +638,7 @@ export default function PracticeClient({
                           <span className="text-gray-400">-</span>
                         )}
                       </td>
-                      <td className="px-3 py-3 whitespace-nowrap">
+                      <td className="px-4 py-4 whitespace-nowrap">
                         {log.practice_times && log.practice_times.length > 0 ? (
                           <div className="text-sm">
                             {calculateSetAverages(log.practice_times, log.rep_count, log.set_count).map((avgTime: number, setIndex: number) => (
@@ -620,10 +651,10 @@ export default function PracticeClient({
                           <span className="text-gray-400">-</span>
                         )}
                       </td>
-                      <td className="px-3 py-3 text-sm text-gray-900 max-w-xs truncate">
+                      <td className="px-4 py-4 text-sm text-gray-900 max-w-xs truncate">
                         {log.note || '-'}
                       </td>
-                      <td className="px-3 py-3 whitespace-nowrap text-sm font-medium">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center justify-end space-x-2">
                           {log.practice_times && log.practice_times.length > 0 && (
                             <Button
@@ -658,16 +689,17 @@ export default function PracticeClient({
                         </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                ))}
+              </tbody>
+            </table>
+              </div>
             </div>
 
             {/* タブレット・モバイル表示（カード形式） */}
             <div className="lg:hidden">
               <div className="divide-y divide-gray-200">
-                {sortedPracticeLogs.map((log) => (
-                  <div key={log.id} className="p-4 hover:bg-gray-50">
+                {paginatedPracticeLogs.map((log) => (
+                  <div key={log.id} className="p-5 sm:p-6 hover:bg-gray-50">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center space-x-2 mb-2">
@@ -764,6 +796,19 @@ export default function PracticeClient({
               </div>
             </div>
           </>
+        )}
+
+        {/* ページング */}
+        {sortedPracticeLogs.length > pageSize && (
+          <div className="mt-4 pt-4 px-4 sm:px-6 pb-6 border-t border-gray-200">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={sortedPracticeLogs.length}
+              itemsPerPage={pageSize}
+              onPageChange={handlePageChange}
+            />
+          </div>
         )}
       </div>
 

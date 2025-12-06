@@ -15,6 +15,7 @@ import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import TeamCompetitionForm from './TeamCompetitionForm'
 import TeamCompetitionEntryModal from './TeamCompetitionEntryModal'
+import { Pagination } from '@/components/ui'
 
 export interface TeamCompetition {
   id: string
@@ -65,12 +66,26 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
   const [showCompetitionForm, setShowCompetitionForm] = useState(false)
   const [selectedCompetition, setSelectedCompetition] = useState<TeamCompetition | null>(null)
   const [showEntryModal, setShowEntryModal] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const pageSize = 20
 
   // チームの大会一覧を取得（関数として抽出）
   const loadTeamCompetitions = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
+      
+      const offset = (currentPage - 1) * pageSize
+      
+      // 総件数を取得
+      const { count, error: countError } = await supabase
+        .from('competitions')
+        .select('*', { count: 'exact', head: true })
+        .eq('team_id', teamId)
+
+      if (countError) throw countError
+      setTotalCount(count || 0)
       
       // チームIDが設定された大会を取得（エントリー情報も含む）
       const { data: competitionsData, error: competitionsError } = await supabase
@@ -111,7 +126,7 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
         `)
         .eq('team_id', teamId)
         .order('date', { ascending: false })
-        .limit(20) // 最新20件のみ
+        .range(offset, offset + pageSize - 1)
 
       if (competitionsError) throw competitionsError
 
@@ -122,7 +137,7 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
     } finally {
       setLoading(false)
     }
-  }, [teamId, supabase])
+  }, [teamId, supabase, currentPage, pageSize])
 
   // 初回読み込み
   useEffect(() => {
@@ -135,7 +150,14 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
 
   const handleCompetitionCreated = () => {
     // 大会一覧を再読み込み（画面全体ではなくデータのみ）
+    // 新しいデータが追加された場合、最初のページに戻る
+    setCurrentPage(1)
     loadTeamCompetitions()
+  }
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    // loadTeamCompetitionsはuseEffectで自動実行される
   }
 
   // 記録入力ページへ遷移
@@ -327,7 +349,7 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
           </div>
         ))}
         
-        {competitions.length === 0 && (
+        {competitions.length === 0 && !loading && (
           <div className="text-center py-8">
             <TrophyIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600">大会がありません</p>
@@ -342,6 +364,19 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
           </div>
         )}
       </div>
+
+      {/* ページング */}
+      {totalCount > 0 && (
+        <div className="mt-4 pt-4 px-4 sm:px-6 pb-6 border-t border-gray-200">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(totalCount / pageSize)}
+            totalItems={totalCount}
+            itemsPerPage={pageSize}
+            onPageChange={handlePageChange}
+          />
+        </div>
+      )}
       </div>
 
       {/* チーム大会作成モーダル */}

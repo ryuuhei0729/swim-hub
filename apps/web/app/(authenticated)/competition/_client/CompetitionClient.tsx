@@ -1,10 +1,11 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { TrophyIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
-import { Button, BestTimeBadge } from '@/components/ui'
+import { Button, BestTimeBadge, Pagination } from '@/components/ui'
+import RecordProgressChart from '@/components/charts/RecordProgressChart'
 import RecordLogForm, { type RecordLogFormData } from '@/components/forms/RecordLogForm'
-import { format } from 'date-fns'
+import { format, isAfter, startOfDay } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
 import { useAuth } from '@/contexts'
@@ -36,15 +37,20 @@ export default function CompetitionClient({
   styles
 }: CompetitionClientProps) {
   const { supabase } = useAuth()
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 20
+  const [selectedChartStyleId, setSelectedChartStyleId] = useState<number | null>(null)
   
   // Zustandストア
   const {
     filterStyle,
     includeRelay,
     filterPoolType,
+    filterFiscalYear,
     setFilterStyle,
     setIncludeRelay,
     setFilterPoolType,
+    setFilterFiscalYear,
   } = useCompetitionFilterStore()
   
   const {
@@ -85,8 +91,74 @@ export default function CompetitionClient({
   // React Queryのキャッシュを使用
   const displayRecords = records
   
+  // 今日の日付（時刻を0時0分0秒にリセット）
+  const today = useMemo(() => startOfDay(new Date()), [])
+  
+  // 出場したことのある種目IDを抽出（ユニーク）
+  const participatedStyleIds = useMemo(() => {
+    const styleIds = new Set<number>()
+    displayRecords.forEach((record: Record) => {
+      if (record.style_id) {
+        styleIds.add(record.style_id)
+      }
+    })
+    return Array.from(styleIds)
+  }, [displayRecords])
+  
+  // 出場したことのある種目だけをフィルタリング
+  const participatedStyles = useMemo(() => {
+    return styles.filter((style: Style) => participatedStyleIds.includes(style.id))
+  }, [styles, participatedStyleIds])
+  
+  // 年度を取得する関数（4月1日〜3月31日が1年度）
+  const getFiscalYear = (date: Date): number => {
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1 // 1-12
+    if (month >= 4) {
+      return year // 4月以降はその年が年度
+    } else {
+      return year - 1 // 1-3月は前年が年度
+    }
+  }
+  
+  // 出場したことのある年度を抽出（ユニーク）
+  const participatedFiscalYears = useMemo(() => {
+    const years = new Set<number>()
+    displayRecords.forEach((record: Record) => {
+      const competition = record.competition as Competition
+      if (competition?.date) {
+        const fiscalYear = getFiscalYear(new Date(competition.date))
+        years.add(fiscalYear)
+      }
+    })
+    return Array.from(years).sort((a, b) => b - a) // 降順でソート
+  }, [displayRecords])
+  
   // フィルタリングロジック
   const filteredRecords = displayRecords.filter((record: Record) => {
+    // 日付フィルタリング：今日より未来の日付は除外
+    const competition = record.competition as Competition
+    if (competition?.date) {
+      const competitionDate = startOfDay(new Date(competition.date))
+      if (isAfter(competitionDate, today)) {
+        return false
+      }
+    }
+    
+    // 年度フィルタ
+    if (filterFiscalYear) {
+      const competition = record.competition as Competition
+      if (competition?.date) {
+        const fiscalYear = getFiscalYear(new Date(competition.date))
+        const filterYear = parseInt(filterFiscalYear)
+        if (fiscalYear !== filterYear) {
+          return false
+        }
+      } else {
+        return false // 日付がない場合は除外
+      }
+    }
+    
     // 種目フィルタ
     if (filterStyle) {
       const recordStyleId = record.style_id
@@ -114,11 +186,33 @@ export default function CompetitionClient({
   })
 
   // 日付の降順でソート
-  const sortedRecords = [...filteredRecords].sort((a, b) => {
-    const dateA = new Date(a.competition?.date || a.created_at)
-    const dateB = new Date(b.competition?.date || b.created_at)
-    return dateB.getTime() - dateA.getTime()
-  })
+  const sortedRecords = useMemo(() => {
+    return [...filteredRecords].sort((a, b) => {
+      const dateA = new Date(a.competition?.date || a.created_at)
+      const dateB = new Date(b.competition?.date || b.created_at)
+      return dateB.getTime() - dateA.getTime()
+    })
+  }, [filteredRecords])
+
+  // ページング適用
+  const paginatedRecords = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize
+    const endIndex = startIndex + pageSize
+    return sortedRecords.slice(startIndex, endIndex)
+  }, [sortedRecords, currentPage, pageSize])
+
+  const totalPages = Math.ceil(sortedRecords.length / pageSize)
+
+  // フィルタ変更時にページをリセット
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filterStyle, includeRelay, filterPoolType, filterFiscalYear])
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    // ページトップにスクロール
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   const handleEditRecord = async (record: Record) => {
     openForm(record)
@@ -170,7 +264,10 @@ export default function CompetitionClient({
         video_url: formData.videoUrl || null,
         note: formData.note || null,
         is_relaying: formData.isRelaying || false,
-        competition_id: competitionId || null
+        competition_id: competitionId || null,
+        reaction_time: formData.reactionTime && formData.reactionTime.trim() !== '' 
+          ? parseFloat(formData.reactionTime) 
+          : null
       }
 
       if (editingData && editingData.id) {
@@ -287,7 +384,26 @@ export default function CompetitionClient({
 
       {/* フィルタリングセクション */}
       <div className="bg-white rounded-lg shadow p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          {/* 期間フィルタ */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              期間
+            </label>
+            <select
+              value={filterFiscalYear}
+              onChange={(e) => setFilterFiscalYear(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">すべての期間</option>
+              {participatedFiscalYears.map((year) => (
+                <option key={year} value={year.toString()}>
+                  {year}年度
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* 種目フィルタ */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -299,7 +415,7 @@ export default function CompetitionClient({
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">すべての種目</option>
-              {styles.map((style: Style) => (
+              {participatedStyles.map((style: Style) => (
                 <option key={style.id} value={style.id}>
                   {style.name_jp}
                 </option>
@@ -324,8 +440,11 @@ export default function CompetitionClient({
           </div>
 
           {/* リレーフィルタ */}
-          <div className="flex flex-col justify-center">
-            <div className="flex items-center">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              引き継ぎ記録
+            </label>
+            <div className="flex items-center h-10">
               <input
                 type="checkbox"
                 id="includeRelay"
@@ -334,7 +453,7 @@ export default function CompetitionClient({
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
               <label htmlFor="includeRelay" className="ml-2 text-sm text-gray-700">
-                引き継ぎ記録
+              引き継ぎ記録を含める
               </label>
             </div>
           </div>
@@ -350,6 +469,7 @@ export default function CompetitionClient({
                 setFilterStyle('')
                 setIncludeRelay(true)
                 setFilterPoolType('')
+                setFilterFiscalYear('')
               }}
               className="w-full text-sm"
             >
@@ -359,14 +479,50 @@ export default function CompetitionClient({
         </div>
       </div>
 
+      {/* 成長度合いグラフセクション */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            成長度合いグラフ
+          </h2>
+          <div className="w-full md:w-64">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              種目を選択
+            </label>
+            <select
+              value={selectedChartStyleId || ''}
+              onChange={(e) => setSelectedChartStyleId(e.target.value ? parseInt(e.target.value) : null)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">種目を選択してください</option>
+              {participatedStyles.map((style: Style) => (
+                <option key={style.id} value={style.id}>
+                  {style.name_jp}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="mt-6">
+          <RecordProgressChart
+            records={displayRecords.filter((record: Record) => {
+              // 日付フィルタリング：今日より未来の日付は除外（グラフ用）
+              const competition = record.competition as Competition
+              if (competition?.date) {
+                const competitionDate = startOfDay(new Date(competition.date))
+                if (isAfter(competitionDate, today)) {
+                  return false
+                }
+              }
+              return true
+            })}
+            selectedStyleId={selectedChartStyleId}
+          />
+        </div>
+      </div>
+
       {/* 大会記録一覧（表形式） */}
       <div className="bg-white rounded-lg shadow">
-        <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
-            大会記録一覧
-          </h2>
-        </div>
-        
         {displayRecords.length === 0 ? (
           <div className="p-12 text-center">
             <TrophyIcon className="mx-auto h-12 w-12 text-gray-400" />
@@ -397,38 +553,39 @@ export default function CompetitionClient({
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+          <div className="overflow-x-auto -mx-4 sm:mx-0">
+            <div className="inline-block min-w-full align-middle px-4 sm:px-0">
+              <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     日付
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     大会名
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     場所
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     種目
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     記録
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     プール
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     メモ
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     操作
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {sortedRecords.map((record: Record) => (
+                {paginatedRecords.map((record: Record) => (
                   <tr key={record.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {(record.competition as Competition)?.date ? format(new Date((record.competition as Competition).date), 'MM/dd', { locale: ja }) : '-'}
@@ -492,6 +649,20 @@ export default function CompetitionClient({
                 ))}
               </tbody>
             </table>
+            </div>
+          </div>
+        )}
+
+        {/* ページング */}
+        {sortedRecords.length > pageSize && (
+          <div className="mt-4 pt-4 px-5 sm:px-6 pb-6 border-t border-gray-200">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={sortedRecords.length}
+              itemsPerPage={pageSize}
+              onPageChange={handlePageChange}
+            />
           </div>
         )}
       </div>
@@ -598,9 +769,16 @@ export default function CompetitionClient({
                         )}
                         {selectedRecord.time && (
                           <div className="flex items-center gap-2 mb-1">
-                            <p className="text-lg font-semibold text-blue-700">
-                            ⏱️ {formatTime(selectedRecord.time)}{selectedRecord.is_relaying && <span className="font-bold text-red-600 ml-1">R</span>}
-                          </p>
+                            <div className="relative text-lg font-semibold text-blue-700 pr-20">
+                              <span className="inline-block">
+                                ⏱️ {formatTime(selectedRecord.time)}{selectedRecord.is_relaying && <span className="font-bold text-red-600 ml-1">R</span>}
+                              </span>
+                              {selectedRecord.reaction_time != null && typeof selectedRecord.reaction_time === 'number' && (
+                                <span className="absolute -bottom-0.5 right-0 text-[10px] text-gray-500 font-normal whitespace-nowrap" data-testid="record-reaction-time-display">
+                                  R.T {selectedRecord.reaction_time.toFixed(2)}
+                                </span>
+                              )}
+                            </div>
                             <BestTimeBadge
                               recordId={selectedRecord.id}
                               styleId={selectedRecord.style_id}

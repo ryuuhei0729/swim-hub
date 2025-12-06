@@ -1361,6 +1361,7 @@ function CompetitionDetails({
           video_url: string | null
           note: string | null
           is_relaying: boolean
+          reaction_time?: number | null
           competition?: {
             id: string
             title: string
@@ -1386,6 +1387,7 @@ function CompetitionDetails({
               time: record.time,
               is_relaying: record.is_relaying,
               video_url: record.video_url || undefined,
+              reaction_time: record.reaction_time ?? null,
               style: record.style ? {
                 id: record.style.id.toString(),
                 name_jp: record.style.name_jp,
@@ -1523,6 +1525,7 @@ function CompetitionDetails({
                   video_url,
                   note,
                   is_relaying,
+                  reaction_time,
                   competition_id,
                   split_times (*)
                 `)
@@ -1536,6 +1539,7 @@ function CompetitionDetails({
                 is_relaying: boolean
                 note: string | null
                 video_url: string | null
+                reaction_time?: number | null
                 competition_id: string
                 split_times: SplitTime[]
               }
@@ -1550,6 +1554,7 @@ function CompetitionDetails({
                   video_url: recordData.video_url,
                   note: recordData.note,
                   is_relaying: recordData.is_relaying,
+                  reaction_time: recordData.reaction_time ?? null,
                   created_at: '',
                   updated_at: '',
                   pool_type: ((record.metadata as { pool_type?: number } | undefined)?.pool_type ?? 0) as PoolType,
@@ -1565,40 +1570,46 @@ function CompetitionDetails({
                 {/* 記録内容 */}
                 <div className="bg-white rounded-lg p-3 mb-3 border border-blue-300 relative">
                   {/* 編集・削除ボタン（右上） */}
-                  <div className="absolute top-3 right-3 flex items-center space-x-2">
-                    <button
-                      onClick={openRecordEditor}
-                      className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
-                      title="記録を編集"
-                      data-testid="edit-record-button"
-                    >
-                      <PencilIcon className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => onDeleteRecord?.(record.id)}
-                      className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-red-100 transition-colors"
-                      title="記録を削除"
-                      data-testid="delete-record-button"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
+                  <div className="absolute top-1 right-3 flex flex-col items-end gap-1">
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={openRecordEditor}
+                        className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                        title="記録を編集"
+                        data-testid="edit-record-button"
+                      >
+                        <PencilIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => onDeleteRecord?.(record.id)}
+                        className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                        title="記録を削除"
+                        data-testid="delete-record-button"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    </div>
+                    {record.metadata?.record?.reaction_time != null && typeof record.metadata?.record?.reaction_time === 'number' && (
+                      <span className="text-s text-gray-600 font-normal whitespace-nowrap" data-testid="record-reaction-time-display">
+                        ( RT {record.metadata.record.reaction_time.toFixed(2)} )
+                      </span>
+                    )}
                   </div>
-                  {/* 1行目：カラム名 */}
-                  <div className="grid grid-cols-2 gap-4 mb-2">
-                    <div className="text-xs font-medium text-gray-500">種目</div>
-                    <div className="text-xs font-medium text-gray-500">タイム</div>
-                  </div>
-                  
-                  {/* 2行目：種目名とタイム（横並び、タイムの大きさに揃える） */}
-                  <div className="grid grid-cols-2 gap-4 items-center">
-                    <div className="text-xl font-bold text-blue-700">
+                  {/* 2行×2列の表構造（罫線なし、すべて左寄せ） */}
+                  <div className="grid grid-cols-[auto_1fr] gap-x-20 gap-y-1 items-end">
+                    {/* 1行目：カラム名 */}
+                    <div className="text-xs font-medium text-gray-500 py-0 leading-tight self-start">種目</div>
+                    <div className="text-xs font-medium text-gray-500 py-0 leading-tight self-start">タイム</div>
+                    
+                    {/* 2行目：データ */}
+                    <div className="text-xl font-bold text-blue-700 whitespace-nowrap">
                       {record.metadata?.style?.name_jp || record.metadata?.record?.style?.name_jp || record.title}
                       {record.metadata?.record?.is_relaying && <span className="font-bold text-red-600 ml-2">R</span>}
                     </div>
-                    {record.metadata?.record?.time && (
-                      <div className="flex items-center gap-2">
-                        <div className="text-2xl font-bold text-blue-700" data-testid="record-time-display">
-                          {formatTime(record.metadata.record.time)}
+                    {record.metadata?.record?.time ? (
+                      <div className="flex items-end gap-4">
+                        <div className="relative text-2xl font-bold text-blue-700" data-testid="record-time-display">
+                          <span className="inline-block">{formatTime(record.metadata.record.time)}</span>
                         </div>
                         <BestTimeBadge
                           recordId={record.id}
@@ -1612,6 +1623,8 @@ function CompetitionDetails({
                           isRelaying={record.metadata?.record?.is_relaying}
                         />
                       </div>
+                    ) : (
+                      <div></div>
                     )}
                   </div>
                 </div>

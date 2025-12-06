@@ -29,6 +29,7 @@ interface RecordLogFormState {
   splitTimes: SplitTimeDraft[]
   note: string
   videoUrl?: string
+  reactionTime: string // 反応時間（秒単位、0.40~1.00程度）
 }
 
 // 送信用（distanceはnumber）
@@ -40,6 +41,7 @@ export interface RecordLogFormData {
   splitTimes: Array<{ distance: number; splitTime: number }>
   note: string
   videoUrl?: string
+  reactionTime: string // 反応時間（秒単位、0.40~1.00程度）
 }
 
 interface RecordLogFormProps {
@@ -55,6 +57,7 @@ interface RecordLogFormProps {
     splitTimes?: SplitTimeRow[]
     note?: string
     videoUrl?: string
+    reactionTime?: number | null // 反応時間（秒単位）
   } | null
   isLoading?: boolean
   styles?: Array<{ id: string | number; nameJp: string; distance: number }>
@@ -80,7 +83,8 @@ export default function RecordLogForm({
     isRelaying: false,
     splitTimes: [],
     note: '',
-    videoUrl: ''
+    videoUrl: '',
+    reactionTime: ''
   })
 
   const formatSecondsToDisplay = (seconds?: number): string => {
@@ -161,7 +165,8 @@ export default function RecordLogForm({
           isRelaying: editData.isRelaying || false,
           splitTimes,
           note: editData.note || '',
-          videoUrl: editData.videoUrl || ''
+          videoUrl: editData.videoUrl || '',
+          reactionTime: editData.reactionTime?.toString() || ''
         }
       ])
       setIsInitialized(true)
@@ -268,6 +273,13 @@ export default function RecordLogForm({
     updateFormData(index, (prev) => ({
       ...prev,
       videoUrl: value
+    }))
+  }
+
+  const handleReactionTimeChange = (index: number, value: string) => {
+    updateFormData(index, (prev) => ({
+      ...prev,
+      reactionTime: value
     }))
   }
 
@@ -544,22 +556,40 @@ export default function RecordLogForm({
                       )}
                     </div>
 
-                    {/* タイム */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        タイム <span className="text-red-500">*</span>
-                      </label>
-                      <Input
-                        type="text"
-                        value={formData.timeDisplayValue}
-                        onChange={(e) => handleTimeChange(index, e.target.value)}
-                        placeholder="例: 1:23.45 または 32.45"
-                        className="w-full"
-                        data-testid={`record-time-${sectionIndex}`}
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        形式: 分:秒.小数（例: 1:23.45）または 秒.小数（例: 32.45）
-                      </p>
+                    {/* タイムとリアクションタイム */}
+                    <div className="grid grid-cols-[1fr_auto] gap-2 items-start">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          タイム <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          type="text"
+                          value={formData.timeDisplayValue}
+                          onChange={(e) => handleTimeChange(index, e.target.value)}
+                          placeholder="例: 1:23.45 または 32.45"
+                          className="w-full"
+                          data-testid={`record-time-${sectionIndex}`}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          形式: 分:秒.小数（例: 1:23.45）または 秒.小数（例: 32.45）
+                        </p>
+                      </div>
+                      <div className="w-42">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          リアクションタイム
+                        </label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0.40"
+                          max="1.00"
+                          value={formData.reactionTime}
+                          onChange={(e) => handleReactionTimeChange(index, e.target.value)}
+                          placeholder="0.65"
+                          className="w-full"
+                          data-testid={`record-reaction-time-${sectionIndex}`}
+                        />
+                      </div>
                     </div>
 
                     {/* リレー */}

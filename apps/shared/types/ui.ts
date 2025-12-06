@@ -85,6 +85,7 @@ export interface RecordMetadata {
     time_result?: number
     is_relaying: boolean
     video_url?: string
+    reaction_time?: number | null // 反応時間（リアクションタイム）
     style: {
       id: string
       name_jp: string
@@ -158,6 +159,7 @@ export interface CalendarItem {
       time_result?: number
       is_relaying: boolean
       video_url?: string
+      reaction_time?: number | null // 反応時間（リアクションタイム）
       style: {
         id: string
         name_jp: string

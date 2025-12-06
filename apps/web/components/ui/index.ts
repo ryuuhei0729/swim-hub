@@ -5,6 +5,8 @@ export { default as Button } from './Button'
 export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './Card'
 export { default as Input } from './Input'
 export { FullScreenLoading, default as LoadingSpinner } from './LoadingSpinner'
+export { default as Pagination } from './Pagination'
+export type { PaginationProps } from './Pagination'
 export { Tabs } from './Tabs'
 export type { Tab } from './Tabs'
 

@@ -422,7 +422,8 @@ export function FormModals({
             isRelaying?: boolean; 
             splitTimes?: Array<{ id?: string; recordId?: string; distance: number; splitTime: number; createdAt?: string }>; 
             note?: string; 
-            videoUrl?: string | null 
+            videoUrl?: string | null;
+            reactionTime?: number | null
           }
           
           const splitTimes = data.splitTimes?.map(st => ({
@@ -440,7 +441,8 @@ export function FormModals({
             isRelaying: data.isRelaying,
             splitTimes: splitTimes,
             note: data.note,
-            videoUrl: data.videoUrl === null ? undefined : data.videoUrl
+            videoUrl: data.videoUrl === null ? undefined : data.videoUrl,
+            reactionTime: data.reactionTime
           }
         })()}
         isLoading={competitionIsLoading}

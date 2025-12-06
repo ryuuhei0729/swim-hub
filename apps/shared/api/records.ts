@@ -25,11 +25,18 @@ export class RecordAPI {
 
   /**
    * 記録一覧取得（期間指定）
+   * @param startDate 開始日（オプション）
+   * @param endDate 終了日（オプション）
+   * @param styleId 種目ID（オプション）
+   * @param limit 取得件数（オプション）
+   * @param offset オフセット（オプション）
    */
   async getRecords(
     startDate?: string,
     endDate?: string,
-    styleId?: number
+    styleId?: number,
+    limit?: number,
+    offset?: number
   ): Promise<RecordWithDetails[]> {
     const { data: { user } } = await this.supabase.auth.getUser()
     if (!user) throw new Error('認証が必要です')
@@ -55,10 +62,50 @@ export class RecordAPI {
       query = query.eq('style_id', styleId)
     }
 
+    if (limit !== undefined) {
+      if (offset !== undefined) {
+        query = query.range(offset, offset + limit - 1)
+      } else {
+        query = query.limit(limit)
+      }
+    }
+
     const { data, error } = await query
 
     if (error) throw error
     return data as RecordWithDetails[]
+  }
+
+  /**
+   * 記録の総件数を取得（期間指定）
+   */
+  async countRecords(
+    startDate?: string,
+    endDate?: string,
+    styleId?: number
+  ): Promise<number> {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+
+    let query = this.supabase
+      .from('records')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+
+    if (startDate) {
+      query = query.gte('created_at', startDate)
+    }
+    if (endDate) {
+      query = query.lte('created_at', endDate)
+    }
+    if (styleId) {
+      query = query.eq('style_id', styleId)
+    }
+
+    const { count, error } = await query
+
+    if (error) throw error
+    return count || 0
   }
 
   /**
@@ -117,6 +164,7 @@ export class RecordAPI {
       is_relaying: boolean
       note: string | null
       pool_type: number
+      reaction_time?: number | null
     }>
   ): Promise<{ created: number; errors: string[] }> {
     const { data: { user } } = await this.supabase.auth.getUser()
@@ -139,7 +187,8 @@ export class RecordAPI {
         pool_type: record.pool_type,
         competition_id: null, // 大会に紐づけない
         team_id: null, // 個人記録
-        video_url: null
+        video_url: null,
+        reaction_time: record.reaction_time || null
       }))
 
       const { data, error } = await this.supabase

@@ -5,11 +5,11 @@
 import type { Database } from '@/lib/supabase'
 import { useCompetitionFormStore, usePracticeFormStore } from '@/stores'
 import type {
-    EditingData,
-    EntryFormData,
-    EntryWithStyle,
-    PracticeMenuFormData,
-    RecordFormDataInternal
+  EditingData,
+  EntryFormData,
+  EntryWithStyle,
+  PracticeMenuFormData,
+  RecordFormDataInternal
 } from '@/stores/types'
 import { EntryAPI } from '@apps/shared/api'
 import type { Style } from '@apps/shared/types/database'
@@ -457,7 +457,10 @@ export function useDashboardHandlers({
           time: formData.time,
           video_url: formData.videoUrl || null,
           note: formData.note || null,
-          is_relaying: formData.isRelaying || false
+          is_relaying: formData.isRelaying || false,
+          reaction_time: formData.reactionTime && formData.reactionTime.trim() !== '' 
+            ? parseFloat(formData.reactionTime) 
+            : null
         }
 
         await updateRecord(effectiveEditingData.id, updates)
@@ -498,7 +501,10 @@ export function useDashboardHandlers({
             note: formData.note || null,
             is_relaying: formData.isRelaying || false,
             competition_id: competitionId,
-            pool_type: competitionPoolType
+            pool_type: competitionPoolType,
+            reaction_time: formData.reactionTime && formData.reactionTime.trim() !== '' 
+              ? parseFloat(formData.reactionTime) 
+              : null
           }
 
           const newRecord = await createRecord(recordForCreate)
