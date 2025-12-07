@@ -60,7 +60,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
     }
     
     // デフォルトのエラーメッセージ
-    return process.env.NODE_ENV === 'development'
+    return __DEV__
       ? `エラーが発生しました: ${errMsg}${statusText}`
       : 'ログインに失敗しました。入力内容を確認してから再度お試しください。'
   }

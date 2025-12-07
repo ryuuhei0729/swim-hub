@@ -19,9 +19,9 @@ if (!supabaseUrl || !supabaseAnonKey) {
     'Supabase環境変数が設定されていません。\n' +
     'EXPO_PUBLIC_SUPABASE_URL と EXPO_PUBLIC_SUPABASE_ANON_KEY を設定してください。\n' +
     '.env.local ファイルを作成して設定を追加してください。\n\n' +
-    `現在の値:\n` +
-    `EXPO_PUBLIC_SUPABASE_URL: ${supabaseUrl || 'undefined'}\n` +
-    `EXPO_PUBLIC_SUPABASE_ANON_KEY: ${supabaseAnonKey ? '設定済み' : 'undefined'}`
+    `現在の設定状態:\n` +
+    `EXPO_PUBLIC_SUPABASE_URL: ${supabaseUrl ? 'set' : 'unset'}\n` +
+    `EXPO_PUBLIC_SUPABASE_ANON_KEY: ${supabaseAnonKey ? 'set' : 'unset'}`
   
   console.error(errorMessage)
   throw new Error(errorMessage)
