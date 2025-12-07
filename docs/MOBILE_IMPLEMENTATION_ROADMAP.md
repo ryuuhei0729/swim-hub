@@ -114,10 +114,10 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: Webの`AuthProvider`と同等の機能をReact Nativeで実装
 
 **タスク**:
-- [ ] `AuthProvider`の実装（`apps/mobile/contexts/AuthProvider.tsx`）
-- [ ] 認証状態の管理（セッション、ユーザー情報）
-- [ ] 認証メソッドの実装（signIn, signUp, signOut）
-- [ ] React Queryの`QueryClient`設定
+- [x] `AuthProvider`の実装（`apps/mobile/contexts/AuthProvider.tsx`）
+- [x] 認証状態の管理（セッション、ユーザー情報）
+- [x] 認証メソッドの実装（signIn, signUp, signOut）
+- [x] React Queryの`QueryClient`設定
 
 **実装方針**:
 - Webの`AuthProvider`を参考に、React Native用に調整
@@ -129,9 +129,9 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: `apps/shared`のReact QueryフックをReact Nativeで使用可能にする
 
 **タスク**:
-- [ ] `QueryClientProvider`の設定
-- [ ] `apps/shared/lib/react-query.ts`の`createQueryClient`を使用
-- [ ] プロバイダーの階層構造を構築
+- [x] `QueryClientProvider`の設定
+- [x] `apps/shared/lib/react-query.ts`の`createQueryClient`を使用
+- [x] プロバイダーの階層構造を構築
 
 **確認事項**:
 - `apps/shared/hooks/queries/*.ts`の`'use client'`ディレクティブはReact Nativeでは無視される（問題なし）
