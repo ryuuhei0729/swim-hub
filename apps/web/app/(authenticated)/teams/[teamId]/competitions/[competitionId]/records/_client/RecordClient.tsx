@@ -38,6 +38,7 @@ interface RecordWithDetails {
   is_relaying: boolean
   pool_type: number | null
   team_id: string | null
+  reaction_time?: number | null
   split_times: {
     id: string
     distance: number

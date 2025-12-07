@@ -16,6 +16,28 @@ import { ja } from 'date-fns/locale'
 import type { Record, Competition } from '@apps/shared/types/database'
 import { formatTime } from '@/utils/formatters'
 
+// カスタムツールチップ（コンポーネント外に定義）
+const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ value?: number; name?: string; color?: string; payload?: { dateLabel?: string } }> }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white p-3 border border-gray-300 rounded-md shadow-lg">
+        <p className="font-medium text-gray-900 mb-2">
+          {payload[0]?.payload?.dateLabel}
+        </p>
+        {payload.map((entry, index: number) => {
+          if (!entry.value) return null
+          return (
+            <p key={index} className="text-sm" style={{ color: entry.color }}>
+              {`${entry.name}: ${formatTime(entry.value)}`}
+            </p>
+          )
+        })}
+      </div>
+    )
+  }
+  return null
+}
+
 interface ChartDataPoint {
   date: string // 大会日付（ISO形式）
   dateLabel: string // 表示用日付（MM/dd形式）
@@ -151,28 +173,6 @@ export default function RecordProgressChart({
 
     return { chartData: data, yAxisDomain: domain }
   }, [records, selectedStyleId])
-
-  // カスタムツールチップ
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-3 border border-gray-300 rounded-md shadow-lg">
-          <p className="font-medium text-gray-900 mb-2">
-            {payload[0]?.payload?.dateLabel}
-          </p>
-          {payload.map((entry: any, index: number) => {
-            if (!entry.value) return null
-            return (
-              <p key={index} className="text-sm" style={{ color: entry.color }}>
-                {`${entry.name}: ${formatTime(entry.value)}`}
-              </p>
-            )
-          })}
-        </div>
-      )
-    }
-    return null
-  }
 
   // カスタムY軸フォーマッター（秒を分:秒形式に変換）
   const formatYAxis = (value: number) => {

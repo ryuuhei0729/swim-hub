@@ -73,6 +73,7 @@ type EditData = {
   isRelaying?: boolean
   splitTimes?: EditSplitTime[]
   videoUrl?: string
+  reactionTime?: number | null
 }
 
 const POOL_TYPES = [
@@ -191,7 +192,8 @@ export default function RecordForm({
               : `split-${Date.now()}-${Math.random()}`
           })) || []),
           note: record.note || '',
-          videoUrl: record.videoUrl || ''
+          videoUrl: record.videoUrl || '',
+          reactionTime: record.reactionTime?.toString() || ''
         }))
         
         setFormData({
