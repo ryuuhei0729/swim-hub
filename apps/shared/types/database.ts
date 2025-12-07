@@ -153,6 +153,7 @@ export interface Record {
   video_url: string | null
   note: string | null
   is_relaying: boolean
+  reaction_time?: number | null // 反応時間（リアクションタイム）を秒単位で記録。範囲は0.40~1.00秒程度。
   created_at: string
   updated_at: string
   // CalendarItemとの互換性のための追加プロパティ

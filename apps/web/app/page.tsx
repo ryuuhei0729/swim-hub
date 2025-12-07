@@ -285,7 +285,7 @@ export default function Home() {
               スイマーのための記録管理サービスです
             </p>
           </div>
-          
+
           <div className="bg-white rounded-2xl p-6 sm:p-10 shadow-sm">
             <p className="text-gray-700 text-base sm:text-lg leading-relaxed mb-6">
               <span className="font-bold text-blue-600">SwimHub（スイムハブ）</span>は、
@@ -344,22 +344,22 @@ export default function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, index) => (
-              <div
-                key={feature.title}
+                <div
+                  key={feature.title}
                 className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg hover:border-blue-200 transition-all duration-300 animate-fade-in"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                >
                 <div className={`w-12 h-12 rounded-xl ${feature.bgColor} flex items-center justify-center mb-4`}>
                   <feature.icon className={`w-6 h-6 ${feature.color}`} />
-                </div>
+                  </div>
                 <h4 className="text-lg font-semibold text-gray-900 mb-2">
-                  {feature.title}
-                </h4>
+                    {feature.title}
+                  </h4>
                 <p className="text-gray-600 text-sm leading-relaxed">
-                  {feature.description}
-                </p>
-              </div>
-            ))}
+                    {feature.description}
+                  </p>
+                </div>
+              ))}
           </div>
 
           <div className="mt-12 text-center">
