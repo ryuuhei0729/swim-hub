@@ -20,6 +20,9 @@ yarn-error.log*
 # dotenvx encryption keys (機密情報のためgit管理外)
 .env.*.keys
 **/.env.*.keys
+# 明示的に除外（絶対にgit管理してはいけない）
+apps/mobile/.env.keys
+apps/web/.env.keys
 
 # MCP Configuration (contains sensitive tokens)
 .mcp.json
