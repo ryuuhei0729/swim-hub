@@ -144,11 +144,11 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: メールアドレス・パスワードでログインできる
 
 **タスク**:
-- [ ] ログイン画面UIの実装
-- [ ] フォームバリデーション
-- [ ] エラーハンドリング
-- [ ] ローディング状態の表示
-- [ ] `AuthProvider`の`signIn`メソッドを使用
+- [x] ログイン画面UIの実装
+- [x] フォームバリデーション
+- [x] エラーハンドリング
+- [x] ローディング状態の表示
+- [x] `AuthProvider`の`signIn`メソッドを使用
 
 **UI要件**:
 - メールアドレス入力
