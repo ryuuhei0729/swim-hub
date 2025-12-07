@@ -75,7 +75,8 @@ export const PracticeFormScreen: React.FC = () => {
       initialize()
       setLoadingPractice(false)
     }
-  }, [isEditMode, practiceId, practices, loadingPractices, initialize])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditMode, practiceId, practices.length, loadingPractices])
 
   // ミューテーション
   const createMutation = useCreatePracticeMutation(supabase)

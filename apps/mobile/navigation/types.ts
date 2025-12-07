@@ -30,6 +30,12 @@ export type MainStackParamList = {
   PracticeForm: {
     practiceId?: string
   }
+  RecordDetail: {
+    recordId: string
+  }
+  RecordForm: {
+    recordId?: string
+  }
 }
 
 // ルートナビゲーターのパラメータ型（認証状態に応じて切り替え）

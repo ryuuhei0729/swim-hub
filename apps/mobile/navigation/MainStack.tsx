@@ -4,6 +4,8 @@ import type { MainStackParamList } from './types'
 import { TabNavigator } from './TabNavigator'
 import { PracticeDetailScreen } from '@/screens/PracticeDetailScreen'
 import { PracticeFormScreen } from '@/screens/PracticeFormScreen'
+import { RecordDetailScreen } from '@/screens/RecordDetailScreen'
+import { RecordFormScreen } from '@/screens/RecordFormScreen'
 
 const Stack = createNativeStackNavigator<MainStackParamList>()
 
@@ -45,6 +47,38 @@ export const MainStack: React.FC = () => {
         options={({ route }) => ({
           headerShown: true,
           title: route.params?.practiceId ? '練習記録編集' : '練習記録作成',
+          headerBackTitle: '戻る',
+          headerStyle: {
+            backgroundColor: '#FFFFFF',
+          },
+          headerTintColor: '#111827',
+          headerTitleStyle: {
+            fontWeight: '600',
+          },
+        })}
+      />
+      <Stack.Screen
+        name="RecordDetail"
+        component={RecordDetailScreen}
+        options={{
+          headerShown: true,
+          title: '大会記録詳細',
+          headerBackTitle: '戻る',
+          headerStyle: {
+            backgroundColor: '#FFFFFF',
+          },
+          headerTintColor: '#111827',
+          headerTitleStyle: {
+            fontWeight: '600',
+          },
+        }}
+      />
+      <Stack.Screen
+        name="RecordForm"
+        component={RecordFormScreen}
+        options={({ route }) => ({
+          headerShown: true,
+          title: route.params?.recordId ? '大会記録編集' : '大会記録作成',
           headerBackTitle: '戻る',
           headerStyle: {
             backgroundColor: '#FFFFFF',

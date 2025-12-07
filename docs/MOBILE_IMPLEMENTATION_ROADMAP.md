@@ -278,10 +278,10 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: 大会記録の一覧を表示
 
 **タスク**:
-- [ ] 一覧画面の実装
-- [ ] `apps/shared/hooks/queries/records.ts`を使用
-- [ ] フィルター機能（種目、年度、プールタイプ）
-- [ ] ソート機能
+- [x] 一覧画面の実装
+- [x] `apps/shared/hooks/queries/records.ts`を使用
+- [x] フィルター機能（種目、年度、プールタイプ）
+- [x] ソート機能
 
 **実装方針**:
 - Webの`apps/web/stores/filter/competitionFilterStore.ts`を参考に、モバイル用のZustandストアを作成
@@ -291,21 +291,21 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: 大会記録の詳細を表示
 
 **タスク**:
-- [ ] 詳細画面の実装
-- [ ] エントリー情報の表示
-- [ ] スプリットタイムの表示
-- [ ] 反応時間の表示
+- [x] 詳細画面の実装
+- [x] エントリー情報の表示
+- [x] スプリットタイムの表示
+- [x] 反応時間の表示
 
 #### 5.3 大会記録作成・編集
 
 **目標**: 大会記録を作成・編集できる
 
 **タスク**:
-- [ ] 作成画面の実装
-- [ ] 編集画面の実装
-- [ ] フォーム状態管理（Zustand）
-- [ ] エントリー情報の入力
-- [ ] スプリットタイムの入力
+- [x] 作成画面の実装
+- [x] 編集画面の実装
+- [x] フォーム状態管理（Zustand）
+- [x] エントリー情報の入力
+- [x] スプリットタイムの入力
 
 ### Phase 6: ダッシュボード機能
 
