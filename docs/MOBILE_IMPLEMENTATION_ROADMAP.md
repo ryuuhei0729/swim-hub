@@ -181,7 +181,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: 未認証ユーザーをログイン画面にリダイレクト
 
 **タスク**:
-- [ ] 認証ガードコンポーネントの実装
+- [x] 認証ガードコンポーネントの実装
 - [ ] ナビゲーション統合（Phase 3で実装）
 
 ### Phase 3: ナビゲーションと基本レイアウト

@@ -101,11 +101,6 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
       return false
     }
     
-    if (password.length < 8) {
-      // 警告として表示（エラーにはしない）
-      // より強力なパスワードを推奨
-    }
-    
     return true
   }
 
