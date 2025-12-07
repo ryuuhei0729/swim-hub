@@ -216,10 +216,10 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: 共通レイアウトコンポーネントの実装
 
 **タスク**:
-- [ ] ヘッダーコンポーネント
-- [ ] タブバーコンポーネント
-- [ ] ローディングコンポーネント
-- [ ] エラー表示コンポーネント
+- [x] ヘッダーコンポーネント
+- [x] タブバーコンポーネント（React Navigationで既に実装済み）
+- [x] ローディングコンポーネント
+- [x] エラー表示コンポーネント
 
 ### Phase 4: 練習記録機能
 
