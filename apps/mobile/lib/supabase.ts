@@ -1,16 +1,17 @@
-import AsyncStorage from '@react-native-async-storage/async-storage'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@swim-hub/shared/types/database'
+import Constants from 'expo-constants'
 
 // 環境変数からSupabase設定を取得
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+// app.config.jsのextraフィールドから読み込む（dotenvxで復号化済み）
+const supabaseUrl = Constants.expoConfig?.extra?.supabaseUrl
+const supabaseAnonKey = Constants.expoConfig?.extra?.supabaseAnonKey
 
 // デバッグ用: 環境変数の確認（開発環境のみ）
 if (__DEV__) {
   console.log('Supabase環境変数の確認:')
-  console.log('EXPO_PUBLIC_SUPABASE_URL:', supabaseUrl ? '設定済み' : '未設定')
-  console.log('EXPO_PUBLIC_SUPABASE_ANON_KEY:', supabaseAnonKey ? '設定済み' : '未設定')
+  console.log('supabaseUrl (from Constants.expoConfig.extra):', supabaseUrl ? `${supabaseUrl.substring(0, 50)}...` : '未設定')
+  console.log('supabaseAnonKey (from Constants.expoConfig.extra):', supabaseAnonKey ? '設定済み' : '未設定')
 }
 
 // 環境変数の検証
@@ -28,11 +29,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 // React Native用Supabaseクライアント
+// 新しいアーキテクチャのテスト: AsyncStorageを一時的に無効化
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: AsyncStorage,
+    // AsyncStorageを一時的にコメントアウトしてテスト
+    // storage: AsyncStorage,
     autoRefreshToken: true,
-    persistSession: true,
+    persistSession: false, // AsyncStorage無しのため永続化しない
     detectSessionInUrl: false,
   },
 })
