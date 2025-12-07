@@ -228,11 +228,11 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: 練習記録の一覧を表示
 
 **タスク**:
-- [ ] 一覧画面の実装
-- [ ] `apps/shared/hooks/queries/practices.ts`の`usePracticesQuery`を使用
-- [ ] 日付フィルター機能
-- [ ] プルリフレッシュ機能
-- [ ] 無限スクロール（ページネーション）
+- [x] 一覧画面の実装
+- [x] `apps/shared/hooks/queries/practices.ts`の`usePracticesQuery`を使用
+- [x] 日付フィルター機能
+- [x] プルリフレッシュ機能
+- [x] 無限スクロール（ページネーション）
 
 **実装方針**:
 - `apps/shared`のAPI層とReact Queryフックをそのまま使用
@@ -243,21 +243,21 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: 特定日の練習記録を詳細表示
 
 **タスク**:
-- [ ] 詳細画面の実装
-- [ ] 練習ログの表示
-- [ ] タイムの表示
-- [ ] タグの表示
+- [x] 詳細画面の実装
+- [x] 練習ログの表示
+- [x] タイムの表示
+- [x] タグの表示
 
 #### 4.3 練習記録作成・編集
 
 **目標**: 練習記録を作成・編集できる
 
 **タスク**:
-- [ ] 作成画面の実装
-- [ ] 編集画面の実装
-- [ ] フォーム状態管理（Zustandを使用、Webと同様）
-- [ ] `apps/shared/hooks/queries/practices.ts`のミューテーションフックを使用
-- [ ] バリデーション
+- [x] 作成画面の実装
+- [x] 編集画面の実装
+- [x] フォーム状態管理（Zustandを使用、Webと同様）
+- [x] `apps/shared/hooks/queries/practices.ts`のミューテーションフックを使用
+- [x] バリデーション
 
 **実装方針**:
 - Webの`apps/web/stores/form/practiceFormStore.ts`を参考に、モバイル用のZustandストアを作成
@@ -268,8 +268,8 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: 練習記録を削除できる
 
 **タスク**:
-- [ ] 削除確認ダイアログ
-- [ ] 削除ミューテーションの実装
+- [x] 削除確認ダイアログ
+- [x] 削除ミューテーションの実装
 
 ### Phase 5: 大会記録機能
 

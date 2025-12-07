@@ -24,6 +24,12 @@ export type TabParamList = {
 // メインスタックのパラメータ型
 export type MainStackParamList = {
   MainTabs: NavigatorScreenParams<TabParamList>
+  PracticeDetail: {
+    practiceId: string
+  }
+  PracticeForm: {
+    practiceId?: string
+  }
 }
 
 // ルートナビゲーターのパラメータ型（認証状態に応じて切り替え）
