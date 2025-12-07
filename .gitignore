@@ -17,6 +17,11 @@ yarn-error.log*
 .env.local
 .env.*.local
 # .env.development, .env.production, .env.example はgit管理（共有設定）
+# モバイルアプリ（apps/mobile/）の環境変数ファイルも同様
+# - apps/mobile/.env.development（git管理）
+# - apps/mobile/.env.example（git管理）
+# - apps/mobile/.env.production（git管理）
+# - apps/mobile/.env.local（git管理外）
 
 # MCP Configuration (contains sensitive tokens)
 .mcp.json
@@ -85,3 +90,19 @@ next-env.d.ts
 /apps/web/e2e/playwright/.auth/  # ログイン状態（認証情報を含むためGit管理外）
 /apps/web/screenshots/
 .playwright-mcp/
+
+# React Native / Expo (Mobile App)
+/apps/mobile/.expo/
+/apps/mobile/dist/
+/apps/mobile/web-build/
+/apps/mobile/expo-env.d.ts
+/apps/mobile/.kotlin/
+/apps/mobile/*.orig.*
+/apps/mobile/*.jks
+/apps/mobile/*.p8
+/apps/mobile/*.p12
+/apps/mobile/*.key
+/apps/mobile/*.mobileprovision
+/apps/mobile/.metro-health-check*
+/apps/mobile/ios/
+/apps/mobile/android/
