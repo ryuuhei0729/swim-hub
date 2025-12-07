@@ -4,9 +4,9 @@
   "private": true,
   "description": "水泳選手マネジメントシステム - Webアプリケーション",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "npx dotenvx run -f .env.development -- next dev",
+    "build": "npx dotenvx run -f .env.production -- next build",
+    "start": "npx dotenvx run -f .env.production -- next start",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "type-check": "tsc --noEmit",
