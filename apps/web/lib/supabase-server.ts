@@ -5,9 +5,9 @@
 import { createServerClient } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@supabase/supabase-js'
+import type { Database } from '@swim-hub/shared/types/database'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
-import type { Database } from './supabase'
 
 /**
  * Cookie操作を記録するための型

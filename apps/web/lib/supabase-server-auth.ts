@@ -5,8 +5,8 @@
 
 import { createServerClient } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@swim-hub/shared/types/database'
 import { cookies } from 'next/headers'
-import type { Database } from './supabase'
 
 /**
  * 認証情報を含むサーバー側Supabaseクライアントを作成

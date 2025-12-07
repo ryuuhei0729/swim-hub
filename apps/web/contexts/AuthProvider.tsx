@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
-import type { Database } from '@/lib/supabase'
+import type { Database } from '@swim-hub/shared/types/database'
 import { useRouter } from 'next/navigation'
 import { getQueryClient } from '@/providers/QueryProvider'
 import { AuthState, AuthContextType } from '@/types'

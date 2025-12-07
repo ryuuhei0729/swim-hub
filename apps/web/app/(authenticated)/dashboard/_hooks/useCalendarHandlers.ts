@@ -2,11 +2,11 @@
 // カレンダーイベントハンドラー用カスタムフック
 // =============================================================================
 
-import type { Database } from '@/lib/supabase'
 import type { EditingData, EntryWithStyle } from '@/stores/types'
 import type { CalendarItemType } from '@apps/shared/types/database'
 import type { CalendarItem, EntryInfo } from '@apps/shared/types/ui'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@swim-hub/shared/types/database'
 import { parseISO, startOfDay } from 'date-fns'
 import { useCallback } from 'react'
 

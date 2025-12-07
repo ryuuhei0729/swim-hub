@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
+import type { Database } from '@swim-hub/shared/types/database'
 import { NextResponse, type NextRequest } from 'next/server'
-import type { Database } from './lib/supabase'
 
 export async function middleware(request: NextRequest) {
   // Cookie操作を記録するための配列

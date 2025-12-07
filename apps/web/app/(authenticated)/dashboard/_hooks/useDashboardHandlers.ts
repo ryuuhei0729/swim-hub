@@ -2,7 +2,6 @@
 // ダッシュボードハンドラー関数用カスタムフック
 // =============================================================================
 
-import type { Database } from '@/lib/supabase'
 import { useCompetitionFormStore, usePracticeFormStore } from '@/stores'
 import type {
   EditingData,
@@ -14,6 +13,7 @@ import type {
 import { EntryAPI } from '@apps/shared/api'
 import type { Style } from '@apps/shared/types/database'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@swim-hub/shared/types/database'
 import { useCallback } from 'react'
 import { getCompetitionId, getPracticeId, getRecordCompetitionId } from '../_utils/dashboardHelpers'
 

@@ -80,10 +80,10 @@ swim-hub/
 **目標**: React Native環境でSupabaseクライアントを正しく初期化
 
 **タスク**:
-- [ ] React Native用Supabaseクライアント作成（`apps/mobile/lib/supabase.ts`）
-- [ ] AsyncStorageアダプターの設定（認証トークン保存）
-- [ ] 環境変数の管理（`.env`ファイル）
-- [ ] 型定義の共有（`apps/shared/types`を使用）
+- [x] React Native用Supabaseクライアント作成（`apps/mobile/lib/supabase.ts`）
+- [x] AsyncStorageアダプターの設定（認証トークン保存）
+- [x] 環境変数の管理（`.env`ファイル）
+- [x] 型定義の共有（`apps/shared/types`を使用）
 
 **実装例**:
 ```typescript
