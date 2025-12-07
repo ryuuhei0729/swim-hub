@@ -126,7 +126,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
         setMessage('確認メールを送信しました。メールを確認してアカウントを有効化してください。')
         onSuccess?.()
       }
-    } catch (err) {
+    } catch {
       setError('予期しないエラーが発生しました。')
     } finally {
       setLoading(false)

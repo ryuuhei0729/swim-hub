@@ -101,7 +101,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
       } else {
         onSuccess?.()
       }
-    } catch (err) {
+    } catch {
       setError('予期しないエラーが発生しました。')
     } finally {
       setLoading(false)
@@ -170,8 +170,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
           <Pressable
             style={styles.linkContainer}
             onPress={() => {
-              // Phase 2.3でパスワードリセット画面を実装予定
-              console.log('パスワードリセット（未実装）')
+              // Phase 3でナビゲーションを実装予定
+              // 現時点では暫定的にログに出力
+              console.log('パスワードリセット画面へ遷移（Phase 3で実装予定）')
             }}
           >
             <Text style={styles.linkText}>パスワードを忘れた方はこちら</Text>

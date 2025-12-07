@@ -172,9 +172,9 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: パスワードをリセットできる
 
 **タスク**:
-- [ ] パスワードリセット画面
-- [ ] メール送信機能
-- [ ] パスワード更新画面
+- [x] パスワードリセット画面
+- [x] メール送信機能
+- [x] パスワード更新画面
 
 #### 2.4 認証ガード
 
