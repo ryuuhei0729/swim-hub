@@ -11,20 +11,21 @@ yarn-error.log*
 /packages/*/dist/
 /packages/*/build/
 
-
 # Environment variables
-.env
 .env.local
 .env.*.local
-# .env.development, .env.production, .env.example はgit管理（共有設定）
+# .env.development, .env.production, .env.example はgit管理（dotenvxで暗号化済み）
 # モバイルアプリ（apps/mobile/）の環境変数ファイルも同様
-# - apps/mobile/.env.development（git管理）
-# - apps/mobile/.env.example（git管理）
-# - apps/mobile/.env.production（git管理）
-# - apps/mobile/.env.local（git管理外）
+
+# dotenvx encryption keys (機密情報のためgit管理外)
+.env.*.keys
+**/.env.*.keys
 
 # MCP Configuration (contains sensitive tokens)
 .mcp.json
+
+# Vercel (個人固有の設定のためgit管理外)
+.vercel/
 
 # Google Cloud Platform Service Account Keys
 swimhub-479706-fa49932fb92d.json
@@ -80,6 +81,10 @@ temp/
 # Next.js auto-generated files
 next-env.d.ts
 **/next-env.d.ts
+
+# TypeScript build info
+*.tsbuildinfo
+**/*.tsbuildinfo
 
 # Playwright E2E Testing
 /apps/web/test-results/

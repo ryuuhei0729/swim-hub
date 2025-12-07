@@ -15,6 +15,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "@dotenvx/dotenvx": "^1.51.1",
     "@react-native-async-storage/async-storage": "^2.1.0",
     "@react-navigation/bottom-tabs": "^7.1.0",
     "@react-navigation/native": "^7.0.0",
@@ -25,13 +26,13 @@
     "date-fns": "^4.1.0",
     "expo": "~54.0.27",
     "expo-status-bar": "~3.0.9",
-    "react": "19.1.0",
+    "react": "19.2.0",
     "react-native": "0.81.5",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@eslint/js": "^9",
-    "@types/react": "~19.1.0",
+    "@types/react": "~19.2.0",
     "eslint": "^9.37.0",
     "eslint-plugin-react": "^7.37.2",
     "eslint-plugin-react-hooks": "^5.1.0",

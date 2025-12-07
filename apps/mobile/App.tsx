@@ -6,12 +6,18 @@ import { AuthProvider, useAuth } from './contexts/AuthProvider'
 import QueryProvider from './providers/QueryProvider'
 import { AuthStack } from './navigation/AuthStack'
 import { MainStack } from './navigation/MainStack'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 /**
  * 認証状態に応じてナビゲーションスタックを切り替えるコンポーネント
  */
 const AppNavigator: React.FC = () => {
   const { isAuthenticated, loading } = useAuth()
+
+  // デバッグ用: 認証状態の確認
+  if (__DEV__) {
+    console.log('AppNavigator - 認証状態:', { isAuthenticated, loading })
+  }
 
   // 認証状態の確認中
   if (loading) {
@@ -37,11 +43,13 @@ const AppNavigator: React.FC = () => {
  */
 export default function App() {
   return (
-    <QueryProvider>
-      <AuthProvider>
-        <AppNavigator />
-      </AuthProvider>
-    </QueryProvider>
+    <ErrorBoundary>
+      <QueryProvider>
+        <AuthProvider>
+          <AppNavigator />
+        </AuthProvider>
+      </QueryProvider>
+    </ErrorBoundary>
   )
 }
 
