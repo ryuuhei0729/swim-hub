@@ -60,7 +60,7 @@ describe('usePracticesQuery', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
     expect(result.current.data).toEqual([mockPractice])
-    expect(mockApi.getPractices).toHaveBeenCalledWith('2025-01-01', '2025-01-31')
+    expect(mockApi.getPractices).toHaveBeenCalledWith('2025-01-01', '2025-01-31', 20, 0)
   })
 
   it('エラー時にエラー状態を返す', async () => {

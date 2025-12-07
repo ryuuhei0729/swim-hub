@@ -62,7 +62,7 @@ describe('useRecordsQuery', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     expect(result.current.records).toEqual([mockRecord])
-    expect(mockApi.getRecords).toHaveBeenCalledWith('2025-01-01', '2025-01-31', undefined)
+    expect(mockApi.getRecords).toHaveBeenCalledWith('2025-01-01', '2025-01-31', undefined, 20, 0)
   })
 
   it('種目IDでフィルタリングできる', async () => {
@@ -80,7 +80,7 @@ describe('useRecordsQuery', () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    expect(mockApi.getRecords).toHaveBeenCalledWith(undefined, undefined, 1)
+    expect(mockApi.getRecords).toHaveBeenCalledWith(undefined, undefined, 1, 20, 0)
   })
 })
 

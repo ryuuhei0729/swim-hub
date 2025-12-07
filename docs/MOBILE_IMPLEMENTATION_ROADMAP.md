@@ -57,19 +57,23 @@ swim-hub/
 
 **タスク**:
 - [ ] Expoプロジェクトの初期化（`apps/mobile`）
+- [ ] Expo SDK 53+の使用を確認（React 19とReact Native 0.78+をサポート）
 - [ ] TypeScript設定
 - [ ] モノレポ構成への統合（npm workspaces）
 - [ ] 開発環境のセットアップ（iOS/Android）
 - [ ] ルート`package.json`のスクリプト更新（Flutter → React Native）
+- [ ] React 19.2とReact Native 0.78+の互換性確認
+- [ ] 使用予定のサードパーティライブラリのReact 19対応状況を確認
 
 **技術選択**:
-- Expo SDK（最新版）
+- Expo SDK 53+（React 19とReact Native 0.78+をサポート）
 - TypeScript 5
-- React Native 0.76+
+- React Native 0.78+（React 19.2と互換性あり）
 
 **注意点**:
 - `package.json`にFlutter関連のスクリプトがあるため、React Native用に更新が必要
 - モノレポ構成を維持し、`apps/shared`を依存関係として追加
+- **重要**: React 19.2を使用するには、React Native 0.78+とExpo SDK 53+が必要。WebアプリとReactバージョンを統一するため、この組み合わせを推奨
 
 #### 1.2 Supabaseクライアントの初期化
 
@@ -483,13 +487,15 @@ WebのTailwind CSSベースのコンポーネントを、React Nativeコンポ�
     "@swim-hub/shared": "*",
     "@tanstack/react-query": "^5.90.10",
     "date-fns": "^4.1.0",
-    "expo": "~52.x",
+    "expo": "~53.x",
     "react": "19.2.0",
-    "react-native": "0.76.x",
+    "react-native": "0.78.x",
     "zustand": "^5.0.8"
   }
 }
 ```
+
+**重要**: React 19.2を使用するには、React Native 0.78+とExpo SDK 53+が必要です。WebアプリとReactバージョンを統一するため、この組み合わせを推奨します。一部のサードパーティライブラリがReact 19に対応していない可能性があるため、使用前に互換性を確認してください。
 
 ### 開発依存関係
 
@@ -537,6 +543,16 @@ WebのTailwind CSSベースのコンポーネントを、React Nativeコンポ�
 - React Queryのキャッシュを活用
 - オフライン検知とUI表示
 - データ同期の実装
+
+### リスク5: React 19とReact Nativeの互換性
+
+**リスク**: React 19.2を使用するにはReact Native 0.78+とExpo SDK 53+が必要。一部のサードパーティライブラリがReact 19に対応していない可能性がある
+
+**対策**:
+- Expo SDK 53+を使用（React 19とReact Native 0.78+をサポート）
+- 使用予定のライブラリのReact 19対応状況を事前に確認
+- 互換性の問題がある場合は、代替ライブラリを検討
+- 定期的にExpo SDKとReact Nativeのアップデートを確認
 
 ## 次のステップ
 
