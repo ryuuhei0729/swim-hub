@@ -191,10 +191,10 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: 画面遷移を実装
 
 **タスク**:
-- [ ] React Navigationのインストール
-- [ ] ナビゲーション構造の設計
-- [ ] スタックナビゲーターの設定
-- [ ] タブナビゲーターの設定（ダッシュボード、練習、大会、チーム、プロフィール）
+- [x] React Navigationのインストール
+- [x] ナビゲーション構造の設計
+- [x] スタックナビゲーターの設定
+- [x] タブナビゲーターの設定（ダッシュボード、練習、大会、チーム、マイページ）
 
 **ナビゲーション構造**:
 ```
@@ -208,7 +208,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     - Practices
     - Competitions
     - Teams
-    - Profile
+    - MyPage
 ```
 
 #### 3.2 基本レイアウトコンポーネント

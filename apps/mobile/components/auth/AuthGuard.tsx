@@ -10,7 +10,10 @@ interface AuthGuardProps {
 /**
  * 認証ガードコンポーネント
  * 未認証ユーザーをログイン画面にリダイレクトし、認証済みユーザーのみ保護されたコンテンツを表示
- * Phase 3でナビゲーションに統合予定
+ * 
+ * 注意: Phase 3.1でナビゲーションを実装したため、通常はApp.tsxでNavigationContainerを使用して
+ * 認証状態に応じたスタックを切り替えます。このコンポーネントは、ナビゲーション外で認証ガードが
+ * 必要な場合に使用できます。
  */
 export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth()
