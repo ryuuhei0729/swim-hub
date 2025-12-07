@@ -15,22 +15,22 @@ export default function LoginPage() {
 }
 
 function LoginPageContent() {
-  const { user, session, isLoading } = useAuth()
+  const { user, session, loading } = useAuth()
   const isAuthenticated = !!user && !!session
   const router = useRouter()
   const searchParams = useSearchParams()
   const hasRedirectedRef = useRef(false)
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated && !hasRedirectedRef.current) {
+    if (!loading && isAuthenticated && !hasRedirectedRef.current) {
       hasRedirectedRef.current = true
       // URLパラメータからリダイレクト先を取得
       const redirectTo = searchParams.get('redirect_to') || '/dashboard'
       router.push(redirectTo)
     }
-  }, [isAuthenticated, isLoading, router, searchParams])
+  }, [isAuthenticated, loading, router, searchParams])
 
-  if (isLoading) {
+  if (loading) {
     return <FullScreenLoading message="認証情報を確認中..." />
   }
 

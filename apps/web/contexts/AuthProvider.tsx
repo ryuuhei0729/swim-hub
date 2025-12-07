@@ -93,36 +93,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // 本番環境では環境変数、開発環境ではwindow.location.originを使用
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
       
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${appUrl}/api/auth/callback?redirect_to=/update-password`
       })
       
       if (error) {
-        return { error: error as import('@supabase/supabase-js').AuthError }
+        return { data: null, error: error as import('@supabase/supabase-js').AuthError }
       }
       
-      return { error: null }
+      return { data: null, error: null }
     } catch (error) {
       console.error('Password reset error:', error)
-      return { error: error as import('@supabase/supabase-js').AuthError }
+      return { data: null, error: error as import('@supabase/supabase-js').AuthError }
     }
   }, [supabase])
 
   // パスワード更新
   const updatePassword = useCallback(async (newPassword: string) => {
     try {
-      const { error } = await supabase.auth.updateUser({
+      const { data, error } = await supabase.auth.updateUser({
         password: newPassword
       })
       
       if (error) {
-        return { error: error as import('@supabase/supabase-js').AuthError }
+        return { data: null, error: error as import('@supabase/supabase-js').AuthError }
       }
       
-      return { error: null }
+      return { data: data ? { user: data.user } : null, error: null }
     } catch (error) {
       console.error('Password update error:', error)
-      return { error: error as import('@supabase/supabase-js').AuthError }
+      return { data: null, error: error as import('@supabase/supabase-js').AuthError }
     }
   }, [supabase])
 
@@ -202,8 +202,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resetPassword,
     updatePassword,
     updateProfile,
-    isAuthenticated: !!authState.user,
-    isLoading: authState.loading
+    isAuthenticated: !!authState.user
   }
 
 

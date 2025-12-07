@@ -24,9 +24,8 @@ export interface AuthContextType extends AuthState {
   signIn: (email: string, password: string) => Promise<{ data: { user: User | null; session: Session | null } | null; error: AuthError | null }>
   signUp: (email: string, password: string, name?: string) => Promise<{ data: { user: User | null; session: Session | null } | null; error: AuthError | null }>
   signOut: () => Promise<{ error: AuthError | null }>
-  resetPassword: (email: string) => Promise<{ error: AuthError | null }>
-  updatePassword: (newPassword: string) => Promise<{ error: AuthError | null }>
+  resetPassword: (email: string) => Promise<{ data: null; error: AuthError | null }>
+  updatePassword: (newPassword: string) => Promise<{ data: { user: User } | null; error: AuthError | null }>
   updateProfile: (updates: Partial<import('./database').UserProfile>) => Promise<{ error: AuthError | null }>
   isAuthenticated: boolean
-  isLoading: boolean
 }

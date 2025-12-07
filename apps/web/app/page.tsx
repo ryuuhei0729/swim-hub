@@ -28,16 +28,15 @@ import {
 export default function Home() {
   const { user, loading } = useAuth()
   const isAuthenticated = !!user
-  const isLoading = loading
   const router = useRouter()
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
+    if (!loading && isAuthenticated) {
       router.push('/dashboard')
     }
-  }, [isAuthenticated, isLoading, router])
+  }, [isAuthenticated, loading, router])
 
-  if (isLoading) {
+  if (loading) {
     return <FullScreenLoading message="SwimHubを起動中..." />
   }
 

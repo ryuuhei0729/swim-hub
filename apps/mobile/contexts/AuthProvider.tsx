@@ -84,36 +84,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       // モバイルアプリでは、パスワードリセットのリダイレクトURLは後で実装（Phase 2.3で対応）
       // 現時点では空文字列を使用
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
         // リダイレクトURLは後で実装
       })
       
       if (error) {
-        return { error: error as import('@supabase/supabase-js').AuthError }
+        return { data: null, error: error as import('@supabase/supabase-js').AuthError }
       }
       
-      return { error: null }
+      return { data: null, error: null }
     } catch (error) {
       console.error('Password reset error:', error)
-      return { error: error as import('@supabase/supabase-js').AuthError }
+      return { data: null, error: error as import('@supabase/supabase-js').AuthError }
     }
   }, [])
 
   // パスワード更新
   const updatePassword = useCallback(async (newPassword: string) => {
     try {
-      const { error } = await supabase.auth.updateUser({
+      const { data, error } = await supabase.auth.updateUser({
         password: newPassword
       })
       
       if (error) {
-        return { error: error as import('@supabase/supabase-js').AuthError }
+        return { data: null, error: error as import('@supabase/supabase-js').AuthError }
       }
       
-      return { error: null }
+      return { data: data ? { user: data.user } : null, error: null }
     } catch (error) {
       console.error('Password update error:', error)
-      return { error: error as import('@supabase/supabase-js').AuthError }
+      return { data: null, error: error as import('@supabase/supabase-js').AuthError }
     }
   }, [])
 
@@ -182,8 +182,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resetPassword,
     updatePassword,
     updateProfile,
-    isAuthenticated: !!authState.user,
-    isLoading: authState.loading
+    isAuthenticated: !!authState.user
   }
 
   return (

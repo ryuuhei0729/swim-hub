@@ -1,9 +1,9 @@
 import React from 'react'
 import { View, ActivityIndicator, StyleSheet } from 'react-native'
 import { useAuth } from '@/contexts/AuthProvider'
-import { LoginForm } from '@/components/auth/LoginForm'
+import { SignupForm } from '@/components/auth/SignupForm'
 
-export const LoginScreen: React.FC = () => {
+export const SignupScreen: React.FC = () => {
   const { isAuthenticated, loading } = useAuth()
 
   // 認証情報を確認中
@@ -21,11 +21,11 @@ export const LoginScreen: React.FC = () => {
   }
 
   return (
-    <LoginForm
+    <SignupForm
       onSuccess={() => {
         // Phase 3でナビゲーションを実装予定
-        // 現時点ではログイン成功時の処理は後で実装
-        console.log('ログイン成功')
+        // 現時点ではサインアップ成功時の処理は後で実装
+        console.log('サインアップ成功')
       }}
     />
   )

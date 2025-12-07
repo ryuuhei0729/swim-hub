@@ -131,7 +131,7 @@ describe('AuthProvider', () => {
     })
 
     await waitFor(() => {
-      expect(contextValue?.isLoading).toBe(false)
+      expect(contextValue?.loading).toBe(false)
       expect(contextValue?.user?.id).toBe('user-1')
     })
 
