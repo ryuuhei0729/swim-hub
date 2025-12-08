@@ -401,7 +401,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: モバイルアプリのテストを実装
 
 **タスク**:
-- [ ] ユニットテスト（Vitest）
+- [x] ユニットテスト（Vitest）
 - [ ] コンポーネントテスト（React Native Testing Library）
 - [ ] E2Eテスト（DetoxまたはMaestro）
 
