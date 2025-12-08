@@ -379,10 +379,10 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: オフライン時でも基本機能が動作
 
 **タスク**:
-- [ ] React Queryのキャッシュ戦略の最適化
-- [ ] オフライン検知
-- [ ] オフライン時のUI表示
-- [ ] データ同期（オンライン復帰時）
+- [x] React Queryのキャッシュ戦略の最適化
+- [x] オフライン検知
+- [x] オフライン時のUI表示
+- [x] データ同期（オンライン復帰時）
 
 #### 9.2 パフォーマンス最適化
 
