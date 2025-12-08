@@ -402,7 +402,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 
 **タスク**:
 - [x] ユニットテスト（Vitest）
-- [ ] コンポーネントテスト（React Native Testing Library）
+- [x] コンポーネントテスト（React Native Testing Library）
 - [ ] E2Eテスト（DetoxまたはMaestro）
 
 #### 10.2 リリース準備

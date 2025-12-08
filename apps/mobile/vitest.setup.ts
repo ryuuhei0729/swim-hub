@@ -14,20 +14,35 @@ afterEach(() => {
 // React Native モジュールのモック
 vi.mock('react-native', () => {
   const React = require('react')
+  
+  // styleプロパティを除外するヘルパー
+  const excludeStyle = ({ style, ...props }: any) => props
+  
   return {
     default: React,
-    View: ({ children, ...props }: any) => React.createElement('div', props, children),
-    Text: ({ children, ...props }: any) => React.createElement('span', props, children),
-    Pressable: ({ children, onPress, ...props }: any) =>
-      React.createElement('button', { ...props, onClick: onPress }, children),
-    ScrollView: ({ children, ...props }: any) =>
-      React.createElement('div', { ...props, style: { overflow: 'auto' } }, children),
+    View: ({ children, ...props }: any) => {
+      const { style, ...restProps } = props
+      return React.createElement('div', restProps, children)
+    },
+    Text: ({ children, ...props }: any) => {
+      const { style, numberOfLines, ...restProps } = props
+      return React.createElement('span', restProps, children)
+    },
+    Pressable: ({ children, onPress, ...props }: any) => {
+      const { style, ...restProps } = props
+      return React.createElement('button', { ...restProps, onClick: onPress }, children)
+    },
+    ScrollView: ({ children, ...props }: any) => {
+      const { style, ...restProps } = props
+      return React.createElement('div', { ...restProps, style: { overflow: 'auto' } }, children)
+    },
     FlatList: ({ data, renderItem, keyExtractor, ...props }: any) => {
+      const { style, ...restProps } = props
       const items = data?.map((item: any, index: number) => {
         const key = keyExtractor ? keyExtractor(item, index) : index
         return React.createElement('div', { key }, renderItem({ item, index }))
       })
-      return React.createElement('div', props, items)
+      return React.createElement('div', restProps, items)
     },
     StyleSheet: {
       create: (styles: any) => styles,

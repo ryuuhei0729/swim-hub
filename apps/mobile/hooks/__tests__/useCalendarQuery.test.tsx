@@ -63,8 +63,8 @@ describe('useCalendarQuery', () => {
     const mockCalendarItems: any[] = []
     vi.spyOn(mockApi, 'getCalendarEntries').mockResolvedValue(mockCalendarItems)
 
-    // タイムゾーンを考慮して日付を作成（UTCで2025-01-15 00:00:00）
-    const currentDate = new Date('2025-01-15T00:00:00Z')
+    // UTCで日付を作成（タイムゾーンの影響を避ける）
+    const currentDate = new Date(Date.UTC(2025, 0, 15)) // 月は0ベース（0=1月）
 
     const { result } = renderHook(
       () => useCalendarQuery(mockClient, { currentDate, api: mockApi }),
@@ -73,13 +73,15 @@ describe('useCalendarQuery', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
-    // getCalendarEntriesが呼ばれたことを確認（実際の日付はタイムゾーンによって変わる可能性があるため、呼ばれたことだけを確認）
+    // getCalendarEntriesが呼ばれたことを確認
     expect(mockApi.getCalendarEntries).toHaveBeenCalled()
     const callArgs = vi.mocked(mockApi.getCalendarEntries).mock.calls[0]
     expect(callArgs).toHaveLength(2)
     // 開始日と終了日が文字列形式であることを確認
     expect(typeof callArgs[0]).toBe('string')
     expect(typeof callArgs[1]).toBe('string')
+    // 1月の日付が含まれることを確認（タイムゾーンの影響を考慮）
+    expect(callArgs[0] + callArgs[1]).toMatch(/2025-01/)
   })
 
   it('APIが提供されていない場合、新しいAPIインスタンスを作成する', async () => {
@@ -113,7 +115,6 @@ describe('useCalendarQuery', () => {
     )
 
     await waitFor(() => expect(janResult.current.isSuccess).toBe(true))
-    const janQueryKey = janResult.current.dataUpdatedAt
 
     // モックをクリア
     vi.clearAllMocks()
@@ -130,8 +131,9 @@ describe('useCalendarQuery', () => {
     // 2月のクエリが実行されたことを確認
     expect(mockApi.getCalendarEntries).toHaveBeenCalled()
     const callArgs = vi.mocked(mockApi.getCalendarEntries).mock.calls[0]
-    // 2月の日付が含まれることを確認
-    expect(callArgs[0] + callArgs[1]).toMatch(/2025-02/)
+    // 2月の日付が含まれることを確認（タイムゾーンの影響を考慮）
+    const dateString = callArgs[0] + callArgs[1]
+    expect(dateString).toMatch(/2025-02/)
   })
 
   it('エラーが発生した場合、エラー状態を返す', async () => {
