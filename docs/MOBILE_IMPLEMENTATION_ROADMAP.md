@@ -366,11 +366,11 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: ユーザープロフィールを表示・編集できる
 
 **タスク**:
-- [ ] プロフィール画面の実装
-- [ ] プロフィール画像のアップロード（Supabase Storage）
-- [ ] 基本情報の編集
-- [ ] ベストタイム表の実装（WEB実装を参考）
-- [ ] パスワード変更
+- [x] プロフィール画面の実装
+- [x] プロフィール画像のアップロード（Supabase Storage）
+- [x] 基本情報の編集
+- [x] ベストタイム表の実装（WEB実装を参考）
+- [x] パスワード変更
 
 ### Phase 9: オフライン対応とパフォーマンス最適化
 
