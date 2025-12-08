@@ -335,18 +335,18 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: 所属チームの一覧を表示
 
 **タスク**:
-- [ ] 一覧画面の実装
-- [ ] `apps/shared/hooks/queries/teams.ts`を使用
-- [ ] チーム作成ボタン
+- [x] 一覧画面の実装
+- [x] `apps/shared/hooks/queries/teams.ts`を使用
+- [x] チーム作成ボタン
 
 #### 7.2 チーム詳細
 
 **目標**: チームの詳細情報を表示
 
 **タスク**:
-- [ ] 詳細画面の実装
-- [ ] メンバー一覧
-- [ ] お知らせ一覧
+- [x] 詳細画面の実装
+- [x] メンバー一覧
+- [x] お知らせ一覧
 - [ ] 練習・大会一覧
 
 #### 7.3 チーム管理機能
@@ -354,9 +354,9 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: チーム管理者がチームを管理できる
 
 **タスク**:
-- [ ] メンバー招待
-- [ ] メンバー管理
-- [ ] お知らせ作成・編集
+- [x] メンバー招待
+- [x] メンバー管理
+- [x] お知らせ作成・編集
 - [ ] チーム練習・大会の一括登録
 
 ### Phase 8: プロフィール機能
@@ -369,6 +369,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 - [ ] プロフィール画面の実装
 - [ ] プロフィール画像のアップロード（Supabase Storage）
 - [ ] 基本情報の編集
+- [ ] ベストタイム表の実装（WEB実装を参考）
 - [ ] パスワード変更
 
 ### Phase 9: オフライン対応とパフォーマンス最適化

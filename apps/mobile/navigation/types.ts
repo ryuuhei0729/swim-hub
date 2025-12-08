@@ -36,6 +36,9 @@ export type MainStackParamList = {
   RecordForm: {
     recordId?: string
   }
+  TeamDetail: {
+    teamId: string
+  }
 }
 
 // ルートナビゲーターのパラメータ型（認証状態に応じて切り替え）

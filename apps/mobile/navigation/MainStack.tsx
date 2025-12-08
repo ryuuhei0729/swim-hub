@@ -6,6 +6,7 @@ import { PracticeDetailScreen } from '@/screens/PracticeDetailScreen'
 import { PracticeFormScreen } from '@/screens/PracticeFormScreen'
 import { RecordDetailScreen } from '@/screens/RecordDetailScreen'
 import { RecordFormScreen } from '@/screens/RecordFormScreen'
+import { TeamDetailScreen } from '@/screens/TeamDetailScreen'
 
 const Stack = createNativeStackNavigator<MainStackParamList>()
 
@@ -88,6 +89,22 @@ export const MainStack: React.FC = () => {
             fontWeight: '600',
           },
         })}
+      />
+      <Stack.Screen
+        name="TeamDetail"
+        component={TeamDetailScreen}
+        options={{
+          headerShown: true,
+          title: 'チーム詳細',
+          headerBackTitle: '戻る',
+          headerStyle: {
+            backgroundColor: '#FFFFFF',
+          },
+          headerTintColor: '#111827',
+          headerTitleStyle: {
+            fontWeight: '600',
+          },
+        }}
       />
     </Stack.Navigator>
   )
