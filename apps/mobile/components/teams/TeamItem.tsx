@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo, useCallback } from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
 import type { TeamMembershipWithUser } from '@swim-hub/shared/types/database'
 
@@ -11,15 +11,26 @@ interface TeamItemProps {
  * チームアイテムコンポーネント
  * チーム一覧の1件を表示
  */
-export const TeamItem: React.FC<TeamItemProps> = ({ membership, onPress }) => {
-  const team = membership.teams
-  const user = membership.users
-  const role = membership.role === 'admin' ? '管理者' : 'メンバー'
-  const status = membership.status === 'pending' ? '承認待ち' : membership.status === 'approved' ? '承認済み' : '拒否'
+const TeamItemComponent: React.FC<TeamItemProps> = ({ membership, onPress }) => {
+  const team = useMemo(() => membership.teams, [membership.teams])
+  const user = useMemo(() => membership.users, [membership.users])
+  const role = useMemo(
+    () => (membership.role === 'admin' ? '管理者' : 'メンバー'),
+    [membership.role]
+  )
+  const status = useMemo(
+    () =>
+      membership.status === 'pending'
+        ? '承認待ち'
+        : membership.status === 'approved'
+          ? '承認済み'
+          : '拒否',
+    [membership.status]
+  )
 
-  const handlePress = () => {
+  const handlePress = useCallback(() => {
     onPress?.(membership)
-  }
+  }, [onPress, membership])
 
   return (
     <Pressable
@@ -142,4 +153,16 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 12,
   },
+})
+
+// メモ化して再レンダリングを最適化
+export const TeamItem = React.memo(TeamItemComponent, (prevProps, nextProps) => {
+  // カスタム比較関数：membership.idが同じで、主要プロパティが変更されていない場合は再レンダリングしない
+  return (
+    prevProps.membership.id === nextProps.membership.id &&
+    prevProps.membership.status === nextProps.membership.status &&
+    prevProps.membership.role === nextProps.membership.role &&
+    prevProps.membership.teams?.id === nextProps.membership.teams?.id &&
+    prevProps.membership.teams?.name === nextProps.membership.teams?.name
+  )
 })

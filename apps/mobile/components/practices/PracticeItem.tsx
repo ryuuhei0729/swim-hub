@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo, useCallback } from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -13,19 +13,22 @@ interface PracticeItemProps {
  * 練習記録アイテムコンポーネント
  * 練習記録の1件を表示
  */
-export const PracticeItem: React.FC<PracticeItemProps> = ({ practice, onPress }) => {
-  // 日付をフォーマット
-  const formattedDate = format(new Date(practice.date), 'yyyy年M月d日(E)', { locale: ja })
+const PracticeItemComponent: React.FC<PracticeItemProps> = ({ practice, onPress }) => {
+  // 日付をフォーマット（メモ化）
+  const formattedDate = useMemo(
+    () => format(new Date(practice.date), 'yyyy年M月d日(E)', { locale: ja }),
+    [practice.date]
+  )
   
   // タイトル（nullの場合は「練習」）
-  const title = practice.title || '練習'
+  const title = useMemo(() => practice.title || '練習', [practice.title])
   
   // 練習ログ数
-  const logCount = practice.practice_logs?.length || 0
+  const logCount = useMemo(() => practice.practice_logs?.length || 0, [practice.practice_logs])
   
-  const handlePress = () => {
+  const handlePress = useCallback(() => {
     onPress?.(practice)
-  }
+  }, [onPress, practice])
 
   return (
     <Pressable
@@ -121,4 +124,17 @@ const styles = StyleSheet.create({
     marginTop: 8,
     lineHeight: 20,
   },
+})
+
+// メモ化して再レンダリングを最適化
+export const PracticeItem = React.memo(PracticeItemComponent, (prevProps, nextProps) => {
+  // カスタム比較関数：practice.idが同じで、practiceの主要プロパティが変更されていない場合は再レンダリングしない
+  return (
+    prevProps.practice.id === nextProps.practice.id &&
+    prevProps.practice.date === nextProps.practice.date &&
+    prevProps.practice.title === nextProps.practice.title &&
+    prevProps.practice.place === nextProps.practice.place &&
+    prevProps.practice.note === nextProps.practice.note &&
+    prevProps.practice.practice_logs?.length === nextProps.practice.practice_logs?.length
+  )
 })

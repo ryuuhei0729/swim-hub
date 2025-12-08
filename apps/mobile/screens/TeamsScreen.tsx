@@ -71,6 +71,14 @@ export const TeamsScreen: React.FC = () => {
     [navigation]
   )
 
+  // アイテムをレンダリング（メモ化）
+  const renderItem = useCallback(
+    ({ item }: { item: TeamMembershipWithUser }) => {
+      return <TeamItem membership={item} onPress={handleTeamPress} />
+    },
+    [handleTeamPress]
+  )
+
   // チーム作成成功時の処理
   const handleCreateSuccess = useCallback(
     (teamId: string) => {
@@ -139,13 +147,17 @@ export const TeamsScreen: React.FC = () => {
         <FlatList
           data={displayTeams}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TeamItem membership={item} onPress={handleTeamPress} />
-          )}
+          renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
           }
+          // パフォーマンス最適化
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+          removeClippedSubviews={true}
+          updateCellsBatchingPeriod={50}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>チームがありません</Text>

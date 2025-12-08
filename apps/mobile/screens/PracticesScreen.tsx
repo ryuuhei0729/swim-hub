@@ -149,14 +149,17 @@ export const PracticesScreen: React.FC = () => {
     )
   }
 
-  // 練習記録アイテムのレンダリング
-  const renderItem = ({ item }: { item: PracticeWithLogs }) => (
-    <PracticeItem
-      practice={item}
-      onPress={(practice) => {
-        navigation.navigate('PracticeDetail', { practiceId: practice.id })
-      }}
-    />
+  // 練習記録アイテムのレンダリング（メモ化）
+  const renderItem = useCallback(
+    ({ item }: { item: PracticeWithLogs }) => (
+      <PracticeItem
+        practice={item}
+        onPress={(practice) => {
+          navigation.navigate('PracticeDetail', { practiceId: practice.id })
+        }}
+      />
+    ),
+    [navigation]
   )
 
   // 作成画面への遷移
@@ -225,6 +228,12 @@ export const PracticesScreen: React.FC = () => {
         }
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
+        // パフォーマンス最適化
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        removeClippedSubviews={true}
+        updateCellsBatchingPeriod={50}
         ListFooterComponent={
           loadingMore ? (
             <View style={styles.footerLoader}>

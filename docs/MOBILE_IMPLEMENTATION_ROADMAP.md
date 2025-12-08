@@ -389,10 +389,10 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: アプリのパフォーマンスを向上
 
 **タスク**:
-- [ ] 画像最適化
-- [ ] リストの仮想化（FlatList最適化）
-- [ ] メモ化の適用
-- [ ] バンドルサイズの最適化
+- [x] 画像最適化
+- [x] リストの仮想化（FlatList最適化）
+- [x] メモ化の適用
+- [x] バンドルサイズの最適化
 
 ### Phase 10: テストとリリース準備
 

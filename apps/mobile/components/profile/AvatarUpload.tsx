@@ -159,7 +159,12 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
         disabled={disabled || isUploading}
       >
         {currentAvatarUrl ? (
-          <Image source={{ uri: currentAvatarUrl }} style={styles.avatarImage} resizeMode="cover" />
+          <Image
+            source={{ uri: currentAvatarUrl }}
+            style={styles.avatarImage}
+            resizeMode="cover"
+            cache="force-cache"
+          />
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Text style={styles.avatarText}>{userName.charAt(0) || '?'}</Text>

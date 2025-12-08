@@ -163,9 +163,20 @@ export const RecordsScreen: React.FC = () => {
   }, [loadingMore, hasMore, isLoading])
 
   // 記録アイテムのタップ処理
-  const handleRecordPress = (record: RecordWithDetails) => {
-    navigation.navigate('RecordDetail', { recordId: record.id })
-  }
+  const handleRecordPress = useCallback(
+    (record: RecordWithDetails) => {
+      navigation.navigate('RecordDetail', { recordId: record.id })
+    },
+    [navigation]
+  )
+
+  // アイテムをレンダリング（メモ化）
+  const renderItem = useCallback(
+    ({ item }: { item: RecordWithDetails }) => {
+      return <RecordItem record={item} onPress={handleRecordPress} />
+    },
+    [handleRecordPress]
+  )
 
   // 作成画面への遷移
   const handleCreate = () => {
@@ -232,15 +243,19 @@ export const RecordsScreen: React.FC = () => {
       <FlatList
         data={allRecords}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <RecordItem record={item} onPress={handleRecordPress} />
-        )}
+        renderItem={renderItem}
         contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
+        // パフォーマンス最適化
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        removeClippedSubviews={true}
+        updateCellsBatchingPeriod={50}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>大会記録がありません</Text>

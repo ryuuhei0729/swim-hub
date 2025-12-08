@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo, useCallback } from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -14,28 +14,40 @@ interface RecordItemProps {
  * 大会記録アイテムコンポーネント
  * 大会記録の1件を表示
  */
-export const RecordItem: React.FC<RecordItemProps> = ({ record, onPress }) => {
+const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress }) => {
   // 大会名（nullの場合は「大会」）
-  const competitionName = record.competition?.title || '大会'
+  const competitionName = useMemo(() => record.competition?.title || '大会', [record.competition?.title])
   
   // 日付をフォーマット（大会の日付を使用）
-  const recordDate = record.competition?.date || record.created_at
-  const formattedDate = format(new Date(recordDate), 'yyyy年M月d日(E)', { locale: ja })
+  const recordDate = useMemo(
+    () => record.competition?.date || record.created_at,
+    [record.competition?.date, record.created_at]
+  )
+  const formattedDate = useMemo(
+    () => format(new Date(recordDate), 'yyyy年M月d日(E)', { locale: ja }),
+    [recordDate]
+  )
   
   // 種目名
-  const styleName = record.style?.name_jp || '不明'
-  const styleDistance = record.style?.distance || 0
-  const styleDisplay = `${styleName} ${styleDistance}m`
+  const styleName = useMemo(() => record.style?.name_jp || '不明', [record.style?.name_jp])
+  const styleDistance = useMemo(() => record.style?.distance || 0, [record.style?.distance])
+  const styleDisplay = useMemo(
+    () => `${styleName} ${styleDistance}m`,
+    [styleName, styleDistance]
+  )
   
   // タイムをフォーマット
-  const formattedTime = formatTime(record.time)
+  const formattedTime = useMemo(() => formatTime(record.time), [record.time])
   
   // プールタイプ
-  const poolType = record.competition?.pool_type === 0 ? '短水路' : '長水路'
+  const poolType = useMemo(
+    () => (record.competition?.pool_type === 0 ? '短水路' : '長水路'),
+    [record.competition?.pool_type]
+  )
   
-  const handlePress = () => {
+  const handlePress = useCallback(() => {
     onPress?.(record)
-  }
+  }, [onPress, record])
 
   return (
     <Pressable
@@ -137,4 +149,16 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginTop: 4,
   },
+})
+
+// メモ化して再レンダリングを最適化
+export const RecordItem = React.memo(RecordItemComponent, (prevProps, nextProps) => {
+  // カスタム比較関数：record.idが同じで、recordの主要プロパティが変更されていない場合は再レンダリングしない
+  return (
+    prevProps.record.id === nextProps.record.id &&
+    prevProps.record.time === nextProps.record.time &&
+    prevProps.record.competition?.id === nextProps.record.competition?.id &&
+    prevProps.record.competition?.date === nextProps.record.competition?.date &&
+    prevProps.record.style?.id === nextProps.record.style?.id
+  )
 })
