@@ -113,6 +113,25 @@ export const PracticesScreen: React.FC = () => {
     }
   }, [loadingMore, hasMore, isLoading])
 
+  // 練習記録アイテムのレンダリング（メモ化）
+  // ⚠️ 重要: すべてのフックは条件付きレンダリングの前に定義する必要がある
+  const renderItem = useCallback(
+    ({ item }: { item: PracticeWithLogs }) => (
+      <PracticeItem
+        practice={item}
+        onPress={(practice) => {
+          navigation.navigate('PracticeDetail', { practiceId: practice.id })
+        }}
+      />
+    ),
+    [navigation]
+  )
+
+  // 作成画面への遷移
+  const handleCreate = useCallback(() => {
+    navigation.navigate('PracticeForm', {})
+  }, [navigation])
+
   // エラー状態
   if (error) {
     return (
@@ -147,24 +166,6 @@ export const PracticesScreen: React.FC = () => {
         </View>
       </View>
     )
-  }
-
-  // 練習記録アイテムのレンダリング（メモ化）
-  const renderItem = useCallback(
-    ({ item }: { item: PracticeWithLogs }) => (
-      <PracticeItem
-        practice={item}
-        onPress={(practice) => {
-          navigation.navigate('PracticeDetail', { practiceId: practice.id })
-        }}
-      />
-    ),
-    [navigation]
-  )
-
-  // 作成画面への遷移
-  const handleCreate = () => {
-    navigation.navigate('PracticeForm', {})
   }
 
   return (
