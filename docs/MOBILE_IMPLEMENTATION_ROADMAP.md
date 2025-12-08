@@ -357,7 +357,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 - [x] メンバー招待
 - [x] メンバー管理
 - [x] お知らせ作成・編集
-- [ ] チーム練習・大会の一括登録
+- [x] チーム練習・大会の一括登録
 
 ### Phase 8: プロフィール機能
 

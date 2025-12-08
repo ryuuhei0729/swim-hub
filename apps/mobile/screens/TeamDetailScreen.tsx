@@ -9,6 +9,7 @@ import {
   TeamMemberList,
   TeamAnnouncementList,
   TeamAnnouncementForm,
+  TeamBulkRegisterForm,
   type TeamTabType,
 } from '@/components/teams'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
@@ -208,6 +209,22 @@ export const TeamDetailScreen: React.FC = () => {
             <Text style={styles.placeholderText}>大会機能は実装予定です</Text>
           </View>
         )
+      case 'bulkRegister':
+        if (!isAdmin) {
+          return (
+            <View style={styles.placeholderContainer}>
+              <Text style={styles.placeholderText}>管理者のみ利用可能です</Text>
+            </View>
+          )
+        }
+        return (
+          <TeamBulkRegisterForm
+            teamId={teamId}
+            onSuccess={() => {
+              refetch()
+            }}
+          />
+        )
       default:
         return null
     }
@@ -234,7 +251,7 @@ export const TeamDetailScreen: React.FC = () => {
         </View>
 
         {/* タブ */}
-        <TeamTabs activeTab={activeTab} onTabChange={setActiveTab} />
+        <TeamTabs activeTab={activeTab} onTabChange={setActiveTab} isAdmin={isAdmin} />
 
         {/* タブコンテンツ */}
         <View style={styles.tabContent}>{renderTabContent()}</View>

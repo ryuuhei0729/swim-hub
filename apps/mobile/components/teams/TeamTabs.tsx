@@ -1,14 +1,15 @@
 import React from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
 
-export type TeamTabType = 'members' | 'announcements' | 'practices' | 'competitions'
+export type TeamTabType = 'members' | 'announcements' | 'practices' | 'competitions' | 'bulkRegister'
 
 export interface TeamTabsProps {
   activeTab: TeamTabType
   onTabChange: (tab: TeamTabType) => void
+  isAdmin?: boolean
 }
 
-const tabs: { id: TeamTabType; name: string; icon: string }[] = [
+const tabs: { id: TeamTabType; name: string; icon: string; adminOnly?: boolean }[] = [
   {
     id: 'members',
     name: 'メンバー',
@@ -29,17 +30,26 @@ const tabs: { id: TeamTabType; name: string; icon: string }[] = [
     name: '大会',
     icon: '🏆',
   },
+  {
+    id: 'bulkRegister',
+    name: '一括登録',
+    icon: '📝',
+    adminOnly: true,
+  },
 ]
 
 /**
  * チームタブコンポーネント
- * メンバー、お知らせ、練習、大会のタブ切り替え
+ * メンバー、お知らせ、練習、大会、一括登録のタブ切り替え
  */
-export const TeamTabs: React.FC<TeamTabsProps> = ({ activeTab, onTabChange }) => {
+export const TeamTabs: React.FC<TeamTabsProps> = ({ activeTab, onTabChange, isAdmin = false }) => {
+  // 管理者のみ表示されるタブをフィルタリング
+  const visibleTabs = tabs.filter((tab) => !tab.adminOnly || isAdmin)
+
   return (
     <View style={styles.container}>
       <View style={styles.tabList}>
-        {tabs.map((tab) => {
+        {visibleTabs.map((tab) => {
           const isActive = activeTab === tab.id
 
           return (
