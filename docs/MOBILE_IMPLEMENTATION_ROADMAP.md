@@ -314,10 +314,10 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: 月間カレンダーで練習・大会を表示
 
 **タスク**:
-- [ ] カレンダーコンポーネントの実装（ライブラリ使用可）
-- [ ] `apps/shared/api/dashboard.ts`を使用
-- [ ] 日付タップで詳細表示
-- [ ] 月の切り替え
+- [x] カレンダーコンポーネントの実装（ライブラリ使用可）
+- [x] `apps/shared/api/dashboard.ts`を使用
+- [x] 日付タップで詳細表示
+- [x] 月の切り替え
 
 #### 6.2 統計表示
 
