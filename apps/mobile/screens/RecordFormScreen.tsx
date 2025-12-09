@@ -218,8 +218,8 @@ export const RecordFormScreen: React.FC = () => {
         savedRecord = await createMutation.mutateAsync(recordData)
       }
 
-      // スプリットタイムを保存
-      if (splitTimes.length > 0 && savedRecord) {
+      // スプリットタイムを保存（編集時は空配列でも置き換え）
+      if (savedRecord) {
         const splitTimeInserts = splitTimes.map((st) => ({
           distance: st.distance,
           split_time: st.splitTime,

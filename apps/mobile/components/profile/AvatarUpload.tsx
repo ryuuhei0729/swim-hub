@@ -79,7 +79,21 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
       }
 
       // ファイル名を生成
-      const fileExt = file instanceof File ? file.name.split('.').pop() : 'jpg'
+      const resolveExtension = (blob: File | Blob): string => {
+        if (blob instanceof File && blob.name) {
+          const extFromName = blob.name.split('.').pop()
+          if (extFromName) return extFromName
+        }
+        if (blob.type) {
+          const mimeParts = blob.type.split('/')
+          if (mimeParts.length === 2 && mimeParts[1]) {
+            return mimeParts[1]
+          }
+        }
+        return 'jpg'
+      }
+
+      const fileExt = resolveExtension(file)
       const fileName = `${Date.now()}.${fileExt}`
       const filePath = `${userFolderPath}/${fileName}`
 
@@ -95,8 +109,12 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
 
       // 公開URLを取得
       const { data } = supabase.storage.from('profile-images').getPublicUrl(filePath)
-
-      onAvatarChange(data.publicUrl)
+      const publicUrl = data?.publicUrl
+      if (publicUrl) {
+        onAvatarChange(publicUrl)
+      } else {
+        console.warn('公開URLの取得に失敗しました')
+      }
     } catch (err) {
       console.error('アップロードエラー:', err)
       const errorMessage = err instanceof Error ? err.message : '画像のアップロードに失敗しました'
@@ -163,7 +181,6 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
             source={{ uri: currentAvatarUrl }}
             style={styles.avatarImage}
             resizeMode="cover"
-            cache="force-cache"
           />
         ) : (
           <View style={styles.avatarPlaceholder}>

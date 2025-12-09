@@ -161,8 +161,14 @@ export const RecordDetailScreen: React.FC = () => {
   // タイムをフォーマット
   const formattedTime = formatTime(record.time)
   
-  // プールタイプ
-  const poolType = record.competition?.pool_type === 0 ? '短水路' : '長水路'
+  // プールタイプ（recordの値を優先）
+  const poolTypeValue = record.pool_type
+  const poolType =
+    poolTypeValue === undefined || poolTypeValue === null
+      ? '—'
+      : poolTypeValue === 0
+        ? '短水路'
+        : '長水路'
 
   // スプリットタイムを距離順にソート
   const sortedSplitTimes = [...(record.split_times || [])].sort(

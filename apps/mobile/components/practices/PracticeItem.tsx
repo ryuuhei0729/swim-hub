@@ -129,12 +129,45 @@ const styles = StyleSheet.create({
 // メモ化して再レンダリングを最適化
 export const PracticeItem = React.memo(PracticeItemComponent, (prevProps, nextProps) => {
   // カスタム比較関数：practice.idが同じで、practiceの主要プロパティが変更されていない場合は再レンダリングしない
-  return (
-    prevProps.practice.id === nextProps.practice.id &&
-    prevProps.practice.date === nextProps.practice.date &&
-    prevProps.practice.title === nextProps.practice.title &&
-    prevProps.practice.place === nextProps.practice.place &&
-    prevProps.practice.note === nextProps.practice.note &&
-    prevProps.practice.practice_logs?.length === nextProps.practice.practice_logs?.length
-  )
+  const prev = prevProps.practice
+  const next = nextProps.practice
+
+  if (
+    prev.id !== next.id ||
+    prev.date !== next.date ||
+    prev.title !== next.title ||
+    prev.place !== next.place ||
+    prev.note !== next.note
+  ) {
+    return false
+  }
+
+  const prevLogs = prev.practice_logs
+  const nextLogs = next.practice_logs
+
+  // 参照が同一なら変更なしとみなす
+  if (prevLogs === nextLogs) {
+    return true
+  }
+
+  // どちらかが未定義の場合の判定
+  if (!prevLogs || !nextLogs) {
+    return prevLogs === nextLogs
+  }
+
+  // 長さが異なれば変更あり
+  if (prevLogs.length !== nextLogs.length) {
+    return false
+  }
+
+  // シャロー比較（id または updated_at が変われば再レンダリング）
+  for (let i = 0; i < prevLogs.length; i++) {
+    const prevLog = prevLogs[i]
+    const nextLog = nextLogs[i]
+    if (prevLog.id !== nextLog.id || prevLog.updated_at !== nextLog.updated_at) {
+      return false
+    }
+  }
+
+  return true
 })

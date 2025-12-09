@@ -2,6 +2,7 @@
 // 練習記録フォーム用Zustandストア（モバイル版）
 // =============================================================================
 
+import { format } from 'date-fns'
 import type { Practice } from '@swim-hub/shared/types/database'
 import { create } from 'zustand'
 
@@ -38,7 +39,7 @@ interface PracticeFormActions {
 }
 
 const initialState: PracticeFormState = {
-  date: new Date().toISOString().split('T')[0], // 今日の日付
+  date: format(new Date(), 'yyyy-MM-dd'), // 今日の日付（ローカルタイム）
   title: null,
   place: null,
   note: null,
@@ -78,7 +79,7 @@ export const usePracticeFormStore = create<PracticeFormState & PracticeFormActio
       // 作成モード: 空のフォームで初期化
       set({
         ...initialState,
-        date: new Date().toISOString().split('T')[0],
+        date: format(new Date(), 'yyyy-MM-dd'),
       })
     }
   },

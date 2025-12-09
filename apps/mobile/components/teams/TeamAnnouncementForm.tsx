@@ -95,6 +95,8 @@ export const TeamAnnouncementForm: React.FC<TeamAnnouncementFormProps> = ({
           content: content.trim(),
           is_published: isPublished,
           created_by: user.id,
+          start_at: null,
+          end_at: null,
         })
       }
 

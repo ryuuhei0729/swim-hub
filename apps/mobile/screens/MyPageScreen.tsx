@@ -29,6 +29,7 @@ export const MyPageScreen: React.FC = () => {
     isLoading: profileLoading,
     isError: profileError,
     error: profileErrorObj,
+    refetch: refetchProfile,
   } = useUserQuery(supabase, {
     enableRealtime: false, // モバイルでは一旦無効化
   })
@@ -39,6 +40,7 @@ export const MyPageScreen: React.FC = () => {
     isLoading: bestTimesLoading,
     isError: bestTimesError,
     error: bestTimesErrorObj,
+    refetch: refetchBestTimes,
   } = useBestTimesQuery(supabase, {
     userId: user?.id,
   })
@@ -46,6 +48,8 @@ export const MyPageScreen: React.FC = () => {
   const isLoading = profileLoading || bestTimesLoading
   const isError = profileError || bestTimesError
   const error = profileErrorObj || bestTimesErrorObj
+  const bestTimesErrorMessage =
+    bestTimesErrorObj instanceof Error ? bestTimesErrorObj.message : undefined
 
   // プロフィール更新処理
   const handleProfileUpdate = useCallback(
@@ -101,7 +105,8 @@ export const MyPageScreen: React.FC = () => {
         <ErrorView
           message={error.message || 'データの取得に失敗しました'}
           onRetry={() => {
-            // リトライは自動で行われる
+            refetchProfile()
+            refetchBestTimes()
           }}
           fullScreen
         />
@@ -160,7 +165,7 @@ export const MyPageScreen: React.FC = () => {
           {bestTimesError ? (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>
-                {bestTimesErrorObj?.message || 'ベストタイムの取得に失敗しました'}
+                {bestTimesErrorMessage || 'ベストタイムの取得に失敗しました'}
               </Text>
             </View>
           ) : (

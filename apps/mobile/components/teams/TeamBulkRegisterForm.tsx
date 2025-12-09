@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, Platform } from 'react-native'
+import { format } from 'date-fns'
 import { TeamBulkRegisterAPI, type BulkRegisterInput } from '@apps/shared/api/teams/bulkRegister'
 import { useAuth } from '@/contexts/AuthProvider'
 
@@ -39,7 +40,7 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({ team
   const { supabase } = useAuth()
   const api = useMemo(() => new TeamBulkRegisterAPI(supabase), [supabase])
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = format(new Date(), 'yyyy-MM-dd')
 
   const [mode, setMode] = useState<Mode>('practice')
   const [practiceRows, setPracticeRows] = useState<PracticeRow[]>([

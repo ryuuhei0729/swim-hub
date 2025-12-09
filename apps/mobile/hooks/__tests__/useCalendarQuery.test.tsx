@@ -4,6 +4,7 @@
 
 import { createMockSupabaseClient } from '@/__mocks__/supabase'
 import { DashboardAPI } from '@apps/shared/api/dashboard'
+import type { CalendarItem } from '@apps/shared/types/ui'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
 import React from 'react'
@@ -34,13 +35,14 @@ describe('useCalendarQuery', () => {
   })
 
   it('カレンダーエントリーを取得できる', async () => {
-    const mockCalendarItems = [
+    const mockCalendarItems: CalendarItem[] = [
       {
         id: 'item-1',
         type: 'practice' as const,
         date: '2025-01-15',
         title: 'テスト練習',
         place: 'テストプール',
+        metadata: {},
       },
     ]
 

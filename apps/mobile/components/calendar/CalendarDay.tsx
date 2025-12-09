@@ -1,7 +1,8 @@
 import React from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
 import { format, isSameMonth, isToday } from 'date-fns'
-import type { CalendarItem, CalendarItemType } from '@apps/shared/types/ui'
+import type { CalendarItem } from '@apps/shared/types/ui'
+import type { CalendarItemType } from '@apps/shared/types/database'
 
 interface CalendarDayProps {
   date: Date
@@ -24,10 +25,11 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
   const isCurrentMonth = isSameMonth(date, currentDate)
   const isTodayDate = isToday(date)
   const dayNumber = format(date, 'd')
+  const displayDateKey = format(date, 'yyyy-MM-dd')
 
   // エントリーの色を取得
-  const getItemColor = (type: CalendarItemType): string => {
-    switch (type) {
+  const getItemColor = (itemType: CalendarItemType): string => {
+    switch (itemType) {
       case 'practice':
       case 'team_practice':
       case 'practice_log':
@@ -106,7 +108,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
 
             return (
               <View
-                key={`${item.type}-${item.id}`}
+                key={`${item.id}-${displayDateKey}`}
                 style={[styles.entryItem, { backgroundColor: color }]}
               >
                 <Text style={styles.entryText} numberOfLines={1}>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { View, Text, Modal, Pressable, TextInput, StyleSheet, ScrollView, Alert, Platform } from 'react-native'
 import { useAuth } from '@/contexts/AuthProvider'
 
@@ -17,6 +17,7 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
   onSuccess,
 }) => {
   const { updatePassword } = useAuth()
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -61,7 +62,7 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
           onSuccess()
         }
         // 2秒後にモーダルを閉じる
-        setTimeout(() => {
+        timeoutRef.current = setTimeout(() => {
           handleClose()
         }, 2000)
       }
@@ -77,6 +78,14 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [])
 
   return (
     <Modal

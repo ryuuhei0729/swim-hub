@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { View, Text, ScrollView, StyleSheet, Pressable, Alert, Platform } from 'react-native'
+import * as Clipboard from 'expo-clipboard'
 import { useRoute, RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useAuth } from '@/contexts/AuthProvider'
@@ -57,8 +58,8 @@ export const TeamDetailScreen: React.FC = () => {
   const isAdmin = currentUserMembership?.role === 'admin'
 
   // 招待コードをコピー
-  const handleCopyInviteCode = () => {
-    if (!currentTeam.invite_code) return
+  const handleCopyInviteCode = async () => {
+    if (!currentTeam || !currentTeam.invite_code) return
 
     if (Platform.OS === 'web') {
       // Web版ではClipboard APIを使用
@@ -88,8 +89,12 @@ export const TeamDetailScreen: React.FC = () => {
         document.body.removeChild(textArea)
       }
     } else {
-      // ネイティブ版ではClipboard APIを使用（react-native-clipboard/clipboardが必要な場合があるが、一旦Alertで表示）
-      Alert.alert('招待コード', currentTeam.invite_code, [{ text: 'OK' }])
+      try {
+        await Clipboard.setStringAsync(currentTeam.invite_code)
+        Alert.alert('コピー完了', '招待コードをコピーしました', [{ text: 'OK' }])
+      } catch {
+        Alert.alert('エラー', 'コピーに失敗しました', [{ text: 'OK' }])
+      }
     }
   }
 
@@ -190,8 +195,6 @@ export const TeamDetailScreen: React.FC = () => {
                 const errorMessage = err instanceof Error ? err.message : '削除に失敗しました'
                 if (Platform.OS === 'web') {
                   window.alert(errorMessage)
-                } else {
-                  Alert.alert('エラー', errorMessage, [{ text: 'OK' }])
                 }
               }
             }}

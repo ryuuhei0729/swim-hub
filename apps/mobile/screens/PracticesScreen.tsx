@@ -1,9 +1,11 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import { View, Text, FlatList, TextInput, StyleSheet, Pressable, RefreshControl } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthProvider'
-import { usePracticesQuery } from '@apps/shared/hooks/queries/practices'
+import { practiceKeys } from '@apps/shared/hooks/queries/keys'
+import { PracticeAPI } from '@apps/shared/api/practices'
 import { PracticeItem } from '@/components/practices'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ErrorView } from '@/components/layout/ErrorView'
@@ -19,13 +21,12 @@ type PracticesScreenNavigationProp = NativeStackNavigationProp<MainStackParamLis
 export const PracticesScreen: React.FC = () => {
   const navigation = useNavigation<PracticesScreenNavigationProp>()
   const { supabase } = useAuth()
-  const [page, setPage] = useState(1)
   const [startDate, setStartDate] = useState<string | undefined>(undefined)
   const [endDate, setEndDate] = useState<string | undefined>(undefined)
-  const [refreshing, setRefreshing] = useState(false)
-  const [allPractices, setAllPractices] = useState<PracticeWithLogs[]>([])
-  const [hasMore, setHasMore] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
+  const [startDateInput, setStartDateInput] = useState('')
+  const [endDateInput, setEndDateInput] = useState('')
+  const [startDateError, setStartDateError] = useState<string | null>(null)
+  const [endDateError, setEndDateError] = useState<string | null>(null)
 
   // デフォルトの日付範囲（過去1年間）
   const defaultStartDate = useMemo(() => {
@@ -39,79 +40,53 @@ export const PracticesScreen: React.FC = () => {
     return new Date().toISOString().split('T')[0]
   }, [endDate])
 
-  // 練習記録データ取得
+  const practiceApi = useMemo(() => new PracticeAPI(supabase), [supabase])
+
   const {
-    data: practices = [],
-    isLoading,
+    data,
     error,
+    isLoading,
+    isRefetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
     refetch,
-  } = usePracticesQuery(supabase, {
-    startDate: defaultStartDate,
-    endDate: defaultEndDate,
-    page,
-    pageSize: 20,
-    enableRealtime: true,
+  } = useInfiniteQuery({
+    queryKey: practiceKeys.list({ startDate: defaultStartDate, endDate: defaultEndDate, pageSize: 20 }),
+    queryFn: async ({ pageParam = 1 }) => {
+      const offset = (pageParam - 1) * 20
+      return await practiceApi.getPractices(defaultStartDate, defaultEndDate, 20, offset)
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, pages) => (lastPage.length === 20 ? pages.length + 1 : undefined),
+    staleTime: 5 * 60 * 1000,
   })
 
-  // ページが変更されたらデータを結合
-  useEffect(() => {
-    if (practices.length > 0) {
-      if (page === 1) {
-        // 最初のページまたはリフレッシュ時は置き換え
-        setAllPractices(practices)
-        setHasMore(practices.length === 20) // 20件未満なら最後のページ
-      } else {
-        // 2ページ目以降は追加
-        setAllPractices((prev) => {
-          // 重複を避ける
-          const existingIds = new Set(prev.map((p) => p.id))
-          const newPractices = practices.filter((p) => !existingIds.has(p.id))
-          return [...prev, ...newPractices]
-        })
-        setHasMore(practices.length === 20) // 20件未満なら最後のページ
-      }
-      setLoadingMore(false)
-    } else if (page === 1 && !isLoading) {
-      // データが空の場合
-      setAllPractices([])
-      setHasMore(false)
-    }
-  }, [practices, page, isLoading])
+  const allPractices = useMemo(() => data?.pages.flat() ?? [], [data])
 
-  // 日付フィルターが変更されたらリセット
-  useEffect(() => {
-    setAllPractices([])
-    setPage(1)
-    setHasMore(true)
-  }, [defaultStartDate, defaultEndDate])
+  const dateRegex = useMemo(() => /^\d{4}-\d{2}-\d{2}$/, [])
 
   // 日付フィルターのリセット
   const handleResetDateFilter = () => {
     setStartDate(undefined)
     setEndDate(undefined)
-    setPage(1)
+    setStartDateInput('')
+    setEndDateInput('')
+    setStartDateError(null)
+    setEndDateError(null)
   }
 
   // プルリフレッシュ処理
   const handleRefresh = useCallback(async () => {
-    setRefreshing(true)
-    setPage(1)
-    setAllPractices([])
-    setHasMore(true)
-    try {
-      await refetch()
-    } finally {
-      setRefreshing(false)
-    }
+    await refetch()
   }, [refetch])
 
   // 次のページを読み込む
   const handleLoadMore = useCallback(() => {
-    if (!loadingMore && hasMore && !isLoading) {
-      setLoadingMore(true)
-      setPage((prev) => prev + 1)
+    if (hasNextPage && !isFetchingNextPage && !isLoading) {
+      fetchNextPage()
     }
-  }, [loadingMore, hasMore, isLoading])
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage, isLoading])
 
   // 練習記録アイテムのレンダリング（メモ化）
   // ⚠️ 重要: すべてのフックは条件付きレンダリングの前に定義する必要がある
@@ -176,28 +151,52 @@ export const PracticesScreen: React.FC = () => {
           <View style={styles.filterItem}>
             <Text style={styles.filterLabel}>開始日</Text>
             <TextInput
-              style={styles.filterInput}
-              value={startDate || ''}
+              style={[styles.filterInput, startDateError && styles.filterInputError]}
+              value={startDateInput}
               onChangeText={(text) => {
-                setStartDate(text || undefined)
-                setPage(1)
+                setStartDateInput(text)
+                if (!text) {
+                  setStartDate(undefined)
+                  setStartDateError(null)
+                  return
+                }
+                if (!dateRegex.test(text)) {
+                  setStartDateError('YYYY-MM-DD形式で入力してください')
+                  return
+                }
+                setStartDateError(null)
+                setStartDate(text)
               }}
               placeholder="YYYY-MM-DD"
               placeholderTextColor="#9CA3AF"
+              accessibilityLabel="開始日入力"
             />
+            {startDateError && <Text style={styles.errorText}>{startDateError}</Text>}
           </View>
           <View style={styles.filterItem}>
             <Text style={styles.filterLabel}>終了日</Text>
             <TextInput
-              style={styles.filterInput}
-              value={endDate || ''}
+              style={[styles.filterInput, endDateError && styles.filterInputError]}
+              value={endDateInput}
               onChangeText={(text) => {
-                setEndDate(text || undefined)
-                setPage(1)
+                setEndDateInput(text)
+                if (!text) {
+                  setEndDate(undefined)
+                  setEndDateError(null)
+                  return
+                }
+                if (!dateRegex.test(text)) {
+                  setEndDateError('YYYY-MM-DD形式で入力してください')
+                  return
+                }
+                setEndDateError(null)
+                setEndDate(text)
               }}
               placeholder="YYYY-MM-DD"
               placeholderTextColor="#9CA3AF"
+              accessibilityLabel="終了日入力"
             />
+            {endDateError && <Text style={styles.errorText}>{endDateError}</Text>}
           </View>
         </View>
         {(startDate || endDate) && (
@@ -209,7 +208,12 @@ export const PracticesScreen: React.FC = () => {
 
       {/* 作成ボタン */}
       <View style={styles.fabContainer}>
-        <Pressable style={styles.fab} onPress={handleCreate}>
+        <Pressable
+          style={styles.fab}
+          onPress={handleCreate}
+          accessibilityLabel="練習記録を作成"
+          accessibilityRole="button"
+        >
           <Text style={styles.fabText}>+</Text>
         </Pressable>
       </View>
@@ -221,7 +225,7 @@ export const PracticesScreen: React.FC = () => {
         contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing}
+            refreshing={isRefetching && !isFetchingNextPage}
             onRefresh={handleRefresh}
             colors={['#2563EB']}
             tintColor="#2563EB"
@@ -236,7 +240,7 @@ export const PracticesScreen: React.FC = () => {
         removeClippedSubviews={true}
         updateCellsBatchingPeriod={50}
         ListFooterComponent={
-          loadingMore ? (
+          isFetchingNextPage ? (
             <View style={styles.footerLoader}>
               <LoadingSpinner size="small" message="読み込み中..." />
             </View>
@@ -285,6 +289,15 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     fontSize: 14,
     color: '#111827',
+  },
+  filterInputError: {
+    borderColor: '#DC2626',
+    backgroundColor: '#FEF2F2',
+  },
+  errorText: {
+    marginTop: 4,
+    fontSize: 12,
+    color: '#DC2626',
   },
   resetButton: {
     marginTop: 12,

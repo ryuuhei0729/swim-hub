@@ -1,7 +1,8 @@
 import React, { useMemo, useCallback } from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { ja } from 'date-fns/locale'
+import { toZonedTime } from 'date-fns-tz'
 import { formatTime } from '@/utils/formatters'
 import type { RecordWithDetails } from '@swim-hub/shared/types/database'
 
@@ -23,10 +24,15 @@ const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress }) => 
     () => record.competition?.date || record.created_at,
     [record.competition?.date, record.created_at]
   )
-  const formattedDate = useMemo(
-    () => format(new Date(recordDate), 'yyyy年M月d日(E)', { locale: ja }),
-    [recordDate]
-  )
+  const formattedDate = useMemo(() => {
+    try {
+      const parsed = typeof recordDate === 'string' ? parseISO(recordDate) : new Date(recordDate)
+      const zoned = toZonedTime(parsed, Intl.DateTimeFormat().resolvedOptions().timeZone)
+      return format(zoned, 'yyyy年M月d日(E)', { locale: ja })
+    } catch {
+      return '日付不明'
+    }
+  }, [recordDate])
   
   // 種目名
   const styleName = useMemo(() => record.style?.name_jp || '不明', [record.style?.name_jp])
@@ -159,6 +165,7 @@ export const RecordItem = React.memo(RecordItemComponent, (prevProps, nextProps)
     prevProps.record.time === nextProps.record.time &&
     prevProps.record.competition?.id === nextProps.record.competition?.id &&
     prevProps.record.competition?.date === nextProps.record.competition?.date &&
-    prevProps.record.style?.id === nextProps.record.style?.id
+    prevProps.record.style?.id === nextProps.record.style?.id &&
+    prevProps.onPress === nextProps.onPress
   )
 })

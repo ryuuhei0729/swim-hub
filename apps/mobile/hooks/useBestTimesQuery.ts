@@ -95,7 +95,24 @@ export function useBestTimesQuery(
         return []
       }
 
-      const records = data as RecordWithRelations[]
+      const records: RecordWithRelations[] = (data as any[]).map((record) => {
+        const styleData = Array.isArray(record.styles) ? record.styles[0] : record.styles
+        const competitionData = Array.isArray(record.competitions) ? record.competitions[0] : record.competitions
+
+        return {
+          id: record.id,
+          time: record.time,
+          created_at: record.created_at,
+          pool_type: record.pool_type,
+          is_relaying: record.is_relaying,
+          styles: styleData
+            ? { name_jp: styleData.name_jp, distance: styleData.distance }
+            : null,
+          competitions: competitionData
+            ? { title: competitionData.title, date: competitionData.date }
+            : null,
+        }
+      })
 
       // 引き継ぎなしのベストタイム（種目、プール種別ごと）
       const bestTimesByStyleAndPool = new Map<string, BestTime>()
@@ -177,8 +194,17 @@ export function useBestTimesQuery(
       relayingBestTimesByStyleAndPool.forEach((relayingTime, key) => {
         if (!bestTimesByStyleAndPool.has(key)) {
           // キーから種目名とプール種別を取得
-          const [styleName, poolTypeStr] = key.split('_')
-          const poolType = parseInt(poolTypeStr, 10)
+          const lastUnderscoreIndex = key.lastIndexOf('_')
+          if (lastUnderscoreIndex === -1) {
+            return
+          }
+
+          const styleName = key.slice(0, lastUnderscoreIndex)
+          const poolTypeStr = key.slice(lastUnderscoreIndex + 1)
+          const poolType = Number.isInteger(parseInt(poolTypeStr, 10)) ? parseInt(poolTypeStr, 10) : NaN
+          if (Number.isNaN(poolType)) {
+            return
+          }
 
           // 種目情報を取得（最初のレコードから）
           const record = records.find(

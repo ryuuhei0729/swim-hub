@@ -109,3 +109,4 @@ describe('TeamItem', () => {
     expect(screen.getByText('テストチーム')).toBeTruthy()
   })
 })
+

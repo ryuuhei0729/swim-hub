@@ -2,7 +2,7 @@ import React from 'react'
 import { View, Text, Modal, Pressable, ScrollView, StyleSheet } from 'react-native'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import type { CalendarItem, CalendarItemType } from '@apps/shared/types/ui'
+import type { CalendarItem } from '@apps/shared/types/ui'
 
 interface DayDetailModalProps {
   visible: boolean
@@ -42,7 +42,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   }
 
   // エントリーの種類に応じた色を取得
-  const getEntryColor = (type: CalendarItemType): string => {
+  const getEntryColor = (type: CalendarItem['type']): string => {
     switch (type) {
       case 'practice':
       case 'team_practice':
@@ -59,7 +59,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   }
 
   // エントリーの種類に応じたラベルを取得
-  const getEntryTypeLabel = (type: CalendarItemType): string => {
+  const getEntryTypeLabel = (type: CalendarItem['type']): string => {
     switch (type) {
       case 'practice':
         return '練習'

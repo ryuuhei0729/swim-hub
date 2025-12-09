@@ -253,6 +253,8 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   memberHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 8,
   },
   memberInfo: {

@@ -23,6 +23,7 @@ describe('PracticeLogItem', () => {
     practice_times: [
       {
         id: 'time-1',
+        user_id: 'user-1',
         practice_log_id: 'log-1',
         set_number: 1,
         rep_number: 1,
@@ -31,6 +32,7 @@ describe('PracticeLogItem', () => {
       },
       {
         id: 'time-2',
+        user_id: 'user-1',
         practice_log_id: 'log-1',
         set_number: 1,
         rep_number: 2,
@@ -40,15 +42,14 @@ describe('PracticeLogItem', () => {
     ],
     practice_log_tags: [
       {
-        id: 'lt-1',
-        practice_log_id: 'log-1',
-        tag_id: 'tag-1',
+        practice_tag_id: 'tag-1',
         practice_tags: {
           id: 'tag-1',
           name: 'テストタグ',
           color: '#FF0000',
           user_id: 'user-1',
           created_at: '2025-01-15T10:00:00Z',
+          updated_at: '2025-01-15T10:00:00Z',
         },
       },
     ],
@@ -133,3 +134,4 @@ describe('PracticeLogItem', () => {
     expect(screen.queryByText(/周/)).toBeNull()
   })
 })
+

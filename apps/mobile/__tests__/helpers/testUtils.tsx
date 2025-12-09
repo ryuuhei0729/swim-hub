@@ -21,3 +21,4 @@ export const createQueryWrapper = () => {
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   )
 }
+

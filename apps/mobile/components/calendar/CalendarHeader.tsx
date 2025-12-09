@@ -27,11 +27,12 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
 }) => {
   const [showMonthSelector, setShowMonthSelector] = useState(false)
 
-  const currentYear = currentDate.getFullYear()
-  const currentMonth = currentDate.getMonth()
+  const safeCurrentDate = currentDate instanceof Date ? currentDate : new Date(currentDate)
+  const currentYear = safeCurrentDate.getFullYear()
+  const currentMonth = safeCurrentDate.getMonth()
 
   // 年リスト（現在年±5年）
-  const years = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i)
+  const years = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i)
 
   const handleMonthSelect = (year: number, month: number) => {
     onMonthYearSelect(year, month)

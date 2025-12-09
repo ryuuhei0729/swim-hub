@@ -82,7 +82,7 @@ export const DashboardScreen: React.FC = () => {
       const practiceId = item.metadata?.practice_id || item.id
       navigation.navigate('PracticeDetail', { practiceId })
     } else if (item.type === 'record') {
-      const recordId = item.metadata?.record?.id || item.id
+      const recordId = item.id
       navigation.navigate('RecordDetail', { recordId })
     } else if (item.type === 'competition' || item.type === 'team_competition') {
       // 大会の詳細画面は未実装のため、一旦スキップ
@@ -92,12 +92,14 @@ export const DashboardScreen: React.FC = () => {
 
   // 練習追加
   const handleAddPractice = (date: Date) => {
-    navigation.navigate('PracticeForm', {})
+    const dateParam = format(date, 'yyyy-MM-dd')
+    navigation.navigate('PracticeForm', { date: dateParam })
   }
 
   // 大会記録追加
   const handleAddRecord = (date: Date) => {
-    navigation.navigate('RecordForm', {})
+    const dateParam = format(date, 'yyyy-MM-dd')
+    navigation.navigate('RecordForm', { date: dateParam })
   }
 
   // エラー状態

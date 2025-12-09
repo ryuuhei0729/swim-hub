@@ -52,7 +52,6 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({ profile, teams =
           source={{ uri: profile.profile_image_path }}
           style={styles.avatarImage}
           resizeMode="cover"
-          cache="force-cache"
         />
       )
     }

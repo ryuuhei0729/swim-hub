@@ -173,8 +173,20 @@ describe('recordFormStore', () => {
       reaction_time: 0.5,
       note: 'テストメモ',
       split_times: [
-        { id: 'split-1', distance: 50, split_time: 25.5 },
-        { id: 'split-2', distance: 100, split_time: 60.0 },
+        {
+          id: 'split-1',
+          record_id: 'record-1',
+          distance: 50,
+          split_time: 25.5,
+          created_at: '2025-01-15T10:00:00Z',
+        },
+        {
+          id: 'split-2',
+          record_id: 'record-1',
+          distance: 100,
+          split_time: 60.0,
+          created_at: '2025-01-15T10:00:00Z',
+        },
       ],
     })
 

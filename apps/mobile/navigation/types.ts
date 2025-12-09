@@ -29,12 +29,14 @@ export type MainStackParamList = {
   }
   PracticeForm: {
     practiceId?: string
+    date?: string
   }
   RecordDetail: {
     recordId: string
   }
   RecordForm: {
     recordId?: string
+    date?: string
   }
   TeamDetail: {
     teamId: string

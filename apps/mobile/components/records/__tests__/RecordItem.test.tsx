@@ -5,12 +5,17 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { RecordItem } from '../RecordItem'
-import { createMockRecordWithDetails } from '@/__mocks__/supabase'
+import {
+  createMockRecordWithDetails,
+  createMockCompetition,
+  createMockStyle,
+} from '@/__mocks__/supabase'
 
 describe('RecordItem', () => {
   const mockRecord = createMockRecordWithDetails({
     time: 60.5,
     competition: {
+      ...createMockCompetition(),
       id: 'comp-1',
       title: 'テスト大会',
       date: '2025-01-15',
@@ -18,6 +23,7 @@ describe('RecordItem', () => {
       pool_type: 1,
     },
     style: {
+      ...createMockStyle(),
       id: 1,
       name_jp: '自由形',
       distance: 100,
@@ -106,3 +112,4 @@ describe('RecordItem', () => {
     expect(screen.getByText('テスト大会')).toBeTruthy()
   })
 })
+

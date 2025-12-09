@@ -22,7 +22,7 @@ type PracticeFormScreenNavigationProp = NativeStackNavigationProp<MainStackParam
 export const PracticeFormScreen: React.FC = () => {
   const route = useRoute<PracticeFormScreenRouteProp>()
   const navigation = useNavigation<PracticeFormScreenNavigationProp>()
-  const { practiceId } = route.params || {}
+  const { practiceId, date: initialDateParam } = route.params || {}
   const { supabase } = useAuth()
   const isEditMode = !!practiceId
 
@@ -73,10 +73,13 @@ export const PracticeFormScreen: React.FC = () => {
     } else {
       // 作成モード: 空のフォームで初期化
       initialize()
+      if (initialDateParam) {
+        setDate(initialDateParam)
+      }
       setLoadingPractice(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEditMode, practiceId, practices.length, loadingPractices])
+  }, [isEditMode, practiceId, practices.length, loadingPractices, initialDateParam])
 
   // ミューテーション
   const createMutation = useCreatePracticeMutation(supabase)
@@ -100,7 +103,13 @@ export const PracticeFormScreen: React.FC = () => {
       } else {
         // 有効な日付かチェック
         const dateObj = new Date(date)
-        if (isNaN(dateObj.getTime())) {
+        const [year, month, day] = date.split('-').map(Number)
+        if (
+          isNaN(dateObj.getTime()) ||
+          dateObj.getFullYear() !== year ||
+          dateObj.getMonth() + 1 !== month ||
+          dateObj.getDate() !== day
+        ) {
           setError('date', '有効な日付を入力してください')
           isValid = false
         }

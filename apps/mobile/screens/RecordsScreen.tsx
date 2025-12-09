@@ -104,11 +104,11 @@ export const RecordsScreen: React.FC = () => {
 
   // ページが変更されたらデータを結合
   useEffect(() => {
-    if (filteredRecords.length > 0) {
+    if (records.length > 0) {
       if (page === 1) {
         // 最初のページまたはリフレッシュ時は置き換え
         setAllRecords(filteredRecords)
-        setHasMore(filteredRecords.length === 20) // 20件未満なら最後のページ
+        setHasMore(records.length === 20) // フィルタ前の件数で判定
       } else {
         // 2ページ目以降は追加
         setAllRecords((prev) => {
@@ -117,7 +117,7 @@ export const RecordsScreen: React.FC = () => {
           const newRecords = filteredRecords.filter((r) => !existingIds.has(r.id))
           return [...prev, ...newRecords]
         })
-        setHasMore(filteredRecords.length === 20) // 20件未満なら最後のページ
+        setHasMore(records.length === 20) // フィルタ前の件数で判定
       }
       setLoadingMore(false)
     } else if (page === 1 && !isLoading) {
@@ -125,7 +125,7 @@ export const RecordsScreen: React.FC = () => {
       setAllRecords([])
       setHasMore(false)
     }
-  }, [filteredRecords, page, isLoading])
+  }, [filteredRecords, records.length, page, isLoading])
 
   // フィルターが変更されたらリセット
   useEffect(() => {

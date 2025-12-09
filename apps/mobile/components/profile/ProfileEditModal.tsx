@@ -58,8 +58,12 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
       setIsUpdating(true)
       setError(null)
 
-      // 誕生日をISO形式に変換
-      const birthday = formData.birthday ? new Date(formData.birthday).toISOString() : null
+      // 誕生日をISO形式に変換（不正値はnullとして扱う）
+      let birthday: string | null = null
+      if (formData.birthday) {
+        const dateObj = new Date(formData.birthday)
+        birthday = isNaN(dateObj.getTime()) ? null : dateObj.toISOString()
+      }
 
       await onUpdate({
         name: formData.name.trim(),

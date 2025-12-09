@@ -48,3 +48,4 @@ describe('SplitTimeItem', () => {
     expect(screen.getByText('50m')).toBeTruthy()
   })
 })
+

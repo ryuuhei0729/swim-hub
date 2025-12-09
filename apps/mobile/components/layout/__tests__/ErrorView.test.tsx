@@ -63,3 +63,4 @@ describe('ErrorView', () => {
     expect(screen.getByText('再試行')).toBeTruthy()
   })
 })
+

@@ -129,7 +129,7 @@ describe('RecordAPI', () => {
 
   describe('記録更新', () => {
     it('記録を更新できる', async () => {
-      const updatedRecord = createMockRecord({ time_seconds: 59.0 })
+      const updatedRecord = createMockRecord({ time: 59.0 })
 
       mockClient.from = vi.fn(() => ({
         update: vi.fn().mockReturnThis(),

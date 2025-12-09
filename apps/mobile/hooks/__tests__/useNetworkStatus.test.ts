@@ -47,7 +47,7 @@ describe('useNetworkStatus', () => {
   })
 
   it('ネットワーク状態の変更を監視する', async () => {
-    let listener: ((state: any) => void) | null = null
+    let listener: ((state: any) => void) | undefined
 
     // モック: addEventListenerを実装
     vi.spyOn(NetInfo, 'addEventListener').mockImplementation((callback: any) => {
@@ -68,13 +68,11 @@ describe('useNetworkStatus', () => {
     })
 
     // ネットワーク状態を変更
-    if (listener) {
-      listener({
-        isConnected: false,
-        isInternetReachable: false,
-        type: 'none',
-      })
-    }
+    listener?.({
+      isConnected: false,
+      isInternetReachable: false,
+      type: 'none',
+    })
 
     await waitFor(() => {
       expect(result.current.isConnected).toBe(false)

@@ -183,6 +183,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **タスク**:
 - [x] 認証ガードコンポーネントの実装
 - [ ] ナビゲーション統合（Phase 3で実装）
+  - ガード実装済み。ナビゲーションへの適用はPhase 3で実行予定。
 
 ### Phase 3: ナビゲーションと基本レイアウト
 
@@ -369,7 +370,8 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 - [x] プロフィール画面の実装
 - [x] プロフィール画像のアップロード（Supabase Storage）
 - [x] 基本情報の編集
-- [x] ベストタイム表の実装（WEB実装を参考）
+- [ ] ベストタイム表の実装（WEB実装を参考）
+  - Phase 8.1 で実装予定。Web版と同等のデータソース（Supabase）を用いて記録を表示し、アップロード/表示要件を満たすことを受け入れ条件とする。
 - [x] パスワード変更
 
 ### Phase 9: オフライン対応とパフォーマンス最適化
@@ -410,9 +412,9 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: アプリストアへのリリース準備
 
 **タスク**:
-- [ ] アイコン・スプラッシュスクリーンの設定
-- [ ] アプリ情報の設定
-- [ ] ビルド設定（iOS/Android）
+- [x] アイコン・スプラッシュスクリーンの設定
+- [x] アプリ情報の設定
+- [x] ビルド設定（iOS/Android）
 - [ ] 配布設定（App Store Connect / Google Play Console）
 
 ## 技術的な考慮事項

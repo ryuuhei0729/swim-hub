@@ -62,3 +62,4 @@ describe('LoadingSpinner', () => {
     expect(screen.getByText('データを読み込み中...')).toBeTruthy()
   })
 })
+

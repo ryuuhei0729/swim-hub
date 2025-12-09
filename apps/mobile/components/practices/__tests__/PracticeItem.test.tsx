@@ -102,3 +102,4 @@ describe('PracticeItem', () => {
     expect(screen.getByText('テスト練習')).toBeTruthy()
   })
 })
+

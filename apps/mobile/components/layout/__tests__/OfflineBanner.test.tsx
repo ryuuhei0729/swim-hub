@@ -26,3 +26,4 @@ describe('OfflineBanner', () => {
     expect(message).toBeTruthy()
   })
 })
+

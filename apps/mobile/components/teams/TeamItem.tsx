@@ -13,7 +13,6 @@ interface TeamItemProps {
  */
 const TeamItemComponent: React.FC<TeamItemProps> = ({ membership, onPress }) => {
   const team = useMemo(() => membership.teams, [membership.teams])
-  const user = useMemo(() => membership.users, [membership.users])
   const role = useMemo(
     () => (membership.role === 'admin' ? '管理者' : 'メンバー'),
     [membership.role]
