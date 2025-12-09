@@ -13,7 +13,10 @@ type SelectBuilder<T> = {
   select: ReturnType<typeof vi.fn>
   eq: ReturnType<typeof vi.fn>
   order: ReturnType<typeof vi.fn>
-  then: <R>(resolve: (value: { data: T; error: null }) => R) => Promise<R>
+  then: <TResult1 = { data: T; error: null }, TResult2 = never>(
+    onfulfilled?: ((value: { data: T; error: null }) => TResult1 | PromiseLike<TResult1>) | null,
+    onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null
+  ) => Promise<TResult1 | TResult2>
 }
 
 const createSelectBuilder = <T,>(data: T): SelectBuilder<T> => {
@@ -21,8 +24,8 @@ const createSelectBuilder = <T,>(data: T): SelectBuilder<T> => {
     select: vi.fn(),
     eq: vi.fn(),
     order: vi.fn(),
-    then: <R,>(resolve: (value: { data: T; error: null }) => R) =>
-      Promise.resolve({ data, error: null }).then(resolve),
+    then: (onfulfilled, onrejected) =>
+      Promise.resolve({ data, error: null }).then(onfulfilled, onrejected),
   }
 
   builder.select.mockReturnValue(builder)

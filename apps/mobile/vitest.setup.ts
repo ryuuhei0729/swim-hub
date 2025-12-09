@@ -61,8 +61,10 @@ vi.mock('react-native', () => {
     ActivityIndicator: ({ ...props }: Record<string, unknown>) =>
       React.createElement('div', props, 'Loading...'),
     RefreshControl: ({ ...props }: Record<string, unknown>) => React.createElement('div', props),
-    Image: ({ source, ...props }: { source?: { uri?: string } | string } & Record<string, unknown>) =>
-      React.createElement('img', { ...props, src: source?.uri || source }),
+    Image: ({ source, ...props }: { source?: { uri?: string } | string } & Record<string, unknown>) => {
+      const src = typeof source === 'string' ? source : source?.uri
+      return React.createElement('img', { ...props, src })
+    },
     TextInput: ({ ...props }: Record<string, unknown>) =>
       React.createElement('input', { type: 'text', ...props }),
   }

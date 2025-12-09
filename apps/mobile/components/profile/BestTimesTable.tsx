@@ -58,6 +58,28 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
     // データベースの種目名形式（例：50m自由形）で検索
     const dbStyleName = `${distance}m${style}`
 
+    const extractCandidates = (times: BestTime[], allowRelaying: boolean): BestTime[] => {
+      const candidates: BestTime[] = []
+      times.forEach((bt) => {
+        if (!bt.is_relaying) {
+          candidates.push(bt)
+          if (allowRelaying && bt.relayingTime) {
+            candidates.push({
+              ...bt,
+              id: bt.relayingTime.id,
+              time: bt.relayingTime.time,
+              created_at: bt.relayingTime.created_at,
+              is_relaying: true,
+              competition: bt.relayingTime.competition,
+            })
+          }
+        } else if (allowRelaying) {
+          candidates.push(bt)
+        }
+      })
+      return candidates
+    }
+
     if (activeTab === 'all') {
       // ALLタブ: 短水路と長水路の速い方を選択
       const candidates: BestTime[] = []
@@ -66,57 +88,13 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
       const shortCourseTimes = bestTimes.filter(
         (bt) => bt.style.name_jp === dbStyleName && bt.pool_type === 0
       )
-
-      shortCourseTimes.forEach((bt) => {
-        // 引き継ぎなしのタイムは常に候補に追加
-        if (!bt.is_relaying) {
-          candidates.push(bt)
-          // チェックボックスがONの場合、引き継ぎありのタイムも追加
-          if (includeRelaying && bt.relayingTime) {
-            candidates.push({
-              ...bt,
-              id: bt.relayingTime.id,
-              time: bt.relayingTime.time,
-              created_at: bt.relayingTime.created_at,
-              is_relaying: true,
-              competition: bt.relayingTime.competition,
-            })
-          }
-        } else {
-          // 引き継ぎありのみのタイム（チェックボックスがONの場合のみ追加）
-          if (includeRelaying) {
-            candidates.push(bt)
-          }
-        }
-      })
+      candidates.push(...extractCandidates(shortCourseTimes, includeRelaying))
 
       // 長水路のタイムを取得
       const longCourseTimes = bestTimes.filter(
         (bt) => bt.style.name_jp === dbStyleName && bt.pool_type === 1
       )
-
-      longCourseTimes.forEach((bt) => {
-        // 引き継ぎなしのタイムは常に候補に追加
-        if (!bt.is_relaying) {
-          candidates.push(bt)
-          // チェックボックスがONの場合、引き継ぎありのタイムも追加
-          if (includeRelaying && bt.relayingTime) {
-            candidates.push({
-              ...bt,
-              id: bt.relayingTime.id,
-              time: bt.relayingTime.time,
-              created_at: bt.relayingTime.created_at,
-              is_relaying: true,
-              competition: bt.relayingTime.competition,
-            })
-          }
-        } else {
-          // 引き継ぎありのみのタイム（チェックボックスがONの場合のみ追加）
-          if (includeRelaying) {
-            candidates.push(bt)
-          }
-        }
-      })
+      candidates.push(...extractCandidates(longCourseTimes, includeRelaying))
 
       if (candidates.length === 0) return null
 
@@ -124,32 +102,8 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
       return candidates.reduce((best, current) => (current.time < best.time ? current : best))
     } else {
       // 短水路/長水路タブ: フィルタリング済みのデータから取得
-      const candidates: BestTime[] = []
-
       const matchingTimes = filteredBestTimes.filter((bt) => bt.style.name_jp === dbStyleName)
-
-      matchingTimes.forEach((bt) => {
-        // 引き継ぎなしのタイムは常に候補に追加
-        if (!bt.is_relaying) {
-          candidates.push(bt)
-          // チェックボックスがONの場合、引き継ぎありのタイムも追加
-          if (includeRelaying && bt.relayingTime) {
-            candidates.push({
-              ...bt,
-              id: bt.relayingTime.id,
-              time: bt.relayingTime.time,
-              created_at: bt.relayingTime.created_at,
-              is_relaying: true,
-              competition: bt.relayingTime.competition,
-            })
-          }
-        } else {
-          // 引き継ぎありのみのタイム（チェックボックスがONの場合のみ追加）
-          if (includeRelaying) {
-            candidates.push(bt)
-          }
-        }
-      })
+      const candidates = extractCandidates(matchingTimes, includeRelaying)
 
       if (candidates.length === 0) return null
 

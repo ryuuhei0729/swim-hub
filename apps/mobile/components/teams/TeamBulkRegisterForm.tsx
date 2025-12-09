@@ -141,7 +141,15 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({ team
       return
     }
 
-    const input = buildInput()
+    // プレビュー用に全入力を構築
+    const previewInput = buildInput()
+
+    // 現在のモードに応じて送信データを限定
+    const input: BulkRegisterInput =
+      mode === 'practice'
+        ? { practices: previewInput.practices, competitions: [] }
+        : { practices: [], competitions: previewInput.competitions }
+
     if (mode === 'practice' && input.practices.length === 0) {
       setError('登録する練習データがありません')
       return

@@ -98,11 +98,11 @@ describe('RecordItem', () => {
     
     // Pressableをタップ（button要素としてレンダリングされる）
     const pressable = screen.getByText('テスト大会').closest('button')
-    if (pressable) {
-      fireEvent.click(pressable)
-      expect(onPress).toHaveBeenCalledTimes(1)
-      expect(onPress).toHaveBeenCalledWith(mockRecord)
-    }
+    expect(pressable).not.toBeNull()
+
+    fireEvent.click(pressable!)
+    expect(onPress).toHaveBeenCalledTimes(1)
+    expect(onPress).toHaveBeenCalledWith(mockRecord)
   })
 
   it('onPressが提供されない場合でもエラーが発生しない', () => {

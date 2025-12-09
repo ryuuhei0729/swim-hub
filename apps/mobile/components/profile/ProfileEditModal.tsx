@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { parse, format, isValid } from 'date-fns'
 import { View, Text, Modal, Pressable, TextInput, StyleSheet, ScrollView } from 'react-native'
 import { AvatarUpload } from './AvatarUpload'
 import type { UserProfile } from '@swim-hub/shared/types/database'
@@ -34,7 +35,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
     if (profile) {
       setFormData({
         name: profile.name || '',
-        birthday: profile.birthday ? profile.birthday.split('T')[0] : '', // YYYY-MM-DD形式
+        birthday: profile.birthday ? format(new Date(profile.birthday), 'yyyy-MM-dd') : '',
         bio: profile.bio || '',
       })
     }
@@ -57,11 +58,20 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
       setIsUpdating(true)
       setError(null)
 
-      // 誕生日をISO形式に変換（不正値はnullとして扱う）
+      // 誕生日を日付文字列として検証（不正値はnullとして扱う）
       let birthday: string | null = null
       if (formData.birthday) {
-        const dateObj = new Date(formData.birthday)
-        birthday = isNaN(dateObj.getTime()) ? null : dateObj.toISOString()
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+        if (dateRegex.test(formData.birthday)) {
+          const [year, month, day] = formData.birthday.split('-').map(Number)
+          const utcDate = new Date(Date.UTC(year, month - 1, day))
+          const isValidDate =
+            !Number.isNaN(utcDate.getTime()) &&
+            utcDate.getUTCFullYear() === year &&
+            utcDate.getUTCMonth() === month - 1 &&
+            utcDate.getUTCDate() === day
+          birthday = isValidDate ? formData.birthday : null
+        }
       }
 
       await onUpdate({

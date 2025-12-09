@@ -160,12 +160,22 @@ const styles = StyleSheet.create({
 // メモ化して再レンダリングを最適化
 export const RecordItem = React.memo(RecordItemComponent, (prevProps, nextProps) => {
   // カスタム比較関数：record.idが同じで、recordの主要プロパティが変更されていない場合は再レンダリングしない
+  const prevCompetition = prevProps.record.competition
+  const nextCompetition = nextProps.record.competition
+  const prevStyle = prevProps.record.style
+  const nextStyle = nextProps.record.style
+
   return (
     prevProps.record.id === nextProps.record.id &&
     prevProps.record.time === nextProps.record.time &&
-    prevProps.record.competition?.id === nextProps.record.competition?.id &&
-    prevProps.record.competition?.date === nextProps.record.competition?.date &&
-    prevProps.record.style?.id === nextProps.record.style?.id &&
+    prevCompetition?.id === nextCompetition?.id &&
+    prevCompetition?.date === nextCompetition?.date &&
+    prevCompetition?.title === nextCompetition?.title &&
+    prevCompetition?.place === nextCompetition?.place &&
+    prevCompetition?.pool_type === nextCompetition?.pool_type &&
+    prevStyle?.id === nextStyle?.id &&
+    prevStyle?.name_jp === nextStyle?.name_jp &&
+    prevStyle?.distance === nextStyle?.distance &&
     prevProps.onPress === nextProps.onPress
   )
 })

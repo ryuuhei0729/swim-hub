@@ -95,11 +95,11 @@ describe('TeamItem', () => {
     
     // Pressableをタップ（button要素としてレンダリングされる）
     const pressable = screen.getByText('テストチーム').closest('button')
-    if (pressable) {
-      fireEvent.click(pressable)
-      expect(onPress).toHaveBeenCalledTimes(1)
-      expect(onPress).toHaveBeenCalledWith(mockMembership)
-    }
+    expect(pressable).not.toBeNull()
+
+    fireEvent.click(pressable!)
+    expect(onPress).toHaveBeenCalledTimes(1)
+    expect(onPress).toHaveBeenCalledWith(mockMembership)
   })
 
   it('onPressが提供されない場合でもエラーが発生しない', () => {

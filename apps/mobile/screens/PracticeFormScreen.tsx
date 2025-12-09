@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert } from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -47,6 +47,7 @@ export const PracticeFormScreen: React.FC = () => {
 
   // 既存データの取得（編集モード時）
   const [loadingPractice, setLoadingPractice] = useState(isEditMode)
+  const initializedRef = useRef(false)
 
   // 編集モード時は、usePracticesQueryでデータを取得してから該当のものを検索
   const {
@@ -59,12 +60,15 @@ export const PracticeFormScreen: React.FC = () => {
   })
 
   useEffect(() => {
+    if (initializedRef.current) return
+
     if (isEditMode && practiceId) {
       // 編集モード: 既存データを取得
       setLoadingPractice(true)
       const practice = practices.find((p) => p.id === practiceId)
       if (practice) {
         initialize(practice)
+        initializedRef.current = true
         setLoadingPractice(false)
       } else if (!loadingPractices) {
         // データが見つからない場合
@@ -73,13 +77,14 @@ export const PracticeFormScreen: React.FC = () => {
     } else {
       // 作成モード: 空のフォームで初期化
       initialize()
+      initializedRef.current = true
       if (initialDateParam) {
         setDate(initialDateParam)
       }
       setLoadingPractice(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEditMode, practiceId, practices.length, loadingPractices, initialDateParam])
+  }, [isEditMode, practiceId, loadingPractices, initialDateParam, practices])
 
   // ミューテーション
   const createMutation = useCreatePracticeMutation(supabase)

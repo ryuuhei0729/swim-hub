@@ -161,7 +161,9 @@ export const TeamItem = React.memo(TeamItemComponent, (prevProps, nextProps) => 
     prevProps.membership.id === nextProps.membership.id &&
     prevProps.membership.status === nextProps.membership.status &&
     prevProps.membership.role === nextProps.membership.role &&
+    prevProps.membership.member_type === nextProps.membership.member_type &&
     prevProps.membership.teams?.id === nextProps.membership.teams?.id &&
-    prevProps.membership.teams?.name === nextProps.membership.teams?.name
+    prevProps.membership.teams?.name === nextProps.membership.teams?.name &&
+    prevProps.membership.teams?.description === nextProps.membership.teams?.description
   )
 })

@@ -88,11 +88,11 @@ describe('PracticeItem', () => {
     
     // Pressableをタップ（button要素としてレンダリングされる）
     const pressable = screen.getByText('テスト練習').closest('button')
-    if (pressable) {
-      fireEvent.click(pressable)
-      expect(onPress).toHaveBeenCalledTimes(1)
-      expect(onPress).toHaveBeenCalledWith(mockPractice)
-    }
+    expect(pressable).not.toBeNull()
+
+    fireEvent.click(pressable!)
+    expect(onPress).toHaveBeenCalledTimes(1)
+    expect(onPress).toHaveBeenCalledWith(mockPractice)
   })
 
   it('onPressが提供されない場合でもエラーが発生しない', () => {

@@ -2,15 +2,15 @@
 // useNetworkStatus.test.ts - ネットワーク状態監視フックのユニットテスト
 // =============================================================================
 
-import type { NetInfoState } from '@react-native-community/netinfo'
+import type { NetInfoState, NetInfoStateType } from '@react-native-community/netinfo'
 import NetInfo from '@react-native-community/netinfo'
 import { renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useNetworkStatus } from '../useNetworkStatus'
 
-const createState = (state: Partial<NetInfoState>): NetInfoState =>
+const createState = (state: Partial<Omit<NetInfoState, 'type'>> & { type?: NetInfoStateType }): NetInfoState =>
   ({
-    type: 'unknown',
+    type: 'unknown' as NetInfoStateType,
     isConnected: false,
     isInternetReachable: false,
     details: null,
@@ -28,7 +28,7 @@ describe('useNetworkStatus', () => {
       createState({
         isConnected: true,
         isInternetReachable: true,
-        type: 'wifi',
+        type: 'wifi' as NetInfoStateType,
       })
     )
 
@@ -47,7 +47,7 @@ describe('useNetworkStatus', () => {
       createState({
         isConnected: false,
         isInternetReachable: false,
-        type: 'none',
+        type: 'none' as NetInfoStateType,
       })
     )
 
@@ -73,7 +73,7 @@ describe('useNetworkStatus', () => {
       createState({
         isConnected: true,
         isInternetReachable: true,
-        type: 'wifi',
+        type: 'wifi' as NetInfoStateType,
       })
     )
 
@@ -88,7 +88,7 @@ describe('useNetworkStatus', () => {
       createState({
         isConnected: false,
         isInternetReachable: false,
-        type: 'none',
+        type: 'none' as NetInfoStateType,
       })
     )
 
@@ -104,7 +104,7 @@ describe('useNetworkStatus', () => {
       createState({
         isConnected: true,
         isInternetReachable: null,
-        type: 'cellular',
+        type: 'cellular' as NetInfoStateType,
       })
     )
 
@@ -125,7 +125,7 @@ describe('useNetworkStatus', () => {
       createState({
         isConnected: true,
         isInternetReachable: true,
-        type: 'wifi',
+        type: 'wifi' as NetInfoStateType,
       })
     )
 

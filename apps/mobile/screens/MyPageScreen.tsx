@@ -70,12 +70,13 @@ export const MyPageScreen: React.FC = () => {
           .eq('id', user.id)
 
         if (updateError) throw updateError
+        await refetchProfile()
       } catch (err) {
         console.error('プロフィール更新エラー:', err)
         throw err
       }
     },
-    [user, supabase]
+    [user, supabase, refetchProfile]
   )
 
   // アバター変更処理
@@ -90,12 +91,13 @@ export const MyPageScreen: React.FC = () => {
           .eq('id', user.id)
 
         if (updateError) throw updateError
+        await refetchProfile()
       } catch (err) {
         console.error('アバター更新エラー:', err)
         throw err
       }
     },
-    [user, supabase]
+    [user, supabase, refetchProfile]
   )
 
   // エラー状態

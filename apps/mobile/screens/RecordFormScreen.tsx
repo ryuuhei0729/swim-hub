@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert } from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -99,25 +99,40 @@ export const RecordFormScreen: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [competitionsKey])
 
+  const hasInitializedForEdit = useRef(false)
+
+  // 編集モード切り替え・レコードID変更時に初期化フラグをリセット
   useEffect(() => {
-    if (isEditMode && recordId) {
-      // 編集モード: 既存データを取得
-      setLoadingRecord(true)
-      const record = records.find((r) => r.id === recordId)
-      if (record) {
-        initialize(record)
-        setLoadingRecord(false)
-      } else if (!loadingRecords) {
-        // データが見つからない場合
-        setLoadingRecord(false)
-      }
-    } else {
-      // 作成モード: 空のフォームで初期化
+    if (!isEditMode || !recordId) {
+      hasInitializedForEdit.current = false
       initialize()
+      setLoadingRecord(false)
+      return
+    }
+
+    // 編集モード開始時にロード中フラグを立てる（実際の初期化は下のeffectで行う）
+    setLoadingRecord(true)
+    hasInitializedForEdit.current = false
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditMode, recordId])
+
+  // 編集モード時の初回初期化を一度だけ行う
+  useEffect(() => {
+    if (!isEditMode || !recordId || hasInitializedForEdit.current) {
+      return
+    }
+
+    const record = records.find((r) => r.id === recordId)
+    if (record) {
+      initialize(record)
+      hasInitializedForEdit.current = true
+      setLoadingRecord(false)
+    } else if (!loadingRecords) {
+      // データが見つからない場合もロード終了
       setLoadingRecord(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEditMode, recordId, records.length, loadingRecords])
+  }, [records, loadingRecords, isEditMode, recordId])
 
   // ミューテーション
   const createMutation = useCreateRecordMutation(supabase)
