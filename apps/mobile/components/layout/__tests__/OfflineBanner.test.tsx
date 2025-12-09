@@ -14,8 +14,8 @@ describe('OfflineBanner', () => {
   })
 
   it('visible=falseの場合、バナーが表示されない', () => {
-    const { container } = render(<OfflineBanner visible={false} />)
-    
+    render(<OfflineBanner visible={false} />)
+
     expect(screen.queryByText('📡 オフラインです。一部の機能が制限されます。')).toBeNull()
   })
 

@@ -2,10 +2,20 @@
 // useNetworkStatus.test.ts - ネットワーク状態監視フックのユニットテスト
 // =============================================================================
 
+import type { NetInfoState } from '@react-native-community/netinfo'
 import NetInfo from '@react-native-community/netinfo'
 import { renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useNetworkStatus } from '../useNetworkStatus'
+
+const createState = (state: Partial<NetInfoState>): NetInfoState =>
+  ({
+    type: 'unknown',
+    isConnected: false,
+    isInternetReachable: false,
+    details: null,
+    ...state,
+  } as NetInfoState)
 
 describe('useNetworkStatus', () => {
   beforeEach(() => {
@@ -14,11 +24,13 @@ describe('useNetworkStatus', () => {
 
   it('初期状態を正しく返す', async () => {
     // モック: 接続済み状態を返す
-    vi.spyOn(NetInfo, 'fetch').mockResolvedValue({
-      isConnected: true,
-      isInternetReachable: true,
-      type: 'wifi',
-    } as any)
+    vi.spyOn(NetInfo, 'fetch').mockResolvedValue(
+      createState({
+        isConnected: true,
+        isInternetReachable: true,
+        type: 'wifi',
+      })
+    )
 
     const { result } = renderHook(() => useNetworkStatus())
 
@@ -31,11 +43,13 @@ describe('useNetworkStatus', () => {
 
   it('オフライン状態を正しく検知する', async () => {
     // モック: オフライン状態を返す
-    vi.spyOn(NetInfo, 'fetch').mockResolvedValue({
-      isConnected: false,
-      isInternetReachable: false,
-      type: 'none',
-    } as any)
+    vi.spyOn(NetInfo, 'fetch').mockResolvedValue(
+      createState({
+        isConnected: false,
+        isInternetReachable: false,
+        type: 'none',
+      })
+    )
 
     const { result } = renderHook(() => useNetworkStatus())
 
@@ -47,19 +61,21 @@ describe('useNetworkStatus', () => {
   })
 
   it('ネットワーク状態の変更を監視する', async () => {
-    let listener: ((state: any) => void) | undefined
+    let listener: ((state: NetInfoState) => void) | undefined
 
     // モック: addEventListenerを実装
-    vi.spyOn(NetInfo, 'addEventListener').mockImplementation((callback: any) => {
+    vi.spyOn(NetInfo, 'addEventListener').mockImplementation((callback: (state: NetInfoState) => void) => {
       listener = callback
       return () => {} // unsubscribe関数
     })
 
-    vi.spyOn(NetInfo, 'fetch').mockResolvedValue({
-      isConnected: true,
-      isInternetReachable: true,
-      type: 'wifi',
-    } as any)
+    vi.spyOn(NetInfo, 'fetch').mockResolvedValue(
+      createState({
+        isConnected: true,
+        isInternetReachable: true,
+        type: 'wifi',
+      })
+    )
 
     const { result } = renderHook(() => useNetworkStatus())
 
@@ -68,11 +84,13 @@ describe('useNetworkStatus', () => {
     })
 
     // ネットワーク状態を変更
-    listener?.({
-      isConnected: false,
-      isInternetReachable: false,
-      type: 'none',
-    })
+    listener?.(
+      createState({
+        isConnected: false,
+        isInternetReachable: false,
+        type: 'none',
+      })
+    )
 
     await waitFor(() => {
       expect(result.current.isConnected).toBe(false)
@@ -82,11 +100,13 @@ describe('useNetworkStatus', () => {
   })
 
   it('isInternetReachableがnullの場合を正しく処理する', async () => {
-    vi.spyOn(NetInfo, 'fetch').mockResolvedValue({
-      isConnected: true,
-      isInternetReachable: null,
-      type: 'cellular',
-    } as any)
+    vi.spyOn(NetInfo, 'fetch').mockResolvedValue(
+      createState({
+        isConnected: true,
+        isInternetReachable: null,
+        type: 'cellular',
+      })
+    )
 
     const { result } = renderHook(() => useNetworkStatus())
 
@@ -101,11 +121,13 @@ describe('useNetworkStatus', () => {
     const unsubscribe = vi.fn()
     vi.spyOn(NetInfo, 'addEventListener').mockReturnValue(unsubscribe)
 
-    vi.spyOn(NetInfo, 'fetch').mockResolvedValue({
-      isConnected: true,
-      isInternetReachable: true,
-      type: 'wifi',
-    } as any)
+    vi.spyOn(NetInfo, 'fetch').mockResolvedValue(
+      createState({
+        isConnected: true,
+        isInternetReachable: true,
+        type: 'wifi',
+      })
+    )
 
     const { unmount } = renderHook(() => useNetworkStatus())
 

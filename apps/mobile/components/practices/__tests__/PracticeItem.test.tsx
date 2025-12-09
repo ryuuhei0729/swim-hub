@@ -14,8 +14,8 @@ describe('PracticeItem', () => {
     place: 'テストプール',
     note: 'テストメモ',
     practice_logs: [
-      { id: 'log-1', practice_id: 'practice-1' } as any,
-      { id: 'log-2', practice_id: 'practice-1' } as any,
+      { id: 'log-1', practice_id: 'practice-1' } satisfies { id: string; practice_id: string },
+      { id: 'log-2', practice_id: 'practice-1' } satisfies { id: string; practice_id: string },
     ],
   })
 

@@ -5,14 +5,13 @@ import type { SplitTime } from '@swim-hub/shared/types/database'
 
 interface SplitTimeItemProps {
   splitTime: SplitTime
-  index: number
 }
 
 /**
  * スプリットタイムアイテムコンポーネント
  * スプリットタイムの1件を表示
  */
-export const SplitTimeItem: React.FC<SplitTimeItemProps> = ({ splitTime, index }) => {
+export const SplitTimeItem: React.FC<SplitTimeItemProps> = ({ splitTime }) => {
   const formattedTime = formatTime(splitTime.split_time)
 
   return (

@@ -41,6 +41,11 @@ interface RecordWithRelations {
   competitions?: { title: string; date: string } | null
 }
 
+type RecordWithRelationsResponse = Omit<RecordWithRelations, 'styles' | 'competitions'> & {
+  styles?: RecordWithRelations['styles'] | RecordWithRelations['styles'][]
+  competitions?: RecordWithRelations['competitions'] | RecordWithRelations['competitions'][]
+}
+
 export interface UseBestTimesQueryOptions {
   userId?: string
 }
@@ -95,9 +100,11 @@ export function useBestTimesQuery(
         return []
       }
 
-      const records: RecordWithRelations[] = (data as any[]).map((record) => {
+      const records: RecordWithRelations[] = (data as RecordWithRelationsResponse[]).map((record) => {
         const styleData = Array.isArray(record.styles) ? record.styles[0] : record.styles
-        const competitionData = Array.isArray(record.competitions) ? record.competitions[0] : record.competitions
+        const competitionData = Array.isArray(record.competitions)
+          ? record.competitions[0]
+          : record.competitions
 
         return {
           id: record.id,

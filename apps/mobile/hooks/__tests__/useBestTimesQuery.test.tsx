@@ -9,6 +9,29 @@ import React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useBestTimesQuery } from '../useBestTimesQuery'
 
+type SelectBuilder<T> = {
+  select: ReturnType<typeof vi.fn>
+  eq: ReturnType<typeof vi.fn>
+  order: ReturnType<typeof vi.fn>
+  then: <R>(resolve: (value: { data: T; error: null }) => R) => Promise<R>
+}
+
+const createSelectBuilder = <T,>(data: T): SelectBuilder<T> => {
+  const builder: SelectBuilder<T> = {
+    select: vi.fn(),
+    eq: vi.fn(),
+    order: vi.fn(),
+    then: <R,>(resolve: (value: { data: T; error: null }) => R) =>
+      Promise.resolve({ data, error: null }).then(resolve),
+  }
+
+  builder.select.mockReturnValue(builder)
+  builder.eq.mockReturnValue(builder)
+  builder.order.mockReturnValue(builder)
+
+  return builder
+}
+
 // React Queryのテスト用ラッパー
 const createWrapper = () => {
   const queryClient = new QueryClient({
@@ -48,17 +71,7 @@ describe('useBestTimesQuery', () => {
       },
     ]
 
-    mockClient.from = vi.fn((table: string) => {
-      const builder = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockReturnThis(),
-        then: vi.fn((resolve: any) =>
-          Promise.resolve({ data: mockData, error: null }).then(resolve)
-        ),
-      }
-      return builder
-    })
+    mockClient.from = vi.fn(() => createSelectBuilder(mockData))
 
     const { result } = renderHook(
       () => useBestTimesQuery(mockClient, { userId: 'test-user-id' }),
@@ -85,17 +98,7 @@ describe('useBestTimesQuery', () => {
       },
     ]
 
-    mockClient.from = vi.fn((table: string) => {
-      const builder = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockReturnThis(),
-        then: vi.fn((resolve: any) =>
-          Promise.resolve({ data: mockRecords, error: null }).then(resolve)
-        ),
-      }
-      return builder
-    })
+    mockClient.from = vi.fn(() => createSelectBuilder(mockRecords))
 
     const { result } = renderHook(
       () => useBestTimesQuery(mockClient, { userId: 'test-user-id' }),
@@ -125,17 +128,7 @@ describe('useBestTimesQuery', () => {
       },
     ]
 
-    mockClient.from = vi.fn((table: string) => {
-      const builder = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockReturnThis(),
-        then: vi.fn((resolve: any) =>
-          Promise.resolve({ data: mockRecords, error: null }).then(resolve)
-        ),
-      }
-      return builder
-    })
+    mockClient.from = vi.fn(() => createSelectBuilder(mockRecords))
 
     const { result } = renderHook(
       () => useBestTimesQuery(mockClient, { userId: 'test-user-id' }),
@@ -158,17 +151,7 @@ describe('useBestTimesQuery', () => {
       error: null,
     })
 
-    mockClient.from = vi.fn((table: string) => {
-      const builder = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockReturnThis(),
-        then: vi.fn((resolve: any) =>
-          Promise.resolve({ data: [], error: null }).then(resolve)
-        ),
-      }
-      return builder
-    })
+    mockClient.from = vi.fn(() => createSelectBuilder([]))
 
     const { result } = renderHook(() => useBestTimesQuery(mockClient, {}), {
       wrapper: createWrapper(),
@@ -196,17 +179,7 @@ describe('useBestTimesQuery', () => {
   })
 
   it('データが空の場合、空配列を返す', async () => {
-    mockClient.from = vi.fn((table: string) => {
-      const builder = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockReturnThis(),
-        then: vi.fn((resolve: any) =>
-          Promise.resolve({ data: [], error: null }).then(resolve)
-        ),
-      }
-      return builder
-    })
+    mockClient.from = vi.fn(() => createSelectBuilder([]))
 
     const { result } = renderHook(
       () => useBestTimesQuery(mockClient, { userId: 'test-user-id' }),

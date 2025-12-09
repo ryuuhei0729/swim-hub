@@ -249,7 +249,7 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
           </View>
 
           {/* ボディ */}
-          {DISTANCES.map((distance, rowIdx) => (
+          {DISTANCES.map((distance) => (
             <View key={distance} style={styles.tableRow}>
               <View style={[styles.cell, styles.distanceCell]}>
                 <Text style={styles.distanceText}>{distance}m</Text>

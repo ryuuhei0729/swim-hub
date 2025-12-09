@@ -25,7 +25,7 @@ const createWrapper = () => {
 }
 
 describe('useCalendarQuery', () => {
-  let mockClient: any
+  let mockClient: ReturnType<typeof createMockSupabaseClient>
   let mockApi: DashboardAPI
 
   beforeEach(() => {
@@ -62,7 +62,7 @@ describe('useCalendarQuery', () => {
   })
 
   it('指定された月の開始日・終了日でクエリを実行する', async () => {
-    const mockCalendarItems: any[] = []
+    const mockCalendarItems: CalendarItem[] = []
     vi.spyOn(mockApi, 'getCalendarEntries').mockResolvedValue(mockCalendarItems)
 
     // UTCで日付を作成（タイムゾーンの影響を避ける）
@@ -87,7 +87,7 @@ describe('useCalendarQuery', () => {
   })
 
   it('APIが提供されていない場合、新しいAPIインスタンスを作成する', async () => {
-    const mockCalendarItems: any[] = []
+    const mockCalendarItems: CalendarItem[] = []
     const apiSpy = vi.spyOn(DashboardAPI.prototype, 'getCalendarEntries').mockResolvedValue(mockCalendarItems)
 
     const currentDate = new Date('2025-01-15')
@@ -103,7 +103,7 @@ describe('useCalendarQuery', () => {
   })
 
   it('異なる月で異なるクエリキーが生成される', async () => {
-    const mockCalendarItems: any[] = []
+    const mockCalendarItems: CalendarItem[] = []
     vi.spyOn(mockApi, 'getCalendarEntries').mockResolvedValue(mockCalendarItems)
 
     // UTCで日付を作成（タイムゾーンの影響を避ける）

@@ -14,53 +14,57 @@ afterEach(() => {
 // React Native モジュールのモック
 vi.mock('react-native', () => {
   const React = require('react')
-  
-  // styleプロパティを除外するヘルパー
-  const excludeStyle = ({ style, ...props }: any) => props
-  
+
   return {
     default: React,
-    View: ({ children, ...props }: any) => {
-      const { style, ...restProps } = props
-      return React.createElement('div', restProps, children)
-    },
-    Text: ({ children, ...props }: any) => {
-      const { style, numberOfLines, ...restProps } = props
-      return React.createElement('span', restProps, children)
-    },
-    Pressable: ({ children, onPress, ...props }: any) => {
-      const { style, ...restProps } = props
-      return React.createElement('button', { ...restProps, onClick: onPress }, children)
-    },
-    ScrollView: ({ children, ...props }: any) => {
-      const { style, ...restProps } = props
-      return React.createElement('div', { ...restProps, style: { overflow: 'auto' } }, children)
-    },
-    FlatList: ({ data, renderItem, keyExtractor, ...props }: any) => {
-      const { style, ...restProps } = props
-      const items = data?.map((item: any, index: number) => {
+    View: ({ children, ...props }: { children?: React.ReactNode } & Record<string, unknown>) =>
+      React.createElement('div', props, children),
+    Text: ({ children, ...props }: { children?: React.ReactNode } & Record<string, unknown>) =>
+      React.createElement('span', props, children),
+    Pressable: ({
+      children,
+      onPress,
+      ...props
+    }: { children?: React.ReactNode; onPress?: () => void } & Record<string, unknown>) =>
+      React.createElement('button', { ...props, onClick: onPress }, children),
+    ScrollView: ({ children, ...props }: { children?: React.ReactNode } & Record<string, unknown>) =>
+      React.createElement('div', { ...props, style: { overflow: 'auto' } }, children),
+    FlatList: ({
+      data,
+      renderItem,
+      keyExtractor,
+      ...props
+    }: {
+      data?: unknown[]
+      renderItem?: ({ item, index }: { item: unknown; index: number }) => React.ReactNode
+      keyExtractor?: (item: unknown, index: number) => string | number
+      children?: React.ReactNode
+    } & Record<string, unknown>) => {
+      const items = data?.map((item, index) => {
         const key = keyExtractor ? keyExtractor(item, index) : index
-        return React.createElement('div', { key }, renderItem({ item, index }))
+        return renderItem ? React.createElement('div', { key }, renderItem({ item, index })) : null
       })
-      return React.createElement('div', restProps, items)
+      return React.createElement('div', props, items)
     },
     StyleSheet: {
-      create: (styles: any) => styles,
-      flatten: (style: any) => style,
+      create: <T extends object>(styles: T) => styles,
+      flatten: <T>(style: T) => style,
     },
     Platform: {
       OS: 'web',
-      select: (obj: any) => obj.web || obj.default,
+      select: <T,>(obj: { web?: T; default?: T }) => obj.web ?? obj.default,
     },
     Alert: {
       alert: vi.fn(),
       prompt: vi.fn(),
     },
-    ActivityIndicator: ({ ...props }: any) => React.createElement('div', props, 'Loading...'),
-    RefreshControl: ({ ...props }: any) => React.createElement('div', props),
-    Image: ({ source, ...props }: any) =>
+    ActivityIndicator: ({ ...props }: Record<string, unknown>) =>
+      React.createElement('div', props, 'Loading...'),
+    RefreshControl: ({ ...props }: Record<string, unknown>) => React.createElement('div', props),
+    Image: ({ source, ...props }: { source?: { uri?: string } | string } & Record<string, unknown>) =>
       React.createElement('img', { ...props, src: source?.uri || source }),
-    TextInput: ({ ...props }: any) => React.createElement('input', { type: 'text', ...props }),
+    TextInput: ({ ...props }: Record<string, unknown>) =>
+      React.createElement('input', { type: 'text', ...props }),
   }
 })
 
@@ -82,18 +86,24 @@ vi.mock('expo-status-bar', () => ({
 
 // @react-native-community/netinfo のモック
 vi.mock('@react-native-community/netinfo', () => {
-  let currentState = {
+  type NetInfoMockState = {
+    isConnected: boolean
+    isInternetReachable: boolean | null
+    type: string
+  }
+
+  let currentState: NetInfoMockState = {
     isConnected: true,
     isInternetReachable: true,
     type: 'wifi',
   }
 
-  const listeners: Array<(state: any) => void> = []
+  const listeners: Array<(state: NetInfoMockState) => void> = []
 
   return {
     default: {
       fetch: vi.fn(() => Promise.resolve(currentState)),
-      addEventListener: vi.fn((listener: (state: any) => void) => {
+      addEventListener: vi.fn((listener: (state: NetInfoMockState) => void) => {
         listeners.push(listener)
         return () => {
           const index = listeners.indexOf(listener)
@@ -103,7 +113,7 @@ vi.mock('@react-native-community/netinfo', () => {
         }
       }),
       // テスト用: ネットワーク状態を変更するヘルパー
-      _setState: (state: any) => {
+      _setState: (state: NetInfoMockState) => {
         currentState = state
         listeners.forEach((listener) => listener(state))
       },

@@ -4,7 +4,6 @@
 
 import React from 'react'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
-import { createQueryClient } from '@apps/shared/lib/react-query'
 
 let queryClient: QueryClient | undefined = undefined
 
@@ -21,9 +20,15 @@ function createMobileQueryClient(): QueryClient {
         refetchOnWindowFocus: false, // モバイルでは不要
         refetchOnMount: true,
         refetchOnReconnect: true, // オンライン復帰時に自動再取得
-        retry: (failureCount, error: any) => {
+        retry: (failureCount, error: unknown) => {
+          const message = error instanceof Error ? error.message : ''
+          const code =
+            typeof error === 'object' && error !== null && 'code' in error
+              ? (error as { code?: string }).code
+              : undefined
+
           // ネットワークエラーの場合はリトライしない（オフライン時）
-          if (error?.message?.includes('network') || error?.code === 'NETWORK_ERROR') {
+          if (message.includes('network') || code === 'NETWORK_ERROR') {
             return false
           }
           // その他のエラーは最大3回リトライ

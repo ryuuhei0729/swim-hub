@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { View, Text, Modal, Pressable, TextInput, StyleSheet, ScrollView, Alert, Platform } from 'react-native'
+import { View, Text, Modal, Pressable, TextInput, StyleSheet, ScrollView } from 'react-native'
 import { useAuth } from '@/contexts/AuthProvider'
 import { useCreateTeamMutation } from '@apps/shared/hooks/queries/teams'
 import type { TeamInsert } from '@swim-hub/shared/types/database'

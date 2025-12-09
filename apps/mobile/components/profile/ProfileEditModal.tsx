@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, Modal, Pressable, TextInput, StyleSheet, ScrollView } from 'react-native'
-import { useAuth } from '@/contexts/AuthProvider'
 import { AvatarUpload } from './AvatarUpload'
 import type { UserProfile } from '@swim-hub/shared/types/database'
 

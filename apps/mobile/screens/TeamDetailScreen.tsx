@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react'
 import { View, Text, ScrollView, StyleSheet, Pressable, Alert, Platform } from 'react-native'
 import * as Clipboard from 'expo-clipboard'
 import { useRoute, RouteProp } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useAuth } from '@/contexts/AuthProvider'
 import { useTeamsQuery, useDeleteAnnouncementMutation } from '@apps/shared/hooks/queries/teams'
 import {
@@ -19,7 +18,6 @@ import type { MainStackParamList } from '@/navigation/types'
 import type { TeamAnnouncement } from '@swim-hub/shared/types/database'
 
 type TeamDetailScreenRouteProp = RouteProp<MainStackParamList, 'TeamDetail'>
-type TeamDetailScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>
 
 /**
  * チーム詳細画面
