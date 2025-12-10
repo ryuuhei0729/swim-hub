@@ -70,13 +70,13 @@ vi.mock('react-native', () => {
   }
 })
 
-// Expo モジュールのモック
-vi.mock('expo', () => ({
-  Constants: {
+// Expo Constants モジュールのモック
+vi.mock('expo-constants', () => ({
+  default: {
     expoConfig: {
       extra: {
-        EXPO_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
-        EXPO_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
+        supabaseUrl: 'https://test.supabase.co',
+        supabaseAnonKey: 'test-anon-key',
       },
     },
   },
