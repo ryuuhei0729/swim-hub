@@ -20,12 +20,44 @@ declare global {
   }
 }
 
+/**
+ * Supabase環境変数を検証（クライアント側）
+ * @throws {Error} 環境変数が設定されていない、または無効な場合
+ */
+function validateSupabaseEnv(): { url: string; anonKey: string } {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    const missingVars: string[] = []
+    if (!supabaseUrl) missingVars.push('NEXT_PUBLIC_SUPABASE_URL')
+    if (!supabaseAnonKey) missingVars.push('NEXT_PUBLIC_SUPABASE_ANON_KEY')
+
+    const errorMessage = 
+      `Supabase環境変数が設定されていません: ${missingVars.join(', ')}\n` +
+      `環境変数が正しく読み込まれていない可能性があります。\n` +
+      `ビルド時に環境変数が正しく設定されているか確認してください。`
+
+    throw new Error(errorMessage)
+  }
+
+  // URLの形式検証
+  try {
+    new URL(supabaseUrl)
+  } catch {
+    throw new Error(
+      `Invalid NEXT_PUBLIC_SUPABASE_URL: "${supabaseUrl}" is not a valid URL.\n` +
+      `環境変数が正しく設定されていない可能性があります。`
+    )
+  }
+
+  return { url: supabaseUrl, anonKey: supabaseAnonKey }
+}
+
 // ブラウザ用のSupabaseクライアント（クライアントコンポーネント用）
 export const createClient = (): SupabaseClient<Database> => {
-  return createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const { url, anonKey } = validateSupabaseEnv()
+  return createBrowserClient<Database>(url, anonKey)
 }
 
 // グローバルなSupabaseクライアント（必要な場合のみ）
