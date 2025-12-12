@@ -71,6 +71,7 @@ export default [
       '*.config.js',
       '*.config.ts',
       'coverage/**',
+      'e2e/**',
     ],
   },
 ]
