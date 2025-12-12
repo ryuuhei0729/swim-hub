@@ -52,6 +52,8 @@ npm start
 
 ## スクリプト
 
+### 開発用
+
 - `npm start` - Expo開発サーバーを起動
 - `npm run android` - Androidエミュレータで起動
 - `npm run ios` - iOSシミュレータで起動
@@ -59,6 +61,39 @@ npm start
 - `npm run type-check` - TypeScriptの型チェック
 - `npm run lint` - ESLintの実行
 - `npm run clean` - キャッシュをクリア
+
+### プロダクションビルド（EAS Build）
+
+プロダクションビルドには **EAS CLI** が必要です。
+
+#### EAS CLI のセットアップ
+
+```bash
+# グローバルインストール
+npm install --global eas-cli
+
+# Expo アカウントでログイン
+eas login
+
+# プロジェクトの設定（初回のみ）
+eas build:configure
+```
+
+#### ビルドコマンド
+
+- `npm run build:mobile:android` - Android向けプロダクションビルド（EAS Build）
+- `npm run build:mobile:ios` - iOS向けプロダクションビルド（EAS Build）
+
+**CI/CD 環境での認証**:
+CI/CD パイプラインでは、`EXPO_TOKEN` 環境変数を使用して認証してください：
+
+```bash
+# Expo トークンの生成（ローカル環境で実行）
+eas token:create
+
+# CI/CD 環境変数に設定
+export EXPO_TOKEN=your_token_here
+```
 
 ## 技術スタック
 

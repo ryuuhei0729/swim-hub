@@ -12,8 +12,8 @@
     "dev:mobile": "cd apps/mobile && npm start",
     "build": "npm run build --workspace=apps/web",
     "build:web": "npm run build --workspace=apps/web",
-    "build:mobile:android": "cd apps/mobile && npx expo build:android",
-    "build:mobile:ios": "cd apps/mobile && npx expo build:ios",
+    "build:mobile:android": "cd apps/mobile && eas build -p android",
+    "build:mobile:ios": "cd apps/mobile && eas build -p ios",
     "start": "npm run start --workspace=apps/web",
     "start:web": "npm run start --workspace=apps/web",
     "lint": "npm run lint --workspaces --if-present",
@@ -68,7 +68,6 @@
   ],
   "author": "開発チーム",
   "license": "MIT",
-  "packageManager": "pnpm@10.20.0+sha512.cf9998222162dd85864d0a8102e7892e7ba4ceadebbf5a31f9c2fce48dfce317a9c53b9f6464d1ef9042cba2e02ae02a9f7c143a2b438cd93c91840f0192b9dd",
   "dependencies": {
     "@dotenvx/dotenvx-ext-vault": "^0.3.2"
   },
