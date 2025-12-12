@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react'
 import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/contexts/AuthProvider'
 import { useUserQuery } from '@apps/shared/hooks/queries/user'
 import { useBestTimesQuery } from '@/hooks/useBestTimesQuery'
@@ -103,7 +104,7 @@ export const MyPageScreen: React.FC = () => {
   // エラー状態
   if (isError && error) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <ErrorView
           message={error.message || 'データの取得に失敗しました'}
           onRetry={() => {
@@ -112,32 +113,32 @@ export const MyPageScreen: React.FC = () => {
           }}
           fullScreen
         />
-      </View>
+      </SafeAreaView>
     )
   }
 
   // ローディング状態
   if (isLoading && !profile) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <LoadingSpinner fullScreen message="データを読み込み中..." />
-      </View>
+      </SafeAreaView>
     )
   }
 
   // プロフィールがない場合
   if (!profile) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>プロフィールが見つかりません</Text>
         </View>
-      </View>
+      </SafeAreaView>
     )
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* ヘッダー */}
         <View style={styles.header}>
@@ -203,7 +204,7 @@ export const MyPageScreen: React.FC = () => {
           setIsPasswordModalOpen(false)
         }}
       />
-    </View>
+    </SafeAreaView>
   )
 }
 

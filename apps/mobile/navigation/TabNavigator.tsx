@@ -1,5 +1,6 @@
 import React from 'react'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { TabParamList } from './types'
 import { DashboardScreen } from '@/screens/DashboardScreen'
 import { PracticesScreen } from '@/screens/PracticesScreen'
@@ -16,6 +17,8 @@ const Tab = createBottomTabNavigator<TabParamList>()
  * ダッシュボード、練習、大会、チーム、マイページの5つのタブ
  */
 export const TabNavigator: React.FC = () => {
+  const insets = useSafeAreaInsets()
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -26,10 +29,17 @@ export const TabNavigator: React.FC = () => {
           backgroundColor: '#FFFFFF',
           borderTopColor: '#E5E7EB',
           borderTopWidth: 1,
+          paddingTop: 8,
+          paddingBottom: Math.max(insets.bottom, 4),
+          height: 56 + Math.max(insets.bottom, 4),
         },
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 10,
           fontWeight: '500',
+          marginTop: 2,
+        },
+        tabBarIconStyle: {
+          marginTop: 4,
         },
       }}
     >
@@ -38,7 +48,7 @@ export const TabNavigator: React.FC = () => {
         component={DashboardScreen}
         options={{
           tabBarLabel: 'ダッシュボード',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>📊</Text>,
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>📊</Text>,
         }}
       />
       <Tab.Screen
@@ -46,7 +56,7 @@ export const TabNavigator: React.FC = () => {
         component={PracticesScreen}
         options={{
           tabBarLabel: '練習',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>🏊</Text>,
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>🏊</Text>,
         }}
       />
       <Tab.Screen
@@ -54,7 +64,7 @@ export const TabNavigator: React.FC = () => {
         component={CompetitionsScreen}
         options={{
           tabBarLabel: '大会',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>🏆</Text>,
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>🏆</Text>,
         }}
       />
       <Tab.Screen
@@ -62,7 +72,7 @@ export const TabNavigator: React.FC = () => {
         component={TeamsScreen}
         options={{
           tabBarLabel: 'チーム',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>👥</Text>,
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>👥</Text>,
         }}
       />
       <Tab.Screen
@@ -70,7 +80,7 @@ export const TabNavigator: React.FC = () => {
         component={MyPageScreen}
         options={{
           tabBarLabel: 'マイページ',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>👤</Text>,
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>👤</Text>,
         }}
       />
     </Tab.Navigator>

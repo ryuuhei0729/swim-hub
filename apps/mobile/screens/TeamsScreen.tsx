@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react'
 import { View, Text, FlatList, StyleSheet, Pressable, RefreshControl } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useAuth } from '@/contexts/AuthProvider'
@@ -102,22 +103,22 @@ export const TeamsScreen: React.FC = () => {
   // エラー状態
   if (isError && error) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <ErrorView
           message={error.message || 'チーム一覧の取得に失敗しました'}
           onRetry={() => refetch()}
           fullScreen
         />
-      </View>
+      </SafeAreaView>
     )
   }
 
   // ローディング状態
   if (isLoading && teams.length === 0) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <LoadingSpinner fullScreen message="チーム一覧を読み込み中..." />
-      </View>
+      </SafeAreaView>
     )
   }
 
@@ -125,7 +126,7 @@ export const TeamsScreen: React.FC = () => {
   const displayTeams = [...approvedTeams, ...pendingTeams]
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       {/* アクションボタン */}
       <View style={styles.actionBar}>
         <Pressable
@@ -186,7 +187,7 @@ export const TeamsScreen: React.FC = () => {
         onClose={() => setIsJoinModalOpen(false)}
         onSuccess={handleJoinSuccess}
       />
-    </View>
+    </SafeAreaView>
   )
 }
 

@@ -2,6 +2,7 @@ import React from 'react'
 import { NavigationContainer } from '@react-navigation/native'
 import { StatusBar } from 'expo-status-bar'
 import { View, ActivityIndicator, StyleSheet } from 'react-native'
+import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { AuthProvider, useAuth } from './contexts/AuthProvider'
 import QueryProvider from './providers/QueryProvider'
 import { NetworkProvider, useNetwork } from './providers/NetworkProvider'
@@ -52,15 +53,17 @@ const AppNavigator: React.FC = () => {
  */
 export default function App() {
   return (
-    <ErrorBoundary>
-      <QueryProvider>
-        <NetworkProvider>
-          <AuthProvider>
-            <AppNavigator />
-          </AuthProvider>
-        </NetworkProvider>
-      </QueryProvider>
-    </ErrorBoundary>
+    <SafeAreaProvider>
+      <ErrorBoundary>
+        <QueryProvider>
+          <NetworkProvider>
+            <AuthProvider>
+              <AppNavigator />
+            </AuthProvider>
+          </NetworkProvider>
+        </QueryProvider>
+      </ErrorBoundary>
+    </SafeAreaProvider>
   )
 }
 

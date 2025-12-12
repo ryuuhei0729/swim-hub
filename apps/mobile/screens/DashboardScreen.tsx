@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { View, ScrollView, StyleSheet } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { addMonths, subMonths, format } from 'date-fns'
@@ -105,27 +106,27 @@ export const DashboardScreen: React.FC = () => {
   // エラー状態
   if (isError && error) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <ErrorView
           message={error.message || 'カレンダーデータの取得に失敗しました'}
           onRetry={() => refetch()}
           fullScreen
         />
-      </View>
+      </SafeAreaView>
     )
   }
 
   // ローディング状態
   if (isLoading && entries.length === 0) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <LoadingSpinner fullScreen message="カレンダーを読み込み中..." />
-      </View>
+      </SafeAreaView>
     )
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <CalendarView
           currentDate={currentDate}
@@ -155,7 +156,7 @@ export const DashboardScreen: React.FC = () => {
           onAddRecord={handleAddRecord}
         />
       )}
-    </View>
+    </SafeAreaView>
   )
 }
 

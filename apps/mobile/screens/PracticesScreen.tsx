@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react'
 import { View, Text, FlatList, TextInput, StyleSheet, Pressable, RefreshControl } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useInfiniteQuery } from '@tanstack/react-query'
@@ -110,41 +111,41 @@ export const PracticesScreen: React.FC = () => {
   // エラー状態
   if (error) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <ErrorView
           message={error.message || '練習記録の取得に失敗しました'}
           onRetry={() => refetch()}
           fullScreen
         />
-      </View>
+      </SafeAreaView>
     )
   }
 
   // ローディング状態（初回読み込み時）
   if (isLoading && allPractices.length === 0) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <LoadingSpinner fullScreen message="練習記録を読み込み中..." />
-      </View>
+      </SafeAreaView>
     )
   }
 
   // データが空の場合
   if (allPractices.length === 0 && !isLoading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>練習記録がありません</Text>
           <Text style={styles.emptySubtext}>
             {defaultStartDate} 〜 {defaultEndDate} の期間に記録がありません
           </Text>
         </View>
-      </View>
+      </SafeAreaView>
     )
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       {/* 日付フィルターUI */}
       <View style={styles.filterContainer}>
         <View style={styles.filterRow}>
@@ -252,7 +253,7 @@ export const PracticesScreen: React.FC = () => {
           </View>
         }
       />
-    </View>
+    </SafeAreaView>
   )
 }
 

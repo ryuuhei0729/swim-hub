@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import { View, Text, FlatList, TextInput, StyleSheet, Pressable, RefreshControl } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useAuth } from '@/contexts/AuthProvider'
@@ -186,27 +187,27 @@ export const RecordsScreen: React.FC = () => {
   // エラー状態
   if (isError && error) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <ErrorView
           message={error.message || '大会記録の取得に失敗しました'}
           onRetry={() => refetch()}
           fullScreen
         />
-      </View>
+      </SafeAreaView>
     )
   }
 
   // ローディング状態（初回のみ）
   if (isLoading && allRecords.length === 0) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <LoadingSpinner fullScreen message="大会記録を読み込み中..." />
-      </View>
+      </SafeAreaView>
     )
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       {/* 日付フィルターUI */}
       <View style={styles.filterContainer}>
         <View style={styles.dateFilterRow}>
@@ -269,7 +270,7 @@ export const RecordsScreen: React.FC = () => {
           ) : null
         }
       />
-    </View>
+    </SafeAreaView>
   )
 }
 

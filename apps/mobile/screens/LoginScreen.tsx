@@ -1,5 +1,6 @@
 import React from 'react'
 import { View, ActivityIndicator, StyleSheet } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/contexts/AuthProvider'
 import { LoginForm } from '@/components/auth/LoginForm'
 
@@ -9,9 +10,9 @@ export const LoginScreen: React.FC = () => {
   // 認証情報を確認中
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <SafeAreaView style={styles.loadingContainer} edges={['top', 'left', 'right', 'bottom']}>
         <ActivityIndicator size="large" color="#2563EB" />
-      </View>
+      </SafeAreaView>
     )
   }
 
@@ -21,17 +22,23 @@ export const LoginScreen: React.FC = () => {
   }
 
   return (
-    <LoginForm
-      onSuccess={() => {
-        // Phase 3でナビゲーションを実装予定
-        // 現時点ではログイン成功時の処理は後で実装
-        console.log('ログイン成功')
-      }}
-    />
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
+      <LoginForm
+        onSuccess={() => {
+          // Phase 3でナビゲーションを実装予定
+          // 現時点ではログイン成功時の処理は後で実装
+          console.log('ログイン成功')
+        }}
+      />
+    </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#EFF6FF',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
