@@ -36,6 +36,26 @@ function validateSupabaseEnv(): { url: string; anonKey: string } {
 }
 
 /**
+ * Supabase URLのみを検証
+ * 管理者クライアント用に匿名キー不要で利用する
+ */
+function validateSupabaseUrl(): string {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+
+  if (!supabaseUrl) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL が設定されていません')
+  }
+
+  try {
+    new URL(supabaseUrl)
+  } catch {
+    throw new Error(`Invalid NEXT_PUBLIC_SUPABASE_URL: "${supabaseUrl}" is not a valid URL`)
+  }
+
+  return supabaseUrl
+}
+
+/**
  * Cookie操作を記録するための型
  * @supabase/ssr の SetAllCookies 型に合わせる
  */
@@ -145,7 +165,7 @@ export function createRouteHandlerClient(request: NextRequest): {
  * ⚠️ 注意: このクライアントは管理者操作のみに使用してください
  */
 export const createAdminClient = (): SupabaseClient<Database> => {
-  const { url } = validateSupabaseEnv()
+  const url = validateSupabaseUrl()
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!serviceRoleKey) {
