@@ -22,26 +22,14 @@ function validateSupabaseEnv(): { url: string; anonKey: string } {
     if (!supabaseUrl) missingVars.push('NEXT_PUBLIC_SUPABASE_URL')
     if (!supabaseAnonKey) missingVars.push('NEXT_PUBLIC_SUPABASE_ANON_KEY')
 
-    const errorMessage = 
-      `Supabase環境変数が設定されていません: ${missingVars.join(', ')}\n` +
-      `環境変数が正しく読み込まれていない可能性があります。\n` +
-      `CI環境の場合は、DOTENV_PRIVATE_KEY_PRODUCTION が設定されているか確認してください。\n` +
-      `現在の環境: ${process.env.NODE_ENV || 'unknown'}\n` +
-      `VERCEL_ENV: ${process.env.VERCEL_ENV || 'not set'}\n` +
-      `NEXT_PUBLIC_ENVIRONMENT: ${process.env.NEXT_PUBLIC_ENVIRONMENT || 'not set'}`
-
-    throw new Error(errorMessage)
+    throw new Error(`Supabase環境変数が設定されていません: ${missingVars.join(', ')}`)
   }
 
   // URLの形式検証
   try {
     new URL(supabaseUrl)
   } catch {
-    throw new Error(
-      `Invalid NEXT_PUBLIC_SUPABASE_URL: "${supabaseUrl}" is not a valid URL.\n` +
-      `環境変数が正しく復号化されていない可能性があります。\n` +
-      `CI環境の場合は、DOTENV_PRIVATE_KEY_PRODUCTION が正しく設定されているか確認してください。`
-    )
+    throw new Error(`Invalid NEXT_PUBLIC_SUPABASE_URL: "${supabaseUrl}" is not a valid URL`)
   }
 
   return { url: supabaseUrl, anonKey: supabaseAnonKey }
@@ -161,10 +149,7 @@ export const createAdminClient = (): SupabaseClient<Database> => {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!serviceRoleKey) {
-    throw new Error(
-      `SUPABASE_SERVICE_ROLE_KEY が設定されていません。\n` +
-      `CI環境の場合は、DOTENV_PRIVATE_KEY_PRODUCTION が設定されているか確認してください。`
-    )
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY が設定されていません')
   }
 
   return createClient<Database>(

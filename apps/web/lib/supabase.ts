@@ -33,22 +33,14 @@ function validateSupabaseEnv(): { url: string; anonKey: string } {
     if (!supabaseUrl) missingVars.push('NEXT_PUBLIC_SUPABASE_URL')
     if (!supabaseAnonKey) missingVars.push('NEXT_PUBLIC_SUPABASE_ANON_KEY')
 
-    const errorMessage = 
-      `Supabase環境変数が設定されていません: ${missingVars.join(', ')}\n` +
-      `環境変数が正しく読み込まれていない可能性があります。\n` +
-      `ビルド時に環境変数が正しく設定されているか確認してください。`
-
-    throw new Error(errorMessage)
+    throw new Error(`Supabase環境変数が設定されていません: ${missingVars.join(', ')}`)
   }
 
   // URLの形式検証
   try {
     new URL(supabaseUrl)
   } catch {
-    throw new Error(
-      `Invalid NEXT_PUBLIC_SUPABASE_URL: "${supabaseUrl}" is not a valid URL.\n` +
-      `環境変数が正しく設定されていない可能性があります。`
-    )
+    throw new Error(`Invalid NEXT_PUBLIC_SUPABASE_URL: "${supabaseUrl}" is not a valid URL`)
   }
 
   return { url: supabaseUrl, anonKey: supabaseAnonKey }
