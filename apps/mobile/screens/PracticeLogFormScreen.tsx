@@ -52,7 +52,7 @@ export const PracticeLogFormScreen: React.FC = () => {
   const { practiceId, practiceLogId } = route.params
   const { supabase } = useAuth()
   const queryClient = useQueryClient()
-  const isEditMode = !!practiceLogId
+  const isEditMode = practiceLogId !== undefined
 
   // メニューデータ（複数）
   const [menus, setMenus] = useState<PracticeMenu[]>([
@@ -99,7 +99,7 @@ export const PracticeLogFormScreen: React.FC = () => {
   useEffect(() => {
     if (initializedRef.current) return
 
-    if (isEditMode && practiceLogId) {
+    if (isEditMode && practiceLogId !== undefined) {
       const loadPracticeLog = async () => {
         try {
           setLoadingPracticeLog(true)
@@ -229,7 +229,7 @@ export const PracticeLogFormScreen: React.FC = () => {
     setCurrentMenuId(menuId)
 
     navigation.navigate('PracticeTimeForm', {
-      practiceLogId: isEditMode && menuId === practiceLogId ? practiceLogId : '',
+      practiceLogId: isEditMode && menuId === practiceLogId && practiceLogId !== undefined ? practiceLogId : undefined,
       setCount: Number(menu.sets) || 1,
       repCount: Number(menu.reps) || 1,
       initialTimes: menu.times.map((t) => ({
@@ -314,7 +314,7 @@ export const PracticeLogFormScreen: React.FC = () => {
           note: menu.note && menu.note.trim() !== '' ? menu.note.trim() : null,
         }
 
-        if (isEditMode && menu.id === practiceLogId) {
+        if (isEditMode && menu.id === practiceLogId && practiceLogId !== undefined) {
           // 更新
           await updateMutation.mutateAsync({
             id: practiceLogId,
@@ -322,16 +322,14 @@ export const PracticeLogFormScreen: React.FC = () => {
           })
 
           // タイムを更新
-          if (menu.times && menu.times.length > 0) {
-            await api.replacePracticeTimes(
-              practiceLogId,
-              menu.times.map((t) => ({
-                set_number: t.setNumber,
-                rep_number: t.repNumber,
-                time: t.time,
-              }))
-            )
-          }
+          await api.replacePracticeTimes(
+            practiceLogId,
+            menu.times ? menu.times.map((t) => ({
+              set_number: t.setNumber,
+              rep_number: t.repNumber,
+              time: t.time,
+            })) : []
+          )
 
           // タグを更新
           // TODO: タグの更新処理を実装
@@ -340,16 +338,14 @@ export const PracticeLogFormScreen: React.FC = () => {
           const createdLog = await createMutation.mutateAsync(logData)
 
           // タイムを作成
-          if (menu.times && menu.times.length > 0) {
-            await api.replacePracticeTimes(
-              createdLog.id,
-              menu.times.map((t) => ({
-                set_number: t.setNumber,
-                rep_number: t.repNumber,
-                time: t.time,
-              }))
-            )
-          }
+          await api.replacePracticeTimes(
+            createdLog.id,
+            menu.times ? menu.times.map((t) => ({
+              set_number: t.setNumber,
+              rep_number: t.repNumber,
+              time: t.time,
+            })) : []
+          )
 
           // タグを作成
           // TODO: タグの作成処理を実装

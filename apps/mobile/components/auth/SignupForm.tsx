@@ -67,7 +67,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
     }
     
     // デフォルトのエラーメッセージ
-    return process.env.NODE_ENV === 'development'
+    return __DEV__
       ? `エラーが発生しました: ${errMsg}${statusText}`
       : 'エラーが発生しました。時間をおいて再度お試しください。'
   }

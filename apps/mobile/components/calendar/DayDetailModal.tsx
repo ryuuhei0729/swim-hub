@@ -97,19 +97,59 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
 
   const formattedDate = format(date, 'M月d日(E)', { locale: ja })
   
-  // エントリー数に応じて最小高さを動的に計算
+  // PracticeLogのPracticeTimeの有無を追跡
+  const [practiceLogsWithTimes, setPracticeLogsWithTimes] = useState<Set<string>>(new Set())
+  
+  // PracticeTimeの有無を更新するコールバック
+  const handlePracticeTimeLoaded = useCallback((practiceLogId: string, hasTimes: boolean) => {
+    setPracticeLogsWithTimes(prev => {
+      const next = new Set(prev)
+      if (hasTimes) {
+        next.add(practiceLogId)
+      } else {
+        next.delete(practiceLogId)
+      }
+      return next
+    })
+  }, [])
+  
+  // エントリー数と種類に応じて最小高さを動的に計算
   const minHeight = React.useMemo(() => {
+    // PracticeLogが含まれているかチェック
+    const hasPracticeLog = entries.some(entry => entry.type === 'practice_log')
+    // PracticeLogでPracticeTimeがあるものがあるかチェック
+    const hasPracticeLogWithTimes = entries.some(
+      entry => entry.type === 'practice_log' && practiceLogsWithTimes.has(entry.id)
+    )
+    
     if (entries.length === 0) {
       return 300 // 空の場合は最小高さ
     }
     if (entries.length === 1) {
-      return 250 // 1つの場合は小さめ
+      // Practiceのみ
+      if (!hasPracticeLog) {
+        return 400
+      }
+      // PracticeLogあり且つPracticeTimeあり
+      if (hasPracticeLogWithTimes) {
+        return 600
+      }
+      // PracticeLogあり（PracticeTimeなし）
+      return 450
     }
     if (entries.length === 2) {
-      return 375 // 2つの場合はちょうどいい感じ
+      // PracticeLogが含まれている場合は大きめに
+      if (hasPracticeLogWithTimes) {
+        return 600
+      }
+      return hasPracticeLog ? 600 : 375
     }
-    return 500 // 3個以上の場合
-  }, [entries.length])
+    // 3個以上の場合
+    if (hasPracticeLogWithTimes) {
+      return 700
+    }
+    return 500
+  }, [entries, practiceLogsWithTimes])
 
   // 動的なスタイルを生成
   const modalContentStyle = React.useMemo(
@@ -123,12 +163,10 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
       transparent
       onRequestClose={onClose}
     >
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <SafeAreaView edges={['bottom']} style={styles.safeAreaContainer}>
-          <Pressable
-            style={modalContentStyle}
-            onPress={(e) => e.stopPropagation()}
-          >
+      <View style={styles.overlay}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <SafeAreaView edges={['bottom']} style={styles.safeAreaContainer} pointerEvents="box-none">
+          <View style={modalContentStyle}>
           {/* ヘッダー */}
           <View style={styles.header}>
             <Text style={styles.title}>{formattedDate}の記録</Text>
@@ -170,6 +208,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                 </View>
               </View>
             ) : (
+              <>
               <View style={styles.entriesContainer}>
                 {entries.map((item) => {
                   const title = getEntryTitle(item)
@@ -196,15 +235,47 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                       onAddPracticeLog={onAddPracticeLog}
                       onEditPracticeLog={onEditPracticeLog}
                       onDeletePracticeLog={onDeletePracticeLog}
+                      onPracticeTimeLoaded={handlePracticeTimeLoaded}
                     />
                   )
                 })}
               </View>
+                {/* 記録追加セクション */}
+                <View style={styles.addRecordSection}>
+                  <Text style={styles.addRecordSectionTitle}>記録を追加</Text>
+                  <View style={styles.addRecordButtonContainer}>
+                    {onAddPractice && (
+                      <Pressable
+                        style={styles.addRecordButtonRow}
+                        onPress={() => {
+                          onAddPractice(date)
+                          onClose()
+                        }}
+                      >
+                        <Feather name="activity" size={20} color="#F59E0B" />
+                        <Text style={styles.addRecordButtonText}>練習記録</Text>
+                      </Pressable>
+                    )}
+                    {onAddRecord && (
+                      <Pressable
+                        style={styles.addRecordButtonRow}
+                        onPress={() => {
+                          onAddRecord(date)
+                          onClose()
+                        }}
+                      >
+                        <MaterialIcons name="pool" size={20} color="#3B82F6" />
+                        <Text style={styles.addRecordButtonText}>大会記録</Text>
+          </Pressable>
+                    )}
+                  </View>
+                </View>
+              </>
             )}
           </ScrollView>
-          </Pressable>
+          </View>
         </SafeAreaView>
-      </Pressable>
+      </View>
     </Modal>
   )
 }
@@ -227,6 +298,7 @@ const PracticeLogDetail: React.FC<{
   onAddPracticeLog?: (practiceId: string) => void
   onEditPracticeLog?: (item: CalendarItem) => void
   onDeletePracticeLog?: (logId: string) => void
+  onPracticeTimeLoaded?: (practiceLogId: string, hasTimes: boolean) => void
 }> = ({
   item,
   title,
@@ -242,6 +314,7 @@ const PracticeLogDetail: React.FC<{
   onAddPracticeLog,
   onEditPracticeLog,
   onDeletePracticeLog,
+  onPracticeTimeLoaded,
 }) => {
   const { supabase } = useAuth()
   const [expanded, setExpanded] = useState(false)
@@ -366,6 +439,13 @@ const PracticeLogDetail: React.FC<{
         practice_times?: PracticeTime[]
       }
 
+      const times = (log.practice_times || []).map((time: PracticeTime) => ({
+        id: time.id,
+        time: time.time,
+        repNumber: time.rep_number,
+        setNumber: time.set_number,
+      }))
+      
       setPracticeLogDetail({
         id: log.id,
         style: log.style,
@@ -374,19 +454,19 @@ const PracticeLogDetail: React.FC<{
         distance: log.distance,
         circle: log.circle,
         note: log.note,
-        times: (log.practice_times || []).map((time: PracticeTime) => ({
-          id: time.id,
-          time: time.time,
-          repNumber: time.rep_number,
-          setNumber: time.set_number,
-        })),
+        times,
       })
+      
+      // PracticeTimeの有無を親に通知
+      if (onPracticeTimeLoaded) {
+        onPracticeTimeLoaded(item.id, times.length > 0)
+      }
     } catch (error) {
       console.error('練習ログ詳細の取得エラー:', error)
     } finally {
       setLoadingLogDetail(false)
     }
-  }, [isPracticeLog, item.id, supabase])
+  }, [isPracticeLog, item.id, supabase, onPracticeTimeLoaded])
 
   useEffect(() => {
     if (isPracticeLog && item.id) {
@@ -772,8 +852,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     width: '100%',
-    maxWidth: 500,
-    maxHeight: '95%',
+    maxHeight: '90%',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -849,6 +928,48 @@ const styles = StyleSheet.create({
   entriesContainer: {
     padding: 16,
     gap: 12,
+  },
+  addRecordSection: {
+    padding: 16,
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  addRecordSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 12,
+  },
+  addRecordButtonContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  addRecordButtonRow: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  addRecordButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
   },
   entryItem: {
     backgroundColor: '#FFFFFF',

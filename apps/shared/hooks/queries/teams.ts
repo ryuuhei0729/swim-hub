@@ -9,15 +9,15 @@ import { useMutation, useQuery, useQueryClient, type UseMutationResult } from '@
 import { useEffect, useMemo } from 'react'
 import { TeamAnnouncementsAPI, TeamCoreAPI, TeamMembersAPI } from '../../api/teams'
 import type {
-  Team,
-  TeamAnnouncement,
-  TeamAnnouncementInsert,
-  TeamAnnouncementUpdate,
-  TeamInsert,
-  TeamMembership,
-  TeamMembershipWithUser,
-  TeamUpdate,
-  TeamWithMembers
+    Team,
+    TeamAnnouncement,
+    TeamAnnouncementInsert,
+    TeamAnnouncementUpdate,
+    TeamInsert,
+    TeamMembership,
+    TeamMembershipWithUser,
+    TeamUpdate,
+    TeamWithMembers
 } from '../../types/database'
 import { teamKeys } from './keys'
 
@@ -156,13 +156,16 @@ export function useTeamsQuery(
     isLoading: teamsQuery.isLoading || (teamId ? (teamDetailQuery.isLoading || membersQuery.isLoading || announcementsQuery.isLoading) : false),
     isError: teamsQuery.isError || (teamId ? (teamDetailQuery.isError || membersQuery.isError || announcementsQuery.isError) : false),
     error: teamsQuery.error || (teamId ? (teamDetailQuery.error || membersQuery.error || announcementsQuery.error) : undefined),
-    refetch: () => {
-      teamsQuery.refetch()
+    refetch: async () => {
+      const promises: Promise<unknown>[] = [teamsQuery.refetch()]
       if (teamId) {
-        teamDetailQuery.refetch()
-        membersQuery.refetch()
-        announcementsQuery.refetch()
+        promises.push(
+          teamDetailQuery.refetch(),
+          membersQuery.refetch(),
+          announcementsQuery.refetch()
+        )
       }
+      await Promise.allSettled(promises)
     },
   }
 }

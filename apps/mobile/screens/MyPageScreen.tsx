@@ -47,8 +47,8 @@ export const MyPageScreen: React.FC = () => {
   })
 
   const isLoading = profileLoading || bestTimesLoading
-  const isError = profileError || bestTimesError
-  const error = profileErrorObj || bestTimesErrorObj
+  const isError = profileError
+  const error = profileErrorObj
   const bestTimesErrorMessage =
     bestTimesErrorObj instanceof Error ? bestTimesErrorObj.message : undefined
 

@@ -36,7 +36,7 @@ export type MainStackParamList = {
     practiceLogId?: string
   }
   PracticeTimeForm: {
-    practiceLogId: string
+    practiceLogId?: string
     setCount: number
     repCount: number
     initialTimes?: Array<{

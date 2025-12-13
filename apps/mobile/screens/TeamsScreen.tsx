@@ -102,10 +102,11 @@ export const TeamsScreen: React.FC = () => {
 
   // エラー状態
   if (isError && error) {
+    const errorMessage = error instanceof Error ? error.message : 'チーム一覧の取得に失敗しました'
     return (
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <ErrorView
-          message={error.message || 'チーム一覧の取得に失敗しました'}
+          message={errorMessage}
           onRetry={() => refetch()}
           fullScreen
         />

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useState } from 'react'
 import { View, Text, ScrollView, StyleSheet, Pressable, Alert, Platform } from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -7,7 +7,7 @@ import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { useAuth } from '@/contexts/AuthProvider'
 import {
-  usePracticesQuery,
+  usePracticeByIdQuery,
   useDeletePracticeMutation,
 } from '@apps/shared/hooks/queries/practices'
 import { PracticeLogItem } from '@/components/practices'
@@ -93,31 +93,23 @@ export const PracticeDetailScreen: React.FC = () => {
     }
   }
 
-  // 練習記録データ取得（広い日付範囲で取得してから該当のものを検索）
-  // より効率的にするには、PracticeAPIにgetPracticeByIdメソッドを追加するのが良いが、
-  // 現時点では既存のAPIを使用
+  // 練習記録データ取得（IDで直接取得）
   const {
-    data: practices = [],
+    data: practice,
     isLoading,
     error,
     refetch,
-  } = usePracticesQuery(supabase, {
-    page: 1,
-    pageSize: 1000, // 十分な件数を取得
+  } = usePracticeByIdQuery(supabase, practiceId, {
     enableRealtime: true,
   })
 
-  // practiceIdで該当の練習記録を検索
-  const practice = useMemo(() => {
-    return practices.find((p) => p.id === practiceId)
-  }, [practices, practiceId])
-
   // エラー状態
   if (error) {
+    const errorMessage = error instanceof Error ? error.message : '練習記録の取得に失敗しました'
     return (
       <View style={styles.container}>
         <ErrorView
-          message={error.message || '練習記録の取得に失敗しました'}
+          message={errorMessage}
           onRetry={() => refetch()}
           fullScreen
         />

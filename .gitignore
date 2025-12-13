@@ -100,6 +100,7 @@ next-env.d.ts
 .playwright-mcp/
 
 # React Native / Expo (Mobile App)
+.expo/
 /apps/mobile/.expo/
 /apps/mobile/dist/
 /apps/mobile/web-build/

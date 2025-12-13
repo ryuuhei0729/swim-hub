@@ -65,7 +65,7 @@ export const MainStack: React.FC = () => {
         component={PracticeLogFormScreen}
         options={({ route }) => ({
           headerShown: true,
-          title: route.params?.practiceLogId ? '練習ログ編集' : '練習ログ作成',
+          title: route.params?.practiceLogId !== undefined ? '練習ログ編集' : '練習ログ作成',
           headerBackTitle: '戻る',
           headerStyle: {
             backgroundColor: '#FFFFFF',

@@ -158,6 +158,45 @@ vi.mock('@react-navigation/bottom-tabs', () => ({
   }),
 }))
 
+// @expo/vector-icons のモック
+vi.mock('@expo/vector-icons', () => {
+  const React = require('react')
+
+  return {
+    Feather: ({
+      name,
+      ...props
+    }: {
+      name: string
+      size?: number
+      color?: string
+    } & Record<string, unknown>) => {
+      // map-pinアイコンを絵文字としてレンダリング
+      const iconMap: Record<string, string> = {
+        'map-pin': '📍',
+      }
+      return React.createElement('span', { ...props, 'data-testid': `icon-${name}` }, iconMap[name] || '')
+    },
+  }
+})
+
+// react-native-safe-area-context のモック
+vi.mock('react-native-safe-area-context', () => {
+  return {
+    useSafeAreaInsets: () => ({
+      top: 0,
+      bottom: 0,
+      left: 0,
+      right: 0,
+    }),
+    SafeAreaProvider: ({ children }: { children?: React.ReactNode }) => children,
+    SafeAreaView: ({ children, ...props }: { children?: React.ReactNode } & Record<string, unknown>) => {
+      const React = require('react')
+      return React.createElement('div', props, children)
+    },
+  }
+})
+
 // グローバルなモック設定
 global.ResizeObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),

@@ -3,6 +3,7 @@ import { View, Text, FlatList, TextInput, StyleSheet, Pressable, RefreshControl 
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { format, subYears } from 'date-fns'
 import { useAuth } from '@/contexts/AuthProvider'
 import { useRecordsQuery } from '@apps/shared/hooks/queries/records'
 import { useRecordFilterStore } from '@/stores/recordFilterStore'
@@ -41,13 +42,13 @@ export const RecordsScreen: React.FC = () => {
   // デフォルトの日付範囲（過去1年間）
   const defaultStartDate = useMemo(() => {
     if (startDate) return startDate
-    const date = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
-    return date.toISOString().split('T')[0]
+    const date = subYears(new Date(), 1)
+    return format(date, 'yyyy-MM-dd')
   }, [startDate])
 
   const defaultEndDate = useMemo(() => {
     if (endDate) return endDate
-    return new Date().toISOString().split('T')[0]
+    return format(new Date(), 'yyyy-MM-dd')
   }, [endDate])
 
   // 大会記録データ取得
@@ -80,11 +81,20 @@ export const RecordsScreen: React.FC = () => {
 
     // 年度フィルター
     if (filterFiscalYear) {
-      const fiscalYearStart = `${filterFiscalYear}-04-01`
-      const fiscalYearEnd = `${parseInt(filterFiscalYear) + 1}-03-31`
+      const fy = parseInt(filterFiscalYear)
+      const fyNext = fy + 1
+      // 年度の開始日（4月1日 00:00:00 UTC）
+      const fiscalYearStart = new Date(`${fy}-04-01T00:00:00.000Z`).getTime()
+      // 年度の終了日（翌年3月31日 23:59:59.999 UTC）
+      const fiscalYearEnd = new Date(`${fyNext}-03-31T23:59:59.999Z`).getTime()
       filtered = filtered.filter((record) => {
-        const recordDate = record.competition?.date || record.created_at
-        return recordDate >= fiscalYearStart && recordDate <= fiscalYearEnd
+        const recordDateStr = record.competition?.date || record.created_at
+        if (!recordDateStr) return false
+        const recordDate = new Date(recordDateStr)
+        // 無効な日付を除外
+        if (isNaN(recordDate.getTime())) return false
+        const recordTimestamp = recordDate.getTime()
+        return recordTimestamp >= fiscalYearStart && recordTimestamp <= fiscalYearEnd
       })
     }
 
@@ -125,8 +135,9 @@ export const RecordsScreen: React.FC = () => {
       // データが空の場合
       setAllRecords([])
       setHasMore(false)
+      setLoadingMore(false)
     }
-  }, [filteredRecords, records.length, page, isLoading])
+  }, [filteredRecords, records, page, isLoading])
 
   // フィルターが変更されたらリセット
   useEffect(() => {

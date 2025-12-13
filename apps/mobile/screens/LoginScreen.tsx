@@ -1,5 +1,5 @@
 import React from 'react'
-import { ActivityIndicator, StyleSheet } from 'react-native'
+import { ActivityIndicator, StyleSheet, Text } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/contexts/AuthProvider'
 import { LoginForm } from '@/components/auth/LoginForm'
@@ -16,20 +16,27 @@ export const LoginScreen: React.FC = () => {
     )
   }
 
-  // 認証済みの場合は何も表示しない（Phase 3でナビゲーションに置き換え）
+  // 認証済みの場合はリダイレクト中のUIを表示
+  // App.tsxのAppNavigatorが認証状態に応じてMainStackに自動的に切り替えます
   if (isAuthenticated) {
-    return null
+    return (
+      <SafeAreaView style={styles.loadingContainer} edges={['top', 'left', 'right', 'bottom']}>
+        <ActivityIndicator size="large" color="#2563EB" />
+        <Text style={styles.redirectingText}>リダイレクト中...</Text>
+      </SafeAreaView>
+    )
   }
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
-    <LoginForm
-      onSuccess={() => {
-        // Phase 3でナビゲーションを実装予定
-        // 現時点ではログイン成功時の処理は後で実装
-        console.log('ログイン成功')
-      }}
-    />
+      <LoginForm
+        onSuccess={() => {
+          // ログイン成功時は、App.tsxのAppNavigatorが認証状態を検知して
+          // 自動的にMainStackに切り替えます
+          // この時点でisAuthenticatedがtrueになるため、上記のリダイレクトUIが表示されます
+          console.log('ログイン成功')
+        }}
+      />
     </SafeAreaView>
   )
 }
@@ -44,5 +51,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#EFF6FF',
+  },
+  redirectingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6B7280',
+    fontWeight: '500',
   },
 })

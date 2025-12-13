@@ -26,8 +26,9 @@ describe('PracticeItem', () => {
     expect(screen.getByText(/2025年1月15日/)).toBeTruthy()
     // タイトルが表示される
     expect(screen.getByText('テスト練習')).toBeTruthy()
-    // 場所が表示される
-    expect(screen.getByText(/📍 テストプール/)).toBeTruthy()
+    // 場所が表示される（アイコンとテキストが含まれる）
+    expect(screen.getByText('テストプール')).toBeTruthy()
+    expect(screen.getByTestId('icon-map-pin')).toBeTruthy()
     // メモが表示される
     expect(screen.getByText('テストメモ')).toBeTruthy()
   })
@@ -68,7 +69,8 @@ describe('PracticeItem', () => {
     
     render(<PracticeItem practice={practiceWithoutPlace} />)
     
-    expect(screen.queryByText(/📍/)).toBeNull()
+    expect(screen.queryByText('テストプール')).toBeNull()
+    expect(screen.queryByTestId('icon-map-pin')).toBeNull()
   })
 
   it('メモがnullの場合、メモが表示されない', () => {

@@ -9,16 +9,16 @@ import { useMutation, useQuery, useQueryClient, type UseMutationResult, type Use
 import { useEffect, useMemo } from 'react'
 import { PracticeAPI } from '../../api/practices'
 import type {
-  Practice,
-  PracticeInsert,
-  PracticeLog,
-  PracticeLogInsert,
-  PracticeLogUpdate,
-  PracticeTag,
-  PracticeTime,
-  PracticeTimeInsert,
-  PracticeUpdate,
-  PracticeWithLogs
+    Practice,
+    PracticeInsert,
+    PracticeLog,
+    PracticeLogInsert,
+    PracticeLogUpdate,
+    PracticeTag,
+    PracticeTime,
+    PracticeTimeInsert,
+    PracticeUpdate,
+    PracticeWithLogs
 } from '../../types/database'
 import { practiceKeys } from './keys'
 
@@ -154,6 +154,98 @@ export function usePracticesCountQuery(
     },
     staleTime: 5 * 60 * 1000, // 5分
   })
+}
+
+export interface UsePracticeByIdQueryOptions {
+  enableRealtime?: boolean
+  initialData?: PracticeWithLogs | null
+  api?: PracticeAPI
+}
+
+/**
+ * IDで練習記録を取得するクエリ
+ */
+export function usePracticeByIdQuery(
+  supabase: SupabaseClient,
+  practiceId: string,
+  options: UsePracticeByIdQueryOptions = {}
+): UseQueryResult<PracticeWithLogs | null, Error> {
+  const {
+    enableRealtime = true,
+    initialData,
+    api: providedApi
+  } = options
+
+  const api = useMemo(
+    () => providedApi ?? new PracticeAPI(supabase),
+    [supabase, providedApi]
+  )
+
+  const queryClient = useQueryClient()
+
+  // クエリ実行
+  const query = useQuery({
+    queryKey: practiceKeys.detail(practiceId),
+    queryFn: async () => {
+      return await api.getPracticeById(practiceId)
+    },
+    enabled: !!practiceId,
+    initialData,
+    staleTime: 5 * 60 * 1000, // 5分
+  })
+
+  // リアルタイム購読（練習記録の変更）
+  useEffect(() => {
+    if (!enableRealtime || !practiceId || !query.data) return
+
+    const channel = supabase
+      .channel(`practice-detail-${practiceId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'practices',
+          filter: `id=eq.${practiceId}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: practiceKeys.detail(practiceId) })
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'practice_logs',
+          filter: `practice_id=eq.${practiceId}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: practiceKeys.detail(practiceId) })
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'practice_times'
+        },
+        () => {
+          // practice_log_id でフィルタリングできないため、practice_logs の変更を監視
+          // より正確には practice_log_id を含む practice_logs を確認する必要があるが、
+          // 簡易的に practice_logs の変更を監視することで対応
+          queryClient.invalidateQueries({ queryKey: practiceKeys.detail(practiceId) })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [api, enableRealtime, practiceId, queryClient, query.data, supabase])
+
+  return query
 }
 
 /**

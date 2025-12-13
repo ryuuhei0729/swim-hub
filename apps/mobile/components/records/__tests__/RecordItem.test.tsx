@@ -89,7 +89,8 @@ describe('RecordItem', () => {
     
     render(<RecordItem record={recordWithoutPlace} />)
     
-    expect(screen.queryByText(/📍/)).toBeNull()
+    expect(screen.queryByText('テスト会場')).toBeNull()
+    expect(screen.queryByTestId('icon-map-pin')).toBeNull()
   })
 
   it('onPressが提供された場合、タップでコールバックが呼ばれる', () => {
