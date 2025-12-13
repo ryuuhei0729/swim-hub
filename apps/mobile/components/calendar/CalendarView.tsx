@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react'
-import { View, Text, StyleSheet } from 'react-native'
+import React, { useMemo, useRef } from 'react'
+import { View, Text, StyleSheet, PanResponder } from 'react-native'
 import { startOfMonth, endOfMonth, eachDayOfInterval, getDay, format } from 'date-fns'
 import { CalendarHeader } from './CalendarHeader'
 import { CalendarDay } from './CalendarDay'
@@ -10,7 +10,6 @@ interface CalendarViewProps {
   entries: CalendarItem[]
   isLoading: boolean
   onDateClick: (date: Date) => void
-  onAddClick?: (date: Date) => void
   onPrevMonth: () => void
   onNextMonth: () => void
   onTodayClick: () => void
@@ -28,7 +27,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   entries,
   isLoading,
   onDateClick,
-  onAddClick,
   onPrevMonth,
   onNextMonth,
   onTodayClick,
@@ -65,8 +63,33 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     return entriesByDate.get(dateKey) || []
   }
 
+  // スワイプジェスチャーの検出
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        // 水平方向の移動が垂直方向の移動より大きい場合のみ反応
+        return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && Math.abs(gestureState.dx) > 10
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        const swipeThreshold = 50 // スワイプと判定する最小距離
+        const { dx } = gestureState
+
+        if (Math.abs(dx) > swipeThreshold) {
+          if (dx > 0) {
+            // 右スワイプ → 前の月
+            onPrevMonth()
+          } else {
+            // 左スワイプ → 次の月
+            onNextMonth()
+          }
+        }
+      },
+    })
+  ).current
+
   return (
-    <View style={styles.container}>
+    <View style={styles.container} {...panResponder.panHandlers}>
       {/* ヘッダー */}
       <CalendarHeader
         currentDate={currentDate}
@@ -90,6 +113,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       <View style={styles.calendarGrid}>
         {calendarDays.map((day) => {
           const dayEntries = getDateEntries(day)
+          const dayOfWeek = getDay(day) // 0 = 日曜日, 6 = 土曜日
+          const isFirstColumn = dayOfWeek === 0 // 日曜日（左端）
+          const isLastColumn = dayOfWeek === 6 // 土曜日（右端）
           return (
             <View key={day.toISOString()} style={styles.dayWrapper}>
               <CalendarDay
@@ -97,7 +123,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 currentDate={currentDate}
                 entries={dayEntries}
                 onPress={onDateClick}
-                onAddPress={onAddClick}
+                isFirstColumn={isFirstColumn}
+                isLastColumn={isLastColumn}
               />
             </View>
           )
@@ -110,8 +137,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    overflow: 'hidden',
   },
   weekdayHeader: {
     flexDirection: 'row',
@@ -132,10 +157,8 @@ const styles = StyleSheet.create({
   calendarGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    padding: 8,
   },
   dayWrapper: {
-    width: '14.28%', // 7列のグリッド（100% / 7）
-    padding: 2,
+    width: '14.285714%', // 7列のグリッド（100% / 7）を正確に
   },
 })

@@ -1,5 +1,6 @@
 import React from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
+import { Feather } from '@expo/vector-icons'
 
 export type TeamTabType = 'members' | 'announcements' | 'practices' | 'competitions' | 'bulkRegister'
 
@@ -9,31 +10,31 @@ export interface TeamTabsProps {
   isAdmin?: boolean
 }
 
-const tabs: { id: TeamTabType; name: string; icon: string; adminOnly?: boolean }[] = [
+const tabs: { id: TeamTabType; name: string; icon: keyof typeof Feather.glyphMap; adminOnly?: boolean }[] = [
   {
     id: 'members',
     name: 'メンバー',
-    icon: '👥',
+    icon: 'users',
   },
   {
     id: 'announcements',
     name: 'お知らせ',
-    icon: '📢',
+    icon: 'bell',
   },
   {
     id: 'practices',
     name: '練習',
-    icon: '🏊',
+    icon: 'clock',
   },
   {
     id: 'competitions',
     name: '大会',
-    icon: '🏆',
+    icon: 'award',
   },
   {
     id: 'bulkRegister',
     name: '一括登録',
-    icon: '📝',
+    icon: 'clipboard',
     adminOnly: true,
   },
 ]
@@ -58,9 +59,11 @@ export const TeamTabs: React.FC<TeamTabsProps> = ({ activeTab, onTabChange, isAd
               style={[styles.tab, isActive && styles.tabActive]}
               onPress={() => onTabChange(tab.id)}
             >
-              <Text style={[styles.tabIcon, isActive && styles.tabIconActive]}>
-                {tab.icon}
-              </Text>
+              <Feather
+                name={tab.icon}
+                size={16}
+                color={isActive ? '#2563EB' : '#6B7280'}
+              />
               <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
                 {tab.name}
               </Text>
@@ -104,12 +107,6 @@ const styles = StyleSheet.create({
   },
   tabActive: {
     backgroundColor: '#EFF6FF',
-  },
-  tabIcon: {
-    fontSize: 16,
-  },
-  tabIconActive: {
-    opacity: 1,
   },
   tabText: {
     fontSize: 14,

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { View, Text, ScrollView, StyleSheet, Pressable, Alert, Platform } from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { Feather } from '@expo/vector-icons'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { useAuth } from '@/contexts/AuthProvider'
@@ -199,7 +200,8 @@ export const RecordDetailScreen: React.FC = () => {
         
         {record.competition?.place && (
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>📍 場所:</Text>
+            <Feather name="map-pin" size={14} color="#6B7280" />
+            <Text style={styles.infoLabel}>場所:</Text>
             <Text style={styles.infoValue}>{record.competition.place}</Text>
           </View>
         )}
@@ -286,11 +288,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
     paddingHorizontal: 16,
+    gap: 4,
   },
   infoLabel: {
     fontSize: 14,
     color: '#6B7280',
-    marginRight: 8,
+    marginRight: 4,
     minWidth: 100,
   },
   infoValue: {

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert } from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthProvider'
 import {
   useCreatePracticeMutation,
@@ -24,6 +25,7 @@ export const PracticeFormScreen: React.FC = () => {
   const navigation = useNavigation<PracticeFormScreenNavigationProp>()
   const { practiceId, date: initialDateParam } = route.params || {}
   const { supabase } = useAuth()
+  const queryClient = useQueryClient()
   const isEditMode = !!practiceId
 
   // Zustandストア
@@ -124,7 +126,7 @@ export const PracticeFormScreen: React.FC = () => {
     return isValid
   }
 
-  // 保存処理
+  // 保存処理（ダッシュボードに戻る）
   const handleSave = async () => {
     if (!validate()) {
       return
@@ -147,14 +149,71 @@ export const PracticeFormScreen: React.FC = () => {
           id: practiceId,
           updates: formData,
         })
+        // カレンダーのクエリを無効化してリフレッシュ
+        queryClient.invalidateQueries({ queryKey: ['calendar'] })
+        // 成功: 前の画面に戻る
+        reset()
+        navigation.goBack()
       } else {
         // 作成
         await createMutation.mutateAsync(formData)
+        // カレンダーのクエリを無効化してリフレッシュ
+        queryClient.invalidateQueries({ queryKey: ['calendar'] })
+        // 成功: ダッシュボードに戻る
+        reset()
+        navigation.navigate('MainTabs', { screen: 'Dashboard' })
+      }
+    } catch (error) {
+      console.error('保存エラー:', error)
+      Alert.alert(
+        'エラー',
+        error instanceof Error ? error.message : '保存に失敗しました',
+        [{ text: 'OK' }]
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 続けて練習ログを作成（PracticeLogFormScreenへ遷移）
+  const handleContinueToLog = async () => {
+    if (!validate()) {
+      return
+    }
+
+    setLoading(true)
+    clearErrors()
+
+    try {
+      const formData = {
+        date,
+        title: title && title.trim() !== '' ? title.trim() : null,
+        place: place && place.trim() !== '' ? place.trim() : null,
+        note: note && note.trim() !== '' ? note.trim() : null,
       }
 
-      // 成功: 前の画面に戻る
+      if (isEditMode && practiceId) {
+        // 編集モードではこのボタンは表示されない想定
+        await updateMutation.mutateAsync({
+          id: practiceId,
+          updates: formData,
+        })
+        queryClient.invalidateQueries({ queryKey: ['calendar'] })
+        reset()
+        navigation.navigate('PracticeLogForm', {
+          practiceId: practiceId,
+        })
+      } else {
+        // 作成
+        const createdPractice = await createMutation.mutateAsync(formData)
+        // カレンダーのクエリを無効化してリフレッシュ
+        queryClient.invalidateQueries({ queryKey: ['calendar'] })
+        // 成功: PracticeLogFormScreenへ遷移
       reset()
-      navigation.goBack()
+        navigation.navigate('PracticeLogForm', {
+          practiceId: createdPractice.id,
+        })
+      }
     } catch (error) {
       console.error('保存エラー:', error)
       Alert.alert(
@@ -269,6 +328,21 @@ export const PracticeFormScreen: React.FC = () => {
             )}
           </Pressable>
         </View>
+
+        {/* 続けて練習ログを作成ボタン（作成モードのみ） */}
+        {!isEditMode && (
+          <Pressable
+            style={[styles.continueButton, storeLoading && styles.buttonDisabled]}
+            onPress={handleContinueToLog}
+            disabled={storeLoading}
+          >
+            {storeLoading ? (
+              <LoadingSpinner size="small" color="#2563EB" />
+            ) : (
+              <Text style={styles.continueButtonText}>続けて練習ログを作成</Text>
+            )}
+          </Pressable>
+        )}
       </View>
     </ScrollView>
   )
@@ -345,6 +419,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  continueButton: {
+    marginTop: 12,
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#2563EB',
+  },
+  continueButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2563EB',
   },
   buttonDisabled: {
     opacity: 0.6,

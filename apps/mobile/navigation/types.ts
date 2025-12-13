@@ -31,6 +31,21 @@ export type MainStackParamList = {
     practiceId?: string
     date?: string
   }
+  PracticeLogForm: {
+    practiceId: string
+    practiceLogId?: string
+  }
+  PracticeTimeForm: {
+    practiceLogId: string
+    setCount: number
+    repCount: number
+    initialTimes?: Array<{
+      id: string
+      setNumber: number
+      repNumber: number
+      time: number
+    }>
+  }
   RecordDetail: {
     recordId: string
   }

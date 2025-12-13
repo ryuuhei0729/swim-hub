@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, ActivityIndicator, StyleSheet } from 'react-native'
+import { ActivityIndicator, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/contexts/AuthProvider'
 import { LoginForm } from '@/components/auth/LoginForm'
@@ -23,13 +23,13 @@ export const LoginScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
-      <LoginForm
-        onSuccess={() => {
-          // Phase 3でナビゲーションを実装予定
-          // 現時点ではログイン成功時の処理は後で実装
-          console.log('ログイン成功')
-        }}
-      />
+    <LoginForm
+      onSuccess={() => {
+        // Phase 3でナビゲーションを実装予定
+        // 現時点ではログイン成功時の処理は後で実装
+        console.log('ログイン成功')
+      }}
+    />
     </SafeAreaView>
   )
 }

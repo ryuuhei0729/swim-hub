@@ -1,15 +1,16 @@
 import React from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
-import { format, isSameMonth, isToday } from 'date-fns'
+import { format, isSameMonth, isToday, getDay } from 'date-fns'
+import { isHoliday } from '@apps/shared/utils/holiday'
 import type { CalendarItem } from '@apps/shared/types/ui'
-import type { CalendarItemType } from '@apps/shared/types/database'
 
 interface CalendarDayProps {
   date: Date
   currentDate: Date
   entries: CalendarItem[]
   onPress: (date: Date) => void
-  onAddPress?: (date: Date) => void
+  isFirstColumn?: boolean
+  isLastColumn?: boolean
 }
 
 /**
@@ -20,27 +21,73 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
   currentDate,
   entries,
   onPress,
-  onAddPress,
+  isFirstColumn = false,
+  isLastColumn = false,
 }) => {
   const isCurrentMonth = isSameMonth(date, currentDate)
   const isTodayDate = isToday(date)
   const dayNumber = format(date, 'd')
   const displayDateKey = format(date, 'yyyy-MM-dd')
+  const dayOfWeek = getDay(date) // 0 = 日曜日, 6 = 土曜日
+  const isSunday = dayOfWeek === 0
+  const isSaturday = dayOfWeek === 6
+  const isHolidayDate = isHoliday(date)
 
-  // エントリーの色を取得
-  const getItemColor = (itemType: CalendarItemType): string => {
-    switch (itemType) {
-      case 'practice':
-      case 'team_practice':
-      case 'practice_log':
-        return '#10B981' // 緑色
-      case 'competition':
-      case 'team_competition':
-      case 'entry':
-      case 'record':
-        return '#2563EB' // 青色
-      default:
-        return '#6B7280' // グレー
+  // 同じ日付にPractice_LogやRecordがあるかチェック
+  const hasPracticeLog = entries.some((e) => e.type === 'practice_log')
+  const hasRecord = entries.some((e) => e.type === 'record')
+
+  // エントリーの色とスタイルを取得
+  const getItemStyle = (item: CalendarItem) => {
+    const isPracticeType = item.type === 'practice' || item.type === 'team_practice' || item.type === 'practice_log'
+    const isCompetitionType = item.type === 'competition' || item.type === 'team_competition' || item.type === 'entry' || item.type === 'record'
+
+    if (isPracticeType) {
+      // Practice系
+      if (item.type === 'practice_log' || hasPracticeLog) {
+        // Practice_Logがある場合: 緑色の枠線 + 黄緑色の背景
+        return {
+          backgroundColor: '#D1FAE5', // 黄緑色 (green-100)
+          borderWidth: 1,
+          borderColor: '#10B981', // 緑色 (green-500)
+          textColor: '#065F46', // 濃い緑色のテキスト (green-800)
+        }
+      } else {
+        // Practiceのみ: 黄緑色の背景のみ
+        return {
+          backgroundColor: '#D1FAE5', // 黄緑色 (green-100)
+          borderWidth: 0,
+          borderColor: 'transparent',
+          textColor: '#065F46', // 濃い緑色のテキスト (green-800)
+        }
+      }
+    } else if (isCompetitionType) {
+      // Competition/Entry/Record系
+      if (item.type === 'record' || hasRecord) {
+        // Recordがある場合: 青色の枠線 + 水色の背景
+        return {
+          backgroundColor: '#DBEAFE', // 水色 (blue-100)
+          borderWidth: 1,
+          borderColor: '#2563EB', // 青色 (blue-600)
+          textColor: '#1E40AF', // 濃い青色のテキスト (blue-800)
+        }
+      } else {
+        // Competition/Entryのみ: 水色の背景のみ
+        return {
+          backgroundColor: '#DBEAFE', // 水色 (blue-100)
+          borderWidth: 0,
+          borderColor: 'transparent',
+          textColor: '#1E40AF', // 濃い青色のテキスト (blue-800)
+        }
+      }
+    } else {
+      // その他
+      return {
+        backgroundColor: '#F3F4F6', // グレー
+        borderWidth: 0,
+        borderColor: 'transparent',
+        textColor: '#374151', // グレーのテキスト
+      }
     }
   }
 
@@ -68,50 +115,52 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
         styles.dayContainer,
         !isCurrentMonth && styles.dayContainerOtherMonth,
         isTodayDate && styles.dayContainerToday,
+        isTodayDate && isFirstColumn && styles.dayContainerTodayFirstColumn,
+        isTodayDate && isLastColumn && styles.dayContainerTodayLastColumn,
+        isTodayDate && !isFirstColumn && !isLastColumn && styles.dayContainerTodayMiddle,
         entries.length > 0 && isCurrentMonth && styles.dayContainerWithEntries,
+        isFirstColumn && styles.dayContainerFirstColumn,
+        isLastColumn && styles.dayContainerLastColumn,
       ]}
       onPress={() => onPress(date)}
       disabled={!isCurrentMonth}
     >
-      {/* 日付と追加ボタン */}
+      {/* 日付 */}
       <View style={styles.dayHeader}>
         <Text
           style={[
             styles.dayNumber,
             isTodayDate && styles.dayNumberToday,
             !isCurrentMonth && styles.dayNumberOtherMonth,
+            (isSunday || isHolidayDate) && isCurrentMonth && styles.dayNumberSunday,
+            isSaturday && isCurrentMonth && !isHolidayDate && styles.dayNumberSaturday,
           ]}
         >
           {dayNumber}
         </Text>
-        {isCurrentMonth && onAddPress && (
-          <Pressable
-            style={styles.addButton}
-            onPress={(e) => {
-              e.stopPropagation()
-              onAddPress(date)
-            }}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Text style={styles.addButtonText}>+</Text>
-          </Pressable>
-        )}
       </View>
 
       {/* エントリー表示 */}
       {isCurrentMonth && (
         <View style={styles.entriesContainer}>
           {displayEntries.map((item) => {
-            const color = getItemColor(item.type)
+            const itemStyle = getItemStyle(item)
             const title = getEntryTitle(item)
             const isRelay = item.type === 'record' && item.metadata?.record?.is_relaying
 
             return (
               <View
                 key={`${item.id}-${displayDateKey}`}
-                style={[styles.entryItem, { backgroundColor: color }]}
+                style={[
+                  styles.entryItem,
+                  {
+                    backgroundColor: itemStyle.backgroundColor,
+                    borderWidth: itemStyle.borderWidth,
+                    borderColor: itemStyle.borderColor,
+                  },
+                ]}
               >
-                <Text style={styles.entryText} numberOfLines={1}>
+                <Text style={[styles.entryText, { color: itemStyle.textColor }]} numberOfLines={1}>
                   {title}
                   {isRelay && <Text style={styles.relayMark}> R</Text>}
                 </Text>
@@ -132,18 +181,37 @@ const styles = StyleSheet.create({
     width: '100%',
     minHeight: 80,
     padding: 4,
-    borderWidth: 1,
+    borderRightWidth: 0.5,
+    borderBottomWidth: 0.5,
     borderColor: '#E5E7EB',
-    borderRadius: 8,
     backgroundColor: '#FFFFFF',
   },
+  dayContainerFirstColumn: {
+    borderLeftWidth: 0,
+  },
+  dayContainerLastColumn: {
+    borderRightWidth: 0,
+  },
   dayContainerOtherMonth: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F3F4F6',
   },
   dayContainerToday: {
-    borderWidth: 2,
+    borderTopWidth: 2,
+    borderBottomWidth: 2,
     borderColor: '#2563EB',
     backgroundColor: '#EFF6FF',
+  },
+  dayContainerTodayFirstColumn: {
+    borderLeftWidth: 2,
+    borderRightWidth: 0.5,
+  },
+  dayContainerTodayLastColumn: {
+    borderLeftWidth: 0.5,
+    borderRightWidth: 2,
+  },
+  dayContainerTodayMiddle: {
+    borderLeftWidth: 0.5,
+    borderRightWidth: 0.5,
   },
   dayContainerWithEntries: {
     shadowColor: '#000',
@@ -162,30 +230,23 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   dayNumber: {
-    fontSize: 14,
+    fontSize: 10,
     fontWeight: '500',
     color: '#111827',
   },
   dayNumberToday: {
-    fontSize: 16,
+    fontSize: 10,
     fontWeight: 'bold',
     color: '#2563EB',
   },
   dayNumberOtherMonth: {
-    color: '#9CA3AF',
+    color: '#D1D5DB',
   },
-  addButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
+  dayNumberSunday: {
+    color: '#DC2626', // 赤色
   },
-  addButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6B7280',
+  dayNumberSaturday: {
+    color: '#2563EB', // 青色
   },
   entriesContainer: {
     gap: 2,
@@ -196,16 +257,15 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   entryText: {
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: '500',
-    color: '#FFFFFF',
   },
   relayMark: {
     fontWeight: 'bold',
     color: '#DC2626',
   },
   moreEntriesText: {
-    fontSize: 10,
+    fontSize: 8,
     color: '#6B7280',
     marginTop: 2,
   },

@@ -1,15 +1,18 @@
 import React, { useState, useMemo } from 'react'
-import { View, ScrollView, StyleSheet } from 'react-native'
+import { ScrollView, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { addMonths, subMonths, format } from 'date-fns'
+import { addMonths, subMonths, format as formatDate } from 'date-fns'
 import { useAuth } from '@/contexts/AuthProvider'
 import { useCalendarQuery } from '@/hooks/useCalendarQuery'
 import { CalendarView } from '@/components/calendar'
 import { DayDetailModal } from '@/components/calendar'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ErrorView } from '@/components/layout/ErrorView'
+import { useDeletePracticeMutation } from '@apps/shared/hooks/queries/practices'
+import { PracticeAPI } from '@apps/shared/api/practices'
+import { Alert } from 'react-native'
 import type { MainStackParamList } from '@/navigation/types'
 import type { CalendarItem } from '@apps/shared/types/ui'
 
@@ -41,7 +44,7 @@ export const DashboardScreen: React.FC = () => {
   const selectedDateEntries = useMemo(() => {
     if (!selectedDate) return []
     // CalendarViewと同じ方法で日付をフォーマット（タイムゾーン問題を回避）
-    const dateKey = format(selectedDate, 'yyyy-MM-dd')
+    const dateKey = formatDate(selectedDate, 'yyyy-MM-dd')
     return entries.filter((item) => item.date === dateKey)
   }, [selectedDate, entries])
 
@@ -71,12 +74,6 @@ export const DashboardScreen: React.FC = () => {
     setShowDayDetail(true)
   }
 
-  // 追加ボタンタップ
-  const handleAddClick = (date: Date) => {
-    setSelectedDate(date)
-    setShowDayDetail(true)
-  }
-
   // エントリータップ
   const handleEntryPress = (item: CalendarItem) => {
     if (item.type === 'practice' || item.type === 'team_practice') {
@@ -93,14 +90,99 @@ export const DashboardScreen: React.FC = () => {
 
   // 練習追加
   const handleAddPractice = (date: Date) => {
-    const dateParam = format(date, 'yyyy-MM-dd')
+    const dateParam = formatDate(date, 'yyyy-MM-dd')
     navigation.navigate('PracticeForm', { date: dateParam })
   }
 
   // 大会記録追加
   const handleAddRecord = (date: Date) => {
-    const dateParam = format(date, 'yyyy-MM-dd')
+    const dateParam = formatDate(date, 'yyyy-MM-dd')
     navigation.navigate('RecordForm', { date: dateParam })
+  }
+
+  // 練習編集
+  const handleEditPractice = (item: CalendarItem) => {
+    const practiceId = item.metadata?.practice_id || item.id
+    const dateParam = item.date
+    navigation.navigate('PracticeForm', { practiceId, date: dateParam })
+  }
+
+  // 練習削除
+  const deleteMutation = useDeletePracticeMutation(supabase)
+  const handleDeletePractice = async (itemId: string) => {
+    Alert.alert(
+      '削除確認',
+      'この練習記録を削除しますか？\nこの操作は取り消せません。',
+      [
+        {
+          text: 'キャンセル',
+          style: 'cancel',
+        },
+        {
+          text: '削除',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteMutation.mutateAsync(itemId)
+              refetch() // カレンダーをリフレッシュ
+            } catch (error) {
+              console.error('削除エラー:', error)
+              Alert.alert(
+                'エラー',
+                error instanceof Error ? error.message : '削除に失敗しました',
+                [{ text: 'OK' }]
+              )
+            }
+          },
+        },
+      ]
+    )
+  }
+
+  // 練習ログ追加
+  const handleAddPracticeLog = (practiceId: string) => {
+    navigation.navigate('PracticeLogForm', { practiceId })
+  }
+
+  // 練習ログ編集
+  const handleEditPracticeLog = (item: CalendarItem) => {
+    const practiceId = item.metadata?.practice_id || item.metadata?.practice?.id
+    const practiceLogId = item.id
+    if (practiceId) {
+      navigation.navigate('PracticeLogForm', { practiceId, practiceLogId })
+    }
+  }
+
+  // 練習ログ削除
+  const handleDeletePracticeLog = async (logId: string) => {
+    Alert.alert(
+      '削除確認',
+      'この練習メニューを削除しますか？\nこの操作は取り消せません。',
+      [
+        {
+          text: 'キャンセル',
+          style: 'cancel',
+        },
+        {
+          text: '削除',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const api = new PracticeAPI(supabase)
+              await api.deletePracticeLog(logId)
+              refetch() // カレンダーをリフレッシュ
+            } catch (error) {
+              console.error('削除エラー:', error)
+              Alert.alert(
+                'エラー',
+                error instanceof Error ? error.message : '削除に失敗しました',
+                [{ text: 'OK' }]
+              )
+            }
+          },
+        },
+      ]
+    )
   }
 
   // エラー状態
@@ -133,7 +215,6 @@ export const DashboardScreen: React.FC = () => {
           entries={entries}
           isLoading={isLoading}
           onDateClick={handleDateClick}
-          onAddClick={handleAddClick}
           onPrevMonth={handlePrevMonth}
           onNextMonth={handleNextMonth}
           onTodayClick={handleTodayClick}
@@ -154,6 +235,11 @@ export const DashboardScreen: React.FC = () => {
           onEntryPress={handleEntryPress}
           onAddPractice={handleAddPractice}
           onAddRecord={handleAddRecord}
+          onEditPractice={handleEditPractice}
+          onDeletePractice={handleDeletePractice}
+          onAddPracticeLog={handleAddPracticeLog}
+          onEditPracticeLog={handleEditPracticeLog}
+          onDeletePracticeLog={handleDeletePracticeLog}
         />
       )}
     </SafeAreaView>
@@ -169,6 +255,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 0,
   },
 })

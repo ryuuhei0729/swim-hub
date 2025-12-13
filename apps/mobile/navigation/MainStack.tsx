@@ -4,6 +4,8 @@ import type { MainStackParamList } from './types'
 import { TabNavigator } from './TabNavigator'
 import { PracticeDetailScreen } from '@/screens/PracticeDetailScreen'
 import { PracticeFormScreen } from '@/screens/PracticeFormScreen'
+import { PracticeLogFormScreen } from '@/screens/PracticeLogFormScreen'
+import { PracticeTimeFormScreen } from '@/screens/PracticeTimeFormScreen'
 import { RecordDetailScreen } from '@/screens/RecordDetailScreen'
 import { RecordFormScreen } from '@/screens/RecordFormScreen'
 import { TeamDetailScreen } from '@/screens/TeamDetailScreen'
@@ -57,6 +59,38 @@ export const MainStack: React.FC = () => {
             fontWeight: '600',
           },
         })}
+      />
+      <Stack.Screen
+        name="PracticeLogForm"
+        component={PracticeLogFormScreen}
+        options={({ route }) => ({
+          headerShown: true,
+          title: route.params?.practiceLogId ? '練習ログ編集' : '練習ログ作成',
+          headerBackTitle: '戻る',
+          headerStyle: {
+            backgroundColor: '#FFFFFF',
+          },
+          headerTintColor: '#111827',
+          headerTitleStyle: {
+            fontWeight: '600',
+          },
+        })}
+      />
+      <Stack.Screen
+        name="PracticeTimeForm"
+        component={PracticeTimeFormScreen}
+        options={{
+          headerShown: true,
+          title: 'タイム入力',
+          headerBackTitle: '戻る',
+          headerStyle: {
+            backgroundColor: '#FFFFFF',
+          },
+          headerTintColor: '#111827',
+          headerTitleStyle: {
+            fontWeight: '600',
+          },
+        }}
       />
       <Stack.Screen
         name="RecordDetail"

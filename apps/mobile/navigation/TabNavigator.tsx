@@ -1,13 +1,13 @@
 import React from 'react'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Feather } from '@expo/vector-icons'
 import type { TabParamList } from './types'
 import { DashboardScreen } from '@/screens/DashboardScreen'
 import { PracticesScreen } from '@/screens/PracticesScreen'
 import { CompetitionsScreen } from '@/screens/CompetitionsScreen'
 import { TeamsScreen } from '@/screens/TeamsScreen'
 import { MyPageScreen } from '@/screens/MyPageScreen'
-import { Text } from 'react-native'
 
 const Tab = createBottomTabNavigator<TabParamList>()
 
@@ -48,7 +48,7 @@ export const TabNavigator: React.FC = () => {
         component={DashboardScreen}
         options={{
           tabBarLabel: 'ダッシュボード',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>📊</Text>,
+          tabBarIcon: ({ color }) => <Feather name="home" size={20} color={color} />,
         }}
       />
       <Tab.Screen
@@ -56,7 +56,7 @@ export const TabNavigator: React.FC = () => {
         component={PracticesScreen}
         options={{
           tabBarLabel: '練習',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>🏊</Text>,
+          tabBarIcon: ({ color }) => <Feather name="bar-chart-2" size={20} color={color} />,
         }}
       />
       <Tab.Screen
@@ -64,7 +64,7 @@ export const TabNavigator: React.FC = () => {
         component={CompetitionsScreen}
         options={{
           tabBarLabel: '大会',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>🏆</Text>,
+          tabBarIcon: ({ color }) => <Feather name="award" size={20} color={color} />,
         }}
       />
       <Tab.Screen
@@ -72,7 +72,7 @@ export const TabNavigator: React.FC = () => {
         component={TeamsScreen}
         options={{
           tabBarLabel: 'チーム',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>👥</Text>,
+          tabBarIcon: ({ color }) => <Feather name="users" size={20} color={color} />,
         }}
       />
       <Tab.Screen
@@ -80,7 +80,7 @@ export const TabNavigator: React.FC = () => {
         component={MyPageScreen}
         options={{
           tabBarLabel: 'マイページ',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>👤</Text>,
+          tabBarIcon: ({ color }) => <Feather name="user" size={20} color={color} />,
         }}
       />
     </Tab.Navigator>

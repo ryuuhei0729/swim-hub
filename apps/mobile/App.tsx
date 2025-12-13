@@ -54,15 +54,15 @@ const AppNavigator: React.FC = () => {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <ErrorBoundary>
-        <QueryProvider>
-          <NetworkProvider>
-            <AuthProvider>
-              <AppNavigator />
-            </AuthProvider>
-          </NetworkProvider>
-        </QueryProvider>
-      </ErrorBoundary>
+    <ErrorBoundary>
+      <QueryProvider>
+        <NetworkProvider>
+          <AuthProvider>
+            <AppNavigator />
+          </AuthProvider>
+        </NetworkProvider>
+      </QueryProvider>
+    </ErrorBoundary>
     </SafeAreaProvider>
   )
 }

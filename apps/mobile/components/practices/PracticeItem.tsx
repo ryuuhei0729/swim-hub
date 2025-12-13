@@ -1,5 +1,6 @@
 import React, { useMemo, useCallback } from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
+import { Feather } from '@expo/vector-icons'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import type { PracticeWithLogs } from '@swim-hub/shared/types/database'
@@ -51,9 +52,12 @@ const PracticeItemComponent: React.FC<PracticeItemProps> = ({ practice, onPress 
         </Text>
         
         {practice.place && (
-          <Text style={styles.place} numberOfLines={1}>
-            📍 {practice.place}
-          </Text>
+          <View style={styles.placeContainer}>
+            <Feather name="map-pin" size={14} color="#6B7280" />
+            <Text style={styles.place} numberOfLines={1}>
+              {practice.place}
+            </Text>
+          </View>
         )}
         
         {practice.note && (
@@ -113,10 +117,15 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginTop: 4,
   },
+  placeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
   place: {
     fontSize: 14,
     color: '#6B7280',
-    marginTop: 4,
   },
   note: {
     fontSize: 14,
