@@ -135,7 +135,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
         return 600
       }
       // PracticeLogあり（PracticeTimeなし）
-      return 450
+      return 350
     }
     if (entries.length === 2) {
       // PracticeLogが含まれている場合は大きめに
