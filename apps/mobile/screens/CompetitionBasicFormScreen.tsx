@@ -274,31 +274,35 @@ export const CompetitionBasicFormScreen: React.FC = () => {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* 日付（開始日・終了日） */}
         <View style={styles.section}>
-          <Text style={styles.label}>
-            開始日 <Text style={styles.required}>*</Text>
-          </Text>
-          <TextInput
-            style={[styles.input, errors.date && styles.inputError]}
-            value={date}
-            onChangeText={setDate}
-            placeholder="YYYY-MM-DD"
-            editable={!loading}
-          />
-          {errors.date && <Text style={styles.errorText}>{errors.date}</Text>}
-        </View>
+          <View style={styles.dateRow}>
+            <View style={styles.dateColumn}>
+              <Text style={styles.label}>
+                開始日 <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={[styles.input, styles.dateInput, errors.date && styles.inputError]}
+                value={date}
+                onChangeText={setDate}
+                placeholder="YYYY-MM-DD"
+                editable={!loading}
+              />
+              {errors.date && <Text style={styles.errorText}>{errors.date}</Text>}
+            </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>
-            終了日 <Text style={styles.optional}>(複数日の場合)</Text>
-          </Text>
-          <TextInput
-            style={[styles.input, errors.endDate && styles.inputError]}
-            value={endDate}
-            onChangeText={setEndDate}
-            placeholder="YYYY-MM-DD"
-            editable={!loading}
-          />
-          {errors.endDate && <Text style={styles.errorText}>{errors.endDate}</Text>}
+            <View style={styles.dateColumn}>
+              <Text style={styles.label}>
+                終了日 <Text style={styles.optional}>(複数日の場合)</Text>
+              </Text>
+              <TextInput
+                style={[styles.input, styles.dateInput, errors.endDate && styles.inputError]}
+                value={endDate}
+                onChangeText={setEndDate}
+                placeholder="YYYY-MM-DD"
+                editable={!loading}
+              />
+              {errors.endDate && <Text style={styles.errorText}>{errors.endDate}</Text>}
+            </View>
+          </View>
         </View>
 
         {/* 大会名 */}
@@ -423,6 +427,13 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 20,
   },
+  dateRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  dateColumn: {
+    flex: 1,
+  },
   label: {
     fontSize: 14,
     fontWeight: '600',
@@ -446,6 +457,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#111827',
     backgroundColor: '#FFFFFF',
+  },
+  dateInput: {
+    width: '100%',
   },
   inputError: {
     borderColor: '#EF4444',

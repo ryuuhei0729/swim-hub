@@ -4,24 +4,18 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/contexts/AuthProvider'
 import { useUserQuery } from '@apps/shared/hooks/queries/user'
 import { useBestTimesQuery } from '@/hooks/useBestTimesQuery'
-import {
-  ProfileDisplay,
-  ProfileEditModal,
-  BestTimesTable,
-  PasswordChangeModal,
-} from '@/components/profile'
+import { ProfileDisplay, ProfileEditModal, BestTimesTable } from '@/components/profile'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ErrorView } from '@/components/layout/ErrorView'
 import type { UserProfile } from '@swim-hub/shared/types/database'
 
 /**
  * マイページ画面
- * プロフィール表示・編集、ベストタイム表、パスワード変更
+ * プロフィール表示・編集、ベストタイム表
  */
 export const MyPageScreen: React.FC = () => {
   const { supabase, user } = useAuth()
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
 
   // プロフィールとチーム情報取得
@@ -198,15 +192,6 @@ export const MyPageScreen: React.FC = () => {
           )}
         </View>
 
-        {/* パスワード変更ボタン */}
-        <View style={styles.section}>
-          <Pressable
-            style={styles.passwordButton}
-            onPress={() => setIsPasswordModalOpen(true)}
-          >
-            <Text style={styles.passwordButtonText}>パスワードを変更</Text>
-          </Pressable>
-        </View>
       </ScrollView>
 
       {/* プロフィール編集モーダル */}
@@ -218,14 +203,6 @@ export const MyPageScreen: React.FC = () => {
         onAvatarChange={handleAvatarChange}
       />
 
-      {/* パスワード変更モーダル */}
-      <PasswordChangeModal
-        visible={isPasswordModalOpen}
-        onClose={() => setIsPasswordModalOpen(false)}
-        onSuccess={() => {
-          setIsPasswordModalOpen(false)
-        }}
-      />
     </SafeAreaView>
   )
 }

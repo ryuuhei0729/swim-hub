@@ -1,42 +1,37 @@
-import React, { useState, useMemo } from 'react'
-import { View, Text, ScrollView, StyleSheet, Pressable, Alert, Platform } from 'react-native'
+import React, { useState } from 'react'
+import { View, Text, StyleSheet, Pressable, Alert, Platform } from 'react-native'
 import * as Clipboard from 'expo-clipboard'
+import { Feather } from '@expo/vector-icons'
 import { useRoute, RouteProp } from '@react-navigation/native'
 import { useAuth } from '@/contexts/AuthProvider'
-import { useTeamsQuery, useDeleteAnnouncementMutation } from '@apps/shared/hooks/queries/teams'
+import { useTeamsQuery } from '@apps/shared/hooks/queries/teams'
 import {
   TeamTabs,
   TeamMemberList,
-  TeamAnnouncementList,
-  TeamAnnouncementForm,
-  TeamBulkRegisterForm,
+  MyMonthlyAttendance,
   type TeamTabType,
 } from '@/components/teams'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ErrorView } from '@/components/layout/ErrorView'
 import type { MainStackParamList } from '@/navigation/types'
-import type { TeamAnnouncement } from '@swim-hub/shared/types/database'
 
 type TeamDetailScreenRouteProp = RouteProp<MainStackParamList, 'TeamDetail'>
 
 /**
  * チーム詳細画面
- * チーム情報、メンバー、お知らせ、練習、大会を表示
+ * チーム情報、メンバー、練習、大会、出欠を表示（閲覧専用）
  */
 export const TeamDetailScreen: React.FC = () => {
   const route = useRoute<TeamDetailScreenRouteProp>()
   const { teamId } = route.params
   const { supabase, user } = useAuth()
-  const deleteAnnouncementMutation = useDeleteAnnouncementMutation(supabase)
   const [activeTab, setActiveTab] = useState<TeamTabType>('members')
-  const [isAnnouncementFormVisible, setIsAnnouncementFormVisible] = useState(false)
-  const [editingAnnouncement, setEditingAnnouncement] = useState<TeamAnnouncement | undefined>()
+  const [isCopied, setIsCopied] = useState(false)
 
   // チームデータ取得
   const {
     currentTeam,
     members,
-    announcements,
     isLoading,
     isError,
     error,
@@ -45,15 +40,6 @@ export const TeamDetailScreen: React.FC = () => {
     teamId,
     enableRealtime: false, // モバイルでは一旦無効化
   })
-
-  // 現在のユーザーのメンバーシップ情報を取得
-  const currentUserMembership = useMemo(() => {
-    if (!user || !members) return null
-    return members.find((m) => m.user_id === user.id) || null
-  }, [user, members])
-
-  // 管理者かどうか
-  const isAdmin = currentUserMembership?.role === 'admin'
 
   // 招待コードをコピー
   const handleCopyInviteCode = async () => {
@@ -64,7 +50,8 @@ export const TeamDetailScreen: React.FC = () => {
       if (navigator.clipboard) {
         navigator.clipboard.writeText(currentTeam.invite_code).then(
           () => {
-            window.alert('招待コードをコピーしました')
+            setIsCopied(true)
+            setTimeout(() => setIsCopied(false), 2000)
           },
           () => {
             window.alert('コピーに失敗しました')
@@ -80,7 +67,8 @@ export const TeamDetailScreen: React.FC = () => {
         textArea.select()
         try {
           document.execCommand('copy')
-          window.alert('招待コードをコピーしました')
+          setIsCopied(true)
+          setTimeout(() => setIsCopied(false), 2000)
         } catch {
           window.alert('コピーに失敗しました')
         }
@@ -89,7 +77,8 @@ export const TeamDetailScreen: React.FC = () => {
     } else {
       try {
         await Clipboard.setStringAsync(currentTeam.invite_code)
-        Alert.alert('コピー完了', '招待コードをコピーしました', [{ text: 'OK' }])
+        setIsCopied(true)
+        setTimeout(() => setIsCopied(false), 2000)
       } catch {
         Alert.alert('エラー', 'コピーに失敗しました', [{ text: 'OK' }])
       }
@@ -140,62 +129,9 @@ export const TeamDetailScreen: React.FC = () => {
             isError={isError}
             error={error || null}
             currentUserId={user?.id || ''}
-            isCurrentUserAdmin={isAdmin}
+            isCurrentUserAdmin={false}
             onRetry={() => refetch()}
             onMemberChange={() => refetch()}
-          />
-        )
-      case 'announcements':
-        return (
-          <TeamAnnouncementList
-            announcements={announcements || []}
-            isLoading={isLoading}
-            isError={isError}
-            error={error || null}
-            isAdmin={isAdmin}
-            onRetry={() => refetch()}
-            onCreateNew={() => {
-              setEditingAnnouncement(undefined)
-              setIsAnnouncementFormVisible(true)
-            }}
-            onEdit={(announcement) => {
-              setEditingAnnouncement(announcement)
-              setIsAnnouncementFormVisible(true)
-            }}
-            onDelete={async (announcementId) => {
-              if (Platform.OS === 'web') {
-                const confirmed = window.confirm('このお知らせを削除しますか？\nこの操作は取り消せません。')
-                if (!confirmed) return
-              } else {
-                Alert.alert('削除確認', 'このお知らせを削除しますか？\nこの操作は取り消せません。', [
-                  { text: 'キャンセル', style: 'cancel' },
-                  {
-                    text: '削除',
-                    style: 'destructive',
-                    onPress: async () => {
-                      try {
-                        await deleteAnnouncementMutation.mutateAsync(announcementId)
-                        refetch()
-                      } catch (err) {
-                        const errorMessage = err instanceof Error ? err.message : '削除に失敗しました'
-                        Alert.alert('エラー', errorMessage, [{ text: 'OK' }])
-                      }
-                    },
-                  },
-                ])
-                return
-              }
-
-              try {
-                await deleteAnnouncementMutation.mutateAsync(announcementId)
-                refetch()
-              } catch (err) {
-                const errorMessage = err instanceof Error ? err.message : '削除に失敗しました'
-                if (Platform.OS === 'web') {
-                  window.alert(errorMessage)
-                }
-              }
-            }}
           />
         )
       case 'practices':
@@ -210,22 +146,8 @@ export const TeamDetailScreen: React.FC = () => {
             <Text style={styles.placeholderText}>大会機能は実装予定です</Text>
           </View>
         )
-      case 'bulkRegister':
-        if (!isAdmin) {
-          return (
-            <View style={styles.placeholderContainer}>
-              <Text style={styles.placeholderText}>管理者のみ利用可能です</Text>
-            </View>
-          )
-        }
-        return (
-          <TeamBulkRegisterForm
-            teamId={teamId}
-            onSuccess={() => {
-              refetch()
-            }}
-          />
-        )
+      case 'attendance':
+        return <MyMonthlyAttendance teamId={teamId} />
       default:
         return null
     }
@@ -233,44 +155,37 @@ export const TeamDetailScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* チーム情報 */}
-        <View style={styles.teamInfo}>
-          <Text style={styles.teamName}>{currentTeam.name}</Text>
-          {currentTeam.description && (
-            <Text style={styles.teamDescription}>{currentTeam.description}</Text>
-          )}
-          {currentTeam.invite_code && (
-            <Pressable style={styles.inviteCodeContainer} onPress={handleCopyInviteCode}>
-              <View style={styles.inviteCodeContent}>
-                <Text style={styles.inviteCodeLabel}>招待コード:</Text>
-                <Text style={styles.inviteCode}>{currentTeam.invite_code}</Text>
-              </View>
-              <Text style={styles.copyHint}>タップしてコピー</Text>
-            </Pressable>
-          )}
-        </View>
+      {/* チーム情報（固定） */}
+      <View style={styles.teamInfo}>
+        <Text style={styles.teamName}>{currentTeam.name}</Text>
+        {currentTeam.description && (
+          <Text style={styles.teamDescription}>{currentTeam.description}</Text>
+        )}
+        {currentTeam.invite_code && (
+          <View style={styles.inviteCodeContainer}>
+            <View style={styles.inviteCodeContent}>
+              <Text style={styles.inviteCodeLabel}>招待コード:</Text>
+              <Text style={styles.inviteCode}>{currentTeam.invite_code}</Text>
+              <Pressable style={styles.copyButton} onPress={handleCopyInviteCode}>
+                <Feather
+                  name={isCopied ? 'check' : 'clipboard'}
+                  size={16}
+                  color={isCopied ? '#10B981' : '#374151'}
+                />
+                <Text style={[styles.copyButtonText, isCopied && styles.copyButtonTextSuccess]}>
+                  コピー
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
+      </View>
 
-        {/* タブ */}
-        <TeamTabs activeTab={activeTab} onTabChange={setActiveTab} isAdmin={isAdmin} />
+      {/* タブ（固定） */}
+      <TeamTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-        {/* タブコンテンツ */}
-        <View style={styles.tabContent}>{renderTabContent()}</View>
-      </ScrollView>
-
-      {/* お知らせ作成・編集フォーム */}
-      <TeamAnnouncementForm
-        visible={isAnnouncementFormVisible}
-        onClose={() => {
-          setIsAnnouncementFormVisible(false)
-          setEditingAnnouncement(undefined)
-        }}
-        teamId={teamId}
-        editData={editingAnnouncement}
-        onSuccess={() => {
-          refetch()
-        }}
-      />
+      {/* タブコンテンツ（スクロール可能） */}
+      <View style={styles.tabContent}>{renderTabContent()}</View>
     </View>
   )
 }
@@ -279,12 +194,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#EFF6FF',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 16,
   },
   teamInfo: {
     backgroundColor: '#FFFFFF',
@@ -324,7 +233,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 4,
   },
   inviteCodeLabel: {
     fontSize: 14,
@@ -332,15 +240,26 @@ const styles = StyleSheet.create({
     color: '#374151',
   },
   inviteCode: {
+    flex: 1,
     fontSize: 14,
     fontWeight: '600',
     color: '#2563EB',
     fontFamily: 'monospace',
   },
-  copyHint: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontStyle: 'italic',
+  copyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    padding: 4,
+    borderRadius: 4,
+  },
+  copyButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  copyButtonTextSuccess: {
+    color: '#10B981',
   },
   tabContent: {
     flex: 1,

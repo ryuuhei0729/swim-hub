@@ -2,7 +2,7 @@ import React from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 
-export type TeamTabType = 'members' | 'announcements' | 'practices' | 'competitions' | 'bulkRegister'
+export type TeamTabType = 'members' | 'practices' | 'competitions' | 'attendance'
 
 export interface TeamTabsProps {
   activeTab: TeamTabType
@@ -10,16 +10,11 @@ export interface TeamTabsProps {
   isAdmin?: boolean
 }
 
-const tabs: { id: TeamTabType; name: string; icon: keyof typeof Feather.glyphMap; adminOnly?: boolean }[] = [
+const tabs: { id: TeamTabType; name: string; icon: keyof typeof Feather.glyphMap }[] = [
   {
     id: 'members',
     name: 'メンバー',
     icon: 'users',
-  },
-  {
-    id: 'announcements',
-    name: 'お知らせ',
-    icon: 'bell',
   },
   {
     id: 'practices',
@@ -32,20 +27,19 @@ const tabs: { id: TeamTabType; name: string; icon: keyof typeof Feather.glyphMap
     icon: 'award',
   },
   {
-    id: 'bulkRegister',
-    name: '一括登録',
+    id: 'attendance',
+    name: '出欠',
     icon: 'clipboard',
-    adminOnly: true,
   },
 ]
 
 /**
  * チームタブコンポーネント
- * メンバー、お知らせ、練習、大会、一括登録のタブ切り替え
+ * メンバー、練習、大会、出欠のタブ切り替え（閲覧専用）
  */
-export const TeamTabs: React.FC<TeamTabsProps> = ({ activeTab, onTabChange, isAdmin = false }) => {
-  // 管理者のみ表示されるタブをフィルタリング
-  const visibleTabs = tabs.filter((tab) => !tab.adminOnly || isAdmin)
+export const TeamTabs: React.FC<TeamTabsProps> = ({ activeTab, onTabChange }) => {
+  // 一般ページは閲覧専用のため、全てのタブを表示
+  const visibleTabs = tabs
 
   return (
     <View style={styles.container}>

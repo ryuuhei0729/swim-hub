@@ -224,56 +224,123 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
             ) : (
               <>
               <View style={styles.entriesContainer}>
-                {entries.map((item) => {
-                  const title = getEntryTitle(item)
-                  const color = getEntryColor(item.type)
-                  const typeLabel = getEntryTypeLabel(item.type)
-                  const isPractice = item.type === 'practice' || item.type === 'team_practice'
-                  const isPracticeLog = item.type === 'practice_log'
-                  const practiceId = item.metadata?.practice_id || item.id
+                {(() => {
+                  // 記録を大会ごとにグループ化
+                  const recordItems = entries.filter(e => e.type === 'record')
+                  const otherItems = entries.filter(e => e.type !== 'record')
                   
-                  // Competitionの場合、そのCompetitionにエントリーや記録があるかどうかを判定
-                  const isCompetition = item.type === 'competition' || item.type === 'team_competition'
-                  const competitionId = isCompetition ? item.id : null
-                  const hasEntriesOrRecords = isCompetition && competitionId
-                    ? entries.some(
-                        (e) =>
-                          (e.type === 'entry' || e.type === 'record') &&
-                          (e.metadata?.competition?.id === competitionId ||
-                            e.metadata?.entry?.competition_id === competitionId ||
-                            e.metadata?.record?.competition_id === competitionId)
-                      )
-                    : false
-
+                  // 記録を大会IDでグループ化
+                  const recordsByCompetition = new Map<string, CalendarItem[]>()
+                  recordItems.forEach(record => {
+                    const competitionId = record.metadata?.competition?.id || 
+                                       record.metadata?.record?.competition_id || 
+                                       record.id
+                    if (!recordsByCompetition.has(competitionId)) {
+                      recordsByCompetition.set(competitionId, [])
+                    }
+                    recordsByCompetition.get(competitionId)!.push(record)
+                  })
+                  
                   return (
-                    <MemoizedPracticeLogDetail
-                      key={`${item.type}-${item.id}`}
-                      item={item}
-                      title={title}
-                      color={color}
-                      typeLabel={typeLabel}
-                      isPractice={isPractice}
-                      isPracticeLog={isPracticeLog}
-                      practiceId={practiceId}
-                      hasEntriesOrRecords={hasEntriesOrRecords}
-                      onEntryPress={onEntryPress}
-                      onClose={onClose}
-                      onEditPractice={onEditPractice}
-                      onDeletePractice={onDeletePractice}
-                      onAddPracticeLog={onAddPracticeLog}
-                      onEditPracticeLog={onEditPracticeLog}
-                      onDeletePracticeLog={onDeletePracticeLog}
-                      onEditRecord={onEditRecord}
-                      onDeleteRecord={onDeleteRecord}
-                      onEditEntry={onEditEntry}
-                      onDeleteEntry={onDeleteEntry}
-                      onAddEntry={onAddEntry}
-                      onEditCompetition={onEditCompetition}
-                      onDeleteCompetition={onDeleteCompetition}
-                      onPracticeTimeLoaded={handlePracticeTimeLoaded}
-                    />
+                    <>
+                      {/* 記録以外のエントリー */}
+                      {otherItems.map((item) => {
+                        const title = getEntryTitle(item)
+                        const color = getEntryColor(item.type)
+                        const typeLabel = getEntryTypeLabel(item.type)
+                        const isPractice = item.type === 'practice' || item.type === 'team_practice'
+                        const isPracticeLog = item.type === 'practice_log'
+                        const practiceId = item.metadata?.practice_id || item.id
+                        
+                        // Competitionの場合、そのCompetitionにエントリーや記録があるかどうかを判定
+                        const isCompetition = item.type === 'competition' || item.type === 'team_competition'
+                        const competitionId = isCompetition ? item.id : null
+                        const hasEntriesOrRecords = isCompetition && competitionId
+                          ? entries.some(
+                              (e) =>
+                                (e.type === 'entry' || e.type === 'record') &&
+                                (e.metadata?.competition?.id === competitionId ||
+                                  e.metadata?.entry?.competition_id === competitionId ||
+                                  e.metadata?.record?.competition_id === competitionId)
+                            )
+                          : false
+
+                        return (
+                          <MemoizedPracticeLogDetail
+                            key={`${item.type}-${item.id}`}
+                            item={item}
+                            title={title}
+                            color={color}
+                            typeLabel={typeLabel}
+                            isPractice={isPractice}
+                            isPracticeLog={isPracticeLog}
+                            practiceId={practiceId}
+                            hasEntriesOrRecords={hasEntriesOrRecords}
+                            onEntryPress={onEntryPress}
+                            onClose={onClose}
+                            onEditPractice={onEditPractice}
+                            onDeletePractice={onDeletePractice}
+                            onAddPracticeLog={onAddPracticeLog}
+                            onEditPracticeLog={onEditPracticeLog}
+                            onDeletePracticeLog={onDeletePracticeLog}
+                            onEditRecord={onEditRecord}
+                            onDeleteRecord={onDeleteRecord}
+                            onEditEntry={onEditEntry}
+                            onDeleteEntry={onDeleteEntry}
+                            onAddEntry={onAddEntry}
+                            onEditCompetition={onEditCompetition}
+                            onDeleteCompetition={onDeleteCompetition}
+                            onPracticeTimeLoaded={handlePracticeTimeLoaded}
+                          />
+                        )
+                      })}
+                      
+                      {/* 記録を大会ごとに表示 */}
+                      {Array.from(recordsByCompetition.entries()).map(([competitionId, records]) => {
+                        const firstRecord = records[0]
+                        const competitionName = firstRecord.metadata?.competition?.title || firstRecord.title || '大会'
+                        const place = firstRecord.place || firstRecord.metadata?.competition?.place || ''
+                        const poolType = firstRecord.metadata?.competition?.pool_type ?? firstRecord.metadata?.pool_type ?? 0
+                        const note = firstRecord.note || undefined
+                        
+                        return (
+                          <RecordDetail
+                            key={`competition-${competitionId}`}
+                            competitionId={competitionId}
+                            competitionName={competitionName}
+                            place={place}
+                            poolType={poolType}
+                            note={note}
+                            records={records}
+                            onEditCompetition={() => {
+                              const competitionItem = entries.find(e => 
+                                (e.type === 'competition' || e.type === 'team_competition') && e.id === competitionId
+                              )
+                              if (competitionItem && onEditCompetition) {
+                                onEditCompetition(competitionItem)
+                                onClose()
+                              }
+                            }}
+                            onDeleteCompetition={() => {
+                              if (onDeleteCompetition) {
+                                onDeleteCompetition(competitionId)
+                              }
+                            }}
+                            onAddRecord={() => {
+                              if (onAddRecord) {
+                                onAddRecord(date)
+                                onClose()
+                              }
+                            }}
+                            onEditRecord={onEditRecord}
+                            onDeleteRecord={onDeleteRecord}
+                            onClose={onClose}
+                          />
+                        )
+                      })}
+                    </>
                   )
-                })}
+                })()}
               </View>
                 {/* 記録追加セクション */}
                 <View style={styles.addRecordSection}>
@@ -1143,6 +1210,396 @@ const TimeTable: React.FC<{
 // TimeTableをメモ化して不要な再レンダリングを防ぐ
 const MemoizedTimeTable = React.memo(TimeTable)
 
+/**
+ * 記録詳細表示コンポーネント（大会ごとにグループ化）
+ */
+const RecordDetail: React.FC<{
+  competitionId: string
+  competitionName: string
+  place?: string
+  poolType?: number
+  note?: string
+  records: CalendarItem[]
+  onEditCompetition?: () => void
+  onDeleteCompetition?: () => void
+  onAddRecord?: () => void
+  onEditRecord?: (item: CalendarItem) => void
+  onDeleteRecord?: (recordId: string) => void
+  onClose?: () => void
+}> = ({
+  competitionId: _competitionId,
+  competitionName,
+  place,
+  poolType,
+  note,
+  records,
+  onEditCompetition,
+  onDeleteCompetition,
+  onAddRecord,
+  onEditRecord,
+  onDeleteRecord,
+  onClose,
+}) => {
+  const { supabase, user } = useAuth()
+  const [actualRecords, setActualRecords] = useState<Array<{
+    id: string
+    styleName: string
+    time: number
+    reactionTime: number | null
+    isRelaying: boolean
+    note: string | null
+    styleId: number
+    styleDistance: number
+  }>>([])
+  const [loading, setLoading] = useState(true)
+  const [splitTimesMap, setSplitTimesMap] = useState<Map<string, Array<{ distance: number; split_time: number }>>>(new Map())
+  const [loadingSplits, setLoadingSplits] = useState<Set<string>>(new Set())
+
+  // プール種別のテキストを取得
+  const getPoolTypeText = (poolType: number): string => {
+    return poolType === 1 ? '長水路(50m)' : '短水路(25m)'
+  }
+
+  // 記録データを取得
+  useEffect(() => {
+    const loadRecords = async () => {
+      try {
+        setLoading(true)
+        let query = supabase
+          .from('records')
+          .select(`
+            id,
+            time,
+            reaction_time,
+            is_relaying,
+            note,
+            style_id,
+            style:styles(id, name_jp, distance)
+          `)
+          .eq('competition_id', _competitionId)
+
+        // チーム大会の場合は自分の記録だけを表示
+        const isTeamCompetition = records[0]?.metadata?.team_id != null
+        if (isTeamCompetition && user?.id) {
+          query = query.eq('user_id', user.id)
+        }
+
+        const { data, error } = await query
+
+        if (error) throw error
+
+        type RecordFromDB = {
+          id: string
+          time: number
+          reaction_time: number | null
+          is_relaying: boolean
+          note: string | null
+          style_id: number
+          style: {
+            id: number
+            name_jp: string
+            distance: number
+          } | {
+            id: number
+            name_jp: string
+            distance: number
+          }[] | null
+        }
+        const recordsData = (data || []) as unknown as RecordFromDB[]
+        const formattedRecords = recordsData.map((record) => {
+          const style = Array.isArray(record.style) ? record.style[0] : record.style
+          return {
+            id: record.id,
+            styleName: style?.name_jp || '',
+            time: record.time || 0,
+            reactionTime: record.reaction_time ?? null,
+            isRelaying: record.is_relaying || false,
+            note: record.note,
+            styleId: record.style_id,
+            styleDistance: style?.distance || 0,
+          }
+        })
+
+        setActualRecords(formattedRecords)
+      } catch (err) {
+        console.error('記録の取得エラー:', err)
+        setActualRecords([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadRecords()
+  }, [_competitionId, supabase, user?.id, records])
+
+  // スプリットタイムを取得
+  useEffect(() => {
+    const loadSplitTimes = async () => {
+      const recordIds = actualRecords.map(r => r.id)
+      const recordsToLoad = recordIds.filter(id => !loadingSplits.has(id))
+      
+      if (recordsToLoad.length === 0) return
+
+      for (const recordId of recordsToLoad) {
+        try {
+          setLoadingSplits(prev => new Set(prev).add(recordId))
+          const { data, error } = await supabase
+            .from('split_times')
+            .select('distance, split_time')
+            .eq('record_id', recordId)
+            .order('distance', { ascending: true })
+
+          if (error) throw error
+          
+          if (data && data.length > 0) {
+            setSplitTimesMap(prev => {
+              const newMap = new Map(prev)
+              newMap.set(recordId, data.map(st => ({
+                distance: st.distance,
+                split_time: st.split_time
+              })))
+              return newMap
+            })
+          }
+        } catch (error) {
+          console.error('スプリットタイム取得エラー:', error)
+        } finally {
+          setLoadingSplits(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(recordId)
+            return newSet
+          })
+        }
+      }
+    }
+
+    loadSplitTimes()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actualRecords, supabase])
+
+  return (
+    <View style={styles.competitionRecordContainer}>
+      {/* 大会ヘッダー */}
+      <View style={styles.competitionHeader}>
+        <View style={styles.competitionHeaderContent}>
+          <View style={styles.competitionHeaderLeft}>
+            <View style={styles.competitionHeaderBar} />
+            <Text style={styles.competitionHeaderTitle}>{competitionName}</Text>
+          </View>
+          <View style={styles.competitionHeaderActions}>
+            {onEditCompetition && (
+              <Pressable
+                style={styles.competitionHeaderButton}
+                onPress={onEditCompetition}
+              >
+                <MaterialIcons name="edit" size={20} color="#2563EB" />
+              </Pressable>
+            )}
+            {onDeleteCompetition && (
+              <Pressable
+                style={styles.competitionHeaderButton}
+                onPress={onDeleteCompetition}
+              >
+                <Feather name="trash-2" size={20} color="#EF4444" />
+              </Pressable>
+            )}
+          </View>
+        </View>
+        {(place || poolType !== undefined) && (
+          <View style={styles.competitionHeaderInfo}>
+            {place && (
+              <View style={styles.competitionHeaderInfoItem}>
+                <Feather name="map-pin" size={14} color="#6B7280" />
+                <Text style={styles.competitionHeaderInfoText}>{place}</Text>
+              </View>
+            )}
+            {poolType !== undefined && (
+              <View style={styles.competitionHeaderInfoItem}>
+                <MaterialIcons name="pool" size={14} color="#6B7280" />
+                <Text style={styles.competitionHeaderInfoText}>{getPoolTypeText(poolType)}</Text>
+              </View>
+            )}
+          </View>
+        )}
+        {note && (
+          <Text style={styles.competitionHeaderNote}>{note}</Text>
+        )}
+      </View>
+
+      {/* 記録カード一覧 */}
+      <View style={styles.recordsList}>
+        {loading ? (
+          <View style={styles.recordCard}>
+            <Text style={styles.loadingText}>記録を読み込み中...</Text>
+          </View>
+        ) : actualRecords.length === 0 ? (
+          <View style={styles.recordCard}>
+            <Text style={styles.emptyText}>記録がありません</Text>
+            {onAddRecord && (
+              <Pressable
+                style={styles.addCompetitionRecordButton}
+                onPress={() => {
+                  onAddRecord()
+                  onClose?.()
+                }}
+              >
+                <MaterialIcons name="add" size={18} color="#2563EB" />
+                <Text style={styles.addCompetitionRecordButtonText}>大会記録を追加</Text>
+              </Pressable>
+            )}
+          </View>
+        ) : (
+          actualRecords.map((record) => {
+            const splits = splitTimesMap.get(record.id) || []
+
+            return (
+              <View key={record.id} style={styles.recordCard}>
+              {/* 記録内容カード */}
+              <View style={styles.recordContentCard}>
+                {/* 編集・削除ボタン（右上） */}
+                <View style={styles.recordCardActions}>
+                  <View style={styles.recordCardActionsRow}>
+                    {onEditRecord && (
+                      <Pressable
+                        style={styles.recordCardActionButton}
+                        onPress={async () => {
+                          // 記録の完全なデータを取得してから編集
+                          try {
+                            const { data: fullRecord } = await supabase
+                              .from('records')
+                              .select(`
+                                *,
+                                style:styles(*),
+                                competition:competitions(*),
+                                split_times(*)
+                              `)
+                              .eq('id', record.id)
+                              .single()
+
+                            if (fullRecord) {
+                              // CalendarItem形式に変換
+                              const calendarItem: CalendarItem = {
+                                id: fullRecord.id,
+                                type: 'record',
+                                date: records[0]?.date || fullRecord.competition?.date || '',
+                                title: fullRecord.style?.name_jp || record.styleName,
+                                place: place || fullRecord.competition?.place || undefined,
+                                note: fullRecord.note || undefined,
+                                metadata: {
+                                  record: {
+                                    time: fullRecord.time,
+                                    is_relaying: fullRecord.is_relaying || false,
+                                    reaction_time: fullRecord.reaction_time ?? null,
+                                    style: {
+                                      id: fullRecord.style?.id?.toString() || record.styleId.toString(),
+                                      name_jp: fullRecord.style?.name_jp || record.styleName,
+                                      distance: fullRecord.style?.distance || record.styleDistance,
+                                    },
+                                    competition_id: fullRecord.competition_id || _competitionId,
+                                    split_times: fullRecord.split_times || [],
+                                  },
+                                  competition: fullRecord.competition || records[0]?.metadata?.competition,
+                                  style: fullRecord.style || {
+                                    id: record.styleId,
+                                    name_jp: record.styleName,
+                                    distance: record.styleDistance,
+                                  },
+                                  pool_type: fullRecord.competition?.pool_type ?? poolType ?? 0,
+                                },
+                              }
+                              onEditRecord(calendarItem)
+                              onClose?.()
+                            }
+                          } catch (error) {
+                            console.error('記録編集データ取得エラー:', error)
+                          }
+                        }}
+                      >
+                        <MaterialIcons name="edit" size={18} color="#2563EB" />
+                      </Pressable>
+                    )}
+                    {onDeleteRecord && (
+                      <Pressable
+                        style={styles.recordCardActionButton}
+                        onPress={() => onDeleteRecord(record.id)}
+                      >
+                        <Feather name="trash-2" size={18} color="#EF4444" />
+                      </Pressable>
+                    )}
+                  </View>
+                </View>
+
+                {/* 種目とタイム */}
+                <View style={styles.recordInfoGrid}>
+                  <View style={styles.recordInfoRow}>
+                    <Text style={styles.recordInfoLabel}>種目</Text>
+                    <Text style={styles.recordStyleValue}>
+                      {record.styleName}
+                      {record.isRelaying && <Text style={styles.recordRelayBadge}> R</Text>}
+                    </Text>
+                  </View>
+                  <View style={styles.recordInfoRow}>
+                    <Text style={styles.recordInfoLabel}>タイム</Text>
+                    <View style={styles.recordTimeContainer}>
+                      <Text style={styles.recordTimeValue}>{formatTime(record.time)}</Text>
+                      {record.reactionTime != null && typeof record.reactionTime === 'number' && (
+                        <Text style={styles.recordReactionTimeInline}>
+                          (RT {record.reactionTime.toFixed(2)})
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                </View>
+              </View>
+
+              {/* スプリットタイム */}
+              {splits.length > 0 && (
+                <View style={styles.splitTimesContainer}>
+                  <View style={styles.splitTimesHeader}>
+                    <View style={styles.splitTimesHeaderBar} />
+                    <Text style={styles.splitTimesHeaderText}>スプリットタイム</Text>
+                  </View>
+                  <View style={styles.splitTimesList}>
+                    {splits.map((split, index) => (
+                      <View key={index} style={styles.splitTimeItem}>
+                        <Text style={styles.splitTimeDistance}>{split.distance}m</Text>
+                        <Text style={styles.splitTimeValue}>{formatTime(split.split_time)}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* メモ */}
+              {record.note && (
+                <View style={styles.recordNoteContainer}>
+                  <Text style={styles.recordNoteLabel}>メモ</Text>
+                  <Text style={styles.recordNoteText}>{record.note}</Text>
+                </View>
+              )}
+            </View>
+            )
+          })
+        )}
+
+        {/* 大会記録を追加ボタン */}
+        {onAddRecord && (
+          <Pressable
+            style={styles.addCompetitionRecordButton}
+            onPress={() => {
+              onAddRecord()
+              onClose?.()
+            }}
+          >
+            <MaterialIcons name="add" size={18} color="#2563EB" />
+            <Text style={styles.addCompetitionRecordButtonText}>大会記録を追加</Text>
+          </Pressable>
+        )}
+      </View>
+    </View>
+  )
+}
+
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
@@ -1556,5 +2013,226 @@ const styles = StyleSheet.create({
   noteText: {
     fontSize: 14,
     color: '#374151',
+  },
+  // RecordDetail用のスタイル
+  competitionRecordContainer: {
+    marginBottom: 20,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+  },
+  competitionHeader: {
+    marginBottom: 12,
+  },
+  competitionHeaderContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  competitionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  competitionHeaderBar: {
+    width: 4,
+    height: 20,
+    backgroundColor: '#2563EB',
+    borderRadius: 2,
+    marginRight: 8,
+  },
+  competitionHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1E40AF',
+    flex: 1,
+  },
+  competitionHeaderActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  competitionHeaderButton: {
+    padding: 4,
+  },
+  competitionHeaderInfo: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 4,
+  },
+  competitionHeaderInfoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  competitionHeaderInfoText: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  competitionHeaderNote: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  recordsList: {
+    gap: 12,
+  },
+  recordCard: {
+    backgroundColor: '#DBEAFE',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#93C5FD',
+  },
+  recordContentCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#93C5FD',
+    position: 'relative',
+  },
+  recordCardActions: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  recordCardActionsRow: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  recordCardActionButton: {
+    padding: 4,
+  },
+  recordReactionTime: {
+    fontSize: 10,
+    color: '#6B7280',
+  },
+  recordInfoGrid: {
+    marginTop: 8,
+    gap: 8,
+  },
+  recordInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  recordInfoLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+    minWidth: 50,
+  },
+  recordStyleValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1E40AF',
+    flex: 1,
+  },
+  recordRelayBadge: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#DC2626',
+  },
+  recordTimeContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+    flex: 1,
+    flexWrap: 'wrap',
+  },
+  recordTimeValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1E40AF',
+  },
+  recordReactionTimeInline: {
+    fontSize: 11,
+    color: '#6B7280',
+  },
+  splitTimesContainer: {
+    marginTop: 8,
+  },
+  splitTimesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  splitTimesHeaderBar: {
+    width: 3,
+    height: 16,
+    backgroundColor: '#2563EB',
+    borderRadius: 2,
+    marginRight: 6,
+  },
+  splitTimesHeaderText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E40AF',
+  },
+  splitTimesList: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#93C5FD',
+  },
+  splitTimeItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  splitTimeDistance: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  splitTimeValue: {
+    fontSize: 14,
+    color: '#1E40AF',
+    fontWeight: '600',
+  },
+  recordNoteContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  recordNoteLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  recordNoteText: {
+    fontSize: 14,
+    color: '#374151',
+  },
+  addCompetitionRecordButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#DBEAFE',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#93C5FD',
+    gap: 6,
+  },
+  addCompetitionRecordButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E40AF',
   },
 })

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert } from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthProvider'
 import {
   useCreateRecordMutation,
@@ -28,6 +29,7 @@ export const RecordFormScreen: React.FC = () => {
   const navigation = useNavigation<RecordFormScreenNavigationProp>()
   const { recordId } = route.params || {}
   const { supabase } = useAuth()
+  const queryClient = useQueryClient()
   const isEditMode = !!recordId
 
   // Zustandストア
@@ -244,6 +246,9 @@ export const RecordFormScreen: React.FC = () => {
           splitTimes: splitTimeInserts,
         })
       }
+
+      // カレンダーのクエリを無効化してリフレッシュ
+      queryClient.invalidateQueries({ queryKey: ['calendar'] })
 
       // 成功: 前の画面に戻る
       reset()
