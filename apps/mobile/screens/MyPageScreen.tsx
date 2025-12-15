@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react'
-import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native'
+import { View, Text, ScrollView, StyleSheet, Pressable, RefreshControl } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/contexts/AuthProvider'
 import { useUserQuery } from '@apps/shared/hooks/queries/user'
@@ -22,6 +22,7 @@ export const MyPageScreen: React.FC = () => {
   const { supabase, user } = useAuth()
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
 
   // プロフィールとチーム情報取得
   const {
@@ -51,6 +52,16 @@ export const MyPageScreen: React.FC = () => {
   const error = profileErrorObj
   const bestTimesErrorMessage =
     bestTimesErrorObj instanceof Error ? bestTimesErrorObj.message : undefined
+
+  // プルリフレッシュ処理
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true)
+    try {
+      await Promise.all([refetchProfile(), refetchBestTimes()])
+    } finally {
+      setRefreshing(false)
+    }
+  }, [refetchProfile, refetchBestTimes])
 
   // プロフィール更新処理
   const handleProfileUpdate = useCallback(
@@ -139,7 +150,18 @@ export const MyPageScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#2563EB']}
+            tintColor="#2563EB"
+          />
+        }
+      >
         {/* ヘッダー */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>マイページ</Text>

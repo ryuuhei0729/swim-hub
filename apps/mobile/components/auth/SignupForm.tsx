@@ -204,6 +204,9 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleSubmit}
             disabled={loading}
+            accessibilityRole="button"
+            accessibilityLabel="アカウント作成"
+            accessibilityState={{ disabled: loading }}
           >
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />

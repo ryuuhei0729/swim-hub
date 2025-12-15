@@ -193,7 +193,7 @@ export const PracticeFormScreen: React.FC = () => {
       }
 
       if (isEditMode && practiceId) {
-        // 編集モードではこのボタンは表示されない想定
+        // 編集モード: 練習を更新
         await updateMutation.mutateAsync({
           id: practiceId,
           updates: formData,
@@ -329,20 +329,18 @@ export const PracticeFormScreen: React.FC = () => {
           </Pressable>
         </View>
 
-        {/* 続けて練習ログを作成ボタン（作成モードのみ） */}
-        {!isEditMode && (
-          <Pressable
-            style={[styles.continueButton, storeLoading && styles.buttonDisabled]}
-            onPress={handleContinueToLog}
-            disabled={storeLoading}
-          >
-            {storeLoading ? (
-              <LoadingSpinner size="small" color="#2563EB" />
-            ) : (
-              <Text style={styles.continueButtonText}>続けて練習ログを作成</Text>
-            )}
-          </Pressable>
-        )}
+        {/* 続けて練習ログを作成ボタン */}
+        <Pressable
+          style={[styles.continueButton, storeLoading && styles.buttonDisabled]}
+          onPress={handleContinueToLog}
+          disabled={storeLoading}
+        >
+          {storeLoading ? (
+            <LoadingSpinner size="small" color="#2563EB" />
+          ) : (
+            <Text style={styles.continueButtonText}>続けて練習ログを作成</Text>
+          )}
+        </Pressable>
       </View>
     </ScrollView>
   )

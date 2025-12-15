@@ -10,6 +10,7 @@
     "dev": "npm run dev --workspace=apps/web",
     "dev:web": "npm run dev --workspace=apps/web",
     "dev:mobile": "cd apps/mobile && npm start",
+    "dev:mobile:clear": "cd apps/mobile && npm run start:clear",
     "build": "npm run build --workspace=apps/web",
     "build:web": "npm run build --workspace=apps/web",
     "build:mobile:android": "cd apps/mobile && eas build -p android",

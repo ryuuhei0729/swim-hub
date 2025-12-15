@@ -3,6 +3,7 @@
 // =============================================================================
 
 import { cleanup } from '@testing-library/react'
+import React from 'react'
 import { afterEach, vi } from 'vitest'
 
 // 各テスト後にクリーンアップ
@@ -140,20 +141,20 @@ vi.mock('@react-navigation/native', () => ({
     goBack: vi.fn(),
     setOptions: vi.fn(),
   }),
-  NavigationContainer: ({ children }: any) => children,
+  NavigationContainer: ({ children }: { children: React.ReactNode }) => children,
   useFocusEffect: vi.fn((callback) => callback()),
 }))
 
 vi.mock('@react-navigation/native-stack', () => ({
   createNativeStackNavigator: () => ({
-    Navigator: ({ children }: any) => children,
+    Navigator: ({ children }: { children: React.ReactNode }) => children,
     Screen: () => null,
   }),
 }))
 
 vi.mock('@react-navigation/bottom-tabs', () => ({
   createBottomTabNavigator: () => ({
-    Navigator: ({ children }: any) => children,
+    Navigator: ({ children }: { children: React.ReactNode }) => children,
     Screen: () => null,
   }),
 }))

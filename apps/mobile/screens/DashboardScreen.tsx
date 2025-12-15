@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react'
-import { ScrollView, StyleSheet } from 'react-native'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import { ScrollView, StyleSheet, RefreshControl } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -11,7 +11,9 @@ import { DayDetailModal } from '@/components/calendar'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ErrorView } from '@/components/layout/ErrorView'
 import { useDeletePracticeMutation } from '@apps/shared/hooks/queries/practices'
+import { useDeleteRecordMutation, useDeleteCompetitionMutation } from '@apps/shared/hooks/queries/records'
 import { PracticeAPI } from '@apps/shared/api/practices'
+import { EntryAPI } from '@apps/shared/api/entries'
 import { Alert } from 'react-native'
 import type { MainStackParamList } from '@/navigation/types'
 import type { CalendarItem } from '@apps/shared/types/ui'
@@ -28,6 +30,7 @@ export const DashboardScreen: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [showDayDetail, setShowDayDetail] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
 
   // カレンダーデータ取得
   const {
@@ -40,6 +43,26 @@ export const DashboardScreen: React.FC = () => {
     currentDate,
   })
 
+  // デバッグ: recordタイプのアイテムをログ出力
+  useEffect(() => {
+    if (entries.length > 0) {
+      const recordItems = entries.filter(item => item.type === 'record')
+      if (recordItems.length > 0) {
+        console.log('[DashboardScreen] Record items found:', recordItems.length)
+        console.log('[DashboardScreen] Record items:', recordItems.map(item => ({
+          id: item.id,
+          type: item.type,
+          date: item.date,
+          title: item.title,
+          metadata: item.metadata,
+        })))
+      } else {
+        console.log('[DashboardScreen] No record items found in entries')
+        console.log('[DashboardScreen] All entry types:', entries.map(item => item.type))
+      }
+    }
+  }, [entries])
+
   // 選択した日付のエントリーを取得
   const selectedDateEntries = useMemo(() => {
     if (!selectedDate) return []
@@ -47,6 +70,16 @@ export const DashboardScreen: React.FC = () => {
     const dateKey = formatDate(selectedDate, 'yyyy-MM-dd')
     return entries.filter((item) => item.date === dateKey)
   }, [selectedDate, entries])
+
+  // プルリフレッシュ処理
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true)
+    try {
+      await refetch()
+    } finally {
+      setRefreshing(false)
+    }
+  }, [refetch])
 
   // 前月へ
   const handlePrevMonth = () => {
@@ -97,7 +130,7 @@ export const DashboardScreen: React.FC = () => {
   // 大会記録追加
   const handleAddRecord = (date: Date) => {
     const dateParam = formatDate(date, 'yyyy-MM-dd')
-    navigation.navigate('RecordForm', { date: dateParam })
+    navigation.navigate('CompetitionForm', { date: dateParam })
   }
 
   // 練習編集
@@ -185,6 +218,194 @@ export const DashboardScreen: React.FC = () => {
     )
   }
 
+  // 記録編集
+  const handleEditRecord = async (item: CalendarItem) => {
+    console.log('handleEditRecord - item:', item)
+    console.log('handleEditRecord - item.id:', item.id)
+    console.log('handleEditRecord - item.metadata:', item.metadata)
+    
+    const dateParam = item.date
+    
+    // competitionIdを取得（複数のパスを試す）
+    // type='record'の場合、item.idはcompetitionのIDなので、それをcompetitionIdとして使用
+    const competitionId = item.metadata?.competition?.id || item.metadata?.record?.competition_id || item.id
+    
+    if (!competitionId) {
+      Alert.alert('エラー', '大会情報が見つかりませんでした')
+      return
+    }
+    
+    // competitionIdを使って、最初のrecordを取得
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        Alert.alert('エラー', '認証が必要です')
+        return
+      }
+      
+      const { data: records, error } = await supabase
+        .from('records')
+        .select('id')
+        .eq('competition_id', competitionId)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+      
+      if (error) {
+        console.error('記録取得エラー:', error)
+        Alert.alert('エラー', '記録の取得に失敗しました')
+        return
+      }
+      
+      if (!records || records.length === 0) {
+        Alert.alert('エラー', '記録が見つかりませんでした')
+        return
+      }
+      
+      const recordId = records[0].id
+      console.log('handleEditRecord - recordId:', recordId)
+      console.log('handleEditRecord - competitionId:', competitionId)
+      
+      navigation.navigate('RecordLogForm', {
+        competitionId,
+        recordId,
+        date: dateParam,
+      })
+    } catch (error) {
+      console.error('記録取得エラー:', error)
+      Alert.alert('エラー', '記録の取得に失敗しました')
+    }
+  }
+
+  // 記録削除
+  const deleteRecordMutation = useDeleteRecordMutation(supabase)
+  const handleDeleteRecord = async (recordId: string) => {
+    Alert.alert(
+      '削除確認',
+      'この大会記録を削除しますか？\nこの操作は取り消せません。',
+      [
+        {
+          text: 'キャンセル',
+          style: 'cancel',
+        },
+        {
+          text: '削除',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteRecordMutation.mutateAsync(recordId)
+              refetch() // カレンダーをリフレッシュ
+            } catch (error) {
+              console.error('削除エラー:', error)
+              Alert.alert(
+                'エラー',
+                error instanceof Error ? error.message : '削除に失敗しました',
+                [{ text: 'OK' }]
+              )
+            }
+          },
+        },
+      ]
+    )
+  }
+
+  // エントリー編集
+  const handleEditEntry = (item: CalendarItem) => {
+    const entryId = item.id
+    const competitionId = item.metadata?.entry?.competition_id || item.metadata?.competition?.id
+    const dateParam = item.date
+    
+    if (competitionId) {
+      navigation.navigate('EntryForm', {
+        competitionId,
+        entryId,
+        date: dateParam,
+      })
+    }
+  }
+
+  // 大会記録を追加（エントリー入力フォームへ遷移）
+  const handleAddEntry = (competitionId: string, date: string) => {
+    navigation.navigate('EntryForm', {
+      competitionId,
+      date,
+    })
+  }
+
+  // エントリー削除
+  const handleDeleteEntry = async (entryId: string) => {
+    Alert.alert(
+      '削除確認',
+      'このエントリーを削除しますか？\nこの操作は取り消せません。',
+      [
+        {
+          text: 'キャンセル',
+          style: 'cancel',
+        },
+        {
+          text: '削除',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const api = new EntryAPI(supabase)
+              await api.deleteEntry(entryId)
+              refetch() // カレンダーをリフレッシュ
+            } catch (error) {
+              console.error('削除エラー:', error)
+              Alert.alert(
+                'エラー',
+                error instanceof Error ? error.message : '削除に失敗しました',
+                [{ text: 'OK' }]
+              )
+            }
+          },
+        },
+      ]
+    )
+  }
+
+  // 大会編集
+  const handleEditCompetition = (item: CalendarItem) => {
+    const competitionId = item.metadata?.competition?.id || item.id
+    const dateParam = item.date
+    navigation.navigate('CompetitionForm', {
+      competitionId,
+      date: dateParam,
+    })
+  }
+
+  // 大会削除
+  const deleteCompetitionMutation = useDeleteCompetitionMutation(supabase)
+  const handleDeleteCompetition = async (competitionId: string) => {
+    Alert.alert(
+      '削除確認',
+      'この大会を削除しますか？\nこの操作は取り消せません。',
+      [
+        {
+          text: 'キャンセル',
+          style: 'cancel',
+        },
+        {
+          text: '削除',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteCompetitionMutation.mutateAsync(competitionId)
+              refetch() // カレンダーをリフレッシュ
+            } catch (error) {
+              console.error('削除エラー:', error)
+              Alert.alert(
+                'エラー',
+                error instanceof Error ? error.message : '削除に失敗しました',
+                [{ text: 'OK' }]
+              )
+            }
+          },
+        },
+      ]
+    )
+  }
+
   // エラー状態
   if (isError && error) {
     return (
@@ -209,7 +430,18 @@ export const DashboardScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#2563EB']}
+            tintColor="#2563EB"
+          />
+        }
+      >
         <CalendarView
           currentDate={currentDate}
           entries={entries}
@@ -240,6 +472,13 @@ export const DashboardScreen: React.FC = () => {
           onAddPracticeLog={handleAddPracticeLog}
           onEditPracticeLog={handleEditPracticeLog}
           onDeletePracticeLog={handleDeletePracticeLog}
+          onEditRecord={handleEditRecord}
+          onDeleteRecord={handleDeleteRecord}
+          onEditEntry={handleEditEntry}
+          onDeleteEntry={handleDeleteEntry}
+          onAddEntry={handleAddEntry}
+          onEditCompetition={handleEditCompetition}
+          onDeleteCompetition={handleDeleteCompetition}
         />
       )}
     </SafeAreaView>

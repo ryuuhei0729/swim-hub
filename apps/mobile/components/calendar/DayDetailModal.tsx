@@ -5,7 +5,7 @@ import { Feather, MaterialIcons } from '@expo/vector-icons'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { useAuth } from '@/contexts/AuthProvider'
-import { formatTime } from '@/utils/formatters'
+import { formatTime, formatCircleTime } from '@/utils/formatters'
 import type { CalendarItem } from '@apps/shared/types/ui'
 import type { PracticeTime } from '@apps/shared/types/database'
 
@@ -22,6 +22,13 @@ interface DayDetailModalProps {
   onAddPracticeLog?: (practiceId: string) => void
   onEditPracticeLog?: (item: CalendarItem) => void
   onDeletePracticeLog?: (logId: string) => void
+  onEditRecord?: (item: CalendarItem) => void
+  onDeleteRecord?: (recordId: string) => void
+  onEditEntry?: (item: CalendarItem) => void
+  onDeleteEntry?: (entryId: string) => void
+  onAddEntry?: (competitionId: string, date: string) => void
+  onEditCompetition?: (item: CalendarItem) => void
+  onDeleteCompetition?: (competitionId: string) => void
 }
 
 /**
@@ -41,6 +48,13 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   onAddPracticeLog,
   onEditPracticeLog,
   onDeletePracticeLog,
+  onEditRecord,
+  onDeleteRecord,
+  onEditEntry,
+  onDeleteEntry,
+  onAddEntry,
+  onEditCompetition,
+  onDeleteCompetition,
 }) => {
   // エントリーのタイトルを生成
   const getEntryTitle = (item: CalendarItem): string => {
@@ -217,9 +231,22 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                   const isPractice = item.type === 'practice' || item.type === 'team_practice'
                   const isPracticeLog = item.type === 'practice_log'
                   const practiceId = item.metadata?.practice_id || item.id
+                  
+                  // Competitionの場合、そのCompetitionにエントリーや記録があるかどうかを判定
+                  const isCompetition = item.type === 'competition' || item.type === 'team_competition'
+                  const competitionId = isCompetition ? item.id : null
+                  const hasEntriesOrRecords = isCompetition && competitionId
+                    ? entries.some(
+                        (e) =>
+                          (e.type === 'entry' || e.type === 'record') &&
+                          (e.metadata?.competition?.id === competitionId ||
+                            e.metadata?.entry?.competition_id === competitionId ||
+                            e.metadata?.record?.competition_id === competitionId)
+                      )
+                    : false
 
                   return (
-                    <PracticeLogDetail
+                    <MemoizedPracticeLogDetail
                       key={`${item.type}-${item.id}`}
                       item={item}
                       title={title}
@@ -228,6 +255,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                       isPractice={isPractice}
                       isPracticeLog={isPracticeLog}
                       practiceId={practiceId}
+                      hasEntriesOrRecords={hasEntriesOrRecords}
                       onEntryPress={onEntryPress}
                       onClose={onClose}
                       onEditPractice={onEditPractice}
@@ -235,6 +263,13 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                       onAddPracticeLog={onAddPracticeLog}
                       onEditPracticeLog={onEditPracticeLog}
                       onDeletePracticeLog={onDeletePracticeLog}
+                      onEditRecord={onEditRecord}
+                      onDeleteRecord={onDeleteRecord}
+                      onEditEntry={onEditEntry}
+                      onDeleteEntry={onDeleteEntry}
+                      onAddEntry={onAddEntry}
+                      onEditCompetition={onEditCompetition}
+                      onDeleteCompetition={onDeleteCompetition}
                       onPracticeTimeLoaded={handlePracticeTimeLoaded}
                     />
                   )
@@ -291,6 +326,7 @@ const PracticeLogDetail: React.FC<{
   isPractice: boolean
   isPracticeLog: boolean
   practiceId: string
+  hasEntriesOrRecords?: boolean
   onEntryPress?: (item: CalendarItem) => void
   onClose: () => void
   onEditPractice?: (item: CalendarItem) => void
@@ -298,6 +334,13 @@ const PracticeLogDetail: React.FC<{
   onAddPracticeLog?: (practiceId: string) => void
   onEditPracticeLog?: (item: CalendarItem) => void
   onDeletePracticeLog?: (logId: string) => void
+  onEditRecord?: (item: CalendarItem) => void
+  onDeleteRecord?: (recordId: string) => void
+  onEditEntry?: (item: CalendarItem) => void
+  onDeleteEntry?: (entryId: string) => void
+  onAddEntry?: (competitionId: string, date: string) => void
+  onEditCompetition?: (item: CalendarItem) => void
+  onDeleteCompetition?: (competitionId: string) => void
   onPracticeTimeLoaded?: (practiceLogId: string, hasTimes: boolean) => void
 }> = ({
   item,
@@ -307,6 +350,7 @@ const PracticeLogDetail: React.FC<{
   isPractice,
   isPracticeLog,
   practiceId,
+  hasEntriesOrRecords = false,
   onEntryPress,
   onClose,
   onEditPractice,
@@ -314,10 +358,23 @@ const PracticeLogDetail: React.FC<{
   onAddPracticeLog,
   onEditPracticeLog,
   onDeletePracticeLog,
+  onEditRecord,
+  onDeleteRecord,
+  onEditEntry,
+  onDeleteEntry,
+  onAddEntry,
+  onEditCompetition,
+  onDeleteCompetition,
   onPracticeTimeLoaded,
 }) => {
   const { supabase } = useAuth()
   const [expanded, setExpanded] = useState(false)
+  const [recordDetail, setRecordDetail] = useState<{
+    time: number
+    note: string
+    reactionTime: number | null
+  } | null>(null)
+  const [loadingRecordDetail, setLoadingRecordDetail] = useState(false)
   const [practiceLogs, setPracticeLogs] = useState<Array<{
     id: string
     practiceId: string
@@ -474,6 +531,61 @@ const PracticeLogDetail: React.FC<{
     }
   }, [isPracticeLog, item.id, loadPracticeLogDetail])
 
+  // 記録詳細を取得（record表示用）
+  useEffect(() => {
+    if (item.type !== 'record') return
+
+    let isMounted = true
+    const loadRecordDetail = async () => {
+      try {
+        setLoadingRecordDetail(true)
+        const competitionId =
+          item.metadata?.competition?.id ||
+          item.metadata?.record?.competition_id ||
+          item.id
+        if (!competitionId) return
+
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        const { data, error } = await supabase
+          .from('records')
+          .select('id, time, note, reaction_time')
+          .eq('competition_id', competitionId)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
+
+        if (!isMounted) return
+        if (error) {
+          console.error('記録詳細取得エラー:', error)
+          return
+        }
+        if (!data) return
+
+        setRecordDetail({
+          time: data.time,
+          note: data.note || '',
+          reactionTime: data.reaction_time ?? null,
+        })
+      } catch (error) {
+        if (!isMounted) return
+        console.error('記録詳細取得エラー:', error)
+      } finally {
+        if (isMounted) {
+          setLoadingRecordDetail(false)
+        }
+      }
+    }
+
+    loadRecordDetail()
+
+    return () => {
+      isMounted = false
+    }
+  }, [item, supabase])
+
   if (isPracticeLog) {
     return (
       <View style={[styles.entryItem, { borderLeftColor: color }]}>
@@ -506,6 +618,75 @@ const PracticeLogDetail: React.FC<{
                   <Feather name="trash-2" size={16} color="#6B7280" />
                 </Pressable>
               )}
+              {item.type === 'record' && onEditRecord && (
+                <Pressable
+                  style={styles.actionButton}
+                  onPress={(e) => {
+                    e.stopPropagation()
+                    onEditRecord(item)
+                    onClose()
+                  }}
+                >
+                  <MaterialIcons name="edit" size={20} color="#6B7280" />
+                </Pressable>
+              )}
+              {item.type === 'record' && onDeleteRecord && (
+                <Pressable
+                  style={styles.actionButton}
+                  onPress={(e) => {
+                    e.stopPropagation()
+                    onDeleteRecord(item.id)
+                  }}
+                >
+                  <Feather name="trash-2" size={20} color="#6B7280" />
+                </Pressable>
+              )}
+              {item.type === 'entry' && onEditEntry && (
+                <Pressable
+                  style={styles.actionButton}
+                  onPress={(e) => {
+                    e.stopPropagation()
+                    onEditEntry(item)
+                    onClose()
+                  }}
+                >
+                  <MaterialIcons name="edit" size={20} color="#6B7280" />
+                </Pressable>
+              )}
+              {item.type === 'entry' && onDeleteEntry && (
+                <Pressable
+                  style={styles.actionButton}
+                  onPress={(e) => {
+                    e.stopPropagation()
+                    onDeleteEntry(item.id)
+                  }}
+                >
+                  <Feather name="trash-2" size={20} color="#6B7280" />
+                </Pressable>
+              )}
+              {(item.type === 'competition' || item.type === 'team_competition') && onEditCompetition && (
+                <Pressable
+                  style={styles.actionButton}
+                  onPress={(e) => {
+                    e.stopPropagation()
+                    onEditCompetition(item)
+                    onClose()
+                  }}
+                >
+                  <MaterialIcons name="edit" size={20} color="#6B7280" />
+                </Pressable>
+              )}
+              {(item.type === 'competition' || item.type === 'team_competition') && onDeleteCompetition && (
+                <Pressable
+                  style={styles.actionButton}
+                  onPress={(e) => {
+                    e.stopPropagation()
+                    onDeleteCompetition(item.id)
+                  }}
+                >
+                  <Feather name="trash-2" size={20} color="#6B7280" />
+                </Pressable>
+              )}
             </View>
           </View>
 
@@ -527,7 +708,7 @@ const PracticeLogDetail: React.FC<{
                   )}
                   {'　　'}
                   <Text style={styles.practiceContentValue}>
-                    {practiceLogDetail.circle ? `${Math.floor(practiceLogDetail.circle / 60)}'${Math.floor(practiceLogDetail.circle % 60).toString().padStart(2, '0')}"` : '-'}
+                    {formatCircleTime(practiceLogDetail.circle)}
                   </Text>
                   {'　'}
                   <Text style={styles.practiceContentValue}>{practiceLogDetail.style}</Text>
@@ -542,7 +723,7 @@ const PracticeLogDetail: React.FC<{
                     <Text style={styles.timeHeaderText}>タイム</Text>
                   </View>
                   <View style={styles.timeTableContainer}>
-                    <TimeTable times={practiceLogDetail.times} repCount={practiceLogDetail.repCount} setCount={practiceLogDetail.setCount} />
+                    <MemoizedTimeTable times={practiceLogDetail.times} repCount={practiceLogDetail.repCount} setCount={practiceLogDetail.setCount} />
                   </View>
                 </View>
               )}
@@ -612,6 +793,75 @@ const PracticeLogDetail: React.FC<{
                   <Feather name="trash-2" size={20} color="#6B7280" />
                 </Pressable>
               )}
+              {item.type === 'record' && onEditRecord && (
+                <Pressable
+                  style={styles.actionButton}
+                  onPress={(e) => {
+                    e.stopPropagation()
+                    onEditRecord(item)
+                    onClose()
+                  }}
+                >
+                  <MaterialIcons name="edit" size={20} color="#6B7280" />
+                </Pressable>
+              )}
+              {item.type === 'record' && onDeleteRecord && (
+                <Pressable
+                  style={styles.actionButton}
+                  onPress={(e) => {
+                    e.stopPropagation()
+                    onDeleteRecord(item.id)
+                  }}
+                >
+                  <Feather name="trash-2" size={20} color="#6B7280" />
+                </Pressable>
+              )}
+              {item.type === 'entry' && onEditEntry && (
+                <Pressable
+                  style={styles.actionButton}
+                  onPress={(e) => {
+                    e.stopPropagation()
+                    onEditEntry(item)
+                    onClose()
+                  }}
+                >
+                  <MaterialIcons name="edit" size={20} color="#6B7280" />
+                </Pressable>
+              )}
+              {item.type === 'entry' && onDeleteEntry && (
+                <Pressable
+                  style={styles.actionButton}
+                  onPress={(e) => {
+                    e.stopPropagation()
+                    onDeleteEntry(item.id)
+                  }}
+                >
+                  <Feather name="trash-2" size={20} color="#6B7280" />
+                </Pressable>
+              )}
+              {(item.type === 'competition' || item.type === 'team_competition') && onEditCompetition && (
+                <Pressable
+                  style={styles.actionButton}
+                  onPress={(e) => {
+                    e.stopPropagation()
+                    onEditCompetition(item)
+                    onClose()
+                  }}
+                >
+                  <MaterialIcons name="edit" size={20} color="#6B7280" />
+                </Pressable>
+              )}
+              {(item.type === 'competition' || item.type === 'team_competition') && onDeleteCompetition && (
+                <Pressable
+                  style={styles.actionButton}
+                  onPress={(e) => {
+                    e.stopPropagation()
+                    onDeleteCompetition(item.id)
+                  }}
+                >
+                  <Feather name="trash-2" size={20} color="#6B7280" />
+                </Pressable>
+              )}
               {isPractice && (
                 <Pressable
                   style={styles.actionButton}
@@ -628,6 +878,33 @@ const PracticeLogDetail: React.FC<{
           <Text style={styles.entryTitle} numberOfLines={2}>
             {title}
           </Text>
+          {item.type === 'record' && (
+            <View style={styles.recordDetailContainer}>
+              {loadingRecordDetail ? (
+                <Text style={styles.loadingText}>記録を読み込み中...</Text>
+              ) : recordDetail ? (
+                <>
+                  <View style={styles.recordRow}>
+                    <Text style={styles.recordLabel}>タイム</Text>
+                    <Text style={styles.recordValue}>{formatTime(recordDetail.time)}</Text>
+                  </View>
+                  {recordDetail.reactionTime !== null && (
+                    <View style={styles.recordRow}>
+                      <Text style={styles.recordLabel}>リアクション</Text>
+                      <Text style={styles.recordValue}>{recordDetail.reactionTime}</Text>
+                    </View>
+                  )}
+                  {recordDetail.note ? (
+                    <Text style={styles.recordNote} numberOfLines={2}>
+                      {recordDetail.note}
+                    </Text>
+                  ) : null}
+                </>
+              ) : (
+                <Text style={styles.recordEmptyText}>記録詳細が見つかりません</Text>
+              )}
+            </View>
+          )}
           {item.place && (
             <View style={styles.entryPlaceContainer}>
               <Feather name="map-pin" size={14} color="#6B7280" />
@@ -653,6 +930,26 @@ const PracticeLogDetail: React.FC<{
             >
               <Feather name="plus" size={14} color="#374151" style={styles.addLogButtonIcon} />
               <Text style={styles.addLogButtonText}>練習メニューを追加</Text>
+            </Pressable>
+          )}
+          {/* 大会記録追加ボタン */}
+          {(item.type === 'competition' || item.type === 'team_competition') &&
+            !hasEntriesOrRecords &&
+            onAddEntry && (
+              <Pressable
+                style={styles.addLogButton}
+                onPress={(e) => {
+                  e.stopPropagation()
+                  const competitionId = item.id
+                  const dateParam = item.date
+                  if (competitionId && dateParam && onAddEntry) {
+                    onAddEntry(competitionId, dateParam)
+                    onClose()
+                  }
+                }}
+              >
+                <Feather name="plus" size={14} color="#374151" style={styles.addLogButtonIcon} />
+                <Text style={styles.addLogButtonText}>大会記録を追加</Text>
             </Pressable>
           )}
         </View>
@@ -682,7 +979,7 @@ const PracticeLogDetail: React.FC<{
                     )}
                     {'　　'}
                     <Text style={styles.practiceContentValue}>
-                      {log.circle ? `${Math.floor(log.circle / 60)}'${Math.floor(log.circle % 60).toString().padStart(2, '0')}"` : '-'}
+                      {formatCircleTime(log.circle)}
                     </Text>
                     {'　'}
                     <Text style={styles.practiceContentValue}>{log.style}</Text>
@@ -697,7 +994,7 @@ const PracticeLogDetail: React.FC<{
                       <Text style={styles.timeHeaderText}>タイム</Text>
                     </View>
                     <View style={styles.timeTableContainer}>
-                      <TimeTable times={log.times} repCount={log.repCount} setCount={log.setCount} />
+                      <MemoizedTimeTable times={log.times} repCount={log.repCount} setCount={log.setCount} />
                     </View>
                   </View>
                 )}
@@ -716,6 +1013,9 @@ const PracticeLogDetail: React.FC<{
     </View>
   )
 }
+
+// PracticeLogDetailをメモ化して不要な再レンダリングを防ぐ
+const MemoizedPracticeLogDetail = React.memo(PracticeLogDetail)
 
 /**
  * タイムテーブルコンポーネント
@@ -752,6 +1052,10 @@ const TimeTable: React.FC<{
     if (setTimes.length === 0) return 0
     return Math.min(...setTimes)
   }
+
+  // 全体平均と全体最速を一度だけ計算
+  const overallAverage = getOverallAverage()
+  const overallFastest = getOverallFastest()
 
   return (
     <View style={styles.timeTable}>
@@ -816,7 +1120,7 @@ const TimeTable: React.FC<{
         </View>
         <View style={[styles.timeTableCell, { flex: setCount }]}>
           <Text style={styles.timeTableOverallValue}>
-            {getOverallAverage() > 0 ? formatTime(getOverallAverage()) : '-'}
+            {overallAverage > 0 ? formatTime(overallAverage) : '-'}
           </Text>
         </View>
       </View>
@@ -828,13 +1132,16 @@ const TimeTable: React.FC<{
         </View>
         <View style={[styles.timeTableCell, { flex: setCount }]}>
           <Text style={styles.timeTableOverallValue}>
-            {getOverallFastest() > 0 ? formatTime(getOverallFastest()) : '-'}
+            {overallFastest > 0 ? formatTime(overallFastest) : '-'}
           </Text>
         </View>
       </View>
     </View>
   )
 }
+
+// TimeTableをメモ化して不要な再レンダリングを防ぐ
+const MemoizedTimeTable = React.memo(TimeTable)
 
 const styles = StyleSheet.create({
   overlay: {
@@ -1001,11 +1308,14 @@ const styles = StyleSheet.create({
   actionButtons: {
     flexDirection: 'row',
     gap: 8,
+    alignItems: 'center',
   },
   actionButton: {
     padding: 4,
     justifyContent: 'center',
     alignItems: 'center',
+    minWidth: 28,
+    minHeight: 28,
   },
   addLogButton: {
     marginTop: 8,
@@ -1055,6 +1365,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#374151',
     lineHeight: 20,
+  },
+  recordDetailContainer: {
+    marginTop: 8,
+    gap: 4,
+  },
+  recordRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  recordLabel: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  recordValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  recordNote: {
+    fontSize: 13,
+    color: '#374151',
+  },
+  recordEmptyText: {
+    fontSize: 13,
+    color: '#6B7280',
   },
   expandedContent: {
     paddingTop: 12,

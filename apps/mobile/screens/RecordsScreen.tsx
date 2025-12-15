@@ -258,7 +258,12 @@ export const RecordsScreen: React.FC = () => {
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#2563EB']}
+            tintColor="#2563EB"
+          />
         }
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}

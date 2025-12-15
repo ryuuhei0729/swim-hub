@@ -6,8 +6,11 @@
   "main": "index.ts",
   "scripts": {
     "start": "npx dotenvx run -f .env.development -- expo start",
+    "start:clear": "npx dotenvx run -f .env.development -- expo start --clear",
     "android": "npx dotenvx run -f .env.development -- expo start --android",
+    "android:clear": "npx dotenvx run -f .env.development -- expo start --android --clear",
     "ios": "npx dotenvx run -f .env.development -- expo start --ios",
+    "ios:clear": "npx dotenvx run -f .env.development -- expo start --ios --clear",
     "web": "npx dotenvx run -f .env.development -- expo start --web",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",

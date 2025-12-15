@@ -53,6 +53,25 @@ export type MainStackParamList = {
     recordId?: string
     date?: string
   }
+  CompetitionForm: {
+    competitionId?: string
+    date: string
+  }
+  EntryForm: {
+    competitionId: string
+    entryId?: string
+    date: string
+  }
+  RecordLogForm: {
+    competitionId: string
+    recordId?: string
+    entryDataList?: Array<{
+      styleId: number
+      styleName: string
+      entryTime?: number
+    }>
+    date: string
+  }
   TeamDetail: {
     teamId: string
   }

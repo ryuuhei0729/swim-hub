@@ -8,6 +8,9 @@ import { PracticeLogFormScreen } from '@/screens/PracticeLogFormScreen'
 import { PracticeTimeFormScreen } from '@/screens/PracticeTimeFormScreen'
 import { RecordDetailScreen } from '@/screens/RecordDetailScreen'
 import { RecordFormScreen } from '@/screens/RecordFormScreen'
+import { CompetitionBasicFormScreen } from '@/screens/CompetitionBasicFormScreen'
+import { EntryLogFormScreen } from '@/screens/EntryLogFormScreen'
+import { RecordLogFormScreen } from '@/screens/RecordLogFormScreen'
 import { TeamDetailScreen } from '@/screens/TeamDetailScreen'
 
 const Stack = createNativeStackNavigator<MainStackParamList>()
@@ -123,6 +126,54 @@ export const MainStack: React.FC = () => {
             fontWeight: '600',
           },
         })}
+      />
+      <Stack.Screen
+        name="CompetitionForm"
+        component={CompetitionBasicFormScreen}
+        options={{
+          headerShown: true,
+          title: '大会情報',
+          headerBackTitle: '戻る',
+          headerStyle: {
+            backgroundColor: '#FFFFFF',
+          },
+          headerTintColor: '#111827',
+          headerTitleStyle: {
+            fontWeight: '600',
+          },
+        }}
+      />
+      <Stack.Screen
+        name="EntryForm"
+        component={EntryLogFormScreen}
+        options={{
+          headerShown: true,
+          title: 'エントリー登録',
+          headerBackTitle: '戻る',
+          headerStyle: {
+            backgroundColor: '#FFFFFF',
+          },
+          headerTintColor: '#111827',
+          headerTitleStyle: {
+            fontWeight: '600',
+          },
+        }}
+      />
+      <Stack.Screen
+        name="RecordLogForm"
+        component={RecordLogFormScreen}
+        options={{
+          headerShown: true,
+          title: '記録入力',
+          headerBackTitle: '戻る',
+          headerStyle: {
+            backgroundColor: '#FFFFFF',
+          },
+          headerTintColor: '#111827',
+          headerTitleStyle: {
+            fontWeight: '600',
+          },
+        }}
       />
       <Stack.Screen
         name="TeamDetail"
