@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, Switch, Modal } from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { useQueryClient } from '@tanstack/react-query'
 import { Feather } from '@expo/vector-icons'
 import { useAuth } from '@/contexts/AuthProvider'
 import {
@@ -44,6 +45,7 @@ export const RecordLogFormScreen: React.FC = () => {
   const navigation = useNavigation<RecordLogFormScreenNavigationProp>()
   const { competitionId, recordId, entryDataList = [], date: _date } = route.params
   const { supabase } = useAuth()
+  const queryClient = useQueryClient()
 
   // フォーム状態（複数エントリー対応）
   const [formDataList, setFormDataList] = useState<RecordFormData[]>([])
@@ -455,6 +457,9 @@ export const RecordLogFormScreen: React.FC = () => {
           }
         }
       }
+
+      // カレンダーのクエリを無効化してリフレッシュ
+      queryClient.invalidateQueries({ queryKey: ['calendar'] })
 
       // 成功: ダッシュボードに戻る
       navigation.navigate('MainTabs', { screen: 'Dashboard' })

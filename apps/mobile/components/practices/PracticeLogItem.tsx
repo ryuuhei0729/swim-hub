@@ -38,9 +38,6 @@ export const PracticeLogItem: React.FC<PracticeLogItemProps> = ({ log }) => {
           <Text style={styles.setRep}>
             {log.set_count}×{log.rep_count}
           </Text>
-          {log.circle && (
-            <Text style={styles.circle}>{log.circle}周</Text>
-          )}
         </View>
       </View>
 
@@ -141,14 +138,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#374151',
-  },
-  circle: {
-    fontSize: 12,
-    color: '#6B7280',
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
   },
   timesContainer: {
     marginTop: 8,

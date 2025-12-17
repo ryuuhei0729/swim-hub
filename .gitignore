@@ -115,3 +115,8 @@ next-env.d.ts
 /apps/mobile/.metro-health-check*
 /apps/mobile/ios/
 /apps/mobile/android/
+# EAS Configuration (機密情報を含むためgit管理外)
+/apps/mobile/eas.json
+# Google Play Service Account Keys (機密情報のためgit管理外)
+/apps/mobile/google-service-account-key.json
+*.service-account-key.json

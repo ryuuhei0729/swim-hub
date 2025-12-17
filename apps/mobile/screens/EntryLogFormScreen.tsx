@@ -86,44 +86,62 @@ export const EntryLogFormScreen: React.FC = () => {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error('認証が必要です')
 
-        const { data: entry, error } = await supabase
+        // まず、指定されたエントリーを取得してcompetitionIdを取得
+        const { data: firstEntry, error: firstEntryError } = await supabase
           .from('entries')
-          .select('*')
+          .select('competition_id')
           .eq('id', entryId)
           .single()
 
         if (!isMounted) return
 
-        if (error) {
-          console.error('エントリー取得エラー詳細:', error)
+        if (firstEntryError) {
+          console.error('エントリー取得エラー詳細:', firstEntryError)
           console.error('エントリー取得エラー - entryId:', entryId)
-          if (error.code === 'PGRST116') {
+          if (firstEntryError.code === 'PGRST116') {
             // エントリーが見つからない場合
             Alert.alert('エラー', 'エントリーが見つかりませんでした')
             navigation.goBack()
             return
           }
-          throw error
+          throw firstEntryError
         }
 
-        if (!entry) {
-          console.log('エントリーデータがnullです')
+        if (!firstEntry || !firstEntry.competition_id) {
           Alert.alert('エラー', 'エントリーデータが見つかりませんでした')
           navigation.goBack()
           return
         }
 
-        // エントリーデータでフォームを初期化
-        const entryData = {
+        // この大会のすべてのエントリーを取得
+        const { data: allEntries, error: allEntriesError } = await supabase
+          .from('entries')
+          .select('*')
+          .eq('competition_id', firstEntry.competition_id)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: true })
+
+        if (!isMounted) return
+
+        if (allEntriesError) {
+          throw allEntriesError
+        }
+
+        if (!allEntries || allEntries.length === 0) {
+          Alert.alert('エラー', 'エントリーデータが見つかりませんでした')
+          navigation.goBack()
+          return
+        }
+
+        // すべてのエントリーをフォームに設定
+        const entriesData = allEntries.map((entry) => ({
           id: entry.id,
           styleId: String(entry.style_id),
           entryTime: entry.entry_time || 0,
           entryTimeDisplayValue: entry.entry_time ? formatTime(entry.entry_time) : '',
           note: entry.note || '',
-        }
-        console.log('取得したエントリーデータ:', entry)
-        console.log('フォーム状態を更新:', entryData)
-        setEntries([entryData])
+        }))
+        setEntries(entriesData)
       } catch (error) {
         if (!isMounted) return
         console.error('エントリー取得エラー:', error)
@@ -240,7 +258,124 @@ export const EntryLogFormScreen: React.FC = () => {
     )
   }
 
-  // エントリー登録処理
+  // UUID形式をチェックするヘルパー関数
+  const isValidUUID = (id: string): boolean => {
+    // UUID形式の正規表現: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    return uuidRegex.test(id)
+  }
+
+  // エントリー保存/更新の共通ヘルパー関数
+  const saveOrUpdateEntries = async (
+    entriesToSave: EntryData[],
+    supabaseClient: typeof supabase,
+    competitionIdParam: string,
+    styles: Style[],
+    entryAPIInstance: EntryAPI
+  ): Promise<EntryInfo[]> => {
+    // 認証チェック
+    const { data: { user } } = await supabaseClient.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+
+    // 編集モードの場合、既存のエントリーをすべて取得
+    const existingEntriesMap = new Map<string, { id: string; style_id: number }>()
+    if (entryId) {
+      // 編集モードの場合、この大会のすべての既存エントリーを取得
+      const { data: allExistingEntries } = await supabaseClient
+        .from('entries')
+        .select('id, style_id')
+        .eq('competition_id', competitionIdParam)
+        .eq('user_id', user.id)
+
+      if (allExistingEntries) {
+        allExistingEntries.forEach((entry) => {
+          existingEntriesMap.set(String(entry.style_id), { id: entry.id, style_id: entry.style_id })
+        })
+      }
+    }
+
+    const createdEntriesList: EntryInfo[] = []
+    const processedEntryIds = new Set<string>()
+
+    // フォームに入力されているエントリーを保存/更新
+    for (const entryData of entriesToSave) {
+      const styleIdNum = parseInt(entryData.styleId)
+      const existingEntryForStyle = existingEntriesMap.get(entryData.styleId)
+
+      let entry
+      // 既存のエントリーIDがある場合（編集モードで既存エントリーを編集している場合）
+      // UUID形式であることを確認（一時的なID '1' や 'entry-...' を除外）
+      if (entryData.id && isValidUUID(entryData.id)) {
+        entry = await entryAPIInstance.updateEntry(entryData.id, {
+          style_id: styleIdNum,
+          entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
+          note: entryData.note && entryData.note.trim() !== '' ? entryData.note.trim() : null,
+        })
+        processedEntryIds.add(entryData.id)
+      } else if (existingEntryForStyle) {
+        // 編集モードで既存エントリーがある場合は更新
+        entry = await entryAPIInstance.updateEntry(existingEntryForStyle.id, {
+          entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
+          note: entryData.note && entryData.note.trim() !== '' ? entryData.note.trim() : null,
+        })
+        processedEntryIds.add(existingEntryForStyle.id)
+      } else {
+        // 新規作成モードまたは編集モードで既存エントリーがない場合
+        // 既存エントリーをチェック（同じ種目のエントリーが既に存在する可能性がある）
+        const existingEntry = await entryAPIInstance.checkExistingEntry(
+          competitionIdParam,
+          user.id,
+          styleIdNum
+        )
+
+        if (existingEntry) {
+          // 既存エントリーがある場合は更新
+          entry = await entryAPIInstance.updateEntry(existingEntry.id, {
+            entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
+            note: entryData.note && entryData.note.trim() !== '' ? entryData.note.trim() : null,
+          })
+          processedEntryIds.add(existingEntry.id)
+        } else {
+          // 新規作成
+          entry = await entryAPIInstance.createPersonalEntry({
+            competition_id: competitionIdParam,
+            style_id: styleIdNum,
+            entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
+            note: entryData.note && entryData.note.trim() !== '' ? entryData.note.trim() : null,
+          })
+        }
+      }
+
+      // 種目情報を取得
+      const style = styles.find((s) => s.id === styleIdNum)
+      if (style && entry) {
+        createdEntriesList.push({
+          styleId: entry.style_id,
+          styleName: style.name_jp,
+          entryTime: entry.entry_time ?? undefined,
+        })
+      }
+    }
+
+    // 編集モードの場合、フォームに存在しない既存エントリーを削除
+    if (entryId && existingEntriesMap.size > 0) {
+      for (const existingEntry of existingEntriesMap.values()) {
+        if (!processedEntryIds.has(existingEntry.id)) {
+          // フォームに存在しない既存エントリーを削除
+          await entryAPIInstance.deleteEntry(existingEntry.id)
+        }
+      }
+    }
+
+    // ストアに保存
+    setCreatedEntries(createdEntriesList)
+
+    // カレンダーのクエリを無効化してリフレッシュ
+    queryClient.invalidateQueries({ queryKey: ['calendar'] })
+
+    return createdEntriesList
+  }
+
   // 保存処理（保存してダッシュボードに戻る）
   const handleSave = async () => {
     if (!validate()) {
@@ -252,56 +387,13 @@ export const EntryLogFormScreen: React.FC = () => {
 
     try {
       const entryAPI = new EntryAPI(supabase)
-      const createdEntriesList: EntryInfo[] = []
-
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('認証が必要です')
-
-      for (const entryData of entries) {
-        // 既存エントリーの重複チェック
-        const { data: existingEntryData } = await supabase
-          .from('entries')
-          .select('id')
-          .eq('competition_id', competitionId)
-          .eq('user_id', user.id)
-          .eq('style_id', parseInt(entryData.styleId))
-          .maybeSingle()
-        
-        const existingEntry = existingEntryData || null
-
-        let entry
-        if (existingEntry) {
-          // 既存エントリーがある場合は更新
-          entry = await entryAPI.updateEntry(existingEntry.id, {
-            entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
-            note: entryData.note && entryData.note.trim() !== '' ? entryData.note.trim() : null,
-          })
-        } else {
-          // 新規作成
-          entry = await entryAPI.createPersonalEntry({
-            competition_id: competitionId,
-            style_id: parseInt(entryData.styleId),
-            entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
-            note: entryData.note && entryData.note.trim() !== '' ? entryData.note.trim() : null,
-          })
-        }
-
-        // 種目情報を取得
-        const style = swimStyles.find((s) => s.id === parseInt(entryData.styleId))
-        if (style && entry) {
-          createdEntriesList.push({
-            styleId: entry.style_id,
-            styleName: style.name_jp,
-            entryTime: entry.entry_time ?? undefined,
-          })
-        }
-      }
-
-      // ストアに保存
-      setCreatedEntries(createdEntriesList)
-
-      // カレンダーのクエリを無効化してリフレッシュ
-      queryClient.invalidateQueries({ queryKey: ['calendar'] })
+      await saveOrUpdateEntries(
+        entries,
+        supabase,
+        competitionId,
+        swimStyles,
+        entryAPI
+      )
 
       // 成功: ダッシュボードに戻る
       navigation.navigate('MainTabs', { screen: 'Dashboard' })
@@ -329,56 +421,13 @@ export const EntryLogFormScreen: React.FC = () => {
 
     try {
       const entryAPI = new EntryAPI(supabase)
-      const createdEntriesList: EntryInfo[] = []
-
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('認証が必要です')
-
-      for (const entryData of entries) {
-        // 既存エントリーの重複チェック
-        const { data: existingEntryData } = await supabase
-          .from('entries')
-          .select('id')
-          .eq('competition_id', competitionId)
-          .eq('user_id', user.id)
-          .eq('style_id', parseInt(entryData.styleId))
-          .maybeSingle()
-        
-        const existingEntry = existingEntryData || null
-
-        let entry
-        if (existingEntry) {
-          // 既存エントリーがある場合は更新
-          entry = await entryAPI.updateEntry(existingEntry.id, {
-            entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
-            note: entryData.note && entryData.note.trim() !== '' ? entryData.note.trim() : null,
-          })
-        } else {
-          // 新規作成
-          entry = await entryAPI.createPersonalEntry({
-            competition_id: competitionId,
-            style_id: parseInt(entryData.styleId),
-            entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
-            note: entryData.note && entryData.note.trim() !== '' ? entryData.note.trim() : null,
-          })
-        }
-
-        // 種目情報を取得
-        const style = swimStyles.find((s) => s.id === parseInt(entryData.styleId))
-        if (style && entry) {
-          createdEntriesList.push({
-            styleId: entry.style_id,
-            styleName: style.name_jp,
-            entryTime: entry.entry_time ?? undefined,
-          })
-        }
-      }
-
-      // ストアに保存
-      setCreatedEntries(createdEntriesList)
-
-      // カレンダーのクエリを無効化してリフレッシュ
-      queryClient.invalidateQueries({ queryKey: ['calendar'] })
+      const createdEntriesList = await saveOrUpdateEntries(
+        entries,
+        supabase,
+        competitionId,
+        swimStyles,
+        entryAPI
+      )
 
       // 記録入力フォームに遷移
       navigation.navigate('RecordLogForm', {

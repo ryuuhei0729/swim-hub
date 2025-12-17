@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { View, Text, Modal, Pressable, ScrollView, StyleSheet } from 'react-native'
+import { View, Text, Modal, Pressable, ScrollView, StyleSheet, Alert } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Feather, MaterialIcons } from '@expo/vector-icons'
+import { Feather } from '@expo/vector-icons'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { useAuth } from '@/contexts/AuthProvider'
 import { formatTime, formatCircleTime } from '@/utils/formatters'
+import { EntryAPI } from '@apps/shared/api/entries'
 import type { CalendarItem } from '@apps/shared/types/ui'
 import type { PracticeTime } from '@apps/shared/types/database'
 
@@ -16,7 +17,7 @@ interface DayDetailModalProps {
   onClose: () => void
   onEntryPress?: (item: CalendarItem) => void
   onAddPractice?: (date: Date) => void
-  onAddRecord?: (date: Date) => void
+  onAddRecord?: (dateOrCompetitionId: Date | string, dateParam?: string) => void
   onEditPractice?: (item: CalendarItem) => void
   onDeletePractice?: (itemId: string) => void
   onAddPracticeLog?: (practiceId: string) => void
@@ -215,7 +216,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                         onClose()
                       }}
                     >
-                      <MaterialIcons name="pool" size={18} color="#FFFFFF" style={styles.addButtonIcon} />
+                      <Feather name="droplet" size={18} color="#FFFFFF" style={styles.addButtonIcon} />
                       <Text style={styles.addButtonText}>大会記録を追加</Text>
                     </Pressable>
                   )}
@@ -225,9 +226,9 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
               <>
               <View style={styles.entriesContainer}>
                 {(() => {
-                  // 記録を大会ごとにグループ化
+                  // エントリータイプをフィルタリング
                   const recordItems = entries.filter(e => e.type === 'record')
-                  const otherItems = entries.filter(e => e.type !== 'record')
+                  const entryItems = entries.filter(e => e.type === 'entry')
                   
                   // 記録を大会IDでグループ化
                   const recordsByCompetition = new Map<string, CalendarItem[]>()
@@ -241,9 +242,45 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                     recordsByCompetition.get(competitionId)!.push(record)
                   })
                   
+                  // エントリーを大会IDでグループ化
+                  const entriesByCompetition = new Map<string, CalendarItem[]>()
+                  entryItems.forEach(entry => {
+                    const competitionId = entry.metadata?.competition?.id || 
+                                        entry.metadata?.entry?.competition_id
+                    if (competitionId) {
+                      if (!entriesByCompetition.has(competitionId)) {
+                        entriesByCompetition.set(competitionId, [])
+                      }
+                      entriesByCompetition.get(competitionId)!.push(entry)
+                    }
+                  })
+                  
+                  // エントリーや記録を持っていないcompetitionタイプのIDを取得
+                  const competitionsWithEntriesOrRecords = new Set<string>()
+                  recordsByCompetition.forEach((_, competitionId) => {
+                    competitionsWithEntriesOrRecords.add(competitionId)
+                  })
+                  entriesByCompetition.forEach((_, competitionId) => {
+                    competitionsWithEntriesOrRecords.add(competitionId)
+                  })
+                  
+                  // その他のアイテム（エントリーや記録を持っていないcompetitionも含む）
+                  const otherItems = entries.filter(e => {
+                    // recordとentryは除外
+                    if (e.type === 'record' || e.type === 'entry') {
+                      return false
+                    }
+                    // competition/team_competitionで、エントリーや記録を持っている場合は除外
+                    if (e.type === 'competition' || e.type === 'team_competition') {
+                      return !competitionsWithEntriesOrRecords.has(e.id)
+                    }
+                    // その他は含める
+                    return true
+                  })
+                  
                   return (
                     <>
-                      {/* 記録以外のエントリー */}
+                      {/* 記録以外のエントリー（entryとcompetition以外） */}
                       {otherItems.map((item) => {
                         const title = getEntryTitle(item)
                         const color = getEntryColor(item.type)
@@ -291,6 +328,52 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                             onEditCompetition={onEditCompetition}
                             onDeleteCompetition={onDeleteCompetition}
                             onPracticeTimeLoaded={handlePracticeTimeLoaded}
+                          />
+                        )
+                      })}
+                      
+                      {/* エントリー済み（記録未登録）を大会ごとに表示 */}
+                      {Array.from(entriesByCompetition.entries()).map(([competitionId, entryList]) => {
+                        // この大会に記録がある場合はスキップ（記録がある場合はRecordDetailで表示される）
+                        if (recordsByCompetition.has(competitionId)) {
+                          return null
+                        }
+                        
+                        const firstEntry = entryList[0]
+                        const competitionName = firstEntry.metadata?.competition?.title || firstEntry.title || '大会'
+                        const place = firstEntry.place || firstEntry.metadata?.competition?.place || ''
+                        const poolType = firstEntry.metadata?.competition?.pool_type ?? 0
+                        const note = firstEntry.note || undefined
+                        
+                        return (
+                          <EntryDetail
+                            key={`entry-competition-${competitionId}`}
+                            competitionId={competitionId}
+                            competitionName={competitionName}
+                            place={place}
+                            poolType={poolType}
+                            note={note}
+                            entries={entryList}
+                            onEditCompetition={(item) => {
+                              if (onEditCompetition) {
+                                onEditCompetition(item)
+                                onClose()
+                              }
+                            }}
+                            onDeleteCompetition={() => {
+                              if (onDeleteCompetition) {
+                                onDeleteCompetition(competitionId)
+                              }
+                            }}
+                            onEditEntry={onEditEntry}
+                            onDeleteEntry={onDeleteEntry}
+                            onAddRecord={(compId: string, dateParam: string) => {
+                              if (onAddRecord) {
+                                onAddRecord(compId, dateParam)
+                                onClose()
+                              }
+                            }}
+                            onClose={onClose}
                           />
                         )
                       })}
@@ -366,7 +449,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           onClose()
                         }}
                       >
-                        <MaterialIcons name="pool" size={20} color="#3B82F6" />
+                        <Feather name="droplet" size={20} color="#3B82F6" />
                         <Text style={styles.addRecordButtonText}>大会記録</Text>
           </Pressable>
                     )}
@@ -671,7 +754,7 @@ const PracticeLogDetail: React.FC<{
                     onClose()
                   }}
                 >
-                  <MaterialIcons name="edit" size={16} color="#6B7280" />
+                  <Feather name="edit" size={18} color="#2563EB" />
                 </Pressable>
               )}
               {onDeletePracticeLog && (
@@ -682,7 +765,7 @@ const PracticeLogDetail: React.FC<{
                     onDeletePracticeLog(item.id)
                   }}
                 >
-                  <Feather name="trash-2" size={16} color="#6B7280" />
+                  <Feather name="trash-2" size={16} color="#EF4444" />
                 </Pressable>
               )}
               {item.type === 'record' && onEditRecord && (
@@ -694,7 +777,7 @@ const PracticeLogDetail: React.FC<{
                     onClose()
                   }}
                 >
-                  <MaterialIcons name="edit" size={20} color="#6B7280" />
+                  <Feather name="edit" size={18} color="#2563EB" />
                 </Pressable>
               )}
               {item.type === 'record' && onDeleteRecord && (
@@ -705,7 +788,7 @@ const PracticeLogDetail: React.FC<{
                     onDeleteRecord(item.id)
                   }}
                 >
-                  <Feather name="trash-2" size={20} color="#6B7280" />
+                  <Feather name="trash-2" size={20} color="#EF4444" />
                 </Pressable>
               )}
               {item.type === 'entry' && onEditEntry && (
@@ -717,7 +800,7 @@ const PracticeLogDetail: React.FC<{
                     onClose()
                   }}
                 >
-                  <MaterialIcons name="edit" size={20} color="#6B7280" />
+                  <Feather name="edit" size={18} color="#2563EB" />
                 </Pressable>
               )}
               {item.type === 'entry' && onDeleteEntry && (
@@ -728,7 +811,7 @@ const PracticeLogDetail: React.FC<{
                     onDeleteEntry(item.id)
                   }}
                 >
-                  <Feather name="trash-2" size={20} color="#6B7280" />
+                  <Feather name="trash-2" size={20} color="#EF4444" />
                 </Pressable>
               )}
               {(item.type === 'competition' || item.type === 'team_competition') && onEditCompetition && (
@@ -740,7 +823,7 @@ const PracticeLogDetail: React.FC<{
                     onClose()
                   }}
                 >
-                  <MaterialIcons name="edit" size={20} color="#6B7280" />
+                  <Feather name="edit" size={18} color="#2563EB" />
                 </Pressable>
               )}
               {(item.type === 'competition' || item.type === 'team_competition') && onDeleteCompetition && (
@@ -751,7 +834,7 @@ const PracticeLogDetail: React.FC<{
                     onDeleteCompetition(item.id)
                   }}
                 >
-                  <Feather name="trash-2" size={20} color="#6B7280" />
+                  <Feather name="trash-2" size={20} color="#EF4444" />
                 </Pressable>
               )}
             </View>
@@ -846,7 +929,7 @@ const PracticeLogDetail: React.FC<{
                     onClose()
                   }}
                 >
-                  <MaterialIcons name="edit" size={20} color="#6B7280" />
+                  <Feather name="edit" size={18} color="#2563EB" />
                 </Pressable>
               )}
               {isPractice && onDeletePractice && (
@@ -857,7 +940,7 @@ const PracticeLogDetail: React.FC<{
                     onDeletePractice(item.id)
                   }}
                 >
-                  <Feather name="trash-2" size={20} color="#6B7280" />
+                  <Feather name="trash-2" size={20} color="#EF4444" />
                 </Pressable>
               )}
               {item.type === 'record' && onEditRecord && (
@@ -869,7 +952,7 @@ const PracticeLogDetail: React.FC<{
                     onClose()
                   }}
                 >
-                  <MaterialIcons name="edit" size={20} color="#6B7280" />
+                  <Feather name="edit" size={18} color="#2563EB" />
                 </Pressable>
               )}
               {item.type === 'record' && onDeleteRecord && (
@@ -880,7 +963,7 @@ const PracticeLogDetail: React.FC<{
                     onDeleteRecord(item.id)
                   }}
                 >
-                  <Feather name="trash-2" size={20} color="#6B7280" />
+                  <Feather name="trash-2" size={20} color="#EF4444" />
                 </Pressable>
               )}
               {item.type === 'entry' && onEditEntry && (
@@ -892,7 +975,7 @@ const PracticeLogDetail: React.FC<{
                     onClose()
                   }}
                 >
-                  <MaterialIcons name="edit" size={20} color="#6B7280" />
+                  <Feather name="edit" size={18} color="#2563EB" />
                 </Pressable>
               )}
               {item.type === 'entry' && onDeleteEntry && (
@@ -903,7 +986,7 @@ const PracticeLogDetail: React.FC<{
                     onDeleteEntry(item.id)
                   }}
                 >
-                  <Feather name="trash-2" size={20} color="#6B7280" />
+                  <Feather name="trash-2" size={20} color="#EF4444" />
                 </Pressable>
               )}
               {(item.type === 'competition' || item.type === 'team_competition') && onEditCompetition && (
@@ -915,7 +998,7 @@ const PracticeLogDetail: React.FC<{
                     onClose()
                   }}
                 >
-                  <MaterialIcons name="edit" size={20} color="#6B7280" />
+                  <Feather name="edit" size={18} color="#2563EB" />
                 </Pressable>
               )}
               {(item.type === 'competition' || item.type === 'team_competition') && onDeleteCompetition && (
@@ -926,7 +1009,7 @@ const PracticeLogDetail: React.FC<{
                     onDeleteCompetition(item.id)
                   }}
                 >
-                  <Feather name="trash-2" size={20} color="#6B7280" />
+                  <Feather name="trash-2" size={20} color="#EF4444" />
                 </Pressable>
               )}
               {isPractice && (
@@ -1383,8 +1466,13 @@ const RecordDetail: React.FC<{
       <View style={styles.competitionHeader}>
         <View style={styles.competitionHeaderContent}>
           <View style={styles.competitionHeaderLeft}>
-            <View style={styles.competitionHeaderBar} />
-            <Text style={styles.competitionHeaderTitle}>{competitionName}</Text>
+            
+            <View style={styles.competitionHeaderTitleRow}>
+              <View style={[styles.entryTypeBadge, { backgroundColor: '#2563EB' }]}>
+                <Text style={styles.entryTypeText}>大会</Text>
+              </View>
+              <Text style={styles.competitionHeaderTitle}>{competitionName}</Text>
+            </View>
           </View>
           <View style={styles.competitionHeaderActions}>
             {onEditCompetition && (
@@ -1392,7 +1480,7 @@ const RecordDetail: React.FC<{
                 style={styles.competitionHeaderButton}
                 onPress={onEditCompetition}
               >
-                <MaterialIcons name="edit" size={20} color="#2563EB" />
+                <Feather name="edit" size={18} color="#2563EB" />
               </Pressable>
             )}
             {onDeleteCompetition && (
@@ -1415,7 +1503,7 @@ const RecordDetail: React.FC<{
             )}
             {poolType !== undefined && (
               <View style={styles.competitionHeaderInfoItem}>
-                <MaterialIcons name="pool" size={14} color="#6B7280" />
+                <Feather name="droplet" size={14} color="#6B7280" />
                 <Text style={styles.competitionHeaderInfoText}>{getPoolTypeText(poolType)}</Text>
               </View>
             )}
@@ -1443,7 +1531,7 @@ const RecordDetail: React.FC<{
                   onClose?.()
                 }}
               >
-                <MaterialIcons name="add" size={18} color="#2563EB" />
+                <Feather name="plus" size={18} color="#2563EB" />
                 <Text style={styles.addCompetitionRecordButtonText}>大会記録を追加</Text>
               </Pressable>
             )}
@@ -1515,7 +1603,7 @@ const RecordDetail: React.FC<{
                           }
                         }}
                       >
-                        <MaterialIcons name="edit" size={18} color="#2563EB" />
+                        <Feather name="edit" size={18} color="#2563EB" />
                       </Pressable>
                     )}
                     {onDeleteRecord && (
@@ -1591,11 +1679,327 @@ const RecordDetail: React.FC<{
               onClose?.()
             }}
           >
-            <MaterialIcons name="add" size={18} color="#2563EB" />
+            <Feather name="plus" size={18} color="#2563EB" />
             <Text style={styles.addCompetitionRecordButtonText}>大会記録を追加</Text>
           </Pressable>
         )}
       </View>
+    </View>
+  )
+}
+
+/**
+ * エントリー詳細表示コンポーネント（大会ごとにグループ化、記録未登録）
+ */
+const EntryDetail: React.FC<{
+  competitionId: string
+  competitionName: string
+  place?: string
+  poolType?: number
+  note?: string
+  entries: CalendarItem[]
+  onEditCompetition?: (item: CalendarItem) => void
+  onDeleteCompetition?: () => void
+  onEditEntry?: (item: CalendarItem) => void
+  onDeleteEntry?: (entryId: string) => void
+  onAddRecord?: (competitionId: string, date: string) => void
+  onClose?: () => void
+}> = ({
+  competitionId,
+  competitionName,
+  place,
+  poolType,
+  note,
+  entries,
+  onEditCompetition,
+  onDeleteCompetition,
+  onEditEntry,
+  onDeleteEntry,
+  onAddRecord,
+  onClose,
+}) => {
+  const { supabase } = useAuth()
+  const [actualEntries, setActualEntries] = useState<Array<{
+    id: string
+    styleId: number
+    styleName: string
+    entryTime: number | null
+    note: string | null
+  }>>([])
+  const [loading, setLoading] = useState(true)
+
+  const fetchEntries = useCallback(async () => {
+    try {
+      setLoading(true)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setLoading(false)
+        return
+      }
+
+      const { data: entryData, error } = await supabase
+        .from('entries')
+        .select(`
+          id,
+          style_id,
+          entry_time,
+          note,
+          style:styles!inner(id, name_jp)
+        `)
+        .eq('competition_id', competitionId)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+
+      if (entryData && entryData.length > 0) {
+        type EntryRow = {
+          id: string
+          style_id: number
+          entry_time: number | null
+          note: string | null
+          style: { id: number; name_jp: string } | { id: number; name_jp: string }[]
+        }
+
+        const mapped = (entryData as EntryRow[]).map((row) => {
+          const style = Array.isArray(row.style) ? row.style[0] : row.style
+          return {
+            id: row.id,
+            styleId: row.style_id,
+            styleName: style?.name_jp || '',
+            entryTime: row.entry_time,
+            note: row.note
+          }
+        })
+        setActualEntries(mapped)
+      } else {
+        // カレンダーアイテムから初期データを構築
+        const initialEntries = entries.map((entry) => {
+          const style = entry.metadata?.style
+          return {
+            id: entry.id,
+            styleId: (typeof style === 'object' && style !== null && 'id' in style) ? Number(style.id) : 0,
+            styleName: (typeof style === 'object' && style !== null && 'name_jp' in style) ? String(style.name_jp) : '',
+            entryTime: entry.metadata?.entry_time || null,
+            note: entry.note || null
+          }
+        })
+        setActualEntries(initialEntries)
+      }
+    } catch (err) {
+      console.error('エントリーデータの取得エラー:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [competitionId, supabase, entries])
+
+  useEffect(() => {
+    fetchEntries()
+  }, [fetchEntries])
+
+  const getPoolTypeText = (poolType: number) => {
+    return poolType === 1 ? '長水路(50m)' : '短水路(25m)'
+  }
+
+  // エントリーが0件で読み込み完了した場合は、コンポーネント全体を非表示にする
+  if (!loading && actualEntries.length === 0) {
+    return null
+  }
+
+  return (
+    <View style={styles.competitionRecordContainer}>
+      {/* 大会ヘッダー */}
+      <View style={styles.competitionHeader}>
+        <View style={styles.competitionHeaderTopRow}>
+          <View style={styles.competitionHeaderLeft}>
+            <Text style={styles.competitionHeaderTitle}>{competitionName}</Text>
+          </View>
+          <View style={styles.competitionHeaderActions}>
+            {onEditCompetition && (
+              <Pressable
+                style={styles.competitionHeaderActionButton}
+                onPress={() => {
+                  // CalendarItemを構築して渡す
+                  const firstEntry = entries[0]
+                  if (firstEntry && onEditCompetition) {
+                    const competitionItem: CalendarItem = {
+                      id: competitionId,
+                      type: firstEntry.metadata?.competition?.team_id ? 'team_competition' : 'competition',
+                      title: competitionName,
+                      date: firstEntry.date || '',
+                      place: place || undefined,
+                      note: note || undefined,
+                      metadata: {
+                        competition: {
+                          id: competitionId,
+                          title: competitionName,
+                          date: firstEntry.date || '',
+                          end_date: null,
+                          place: place || null,
+                          pool_type: poolType ?? 0,
+                          team_id: firstEntry.metadata?.competition?.team_id || null,
+                        },
+                      },
+                    }
+                    onEditCompetition(competitionItem)
+                    onClose?.()
+                  }
+                }}
+              >
+                <Feather name="edit" size={18} color="#2563EB" />
+              </Pressable>
+            )}
+            {onDeleteCompetition && (
+              <Pressable
+                style={styles.competitionHeaderActionButton}
+                onPress={onDeleteCompetition}
+              >
+                <Feather name="trash-2" size={18} color="#EF4444" />
+              </Pressable>
+            )}
+          </View>
+        </View>
+        {place && (
+          <Text style={styles.competitionHeaderPlace}>📍 {place}</Text>
+        )}
+        {poolType !== undefined && (
+          <Text style={styles.competitionHeaderPoolType}>{getPoolTypeText(poolType)}</Text>
+        )}
+      </View>
+
+      {note && (
+        <View style={styles.competitionNoteContainer}>
+          <Text style={styles.competitionNoteText}>{note}</Text>
+        </View>
+      )}
+
+      {/* エントリー済み（記録未登録）セクション */}
+      <View style={styles.entrySection}>
+        <View style={styles.entrySectionHeader}>
+          <Text style={styles.entrySectionHeaderEmoji}>📝</Text>
+          <Text style={styles.entrySectionHeaderTitle}>エントリー済み（記録未登録）</Text>
+          {onEditEntry && (
+            <Pressable
+              style={styles.entrySectionHeaderActionButton}
+              onPress={() => {
+                // actualEntriesから最初のエントリーを取得して編集対象とする
+                if (actualEntries.length > 0 && !loading) {
+                  const firstActualEntry = actualEntries[0]
+                  const firstCalendarEntry = entries[0]
+                  if (firstCalendarEntry && onEditEntry) {
+                    // 実際のエントリーIDを使用してCalendarItemを構築
+                    const entryItem: CalendarItem = {
+                      ...firstCalendarEntry,
+                      id: firstActualEntry.id, // 実際のエントリーIDを使用
+                    }
+                    onEditEntry(entryItem)
+                    onClose?.()
+                  }
+                } else if (entries.length > 0 && onEditEntry) {
+                  // actualEntriesがまだ読み込まれていない場合は、CalendarItemをそのまま使用
+                  onEditEntry(entries[0])
+                  onClose?.()
+                }
+              }}
+            >
+              <Feather name="edit" size={18} color="#2563EB" />
+            </Pressable>
+          )}
+        </View>
+
+        {loading ? (
+          <Text style={styles.entryLoadingText}>読み込み中...</Text>
+        ) : actualEntries.length === 0 ? (
+          <Text style={styles.entryEmptyText}>エントリー情報が見つかりません</Text>
+        ) : (
+          <View style={styles.entryList}>
+            {actualEntries.map((entry) => (
+              <View key={entry.id} style={styles.entryCard}>
+                <View style={styles.entryCardContent}>
+                  <View style={styles.entryCardInfo}>
+                    <View style={styles.entryCardInfoRow}>
+                      <Text style={styles.entryCardInfoLabel}>種目:</Text>
+                      <Text style={styles.entryCardInfoValue}>{entry.styleName}</Text>
+                    </View>
+                    {entry.entryTime && entry.entryTime > 0 && (
+                      <View style={styles.entryCardInfoRow}>
+                        <Text style={styles.entryCardInfoLabel}>エントリータイム:</Text>
+                        <Text style={styles.entryCardInfoValueTime}>{formatTime(entry.entryTime)}</Text>
+                      </View>
+                    )}
+                    {entry.note && entry.note.trim().length > 0 && (
+                      <View style={styles.entryCardInfoRow}>
+                        <Text style={styles.entryCardInfoLabel}>メモ:</Text>
+                        <Text style={styles.entryCardInfoValue}>{entry.note}</Text>
+                      </View>
+                    )}
+                  </View>
+                  {onDeleteEntry && (
+                    <Pressable
+                      style={styles.entryCardDeleteButton}
+                      onPress={async () => {
+                        Alert.alert(
+                          '削除確認',
+                          'このエントリーを削除しますか？\nこの操作は取り消せません。',
+                          [
+                            {
+                              text: 'キャンセル',
+                              style: 'cancel',
+                            },
+                            {
+                              text: '削除',
+                              style: 'destructive',
+                              onPress: async () => {
+                                try {
+                                  const api = new EntryAPI(supabase)
+                                  await api.deleteEntry(entry.id)
+                                  // 削除後にエントリー一覧を再取得
+                                  await fetchEntries()
+                                  // 親コンポーネントに削除完了を通知（カレンダーのリフレッシュのため）
+                                  // 削除確認は既に表示済みなので、親コンポーネントの削除確認はスキップされる
+                                  if (onDeleteEntry) {
+                                    onDeleteEntry(entry.id)
+                                  }
+                                } catch (error) {
+                                  console.error('削除エラー:', error)
+                                  Alert.alert(
+                                    'エラー',
+                                    error instanceof Error ? error.message : '削除に失敗しました',
+                                    [{ text: 'OK' }]
+                                  )
+                                }
+                              },
+                            },
+                          ]
+                        )
+                      }}
+                    >
+                      <Feather name="trash-2" size={16} color="#EF4444" />
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+
+      {/* 大会記録を追加ボタン */}
+      {onAddRecord && (
+        <Pressable
+          style={styles.addCompetitionRecordButton}
+          onPress={() => {
+            const firstEntry = entries[0]
+            const dateParam = firstEntry?.date || ''
+            if (competitionId && dateParam) {
+              onAddRecord(competitionId, dateParam)
+              onClose?.()
+            }
+          }}
+        >
+          <Feather name="plus" size={20} color="#FFFFFF" />
+          <Text style={styles.addCompetitionRecordButtonText}>大会記録を追加</Text>
+        </Pressable>
+      )}
     </View>
   )
 }
@@ -2026,16 +2430,22 @@ const styles = StyleSheet.create({
   competitionHeader: {
     marginBottom: 12,
   },
+  competitionHeaderTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  competitionHeaderLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   competitionHeaderContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 8,
-  },
-  competitionHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
   },
   competitionHeaderBar: {
     width: 4,
@@ -2044,15 +2454,21 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     marginRight: 8,
   },
+  competitionHeaderTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
   competitionHeaderTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1E40AF',
-    flex: 1,
+    color: '#111827',
   },
   competitionHeaderActions: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    gap: 4,
   },
   competitionHeaderButton: {
     padding: 4,
@@ -2234,5 +2650,119 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#1E40AF',
+  },
+  // EntryDetail用のスタイル
+  entrySection: {
+    backgroundColor: '#FFF7ED',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+    marginTop: 12,
+  },
+  entrySectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  entrySectionHeaderEmoji: {
+    fontSize: 18,
+  },
+  entrySectionHeaderTitle: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#9A3412',
+  },
+  entrySectionHeaderActionButton: {
+    padding: 4,
+  },
+  entryLoadingText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    padding: 8,
+  },
+  entryEmptyText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    padding: 8,
+  },
+  entryList: {
+    gap: 8,
+  },
+  entryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 6,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+  },
+  entryCardContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  entryCardInfo: {
+    flex: 1,
+    gap: 6,
+  },
+  entryCardInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  entryCardInfoLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#9A3412',
+    minWidth: 100,
+  },
+  entryCardInfoValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+    flex: 1,
+  },
+  entryCardInfoValueTime: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+    fontFamily: 'monospace',
+  },
+  entryCardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginLeft: 8,
+  },
+  entryCardDeleteButton: {
+    padding: 4,
+  },
+  competitionHeaderPlace: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  competitionHeaderPoolType: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  competitionNoteContainer: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 6,
+    padding: 8,
+    marginBottom: 12,
+  },
+  competitionNoteText: {
+    fontSize: 14,
+    color: '#374151',
+  },
+  competitionHeaderActionButton: {
+    padding: 4,
   },
 })

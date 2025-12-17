@@ -190,9 +190,12 @@ export const RecordsScreen: React.FC = () => {
     [handleRecordPress]
   )
 
-  // 作成画面への遷移
+  // 作成画面への遷移（ダッシュボードと同じフロー: Competition → Entry → Record）
   const handleCreate = () => {
-    navigation.navigate('RecordForm', {})
+    // 今日の日付をフォーマット
+    const today = format(new Date(), 'yyyy-MM-dd')
+    // ダッシュボードと同じようにCompetitionFormから開始
+    navigation.navigate('CompetitionForm', { date: today })
   }
 
   // エラー状態
@@ -351,7 +354,7 @@ const styles = StyleSheet.create({
   },
   fabContainer: {
     position: 'absolute',
-    bottom: 80,
+    bottom: 20,
     right: 16,
     zIndex: 1000,
   },

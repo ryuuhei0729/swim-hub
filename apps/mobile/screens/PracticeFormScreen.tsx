@@ -9,6 +9,7 @@ import {
   useUpdatePracticeMutation,
   usePracticesQuery,
 } from '@apps/shared/hooks/queries/practices'
+import { practiceKeys } from '@apps/shared/hooks/queries/keys'
 import { usePracticeFormStore } from '@/stores/practiceFormStore'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import type { MainStackParamList } from '@/navigation/types'
@@ -149,19 +150,21 @@ export const PracticeFormScreen: React.FC = () => {
           id: practiceId,
           updates: formData,
         })
-        // カレンダーのクエリを無効化してリフレッシュ
+        // カレンダーと練習一覧のクエリを無効化してリフレッシュ
         queryClient.invalidateQueries({ queryKey: ['calendar'] })
+        queryClient.invalidateQueries({ queryKey: practiceKeys.lists() })
         // 成功: 前の画面に戻る
         reset()
         navigation.goBack()
       } else {
         // 作成
         await createMutation.mutateAsync(formData)
-        // カレンダーのクエリを無効化してリフレッシュ
+        // カレンダーと練習一覧のクエリを無効化してリフレッシュ
         queryClient.invalidateQueries({ queryKey: ['calendar'] })
-        // 成功: ダッシュボードに戻る
+        queryClient.invalidateQueries({ queryKey: practiceKeys.lists() })
+        // 成功: 前の画面に戻る（練習タブから来た場合は練習タブに戻る）
         reset()
-        navigation.navigate('MainTabs', { screen: 'Dashboard' })
+        navigation.goBack()
       }
     } catch (error) {
       console.error('保存エラー:', error)
@@ -199,6 +202,7 @@ export const PracticeFormScreen: React.FC = () => {
           updates: formData,
         })
         queryClient.invalidateQueries({ queryKey: ['calendar'] })
+        queryClient.invalidateQueries({ queryKey: practiceKeys.lists() })
         reset()
         navigation.navigate('PracticeLogForm', {
           practiceId: practiceId,
@@ -206,10 +210,11 @@ export const PracticeFormScreen: React.FC = () => {
       } else {
         // 作成
         const createdPractice = await createMutation.mutateAsync(formData)
-        // カレンダーのクエリを無効化してリフレッシュ
+        // カレンダーと練習一覧のクエリを無効化してリフレッシュ
         queryClient.invalidateQueries({ queryKey: ['calendar'] })
+        queryClient.invalidateQueries({ queryKey: practiceKeys.lists() })
         // 成功: PracticeLogFormScreenへ遷移
-      reset()
+        reset()
         navigation.navigate('PracticeLogForm', {
           practiceId: createdPractice.id,
         })
@@ -271,7 +276,7 @@ export const PracticeFormScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             value={title || ''}
-            onChangeText={(text) => setTitle(text.trim() !== '' ? text : null)}
+            onChangeText={setTitle}
             placeholder="練習タイトル（任意）"
             placeholderTextColor="#9CA3AF"
             editable={!storeLoading}
@@ -284,7 +289,7 @@ export const PracticeFormScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             value={place || ''}
-            onChangeText={(text) => setPlace(text.trim() !== '' ? text : null)}
+            onChangeText={setPlace}
             placeholder="練習場所（任意）"
             placeholderTextColor="#9CA3AF"
             editable={!storeLoading}
@@ -297,7 +302,7 @@ export const PracticeFormScreen: React.FC = () => {
           <TextInput
             style={[styles.input, styles.textArea]}
             value={note || ''}
-            onChangeText={(text) => setNote(text.trim() !== '' ? text : null)}
+            onChangeText={setNote}
             placeholder="メモ（任意）"
             placeholderTextColor="#9CA3AF"
             multiline

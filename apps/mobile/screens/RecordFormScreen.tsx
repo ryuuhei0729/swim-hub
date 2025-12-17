@@ -27,14 +27,14 @@ type RecordFormScreenNavigationProp = NativeStackNavigationProp<MainStackParamLi
 export const RecordFormScreen: React.FC = () => {
   const route = useRoute<RecordFormScreenRouteProp>()
   const navigation = useNavigation<RecordFormScreenNavigationProp>()
-  const { recordId } = route.params || {}
+  const { recordId, competitionId: routeCompetitionId } = route.params || {}
   const { supabase } = useAuth()
   const queryClient = useQueryClient()
   const isEditMode = !!recordId
 
   // Zustandストア
   const {
-    competitionId,
+    competitionId: storeCompetitionId,
     styleId,
     time,
     reactionTime,
@@ -100,6 +100,14 @@ export const RecordFormScreen: React.FC = () => {
     setCompetitions(competitionsData)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [competitionsKey])
+
+  // routeCompetitionIdが渡された場合はストアに設定
+  useEffect(() => {
+    if (routeCompetitionId && !isEditMode) {
+      setCompetitionId(routeCompetitionId)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeCompetitionId, isEditMode])
 
   const hasInitializedForEdit = useRef(false)
 
@@ -167,7 +175,8 @@ export const RecordFormScreen: React.FC = () => {
     let isValid = true
 
     // 大会のバリデーション
-    if (!competitionId || competitionId.trim() === '') {
+    const finalCompetitionId = routeCompetitionId || storeCompetitionId
+    if (!finalCompetitionId || finalCompetitionId.trim() === '') {
       setError('competitionId', '大会を選択してください')
       isValid = false
     }
@@ -209,11 +218,12 @@ export const RecordFormScreen: React.FC = () => {
 
     try {
       // 大会からプールタイプを取得
-      const selectedCompetition = competitions.find((c) => c.id === competitionId)
+      const finalCompetitionId = routeCompetitionId || storeCompetitionId
+      const selectedCompetition = competitions.find((c) => c.id === finalCompetitionId)
       const poolType: PoolType = (selectedCompetition?.pool_type ?? 0) as PoolType // デフォルトは短水路
 
       const recordData = {
-        competition_id: competitionId,
+        competition_id: finalCompetitionId,
         style_id: styleId!,
         time: time!,
         reaction_time: reactionTime,
@@ -311,7 +321,7 @@ export const RecordFormScreen: React.FC = () => {
           </Text>
           <TextInput
             style={[styles.input, errors.competitionId && styles.inputError]}
-            value={competitionId || ''}
+            value={routeCompetitionId || storeCompetitionId || ''}
             onChangeText={(text) => {
               setCompetitionId(text.trim() !== '' ? text.trim() : null)
               if (errors.competitionId) {
@@ -320,7 +330,7 @@ export const RecordFormScreen: React.FC = () => {
             }}
             placeholder="大会IDを入力"
             placeholderTextColor="#9CA3AF"
-            editable={!storeLoading}
+            editable={!routeCompetitionId && !storeLoading}
           />
           {errors.competitionId && <Text style={styles.errorText}>{errors.competitionId}</Text>}
           {competitions.length > 0 && (

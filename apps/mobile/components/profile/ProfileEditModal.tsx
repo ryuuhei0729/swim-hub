@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { format } from 'date-fns'
 import { View, Text, Modal, Pressable, TextInput, StyleSheet, ScrollView } from 'react-native'
+import { Picker } from '@react-native-picker/picker'
 import { AvatarUpload } from './AvatarUpload'
+import { useAuth } from '@/contexts/AuthProvider'
 import type { UserProfile } from '@swim-hub/shared/types/database'
 
 interface ProfileEditModalProps {
@@ -9,7 +11,7 @@ interface ProfileEditModalProps {
   onClose: () => void
   profile: Partial<UserProfile>
   onUpdate: (updatedProfile: Partial<UserProfile>) => Promise<void>
-  onAvatarChange: (newAvatarUrl: string | null) => void
+  onAvatarChange: (newAvatarUrl: string | null) => Promise<void>
 }
 
 /**
@@ -22,6 +24,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
   onUpdate,
   onAvatarChange,
 }) => {
+  const { supabase, user } = useAuth()
   const [formData, setFormData] = useState({
     name: '',
     birthday: '',
@@ -29,18 +32,103 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
   })
   const [isUpdating, setIsUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedImageData, setSelectedImageData] = useState<{
+    base64: string
+    fileExtension: string
+  } | null>(null)
+
+  // 年・月・日の状態管理
+  const currentDateRef = useRef(new Date())
+  const currentDate = currentDateRef.current
+  const [selectedYear, setSelectedYear] = useState<number>(currentDate.getFullYear())
+  const [selectedMonth, setSelectedMonth] = useState<number>(currentDate.getMonth() + 1)
+  const [selectedDay, setSelectedDay] = useState<number>(currentDate.getDate())
+
+  // 日付変換ユーティリティ関数
+  const parseBirthday = useCallback((birthdayStr: string): { year: number; month: number; day: number } => {
+    if (!birthdayStr) {
+      const now = new Date()
+      return {
+        year: now.getFullYear(),
+        month: now.getMonth() + 1,
+        day: now.getDate(),
+      }
+    }
+    const [year, month, day] = birthdayStr.split('-').map(Number)
+    return {
+      year: year || currentDate.getFullYear(),
+      month: month || currentDate.getMonth() + 1,
+      day: day || currentDate.getDate(),
+    }
+  }, [currentDate])
+
+  const formatBirthday = (year: number, month: number, day: number): string => {
+    const monthStr = month.toString().padStart(2, '0')
+    const dayStr = day.toString().padStart(2, '0')
+    return `${year}-${monthStr}-${dayStr}`
+  }
+
+  const getDaysInMonth = (year: number, month: number): number => {
+    return new Date(year, month, 0).getDate()
+  }
+
+  // 年の選択肢（1900年〜現在の年）
+  const years = useMemo(() => {
+    const currentYear = currentDate.getFullYear()
+    return Array.from({ length: currentYear - 1899 }, (_, i) => currentYear - i)
+  }, [currentDate])
+
+  // 月の選択肢（1-12月）
+  const months = useMemo(() => {
+    return Array.from({ length: 12 }, (_, i) => i + 1)
+  }, [])
+
+  // 日の選択肢（選択された年月に応じて動的に生成）
+  const days = useMemo(() => {
+    const daysInMonth = getDaysInMonth(selectedYear, selectedMonth)
+    return Array.from({ length: daysInMonth }, (_, i) => i + 1)
+  }, [selectedYear, selectedMonth])
 
   // プロフィールが変更されたときにフォームデータを更新
   useEffect(() => {
     if (profile) {
+      const birthdayStr = profile.birthday ? format(new Date(profile.birthday), 'yyyy-MM-dd') : ''
       setFormData({
         name: profile.name || '',
-        birthday: profile.birthday ? format(new Date(profile.birthday), 'yyyy-MM-dd') : '',
+        birthday: birthdayStr,
         bio: profile.bio || '',
       })
+
+      // 誕生日から年・月・日を抽出
+      if (birthdayStr) {
+        const { year, month, day } = parseBirthday(birthdayStr)
+        setSelectedYear(year)
+        setSelectedMonth(month)
+        setSelectedDay(day)
+      } else {
+        // 誕生日がない場合は現在の日付を設定
+        setSelectedYear(currentDate.getFullYear())
+        setSelectedMonth(currentDate.getMonth() + 1)
+        setSelectedDay(currentDate.getDate())
+      }
     }
     setError(null)
-  }, [profile, visible])
+  }, [profile, visible, currentDate, parseBirthday])
+
+  // 年・月・日の変更時にformData.birthdayを更新
+  useEffect(() => {
+    const birthdayStr = formatBirthday(selectedYear, selectedMonth, selectedDay)
+    setFormData((prev) => ({ ...prev, birthday: birthdayStr }))
+    setError(null)
+  }, [selectedYear, selectedMonth, selectedDay])
+
+  // 月や年が変更されたときに、日が無効な値にならないように調整
+  useEffect(() => {
+    const daysInMonth = getDaysInMonth(selectedYear, selectedMonth)
+    if (selectedDay > daysInMonth) {
+      setSelectedDay(daysInMonth)
+    }
+  }, [selectedYear, selectedMonth, selectedDay])
 
   const handleClose = () => {
     if (isUpdating) return
@@ -58,21 +146,118 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
       setIsUpdating(true)
       setError(null)
 
-      // 誕生日を日付文字列として検証（不正値はnullとして扱う）
-      let birthday: string | null = null
-      if (formData.birthday) {
-        const dateRegex = /^\d{4}-\d{2}-\d{2}$/
-        if (dateRegex.test(formData.birthday)) {
-          const [year, month, day] = formData.birthday.split('-').map(Number)
-          const utcDate = new Date(Date.UTC(year, month - 1, day))
-          const isValidDate =
-            !Number.isNaN(utcDate.getTime()) &&
-            utcDate.getUTCFullYear() === year &&
-            utcDate.getUTCMonth() === month - 1 &&
-            utcDate.getUTCDate() === day
-          birthday = isValidDate ? formData.birthday : null
+      // 選択した画像がある場合はアップロード
+      if (selectedImageData && user) {
+        try {
+          const userFolderPath = `avatars/${user.id}`
+
+          // 既存画像の削除（WEBの実装と同様）
+          try {
+            const { data: files, error: listError } = await supabase.storage
+              .from('profile-images')
+              .list(userFolderPath)
+
+            // 404エラーは「ディレクトリが存在しない（削除するものがない）」として扱う
+            const errorStatusCode = (listError as { statusCode?: string | number } | null)?.statusCode
+            if (listError && errorStatusCode !== '404' && errorStatusCode !== 404) {
+              console.warn('ファイル一覧取得エラー:', listError)
+            } else if (files && files.length > 0) {
+              // すべてのファイルを削除
+              const filePathsToDelete = files.map((f) => `${userFolderPath}/${f.name}`)
+              console.log('既存のプロフィール画像を削除中:', filePathsToDelete)
+
+              const { error: deleteError } = await supabase.storage
+                .from('profile-images')
+                .remove(filePathsToDelete)
+
+              if (deleteError) {
+                console.warn('既存画像の削除に失敗:', deleteError)
+              } else {
+                console.log('既存のプロフィール画像を削除しました:', filePathsToDelete.length, 'ファイル')
+              }
+            }
+          } catch (deleteErr) {
+            console.warn('既存画像の削除処理でエラー:', deleteErr)
+            // エラーが発生しても続行（新規ユーザーなど、フォルダが存在しない場合もある）
+          }
+
+          // base64をArrayBufferに変換（React Native対応）
+          const base64ToArrayBuffer = (base64: string): ArrayBuffer => {
+            // base64文字列をバイナリデータに変換
+            // React Nativeではatobが使えないため、手動で変換
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+            let bufferLength = base64.length * 0.75
+            if (base64[base64.length - 1] === '=') {
+              bufferLength--
+              if (base64[base64.length - 2] === '=') {
+                bufferLength--
+              }
+            }
+
+            const bytes = new Uint8Array(bufferLength)
+            let p = 0
+
+            for (let i = 0; i < base64.length; i += 4) {
+              const encoded1 = chars.indexOf(base64[i])
+              const encoded2 = chars.indexOf(base64[i + 1])
+              const encoded3 = chars.indexOf(base64[i + 2])
+              const encoded4 = chars.indexOf(base64[i + 3])
+
+              bytes[p++] = (encoded1 << 2) | (encoded2 >> 4)
+              if (encoded3 !== 64) bytes[p++] = ((encoded2 & 15) << 4) | (encoded3 >> 2)
+              if (encoded4 !== 64) bytes[p++] = ((encoded3 & 3) << 6) | encoded4
+            }
+
+            return bytes.buffer
+          }
+
+          const base64Data = selectedImageData.base64
+          const arrayBuffer = base64ToArrayBuffer(base64Data)
+
+          // ファイル名を生成
+          const fileExt = selectedImageData.fileExtension || 'jpg'
+          const fileName = `${Date.now()}.${fileExt}`
+          const filePath = `${userFolderPath}/${fileName}`
+
+          // コンテンツタイプを決定
+          const contentType = fileExt === 'png' ? 'image/png' : 'image/jpeg'
+
+          // Supabase Storageにアップロード（React NativeではArrayBufferを使用）
+          console.log('新しい画像をアップロード中:', filePath, 'サイズ:', arrayBuffer.byteLength, 'bytes')
+          const { error: uploadError } = await supabase.storage
+            .from('profile-images')
+            .upload(filePath, arrayBuffer, {
+              cacheControl: '3600',
+              upsert: false,
+              contentType,
+            })
+
+          if (uploadError) {
+            console.error('アップロードエラー:', uploadError)
+            throw uploadError
+          }
+
+          // 公開URLを取得（WEBの実装と同様）
+          const { data } = supabase.storage.from('profile-images').getPublicUrl(filePath)
+          const publicUrl = data?.publicUrl
+
+          if (!publicUrl) {
+            throw new Error('公開URLの取得に失敗しました')
+          }
+
+          console.log('新しい画像のアップロード完了:', publicUrl)
+
+          // データベースのusersテーブルを更新（WEBの実装と同様）
+          await onAvatarChange(publicUrl)
+        } catch (err) {
+          console.error('画像アップロードエラー:', err)
+          const errorMessage = err instanceof Error ? err.message : '画像のアップロードに失敗しました'
+          throw new Error(errorMessage)
         }
       }
+
+      // 誕生日をISO形式に変換（WEBと同様の処理）
+      const birthday = formData.birthday ? new Date(formData.birthday).toISOString() : null
 
       await onUpdate({
         name: formData.name.trim(),
@@ -81,11 +266,11 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
       })
 
       // 成功時は即時にモーダルを閉じる
+      setSelectedImageData(null)
       handleClose()
     } catch (err) {
       console.error('プロフィール更新エラー:', err)
-      const errorMessage = err instanceof Error ? err.message : 'プロフィールの更新に失敗しました'
-      setError(errorMessage)
+      setError('プロフィールの更新に失敗しました')
     } finally {
       setIsUpdating(false)
     }
@@ -107,7 +292,12 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
             </Pressable>
           </View>
 
-          <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
+          <ScrollView
+            style={styles.body}
+            contentContainerStyle={styles.bodyContent}
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
+          >
             {error && (
               <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>{error}</Text>
@@ -120,6 +310,9 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                 currentAvatarUrl={profile.profile_image_path ?? null}
                 userName={formData.name || profile.name || ''}
                 onAvatarChange={onAvatarChange}
+                onImageSelected={(imageUri, base64Data, fileExtension) => {
+                  setSelectedImageData({ base64: base64Data, fileExtension })
+                }}
                 disabled={isUpdating}
               />
             </View>
@@ -145,17 +338,47 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
             {/* 生年月日 */}
             <View style={styles.formGroup}>
               <Text style={styles.label}>生年月日</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.birthday}
-                onChangeText={(text) => {
-                  setFormData((prev) => ({ ...prev, birthday: text }))
-                  setError(null)
-                }}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor="#9CA3AF"
-                editable={!isUpdating}
-              />
+              <View style={styles.pickerContainer}>
+                <View style={[styles.pickerWrapper, styles.pickerWrapperYear, styles.pickerWrapperWithBorder]}>
+                  <Picker
+                    selectedValue={selectedYear}
+                    onValueChange={(value) => setSelectedYear(value)}
+                    enabled={!isUpdating}
+                    style={styles.picker}
+                    itemStyle={styles.pickerItem}
+                  >
+                    {years.map((year) => (
+                      <Picker.Item key={year} label={`${year}年`} value={year} />
+                    ))}
+                  </Picker>
+                </View>
+                <View style={[styles.pickerWrapper, styles.pickerWrapperWithBorder]}>
+                  <Picker
+                    selectedValue={selectedMonth}
+                    onValueChange={(value) => setSelectedMonth(value)}
+                    enabled={!isUpdating}
+                    style={styles.picker}
+                    itemStyle={styles.pickerItem}
+                  >
+                    {months.map((month) => (
+                      <Picker.Item key={month} label={`${month}月`} value={month} />
+                    ))}
+                  </Picker>
+                </View>
+                <View style={styles.pickerWrapper}>
+                  <Picker
+                    selectedValue={selectedDay}
+                    onValueChange={(value) => setSelectedDay(value)}
+                    enabled={!isUpdating}
+                    style={styles.picker}
+                    itemStyle={styles.pickerItem}
+                  >
+                    {days.map((day) => (
+                      <Picker.Item key={day} label={`${day}日`} value={day} />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
             </View>
 
             {/* 自己紹介 */}
@@ -218,6 +441,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 600,
     maxHeight: '90%',
+    flexDirection: 'column',
   },
   header: {
     flexDirection: 'row',
@@ -247,7 +471,9 @@ const styles = StyleSheet.create({
     lineHeight: 28,
   },
   body: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    minHeight: 0,
   },
   bodyContent: {
     padding: 20,
@@ -286,6 +512,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#111827',
     backgroundColor: '#FFFFFF',
+  },
+  pickerContainer: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+    height: 200,
+  },
+  pickerWrapper: {
+    flex: 1,
+  },
+  pickerWrapperYear: {
+    flex: 1.4,
+  },
+  pickerWrapperWithBorder: {
+    borderRightWidth: 1,
+    borderRightColor: '#E5E7EB',
+  },
+  picker: {
+    width: '100%',
+    height: 200,
+  },
+  pickerItem: {
+    fontSize: 14,
+    color: '#111827',
   },
   textArea: {
     minHeight: 120,

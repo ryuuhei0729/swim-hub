@@ -9,6 +9,7 @@ import {
   useCreatePracticeLogMutation,
   useUpdatePracticeLogMutation,
 } from '@apps/shared/hooks/queries/practices'
+import { practiceKeys } from '@apps/shared/hooks/queries/keys'
 import { PracticeAPI } from '@apps/shared/api/practices'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import type { MainStackParamList } from '@/navigation/types'
@@ -353,10 +354,12 @@ export const PracticeLogFormScreen: React.FC = () => {
       }
 
       // カレンダーのクエリを無効化してリフレッシュ
+      // カレンダーと練習一覧のクエリを無効化してリフレッシュ
       queryClient.invalidateQueries({ queryKey: ['calendar'] })
+      queryClient.invalidateQueries({ queryKey: practiceKeys.lists() })
 
-      // 成功: ダッシュボードに戻る
-      navigation.navigate('MainTabs', { screen: 'Dashboard' })
+      // 成功: 前の画面に戻る（練習タブから来た場合は練習タブに戻る）
+      navigation.goBack()
     } catch (error) {
       console.error('保存エラー:', error)
       Alert.alert(

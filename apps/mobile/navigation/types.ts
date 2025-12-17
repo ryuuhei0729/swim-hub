@@ -52,6 +52,7 @@ export type MainStackParamList = {
   RecordForm: {
     recordId?: string
     date?: string
+    competitionId?: string
   }
   CompetitionForm: {
     competitionId?: string

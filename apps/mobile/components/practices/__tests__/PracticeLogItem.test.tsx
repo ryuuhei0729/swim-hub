@@ -15,7 +15,7 @@ describe('PracticeLogItem', () => {
     distance: 100,
     rep_count: 4,
     set_count: 2,
-    circle: 90,
+    circle: null,
     style: 'freestyle',
     note: 'テストメモ',
     created_at: '2025-01-15T10:00:00Z',
@@ -64,8 +64,6 @@ describe('PracticeLogItem', () => {
     expect(screen.getByText('100m')).toBeTruthy()
     // セット数×レップ数が表示される
     expect(screen.getByText('2×4')).toBeTruthy()
-    // 周回数が表示される
-    expect(screen.getByText('90周')).toBeTruthy()
   })
 
   it('タイム一覧が表示される', () => {
@@ -121,17 +119,6 @@ describe('PracticeLogItem', () => {
     render(<PracticeLogItem log={logWithoutTimes} />)
     
     expect(screen.queryByText('タイム:')).toBeNull()
-  })
-
-  it('circleがnullの場合、周回数が表示されない', () => {
-    const logWithoutCircle: PracticeLogWithTags = {
-      ...mockLog,
-      circle: null,
-    }
-    
-    render(<PracticeLogItem log={logWithoutCircle} />)
-    
-    expect(screen.queryByText(/周/)).toBeNull()
   })
 })
 

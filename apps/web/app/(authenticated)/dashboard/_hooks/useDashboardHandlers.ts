@@ -4,11 +4,11 @@
 
 import { useCompetitionFormStore, usePracticeFormStore } from '@/stores'
 import type {
-  EditingData,
-  EntryFormData,
-  EntryWithStyle,
-  PracticeMenuFormData,
-  RecordFormDataInternal
+    EditingData,
+    EntryFormData,
+    EntryWithStyle,
+    PracticeMenuFormData,
+    RecordFormDataInternal
 } from '@/stores/types'
 import { EntryAPI } from '@apps/shared/api'
 import type { Style } from '@apps/shared/types/database'
@@ -359,14 +359,36 @@ export function useDashboardHandlers({
       const entryAPI = new EntryAPI(supabase)
       const createdEntriesList: EntryWithStyle[] = []
 
+      // 編集モードの場合、既存のエントリーをすべて取得
+      const existingEntriesMap = new Map<string, { id: string; style_id: number }>()
+      if (competitionEditingData?.type === 'entry') {
+        // 編集モードの場合、この大会のすべての既存エントリーを取得
+        const { data: allExistingEntries } = await supabase
+          .from('entries')
+          .select('id, style_id')
+          .eq('competition_id', competitionId)
+          .eq('user_id', user.id)
+
+        if (allExistingEntries) {
+          allExistingEntries.forEach((entry) => {
+            existingEntriesMap.set(String(entry.style_id), { id: entry.id, style_id: entry.style_id })
+          })
+        }
+      }
+
+      const processedEntryIds = new Set<string>()
+
+      // フォームに入力されているエントリーを保存/更新
       for (const entryData of entriesData) {
         let entry
         if (entryData.id && competitionEditingData?.type === 'entry') {
+          // 既存のエントリーIDがある場合（編集モードで既存エントリーを編集している場合）
           entry = await entryAPI.updateEntry(entryData.id, {
             style_id: parseInt(entryData.styleId),
             entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
             note: entryData.note || null
           })
+          processedEntryIds.add(entryData.id)
         } else {
           const existingEntry = await entryAPI.checkExistingEntry(
             competitionId,
@@ -379,6 +401,7 @@ export function useDashboardHandlers({
               entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
               note: entryData.note || null
             })
+            processedEntryIds.add(existingEntry.id)
           } else {
             entry = await entryAPI.createPersonalEntry({
               competition_id: competitionId,
@@ -406,6 +429,16 @@ export function useDashboardHandlers({
             teamId: entry.team_id,
             styleName: style.name_jp
           })
+        }
+      }
+
+      // 編集モードの場合、フォームに存在しない既存エントリーを削除
+      if (competitionEditingData?.type === 'entry' && existingEntriesMap.size > 0) {
+        for (const existingEntry of existingEntriesMap.values()) {
+          if (!processedEntryIds.has(existingEntry.id)) {
+            // フォームに存在しない既存エントリーを削除
+            await entryAPI.deleteEntry(existingEntry.id)
+          }
         }
       }
 

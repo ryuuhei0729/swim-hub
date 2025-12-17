@@ -1,17 +1,18 @@
-import React, { useState, useMemo, useCallback } from 'react'
-import { View, Text, FlatList, TextInput, StyleSheet, Pressable, RefreshControl } from 'react-native'
+import React, { useState, useMemo, useCallback, useEffect } from 'react'
+import { View, Text, FlatList, StyleSheet, Pressable, RefreshControl, ScrollView } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthProvider'
 import { practiceKeys } from '@apps/shared/hooks/queries/keys'
 import { PracticeAPI } from '@apps/shared/api/practices'
 import { PracticeItem } from '@/components/practices'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ErrorView } from '@/components/layout/ErrorView'
+import { usePracticeFilterStore } from '@/stores/practiceFilterStore'
 import type { MainStackParamList } from '@/navigation/types'
-import type { PracticeWithLogs } from '@swim-hub/shared/types/database'
+import type { PracticeWithLogs, PracticeTag } from '@swim-hub/shared/types/database'
 
 type PracticesScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>
 
@@ -22,26 +23,35 @@ type PracticesScreenNavigationProp = NativeStackNavigationProp<MainStackParamLis
 export const PracticesScreen: React.FC = () => {
   const navigation = useNavigation<PracticesScreenNavigationProp>()
   const { supabase } = useAuth()
-  const [startDate, setStartDate] = useState<string | undefined>(undefined)
-  const [endDate, setEndDate] = useState<string | undefined>(undefined)
-  const [startDateInput, setStartDateInput] = useState('')
-  const [endDateInput, setEndDateInput] = useState('')
-  const [startDateError, setStartDateError] = useState<string | null>(null)
-  const [endDateError, setEndDateError] = useState<string | null>(null)
+  
+  // タグフィルターストア
+  const {
+    selectedTagIds,
+    showTagFilter,
+    setSelectedTags,
+    toggleTagFilter,
+  } = usePracticeFilterStore()
 
   // デフォルトの日付範囲（過去1年間）
   const defaultStartDate = useMemo(() => {
-    if (startDate) return startDate
     const date = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
     return date.toISOString().split('T')[0]
-  }, [startDate])
+  }, [])
 
   const defaultEndDate = useMemo(() => {
-    if (endDate) return endDate
     return new Date().toISOString().split('T')[0]
-  }, [endDate])
+  }, [])
 
   const practiceApi = useMemo(() => new PracticeAPI(supabase), [supabase])
+  
+  // タグ一覧を取得
+  const { data: tags = [] } = useQuery({
+    queryKey: ['practice-tags'],
+    queryFn: async () => {
+      return await practiceApi.getPracticeTags()
+    },
+    staleTime: 5 * 60 * 1000,
+  })
 
   const {
     data,
@@ -65,17 +75,36 @@ export const PracticesScreen: React.FC = () => {
 
   const allPractices = useMemo(() => data?.pages.flat() ?? [], [data])
 
-  const dateRegex = useMemo(() => /^\d{4}-\d{2}-\d{2}$/, [])
-
-  // 日付フィルターのリセット
-  const handleResetDateFilter = () => {
-    setStartDate(undefined)
-    setEndDate(undefined)
-    setStartDateInput('')
-    setEndDateInput('')
-    setStartDateError(null)
-    setEndDateError(null)
-  }
+  // タグフィルタリング
+  const filteredPractices = useMemo(() => {
+    if (selectedTagIds.length === 0) {
+      return allPractices
+    }
+    
+    return allPractices.filter((practice) => {
+      // 練習ログのタグを取得
+      const logTags = practice.practice_logs?.flatMap((log) =>
+        log.practice_log_tags?.map((plt) => plt.practice_tags?.id).filter(Boolean) || []
+      ) || []
+      
+      // 選択されたタグIDのいずれかがログのタグに含まれているかチェック
+      return selectedTagIds.some((tagId) => logTags.includes(tagId))
+    })
+  }, [allPractices, selectedTagIds])
+  
+  // タグの選択/解除をトグル
+  const handleTagToggle = useCallback((tagId: string) => {
+    if (selectedTagIds.includes(tagId)) {
+      setSelectedTags(selectedTagIds.filter((id) => id !== tagId))
+    } else {
+      setSelectedTags([...selectedTagIds, tagId])
+    }
+  }, [selectedTagIds, setSelectedTags])
+  
+  // タグフィルターをクリア
+  const handleClearTags = useCallback(() => {
+    setSelectedTags([])
+  }, [setSelectedTags])
 
   // プルリフレッシュ処理
   const handleRefresh = useCallback(async () => {
@@ -136,9 +165,6 @@ export const PracticesScreen: React.FC = () => {
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>練習記録がありません</Text>
-          <Text style={styles.emptySubtext}>
-            {defaultStartDate} 〜 {defaultEndDate} の期間に記録がありません
-          </Text>
         </View>
       </SafeAreaView>
     )
@@ -146,64 +172,59 @@ export const PracticesScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      {/* 日付フィルターUI */}
+      {/* タグフィルターUI */}
       <View style={styles.filterContainer}>
-        <View style={styles.filterRow}>
-          <View style={styles.filterItem}>
-            <Text style={styles.filterLabel}>開始日</Text>
-            <TextInput
-              style={[styles.filterInput, startDateError && styles.filterInputError]}
-              value={startDateInput}
-              onChangeText={(text) => {
-                setStartDateInput(text)
-                if (!text) {
-                  setStartDate(undefined)
-                  setStartDateError(null)
-                  return
-                }
-                if (!dateRegex.test(text)) {
-                  setStartDateError('YYYY-MM-DD形式で入力してください')
-                  return
-                }
-                setStartDateError(null)
-                setStartDate(text)
-              }}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor="#9CA3AF"
-              accessibilityLabel="開始日入力"
-            />
-            {startDateError && <Text style={styles.errorText}>{startDateError}</Text>}
+        <Pressable
+          style={styles.filterToggleButton}
+          onPress={toggleTagFilter}
+        >
+          <Text style={styles.filterToggleButtonText}>タグでフィルター</Text>
+        </Pressable>
+        
+        {/* タグフィルタリングUI */}
+        {showTagFilter && (
+          <View style={styles.tagsContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.tagsScrollContent}
+            >
+              {tags.map((tag: PracticeTag) => (
+                <Pressable
+                  key={tag.id}
+                  onPress={() => handleTagToggle(tag.id)}
+                  style={[
+                    styles.tagButton,
+                    selectedTagIds.includes(tag.id) && {
+                      backgroundColor: tag.color,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.tagButtonText,
+                      selectedTagIds.includes(tag.id) && styles.tagButtonTextSelected,
+                    ]}
+                  >
+                    {tag.name}
+                  </Text>
+                </Pressable>
+              ))}
+              {selectedTagIds.length > 0 && (
+                <Pressable
+                  style={styles.clearButton}
+                  onPress={handleClearTags}
+                >
+                  <Text style={styles.clearButtonText}>クリア</Text>
+                </Pressable>
+              )}
+            </ScrollView>
+            {selectedTagIds.length > 0 && (
+              <Text style={styles.filterInfoText}>
+                {selectedTagIds.length}個のタグでフィルタリング中
+              </Text>
+            )}
           </View>
-          <View style={styles.filterItem}>
-            <Text style={styles.filterLabel}>終了日</Text>
-            <TextInput
-              style={[styles.filterInput, endDateError && styles.filterInputError]}
-              value={endDateInput}
-              onChangeText={(text) => {
-                setEndDateInput(text)
-                if (!text) {
-                  setEndDate(undefined)
-                  setEndDateError(null)
-                  return
-                }
-                if (!dateRegex.test(text)) {
-                  setEndDateError('YYYY-MM-DD形式で入力してください')
-                  return
-                }
-                setEndDateError(null)
-                setEndDate(text)
-              }}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor="#9CA3AF"
-              accessibilityLabel="終了日入力"
-            />
-            {endDateError && <Text style={styles.errorText}>{endDateError}</Text>}
-          </View>
-        </View>
-        {(startDate || endDate) && (
-          <Pressable style={styles.resetButton} onPress={handleResetDateFilter}>
-            <Text style={styles.resetButtonText}>フィルターをリセット</Text>
-          </Pressable>
         )}
       </View>
 
@@ -220,7 +241,7 @@ export const PracticesScreen: React.FC = () => {
       </View>
 
       <FlatList
-        data={allPractices}
+        data={filteredPractices}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
@@ -234,10 +255,10 @@ export const PracticesScreen: React.FC = () => {
         }
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
-        // パフォーマンス最適化
-        initialNumToRender={10}
-        maxToRenderPerBatch={10}
-        windowSize={10}
+        // パフォーマンス最適化（1画面に8個表示するため、初期レンダリング数を調整）
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={8}
         removeClippedSubviews={true}
         updateCellsBatchingPeriod={50}
         ListFooterComponent={
@@ -268,50 +289,64 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
-  filterRow: {
-    flexDirection: 'row',
-    gap: 12,
+  filterToggleButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    alignSelf: 'flex-start',
   },
-  filterItem: {
-    flex: 1,
+  filterToggleButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
   },
-  filterLabel: {
+  tagsContainer: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  tagsScrollContent: {
+    gap: 8,
+    paddingRight: 16,
+  },
+  tagButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+    minHeight: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tagButtonText: {
     fontSize: 12,
     fontWeight: '600',
     color: '#374151',
-    marginBottom: 4,
   },
-  filterInput: {
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
+  tagButtonTextSelected: {
+    color: '#FFFFFF',
+  },
+  clearButton: {
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 14,
-    color: '#111827',
-  },
-  filterInputError: {
-    borderColor: '#DC2626',
-    backgroundColor: '#FEF2F2',
-  },
-  errorText: {
-    marginTop: 4,
-    fontSize: 12,
-    color: '#DC2626',
-  },
-  resetButton: {
-    marginTop: 12,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 6,
+    borderRadius: 16,
     backgroundColor: '#F3F4F6',
-    borderRadius: 6,
+    minHeight: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 4,
   },
-  resetButtonText: {
+  clearButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  filterInfoText: {
+    marginTop: 8,
     fontSize: 12,
     color: '#6B7280',
-    fontWeight: '500',
   },
   listContent: {
     paddingVertical: 8,
@@ -339,7 +374,7 @@ const styles = StyleSheet.create({
   },
   fabContainer: {
     position: 'absolute',
-    bottom: 80,
+    bottom: 20,
     right: 16,
     zIndex: 1000,
   },

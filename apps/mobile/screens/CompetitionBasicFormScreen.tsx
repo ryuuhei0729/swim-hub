@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert } from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { format } from 'date-fns'
+import { format, parseISO, isValid, isBefore } from 'date-fns'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthProvider'
 import {
@@ -136,8 +136,30 @@ export const CompetitionBasicFormScreen: React.FC = () => {
 
     // 終了日のバリデーション
     if (endDate && endDate.trim() !== '') {
-      if (endDate < date) {
-        newErrors.endDate = '終了日は開始日以降の日付を指定してください'
+      // フォーマット検証（YYYY-MM-DD）
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+      if (!dateRegex.test(endDate)) {
+        newErrors.endDate = '日付はYYYY-MM-DD形式で入力してください'
+      } else {
+        // 日付として有効か確認
+        const parsedEndDate = parseISO(endDate)
+        if (!isValid(parsedEndDate)) {
+          newErrors.endDate = '有効な日付を入力してください'
+        } else {
+          // 開始日が有効な場合のみ比較
+          if (date && date.trim() !== '') {
+            const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+            if (dateRegex.test(date)) {
+              const parsedStartDate = parseISO(date)
+              if (isValid(parsedStartDate)) {
+                // 終了日が開始日より前でないか確認
+                if (isBefore(parsedEndDate, parsedStartDate)) {
+                  newErrors.endDate = '終了日は開始日以降の日付を指定してください'
+                }
+              }
+            }
+          }
+        }
       }
     }
 

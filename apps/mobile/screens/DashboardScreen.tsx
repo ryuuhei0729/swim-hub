@@ -13,7 +13,6 @@ import { ErrorView } from '@/components/layout/ErrorView'
 import { useDeletePracticeMutation } from '@apps/shared/hooks/queries/practices'
 import { useDeleteRecordMutation, useDeleteCompetitionMutation } from '@apps/shared/hooks/queries/records'
 import { PracticeAPI } from '@apps/shared/api/practices'
-import { EntryAPI } from '@apps/shared/api/entries'
 import { Alert } from 'react-native'
 import type { MainStackParamList } from '@/navigation/types'
 import type { CalendarItem } from '@apps/shared/types/ui'
@@ -128,9 +127,18 @@ export const DashboardScreen: React.FC = () => {
   }
 
   // 大会記録追加
-  const handleAddRecord = (date: Date) => {
-    const dateParam = formatDate(date, 'yyyy-MM-dd')
-    navigation.navigate('CompetitionForm', { date: dateParam })
+  const handleAddRecord = (dateOrCompetitionId: Date | string, dateParam?: string) => {
+    // EntryDetailから呼ばれた場合（competitionIdとdateが渡される）
+    if (typeof dateOrCompetitionId === 'string' && dateParam) {
+      navigation.navigate('RecordForm', {
+        competitionId: dateOrCompetitionId,
+        date: dateParam,
+      })
+    } else if (dateOrCompetitionId instanceof Date) {
+      // 通常の呼び出し（dateのみ）
+      const formattedDate = formatDate(dateOrCompetitionId, 'yyyy-MM-dd')
+      navigation.navigate('CompetitionForm', { date: formattedDate })
+    }
   }
 
   // 練習編集
@@ -333,35 +341,11 @@ export const DashboardScreen: React.FC = () => {
   }
 
   // エントリー削除
-  const handleDeleteEntry = async (entryId: string) => {
-    Alert.alert(
-      '削除確認',
-      'このエントリーを削除しますか？\nこの操作は取り消せません。',
-      [
-        {
-          text: 'キャンセル',
-          style: 'cancel',
-        },
-        {
-          text: '削除',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const api = new EntryAPI(supabase)
-              await api.deleteEntry(entryId)
-              refetch() // カレンダーをリフレッシュ
-            } catch (error) {
-              console.error('削除エラー:', error)
-              Alert.alert(
-                'エラー',
-                error instanceof Error ? error.message : '削除に失敗しました',
-                [{ text: 'OK' }]
-              )
-            }
-          },
-        },
-      ]
-    )
+  // EntryDetail内で削除確認と削除処理が完結しているため、
+  // ここでは削除成功後にカレンダーをリフレッシュするだけ
+  const handleDeleteEntry = async (_entryId: string) => {
+    // 削除はEntryDetail内で既に完了しているため、カレンダーのリフレッシュのみ実行
+    refetch()
   }
 
   // 大会編集

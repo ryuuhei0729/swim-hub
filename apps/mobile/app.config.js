@@ -23,5 +23,9 @@ module.exports = {
     supabaseUrl: supabaseUrl,
     supabaseAnonKey: supabaseAnonKey,
     environment: process.env.EXPO_PUBLIC_ENVIRONMENT || 'development',
+    // EASプロジェクトID
+    eas: {
+      projectId: 'fb40c5df-d4ba-4bb6-adea-41d49d34a6be',
+    },
   },
 }
