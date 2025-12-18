@@ -13,6 +13,57 @@ interface AvatarUploadProps {
 }
 
 /**
+ * MIMEタイプからファイル拡張子を導出
+ * @param mimeType MIMEタイプ（例: 'image/jpeg', 'image/png'）
+ * @returns ファイル拡張子（例: 'jpg', 'png'）
+ */
+function getExtensionFromMimeType(mimeType: string | null | undefined): string {
+  if (!mimeType) {
+    return 'jpg' // デフォルト
+  }
+
+  // MIMEタイプから拡張子へのマッピング
+  const mimeToExt: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/jpg': 'jpg',
+    'image/png': 'png',
+    'image/gif': 'gif',
+    'image/webp': 'webp',
+    'image/bmp': 'bmp',
+    'image/tiff': 'tiff',
+    'image/svg+xml': 'svg',
+  }
+
+  // 小文字に変換して検索
+  const normalizedMime = mimeType.toLowerCase().trim()
+  return mimeToExt[normalizedMime] || 'jpg' // 見つからない場合はデフォルト
+}
+
+/**
+ * アセットからファイル拡張子を導出
+ * @param asset expo-image-pickerのアセット
+ * @returns ファイル拡張子
+ */
+function getFileExtensionFromAsset(asset: ImagePicker.ImagePickerAsset): string {
+  // 1. asset.type（MIMEタイプ）が存在する場合はそれを使用
+  if (asset.type) {
+    return getExtensionFromMimeType(asset.type)
+  }
+
+  // 2. asset.uriがdata URIの場合は、MIMEタイプを抽出
+  if (asset.uri.startsWith('data:')) {
+    // data:image/png;base64, の形式から MIMEタイプを抽出
+    const mimeMatch = asset.uri.match(/^data:([^;]+)/)
+    if (mimeMatch && mimeMatch[1]) {
+      return getExtensionFromMimeType(mimeMatch[1])
+    }
+  }
+
+  // 3. どちらもない場合は安全なデフォルト
+  return 'jpg'
+}
+
+/**
  * プロフィール画像アップロードコンポーネント
  */
 export const AvatarUpload: React.FC<AvatarUploadProps> = ({
@@ -88,7 +139,9 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
             const base64Data = reader.result as string
             // data:image/jpeg;base64, のプレフィックスを除去
             const base64 = base64Data.split(',')[1] || ''
-            const fileExt = file.name.split('.').pop() || 'jpg'
+            // MIMEタイプから拡張子を導出（file.typeを使用）
+            const fileExt = getExtensionFromMimeType(file.type) || 
+                           (file.name.split('.').pop() || 'jpg')
             onImageSelected(imageUrl, base64, fileExt)
           }
           reader.onerror = () => {
@@ -148,8 +201,10 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
         
         // 親コンポーネントに選択した画像を通知（base64データとURIを渡す）
         if (onImageSelected) {
+          // MIMEタイプから拡張子を導出（content://、data:、React Native FS URIに対応）
+          const fileExtension = getFileExtensionFromAsset(asset)
           // base64データとURIを渡す（ArrayBufferへの変換は親コンポーネントで行う）
-          onImageSelected(asset.uri, asset.base64, asset.uri.split('.').pop() || 'jpg')
+          onImageSelected(asset.uri, asset.base64, fileExtension)
         }
       } catch (err) {
         console.error('画像選択エラー:', err)

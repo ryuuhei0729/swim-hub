@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { format } from 'date-fns'
 import { View, Text, Modal, Pressable, TextInput, StyleSheet, ScrollView } from 'react-native'
 import { Picker } from '@react-native-picker/picker'
 import { AvatarUpload } from './AvatarUpload'
@@ -93,7 +92,10 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
   // プロフィールが変更されたときにフォームデータを更新
   useEffect(() => {
     if (profile) {
-      const birthdayStr = profile.birthday ? format(new Date(profile.birthday), 'yyyy-MM-dd') : ''
+      // タイムゾーン問題を回避: birthdayを日付のみの値として扱い、ISO文字列の最初の10文字（YYYY-MM-DD）を抽出
+      const birthdayStr = profile.birthday && profile.birthday.length >= 10
+        ? profile.birthday.substring(0, 10)
+        : ''
       setFormData({
         name: profile.name || '',
         birthday: birthdayStr,
@@ -228,8 +230,10 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         }
       }
 
-      // 誕生日をISO形式に変換（WEBと同様の処理）
-      const birthday = formData.birthday ? new Date(formData.birthday).toISOString() : null
+      // 誕生日をISO形式に変換（タイムゾーン問題を回避: YYYY-MM-DD形式をUTC 00:00:00として扱う）
+      const birthday = formData.birthday && formData.birthday.length >= 10
+        ? `${formData.birthday}T00:00:00.000Z`
+        : null
 
       await onUpdate({
         name: formData.name.trim(),
