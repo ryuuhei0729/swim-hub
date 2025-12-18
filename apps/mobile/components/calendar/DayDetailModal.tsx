@@ -1417,15 +1417,23 @@ const RecordDetail: React.FC<{
 
   // スプリットタイムを取得
   useEffect(() => {
+    let cancelled = false
+
     const loadSplitTimes = async () => {
       const recordIds = actualRecords.map(r => r.id)
+      // 最新のloadingSplitsを使用して、まだロードしていないレコードIDを取得
       const recordsToLoad = recordIds.filter(id => !loadingSplits.has(id))
       
       if (recordsToLoad.length === 0) return
 
       for (const recordId of recordsToLoad) {
+        // アンマウントチェック
+        if (cancelled) return
+
         try {
+          if (cancelled) return
           setLoadingSplits(prev => new Set(prev).add(recordId))
+          
           const { data, error } = await supabase
             .from('split_times')
             .select('distance, split_time')
@@ -1434,8 +1442,12 @@ const RecordDetail: React.FC<{
 
           if (error) throw error
           
+          // アンマウントチェック
+          if (cancelled) return
+          
           if (data && data.length > 0) {
             setSplitTimesMap(prev => {
+              if (cancelled) return prev
               const newMap = new Map(prev)
               newMap.set(recordId, data.map(st => ({
                 distance: st.distance,
@@ -1445,20 +1457,27 @@ const RecordDetail: React.FC<{
             })
           }
         } catch (error) {
+          if (cancelled) return
           console.error('スプリットタイム取得エラー:', error)
         } finally {
-          setLoadingSplits(prev => {
-            const newSet = new Set(prev)
-            newSet.delete(recordId)
-            return newSet
-          })
+          if (!cancelled) {
+            setLoadingSplits(prev => {
+              const newSet = new Set(prev)
+              newSet.delete(recordId)
+              return newSet
+            })
+          }
         }
       }
     }
 
     loadSplitTimes()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [actualRecords, supabase])
+
+    // クリーンアップ関数: アンマウント時にキャンセルフラグを設定
+    return () => {
+      cancelled = true
+    }
+  }, [actualRecords, supabase, loadingSplits])
 
   return (
     <View style={styles.competitionRecordContainer}>

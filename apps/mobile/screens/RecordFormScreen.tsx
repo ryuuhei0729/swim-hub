@@ -152,21 +152,36 @@ export const RecordFormScreen: React.FC = () => {
   // タイム文字列を秒数に変換
   const parseTime = (timeStr: string): number | null => {
     if (!timeStr || timeStr.trim() === '') return null
+    
+    const trimmed = timeStr.trim()
+    
     // 分:秒.小数形式をパース
-    const parts = timeStr.split(':')
-    if (parts.length === 2) {
+    if (trimmed.includes(':')) {
+      const parts = trimmed.split(':')
+      // コロンが2つ以上ある場合は不正な形式（例: "1:2:3"）
+      if (parts.length !== 2) {
+        return null
+      }
+      
       const minutes = parseFloat(parts[0])
       const seconds = parseFloat(parts[1])
-      if (!isNaN(minutes) && !isNaN(seconds)) {
-        return minutes * 60 + seconds
+      
+      if (!Number.isFinite(minutes) || !Number.isFinite(seconds) ||
+          Number.isNaN(minutes) || Number.isNaN(seconds) ||
+          minutes < 0 || seconds < 0) {
+        return null
       }
+      
+      return minutes * 60 + seconds
     }
+    
     // 秒数のみの場合
-    const seconds = parseFloat(timeStr)
-    if (!isNaN(seconds)) {
-      return seconds
+    const seconds = parseFloat(trimmed)
+    if (!Number.isFinite(seconds) || Number.isNaN(seconds) || seconds < 0) {
+      return null
     }
-    return null
+    
+    return seconds
   }
 
   // バリデーション
@@ -288,8 +303,23 @@ export const RecordFormScreen: React.FC = () => {
 
   // タイム入力の処理（文字列から秒数に変換）
   const handleTimeChange = (text: string) => {
+    // 入力が空の場合はエラーをクリア
+    if (text.trim() === '') {
+      clearErrors()
+      setTime(null)
+      return
+    }
+    
     const parsed = parseTime(text)
-    setTime(parsed)
+    if (parsed === null) {
+      // 不正な形式の場合、エラーメッセージを表示
+      setError('time', 'タイムの形式が正しくありません（例: 1:23.45 または 83.45）')
+      setTime(null)
+    } else {
+      // 正常にパースできた場合、エラーをクリア
+      clearErrors()
+      setTime(parsed)
+    }
   }
 
   // 反応時間入力の処理
@@ -437,10 +467,17 @@ export const RecordFormScreen: React.FC = () => {
                 style={[styles.input, styles.splitTimeTime]}
                 value={formatTime(st.splitTime)}
                 onChangeText={(text) => {
+                  // 入力が空の場合は0に設定
+                  if (text.trim() === '') {
+                    updateSplitTime(index, { splitTime: 0 })
+                    return
+                  }
+                  
                   const parsed = parseTime(text)
                   if (parsed !== null) {
                     updateSplitTime(index, { splitTime: parsed })
                   }
+                  // 不正な形式の場合は何もしない（既存の値を維持）
                 }}
                 placeholder="タイム"
                 placeholderTextColor="#9CA3AF"

@@ -5,6 +5,7 @@ import { Picker } from '@react-native-picker/picker'
 import { AvatarUpload } from './AvatarUpload'
 import { useAuth } from '@/contexts/AuthProvider'
 import type { UserProfile } from '@swim-hub/shared/types/database'
+import { base64ToArrayBuffer } from '@/utils/base64'
 
 interface ProfileEditModalProps {
   visible: boolean
@@ -182,35 +183,6 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
           }
 
           // base64をArrayBufferに変換（React Native対応）
-          const base64ToArrayBuffer = (base64: string): ArrayBuffer => {
-            // base64文字列をバイナリデータに変換
-            // React Nativeではatobが使えないため、手動で変換
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-            let bufferLength = base64.length * 0.75
-            if (base64[base64.length - 1] === '=') {
-              bufferLength--
-              if (base64[base64.length - 2] === '=') {
-                bufferLength--
-              }
-            }
-
-            const bytes = new Uint8Array(bufferLength)
-            let p = 0
-
-            for (let i = 0; i < base64.length; i += 4) {
-              const encoded1 = chars.indexOf(base64[i])
-              const encoded2 = chars.indexOf(base64[i + 1])
-              const encoded3 = chars.indexOf(base64[i + 2])
-              const encoded4 = chars.indexOf(base64[i + 3])
-
-              bytes[p++] = (encoded1 << 2) | (encoded2 >> 4)
-              if (encoded3 !== 64) bytes[p++] = ((encoded2 & 15) << 4) | (encoded3 >> 2)
-              if (encoded4 !== 64) bytes[p++] = ((encoded3 & 3) << 6) | encoded4
-            }
-
-            return bytes.buffer
-          }
-
           const base64Data = selectedImageData.base64
           const arrayBuffer = base64ToArrayBuffer(base64Data)
 

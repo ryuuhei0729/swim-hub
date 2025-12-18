@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { format } from 'date-fns'
 import type { PracticeWithLogs } from '@swim-hub/shared/types/database'
+import { formatCircleTime } from '@/utils/formatters'
 
 interface PracticeItemProps {
   practice: PracticeWithLogs
@@ -19,14 +20,6 @@ const getStyleName = (style: string): string => {
     im: '個人メドレー',
   }
   return styleMap[style.toLowerCase()] || style
-}
-
-// サークルタイムをフォーマット（秒数を分:秒形式に）
-const formatCircleTime = (circle: number | null): string => {
-  if (!circle) return ''
-  const minutes = Math.floor(circle / 60)
-  const seconds = Math.floor(circle % 60)
-  return `${minutes}'${seconds.toString().padStart(2, '0')}"`
 }
 
 /**
@@ -60,7 +53,8 @@ const PracticeItemComponent: React.FC<PracticeItemProps> = ({ practice, onPress 
     // サークル
     if (firstLog.circle) {
       const circleTime = formatCircleTime(firstLog.circle)
-      if (circleTime) {
+      // 共有実装は null の場合に '-' を返すため、'-' の場合は除外
+      if (circleTime && circleTime !== '-') {
         parts.push(circleTime)
       }
     }

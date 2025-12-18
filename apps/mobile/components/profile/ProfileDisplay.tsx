@@ -4,16 +4,8 @@ import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import type { TeamMembershipWithUser } from '@swim-hub/shared/types/database'
+import type { TeamMembershipWithUser, UserProfile } from '@swim-hub/shared/types/database'
 import type { MainStackParamList } from '@/navigation/types'
-
-interface UserProfile {
-  id: string
-  name: string
-  birthday?: string | null
-  bio?: string | null
-  profile_image_path?: string | null
-}
 
 interface ProfileDisplayProps {
   profile: UserProfile

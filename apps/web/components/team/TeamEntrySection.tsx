@@ -50,6 +50,11 @@ export default function TeamEntrySection({ teamId, isAdmin: _isAdmin }: TeamEntr
     note: string
     editingEntryId: string | null
   }>>({})
+  
+  // 各大会のエラー状態
+  const [errors, setErrors] = useState<Record<string, {
+    entryTime?: string
+  }>>({})
 
   useEffect(() => {
     loadData()
@@ -130,6 +135,50 @@ export default function TeamEntrySection({ teamId, isAdmin: _isAdmin }: TeamEntr
         ...updates
       }
     }))
+    
+    // エントリータイムが更新された場合、バリデーション
+    if ('entryTime' in updates) {
+      const entryTime = updates.entryTime || ''
+      
+      // 入力が空でない場合、形式を検証
+      if (entryTime.trim() !== '') {
+        const parsed = parseTime(entryTime)
+        if (parsed === null) {
+          // 不正な形式の場合、エラーメッセージを設定
+          setErrors(prev => ({
+            ...prev,
+            [competitionId]: {
+              ...prev[competitionId],
+              entryTime: 'タイムの形式が正しくありません（例: 1:23.45 または 83.45）'
+            }
+          }))
+        } else {
+          // 正常な形式の場合、エラーをクリア
+          setErrors(prev => {
+            const newErrors = { ...prev }
+            if (newErrors[competitionId]) {
+              delete newErrors[competitionId].entryTime
+              if (Object.keys(newErrors[competitionId]).length === 0) {
+                delete newErrors[competitionId]
+              }
+            }
+            return newErrors
+          })
+        }
+      } else {
+        // 入力が空の場合、エラーをクリア
+        setErrors(prev => {
+          const newErrors = { ...prev }
+          if (newErrors[competitionId]) {
+            delete newErrors[competitionId].entryTime
+            if (Object.keys(newErrors[competitionId]).length === 0) {
+              delete newErrors[competitionId]
+            }
+          }
+          return newErrors
+        })
+      }
+    }
   }
 
   const parseTime = (timeStr: string): number | null => {
@@ -139,6 +188,11 @@ export default function TeamEntrySection({ teamId, isAdmin: _isAdmin }: TeamEntr
     
     try {
       const parts = trimmed.split(':')
+      // コロンが2つ以上ある場合は不正な形式（例: "1:2:3"）
+      if (parts.length > 2) {
+        return null
+      }
+      
       if (parts.length === 2) {
         const minutesStr = parts[0].trim()
         const secondsStr = parts[1].trim()
@@ -439,11 +493,22 @@ export default function TeamEntrySection({ teamId, isAdmin: _isAdmin }: TeamEntr
                           value={form.entryTime}
                           onChange={(e) => updateFormData(competition.id, { entryTime: e.target.value })}
                           placeholder="例: 1:23.45"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                          className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
+                            errors[competition.id]?.entryTime
+                              ? 'border-red-500'
+                              : 'border-gray-300'
+                          }`}
                         />
-                        <p className="mt-1 text-xs text-gray-500">
-                          形式: 分:秒.ミリ秒（例: 1:23.45） または 秒.ミリ秒（例: 65.23）
-                        </p>
+                        {errors[competition.id]?.entryTime && (
+                          <p className="mt-1 text-xs text-red-600">
+                            {errors[competition.id].entryTime}
+                          </p>
+                        )}
+                        {!errors[competition.id]?.entryTime && (
+                          <p className="mt-1 text-xs text-gray-500">
+                            形式: 分:秒.ミリ秒（例: 1:23.45） または 秒.ミリ秒（例: 65.23）
+                          </p>
+                        )}
                       </div>
 
                       {/* メモ */}

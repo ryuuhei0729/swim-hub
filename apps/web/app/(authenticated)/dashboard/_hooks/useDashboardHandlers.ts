@@ -361,6 +361,7 @@ export function useDashboardHandlers({
 
       // 編集モードの場合、既存のエントリーをすべて取得
       const existingEntriesMap = new Map<string, { id: string; style_id: number }>()
+      const existingEntriesByIdMap = new Map<string, { id: string; style_id: number }>()
       if (competitionEditingData?.type === 'entry') {
         // 編集モードの場合、この大会のすべての既存エントリーを取得
         const { data: allExistingEntries } = await supabase
@@ -370,8 +371,9 @@ export function useDashboardHandlers({
           .eq('user_id', user.id)
 
         if (allExistingEntries) {
-          allExistingEntries.forEach((entry) => {
+          allExistingEntries.forEach((entry: { id: string; style_id: number }) => {
             existingEntriesMap.set(String(entry.style_id), { id: entry.id, style_id: entry.style_id })
+            existingEntriesByIdMap.set(entry.id, { id: entry.id, style_id: entry.style_id })
           })
         }
       }
@@ -383,8 +385,22 @@ export function useDashboardHandlers({
         let entry
         if (entryData.id && competitionEditingData?.type === 'entry') {
           // 既存のエントリーIDがある場合（編集モードで既存エントリーを編集している場合）
+          // 種目を変更する場合、重複チェック
+          const originalEntry = existingEntriesByIdMap.get(entryData.id)
+          const styleIdNum = parseInt(entryData.styleId)
+          const isStyleChanged = originalEntry && originalEntry.style_id !== styleIdNum
+          
+          if (isStyleChanged) {
+            // 変更後の種目が既に他のエントリーで使用されていないかチェック
+            const existingEntryWithSameStyle = existingEntriesMap.get(String(styleIdNum))
+            if (existingEntryWithSameStyle && existingEntryWithSameStyle.id !== entryData.id) {
+              const styleName = styles.find(s => s.id === styleIdNum)?.name_jp || '不明'
+              throw new Error(`種目「${styleName}」は既にエントリー済みです`)
+            }
+          }
+          
           entry = await entryAPI.updateEntry(entryData.id, {
-            style_id: parseInt(entryData.styleId),
+            style_id: styleIdNum,
             entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
             note: entryData.note || null
           })

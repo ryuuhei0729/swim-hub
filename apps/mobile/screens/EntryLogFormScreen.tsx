@@ -182,11 +182,19 @@ export const EntryLogFormScreen: React.FC = () => {
 
     // "1:30.50" 形式
     if (trimmed.includes(':')) {
-      const [minutesStr, secondsStr] = trimmed.split(':')
+      const parts = trimmed.split(':')
+      // コロンが2つ以上ある場合は不正な形式（例: "1:2:3"）
+      if (parts.length !== 2) {
+        return 0
+      }
+      
+      const [minutesStr, secondsStr] = parts
       const minutes = parseInt(minutesStr)
       const seconds = parseFloat(secondsStr)
 
-      if (!Number.isFinite(minutes) || !Number.isFinite(seconds)) {
+      if (!Number.isFinite(minutes) || !Number.isFinite(seconds) || 
+          Number.isNaN(minutes) || Number.isNaN(seconds) ||
+          minutes < 0 || seconds < 0) {
         return 0
       }
 
@@ -195,7 +203,39 @@ export const EntryLogFormScreen: React.FC = () => {
 
     // "30.50" 形式
     const parsed = parseFloat(trimmed)
-    return Number.isFinite(parsed) ? parsed : 0
+    if (!Number.isFinite(parsed) || Number.isNaN(parsed) || parsed < 0) {
+      return 0
+    }
+    return parsed
+  }
+  
+  // タイム文字列が有効かどうかを検証
+  const isValidTimeString = (timeString: string): boolean => {
+    if (!timeString || timeString.trim() === '') return true // 空は有効（任意入力）
+    
+    const trimmed = timeString.trim()
+    if (!trimmed) return true
+    
+    // "1:30.50" 形式
+    if (trimmed.includes(':')) {
+      const parts = trimmed.split(':')
+      // コロンが2つ以上ある場合は不正な形式
+      if (parts.length !== 2) {
+        return false
+      }
+      
+      const [minutesStr, secondsStr] = parts
+      const minutes = parseInt(minutesStr)
+      const seconds = parseFloat(secondsStr)
+
+      return Number.isFinite(minutes) && Number.isFinite(seconds) && 
+             !Number.isNaN(minutes) && !Number.isNaN(seconds) &&
+             minutes >= 0 && seconds >= 0
+    }
+
+    // "30.50" 形式
+    const parsed = parseFloat(trimmed)
+    return Number.isFinite(parsed) && !Number.isNaN(parsed) && parsed >= 0
   }
 
   // バリデーション
@@ -242,14 +282,41 @@ export const EntryLogFormScreen: React.FC = () => {
   // エントリー更新
   const updateEntry = (entryId: string, updates: Partial<EntryData>) => {
     setEntries((prev) =>
-      prev.map((entry) => {
+      prev.map((entry, index) => {
         if (entry.id !== entryId) return entry
 
         const updated = { ...entry, ...updates }
 
         // エントリータイムが更新された場合、表示値も更新
         if ('entryTimeDisplayValue' in updates) {
-          const timeValue = parseTimeString(updates.entryTimeDisplayValue || '')
+          const timeDisplayValue = updates.entryTimeDisplayValue || ''
+          
+          // 入力が空でない場合、形式を検証
+          if (timeDisplayValue.trim() !== '') {
+            if (!isValidTimeString(timeDisplayValue)) {
+              // 不正な形式の場合、エラーメッセージを設定
+              setErrors((prev) => ({
+                ...prev,
+                [`entryTime-${index}`]: 'タイムの形式が正しくありません（例: 1:23.45 または 83.45）',
+              }))
+            } else {
+              // 正常な形式の場合、エラーをクリア
+              setErrors((prev) => {
+                const newErrors = { ...prev }
+                delete newErrors[`entryTime-${index}`]
+                return newErrors
+              })
+            }
+          } else {
+            // 入力が空の場合、エラーをクリア
+            setErrors((prev) => {
+              const newErrors = { ...prev }
+              delete newErrors[`entryTime-${index}`]
+              return newErrors
+            })
+          }
+          
+          const timeValue = parseTimeString(timeDisplayValue)
           updated.entryTime = timeValue
         }
 
@@ -279,6 +346,7 @@ export const EntryLogFormScreen: React.FC = () => {
 
     // 編集モードの場合、既存のエントリーをすべて取得
     const existingEntriesMap = new Map<string, { id: string; style_id: number }>()
+    const existingEntriesByIdMap = new Map<string, { id: string; style_id: number }>()
     if (entryId) {
       // 編集モードの場合、この大会のすべての既存エントリーを取得
       const { data: allExistingEntries } = await supabaseClient
@@ -290,6 +358,7 @@ export const EntryLogFormScreen: React.FC = () => {
       if (allExistingEntries) {
         allExistingEntries.forEach((entry) => {
           existingEntriesMap.set(String(entry.style_id), { id: entry.id, style_id: entry.style_id })
+          existingEntriesByIdMap.set(entry.id, { id: entry.id, style_id: entry.style_id })
         })
       }
     }
@@ -306,6 +375,19 @@ export const EntryLogFormScreen: React.FC = () => {
       // 既存のエントリーIDがある場合（編集モードで既存エントリーを編集している場合）
       // UUID形式であることを確認（一時的なID '1' や 'entry-...' を除外）
       if (entryData.id && isValidUUID(entryData.id)) {
+        // 種目を変更する場合、重複チェック
+        const originalEntry = existingEntriesByIdMap.get(entryData.id)
+        const isStyleChanged = originalEntry && originalEntry.style_id !== styleIdNum
+        
+        if (isStyleChanged) {
+          // 変更後の種目が既に他のエントリーで使用されていないかチェック
+          const existingEntryWithSameStyle = existingEntriesMap.get(String(styleIdNum))
+          if (existingEntryWithSameStyle && existingEntryWithSameStyle.id !== entryData.id) {
+            const styleName = styles.find(s => s.id === styleIdNum)?.name_jp || '不明'
+            throw new Error(`種目「${styleName}」は既にエントリー済みです`)
+          }
+        }
+        
         entry = await entryAPIInstance.updateEntry(entryData.id, {
           style_id: styleIdNum,
           entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
@@ -536,7 +618,10 @@ export const EntryLogFormScreen: React.FC = () => {
             <View style={styles.section}>
               <Text style={styles.label}>エントリータイム</Text>
               <TextInput
-                style={styles.input}
+                style={[
+                  styles.input,
+                  errors[`entryTime-${index}`] && styles.inputError,
+                ]}
                 value={entry.entryTimeDisplayValue}
                 onChangeText={(text) =>
                   updateEntry(entry.id, { entryTimeDisplayValue: text })
@@ -546,7 +631,10 @@ export const EntryLogFormScreen: React.FC = () => {
                 keyboardType="default"
                 editable={!loading}
               />
-              {entry.entryTime > 0 && (
+              {errors[`entryTime-${index}`] && (
+                <Text style={styles.errorText}>{errors[`entryTime-${index}`]}</Text>
+              )}
+              {entry.entryTime > 0 && !errors[`entryTime-${index}`] && (
                 <Text style={styles.timeHint}>
                   入力値: {formatTime(entry.entryTime)}
                 </Text>

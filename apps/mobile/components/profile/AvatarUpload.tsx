@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { View, Text, Image, Pressable, StyleSheet, Alert, Platform} from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import { Feather } from '@expo/vector-icons'
@@ -25,6 +25,29 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
   const { supabase, user } = useAuth()
   const [error, setError] = useState<string | null>(null)
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null)
+  const previousBlobUrlRef = useRef<string | null>(null)
+
+  // blob URLのクリーンアップ
+  useEffect(() => {
+    // 既存のblob URLを解放
+    if (previousBlobUrlRef.current) {
+      URL.revokeObjectURL(previousBlobUrlRef.current)
+      previousBlobUrlRef.current = null
+    }
+
+    // 現在のselectedImageUriがblob URLの場合は、参照を保持
+    if (selectedImageUri && selectedImageUri.startsWith('blob:')) {
+      previousBlobUrlRef.current = selectedImageUri
+    }
+
+    // クリーンアップ関数: コンポーネントのアンマウント時、またはselectedImageUriが変更された時に実行
+    return () => {
+      if (previousBlobUrlRef.current) {
+        URL.revokeObjectURL(previousBlobUrlRef.current)
+        previousBlobUrlRef.current = null
+      }
+    }
+  }, [selectedImageUri])
 
   const handleImageSelect = async () => {
     if (!user || disabled) return
@@ -46,6 +69,11 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
         if (file.size > 5 * 1024 * 1024) {
           setError('画像サイズは5MB以下にしてください')
           return
+        }
+
+        // 既存のblob URLを解放（新しいURLを作成する前に）
+        if (selectedImageUri && selectedImageUri.startsWith('blob:')) {
+          URL.revokeObjectURL(selectedImageUri)
         }
 
         // 選択した画像をアバター表示エリアにプレビューとして表示
