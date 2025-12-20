@@ -18,11 +18,6 @@ const AppNavigator: React.FC = () => {
   const { isAuthenticated, loading } = useAuth()
   const { isConnected, isInternetReachable } = useNetwork()
 
-  // デバッグ用: 認証状態の確認
-  if (__DEV__) {
-    console.log('AppNavigator - 認証状態:', { isAuthenticated, loading })
-  }
-
   // 認証状態の確認中
   if (loading) {
     return (
@@ -34,7 +29,8 @@ const AppNavigator: React.FC = () => {
   }
 
   // オフライン判定（接続がない、またはインターネットに到達できない）
-  const isOffline = !isConnected || isInternetReachable === false
+  // isInternetReachableがnullの場合は、isConnectedがfalseの場合のみオフラインと判定
+  const isOffline = !isConnected || (isInternetReachable !== null && isInternetReachable === false)
 
   // 認証状態に応じてスタックを切り替え
   return (
