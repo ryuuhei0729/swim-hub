@@ -17,7 +17,7 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
   onSuccess,
 }) => {
   const { updatePassword } = useAuth()
-  const timeoutRef = useRef<number | null>(null)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)

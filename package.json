@@ -13,6 +13,7 @@
     "dev:mobile:clear": "cd apps/mobile && npm run start:clear",
     "build": "npm run build --workspace=apps/web",
     "build:web": "npm run build --workspace=apps/web",
+    "build:vercel": "npm run build:vercel --workspace=apps/web",
     "build:mobile:android": "cd apps/mobile && eas build -p android",
     "build:mobile:ios": "cd apps/mobile && eas build -p ios",
     "start": "npm run start --workspace=apps/web",
