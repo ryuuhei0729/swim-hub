@@ -45,8 +45,8 @@
   "submit": {
     "production": {
       "ios": {
-        "appleId": "ryuuhei.hosoi@gmail.com",
-        "ascAppId": "ddtj-ujvi-zusi-ttbr"
+        "appleId": "$APPLE_ID",
+        "ascAppId": "$ASC_APP_SPECIFIC_PASSWORD"
       },
       "android": {
         "serviceAccountKeyPath": "./google-service-account-key.json"

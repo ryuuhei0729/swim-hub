@@ -80,12 +80,6 @@ export function getSupabaseConfig() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-  // デバッグ: 環境変数の値を確認
-  console.log('[getSupabaseConfig] env:', env)
-  console.log('[getSupabaseConfig] NODE_ENV:', process.env.NODE_ENV)
-  console.log('[getSupabaseConfig] NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'undefined')
-  console.log('[getSupabaseConfig] NEXT_PUBLIC_SUPABASE_ANON_KEY:', supabaseAnonKey ? 'set' : 'undefined')
   
   // 環境変数が設定されていない場合のデフォルト値を使用
   if (!supabaseUrl || !supabaseAnonKey) {
