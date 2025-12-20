@@ -70,14 +70,9 @@
   "author": "開発チーム",
   "license": "MIT",
   "dependencies": {
-    "@dotenvx/dotenvx-ext-vault": "^0.3.2"
-  },
-  "overrides": {
-    "react": "19.2.1",
-    "react-dom": "19.2.1",
-    "@swim-hub/mobile": {
-      "react": "19.1.0",
-      "react-dom": "19.1.0"
-    }
+    "@alloc/quick-lru": "^5.2.0",
+    "@dotenvx/dotenvx-ext-vault": "^0.3.2",
+    "enhanced-resolve": "^5.18.4",
+    "tapable": "^2.3.0"
   }
 }

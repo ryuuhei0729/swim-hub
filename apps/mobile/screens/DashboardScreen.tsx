@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import { ScrollView, StyleSheet, RefreshControl } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
@@ -41,26 +41,6 @@ export const DashboardScreen: React.FC = () => {
   } = useCalendarQuery(supabase, {
     currentDate,
   })
-
-  // デバッグ: recordタイプのアイテムをログ出力
-  useEffect(() => {
-    if (entries.length > 0) {
-      const recordItems = entries.filter(item => item.type === 'record')
-      if (recordItems.length > 0) {
-        console.log('[DashboardScreen] Record items found:', recordItems.length)
-        console.log('[DashboardScreen] Record items:', recordItems.map(item => ({
-          id: item.id,
-          type: item.type,
-          date: item.date,
-          title: item.title,
-          metadata: item.metadata,
-        })))
-      } else {
-        console.log('[DashboardScreen] No record items found in entries')
-        console.log('[DashboardScreen] All entry types:', entries.map(item => item.type))
-      }
-    }
-  }, [entries])
 
   // 選択した日付のエントリーを取得
   const selectedDateEntries = useMemo(() => {
@@ -228,10 +208,6 @@ export const DashboardScreen: React.FC = () => {
 
   // 記録編集
   const handleEditRecord = async (item: CalendarItem) => {
-    console.log('handleEditRecord - item:', item)
-    console.log('handleEditRecord - item.id:', item.id)
-    console.log('handleEditRecord - item.metadata:', item.metadata)
-    
     const dateParam = item.date
     
     // competitionIdを取得（複数のパスを試す）
@@ -271,8 +247,6 @@ export const DashboardScreen: React.FC = () => {
       }
       
       const recordId = records[0].id
-      console.log('handleEditRecord - recordId:', recordId)
-      console.log('handleEditRecord - competitionId:', competitionId)
       
       navigation.navigate('RecordLogForm', {
         competitionId,
