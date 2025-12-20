@@ -164,7 +164,7 @@ export const RecordLogFormScreen: React.FC = () => {
     return () => {
       isMounted = false
     }
-  }, [recordId, swimStyles.length, loadingStyles, supabase, navigation])
+  }, [recordId, competitionId, swimStyles.length, loadingStyles, supabase, navigation])
 
   // エントリー情報からフォームデータを初期化（新規作成モードの場合）
   useEffect(() => {
