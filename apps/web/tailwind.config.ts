@@ -1,5 +1,6 @@
-/** @type {import('tailwindcss').Config} */
-module.exports = {
+import type { Config } from 'tailwindcss'
+
+const config: Config = {
   content: [
     './app/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -7,6 +8,7 @@ module.exports = {
     './hooks/**/*.{js,ts,jsx,tsx,mdx}',
     './lib/**/*.{js,ts,jsx,tsx,mdx}',
   ],
+  // @ts-expect-error: Tailwind v4ではsafelistがConfig型に存在しないが、実際には動作する
   safelist: [
     'min-h-screen',
     'bg-gray-50',
@@ -191,3 +193,5 @@ module.exports = {
     require('@tailwindcss/aspect-ratio'),
   ],
 }
+
+export default config
