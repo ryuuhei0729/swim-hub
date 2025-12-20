@@ -17,6 +17,11 @@ function validateSupabaseEnv(): { url: string; anonKey: string } {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+  // デバッグ: 環境変数の値を確認
+  console.log('[validateSupabaseEnv] NODE_ENV:', process.env.NODE_ENV)
+  console.log('[validateSupabaseEnv] NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'undefined')
+  console.log('[validateSupabaseEnv] NEXT_PUBLIC_SUPABASE_ANON_KEY:', supabaseAnonKey ? 'set' : 'undefined')
+
   if (!supabaseUrl || !supabaseAnonKey) {
     const missingVars: string[] = []
     if (!supabaseUrl) missingVars.push('NEXT_PUBLIC_SUPABASE_URL')
