@@ -49,6 +49,7 @@
     "@playwright/test": "^1.56.1",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/forms": "^0.5.9",
+    "@tailwindcss/oxide": "^4.1.18",
     "@tailwindcss/typography": "^0.5.19",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
