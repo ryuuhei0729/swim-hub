@@ -96,8 +96,6 @@ export const RecordLogFormScreen: React.FC = () => {
     const fetchRecord = async () => {
       try {
         setLoadingRecord(true)
-        console.log('RecordLogFormScreen - recordId:', recordId)
-        console.log('RecordLogFormScreen - competitionId:', competitionId)
         
         const { data: record, error } = await supabase
           .from('records')
@@ -122,7 +120,6 @@ export const RecordLogFormScreen: React.FC = () => {
           throw error
         }
         if (!record) {
-          console.log('記録データがnullです')
           Alert.alert('エラー', '記録データが見つかりませんでした')
           navigation.goBack()
           return
@@ -145,8 +142,6 @@ export const RecordLogFormScreen: React.FC = () => {
           videoUrl: record.video_url || '',
           reactionTime: record.reaction_time ? String(record.reaction_time) : '',
         }
-        console.log('取得した記録データ:', record)
-        console.log('フォーム状態を更新:', formData)
         setFormDataList([formData])
       } catch (error) {
         if (!isMounted) return

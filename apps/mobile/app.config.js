@@ -20,6 +20,7 @@ module.exports = {
   ...baseConfig.expo,
   // 環境変数をextraフィールドに設定（アプリ内でアクセス可能）
   extra: {
+    ...baseConfig.expo.extra,
     supabaseUrl: supabaseUrl,
     supabaseAnonKey: supabaseAnonKey,
     environment: process.env.EXPO_PUBLIC_ENVIRONMENT || 'development',

@@ -1,16 +1,16 @@
 {
   "cli": {
-    "version": ">= 5.0.0"
+    "version": ">= 5.0.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "production": {
-      "channel": "production",
       "ios": {
         "simulator": false,
         "buildConfiguration": "Release"
       },
       "android": {
-        "buildType": "aab"
+        "buildType": "app-bundle"
       },
       "env": {
         "EXPO_PUBLIC_ENVIRONMENT": "production"
@@ -45,9 +45,8 @@
   "submit": {
     "production": {
       "ios": {
-        "appleId": "ryuuhei_0729@yahoo.co.jp",
-        "ascAppId": "your-app-specific-password",
-        "appleTeamId": "YOUR_TEAM_ID"
+        "appleId": "$APPLE_ID",
+        "ascAppId": "$ASC_APP_SPECIFIC_PASSWORD"
       },
       "android": {
         "serviceAccountKeyPath": "./google-service-account-key.json"

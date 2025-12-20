@@ -13,6 +13,7 @@
     "dev:mobile:clear": "cd apps/mobile && npm run start:clear",
     "build": "npm run build --workspace=apps/web",
     "build:web": "npm run build --workspace=apps/web",
+    "build:vercel": "npm run build:vercel --workspace=apps/web",
     "build:mobile:android": "cd apps/mobile && eas build -p android",
     "build:mobile:ios": "cd apps/mobile && eas build -p ios",
     "start": "npm run start --workspace=apps/web",
@@ -45,9 +46,13 @@
     "supabase:status": "npx supabase status --workdir supabase"
   },
   "devDependencies": {
+    "@alloc/quick-lru": "^5.2.0",
+    "@dotenvx/dotenvx-ext-vault": "^0.3.2",
     "@playwright/test": "^1.56.1",
     "@types/node": "^25",
     "dotenv": "^17.2.3",
+    "enhanced-resolve": "^5.18.4",
+    "tapable": "^2.3.0",
     "turbo": "^2.6.0",
     "typescript": "^5"
   },
@@ -68,16 +73,5 @@
     "monorepo"
   ],
   "author": "開発チーム",
-  "license": "MIT",
-  "dependencies": {
-    "@dotenvx/dotenvx-ext-vault": "^0.3.2"
-  },
-  "overrides": {
-    "react": "19.2.1",
-    "react-dom": "19.2.1",
-    "@swim-hub/mobile": {
-      "react": "19.1.0",
-      "react-dom": "19.1.0"
-    }
-  }
+  "license": "MIT"
 }
