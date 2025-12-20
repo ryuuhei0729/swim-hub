@@ -1,4 +1,5 @@
 import { vi } from 'vitest'
+import type { PoolType, Record as RecordRow, RecordWithDetails } from '../types/database'
 
 /**
  * Supabase Client のモックヘルパー
@@ -145,6 +146,7 @@ export const createMockPractice = (overrides = {}) => ({
   id: 'practice-1',
   user_id: 'test-user-id',
   date: '2025-01-15',
+  title: 'テスト練習',
   place: 'テストプール',
   note: 'テスト練習',
   created_at: '2025-01-15T10:00:00Z',
@@ -173,12 +175,13 @@ export const createMockPracticeWithLogs = (overrides = {}) => ({
   ...overrides,
 })
 
-export const createMockRecord = (overrides = {}) => ({
+export const createMockRecord = (overrides: Partial<RecordRow> = {}): RecordRow => ({
   id: 'record-1',
   user_id: 'test-user-id',
   competition_id: 'comp-1',
   style_id: 1,
   time: 60.5,
+  pool_type: 0 as PoolType,
   is_relaying: false,
   note: 'テスト記録',
   video_url: null,
@@ -210,7 +213,9 @@ export const createMockStyle = (overrides = {}) => ({
   ...overrides,
 })
 
-export const createMockRecordWithDetails = (overrides = {}) => ({
+export const createMockRecordWithDetails = (
+  overrides: Partial<RecordWithDetails> = {}
+): RecordWithDetails => ({
   ...createMockRecord(),
   competition: createMockCompetition(),
   style: createMockStyle(),
@@ -235,6 +240,7 @@ export const createMockTeamMembershipWithUser = (overrides = {}) => ({
   role: 'admin' as const,
   member_type: null,
   group_name: null,
+  status: 'approved' as const,
   is_active: true,
   joined_at: '2025-01-01T00:00:00Z',
   left_at: null,

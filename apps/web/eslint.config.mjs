@@ -2,6 +2,11 @@ import js from '@eslint/js'
 import reactPlugin from 'eslint-plugin-react'
 import hooksPlugin from 'eslint-plugin-react-hooks'
 import typescriptEslint from 'typescript-eslint'
+import { fileURLToPath } from 'url'
+import path from 'path'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 export default [
   js.configs.recommended,
@@ -20,6 +25,8 @@ export default [
         ecmaFeatures: {
           jsx: true,
         },
+        tsconfigRootDir: __dirname,
+        project: ['./tsconfig.json'],
       },
       globals: {
         console: 'readonly',
@@ -64,6 +71,7 @@ export default [
       '*.config.js',
       '*.config.ts',
       'coverage/**',
+      'e2e/**',
     ],
   },
 ]

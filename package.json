@@ -9,17 +9,17 @@
   "scripts": {
     "dev": "npm run dev --workspace=apps/web",
     "dev:web": "npm run dev --workspace=apps/web",
-    "dev:mobile": "cd apps/mobile && flutter run",
+    "dev:mobile": "cd apps/mobile && npm start",
+    "dev:mobile:clear": "cd apps/mobile && npm run start:clear",
     "build": "npm run build --workspace=apps/web",
     "build:web": "npm run build --workspace=apps/web",
-    "build:mobile:android": "cd apps/mobile && flutter build apk",
-    "build:mobile:ios": "cd apps/mobile && flutter build ios",
-    "build:mobile:web": "cd apps/mobile && flutter build web --base-href $FLUTTER_BASE_HREF",
+    "build:mobile:android": "cd apps/mobile && eas build -p android",
+    "build:mobile:ios": "cd apps/mobile && eas build -p ios",
     "start": "npm run start --workspace=apps/web",
     "start:web": "npm run start --workspace=apps/web",
     "lint": "npm run lint --workspaces --if-present",
     "lint:web": "npm run lint --workspace=apps/web",
-    "lint:mobile": "cd apps/mobile && flutter analyze",
+    "lint:mobile": "npm run lint --workspace=apps/mobile",
     "test": "npm run test --workspaces --if-present",
     "test:unit": "npm run test --workspace=apps/web && npm run test --workspace=apps/shared",
     "test:watch": "npm run test:watch --workspace=apps/web",
@@ -28,12 +28,14 @@
     "test:web": "npm run test --workspace=apps/web",
     "test:web:local": "npm run test:web:local --workspace=apps/web",
     "test:web:remote": "npm run test:web:remote --workspace=apps/web",
-    "test:mobile": "cd apps/mobile && flutter test",
+    "test:mobile": "npm run test --workspace=apps/mobile",
+    "test:mobile:watch": "npm run test:watch --workspace=apps/mobile",
+    "test:mobile:coverage": "npm run test:coverage --workspace=apps/mobile",
     "type-check": "npm run type-check --workspaces --if-present",
     "clean": "npm run clean --workspaces --if-present && rm -rf node_modules",
-    "clean:mobile": "cd apps/mobile && flutter clean",
+    "clean:mobile": "npm run clean --workspace=apps/mobile",
     "install:all": "npm install",
-    "install:mobile": "cd apps/mobile && flutter pub get",
+    "install:mobile": "npm install --workspace=apps/mobile",
     "docker:dev": "npm run docker:dev --workspace=apps/web",
     "docker:build": "npm run docker:build --workspace=apps/web",
     "docker:down": "npm run docker:down --workspace=apps/web",
@@ -61,11 +63,21 @@
     "swimming",
     "management",
     "nextjs",
-    "flutter",
+    "react-native",
     "supabase",
     "monorepo"
   ],
   "author": "開発チーム",
   "license": "MIT",
-  "packageManager": "pnpm@10.20.0+sha512.cf9998222162dd85864d0a8102e7892e7ba4ceadebbf5a31f9c2fce48dfce317a9c53b9f6464d1ef9042cba2e02ae02a9f7c143a2b438cd93c91840f0192b9dd"
+  "dependencies": {
+    "@dotenvx/dotenvx-ext-vault": "^0.3.2"
+  },
+  "overrides": {
+    "react": "19.2.1",
+    "react-dom": "19.2.1",
+    "@swim-hub/mobile": {
+      "react": "19.1.0",
+      "react-dom": "19.1.0"
+    }
+  }
 }

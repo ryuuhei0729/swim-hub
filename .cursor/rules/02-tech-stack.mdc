@@ -12,7 +12,7 @@ alwaysApply: true
 swim-hub/
 ├── apps/
 │   ├── web/           # Next.jsアプリケーション
-│   └── mobile/        # React Native（未実装）
+│   └── mobile/        # React Native + Expo
 ├── supabase/          # Supabase設定
 │   ├── functions/     # Edge Functions（必要に応じて）
 │   └── migrations/    # データベースマイグレーション
@@ -24,7 +24,7 @@ swim-hub/
 - **Framework**: Next.js 15 (App Router)
 - **Language**: TypeScript 5
 - **UI**: React 19 + Tailwind CSS 4
-- **State**: React Context + useState/useReducer
+- **State**: Zustand (フォーム・フィルター・UI状態) + React Context (認証など)
 - **Data Access**: Supabase Client (直接アクセス)
 - **Form**: useState (React Hook Formは未使用)
 - **Date**: date-fns 4
@@ -37,9 +37,9 @@ swim-hub/
 - **Storage**: Supabase Storage
 - **Security**: Row Level Security (RLS)
 
-## Mobile (未実装)
+## Mobile
 - **Framework**: React Native + Expo
 - **Language**: TypeScript
-- **State**: React Context + useState/useReducer
+- **State**: Zustand (フォーム・フィルター・UI状態) + React Context (認証など)
 - **Data Access**: Supabase Client (直接アクセス)
 - **Navigation**: React Navigation

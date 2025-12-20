@@ -56,14 +56,14 @@ swim-hub/
 **目標**: モバイルアプリの開発環境を構築
 
 **タスク**:
-- [ ] Expoプロジェクトの初期化（`apps/mobile`）
-- [ ] Expo SDK 53+の使用を確認（React 19とReact Native 0.78+をサポート）
-- [ ] TypeScript設定
-- [ ] モノレポ構成への統合（npm workspaces）
-- [ ] 開発環境のセットアップ（iOS/Android）
-- [ ] ルート`package.json`のスクリプト更新（Flutter → React Native）
-- [ ] React 19.2とReact Native 0.78+の互換性確認
-- [ ] 使用予定のサードパーティライブラリのReact 19対応状況を確認
+- [x] Expoプロジェクトの初期化（`apps/mobile`）
+- [x] Expo SDK 53+の使用を確認（React 19とReact Native 0.78+をサポート）
+- [x] TypeScript設定
+- [x] モノレポ構成への統合（npm workspaces）
+- [x] 開発環境のセットアップ（iOS/Android）
+- [x] ルート`package.json`のスクリプト更新（Flutter → React Native）
+- [x] React 19.2とReact Native 0.78+の互換性確認
+- [x] 使用予定のサードパーティライブラリのReact 19対応状況を確認
 
 **技術選択**:
 - Expo SDK 53+（React 19とReact Native 0.78+をサポート）
@@ -80,10 +80,10 @@ swim-hub/
 **目標**: React Native環境でSupabaseクライアントを正しく初期化
 
 **タスク**:
-- [ ] React Native用Supabaseクライアント作成（`apps/mobile/lib/supabase.ts`）
-- [ ] AsyncStorageアダプターの設定（認証トークン保存）
-- [ ] 環境変数の管理（`.env`ファイル）
-- [ ] 型定義の共有（`apps/shared/types`を使用）
+- [x] React Native用Supabaseクライアント作成（`apps/mobile/lib/supabase.ts`）
+- [x] AsyncStorageアダプターの設定（認証トークン保存）
+- [x] 環境変数の管理（`.env`ファイル）
+- [x] 型定義の共有（`apps/shared/types`を使用）
 
 **実装例**:
 ```typescript
@@ -114,10 +114,10 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: Webの`AuthProvider`と同等の機能をReact Nativeで実装
 
 **タスク**:
-- [ ] `AuthProvider`の実装（`apps/mobile/contexts/AuthProvider.tsx`）
-- [ ] 認証状態の管理（セッション、ユーザー情報）
-- [ ] 認証メソッドの実装（signIn, signUp, signOut）
-- [ ] React Queryの`QueryClient`設定
+- [x] `AuthProvider`の実装（`apps/mobile/contexts/AuthProvider.tsx`）
+- [x] 認証状態の管理（セッション、ユーザー情報）
+- [x] 認証メソッドの実装（signIn, signUp, signOut）
+- [x] React Queryの`QueryClient`設定
 
 **実装方針**:
 - Webの`AuthProvider`を参考に、React Native用に調整
@@ -129,9 +129,9 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: `apps/shared`のReact QueryフックをReact Nativeで使用可能にする
 
 **タスク**:
-- [ ] `QueryClientProvider`の設定
-- [ ] `apps/shared/lib/react-query.ts`の`createQueryClient`を使用
-- [ ] プロバイダーの階層構造を構築
+- [x] `QueryClientProvider`の設定
+- [x] `apps/shared/lib/react-query.ts`の`createQueryClient`を使用
+- [x] プロバイダーの階層構造を構築
 
 **確認事項**:
 - `apps/shared/hooks/queries/*.ts`の`'use client'`ディレクティブはReact Nativeでは無視される（問題なし）
@@ -144,11 +144,11 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: メールアドレス・パスワードでログインできる
 
 **タスク**:
-- [ ] ログイン画面UIの実装
-- [ ] フォームバリデーション
-- [ ] エラーハンドリング
-- [ ] ローディング状態の表示
-- [ ] `AuthProvider`の`signIn`メソッドを使用
+- [x] ログイン画面UIの実装
+- [x] フォームバリデーション
+- [x] エラーハンドリング
+- [x] ローディング状態の表示
+- [x] `AuthProvider`の`signIn`メソッドを使用
 
 **UI要件**:
 - メールアドレス入力
@@ -162,27 +162,28 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: 新規ユーザー登録ができる
 
 **タスク**:
-- [ ] サインアップ画面UIの実装
-- [ ] フォームバリデーション（メール、パスワード強度）
-- [ ] エラーハンドリング
-- [ ] メール認証フローの説明
+- [x] サインアップ画面UIの実装
+- [x] フォームバリデーション（メール、パスワード強度）
+- [x] エラーハンドリング
+- [x] メール認証フローの説明
 
 #### 2.3 パスワードリセット
 
 **目標**: パスワードをリセットできる
 
 **タスク**:
-- [ ] パスワードリセット画面
-- [ ] メール送信機能
-- [ ] パスワード更新画面
+- [x] パスワードリセット画面
+- [x] メール送信機能
+- [x] パスワード更新画面
 
 #### 2.4 認証ガード
 
 **目標**: 未認証ユーザーをログイン画面にリダイレクト
 
 **タスク**:
-- [ ] 認証ガードコンポーネントの実装
+- [x] 認証ガードコンポーネントの実装
 - [ ] ナビゲーション統合（Phase 3で実装）
+  - ガード実装済み。ナビゲーションへの適用はPhase 3で実行予定。
 
 ### Phase 3: ナビゲーションと基本レイアウト
 
@@ -191,10 +192,10 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: 画面遷移を実装
 
 **タスク**:
-- [ ] React Navigationのインストール
-- [ ] ナビゲーション構造の設計
-- [ ] スタックナビゲーターの設定
-- [ ] タブナビゲーターの設定（ダッシュボード、練習、大会、チーム、プロフィール）
+- [x] React Navigationのインストール
+- [x] ナビゲーション構造の設計
+- [x] スタックナビゲーターの設定
+- [x] タブナビゲーターの設定（ダッシュボード、練習、大会、チーム、マイページ）
 
 **ナビゲーション構造**:
 ```
@@ -208,7 +209,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     - Practices
     - Competitions
     - Teams
-    - Profile
+    - MyPage
 ```
 
 #### 3.2 基本レイアウトコンポーネント
@@ -216,10 +217,10 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: 共通レイアウトコンポーネントの実装
 
 **タスク**:
-- [ ] ヘッダーコンポーネント
-- [ ] タブバーコンポーネント
-- [ ] ローディングコンポーネント
-- [ ] エラー表示コンポーネント
+- [x] ヘッダーコンポーネント
+- [x] タブバーコンポーネント（React Navigationで既に実装済み）
+- [x] ローディングコンポーネント
+- [x] エラー表示コンポーネント
 
 ### Phase 4: 練習記録機能
 
@@ -228,11 +229,11 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: 練習記録の一覧を表示
 
 **タスク**:
-- [ ] 一覧画面の実装
-- [ ] `apps/shared/hooks/queries/practices.ts`の`usePracticesQuery`を使用
-- [ ] 日付フィルター機能
-- [ ] プルリフレッシュ機能
-- [ ] 無限スクロール（ページネーション）
+- [x] 一覧画面の実装
+- [x] `apps/shared/hooks/queries/practices.ts`の`usePracticesQuery`を使用
+- [x] 日付フィルター機能
+- [x] プルリフレッシュ機能
+- [x] 無限スクロール（ページネーション）
 
 **実装方針**:
 - `apps/shared`のAPI層とReact Queryフックをそのまま使用
@@ -243,21 +244,21 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: 特定日の練習記録を詳細表示
 
 **タスク**:
-- [ ] 詳細画面の実装
-- [ ] 練習ログの表示
-- [ ] タイムの表示
-- [ ] タグの表示
+- [x] 詳細画面の実装
+- [x] 練習ログの表示
+- [x] タイムの表示
+- [x] タグの表示
 
 #### 4.3 練習記録作成・編集
 
 **目標**: 練習記録を作成・編集できる
 
 **タスク**:
-- [ ] 作成画面の実装
-- [ ] 編集画面の実装
-- [ ] フォーム状態管理（Zustandを使用、Webと同様）
-- [ ] `apps/shared/hooks/queries/practices.ts`のミューテーションフックを使用
-- [ ] バリデーション
+- [x] 作成画面の実装
+- [x] 編集画面の実装
+- [x] フォーム状態管理（Zustandを使用、Webと同様）
+- [x] `apps/shared/hooks/queries/practices.ts`のミューテーションフックを使用
+- [x] バリデーション
 
 **実装方針**:
 - Webの`apps/web/stores/form/practiceFormStore.ts`を参考に、モバイル用のZustandストアを作成
@@ -268,8 +269,8 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: 練習記録を削除できる
 
 **タスク**:
-- [ ] 削除確認ダイアログ
-- [ ] 削除ミューテーションの実装
+- [x] 削除確認ダイアログ
+- [x] 削除ミューテーションの実装
 
 ### Phase 5: 大会記録機能
 
@@ -278,10 +279,10 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: 大会記録の一覧を表示
 
 **タスク**:
-- [ ] 一覧画面の実装
-- [ ] `apps/shared/hooks/queries/records.ts`を使用
-- [ ] フィルター機能（種目、年度、プールタイプ）
-- [ ] ソート機能
+- [x] 一覧画面の実装
+- [x] `apps/shared/hooks/queries/records.ts`を使用
+- [x] フィルター機能（種目、年度、プールタイプ）
+- [x] ソート機能
 
 **実装方針**:
 - Webの`apps/web/stores/filter/competitionFilterStore.ts`を参考に、モバイル用のZustandストアを作成
@@ -291,21 +292,21 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: 大会記録の詳細を表示
 
 **タスク**:
-- [ ] 詳細画面の実装
-- [ ] エントリー情報の表示
-- [ ] スプリットタイムの表示
-- [ ] 反応時間の表示
+- [x] 詳細画面の実装
+- [x] エントリー情報の表示
+- [x] スプリットタイムの表示
+- [x] 反応時間の表示
 
 #### 5.3 大会記録作成・編集
 
 **目標**: 大会記録を作成・編集できる
 
 **タスク**:
-- [ ] 作成画面の実装
-- [ ] 編集画面の実装
-- [ ] フォーム状態管理（Zustand）
-- [ ] エントリー情報の入力
-- [ ] スプリットタイムの入力
+- [x] 作成画面の実装
+- [x] 編集画面の実装
+- [x] フォーム状態管理（Zustand）
+- [x] エントリー情報の入力
+- [x] スプリットタイムの入力
 
 ### Phase 6: ダッシュボード機能
 
@@ -314,10 +315,10 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: 月間カレンダーで練習・大会を表示
 
 **タスク**:
-- [ ] カレンダーコンポーネントの実装（ライブラリ使用可）
-- [ ] `apps/shared/api/dashboard.ts`を使用
-- [ ] 日付タップで詳細表示
-- [ ] 月の切り替え
+- [x] カレンダーコンポーネントの実装（ライブラリ使用可）
+- [x] `apps/shared/api/dashboard.ts`を使用
+- [x] 日付タップで詳細表示
+- [x] 月の切り替え
 
 #### 6.2 統計表示
 
@@ -335,18 +336,18 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: 所属チームの一覧を表示
 
 **タスク**:
-- [ ] 一覧画面の実装
-- [ ] `apps/shared/hooks/queries/teams.ts`を使用
-- [ ] チーム作成ボタン
+- [x] 一覧画面の実装
+- [x] `apps/shared/hooks/queries/teams.ts`を使用
+- [x] チーム作成ボタン
 
 #### 7.2 チーム詳細
 
 **目標**: チームの詳細情報を表示
 
 **タスク**:
-- [ ] 詳細画面の実装
-- [ ] メンバー一覧
-- [ ] お知らせ一覧
+- [x] 詳細画面の実装
+- [x] メンバー一覧
+- [x] お知らせ一覧
 - [ ] 練習・大会一覧
 
 #### 7.3 チーム管理機能
@@ -354,10 +355,10 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: チーム管理者がチームを管理できる
 
 **タスク**:
-- [ ] メンバー招待
-- [ ] メンバー管理
-- [ ] お知らせ作成・編集
-- [ ] チーム練習・大会の一括登録
+- [x] メンバー招待
+- [x] メンバー管理
+- [x] お知らせ作成・編集
+- [x] チーム練習・大会の一括登録
 
 ### Phase 8: プロフィール機能
 
@@ -366,10 +367,12 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: ユーザープロフィールを表示・編集できる
 
 **タスク**:
-- [ ] プロフィール画面の実装
-- [ ] プロフィール画像のアップロード（Supabase Storage）
-- [ ] 基本情報の編集
-- [ ] パスワード変更
+- [x] プロフィール画面の実装
+- [x] プロフィール画像のアップロード（Supabase Storage）
+- [x] 基本情報の編集
+- [ ] ベストタイム表の実装（WEB実装を参考）
+  - Phase 8.1 で実装予定。Web版と同等のデータソース（Supabase）を用いて記録を表示し、アップロード/表示要件を満たすことを受け入れ条件とする。
+- [x] パスワード変更
 
 ### Phase 9: オフライン対応とパフォーマンス最適化
 
@@ -378,20 +381,20 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: オフライン時でも基本機能が動作
 
 **タスク**:
-- [ ] React Queryのキャッシュ戦略の最適化
-- [ ] オフライン検知
-- [ ] オフライン時のUI表示
-- [ ] データ同期（オンライン復帰時）
+- [x] React Queryのキャッシュ戦略の最適化
+- [x] オフライン検知
+- [x] オフライン時のUI表示
+- [x] データ同期（オンライン復帰時）
 
 #### 9.2 パフォーマンス最適化
 
 **目標**: アプリのパフォーマンスを向上
 
 **タスク**:
-- [ ] 画像最適化
-- [ ] リストの仮想化（FlatList最適化）
-- [ ] メモ化の適用
-- [ ] バンドルサイズの最適化
+- [x] 画像最適化
+- [x] リストの仮想化（FlatList最適化）
+- [x] メモ化の適用
+- [x] バンドルサイズの最適化
 
 ### Phase 10: テストとリリース準備
 
@@ -400,8 +403,8 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: モバイルアプリのテストを実装
 
 **タスク**:
-- [ ] ユニットテスト（Vitest）
-- [ ] コンポーネントテスト（React Native Testing Library）
+- [x] ユニットテスト（Vitest）
+- [x] コンポーネントテスト（React Native Testing Library）
 - [ ] E2Eテスト（DetoxまたはMaestro）
 
 #### 10.2 リリース準備
@@ -409,9 +412,9 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **目標**: アプリストアへのリリース準備
 
 **タスク**:
-- [ ] アイコン・スプラッシュスクリーンの設定
-- [ ] アプリ情報の設定
-- [ ] ビルド設定（iOS/Android）
+- [x] アイコン・スプラッシュスクリーンの設定
+- [x] アプリ情報の設定
+- [x] ビルド設定（iOS/Android）
 - [ ] 配布設定（App Store Connect / Google Play Console）
 
 ## 技術的な考慮事項

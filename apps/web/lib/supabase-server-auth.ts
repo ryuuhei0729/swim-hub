@@ -5,8 +5,8 @@
 
 import { createServerClient } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@swim-hub/shared/types/database'
 import { cookies } from 'next/headers'
-import type { Database } from './supabase'
 
 /**
  * 認証情報を含むサーバー側Supabaseクライアントを作成
@@ -17,9 +17,28 @@ import type { Database } from './supabase'
 export async function createAuthenticatedServerClient(): Promise<SupabaseClient<Database>> {
   const cookieStore = await cookies()
 
+  // 環境変数の検証
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    const missingVars: string[] = []
+    if (!supabaseUrl) missingVars.push('NEXT_PUBLIC_SUPABASE_URL')
+    if (!supabaseAnonKey) missingVars.push('NEXT_PUBLIC_SUPABASE_ANON_KEY')
+
+    throw new Error(`Supabase環境変数が設定されていません: ${missingVars.join(', ')}`)
+  }
+
+  // URLの形式検証
+  try {
+    new URL(supabaseUrl)
+  } catch {
+    throw new Error(`Invalid NEXT_PUBLIC_SUPABASE_URL: "${supabaseUrl}" is not a valid URL`)
+  }
+
   return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {

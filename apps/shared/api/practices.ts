@@ -5,15 +5,15 @@
 
 import { SupabaseClient } from '@supabase/supabase-js'
 import {
-  Practice,
-  PracticeInsert,
-  PracticeLog,
-  PracticeLogInsert,
-  PracticeLogUpdate,
-  PracticeTime,
-  PracticeTimeInsert,
-  PracticeUpdate,
-  PracticeWithLogs
+    Practice,
+    PracticeInsert,
+    PracticeLog,
+    PracticeLogInsert,
+    PracticeLogUpdate,
+    PracticeTime,
+    PracticeTimeInsert,
+    PracticeUpdate,
+    PracticeWithLogs
 } from '../types/database'
 
 export class PracticeAPI {
@@ -122,6 +122,45 @@ export class PracticeAPI {
 
     if (error) throw error
     return data as PracticeWithLogs[]
+  }
+
+  /**
+   * IDで練習記録を取得
+   * @param id 練習記録ID
+   */
+  async getPracticeById(id: string): Promise<PracticeWithLogs | null> {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+
+    const { data, error } = await this.supabase
+      .from('practices')
+      .select(`
+        *,
+        practice_logs (
+          *,
+          practice_times (*),
+          practice_log_tags (
+            practice_tag_id,
+            practice_tags (
+              id,
+              name,
+              color
+            )
+          )
+        )
+      `)
+      .eq('user_id', user.id)
+      .eq('id', id)
+      .single()
+
+    if (error) {
+      // レコードが見つからない場合は null を返す
+      if (error.code === 'PGRST116') {
+        return null
+      }
+      throw error
+    }
+    return data as PracticeWithLogs
   }
 
   /**

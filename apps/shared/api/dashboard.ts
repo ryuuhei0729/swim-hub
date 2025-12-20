@@ -31,6 +31,13 @@ export class DashboardAPI {
 
     if (error) throw error
 
+    // デバッグ: recordタイプのアイテムをログ出力
+    const recordItems = calendarData?.filter(item => item.item_type === 'record') || []
+    if (recordItems.length > 0) {
+      console.log('[DashboardAPI] Record items found:', recordItems.length)
+      console.log('[DashboardAPI] Record items sample:', JSON.stringify(recordItems[0], null, 2))
+    }
+
     // データをCalendarItem形式に変換
     // 注意: calendar_viewは既にauth.uid()でフィルタリングされていますが、
     // 多層防御として、個人のデータのみmetadataのuser_idが現在のユーザーと一致することを確認
@@ -42,7 +49,8 @@ export class DashboardAPI {
           return true
         }
         // 個人のデータの場合のみ、user_idを検証
-        const userId = item.metadata?.user_id
+        // recordの場合は、metadata.record.user_idもチェック
+        const userId = item.metadata?.user_id || item.metadata?.record?.user_id
         if (userId) {
           return userId === user.id
         }

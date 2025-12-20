@@ -1,6 +1,7 @@
 'use client'
 import { createBrowserClient } from '@supabase/ssr'
 import { type SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@swim-hub/shared/types/database'
 import { getCurrentEnvConfig, getSupabaseConfig } from './env'
 
 // 環境別のSupabase設定を取得
@@ -12,315 +13,6 @@ if (_envConfig.debug) {
   // デバッグログの出力
 }
 
-// 型定義
-export type Database = {
-  public: {
-    Tables: {
-      users: {
-        Row: {
-          id: string
-          name: string
-          gender: number // 0: male, 1: female
-          birthday: string | null
-          profile_image_path: string | null
-          bio: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          gender?: number // デフォルト: 0 (male)
-          birthday?: string | null
-          profile_image_path?: string | null
-          bio?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          gender?: number
-          birthday?: string | null
-          profile_image_path?: string | null
-          bio?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      styles: {
-        Row: {
-          id: number
-          name_jp: string
-          name: string
-          style: 'fr' | 'br' | 'ba' | 'fly' | 'im'
-          distance: number
-        }
-        Insert: {
-          id: number
-          name_jp: string
-          name: string
-          style: 'fr' | 'br' | 'ba' | 'fly' | 'im'
-          distance: number
-        }
-        Update: {
-          id?: number
-          name_jp?: string
-          name?: string
-          style?: 'fr' | 'br' | 'ba' | 'fly' | 'im'
-          distance?: number
-        }
-      }
-      competitions: {
-        Row: {
-          id: string
-          title: string
-          date: string
-          place: string // NOT NULL
-          pool_type: number // 0: short, 1: long
-          note: string | null
-          attendance_status?: string | null
-        }
-        Insert: {
-          id?: string
-          title: string
-          date: string
-          place: string // NOT NULL
-          pool_type?: number // デフォルト: 0 (short)
-          note?: string | null
-          attendance_status?: string | null
-        }
-        Update: {
-          id?: string
-          title?: string
-          date?: string
-          place?: string
-          pool_type?: number
-          note?: string | null
-          attendance_status?: string | null
-        }
-      }
-      practices: {
-        Row: {
-          id: string
-          user_id: string
-          date: string
-          place: string | null
-          note: string | null
-          attendance_status?: string | null
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          date: string
-          place: string | null
-          note?: string | null
-          attendance_status?: string | null
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          date?: string
-          place?: string | null
-          note?: string | null
-          attendance_status?: string | null
-        }
-      }
-      records: {
-        Row: {
-          id: string
-          user_id: string
-          competition_id: string | null
-          style_id: number
-          time: number
-          video_url: string | null
-          note: string | null
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          competition_id?: string | null
-          style_id: number
-          time: number
-          video_url?: string | null
-          note?: string | null
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          competition_id?: string | null
-          style_id?: number
-          time?: number
-          video_url?: string | null
-          note?: string | null
-        }
-      }
-      split_times: {
-        Row: {
-          id: string
-          record_id: string
-          distance: number
-          split_time: number
-        }
-        Insert: {
-          id?: string
-          record_id: string
-          distance: number
-          split_time: number
-        }
-        Update: {
-          id?: string
-          record_id?: string
-          distance?: number
-          split_time?: number
-        }
-      }
-      practice_logs: {
-        Row: {
-          id: string
-          user_id: string
-          date: string
-          practice_id: string
-          style: string
-          rep_count: number
-          set_count: number
-          distance: number
-          circle: number | null // NOT NULLからNULLに変更
-          note: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          date?: string
-          practice_id: string
-          style: string
-          rep_count: number
-          set_count: number
-          distance: number
-          circle?: number | null
-          note?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          date?: string
-          practice_id?: string
-          style?: string
-          rep_count?: number
-          set_count?: number
-          distance?: number
-          circle?: number | null
-          note?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      practice_times: {
-        Row: {
-          id: string
-          practice_log_id: string
-          rep_number: number
-          set_number: number
-          time: number
-        }
-        Insert: {
-          id?: string
-          practice_log_id: string
-          rep_number: number
-          set_number: number
-          time: number
-        }
-        Update: {
-          id?: string
-          practice_log_id?: string
-          rep_number?: number
-          set_number?: number
-          time?: number
-        }
-      }
-      practice_tags: {
-        Row: {
-          id: string
-          user_id: string
-          name: string
-          color: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          name: string
-          color?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          name?: string
-          color?: string
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      practice_log_tags: {
-        Row: {
-          id: string
-          practice_log_id: string
-          practice_tag_id: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          practice_log_id: string
-          practice_tag_id: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          practice_log_id?: string
-          practice_tag_id?: string
-          created_at?: string
-        }
-      }
-      team_memberships: {
-        Row: {
-          id: string
-          team_id: string
-          user_id: string
-          role: 'admin' | 'user'
-          is_active: boolean
-          joined_at: string
-          left_at: string | null
-        }
-        Insert: {
-          id?: string
-          team_id: string
-          user_id: string
-          role?: 'admin' | 'user'
-          is_active?: boolean
-          joined_at?: string
-          left_at?: string | null
-        }
-        Update: {
-          id?: string
-          team_id?: string
-          user_id?: string
-          role?: 'admin' | 'user'
-          is_active?: boolean
-          joined_at?: string
-          left_at?: string | null
-        }
-      }
-    }
-  }
-}
-
 // ブラウザ環境でSupabaseクライアントを管理（Hot Reload対応）
 declare global {
   interface Window {
@@ -328,12 +20,36 @@ declare global {
   }
 }
 
+/**
+ * Supabase環境変数を検証（クライアント側）
+ * @throws {Error} 環境変数が設定されていない、または無効な場合
+ */
+function validateSupabaseEnv(): { url: string; anonKey: string } {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    const missingVars: string[] = []
+    if (!supabaseUrl) missingVars.push('NEXT_PUBLIC_SUPABASE_URL')
+    if (!supabaseAnonKey) missingVars.push('NEXT_PUBLIC_SUPABASE_ANON_KEY')
+
+    throw new Error(`Supabase環境変数が設定されていません: ${missingVars.join(', ')}`)
+  }
+
+  // URLの形式検証
+  try {
+    new URL(supabaseUrl)
+  } catch {
+    throw new Error(`Invalid NEXT_PUBLIC_SUPABASE_URL: "${supabaseUrl}" is not a valid URL`)
+  }
+
+  return { url: supabaseUrl, anonKey: supabaseAnonKey }
+}
+
 // ブラウザ用のSupabaseクライアント（クライアントコンポーネント用）
 export const createClient = (): SupabaseClient<Database> => {
-  return createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const { url, anonKey } = validateSupabaseEnv()
+  return createBrowserClient<Database>(url, anonKey)
 }
 
 // グローバルなSupabaseクライアント（必要な場合のみ）

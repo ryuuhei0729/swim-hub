@@ -251,3 +251,5 @@ jobs:
     - name: Build Next.js app
       working-directory: apps/web
       run: npm run build
+      env:
+        DOTENV_PRIVATE_KEY_PRODUCTION: ${{ secrets.DOTENV_PRIVATE_KEY_PRODUCTION }}
