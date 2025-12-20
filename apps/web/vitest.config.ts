@@ -5,7 +5,12 @@ import { defineConfig } from 'vitest/config'
 import { createVitestConfig } from '../../tools/vitest-config/web.js'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react({
+      // React 19.2.1のuseIdフックを正しく動作させる
+      jsxRuntime: 'automatic',
+    }),
+  ],
   ...createVitestConfig({
     name: 'web',
     environment: 'jsdom',
@@ -36,6 +41,12 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './'),
       '@apps/shared': path.resolve(__dirname, '../shared'),
+    },
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './'),
+        '@apps/shared': path.resolve(__dirname, '../shared'),
+      },
     },
   }),
 })

@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @config "../tailwind.config.ts";
-@import "../../../node_modules/react-device-frameset/dist/styles/marvel-devices.min.css";
 
 @layer base {
   html {
