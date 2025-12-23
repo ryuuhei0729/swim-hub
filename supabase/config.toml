@@ -181,6 +181,17 @@ otp_length = 6
 otp_expiry = 3600
 
 # Use a production-ready SMTP server
+# Resend を使用する場合の設定例（本番環境では Supabase Dashboard で設定）
+# [auth.email.smtp]
+# enabled = true
+# host = "smtp.resend.com"
+# port = 465
+# user = "resend"
+# pass = "env(RESEND_API_KEY)"
+# admin_email = "noreply@swim-hub.app"
+# sender_name = "SwimHub"
+
+# SendGrid を使用する場合の設定例
 # [auth.email.smtp]
 # enabled = true
 # host = "smtp.sendgrid.net"
