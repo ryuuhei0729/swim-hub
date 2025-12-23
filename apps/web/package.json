@@ -60,7 +60,7 @@
     "@vitejs/plugin-react": "^5.1.0",
     "@vitest/coverage-v8": "^4.0.8",
     "autoprefixer": "^10.4.21",
-    "dotenv": "^16.4.7",
+    "dotenv": "^17.2.3",
     "eslint": "^9.37.0",
     "eslint-config-next": "^16.0.7",
     "jsdom": "^27.1.0",
