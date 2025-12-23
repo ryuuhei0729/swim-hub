@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -12,12 +12,10 @@ import {
   TrophyIcon,
   ClipboardDocumentListIcon,
   UsersIcon,
-  SpeakerWaveIcon,
   ArrowRightIcon,
   CheckIcon,
   SparklesIcon,
   UserIcon,
-  AcademicCapIcon,
   UserGroupIcon,
   QuestionMarkCircleIcon,
   ClockIcon,
@@ -30,6 +28,49 @@ export default function Home() {
   const { user, loading } = useAuth()
   const isAuthenticated = !!user
   const router = useRouter()
+  const [imageErrors, setImageErrors] = useState<{ mobile: boolean; desktop: boolean }>({
+    mobile: false,
+    desktop: false,
+  })
+  const [windowWidth, setWindowWidth] = useState<number>(0)
+
+  // ウィンドウサイズをリアルタイムで監視
+  useEffect(() => {
+    // 初期値を設定
+    if (typeof window !== 'undefined') {
+      setWindowWidth(window.innerWidth)
+    }
+
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth)
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  // スマホ端末のスケールを計算（ウィンドウ幅に応じて動的に調整）
+  const mobileScale = useMemo(() => {
+    if (windowWidth === 0) return 0.80 // 初期値
+    // 基準: 1920pxで0.80、1280pxで0.60、768pxで0.40
+    // 線形補間で計算
+    if (windowWidth >= 1920) return 0.80
+    if (windowWidth <= 768) return 0.40
+    // 768px〜1920pxの間で線形補間
+    const ratio = (windowWidth - 768) / (1920 - 768)
+    return 0.40 + (ratio * 0.40)
+  }, [windowWidth])
+
+  // PC端末のスケールを計算（ウィンドウ幅に応じて動的に調整）
+  const desktopScale = useMemo(() => {
+    if (windowWidth === 0) return 0.60 // 初期値
+    // 基準: 1920pxで0.60、1280pxで0.45、1024pxで0.35
+    if (windowWidth >= 1920) return 0.60
+    if (windowWidth <= 1024) return 0.35
+    // 1024px〜1920pxの間で線形補間
+    const ratio = (windowWidth - 1024) / (1920 - 1024)
+    return 0.35 + (ratio * 0.25)
+  }, [windowWidth])
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
@@ -45,74 +86,80 @@ export default function Home() {
     return null
   }
 
-  // 機能一覧（個人・チーム バランスよく）
+  // スクリーンショット画像パス（後で実際のスクリーンショットに置き換え可能）
+  const screenshotPaths = {
+    mobile: '/screenshots/dashboard-mobile.png', // スマホ：ダッシュボード画面
+    desktop: '/screenshots/members-desktop.png', // PC：チームメンバー画面
+  }
+
+  // 手が届かなかったかゆい機能
   const features = [
     {
-      icon: CalendarDaysIcon,
-      title: 'カレンダー記録',
-      description: '練習や大会の記録を日付ごとに簡単に管理。月間サマリーで一目で確認できます。',
+      icon: CheckIcon,
+      title: 'チームを抜けても記録は残る',
+      description: '全ての記録は個人に紐づくため、チームを転々とする選手でも記録が途切れることはありません。あなたの成長の軌跡をずっと残せます。',
       color: 'text-blue-600',
       bgColor: 'bg-blue-100'
     },
     {
       icon: TrophyIcon,
-      title: 'タイム管理',
-      description: 'ベストタイムの自動更新、スプリットタイムの記録、長水路・短水路別の管理に対応。',
+      title: '短水路・長水路・引き継ぎ有無も管理',
+      description: '「この記録は短水路？長水路？リレーの引き継ぎはあった？」そんな疑問を解決。記録の詳細情報をしっかり管理できます。',
       color: 'text-yellow-600',
       bgColor: 'bg-yellow-100'
     },
     {
-      icon: ChartBarIcon,
-      title: '練習分析',
-      description: '練習内容をタグで管理し、振り返りや分析を簡単に。自分の成長を可視化できます。',
+      icon: ClockIcon,
+      title: 'ラップタイムの自由入力',
+      description: '25m、50mはもちろん、5m、12.5m、15mなど、細かい間隔でのラップタイムも自由に入力可能。あなたのスタイルに合わせた柔軟な記録管理ができます。',
       color: 'text-purple-600',
       bgColor: 'bg-purple-100'
     },
     {
-      icon: UsersIcon,
-      title: 'チーム管理',
-      description: '複数のチームに同時所属可能。チーム脱退後も個人データは保持されます。',
+      icon: ClipboardDocumentListIcon,
+      title: '大会エントリー集計',
+      description: 'エントリー種目とエントリータイムを集計可能。大会へのエントリー作業を大幅に効率化し、エントリーミスを防ぎます。',
       color: 'text-green-600',
       bgColor: 'bg-green-100'
     },
     {
-      icon: SpeakerWaveIcon,
-      title: 'お知らせ共有',
-      description: 'チーム内のお知らせを簡単に共有。重要な連絡も見逃しません。',
+      icon: CalendarDaysIcon,
+      title: 'YouTubeリンクで泳ぎと記録を紐付け',
+      description: '動画はYouTubeで管理。記録にYouTubeリンクを紐付けることで、泳ぎのフォームと記録を簡単に結びつけられます。',
       color: 'text-indigo-600',
       bgColor: 'bg-indigo-100'
     },
     {
-      icon: ClipboardDocumentListIcon,
-      title: '出欠管理',
-      description: '練習や大会の出席状況を記録・管理。チーム全体の参加状況を把握できます。',
+      icon: ChartBarIcon,
+      title: 'Excelファイルで一括入力',
+      description: 'チームのスケジュールをExcelファイルから一括インポート可能。手入力の手間を大幅に削減できます。',
       color: 'text-red-600',
       bgColor: 'bg-red-100'
     }
   ]
 
-  // 利用シーン
+  // 利用パターン（3種類）
   const useCases = [
     {
       icon: UserIcon,
-      persona: '個人選手',
-      title: '自分の記録を管理したい',
-      description: 'マスターズスイマーや個人で練習する選手に最適。自分のペースで記録を管理できます。',
-      features: ['練習記録', 'ベストタイム管理', 'タイム推移グラフ']
+      persona: 'パターン1',
+      title: '個人で使う',
+      description: '練習記録や大会の結果を自分で入力して、データを蓄積。マスターズスイマーや個人で練習する選手に最適です。',
+      features: ['練習記録の蓄積', '大会結果の記録', 'ベストタイムの自動更新']
     },
     {
       icon: UserGroupIcon,
-      persona: 'チーム選手',
-      title: '個人記録とチーム活動の両立',
-      description: 'チームに所属しながら個人の記録も管理。両方の良いところを活かせます。',
-      features: ['個人記録管理', 'チーム練習参加', 'お知らせ確認']
+      persona: 'パターン2',
+      title: 'スイミングクラブや部活内で使う',
+      description: 'チーム機能で練習記録や大会結果を共有。マネージャーやコーチが代理で全員分の記録を入力でき、出欠管理やエントリー集計も効率化。複数チームへの所属も可能です。',
+      features: ['代理入力機能', '出欠管理', '大会エントリー集計', 'お知らせ共有', '複数チーム所属可能']
     },
     {
-      icon: AcademicCapIcon,
-      persona: 'コーチ',
-      title: 'チーム全体の記録管理',
-      description: 'チームメンバーの記録を一元管理。効率的な指導をサポートします。',
-      features: ['メンバー管理', '練習計画共有', '記録分析']
+      icon: UsersIcon,
+      persona: 'パターン3',
+      title: '友達同士で使う',
+      description: 'チーム機能は友達同士でも使えます。お互いの記録を見られるので、切磋琢磨してモチベーションを高め合えます。',
+      features: ['仲間の記録を閲覧', '記録で切磋琢磨', 'モチベーション向上']
     }
   ]
 
@@ -135,10 +182,89 @@ export default function Home() {
     }
   ]
 
+  // スムーズスクロール用のハンドラー
+  const handleScrollTo = (id: string) => {
+    const element = document.getElementById(id)
+    if (element) {
+      const headerOffset = 100
+      const elementPosition = element.getBoundingClientRect().top
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      })
+    }
+  }
+
   return (
     <div className="min-h-screen bg-white">
+      {/* 固定ヘッダーナビゲーション */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/60 backdrop-blur-sm shadow-sm">
+        <nav className="max-w-7xl mx-auto px-2 sm:px-3 lg:px-4">
+          <div className="flex items-center justify-between h-20">
+            {/* ロゴ */}
+            <Link href="/" className="flex items-center space-x-3">
+              <Image src="/favicon.png" alt="SwimHub" width={50} height={50} className="w-16 h-16" />
+              <span className="text-3xl font-bold text-gray-900">SwimHub</span>
+            </Link>
+
+            {/* ナビゲーションメニュー */}
+            <div className="hidden md:flex items-center space-x-1 lg:space-x-2">
+              <button
+                onClick={() => handleScrollTo('about')}
+                className="px-4 py-2 text-base text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+              >
+                SwimHubとは？
+              </button>
+              <button
+                onClick={() => handleScrollTo('features')}
+                className="px-4 py-2 text-base text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+              >
+                イチオシ機能
+              </button>
+              <button
+                onClick={() => handleScrollTo('usecases')}
+                className="px-4 py-2 text-base text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+              >
+                利用パターン
+              </button>
+              <button
+                onClick={() => handleScrollTo('announcements')}
+                className="px-4 py-2 text-base text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+              >
+                お知らせ
+              </button>
+              <div className="mx-2 h-6 w-px bg-gray-300" />
+              <Link
+                href="/signup"
+                className="px-5 py-2.5 text-base font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+              >
+                無料登録
+              </Link>
+              <Link
+                href="/login"
+                className="px-5 py-2.5 text-base font-semibold text-blue-600 border border-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+              >
+                ログイン
+              </Link>
+            </div>
+
+            {/* モバイルメニューボタン */}
+            <button
+              className="md:hidden p-2 text-gray-700 hover:text-blue-600"
+              aria-label="メニュー"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
+        </nav>
+      </header>
+
       {/* ヒーローセクション（背景画像 + スマホモック） */}
-      <section className="relative isolate overflow-hidden bg-gray-900 text-white">
+      <section className="relative isolate overflow-hidden bg-gray-900 text-white pt-20">
         <Image
           src="/hero-section.png"
           alt="プールでの練習風景"
@@ -149,21 +275,22 @@ export default function Home() {
         />
         <div className="absolute inset-0 bg-black/30" />
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
+        <div className="relative max-w-7xl mx-auto px-2 sm:px-3 lg:px-4 py-12 sm:py-16 lg:py-20">
           <div className="grid gap-8 md:gap-12 lg:grid-cols-2 items-center">
             {/* 左側: テキストコンテンツ */}
             <div className="space-y-4 sm:space-y-6 animate-fade-in text-center lg:text-left order-2 lg:order-1">
-              <div className="inline-flex items-center gap-2 bg-white/10 text-blue-100 px-3 py-1 rounded-full text-xs font-semibold tracking-wide">
-                <SparklesIcon className="w-4 h-4" />
+              <div className="inline-flex items-center gap-2 bg-white/10 text-blue-100 px-3 py-1 rounded-full text-md font-semibold tracking-wide">
+                <SparklesIcon className="w-6 h-8" />
                 スマホでらくらくチーム管理
               </div>
 
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
                 <span className="text-cyan-400">個人でもチームでも、</span>
-                <span className="block text-blue-100">水泳の記録管理をこれひとつで。</span>
+                <span className="block text-blue-100">水泳の記録管理を</span>
+                <span className="block text-blue-100">これひとつで。</span>
               </h1>
 
-              <p className="text-sm sm:text-base md:text-lg text-blue-50 leading-relaxed max-w-2xl mx-auto lg:mx-0">
+              <p className="text-md sm:text-xl md:text-xl text-blue-50 leading-relaxed max-w-2xl mx-auto lg:mx-0">
                 練習記録・大会記録・チームの出欠、エントリー収集までまとめて管理。スマホでもブラウザでもすぐに始められます。
               </p>
 
@@ -172,24 +299,24 @@ export default function Home() {
                   disabled
                   className="inline-flex items-center justify-center px-4 sm:px-5 py-2.5 sm:py-3 bg-white/20 text-white rounded-lg backdrop-blur-sm cursor-not-allowed text-sm sm:text-base"
                 >
-                  <svg className="w-5 h-5 sm:w-6 sm:h-6 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                  <svg className="w-7 h-7 sm:w-6 sm:h-6 mr-2" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
                   </svg>
                   <div className="text-left">
-                    <div className="text-[10px] leading-none opacity-80">Coming Soon</div>
-                    <div className="text-xs sm:text-sm font-semibold">App Store</div>
+                    <div className="text-[15px] leading-none opacity-80">Coming Soon</div>
+                    <div className="text-xl sm:text-md font-semibold">App Store</div>
                   </div>
                 </button>
                 <button
                   disabled
                   className="inline-flex items-center justify-center px-4 sm:px-5 py-2.5 sm:py-3 bg-white/20 text-white rounded-lg backdrop-blur-sm cursor-not-allowed text-sm sm:text-base"
                 >
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                  <svg className="w-7 h-7 sm:w-6 sm:h-6 mr-2" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z" />
                   </svg>
                   <div className="text-left">
-                    <div className="text-[10px] leading-none opacity-80">Coming Soon</div>
-                    <div className="text-xs sm:text-sm font-semibold">Google Play</div>
+                    <div className="text-[15px] leading-none opacity-80">Coming Soon</div>
+                    <div className="text-xl sm:text-md font-semibold">Google Play</div>
                   </div>
                 </button>
               </div>
@@ -212,21 +339,70 @@ export default function Home() {
             </div>
 
             {/* 右側: デバイスモック */}
-            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-end gap-3 sm:gap-4 lg:gap-6 animate-fade-in order-1 lg:order-2" style={{ animationDelay: '0.1s' }}>
-              {/* スマホモック（iPhone） */}
-              <div className="w-[140px] sm:w-[160px] md:w-[180px] lg:w-[200px]">
+            <div className="relative flex items-end justify-center animate-fade-in order-1 lg:order-2" style={{ animationDelay: '0.1s' }}>
+              {/* スマホモック（iPhone）- ダッシュボード画面（ユーザー視点） */}
+              {/* スマホサイズでは非表示、タブレット以上で表示 */}
+              <div 
+                className="hidden sm:block absolute z-10" 
+                style={{ 
+                  left: 'calc(50% - 10px)', 
+                  transform: `translateX(50%) translateY(5%) scale(${mobileScale})` 
+                }}
+              >
                 <DeviceFrameset device="iPhone X" color="black">
-                  <div className="w-full h-full bg-black flex items-center justify-center text-white/40 text-xs">
-                    スマホ画面プレビュー
+                  <div className="w-full h-full relative">
+                    {imageErrors.mobile ? (
+                      <div className="w-full h-full bg-gray-800 flex items-center justify-center text-white/40 text-xs p-2 text-center">
+                        ダッシュボード画面
+                        <br />
+                        （画像準備中）
+                      </div>
+                    ) : (
+                      <Image
+                        src={screenshotPaths.mobile}
+                        alt="SwimHub ダッシュボード画面（スマホ）"
+                        fill
+                        className="object-contain"
+                        sizes="(max-width: 640px) 200px, (max-width: 768px) 250px, (max-width: 1024px) 300px, 350px"
+                        quality={100}
+                        unoptimized
+                        onError={() => {
+                          setImageErrors((prev) => ({ ...prev, mobile: true }))
+                        }}
+                      />
+                    )}
                   </div>
                 </DeviceFrameset>
               </div>
               
-              {/* PCモック（MacBook Pro） */}
-              <div className="hidden md:block w-[200px] md:w-[240px] lg:w-[280px]">
+              {/* PCモック（MacBook Pro）- チームメンバー画面（管理者視点） */}
+              {/* タブレット以上で表示、常に前面に */}
+              <div 
+                className="hidden md:block relative z-20" 
+                style={{ transform: `scale(${desktopScale}) translateY(35%)` }}
+              >
                 <DeviceFrameset device="MacBook Pro" color="black">
-                  <div className="w-full h-full bg-black flex items-center justify-center text-white/40 text-xs">
-                    PC画面プレビュー
+                  <div className="w-full h-full relative">
+                    {imageErrors.desktop ? (
+                      <div className="w-full h-full bg-gray-800 flex items-center justify-center text-white/40 text-xs p-2 text-center">
+                        チームメンバー画面
+                        <br />
+                        （画像準備中）
+                      </div>
+                    ) : (
+                      <Image
+                        src={screenshotPaths.desktop}
+                        alt="SwimHub チームメンバー画面（PC）"
+                        fill
+                        className="object-contain"
+                        sizes="(max-width: 768px) 350px, (max-width: 1024px) 400px, 450px"
+                        quality={100}
+                        unoptimized
+                        onError={() => {
+                          setImageErrors((prev) => ({ ...prev, desktop: true }))
+                        }}
+                      />
+                    )}
                   </div>
                 </DeviceFrameset>
               </div>
@@ -290,7 +466,7 @@ export default function Home() {
       </section>
 
       {/* SwimHubとは？セクション */}
-      <section className="py-16 sm:py-20 bg-blue-50">
+      <section id="about" className="py-16 sm:py-20 bg-blue-50 scroll-mt-[100px]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">
@@ -302,58 +478,54 @@ export default function Home() {
           </div>
 
           <div className="bg-white rounded-2xl p-6 sm:p-10 shadow-sm">
-            <p className="text-gray-700 text-base sm:text-lg leading-relaxed mb-6">
+            <p className="text-gray-700 text-base sm:text-lg leading-relaxed mb-8">
               <span className="font-bold text-blue-600">SwimHub（スイムハブ）</span>は、
               水泳選手の記録管理の悩みから生まれた、練習・大会記録管理サービスです。
-            </p>
-            <p className="text-gray-700 text-base sm:text-lg leading-relaxed mb-8">
-              はじめ方はとっても簡単。
-              PCやスマホから簡単なアカウント登録をしたらすぐに使い始められます。
+              PCやスマホから簡単にアクセスでき、個人利用からチーム運営まで幅広く対応しています。
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="text-center p-6 bg-blue-50 rounded-xl">
-                <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center mx-auto mb-4 text-xl font-bold">
-                  1
+              <div className="p-6 bg-blue-50 rounded-xl border border-blue-100">
+                <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center mx-auto mb-4">
+                  <CalendarDaysIcon className="w-6 h-6" />
                 </div>
-                <h4 className="font-semibold text-gray-900 mb-2">アカウント登録</h4>
-                <p className="text-sm text-gray-600">メールアドレスだけでOK。1分で完了します。</p>
+                <h4 className="font-semibold text-gray-900 mb-3 text-center">練習記録の管理</h4>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  練習内容を日付ごとに記録し、サークルの変遷や練習タイムの変遷を可視化。自分の成長をグラフで確認できます。
+                </p>
               </div>
-              <div className="text-center p-6 bg-blue-50 rounded-xl">
-                <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center mx-auto mb-4 text-xl font-bold">
-                  2
+              <div className="p-6 bg-yellow-50 rounded-xl border border-yellow-100">
+                <div className="w-12 h-12 rounded-full bg-yellow-600 text-white flex items-center justify-center mx-auto mb-4">
+                  <TrophyIcon className="w-6 h-6" />
                 </div>
-                <h4 className="font-semibold text-gray-900 mb-2">記録を登録</h4>
-                <p className="text-sm text-gray-600">練習や大会の記録を入力するだけ。</p>
+                <h4 className="font-semibold text-gray-900 mb-3 text-center">大会記録の管理</h4>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  種目別タイムの変遷を追跡し、ラップタイム分析で泳ぎの改善点を発見。ベストタイムの自動更新も可能です。
+                </p>
               </div>
-              <div className="text-center p-6 bg-blue-50 rounded-xl">
-                <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center mx-auto mb-4 text-xl font-bold">
-                  3
+              <div className="p-6 bg-green-50 rounded-xl border border-green-100">
+                <div className="w-12 h-12 rounded-full bg-green-600 text-white flex items-center justify-center mx-auto mb-4">
+                  <UsersIcon className="w-6 h-6" />
                 </div>
-                <h4 className="font-semibold text-gray-900 mb-2">成長を確認</h4>
-                <p className="text-sm text-gray-600">タイムの推移やベスト更新を自動で管理。</p>
+                <h4 className="font-semibold text-gray-900 mb-3 text-center">チーム管理</h4>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  出欠管理、練習・大会のスケジュール登録、エントリー集計機能など、チーム運営に必要な機能を一括管理できます。
+                </p>
               </div>
-            </div>
-            
-            <div className="mt-8 pt-8 border-t border-gray-200">
-              <p className="text-gray-600 text-sm text-center">
-                チームに所属している場合は、チームに参加することで
-                チーム練習への出欠登録やお知らせの確認もできます。
-              </p>
             </div>
           </div>
         </div>
       </section>
 
       {/* 特徴セクション */}
-      <section className="py-16 sm:py-20 bg-white">
+      <section id="features" className="py-16 sm:py-20 bg-white scroll-mt-[100px]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              SwimHubの特徴
+              手が届かなかったかゆい機能を追加！
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              個人利用からチーム運営まで、必要な機能がすべて揃っています
+              他のアプリでは実現できなかった、本当に欲しかった機能を実装しました
             </p>
           </div>
 
@@ -387,14 +559,14 @@ export default function Home() {
       </section>
 
       {/* 利用シーンセクション */}
-      <section className="py-16 sm:py-20 bg-gray-50">
+      <section id="usecases" className="py-16 sm:py-20 bg-gray-50 scroll-mt-[100px]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              こんな方におすすめ
+              SwimHubの使い方（3つの利用パターン）
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              様々な利用シーンに対応しています
+              個人利用からチーム運営、友達同士での利用まで、様々なシーンに対応しています
             </p>
           </div>
 
@@ -432,7 +604,7 @@ export default function Home() {
       </section>
 
       {/* お知らせセクション */}
-      <section className="py-16 sm:py-20 bg-white">
+      <section id="announcements" className="py-16 sm:py-20 bg-white scroll-mt-[100px]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
@@ -466,10 +638,10 @@ export default function Home() {
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-6">
             今すぐ記録を始めよう
           </h2>
-          <p className="text-lg text-blue-100 mb-4 leading-relaxed">
+          <p className="text-lg text-white mb-4 font-bold leading-relaxed">
             アカウント作成は無料。すぐに使い始められます。
           </p>
-          <p className="text-base text-blue-200 mb-8">
+          <p className="text-base text-white font-bold mb-8">
             チームに所属していなくても大丈夫。
             <br className="hidden sm:block" />
             まずは個人で始めて、後からチーム機能を追加することもできます。
@@ -526,25 +698,29 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <div className="flex justify-center mb-6">
-              <div className="w-10 h-10 flex items-center justify-center">
+              <div className="w-20 h-20 flex items-center justify-center">
                 <Image 
                   src="/favicon.png" 
                   alt="SwimHub" 
-                  width={40} 
-                  height={40} 
-                  className="w-full h-full object-contain opacity-80" 
+                  width={80} 
+                  height={80} 
+                  className="w-full h-full object-contain" 
                 />
               </div>
             </div>
-            <h3 className="text-lg font-semibold mb-2">
+            <h3 className="text-gray-100 text-xl font-semibold mb-2">
               SwimHub
             </h3>
-            <p className="text-gray-400 mb-6 text-sm">
+            <p className="text-gray-100 mb-6 text-sm">
               水泳選手のための記録管理サービス
             </p>
             <div className="flex justify-center gap-6 mb-8 text-sm text-gray-400">
-              <span>利用規約</span>
-              <span>プライバシーポリシー</span>
+              <Link href="/terms" className="hover:text-white text-gray-400 font-bold transition-colors">
+                利用規約
+              </Link>
+              <Link href="/privacy" className="hover:text-white text-gray-400 font-bold transition-colors">
+                プライバシーポリシー
+              </Link>
             </div>
             <div className="text-xs text-gray-500">
               © 2025 SwimHub. All rights reserved.
