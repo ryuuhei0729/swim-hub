@@ -9,22 +9,24 @@ import { useMutation, useQuery, useQueryClient, type UseMutationResult, type Use
 import { useEffect, useMemo } from 'react'
 import { PracticeAPI } from '../../api/practices'
 import type {
-  Practice,
-  PracticeInsert,
-  PracticeLog,
-  PracticeLogInsert,
-  PracticeLogUpdate,
-  PracticeTag,
-  PracticeTime,
-  PracticeTimeInsert,
-  PracticeUpdate,
-  PracticeWithLogs
+    Practice,
+    PracticeInsert,
+    PracticeLog,
+    PracticeLogInsert,
+    PracticeLogUpdate,
+    PracticeTag,
+    PracticeTime,
+    PracticeTimeInsert,
+    PracticeUpdate,
+    PracticeWithLogs
 } from '../../types/database'
 import { practiceKeys } from './keys'
 
 export interface UsePracticesQueryOptions {
   startDate?: string
   endDate?: string
+  page?: number
+  pageSize?: number
   enableRealtime?: boolean
   initialData?: PracticeWithLogs[]
   api?: PracticeAPI
@@ -40,6 +42,8 @@ export function usePracticesQuery(
   const {
     startDate,
     endDate,
+    page = 1,
+    pageSize = 20,
     enableRealtime = true,
     initialData,
     api: providedApi
@@ -64,11 +68,14 @@ export function usePracticesQuery(
     return new Date().toISOString().split('T')[0]
   }, [endDate])
 
+  // ページング計算
+  const offset = useMemo(() => (page - 1) * pageSize, [page, pageSize])
+
   // クエリ実行
   const query = useQuery({
-    queryKey: practiceKeys.list({ startDate: defaultStartDate, endDate: defaultEndDate }),
+    queryKey: practiceKeys.list({ startDate: defaultStartDate, endDate: defaultEndDate, page, pageSize }),
     queryFn: async () => {
-      return await api.getPractices(defaultStartDate, defaultEndDate)
+      return await api.getPractices(defaultStartDate, defaultEndDate, pageSize, offset)
     },
     initialData,
     staleTime: 5 * 60 * 1000, // 5分
@@ -79,8 +86,8 @@ export function usePracticesQuery(
     if (!enableRealtime || !query.data) return
 
     const channel = api.subscribeToPractices((newPractice) => {
-      queryClient.setQueryData<PracticeWithLogs[]>(
-        practiceKeys.list({ startDate: defaultStartDate, endDate: defaultEndDate }),
+      queryClient.setQueriesData<PracticeWithLogs[]>(
+        { queryKey: practiceKeys.lists() },
         (old: PracticeWithLogs[] | undefined) => {
           if (!old) return old
 
@@ -110,6 +117,133 @@ export function usePracticesQuery(
       supabase.removeChannel(channel)
     }
   }, [api, enableRealtime, queryClient, defaultStartDate, defaultEndDate, query.data, supabase])
+
+  return query
+}
+
+/**
+ * 練習記録の総件数を取得するクエリ
+ */
+export function usePracticesCountQuery(
+  supabase: SupabaseClient,
+  options: { startDate?: string; endDate?: string; api?: PracticeAPI } = {}
+): UseQueryResult<number, Error> {
+  const { startDate, endDate, api: providedApi } = options
+
+  const api = useMemo(
+    () => providedApi ?? new PracticeAPI(supabase),
+    [supabase, providedApi]
+  )
+
+  // デフォルトの日付範囲を計算
+  const defaultStartDate = useMemo(() => {
+    if (startDate) return startDate
+    const date = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
+    return date.toISOString().split('T')[0]
+  }, [startDate])
+
+  const defaultEndDate = useMemo(() => {
+    if (endDate) return endDate
+    return new Date().toISOString().split('T')[0]
+  }, [endDate])
+
+  return useQuery({
+    queryKey: practiceKeys.count({ startDate: defaultStartDate, endDate: defaultEndDate }),
+    queryFn: async () => {
+      return await api.countPractices(defaultStartDate, defaultEndDate)
+    },
+    staleTime: 5 * 60 * 1000, // 5分
+  })
+}
+
+export interface UsePracticeByIdQueryOptions {
+  enableRealtime?: boolean
+  initialData?: PracticeWithLogs | null
+  api?: PracticeAPI
+}
+
+/**
+ * IDで練習記録を取得するクエリ
+ */
+export function usePracticeByIdQuery(
+  supabase: SupabaseClient,
+  practiceId: string,
+  options: UsePracticeByIdQueryOptions = {}
+): UseQueryResult<PracticeWithLogs | null, Error> {
+  const {
+    enableRealtime = true,
+    initialData,
+    api: providedApi
+  } = options
+
+  const api = useMemo(
+    () => providedApi ?? new PracticeAPI(supabase),
+    [supabase, providedApi]
+  )
+
+  const queryClient = useQueryClient()
+
+  // クエリ実行
+  const query = useQuery({
+    queryKey: practiceKeys.detail(practiceId),
+    queryFn: async () => {
+      return await api.getPracticeById(practiceId)
+    },
+    enabled: !!practiceId,
+    initialData,
+    staleTime: 5 * 60 * 1000, // 5分
+  })
+
+  // リアルタイム購読（練習記録の変更）
+  useEffect(() => {
+    if (!enableRealtime || !practiceId || !query.data) return
+
+    const channel = supabase
+      .channel(`practice-detail-${practiceId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'practices',
+          filter: `id=eq.${practiceId}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: practiceKeys.detail(practiceId) })
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'practice_logs',
+          filter: `practice_id=eq.${practiceId}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: practiceKeys.detail(practiceId) })
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'practice_times'
+        },
+        () => {
+          // practice_log_id でフィルタリングできないため、practice_logs の変更を監視
+          // より正確には practice_log_id を含む practice_logs を確認する必要があるが、
+          // 簡易的に practice_logs の変更を監視することで対応
+          queryClient.invalidateQueries({ queryKey: practiceKeys.detail(practiceId) })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [api, enableRealtime, practiceId, queryClient, query.data, supabase])
 
   return query
 }

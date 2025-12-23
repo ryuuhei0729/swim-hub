@@ -11,15 +11,24 @@ yarn-error.log*
 /packages/*/dist/
 /packages/*/build/
 
-
 # Environment variables
-.env
 .env.local
 .env.*.local
-# .env.development, .env.production, .env.example はgit管理（共有設定）
+# .env.development, .env.production, .env.example はgit管理（dotenvxで暗号化済み）
+# モバイルアプリ（apps/mobile/）の環境変数ファイルも同様
+
+# dotenvx encryption keys (機密情報のためgit管理外)
+.env.*.keys
+**/.env.*.keys
+# 明示的に除外（絶対にgit管理してはいけない）
+apps/mobile/.env.keys
+apps/web/.env.keys
 
 # MCP Configuration (contains sensitive tokens)
 .mcp.json
+
+# Vercel (個人固有の設定のためgit管理外)
+.vercel/
 
 # Google Cloud Platform Service Account Keys
 swimhub-479706-fa49932fb92d.json
@@ -76,6 +85,10 @@ temp/
 next-env.d.ts
 **/next-env.d.ts
 
+# TypeScript build info
+*.tsbuildinfo
+**/*.tsbuildinfo
+
 # Playwright E2E Testing
 /apps/web/test-results/
 /apps/web/e2e/playwright-report/
@@ -85,3 +98,34 @@ next-env.d.ts
 /apps/web/e2e/playwright/.auth/  # ログイン状態（認証情報を含むためGit管理外）
 /apps/web/screenshots/
 .playwright-mcp/
+
+# React Native / Expo (Mobile App)
+.expo/
+/apps/mobile/.expo/
+# Root app.json (should not exist, created by mistake)
+/app.json
+/apps/mobile/dist/
+/apps/mobile/web-build/
+/apps/mobile/expo-env.d.ts
+/apps/mobile/.kotlin/
+/apps/mobile/*.orig.*
+/apps/mobile/*.jks
+/apps/mobile/*.p8
+/apps/mobile/*.p12
+/apps/mobile/*.key
+/apps/mobile/*.mobileprovision
+/apps/mobile/.metro-health-check*
+/apps/mobile/ios/
+/apps/mobile/android/
+# EAS Build artifacts
+/apps/mobile/*.app/
+/apps/mobile/*.app
+/apps/mobile/*.tar.gz
+/apps/mobile/*.ipa
+/apps/mobile/*.apk
+/apps/mobile/*.aab
+# EAS Configuration (機密情報を含むためgit管理外)
+/apps/mobile/eas.json
+# Google Play Service Account Keys (機密情報のためgit管理外)
+/apps/mobile/google-service-account-key.json
+*.service-account-key.json

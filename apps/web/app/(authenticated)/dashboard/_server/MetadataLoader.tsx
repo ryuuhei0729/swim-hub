@@ -9,7 +9,7 @@ import { createClient } from '@supabase/supabase-js'
 import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-server-auth'
 import { StyleAPI } from '@apps/shared/api/styles'
 import type { Style, PracticeTag } from '@apps/shared/types/database'
-import type { Database } from '@/lib/supabase'
+import type { Database } from '@swim-hub/shared/types/database'
 
 interface MetadataLoaderProps {
   children: (data: {

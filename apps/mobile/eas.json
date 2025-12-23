@@ -1,0 +1,56 @@
+{
+  "cli": {
+    "version": ">= 5.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "production": {
+      "ios": {
+        "simulator": false,
+        "buildConfiguration": "Release"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENVIRONMENT": "production"
+      }
+    },
+    "preview": {
+      "channel": "preview",
+      "ios": {
+        "simulator": true
+      },
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENVIRONMENT": "development"
+      }
+    },
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      },
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENVIRONMENT": "development"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "$APPLE_ID",
+        "ascAppId": "$ASC_APP_SPECIFIC_PASSWORD"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-service-account-key.json"
+      }
+    }
+  }
+}

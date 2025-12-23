@@ -1,4 +1,4 @@
-import React, { useId } from 'react'
+import React, { useState } from 'react'
 import { cn } from '@/utils'
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -9,7 +9,9 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type, label, error, helperText, id, ...props }, ref) => {
-    const generatedId = useId()
+    // useIdの代わりにuseStateの初期化関数を使用（テスト環境での互換性のため）
+    // useStateの初期化関数は、レンダリング中ではなく初期化時のみ呼び出される
+    const [generatedId] = useState(() => `input-${Math.random().toString(36).substring(2, 9)}`)
     const inputId = id || generatedId
     
     return (

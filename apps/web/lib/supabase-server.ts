@@ -5,9 +5,55 @@
 import { createServerClient } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@supabase/supabase-js'
+import type { Database } from '@swim-hub/shared/types/database'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
-import type { Database } from './supabase'
+
+/**
+ * Supabase環境変数を検証
+ * @throws {Error} 環境変数が設定されていない、または無効な場合
+ */
+function validateSupabaseEnv(): { url: string; anonKey: string } {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    const missingVars: string[] = []
+    if (!supabaseUrl) missingVars.push('NEXT_PUBLIC_SUPABASE_URL')
+    if (!supabaseAnonKey) missingVars.push('NEXT_PUBLIC_SUPABASE_ANON_KEY')
+
+    throw new Error(`Supabase環境変数が設定されていません: ${missingVars.join(', ')}`)
+  }
+
+  // URLの形式検証
+  try {
+    new URL(supabaseUrl)
+  } catch {
+    throw new Error(`Invalid NEXT_PUBLIC_SUPABASE_URL: "${supabaseUrl}" is not a valid URL`)
+  }
+
+  return { url: supabaseUrl, anonKey: supabaseAnonKey }
+}
+
+/**
+ * Supabase URLのみを検証
+ * 管理者クライアント用に匿名キー不要で利用する
+ */
+function validateSupabaseUrl(): string {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+
+  if (!supabaseUrl) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL が設定されていません')
+  }
+
+  try {
+    new URL(supabaseUrl)
+  } catch {
+    throw new Error(`Invalid NEXT_PUBLIC_SUPABASE_URL: "${supabaseUrl}" is not a valid URL`)
+  }
+
+  return supabaseUrl
+}
 
 /**
  * Cookie操作を記録するための型
@@ -38,10 +84,11 @@ export { createAuthenticatedServerClient, getServerUser, getServerUserProfile } 
  */
 export const createServerComponentClient = async (): Promise<SupabaseClient<Database>> => {
   const cookieStore = await cookies()
+  const { url, anonKey } = validateSupabaseEnv()
 
   return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url,
+    anonKey,
     {
       cookies: {
         getAll() {
@@ -74,10 +121,11 @@ export function createRouteHandlerClient(request: NextRequest): {
 } {
   // Cookie操作を記録する配列
   const cookiesToSet: CookieToSet[] = []
+  const { url, anonKey } = validateSupabaseEnv()
 
   const client = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url,
+    anonKey,
     {
       cookies: {
         getAll() {
@@ -117,9 +165,16 @@ export function createRouteHandlerClient(request: NextRequest): {
  * ⚠️ 注意: このクライアントは管理者操作のみに使用してください
  */
 export const createAdminClient = (): SupabaseClient<Database> => {
+  const url = validateSupabaseUrl()
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!serviceRoleKey) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY が設定されていません')
+  }
+
   return createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    url,
+    serviceRoleKey,
     {
       auth: {
         autoRefreshToken: false,

@@ -30,6 +30,7 @@ export function useUserQuery(
   isLoading: boolean
   isError: boolean
   error: Error | null
+  refetch: () => Promise<void>
 } {
   const {
     userId,
@@ -181,6 +182,9 @@ export function useUserQuery(
     isLoading: profileQuery.isLoading || teamsQueryResult.isLoading,
     isError: profileQuery.isError || teamsQueryResult.isError,
     error: profileQuery.error || teamsQueryResult.error || null,
+    refetch: async () => {
+      await Promise.allSettled([profileQuery.refetch(), teamsQueryResult.refetch?.()])
+    },
   }
 }
 

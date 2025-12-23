@@ -17,6 +17,7 @@ interface RecordSet {
   splitTimes: SplitTimeInput[]
   note: string
   videoUrl?: string
+  reactionTime: string // 反応時間（秒単位、0.40~1.00程度）
 }
 
 interface RecordFormData {
@@ -56,6 +57,7 @@ type EditRecord = {
   splitTimes?: EditSplitTime[]
   note?: string
   videoUrl?: string
+  reactionTime?: number | null // 反応時間（秒単位）
 }
 type EditData = {
   recordDate?: string
@@ -71,6 +73,7 @@ type EditData = {
   isRelaying?: boolean
   splitTimes?: EditSplitTime[]
   videoUrl?: string
+  reactionTime?: number | null
 }
 
 const POOL_TYPES = [
@@ -99,7 +102,8 @@ export default function RecordForm({
       isRelaying: false,
       splitTimes: [],
       note: '',
-      videoUrl: ''
+      videoUrl: '',
+      reactionTime: ''
     }],
     note: ''
   })
@@ -188,7 +192,8 @@ export default function RecordForm({
               : `split-${Date.now()}-${Math.random()}`
           })) || []),
           note: record.note || '',
-          videoUrl: record.videoUrl || ''
+          videoUrl: record.videoUrl || '',
+          reactionTime: record.reactionTime?.toString() || ''
         }))
         
         setFormData({
@@ -222,7 +227,8 @@ export default function RecordForm({
               : `split-${Date.now()}-${Math.random()}`
           })) || []),
           note: editData.note || '',
-          videoUrl: editData.videoUrl || ''
+          videoUrl: editData.videoUrl || '',
+          reactionTime: editData.reactionTime?.toString() || ''
         }],
         note: editData.note || ''
       })
@@ -241,7 +247,8 @@ export default function RecordForm({
           isRelaying: false,
           splitTimes: [],
           note: '',
-          videoUrl: ''
+          videoUrl: '',
+          reactionTime: ''
         }],
         note: ''
       })
@@ -294,7 +301,8 @@ export default function RecordForm({
       isRelaying: false,
       splitTimes: [],
       note: '',
-      videoUrl: ''
+      videoUrl: '',
+      reactionTime: ''
     }
     
     setFormData(prev => ({
@@ -606,46 +614,65 @@ export default function RecordForm({
                     </select>
                   </div>
 
-                  <div>
-                      <label htmlFor={timeId} className="block text-sm font-medium text-gray-700 mb-2">
-                        タイム
-                    </label>
-                    <Input
-                        id={timeId}
-                      type="text"
-                      value={record.timeDisplayValue !== undefined ? record.timeDisplayValue : (record.time > 0 ? formatTimeDisplay(record.time) : '')}
-                      onChange={(e) => {
-                        const timeStr = e.target.value
-                        // 入力中は文字列をそのまま保持
-                        updateRecord(record.id, { timeDisplayValue: timeStr })
-                      }}
-                      onBlur={(e) => {
-                        const timeStr = e.target.value
-                        if (timeStr === '') {
-                          updateRecord(record.id, { time: 0, timeDisplayValue: undefined })
-                        } else {
-                          const time = parseTimeString(timeStr)
-                          // updateRecord内で自動的にsplit-timeも同期される
-                          updateRecord(record.id, { time, timeDisplayValue: undefined })
-                        }
-                      }}
-                      placeholder="例: 1:30.50"
-                      required
-                      data-testid={`record-time-${recordIndex + 1}`}
-                    />
+                  <div className="md:col-span-2">
+                    <div className="grid grid-cols-[1fr_auto] gap-2 items-start">
+                      <div>
+                        <label htmlFor={timeId} className="block text-sm font-medium text-gray-700 mb-2">
+                          タイム
+                        </label>
+                        <Input
+                          id={timeId}
+                          type="text"
+                          value={record.timeDisplayValue !== undefined ? record.timeDisplayValue : (record.time > 0 ? formatTimeDisplay(record.time) : '')}
+                          onChange={(e) => {
+                            const timeStr = e.target.value
+                            // 入力中は文字列をそのまま保持
+                            updateRecord(record.id, { timeDisplayValue: timeStr })
+                          }}
+                          onBlur={(e) => {
+                            const timeStr = e.target.value
+                            if (timeStr === '') {
+                              updateRecord(record.id, { time: 0, timeDisplayValue: undefined })
+                            } else {
+                              const time = parseTimeString(timeStr)
+                              // updateRecord内で自動的にsplit-timeも同期される
+                              updateRecord(record.id, { time, timeDisplayValue: undefined })
+                            }
+                          }}
+                          placeholder="例: 1:30.50"
+                          required
+                          data-testid={`record-time-${recordIndex + 1}`}
+                        />
+                      </div>
+                      <div className="w-36">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          リアクションタイム
+                        </label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0.40"
+                          max="1.00"
+                          value={record.reactionTime}
+                          onChange={(e) => updateRecord(record.id, { reactionTime: e.target.value })}
+                          placeholder="0.65"
+                          data-testid={`record-reaction-time-${recordIndex + 1}`}
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                    <div className="flex items-center">
-                      <input
-                        id={relayId}
-                        type="checkbox"
-                        checked={record.isRelaying}
-                        onChange={(e) => updateRecord(record.id, { isRelaying: e.target.checked })}
-                        className="mr-2"
-                        data-testid={`record-relay-${recordIndex + 1}`}
-                      />
-                      <label htmlFor={relayId} className="text-sm text-gray-700">
-                        リレー
+                  <div className="flex items-center">
+                    <input
+                      id={relayId}
+                      type="checkbox"
+                      checked={record.isRelaying}
+                      onChange={(e) => updateRecord(record.id, { isRelaying: e.target.checked })}
+                      className="mr-2"
+                      data-testid={`record-relay-${recordIndex + 1}`}
+                    />
+                    <label htmlFor={relayId} className="text-sm text-gray-700">
+                      リレー
                     </label>
                   </div>
                 </div>

@@ -42,7 +42,8 @@ export class DashboardAPI {
           return true
         }
         // 個人のデータの場合のみ、user_idを検証
-        const userId = item.metadata?.user_id
+        // recordの場合は、metadata.record.user_idもチェック
+        const userId = item.metadata?.user_id || item.metadata?.record?.user_id
         if (userId) {
           return userId === user.id
         }

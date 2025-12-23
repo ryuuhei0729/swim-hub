@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "SwimHub",
+    "slug": "swim-hub-mobile",
+    "version": "1.0.0",
+    "description": "水泳選手の練習記録・大会記録を管理するアプリ",
+    "orientation": "portrait",
+    "icon": "./assets/icons/app-icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.swimhub",
+      "buildNumber": "1.0.0",
+      "infoPlist": {
+        "NSCameraUsageDescription": "プロフィール画像を撮影するためにカメラへのアクセスが必要です",
+        "NSPhotoLibraryUsageDescription": "プロフィール画像を選択するためにフォトライブラリへのアクセスが必要です",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icons/app-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "app.swimhub",
+      "versionCode": 1,
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/icons/app-icon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "fb40c5df-d4ba-4bb6-adea-41d49d34a6be"
+      }
+    }
+  }
+}

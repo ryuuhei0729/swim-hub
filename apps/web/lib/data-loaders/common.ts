@@ -3,11 +3,11 @@
 // 各ページで共通して使用するデータ取得パターンを抽象化
 // =============================================================================
 
-import type { Database } from '@/lib/supabase'
 import { createAuthenticatedServerClient } from '@/lib/supabase-server-auth'
 import { StyleAPI } from '@apps/shared/api/styles'
 import type { PracticeTag, Style } from '@apps/shared/types/database'
 import { createClient } from '@supabase/supabase-js'
+import type { Database } from '@swim-hub/shared/types/database'
 import { unstable_cache } from 'next/cache'
 
 /**

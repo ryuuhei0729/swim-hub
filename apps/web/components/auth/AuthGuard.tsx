@@ -8,10 +8,10 @@ interface AuthGuardProps {
 }
 
 export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
-  const { isLoading, isAuthenticated } = useAuth()
+  const { loading, isAuthenticated } = useAuth()
 
   // 認証状態の確認中はローディング画面を表示
-  if (isLoading) {
+  if (loading) {
     return <FullScreenLoading message="認証情報を確認中..." />
   }
 

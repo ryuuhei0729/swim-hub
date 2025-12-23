@@ -2,10 +2,10 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
-import type { Database } from '@/lib/supabase'
+import type { Database } from '@swim-hub/shared/types/database'
 import { useRouter } from 'next/navigation'
 import { getQueryClient } from '@/providers/QueryProvider'
-import { AuthState, AuthContextType } from '@/types'
+import { AuthState, AuthContextType } from '@swim-hub/shared/types/auth'
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
@@ -98,31 +98,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       
       if (error) {
-        return { error: error as import('@supabase/supabase-js').AuthError }
+        return { data: null, error: error as import('@supabase/supabase-js').AuthError }
       }
       
-      return { error: null }
+      return { data: null, error: null }
     } catch (error) {
       console.error('Password reset error:', error)
-      return { error: error as import('@supabase/supabase-js').AuthError }
+      return { data: null, error: error as import('@supabase/supabase-js').AuthError }
     }
   }, [supabase])
 
   // パスワード更新
   const updatePassword = useCallback(async (newPassword: string) => {
     try {
-      const { error } = await supabase.auth.updateUser({
+      const { data, error } = await supabase.auth.updateUser({
         password: newPassword
       })
       
       if (error) {
-        return { error: error as import('@supabase/supabase-js').AuthError }
+        return { data: null, error: error as import('@supabase/supabase-js').AuthError }
       }
       
-      return { error: null }
+      return { data: data ? { user: data.user } : null, error: null }
     } catch (error) {
       console.error('Password update error:', error)
-      return { error: error as import('@supabase/supabase-js').AuthError }
+      return { data: null, error: error as import('@supabase/supabase-js').AuthError }
     }
   }, [supabase])
 
@@ -202,8 +202,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resetPassword,
     updatePassword,
     updateProfile,
-    isAuthenticated: !!authState.user,
-    isLoading: authState.loading
+    isAuthenticated: !!authState.user
   }
 
 

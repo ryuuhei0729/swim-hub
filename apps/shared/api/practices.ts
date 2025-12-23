@@ -5,15 +5,15 @@
 
 import { SupabaseClient } from '@supabase/supabase-js'
 import {
-  Practice,
-  PracticeInsert,
-  PracticeLog,
-  PracticeLogInsert,
-  PracticeLogUpdate,
-  PracticeTime,
-  PracticeTimeInsert,
-  PracticeUpdate,
-  PracticeWithLogs
+    Practice,
+    PracticeInsert,
+    PracticeLog,
+    PracticeLogInsert,
+    PracticeLogUpdate,
+    PracticeTime,
+    PracticeTimeInsert,
+    PracticeUpdate,
+    PracticeWithLogs
 } from '../types/database'
 
 export class PracticeAPI {
@@ -25,12 +25,21 @@ export class PracticeAPI {
 
   /**
    * 練習記録一覧取得（期間指定）
+   * @param startDate 開始日
+   * @param endDate 終了日
+   * @param limit 取得件数（オプション）
+   * @param offset オフセット（オプション）
    */
-  async getPractices(startDate: string, endDate: string): Promise<PracticeWithLogs[]> {
+  async getPractices(
+    startDate: string,
+    endDate: string,
+    limit?: number,
+    offset?: number
+  ): Promise<PracticeWithLogs[]> {
     const { data: { user } } = await this.supabase.auth.getUser()
     if (!user) throw new Error('認証が必要です')
 
-    const { data, error } = await this.supabase
+    let query = this.supabase
       .from('practices')
       .select(`
         *,
@@ -52,8 +61,36 @@ export class PracticeAPI {
       .lte('date', endDate)
       .order('date', { ascending: false })
 
+    if (limit !== undefined) {
+      if (offset !== undefined) {
+        query = query.range(offset, offset + limit - 1)
+      } else {
+        query = query.limit(limit)
+      }
+    }
+
+    const { data, error } = await query
+
     if (error) throw error
     return data as PracticeWithLogs[]
+  }
+
+  /**
+   * 練習記録の総件数を取得（期間指定）
+   */
+  async countPractices(startDate: string, endDate: string): Promise<number> {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+
+    const { count, error } = await this.supabase
+      .from('practices')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('date', startDate)
+      .lte('date', endDate)
+
+    if (error) throw error
+    return count || 0
   }
 
   /**
@@ -85,6 +122,45 @@ export class PracticeAPI {
 
     if (error) throw error
     return data as PracticeWithLogs[]
+  }
+
+  /**
+   * IDで練習記録を取得
+   * @param id 練習記録ID
+   */
+  async getPracticeById(id: string): Promise<PracticeWithLogs | null> {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+
+    const { data, error } = await this.supabase
+      .from('practices')
+      .select(`
+        *,
+        practice_logs (
+          *,
+          practice_times (*),
+          practice_log_tags (
+            practice_tag_id,
+            practice_tags (
+              id,
+              name,
+              color
+            )
+          )
+        )
+      `)
+      .eq('user_id', user.id)
+      .eq('id', id)
+      .single()
+
+    if (error) {
+      // レコードが見つからない場合は null を返す
+      if (error.code === 'PGRST116') {
+        return null
+      }
+      throw error
+    }
+    return data as PracticeWithLogs
   }
 
   /**

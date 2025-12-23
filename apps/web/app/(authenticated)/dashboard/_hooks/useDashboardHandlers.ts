@@ -2,7 +2,6 @@
 // ダッシュボードハンドラー関数用カスタムフック
 // =============================================================================
 
-import type { Database } from '@/lib/supabase'
 import { useCompetitionFormStore, usePracticeFormStore } from '@/stores'
 import type {
     EditingData,
@@ -14,6 +13,7 @@ import type {
 import { EntryAPI } from '@apps/shared/api'
 import type { Style } from '@apps/shared/types/database'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@swim-hub/shared/types/database'
 import { useCallback } from 'react'
 import { getCompetitionId, getPracticeId, getRecordCompetitionId } from '../_utils/dashboardHelpers'
 
@@ -359,14 +359,52 @@ export function useDashboardHandlers({
       const entryAPI = new EntryAPI(supabase)
       const createdEntriesList: EntryWithStyle[] = []
 
+      // 編集モードの場合、既存のエントリーをすべて取得
+      const existingEntriesMap = new Map<string, { id: string; style_id: number }>()
+      const existingEntriesByIdMap = new Map<string, { id: string; style_id: number }>()
+      if (competitionEditingData?.type === 'entry') {
+        // 編集モードの場合、この大会のすべての既存エントリーを取得
+        const { data: allExistingEntries } = await supabase
+          .from('entries')
+          .select('id, style_id')
+          .eq('competition_id', competitionId)
+          .eq('user_id', user.id)
+
+        if (allExistingEntries) {
+          allExistingEntries.forEach((entry: { id: string; style_id: number }) => {
+            existingEntriesMap.set(String(entry.style_id), { id: entry.id, style_id: entry.style_id })
+            existingEntriesByIdMap.set(entry.id, { id: entry.id, style_id: entry.style_id })
+          })
+        }
+      }
+
+      const processedEntryIds = new Set<string>()
+
+      // フォームに入力されているエントリーを保存/更新
       for (const entryData of entriesData) {
         let entry
         if (entryData.id && competitionEditingData?.type === 'entry') {
+          // 既存のエントリーIDがある場合（編集モードで既存エントリーを編集している場合）
+          // 種目を変更する場合、重複チェック
+          const originalEntry = existingEntriesByIdMap.get(entryData.id)
+          const styleIdNum = parseInt(entryData.styleId)
+          const isStyleChanged = originalEntry && originalEntry.style_id !== styleIdNum
+          
+          if (isStyleChanged) {
+            // 変更後の種目が既に他のエントリーで使用されていないかチェック
+            const existingEntryWithSameStyle = existingEntriesMap.get(String(styleIdNum))
+            if (existingEntryWithSameStyle && existingEntryWithSameStyle.id !== entryData.id) {
+              const styleName = styles.find(s => s.id === styleIdNum)?.name_jp || '不明'
+              throw new Error(`種目「${styleName}」は既にエントリー済みです`)
+            }
+          }
+          
           entry = await entryAPI.updateEntry(entryData.id, {
-            style_id: parseInt(entryData.styleId),
+            style_id: styleIdNum,
             entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
             note: entryData.note || null
           })
+          processedEntryIds.add(entryData.id)
         } else {
           const existingEntry = await entryAPI.checkExistingEntry(
             competitionId,
@@ -379,6 +417,7 @@ export function useDashboardHandlers({
               entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
               note: entryData.note || null
             })
+            processedEntryIds.add(existingEntry.id)
           } else {
             entry = await entryAPI.createPersonalEntry({
               competition_id: competitionId,
@@ -406,6 +445,16 @@ export function useDashboardHandlers({
             teamId: entry.team_id,
             styleName: style.name_jp
           })
+        }
+      }
+
+      // 編集モードの場合、フォームに存在しない既存エントリーを削除
+      if (competitionEditingData?.type === 'entry' && existingEntriesMap.size > 0) {
+        for (const existingEntry of existingEntriesMap.values()) {
+          if (!processedEntryIds.has(existingEntry.id)) {
+            // フォームに存在しない既存エントリーを削除
+            await entryAPI.deleteEntry(existingEntry.id)
+          }
         }
       }
 
@@ -457,7 +506,10 @@ export function useDashboardHandlers({
           time: formData.time,
           video_url: formData.videoUrl || null,
           note: formData.note || null,
-          is_relaying: formData.isRelaying || false
+          is_relaying: formData.isRelaying || false,
+          reaction_time: formData.reactionTime && formData.reactionTime.trim() !== '' 
+            ? parseFloat(formData.reactionTime) 
+            : null
         }
 
         await updateRecord(effectiveEditingData.id, updates)
@@ -498,7 +550,10 @@ export function useDashboardHandlers({
             note: formData.note || null,
             is_relaying: formData.isRelaying || false,
             competition_id: competitionId,
-            pool_type: competitionPoolType
+            pool_type: competitionPoolType,
+            reaction_time: formData.reactionTime && formData.reactionTime.trim() !== '' 
+              ? parseFloat(formData.reactionTime) 
+              : null
           }
 
           const newRecord = await createRecord(recordForCreate)

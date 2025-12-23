@@ -2,7 +2,8 @@
 
 import React from 'react'
 import { PlusIcon } from '@heroicons/react/24/outline'
-import { format, isSameMonth, isToday } from 'date-fns'
+import { format, isSameMonth, isToday, getDay } from 'date-fns'
+import { isHoliday } from '@apps/shared/utils/holiday'
 import { CalendarItem, CalendarItemType } from '@/types'
 
 interface CalendarGridProps {
@@ -66,6 +67,10 @@ export default function CalendarGrid({
             const dayEntries = getDateEntries(day)
             const isCurrentMonth = isSameMonth(day, currentDate)
             const isTodayDate = isToday(day)
+            const dayOfWeek = getDay(day) // 0 = 日曜日, 6 = 土曜日
+            const isSunday = dayOfWeek === 0
+            const isSaturday = dayOfWeek === 6
+            const isHolidayDate = isHoliday(day)
 
             const dateKey = format(day, 'yyyy-MM-dd')
             return (
@@ -86,7 +91,10 @@ export default function CalendarGrid({
                   <span className={`
                     text-sm font-medium
                     ${isTodayDate ? 'text-blue-600 font-bold' : ''}
-                    ${!isCurrentMonth ? 'text-gray-400' : 'text-gray-900'}
+                    ${!isCurrentMonth ? 'text-gray-400' : ''}
+                    ${isCurrentMonth && !isTodayDate && (isSunday || isHolidayDate) ? 'text-red-600' : ''}
+                    ${isCurrentMonth && !isTodayDate && isSaturday && !isHolidayDate ? 'text-blue-600' : ''}
+                    ${isCurrentMonth && !isTodayDate && !isSunday && !isSaturday && !isHolidayDate ? 'text-gray-900' : ''}
                   `}>
                     {format(day, 'd')}
                   </span>
