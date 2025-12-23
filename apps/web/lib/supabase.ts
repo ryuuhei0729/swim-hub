@@ -49,6 +49,9 @@ function validateSupabaseEnv(): { url: string; anonKey: string } {
 // ブラウザ用のSupabaseクライアント（クライアントコンポーネント用）
 export const createClient = (): SupabaseClient<Database> => {
   const { url, anonKey } = validateSupabaseEnv()
+  
+  // createBrowserClientはクッキーストレージを自動的に使用
+  // APIキーは自動的にリクエストヘッダーに含まれる
   return createBrowserClient<Database>(url, anonKey)
 }
 
