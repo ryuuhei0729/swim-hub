@@ -76,7 +76,7 @@ export const createClient = (): SupabaseClient<Database> => {
   // デバッグ: クライアントが正しく作成されたか確認
   if (typeof window !== 'undefined') {
     console.log('[Supabase Client] Client created:', {
-      url: client.supabaseUrl,
+      url: url.substring(0, 30) + '...',
       hasAuth: !!client.auth,
       // クライアントの内部状態を確認（デバッグ用）
       clientType: typeof client
