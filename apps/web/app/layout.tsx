@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google'
 import { AuthProvider } from '../contexts'
 import QueryProvider from '../providers/QueryProvider'
 import './globals.css'
+import 'react-device-frameset/styles/marvel-devices.min.css'
 
 const inter = Inter({ subsets: ['latin'] })
 

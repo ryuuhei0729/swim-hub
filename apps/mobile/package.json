@@ -10,6 +10,8 @@
     "android": "npx dotenvx run -f .env.development -- expo start --android",
     "android:clear": "npx dotenvx run -f .env.development -- expo start --android --clear",
     "ios": "npx dotenvx run -f .env.development -- expo start --ios",
+    "ios:run": "npx dotenvx run -f .env.development -- expo run:ios",
+    "ios:run:sim": "npx dotenvx run -f .env.development -- expo run:ios --simulator \"iPhone 16\"",
     "ios:clear": "npx dotenvx run -f .env.development -- expo start --ios --clear",
     "web": "npx dotenvx run -f .env.development -- expo start --web",
     "lint": "eslint .",
