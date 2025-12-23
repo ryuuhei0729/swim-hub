@@ -90,20 +90,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // パスワードリセット
   const resetPassword = useCallback(async (email: string) => {
     try {
+      // デバッグ: Supabaseクライアントの状態を確認
+      console.log('[Password Reset] Starting reset for:', email)
+      console.log('[Password Reset] Supabase client:', {
+        hasAuth: !!supabase.auth,
+        // 内部のAPIキーが設定されているか確認（直接アクセスできないため、リクエストで確認）
+      })
+      
       // 本番環境では環境変数、開発環境ではwindow.location.originを使用
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
+      const redirectTo = `${appUrl}/api/auth/callback?redirect_to=/update-password`
+      
+      console.log('[Password Reset] Redirect URL:', redirectTo)
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${appUrl}/api/auth/callback?redirect_to=/update-password`
+        redirectTo
       })
       
       if (error) {
+        // エラーの詳細をログに出力
+        console.error('[Password Reset] Error details:', {
+          message: error.message,
+          status: error.status,
+          name: error.name,
+          error
+        })
         return { data: null, error: error as import('@supabase/supabase-js').AuthError }
       }
       
+      console.log('[Password Reset] Success')
       return { data: null, error: null }
     } catch (error) {
-      console.error('Password reset error:', error)
+      console.error('[Password Reset] Exception:', error)
       return { data: null, error: error as import('@supabase/supabase-js').AuthError }
     }
   }, [supabase])

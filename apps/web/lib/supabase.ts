@@ -49,7 +49,41 @@ function validateSupabaseEnv(): { url: string; anonKey: string } {
 // ブラウザ用のSupabaseクライアント（クライアントコンポーネント用）
 export const createClient = (): SupabaseClient<Database> => {
   const { url, anonKey } = validateSupabaseEnv()
-  return createBrowserClient<Database>(url, anonKey)
+  
+  // デバッグ: 環境変数が正しく読み込まれているか確認（常に表示）
+  if (typeof window !== 'undefined') {
+    console.log('[Supabase Client] Creating client:', {
+      url: url.substring(0, 30) + '...',
+      anonKeySet: !!anonKey,
+      anonKeyLength: anonKey?.length,
+      anonKeyPrefix: anonKey ? anonKey.substring(0, 10) + '...' : 'undefined',
+      envUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'set' : 'not set',
+      envKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'set' : 'not set'
+    })
+  }
+  
+  // APIキーが設定されていない場合はエラーを投げる
+  if (!anonKey) {
+    const error = new Error('Supabase API key is not set')
+    console.error('[Supabase Client] Error:', error)
+    throw error
+  }
+  
+  // createBrowserClientはクッキーストレージを自動的に使用
+  // APIキーは自動的にリクエストヘッダーに含まれる
+  const client = createBrowserClient<Database>(url, anonKey)
+  
+  // デバッグ: クライアントが正しく作成されたか確認
+  if (typeof window !== 'undefined') {
+    console.log('[Supabase Client] Client created:', {
+      url: client.supabaseUrl,
+      hasAuth: !!client.auth,
+      // クライアントの内部状態を確認（デバッグ用）
+      clientType: typeof client
+    })
+  }
+  
+  return client
 }
 
 // グローバルなSupabaseクライアント（必要な場合のみ）

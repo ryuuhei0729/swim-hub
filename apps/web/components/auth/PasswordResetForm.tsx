@@ -24,12 +24,23 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess 
     try {
       const { error } = await resetPassword(email)
       if (error) {
-        setError('パスワードリセットメールの送信に失敗しました。')
+        // エラーの詳細をログに出力
+        console.error('Password reset form error:', error)
+        
+        // エラーメッセージに応じて適切なメッセージを表示
+        let errorMessage = 'パスワードリセットメールの送信に失敗しました。'
+        if (error.message?.includes('API key')) {
+          errorMessage = '認証エラーが発生しました。Supabaseの設定を確認してください。'
+        } else if (error.message) {
+          errorMessage = `エラー: ${error.message}`
+        }
+        setError(errorMessage)
       } else {
         setMessage('パスワードリセット用のメールを送信しました。メールを確認してください。')
         onSuccess?.()
       }
-    } catch {
+    } catch (err) {
+      console.error('Password reset form exception:', err)
       setError('予期しないエラーが発生しました。')
     } finally {
       setLoading(false)
