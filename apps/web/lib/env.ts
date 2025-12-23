@@ -53,7 +53,7 @@ export const envConfig = {
   production: {
     name: '本番環境',
     supabaseProject: 'swimmer-prod', // 本番用DBを使用
-    appUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://your-app.vercel.app',
+    appUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://swim-hub.app',
     debug: false,
   },
 } as const

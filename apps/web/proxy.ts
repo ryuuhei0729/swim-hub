@@ -2,7 +2,8 @@ import { createServerClient } from '@supabase/ssr'
 import type { Database } from '@swim-hub/shared/types/database'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
+// Next.js Proxy (旧 middleware)
+export async function proxy(request: NextRequest) {
   // Cookie操作を記録するための配列
   const cookiesToSet: Array<{
     name: string
@@ -32,8 +33,8 @@ export async function middleware(request: NextRequest) {
         },
         setAll(cookies) {
           cookiesToSet.push(...cookies)
-        },
-    },
+        }
+      }
     }
   )
 
