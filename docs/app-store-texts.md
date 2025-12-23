@@ -105,7 +105,7 @@ SwimHubは、水泳選手の記録管理の悩みから生まれた、練習・�
 
 ## サポートURL
 
-https://swim-hub.vercel.app/support
+https://swim-hub.app/support
 
 （※ 実際のサポートページのURLに置き換えてください）
 
@@ -113,6 +113,6 @@ https://swim-hub.vercel.app/support
 
 ## マーケティングURL
 
-https://swim-hub.vercel.app
+https://swim-hub.app
 
 （※ ランディングページのURL）
