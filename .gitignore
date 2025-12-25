@@ -18,6 +18,8 @@ yarn-error.log*
 # .env.production はVercelの環境変数を使用するため、git管理外
 apps/web/.env.production
 # モバイルアプリ（apps/mobile/）の環境変数ファイルはgit管理（dotenvxで暗号化済み）
+# EAS Submit用の環境変数ファイル（機密情報のためgit管理外）
+apps/mobile/.env
 
 # dotenvx encryption keys (機密情報のためgit管理外)
 .env.*.keys
