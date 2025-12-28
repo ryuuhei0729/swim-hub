@@ -208,8 +208,8 @@ export function useCreateCompetitionMutation(supabase: SupabaseClient, api?: Rec
             .single()
           
           if (profile?.google_calendar_enabled && profile?.google_calendar_sync_competitions) {
-            const { syncCompetitionToGoogleCalendar } = await import('@apps/shared/api/google-calendar')
-            syncCompetitionToGoogleCalendar(created, 'create').catch(err => {
+            const { syncCompetitionToGoogleCalendar } = await import('../../api/google-calendar')
+            syncCompetitionToGoogleCalendar(created, 'create').catch((err: unknown) => {
               console.error('Google Calendar同期エラー:', err)
             })
           }
@@ -255,9 +255,9 @@ export function useUpdateCompetitionMutation(supabase: SupabaseClient, api?: Rec
             .single()
           
           if (profile?.google_calendar_enabled && profile?.google_calendar_sync_competitions) {
-            const { syncCompetitionToGoogleCalendar } = await import('@apps/shared/api/google-calendar')
+            const { syncCompetitionToGoogleCalendar } = await import('../../api/google-calendar')
             // TODO: googleEventIdを取得して渡す必要がある
-            syncCompetitionToGoogleCalendar(updated, 'update').catch(err => {
+            syncCompetitionToGoogleCalendar(updated, 'update').catch((err: unknown) => {
               console.error('Google Calendar同期エラー:', err)
             })
           }
@@ -316,9 +316,9 @@ export function useDeleteCompetitionMutation(supabase: SupabaseClient, api?: Rec
               .single()
             
             if (profile?.google_calendar_enabled && profile?.google_calendar_sync_competitions) {
-              const { syncCompetitionToGoogleCalendar } = await import('@apps/shared/api/google-calendar')
+              const { syncCompetitionToGoogleCalendar } = await import('../../api/google-calendar')
               // TODO: googleEventIdを取得して渡す必要がある
-              syncCompetitionToGoogleCalendar(competitionData, 'delete').catch(err => {
+              syncCompetitionToGoogleCalendar(competitionData, 'delete').catch((err: unknown) => {
                 console.error('Google Calendar同期エラー:', err)
               })
             }

@@ -27,7 +27,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'ユーザー情報の取得に失敗しました' }, { status: 500 })
     }
 
-    if (!profile.google_calendar_enabled || !profile.google_calendar_refresh_token) {
+    type ProfileData = {
+      google_calendar_enabled: boolean
+      google_calendar_refresh_token: string | null
+      google_calendar_sync_practices: boolean
+      google_calendar_sync_competitions: boolean
+    }
+    const profileData = profile as ProfileData
+
+    if (!profileData.google_calendar_enabled || !profileData.google_calendar_refresh_token) {
       return NextResponse.json({ error: 'Google Calendar連携が有効になっていません' }, { status: 400 })
     }
 
@@ -40,10 +48,10 @@ export async function POST(request: NextRequest) {
     }
 
     // 同期設定を確認
-    if (type === 'practice' && !profile.google_calendar_sync_practices) {
+    if (type === 'practice' && !profileData.google_calendar_sync_practices) {
       return NextResponse.json({ error: '練習記録の同期が無効です' }, { status: 400 })
     }
-    if (type === 'competition' && !profile.google_calendar_sync_competitions) {
+    if (type === 'competition' && !profileData.google_calendar_sync_competitions) {
       return NextResponse.json({ error: '大会記録の同期が無効です' }, { status: 400 })
     }
 
@@ -61,7 +69,7 @@ export async function POST(request: NextRequest) {
         .select('name')
         .eq('id', data.team_id)
         .single()
-      teamName = team?.name || null
+      teamName = (team as { name: string } | null)?.name || null
     }
 
     // Google Calendarイベントに変換

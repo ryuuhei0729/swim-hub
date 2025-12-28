@@ -270,8 +270,8 @@ export function useCreatePracticeMutation(supabase: SupabaseClient, api?: Practi
             .single()
           
           if (profile?.google_calendar_enabled && profile?.google_calendar_sync_practices) {
-            const { syncPracticeToGoogleCalendar } = await import('@apps/shared/api/google-calendar')
-            syncPracticeToGoogleCalendar(created, 'create').catch(err => {
+            const { syncPracticeToGoogleCalendar } = await import('../../api/google-calendar')
+            syncPracticeToGoogleCalendar(created, 'create').catch((err: unknown) => {
               console.error('Google Calendar同期エラー:', err)
             })
           }
@@ -312,9 +312,9 @@ export function useUpdatePracticeMutation(supabase: SupabaseClient, api?: Practi
             .single()
           
           if (profile?.google_calendar_enabled && profile?.google_calendar_sync_practices) {
-            const { syncPracticeToGoogleCalendar } = await import('@apps/shared/api/google-calendar')
+            const { syncPracticeToGoogleCalendar } = await import('../../api/google-calendar')
             // TODO: googleEventIdを取得して渡す必要がある（現時点では新規作成として扱う）
-            syncPracticeToGoogleCalendar(updated, 'update').catch(err => {
+            syncPracticeToGoogleCalendar(updated, 'update').catch((err: unknown) => {
               console.error('Google Calendar同期エラー:', err)
             })
           }
@@ -373,9 +373,9 @@ export function useDeletePracticeMutation(supabase: SupabaseClient, api?: Practi
               .single()
             
             if (profile?.google_calendar_enabled && profile?.google_calendar_sync_practices) {
-              const { syncPracticeToGoogleCalendar } = await import('@apps/shared/api/google-calendar')
+              const { syncPracticeToGoogleCalendar } = await import('../../api/google-calendar')
               // TODO: googleEventIdを取得して渡す必要がある
-              syncPracticeToGoogleCalendar(practiceData, 'delete').catch(err => {
+              syncPracticeToGoogleCalendar(practiceData, 'delete').catch((err: unknown) => {
                 console.error('Google Calendar同期エラー:', err)
               })
             }

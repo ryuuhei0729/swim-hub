@@ -59,6 +59,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [])
 
+  // OAuthログイン
+  const signInWithOAuth = useCallback(async (provider: 'google', options?: { redirectTo?: string; scopes?: string }) => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: options?.redirectTo,
+          scopes: options?.scopes,
+        }
+      })
+      
+      if (error) {
+        return { error: error as import('@supabase/supabase-js').AuthError }
+      }
+      
+      return { error: null }
+    } catch (error) {
+      console.error('OAuth sign in error:', error)
+      return { error: error as import('@supabase/supabase-js').AuthError }
+    }
+  }, [])
+
   // ログアウト
   const signOut = useCallback(async () => {
     try {
@@ -228,6 +250,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     supabase,
     signIn,
     signUp,
+    signInWithOAuth,
     signOut,
     resetPassword,
     updatePassword,
