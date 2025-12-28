@@ -22,4 +22,6 @@ export { default as TeamStatsCards } from './TeamStatsCards'
 export { default as TeamTabs } from './TeamTabs'
 export { default as TeamAdminTabs } from './TeamAdminTabs'
 export { default as TeamTimeInputModal } from './TeamTimeInputModal'
+export { default as AdminMonthlyAttendance } from './AdminMonthlyAttendance'
+export { default as MyMonthlyAttendance } from './MyMonthlyAttendance'
 

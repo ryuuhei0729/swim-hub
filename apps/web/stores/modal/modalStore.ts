@@ -14,10 +14,15 @@ interface ModalActions {
   toggleModal: (id: string) => void
   closeAll: () => void
   isOpen: (id: string) => boolean
+  reset: () => void
+}
+
+const initialState: ModalState = {
+  modals: {},
 }
 
 export const useModalStore = create<ModalState & ModalActions>()((set, get) => ({
-  modals: {},
+  ...initialState,
   
   openModal: (id) => set((state) => ({
     modals: { ...state.modals, [id]: true },
@@ -34,5 +39,7 @@ export const useModalStore = create<ModalState & ModalActions>()((set, get) => (
   closeAll: () => set({ modals: {} }),
   
   isOpen: (id) => get().modals[id] || false,
+  
+  reset: () => set(initialState),
 }))
 

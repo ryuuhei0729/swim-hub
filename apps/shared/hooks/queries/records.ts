@@ -195,7 +195,30 @@ export function useCreateCompetitionMutation(supabase: SupabaseClient, api?: Rec
 
   return useMutation({
     mutationFn: async (competition: Omit<CompetitionInsert, 'user_id'>) => {
-      return await recordApi.createCompetition(competition)
+      const created = await recordApi.createCompetition(competition)
+      
+      // Google Calendar同期（バックグラウンドで実行、エラーは無視）
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: profile } = await supabase
+            .from('users')
+            .select('google_calendar_enabled, google_calendar_sync_competitions')
+            .eq('id', user.id)
+            .single()
+          
+          if (profile?.google_calendar_enabled && profile?.google_calendar_sync_competitions) {
+            const { syncCompetitionToGoogleCalendar } = await import('@apps/shared/api/google-calendar')
+            syncCompetitionToGoogleCalendar(created, 'create').catch(err => {
+              console.error('Google Calendar同期エラー:', err)
+            })
+          }
+        }
+      } catch (err) {
+        console.error('Google Calendar同期チェックエラー:', err)
+      }
+      
+      return created
     },
     onSuccess: (newCompetition: Competition) => {
       queryClient.setQueriesData<Competition[]>(
@@ -219,7 +242,31 @@ export function useUpdateCompetitionMutation(supabase: SupabaseClient, api?: Rec
 
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: CompetitionUpdate }) => {
-      return await recordApi.updateCompetition(id, updates)
+      const updated = await recordApi.updateCompetition(id, updates)
+      
+      // Google Calendar同期（バックグラウンドで実行、エラーは無視）
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: profile } = await supabase
+            .from('users')
+            .select('google_calendar_enabled, google_calendar_sync_competitions')
+            .eq('id', user.id)
+            .single()
+          
+          if (profile?.google_calendar_enabled && profile?.google_calendar_sync_competitions) {
+            const { syncCompetitionToGoogleCalendar } = await import('@apps/shared/api/google-calendar')
+            // TODO: googleEventIdを取得して渡す必要がある
+            syncCompetitionToGoogleCalendar(updated, 'update').catch(err => {
+              console.error('Google Calendar同期エラー:', err)
+            })
+          }
+        }
+      } catch (err) {
+        console.error('Google Calendar同期チェックエラー:', err)
+      }
+      
+      return updated
     },
     onSuccess: (updated: Competition, variables: { id: string; updates: CompetitionUpdate }) => {
       queryClient.setQueriesData<Competition[]>(
@@ -242,7 +289,44 @@ export function useDeleteCompetitionMutation(supabase: SupabaseClient, api?: Rec
 
   return useMutation({
     mutationFn: async (id: string) => {
+      // 削除前にCompetitionデータを取得（Google Calendar同期用）
+      let competitionData: Competition | null = null
+      try {
+        const { data } = await supabase
+          .from('competitions')
+          .select('*')
+          .eq('id', id)
+          .single()
+        competitionData = data as Competition | null
+      } catch (err) {
+        console.error('Competition取得エラー:', err)
+      }
+      
       await recordApi.deleteCompetition(id)
+      
+      // Google Calendar同期（バックグラウンドで実行、エラーは無視）
+      if (competitionData) {
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const { data: profile } = await supabase
+              .from('users')
+              .select('google_calendar_enabled, google_calendar_sync_competitions')
+              .eq('id', user.id)
+              .single()
+            
+            if (profile?.google_calendar_enabled && profile?.google_calendar_sync_competitions) {
+              const { syncCompetitionToGoogleCalendar } = await import('@apps/shared/api/google-calendar')
+              // TODO: googleEventIdを取得して渡す必要がある
+              syncCompetitionToGoogleCalendar(competitionData, 'delete').catch(err => {
+                console.error('Google Calendar同期エラー:', err)
+              })
+            }
+          }
+        } catch (err) {
+          console.error('Google Calendar同期チェックエラー:', err)
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: recordKeys.competitions() })

@@ -23,6 +23,7 @@ export interface AuthContextType extends AuthState {
   supabase: SupabaseClient
   signIn: (email: string, password: string) => Promise<{ data: { user: User | null; session: Session | null } | null; error: AuthError | null }>
   signUp: (email: string, password: string, name?: string) => Promise<{ data: { user: User | null; session: Session | null } | null; error: AuthError | null }>
+  signInWithOAuth: (provider: 'google', options?: { redirectTo?: string; scopes?: string }) => Promise<{ error: AuthError | null }>
   signOut: () => Promise<{ error: AuthError | null }>
   resetPassword: (email: string) => Promise<{ data: null; error: AuthError | null }>
   updatePassword: (newPassword: string) => Promise<{ data: { user: User } | null; error: AuthError | null }>

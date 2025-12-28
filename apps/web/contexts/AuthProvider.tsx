@@ -67,6 +67,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [supabase])
 
+  // OAuth認証（Google）
+  const signInWithOAuth = useCallback(async (provider: 'google', options?: { redirectTo?: string; scopes?: string }) => {
+    try {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
+      const redirectTo = options?.redirectTo || `${appUrl}/api/auth/callback?redirect_to=/mypage`
+      
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo,
+          scopes: options?.scopes || 'https://www.googleapis.com/auth/calendar',
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
+        }
+      })
+      
+      if (error) {
+        return { error: error as import('@supabase/supabase-js').AuthError }
+      }
+      
+      return { error: null }
+    } catch (error) {
+      console.error('OAuth sign in error:', error)
+      return { error: error as import('@supabase/supabase-js').AuthError }
+    }
+  }, [supabase])
+
   // ログアウト
   const signOut = useCallback(async () => {
     try {
@@ -79,6 +108,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // React Queryのキャッシュをクリア（セキュリティとデータ整合性のため）
       const queryClient = getQueryClient()
       queryClient.clear()
+      
+      // Zustandストアを全てリセット（セキュリティとデータ整合性のため）
+      if (typeof window !== 'undefined') {
+        const {
+          useProfileStore,
+          useTeamStore,
+          useUIStore,
+          usePracticeFormStore,
+          usePracticeRecordStore,
+          useCompetitionFormStore,
+          useCompetitionRecordStore,
+          useCompetitionFilterStore,
+          usePracticeFilterStore,
+          useCommonFormStore,
+          useAttendanceTabStore,
+          useTeamDetailStore,
+          useTeamAdminStore,
+          useModalStore,
+        } = await import('@/stores')
+        
+        useProfileStore.getState().reset()
+        useTeamStore.getState().reset()
+        useUIStore.getState().reset()
+        usePracticeFormStore.getState().reset()
+        usePracticeRecordStore.getState().reset()
+        useCompetitionFormStore.getState().reset()
+        useCompetitionRecordStore.getState().reset()
+        useCompetitionFilterStore.getState().reset()
+        usePracticeFilterStore.getState().reset()
+        useCommonFormStore.getState().reset()
+        useAttendanceTabStore.getState().reset()
+        useTeamDetailStore.getState().reset()
+        useTeamAdminStore.getState().reset()
+        useModalStore.getState().reset()
+      }
+      
+      // localStorageをクリア（念のため、将来的な使用に備えて）
+      if (typeof window !== 'undefined') {
+        try {
+          window.localStorage.clear()
+        } catch (error) {
+          console.warn('localStorageのクリアに失敗:', error)
+        }
+      }
       
       return { error: null }
     } catch (error) {
@@ -169,10 +242,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // ログイン/ログアウト時にページをリフレッシュ
         if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-          // ログアウト時はReact Queryのキャッシュをクリア（セキュリティとデータ整合性のため）
+          // ログアウト時は全てのキャッシュをクリア（セキュリティとデータ整合性のため）
           if (event === 'SIGNED_OUT') {
             const queryClient = getQueryClient()
             queryClient.clear()
+            
+            // Zustandストアを全てリセット
+            if (typeof window !== 'undefined') {
+              import('@/stores').then((stores) => {
+                stores.useProfileStore.getState().reset()
+                stores.useTeamStore.getState().reset()
+                stores.useUIStore.getState().reset()
+                stores.usePracticeFormStore.getState().reset()
+                stores.usePracticeRecordStore.getState().reset()
+                stores.useCompetitionFormStore.getState().reset()
+                stores.useCompetitionRecordStore.getState().reset()
+                stores.useCompetitionFilterStore.getState().reset()
+                stores.usePracticeFilterStore.getState().reset()
+                stores.useCommonFormStore.getState().reset()
+                stores.useAttendanceTabStore.getState().reset()
+                stores.useTeamDetailStore.getState().reset()
+                stores.useTeamAdminStore.getState().reset()
+                stores.useModalStore.getState().reset()
+              }).catch((error) => {
+                console.warn('ストアのリセットに失敗:', error)
+              })
+              
+              // localStorageをクリア
+              try {
+                window.localStorage.clear()
+              } catch (error) {
+                console.warn('localStorageのクリアに失敗:', error)
+              }
+            }
           }
           
           const currentPath = window.location.pathname
@@ -198,6 +300,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     supabase,
     signIn,
     signUp,
+    signInWithOAuth,
     signOut,
     resetPassword,
     updatePassword,

@@ -25,6 +25,9 @@ interface PracticeTimeActions {
   
   // 現在編集中のメニューIDの設定
   setCurrentMenuId: (menuId: string | null) => void
+  
+  // リセット
+  reset: () => void
 }
 
 const initialState: PracticeTimeState = {
@@ -63,4 +66,7 @@ export const usePracticeTimeStore = create<PracticeTimeState & PracticeTimeActio
   setCurrentMenuId: (menuId) => {
     set({ currentMenuId: menuId })
   },
+  
+  // リセット
+  reset: () => set(initialState),
 }))

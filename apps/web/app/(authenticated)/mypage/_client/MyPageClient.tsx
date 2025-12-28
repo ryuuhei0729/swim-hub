@@ -10,7 +10,8 @@ import { TrophyIcon, DocumentArrowUpIcon } from '@heroicons/react/24/outline'
 import BestTimesTable from '@/components/profile/BestTimesTable'
 import ProfileDisplay from '@/components/profile/ProfileDisplay'
 import ProfileEditModal from '@/components/profile/ProfileEditModal'
-import type { UserUpdate } from '@apps/shared/types/database'
+import GoogleCalendarSyncSettings from '@/components/settings/GoogleCalendarSyncSettings'
+import type { UserUpdate, UserProfile as DatabaseUserProfile } from '@apps/shared/types/database'
 
 interface BestTime {
   id: string
@@ -106,6 +107,9 @@ export default function MyPageClient({
     avatar_url: queryProfile.profile_image_path,
     profile_image_path: queryProfile.profile_image_path,
   } : null
+
+  // データベースのUserProfile（Google Calendar設定を含む）
+  const dbProfile: DatabaseUserProfile | null = queryProfile
 
   const handleProfileUpdate = useCallback(async (updatedProfile: Partial<UserProfile>) => {
     if (!user) return
@@ -211,6 +215,18 @@ export default function MyPageClient({
           
           <BestTimesTable bestTimes={bestTimes} />
         </div>
+
+        {/* Googleカレンダー連携設定 */}
+        <GoogleCalendarSyncSettings
+          profile={dbProfile}
+          onUpdate={() => {
+            // プロフィールを再取得
+            if (user) {
+              queryClient.invalidateQueries({ queryKey: userKeys.profile(user.id) })
+              queryClient.invalidateQueries({ queryKey: userKeys.currentProfile() })
+            }
+          }}
+        />
       </div>
 
       {/* プロフィール編集モーダル */}

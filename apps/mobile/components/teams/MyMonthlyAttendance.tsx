@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { View, Text, ScrollView, StyleSheet, Pressable, TextInput, Alert } from 'react-native'
+import { View, Text, ScrollView, StyleSheet, Pressable, TextInput, Alert, Modal } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { useAuth } from '@/contexts/AuthProvider'
 import { AttendanceAPI, TeamAttendanceWithDetails } from '@swim-hub/shared'
 import { AttendanceStatus, TeamEvent } from '@swim-hub/shared/types/database'
 import { getMonthDateRange } from '@swim-hub/shared/utils/date'
-import { format } from 'date-fns'
+import { format, startOfMonth, endOfMonth, addMonths } from 'date-fns'
 import { ja } from 'date-fns/locale'
 
 export interface MyMonthlyAttendanceProps {
@@ -17,6 +17,14 @@ interface AttendanceEditState {
   note: string
 }
 
+interface MonthItem {
+  year: number
+  month: number
+  status: 'has_unanswered' | 'all_answered' | null
+  eventCount: number
+  answeredCount: number
+}
+
 /**
  * 月別出欠管理コンポーネント（モバイル版）
  */
@@ -24,28 +32,141 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
   const { supabase } = useAuth()
   const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase])
 
-  // 現在の年月を管理
-  const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
-  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1)
+  // 月リスト表示用の状態
+  const [monthList, setMonthList] = useState<MonthItem[]>([])
+  const [loadingMonthList, setLoadingMonthList] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // 出欠情報とイベント情報
+  // モーダル表示用の状態
+  const [selectedMonth, setSelectedMonth] = useState<{ year: number; month: number } | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+
+  // モーダル内の出欠情報とイベント情報（既存のロジックを再利用）
   const [attendances, setAttendances] = useState<TeamAttendanceWithDetails[]>([])
   const [events, setEvents] = useState<TeamEvent[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
   // 編集状態（ローカル）
   const [editStates, setEditStates] = useState<Record<string, AttendanceEditState>>({})
   const [saving, setSaving] = useState(false)
 
-  // 月別の出欠情報を取得
+  // 各月のステータスを計算
+  const calculateMonthStatus = useCallback(async (year: number, month: number): Promise<{ eventCount: number; answeredCount: number; status: 'has_unanswered' | 'all_answered' | null }> => {
+    const [startDateStr, endDateStr] = getMonthDateRange(year, month)
+    
+    // イベント数を取得
+    const [practicesResult, competitionsResult] = await Promise.all([
+      supabase
+        .from('practices')
+        .select('id', { count: 'exact', head: true })
+        .eq('team_id', teamId)
+        .gte('date', startDateStr)
+        .lte('date', endDateStr),
+      supabase
+        .from('competitions')
+        .select('id', { count: 'exact', head: true })
+        .eq('team_id', teamId)
+        .gte('date', startDateStr)
+        .lte('date', endDateStr)
+    ])
+    
+    if (practicesResult.error) throw practicesResult.error
+    if (competitionsResult.error) throw competitionsResult.error
+    
+    const eventCount = (practicesResult.count || 0) + (competitionsResult.count || 0)
+    
+    // 自分の出欠回答数を取得
+    const attendanceData = await attendanceAPI.getMyAttendancesByMonth(teamId, year, month)
+    const answeredCount = attendanceData.length
+    
+    return {
+      eventCount,
+      answeredCount,
+      status: eventCount === 0 ? null : (answeredCount < eventCount ? 'has_unanswered' : 'all_answered')
+    }
+  }, [teamId, supabase, attendanceAPI])
+
+  // 月リストを取得
+  const loadMonthList = useCallback(async () => {
+    try {
+      setLoadingMonthList(true)
+      setError(null)
+
+      const now = new Date()
+      const startDateStr = format(startOfMonth(now), 'yyyy-MM-dd')
+      const oneYearLater = addMonths(now, 12)
+      const endDateStr = format(endOfMonth(oneYearLater), 'yyyy-MM-dd')
+      
+      // 練習・大会を取得（日付のみ）
+      const [practicesResult, competitionsResult] = await Promise.all([
+        supabase
+          .from('practices')
+          .select('date')
+          .eq('team_id', teamId)
+          .gte('date', startDateStr)
+          .lte('date', endDateStr),
+        supabase
+          .from('competitions')
+          .select('date')
+          .eq('team_id', teamId)
+          .gte('date', startDateStr)
+          .lte('date', endDateStr)
+      ])
+
+      if (practicesResult.error) throw practicesResult.error
+      if (competitionsResult.error) throw competitionsResult.error
+      
+      // 月ごとにグループ化
+      const monthSet = new Set<string>()
+      const allDates = [
+        ...(practicesResult.data || []).map(p => p.date),
+        ...(competitionsResult.data || []).map(c => c.date)
+      ]
+      
+      allDates.forEach(dateStr => {
+        const date = new Date(dateStr)
+        const year = date.getFullYear()
+        const month = date.getMonth() + 1
+        const monthKey = `${year}-${String(month).padStart(2, '0')}`
+        monthSet.add(monthKey)
+      })
+      
+      // 月リストを作成してステータスを計算
+      const monthList: MonthItem[] = []
+      const sortedMonthKeys = Array.from(monthSet).sort()
+      
+      for (const monthKey of sortedMonthKeys) {
+        const [yearStr, monthStr] = monthKey.split('-')
+        const year = parseInt(yearStr)
+        const month = parseInt(monthStr)
+        
+        const status = await calculateMonthStatus(year, month)
+        monthList.push({
+          year,
+          month,
+          ...status
+        })
+      }
+      
+      setMonthList(monthList)
+    } catch (err) {
+      console.error('月リストの取得に失敗:', err)
+      setError('月リストの取得に失敗しました')
+    } finally {
+      setLoadingMonthList(false)
+    }
+  }, [teamId, supabase, calculateMonthStatus])
+
+  // 月別の出欠情報を取得（モーダル用）
   const loadAttendances = useCallback(async () => {
+    if (!selectedMonth) return
+
     try {
       setLoading(true)
       setError(null)
 
       // 月の開始日と終了日を計算
-      const [startDateStr, endDateStr] = getMonthDateRange(currentYear, currentMonth)
+      const [startDateStr, endDateStr] = getMonthDateRange(selectedMonth.year, selectedMonth.month)
 
       // 練習と大会を取得
       const [practicesResult, competitionsResult] = await Promise.all([
@@ -85,8 +206,8 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       // 出欠情報を取得
       const attendanceData = await attendanceAPI.getMyAttendancesByMonth(
         teamId,
-        currentYear,
-        currentMonth
+        selectedMonth.year,
+        selectedMonth.month
       )
       setAttendances(attendanceData)
 
@@ -117,11 +238,19 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
     } finally {
       setLoading(false)
     }
-  }, [teamId, currentYear, currentMonth, supabase, attendanceAPI])
+  }, [teamId, selectedMonth, supabase, attendanceAPI])
 
+  // 月リストを初期読み込み
   useEffect(() => {
-    loadAttendances()
-  }, [loadAttendances])
+    loadMonthList()
+  }, [loadMonthList])
+
+  // モーダルが開かれたときに詳細データを読み込む
+  useEffect(() => {
+    if (selectedMonth && isModalOpen) {
+      loadAttendances()
+    }
+  }, [selectedMonth, isModalOpen, loadAttendances])
 
   // ステータス変更
   const handleStatusChange = (eventId: string, status: AttendanceStatus | null) => {
@@ -230,7 +359,11 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
 
       // 再読み込み
       await loadAttendances()
+      // 月リストも更新
+      await loadMonthList()
       
+      // 保存成功後、モーダルを閉じる
+      handleCloseModal()
       Alert.alert('保存完了', '出欠情報を保存しました', [{ text: 'OK' }])
     } catch (err) {
       console.error('出欠情報の保存に失敗:', err)
@@ -242,29 +375,35 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
     }
   }
 
-  // 前月へ
-  const handlePrevMonth = () => {
-    if (currentMonth === 1) {
-      setCurrentYear(currentYear - 1)
-      setCurrentMonth(12)
-    } else {
-      setCurrentMonth(currentMonth - 1)
-    }
+  // 月アイテムをクリック
+  const handleMonthClick = (year: number, month: number) => {
+    setSelectedMonth({ year, month })
+    setIsModalOpen(true)
   }
 
-  // 翌月へ
-  const handleNextMonth = () => {
-    if (currentMonth === 12) {
-      setCurrentYear(currentYear + 1)
-      setCurrentMonth(1)
-    } else {
-      setCurrentMonth(currentMonth + 1)
-    }
+  // モーダルを閉じる
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+    setSelectedMonth(null)
+    setEditStates({})
   }
 
   // 月名を取得
-  const getMonthLabel = () => {
-    return `${currentYear}年${currentMonth}月`
+  const getMonthLabel = (year: number, month: number) => {
+    return `${year}年${month}月`
+  }
+
+  // 月のステータスバッジ
+  const StatusBadge = ({ status }: { status: 'has_unanswered' | 'all_answered' | null }) => {
+    if (status === null) return null
+    
+    return (
+      <View style={status === 'has_unanswered' ? styles.monthStatusBadgeUnanswered : styles.monthStatusBadgeAnswered}>
+        <Text style={status === 'has_unanswered' ? styles.monthStatusBadgeTextUnanswered : styles.monthStatusBadgeTextAnswered}>
+          {status === 'has_unanswered' ? '未回答あり' : '全て回答済み'}
+        </Text>
+      </View>
+    )
   }
 
   // イベントのステータスバッジ
@@ -291,7 +430,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
     }
   }
 
-  if (loading) {
+  if (loadingMonthList) {
     return (
       <View style={styles.container}>
         <View style={styles.loadingContainer}>
@@ -312,132 +451,178 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      {/* 月ナビゲーション */}
-      <View style={styles.monthNavigation}>
-        <Pressable style={styles.monthButton} onPress={handlePrevMonth}>
-          <Feather name="chevron-left" size={20} color="#374151" />
-          <Text style={styles.monthButtonText}>前月</Text>
-        </Pressable>
-        <Text style={styles.monthLabel}>{getMonthLabel()}</Text>
-        <Pressable style={styles.monthButton} onPress={handleNextMonth}>
-          <Text style={styles.monthButtonText}>翌月</Text>
-          <Feather name="chevron-right" size={20} color="#374151" />
-        </Pressable>
-      </View>
-
-      {/* イベント一覧 */}
-      {events.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>この月にはイベントがありません</Text>
-        </View>
-      ) : (
-        <View style={styles.eventsContainer}>
-          {events.map((event) => {
-            const editState = editStates[event.id] || { status: null, note: '' }
-
-            return (
-              <View
-                key={`${event.type}-${event.id}`}
-                style={[
-                  styles.eventCard,
-                  event.type === 'competition' && styles.eventCardCompetition
-                ]}
+    <>
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+        {/* 月リスト表示 */}
+        {monthList.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>表示できる月がありません</Text>
+          </View>
+        ) : (
+          <View style={styles.monthListContainer}>
+            {monthList.map((monthItem) => (
+              <Pressable
+                key={`${monthItem.year}-${monthItem.month}`}
+                style={styles.monthItem}
+                onPress={() => handleMonthClick(monthItem.year, monthItem.month)}
               >
-                {/* イベント情報とステータスバッジ */}
-                <View style={styles.eventHeader}>
-                  <View style={styles.eventInfo}>
-                    <Text style={styles.eventDate}>
-                      {format(new Date(event.date), 'M月d日(E)', { locale: ja })}
-                    </Text>
-                    <Text style={styles.eventTitle}>
-                      {event.type === 'competition' ? event.title : '練習'}
-                    </Text>
-                    {event.place && (
-                      <Text style={styles.eventPlace}>@{event.place}</Text>
-                    )}
-                  </View>
-                  {getStatusBadge(event.attendance_status)}
-                </View>
+                <Text style={styles.monthItemText}>
+                  {getMonthLabel(monthItem.year, monthItem.month)}
+                </Text>
+                <StatusBadge status={monthItem.status} />
+              </Pressable>
+            ))}
+          </View>
+        )}
+      </ScrollView>
 
-                {/* 出欠選択 */}
-                <View style={styles.attendanceButtons}>
-                  <Pressable
-                    style={[
-                      styles.attendanceButton,
-                      editState.status === 'present' && styles.attendanceButtonActivePresent
-                    ]}
-                    onPress={() => handleStatusChange(event.id, 'present')}
-                  >
-                    <Text
-                      style={[
-                        styles.attendanceButtonText,
-                        editState.status === 'present' && styles.attendanceButtonTextActive
-                      ]}
-                    >
-                      出席
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    style={[
-                      styles.attendanceButton,
-                      editState.status === 'absent' && styles.attendanceButtonActiveAbsent
-                    ]}
-                    onPress={() => handleStatusChange(event.id, 'absent')}
-                  >
-                    <Text
-                      style={[
-                        styles.attendanceButtonText,
-                        editState.status === 'absent' && styles.attendanceButtonTextActive
-                      ]}
-                    >
-                      欠席
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    style={[
-                      styles.attendanceButton,
-                      editState.status === 'other' && styles.attendanceButtonActiveOther
-                    ]}
-                    onPress={() => handleStatusChange(event.id, 'other')}
-                  >
-                    <Text
-                      style={[
-                        styles.attendanceButtonText,
-                        editState.status === 'other' && styles.attendanceButtonTextActive
-                      ]}
-                    >
-                      その他
-                    </Text>
-                  </Pressable>
-                </View>
-
-                {/* 備考入力 */}
-                <TextInput
-                  style={styles.noteInput}
-                  value={editState.note}
-                  onChangeText={(text) => handleNoteChange(event.id, text)}
-                  placeholder="備考を入力（任意）"
-                  multiline
-                  numberOfLines={2}
-                />
-              </View>
-            )
-          })}
-
-          {/* まとめて保存ボタン */}
-          <Pressable
-            style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-            onPress={handleSaveAll}
-            disabled={saving}
-          >
-            <Text style={styles.saveButtonText}>
-              {saving ? '保存中...' : `${getMonthLabel()}分をまとめて保存`}
+      {/* 月詳細モーダル */}
+      <Modal
+        visible={isModalOpen}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={handleCloseModal}
+      >
+        <View style={styles.modalContainer}>
+          {/* モーダルヘッダー */}
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>
+              {selectedMonth ? getMonthLabel(selectedMonth.year, selectedMonth.month) : ''}
             </Text>
-          </Pressable>
+            <Pressable onPress={handleCloseModal} style={styles.modalCloseButton}>
+              <Feather name="x" size={24} color="#374151" />
+            </Pressable>
+          </View>
+
+          {/* モーダルコンテンツ */}
+          <ScrollView style={styles.modalContent} contentContainerStyle={styles.modalScrollContent}>
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>読み込み中...</Text>
+              </View>
+            ) : error ? (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : (
+              <View style={styles.eventsContainer}>
+                {/* イベント一覧 */}
+                {events.length === 0 ? (
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>この月にはイベントがありません</Text>
+                  </View>
+                ) : (
+                  <>
+                    {events.map((event) => {
+                      const editState = editStates[event.id] || { status: null, note: '' }
+
+                      return (
+                        <View
+                          key={`${event.type}-${event.id}`}
+                          style={[
+                            styles.eventCard,
+                            event.type === 'competition' && styles.eventCardCompetition
+                          ]}
+                        >
+                          {/* イベント情報とステータスバッジ */}
+                          <View style={styles.eventHeader}>
+                            <View style={styles.eventInfo}>
+                              <Text style={styles.eventDate}>
+                                {format(new Date(event.date), 'M月d日(E)', { locale: ja })}
+                              </Text>
+                              <Text style={styles.eventTitle}>
+                                {event.type === 'competition' ? event.title : '練習'}
+                              </Text>
+                              {event.place && (
+                                <Text style={styles.eventPlace}>@{event.place}</Text>
+                              )}
+                            </View>
+                            {getStatusBadge(event.attendance_status)}
+                          </View>
+
+                          {/* 出欠選択 */}
+                          <View style={styles.attendanceButtons}>
+                            <Pressable
+                              style={[
+                                styles.attendanceButton,
+                                editState.status === 'present' && styles.attendanceButtonActivePresent
+                              ]}
+                              onPress={() => handleStatusChange(event.id, 'present')}
+                            >
+                              <Text
+                                style={[
+                                  styles.attendanceButtonText,
+                                  editState.status === 'present' && styles.attendanceButtonTextActive
+                                ]}
+                              >
+                                出席
+                              </Text>
+                            </Pressable>
+                            <Pressable
+                              style={[
+                                styles.attendanceButton,
+                                editState.status === 'absent' && styles.attendanceButtonActiveAbsent
+                              ]}
+                              onPress={() => handleStatusChange(event.id, 'absent')}
+                            >
+                              <Text
+                                style={[
+                                  styles.attendanceButtonText,
+                                  editState.status === 'absent' && styles.attendanceButtonTextActive
+                                ]}
+                              >
+                                欠席
+                              </Text>
+                            </Pressable>
+                            <Pressable
+                              style={[
+                                styles.attendanceButton,
+                                editState.status === 'other' && styles.attendanceButtonActiveOther
+                              ]}
+                              onPress={() => handleStatusChange(event.id, 'other')}
+                            >
+                              <Text
+                                style={[
+                                  styles.attendanceButtonText,
+                                  editState.status === 'other' && styles.attendanceButtonTextActive
+                                ]}
+                              >
+                                その他
+                              </Text>
+                            </Pressable>
+                          </View>
+
+                          {/* 備考入力 */}
+                          <TextInput
+                            style={styles.noteInput}
+                            value={editState.note}
+                            onChangeText={(text) => handleNoteChange(event.id, text)}
+                            placeholder="備考を入力（任意）"
+                            multiline
+                            numberOfLines={2}
+                          />
+                        </View>
+                      )
+                    })}
+
+                    {/* まとめて保存ボタン */}
+                    <Pressable
+                      style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+                      onPress={handleSaveAll}
+                      disabled={saving}
+                    >
+                      <Text style={styles.saveButtonText}>
+                        {saving ? '保存中...' : selectedMonth ? `${getMonthLabel(selectedMonth.year, selectedMonth.month)}分をまとめて保存` : '保存'}
+                      </Text>
+                    </Pressable>
+                  </>
+                )}
+              </View>
+            )}
+          </ScrollView>
         </View>
-      )}
-    </ScrollView>
+      </Modal>
+    </>
   )
 }
 
@@ -471,29 +656,71 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     fontSize: 14,
   },
-  monthNavigation: {
+  monthListContainer: {
+    gap: 8,
+  },
+  monthItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  monthButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     borderRadius: 8,
   },
-  monthButtonText: {
-    fontSize: 14,
-    color: '#374151',
+  monthItemText: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  monthStatusBadgeUnanswered: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  monthStatusBadgeTextUnanswered: {
+    fontSize: 12,
+    color: '#92400E',
     fontWeight: '500',
   },
-  monthLabel: {
+  monthStatusBadgeAnswered: {
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  monthStatusBadgeTextAnswered: {
+    fontSize: 12,
+    color: '#065F46',
+    fontWeight: '500',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#111827',
+  },
+  modalCloseButton: {
+    padding: 8,
+  },
+  modalContent: {
+    flex: 1,
+  },
+  modalScrollContent: {
+    padding: 16,
   },
   emptyContainer: {
     backgroundColor: '#F9FAFB',

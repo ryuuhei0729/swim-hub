@@ -72,6 +72,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const queryClient = getQueryClient()
       queryClient.clear()
       
+      // Zustandストアを全てリセット（セキュリティとデータ整合性のため）
+      const [
+        { usePracticeFormStore },
+        { usePracticeFilterStore },
+        { usePracticeTimeStore },
+        { useCompetitionFormStore },
+        { useRecordFormStore },
+        { useRecordFilterStore },
+      ] = await Promise.all([
+        import('@/stores/practiceFormStore'),
+        import('@/stores/practiceFilterStore'),
+        import('@/stores/practiceTimeStore'),
+        import('@/stores/competitionFormStore'),
+        import('@/stores/recordFormStore'),
+        import('@/stores/recordFilterStore'),
+      ])
+      
+      usePracticeFormStore.getState().reset()
+      usePracticeFilterStore.getState().reset()
+      usePracticeTimeStore.getState().reset()
+      useCompetitionFormStore.getState().reset()
+      useRecordFormStore.getState().reset()
+      useRecordFilterStore.getState().reset()
+      
       return { error: null }
     } catch (error) {
       console.error('Sign out error:', error)
@@ -158,10 +182,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           loading: false
         })
         
-        // ログアウト時はReact Queryのキャッシュをクリア（セキュリティとデータ整合性のため）
+        // ログアウト時は全てのキャッシュをクリア（セキュリティとデータ整合性のため）
         if (event === 'SIGNED_OUT') {
           const queryClient = getQueryClient()
           queryClient.clear()
+          
+          // Zustandストアを全てリセット
+          Promise.all([
+            import('@/stores/practiceFormStore'),
+            import('@/stores/practiceFilterStore'),
+            import('@/stores/practiceTimeStore'),
+            import('@/stores/competitionFormStore'),
+            import('@/stores/recordFormStore'),
+            import('@/stores/recordFilterStore'),
+          ]).then(([
+            { usePracticeFormStore },
+            { usePracticeFilterStore },
+            { usePracticeTimeStore },
+            { useCompetitionFormStore },
+            { useRecordFormStore },
+            { useRecordFilterStore },
+          ]) => {
+            usePracticeFormStore.getState().reset()
+            usePracticeFilterStore.getState().reset()
+            usePracticeTimeStore.getState().reset()
+            useCompetitionFormStore.getState().reset()
+            useRecordFormStore.getState().reset()
+            useRecordFilterStore.getState().reset()
+          }).catch((error) => {
+            console.warn('ストアのリセットに失敗:', error)
+          })
         }
       }
     )
