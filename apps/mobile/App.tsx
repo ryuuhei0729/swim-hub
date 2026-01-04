@@ -1,7 +1,7 @@
 import React from 'react'
 import { NavigationContainer } from '@react-navigation/native'
 import { StatusBar } from 'expo-status-bar'
-import { View, ActivityIndicator, StyleSheet } from 'react-native'
+import { View, ActivityIndicator, StyleSheet, Text } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { AuthProvider, useAuth } from './contexts/AuthProvider'
 import QueryProvider from './providers/QueryProvider'
@@ -10,11 +10,33 @@ import { OfflineBanner } from './components/layout/OfflineBanner'
 import { AuthStack } from './navigation/AuthStack'
 import { MainStack } from './navigation/MainStack'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { supabase } from './lib/supabase'
+
+/**
+ * Supabase未初期化時のエラー画面
+ */
+const SupabaseErrorScreen: React.FC = () => {
+  return (
+    <View style={styles.errorContainer}>
+      <Text style={styles.errorTitle}>設定エラー</Text>
+      <Text style={styles.errorMessage}>
+        Supabaseの設定が正しく行われていません。
+        {'\n\n'}
+        アプリの設定を確認してください。
+      </Text>
+    </View>
+  )
+}
 
 /**
  * 認証状態に応じてナビゲーションスタックを切り替えるコンポーネント
  */
 const AppNavigator: React.FC = () => {
+  // Supabaseクライアントが初期化されていない場合はエラー画面を表示
+  if (!supabase) {
+    return <SupabaseErrorScreen />
+  }
+
   const { isAuthenticated, loading } = useAuth()
   const { isConnected, isInternetReachable } = useNetwork()
 
@@ -72,5 +94,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#EFF6FF',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    padding: 20,
+  },
+  errorTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#DC2626',
+    marginBottom: 16,
+  },
+  errorMessage: {
+    fontSize: 16,
+    color: '#374151',
+    textAlign: 'center',
+    lineHeight: 24,
   },
 })

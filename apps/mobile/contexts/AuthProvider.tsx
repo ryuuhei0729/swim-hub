@@ -15,6 +15,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ログイン
   const signIn = useCallback(async (email: string, password: string) => {
+    if (!supabase) {
+      return { data: null, error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
+    }
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -34,6 +37,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // サインアップ
   const signUp = useCallback(async (email: string, password: string, name?: string) => {
+    if (!supabase) {
+      return { data: null, error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
+    }
     try {
       // モバイルアプリでは、メール認証のリダイレクトURLは後で実装（Phase 2.2で対応）
       // 現時点では空文字列を使用
@@ -61,6 +67,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // OAuthログイン
   const signInWithOAuth = useCallback(async (provider: 'google', options?: { redirectTo?: string; scopes?: string }) => {
+    if (!supabase) {
+      return { error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
+    }
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
@@ -83,6 +92,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ログアウト
   const signOut = useCallback(async () => {
+    if (!supabase) {
+      return { error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
+    }
     try {
       const { error } = await supabase.auth.signOut()
       
@@ -127,6 +139,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // パスワードリセット
   const resetPassword = useCallback(async (email: string) => {
+    if (!supabase) {
+      return { data: null, error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
+    }
     try {
       // モバイルアプリでは、パスワードリセットのリダイレクトURLは後で実装（Phase 2.3で対応）
       // 現時点では空文字列を使用
@@ -147,6 +162,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // パスワード更新
   const updatePassword = useCallback(async (newPassword: string) => {
+    if (!supabase) {
+      return { data: null, error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
+    }
     try {
       const { data, error } = await supabase.auth.updateUser({
         password: newPassword
@@ -165,6 +183,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // プロフィール更新
   const updateProfile = useCallback(async (updates: Partial<import('@swim-hub/shared/types/database').UserProfile>) => {
+    if (!supabase) {
+      return { error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
+    }
     try {
       if (!authState.user) {
         return { error: new Error('User not authenticated') as unknown as import('@supabase/supabase-js').AuthError }
@@ -191,12 +212,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let isMounted = true
 
+    // Supabaseクライアントが初期化されていない場合の処理
+    if (!supabase) {
+      console.error('Supabaseクライアントが初期化されていません')
+      setAuthState({
+        user: null,
+        session: null,
+        loading: false
+      })
+      return
+    }
+
+    // タイムアウト設定（10秒後にloadingをfalseにする）
+    const timeoutId = setTimeout(() => {
+      if (isMounted && authState.loading) {
+        console.warn('認証状態の確認がタイムアウトしました')
+        setAuthState(prev => ({
+          ...prev,
+          loading: false
+        }))
+      }
+    }, 10000)
+
     // 認証状態の変更を監視（初期セッション取得も含む）
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!isMounted) {
           return
         }
+        
+        clearTimeout(timeoutId)
         
         setAuthState({
           user: session?.user ?? null,
@@ -238,16 +283,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     )
 
+    // 初期セッションを明示的に取得（onAuthStateChangeが呼ばれない場合のフォールバック）
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (isMounted) {
+        clearTimeout(timeoutId)
+        setAuthState({
+          user: session?.user ?? null,
+          session,
+          loading: false
+        })
+      }
+    }).catch((error) => {
+      console.error('初期セッション取得エラー:', error)
+      if (isMounted) {
+        clearTimeout(timeoutId)
+        setAuthState({
+          user: null,
+          session: null,
+          loading: false
+        })
+      }
+    })
+
     // クリーンアップ関数
     return () => {
       isMounted = false
+      clearTimeout(timeoutId)
       subscription.unsubscribe()
     }
   }, [])
 
+  // supabaseがnullの場合のフォールバック（実際には使用されない）
   const value: AuthContextType = {
     ...authState,
-    supabase,
+    supabase: supabase || ({} as any),
     signIn,
     signUp,
     signInWithOAuth,

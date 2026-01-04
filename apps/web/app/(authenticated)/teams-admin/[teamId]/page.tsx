@@ -1,6 +1,11 @@
 import React, { Suspense } from 'react'
 import TeamAdminDataLoader from './_server/TeamAdminDataLoader'
 
+/**
+ * 動的レンダリングを強制（認証が必要なページのため）
+ */
+export const dynamic = 'force-dynamic'
+
 interface TeamAdminPageProps {
   params: Promise<{
     teamId: string

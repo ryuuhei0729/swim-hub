@@ -14,28 +14,30 @@ if (__DEV__) {
   console.log('supabaseAnonKey (from Constants.expoConfig.extra):', supabaseAnonKey ? '設定済み' : '未設定')
 }
 
-// 環境変数の検証
-if (!supabaseUrl || !supabaseAnonKey) {
-  const errorMessage = 
+// 環境変数の検証（エラーをthrowせず、nullを返す）
+let supabase: ReturnType<typeof createClient<Database>> | null = null
+
+if (supabaseUrl && supabaseAnonKey) {
+  try {
+    // React Native用Supabaseクライアント
+    supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+    })
+  } catch (error) {
+    console.error('Supabaseクライアントの初期化に失敗しました:', error)
+  }
+} else {
+  console.error(
     'Supabase環境変数が設定されていません。\n' +
     'EXPO_PUBLIC_SUPABASE_URL と EXPO_PUBLIC_SUPABASE_ANON_KEY を設定してください。\n' +
-    '.env.local ファイルを作成して設定を追加してください。\n\n' +
     `現在の設定状態:\n` +
     `EXPO_PUBLIC_SUPABASE_URL: ${supabaseUrl ? 'set' : 'unset'}\n` +
     `EXPO_PUBLIC_SUPABASE_ANON_KEY: ${supabaseAnonKey ? 'set' : 'unset'}`
-  
-  console.error(errorMessage)
-  throw new Error(errorMessage)
+  )
 }
 
-// React Native用Supabaseクライアント
-// 新しいアーキテクチャのテスト: AsyncStorageを一時的に無効化
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    // AsyncStorageを一時的にコメントアウトしてテスト
-    // storage: AsyncStorage,
-    autoRefreshToken: true,
-    persistSession: false, // AsyncStorage無しのため永続化しない
-    detectSessionInUrl: false,
-  },
-})
+export { supabase }

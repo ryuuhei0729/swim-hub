@@ -10,8 +10,24 @@ import { AuthState, AuthContextType } from '@swim-hub/shared/types/auth'
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const supabase = useMemo(() => createClient(), [])
   const router = useRouter()
+  // ブラウザ環境でのみSupabaseクライアントを作成（ビルド時の静的生成を回避）
+  const supabase = useMemo(() => {
+    // サーバー側（ビルド時）では実行しない
+    if (typeof window === 'undefined') {
+      // サーバー側ではダミークライアントを返す（実際には使用されない）
+      // 型安全性のため、anyを使用
+      return null as any
+    }
+    try {
+      return createClient()
+    } catch (error) {
+      // 環境変数が設定されていない場合のエラーハンドリング
+      console.error('Supabaseクライアントの作成に失敗しました:', error)
+      // ダミークライアントを返す（実際には使用されない）
+      return null as any
+    }
+  }, [])
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
     session: null,
@@ -21,6 +37,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ログイン
   const signIn = useCallback(async (email: string, password: string) => {
+    if (!supabase) {
+      return { data: null, error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
+    }
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -40,6 +59,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // サインアップ
   const signUp = useCallback(async (email: string, password: string, name?: string) => {
+    if (!supabase) {
+      return { data: null, error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
+    }
     try {
       // 本番環境では環境変数、開発環境ではwindow.location.originを使用
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
@@ -69,6 +91,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // OAuth認証（Google）
   const signInWithOAuth = useCallback(async (provider: 'google', options?: { redirectTo?: string; scopes?: string }) => {
+    if (!supabase) {
+      return { error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
+    }
     try {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
       const redirectTo = options?.redirectTo || `${appUrl}/api/auth/callback?redirect_to=/mypage`
@@ -98,6 +123,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ログアウト
   const signOut = useCallback(async () => {
+    if (!supabase) {
+      return { error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
+    }
     try {
       const { error } = await supabase.auth.signOut()
       
@@ -162,6 +190,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // パスワードリセット
   const resetPassword = useCallback(async (email: string) => {
+    if (!supabase) {
+      return { data: null, error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
+    }
     try {
       // 本番環境では環境変数、開発環境ではwindow.location.originを使用
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
@@ -183,6 +214,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // パスワード更新
   const updatePassword = useCallback(async (newPassword: string) => {
+    if (!supabase) {
+      return { data: null, error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
+    }
     try {
       const { data, error } = await supabase.auth.updateUser({
         password: newPassword
@@ -201,6 +235,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // プロフィール更新（React Queryのミューテーションに移行予定）
   const updateProfile = useCallback(async (updates: Partial<import('@apps/shared/types/database').UserProfile>) => {
+    if (!supabase) {
+      return { error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
+    }
     try {
       if (!authState.user) {
         return { error: new Error('User not authenticated') as unknown as import('@supabase/supabase-js').AuthError }
@@ -209,7 +246,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userUpdate: Database['public']['Tables']['users']['Update'] = updates
       const { error } = await supabase
         .from('users')
-        // @ts-expect-error: Supabaseの型推論がupdateでneverになる既知の問題のため
         .update(userUpdate)
         .eq('id', authState.user.id)
       
@@ -225,11 +261,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [authState.user, supabase])
 
   useEffect(() => {
+    // ブラウザ環境でない場合、またはSupabaseクライアントが作成されていない場合はスキップ
+    if (typeof window === 'undefined' || !supabase) {
+      return
+    }
+
     let isMounted = true
 
     // 認証状態の変更を監視（初期セッション取得も含む）
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: string, session: any) => {
         if (!isMounted) {
           return
         }
