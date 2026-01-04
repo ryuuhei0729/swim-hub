@@ -14,7 +14,14 @@ describe('TeamCoreAPI', () => {
 
   describe('getMyTeams', () => {
     it('自身のチームメンバーシップ一覧を取得できる', async () => {
-      const memberships = [{ id: 'membership-1', team_id: 'team-1', user_id: 'test-user-id' }]
+      // status='approved'かつis_active=trueの場合のみ返される
+      const memberships = [{ 
+        id: 'membership-1', 
+        team_id: 'team-1', 
+        user_id: 'test-user-id',
+        status: 'approved' as const,
+        is_active: true
+      }]
 
       supabaseMock.queueTable('team_memberships', [{ data: memberships }])
 
