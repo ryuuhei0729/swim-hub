@@ -13,7 +13,7 @@ import {
 } from '@/components/team'
 import TeamAdminTabs from '@/components/team/TeamAdminTabs'
 import type { TeamAdminTabType } from '@/components/team/TeamAdminTabs'
-import MyMonthlyAttendance from '@/components/team/MyMonthlyAttendance'
+import { AdminMonthlyAttendance } from '@/components/team'
 import MemberDetailModal from '@/components/team/MemberDetailModal'
 import type { MemberDetail } from '@/components/team/MemberDetailModal'
 import { TeamMembership, TeamWithMembers } from '@swim-hub/shared/types/database'
@@ -177,7 +177,7 @@ export default function TeamAdminClient({
       case 'competitions':
         return <TeamCompetitions teamId={teamId} isAdmin={true} />
       case 'attendance':
-        return <MyMonthlyAttendance teamId={teamId} />
+        return <AdminMonthlyAttendance teamId={teamId} />
       case 'bulk-register':
         return <TeamBulkRegister teamId={teamId} isAdmin={true} />
       case 'settings':
@@ -252,7 +252,7 @@ export default function TeamAdminClient({
       </div>
 
       {/* タブコンテンツ */}
-      <div className="bg-white rounded-lg shadow mt-4">
+      <div className="bg-white rounded-lg shadow">
         {renderTabContent()}
       </div>
 

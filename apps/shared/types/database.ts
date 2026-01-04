@@ -17,6 +17,10 @@ export interface UserProfile {
   birthday: string | null
   profile_image_path: string | null
   bio: string | null
+  google_calendar_enabled: boolean
+  google_calendar_refresh_token: string | null
+  google_calendar_sync_practices: boolean
+  google_calendar_sync_competitions: boolean
   created_at: string
   updated_at: string
 }
@@ -474,6 +478,10 @@ export type Database = {
           birthday: string | null
           profile_image_path: string | null
           bio: string | null
+          google_calendar_enabled: boolean
+          google_calendar_refresh_token: string | null
+          google_calendar_sync_practices: boolean
+          google_calendar_sync_competitions: boolean
           created_at: string
           updated_at: string
         }
@@ -484,6 +492,10 @@ export type Database = {
           birthday?: string | null
           profile_image_path?: string | null
           bio?: string | null
+          google_calendar_enabled?: boolean
+          google_calendar_refresh_token?: string | null
+          google_calendar_sync_practices?: boolean
+          google_calendar_sync_competitions?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -494,6 +506,10 @@ export type Database = {
           birthday?: string | null
           profile_image_path?: string | null
           bio?: string | null
+          google_calendar_enabled?: boolean
+          google_calendar_refresh_token?: string | null
+          google_calendar_sync_practices?: boolean
+          google_calendar_sync_competitions?: boolean
           created_at?: string
           updated_at?: string
         }

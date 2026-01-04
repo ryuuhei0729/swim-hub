@@ -257,7 +257,31 @@ export function useCreatePracticeMutation(supabase: SupabaseClient, api?: Practi
 
   return useMutation({
     mutationFn: async (practice: Omit<PracticeInsert, 'user_id'>) => {
-      return await practiceApi.createPractice(practice)
+      const created = await practiceApi.createPractice(practice)
+      
+      // Google Calendar同期（バックグラウンドで実行、エラーは無視）
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: profile } = await supabase
+            .from('users')
+            .select('google_calendar_enabled, google_calendar_sync_practices')
+            .eq('id', user.id)
+            .single()
+          
+          if (profile?.google_calendar_enabled && profile?.google_calendar_sync_practices) {
+            const { syncPracticeToGoogleCalendar } = await import('../../api/google-calendar')
+            syncPracticeToGoogleCalendar(created, 'create').catch((err: unknown) => {
+              console.error('Google Calendar同期エラー:', err)
+            })
+          }
+        }
+      } catch (err) {
+        // エラーは無視（メイン処理に影響しない）
+        console.error('Google Calendar同期チェックエラー:', err)
+      }
+      
+      return created
     },
     onSuccess: () => {
       // 関連するクエリを無効化して再取得
@@ -275,7 +299,31 @@ export function useUpdatePracticeMutation(supabase: SupabaseClient, api?: Practi
 
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: PracticeUpdate }) => {
-      return await practiceApi.updatePractice(id, updates)
+      const updated = await practiceApi.updatePractice(id, updates)
+      
+      // Google Calendar同期（バックグラウンドで実行、エラーは無視）
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: profile } = await supabase
+            .from('users')
+            .select('google_calendar_enabled, google_calendar_sync_practices')
+            .eq('id', user.id)
+            .single()
+          
+          if (profile?.google_calendar_enabled && profile?.google_calendar_sync_practices) {
+            const { syncPracticeToGoogleCalendar } = await import('../../api/google-calendar')
+            // TODO: googleEventIdを取得して渡す必要がある（現時点では新規作成として扱う）
+            syncPracticeToGoogleCalendar(updated, 'update').catch((err: unknown) => {
+              console.error('Google Calendar同期エラー:', err)
+            })
+          }
+        }
+      } catch (err) {
+        console.error('Google Calendar同期チェックエラー:', err)
+      }
+      
+      return updated
     },
     onSuccess: (updated: Practice, variables: { id: string; updates: PracticeUpdate }) => {
       // 関連するクエリを更新
@@ -303,7 +351,39 @@ export function useDeletePracticeMutation(supabase: SupabaseClient, api?: Practi
 
   return useMutation({
     mutationFn: async (id: string) => {
+      // 削除前にPracticeデータを取得（Google Calendar同期用）
+      let practiceData: Practice | null = null
+      try {
+        practiceData = await practiceApi.getPracticeById(id)
+      } catch (err) {
+        console.error('Practice取得エラー:', err)
+      }
+      
       await practiceApi.deletePractice(id)
+      
+      // Google Calendar同期（バックグラウンドで実行、エラーは無視）
+      if (practiceData) {
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const { data: profile } = await supabase
+              .from('users')
+              .select('google_calendar_enabled, google_calendar_sync_practices')
+              .eq('id', user.id)
+              .single()
+            
+            if (profile?.google_calendar_enabled && profile?.google_calendar_sync_practices) {
+              const { syncPracticeToGoogleCalendar } = await import('../../api/google-calendar')
+              // TODO: googleEventIdを取得して渡す必要がある
+              syncPracticeToGoogleCalendar(practiceData, 'delete').catch((err: unknown) => {
+                console.error('Google Calendar同期エラー:', err)
+              })
+            }
+          }
+        } catch (err) {
+          console.error('Google Calendar同期チェックエラー:', err)
+        }
+      }
     },
     onSuccess: () => {
       // 関連するクエリを無効化して再取得

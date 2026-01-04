@@ -2,6 +2,11 @@ import React, { Suspense } from 'react'
 import AdminTeamsDataLoader from './_server/AdminTeamsDataLoader'
 
 /**
+ * 動的レンダリングを強制（認証が必要なページのため）
+ */
+export const dynamic = 'force-dynamic'
+
+/**
  * 管理者チーム一覧ページ（Server Component）
  * データ取得はサーバー側で並行実行される
  */

@@ -73,8 +73,11 @@ export function useTeamsQuery(
     queryFn: async () => {
       return await coreApi.getMyTeams()
     },
-    initialData: initialTeams,
+    // initialDataが空配列の場合はundefinedにして、必ずクエリを実行する
+    initialData: initialTeams && initialTeams.length > 0 ? initialTeams : undefined,
     staleTime: 5 * 60 * 1000, // 5分
+    refetchOnMount: true, // マウント時に必ず再取得
+    refetchOnWindowFocus: true, // ウィンドウフォーカス時に再取得
   })
 
   // チーム詳細取得クエリ（teamIdが指定されている場合のみ）

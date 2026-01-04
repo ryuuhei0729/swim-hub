@@ -10,8 +10,24 @@ import { AuthState, AuthContextType } from '@swim-hub/shared/types/auth'
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const supabase = useMemo(() => createClient(), [])
   const router = useRouter()
+  // ブラウザ環境でのみSupabaseクライアントを作成（ビルド時の静的生成を回避）
+  const supabase = useMemo(() => {
+    // サーバー側（ビルド時）では実行しない
+    if (typeof window === 'undefined') {
+      // サーバー側ではダミークライアントを返す（実際には使用されない）
+      // 型安全性のため、anyを使用
+      return null as any
+    }
+    try {
+      return createClient()
+    } catch (error) {
+      // 環境変数が設定されていない場合のエラーハンドリング
+      console.error('Supabaseクライアントの作成に失敗しました:', error)
+      // ダミークライアントを返す（実際には使用されない）
+      return null as any
+    }
+  }, [])
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
     session: null,
@@ -21,6 +37,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ログイン
   const signIn = useCallback(async (email: string, password: string) => {
+    if (!supabase) {
+      return { data: null, error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
+    }
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -40,6 +59,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // サインアップ
   const signUp = useCallback(async (email: string, password: string, name?: string) => {
+    if (!supabase) {
+      return { data: null, error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
+    }
     try {
       // 本番環境では環境変数、開発環境ではwindow.location.originを使用
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
@@ -67,8 +89,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [supabase])
 
+  // OAuth認証（Google）
+  const signInWithOAuth = useCallback(async (provider: 'google', options?: { redirectTo?: string; scopes?: string }) => {
+    if (!supabase) {
+      return { error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
+    }
+    try {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
+      const redirectTo = options?.redirectTo || `${appUrl}/api/auth/callback?redirect_to=/mypage`
+      
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo,
+          scopes: options?.scopes || 'https://www.googleapis.com/auth/calendar',
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
+        }
+      })
+      
+      if (error) {
+        return { error: error as import('@supabase/supabase-js').AuthError }
+      }
+      
+      return { error: null }
+    } catch (error) {
+      console.error('OAuth sign in error:', error)
+      return { error: error as import('@supabase/supabase-js').AuthError }
+    }
+  }, [supabase])
+
   // ログアウト
   const signOut = useCallback(async () => {
+    if (!supabase) {
+      return { error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
+    }
     try {
       const { error } = await supabase.auth.signOut()
       
@@ -80,6 +137,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const queryClient = getQueryClient()
       queryClient.clear()
       
+      // Zustandストアを全てリセット（セキュリティとデータ整合性のため）
+      if (typeof window !== 'undefined') {
+        const {
+          useProfileStore,
+          useTeamStore,
+          useUIStore,
+          usePracticeFormStore,
+          usePracticeRecordStore,
+          useCompetitionFormStore,
+          useCompetitionRecordStore,
+          useCompetitionFilterStore,
+          usePracticeFilterStore,
+          useCommonFormStore,
+          useAttendanceTabStore,
+          useTeamDetailStore,
+          useTeamAdminStore,
+          useModalStore,
+        } = await import('@/stores')
+        
+        useProfileStore.getState().reset()
+        useTeamStore.getState().reset()
+        useUIStore.getState().reset()
+        usePracticeFormStore.getState().reset()
+        usePracticeRecordStore.getState().reset()
+        useCompetitionFormStore.getState().reset()
+        useCompetitionRecordStore.getState().reset()
+        useCompetitionFilterStore.getState().reset()
+        usePracticeFilterStore.getState().reset()
+        useCommonFormStore.getState().reset()
+        useAttendanceTabStore.getState().reset()
+        useTeamDetailStore.getState().reset()
+        useTeamAdminStore.getState().reset()
+        useModalStore.getState().reset()
+      }
+      
+      // localStorageをクリア（念のため、将来的な使用に備えて）
+      if (typeof window !== 'undefined') {
+        try {
+          window.localStorage.clear()
+        } catch (error) {
+          console.warn('localStorageのクリアに失敗:', error)
+        }
+      }
+      
       return { error: null }
     } catch (error) {
       console.error('Sign out error:', error)
@@ -89,6 +190,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // パスワードリセット
   const resetPassword = useCallback(async (email: string) => {
+    if (!supabase) {
+      return { data: null, error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
+    }
     try {
       // 本番環境では環境変数、開発環境ではwindow.location.originを使用
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
@@ -110,6 +214,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // パスワード更新
   const updatePassword = useCallback(async (newPassword: string) => {
+    if (!supabase) {
+      return { data: null, error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
+    }
     try {
       const { data, error } = await supabase.auth.updateUser({
         password: newPassword
@@ -128,6 +235,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // プロフィール更新（React Queryのミューテーションに移行予定）
   const updateProfile = useCallback(async (updates: Partial<import('@apps/shared/types/database').UserProfile>) => {
+    if (!supabase) {
+      return { error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
+    }
     try {
       if (!authState.user) {
         return { error: new Error('User not authenticated') as unknown as import('@supabase/supabase-js').AuthError }
@@ -136,7 +246,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userUpdate: Database['public']['Tables']['users']['Update'] = updates
       const { error } = await supabase
         .from('users')
-        // @ts-expect-error: Supabaseの型推論がupdateでneverになる既知の問題のため
         .update(userUpdate)
         .eq('id', authState.user.id)
       
@@ -152,11 +261,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [authState.user, supabase])
 
   useEffect(() => {
+    // ブラウザ環境でない場合、またはSupabaseクライアントが作成されていない場合はスキップ
+    if (typeof window === 'undefined' || !supabase) {
+      return
+    }
+
     let isMounted = true
 
     // 認証状態の変更を監視（初期セッション取得も含む）
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: string, session: any) => {
         if (!isMounted) {
           return
         }
@@ -169,10 +283,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // ログイン/ログアウト時にページをリフレッシュ
         if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-          // ログアウト時はReact Queryのキャッシュをクリア（セキュリティとデータ整合性のため）
+          // ログアウト時は全てのキャッシュをクリア（セキュリティとデータ整合性のため）
           if (event === 'SIGNED_OUT') {
             const queryClient = getQueryClient()
             queryClient.clear()
+            
+            // Zustandストアを全てリセット
+            if (typeof window !== 'undefined') {
+              import('@/stores').then((stores) => {
+                stores.useProfileStore.getState().reset()
+                stores.useTeamStore.getState().reset()
+                stores.useUIStore.getState().reset()
+                stores.usePracticeFormStore.getState().reset()
+                stores.usePracticeRecordStore.getState().reset()
+                stores.useCompetitionFormStore.getState().reset()
+                stores.useCompetitionRecordStore.getState().reset()
+                stores.useCompetitionFilterStore.getState().reset()
+                stores.usePracticeFilterStore.getState().reset()
+                stores.useCommonFormStore.getState().reset()
+                stores.useAttendanceTabStore.getState().reset()
+                stores.useTeamDetailStore.getState().reset()
+                stores.useTeamAdminStore.getState().reset()
+                stores.useModalStore.getState().reset()
+              }).catch((error) => {
+                console.warn('ストアのリセットに失敗:', error)
+              })
+              
+              // localStorageをクリア
+              try {
+                window.localStorage.clear()
+              } catch (error) {
+                console.warn('localStorageのクリアに失敗:', error)
+              }
+            }
           }
           
           const currentPath = window.location.pathname
@@ -198,6 +341,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     supabase,
     signIn,
     signUp,
+    signInWithOAuth,
     signOut,
     resetPassword,
     updatePassword,

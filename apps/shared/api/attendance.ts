@@ -261,21 +261,12 @@ export class AttendanceAPI {
       throw new Error('自分の出欠情報のみ更新可能です')
     }
 
-    // 各出欠情報について、提出期限チェックとclose後の編集日時追加処理を行う
+    // 各出欠情報について、close後の編集日時追加処理を行う
+    // 締め切り後の編集も許可する（備考に編集日時が自動追加される）
     const updatePromises = Array.from(updateMap.entries()).map(async ([attendanceId, update]) => {
       const existing = existingAttendances.find(a => a.id === attendanceId)
       if (!existing) {
         throw new Error(`出欠情報 ${attendanceId} が見つかりません`)
-      }
-
-      // 提出期限チェック
-      const canSubmit = await this.canSubmitAttendance(
-        existing.practice_id,
-        existing.competition_id
-      )
-
-      if (!canSubmit) {
-        throw new Error('出欠提出期間外です')
       }
 
       // イベントがclosedかチェック
@@ -285,9 +276,17 @@ export class AttendanceAPI {
       )
 
       let finalNote = update.note
-      if (isClosed && update.note) {
+      if (isClosed) {
         // close後の編集の場合、編集日時を追加
-        finalNote = this.addEditMark(update.note)
+        // 備考がない場合でも編集日時を追加
+        const editMark = this.getEditMark()
+        if (update.note) {
+          // 既存の備考がある場合は追加
+          finalNote = this.addEditMark(update.note)
+        } else {
+          // 備考がない場合は編集日時のみ
+          finalNote = editMark
+        }
       }
 
       const { data, error } = await this.supabase
@@ -459,13 +458,21 @@ export class AttendanceAPI {
   // =========================================================================
 
   /**
+   * 編集済みマークを取得
+   */
+  private getEditMark(): string {
+    const now = new Date()
+    return `(${format(now, 'MM/dd HH:mm')}編集)`
+  }
+
+  /**
    * 編集済みマークを追加
    */
   private addEditMark(note: string): string {
-    const now = new Date()
-    const editMark = ` (${format(now, 'yyyy/MM/dd HH:mm')} 編集済)`
-    const cleanedNote = note.replace(/\s*\(\d{4}\/\d{2}\/\d{2}\s+\d{2}:\d{2}\s+編集済\)\s*$/, '')
-    return cleanedNote + editMark
+    const editMark = this.getEditMark()
+    // 既存の編集マークを削除（重複を防ぐ）
+    const cleanedNote = note.replace(/\s*\(\d{1,2}\/\d{1,2}\s+\d{1,2}:\d{2}編集\)\s*/g, '').trim()
+    return cleanedNote ? `${cleanedNote} ${editMark}` : editMark
   }
 
   /**

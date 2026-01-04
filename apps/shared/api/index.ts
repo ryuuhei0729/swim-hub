@@ -5,6 +5,7 @@
 export * from './attendance'
 export * from './dashboard'
 export * from './entries'
+export * from './google-calendar'
 export * from './practices'
 export * from './records'
 export * from './styles'

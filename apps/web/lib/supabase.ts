@@ -2,16 +2,6 @@
 import { createBrowserClient } from '@supabase/ssr'
 import { type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@swim-hub/shared/types/database'
-import { getCurrentEnvConfig, getSupabaseConfig } from './env'
-
-// 環境別のSupabase設定を取得
-const { url: _supabaseUrl, anonKey: _supabaseAnonKey, environment: _environment } = getSupabaseConfig()
-const _envConfig = getCurrentEnvConfig()
-
-// 環境情報をログ出力（開発・ステージング環境のみ）
-if (_envConfig.debug) {
-  // デバッグログの出力
-}
 
 // ブラウザ環境でSupabaseクライアントを管理（Hot Reload対応）
 declare global {
@@ -28,10 +18,11 @@ function validateSupabaseEnv(): { url: string; anonKey: string } {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  if (!supabaseUrl || !supabaseAnonKey) {
+  // 環境変数が設定されていない、または空文字列の場合
+  if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.trim() === '' || supabaseAnonKey.trim() === '') {
     const missingVars: string[] = []
-    if (!supabaseUrl) missingVars.push('NEXT_PUBLIC_SUPABASE_URL')
-    if (!supabaseAnonKey) missingVars.push('NEXT_PUBLIC_SUPABASE_ANON_KEY')
+    if (!supabaseUrl || supabaseUrl.trim() === '') missingVars.push('NEXT_PUBLIC_SUPABASE_URL')
+    if (!supabaseAnonKey || supabaseAnonKey.trim() === '') missingVars.push('NEXT_PUBLIC_SUPABASE_ANON_KEY')
 
     throw new Error(`Supabase環境変数が設定されていません: ${missingVars.join(', ')}`)
   }
@@ -48,7 +39,17 @@ function validateSupabaseEnv(): { url: string; anonKey: string } {
 
 // ブラウザ用のSupabaseクライアント（クライアントコンポーネント用）
 export const createClient = (): SupabaseClient<Database> => {
+  // 環境変数を検証
   const { url, anonKey } = validateSupabaseEnv()
+  
+  // 追加の検証：URLとキーが有効な文字列であることを確認
+  if (typeof url !== 'string' || typeof anonKey !== 'string') {
+    throw new Error(`Supabase環境変数の型が不正です: url=${typeof url}, anonKey=${typeof anonKey}`)
+  }
+  
+  if (!url || url.trim() === '' || !anonKey || anonKey.trim() === '') {
+    throw new Error(`Supabase環境変数が空です: url="${url}", anonKey="${anonKey ? '***' : ''}"`)
+  }
   
   // createBrowserClientはクッキーストレージを自動的に使用
   // APIキーは自動的にリクエストヘッダーに含まれる

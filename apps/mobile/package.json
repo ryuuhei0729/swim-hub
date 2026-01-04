@@ -19,7 +19,8 @@
     "clean": "npx expo clean",
     "test": "vitest run",
     "test:watch": "vitest watch",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "submit:ios": "set -a && source .env && set +a && export APPLE_ID APPLE_APP_SPECIFIC_PASSWORD && eas submit --platform ios --latest"
   },
   "dependencies": {
     "@dotenvx/dotenvx": "^1.51.1",
