@@ -90,8 +90,6 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
       setError(null)
 
       const now = new Date()
-      const currentYear = now.getFullYear()
-      const currentMonth = now.getMonth() + 1
       
       // 1年後の日付を計算
       const oneYearLater = addMonths(now, 12)

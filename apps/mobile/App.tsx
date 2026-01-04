@@ -32,13 +32,14 @@ const SupabaseErrorScreen: React.FC = () => {
  * 認証状態に応じてナビゲーションスタックを切り替えるコンポーネント
  */
 const AppNavigator: React.FC = () => {
+  // React Hooksは常に同じ順序で呼ばれる必要があるため、条件分岐の前に呼ぶ
+  const { isAuthenticated, loading } = useAuth()
+  const { isConnected, isInternetReachable } = useNetwork()
+
   // Supabaseクライアントが初期化されていない場合はエラー画面を表示
   if (!supabase) {
     return <SupabaseErrorScreen />
   }
-
-  const { isAuthenticated, loading } = useAuth()
-  const { isConnected, isInternetReachable } = useNetwork()
 
   // 認証状態の確認中
   if (loading) {

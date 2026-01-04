@@ -50,8 +50,6 @@ export default function AdminMonthlyAttendance({ teamId }: AdminMonthlyAttendanc
       setError(null)
 
       const now = new Date()
-      const currentYear = now.getFullYear()
-      const currentMonth = now.getMonth() + 1
       
       // 1年後の日付を計算
       const oneYearLater = addMonths(now, 12)
@@ -301,18 +299,6 @@ export default function AdminMonthlyAttendance({ teamId }: AdminMonthlyAttendanc
   // 月名を取得
   const getMonthLabel = (year: number, month: number) => {
     return `${year}年${month}月`
-  }
-
-  // ステータスバッジ
-  const getStatusBadge = (status: AttendanceStatusType | null | undefined) => {
-    switch (status) {
-      case 'open':
-        return <span className="text-xs px-2 py-0.5 rounded-full bg-blue-200 text-blue-800">提出受付中</span>
-      case 'closed':
-        return <span className="text-xs px-2 py-0.5 rounded-full bg-red-200 text-red-800">提出締切</span>
-      default:
-        return <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">未設定</span>
-    }
   }
 
   if (loadingMonthList) {
