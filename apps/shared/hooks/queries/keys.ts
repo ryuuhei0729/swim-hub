@@ -32,6 +32,7 @@ export const recordKeys = {
   competitionsList: (filters?: { startDate?: string; endDate?: string }) =>
     [...recordKeys.competitions(), 'list', filters] as const,
   competitionDetail: (id: string) => [...recordKeys.competitions(), 'detail', id] as const,
+  bestTimes: (userId?: string) => [...recordKeys.all, 'bestTimes', userId] as const,
 } as const
 
 /**

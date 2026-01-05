@@ -5,7 +5,7 @@
 'use client'
 
 import { SupabaseClient } from '@supabase/supabase-js'
-import { useMutation, useQuery, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
 import { RecordAPI } from '../../api/records'
 import type {
@@ -19,6 +19,7 @@ import type {
   SplitTime,
   SplitTimeInsert
 } from '../../types/database'
+import type { BestTime } from '../../types/ui'
 import { recordKeys } from './keys'
 
 export interface UseRecordsQueryOptions {
@@ -410,6 +411,36 @@ export function useRecordsCountQuery(
     queryFn: async () => {
       return await api.countRecords(startDate, endDate, styleId)
     },
+    staleTime: 5 * 60 * 1000, // 5分
+  })
+}
+
+export interface UseBestTimesQueryOptions {
+  userId?: string
+  api?: RecordAPI
+}
+
+/**
+ * ベストタイム取得クエリ
+ * 種目・プール種別ごとの最速タイムを計算
+ */
+export function useBestTimesQuery(
+  supabase: SupabaseClient,
+  options: UseBestTimesQueryOptions = {}
+): UseQueryResult<BestTime[], Error> {
+  const { userId, api: providedApi } = options
+
+  const api = useMemo(
+    () => providedApi ?? new RecordAPI(supabase),
+    [supabase, providedApi]
+  )
+
+  return useQuery({
+    queryKey: recordKeys.bestTimes(userId),
+    queryFn: async () => {
+      return await api.getBestTimes(userId)
+    },
+    enabled: true,
     staleTime: 5 * 60 * 1000, // 5分
   })
 }

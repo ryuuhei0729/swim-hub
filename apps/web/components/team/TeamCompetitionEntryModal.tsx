@@ -1,11 +1,12 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
-// ここでは直接Supabaseクエリで置換（TeamAPI互換の処理を画面内実装）
+import { EntryAPI } from '@apps/shared/api/entries'
+import { RecordAPI } from '@apps/shared/api/records'
 import { useAuth } from '@/contexts/AuthProvider'
 
 interface TeamCompetitionEntryModalProps {
@@ -24,7 +25,8 @@ export default function TeamCompetitionEntryModal({
   teamId: _teamId
 }: TeamCompetitionEntryModalProps) {
   const { supabase } = useAuth()
-  // TeamAPI への依存は排除
+  const entryApi = useMemo(() => new EntryAPI(supabase), [supabase])
+  const recordApi = useMemo(() => new RecordAPI(supabase), [supabase])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   type EntryRow = {
@@ -56,24 +58,16 @@ export default function TeamCompetitionEntryModal({
   const [data, setData] = useState<EntryByStyleData | null>(null)
   const [updatingStatus, setUpdatingStatus] = useState(false)
 
-  useEffect(() => {
-    if (isOpen) {
-      loadEntries()
-    }
-  }, [isOpen, competitionId])
-
-  const loadEntries = async () => {
+  const loadEntries = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
+      
       // 1) 競技会情報取得（team_id含む）
-      const { data: competition, error: competitionError } = await supabase
-        .from('competitions')
-        .select('team_id, title, date, place, entry_status')
-        .eq('id', competitionId)
-        .single()
-      if (competitionError) throw competitionError
-      if (!competition?.team_id) throw new Error('チーム大会ではありません')
+      const competitions = await recordApi.getCompetitions()
+      const competition = competitions.find(c => c.id === competitionId)
+      if (!competition) throw new Error('大会が見つかりません')
+      if (!competition.team_id) throw new Error('チーム大会ではありません')
 
       // 2) 現在ユーザーのロール取得
       const { data: { user } } = await supabase.auth.getUser()
@@ -87,40 +81,21 @@ export default function TeamCompetitionEntryModal({
         .single()
       if (membershipError) throw membershipError
 
-      // 3) エントリー一覧取得（ユーザー・種目join）
-      const { data: entries, error: entriesError } = await supabase
-        .from('entries')
-        .select(`
-          id,
-          user_id,
-          style_id,
-          entry_time,
-          note,
-          created_at,
-          users!entries_user_id_fkey ( id, name ),
-          styles ( id, name_jp, distance )
-        `)
-        .eq('competition_id', competitionId)
-        .eq('team_id', competition.team_id)
-        .order('style_id', { ascending: true })
-        .order('entry_time', { ascending: true, nullsFirst: false })
-      if (entriesError) throw entriesError
+      // 3) エントリー一覧取得（EntryAPIを使用）
+      const entries = await entryApi.getEntriesByCompetition(competitionId)
 
       // 4) 種目ごとにグルーピング
-      type EntryFromDB = {
-        id: string
-        user_id: string
-        style_id: number
-        entry_time: number | null
-        note: string | null
-        created_at: string
-        users: { id: string; name: string } | null
-        styles: { id: number; name_jp: string; distance: number } | null
-      }
-      const entriesByStyle = ((entries || []) as unknown as EntryFromDB[]).reduce((acc: Record<number, { style: EntryRow['styles']; entries: EntryRow[] }>, entry) => {
+      const entriesByStyle = entries.reduce((acc: Record<number, { style: EntryRow['styles']; entries: EntryRow[] }>, entry) => {
         const styleId = entry.style_id
-        const style = entry.styles ?? null
-        const user = entry.users ?? null
+        const style = entry.style ? {
+          id: entry.style.id,
+          name_jp: entry.style.name_jp,
+          distance: entry.style.distance
+        } : null
+        const user = entry.user ? {
+          id: entry.user.id,
+          name: entry.user.name || '不明なユーザー'
+        } : null
         if (!acc[styleId]) acc[styleId] = { style: style, entries: [] }
         acc[styleId].entries.push({
           id: entry.id,
@@ -136,10 +111,16 @@ export default function TeamCompetitionEntryModal({
       }, {} as Record<number, { style: EntryRow['styles']; entries: EntryRow[] }>)
 
       setData({
-        competition,
+        competition: {
+          team_id: competition.team_id || '',
+          title: competition.title || competitionTitle,
+          date: competition.date,
+          place: competition.place,
+          entry_status: competition.entry_status || 'before'
+        },
         isAdmin: membership?.role === 'admin',
         entriesByStyle,
-        totalEntries: (entries || []).length
+        totalEntries: entries.length
       })
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err))
@@ -148,7 +129,13 @@ export default function TeamCompetitionEntryModal({
     } finally {
       setLoading(false)
     }
+  }, [competitionId, competitionTitle, entryApi, recordApi, supabase])
+
+  useEffect(() => {
+    if (isOpen) {
+      loadEntries()
   }
+  }, [isOpen, competitionId, loadEntries])
 
   const handleStatusChange = async (newStatus: 'before' | 'open' | 'closed') => {
     // 現在のステータスと同じ場合は何もしない
@@ -158,14 +145,11 @@ export default function TeamCompetitionEntryModal({
 
     try {
       setUpdatingStatus(true)
-      // 管理者チェックと更新
-      const { data: competition, error: competitionError } = await supabase
-        .from('competitions')
-        .select('team_id')
-        .eq('id', competitionId)
-        .single()
-      if (competitionError) throw competitionError
-      if (!competition?.team_id) throw new Error('チーム大会ではありません')
+      // 管理者チェックと更新（RecordAPIを使用）
+      const competitions = await recordApi.getCompetitions()
+      const competition = competitions.find(c => c.id === competitionId)
+      if (!competition) throw new Error('大会が見つかりません')
+      if (!competition.team_id) throw new Error('チーム大会ではありません')
 
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('認証が必要です')
@@ -179,14 +163,12 @@ export default function TeamCompetitionEntryModal({
       if (membershipError) throw membershipError
       if (membership?.role !== 'admin') throw new Error('管理者権限が必要です')
 
-      const { error: updateError } = await supabase
-        .from('competitions')
-        .update({ entry_status: newStatus })
-        .eq('id', competitionId)
-      if (updateError) throw updateError
+      await recordApi.updateCompetition(competitionId, { entry_status: newStatus })
       await loadEntries() // 再読み込み
     } catch (err) {
       console.error('ステータス変更に失敗:', err)
+      const error = err instanceof Error ? err : new Error(String(err))
+      setError(error.message || 'ステータス変更に失敗しました')
     } finally {
       setUpdatingStatus(false)
     }
@@ -211,11 +193,11 @@ export default function TeamCompetitionEntryModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[60] overflow-y-auto" data-testid="team-competition-entry-modal">
+    <div className="fixed inset-0 z-60 overflow-y-auto" data-testid="team-competition-entry-modal">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 bg-black/40 transition-opacity z-[10]" onClick={onClose}></div>
+        <div className="fixed inset-0 bg-black/40 transition-opacity z-10" onClick={onClose}></div>
 
-        <div className="relative z-[20] inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full" data-testid="team-competition-entry-dialog">
+        <div className="relative z-20 inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full" data-testid="team-competition-entry-dialog">
           {/* ヘッダー */}
           <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div className="flex items-center justify-between mb-4">

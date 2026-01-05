@@ -1,4 +1,4 @@
-import React, { useState, useEffect} from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, Modal } from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -34,6 +34,7 @@ export const EntryLogFormScreen: React.FC = () => {
   const { competitionId, entryId, date } = route.params
   const { supabase } = useAuth()
   const queryClient = useQueryClient()
+  const entryApi = useMemo(() => new EntryAPI(supabase), [supabase])
 
   // フォーム状態
   const [entries, setEntries] = useState<EntryData[]>([
@@ -87,54 +88,48 @@ export const EntryLogFormScreen: React.FC = () => {
         if (!user) throw new Error('認証が必要です')
 
         // まず、指定されたエントリーを取得してcompetitionIdを取得
-        const { data: firstEntry, error: firstEntryError } = await supabase
-          .from('entries')
-          .select('competition_id')
-          .eq('id', entryId)
-          .single()
-
+        let competitionIdFromEntry: string
+        try {
+          const firstEntry = await entryApi.getEntry(entryId)
+          if (!firstEntry || !firstEntry.competition_id) {
+            Alert.alert('エラー', 'エントリーデータが見つかりませんでした')
+            navigation.goBack()
+            return
+          }
+          competitionIdFromEntry = firstEntry.competition_id
+        } catch (error: unknown) {
         if (!isMounted) return
-
-        if (firstEntryError) {
-          console.error('エントリー取得エラー詳細:', firstEntryError)
+          console.error('エントリー取得エラー詳細:', error)
           console.error('エントリー取得エラー - entryId:', entryId)
-          if (firstEntryError.code === 'PGRST116') {
+          const errorMessage = error instanceof Error ? error.message : String(error)
+          const errorCode = error && typeof error === 'object' && 'code' in error ? String(error.code) : undefined
+          if (errorMessage === 'アクセスが拒否されました' || errorCode === 'PGRST116') {
             // エントリーが見つからない場合
             Alert.alert('エラー', 'エントリーが見つかりませんでした')
             navigation.goBack()
             return
           }
-          throw firstEntryError
+          throw error
         }
-
-        if (!firstEntry || !firstEntry.competition_id) {
-          Alert.alert('エラー', 'エントリーデータが見つかりませんでした')
-          navigation.goBack()
-          return
-        }
-
-        // この大会のすべてのエントリーを取得
-        const { data: allEntries, error: allEntriesError } = await supabase
-          .from('entries')
-          .select('*')
-          .eq('competition_id', firstEntry.competition_id)
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: true })
 
         if (!isMounted) return
 
-        if (allEntriesError) {
-          throw allEntriesError
-        }
+        // この大会のすべてのエントリーを取得（EntryAPIを使用）
+        const allEntries = await entryApi.getEntriesByCompetition(competitionIdFromEntry)
+        
+        // 現在のユーザーのエントリーのみをフィルタリング
+        const userEntries = allEntries.filter(entry => entry.user_id === user.id)
 
-        if (!allEntries || allEntries.length === 0) {
+        if (!isMounted) return
+
+        if (!userEntries || userEntries.length === 0) {
           Alert.alert('エラー', 'エントリーデータが見つかりませんでした')
           navigation.goBack()
           return
         }
 
         // すべてのエントリーをフォームに設定
-        const entriesData = allEntries.map((entry) => ({
+        const entriesData = userEntries.map((entry) => ({
           id: entry.id,
           styleId: String(entry.style_id),
           entryTime: entry.entry_time || 0,
@@ -159,7 +154,7 @@ export const EntryLogFormScreen: React.FC = () => {
     return () => {
       isMounted = false
     }
-  }, [entryId, swimStyles.length, loadingStyles, supabase, navigation])
+  }, [entryId, swimStyles.length, loadingStyles, supabase, navigation, entryApi])
 
   // 新規作成モードの場合、最初のエントリーにデフォルトの種目を設定
   useEffect(() => {
@@ -348,15 +343,14 @@ export const EntryLogFormScreen: React.FC = () => {
     const existingEntriesMap = new Map<string, { id: string; style_id: number }>()
     const existingEntriesByIdMap = new Map<string, { id: string; style_id: number }>()
     if (entryId) {
-      // 編集モードの場合、この大会のすべての既存エントリーを取得
-      const { data: allExistingEntries } = await supabaseClient
-        .from('entries')
-        .select('id, style_id')
-        .eq('competition_id', competitionIdParam)
-        .eq('user_id', user.id)
+      // 編集モードの場合、この大会のすべての既存エントリーを取得（EntryAPIを使用）
+      const allExistingEntries = await entryAPIInstance.getEntriesByCompetition(competitionIdParam)
+      
+      // 現在のユーザーのエントリーのみをフィルタリング
+      const userExistingEntries = allExistingEntries.filter(entry => entry.user_id === user.id)
 
-      if (allExistingEntries) {
-        allExistingEntries.forEach((entry) => {
+      if (userExistingEntries) {
+        userExistingEntries.forEach((entry) => {
           existingEntriesMap.set(String(entry.style_id), { id: entry.id, style_id: entry.style_id })
           existingEntriesByIdMap.set(entry.id, { id: entry.id, style_id: entry.style_id })
         })

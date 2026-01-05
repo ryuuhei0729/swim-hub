@@ -50,7 +50,8 @@ export class DashboardAPI {
         // user_idがない場合はViewのauth.uid()フィルタリングを信頼
         return true
       })
-      .map(item => ({
+      .map(item => {
+        const calendarItem = {
         id: item.id,
         type: item.item_type as CalendarItemType,
         date: item.item_date,
@@ -63,7 +64,9 @@ export class DashboardAPI {
           date: item.item_date,
           ...(item.metadata || {})
         }
-      })) || []
+        }
+        return calendarItem
+      }) || []
 
     return result
   }

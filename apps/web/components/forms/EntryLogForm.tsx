@@ -143,14 +143,14 @@ export default function EntryLogForm({
       initialEntriesData = (() => {
         // editDataにentries配列が含まれる場合は優先
         if (typeof editData === 'object' && editData !== null && 'entries' in editData) {
-          const entriesProp = (editData as any).entries as Array<{
+          const entriesProp = (editData as EditEntryData & { entries: Array<{
             id?: string
             styleId?: string | number
             style_id?: string | number
             entryTime?: number | null
             entry_time?: number | null
             note?: string | null
-          }>
+          }> }).entries
           if (Array.isArray(entriesProp) && entriesProp.length > 0) {
             return entriesProp.map((entry, idx) => ({
               id: entry.id || `entry-${idx + 1}`,
@@ -288,7 +288,7 @@ export default function EntryLogForm({
   }
 
   return (
-    <div className="fixed inset-0 z-[70] overflow-y-auto" data-testid="entry-form-modal">
+    <div className="fixed inset-0 z-70 overflow-y-auto" data-testid="entry-form-modal">
       <div className="flex min-h-screen items-center justify-center p-4">
         <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose}></div>
 
@@ -367,7 +367,7 @@ export default function EntryLogForm({
                       <select
                         value={entry.styleId}
                         onChange={(e) => updateEntry(entry.id, { styleId: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                         disabled={isLoading}
                         data-testid={`entry-style-${index + 1}`}
