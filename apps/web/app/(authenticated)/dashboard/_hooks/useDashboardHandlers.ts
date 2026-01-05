@@ -348,6 +348,13 @@ export function useDashboardHandlers({
     
     setLoading(true)
     try {
+      // UUID形式のIDかどうかをチェックする関数
+      const isValidUUID = (id: string): boolean => {
+        // UUID形式の正規表現: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        return uuidRegex.test(id)
+      }
+
       // ストアから直接最新の値を取得（useCallbackのクロージャー問題を回避）
       const { createdCompetitionId: storeCompetitionId, editingData: storeEditingData } = useCompetitionFormStore.getState()
       const competitionId = getCompetitionId(storeCompetitionId, storeEditingData) || getCompetitionId(createdCompetitionId, competitionEditingData)
@@ -358,6 +365,23 @@ export function useDashboardHandlers({
 
       const entryAPI = new EntryAPI(supabase)
       const createdEntriesList: EntryWithStyle[] = []
+
+      // competitionのteam_idを取得（チームのcompetitionかどうかを判定）
+      const { data: competitionData, error: competitionError } = await supabase
+        .from('competitions')
+        .select('team_id')
+        .eq('id', competitionId)
+        .single()
+      
+      if (competitionError) {
+        throw competitionError
+      }
+      
+      type CompetitionWithTeamId = {
+        team_id: string | null
+      }
+      const competition = competitionData as CompetitionWithTeamId | null
+      const isTeamCompetition = competition?.team_id !== null && competition?.team_id !== undefined
 
       // 編集モードの場合、既存のエントリーをすべて取得
       const existingEntriesMap = new Map<string, { id: string; style_id: number }>()
@@ -383,8 +407,9 @@ export function useDashboardHandlers({
       // フォームに入力されているエントリーを保存/更新
       for (const entryData of entriesData) {
         let entry
-        if (entryData.id && competitionEditingData?.type === 'entry') {
+        if (entryData.id && competitionEditingData?.type === 'entry' && isValidUUID(entryData.id)) {
           // 既存のエントリーIDがある場合（編集モードで既存エントリーを編集している場合）
+          // UUID形式であることを確認（一時的なID 'entry-...' を除外）
           // 種目を変更する場合、重複チェック
           const originalEntry = existingEntriesByIdMap.get(entryData.id)
           const styleIdNum = parseInt(entryData.styleId)
@@ -419,12 +444,26 @@ export function useDashboardHandlers({
             })
             processedEntryIds.add(existingEntry.id)
           } else {
+            // チームのcompetitionの場合はcreateTeamEntryを使用
+            if (isTeamCompetition && competition?.team_id) {
+              entry = await entryAPI.createTeamEntry(
+                competition.team_id,
+                user.id,
+                {
+                  competition_id: competitionId,
+                  style_id: parseInt(entryData.styleId),
+                  entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
+                  note: entryData.note || null
+                }
+              )
+          } else {
             entry = await entryAPI.createPersonalEntry({
               competition_id: competitionId,
               style_id: parseInt(entryData.styleId),
               entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
               note: entryData.note || null
             })
+            }
           }
         }
         

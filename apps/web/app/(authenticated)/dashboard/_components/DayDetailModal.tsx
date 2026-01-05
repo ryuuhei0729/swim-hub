@@ -13,6 +13,7 @@ import { BestTimeBadge } from '@/components/ui'
 import type {
   Record,
   Practice,
+  PracticeLog,
   PracticeLogWithTimes,
   PracticeTime,
   PracticeTag,
@@ -20,7 +21,7 @@ import type {
   SplitTime,
   PoolType
 } from '@apps/shared/types/database'
-import { AttendanceAPI } from '@swim-hub/shared'
+import { AttendanceAPI, EntryAPI } from '@swim-hub/shared'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -185,7 +186,7 @@ export default function DayDetailModal({
                       })
                       .map(p => {
                         // metadata.practice_log.updated_atを取得
-                        const practiceLog = (p.metadata as any)?.practice_log
+                        const practiceLog = (p.metadata as { practice_log?: PracticeLog })?.practice_log
                         const updatedAt = practiceLog?.updated_at || p.id
                         return `${p.id}:${updatedAt}`
                       })
@@ -495,7 +496,7 @@ export default function DayDetailModal({
 
       {/* 削除確認モーダル */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-[60] overflow-y-auto">
+        <div className="fixed inset-0 z-60 overflow-y-auto">
           <div className="flex min-h-screen items-center justify-center p-4">
             <div className="fixed inset-0 bg-black/40 transition-opacity"></div>
             
@@ -622,7 +623,7 @@ function AttendanceModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[60] overflow-y-auto">
+    <div className="fixed inset-0 z-60 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
         <div 
           className="fixed inset-0 bg-black/40 transition-opacity" 
@@ -1715,6 +1716,7 @@ function CompetitionWithEntry({
 }) {
   const router = useRouter()
   const { supabase } = useAuth()
+  const entryApi = useMemo(() => new EntryAPI(supabase), [supabase])
   const [entries, setEntries] = useState<CompetitionEntryDisplay[]>(() => {
     if (styleId && styleName) {
       return [
@@ -1743,37 +1745,21 @@ function CompetitionWithEntry({
           return
         }
 
-        const { data: entryData, error } = await supabase
-          .from('entries')
-          .select(`
-            id,
-            style_id,
-            entry_time,
-            note,
-            style:styles!inner(id, name_jp)
-          `)
-          .eq('competition_id', competitionId)
-          .eq('user_id', user.id)
+        // EntryAPIを使用してエントリーを取得
+        const allEntries = await entryApi.getEntriesByCompetition(competitionId)
+        
+        // 現在のユーザーのエントリーのみをフィルタリング
+        const userEntries = allEntries.filter(entry => entry.user_id === user.id)
 
-        if (error) throw error
-
-        if (entryData && entryData.length > 0) {
-          type EntryRow = {
-            id: string
-            style_id: number
-            entry_time: number | null
-            note: string | null
-            style: { id: number; name_jp: string } | { id: number; name_jp: string }[]
-          }
-
-          const mapped = (entryData as EntryRow[]).map((row) => {
-            const style = Array.isArray(row.style) ? row.style[0] : row.style
+        if (userEntries && userEntries.length > 0) {
+          const mapped = userEntries.map((entry) => {
+            const style = entry.style
             return {
-              id: row.id,
-              styleId: row.style_id,
+              id: entry.id,
+              styleId: entry.style_id,
               styleName: style?.name_jp || '',
-              entryTime: row.entry_time,
-              note: row.note
+              entryTime: entry.entry_time,
+              note: entry.note
             } as CompetitionEntryDisplay
           })
           setEntries(mapped)
@@ -1797,7 +1783,7 @@ function CompetitionWithEntry({
 
     fetchEntryData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [competitionId, supabase, deletedEntryIds?.length])
+  }, [competitionId, entryApi, deletedEntryIds?.length])
 
   const entryInfoList: EntryInfo[] = entries.map((entry) => ({
     styleId: entry.styleId,

@@ -388,6 +388,36 @@ export function isTeamInfo(team: unknown): team is TeamInfo {
   return !!team && typeof (team as any).id === 'string' && typeof (team as any).name === 'string'
 }
 
+// =============================================================================
+// 5. ベストタイム関連
+// =============================================================================
+
+export interface BestTime {
+  id: string
+  time: number
+  created_at: string
+  pool_type: number // 0: 短水路, 1: 長水路
+  is_relaying: boolean
+  style: {
+    name_jp: string
+    distance: number
+  }
+  competition?: {
+    title: string
+    date: string
+  }
+  // 引き継ぎありのタイム（オプショナル）
+  relayingTime?: {
+    id: string
+    time: number
+    created_at: string
+    competition?: {
+      title: string
+      date: string
+    }
+  }
+}
+
 export const DEFAULT_VALUES = {
   POOL_TYPE: 0 as const, // 短水路
   GENDER: 0 as const, // 男性

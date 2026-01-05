@@ -15,6 +15,7 @@ import {
   SplitTime,
   SplitTimeInsert
 } from '../types/database'
+import type { BestTime } from '../types/ui'
 
 export class RecordAPI {
   constructor(private supabase: SupabaseClient) {}
@@ -204,6 +205,205 @@ export class RecordAPI {
     }
 
     return results
+  }
+
+  /**
+   * ベストタイム取得
+   * 種目・プール種別ごとの最速タイムを計算
+   * @param userId ユーザーID（オプション、指定しない場合は現在のユーザー）
+   */
+  async getBestTimes(userId?: string): Promise<BestTime[]> {
+    let targetUserId = userId
+    if (!targetUserId) {
+      const { data: { user } } = await this.supabase.auth.getUser()
+      if (!user) throw new Error('認証が必要です')
+      targetUserId = user.id
+    }
+
+    // recordsテーブルから記録を取得
+    const { data, error } = await this.supabase
+      .from('records')
+      .select(`
+        id,
+        time,
+        created_at,
+        pool_type,
+        is_relaying,
+        styles!records_style_id_fkey (
+          name_jp,
+          distance
+        ),
+        competitions!records_competition_id_fkey (
+          title,
+          date
+        )
+      `)
+      .eq('user_id', targetUserId)
+      .order('time', { ascending: true })
+
+    if (error) {
+      console.error('ベストタイム取得エラー:', error)
+      throw error
+    }
+
+    if (!data || !Array.isArray(data)) {
+      return []
+    }
+
+    // レスポンスの型変換（Supabaseの配列/単一オブジェクトの不整合に対応）
+    interface RecordWithRelations {
+      id: string
+      time: number
+      created_at: string
+      pool_type: number
+      is_relaying: boolean
+      styles?: { name_jp: string; distance: number } | null
+      competitions?: { title: string; date: string } | null
+    }
+
+    type RecordWithRelationsResponse = Omit<RecordWithRelations, 'styles' | 'competitions'> & {
+      styles?: RecordWithRelations['styles'] | RecordWithRelations['styles'][]
+      competitions?: RecordWithRelations['competitions'] | RecordWithRelations['competitions'][]
+    }
+
+    const records: RecordWithRelations[] = (data as RecordWithRelationsResponse[]).map((record) => {
+      const styleData = Array.isArray(record.styles) ? record.styles[0] : record.styles
+      const competitionData = Array.isArray(record.competitions)
+        ? record.competitions[0]
+        : record.competitions
+
+      return {
+        id: record.id,
+        time: record.time,
+        created_at: record.created_at,
+        pool_type: record.pool_type,
+        is_relaying: record.is_relaying,
+        styles: styleData
+          ? { name_jp: styleData.name_jp, distance: styleData.distance }
+          : null,
+        competitions: competitionData
+          ? { title: competitionData.title, date: competitionData.date }
+          : null,
+      }
+    })
+
+    // 引き継ぎなしのベストタイム（種目、プール種別ごと）
+    const bestTimesByStyleAndPool = new Map<string, BestTime>()
+    // 引き継ぎありのベストタイム（種目、プール種別ごと）
+    const relayingBestTimesByStyleAndPool = new Map<
+      string,
+      {
+        id: string
+        time: number
+        created_at: string
+        competition?: {
+          title: string
+          date: string
+        }
+      }
+    >()
+
+    records.forEach((record) => {
+      const styleKey = record.styles?.name_jp || 'Unknown'
+      const poolType = record.pool_type ?? 0
+      const key = `${styleKey}_${poolType}`
+
+      if (record.is_relaying) {
+        // 引き継ぎありのタイム
+        if (
+          !relayingBestTimesByStyleAndPool.has(key) ||
+          record.time < relayingBestTimesByStyleAndPool.get(key)!.time
+        ) {
+          relayingBestTimesByStyleAndPool.set(key, {
+            id: record.id,
+            time: record.time,
+            created_at: record.created_at,
+            competition: record.competitions
+              ? {
+                  title: record.competitions.title,
+                  date: record.competitions.date,
+                }
+              : undefined,
+          })
+        }
+      } else {
+        // 引き継ぎなしのタイム
+        if (
+          !bestTimesByStyleAndPool.has(key) ||
+          record.time < bestTimesByStyleAndPool.get(key)!.time
+        ) {
+          bestTimesByStyleAndPool.set(key, {
+            id: record.id,
+            time: record.time,
+            created_at: record.created_at,
+            pool_type: poolType,
+            is_relaying: false,
+            style: {
+              name_jp: record.styles?.name_jp || 'Unknown',
+              distance: record.styles?.distance || 0,
+            },
+            competition: record.competitions
+              ? {
+                  title: record.competitions.title,
+                  date: record.competitions.date,
+                }
+              : undefined,
+          })
+        }
+      }
+    })
+
+    // 引き継ぎなしのタイムに、引き継ぎありのタイムを紐付ける
+    const result: BestTime[] = []
+    bestTimesByStyleAndPool.forEach((bestTime, key) => {
+      const relayingTime = relayingBestTimesByStyleAndPool.get(key)
+      result.push({
+        ...bestTime,
+        relayingTime: relayingTime,
+      })
+    })
+
+    // 引き継ぎなしがなく、引き継ぎありのみの場合も追加
+    relayingBestTimesByStyleAndPool.forEach((relayingTime, key) => {
+      if (!bestTimesByStyleAndPool.has(key)) {
+        // キーから種目名とプール種別を取得
+        const lastUnderscoreIndex = key.lastIndexOf('_')
+        if (lastUnderscoreIndex === -1) {
+          return
+        }
+
+        const styleName = key.slice(0, lastUnderscoreIndex)
+        const poolTypeStr = key.slice(lastUnderscoreIndex + 1)
+        const poolType = Number.isInteger(parseInt(poolTypeStr, 10)) ? parseInt(poolTypeStr, 10) : NaN
+        if (Number.isNaN(poolType)) {
+          return
+        }
+
+        // 種目情報を取得（最初のレコードから）
+        const record = records.find(
+          (r) =>
+            (r.styles?.name_jp || 'Unknown') === styleName &&
+            (r.pool_type ?? 0) === poolType
+        )
+
+        if (record) {
+          result.push({
+            id: relayingTime.id,
+            time: relayingTime.time,
+            created_at: relayingTime.created_at,
+            pool_type: poolType,
+            is_relaying: true,
+            style: {
+              name_jp: record.styles?.name_jp || 'Unknown',
+              distance: record.styles?.distance || 0,
+            },
+            competition: relayingTime.competition,
+          })
+        }
+      }
+    })
+
+    return result
   }
 
   // =========================================================================

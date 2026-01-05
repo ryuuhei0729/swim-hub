@@ -65,14 +65,55 @@ export default function CalendarView({
   // 日付別のエントリーをマッピング
   const entriesByDate = useMemo(() => {
     const map = new Map<string, CalendarItem[]>()
+    // 同じcompetition.idのエントリーが重複しないように、entryタイプを優先
+    // 日付ごとにcompetition.idを追跡
+    const competitionIdsByDate = new Map<string, Set<string>>()
+    
+    // まず、entryタイプのアイテムを処理
     entries.forEach(item => {
       const dateKey = item.date
+      const competitionId = item.metadata?.competition?.id
+      
+      if (item.type === 'entry' && competitionId) {
+        if (!competitionIdsByDate.has(dateKey)) {
+          competitionIdsByDate.set(dateKey, new Set())
+        }
+        const competitionIds = competitionIdsByDate.get(dateKey)!
+        if (!competitionIds.has(competitionId)) {
+          competitionIds.add(competitionId)
       if (!map.has(dateKey)) {
         map.set(dateKey, [])
       }
       map.get(dateKey)!.push(item)
+        }
+      }
     })
     
+    // 次に、team_competitionタイプのアイテムを処理（同じcompetition.idのentryタイプが存在しない場合のみ）
+    entries.forEach(item => {
+      const dateKey = item.date
+      const competitionId = item.metadata?.competition?.id
+      
+      if (item.type === 'team_competition' && competitionId) {
+        const competitionIds = competitionIdsByDate.get(dateKey)
+        if (!competitionIds || !competitionIds.has(competitionId)) {
+          if (!competitionIdsByDate.has(dateKey)) {
+            competitionIdsByDate.set(dateKey, new Set())
+          }
+          competitionIdsByDate.get(dateKey)!.add(competitionId)
+          if (!map.has(dateKey)) {
+            map.set(dateKey, [])
+          }
+          map.get(dateKey)!.push(item)
+        }
+      } else if (item.type !== 'entry') {
+        // その他のタイプ（entryとteam_competition以外）はそのまま追加
+        if (!map.has(dateKey)) {
+          map.set(dateKey, [])
+        }
+        map.get(dateKey)!.push(item)
+      }
+    })
     
     return map
   }, [entries])

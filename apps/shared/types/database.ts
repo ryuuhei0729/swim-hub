@@ -783,6 +783,41 @@ export type Database = {
           left_at?: string | null
         }
       }
+      entries: {
+        Row: {
+          id: string
+          team_id: string | null
+          competition_id: string
+          user_id: string
+          style_id: number
+          entry_time: number | null
+          note: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          team_id?: string | null
+          competition_id: string
+          user_id: string
+          style_id: number
+          entry_time?: number | null
+          note?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          team_id?: string | null
+          competition_id?: string
+          user_id?: string
+          style_id?: number
+          entry_time?: number | null
+          note?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
   }
 }
