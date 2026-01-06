@@ -93,7 +93,7 @@ export class TeamBulkRegisterAPI {
     if (input.competitions.length > 0) {
       try {
         const competitionInserts: CompetitionInsert[] = input.competitions.map(competition => ({
-          user_id: null,
+          user_id: user.id,
           team_id: teamId,
           title: competition.title || null,
           date: competition.date,
