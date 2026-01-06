@@ -1078,13 +1078,6 @@ function PracticeDetails({
                       onClick={() => {
                         // 編集に必要な情報を保持したまま渡す
                         // styleの値をコード値に変換（ラベルの場合はコード値に変換）
-                        const SWIM_STYLES = [
-                          { value: 'Fr', label: '自由形' },
-                          { value: 'Ba', label: '背泳ぎ' },
-                          { value: 'Br', label: '平泳ぎ' },
-                          { value: 'Fly', label: 'バタフライ' },
-                          { value: 'IM', label: '個人メドレー' }
-                        ]
                         const styleValue = formattedLog.style
                         // ラベルの場合はコード値に変換
                         const styleCode = SWIM_STYLES.find(s => s.label === styleValue)?.value || 
