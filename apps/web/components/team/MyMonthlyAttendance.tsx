@@ -56,6 +56,14 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
   const [teamMembers, setTeamMembers] = useState<Array<{ id: string; name: string }>>([])
   const [loadingAttendance, setLoadingAttendance] = useState(false)
 
+  // 直近の出欠セクション用の状態
+  const [recentEvents, setRecentEvents] = useState<TeamEvent[]>([])
+  const [recentAttendances, setRecentAttendances] = useState<TeamAttendanceWithDetails[]>([])
+  const [recentEditStates, setRecentEditStates] = useState<Record<string, AttendanceEditState>>({})
+  const [loadingRecent, setLoadingRecent] = useState(false)
+  const [savingEventIds, setSavingEventIds] = useState<Set<string>>(new Set())
+  const [selectedRecentTab, setSelectedRecentTab] = useState<'current' | 'next'>('current')
+
   // 各月のステータスを計算
   const calculateMonthStatus = useCallback(async (year: number, month: number): Promise<{ eventCount: number; answeredCount: number; status: 'has_unanswered' | 'all_answered' | null }> => {
     const [startDateStr, endDateStr] = getMonthDateRange(year, month)
@@ -101,7 +109,8 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
     )
     
     // 全てのイベントに回答があるかチェック
-    const allAnswered = eventCount > 0 && eventIds.size === answeredEventIds.size && eventIds.size === eventCount
+    // eventIdsのすべてのIDがansweredEventIdsに含まれているかを確認
+    const allAnswered = eventCount > 0 && Array.from(eventIds).every(id => answeredEventIds.has(id))
     
     return {
       eventCount,
@@ -266,10 +275,292 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
     }
   }, [teamId, selectedMonth, supabase, attendanceAPI])
 
+  // 直近の出欠（今月と来月）を取得
+  const loadRecentAttendances = useCallback(async () => {
+    try {
+      setLoadingRecent(true)
+      setError(null)
+
+      const now = new Date()
+      const currentYear = now.getFullYear()
+      const currentMonth = now.getMonth() + 1
+      const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1
+      const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear
+
+      // 今月と来月の開始日と終了日を計算
+      const [currentStart] = getMonthDateRange(currentYear, currentMonth)
+      const [, nextEnd] = getMonthDateRange(nextYear, nextMonth)
+
+      // 練習と大会を取得（今月と来月）
+      const [practicesResult, competitionsResult] = await Promise.all([
+        supabase
+          .from('practices')
+          .select('*')
+          .eq('team_id', teamId)
+          .gte('date', currentStart)
+          .lte('date', nextEnd)
+          .order('date', { ascending: true }),
+        supabase
+          .from('competitions')
+          .select('*')
+          .eq('team_id', teamId)
+          .gte('date', currentStart)
+          .lte('date', nextEnd)
+          .order('date', { ascending: true })
+      ])
+
+      if (practicesResult.error) throw practicesResult.error
+      if (competitionsResult.error) throw competitionsResult.error
+
+      // イベントを統合
+      const practices: TeamEvent[] = (practicesResult.data || []).map((p) => ({
+        ...p,
+        type: 'practice' as const
+      }))
+      const competitions: TeamEvent[] = (competitionsResult.data || []).map((c) => ({
+        ...c,
+        type: 'competition' as const
+      }))
+      const allEvents = [...practices, ...competitions].sort(
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      )
+      setRecentEvents(allEvents)
+
+      // 出欠情報を取得（今月と来月）
+      const [currentAttendances, nextAttendances] = await Promise.all([
+        attendanceAPI.getMyAttendancesByMonth(teamId, currentYear, currentMonth),
+        attendanceAPI.getMyAttendancesByMonth(teamId, nextYear, nextMonth)
+      ])
+      const allAttendances = [...currentAttendances, ...nextAttendances]
+      setRecentAttendances(allAttendances)
+
+      // 編集状態を初期化
+      const initialEditStates: Record<string, AttendanceEditState> = {}
+      allAttendances.forEach((attendance) => {
+        const eventId = attendance.practice_id || attendance.competition_id
+        if (eventId) {
+          initialEditStates[eventId] = {
+            status: attendance.status,
+            note: attendance.note || ''
+          }
+        }
+      })
+      // イベントがあって出欠情報がない場合は未回答として初期化
+      allEvents.forEach((event) => {
+        if (!initialEditStates[event.id]) {
+          initialEditStates[event.id] = {
+            status: null,
+            note: ''
+          }
+        }
+      })
+      setRecentEditStates(initialEditStates)
+    } catch (err) {
+      console.error('直近の出欠情報の取得に失敗:', err)
+      setError('直近の出欠情報の取得に失敗しました')
+    } finally {
+      setLoadingRecent(false)
+    }
+  }, [teamId, supabase, attendanceAPI])
+
+  // 直近の出欠のステータス変更
+  const handleRecentStatusChange = (eventId: string, status: AttendanceStatus | null) => {
+    setRecentEditStates((prev) => ({
+      ...prev,
+      [eventId]: {
+        ...prev[eventId],
+        status
+      }
+    }))
+  }
+
+  // 直近の出欠の備考変更
+  const handleRecentNoteChange = (eventId: string, note: string) => {
+    setRecentEditStates((prev) => ({
+      ...prev,
+      [eventId]: {
+        ...prev[eventId],
+        note
+      }
+    }))
+  }
+
+  // 直近の出欠の個別保存
+  const handleSaveRecentEvent = async (eventId: string) => {
+    const event = recentEvents.find((e) => e.id === eventId)
+    if (!event) return
+
+    const editState = recentEditStates[eventId]
+    if (!editState) return
+
+    // 既存の出欠情報を取得
+    const existingAttendance = recentAttendances.find(
+      (a) => (a.practice_id || a.competition_id) === eventId
+    )
+
+    // 変更がない場合はスキップ
+    if (existingAttendance) {
+      if (
+        existingAttendance.status === editState.status &&
+        (existingAttendance.note || '') === editState.note
+      ) {
+        return
+      }
+    } else if (editState.status === null && editState.note === '') {
+      // 新規で未回答の場合はスキップ
+      return
+    }
+
+    // 提出締め切り後の編集がある場合、確認を求める
+    if (event.attendance_status === 'closed') {
+      const date = new Date(event.date)
+      const dateStr = `${date.getMonth() + 1}/${date.getDate()}`
+      const confirmed = window.confirm(
+        `提出締め切り後の編集になります（${dateStr}）。備考に編集日時が自動的に追加されます。保存しますか？`
+      )
+      if (!confirmed) {
+        return
+      }
+    }
+
+    try {
+      setSavingEventIds((prev) => new Set(prev).add(eventId))
+      setError(null)
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('認証が必要です')
+
+      let note = editState.note || null
+
+      // 提出締め切り後の編集の場合、備考に編集日時を追加
+      if (event.attendance_status === 'closed') {
+        const now = new Date()
+        const editTimestamp = format(now, 'MM/dd HH:mm')
+        const editNote = `(${editTimestamp}締切後編集)`
+        note = note ? `${note} ${editNote}` : editNote
+      }
+
+      if (existingAttendance) {
+        // 更新
+        const { error: updateError } = await supabase
+          .from('team_attendance')
+          .update({
+            status: editState.status,
+            note
+          })
+          .eq('id', existingAttendance.id)
+
+        if (updateError) throw updateError
+      } else {
+        // 新規作成
+        const { error: insertError } = await supabase
+          .from('team_attendance')
+          .insert({
+            user_id: user.id,
+            practice_id: event.type === 'practice' ? event.id : null,
+            competition_id: event.type === 'competition' ? event.id : null,
+            status: editState.status,
+            note
+          })
+
+        if (insertError) throw insertError
+      }
+
+      // ローカル状態を更新（再取得せずに直接更新）
+      if (existingAttendance) {
+        // 既存の出欠情報を更新
+        setRecentAttendances((prev) =>
+          prev.map((a) =>
+            a.id === existingAttendance.id
+              ? { ...a, status: editState.status, note }
+              : a
+          )
+        )
+      } else {
+        // 新規作成の場合は、作成したデータを取得してローカル状態に追加
+        const { data: insertedData, error: selectError } = await supabase
+          .from('team_attendance')
+          .select(`
+            *,
+            user:users(*),
+            practice:practices(*),
+            competition:competitions(*)
+          `)
+          .eq('user_id', user.id)
+          .eq(event.type === 'practice' ? 'practice_id' : 'competition_id', eventId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
+
+        if (selectError) {
+          // 取得に失敗した場合は再取得
+          await loadRecentAttendances()
+        } else if (insertedData) {
+          // 取得できた場合はローカル状態に追加
+          setRecentAttendances((prev) => [...prev, insertedData as TeamAttendanceWithDetails])
+        }
+      }
+
+      // 編集状態を保存済み状態に更新
+      setRecentEditStates((prev) => ({
+        ...prev,
+        [eventId]: {
+          status: editState.status,
+          note: editState.note
+        }
+      }))
+
+      // 月リストのステータスを更新（再取得せずに計算で更新）
+      const now = new Date()
+      const eventDate = new Date(event.date)
+      const eventYear = eventDate.getFullYear()
+      const eventMonth = eventDate.getMonth() + 1
+      const currentYear = now.getFullYear()
+      const currentMonth = now.getMonth() + 1
+
+      // 該当する月のステータスを再計算
+      if ((eventYear === currentYear && eventMonth === currentMonth) ||
+          (eventYear === currentYear && eventMonth === currentMonth + 1) ||
+          (eventYear === currentYear + 1 && eventMonth === 1 && currentMonth === 12)) {
+        // 該当月のステータスを再計算
+        const calculateStatus = async () => {
+          try {
+            const status = await calculateMonthStatus(eventYear, eventMonth)
+            setMonthList((prev) =>
+              prev.map((item) =>
+                item.year === eventYear && item.month === eventMonth
+                  ? {
+                      ...item,
+                      status: status.status,
+                      answeredCount: status.answeredCount,
+                      eventCount: status.eventCount
+                    }
+                  : item
+              )
+            )
+          } catch (err) {
+            console.error('月ステータスの更新に失敗:', err)
+          }
+        }
+        calculateStatus()
+      }
+    } catch (err) {
+      console.error('出欠情報の保存に失敗:', err)
+      setError('出欠情報の保存に失敗しました')
+    } finally {
+      setSavingEventIds((prev) => {
+        const next = new Set(prev)
+        next.delete(eventId)
+        return next
+      })
+    }
+  }
+
   // 月リストを初期読み込み
   useEffect(() => {
     loadMonthList()
-  }, [loadMonthList])
+    loadRecentAttendances()
+  }, [loadMonthList, loadRecentAttendances])
 
   // モーダルが開かれたときに詳細データを読み込む
   useEffect(() => {
@@ -542,7 +833,7 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
     if (status === null) return null
     
     return (
-      <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
         status === 'has_unanswered'
           ? 'bg-yellow-100 text-yellow-800'
           : 'bg-green-100 text-green-800'
@@ -586,21 +877,21 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
   }
 
   return (
-    <div className="p-4 space-y-3">
-      {/* 月リスト表示 */}
+    <div className="p-4">
+      {/* 月リスト表示（カード形式のグリッドレイアウト） */}
       {monthList.length === 0 ? (
         <div className="bg-gray-50 rounded-lg p-6 text-center">
           <p className="text-sm text-gray-600">表示できる月がありません</p>
         </div>
       ) : (
-        <div className="space-y-1.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {monthList.map((monthItem) => (
             <button
               key={`${monthItem.year}-${monthItem.month}`}
               onClick={() => handleMonthClick(monthItem.year, monthItem.month)}
-              className="w-full flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-left"
+              className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 hover:shadow-md transition-all text-left"
             >
-              <span className="text-base font-medium text-gray-900">
+              <span className="text-sm font-medium text-gray-900">
                 {getMonthLabel(monthItem.year, monthItem.month)}
               </span>
               <StatusBadge status={monthItem.status} />
@@ -608,6 +899,174 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
           ))}
         </div>
       )}
+
+      {/* 直近の出欠セクション */}
+      <div className="mt-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">直近の出欠</h2>
+        
+        {/* タブ */}
+        <div className="flex border-b border-gray-200 mb-4">
+          <button
+            onClick={() => setSelectedRecentTab('current')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              selectedRecentTab === 'current'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            今月
+          </button>
+          <button
+            onClick={() => setSelectedRecentTab('next')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              selectedRecentTab === 'next'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            来月
+          </button>
+        </div>
+
+        {loadingRecent ? (
+          <div className="text-center py-6">
+            <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
+            <p className="mt-1.5 text-sm text-gray-500">読み込み中...</p>
+          </div>
+        ) : (() => {
+          // 選択されたタブに応じてイベントをフィルタリング
+          const now = new Date()
+          const currentYear = now.getFullYear()
+          const currentMonth = now.getMonth() + 1
+          const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1
+          const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear
+
+          const filteredEvents = recentEvents.filter((event) => {
+            const eventDate = new Date(event.date)
+            const eventYear = eventDate.getFullYear()
+            const eventMonth = eventDate.getMonth() + 1
+
+            if (selectedRecentTab === 'current') {
+              return eventYear === currentYear && eventMonth === currentMonth
+            } else {
+              return eventYear === nextYear && eventMonth === nextMonth
+            }
+          })
+
+          if (filteredEvents.length === 0) {
+            return (
+              <div className="bg-gray-50 rounded-lg p-6 text-center">
+                <p className="text-sm text-gray-600">
+                  {selectedRecentTab === 'current' ? '今月' : '来月'}のイベントがありません
+                </p>
+              </div>
+            )
+          }
+
+          return (
+            <div className="bg-white rounded-lg shadow divide-y divide-gray-200">
+              {filteredEvents.map((event) => {
+              const editState = recentEditStates[event.id] || { status: null, note: '' }
+              const isSaving = savingEventIds.has(event.id)
+              const existingAttendance = recentAttendances.find(
+                (a) => (a.practice_id || a.competition_id) === event.id
+              )
+              const hasChanges = existingAttendance
+                ? existingAttendance.status !== editState.status ||
+                  (existingAttendance.note || '') !== editState.note
+                : editState.status !== null || editState.note !== ''
+
+              return (
+                <div
+                  key={`${event.type}-${event.id}`}
+                  className={`p-4 hover:bg-gray-50 ${
+                    event.type === 'competition'
+                      ? 'bg-purple-50'
+                      : 'bg-white'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    {/* 左側：日付、タイトル、場所 */}
+                    <div className="flex-1 flex items-center gap-2">
+                      <span className="text-sm font-bold text-gray-900 whitespace-nowrap">
+                        {new Date(event.date).toLocaleDateString('ja-JP', {
+                          month: 'long',
+                          day: 'numeric',
+                          weekday: 'short'
+                        })}
+                      </span>
+                      <h3 className="text-xs font-medium text-gray-900">
+                        {event.type === 'competition' ? event.title : '練習'}
+                      </h3>
+                      {event.place && (
+                        <span className="text-xs text-gray-600">@{event.place}</span>
+                      )}
+                    </div>
+
+                    {/* 右側：ステータスバッジ、出欠選択と備考、保存ボタン */}
+                    <div className="flex flex-col items-end gap-1.5 shrink-0">
+                      {/* ステータスバッジ */}
+                      <div>
+                        {getStatusBadge(event.attendance_status)}
+                      </div>
+                      {/* 出欠選択と備考 */}
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleRecentStatusChange(event.id, 'present')}
+                          className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                            editState.status === 'present'
+                              ? 'bg-green-100 text-green-800 border-2 border-green-500'
+                              : 'bg-gray-100 text-gray-600 hover:bg-green-50 border-2 border-transparent'
+                          }`}
+                        >
+                          出席
+                        </button>
+                        <button
+                          onClick={() => handleRecentStatusChange(event.id, 'absent')}
+                          className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                            editState.status === 'absent'
+                              ? 'bg-red-100 text-red-800 border-2 border-red-500'
+                              : 'bg-gray-100 text-gray-600 hover:bg-red-50 border-2 border-transparent'
+                          }`}
+                        >
+                          欠席
+                        </button>
+                        <button
+                          onClick={() => handleRecentStatusChange(event.id, 'other')}
+                          className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                            editState.status === 'other'
+                              ? 'bg-yellow-100 text-yellow-800 border-2 border-yellow-500'
+                              : 'bg-gray-100 text-gray-600 hover:bg-yellow-50 border-2 border-transparent'
+                          }`}
+                        >
+                          その他
+                        </button>
+                        <input
+                          type="text"
+                          value={editState.note}
+                          onChange={(e) => handleRecentNoteChange(event.id, e.target.value)}
+                          placeholder="備考を入力（任意）"
+                          className="w-60 px-2 py-1 border border-gray-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                        <button
+                          onClick={() => handleSaveRecentEvent(event.id)}
+                          disabled={isSaving || !hasChanges}
+                          className={`px-3 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700 transition-colors ${
+                            isSaving || !hasChanges ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
+                        >
+                          {isSaving ? '保存中...' : '保存'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          )
+        })()}
+      </div>
 
       {/* 月詳細モーダル */}
       <BaseModal

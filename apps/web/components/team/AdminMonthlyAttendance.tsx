@@ -598,7 +598,7 @@ export default function AdminMonthlyAttendance({ teamId }: AdminMonthlyAttendanc
                     selectedEventIds.size === 0 ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                 >
-                  集計前にする
+                  受付中にする
                 </button>
                   <button
                   onClick={() => handleBulkUpdate('closed')}
@@ -607,7 +607,7 @@ export default function AdminMonthlyAttendance({ teamId }: AdminMonthlyAttendanc
                     selectedEventIds.size === 0 ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                   >
-                  締切後にする
+                  締切にする
                   </button>
                 </div>
               </>
