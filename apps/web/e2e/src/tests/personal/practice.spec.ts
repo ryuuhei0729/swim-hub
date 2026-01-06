@@ -131,6 +131,9 @@ test.describe('個人練習記録のテスト', () => {
     // ステップ13: 種目を選択
     await page.selectOption('[data-testid="practice-style"]', 'Fr')
     
+    // ステップ13-1: 泳法カテゴリを選択（オプション）
+    await page.selectOption('[data-testid="practice-swim-category"]', 'Swim')
+    
     // 本数とセット数の値が正しく設定されていることを確認（値が反映されるのを待つ）
     const repCountInput = page.locator('[data-testid="practice-rep-count"]')
     const setCountInput = page.locator('[data-testid="practice-set-count"]')
@@ -314,6 +317,9 @@ test.describe('個人練習記録のテスト', () => {
     
     // ステップ9: 種目を変更（フリー → バタフライ）
     await page.selectOption('[data-testid="practice-style"]', 'Fly')
+    
+    // ステップ9-1: 泳法カテゴリを変更（Swim → Pull）
+    await page.selectOption('[data-testid="practice-swim-category"]', 'Pull')
     
     // ステップ10: 「練習記録を更新」ボタンをクリック
     await page.click('[data-testid="update-practice-log-button"]')

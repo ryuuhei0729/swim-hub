@@ -30,6 +30,7 @@ interface PracticeLogWithDetails {
   id: string
   user_id: string
   style: string
+  swim_category: 'Swim' | 'Pull' | 'Kick'
   distance: number
   rep_count: number
   set_count: number
@@ -117,6 +118,7 @@ export default async function PracticeLogDataLoader({ teamId, practiceId }: Prac
         id,
         user_id,
         style,
+        swim_category,
         distance,
         rep_count,
         set_count,

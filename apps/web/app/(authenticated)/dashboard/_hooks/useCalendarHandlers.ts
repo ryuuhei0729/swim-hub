@@ -130,17 +130,31 @@ export function useCalendarHandlers({
 
   // 練習ログ編集ハンドラー
   const onEditPracticeLog = useCallback((log: any) => {
+    // timesの構造を確認して変換
+    type TimeEntry = import('@apps/shared/types/ui').TimeEntry
+    let times: Array<{ memberId: string; times: TimeEntry[] }> = []
+    if (log.times && Array.isArray(log.times)) {
+      // DayDetailModalから渡される形式: [{ memberId: '', times: [...] }]
+      if (log.times.length > 0 && 'times' in log.times[0]) {
+        times = log.times
+      } else {
+        // 既存の形式: TimeEntry[]
+        times = [{ memberId: '', times: log.times }]
+      }
+    }
+    
     const editData: EditingData = {
       id: log.id,
       practiceId: log.practice_id || log.practiceId,
-      style: log.style,
+      style: log.style || 'Fr',
+      swim_category: log.swim_category || 'Swim',
       distance: log.distance,
       rep_count: log.rep_count,
       set_count: log.set_count,
       circle: log.circle,
       note: log.note || undefined,
       tags: log.tags,
-      times: log.times
+      times: times
     }
     openPracticeLogForm(undefined, editData)
   }, [openPracticeLogForm])

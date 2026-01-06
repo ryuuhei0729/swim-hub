@@ -300,6 +300,7 @@ export function FormModals({
           const data = editingData as { 
             id?: string; 
             style: string; 
+            swim_category?: 'Swim' | 'Pull' | 'Kick';
             distance?: number; 
             rep_count?: number; 
             set_count?: number; 
@@ -312,6 +313,7 @@ export function FormModals({
           return {
             id: data.id,
             style: String(data.style || 'Fr'),
+            swim_category: data.swim_category || 'Swim',
             distance: data.distance,
             rep_count: data.rep_count,
             set_count: data.set_count,

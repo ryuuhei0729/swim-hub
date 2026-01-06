@@ -26,6 +26,7 @@ export type PracticePageEditingData = {
   place: string
   note: string
   style: string
+  swim_category?: 'Swim' | 'Pull' | 'Kick'
   rep_count: number
   set_count: number
   distance: number
