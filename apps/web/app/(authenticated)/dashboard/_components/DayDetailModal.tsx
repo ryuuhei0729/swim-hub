@@ -783,6 +783,7 @@ function PracticeDetails({
     id: string
     practiceId: string
     style: string
+    swim_category?: 'Swim' | 'Pull' | 'Kick'
     repCount: number
     setCount: number
     distance: number
@@ -831,6 +832,7 @@ function PracticeDetails({
           id: string
           practice_id: string
           style: string
+          swim_category?: 'Swim' | 'Pull' | 'Kick'
           rep_count: number
           set_count: number
           distance: number
@@ -849,6 +851,7 @@ function PracticeDetails({
             id: log.id,
             practiceId: log.practice_id,
             style: log.style,
+            swim_category: log.swim_category,
             repCount: log.rep_count,
             setCount: log.set_count,
             distance: log.distance,
@@ -892,6 +895,24 @@ function PracticeDetails({
   }
 
   const practiceLogs = practice.practiceLogs || []
+
+  // 種目の選択肢（コード値からラベルに変換するため）
+  const SWIM_STYLES = [
+    { value: 'Fr', label: '自由形' },
+    { value: 'Ba', label: '背泳ぎ' },
+    { value: 'Br', label: '平泳ぎ' },
+    { value: 'Fly', label: 'バタフライ' },
+    { value: 'IM', label: '個人メドレー' }
+  ]
+
+  // コード値をラベルに変換する関数
+  const getStyleLabel = (styleValue: string): string => {
+    const style = SWIM_STYLES.find(s => s.value === styleValue)
+    if (style) return style.label
+    // 既にラベルの場合はそのまま返す
+    if (SWIM_STYLES.some(s => s.label === styleValue)) return styleValue
+    return styleValue
+  }
 
   // 色の明度に基づいてテキスト色を決定する関数
   const getTextColor = (backgroundColor: string) => {
@@ -1001,6 +1022,7 @@ function PracticeDetails({
               id: string
               practiceId: string
               style: string
+              swim_category?: 'Swim' | 'Pull' | 'Kick'
               repCount: number
               setCount: number
               distance: number
@@ -1055,11 +1077,19 @@ function PracticeDetails({
                     <button
                       onClick={() => {
                         // 編集に必要な情報を保持したまま渡す
+                        // styleの値をコード値に変換（ラベルの場合はコード値に変換）
+                        const styleValue = formattedLog.style
+                        // ラベルの場合はコード値に変換
+                        const styleCode = SWIM_STYLES.find(s => s.label === styleValue)?.value || 
+                                         SWIM_STYLES.find(s => s.value === styleValue)?.value || 
+                                         styleValue || 'Fr'
+                        
                         const formData = {
                           id: formattedLog.id,
                           user_id: practice.user_id,
                           practice_id: formattedLog.practiceId,
-                          style: formattedLog.style,
+                          style: styleCode,
+                          swim_category: formattedLog.swim_category || 'Swim',
                           rep_count: formattedLog.repCount,
                           set_count: formattedLog.setCount,
                           distance: formattedLog.distance,
@@ -1108,7 +1138,15 @@ function PracticeDetails({
                         {formattedLog.circle ? `${Math.floor(formattedLog.circle / 60)}'${Math.floor(formattedLog.circle % 60).toString().padStart(2, '0')}"` : '-'}
                       </span>
                       {'　'}
-                      <span className="text-lg font-semibold text-green-700">{formattedLog.style}</span>
+                      <span className="text-lg font-semibold text-green-700">{getStyleLabel(formattedLog.style)}</span>
+                      {formattedLog.swim_category && formattedLog.swim_category !== 'Swim' && (
+                        <>
+                          {'　'}
+                          <span className="text-lg font-semibold text-green-700">
+                            {formattedLog.swim_category}
+                          </span>
+                        </>
+                      )}
                     </div>
                 </div>
 

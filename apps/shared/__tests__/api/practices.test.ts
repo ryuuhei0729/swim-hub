@@ -189,6 +189,7 @@ describe('PracticeAPI', () => {
         set_count: 2,
         circle_time: 90,
         style: 'freestyle',
+        swim_category: 'Swim' as const,
         note: 'テストメモ',
         circle: 1,
       }
@@ -220,6 +221,7 @@ describe('PracticeAPI', () => {
           set_count: 2,
           circle_time: 90,
           style: 'freestyle',
+          swim_category: 'Swim' as const,
           note: 'テストメモ1',
           circle: 1,
         },
@@ -230,6 +232,7 @@ describe('PracticeAPI', () => {
           set_count: 1,
           circle_time: 180,
           style: 'backstroke',
+          swim_category: 'Swim' as const,
           note: 'テストメモ2',
           circle: 2,
         },

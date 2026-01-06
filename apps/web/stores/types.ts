@@ -33,12 +33,13 @@ export type EditingData =
       reactionTime?: number | null
       splitTimes?: Array<{ distance: number; splitTime: number }>
       // 練習ログ編集用のプロパティ
+      swim_category?: 'Swim' | 'Pull' | 'Kick'
       distance?: number
       rep_count?: number
       set_count?: number
       circle?: number | null
       tags?: PracticeTag[]
-      times?: TimeEntry[]
+      times?: Array<{ memberId: string; times: TimeEntry[] }>
     }
   | null
 
@@ -52,6 +53,7 @@ export interface PracticeMenuFormData {
   place?: string
   note?: string
   style?: string
+  swimCategory?: 'Swim' | 'Pull' | 'Kick'
   reps?: number
   sets?: number
   distance?: number

@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthProvider'
 import { Button } from '@/components/ui'
-import { ArrowLeftIcon, PlusIcon, TrashIcon, ClockIcon, CalendarDaysIcon, MapPinIcon, UserGroupIcon, XMarkIcon, CheckIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, PlusIcon, TrashIcon, ClockIcon, CalendarDaysIcon, MapPinIcon, UserGroupIcon, XMarkIcon, CheckIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
 import TagInput from '@/components/forms/TagInput'
 import TeamTimeInputModal, { TeamTimeEntry } from '@/components/team/TeamTimeInputModal'
 import { PracticeTag, Practice } from '@apps/shared/types/database'
@@ -26,6 +26,7 @@ interface TeamMember {
 interface PracticeMenu {
   id: string
   style: string
+  swimCategory: 'Swim' | 'Pull' | 'Kick'
   distance: number | ''
   reps: number
   sets: number
@@ -48,6 +49,7 @@ interface PracticeLogWithDetails {
   id: string
   user_id: string
   style: string
+  swim_category: 'Swim' | 'Pull' | 'Kick'
   distance: number
   rep_count: number
   set_count: number
@@ -78,11 +80,18 @@ interface PracticeLogClientProps {
 
 // 種目の選択肢
 const SWIM_STYLES = [
-  { value: 'Fr', label: 'フリー' },
-  { value: 'Ba', label: 'バック' },
-  { value: 'Br', label: 'ブレスト' },
+  { value: 'Fr', label: '自由形' },
+  { value: 'Ba', label: '背泳ぎ' },
+  { value: 'Br', label: '平泳ぎ' },
   { value: 'Fly', label: 'バタフライ' },
   { value: 'IM', label: '個人メドレー' }
+]
+
+// 泳法カテゴリの選択肢
+const SWIM_CATEGORIES = [
+  { value: 'Swim', label: 'Swim' },
+  { value: 'Pull', label: 'Pull' },
+  { value: 'Kick', label: 'Kick' }
 ]
 
 export default function PracticeLogClient({
@@ -120,6 +129,7 @@ export default function PracticeLogClient({
       return [{
         id: '1',
         style: 'Fr',
+        swimCategory: 'Swim',
         distance: 100,
         reps: 4,
         sets: 1,
@@ -135,6 +145,7 @@ export default function PracticeLogClient({
     // 同じメニュー構成のログをグループ化
     const menuGroups = new Map<string, {
       style: string
+      swim_category: 'Swim' | 'Pull' | 'Kick'
       distance: number
       rep_count: number
       set_count: number
@@ -146,7 +157,7 @@ export default function PracticeLogClient({
     }>()
 
     for (const log of existingLogs) {
-      const key = `${log.style}-${log.distance}-${log.rep_count}-${log.set_count}`
+      const key = `${log.style}-${log.swim_category || 'Swim'}-${log.distance}-${log.rep_count}-${log.set_count}`
       
       if (!menuGroups.has(key)) {
         const tags = log.practice_log_tags
@@ -155,6 +166,7 @@ export default function PracticeLogClient({
         
         menuGroups.set(key, {
           style: log.style,
+          swim_category: log.swim_category || 'Swim',
           distance: log.distance,
           rep_count: log.rep_count,
           set_count: log.set_count,
@@ -198,6 +210,7 @@ export default function PracticeLogClient({
     return Array.from(menuGroups.entries()).map(([_key, group], index) => ({
       id: String(index + 1),
       style: group.style,
+      swimCategory: group.swim_category,
       distance: group.distance,
       reps: group.rep_count,
       sets: group.set_count,
@@ -224,6 +237,7 @@ export default function PracticeLogClient({
     const newMenu: PracticeMenu = {
       id: Date.now().toString(),
       style: 'Fr',
+      swimCategory: 'Swim',
       distance: 100,
       reps: 4,
       sets: 1,
@@ -255,6 +269,12 @@ export default function PracticeLogClient({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // 既に保存処理中の場合は重複実行を防ぐ
+    if (saving) {
+      return
+    }
+    
     setSaving(true)
 
     try {
@@ -262,6 +282,7 @@ export default function PracticeLogClient({
       const logsData: Array<{
         user_id: string
         style: string
+        swim_category: 'Swim' | 'Pull' | 'Kick'
         rep_count: number
         set_count: number
         distance: number
@@ -284,6 +305,7 @@ export default function PracticeLogClient({
           logsData.push({
             user_id: member.user_id,
             style: menu.style,
+            swim_category: menu.swimCategory,
             rep_count: Number(menu.reps) || 1,
             set_count: Number(menu.sets) || 1,
             distance: Number(menu.distance) || 100,
@@ -305,6 +327,7 @@ export default function PracticeLogClient({
       }
 
       // RPC関数を呼び出して原子性のある操作を実行
+      // replace_practice_logsは、practice_idに紐づくすべてのログを削除してから新しいログを挿入する
       const { data: result, error: rpcError } = await supabase
         .rpc('replace_practice_logs', {
           p_practice_id: practiceId,
@@ -413,12 +436,13 @@ export default function PracticeLogClient({
                 {/* 種目 */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    種目
+                    種目①
                   </label>
+                  <div className="relative">
                   <select
                     value={menu.style}
                     onChange={(e) => updateMenu(menu.id, 'style', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full pl-3 pr-10 py-2 bg-white border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
                     data-testid={`team-practice-log-style-${index + 1}`}
                   >
                     {SWIM_STYLES.map(style => (
@@ -427,6 +451,34 @@ export default function PracticeLogClient({
                       </option>
                     ))}
                   </select>
+                    <ChevronDownIcon 
+                      className="h-4 w-4 absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
+                    />
+                  </div>
+                </div>
+
+                {/* 泳法カテゴリ */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    種目②
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={menu.swimCategory}
+                      onChange={(e) => updateMenu(menu.id, 'swimCategory', e.target.value as 'Swim' | 'Pull' | 'Kick')}
+                      className="w-full pl-3 pr-10 py-2 bg-white border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+                      data-testid={`team-practice-log-swim-category-${index + 1}`}
+                    >
+                      {SWIM_CATEGORIES.map(category => (
+                        <option key={category.value} value={category.value}>
+                          {category.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDownIcon 
+                      className="h-4 w-4 absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
+                    />
+                  </div>
                 </div>
 
                 {/* 距離 */}

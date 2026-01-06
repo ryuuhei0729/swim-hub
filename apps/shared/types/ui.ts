@@ -222,6 +222,7 @@ export interface PracticeSet {
   uiCircleSec?: number | ''
   setCount?: number | ''
   style: string
+  swimCategory?: 'Swim' | 'Pull' | 'Kick'
   note?: string
   tags?: PracticeTag[]
   times?: TimeEntry[]

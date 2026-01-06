@@ -23,16 +23,24 @@ type PracticeLogFormScreenNavigationProp = NativeStackNavigationProp<MainStackPa
 
 // 種目の選択肢
 const SWIM_STYLES = [
-  { value: 'Fr', label: 'フリー' },
-  { value: 'Ba', label: 'バック' },
-  { value: 'Br', label: 'ブレスト' },
+  { value: 'Fr', label: '自由形' },
+  { value: 'Ba', label: '背泳ぎ' },
+  { value: 'Br', label: '平泳ぎ' },
   { value: 'Fly', label: 'バタフライ' },
   { value: 'IM', label: '個人メドレー' },
+]
+
+// 泳法カテゴリの選択肢
+const SWIM_CATEGORIES = [
+  { value: 'Swim', label: 'Swim' },
+  { value: 'Pull', label: 'Pull' },
+  { value: 'Kick', label: 'Kick' },
 ]
 
 interface PracticeMenu {
   id: string
   style: string
+  swimCategory: 'Swim' | 'Pull' | 'Kick'
   distance: number | ''
   reps: number | ''
   sets: number | ''
@@ -60,6 +68,7 @@ export const PracticeLogFormScreen: React.FC = () => {
     {
       id: `menu-${Date.now()}`,
       style: 'Fr',
+      swimCategory: 'Swim',
       distance: '',
       reps: '',
       sets: '',
@@ -150,6 +159,7 @@ export const PracticeLogFormScreen: React.FC = () => {
             {
               id: practiceLogData.id,
               style: practiceLogData.style,
+              swimCategory: practiceLogData.swim_category || 'Swim',
               distance: practiceLogData.distance,
               reps: practiceLogData.rep_count,
               sets: practiceLogData.set_count,
@@ -192,6 +202,7 @@ export const PracticeLogFormScreen: React.FC = () => {
       {
         id: `menu-${Date.now()}-${Math.random()}`,
         style: 'Fr',
+        swimCategory: 'Swim',
         distance: '',
         reps: '',
         sets: '',
@@ -308,6 +319,7 @@ export const PracticeLogFormScreen: React.FC = () => {
         const logData = {
           practice_id: practiceId,
           style: menu.style,
+          swim_category: menu.swimCategory,
           distance: Number(menu.distance),
           rep_count: Number(menu.reps),
           set_count: Number(menu.sets),
@@ -415,7 +427,7 @@ export const PracticeLogFormScreen: React.FC = () => {
               {/* 種目 */}
               <View style={styles.field}>
                 <Text style={styles.label}>
-                  種目 <Text style={styles.required}>*</Text>
+                  種目① <Text style={styles.required}>*</Text>
                 </Text>
                 <View style={styles.pickerContainer}>
                   {SWIM_STYLES.map((style) => (
@@ -434,6 +446,32 @@ export const PracticeLogFormScreen: React.FC = () => {
                         ]}
                       >
                         {style.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+
+              {/* 泳法カテゴリ */}
+              <View style={styles.field}>
+                <Text style={styles.label}>種目② <Text style={styles.required}>*</Text></Text>
+                <View style={styles.pickerContainer}>
+                  {SWIM_CATEGORIES.map((category) => (
+                    <Pressable
+                      key={category.value}
+                      style={[
+                        styles.pickerOption,
+                        menu.swimCategory === category.value && styles.pickerOptionSelected,
+                      ]}
+                      onPress={() => updateMenu(menu.id, 'swimCategory', category.value as 'Swim' | 'Pull' | 'Kick')}
+                    >
+                      <Text
+                        style={[
+                          styles.pickerOptionText,
+                          menu.swimCategory === category.value && styles.pickerOptionTextSelected,
+                        ]}
+                      >
+                        {category.label}
                       </Text>
                     </Pressable>
                   ))}

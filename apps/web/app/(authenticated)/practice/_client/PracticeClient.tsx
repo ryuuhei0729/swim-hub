@@ -254,6 +254,7 @@ export default function PracticeClient({
       place: log.practice?.place || '',
       note: log.practice?.note || '',
       style: log.style,
+      swim_category: log.swim_category || 'Swim',
       rep_count: log.rep_count,
       set_count: log.set_count || 1,
       distance: log.distance,
@@ -297,6 +298,7 @@ export default function PracticeClient({
           const logInput = {
             practice_id: editingData.practiceId,
             style: menu.style || 'Fr',
+            swim_category: menu.swimCategory || 'Swim',
             rep_count: menu.reps || 1,
             set_count: menu.sets || 1,
             distance: menu.distance || 100,
@@ -329,6 +331,7 @@ export default function PracticeClient({
           const logInput = {
             practice_id: newPractice.id,
             style: menu.style || 'Fr',
+            swim_category: menu.swimCategory || 'Swim',
             rep_count: menu.reps || 1,
             set_count: menu.sets || 1,
             distance: menu.distance || 100,

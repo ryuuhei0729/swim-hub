@@ -78,6 +78,7 @@ export interface PracticeLog {
   user_id: string
   practice_id: string
   style: string
+  swim_category: 'Swim' | 'Pull' | 'Kick'
   rep_count: number
   set_count: number
   distance: number
@@ -648,6 +649,7 @@ export type Database = {
           date: string
           practice_id: string
           style: string
+          swim_category: 'Swim' | 'Pull' | 'Kick'
           rep_count: number
           set_count: number
           distance: number
@@ -662,6 +664,7 @@ export type Database = {
           date?: string
           practice_id: string
           style: string
+          swim_category?: 'Swim' | 'Pull' | 'Kick'
           rep_count: number
           set_count: number
           distance: number
@@ -676,6 +679,7 @@ export type Database = {
           date?: string
           practice_id?: string
           style?: string
+          swim_category?: 'Swim' | 'Pull' | 'Kick'
           rep_count?: number
           set_count?: number
           distance?: number

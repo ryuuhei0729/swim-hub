@@ -131,6 +131,7 @@ export function useDashboardHandlers({
         const menu = menus[0]
         const logInput = {
           style: menu.style || 'fr',
+          swim_category: menu.swimCategory || 'Swim',
           rep_count: Number(menu.reps) || 1,
           set_count: Number(menu.sets) || 1,
           distance: Number(menu.distance) || 100,
@@ -202,6 +203,7 @@ export function useDashboardHandlers({
           const logInput = {
             practice_id: practiceId,
             style: menu.style || 'fr',
+            swim_category: menu.swimCategory || 'Swim',
             rep_count: Number(menu.reps) || 1,
             set_count: Number(menu.sets) || 1,
             distance: Number(menu.distance) || 100,
