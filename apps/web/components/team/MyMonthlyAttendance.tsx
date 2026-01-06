@@ -6,8 +6,112 @@ import { AttendanceAPI, TeamAttendanceWithDetails } from '@swim-hub/shared'
 import { TeamAttendancesAPI } from '@apps/shared/api/teams/attendances'
 import { AttendanceStatus, TeamEvent } from '@swim-hub/shared/types/database'
 import { getMonthDateRange } from '@swim-hub/shared/utils/date'
+import { fetchTeamMembers, TeamMember } from '@swim-hub/shared/utils/team'
+import { useAttendanceGrouping } from '@swim-hub/shared/hooks/useAttendanceGrouping'
+import { sanitizeTextInput } from '@swim-hub/shared/utils/sanitize'
 import { format, startOfMonth, endOfMonth, addMonths } from 'date-fns'
 import BaseModal from '@/components/ui/BaseModal'
+
+// 備考の最大文字数
+const NOTE_MAX_LENGTH = 500
+
+// 出欠状況グループ化表示コンポーネント
+function AttendanceGroupingDisplay({
+  attendanceData,
+  teamMembers
+}: {
+  attendanceData: TeamAttendanceWithDetails[]
+  teamMembers: TeamMember[]
+}) {
+  const { presentMembers, absentMembers, otherMembers, unansweredMembers } = useAttendanceGrouping(
+    attendanceData,
+    teamMembers
+  )
+
+  return (
+    <>
+      {/* 出席 */}
+      <div>
+        <h3 className="text-sm font-semibold text-green-800 mb-2">
+          出席 ({presentMembers.length}名)
+        </h3>
+        {presentMembers.length > 0 ? (
+          <div className="bg-green-50 rounded-lg p-3 space-y-1">
+            {presentMembers.map((member) => (
+              <div key={member.id} className="text-sm text-gray-900">
+                {member.name}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">
+            なし
+          </div>
+        )}
+      </div>
+
+      {/* 欠席 */}
+      <div>
+        <h3 className="text-sm font-semibold text-red-800 mb-2">
+          欠席 ({absentMembers.length}名)
+        </h3>
+        {absentMembers.length > 0 ? (
+          <div className="bg-red-50 rounded-lg p-3 space-y-1">
+            {absentMembers.map((member) => (
+              <div key={member.id} className="text-sm text-gray-900">
+                {member.name}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">
+            なし
+          </div>
+        )}
+      </div>
+
+      {/* その他 */}
+      <div>
+        <h3 className="text-sm font-semibold text-yellow-800 mb-2">
+          その他 ({otherMembers.length}名)
+        </h3>
+        {otherMembers.length > 0 ? (
+          <div className="bg-yellow-50 rounded-lg p-3 space-y-1">
+            {otherMembers.map((member) => (
+              <div key={member.id} className="text-sm text-gray-900">
+                {member.name}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">
+            なし
+          </div>
+        )}
+      </div>
+
+      {/* 未回答 */}
+      <div>
+        <h3 className="text-sm font-semibold text-gray-800 mb-2">
+          未回答 ({unansweredMembers.length}名)
+        </h3>
+        {unansweredMembers.length > 0 ? (
+          <div className="bg-gray-50 rounded-lg p-3 space-y-1">
+            {unansweredMembers.map((member) => (
+              <div key={member.id} className="text-sm text-gray-600">
+                {member.name}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">
+            なし
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
 
 export interface MyMonthlyAttendanceProps {
   teamId: string
@@ -53,7 +157,7 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false)
   const [selectedEventForAttendance, setSelectedEventForAttendance] = useState<TeamEvent | null>(null)
   const [attendanceData, setAttendanceData] = useState<TeamAttendanceWithDetails[]>([])
-  const [teamMembers, setTeamMembers] = useState<Array<{ id: string; name: string }>>([])
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [loadingAttendance, setLoadingAttendance] = useState(false)
 
   // 直近の出欠セクション用の状態
@@ -63,6 +167,7 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
   const [loadingRecent, setLoadingRecent] = useState(false)
   const [savingEventIds, setSavingEventIds] = useState<Set<string>>(new Set())
   const [selectedRecentTab, setSelectedRecentTab] = useState<'current' | 'next'>('current')
+  const abortControllerRef = React.useRef<AbortController | null>(null)
 
   // 各月のステータスを計算
   const calculateMonthStatus = useCallback(async (year: number, month: number): Promise<{ eventCount: number; answeredCount: number; status: 'has_unanswered' | 'all_answered' | null }> => {
@@ -276,7 +381,7 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
   }, [teamId, selectedMonth, supabase, attendanceAPI])
 
   // 直近の出欠（今月と来月）を取得
-  const loadRecentAttendances = useCallback(async () => {
+  const loadRecentAttendances = useCallback(async (signal?: AbortSignal) => {
     try {
       setLoadingRecent(true)
       setError(null)
@@ -326,11 +431,18 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
       )
       setRecentEvents(allEvents)
 
+      // キャンセルチェック
+      if (signal?.aborted) return
+
       // 出欠情報を取得（今月と来月）
       const [currentAttendances, nextAttendances] = await Promise.all([
         attendanceAPI.getMyAttendancesByMonth(teamId, currentYear, currentMonth),
         attendanceAPI.getMyAttendancesByMonth(teamId, nextYear, nextMonth)
       ])
+
+      // キャンセルチェック
+      if (signal?.aborted) return
+
       const allAttendances = [...currentAttendances, ...nextAttendances]
       setRecentAttendances(allAttendances)
 
@@ -354,12 +466,25 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
           }
         }
       })
+      // キャンセルチェック
+      if (signal?.aborted) return
+
       setRecentEditStates(initialEditStates)
     } catch (err) {
+      // AbortErrorの場合はエラーとして扱わない
+      if (err instanceof Error && err.name === 'AbortError') {
+        return
+      }
+      // キャンセルされた場合はエラーを表示しない
+      if (signal?.aborted) return
+      
       console.error('直近の出欠情報の取得に失敗:', err)
       setError('直近の出欠情報の取得に失敗しました')
     } finally {
-      setLoadingRecent(false)
+      // キャンセルされていない場合のみローディング状態を解除
+      if (!signal?.aborted) {
+        setLoadingRecent(false)
+      }
     }
   }, [teamId, supabase, attendanceAPI])
 
@@ -376,11 +501,14 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
 
   // 直近の出欠の備考変更
   const handleRecentNoteChange = (eventId: string, note: string) => {
+    // 最大長を制限
+    const trimmedNote = note.length > NOTE_MAX_LENGTH ? note.substring(0, NOTE_MAX_LENGTH) : note
+    
     setRecentEditStates((prev) => ({
       ...prev,
       [eventId]: {
         ...prev[eventId],
-        note
+        note: trimmedNote
       }
     }))
   }
@@ -430,7 +558,8 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('認証が必要です')
 
-      let note = editState.note || null
+      // 備考をサニタイズ（最大長制限とHTMLエスケープ）
+      let note = editState.note ? sanitizeTextInput(editState.note, NOTE_MAX_LENGTH) : null
 
       // 提出締め切り後の編集の場合、備考に編集日時を追加
       if (event.attendance_status === 'closed') {
@@ -442,8 +571,11 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
         if (note) {
           // 既存の締切後編集パターンを削除（正規表現でマッチ）
           note = note.replace(/\s*\(\d{2}\/\d{2}\s+\d{2}:\d{2}締切後編集\)/g, '').trim()
-          // 新しい編集日時を追加
-          note = note ? `${note} ${editNote}` : editNote
+          // 新しい編集日時を追加（最大長を考慮）
+          const combinedNote = note ? `${note} ${editNote}` : editNote
+          note = combinedNote.length > NOTE_MAX_LENGTH 
+            ? combinedNote.substring(0, NOTE_MAX_LENGTH) 
+            : combinedNote
         } else {
           note = editNote
         }
@@ -511,40 +643,83 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
 
         if (selectError) {
           // 取得に失敗した場合は再取得
-          await loadRecentAttendances()
+          await loadRecentAttendances(undefined)
         } else if (insertedData) {
-          // 取得できた場合はローカル状態に追加
-          setRecentAttendances((prev) => [...prev, insertedData as TeamAttendanceWithDetails])
-          // 編集状態も更新（締切後編集が追加された後のnoteを使用）
-          setRecentEditStates((prev) => ({
-            ...prev,
-            [eventId]: {
-              status: editState.status,
-              note: note || '' // 締切後編集が追加された後のnoteを使用
+          // insertedDataの形状を検証
+          const isValidAttendance = (
+            data: unknown
+          ): data is TeamAttendanceWithDetails => {
+            if (!data || typeof data !== 'object') return false
+            
+            const d = data as Record<string, unknown>
+            
+            // 必須フィールドのチェック
+            if (!d.id || typeof d.id !== 'string') return false
+            if (!d.user_id || typeof d.user_id !== 'string') return false
+            if (d.status !== null && typeof d.status !== 'string') return false
+            if (d.note !== null && typeof d.note !== 'string') return false
+            
+            // userフィールドの検証（必須）
+            if (!d.user || typeof d.user !== 'object') return false
+            const user = d.user as Record<string, unknown>
+            if (!user.id || typeof user.id !== 'string') return false
+            if (!user.name || typeof user.name !== 'string') return false
+            
+            // practiceフィールドの検証（オプショナル）
+            if (d.practice !== null && d.practice !== undefined) {
+              if (typeof d.practice !== 'object') return false
+              const practice = d.practice as Record<string, unknown>
+              if (!practice.id || typeof practice.id !== 'string') return false
             }
-          }))
+            
+            // competitionフィールドの検証（オプショナル）
+            if (d.competition !== null && d.competition !== undefined) {
+              if (typeof d.competition !== 'object') return false
+              const competition = d.competition as Record<string, unknown>
+              if (!competition.id || typeof competition.id !== 'string') return false
+            }
+            
+            return true
+          }
+          
+          if (isValidAttendance(insertedData)) {
+            // 検証が通った場合はローカル状態に追加
+            setRecentAttendances((prev) => [...prev, insertedData])
+            // 編集状態も更新（締切後編集が追加された後のnoteを使用）
+            setRecentEditStates((prev) => ({
+              ...prev,
+              [eventId]: {
+                status: editState.status,
+                note: note || '' // 締切後編集が追加された後のnoteを使用
+              }
+            }))
+          } else {
+            // 検証が失敗した場合は再取得
+            console.warn('insertedDataの形状が不正です。再取得します。', insertedData)
+            await loadRecentAttendances(undefined)
+          }
         }
       }
 
       // 月リストのステータスを更新（再取得せずに計算で更新）
-      const now = new Date()
-      const eventDate = new Date(event.date)
-      const eventYear = eventDate.getFullYear()
-      const eventMonth = eventDate.getMonth() + 1
-      const currentYear = now.getFullYear()
-      const currentMonth = now.getMonth() + 1
+      const statusUpdateNow = new Date()
+      const statusUpdateEventDate = new Date(event.date)
+      const statusUpdateEventYear = statusUpdateEventDate.getFullYear()
+      const statusUpdateEventMonth = statusUpdateEventDate.getMonth() + 1
+      const statusUpdateCurrentYear = statusUpdateNow.getFullYear()
+      const statusUpdateCurrentMonth = statusUpdateNow.getMonth() + 1
 
       // 該当する月のステータスを再計算
-      if ((eventYear === currentYear && eventMonth === currentMonth) ||
-          (eventYear === currentYear && eventMonth === currentMonth + 1) ||
-          (eventYear === currentYear + 1 && eventMonth === 1 && currentMonth === 12)) {
+      if ((statusUpdateEventYear === statusUpdateCurrentYear && statusUpdateEventMonth === statusUpdateCurrentMonth) ||
+          (statusUpdateEventYear === statusUpdateCurrentYear && statusUpdateEventMonth === statusUpdateCurrentMonth + 1) ||
+          (statusUpdateEventYear === statusUpdateCurrentYear + 1 && statusUpdateEventMonth === 1 && statusUpdateCurrentMonth === 12)) {
         // 該当月のステータスを再計算
         const calculateStatus = async () => {
           try {
-            const status = await calculateMonthStatus(eventYear, eventMonth)
+            const status = await calculateMonthStatus(statusUpdateEventYear, statusUpdateEventMonth)
             setMonthList((prev) =>
               prev.map((item) =>
-                item.year === eventYear && item.month === eventMonth
+                item.year === statusUpdateEventYear && item.month === statusUpdateEventMonth
                   ? {
                       ...item,
                       status: status.status,
@@ -575,7 +750,22 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
   // 月リストを初期読み込み
   useEffect(() => {
     loadMonthList()
-    loadRecentAttendances()
+    
+    // 既存のリクエストをキャンセル
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    
+    // 新しいAbortControllerを作成
+    const abortController = new AbortController()
+    abortControllerRef.current = abortController
+    
+    loadRecentAttendances(abortController.signal)
+    
+    // クリーンアップ関数
+    return () => {
+      abortController.abort()
+    }
   }, [loadMonthList, loadRecentAttendances])
 
   // モーダルが開かれたときに詳細データを読み込む
@@ -598,11 +788,14 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
 
   // 備考変更
   const handleNoteChange = (eventId: string, note: string) => {
+    // 最大長を制限
+    const trimmedNote = note.length > NOTE_MAX_LENGTH ? note.substring(0, NOTE_MAX_LENGTH) : note
+    
     setEditStates((prev) => ({
       ...prev,
       [eventId]: {
         ...prev[eventId],
-        note
+        note: trimmedNote
       }
     }))
   }
@@ -637,10 +830,13 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
             return null
           }
 
+          // 備考をサニタイズ（最大長制限とHTMLエスケープ）
+          const sanitizedNote = editState.note ? sanitizeTextInput(editState.note, NOTE_MAX_LENGTH) : null
+
           return {
             attendanceId: existingAttendance?.id || '',
             status: editState.status,
-            note: editState.note || null,
+            note: sanitizedNote,
             eventId: event.id,
             eventAttendanceStatus: event.attendance_status,
             isNew: !existingAttendance
@@ -705,7 +901,8 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
         })
         .map((event) => {
           const editState = editStates[event.id]
-          let note = editState.note || null
+          // 備考をサニタイズ（最大長制限とHTMLエスケープ）
+          let note = editState.note ? sanitizeTextInput(editState.note, NOTE_MAX_LENGTH) : null
           
           // 提出締め切り後の新規作成の場合、備考に編集日時を追加
           // API側で処理するため、フロントエンド側ではそのまま渡す
@@ -719,8 +916,11 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
             if (note) {
               // 既存の締切後編集パターンを削除（正規表現でマッチ）
               note = note.replace(/\s*\(\d{2}\/\d{2}\s+\d{2}:\d{2}締切後編集\)/g, '').trim()
-              // 新しい編集日時を追加
-            note = note ? `${note} ${editNote}` : editNote
+              // 新しい編集日時を追加（最大長を考慮）
+              const combinedNote = note ? `${note} ${editNote}` : editNote
+              note = combinedNote.length > NOTE_MAX_LENGTH 
+                ? combinedNote.substring(0, NOTE_MAX_LENGTH) 
+                : combinedNote
             } else {
               note = editNote
             }
@@ -806,39 +1006,7 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
       setAttendanceData(attendances)
 
       // チームメンバー全員を取得
-      const { data: membersData, error: membersError } = await supabase
-        .from('team_memberships')
-        .select(`
-          user_id,
-          users:users!team_memberships_user_id_fkey (
-            id,
-            name
-          )
-        `)
-        .eq('team_id', teamId)
-        .eq('status', 'approved')
-        .eq('is_active', true)
-
-      if (membersError) throw membersError
-
-      interface MemberData {
-        user_id: string
-        users: {
-          id: string
-          name: string
-        } | null | Array<{ id: string; name: string }>
-      }
-
-      const members = (membersData || [])
-        .map((m: MemberData) => {
-          const user = Array.isArray(m.users) ? m.users[0] : m.users
-          return {
-            id: m.user_id,
-            name: user?.name || 'Unknown User'
-          }
-        })
-        .filter((m: { id: string; name: string }) => m.name !== 'Unknown User')
-      
+      const members = await fetchTeamMembers(supabase, teamId)
       setTeamMembers(members)
     } catch (err) {
       console.error('出欠情報の取得に失敗:', err)
@@ -1075,6 +1243,7 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
                           value={editState.note}
                           onChange={(e) => handleRecentNoteChange(event.id, e.target.value)}
                           placeholder="備考を入力（任意）"
+                          maxLength={NOTE_MAX_LENGTH}
                           className="w-60 px-2 py-1 border border-gray-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                         <button
@@ -1198,6 +1367,7 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
                                 value={editState.note}
                                 onChange={(e) => handleNoteChange(event.id, e.target.value)}
                                 placeholder="備考を入力（任意）"
+                                maxLength={NOTE_MAX_LENGTH}
                                 className="w-60 px-2 py-1 border border-gray-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               />
                             </div>
@@ -1245,114 +1415,10 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
         ) : (
           <div className="space-y-4">
             {/* 4つのグループに分けて表示 */}
-            {(() => {
-              // 回答済みのユーザーIDセット
-              const answeredUserIds = new Set(
-                attendanceData.map(a => a.user_id)
-              )
-              
-              // 未回答のメンバー（チームメンバー全員から回答済みを除外）
-              const unansweredMembers = teamMembers.filter(
-                m => !answeredUserIds.has(m.id)
-              )
-
-              // グループ化
-              const presentMembers = attendanceData
-                .filter(a => a.status === 'present')
-                .map(a => ({ id: a.user_id, name: a.user?.name || 'Unknown User' }))
-              
-              const absentMembers = attendanceData
-                .filter(a => a.status === 'absent')
-                .map(a => ({ id: a.user_id, name: a.user?.name || 'Unknown User' }))
-              
-              const otherMembers = attendanceData
-                .filter(a => a.status === 'other')
-                .map(a => ({ id: a.user_id, name: a.user?.name || 'Unknown User' }))
-
-              return (
-                <>
-                  {/* 出席 */}
-                  <div>
-                    <h3 className="text-sm font-semibold text-green-800 mb-2">
-                      出席 ({presentMembers.length}名)
-                    </h3>
-                    {presentMembers.length > 0 ? (
-                      <div className="bg-green-50 rounded-lg p-3 space-y-1">
-                        {presentMembers.map((member) => (
-                          <div key={member.id} className="text-sm text-gray-900">
-                            {member.name}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">
-                        なし
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 欠席 */}
-                  <div>
-                    <h3 className="text-sm font-semibold text-red-800 mb-2">
-                      欠席 ({absentMembers.length}名)
-                    </h3>
-                    {absentMembers.length > 0 ? (
-                      <div className="bg-red-50 rounded-lg p-3 space-y-1">
-                        {absentMembers.map((member) => (
-                          <div key={member.id} className="text-sm text-gray-900">
-                            {member.name}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">
-                        なし
-                      </div>
-                    )}
-                  </div>
-
-                  {/* その他 */}
-                  <div>
-                    <h3 className="text-sm font-semibold text-yellow-800 mb-2">
-                      その他 ({otherMembers.length}名)
-                    </h3>
-                    {otherMembers.length > 0 ? (
-                      <div className="bg-yellow-50 rounded-lg p-3 space-y-1">
-                        {otherMembers.map((member) => (
-                          <div key={member.id} className="text-sm text-gray-900">
-                            {member.name}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">
-                        なし
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 未回答 */}
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-800 mb-2">
-                      未回答 ({unansweredMembers.length}名)
-                    </h3>
-                    {unansweredMembers.length > 0 ? (
-                      <div className="bg-gray-50 rounded-lg p-3 space-y-1">
-                        {unansweredMembers.map((member) => (
-                          <div key={member.id} className="text-sm text-gray-600">
-                            {member.name}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">
-                        なし
-                      </div>
-                    )}
-                  </div>
-                </>
-              )
-            })()}
+            <AttendanceGroupingDisplay
+              attendanceData={attendanceData}
+              teamMembers={teamMembers}
+            />
           </div>
         )}
       </BaseModal>

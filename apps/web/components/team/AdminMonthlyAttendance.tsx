@@ -4,12 +4,112 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAuth } from '@/contexts'
 import { TeamAttendancesAPI } from '@apps/shared/api/teams/attendances'
 import { AttendanceStatusType, TeamEvent, TeamAttendanceWithDetails } from '@swim-hub/shared/types/database'
+import { fetchTeamMembers, TeamMember } from '@swim-hub/shared/utils/team'
+import { useAttendanceGrouping } from '@swim-hub/shared/hooks/useAttendanceGrouping'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import BaseModal from '@/components/ui/BaseModal'
 
 export interface AdminMonthlyAttendanceProps {
   teamId: string
+}
+
+// 出欠状況グループ化表示コンポーネント
+function AttendanceGroupingDisplay({
+  attendanceData,
+  teamMembers
+}: {
+  attendanceData: TeamAttendanceWithDetails[]
+  teamMembers: TeamMember[]
+}) {
+  const { presentMembers, absentMembers, otherMembers, unansweredMembers } = useAttendanceGrouping(
+    attendanceData,
+    teamMembers
+  )
+
+  return (
+    <>
+      {/* 出席 */}
+      <div>
+        <h3 className="text-sm font-semibold text-green-800 mb-2">
+          出席 ({presentMembers.length}名)
+        </h3>
+        {presentMembers.length > 0 ? (
+          <div className="bg-green-50 rounded-lg p-3 space-y-1">
+            {presentMembers.map((member) => (
+              <div key={member.id} className="text-sm text-gray-900">
+                {member.name}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">
+            なし
+          </div>
+        )}
+      </div>
+
+      {/* 欠席 */}
+      <div>
+        <h3 className="text-sm font-semibold text-red-800 mb-2">
+          欠席 ({absentMembers.length}名)
+        </h3>
+        {absentMembers.length > 0 ? (
+          <div className="bg-red-50 rounded-lg p-3 space-y-1">
+            {absentMembers.map((member) => (
+              <div key={member.id} className="text-sm text-gray-900">
+                {member.name}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">
+            なし
+          </div>
+        )}
+      </div>
+
+      {/* その他 */}
+      <div>
+        <h3 className="text-sm font-semibold text-yellow-800 mb-2">
+          その他 ({otherMembers.length}名)
+        </h3>
+        {otherMembers.length > 0 ? (
+          <div className="bg-yellow-50 rounded-lg p-3 space-y-1">
+            {otherMembers.map((member) => (
+              <div key={member.id} className="text-sm text-gray-900">
+                {member.name}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">
+            なし
+          </div>
+        )}
+      </div>
+
+      {/* 未回答 */}
+      <div>
+        <h3 className="text-sm font-semibold text-gray-800 mb-2">
+          未回答 ({unansweredMembers.length}名)
+        </h3>
+        {unansweredMembers.length > 0 ? (
+          <div className="bg-gray-50 rounded-lg p-3 space-y-1">
+            {unansweredMembers.map((member) => (
+              <div key={member.id} className="text-sm text-gray-600">
+                {member.name}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">
+            なし
+          </div>
+        )}
+      </div>
+    </>
+  )
 }
 
 interface EventStatusEditState {
@@ -43,7 +143,7 @@ export default function AdminMonthlyAttendance({ teamId }: AdminMonthlyAttendanc
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false)
   const [selectedEventForAttendance, setSelectedEventForAttendance] = useState<TeamEvent | null>(null)
   const [attendanceData, setAttendanceData] = useState<TeamAttendanceWithDetails[]>([])
-  const [teamMembers, setTeamMembers] = useState<Array<{ id: string; name: string }>>([])
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [loadingAttendance, setLoadingAttendance] = useState(false)
 
   // 未来のイベント一覧を取得
@@ -208,39 +308,7 @@ export default function AdminMonthlyAttendance({ teamId }: AdminMonthlyAttendanc
       setAttendanceData(attendances)
 
       // チームメンバー全員を取得
-      const { data: membersData, error: membersError } = await supabase
-        .from('team_memberships')
-        .select(`
-          user_id,
-          users:users!team_memberships_user_id_fkey (
-            id,
-            name
-          )
-        `)
-        .eq('team_id', teamId)
-        .eq('status', 'approved')
-        .eq('is_active', true)
-
-      if (membersError) throw membersError
-
-      interface MemberData {
-        user_id: string
-        users: {
-          id: string
-          name: string
-        } | null | Array<{ id: string; name: string }>
-      }
-
-      const members = (membersData || [])
-        .map((m: MemberData) => {
-          const user = Array.isArray(m.users) ? m.users[0] : m.users
-          return {
-            id: m.user_id,
-            name: user?.name || 'Unknown User'
-          }
-        })
-        .filter((m: { id: string; name: string }) => m.name !== 'Unknown User')
-      
+      const members = await fetchTeamMembers(supabase, teamId)
       setTeamMembers(members)
     } catch (err) {
       console.error('出欠情報の取得に失敗:', err)
@@ -630,114 +698,10 @@ export default function AdminMonthlyAttendance({ teamId }: AdminMonthlyAttendanc
         ) : (
           <div className="space-y-4">
             {/* 4つのグループに分けて表示 */}
-            {(() => {
-              // 回答済みのユーザーIDセット
-              const answeredUserIds = new Set(
-                attendanceData.map(a => a.user_id)
-              )
-              
-              // 未回答のメンバー（チームメンバー全員から回答済みを除外）
-              const unansweredMembers = teamMembers.filter(
-                m => !answeredUserIds.has(m.id)
-              )
-
-              // グループ化
-              const presentMembers = attendanceData
-                .filter(a => a.status === 'present')
-                .map(a => ({ id: a.user_id, name: a.user?.name || 'Unknown User' }))
-              
-              const absentMembers = attendanceData
-                .filter(a => a.status === 'absent')
-                .map(a => ({ id: a.user_id, name: a.user?.name || 'Unknown User' }))
-              
-              const otherMembers = attendanceData
-                .filter(a => a.status === 'other')
-                .map(a => ({ id: a.user_id, name: a.user?.name || 'Unknown User' }))
-
-              return (
-                <>
-                  {/* 出席 */}
-                  <div>
-                    <h3 className="text-sm font-semibold text-green-800 mb-2">
-                      出席 ({presentMembers.length}名)
-                    </h3>
-                    {presentMembers.length > 0 ? (
-                      <div className="bg-green-50 rounded-lg p-3 space-y-1">
-                        {presentMembers.map((member) => (
-                          <div key={member.id} className="text-sm text-gray-900">
-                            {member.name}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">
-                        なし
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 欠席 */}
-                  <div>
-                    <h3 className="text-sm font-semibold text-red-800 mb-2">
-                      欠席 ({absentMembers.length}名)
-                    </h3>
-                    {absentMembers.length > 0 ? (
-                      <div className="bg-red-50 rounded-lg p-3 space-y-1">
-                        {absentMembers.map((member) => (
-                          <div key={member.id} className="text-sm text-gray-900">
-                            {member.name}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">
-                        なし
-                      </div>
-                    )}
-                  </div>
-
-                  {/* その他 */}
-                  <div>
-                    <h3 className="text-sm font-semibold text-yellow-800 mb-2">
-                      その他 ({otherMembers.length}名)
-                    </h3>
-                    {otherMembers.length > 0 ? (
-                      <div className="bg-yellow-50 rounded-lg p-3 space-y-1">
-                        {otherMembers.map((member) => (
-                          <div key={member.id} className="text-sm text-gray-900">
-                            {member.name}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">
-                        なし
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 未回答 */}
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-800 mb-2">
-                      未回答 ({unansweredMembers.length}名)
-                    </h3>
-                    {unansweredMembers.length > 0 ? (
-                      <div className="bg-gray-50 rounded-lg p-3 space-y-1">
-                        {unansweredMembers.map((member) => (
-                          <div key={member.id} className="text-sm text-gray-600">
-                            {member.name}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">
-                        なし
-                      </div>
-                    )}
-                  </div>
-                </>
-              )
-            })()}
+            <AttendanceGroupingDisplay
+              attendanceData={attendanceData}
+              teamMembers={teamMembers}
+            />
           </div>
         )}
       </BaseModal>
