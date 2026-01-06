@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAuth } from '@/contexts'
 import { AttendanceAPI, TeamAttendanceWithDetails } from '@swim-hub/shared'
+import { TeamAttendancesAPI } from '@apps/shared/api/teams/attendances'
 import { AttendanceStatus, TeamEvent } from '@swim-hub/shared/types/database'
 import { getMonthDateRange } from '@swim-hub/shared/utils/date'
 import { format, startOfMonth, endOfMonth, addMonths } from 'date-fns'
@@ -28,6 +29,7 @@ interface MonthItem {
 export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps) {
   const { supabase } = useAuth()
   const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase])
+  const attendancesAPI = useMemo(() => new TeamAttendancesAPI(supabase), [supabase])
 
   // 月リスト表示用の状態
   const [monthList, setMonthList] = useState<MonthItem[]>([])
@@ -47,21 +49,28 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
   const [editStates, setEditStates] = useState<Record<string, AttendanceEditState>>({})
   const [saving, setSaving] = useState(false)
 
+  // 出欠状況モーダルの状態
+  const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false)
+  const [selectedEventForAttendance, setSelectedEventForAttendance] = useState<TeamEvent | null>(null)
+  const [attendanceData, setAttendanceData] = useState<TeamAttendanceWithDetails[]>([])
+  const [teamMembers, setTeamMembers] = useState<Array<{ id: string; name: string }>>([])
+  const [loadingAttendance, setLoadingAttendance] = useState(false)
+
   // 各月のステータスを計算
   const calculateMonthStatus = useCallback(async (year: number, month: number): Promise<{ eventCount: number; answeredCount: number; status: 'has_unanswered' | 'all_answered' | null }> => {
     const [startDateStr, endDateStr] = getMonthDateRange(year, month)
     
-    // イベント数を取得
+    // イベント数を取得（IDも取得して、どのイベントがあるかを把握）
     const [practicesResult, competitionsResult] = await Promise.all([
       supabase
         .from('practices')
-        .select('id', { count: 'exact', head: true })
+        .select('id')
         .eq('team_id', teamId)
         .gte('date', startDateStr)
         .lte('date', endDateStr),
       supabase
         .from('competitions')
-        .select('id', { count: 'exact', head: true })
+        .select('id')
         .eq('team_id', teamId)
         .gte('date', startDateStr)
         .lte('date', endDateStr)
@@ -70,16 +79,34 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
     if (practicesResult.error) throw practicesResult.error
     if (competitionsResult.error) throw competitionsResult.error
     
-    const eventCount = (practicesResult.count || 0) + (competitionsResult.count || 0)
+    const practiceIds = (practicesResult.data || []).map(p => p.id)
+    const competitionIds = (competitionsResult.data || []).map(c => c.id)
+    const eventCount = practiceIds.length + competitionIds.length
     
-    // 自分の出欠回答数を取得
+    // 自分の出欠回答を取得
     const attendanceData = await attendanceAPI.getMyAttendancesByMonth(teamId, year, month)
-    const answeredCount = attendanceData.length
+    
+    // 回答済みの数をカウント（statusがnullでないもの）
+    const answeredCount = attendanceData.filter(a => a.status !== null).length
+    
+    // 全てのイベントに対して回答があるかチェック
+    // イベントIDのセットを作成
+    const eventIds = new Set([...practiceIds, ...competitionIds])
+    // 回答があるイベントIDのセットを作成
+    const answeredEventIds = new Set(
+      attendanceData
+        .filter(a => a.status !== null)
+        .map(a => a.practice_id || a.competition_id)
+        .filter((id): id is string => id !== null)
+    )
+    
+    // 全てのイベントに回答があるかチェック
+    const allAnswered = eventCount > 0 && eventIds.size === answeredEventIds.size && eventIds.size === eventCount
     
     return {
       eventCount,
       answeredCount,
-      status: eventCount === 0 ? null : (answeredCount < eventCount ? 'has_unanswered' : 'all_answered')
+      status: eventCount === 0 ? null : (allAnswered ? 'all_answered' : 'has_unanswered')
     }
   }, [teamId, supabase, attendanceAPI])
 
@@ -320,15 +347,28 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
       }
 
       // 提出締め切り後の編集があるかチェック
-      const hasClosedEdits = updates.some((update) => {
+      const closedEvents = updates
+        .filter((update) => {
         const event = events.find((e) => e.id === update.eventId)
         return event && event.attendance_status === 'closed'
       })
+        .map((update) => {
+          const event = events.find((e) => e.id === update.eventId)
+          return event
+        })
+        .filter((e): e is TeamEvent => e !== undefined)
 
       // 提出締め切り後の編集がある場合、確認を求める
-      if (hasClosedEdits) {
+      if (closedEvents.length > 0) {
+        const eventDates = closedEvents
+          .map((event) => {
+            const date = new Date(event.date)
+            return `${date.getMonth() + 1}/${date.getDate()}`
+          })
+          .join('、')
+        
         const confirmed = window.confirm(
-          '提出締め切り後の編集になります。備考に編集日時が自動的に追加されます。保存しますか？'
+          `提出締め切り後の編集になります（${eventDates}）。備考に編集日時が自動的に追加されます。保存しますか？`
         )
         if (!confirmed) {
           setSaving(false)
@@ -366,7 +406,7 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
           if (event.attendance_status === 'closed') {
             const now = new Date()
             const editTimestamp = format(now, 'MM/dd HH:mm')
-            const editNote = `(${editTimestamp}編集)`
+            const editNote = `(${editTimestamp}締切後編集)`
             note = note ? `${note} ${editNote}` : editNote
           }
           
@@ -422,6 +462,75 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
     setSelectedMonth(null)
     setEditStates({})
   }
+
+  // 出欠状況モーダルを開く
+  const handleOpenAttendanceModal = async (event: TeamEvent) => {
+    setSelectedEventForAttendance(event)
+    setIsAttendanceModalOpen(true)
+    await loadAttendanceData(event)
+  }
+
+  // 出欠状況モーダルを閉じる
+  const handleCloseAttendanceModal = () => {
+    setIsAttendanceModalOpen(false)
+    setSelectedEventForAttendance(null)
+    setAttendanceData([])
+    setTeamMembers([])
+  }
+
+  // 出欠状況データを取得
+  const loadAttendanceData = useCallback(async (event: TeamEvent) => {
+    try {
+      setLoadingAttendance(true)
+      
+      // 出欠情報を取得
+      const attendances = event.type === 'practice'
+        ? await attendancesAPI.listByPractice(event.id)
+        : await attendancesAPI.listByCompetition(event.id)
+      setAttendanceData(attendances)
+
+      // チームメンバー全員を取得
+      const { data: membersData, error: membersError } = await supabase
+        .from('team_memberships')
+        .select(`
+          user_id,
+          users:users!team_memberships_user_id_fkey (
+            id,
+            name
+          )
+        `)
+        .eq('team_id', teamId)
+        .eq('status', 'approved')
+        .eq('is_active', true)
+
+      if (membersError) throw membersError
+
+      interface MemberData {
+        user_id: string
+        users: {
+          id: string
+          name: string
+        } | null | Array<{ id: string; name: string }>
+      }
+
+      const members = (membersData || [])
+        .map((m: MemberData) => {
+          const user = Array.isArray(m.users) ? m.users[0] : m.users
+          return {
+            id: m.user_id,
+            name: user?.name || 'Unknown User'
+          }
+        })
+        .filter((m: { id: string; name: string }) => m.name !== 'Unknown User')
+      
+      setTeamMembers(members)
+    } catch (err) {
+      console.error('出欠情報の取得に失敗:', err)
+      setError('出欠情報の取得に失敗しました')
+    } finally {
+      setLoadingAttendance(false)
+    }
+  }, [teamId, supabase, attendancesAPI])
 
   // 月名を取得
   const getMonthLabel = (year: number, month: number) => {
@@ -525,31 +634,32 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
               </div>
             ) : (
               <>
-                <div className="space-y-3">
+                <div className="bg-white rounded-lg shadow divide-y divide-gray-200">
                   {events.map((event) => {
                     const editState = editStates[event.id] || { status: null, note: '' }
 
                     return (
                       <div
                         key={`${event.type}-${event.id}`}
-                        className={`border rounded-lg p-3 ${
+                        className={`p-4 hover:bg-gray-50 cursor-pointer ${
                           event.type === 'competition'
-                            ? 'bg-purple-50 border-purple-200'
-                            : 'bg-white border-gray-200'
+                            ? 'bg-purple-50'
+                            : 'bg-white'
                         }`}
+                        onClick={() => handleOpenAttendanceModal(event)}
                       >
                         {/* イベント情報と出欠選択を横並び */}
                         <div className="flex items-center justify-between gap-3">
                           {/* 左側：日付、タイトル、場所を1行で */}
                           <div className="flex-1 flex items-center gap-2">
-                            <span className="text-base font-bold text-gray-900 whitespace-nowrap">
+                            <span className="text-sm font-bold text-gray-900 whitespace-nowrap">
                               {new Date(event.date).toLocaleDateString('ja-JP', {
                                 month: 'long',
                                 day: 'numeric',
                                 weekday: 'short'
                               })}
                             </span>
-                            <h3 className="text-sm font-medium text-gray-900">
+                            <h3 className="text-xs font-medium text-gray-900">
                               {event.type === 'competition' ? event.title : '練習'}
                             </h3>
                             {event.place && (
@@ -558,7 +668,7 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
                           </div>
 
                           {/* 右側：ステータスバッジ、出欠選択と備考 */}
-                          <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                          <div className="flex flex-col items-end gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                             {/* ステータスバッジ */}
                             <div>
                               {getStatusBadge(event.attendance_status)}
@@ -567,7 +677,7 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
                             <div className="flex items-center gap-1.5">
                               <button
                                 onClick={() => handleStatusChange(event.id, 'present')}
-                                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
                                   editState.status === 'present'
                                     ? 'bg-green-100 text-green-800 border-2 border-green-500'
                                     : 'bg-gray-100 text-gray-600 hover:bg-green-50 border-2 border-transparent'
@@ -577,7 +687,7 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
                               </button>
                               <button
                                 onClick={() => handleStatusChange(event.id, 'absent')}
-                                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
                                   editState.status === 'absent'
                                     ? 'bg-red-100 text-red-800 border-2 border-red-500'
                                     : 'bg-gray-100 text-gray-600 hover:bg-red-50 border-2 border-transparent'
@@ -587,7 +697,7 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
                               </button>
                               <button
                                 onClick={() => handleStatusChange(event.id, 'other')}
-                                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
                                   editState.status === 'other'
                                     ? 'bg-yellow-100 text-yellow-800 border-2 border-yellow-500'
                                     : 'bg-gray-100 text-gray-600 hover:bg-yellow-50 border-2 border-transparent'
@@ -600,7 +710,7 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
                                 value={editState.note}
                                 onChange={(e) => handleNoteChange(event.id, e.target.value)}
                                 placeholder="備考を入力（任意）"
-                                className="w-40 px-2 py-1.5 border border-gray-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-60 px-2 py-1 border border-gray-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               />
                             </div>
                           </div>
@@ -624,6 +734,137 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
                 </div>
               </>
             )}
+          </div>
+        )}
+      </BaseModal>
+
+      {/* 出欠状況モーダル */}
+      <BaseModal
+        isOpen={isAttendanceModalOpen}
+        onClose={handleCloseAttendanceModal}
+        title={selectedEventForAttendance ? `${new Date(selectedEventForAttendance.date).toLocaleDateString('ja-JP', {
+          month: 'long',
+          day: 'numeric',
+          weekday: 'short'
+        })}の出欠状況` : ''}
+        size="lg"
+      >
+        {loadingAttendance ? (
+          <div className="text-center py-6">
+            <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
+            <p className="mt-1.5 text-sm text-gray-500">読み込み中...</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* 4つのグループに分けて表示 */}
+            {(() => {
+              // 回答済みのユーザーIDセット
+              const answeredUserIds = new Set(
+                attendanceData.map(a => a.user_id)
+              )
+              
+              // 未回答のメンバー（チームメンバー全員から回答済みを除外）
+              const unansweredMembers = teamMembers.filter(
+                m => !answeredUserIds.has(m.id)
+              )
+
+              // グループ化
+              const presentMembers = attendanceData
+                .filter(a => a.status === 'present')
+                .map(a => ({ id: a.user_id, name: a.user?.name || 'Unknown User' }))
+              
+              const absentMembers = attendanceData
+                .filter(a => a.status === 'absent')
+                .map(a => ({ id: a.user_id, name: a.user?.name || 'Unknown User' }))
+              
+              const otherMembers = attendanceData
+                .filter(a => a.status === 'other')
+                .map(a => ({ id: a.user_id, name: a.user?.name || 'Unknown User' }))
+
+              return (
+                <>
+                  {/* 出席 */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-green-800 mb-2">
+                      出席 ({presentMembers.length}名)
+                    </h3>
+                    {presentMembers.length > 0 ? (
+                      <div className="bg-green-50 rounded-lg p-3 space-y-1">
+                        {presentMembers.map((member) => (
+                          <div key={member.id} className="text-sm text-gray-900">
+                            {member.name}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">
+                        なし
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 欠席 */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-red-800 mb-2">
+                      欠席 ({absentMembers.length}名)
+                    </h3>
+                    {absentMembers.length > 0 ? (
+                      <div className="bg-red-50 rounded-lg p-3 space-y-1">
+                        {absentMembers.map((member) => (
+                          <div key={member.id} className="text-sm text-gray-900">
+                            {member.name}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">
+                        なし
+                      </div>
+                    )}
+                  </div>
+
+                  {/* その他 */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-yellow-800 mb-2">
+                      その他 ({otherMembers.length}名)
+                    </h3>
+                    {otherMembers.length > 0 ? (
+                      <div className="bg-yellow-50 rounded-lg p-3 space-y-1">
+                        {otherMembers.map((member) => (
+                          <div key={member.id} className="text-sm text-gray-900">
+                            {member.name}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">
+                        なし
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 未回答 */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-800 mb-2">
+                      未回答 ({unansweredMembers.length}名)
+                    </h3>
+                    {unansweredMembers.length > 0 ? (
+                      <div className="bg-gray-50 rounded-lg p-3 space-y-1">
+                        {unansweredMembers.map((member) => (
+                          <div key={member.id} className="text-sm text-gray-600">
+                            {member.name}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">
+                        なし
+                      </div>
+                    )}
+                  </div>
+                </>
+              )
+            })()}
           </div>
         )}
       </BaseModal>
