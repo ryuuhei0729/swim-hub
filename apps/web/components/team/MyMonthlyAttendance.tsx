@@ -437,7 +437,16 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
         const now = new Date()
         const editTimestamp = format(now, 'MM/dd HH:mm')
         const editNote = `(${editTimestamp}締切後編集)`
-        note = note ? `${note} ${editNote}` : editNote
+        
+        // 既存の「(MM/dd HH:mm締切後編集)」パターンを削除してから追加
+        if (note) {
+          // 既存の締切後編集パターンを削除（正規表現でマッチ）
+          note = note.replace(/\s*\(\d{2}\/\d{2}\s+\d{2}:\d{2}締切後編集\)/g, '').trim()
+          // 新しい編集日時を追加
+          note = note ? `${note} ${editNote}` : editNote
+        } else {
+          note = editNote
+        }
       }
 
       if (existingAttendance) {
@@ -468,7 +477,7 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
 
       // ローカル状態を更新（再取得せずに直接更新）
       if (existingAttendance) {
-        // 既存の出欠情報を更新
+        // 既存の出欠情報を更新（備考欄に「締切後編集」が追加された状態も含む）
         setRecentAttendances((prev) =>
           prev.map((a) =>
             a.id === existingAttendance.id
@@ -476,6 +485,14 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
               : a
           )
         )
+        // 編集状態も更新（備考欄に「締切後編集」が追加された状態を反映）
+        setRecentEditStates((prev) => ({
+          ...prev,
+          [eventId]: {
+            status: editState.status,
+            note: note || '' // 締切後編集が追加された後のnoteを反映
+          }
+        }))
       } else {
         // 新規作成の場合は、作成したデータを取得してローカル状態に追加
         const { data: insertedData, error: selectError } = await supabase
@@ -498,17 +515,16 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
         } else if (insertedData) {
           // 取得できた場合はローカル状態に追加
           setRecentAttendances((prev) => [...prev, insertedData as TeamAttendanceWithDetails])
+          // 編集状態も更新（締切後編集が追加された後のnoteを使用）
+          setRecentEditStates((prev) => ({
+            ...prev,
+            [eventId]: {
+              status: editState.status,
+              note: note || '' // 締切後編集が追加された後のnoteを使用
+            }
+          }))
         }
       }
-
-      // 編集状態を保存済み状態に更新
-      setRecentEditStates((prev) => ({
-        ...prev,
-        [eventId]: {
-          status: editState.status,
-          note: editState.note
-        }
-      }))
 
       // 月リストのステータスを更新（再取得せずに計算で更新）
       const now = new Date()
@@ -698,7 +714,16 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
             const now = new Date()
             const editTimestamp = format(now, 'MM/dd HH:mm')
             const editNote = `(${editTimestamp}締切後編集)`
+            
+            // 既存の「(MM/dd HH:mm締切後編集)」パターンを削除してから追加
+            if (note) {
+              // 既存の締切後編集パターンを削除（正規表現でマッチ）
+              note = note.replace(/\s*\(\d{2}\/\d{2}\s+\d{2}:\d{2}締切後編集\)/g, '').trim()
+              // 新しい編集日時を追加
             note = note ? `${note} ${editNote}` : editNote
+            } else {
+              note = editNote
+            }
           }
           
           return {
@@ -965,16 +990,20 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
 
           return (
             <div className="bg-white rounded-lg shadow divide-y divide-gray-200">
-              {filteredEvents.map((event) => {
-              const editState = recentEditStates[event.id] || { status: null, note: '' }
-              const isSaving = savingEventIds.has(event.id)
-              const existingAttendance = recentAttendances.find(
-                (a) => (a.practice_id || a.competition_id) === event.id
-              )
-              const hasChanges = existingAttendance
-                ? existingAttendance.status !== editState.status ||
-                  (existingAttendance.note || '') !== editState.note
-                : editState.status !== null || editState.note !== ''
+            {filteredEvents.map((event) => {
+                const editState = recentEditStates[event.id] || { status: null, note: '' }
+                const isSaving = savingEventIds.has(event.id)
+                // recentAttendancesから最新の値を取得（保存後に更新されるため）
+                const existingAttendance = recentAttendances.find(
+                  (a) => (a.practice_id || a.competition_id) === event.id
+                )
+                // 保存済みの状態と編集状態を比較
+                // 締切後編集の場合、noteに「締切後編集」が追加される可能性があるため、
+                // existingAttendanceのnoteとeditState.noteを比較する際は注意が必要
+                const hasChanges = existingAttendance
+                  ? existingAttendance.status !== editState.status ||
+                    (existingAttendance.note || '').trim() !== (editState.note || '').trim()
+                  : editState.status !== null || (editState.note || '').trim() !== ''
 
               return (
                 <div
