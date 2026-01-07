@@ -157,10 +157,46 @@ jobs:
     - name: Install Playwright browsers
       run: npx playwright install --with-deps
 
+    - name: Configure Supabase for CI environment
+      run: |
+        # CI環境用の設定を準備
+        echo "🔧 CI環境用のSupabase設定を準備中..."
+        
+        # 1. JWT署名鍵を生成（RS256アルゴリズムを使用）
+        echo "🔑 JWT署名鍵を生成中..."
+        mkdir -p supabase
+        npx supabase gen signing-key --algorithm RS256 > supabase/signing_key.json || {
+          echo "⚠️ JWT署名鍵の生成に失敗しました。デフォルト設定を使用します。"
+          exit 1
+        }
+        echo "✅ JWT署名鍵を生成しました"
+        
+        # 2. config.tomlでsigning_keys_pathを有効化（CI環境のみ）
+        echo "📝 config.tomlを更新中..."
+        # Linux環境用のsedコマンド（CI環境はLinux）
+        sed -i 's|# signing_keys_path = "./signing_key.json"|signing_keys_path = "./signing_key.json"|g' supabase/config.toml || {
+          echo "⚠️ config.tomlの更新に失敗しました。"
+          exit 1
+        }
+        
+        # 3. CI環境でGoogle OAuthを無効化
+        echo "🔒 Google OAuthを無効化中..."
+        # [auth.external.google]セクションのenabled = trueをfalseに変更
+        sed -i '/\[auth\.external\.google\]/,/^\[/ s/^enabled = true/enabled = false/' supabase/config.toml || {
+          echo "⚠️ Google OAuthの無効化に失敗しました。"
+          exit 1
+        }
+        echo "✅ config.tomlを更新しました"
+      env:
+        # CI環境ではGoogle OAuthは不要なため、ダミー値を設定して警告を抑制
+        SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID: "dummy-client-id"
+        SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: "dummy-secret"
+
     - name: Start Supabase stack
       run: npx supabase start --workdir supabase
       timeout-minutes: 5
       env:
+        SUPABASE_DB_PASSWORD: postgres
         # CI環境ではGoogle OAuthは不要なため、ダミー値を設定して警告を抑制
         SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID: "dummy-client-id"
         SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: "dummy-secret"
