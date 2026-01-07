@@ -56,6 +56,7 @@
     "@types/node": "^25",
     "dotenv": "^17.2.3",
     "enhanced-resolve": "^5.18.4",
+    "supabase": "^2.71.1",
     "tapable": "^2.3.0",
     "turbo": "^2.6.0",
     "typescript": "^5"

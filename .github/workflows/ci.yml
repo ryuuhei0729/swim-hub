@@ -160,11 +160,30 @@ jobs:
     - name: Start Supabase stack
       run: npx supabase start --workdir supabase
       timeout-minutes: 5
+      env:
+        # CI環境ではGoogle OAuthは不要なため、ダミー値を設定して警告を抑制
+        SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID: "dummy-client-id"
+        SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: "dummy-secret"
+
+    - name: Wait for Supabase to be ready
+      run: |
+        echo "⏳ Supabaseコンテナの起動を待機中..."
+        for i in {1..30}; do
+          if curl -s -f http://127.0.0.1:54321/rest/v1/ > /dev/null 2>&1; then
+            echo "✅ Supabaseが起動しました"
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "⚠️ Supabaseの起動確認がタイムアウトしましたが、続行します"
 
     - name: Run migrations and seed database
       run: npx supabase db reset --workdir supabase
       env:
         SUPABASE_DB_PASSWORD: postgres
+        # CI環境ではGoogle OAuthは不要なため、ダミー値を設定して警告を抑制
+        SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID: "dummy-client-id"
+        SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: "dummy-secret"
 
     - name: Refresh PostgREST schema cache
       run: |
