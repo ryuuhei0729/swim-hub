@@ -196,13 +196,12 @@ jobs:
         done
         echo "⚠️ Supabaseの起動確認がタイムアウトしましたが、続行します"
 
-    - name: Reset database and run migrations
+    - name: Reset database
       run: |
-        # db resetの代わりに、データベースを直接リセットしてマイグレーションを適用
+        # データベースを直接リセット（コンテナ再起動なし）
         # これにより、コンテナ再起動時のJWT署名鍵読み込み問題を回避
         echo "🔄 データベースをリセット中..."
         
-        # データベースを直接リセット（コンテナ再起動なし）
         DB_CONTAINER=$(docker ps --filter "name=supabase_db" --format "{{.Names}}" | head -n 1)
         if [ -z "$DB_CONTAINER" ]; then
           echo "❌ データベースコンテナが見つかりません"
@@ -213,24 +212,30 @@ jobs:
         
         # データベースをリセット（すべてのスキーマを削除）
         docker exec "$DB_CONTAINER" psql -U postgres -d postgres -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO postgres; GRANT ALL ON SCHEMA public TO public;" || {
-          echo "⚠️ データベースリセットに失敗しました。db resetを試します..."
-          npx supabase db reset --workdir supabase
-          exit 0
-        }
-        
-        # マイグレーションを適用
-        echo "📦 マイグレーションを適用中..."
-        npx supabase migration up --workdir supabase || {
-          echo "⚠️ マイグレーションの適用に失敗しました"
+          echo "⚠️ データベースリセットに失敗しました"
           exit 1
         }
         
-        echo "✅ データベースのリセットとマイグレーションが完了しました"
+        echo "✅ データベースのリセットが完了しました"
       env:
         SUPABASE_DB_PASSWORD: postgres
-        # CI環境ではGoogle OAuthは不要なため、ダミー値を設定して警告を抑制
-        SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID: "dummy-client-id"
-        SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: "dummy-secret"
+
+    - name: Apply migrations (psql)
+      run: |
+        DB_CONTAINER=$(docker ps --filter "name=supabase_db" --format "{{.Names}}" | head -n 1)
+        if [ -z "$DB_CONTAINER" ]; then
+          echo "❌ DB container not found"
+          exit 1
+        fi
+
+        echo "📦 Applying migrations via psql"
+
+        for file in supabase/migrations/*.sql; do
+          echo "➡️ Applying $file"
+          docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres < "$file"
+        done
+      env:
+        SUPABASE_DB_PASSWORD: postgres
 
     - name: Refresh PostgREST schema cache
       run: |
