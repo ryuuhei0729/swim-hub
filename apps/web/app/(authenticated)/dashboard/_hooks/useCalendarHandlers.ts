@@ -83,7 +83,7 @@ export function useCalendarHandlers({
   }, [openPracticeBasicForm, openCompetitionBasicForm, setSelectedDate, setEditingData])
 
   // アイテム編集ハンドラー
-  const onEditItem = useCallback((item: CalendarItem) => {
+  const onEditItem = useCallback(async (item: CalendarItem) => {
     const dateObj = parseDateString(item.date)
     
     if (item.type === 'practice' || item.type === 'team_practice') {
@@ -94,6 +94,7 @@ export function useCalendarHandlers({
       // editDataからcompetitionIdを取得（DayDetailModalから渡される場合）
       let competitionId: string | undefined
       let editData: EditingData | undefined
+      let isTeamCompetition = false
       
       if (item.editData && typeof item.editData === 'object') {
         // editDataが存在する場合、そこからcompetitionIdを取得
@@ -102,6 +103,11 @@ export function useCalendarHandlers({
         }
         // editDataをEditingDataとして使用
         editData = item.editData as EditingData
+        // competitionオブジェクトからteam_idを取得
+        if ('competition' in item.editData && item.editData.competition) {
+          const competition = item.editData.competition as { team_id?: string | null }
+          isTeamCompetition = !!competition.team_id
+        }
       }
       
       // フォールバック: metadataから取得
@@ -109,14 +115,54 @@ export function useCalendarHandlers({
         competitionId = item.metadata?.entry?.competition_id || item.metadata?.competition?.id
       }
       
+      // チームcompetitionかどうかを判定
+      if (!isTeamCompetition) {
+        isTeamCompetition = !!item.metadata?.team_id
+      }
+      
       if (competitionId) {
-        // editDataをEditingDataとして渡す
-        openEntryLogForm(competitionId, editData)
+        // チームcompetitionの場合、entry_statusをチェック
+        if (isTeamCompetition) {
+          // entry_statusを取得してチェック
+          try {
+            const { data: competitionData, error: competitionError } = await supabase
+              .from('competitions')
+              .select('entry_status')
+              .eq('id', competitionId)
+              .single()
+
+            if (!competitionError && competitionData) {
+              const status = (competitionData as { entry_status?: string | null }).entry_status || 'before'
+              if (status !== 'open') {
+                // entry_statusが'open'でない場合はalertを表示してrecord入力モーダルに遷移
+                const statusLabel = status === 'before' ? '受付前' : '受付終了'
+                window.alert(`エントリーは${statusLabel}のため、エントリー登録はできません。記録入力に進みます。`)
+                
+                // record入力モーダルに遷移
+                if (editData && 'entryDataList' in editData && editData.entryDataList) {
+                  openRecordLogForm(competitionId, undefined, { entryDataList: editData.entryDataList })
+                } else {
+                  openRecordLogForm(competitionId)
+                }
+                return
+              }
+            }
+            // entry_statusが'open'の場合は通常通りエントリー登録フォームを開く
+            openEntryLogForm(competitionId, editData)
+          } catch (err: unknown) {
+            console.error('エントリーステータスの取得エラー:', err)
+            // エラー時は通常通りエントリー登録フォームを開く
+            openEntryLogForm(competitionId, editData)
+          }
+        } else {
+          // 個人competitionの場合は通常通りエントリー登録フォームを開く
+          openEntryLogForm(competitionId, editData)
+        }
       }
     } else if (item.type === 'competition' || item.type === 'team_competition') {
       openCompetitionBasicForm(dateObj, item)
     }
-  }, [parseDateString, openPracticeBasicForm, openPracticeLogForm, openEntryLogForm, openCompetitionBasicForm, setEditingData])
+  }, [parseDateString, openPracticeBasicForm, openPracticeLogForm, openEntryLogForm, openCompetitionBasicForm, openRecordLogForm, supabase, setEditingData])
 
   // アイテム削除ハンドラー（handleDeleteItemを使用）
   const onDeleteItem = useCallback(async (itemId: string, itemType?: CalendarItemType) => {
@@ -176,14 +222,14 @@ export function useCalendarHandlers({
   }, [supabase, refreshCalendar])
 
   // 記録追加ハンドラー
-  const onAddRecord = useCallback((params: { competitionId?: string; entryData?: EntryInfo; entryDataList?: EntryInfo[] }) => {
+  const onAddRecord = useCallback(async (params: { competitionId?: string; entryData?: EntryInfo; entryDataList?: EntryInfo[] }) => {
     const { competitionId, entryData, entryDataList } = params
     
     if (!competitionId || competitionId.trim() === '') {
       openCompetitionBasicForm()
       return
     }
-    
+
     if (entryDataList && entryDataList.length > 0) {
       const editData: EditingData = { entryDataList }
       openRecordLogForm(competitionId || undefined, undefined, editData)
@@ -194,9 +240,39 @@ export function useCalendarHandlers({
       const editData: EditingData = { entryData }
       openRecordLogForm(competitionId || undefined, undefined, editData)
     } else if (competitionId) {
-      openEntryLogForm(competitionId)
+      // チームcompetitionかどうかをチェック
+      try {
+        const { data: competitionData, error: competitionError } = await supabase
+          .from('competitions')
+          .select('entry_status, team_id')
+          .eq('id', competitionId)
+          .single()
+
+        if (!competitionError && competitionData) {
+          const isTeamCompetition = !!(competitionData as { team_id?: string | null }).team_id
+          // チームcompetitionの場合、entry_statusをチェック
+          if (isTeamCompetition) {
+            const status = (competitionData as { entry_status?: string | null }).entry_status || 'before'
+            if (status !== 'open') {
+              // entry_statusが'open'でない場合はalertを表示してrecord入力モーダルに遷移
+              const statusLabel = status === 'before' ? '受付前' : '受付終了'
+              window.alert(`エントリーは${statusLabel}のため、エントリー登録はできません。記録入力に進みます。`)
+              
+              // record入力モーダルに遷移
+              openRecordLogForm(competitionId)
+              return
+            }
+          }
+        }
+        // entry_statusが'open'または個人competitionの場合は通常通りエントリー登録フォームを開く
+        openEntryLogForm(competitionId)
+      } catch (err: unknown) {
+        console.error('エントリーステータスの取得エラー:', err)
+        // エラー時は通常通りエントリー登録フォームを開く
+        openEntryLogForm(competitionId)
+      }
     }
-  }, [openCompetitionBasicForm, openRecordLogForm, openEntryLogForm])
+  }, [openCompetitionBasicForm, openRecordLogForm, openEntryLogForm, supabase])
 
   // 記録編集ハンドラー
   const onEditRecord = useCallback((record: RecordForEdit) => {

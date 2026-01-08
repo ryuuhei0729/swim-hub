@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { useAuth } from '@/contexts'
 import CalendarContainer from '../_components/CalendarContainer'
 import TeamAnnouncementsSection from '../_components/TeamAnnouncementsSection'
@@ -59,6 +59,7 @@ export default function DashboardClient({
   tags
 }: DashboardClientProps) {
   const { user, supabase } = useAuth()
+  const [notificationsRefreshKey, setNotificationsRefreshKey] = useState(0)
   
   // Zustandストア
   const {
@@ -170,9 +171,9 @@ export default function DashboardClient({
   const {
     handlePracticeBasicSubmit,
     handlePracticeLogSubmit,
-    handleDeleteItem,
+    handleDeleteItem: originalHandleDeleteItem,
     handleCompetitionBasicSubmit,
-    handleEntrySubmit,
+    handleEntrySubmit: originalHandleEntrySubmit,
     handleEntrySkip,
     handleRecordLogSubmit
   } = useDashboardHandlers({
@@ -208,6 +209,25 @@ export default function DashboardClient({
     refreshCalendar
   })
 
+  // エントリー完了時に通知を再読み込み
+  const handleEntrySubmit = async (entriesData: Parameters<typeof originalHandleEntrySubmit>[0]) => {
+    await originalHandleEntrySubmit(entriesData)
+    // 通知を再読み込み
+    setNotificationsRefreshKey(prev => prev + 1)
+  }
+
+  // エントリー削除時に通知を再読み込み
+  const handleDeleteItem = async (
+    itemId: string, 
+    itemType?: 'practice' | 'team_practice' | 'practice_log' | 'competition' | 'team_competition' | 'entry' | 'record'
+  ) => {
+    await originalHandleDeleteItem(itemId, itemType)
+    // エントリー削除の場合、通知を再読み込み
+    if (itemType === 'entry') {
+      setNotificationsRefreshKey(prev => prev + 1)
+    }
+  }
+
   // カレンダーイベントハンドラー
   const {
     onDateClick,
@@ -237,7 +257,11 @@ export default function DashboardClient({
     <div className="min-h-screen bg-gray-50">
       <div className="w-full">
         {/* チームのお知らせセクション */}
-        <TeamAnnouncementsSection teams={teams} />
+        <TeamAnnouncementsSection 
+          teams={teams} 
+          openEntryLogForm={openEntryLogForm}
+          refreshKey={notificationsRefreshKey}
+        />
         
         {/* カレンダーコンポーネント */}
         <CalendarContainer 

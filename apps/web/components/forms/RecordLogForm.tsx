@@ -6,6 +6,8 @@ import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { formatTime } from '@/utils/formatters'
 import { EntryInfo } from '@apps/shared/types/ui'
 import { LapTimeDisplay } from './LapTimeDisplay'
+import { format } from 'date-fns'
+import { ja } from 'date-fns/locale'
 // SplitTimeRow型定義（editData用のcamelCase型）
 type SplitTimeRow = {
   distance: number
@@ -49,6 +51,8 @@ interface RecordLogFormProps {
   onClose: () => void
   onSubmit: (dataList: RecordLogFormData[]) => Promise<void>
   competitionId: string
+  competitionTitle?: string // 大会名
+  competitionDate?: string // 大会日付
   editData?: {
     id?: string
     styleId?: number
@@ -69,6 +73,8 @@ export default function RecordLogForm({
   onClose,
   onSubmit,
   competitionId: _competitionId,
+  competitionTitle,
+  competitionDate,
   editData,
   isLoading = false,
   styles = [],
@@ -181,7 +187,7 @@ export default function RecordLogForm({
       setFormDataList([createDefaultState(styles[0]?.id ? String(styles[0].id) : '')])
       setIsInitialized(true)
     }
-  }, [isOpen, editData, entryDataList, isInitialized])
+  }, [isOpen, editData, entryDataList, isInitialized, styles])
 
   const parseTimeToSeconds = (timeStr: string): number => {
     if (!timeStr || timeStr.trim() === '') return 0
@@ -469,7 +475,7 @@ export default function RecordLogForm({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[70] overflow-y-auto" data-testid="record-form-modal">
+    <div className="fixed inset-0 z-70 overflow-y-auto" data-testid="record-form-modal">
       <div className="flex min-h-screen items-center justify-center p-4">
         {/* オーバーレイ */}
         <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose}></div>
@@ -480,9 +486,26 @@ export default function RecordLogForm({
             {/* ヘッダー */}
             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg leading-6 font-medium text-gray-900">
-                  {editData ? '記録編集' : '記録登録'}
-                </h3>
+                <div className="flex-1">
+                  {(competitionTitle || competitionDate) && (
+                    <div className="mt-3 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200">
+                      <p className="text-lg font-bold text-gray-900">
+                        {competitionDate && competitionTitle && (
+                          <>
+                            <span className="text-base font-semibold text-blue-700">
+                              {format(new Date(competitionDate), 'yyyy年M月d日(E)', { locale: ja })}
+                            </span>
+                            <span className="ml-3">{competitionTitle}</span>
+                          </>
+                        )}
+                        {competitionDate && !competitionTitle && (
+                          format(new Date(competitionDate), 'yyyy年M月d日(E)', { locale: ja })
+                        )}
+                        {!competitionDate && competitionTitle && competitionTitle}
+                      </p>
+                    </div>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={handleClose}
