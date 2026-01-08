@@ -10,12 +10,14 @@ interface TeamAnnouncementsProps {
   teamId: string
   isAdmin: boolean
   viewOnly?: boolean
+  hideEmptyMessage?: boolean
 }
 
 export const TeamAnnouncements: React.FC<TeamAnnouncementsProps> = ({
   teamId,
   isAdmin,
-  viewOnly = false
+  viewOnly = false,
+  hideEmptyMessage = false
 }) => {
   const [showForm, setShowForm] = useState(false)
   const [_showDetail, setShowDetail] = useState(false)
@@ -55,6 +57,7 @@ export const TeamAnnouncements: React.FC<TeamAnnouncementsProps> = ({
         onCreateNew={handleCreateNew}
         onEdit={handleEdit}
         viewOnly={viewOnly}
+        hideEmptyMessage={hideEmptyMessage}
       />
 
       {/* お知らせ作成・編集フォーム */}

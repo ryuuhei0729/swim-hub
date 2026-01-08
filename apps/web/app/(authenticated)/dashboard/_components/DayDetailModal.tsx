@@ -326,6 +326,28 @@ export default function DayDetailModal({
                           const { data: { user } } = await supabase.auth.getUser()
                           if (!user) return
 
+                          // チームcompetitionの場合、entry_statusをチェック
+                          if (item.metadata?.team_id) {
+                            const { data: competitionData, error: competitionError } = await supabase
+                              .from('competitions')
+                              .select('entry_status')
+                              .eq('id', competitionId)
+                              .single()
+
+                            if (!competitionError && competitionData) {
+                              const status = competitionData.entry_status || 'before'
+                              if (status !== 'open') {
+                                // entry_statusが'open'でない場合はalertを表示してrecord入力モーダルに遷移
+                                const statusLabel = status === 'before' ? '受付前' : '受付終了'
+                                window.alert(`エントリーは${statusLabel}のため、エントリー登録はできません。記録入力に進みます。`)
+                                
+                                // record入力モーダルに遷移
+                                onAddRecord?.({ competitionId })
+                                return
+                              }
+                            }
+                          }
+
                           // エントリーデータを取得
                         const { data: entryData, error } = await supabase
                             .from('entries')
@@ -1771,6 +1793,7 @@ function CompetitionWithEntry({
   })
   const [loading, setLoading] = useState(true)
   const [authError, setAuthError] = useState<string | null>(null)
+  const [entryStatus, setEntryStatus] = useState<'before' | 'open' | 'closed' | null>(null)
 
   useEffect(() => {
     const fetchEntryData = async () => {
@@ -1781,6 +1804,17 @@ function CompetitionWithEntry({
           setAuthError('認証が必要です。ログインしてください。')
           router.replace('/login')
           return
+        }
+
+        // competitionのentry_statusを取得
+        const { data: competitionData, error: competitionError } = await supabase
+          .from('competitions')
+          .select('entry_status')
+          .eq('id', competitionId)
+          .single()
+
+        if (!competitionError && competitionData) {
+          setEntryStatus(competitionData.entry_status || 'before')
         }
 
         // EntryAPIを使用してエントリーを取得
@@ -1843,8 +1877,51 @@ function CompetitionWithEntry({
     }
   }
 
-  const handleEditEntryClick = () => {
+  const handleEditEntryClick = async () => {
     if (!onEditEntry) return
+
+    // チームcompetitionの場合、entry_statusをチェック
+    if (isTeamCompetition) {
+      // entry_statusがまだ取得されていない場合は取得
+      if (entryStatus === null) {
+        try {
+          const { data: competitionData, error: competitionError } = await supabase
+            .from('competitions')
+            .select('entry_status')
+            .eq('id', competitionId)
+            .single()
+
+          if (!competitionError && competitionData) {
+            const status = competitionData.entry_status || 'before'
+            setEntryStatus(status)
+
+            // entry_statusが'open'でない場合はalertを表示してrecord入力モーダルに遷移
+            if (status !== 'open') {
+              const statusLabel = status === 'before' ? '受付前' : '受付終了'
+              window.alert(`エントリーは${statusLabel}のため、エントリー登録はできません。記録入力に進みます。`)
+              
+              // record入力モーダルに遷移
+              if (onAddRecord) {
+                handleAddRecordClick()
+              }
+              return
+            }
+          }
+        } catch (err) {
+          console.error('エントリーステータスの取得エラー:', err)
+        }
+      } else if (entryStatus !== 'open') {
+        // entry_statusが'open'でない場合はalertを表示してrecord入力モーダルに遷移
+        const statusLabel = entryStatus === 'before' ? '受付前' : '受付終了'
+        window.alert(`エントリーは${statusLabel}のため、エントリー登録はできません。記録入力に進みます。`)
+        
+        // record入力モーダルに遷移
+        if (onAddRecord) {
+          handleAddRecordClick()
+        }
+        return
+      }
+    }
 
     if (entries.length === 0) {
       onEditEntry()
