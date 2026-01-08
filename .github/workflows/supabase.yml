@@ -26,7 +26,7 @@ jobs:
         node-version: '20.x'
       
     - name: Type check migrations
-      run: npx supabase db type-check
+      run: npx supabase db type-check --workdir supabase
 
   migration-test:
     needs: type-check
@@ -49,16 +49,90 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
-    - name: Start Supabase stack
-      run: npx supabase start
+    - name: Configure Supabase for CI environment
+      run: |
+        # CI環境用の設定を準備
+        echo "🔧 CI環境用のSupabase設定を準備中..."
+        
+        # CI環境でGoogle OAuthを無効化（JWT署名鍵はデフォルトを使用）
+        echo "🔒 Google OAuthを無効化中..."
+        # [auth.external.google]セクションのenabled = trueをfalseに変更
+        sed -i '/\[auth\.external\.google\]/,/^\[/ s/^enabled = true/enabled = false/' supabase/config.toml || {
+          echo "⚠️ Google OAuthの無効化に失敗しました。"
+          exit 1
+        }
+        echo "✅ config.tomlを更新しました（Google OAuthを無効化、JWT署名鍵はデフォルトを使用）"
+      env:
+        # CI環境ではGoogle OAuthは不要なため、ダミー値を設定して警告を抑制
+        SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID: "dummy-client-id"
+        SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: "dummy-secret"
 
-    - name: Run migrations against fresh database
-      run: npx supabase db reset
+    - name: Start Supabase stack
+      run: npx supabase start --workdir supabase
+      timeout-minutes: 5
+      env:
+        SUPABASE_DB_PASSWORD: postgres
+        # CI環境ではGoogle OAuthは不要なため、ダミー値を設定して警告を抑制
+        SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID: "dummy-client-id"
+        SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: "dummy-secret"
+
+    - name: Wait for Supabase to be ready
+      run: |
+        echo "⏳ Supabaseコンテナの起動を待機中..."
+        for i in {1..30}; do
+          if curl -s -f http://127.0.0.1:54321/rest/v1/ > /dev/null 2>&1; then
+            echo "✅ Supabaseが起動しました"
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "⚠️ Supabaseの起動確認がタイムアウトしましたが、続行します"
+
+    - name: Reset database
+      run: |
+        # データベースを直接リセット（コンテナ再起動なし）
+        # これにより、コンテナ再起動時のJWT署名鍵読み込み問題を回避
+        echo "🔄 データベースをリセット中..."
+        
+        DB_CONTAINER=$(docker ps --filter "name=supabase_db" --format "{{.Names}}" | head -n 1)
+        if [ -z "$DB_CONTAINER" ]; then
+          echo "❌ データベースコンテナが見つかりません"
+          exit 1
+        fi
+        
+        echo "📦 データベースコンテナ: $DB_CONTAINER"
+        
+        # データベースをリセット（すべてのスキーマを削除）
+        docker exec "$DB_CONTAINER" psql -U postgres -d postgres -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO postgres; GRANT ALL ON SCHEMA public TO public;" || {
+          echo "⚠️ データベースリセットに失敗しました"
+          exit 1
+        }
+        
+        echo "✅ データベースのリセットが完了しました"
+      env:
+        SUPABASE_DB_PASSWORD: postgres
+
+    - name: Apply migrations (psql)
+      run: |
+        DB_CONTAINER=$(docker ps --filter "name=supabase_db" --format "{{.Names}}" | head -n 1)
+        if [ -z "$DB_CONTAINER" ]; then
+          echo "❌ DB container not found"
+          exit 1
+        fi
+
+        echo "📦 Applying migrations via psql"
+
+        for file in supabase/migrations/*.sql; do
+          echo "➡️ Applying $file"
+          docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres < "$file"
+        done
+      env:
+        SUPABASE_DB_PASSWORD: postgres
 
     - name: Test Edge Functions
       if: ${{ hashFiles('supabase/functions/**/*.ts') != '' || hashFiles('supabase/functions/**/*.js') != '' }}
-      run: npx supabase functions test
+      run: npx supabase functions test --workdir supabase
 
     - name: Stop Supabase stack
       if: always()
-      run: npx supabase stop
+      run: npx supabase stop --workdir supabase

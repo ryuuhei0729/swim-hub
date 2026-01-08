@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Button, Input } from '@/components/ui'
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { formatTime } from '@/utils/formatters'
+import { format } from 'date-fns'
+import { ja } from 'date-fns/locale'
 
 interface EntryData {
   id: string
@@ -39,6 +41,7 @@ interface EntryLogFormProps {
   onSkip: () => void // SKIP機能
   competitionId: string
   competitionTitle?: string // 大会名（nullの場合は「大会」と表示）
+  competitionDate?: string // 大会日付
   isLoading?: boolean
   styles?: Array<{ id: string; nameJp: string; distance: number }>
   editData?: EditEntryData // 編集用の既存データ
@@ -52,6 +55,7 @@ export default function EntryLogForm({
   onSkip,
   competitionId: _competitionId,
   competitionTitle,
+  competitionDate,
   isLoading = false,
   styles = [],
   editData,
@@ -296,14 +300,24 @@ export default function EntryLogForm({
           {/* ヘッダー */}
           <div className="bg-white px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
-              <div>
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                エントリー登録
-              </h3>
-                {competitionTitle && (
-                  <p className="text-sm text-gray-600 mt-1">
-                    {competitionTitle || '大会'}
-                  </p>
+              <div className="flex-1">
+                {(competitionTitle || competitionDate) && (
+                  <div className="mt-3 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-lg font-bold text-gray-900">
+                      {competitionDate && competitionTitle && (
+                        <>
+                          <span className="text-base font-semibold text-blue-700">
+                            {format(new Date(competitionDate), 'yyyy年M月d日(E)', { locale: ja })}
+                          </span>
+                          <span className="ml-3">{competitionTitle}</span>
+                        </>
+                      )}
+                      {competitionDate && !competitionTitle && (
+                        format(new Date(competitionDate), 'yyyy年M月d日(E)', { locale: ja })
+                      )}
+                      {!competitionDate && competitionTitle && competitionTitle}
+                    </p>
+                  </div>
                 )}
               </div>
               <button
@@ -315,7 +329,7 @@ export default function EntryLogForm({
                 <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
-            <p className="mt-2 text-sm text-gray-600">
+            <p className="mt-3 text-sm text-gray-600">
               大会にエントリーする種目とエントリータイムを入力してください。
               <br />
               エントリーをスキップして記録のみ登録することもできます。

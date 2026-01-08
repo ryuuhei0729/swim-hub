@@ -326,6 +326,28 @@ export default function DayDetailModal({
                           const { data: { user } } = await supabase.auth.getUser()
                           if (!user) return
 
+                          // チームcompetitionの場合、entry_statusをチェック
+                          if (item.metadata?.team_id) {
+                            const { data: competitionData, error: competitionError } = await supabase
+                              .from('competitions')
+                              .select('entry_status')
+                              .eq('id', competitionId)
+                              .single()
+
+                            if (!competitionError && competitionData) {
+                              const status = competitionData.entry_status || 'before'
+                              if (status !== 'open') {
+                                // entry_statusが'open'でない場合はalertを表示してrecord入力モーダルに遷移
+                                const statusLabel = status === 'before' ? '受付前' : '受付終了'
+                                window.alert(`エントリーは${statusLabel}のため、エントリー登録はできません。記録入力に進みます。`)
+                                
+                                // record入力モーダルに遷移
+                                onAddRecord?.({ competitionId })
+                                return
+                              }
+                            }
+                          }
+
                           // エントリーデータを取得
                         const { data: entryData, error } = await supabase
                             .from('entries')
@@ -783,6 +805,7 @@ function PracticeDetails({
     id: string
     practiceId: string
     style: string
+    swim_category?: 'Swim' | 'Pull' | 'Kick'
     repCount: number
     setCount: number
     distance: number
@@ -831,6 +854,7 @@ function PracticeDetails({
           id: string
           practice_id: string
           style: string
+          swim_category?: 'Swim' | 'Pull' | 'Kick'
           rep_count: number
           set_count: number
           distance: number
@@ -849,6 +873,7 @@ function PracticeDetails({
             id: log.id,
             practiceId: log.practice_id,
             style: log.style,
+            swim_category: log.swim_category,
             repCount: log.rep_count,
             setCount: log.set_count,
             distance: log.distance,
@@ -892,6 +917,24 @@ function PracticeDetails({
   }
 
   const practiceLogs = practice.practiceLogs || []
+
+  // 種目の選択肢（コード値からラベルに変換するため）
+  const SWIM_STYLES = [
+    { value: 'Fr', label: '自由形' },
+    { value: 'Ba', label: '背泳ぎ' },
+    { value: 'Br', label: '平泳ぎ' },
+    { value: 'Fly', label: 'バタフライ' },
+    { value: 'IM', label: '個人メドレー' }
+  ]
+
+  // コード値をラベルに変換する関数
+  const getStyleLabel = (styleValue: string): string => {
+    const style = SWIM_STYLES.find(s => s.value === styleValue)
+    if (style) return style.label
+    // 既にラベルの場合はそのまま返す
+    if (SWIM_STYLES.some(s => s.label === styleValue)) return styleValue
+    return styleValue
+  }
 
   // 色の明度に基づいてテキスト色を決定する関数
   const getTextColor = (backgroundColor: string) => {
@@ -1001,6 +1044,7 @@ function PracticeDetails({
               id: string
               practiceId: string
               style: string
+              swim_category?: 'Swim' | 'Pull' | 'Kick'
               repCount: number
               setCount: number
               distance: number
@@ -1055,11 +1099,19 @@ function PracticeDetails({
                     <button
                       onClick={() => {
                         // 編集に必要な情報を保持したまま渡す
+                        // styleの値をコード値に変換（ラベルの場合はコード値に変換）
+                        const styleValue = formattedLog.style
+                        // ラベルの場合はコード値に変換
+                        const styleCode = SWIM_STYLES.find(s => s.label === styleValue)?.value || 
+                                         SWIM_STYLES.find(s => s.value === styleValue)?.value || 
+                                         styleValue || 'Fr'
+                        
                         const formData = {
                           id: formattedLog.id,
                           user_id: practice.user_id,
                           practice_id: formattedLog.practiceId,
-                          style: formattedLog.style,
+                          style: styleCode,
+                          swim_category: formattedLog.swim_category || 'Swim',
                           rep_count: formattedLog.repCount,
                           set_count: formattedLog.setCount,
                           distance: formattedLog.distance,
@@ -1108,7 +1160,15 @@ function PracticeDetails({
                         {formattedLog.circle ? `${Math.floor(formattedLog.circle / 60)}'${Math.floor(formattedLog.circle % 60).toString().padStart(2, '0')}"` : '-'}
                       </span>
                       {'　'}
-                      <span className="text-lg font-semibold text-green-700">{formattedLog.style}</span>
+                      <span className="text-lg font-semibold text-green-700">{getStyleLabel(formattedLog.style)}</span>
+                      {formattedLog.swim_category && formattedLog.swim_category !== 'Swim' && (
+                        <>
+                          {'　'}
+                          <span className="text-lg font-semibold text-green-700">
+                            {formattedLog.swim_category}
+                          </span>
+                        </>
+                      )}
                     </div>
                 </div>
 
@@ -1733,6 +1793,7 @@ function CompetitionWithEntry({
   })
   const [loading, setLoading] = useState(true)
   const [authError, setAuthError] = useState<string | null>(null)
+  const [entryStatus, setEntryStatus] = useState<'before' | 'open' | 'closed' | null>(null)
 
   useEffect(() => {
     const fetchEntryData = async () => {
@@ -1743,6 +1804,17 @@ function CompetitionWithEntry({
           setAuthError('認証が必要です。ログインしてください。')
           router.replace('/login')
           return
+        }
+
+        // competitionのentry_statusを取得
+        const { data: competitionData, error: competitionError } = await supabase
+          .from('competitions')
+          .select('entry_status')
+          .eq('id', competitionId)
+          .single()
+
+        if (!competitionError && competitionData) {
+          setEntryStatus(competitionData.entry_status || 'before')
         }
 
         // EntryAPIを使用してエントリーを取得
@@ -1805,8 +1877,51 @@ function CompetitionWithEntry({
     }
   }
 
-  const handleEditEntryClick = () => {
+  const handleEditEntryClick = async () => {
     if (!onEditEntry) return
+
+    // チームcompetitionの場合、entry_statusをチェック
+    if (isTeamCompetition) {
+      // entry_statusがまだ取得されていない場合は取得
+      if (entryStatus === null) {
+        try {
+          const { data: competitionData, error: competitionError } = await supabase
+            .from('competitions')
+            .select('entry_status')
+            .eq('id', competitionId)
+            .single()
+
+          if (!competitionError && competitionData) {
+            const status = competitionData.entry_status || 'before'
+            setEntryStatus(status)
+
+            // entry_statusが'open'でない場合はalertを表示してrecord入力モーダルに遷移
+            if (status !== 'open') {
+              const statusLabel = status === 'before' ? '受付前' : '受付終了'
+              window.alert(`エントリーは${statusLabel}のため、エントリー登録はできません。記録入力に進みます。`)
+              
+              // record入力モーダルに遷移
+              if (onAddRecord) {
+                handleAddRecordClick()
+              }
+              return
+            }
+          }
+        } catch (err) {
+          console.error('エントリーステータスの取得エラー:', err)
+        }
+      } else if (entryStatus !== 'open') {
+        // entry_statusが'open'でない場合はalertを表示してrecord入力モーダルに遷移
+        const statusLabel = entryStatus === 'before' ? '受付前' : '受付終了'
+        window.alert(`エントリーは${statusLabel}のため、エントリー登録はできません。記録入力に進みます。`)
+        
+        // record入力モーダルに遷移
+        if (onAddRecord) {
+          handleAddRecordClick()
+        }
+        return
+      }
+    }
 
     if (entries.length === 0) {
       onEditEntry()

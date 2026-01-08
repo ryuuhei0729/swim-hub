@@ -14,6 +14,7 @@ interface AnnouncementListProps {
   onCreateNew?: () => void
   onEdit?: (announcement: TeamAnnouncement) => void
   viewOnly?: boolean
+  hideEmptyMessage?: boolean
 }
 
 export const AnnouncementList: React.FC<AnnouncementListProps> = ({
@@ -21,7 +22,8 @@ export const AnnouncementList: React.FC<AnnouncementListProps> = ({
   isAdmin,
   onCreateNew,
   onEdit,
-  viewOnly = false
+  viewOnly = false,
+  hideEmptyMessage = false
 }) => {
   const { supabase } = useAuth()
   const {
@@ -100,9 +102,11 @@ export const AnnouncementList: React.FC<AnnouncementListProps> = ({
 
       {/* お知らせ一覧 */}
       {filteredAnnouncements.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
-          <p>お知らせはありません</p>
-        </div>
+        !hideEmptyMessage && (
+          <div className="text-center py-8 text-gray-500">
+            <p>お知らせはありません</p>
+          </div>
+        )
       ) : (
         <div className="space-y-2">
           {filteredAnnouncements.map((announcement) => (

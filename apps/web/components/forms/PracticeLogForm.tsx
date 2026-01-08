@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { Button, Input } from '@/components/ui'
-import { XMarkIcon, PlusIcon, TrashIcon, ClockIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, PlusIcon, TrashIcon, ClockIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import TimeInputModal from './TimeInputModal'
 import TagInput from './TagInput'
@@ -14,6 +14,7 @@ type Tag = PracticeTag
 interface PracticeMenu {
   id: string
   style: string
+  swimCategory: 'Swim' | 'Pull' | 'Kick'
   distance: number | ''
   reps: number | ''
   sets: number | ''
@@ -29,6 +30,7 @@ interface PracticeLogFormProps {
   onClose: () => void
   onSubmit: (data: Array<{
     style: string
+    swimCategory: 'Swim' | 'Pull' | 'Kick'
     distance: number
     reps: number
     sets: number
@@ -41,6 +43,7 @@ interface PracticeLogFormProps {
   editData?: {
     id?: string
     style?: string
+    swim_category?: 'Swim' | 'Pull' | 'Kick'
     distance?: number
     rep_count?: number
     set_count?: number
@@ -60,11 +63,18 @@ interface PracticeLogFormProps {
 
 // 種目の選択肢
 const SWIM_STYLES = [
-  { value: 'Fr', label: 'フリー' },
-  { value: 'Ba', label: 'バック' },
-  { value: 'Br', label: 'ブレスト' },
+  { value: 'Fr', label: '自由形' },
+  { value: 'Ba', label: '背泳ぎ' },
+  { value: 'Br', label: '平泳ぎ' },
   { value: 'Fly', label: 'バタフライ' },
   { value: 'IM', label: '個人メドレー' }
+]
+
+// 泳法カテゴリの選択肢
+const SWIM_CATEGORIES = [
+  { value: 'Swim', label: 'Swim' },
+  { value: 'Pull', label: 'Pull' },
+  { value: 'Kick', label: 'Kick' }
 ]
 
 export default function PracticeLogForm({
@@ -101,6 +111,7 @@ export default function PracticeLogForm({
     {
       id: '1',
       style: 'Fr',
+      swimCategory: 'Swim',
       distance: 100,
       reps: 4,
       sets: 1,
@@ -139,11 +150,14 @@ export default function PracticeLogForm({
       const circleTime = editData.circle || 0
       const circleMin = Math.floor(circleTime / 60)
       const circleSec = circleTime % 60
+      // editDataからswim_categoryを取得
+      const swimCategory = editData.swim_category || 'Swim'
 
       setMenus([
         {
           id: editData.id || '1',
           style: editData.style || 'Fr',
+          swimCategory: swimCategory as 'Swim' | 'Pull' | 'Kick',
           distance: editData.distance || 100,
           reps: editData.rep_count || 4,
           sets: editData.set_count || 1,
@@ -159,6 +173,7 @@ export default function PracticeLogForm({
         {
           id: '1',
           style: 'Fr',
+          swimCategory: 'Swim',
           distance: 100,
           reps: 4,
           sets: 1,
@@ -185,6 +200,7 @@ export default function PracticeLogForm({
       {
         id: newId,
         style: 'Fr',
+        swimCategory: 'Swim',
         distance: 100,
         reps: 4,
         sets: 1,
@@ -263,6 +279,7 @@ export default function PracticeLogForm({
 
       const data = {
         style: menu.style,
+        swimCategory: menu.swimCategory,
         distance: Number(menu.distance) || 100,
         reps: Number(menu.reps) || 1,
         sets: Number(menu.sets) || 1,
@@ -293,7 +310,7 @@ export default function PracticeLogForm({
   }
 
   return (
-    <div className="fixed inset-0 z-[70] overflow-y-auto" data-testid="practice-log-form-modal">
+    <div className="fixed inset-0 z-70 overflow-y-auto" data-testid="practice-log-form-modal">
       <div className="flex min-h-screen items-center justify-center p-4">
         {/* オーバーレイ */}
         <div
@@ -377,18 +394,19 @@ export default function PracticeLogForm({
                       />
                     </div>
 
-                    {/* 2行目：種目のみ（右側は空けておく） */}
+                    {/* 2行目：種目と泳法カテゴリ */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          種目 <span className="text-red-500">*</span>
+                          種目① <span className="text-red-500">*</span>
                         </label>
+                        <div className="relative">
                         <select
                           value={menu.style}
                           onChange={(e) =>
                             updateMenu(menu.id, 'style', e.target.value)
                           }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full pl-3 pr-10 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
                           required
                           data-testid="practice-style"
                         >
@@ -398,9 +416,35 @@ export default function PracticeLogForm({
                             </option>
                           ))}
                         </select>
+                          <ChevronDownIcon 
+                            className="h-4 w-4 absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
+                          />
+                        </div>
                       </div>
-                      {/* 右側は空けておく（将来的に種目②を追加予定） */}
-                      <div></div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          種目② <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <select
+                            value={menu.swimCategory}
+                            onChange={(e) =>
+                              updateMenu(menu.id, 'swimCategory', e.target.value as 'Swim' | 'Pull' | 'Kick')
+                            }
+                            className="w-full pl-3 pr-10 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+                            data-testid="practice-swim-category"
+                          >
+                            {SWIM_CATEGORIES.map(category => (
+                              <option key={category.value} value={category.value}>
+                                {category.label}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDownIcon 
+                            className="h-4 w-4 absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
+                          />
+                        </div>
+                      </div>
                     </div>
 
                     {/* 3行目：距離、本数、セット数、サークル（分）、サークル（秒） */}
@@ -617,7 +661,7 @@ export default function PracticeLogForm({
                           updateMenu(menu.id, 'note', e.target.value)
                         }
                         rows={2}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="このメニューに関するメモ"
                         data-testid={`practice-log-note-${index + 1}`}
                       />
