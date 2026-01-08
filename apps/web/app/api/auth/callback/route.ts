@@ -1,4 +1,5 @@
-import { createAuthenticatedServerClient } from '@/lib/supabase-server-auth'
+import { createRouteHandlerClient } from '@/lib/supabase-server'
+import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -6,40 +7,83 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get('code')
   const redirectTo = requestUrl.searchParams.get('redirect_to') || '/dashboard'
 
-  if (code) {
-    try {
-      const supabase = await createAuthenticatedServerClient()
-      // コードをセッションに交換（Cookie操作は自動的に処理される）
-      const { data, error } = await supabase.auth.exchangeCodeForSession(code)
-      
-      if (error) {
-        console.error('OAuthコールバックエラー:', error)
-      } else if (data.session) {
-        // Google OAuthの場合、Google Calendar連携を有効化
-        const provider = data.session.provider_token ? 'google' : null
-        if (provider === 'google' && data.user) {
-          // Google Calendar連携を有効化（マイページで確認される）
-          const updateData: { google_calendar_enabled: boolean; google_calendar_refresh_token: string | null } = {
-            google_calendar_enabled: true,
-            google_calendar_refresh_token: data.session.provider_refresh_token || null
-          }
-          const { error: updateError } = await supabase
-            .from('users')
-            // @ts-expect-error: Supabaseの型推論がupdateでneverになる既知の問題のため
-            .update(updateData)
-            .eq('id', data.user.id)
-          
-          if (updateError) {
-            // エラーは無視（既に有効化されている可能性がある）
-            console.error('Google Calendar連携有効化エラー:', updateError)
-          }
-        }
-      }
-    } catch (error) {
-      console.error('OAuthコールバックエラー:', error)
-    }
+  if (!code) {
+    // codeパラメータがない場合はエラーページにリダイレクト
+    return NextResponse.redirect(requestUrl.origin + '/login?error=missing_code')
   }
 
-  // リダイレクト（Route HandlerではNextResponse.redirectを使用）
-  return NextResponse.redirect(requestUrl.origin + redirectTo)
+  try {
+    // Next.js 14以降では、cookies()を明示的に呼び出してCookieを読み取る必要がある
+    // これにより、PKCE code verifierが確実に読み取られる
+    const cookieStore = await cookies()
+    cookieStore.getAll() // 遅延評価を回避するために明示的に読み取る
+    
+    // Route Handler用のクライアントを作成（Cookie操作を記録）
+    const { client: supabase, setCookiesOnResponse } = createRouteHandlerClient(request)
+    
+    // コードをセッションに交換（Cookie操作は自動的に処理される）
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+    
+    if (error) {
+      console.error('OAuthコールバックエラー:', error)
+      // エラーが発生した場合はログイン画面にリダイレクト（エラーメッセージ付き）
+      const errorResponse = NextResponse.redirect(
+        requestUrl.origin + `/login?error=${encodeURIComponent(error.message)}`
+      )
+      setCookiesOnResponse(errorResponse)
+      return errorResponse
+    }
+
+    if (!data.session) {
+      console.error('OAuthコールバックエラー: セッションが作成されませんでした')
+      const errorResponse = NextResponse.redirect(
+        requestUrl.origin + '/login?error=session_creation_failed'
+      )
+      setCookiesOnResponse(errorResponse)
+      return errorResponse
+    }
+
+    // Google OAuthの場合、Google Calendar連携を有効化
+    const provider = data.session.provider_token ? 'google' : null
+    if (provider === 'google' && data.user) {
+      // Google Calendar連携を有効化（マイページで確認される）
+      const updateData: { google_calendar_enabled: boolean; google_calendar_refresh_token: string | null } = {
+        google_calendar_enabled: true,
+        google_calendar_refresh_token: data.session.provider_refresh_token || null
+      }
+      const { error: updateError } = await supabase
+        .from('users')
+        // @ts-expect-error: Supabaseの型推論がupdateでneverになる既知の問題のため
+        .update(updateData)
+        .eq('id', data.user.id)
+      
+      if (updateError) {
+        // エラーは無視（既に有効化されている可能性がある）
+        console.error('Google Calendar連携有効化エラー:', updateError)
+      }
+    }
+
+    // セッションが正しく作成されたことを確認
+    const { data: { session: verifiedSession } } = await supabase.auth.getSession()
+    if (!verifiedSession) {
+      console.error('OAuthコールバックエラー: セッションの検証に失敗しました')
+      const errorResponse = NextResponse.redirect(
+        requestUrl.origin + '/login?error=session_verification_failed'
+      )
+      setCookiesOnResponse(errorResponse)
+      return errorResponse
+    }
+
+    // リダイレクト（Cookieを設定）
+    const successResponse = NextResponse.redirect(requestUrl.origin + redirectTo)
+    setCookiesOnResponse(successResponse)
+    return successResponse
+  } catch (error) {
+    console.error('OAuthコールバックエラー:', error)
+    const errorMessage = error instanceof Error ? error.message : 'unknown_error'
+    const errorResponse = NextResponse.redirect(
+      requestUrl.origin + `/login?error=${encodeURIComponent(errorMessage)}`
+    )
+    return errorResponse
+  }
 }

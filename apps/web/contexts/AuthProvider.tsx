@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Database } from '@swim-hub/shared/types/database'
+import type { Session } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
 import { getQueryClient } from '@/providers/QueryProvider'
 import { AuthState, AuthContextType } from '@swim-hub/shared/types/auth'
@@ -12,20 +14,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const router = useRouter()
   // ブラウザ環境でのみSupabaseクライアントを作成（ビルド時の静的生成を回避）
-  const supabase = useMemo(() => {
+  const supabase = useMemo((): SupabaseClient<Database> | null => {
     // サーバー側（ビルド時）では実行しない
     if (typeof window === 'undefined') {
-      // サーバー側ではダミークライアントを返す（実際には使用されない）
-      // 型安全性のため、anyを使用
-      return null as any
+      // サーバー側ではnullを返す（実際には使用されない）
+      return null
     }
     try {
       return createClient()
     } catch (error) {
       // 環境変数が設定されていない場合のエラーハンドリング
       console.error('Supabaseクライアントの作成に失敗しました:', error)
-      // ダミークライアントを返す（実際には使用されない）
-      return null as any
+      // nullを返す（実際には使用されない）
+      return null
     }
   }, [])
   const [authState, setAuthState] = useState<AuthState>({
@@ -90,15 +91,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [supabase])
 
   // OAuth認証（Google）
+  // createBrowserClientは自動的にCookieを使用してPKCE code verifierを保存
   const signInWithOAuth = useCallback(async (provider: 'google', options?: { redirectTo?: string; scopes?: string }) => {
     if (!supabase) {
       return { error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
     }
+    
     try {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
-      const redirectTo = options?.redirectTo || `${appUrl}/api/auth/callback?redirect_to=/mypage`
+      const redirectTo = options?.redirectTo || `${appUrl}/api/auth/callback?redirect_to=/dashboard`
       
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
           redirectTo,
@@ -111,7 +114,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       
       if (error) {
+        console.error('OAuth signInWithOAuth error:', error)
         return { error: error as import('@supabase/supabase-js').AuthError }
+      }
+      
+      // OAuthプロバイダーにリダイレクト（data.urlが存在する場合）
+      if (data.url && typeof window !== 'undefined') {
+        window.location.href = data.url
       }
       
       return { error: null }
@@ -246,6 +255,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userUpdate: Database['public']['Tables']['users']['Update'] = updates
       const { error } = await supabase
         .from('users')
+        // @ts-expect-error: Supabaseの型推論がupdateでneverになる既知の問題のため
         .update(userUpdate)
         .eq('id', authState.user.id)
       
@@ -270,7 +280,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // 認証状態の変更を監視（初期セッション取得も含む）
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event: string, session: any) => {
+      async (event: string, session: Session | null) => {
         if (!isMounted) {
           return
         }
@@ -329,6 +339,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     )
 
+    // 初期セッションを明示的に取得（onAuthStateChangeが呼ばれない場合のフォールバック）
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: import('@supabase/supabase-js').Session | null } }) => {
+      if (isMounted) {
+        setAuthState({
+          user: session?.user ?? null,
+          session,
+          loading: false
+        })
+      }
+    }).catch((error: unknown) => {
+      console.error('初期セッション取得エラー:', error)
+      if (isMounted) {
+        setAuthState({
+          user: null,
+          session: null,
+          loading: false
+        })
+      }
+    })
+
     // クリーンアップ関数
     return () => {
       isMounted = false
@@ -338,7 +368,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const value: AuthContextType = {
     ...authState,
-    supabase,
+    supabase: supabase || ({} as SupabaseClient<Database>),
     signIn,
     signUp,
     signInWithOAuth,

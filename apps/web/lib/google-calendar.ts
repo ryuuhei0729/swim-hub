@@ -2,7 +2,7 @@
 // Google Calendar API連携ユーティリティ
 // =============================================================================
 
-import type { Practice, Competition } from '@apps/shared/types/database'
+import type { Competition, Practice } from '@apps/shared/types/database'
 
 /**
  * Google Calendarイベントの型定義

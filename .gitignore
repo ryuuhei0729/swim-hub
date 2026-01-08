@@ -84,7 +84,7 @@ temp/
 /apps/supabase/.temp.next/
 /supabase/.branches
 /supabase/.temp
-/supabase/signing_key.json
+/supabase/.env
 
 # Next.js auto-generated files
 next-env.d.ts

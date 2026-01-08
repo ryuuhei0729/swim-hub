@@ -51,8 +51,8 @@ export const createClient = (): SupabaseClient<Database> => {
     throw new Error(`Supabase環境変数が空です: url="${url}", anonKey="${anonKey ? '***' : ''}"`)
   }
   
-  // createBrowserClientはクッキーストレージを自動的に使用
-  // APIキーは自動的にリクエストヘッダーに含まれる
+  // createBrowserClientは自動的にCookieを使用してPKCE code verifierを保存
+  // @supabase/ssrのcreateBrowserClientはデフォルトでCookieストレージを使用
   return createBrowserClient<Database>(url, anonKey)
 }
 

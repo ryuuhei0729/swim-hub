@@ -150,8 +150,21 @@ export function createRouteHandlerClient(request: NextRequest): {
    */
   const setCookiesOnResponse = (response: NextResponse) => {
     cookiesToSet.forEach((cookie) => {
-      // Cookie設定
-      response.cookies.set(cookie.name, cookie.value, cookie.options)
+      // Cookie設定（SameSite、Secure、Pathなどの属性を明示的に設定）
+      // Supabaseのデフォルト設定に従い、SameSite: laxを使用
+      // SameSite: laxは、トップレベルナビゲーション（OAuthリダイレクト）でCookieが送信される
+      const cookieOptions = {
+        ...cookie.options,
+        // SameSite: laxを使用（Supabaseのデフォルト）
+        sameSite: (cookie.options?.sameSite as 'lax' | 'strict' | 'none') || 'lax',
+        // 開発環境ではsecureをfalseに、本番環境ではtrueに
+        secure: cookie.options?.secure ?? (process.env.NODE_ENV === 'production'),
+        // Pathを/に設定（すべてのパスで有効）
+        path: cookie.options?.path || '/',
+        // HttpOnlyはfalse（JavaScriptからアクセス可能にする必要がある場合がある）
+        httpOnly: cookie.options?.httpOnly ?? false,
+      }
+      response.cookies.set(cookie.name, cookie.value, cookieOptions)
     })
   }
 
