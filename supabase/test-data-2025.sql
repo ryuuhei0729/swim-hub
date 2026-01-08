@@ -8,8 +8,8 @@
 -- 2. 個人練習（自主練・火曜日、2週間に1回）: 2025年1月〜12月
 -- 3. 大会（土日、1ヶ月に2回）: 2025年1月〜12月
 --
--- User ID: 79d1aec3-b480-4eee-b427-ab466deea4c6
--- Team ID: 3654f61a-b7ca-4cda-8f40-cebabd91890b
+-- User ID: 1f1d17b2-f4dd-4599-9a08-3c467b679bc6
+-- Team ID: f62e45bd-cb7e-4d1f-a783-8ce54793f3d4
 -- =============================================================================
 
 -- =============================================================================
@@ -25,7 +25,7 @@ INSERT INTO users (
     created_at,
     updated_at
 ) VALUES (
-    '79d1aec3-b480-4eee-b427-ab466deea4c6',
+    '1f1d17b2-f4dd-4599-9a08-3c467b679bc6',
     'テストユーザー',
     0,
     '2000-01-01',
@@ -43,11 +43,11 @@ INSERT INTO teams (
     created_at,
     updated_at
 ) VALUES (
-    '3654f61a-b7ca-4cda-8f40-cebabd91890b',
+    'f62e45bd-cb7e-4d1f-a783-8ce54793f3d4',
     'テストチーム',
     'テスト用のチームです',
     'TEST123',
-    '79d1aec3-b480-4eee-b427-ab466deea4c6',
+    '1f1d17b2-f4dd-4599-9a08-3c467b679bc6',
     NOW(),
     NOW()
 ) ON CONFLICT (id) DO NOTHING;
@@ -65,8 +65,8 @@ INSERT INTO team_memberships (
     created_at,
     updated_at
 ) VALUES (
-    '3654f61a-b7ca-4cda-8f40-cebabd91890b',
-    '79d1aec3-b480-4eee-b427-ab466deea4c6',
+    'f62e45bd-cb7e-4d1f-a783-8ce54793f3d4',
+    '1f1d17b2-f4dd-4599-9a08-3c467b679bc6',
     'admin',
     NULL,
     NULL,
@@ -89,48 +89,48 @@ INSERT INTO team_memberships (
 DELETE FROM split_times
 WHERE record_id IN (
     SELECT id FROM records
-    WHERE user_id = '79d1aec3-b480-4eee-b427-ab466deea4c6'
-       OR team_id = '3654f61a-b7ca-4cda-8f40-cebabd91890b'
+    WHERE user_id = '1f1d17b2-f4dd-4599-9a08-3c467b679bc6'
+        OR team_id = 'f62e45bd-cb7e-4d1f-a783-8ce54793f3d4'
 );
 
 -- レコードを削除
 DELETE FROM records
-WHERE user_id = '79d1aec3-b480-4eee-b427-ab466deea4c6'
-   OR team_id = '3654f61a-b7ca-4cda-8f40-cebabd91890b';
+WHERE user_id = '1f1d17b2-f4dd-4599-9a08-3c467b679bc6'
+   OR team_id = 'f62e45bd-cb7e-4d1f-a783-8ce54793f3d4';
 
 -- エントリーを削除
 DELETE FROM entries
-WHERE user_id = '79d1aec3-b480-4eee-b427-ab466deea4c6'
-   OR team_id = '3654f61a-b7ca-4cda-8f40-cebabd91890b';
+WHERE user_id = '1f1d17b2-f4dd-4599-9a08-3c467b679bc6'
+   OR team_id = 'f62e45bd-cb7e-4d1f-a783-8ce54793f3d4';
 
 -- 大会を削除
 DELETE FROM competitions
-WHERE user_id = '79d1aec3-b480-4eee-b427-ab466deea4c6'
-   OR team_id = '3654f61a-b7ca-4cda-8f40-cebabd91890b';
+WHERE user_id = '1f1d17b2-f4dd-4599-9a08-3c467b679bc6'
+   OR team_id = 'f62e45bd-cb7e-4d1f-a783-8ce54793f3d4';
 
 -- 練習ログタグを削除
 DELETE FROM practice_log_tags
 WHERE practice_log_id IN (
     SELECT id FROM practice_logs
-    WHERE user_id = '79d1aec3-b480-4eee-b427-ab466deea4c6'
+    WHERE user_id = '1f1d17b2-f4dd-4599-9a08-3c467b679bc6'
 );
 
 -- 練習タイムを削除
 DELETE FROM practice_times
-WHERE user_id = '79d1aec3-b480-4eee-b427-ab466deea4c6';
+WHERE user_id = '1f1d17b2-f4dd-4599-9a08-3c467b679bc6';
 
 -- 練習ログを削除
 DELETE FROM practice_logs
-WHERE user_id = '79d1aec3-b480-4eee-b427-ab466deea4c6';
+WHERE user_id = '1f1d17b2-f4dd-4599-9a08-3c467b679bc6';
 
 -- 練習を削除
 DELETE FROM practices
-WHERE user_id = '79d1aec3-b480-4eee-b427-ab466deea4c6'
-   OR team_id = '3654f61a-b7ca-4cda-8f40-cebabd91890b';
+WHERE user_id = '1f1d17b2-f4dd-4599-9a08-3c467b679bc6'
+   OR team_id = 'f62e45bd-cb7e-4d1f-a783-8ce54793f3d4';
 
 -- 練習タグを削除（このユーザーのタグのみ）
 DELETE FROM practice_tags
-WHERE user_id = '79d1aec3-b480-4eee-b427-ab466deea4c6';
+WHERE user_id = '1f1d17b2-f4dd-4599-9a08-3c467b679bc6';
 
 -- =============================================================================
 -- テストデータ作成開始
@@ -139,8 +139,8 @@ WHERE user_id = '79d1aec3-b480-4eee-b427-ab466deea4c6';
 -- 定数定義
 DO $$
 DECLARE
-    v_user_id UUID := '79d1aec3-b480-4eee-b427-ab466deea4c6';
-    v_team_id UUID := '3654f61a-b7ca-4cda-8f40-cebabd91890b';
+    v_user_id UUID := '1f1d17b2-f4dd-4599-9a08-3c467b679bc6';
+    v_team_id UUID := 'f62e45bd-cb7e-4d1f-a783-8ce54793f3d4';
     v_practice_places TEXT[] := ARRAY['東京プール', '大阪プール', '名古屋プール', '横浜プール', '福岡プール'];
     v_competition_places TEXT[] := ARRAY['東京プール', '大阪プール', '名古屋プール', '横浜プール', '福岡プール', '札幌プール'];
     v_competition_titles TEXT[] := ARRAY['春季大会', '夏季大会', '秋季大会', '冬季大会', '関東大会', '関西大会', '全国大会', '地区大会'];
@@ -825,7 +825,7 @@ SELECT
     MIN(date) as first_date,
     MAX(date) as last_date
 FROM practices
-WHERE team_id = '3654f61a-b7ca-4cda-8f40-cebabd91890b'
+WHERE team_id = 'f62e45bd-cb7e-4d1f-a783-8ce54793f3d4'
   AND date >= '2025-01-01'
   AND date <= '2025-12-31';
 
@@ -835,7 +835,7 @@ SELECT
     MIN(date) as first_date,
     MAX(date) as last_date
 FROM practices
-WHERE user_id = '79d1aec3-b480-4eee-b427-ab466deea4c6'
+WHERE user_id = '1f1d17b2-f4dd-4599-9a08-3c467b679bc6'
   AND team_id IS NULL
   AND date >= '2025-01-01'
   AND date <= '2025-12-31';
@@ -846,7 +846,7 @@ SELECT
     MIN(date) as first_date,
     MAX(date) as last_date
 FROM competitions
-WHERE team_id = '3654f61a-b7ca-4cda-8f40-cebabd91890b'
+WHERE team_id = 'f62e45bd-cb7e-4d1f-a783-8ce54793f3d4'
   AND date >= '2025-01-01'
   AND date <= '2025-12-31';
 
@@ -855,6 +855,6 @@ SELECT
     COUNT(*) as entry_count,
     COUNT(DISTINCT competition_id) as competition_count
 FROM entries
-WHERE user_id = '79d1aec3-b480-4eee-b427-ab466deea4c6'
-  AND team_id = '3654f61a-b7ca-4cda-8f40-cebabd91890b';
+WHERE user_id = '1f1d17b2-f4dd-4599-9a08-3c467b679bc6'
+  AND team_id = 'f62e45bd-cb7e-4d1f-a783-8ce54793f3d4';
 
