@@ -28,11 +28,13 @@ interface UseDashboardHandlersProps {
   updatePracticeLog: (id: string, updates: import('@apps/shared/types/database').PracticeLogUpdate) => Promise<import('@apps/shared/types/database').PracticeLog>
   createPracticeTime: (time: import('@apps/shared/types/database').PracticeTimeInsert) => Promise<import('@apps/shared/types/database').PracticeTime>
   deletePracticeTime: (id: string) => Promise<void>
+  deletePractice: (id: string) => Promise<void>
   // Record hooks（実際の型に合わせる）
   createRecord: (record: Omit<import('@apps/shared/types/database').RecordInsert, 'user_id'>) => Promise<import('@apps/shared/types/database').Record>
   updateRecord: (id: string, updates: import('@apps/shared/types/database').RecordUpdate) => Promise<import('@apps/shared/types/database').Record>
   createCompetition: (competition: Omit<import('@apps/shared/types/database').CompetitionInsert, 'user_id'>) => Promise<import('@apps/shared/types/database').Competition>
   updateCompetition: (id: string, updates: import('@apps/shared/types/database').CompetitionUpdate) => Promise<import('@apps/shared/types/database').Competition>
+  deleteCompetition: (id: string) => Promise<void>
   createSplitTimes: (params: { recordId: string; splitTimes: Array<{ distance: number; split_time?: number; splitTime?: number }> }) => Promise<import('@apps/shared/types/database').SplitTime[]>
   replaceSplitTimes: (params: { recordId: string; splitTimes: Omit<import('@apps/shared/types/database').SplitTimeInsert, 'record_id'>[] }) => Promise<import('@apps/shared/types/database').SplitTime[]>
   // Form store actions
@@ -66,10 +68,12 @@ export function useDashboardHandlers({
   updatePracticeLog,
   createPracticeTime,
   deletePracticeTime,
+  deletePractice,
   createRecord,
   updateRecord,
   createCompetition,
   updateCompetition,
+  deleteCompetition,
   createSplitTimes,
   replaceSplitTimes,
   editingData,
@@ -266,11 +270,8 @@ export function useDashboardHandlers({
 
     try {
       if (itemType === 'practice' || itemType === 'team_practice') {
-        const { error } = await supabase
-          .from('practices')
-          .delete()
-          .eq('id', itemId)
-        if (error) throw error
+        // Google Calendar同期を含むミューテーションを使用
+        await deletePractice(itemId)
       } else if (itemType === 'practice_log') {
         const { error } = await supabase
           .from('practice_logs')
@@ -290,18 +291,15 @@ export function useDashboardHandlers({
           .eq('id', itemId)
         if (error) throw error
       } else if (itemType === 'competition' || itemType === 'team_competition') {
-        const { error } = await supabase
-          .from('competitions')
-          .delete()
-          .eq('id', itemId)
-        if (error) throw error
+        // Google Calendar同期を含むミューテーションを使用
+        await deleteCompetition(itemId)
       }
 
       refreshCalendar()
     } catch (error) {
       console.error('記録の削除に失敗しました:', error)
     }
-  }, [supabase, refreshCalendar])
+  }, [supabase, refreshCalendar, deletePractice, deleteCompetition])
 
   // 大会情報作成・更新
   const handleCompetitionBasicSubmit = useCallback(async (basicData: { date: string; endDate: string; title: string; place: string; poolType: number; note: string }) => {

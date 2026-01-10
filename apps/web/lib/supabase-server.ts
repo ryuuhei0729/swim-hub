@@ -113,9 +113,13 @@ export const createServerComponentClient = async (): Promise<SupabaseClient<Data
  * Cookie操作を記録し、NextResponseに適用できるようにする
  * 
  * @param request Next.jsのNextRequestオブジェクト
+ * @param cookieStore オプション: next/headersのcookies()から取得したCookieストア
  * @returns 認証情報が設定されたSupabaseクライアントとCookie設定ヘルパー
  */
-export function createRouteHandlerClient(request: NextRequest): {
+export function createRouteHandlerClient(
+  request: NextRequest,
+  cookieStore?: Awaited<ReturnType<typeof import('next/headers').cookies>>
+): {
   client: SupabaseClient<Database>
   setCookiesOnResponse: (response: NextResponse) => void
 } {
@@ -129,10 +133,36 @@ export function createRouteHandlerClient(request: NextRequest): {
     {
       cookies: {
         getAll() {
-          // リクエストからすべてのCookieを取得
+          // 重要: Next.js 14+では、cookieStoreから明示的にCookieを読み込む
+          // cookieStoreが提供されている場合は、それを優先的に使用
+          // これにより、PKCE code verifierが確実に読み取られる
+          if (cookieStore) {
+            // cookieStoreからすべてのCookieを取得（遅延評価を回避）
+            const cookieStoreCookies = cookieStore.getAll()
+            // request.cookiesとマージ（request.cookiesにないCookieを追加）
+            const requestCookies = request.cookies.getAll().map((cookie) => ({
+              name: cookie.name,
+              value: cookie.value || ''
+            }))
+            
+            // cookieStoreを優先し、request.cookiesにないCookieを追加
+            const cookieMap = new Map(cookieStoreCookies.map(c => [c.name, c.value]))
+            requestCookies.forEach((cookie) => {
+              if (!cookieMap.has(cookie.name)) {
+                cookieMap.set(cookie.name, cookie.value)
+              }
+            })
+            
+            return Array.from(cookieMap.entries()).map(([name, value]) => ({
+              name,
+              value
+            }))
+          }
+          
+          // cookieStoreが提供されていない場合は、request.cookiesを使用
           return request.cookies.getAll().map((cookie) => ({
             name: cookie.name,
-            value: cookie.value
+            value: cookie.value || ''
           }))
         },
         setAll(cookies: CookieToSet[]) {
@@ -150,8 +180,21 @@ export function createRouteHandlerClient(request: NextRequest): {
    */
   const setCookiesOnResponse = (response: NextResponse) => {
     cookiesToSet.forEach((cookie) => {
-      // Cookie設定
-      response.cookies.set(cookie.name, cookie.value, cookie.options)
+      // Cookie設定（SameSite、Secure、Pathなどの属性を明示的に設定）
+      // Supabaseのデフォルト設定に従い、SameSite: laxを使用
+      // SameSite: laxは、トップレベルナビゲーション（OAuthリダイレクト）でCookieが送信される
+      const cookieOptions = {
+        ...cookie.options,
+        // SameSite: laxを使用（Supabaseのデフォルト）
+        sameSite: (cookie.options?.sameSite as 'lax' | 'strict' | 'none') || 'lax',
+        // 開発環境ではsecureをfalseに、本番環境ではtrueに
+        secure: cookie.options?.secure ?? (process.env.NODE_ENV === 'production'),
+        // Pathを/に設定（すべてのパスで有効）
+        path: cookie.options?.path || '/',
+        // HttpOnlyはfalse（JavaScriptからアクセス可能にする必要がある場合がある）
+        httpOnly: cookie.options?.httpOnly ?? false,
+      }
+      response.cookies.set(cookie.name, cookie.value, cookieOptions)
     })
   }
 

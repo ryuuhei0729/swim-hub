@@ -12,6 +12,7 @@ yarn-error.log*
 /packages/*/build/
 
 # Environment variables
+.env
 .env.local
 .env.*.local
 # .env.development はgit管理（dotenvxで暗号化済み）
@@ -84,7 +85,11 @@ temp/
 /apps/supabase/.temp.next/
 /supabase/.branches
 /supabase/.temp
-/supabase/signing_key.json
+/supabase/.env
+/supabase/supabase/
+
+# SSL certificates for local HTTPS development
+apps/web/localhost*.pem
 
 # Next.js auto-generated files
 next-env.d.ts

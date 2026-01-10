@@ -20,11 +20,17 @@ const createState = (state: Partial<Omit<NetInfoState, 'type'>> & { type?: NetIn
 describe('useNetworkStatus', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // 静的モックの状態をリセット
+    ;(NetInfo as any)._setState({
+      isConnected: true,
+      isInternetReachable: true,
+      type: 'wifi',
+    })
   })
 
   it('初期状態を正しく返す', async () => {
     // モック: 接続済み状態を返す
-    vi.spyOn(NetInfo, 'fetch').mockResolvedValue(
+    ;(NetInfo.fetch as any).mockResolvedValue(
       createState({
         isConnected: true,
         isInternetReachable: true,
@@ -43,7 +49,7 @@ describe('useNetworkStatus', () => {
 
   it('オフライン状態を正しく検知する', async () => {
     // モック: オフライン状態を返す
-    vi.spyOn(NetInfo, 'fetch').mockResolvedValue(
+    ;(NetInfo.fetch as any).mockResolvedValue(
       createState({
         isConnected: false,
         isInternetReachable: false,
@@ -64,12 +70,12 @@ describe('useNetworkStatus', () => {
     let listener: ((state: NetInfoState) => void) | undefined
 
     // モック: addEventListenerを実装
-    vi.spyOn(NetInfo, 'addEventListener').mockImplementation((callback: (state: NetInfoState) => void) => {
+    ;(NetInfo.addEventListener as any).mockImplementation((callback: (state: NetInfoState) => void) => {
       listener = callback
       return () => {} // unsubscribe関数
     })
 
-    vi.spyOn(NetInfo, 'fetch').mockResolvedValue(
+    ;(NetInfo.fetch as any).mockResolvedValue(
       createState({
         isConnected: true,
         isInternetReachable: true,
@@ -100,7 +106,7 @@ describe('useNetworkStatus', () => {
   })
 
   it('isInternetReachableがnullの場合を正しく処理する', async () => {
-    vi.spyOn(NetInfo, 'fetch').mockResolvedValue(
+    ;(NetInfo.fetch as any).mockResolvedValue(
       createState({
         isConnected: true,
         isInternetReachable: null,
@@ -119,9 +125,9 @@ describe('useNetworkStatus', () => {
 
   it('クリーンアップ時にイベントリスナーを解除する', () => {
     const unsubscribe = vi.fn()
-    vi.spyOn(NetInfo, 'addEventListener').mockReturnValue(unsubscribe)
+    ;(NetInfo.addEventListener as any).mockReturnValue(unsubscribe)
 
-    vi.spyOn(NetInfo, 'fetch').mockResolvedValue(
+    ;(NetInfo.fetch as any).mockResolvedValue(
       createState({
         isConnected: true,
         isInternetReachable: true,

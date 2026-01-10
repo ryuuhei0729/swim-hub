@@ -271,9 +271,15 @@ export function useCreatePracticeMutation(supabase: SupabaseClient, api?: Practi
           
           if (profile?.google_calendar_enabled && profile?.google_calendar_sync_practices) {
             const { syncPracticeToGoogleCalendar } = await import('../../api/google-calendar')
-            syncPracticeToGoogleCalendar(created, 'create').catch((err: unknown) => {
-              console.error('Google Calendar同期エラー:', err)
-            })
+            const syncResult = await syncPracticeToGoogleCalendar(created, 'create')
+            
+            // 同期成功時にgoogle_event_idを保存
+            if (syncResult.success && syncResult.googleEventId) {
+              await supabase
+                .from('practices')
+                .update({ google_event_id: syncResult.googleEventId })
+                .eq('id', created.id)
+            }
           }
         }
       } catch (err) {
@@ -299,6 +305,19 @@ export function useUpdatePracticeMutation(supabase: SupabaseClient, api?: Practi
 
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: PracticeUpdate }) => {
+      // 更新前にgoogle_event_idを取得
+      let googleEventId: string | null = null
+      try {
+        const { data: existing } = await supabase
+          .from('practices')
+          .select('google_event_id')
+          .eq('id', id)
+          .single()
+        googleEventId = existing?.google_event_id || null
+      } catch (err) {
+        console.error('google_event_id取得エラー:', err)
+      }
+      
       const updated = await practiceApi.updatePractice(id, updates)
       
       // Google Calendar同期（バックグラウンドで実行、エラーは無視）
@@ -313,10 +332,15 @@ export function useUpdatePracticeMutation(supabase: SupabaseClient, api?: Practi
           
           if (profile?.google_calendar_enabled && profile?.google_calendar_sync_practices) {
             const { syncPracticeToGoogleCalendar } = await import('../../api/google-calendar')
-            // TODO: googleEventIdを取得して渡す必要がある（現時点では新規作成として扱う）
-            syncPracticeToGoogleCalendar(updated, 'update').catch((err: unknown) => {
-              console.error('Google Calendar同期エラー:', err)
-            })
+            const syncResult = await syncPracticeToGoogleCalendar(updated, 'update', googleEventId || undefined)
+            
+            // 同期成功時にgoogle_event_idを更新（新規作成された場合は新しいID）
+            if (syncResult.success && syncResult.googleEventId) {
+              await supabase
+                .from('practices')
+                .update({ google_event_id: syncResult.googleEventId })
+                .eq('id', id)
+            }
           }
         }
       } catch (err) {
@@ -351,10 +375,25 @@ export function useDeletePracticeMutation(supabase: SupabaseClient, api?: Practi
 
   return useMutation({
     mutationFn: async (id: string) => {
-      // 削除前にPracticeデータを取得（Google Calendar同期用）
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/3f29a492-ce99-45fd-b6fe-c961bf31971e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'practices.ts:mutationFn-start',message:'Practice削除開始',data:{id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+      // 削除前にPracticeデータとgoogle_event_idを取得（Google Calendar同期用）
       let practiceData: Practice | null = null
+      let googleEventId: string | null = null
       try {
         practiceData = await practiceApi.getPracticeById(id)
+        // google_event_idを取得
+        const { data: existing } = await supabase
+          .from('practices')
+          .select('google_event_id')
+          .eq('id', id)
+          .single()
+        googleEventId = existing?.google_event_id || null
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/3f29a492-ce99-45fd-b6fe-c961bf31971e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'practices.ts:google_event_id-check',message:'google_event_id取得結果',data:{googleEventId,practiceDataExists:!!practiceData},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        console.log('Practice削除 - google_event_id:', googleEventId)
       } catch (err) {
         console.error('Practice取得エラー:', err)
       }
@@ -372,15 +411,41 @@ export function useDeletePracticeMutation(supabase: SupabaseClient, api?: Practi
               .eq('id', user.id)
               .single()
             
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/3f29a492-ce99-45fd-b6fe-c961bf31971e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'practices.ts:profile-check',message:'プロフィール確認',data:{google_calendar_enabled:profile?.google_calendar_enabled,google_calendar_sync_practices:profile?.google_calendar_sync_practices,googleEventId,willSync:!!(profile?.google_calendar_enabled && profile?.google_calendar_sync_practices && googleEventId)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
+            console.log('Practice削除 - プロフィール:', {
+              google_calendar_enabled: profile?.google_calendar_enabled,
+              google_calendar_sync_practices: profile?.google_calendar_sync_practices,
+              googleEventId
+            })
+            
             if (profile?.google_calendar_enabled && profile?.google_calendar_sync_practices) {
-              const { syncPracticeToGoogleCalendar } = await import('../../api/google-calendar')
-              // TODO: googleEventIdを取得して渡す必要がある
-              syncPracticeToGoogleCalendar(practiceData, 'delete').catch((err: unknown) => {
-                console.error('Google Calendar同期エラー:', err)
-              })
+              if (googleEventId) {
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/3f29a492-ce99-45fd-b6fe-c961bf31971e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'practices.ts:before-sync-call',message:'同期関数呼び出し前',data:{googleEventId,action:'delete'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
+                // #endregion
+                const { syncPracticeToGoogleCalendar } = await import('../../api/google-calendar')
+                const result = await syncPracticeToGoogleCalendar(practiceData, 'delete', googleEventId)
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/3f29a492-ce99-45fd-b6fe-c961bf31971e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'practices.ts:after-sync-call',message:'同期関数呼び出し後',data:{result},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+                // #endregion
+                console.log('Practice削除 - 同期結果:', result)
+                if (!result.success) {
+                  console.error('Google Calendar削除エラー:', result.error)
+                }
+              } else {
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/3f29a492-ce99-45fd-b6fe-c961bf31971e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'practices.ts:no-google-event-id',message:'google_event_idがないため削除スキップ',data:{googleEventId:null},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+                // #endregion
+                console.warn('Practice削除 - google_event_idが存在しないため、Google Calendar削除をスキップ')
+              }
             }
           }
         } catch (err) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/3f29a492-ce99-45fd-b6fe-c961bf31971e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'practices.ts:sync-error',message:'同期エラー発生',data:{error:String(err)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
+          // #endregion
           console.error('Google Calendar同期チェックエラー:', err)
         }
       }

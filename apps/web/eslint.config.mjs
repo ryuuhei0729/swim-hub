@@ -72,6 +72,7 @@ export default [
       '*.config.ts',
       'coverage/**',
       'e2e/**',
+      'server.js', // Next.js HTTPS開発サーバー（CommonJS）
     ],
   },
 ]

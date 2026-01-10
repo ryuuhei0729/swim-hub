@@ -6,70 +6,19 @@ import { cleanup } from '@testing-library/react'
 import React from 'react'
 import { afterEach, vi } from 'vitest'
 
+// Reactの複数インスタンスを防ぐため、グローバルに設定
+if (typeof globalThis !== 'undefined') {
+  ;(globalThis as any).React = React
+}
+
 // 各テスト後にクリーンアップ
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()
 })
 
-// React Native モジュールのモック
-vi.mock('react-native', () => {
-  const React = require('react')
-
-  return {
-    default: React,
-    View: ({ children, ...props }: { children?: React.ReactNode } & Record<string, unknown>) =>
-      React.createElement('div', props, children),
-    Text: ({ children, ...props }: { children?: React.ReactNode } & Record<string, unknown>) =>
-      React.createElement('span', props, children),
-    Pressable: ({
-      children,
-      onPress,
-      ...props
-    }: { children?: React.ReactNode; onPress?: () => void } & Record<string, unknown>) =>
-      React.createElement('button', { ...props, onClick: onPress }, children),
-    ScrollView: ({ children, ...props }: { children?: React.ReactNode } & Record<string, unknown>) =>
-      React.createElement('div', { ...props, style: { overflow: 'auto' } }, children),
-    FlatList: ({
-      data,
-      renderItem,
-      keyExtractor,
-      ...props
-    }: {
-      data?: unknown[]
-      renderItem?: ({ item, index }: { item: unknown; index: number }) => React.ReactNode
-      keyExtractor?: (item: unknown, index: number) => string | number
-      children?: React.ReactNode
-    } & Record<string, unknown>) => {
-      const items = data?.map((item, index) => {
-        const key = keyExtractor ? keyExtractor(item, index) : index
-        return renderItem ? React.createElement('div', { key }, renderItem({ item, index })) : null
-      })
-      return React.createElement('div', props, items)
-    },
-    StyleSheet: {
-      create: <T extends object>(styles: T) => styles,
-      flatten: <T>(style: T) => style,
-    },
-    Platform: {
-      OS: 'web',
-      select: <T,>(obj: { web?: T; default?: T }) => obj.web ?? obj.default,
-    },
-    Alert: {
-      alert: vi.fn(),
-      prompt: vi.fn(),
-    },
-    ActivityIndicator: ({ ...props }: Record<string, unknown>) =>
-      React.createElement('div', props, 'Loading...'),
-    RefreshControl: ({ ...props }: Record<string, unknown>) => React.createElement('div', props),
-    Image: ({ source, ...props }: { source?: { uri?: string } | string } & Record<string, unknown>) => {
-      const src = typeof source === 'string' ? source : source?.uri
-      return React.createElement('img', { ...props, src })
-    },
-    TextInput: ({ ...props }: Record<string, unknown>) =>
-      React.createElement('input', { type: 'text', ...props }),
-  }
-})
+// 注意: React Nativeのモックは vitest.config.ts の resolve.alias で
+// __mocks__/react-native.ts にエイリアスされているため、ここでは不要
 
 // Expo Constants モジュールのモック
 vi.mock('expo-constants', () => ({
@@ -87,42 +36,8 @@ vi.mock('expo-status-bar', () => ({
   StatusBar: () => null,
 }))
 
-// @react-native-community/netinfo のモック
-vi.mock('@react-native-community/netinfo', () => {
-  type NetInfoMockState = {
-    isConnected: boolean
-    isInternetReachable: boolean | null
-    type: string
-  }
-
-  let currentState: NetInfoMockState = {
-    isConnected: true,
-    isInternetReachable: true,
-    type: 'wifi',
-  }
-
-  const listeners: Array<(state: NetInfoMockState) => void> = []
-
-  return {
-    default: {
-      fetch: vi.fn(() => Promise.resolve(currentState)),
-      addEventListener: vi.fn((listener: (state: NetInfoMockState) => void) => {
-        listeners.push(listener)
-        return () => {
-          const index = listeners.indexOf(listener)
-          if (index > -1) {
-            listeners.splice(index, 1)
-          }
-        }
-      }),
-      // テスト用: ネットワーク状態を変更するヘルパー
-      _setState: (state: NetInfoMockState) => {
-        currentState = state
-        listeners.forEach((listener) => listener(state))
-      },
-    },
-  }
-})
+// 注意: @react-native-community/netinfoのモックは vitest.config.ts の resolve.alias で
+// __mocks__/@react-native-community/netinfo.ts にエイリアスされているため、ここでは不要
 
 // AsyncStorage のモック
 vi.mock('@react-native-async-storage/async-storage', () => ({

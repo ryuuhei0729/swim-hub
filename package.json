@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "npm run dev --workspace=apps/web",
     "dev:web": "npm run dev --workspace=apps/web",
+    "dev:https": "npm run dev:https --workspace=apps/web",
     "dev:mobile": "cd apps/mobile && npm start",
     "dev:mobile:clear": "cd apps/mobile && npm run start:clear",
     "ios": "npm run ios --workspace=apps/mobile",
@@ -44,7 +45,7 @@
     "docker:dev": "npm run docker:dev --workspace=apps/web",
     "docker:build": "npm run docker:build --workspace=apps/web",
     "docker:down": "npm run docker:down --workspace=apps/web",
-    "supabase:start": "npx supabase start --workdir supabase",
+    "supabase:start": "bash supabase/start.sh",
     "supabase:stop": "npx supabase stop --workdir supabase",
     "supabase:reset": "npx supabase db reset --workdir supabase",
     "supabase:status": "npx supabase status --workdir supabase"

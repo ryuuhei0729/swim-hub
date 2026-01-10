@@ -38,6 +38,8 @@ DROP FUNCTION IF EXISTS "public"."update_best_times"() CASCADE;
 -- Drop types if they exist
 DROP TYPE IF EXISTS "public"."attendance_status_type" CASCADE;
 DROP TYPE IF EXISTS "public"."entry_status_type" CASCADE;
+DROP TYPE IF EXISTS "public"."membership_status_type" CASCADE;
+DROP TYPE IF EXISTS "public"."swim_category_enum" CASCADE;
 
 CREATE EXTENSION IF NOT EXISTS "pg_stat_statements" WITH SCHEMA "extensions";
 
@@ -61,6 +63,18 @@ CREATE TYPE "public"."entry_status_type" AS ENUM (
 );
 
 ALTER TYPE "public"."entry_status_type" OWNER TO "postgres";
+
+CREATE TYPE "public"."membership_status_type" AS ENUM (
+    'pending',
+    'approved',
+    'rejected'
+);
+
+ALTER TYPE "public"."membership_status_type" OWNER TO "postgres";
+
+CREATE TYPE "public"."swim_category_enum" AS ENUM ('Swim', 'Pull', 'Kick');
+
+ALTER TYPE "public"."swim_category_enum" OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."create_attendance_for_team_competition"() RETURNS "trigger"
     LANGUAGE "plpgsql"
@@ -251,6 +265,7 @@ DECLARE
   v_result jsonb;
   v_error_message text;
   v_index integer := 0;
+  v_swim_category "public"."swim_category_enum";
 BEGIN
   -- トランザクション開始（関数全体が自動的にトランザクション内で実行される）
   
@@ -340,6 +355,31 @@ BEGIN
         'index', v_index
       );
       RETURN v_result;
+    END IF;
+    
+    -- swim_categoryのバリデーション（オプショナル、デフォルト'Swim'）
+    IF v_log_data->'swim_category' IS NULL THEN
+      v_swim_category := 'Swim';
+    ELSIF jsonb_typeof(v_log_data->'swim_category') != 'string' THEN
+      v_result := jsonb_build_object(
+        'success', false,
+        'error', 'swim_category must be a string',
+        'field', 'swim_category',
+        'index', v_index
+      );
+      RETURN v_result;
+    ELSE
+      -- enum値の検証
+      IF v_log_data->>'swim_category' NOT IN ('Swim', 'Pull', 'Kick') THEN
+        v_result := jsonb_build_object(
+          'success', false,
+          'error', 'swim_category must be one of: Swim, Pull, Kick',
+          'field', 'swim_category',
+          'index', v_index
+        );
+        RETURN v_result;
+      END IF;
+      v_swim_category := (v_log_data->>'swim_category')::"public"."swim_category_enum";
     END IF;
     
     -- rep_countの存在と型チェック
@@ -452,6 +492,7 @@ BEGIN
       practice_id,
       user_id,
       style,
+      swim_category,
       rep_count,
       set_count,
       distance,
@@ -460,6 +501,7 @@ BEGIN
       p_practice_id,
       (v_log_data->>'user_id')::uuid,
       v_log_data->>'style',
+      v_swim_category,
       (v_log_data->>'rep_count')::integer,
       (v_log_data->>'set_count')::integer,
       (v_log_data->>'distance')::integer,
@@ -527,7 +569,7 @@ $$;
 
 ALTER FUNCTION "public"."replace_practice_logs"("p_practice_id" "uuid", "p_logs_data" "jsonb") OWNER TO "postgres";
 
-COMMENT ON FUNCTION "public"."replace_practice_logs"("p_practice_id" "uuid", "p_logs_data" "jsonb") IS 'practice_logsを原子性のある操作で置き換える。既存のログを削除してから新しいログを挿入する。トランザクション内で実行されるため、エラー時は自動的にロールバックされる。';
+COMMENT ON FUNCTION "public"."replace_practice_logs"("p_practice_id" "uuid", "p_logs_data" "jsonb") IS 'practice_logsを原子性のある操作で置き換える。既存のログを削除してから新しいログを挿入する。トランザクション内で実行されるため、エラー時は自動的にロールバックされる。swim_categoryフィールドをサポート。';
 
 CREATE OR REPLACE FUNCTION "public"."set_invite_code"() RETURNS "trigger"
     LANGUAGE "plpgsql"
@@ -543,7 +585,45 @@ $$;
 
 ALTER FUNCTION "public"."set_invite_code"() OWNER TO "postgres";
 
+-- 承認待ちのメンバーシップから招待コードを取得するRPC関数
+-- 自分のメンバーシップ（user_id = auth.uid()）の招待コードのみ取得可能
+CREATE OR REPLACE FUNCTION "public"."get_invite_code_by_team_id"("p_team_id" "uuid")
+RETURNS "text"
+    LANGUAGE "plpgsql"
+    SECURITY DEFINER
+    SET search_path = public
+    AS $$
+DECLARE
+  v_invite_code text;
+BEGIN
+  -- 認証チェック
+  IF (SELECT "auth"."uid"()) IS NULL THEN
+    RAISE EXCEPTION '認証が必要です';
+  END IF;
+  
+  -- 自分のメンバーシップが存在するかチェック（承認待ちでも可）
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.team_memberships tm
+    WHERE tm.team_id = p_team_id
+      AND tm.user_id = (SELECT "auth"."uid"())
+  ) THEN
+    RAISE EXCEPTION 'チームへのアクセス権限がありません';
+  END IF;
+  
+  -- 招待コードを取得
+  SELECT t.invite_code INTO v_invite_code
+  FROM public.teams t
+  WHERE t.id = p_team_id
+  LIMIT 1;
+  
+  RETURN v_invite_code;
+END;
+$$;
 
+ALTER FUNCTION "public"."get_invite_code_by_team_id"("p_team_id" "uuid") OWNER TO "postgres";
+
+COMMENT ON FUNCTION "public"."get_invite_code_by_team_id"("p_team_id" "uuid") IS '承認待ちのメンバーシップからも招待コードを取得できる。自分のメンバーシップ（user_id = auth.uid()）が存在する場合のみ取得可能。';
 
 CREATE OR REPLACE FUNCTION "public"."update_updated_at_column"() RETURNS "trigger"
     LANGUAGE "plpgsql"
@@ -582,11 +662,11 @@ COMMENT ON COLUMN "public"."announcements"."end_at" IS '表示終了日時（NUL
 
 CREATE TABLE "public"."competitions" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "title" "text" NOT NULL,
+    "title" "text",
     "date" "date" NOT NULL,
     "end_date" "date",
     "place" "text",
-    "pool_type" integer DEFAULT 0,
+    "pool_type" integer DEFAULT 0 NOT NULL,
     "note" "text",
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
@@ -600,6 +680,8 @@ CREATE TABLE "public"."competitions" (
 );
 
 ALTER TABLE "public"."competitions" OWNER TO "postgres";
+
+COMMENT ON COLUMN "public"."competitions"."title" IS '大会名（NULLの場合は「大会」と表示）';
 
 COMMENT ON COLUMN "public"."competitions"."entry_status" IS 'エントリーステータス: before=エントリー前, open=エントリー受付中, closed=エントリー締切';
 
@@ -640,6 +722,7 @@ CREATE TABLE "public"."practice_logs" (
     "user_id" "uuid" NOT NULL,
     "practice_id" "uuid" NOT NULL,
     "style" "text" NOT NULL,
+    "swim_category" "public"."swim_category_enum" DEFAULT 'Swim'::"public"."swim_category_enum" NOT NULL,
     "rep_count" integer NOT NULL,
     "set_count" integer NOT NULL,
     "distance" integer NOT NULL,
@@ -651,10 +734,13 @@ CREATE TABLE "public"."practice_logs" (
 
 ALTER TABLE "public"."practice_logs" OWNER TO "postgres";
 
+COMMENT ON COLUMN "public"."practice_logs"."swim_category" IS '泳法カテゴリ: Swim=通常泳法, Pull=プル, Kick=キック';
+
 CREATE TABLE "public"."practices" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "user_id" "uuid" NOT NULL,
     "date" "date" NOT NULL,
+    "title" "text",
     "place" "text",
     "note" "text",
     "created_at" timestamp with time zone DEFAULT "now"(),
@@ -666,6 +752,8 @@ CREATE TABLE "public"."practices" (
 
 ALTER TABLE "public"."practices" OWNER TO "postgres";
 
+COMMENT ON COLUMN "public"."practices"."title" IS '練習タイトル（NULLの場合は「練習」と表示）';
+
 COMMENT ON COLUMN "public"."practices"."attendance_status" IS '出欠提出ステータス: open=提出受付中, closed=提出締切';
 
 CREATE TABLE "public"."records" (
@@ -675,6 +763,7 @@ CREATE TABLE "public"."records" (
     "style_id" integer NOT NULL,
     "time" numeric(10,2) NOT NULL,
     "pool_type" smallint NOT NULL,
+    "reaction_time" numeric(10,2),
     "video_url" "text",
     "note" "text",
     "is_relaying" boolean DEFAULT false NOT NULL,
@@ -687,11 +776,14 @@ ALTER TABLE "public"."records" OWNER TO "postgres";
 
 COMMENT ON COLUMN "public"."records"."pool_type" IS '0: 短水路(25m), 1: 長水路(50m)';
 
+COMMENT ON COLUMN "public"."records"."reaction_time" IS '反応時間（リアクションタイム）を秒単位で記録。範囲は0.40~1.00秒程度。';
+
 CREATE TABLE "public"."team_memberships" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "team_id" "uuid" NOT NULL,
     "user_id" "uuid" NOT NULL,
     "role" "text" DEFAULT 'user'::"text" NOT NULL,
+    "status" "public"."membership_status_type" DEFAULT 'pending'::"public"."membership_status_type" NOT NULL,
     "member_type" "text",
     "group_name" "text",
     "joined_at" "date" DEFAULT CURRENT_DATE,
@@ -704,6 +796,8 @@ CREATE TABLE "public"."team_memberships" (
 );
 
 ALTER TABLE "public"."team_memberships" OWNER TO "postgres";
+
+COMMENT ON COLUMN "public"."team_memberships"."status" IS 'メンバーシップの承認ステータス: pending=承認待ち, approved=承認済み, rejected=拒否';
 
 CREATE TABLE "public"."teams" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -722,7 +816,7 @@ CREATE OR REPLACE VIEW "public"."calendar_view" WITH ("security_invoker"='true')
 SELECT "p"."id",
     'practice'::"text" AS "item_type",
     "p"."date" AS "item_date",
-    '練習'::"text" AS "title",
+    COALESCE("p"."title", '練習'::"text") AS "title",
     "p"."place",
     "p"."note",
     "jsonb_build_object"('practice', "to_jsonb"("p".*), 'user_id', "p"."user_id") AS "metadata"
@@ -735,7 +829,7 @@ UNION ALL
 SELECT "p"."id",
     'team_practice'::"text" AS "item_type",
     "p"."date" AS "item_date",
-    'チーム練習'::"text" AS "title",
+    COALESCE("p"."title", 'チーム練習'::"text") AS "title",
     "p"."place",
     "p"."note",
     "jsonb_build_object"('practice', "to_jsonb"("p".*), 'user_id', "p"."user_id", 'team_id', "p"."team_id", 'team', "to_jsonb"("t".*)) AS "metadata"
@@ -784,7 +878,7 @@ UNION ALL
 SELECT "c"."id",
     'competition'::"text" AS "item_type",
     "d"."date"::date AS "item_date",
-    "c"."title",
+    COALESCE("c"."title", '大会'::"text") AS "title",
     "c"."place",
     "c"."note",
     "jsonb_build_object"('competition', "to_jsonb"("c".*), 'user_id', "c"."user_id", 'pool_type', "c"."pool_type", 'is_multi_day', "c"."end_date" IS NOT NULL) AS "metadata"
@@ -800,7 +894,7 @@ UNION ALL
 SELECT "c"."id",
     'team_competition'::"text" AS "item_type",
     "d"."date"::date AS "item_date",
-    "c"."title",
+    COALESCE("c"."title", '大会'::"text") AS "title",
     "c"."place",
     "c"."note",
     "jsonb_build_object"('competition', "to_jsonb"("c".*), 'user_id', "c"."user_id", 'team_id', "c"."team_id", 'team', "to_jsonb"("t".*), 'pool_type', "c"."pool_type", 'is_multi_day', "c"."end_date" IS NOT NULL) AS "metadata"
@@ -819,7 +913,7 @@ UNION ALL
 SELECT "c"."id",
     'entry'::"text" AS "item_type",
     "d"."date"::date AS "item_date",
-    "c"."title",
+    COALESCE("c"."title", '大会'::"text") AS "title",
     "c"."place",
     NULL::"text" AS "note",
     "jsonb_build_object"('competition', "to_jsonb"("c".*), 'user_id', "c"."user_id", 'is_multi_day', "c"."end_date" IS NOT NULL) AS "metadata"
@@ -835,7 +929,7 @@ UNION ALL
 SELECT "c"."id",
     'entry'::"text" AS "item_type",
     "d"."date"::date AS "item_date",
-    "c"."title",
+    COALESCE("c"."title", '大会'::"text") AS "title",
     "c"."place",
     NULL::"text" AS "note",
     "jsonb_build_object"('competition', "to_jsonb"("c".*), 'user_id', "c"."user_id", 'team_id', "c"."team_id", 'team', "to_jsonb"("t".*), 'is_multi_day', "c"."end_date" IS NOT NULL) AS "metadata"
@@ -854,7 +948,7 @@ UNION ALL
 SELECT "c"."id",
     'record'::"text" AS "item_type",
     "d"."date"::date AS "item_date",
-    "c"."title",
+    COALESCE("c"."title", '大会'::"text") AS "title",
     "c"."place",
     NULL::"text" AS "note",
     "jsonb_build_object"('competition', "to_jsonb"("c".*), 'user_id', "c"."user_id", 'pool_type', "c"."pool_type", 'is_multi_day', "c"."end_date" IS NOT NULL) AS "metadata"
@@ -868,7 +962,7 @@ UNION ALL
 SELECT "c"."id",
     'record'::"text" AS "item_type",
     "d"."date"::date AS "item_date",
-    "c"."title",
+    COALESCE("c"."title", '大会'::"text") AS "title",
     "c"."place",
     NULL::"text" AS "note",
     "jsonb_build_object"('competition', "to_jsonb"("c".*), 'user_id', "c"."user_id", 'team_id', "c"."team_id", 'team', "to_jsonb"("t".*), 'pool_type', "c"."pool_type", 'is_multi_day', "c"."end_date" IS NOT NULL) AS "metadata"
@@ -883,7 +977,7 @@ SELECT "c"."id",
 
 ALTER VIEW "public"."calendar_view" OWNER TO "postgres";
 
-COMMENT ON VIEW "public"."calendar_view" IS 'カレンダー表示用の統合ビュー（練習、練習ログ、大会、エントリー、記録を含む）。placeカラムで統一。複数日開催の大会は各日に展開される。チームのcompetition/recordは、チームメンバーであれば誰が登録したものでも表示される。';
+COMMENT ON VIEW "public"."calendar_view" IS 'カレンダー表示用の統合ビュー（練習、練習ログ、大会、エントリー、記録を含む）。placeカラムで統一。複数日開催の大会は各日に展開される。チームのcompetition/recordは、チームメンバーであれば誰が登録したものでも表示される。titleがnullの場合はデフォルト値（練習/大会）を表示。';
 
 CREATE TABLE "public"."group_assignments" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -1003,12 +1097,24 @@ CREATE TABLE "public"."users" (
     "birthday" "date",
     "profile_image_path" "text",
     "bio" "text",
+    "google_calendar_enabled" boolean DEFAULT false NOT NULL,
+    "google_calendar_refresh_token" "text",
+    "google_calendar_sync_practices" boolean DEFAULT true NOT NULL,
+    "google_calendar_sync_competitions" boolean DEFAULT true NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
     CONSTRAINT "users_gender_check" CHECK (("gender" = ANY (ARRAY[0, 1])))
 );
 
 ALTER TABLE "public"."users" OWNER TO "postgres";
+
+COMMENT ON COLUMN "public"."users"."google_calendar_enabled" IS 'Googleカレンダー連携が有効かどうか';
+
+COMMENT ON COLUMN "public"."users"."google_calendar_refresh_token" IS 'Google OAuthリフレッシュトークン（暗号化推奨）';
+
+COMMENT ON COLUMN "public"."users"."google_calendar_sync_practices" IS '練習記録をGoogleカレンダーに同期するかどうか';
+
+COMMENT ON COLUMN "public"."users"."google_calendar_sync_competitions" IS '大会記録をGoogleカレンダーに同期するかどうか';
 
 ALTER TABLE ONLY "public"."announcements"
     ADD CONSTRAINT "announcements_pkey" PRIMARY KEY ("id");
@@ -1211,6 +1317,10 @@ CREATE INDEX "idx_team_memberships_role" ON "public"."team_memberships" USING "b
 CREATE INDEX "idx_team_memberships_team_id" ON "public"."team_memberships" USING "btree" ("team_id");
 
 CREATE INDEX "idx_team_memberships_user_id" ON "public"."team_memberships" USING "btree" ("user_id");
+
+CREATE INDEX "idx_team_memberships_status" ON "public"."team_memberships" USING "btree" ("status");
+
+CREATE INDEX "idx_team_memberships_team_status" ON "public"."team_memberships" USING "btree" ("team_id", "status");
 
 CREATE INDEX "idx_teams_created_at" ON "public"."teams" USING "btree" ("created_at");
 
@@ -1768,9 +1878,30 @@ CREATE POLICY "Users can view own practice_times" ON "public"."practice_times" F
     JOIN "public"."practices" "p" ON (("p"."id" = "pl"."practice_id")))
   WHERE (("pl"."id" = "practice_times"."practice_log_id") AND ("p"."user_id" = (SELECT "auth"."uid"()))))));
 
-CREATE POLICY "Users can view own profile and team members" ON "public"."users" FOR SELECT USING ((((SELECT "auth"."uid"()) = "id") OR public.shares_active_team("users"."id", (SELECT "auth"."uid"()))));
+CREATE POLICY "Users can view own profile and team members" ON "public"."users" FOR SELECT USING (
+  ((SELECT "auth"."uid"()) = "id")
+  OR
+  public.shares_active_team("users"."id", (SELECT "auth"."uid"()))
+  OR
+  -- チーム管理者は承認待ちユーザー情報も閲覧可能
+  EXISTS (
+    SELECT 1
+    FROM "public"."team_memberships" tm
+    WHERE tm.user_id = "users"."id"
+      AND tm.status = 'pending'::"public"."membership_status_type"
+      AND public.is_team_admin(tm.team_id, (SELECT "auth"."uid"()))
+  )
+);
 
 CREATE POLICY "Users can view own records" ON "public"."records" FOR SELECT USING (((SELECT "auth"."uid"()) = "user_id"));
+
+-- チームメンバーは同じチームのメンバーの個人記録（team_id IS NULL）を閲覧可能
+CREATE POLICY "Team members can view teammates' personal records" ON "public"."records"
+FOR SELECT USING (
+  team_id IS NULL
+  AND
+  public.shares_active_team(records.user_id, (SELECT auth.uid()))
+);
 
 -- チームメンバーはチーム記録を閲覧可能
 CREATE POLICY "Team members can view team records" ON "public"."records"
@@ -1944,10 +2075,19 @@ ALTER TABLE "public"."teams" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."styles" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "Users can view team memberships" ON "public"."team_memberships" FOR SELECT USING (
+CREATE POLICY "Users can view team memberships" ON "public"."team_memberships"
+FOR SELECT USING (
   ("user_id" = (SELECT "auth"."uid"()))
   OR
-  public.is_team_member("team_memberships"."team_id", (SELECT "auth"."uid"()))
+  public.is_team_admin("team_memberships"."team_id", (SELECT "auth"."uid"()))
+  OR
+  (
+    "status" = 'approved'::"public"."membership_status_type"
+    AND
+    "is_active" = true
+    AND
+    public.is_team_member("team_memberships"."team_id", (SELECT "auth"."uid"()))
+  )
   OR
   (
     EXISTS (
@@ -2005,6 +2145,10 @@ GRANT ALL ON FUNCTION "public"."replace_practice_log_tags"("p_practice_log_id" "
 GRANT ALL ON FUNCTION "public"."replace_practice_logs"("p_practice_id" "uuid", "p_logs_data" "jsonb") TO "anon";
 GRANT ALL ON FUNCTION "public"."replace_practice_logs"("p_practice_id" "uuid", "p_logs_data" "jsonb") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."replace_practice_logs"("p_practice_id" "uuid", "p_logs_data" "jsonb") TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."get_invite_code_by_team_id"("p_team_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_invite_code_by_team_id"("p_team_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_invite_code_by_team_id"("p_team_id" "uuid") TO "service_role";
 
 GRANT ALL ON FUNCTION "public"."set_invite_code"() TO "anon";
 GRANT ALL ON FUNCTION "public"."set_invite_code"() TO "authenticated";
