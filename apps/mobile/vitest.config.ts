@@ -65,11 +65,6 @@ export default defineConfig({
   optimizeDeps: {
     include: ['react', 'react-dom', '@testing-library/react'],
   },
-  server: {
-    deps: {
-      inline: ['react', 'react-dom', '@testing-library/react'],
-    },
-  },
   esbuild: {
     jsx: 'automatic',
   },

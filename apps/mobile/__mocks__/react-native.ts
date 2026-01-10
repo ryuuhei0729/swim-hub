@@ -21,9 +21,9 @@ export const View = ({
 export const Text = ({
   children,
   style,
-  numberOfLines,
+  _numberOfLines,
   ...props
-}: { children?: React.ReactNode; style?: unknown; numberOfLines?: number } & Record<string, unknown>) => {
+}: { children?: React.ReactNode; style?: unknown; _numberOfLines?: number } & Record<string, unknown>) => {
   // styleプロップを処理（配列の場合はマージ）
   const processedStyle = Array.isArray(style)
     ? Object.assign({}, ...style.filter(Boolean))
@@ -96,16 +96,17 @@ export const TextInput = ({ ...props }: Record<string, unknown>) =>
 export const StyleSheet = {
   create: <T extends Record<string, any>>(styles: T): T => {
     // スタイルオブジェクトをそのまま返す（DOM要素でも動作するように）
-    return Object.keys(styles).reduce((acc, key) => {
+    const result: Record<string, any> = {}
+    Object.keys(styles).forEach((key) => {
       const style = styles[key]
       if (typeof style === 'object' && style !== null) {
         // ネストされたスタイルオブジェクトをフラット化
-        acc[key] = { ...style }
+        result[key] = { ...style }
       } else {
-        acc[key] = style
+        result[key] = style
       }
-      return acc
-    }, {} as T)
+    })
+    return result as T
   },
   flatten: <T>(style: T): T => {
     // スタイルをフラット化（DOM要素用に変換）
