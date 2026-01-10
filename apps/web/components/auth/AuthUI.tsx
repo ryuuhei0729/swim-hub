@@ -38,13 +38,6 @@ export const AuthUI: React.FC = () => {
       }
       const redirectTo = `${window.location.origin}/api/auth/callback?redirect_to=/dashboard`
 
-      // デバッグ: signInWithOAuth前のCookie状態を確認
-      if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-        const beforeCookies = document.cookie.split('; ')
-        console.log('OAuth開始前 - 検出されたCookie数:', beforeCookies.length)
-        console.log('OAuth開始前 - すべてのCookie名:', beforeCookies.map(c => c.split('=')[0]).join(', '))
-      }
-
       const { data, error: authError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -58,30 +51,12 @@ export const AuthUI: React.FC = () => {
       })
 
       if (authError) {
-        console.error('OAuth signInWithOAuth error:', authError)
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('OAuth signInWithOAuth error:', authError)
+        }
         setError('Google認証に失敗しました。再度お試しください。')
         setLoading(false)
         return
-      }
-
-      // デバッグ: code-verifierがCookieに保存されているか確認
-      // signInWithOAuthは同期的にCookieを保存するため、即座に確認可能
-      if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-        // 少し待ってからCookieを確認（@supabase/ssrがCookieを設定する時間を確保）
-        await new Promise(resolve => setTimeout(resolve, 100))
-        const allCookies = document.cookie.split('; ')
-        const codeVerifierCookie = allCookies.find(c => c.includes('code-verifier') || c.includes('pkce'))
-        console.log('OAuth開始後 - 検出されたCookie数:', allCookies.length)
-        console.log('OAuth開始後 - code-verifier/pkce Cookie:', codeVerifierCookie ? codeVerifierCookie.split('=')[0] : '見つかりません')
-        console.log('OAuth開始後 - すべてのCookie名:', allCookies.map(c => c.split('=')[0]).join(', '))
-        
-        if (!codeVerifierCookie) {
-          console.error('❌ PKCE code verifier Cookieが保存されていません！')
-          console.error('Supabase client:', supabase ? '存在' : '存在しない')
-          console.error('redirectTo:', redirectTo)
-        } else {
-          console.log('✅ PKCE code verifier Cookieが保存されました:', codeVerifierCookie.split('=')[0])
-        }
       }
 
       // OAuthプロバイダーにリダイレクト（data.urlが存在する場合）
@@ -89,7 +64,9 @@ export const AuthUI: React.FC = () => {
         window.location.href = data.url
       }
     } catch (err) {
-      console.error('Google認証エラー:', err)
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Google認証エラー:', err)
+      }
       setError('Google認証に失敗しました。再度お試しください。')
       setLoading(false)
     }

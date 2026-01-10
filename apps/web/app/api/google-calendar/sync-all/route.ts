@@ -1,13 +1,13 @@
+import { competitionToCalendarEvent, practiceToCalendarEvent } from '@/lib/google-calendar'
 import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-server-auth'
+import type { Competition, Practice } from '@apps/shared/types/database'
 import { NextRequest, NextResponse } from 'next/server'
-import { practiceToCalendarEvent, competitionToCalendarEvent } from '@/lib/google-calendar'
-import type { Practice, Competition } from '@apps/shared/types/database'
 
 /**
  * Google Calendar APIへの一括同期処理
  * POST /api/google-calendar/sync-all
  */
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     const supabase = await createAuthenticatedServerClient()
     const user = await getServerUser()
@@ -89,15 +89,22 @@ export async function POST(request: NextRequest) {
             })
 
             if (response.ok) {
-              const result = await response.json()
+              const result = await response.json() as { id: string }
               
               // google_event_idを保存
-              await supabase
-                .from('practices')
+              const { error: updateError } = await (
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                supabase.from('practices') as any
+              )
                 .update({ google_event_id: result.id })
                 .eq('id', practice.id)
               
-              practiceSuccessCount++
+              if (updateError) {
+                console.error(`Practice更新エラー (${practice.id}):`, updateError)
+                practiceErrorCount++
+              } else {
+                practiceSuccessCount++
+              }
             } else {
               console.error(`Practice同期エラー (${practice.id}):`, await response.text())
               practiceErrorCount++
@@ -146,15 +153,22 @@ export async function POST(request: NextRequest) {
             })
 
             if (response.ok) {
-              const result = await response.json()
+              const result = await response.json() as { id: string }
               
               // google_event_idを保存
-              await supabase
-                .from('competitions')
+              const { error: updateError } = await (
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                supabase.from('competitions') as any
+              )
                 .update({ google_event_id: result.id })
                 .eq('id', competition.id)
               
-              competitionSuccessCount++
+              if (updateError) {
+                console.error(`Competition更新エラー (${competition.id}):`, updateError)
+                competitionErrorCount++
+              } else {
+                competitionSuccessCount++
+              }
             } else {
               console.error(`Competition同期エラー (${competition.id}):`, await response.text())
               competitionErrorCount++
