@@ -35,20 +35,6 @@ export default function Home() {
   })
   const [windowWidth, setWindowWidth] = useState<number>(0)
 
-  // OAuthコールバック処理（codeパラメータがある場合）
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search)
-      const code = urlParams.get('code')
-      if (code) {
-        // OAuthコールバックを/api/auth/callbackにリダイレクト
-        const redirectTo = urlParams.get('redirect_to') || '/dashboard'
-        window.location.href = `/api/auth/callback?code=${code}&redirect_to=${encodeURIComponent(redirectTo)}`
-        return
-      }
-    }
-  }, [])
-
   // ウィンドウサイズをリアルタイムで監視
   useEffect(() => {
     // 初期値を設定

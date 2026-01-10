@@ -1,4 +1,3 @@
-'use client'
 import { createBrowserClient } from '@supabase/ssr'
 import { type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@swim-hub/shared/types/database'
@@ -37,24 +36,56 @@ function validateSupabaseEnv(): { url: string; anonKey: string } {
   return { url: supabaseUrl, anonKey: supabaseAnonKey }
 }
 
-// ブラウザ用のSupabaseクライアント（クライアントコンポーネント用）
-export const createClient = (): SupabaseClient<Database> => {
-  // 環境変数を検証
-  const { url, anonKey } = validateSupabaseEnv()
-  
-  // 追加の検証：URLとキーが有効な文字列であることを確認
-  if (typeof url !== 'string' || typeof anonKey !== 'string') {
-    throw new Error(`Supabase環境変数の型が不正です: url=${typeof url}, anonKey=${typeof anonKey}`)
+// ブラウザ用のSupabaseクライアント（シングルトン）
+// 重要: Browser Clientは1箇所だけに統一することで、PKCE code verifierが確実にCookieに保存・読み取りされる
+// 環境変数を検証
+const { url, anonKey } = (() => {
+  try {
+    return validateSupabaseEnv()
+  } catch {
+    // サーバー側（ビルド時）では環境変数が取得できない場合がある
+    // その場合は後でエラーを投げる
+    return { url: '', anonKey: '' }
   }
-  
-  if (!url || url.trim() === '' || !anonKey || anonKey.trim() === '') {
-    throw new Error(`Supabase環境変数が空です: url="${url}", anonKey="${anonKey ? '***' : ''}"`)
+})()
+
+// ローカル環境かどうかを判定する関数
+function isLocalEnvironment(): boolean {
+  if (typeof window === 'undefined') {
+    return false
   }
-  
-  // createBrowserClientは自動的にCookieを使用してPKCE code verifierを保存
-  // @supabase/ssrのcreateBrowserClientはデフォルトでCookieストレージを使用
-  return createBrowserClient<Database>(url, anonKey)
+  const hostname = window.location.hostname
+  return hostname === 'localhost' || hostname === '127.0.0.1'
 }
 
-// グローバルなSupabaseクライアント（必要な場合のみ）
-// export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// ブラウザ環境でのみSupabaseクライアントを作成
+// サーバー側（ビルド時）ではundefinedを返す
+// Cookie設定は環境に応じて変更
+// - ローカル開発（HTTP）: secure: false, sameSite: 'lax'
+// - 本番（HTTPS）: secure: true, sameSite: 'lax'
+// 重要: pathを明示的に設定することで、PKCE code verifierが確実にCookieに保存される
+export const supabase: SupabaseClient<Database> | undefined = 
+  typeof window !== 'undefined' 
+    ? createBrowserClient<Database>(
+        url || process.env.NEXT_PUBLIC_SUPABASE_URL!, 
+        anonKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookieOptions: {
+            sameSite: 'lax',
+            secure: !isLocalEnvironment(), // ローカルはHTTP、本番はHTTPS
+            path: '/', // すべてのパスでCookieが有効になるように設定
+          },
+        }
+      )
+    : undefined
+
+// 後方互換性のため、createClient関数もエクスポート（supabaseを返す）
+export const createClient = (): SupabaseClient<Database> => {
+  if (typeof window === 'undefined') {
+    throw new Error('createClient()はブラウザ環境でのみ使用できます')
+  }
+  if (!supabase) {
+    throw new Error('Supabaseクライアントが初期化されていません')
+  }
+  return supabase
+}

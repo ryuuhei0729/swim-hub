@@ -1,4 +1,5 @@
 export { AuthForm } from './AuthForm'
+export { AuthUI } from './AuthUI'
 export { PasswordResetForm } from './PasswordResetForm'
 export { UpdatePasswordForm } from './UpdatePasswordForm'
 export { AuthGuard } from './AuthGuard'
