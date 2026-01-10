@@ -547,6 +547,7 @@ export type Database = {
           pool_type: number // 0: short, 1: long
           note: string | null
           attendance_status?: string | null
+          google_event_id: string | null
         }
         Insert: {
           id?: string
@@ -556,6 +557,7 @@ export type Database = {
           pool_type?: number // デフォルト: 0 (short)
           note?: string | null
           attendance_status?: string | null
+          google_event_id?: string | null
         }
         Update: {
           id?: string
@@ -565,6 +567,7 @@ export type Database = {
           pool_type?: number
           note?: string | null
           attendance_status?: string | null
+          google_event_id?: string | null
         }
       }
       practices: {
@@ -575,6 +578,7 @@ export type Database = {
           place: string | null
           note: string | null
           attendance_status?: string | null
+          google_event_id: string | null
         }
         Insert: {
           id?: string
@@ -583,6 +587,7 @@ export type Database = {
           place: string | null
           note?: string | null
           attendance_status?: string | null
+          google_event_id?: string | null
         }
         Update: {
           id?: string
@@ -591,6 +596,7 @@ export type Database = {
           place?: string | null
           note?: string | null
           attendance_status?: string | null
+          google_event_id?: string | null
         }
       }
       records: {

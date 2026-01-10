@@ -8,11 +8,21 @@ import type { Practice, Competition } from '@apps/shared/types/database'
  * POST /api/google-calendar/sync
  */
 export async function POST(request: NextRequest) {
+  // #region agent log
+  const fs = await import('fs')
+  const logDebug = (loc: string, msg: string, data: Record<string, unknown>, hyp: string) => {
+    try { fs.appendFileSync('/Users/ryuuhei_0729/swim-hub/.cursor/debug.log', JSON.stringify({location:loc,message:msg,data,timestamp:Date.now(),sessionId:'debug-session',hypothesisId:hyp})+'\n') } catch {}
+  }
+  logDebug('route.ts:POST-start', 'API削除リクエスト受信', {}, 'E')
+  // #endregion
   try {
     const supabase = await createAuthenticatedServerClient()
     const user = await getServerUser()
     
     if (!user) {
+      // #region agent log
+      logDebug('route.ts:no-user', 'ユーザー認証なし', {}, 'B')
+      // #endregion
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
 
@@ -40,12 +50,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { type, data, action } = body as {
+    const { type, data, action, googleEventId } = body as {
       type: 'practice' | 'competition'
       data: Practice | Competition
       action: 'create' | 'update' | 'delete'
       googleEventId?: string
     }
+    // #region agent log
+    logDebug('route.ts:body-parsed', 'リクエストボディ解析', {type,action,googleEventId,hasData:!!data}, 'E')
+    // #endregion
 
     // 同期設定を確認
     if (type === 'practice' && !profileData.google_calendar_sync_practices) {
@@ -57,8 +70,64 @@ export async function POST(request: NextRequest) {
 
     // SupabaseからOAuthトークンを取得
     const { data: { session } } = await supabase.auth.getSession()
+    // #region agent log
+    logDebug('route.ts:session-check', 'セッション確認', {hasSession:!!session,hasProviderToken:!!session?.provider_token,providerTokenLength:session?.provider_token?.length||0}, 'B')
+    // #endregion
     if (!session?.provider_token) {
+      // #region agent log
+      logDebug('route.ts:no-provider-token', 'provider_tokenがない', {}, 'B')
+      // #endregion
       return NextResponse.json({ error: 'Google認証トークンが取得できません' }, { status: 401 })
+    }
+
+    // Google Calendar APIを呼び出し
+    const accessToken = session.provider_token
+    const calendarApiUrl = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
+
+    if (action === 'delete') {
+      // #region agent log
+      logDebug('route.ts:delete-action', 'Google Calendar削除処理開始', {type,googleEventId,action}, 'C')
+      // #endregion
+      console.log('Google Calendar削除リクエスト:', { type, googleEventId, action })
+      
+      if (!googleEventId) {
+        // #region agent log
+        logDebug('route.ts:no-googleEventId', 'googleEventIdが提供されていない', {}, 'A')
+        // #endregion
+        console.warn('Google Calendar削除 - googleEventIdが提供されていません')
+        return NextResponse.json({ error: 'googleEventIdが必要です' }, { status: 400 })
+      }
+
+      // イベント削除
+      const deleteResponse = await fetch(`${calendarApiUrl}/${googleEventId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      // #region agent log
+      logDebug('route.ts:delete-response', 'Google Calendar API削除レスポンス', {status:deleteResponse.status,statusText:deleteResponse.statusText,ok:deleteResponse.ok}, 'C')
+      // #endregion
+      console.log('Google Calendar削除レスポンス:', {
+        status: deleteResponse.status,
+        statusText: deleteResponse.statusText
+      })
+
+      if (!deleteResponse.ok) {
+        const errorText = await deleteResponse.text()
+        // #region agent log
+        logDebug('route.ts:delete-error', 'Google Calendar削除失敗', {status:deleteResponse.status,errorText}, 'C')
+        // #endregion
+        console.error('Google Calendar削除エラー:', errorText)
+        return NextResponse.json({ error: 'Google Calendarへの削除に失敗しました' }, { status: deleteResponse.status })
+      }
+
+      // #region agent log
+      logDebug('route.ts:delete-success', 'Google Calendar削除成功', {googleEventId}, 'C')
+      // #endregion
+      return NextResponse.json({ success: true })
     }
 
     // チーム名を取得（team_idがある場合）
@@ -77,33 +146,10 @@ export async function POST(request: NextRequest) {
       ? practiceToCalendarEvent(data as Practice, teamName)
       : competitionToCalendarEvent(data as Competition, teamName)
 
-    // Google Calendar APIを呼び出し
-    const accessToken = session.provider_token
-    const calendarApiUrl = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
-
-    if (action === 'delete' && body.googleEventId) {
-      // イベント削除
-      const deleteResponse = await fetch(`${calendarApiUrl}/${body.googleEventId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        }
-      })
-
-      if (!deleteResponse.ok) {
-        const errorText = await deleteResponse.text()
-        console.error('Google Calendar削除エラー:', errorText)
-        return NextResponse.json({ error: 'Google Calendarへの削除に失敗しました' }, { status: deleteResponse.status })
-      }
-
-      return NextResponse.json({ success: true })
-    }
-
     // イベント作成・更新
     const method = action === 'create' ? 'POST' : 'PUT'
-    const url = action === 'update' && body.googleEventId
-      ? `${calendarApiUrl}/${body.googleEventId}`
+    const url = action === 'update' && googleEventId
+      ? `${calendarApiUrl}/${googleEventId}`
       : calendarApiUrl
 
     const response = await fetch(url, {

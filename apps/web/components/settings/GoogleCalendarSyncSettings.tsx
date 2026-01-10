@@ -17,7 +17,12 @@ export default function GoogleCalendarSyncSettings({
   const { signInWithOAuth, supabase, user } = useAuth()
   const [loading, setLoading] = useState(false)
   const [syncing, setSyncing] = useState(false)
+  const [bulkSyncing, setBulkSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [bulkSyncResult, setBulkSyncResult] = useState<{
+    practices: { success: number; error: number }
+    competitions: { success: number; error: number }
+  } | null>(null)
 
   const isEnabled = profile?.google_calendar_enabled || false
   const syncPractices = profile?.google_calendar_sync_practices ?? true
@@ -93,6 +98,42 @@ export default function GoogleCalendarSyncSettings({
       setError('設定の更新に失敗しました。')
     } finally {
       setSyncing(false)
+    }
+  }
+
+  // 既存データの一括同期
+  const handleBulkSync = async () => {
+    if (!user) return
+
+    setBulkSyncing(true)
+    setError(null)
+    setBulkSyncResult(null)
+
+    try {
+      const appUrl = typeof window !== 'undefined' 
+        ? window.location.origin 
+        : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+
+      const response = await fetch(`${appUrl}/api/google-calendar/sync-all`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || '一括同期に失敗しました')
+      }
+
+      const result = await response.json()
+      setBulkSyncResult(result.results)
+      onUpdate() // プロフィールを再取得
+    } catch (err) {
+      console.error('一括同期エラー:', err)
+      setError(err instanceof Error ? err.message : '一括同期に失敗しました。')
+    } finally {
+      setBulkSyncing(false)
     }
   }
 
@@ -177,14 +218,59 @@ export default function GoogleCalendarSyncSettings({
               <span className="text-sm text-gray-700">大会記録を自動同期</span>
             </label>
           </div>
-          <button
-            onClick={handleDisconnectGoogle}
-            disabled={loading}
-            className="inline-flex items-center justify-center px-4 py-2 border border-red-300 rounded-lg text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out"
-          >
-            <XCircleIcon className="h-5 w-5 mr-2" />
-            連携を解除
-          </button>
+          
+          <div className="pt-3 border-t border-gray-200">
+            <p className="text-sm text-gray-600 mb-3">
+              既に登録されている練習記録・大会記録をGoogleカレンダーに同期します。
+            </p>
+            <button
+              onClick={handleBulkSync}
+              disabled={bulkSyncing}
+              className="inline-flex items-center justify-center px-4 py-2 border border-blue-300 rounded-lg text-sm font-medium text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out"
+            >
+              {bulkSyncing ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  同期中...
+                </>
+              ) : (
+                '既存データを同期'
+              )}
+            </button>
+            
+            {bulkSyncResult && (
+              <div className="mt-3 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
+                <p className="font-medium mb-1">同期が完了しました</p>
+                <ul className="list-disc list-inside space-y-1">
+                  {bulkSyncResult.practices.success > 0 && (
+                    <li>練習記録: {bulkSyncResult.practices.success}件を同期</li>
+                  )}
+                  {bulkSyncResult.competitions.success > 0 && (
+                    <li>大会記録: {bulkSyncResult.competitions.success}件を同期</li>
+                  )}
+                  {(bulkSyncResult.practices.error > 0 || bulkSyncResult.competitions.error > 0) && (
+                    <li className="text-yellow-700">
+                      エラー: 練習記録{bulkSyncResult.practices.error}件、大会記録{bulkSyncResult.competitions.error}件
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
+          </div>
+          
+          <div className="pt-3 border-t border-gray-200">
+            <button
+              onClick={handleDisconnectGoogle}
+              disabled={loading}
+              className="inline-flex items-center justify-center px-4 py-2 border border-red-300 rounded-lg text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out"
+            >
+              <XCircleIcon className="h-5 w-5 mr-2" />
+              連携を解除
+            </button>
+          </div>
         </div>
       )}
     </div>
