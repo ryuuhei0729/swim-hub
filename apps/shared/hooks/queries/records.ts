@@ -324,13 +324,7 @@ export function useDeleteCompetitionMutation(supabase: SupabaseClient, api?: Rec
           .eq('id', id)
           .single()
         competitionData = data as Competition | null
-        // google_event_idを取得
-        const { data: existing } = await supabase
-          .from('competitions')
-          .select('google_event_id')
-          .eq('id', id)
-          .single()
-        googleEventId = existing?.google_event_id || null
+        googleEventId = competitionData?.google_event_id || null
         console.log('Competition削除 - google_event_id:', googleEventId)
       } catch (err) {
         console.error('Competition取得エラー:', err)

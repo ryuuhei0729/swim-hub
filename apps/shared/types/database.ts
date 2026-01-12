@@ -9,7 +9,7 @@ import { SupabaseClient } from '@supabase/supabase-js'
 // 1. 基本型定義
 // =============================================================================
 
-// ユーザープロフィール
+// ユーザープロフィール（クライアント側用 - 機密情報を除外）
 export interface UserProfile {
   id: string
   name: string
@@ -18,7 +18,7 @@ export interface UserProfile {
   profile_image_path: string | null
   bio: string | null
   google_calendar_enabled: boolean
-  google_calendar_refresh_token: string | null
+  // google_calendar_refresh_token は機密情報のためクライアント側では除外
   google_calendar_sync_practices: boolean
   google_calendar_sync_competitions: boolean
   created_at: string

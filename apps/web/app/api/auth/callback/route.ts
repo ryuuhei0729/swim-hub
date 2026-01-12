@@ -2,10 +2,48 @@ import { createRouteHandlerClient } from '@/lib/supabase-server'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
+/**
+ * redirectToパラメータを検証・サニタイズする
+ * - '/'で始まるパスであることを確認
+ * - CR/LFや制御文字を含まないことを確認
+ * - 無効な値の場合は'/dashboard'にフォールバック
+ */
+function validateRedirectPath(redirectTo: string | null): string {
+  const defaultPath = '/dashboard'
+  
+  if (!redirectTo) {
+    return defaultPath
+  }
+  
+  // パスが'/'で始まることを確認
+  if (!redirectTo.startsWith('/')) {
+    return defaultPath
+  }
+  
+  // CR/LFや制御文字を含まないことを確認
+  // 許可する文字: 英数字、パス区切り(/)、クエリパラメータ(?&)、ハッシュ(#)、エンコードされた文字(%)
+  // 禁止: CR(\r), LF(\n), タブ(\t), null文字(\0), その他の制御文字
+  for (let i = 0; i < redirectTo.length; i++) {
+    const charCode = redirectTo.charCodeAt(i)
+    // 制御文字（0x00-0x1F）、DEL（0x7F）、拡張制御文字（0x80-0x9F）をチェック
+    if ((charCode >= 0x00 && charCode <= 0x1F) || charCode === 0x7F || (charCode >= 0x80 && charCode <= 0x9F)) {
+      return defaultPath
+    }
+  }
+  
+  // 相対パストラバーサル攻撃を防ぐ（../や..\\など）
+  if (redirectTo.includes('..')) {
+    return defaultPath
+  }
+  
+  // 検証を通過したパスを返す
+  return redirectTo
+}
+
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
-  const redirectTo = requestUrl.searchParams.get('redirect_to') || '/dashboard'
+  const redirectTo = validateRedirectPath(requestUrl.searchParams.get('redirect_to'))
 
   if (!code) {
     // codeパラメータがない場合はエラーページにリダイレクト
@@ -20,17 +58,16 @@ export async function GET(request: NextRequest) {
     // 明示的にgetAll()を呼び出して、すべてのCookieを読み込む
     const cookieStoreCookies = cookieStore.getAll()
     
-    // デバッグ: リクエストから直接Cookieを確認
-    const requestCookies = request.cookies.getAll()
-    console.log('OAuthコールバック - request.cookiesから検出されたCookie数:', requestCookies.length)
-    console.log('OAuthコールバック - request.cookiesから検出されたCookie名:', requestCookies.map(c => c.name).join(', '))
-    const codeVerifierCookie = requestCookies.find(c => c.name.includes('code-verifier') || c.name.includes('pkce'))
-    console.log('OAuthコールバック - request.cookiesからcode-verifier Cookie:', codeVerifierCookie ? `${codeVerifierCookie.name} = ${codeVerifierCookie.value.substring(0, 20)}...` : '見つかりません')
-    
-    console.log('OAuthコールバック - cookies()から検出されたCookie数:', cookieStoreCookies.length)
-    console.log('OAuthコールバック - cookies()から検出されたCookie名:', cookieStoreCookies.map(c => c.name).join(', '))
-    const cookieStoreCodeVerifier = cookieStoreCookies.find(c => c.name.includes('code-verifier') || c.name.includes('pkce'))
-    console.log('OAuthコールバック - cookies()からcode-verifier Cookie:', cookieStoreCodeVerifier ? `${cookieStoreCodeVerifier.name} = ${cookieStoreCodeVerifier.value.substring(0, 20)}...` : '見つかりません')
+    // 開発環境のみ最小限の診断情報をログ出力（Cookie値やPKCE verifierは一切出力しない）
+    if (process.env.NODE_ENV !== 'production') {
+      const requestCookies = request.cookies.getAll()
+      const hasCodeVerifier = cookieStoreCookies.some(c => c.name.includes('code-verifier') || c.name.includes('pkce'))
+      console.log('OAuthコールバック - Cookie検出:', {
+        requestCookiesCount: requestCookies.length,
+        cookieStoreCookiesCount: cookieStoreCookies.length,
+        hasCodeVerifier: hasCodeVerifier
+      })
+    }
     
     // Route Handler用のクライアントを作成（Cookie操作を記録）
     // cookies()から取得したCookieストアを優先的に使用
@@ -91,6 +128,7 @@ export async function GET(request: NextRequest) {
     }
 
     // リダイレクト（Cookieを設定）
+    // redirectToは既に検証済みなので安全に結合
     const successResponse = NextResponse.redirect(requestUrl.origin + redirectTo)
     setCookiesOnResponse(successResponse)
     return successResponse

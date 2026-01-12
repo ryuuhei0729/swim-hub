@@ -125,7 +125,12 @@ export const createMockSupabaseClient = (options: {
     }),
     rpc: vi.fn().mockResolvedValue({ data: queryData, error: queryError }),
     channel: vi.fn(() => {
-      const channel = {
+      const channel: {
+        on: ReturnType<typeof vi.fn>
+        subscribe: ReturnType<typeof vi.fn>
+        unsubscribe: ReturnType<typeof vi.fn>
+        send: ReturnType<typeof vi.fn>
+      } = {
         on: vi.fn(() => channel),
         subscribe: vi.fn(() => channel),
         unsubscribe: vi.fn(),
@@ -254,7 +259,7 @@ export const createMockTeamMembershipWithUser = (overrides = {}) => ({
     profile_image_path: null,
     bio: null,
     google_calendar_enabled: false,
-    google_calendar_refresh_token: null,
+    // google_calendar_refresh_token は機密情報のためクライアント側では除外
     google_calendar_sync_practices: false,
     google_calendar_sync_competitions: false,
     created_at: '2025-01-01T00:00:00Z',

@@ -21,9 +21,9 @@ export const View = ({
 export const Text = ({
   children,
   style,
-  _numberOfLines,
+  numberOfLines: _numberOfLines,
   ...props
-}: { children?: React.ReactNode; style?: unknown; _numberOfLines?: number } & Record<string, unknown>) => {
+}: { children?: React.ReactNode; style?: unknown; numberOfLines?: number } & Record<string, unknown>) => {
   // styleプロップを処理（配列の場合はマージ）
   const processedStyle = Array.isArray(style)
     ? Object.assign({}, ...style.filter(Boolean))

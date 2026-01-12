@@ -40,7 +40,7 @@ export async function updateSession(request: NextRequest) {
                     path: '/',
                     sameSite: 'lax',
                     secure: !isLocal, // ローカルはHTTP、本番はHTTPS
-                    httpOnly: cookie.name.includes('auth-token') || cookie.name.includes('code-verifier') ? false : undefined, // PKCE code verifierはJavaScriptからアクセス可能にする必要がある
+                    httpOnly: cookie.name.includes('code-verifier') ? false : true,
                 })
             }
         })

@@ -1,7 +1,5 @@
 import React from "react";
 import "./globals.css";
-import { headers } from "next/headers";
-import { cachedValidateAuthWithRedirect } from "@/lib/supabase-auth/auth";
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { AuthProvider } from '../contexts'
@@ -29,51 +27,19 @@ export const metadata: Metadata = {
   },
 }
 
-export default async function RootLayout({
+export default function RootLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    // ---------------------------------------------
-    // リクエストURLを取得
-    // ---------------------------------------------
-    const headersList = await headers();
-    const pathname = headersList.get("x-current-path");
-    const isLoginPage = pathname?.startsWith("/login");
-    const isRootPage = pathname === "/";
-    
-    // 認証が不要なページ（LP、ログインページ、認証関連ページ、静的ページ）
-    const publicPages = [
-        "/login",
-        "/signup",
-        "/reset-password",
-        "/contact",
-        "/privacy",
-        "/terms",
-        "/support",
-    ];
-    const isPublicPage = isRootPage || isLoginPage || publicPages.some(page => pathname?.startsWith(page));
-
-    // ---------------------------------------------
-    // 認証確認: 公開ページ以外
-    // ---------------------------------------------
-    if (!isPublicPage) {
-        await cachedValidateAuthWithRedirect();
-    }
-
+    // 認証チェックは proxy.ts で一元管理
+    // レイアウトの条件分岐は各ルートグループの layout.tsx で処理
     return (
         <html lang="ja" className="h-full">
             <body className={inter.className}>
                 <AuthProvider>
                     <QueryProvider>
-                        {isPublicPage
-                            ? <>{children}</>
-                            : <main className="relative min-h-screen">
-                                <div className="min-h-screen bg-gray-50">
-                                    {children}
-                                </div>
-                            </main>
-                        }
+                        {children}
                     </QueryProvider>
                 </AuthProvider>
             </body>

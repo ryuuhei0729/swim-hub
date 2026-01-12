@@ -103,8 +103,16 @@ export async function POST(request: NextRequest) {
       : competitionToCalendarEvent(data as Competition, teamName)
 
     // イベント作成・更新
+    // updateアクションの場合はgoogleEventIdが必須
+    if (action === 'update' && !googleEventId) {
+      return NextResponse.json(
+        { error: '更新にはgoogleEventIdが必要です' },
+        { status: 400 }
+      )
+    }
+
     const method = action === 'create' ? 'POST' : 'PUT'
-    const url = action === 'update' && googleEventId
+    const url = action === 'update'
       ? `${calendarApiUrl}/${googleEventId}`
       : calendarApiUrl
 
