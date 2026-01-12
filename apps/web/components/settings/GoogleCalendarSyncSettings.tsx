@@ -35,7 +35,11 @@ export default function GoogleCalendarSyncSettings({
     
     const { error } = await signInWithOAuth('google', {
       redirectTo: '/mypage',
-      scopes: 'https://www.googleapis.com/auth/calendar'
+      scopes: 'https://www.googleapis.com/auth/calendar',
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent'
+      }
     })
     
     if (error) {
@@ -55,15 +59,23 @@ export default function GoogleCalendarSyncSettings({
     setError(null)
 
     try {
-      const { error } = await supabase
+      // RPC関数でトークンを削除（NULLを設定）
+      const { error: tokenError } = await supabase.rpc('set_google_refresh_token', {
+        p_user_id: user?.id,
+        p_token: null
+      })
+
+      // google_calendar_enabledフラグを更新
+      const { error: updateError } = await supabase
         .from('users')
         .update({
-          google_calendar_enabled: false,
-          google_calendar_refresh_token: null
+          google_calendar_enabled: false
         })
         .eq('id', user?.id)
 
-      if (error) throw error
+      if (tokenError || updateError) {
+        throw tokenError || updateError
+      }
 
       onUpdate()
     } catch (err) {

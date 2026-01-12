@@ -60,6 +60,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(requestUrl.origin + '/login?error=missing_code')
   }
 
+  // setCookiesOnResponseをtryブロックの外で宣言し、catchブロックからもアクセス可能にする
+  let setCookiesOnResponse: ((response: NextResponse) => void) | null = null
+
   try {
     // 重要: Next.js 14以降では、cookies()を明示的に呼び出してCookieを読み取る必要がある
     // これにより、PKCE code verifierが確実に読み取られる
@@ -82,7 +85,8 @@ export async function GET(request: NextRequest) {
     // Route Handler用のクライアントを作成（Cookie操作を記録）
     // cookies()から取得したCookieストアを優先的に使用
     // これにより、Next.js 14+の遅延評価問題を回避
-    const { client: supabase, setCookiesOnResponse } = createRouteHandlerClient(request, cookieStore)
+    const { client: supabase, setCookiesOnResponse: setCookies } = createRouteHandlerClient(request, cookieStore)
+    setCookiesOnResponse = setCookies
     
     // コードをセッションに交換（Cookie操作は自動的に処理される）
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
@@ -110,19 +114,26 @@ export async function GET(request: NextRequest) {
     const provider = data.user?.app_metadata?.provider
     if (provider === 'google' && data.user) {
       // Google Calendar連携を有効化（マイページで確認される）
-      const updateData: { google_calendar_enabled: boolean; google_calendar_refresh_token: string | null } = {
-        google_calendar_enabled: true,
-        google_calendar_refresh_token: data.session.provider_refresh_token || null
-      }
+      // リフレッシュトークンはRPC関数で暗号化して保存
+      const refreshToken = data.session.provider_refresh_token || null
+      
+      // RPC関数でトークンを暗号化して保存
+      // @ts-expect-error - @supabase/ssr v0.8.0のcreateServerClientはDatabase['public']['Functions']の型推論をサポートしていない
+      const { error: tokenError } = await supabase.rpc('set_google_refresh_token', {
+        p_user_id: data.user.id,
+        p_token: refreshToken
+      })
+      
+      // google_calendar_enabledフラグを更新
       const { error: updateError } = await supabase
         .from('users')
         // @ts-expect-error: Supabaseの型推論がupdateでneverになる既知の問題のため
-        .update(updateData)
+        .update({ google_calendar_enabled: true })
         .eq('id', data.user.id)
       
-      if (updateError) {
+      if (tokenError || updateError) {
         // エラーは無視（既に有効化されている可能性がある）
-        console.error('Google Calendar連携有効化エラー:', updateError)
+        console.error('Google Calendar連携有効化エラー:', tokenError || updateError)
       }
     }
 
@@ -148,6 +159,10 @@ export async function GET(request: NextRequest) {
     const errorResponse = NextResponse.redirect(
       requestUrl.origin + `/login?error=${encodeURIComponent(errorMessage)}`
     )
+    // setCookiesOnResponseが利用可能な場合は、他のエラーパスと同様にCookieを設定
+    if (setCookiesOnResponse) {
+      setCookiesOnResponse(errorResponse)
+    }
     return errorResponse
   }
 }

@@ -1,5 +1,6 @@
 // lib/supabase-auth/middleware.ts
 
+import { getSafeRedirectUrl } from "@/utils/redirect"
 import { CookieOptions, createServerClient } from "@supabase/ssr"
 import type { Database } from '@swim-hub/shared/types/database'
 import { NextResponse, type NextRequest } from "next/server"
@@ -19,11 +20,8 @@ export async function updateSession(request: NextRequest) {
     // ---------------------------------------------
     if (pathname === '/' && request.nextUrl.searchParams.has('code')) {
         const code = request.nextUrl.searchParams.get('code')
-        const rawRedirectTo = request.nextUrl.searchParams.get('redirect_to') || '/dashboard'
-        // 相対パスのみ許可（オープンリダイレクト防止）
-        const redirectTo = rawRedirectTo.startsWith('/') && !rawRedirectTo.startsWith('//') 
-            ? rawRedirectTo 
-            : '/dashboard'
+        const rawRedirectTo = request.nextUrl.searchParams.get('redirect_to')
+        const redirectTo = getSafeRedirectUrl(rawRedirectTo)
         if (!code) {
             // codeがない場合はログインページにリダイレクト
             return NextResponse.redirect(new URL('/login?error=missing_code', request.url))
@@ -77,16 +75,21 @@ export async function updateSession(request: NextRequest) {
                         value,
                         ...options,
                     });
-                    response = NextResponse.next({
+                    const newResponse = NextResponse.next({
                         request: {
                             headers: request.headers,
                         },
                     });
-                    response.cookies.set({
+                    // 既存のヘッダーを保持
+                    response.headers.forEach((value, key) => {
+                        newResponse.headers.set(key, value);
+                    });
+                    newResponse.cookies.set({
                         name,
                         value,
                         ...options,
                     });
+                    response = newResponse;
                 },
                 remove(name: string, options: CookieOptions) {
                     // Cookieを削除
@@ -95,16 +98,21 @@ export async function updateSession(request: NextRequest) {
                         value: '',
                         ...options,
                     });
-                    response = NextResponse.next({
+                    const newResponse = NextResponse.next({
                         request: {
                             headers: request.headers,
                         },
                     });
-                    response.cookies.set({
+                    // 既存のヘッダーを保持
+                    response.headers.forEach((value, key) => {
+                        newResponse.headers.set(key, value);
+                    });
+                    newResponse.cookies.set({
                         name,
                         value: '',
                         ...options,
                     });
+                    response = newResponse;
                 },
             },
         }
@@ -140,6 +148,32 @@ export async function updateSession(request: NextRequest) {
         '/reset-password'
     ]
 
+    // パブリックルート（認証不要）
+    const publicRoutes = [
+        '/',
+        '/login',
+        '/auth',
+        '/contact',
+        '/privacy',
+        '/terms',
+        '/support',
+        '/api',
+        '/_next'
+    ]
+
+    // 静的アセット拡張子
+    const staticExtensions = ['.ico', '.png', '.jpg', '.jpeg', '.svg', '.css', '.js', '.txt', '.json', '.woff', '.woff2', '.ttf', '.eot']
+
+    // 静的アセットかどうかをチェックするヘルパー関数
+    const isStaticAsset = (path: string): boolean => {
+        return staticExtensions.some(ext => path.endsWith(ext))
+    }
+
+    // パブリックルートかどうかをチェックするヘルパー関数
+    const isPublicRoute = (path: string): boolean => {
+        return publicRoutes.some(route => path === route || path.startsWith(route + '/'))
+    }
+
     const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
     const isAuthRoute = authRoutes.some(route => pathname.startsWith(route))
 
@@ -158,18 +192,7 @@ export async function updateSession(request: NextRequest) {
     }
 
     // テンプレート通りの基本的な認証チェック（保護ルート以外の場合）
-    if (
-        !user &&
-        !pathname.startsWith('/login') &&
-        !pathname.startsWith('/auth') &&
-        !pathname.startsWith('/api') &&
-        !pathname.startsWith('/_next') &&
-        pathname !== '/' &&
-        !pathname.startsWith('/contact') &&
-        !pathname.startsWith('/privacy') &&
-        !pathname.startsWith('/terms') &&
-        !pathname.startsWith('/support')
-    ) {
+    if (!user && !isPublicRoute(pathname) && !isStaticAsset(pathname)) {
         const url = request.nextUrl.clone();
         url.pathname = '/login';
         return NextResponse.redirect(url);

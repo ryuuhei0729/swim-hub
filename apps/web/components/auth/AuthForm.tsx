@@ -173,7 +173,12 @@ export const AuthForm: React.FC<AuthFormProps> = ({
           onClick={async () => {
             setLoading(true)
             setError(null)
-            const { error } = await signInWithOAuth('google')
+            const { error } = await signInWithOAuth('google', {
+              queryParams: {
+                access_type: 'offline',
+                prompt: 'consent'
+              }
+            })
             if (error) {
               setError('Google認証に失敗しました。再度お試しください。')
               setLoading(false)

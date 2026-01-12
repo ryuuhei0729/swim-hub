@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     // ユーザーのGoogle Calendar連携設定を取得
     const { data: profile, error: profileError } = await supabase
       .from('users')
-      .select('google_calendar_enabled, google_calendar_refresh_token, google_calendar_sync_practices, google_calendar_sync_competitions')
+      .select('google_calendar_enabled, google_calendar_sync_practices, google_calendar_sync_competitions')
       .eq('id', user.id)
       .single()
 
@@ -29,14 +29,23 @@ export async function POST(request: NextRequest) {
 
     type ProfileData = {
       google_calendar_enabled: boolean
-      google_calendar_refresh_token: string | null
       google_calendar_sync_practices: boolean
       google_calendar_sync_competitions: boolean
     }
     const profileData = profile as ProfileData
 
-    if (!profileData.google_calendar_enabled || !profileData.google_calendar_refresh_token) {
+    if (!profileData.google_calendar_enabled) {
       return NextResponse.json({ error: 'Google Calendar連携が有効になっていません' }, { status: 400 })
+    }
+
+    // RPC関数でトークンを復号化して取得
+    // @ts-expect-error - @supabase/ssr v0.8.0のcreateServerClientはDatabase['public']['Functions']の型推論をサポートしていない
+    const { data: refreshToken, error: tokenError } = await supabase.rpc('get_google_refresh_token', {
+      p_user_id: user.id
+    })
+
+    if (tokenError || !refreshToken) {
+      return NextResponse.json({ error: 'Google Calendar連携トークンの取得に失敗しました' }, { status: 401 })
     }
 
     const body = await request.json()

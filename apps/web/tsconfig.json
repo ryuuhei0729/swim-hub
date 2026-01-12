@@ -4,7 +4,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
-      "@apps/shared/*": ["../shared/*"]
+      "@apps/shared/*": ["../shared/*"],
+      "@swim-hub/shared/*": ["../shared/*"]
     }
   },
   "include": [

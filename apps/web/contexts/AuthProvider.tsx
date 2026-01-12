@@ -90,7 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // OAuth認証（Google）
   // supabase.tsから統一されたBrowser Clientを使用することで、PKCE code verifierが確実にCookieに保存・読み取りされる
-  const signInWithOAuth = useCallback(async (provider: 'google', options?: { redirectTo?: string; scopes?: string }) => {
+  const signInWithOAuth = useCallback(async (provider: 'google', options?: { redirectTo?: string; scopes?: string; queryParams?: Record<string, string> }) => {
     if (!supabaseClient) {
       return { error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
     }
@@ -110,7 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         options: {
           redirectTo,
           scopes: options?.scopes || 'https://www.googleapis.com/auth/calendar',
-          queryParams: {
+          queryParams: options?.queryParams || {
             access_type: 'offline',
             prompt: 'consent'
           }

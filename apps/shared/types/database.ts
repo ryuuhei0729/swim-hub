@@ -18,7 +18,7 @@ export interface UserProfile {
   profile_image_path: string | null
   bio: string | null
   google_calendar_enabled: boolean
-  // google_calendar_refresh_token は機密情報のためクライアント側では除外
+  // google_calendar_refresh_token は機密情報のためクライアント側では除外（pgsodiumで暗号化済み）
   google_calendar_sync_practices: boolean
   google_calendar_sync_competitions: boolean
   created_at: string
@@ -482,7 +482,7 @@ export type Database = {
           profile_image_path: string | null
           bio: string | null
           google_calendar_enabled: boolean
-          google_calendar_refresh_token: string | null
+          google_calendar_refresh_token: string | null // pgsodiumで暗号化済み（BYTEA型、nonce(24 bytes) + encrypted_token形式）
           google_calendar_sync_practices: boolean
           google_calendar_sync_competitions: boolean
           created_at: string
@@ -496,7 +496,7 @@ export type Database = {
           profile_image_path?: string | null
           bio?: string | null
           google_calendar_enabled?: boolean
-          google_calendar_refresh_token?: string | null
+          google_calendar_refresh_token?: string | null // pgsodiumで暗号化済み（BYTEA型、nonce(24 bytes) + encrypted_token形式）
           google_calendar_sync_practices?: boolean
           google_calendar_sync_competitions?: boolean
           created_at?: string
@@ -510,7 +510,7 @@ export type Database = {
           profile_image_path?: string | null
           bio?: string | null
           google_calendar_enabled?: boolean
-          google_calendar_refresh_token?: string | null
+          google_calendar_refresh_token?: string | null // pgsodiumで暗号化済み（BYTEA型、nonce(24 bytes) + encrypted_token形式）
           google_calendar_sync_practices?: boolean
           google_calendar_sync_competitions?: boolean
           created_at?: string
@@ -866,6 +866,27 @@ export type Database = {
           updated_at?: string
         }
       }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      set_google_refresh_token: {
+        Args: {
+          p_user_id: string
+          p_token: string | null
+        }
+        Returns: null
+      }
+      get_google_refresh_token: {
+        Args: {
+          p_user_id: string
+        }
+        Returns: string | null
+      }
+    }
+    Enums: {
+      [_ in never]: never
     }
   }
 }
