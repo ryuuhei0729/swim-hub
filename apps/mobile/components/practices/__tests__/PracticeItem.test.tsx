@@ -14,23 +14,47 @@ describe('PracticeItem', () => {
     place: 'テストプール',
     note: 'テストメモ',
     practice_logs: [
-      { id: 'log-1', practice_id: 'practice-1' } satisfies { id: string; practice_id: string },
-      { id: 'log-2', practice_id: 'practice-1' } satisfies { id: string; practice_id: string },
+      {
+        id: 'log-1',
+        practice_id: 'practice-1',
+        distance: 100,
+        rep_count: 4,
+        set_count: 2,
+        circle: null,
+        style: null,
+        note: null,
+        created_at: '2025-01-15T10:00:00Z',
+        updated_at: '2025-01-15T10:00:00Z',
+        practice_log_tags: [],
+      },
+      {
+        id: 'log-2',
+        practice_id: 'practice-1',
+        distance: 100,
+        rep_count: 4,
+        set_count: 2,
+        circle: null,
+        style: null,
+        note: null,
+        created_at: '2025-01-15T10:00:00Z',
+        updated_at: '2025-01-15T10:00:00Z',
+        practice_log_tags: [],
+      },
     ],
   })
 
   it('練習記録データが正しく表示される', () => {
     render(<PracticeItem practice={mockPractice} />)
     
-    // 日付が表示される（フォーマットされた形式）
-    expect(screen.getByText(/2025年1月15日/)).toBeTruthy()
+    // 日付が表示される（M/d形式、例: 1/15）
+    expect(screen.getByText(/1\/15/)).toBeTruthy()
     // タイトルが表示される
     expect(screen.getByText('テスト練習')).toBeTruthy()
     // 場所が表示される（アイコンとテキストが含まれる）
     expect(screen.getByText('テストプール')).toBeTruthy()
     expect(screen.getByTestId('icon-map-pin')).toBeTruthy()
-    // メモが表示される
-    expect(screen.getByText('テストメモ')).toBeTruthy()
+    // 練習ログの情報が表示される（距離・本数・セット）
+    expect(screen.getByText(/100m × 4本 × 2セット/)).toBeTruthy()
   })
 
   it('タイトルがnullの場合、「練習」が表示される', () => {
@@ -47,7 +71,9 @@ describe('PracticeItem', () => {
   it('練習ログ数が表示される', () => {
     render(<PracticeItem practice={mockPractice} />)
     
-    expect(screen.getByText('2セット')).toBeTruthy()
+    // セット数は「距離m × 本数本 × セット数セット」の形式で表示される
+    // デフォルトのモックデータでは set_count: 2 が設定されている
+    expect(screen.getByText(/2セット/)).toBeTruthy()
   })
 
   it('練習ログがない場合、ログ数が表示されない', () => {

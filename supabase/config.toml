@@ -117,9 +117,17 @@ file_size_limit = "50MiB"
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://127.0.0.1:3000"
+site_url = "http://localhost:3000"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000", "https://swim-hub.app/**", "https://swim-hub.vercel.app/**"]
+# HTTPとHTTPSの両方をサポート（開発環境）
+additional_redirect_urls = [
+  "http://127.0.0.1:3000/api/auth/callback",
+  "http://localhost:3000/api/auth/callback",
+  "http://127.0.0.1:3000",
+  "http://localhost:3000",
+  "https://swim-hub.app/**",
+  "https://swim-hub.vercel.app/**"
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # Path to JWT signing key. DO NOT commit your signing keys file to git.
@@ -290,9 +298,11 @@ skip_nonce_check = false
 [auth.external.google]
 enabled = true
 # Google Cloud Consoleで取得したClient IDを設定
+# Supabase CLIは SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID という環境変数名を期待します
 client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
 # Google Cloud Consoleで取得したClient Secretを設定
 # DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
+# Supabase CLIは SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET という環境変数名を期待します
 secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
 # Overrides the default auth redirectUrl.
 redirect_uri = ""

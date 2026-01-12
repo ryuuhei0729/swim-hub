@@ -7,6 +7,7 @@ import TeamAnnouncementsSection from '../_components/TeamAnnouncementsSection'
 import {
   useCreatePracticeMutation,
   useUpdatePracticeMutation,
+  useDeletePracticeMutation,
   useCreatePracticeLogMutation,
   useUpdatePracticeLogMutation,
   useCreatePracticeTimeMutation,
@@ -17,6 +18,7 @@ import {
   useUpdateRecordMutation,
   useCreateCompetitionMutation,
   useUpdateCompetitionMutation,
+  useDeleteCompetitionMutation,
   useCreateSplitTimesMutation,
   useReplaceSplitTimesMutation,
 } from '@apps/shared/hooks/queries/records'
@@ -115,6 +117,7 @@ export default function DashboardClient({
   // 練習記録用のミューテーションフック
   const createPracticeMutation = useCreatePracticeMutation(supabase)
   const updatePracticeMutation = useUpdatePracticeMutation(supabase)
+  const deletePracticeMutation = useDeletePracticeMutation(supabase)
   const createPracticeLogMutation = useCreatePracticeLogMutation(supabase)
   const updatePracticeLogMutation = useUpdatePracticeLogMutation(supabase)
   const createPracticeTimeMutation = useCreatePracticeTimeMutation(supabase)
@@ -125,6 +128,7 @@ export default function DashboardClient({
   const updateRecordMutation = useUpdateRecordMutation(supabase)
   const createCompetitionMutation = useCreateCompetitionMutation(supabase)
   const updateCompetitionMutation = useUpdateCompetitionMutation(supabase)
+  const deleteCompetitionMutation = useDeleteCompetitionMutation(supabase)
   const createSplitTimesMutation = useCreateSplitTimesMutation(supabase)
   const replaceSplitTimesMutation = useReplaceSplitTimesMutation(supabase)
 
@@ -147,6 +151,9 @@ export default function DashboardClient({
   const deletePracticeTime = async (id: string) => {
     return await deletePracticeTimeMutation.mutateAsync(id)
   }
+  const deletePractice = async (id: string) => {
+    return await deletePracticeMutation.mutateAsync(id)
+  }
 
   const createRecord = async (record: Parameters<typeof createRecordMutation.mutateAsync>[0]) => {
     return await createRecordMutation.mutateAsync(record)
@@ -159,6 +166,9 @@ export default function DashboardClient({
   }
   const updateCompetition = async (id: string, updates: Parameters<typeof updateCompetitionMutation.mutateAsync>[0]['updates']) => {
     return await updateCompetitionMutation.mutateAsync({ id, updates })
+  }
+  const deleteCompetition = async (id: string) => {
+    return await deleteCompetitionMutation.mutateAsync(id)
   }
   const createSplitTimes = async (params: Parameters<typeof createSplitTimesMutation.mutateAsync>[0]) => {
     return await createSplitTimesMutation.mutateAsync(params)
@@ -186,10 +196,12 @@ export default function DashboardClient({
     updatePracticeLog,
     createPracticeTime,
     deletePracticeTime,
+    deletePractice,
     createRecord,
     updateRecord,
     createCompetition,
     updateCompetition,
+    deleteCompetition,
     createSplitTimes,
     replaceSplitTimes,
     editingData,

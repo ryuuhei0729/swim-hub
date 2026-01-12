@@ -54,7 +54,7 @@ export function useUserQuery(
 
       const { data, error } = await supabase
         .from('users')
-        .select('*')
+        .select('id, name, gender, birthday, profile_image_path, bio, google_calendar_enabled, google_calendar_sync_practices, google_calendar_sync_competitions, created_at, updated_at')
         .eq('id', targetUserId)
         .single()
 
@@ -74,7 +74,7 @@ export function useUserQuery(
             const { data: newProfile, error: createError } = await supabase
               .from('users')
               .insert(userInsert)
-              .select()
+              .select('id, name, gender, birthday, profile_image_path, bio, google_calendar_enabled, google_calendar_sync_practices, google_calendar_sync_competitions, created_at, updated_at')
               .single()
 
             if (createError) {
@@ -207,7 +207,7 @@ export function useUserProfileQuery(
 
       const { data, error } = await supabase
         .from('users')
-        .select('*')
+        .select('id, name, gender, birthday, profile_image_path, bio, google_calendar_enabled, google_calendar_sync_practices, google_calendar_sync_competitions, created_at, updated_at')
         .eq('id', targetUserId)
         .single()
 
@@ -227,7 +227,7 @@ export function useUserProfileQuery(
             const { data: newProfile, error: createError } = await supabase
               .from('users')
               .insert(userInsert)
-              .select()
+              .select('id, name, gender, birthday, profile_image_path, bio, google_calendar_enabled, google_calendar_sync_practices, google_calendar_sync_competitions, created_at, updated_at')
               .single()
 
             if (createError) {
