@@ -15,6 +15,16 @@ function validateRedirectPath(redirectTo: string | null): string {
     return defaultPath
   }
   
+  // プロトコル相対URL（//evil.com）を拒否
+  try {
+    const decoded = decodeURIComponent(redirectTo)
+    if (decoded.startsWith('//') || /^\/\//.test(decoded)) {
+      return defaultPath
+    }
+  } catch {
+    // decodeURIComponentが失敗した場合は無視（次のチェックで処理される）
+  }
+  
   // パスが'/'で始まることを確認
   if (!redirectTo.startsWith('/')) {
     return defaultPath
@@ -97,7 +107,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Google OAuthの場合、Google Calendar連携を有効化
-    const provider = data.session.provider_token ? 'google' : null
+    const provider = data.user?.app_metadata?.provider
     if (provider === 'google' && data.user) {
       // Google Calendar連携を有効化（マイページで確認される）
       const updateData: { google_calendar_enabled: boolean; google_calendar_refresh_token: string | null } = {

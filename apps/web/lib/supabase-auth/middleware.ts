@@ -19,7 +19,11 @@ export async function updateSession(request: NextRequest) {
     // ---------------------------------------------
     if (pathname === '/' && request.nextUrl.searchParams.has('code')) {
         const code = request.nextUrl.searchParams.get('code')
-        const redirectTo = request.nextUrl.searchParams.get('redirect_to') || '/dashboard'
+        const rawRedirectTo = request.nextUrl.searchParams.get('redirect_to') || '/dashboard'
+        // 相対パスのみ許可（オープンリダイレクト防止）
+        const redirectTo = rawRedirectTo.startsWith('/') && !rawRedirectTo.startsWith('//') 
+            ? rawRedirectTo 
+            : '/dashboard'
         if (!code) {
             // codeがない場合はログインページにリダイレクト
             return NextResponse.redirect(new URL('/login?error=missing_code', request.url))

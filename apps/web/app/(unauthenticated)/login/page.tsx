@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { AuthForm, AuthUI } from '@/components/auth'
 import { useAuth } from '@/contexts'
 import { FullScreenLoading } from '@/components/ui/LoadingSpinner'
+import { getSafeRedirectUrl } from '@/utils'
 
 export default function LoginPage() {
   return (
@@ -58,8 +59,8 @@ function LoginPageContent() {
   useEffect(() => {
     if (!loading && isAuthenticated && !hasRedirectedRef.current) {
       hasRedirectedRef.current = true
-      // URLパラメータからリダイレクト先を取得
-      const redirectTo = searchParams.get('redirect_to') || '/dashboard'
+      // URLパラメータからリダイレクト先を取得（安全に検証）
+      const redirectTo = getSafeRedirectUrl(searchParams.get('redirect_to'))
       router.push(redirectTo)
     }
   }, [isAuthenticated, loading, router, searchParams])
@@ -88,8 +89,8 @@ function LoginPageContent() {
         <AuthForm 
           mode="signin" 
           onSuccess={() => {
-            // URLパラメータからリダイレクト先を取得
-            const redirectTo = searchParams.get('redirect_to') || '/dashboard'
+            // URLパラメータからリダイレクト先を取得（安全に検証）
+            const redirectTo = getSafeRedirectUrl(searchParams.get('redirect_to'))
             router.push(redirectTo)
           }}
         />
