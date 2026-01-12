@@ -9,7 +9,7 @@ import { SupabaseClient } from '@supabase/supabase-js'
 // 1. 基本型定義
 // =============================================================================
 
-// ユーザープロフィール
+// ユーザープロフィール（クライアント側用 - 機密情報を除外）
 export interface UserProfile {
   id: string
   name: string
@@ -18,7 +18,7 @@ export interface UserProfile {
   profile_image_path: string | null
   bio: string | null
   google_calendar_enabled: boolean
-  google_calendar_refresh_token: string | null
+  // google_calendar_refresh_token は機密情報のためクライアント側では除外（pgsodiumで暗号化済み）
   google_calendar_sync_practices: boolean
   google_calendar_sync_competitions: boolean
   created_at: string
@@ -47,6 +47,7 @@ export interface Practice {
   note: string | null
   team_id?: string | null
   attendance_status?: AttendanceStatusType | null // 出欠提出ステータス
+  google_event_id?: string | null // Google CalendarイベントID
   created_at: string
   updated_at: string
   // CalendarItemとの互換性のための追加プロパティ
@@ -140,6 +141,7 @@ export interface Competition {
   pool_type: number // 0: 短水路, 1: 長水路（NOT NULL）
   entry_status?: 'before' | 'open' | 'closed' // エントリーステータス（デフォルト: before）
   attendance_status?: AttendanceStatusType | null // 出欠提出ステータス
+  google_event_id?: string | null // Google CalendarイベントID
   note: string | null
   created_at: string
   updated_at: string
@@ -480,7 +482,7 @@ export type Database = {
           profile_image_path: string | null
           bio: string | null
           google_calendar_enabled: boolean
-          google_calendar_refresh_token: string | null
+          google_calendar_refresh_token: string | null // pgsodiumで暗号化済み（BYTEA型、nonce(24 bytes) + encrypted_token形式）
           google_calendar_sync_practices: boolean
           google_calendar_sync_competitions: boolean
           created_at: string
@@ -494,7 +496,7 @@ export type Database = {
           profile_image_path?: string | null
           bio?: string | null
           google_calendar_enabled?: boolean
-          google_calendar_refresh_token?: string | null
+          google_calendar_refresh_token?: string | null // pgsodiumで暗号化済み（BYTEA型、nonce(24 bytes) + encrypted_token形式）
           google_calendar_sync_practices?: boolean
           google_calendar_sync_competitions?: boolean
           created_at?: string
@@ -508,7 +510,7 @@ export type Database = {
           profile_image_path?: string | null
           bio?: string | null
           google_calendar_enabled?: boolean
-          google_calendar_refresh_token?: string | null
+          google_calendar_refresh_token?: string | null // pgsodiumで暗号化済み（BYTEA型、nonce(24 bytes) + encrypted_token形式）
           google_calendar_sync_practices?: boolean
           google_calendar_sync_competitions?: boolean
           created_at?: string
@@ -541,30 +543,54 @@ export type Database = {
       competitions: {
         Row: {
           id: string
-          title: string
+          title: string | null
           date: string
-          place: string // NOT NULL
+          end_date: string | null
+          place: string | null
           pool_type: number // 0: short, 1: long
           note: string | null
-          attendance_status?: string | null
+          user_id: string | null
+          team_id: string | null
+          created_by: string | null
+          entry_status: 'before' | 'open' | 'closed'
+          attendance_status: 'open' | 'closed' | null
+          google_event_id: string | null
+          created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
-          title: string
+          title?: string | null
           date: string
-          place: string // NOT NULL
+          end_date?: string | null
+          place?: string | null
           pool_type?: number // デフォルト: 0 (short)
           note?: string | null
-          attendance_status?: string | null
+          user_id?: string | null
+          team_id?: string | null
+          created_by?: string | null
+          entry_status?: 'before' | 'open' | 'closed'
+          attendance_status?: 'open' | 'closed' | null
+          google_event_id?: string | null
+          created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
-          title?: string
+          title?: string | null
           date?: string
-          place?: string
+          end_date?: string | null
+          place?: string | null
           pool_type?: number
           note?: string | null
-          attendance_status?: string | null
+          user_id?: string | null
+          team_id?: string | null
+          created_by?: string | null
+          entry_status?: 'before' | 'open' | 'closed'
+          attendance_status?: 'open' | 'closed' | null
+          google_event_id?: string | null
+          created_at?: string
+          updated_at?: string
         }
       }
       practices: {
@@ -572,25 +598,43 @@ export type Database = {
           id: string
           user_id: string
           date: string
+          title: string | null
           place: string | null
           note: string | null
-          attendance_status?: string | null
+          team_id: string | null
+          created_by: string | null
+          attendance_status: 'open' | 'closed' | null
+          google_event_id: string | null
+          created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
           user_id: string
           date: string
-          place: string | null
+          title?: string | null
+          place?: string | null
           note?: string | null
-          attendance_status?: string | null
+          team_id?: string | null
+          created_by?: string | null
+          attendance_status?: 'open' | 'closed' | null
+          google_event_id?: string | null
+          created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
           user_id?: string
           date?: string
+          title?: string | null
           place?: string | null
           note?: string | null
-          attendance_status?: string | null
+          team_id?: string | null
+          created_by?: string | null
+          attendance_status?: 'open' | 'closed' | null
+          google_event_id?: string | null
+          created_at?: string
+          updated_at?: string
         }
       }
       records: {
@@ -822,6 +866,27 @@ export type Database = {
           updated_at?: string
         }
       }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      set_google_refresh_token: {
+        Args: {
+          p_user_id: string
+          p_token: string | null
+        }
+        Returns: null
+      }
+      get_google_refresh_token: {
+        Args: {
+          p_user_id: string
+        }
+        Returns: string | null
+      }
+    }
+    Enums: {
+      [_ in never]: never
     }
   }
 }

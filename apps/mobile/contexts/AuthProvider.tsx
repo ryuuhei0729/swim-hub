@@ -66,7 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [])
 
   // OAuthログイン
-  const signInWithOAuth = useCallback(async (provider: 'google', options?: { redirectTo?: string; scopes?: string }) => {
+  const signInWithOAuth = useCallback(async (provider: 'google', options?: { redirectTo?: string; scopes?: string; queryParams?: Record<string, string> }) => {
     if (!supabase) {
       return { error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
     }
@@ -76,6 +76,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         options: {
           redirectTo: options?.redirectTo,
           scopes: options?.scopes,
+          queryParams: options?.queryParams || {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
         }
       })
       

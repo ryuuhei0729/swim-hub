@@ -1,9 +1,9 @@
- import React from 'react'
+import React from "react";
+import "./globals.css";
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { AuthProvider } from '../contexts'
 import QueryProvider from '../providers/QueryProvider'
-import './globals.css'
 import 'react-device-frameset/styles/marvel-devices.min.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -28,21 +28,21 @@ export const metadata: Metadata = {
 }
 
 export default function RootLayout({
-  children,
+    children,
 }: {
-  children: React.ReactNode
+    children: React.ReactNode;
 }) {
-  return (
-    <html lang="ja">
-      <body className={inter.className}>
-        <AuthProvider>
-          <QueryProvider>
-          <div className="min-h-screen bg-gray-50">
-            {children}
-          </div>
-          </QueryProvider>
-        </AuthProvider>
-      </body>
-    </html>
-  )
+    // 認証チェックは proxy.ts で一元管理
+    // レイアウトの条件分岐は各ルートグループの layout.tsx で処理
+    return (
+        <html lang="ja" className="h-full">
+            <body className={inter.className}>
+                <AuthProvider>
+                    <QueryProvider>
+                        {children}
+                    </QueryProvider>
+                </AuthProvider>
+            </body>
+        </html>
+    );
 }

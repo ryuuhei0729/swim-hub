@@ -3,8 +3,8 @@
 // =============================================================================
 
 import type { EditingData, EntryWithStyle } from '@/stores/types'
-import type { CalendarItemType } from '@apps/shared/types/database'
-import type { CalendarItem, EntryInfo } from '@apps/shared/types/ui'
+import type { CalendarItemType, PracticeLogWithTimes, PracticeTag } from '@apps/shared/types/database'
+import type { CalendarItem, EntryInfo, TimeEntry } from '@apps/shared/types/ui'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@swim-hub/shared/types/database'
 import { parseISO, startOfDay } from 'date-fns'
@@ -162,7 +162,7 @@ export function useCalendarHandlers({
     } else if (item.type === 'competition' || item.type === 'team_competition') {
       openCompetitionBasicForm(dateObj, item)
     }
-  }, [parseDateString, openPracticeBasicForm, openPracticeLogForm, openEntryLogForm, openCompetitionBasicForm, openRecordLogForm, supabase, setEditingData])
+  }, [parseDateString, openPracticeBasicForm, openPracticeLogForm, openEntryLogForm, openCompetitionBasicForm, openRecordLogForm, supabase])
 
   // アイテム削除ハンドラー（handleDeleteItemを使用）
   const onDeleteItem = useCallback(async (itemId: string, itemType?: CalendarItemType) => {
@@ -175,17 +175,19 @@ export function useCalendarHandlers({
   }, [openPracticeLogForm])
 
   // 練習ログ編集ハンドラー
-  const onEditPracticeLog = useCallback((log: any) => {
+  const onEditPracticeLog = useCallback((log: (PracticeLogWithTimes & { tags?: PracticeTag[] }) & {
+    practiceId?: string
+    times?: Array<{ memberId: string; times: TimeEntry[] }> | TimeEntry[]
+  }) => {
     // timesの構造を確認して変換
-    type TimeEntry = import('@apps/shared/types/ui').TimeEntry
     let times: Array<{ memberId: string; times: TimeEntry[] }> = []
     if (log.times && Array.isArray(log.times)) {
       // DayDetailModalから渡される形式: [{ memberId: '', times: [...] }]
       if (log.times.length > 0 && 'times' in log.times[0]) {
-        times = log.times
+        times = log.times as Array<{ memberId: string; times: TimeEntry[] }>
       } else {
         // 既存の形式: TimeEntry[]
-        times = [{ memberId: '', times: log.times }]
+        times = [{ memberId: '', times: log.times as TimeEntry[] }]
       }
     }
     
