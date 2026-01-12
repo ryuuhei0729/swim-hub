@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
  * - '/'で始まるパスであることを確認
  * - CR/LFや制御文字を含まないことを確認
  * - 無効な値の場合は'/dashboard'にフォールバック
+ * - デコード後の値に対してバリデーションを実行（二重エンコード攻撃を防止）
  */
 function validateRedirectPath(redirectTo: string | null): string {
   const defaultPath = '/dashboard'
@@ -15,39 +16,43 @@ function validateRedirectPath(redirectTo: string | null): string {
     return defaultPath
   }
   
-  // プロトコル相対URL（//evil.com）を拒否
+  // まずデコードを試みる（二重エンコード攻撃を防止するため）
+  let decoded: string
   try {
-    const decoded = decodeURIComponent(redirectTo)
-    if (decoded.startsWith('//') || /^\/\//.test(decoded)) {
-      return defaultPath
-    }
+    decoded = decodeURIComponent(redirectTo)
   } catch {
-    // decodeURIComponentが失敗した場合は無視（次のチェックで処理される）
-  }
-  
-  // パスが'/'で始まることを確認
-  if (!redirectTo.startsWith('/')) {
+    // decodeURIComponentが失敗した場合は安全のためデフォルトパスを返す
     return defaultPath
   }
   
-  // CR/LFや制御文字を含まないことを確認
-  // 許可する文字: 英数字、パス区切り(/)、クエリパラメータ(?&)、ハッシュ(#)、エンコードされた文字(%)
+  // プロトコル相対URL（//evil.com）を拒否
+  if (decoded.startsWith('//') || /^\/\//.test(decoded)) {
+    return defaultPath
+  }
+  
+  // パスが'/'で始まることを確認（デコード後の値でチェック）
+  if (!decoded.startsWith('/')) {
+    return defaultPath
+  }
+  
+  // CR/LFや制御文字を含まないことを確認（デコード後の値でチェック）
+  // 許可する文字: 英数字、パス区切り(/)、クエリパラメータ(?&)、ハッシュ(#)
   // 禁止: CR(\r), LF(\n), タブ(\t), null文字(\0), その他の制御文字
-  for (let i = 0; i < redirectTo.length; i++) {
-    const charCode = redirectTo.charCodeAt(i)
+  for (let i = 0; i < decoded.length; i++) {
+    const charCode = decoded.charCodeAt(i)
     // 制御文字（0x00-0x1F）、DEL（0x7F）、拡張制御文字（0x80-0x9F）をチェック
     if ((charCode >= 0x00 && charCode <= 0x1F) || charCode === 0x7F || (charCode >= 0x80 && charCode <= 0x9F)) {
       return defaultPath
     }
   }
   
-  // 相対パストラバーサル攻撃を防ぐ（../や..\\など）
-  if (redirectTo.includes('..')) {
+  // 相対パストラバーサル攻撃を防ぐ（../や..\\など）（デコード後の値でチェック）
+  if (decoded.includes('..')) {
     return defaultPath
   }
   
-  // 検証を通過したパスを返す
-  return redirectTo
+  // 検証を通過したデコード済みパスを返す
+  return decoded
 }
 
 export async function GET(request: NextRequest) {
@@ -117,12 +122,16 @@ export async function GET(request: NextRequest) {
       // リフレッシュトークンはRPC関数で暗号化して保存
       const refreshToken = data.session.provider_refresh_token || null
       
-      // RPC関数でトークンを暗号化して保存
-      // @ts-expect-error - @supabase/ssr v0.8.0のcreateServerClientはDatabase['public']['Functions']の型推論をサポートしていない
-      const { error: tokenError } = await supabase.rpc('set_google_refresh_token', {
-        p_user_id: data.user.id,
-        p_token: refreshToken
-      })
+      // RPC関数でトークンを暗号化して保存（トークンが存在する場合のみ）
+      let tokenError: Error | null = null
+      if (refreshToken) {
+        // @ts-expect-error - @supabase/ssr v0.8.0のcreateServerClientはDatabase['public']['Functions']の型推論をサポートしていない
+        const { error } = await supabase.rpc('set_google_refresh_token', {
+          p_user_id: data.user.id,
+          p_token: refreshToken
+        })
+        tokenError = error
+      }
       
       // google_calendar_enabledフラグを更新
       const { error: updateError } = await supabase
@@ -133,7 +142,12 @@ export async function GET(request: NextRequest) {
       
       if (tokenError || updateError) {
         // エラーは無視（既に有効化されている可能性がある）
-        console.error('Google Calendar連携有効化エラー:', tokenError || updateError)
+        if (tokenError) {
+          console.error('Google Calendar連携有効化エラー（トークン保存）:', tokenError)
+        }
+        if (updateError) {
+          console.error('Google Calendar連携有効化エラー（ユーザー更新）:', updateError)
+        }
       }
     }
 

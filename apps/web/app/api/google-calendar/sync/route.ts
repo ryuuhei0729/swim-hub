@@ -1,4 +1,4 @@
-import { competitionToCalendarEvent, practiceToCalendarEvent } from '@/lib/google-calendar'
+import { competitionToCalendarEvent, practiceToCalendarEvent, refreshGoogleAccessToken, fetchGoogleCalendarWithTokenRefresh } from '@/lib/google-calendar'
 import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-server-auth'
 import type { Competition, Practice } from '@apps/shared/types/database'
 import { NextRequest, NextResponse } from 'next/server'
@@ -64,14 +64,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '大会記録の同期が無効です' }, { status: 400 })
     }
 
-    // SupabaseからOAuthトークンを取得
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.provider_token) {
-      return NextResponse.json({ error: 'Google認証トークンが取得できません' }, { status: 401 })
+    // リフレッシュトークンを使用して新しいアクセストークンを取得
+    let accessToken: string
+    try {
+      accessToken = await refreshGoogleAccessToken(refreshToken)
+    } catch (error) {
+      console.error('Google OAuthトークンリフレッシュエラー:', error)
+      // フォールバック: Supabaseセッションのprovider_tokenを使用
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.provider_token) {
+        return NextResponse.json({ error: 'Google認証トークンの取得に失敗しました' }, { status: 401 })
+      }
+      accessToken = session.provider_token
     }
-
-    // Google Calendar APIを呼び出し
-    const accessToken = session.provider_token
     const calendarApiUrl = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
 
     if (action === 'delete') {
@@ -79,14 +84,15 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'googleEventIdが必要です' }, { status: 400 })
       }
 
-      // イベント削除
-      const deleteResponse = await fetch(`${calendarApiUrl}/${googleEventId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        }
-      })
+      // イベント削除（401エラー時に自動的にトークンをリフレッシュして再試行）
+      const deleteResponse = await fetchGoogleCalendarWithTokenRefresh(
+        `${calendarApiUrl}/${googleEventId}`,
+        {
+          method: 'DELETE',
+        },
+        accessToken,
+        refreshToken
+      )
 
       if (!deleteResponse.ok) {
         return NextResponse.json({ error: 'Google Calendarへの削除に失敗しました' }, { status: deleteResponse.status })
@@ -125,14 +131,16 @@ export async function POST(request: NextRequest) {
       ? `${calendarApiUrl}/${googleEventId}`
       : calendarApiUrl
 
-    const response = await fetch(url, {
-      method,
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
+    // イベント作成・更新（401エラー時に自動的にトークンをリフレッシュして再試行）
+    const response = await fetchGoogleCalendarWithTokenRefresh(
+      url,
+      {
+        method,
+        body: JSON.stringify(event),
       },
-      body: JSON.stringify(event)
-    })
+      accessToken,
+      refreshToken
+    )
 
     if (!response.ok) {
       return NextResponse.json({ error: 'Google Calendarへの同期に失敗しました' }, { status: response.status })

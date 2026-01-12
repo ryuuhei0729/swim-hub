@@ -1,4 +1,4 @@
-import { competitionToCalendarEvent, practiceToCalendarEvent } from '@/lib/google-calendar'
+import { competitionToCalendarEvent, practiceToCalendarEvent, refreshGoogleAccessToken, fetchGoogleCalendarWithTokenRefresh } from '@/lib/google-calendar'
 import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-server-auth'
 import type { Competition, Practice } from '@apps/shared/types/database'
 import { NextRequest, NextResponse } from 'next/server'
@@ -48,13 +48,19 @@ export async function POST(_request: NextRequest) {
       return NextResponse.json({ error: 'Google Calendar連携トークンの取得に失敗しました' }, { status: 401 })
     }
 
-    // SupabaseからOAuthトークンを取得
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.provider_token) {
-      return NextResponse.json({ error: 'Google認証トークンが取得できません' }, { status: 401 })
+    // リフレッシュトークンを使用して新しいアクセストークンを取得
+    let accessToken: string
+    try {
+      accessToken = await refreshGoogleAccessToken(refreshToken)
+    } catch (error) {
+      console.error('Google OAuthトークンリフレッシュエラー:', error)
+      // フォールバック: Supabaseセッションのprovider_tokenを使用
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.provider_token) {
+        return NextResponse.json({ error: 'Google認証トークンの取得に失敗しました' }, { status: 401 })
+      }
+      accessToken = session.provider_token
     }
-
-    const accessToken = session.provider_token
     const calendarApiUrl = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
 
     let practiceSuccessCount = 0
@@ -87,15 +93,16 @@ export async function POST(_request: NextRequest) {
             // Google Calendarイベントに変換
             const event = practiceToCalendarEvent(practice, teamName)
 
-            // Google Calendar APIを呼び出し
-            const response = await fetch(calendarApiUrl, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
+            // Google Calendar APIを呼び出し（401エラー時に自動的にトークンをリフレッシュして再試行）
+            const response = await fetchGoogleCalendarWithTokenRefresh(
+              calendarApiUrl,
+              {
+                method: 'POST',
+                body: JSON.stringify(event),
               },
-              body: JSON.stringify(event)
-            })
+              accessToken,
+              refreshToken
+            )
 
             if (response.ok) {
               const result = await response.json() as { id: string }
@@ -151,15 +158,16 @@ export async function POST(_request: NextRequest) {
             // Google Calendarイベントに変換
             const event = competitionToCalendarEvent(competition, teamName)
 
-            // Google Calendar APIを呼び出し
-            const response = await fetch(calendarApiUrl, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
+            // Google Calendar APIを呼び出し（401エラー時に自動的にトークンをリフレッシュして再試行）
+            const response = await fetchGoogleCalendarWithTokenRefresh(
+              calendarApiUrl,
+              {
+                method: 'POST',
+                body: JSON.stringify(event),
               },
-              body: JSON.stringify(event)
-            })
+              accessToken,
+              refreshToken
+            )
 
             if (response.ok) {
               const result = await response.json() as { id: string }
