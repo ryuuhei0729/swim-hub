@@ -41,9 +41,29 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
   const [processingMemberId, setProcessingMemberId] = useState<string | null>(null)
 
   // ロール変更処理
-  const handleRoleChange = async (member: TeamMembershipWithUser, newRole: 'admin' | 'user') => {
+  const handleRoleChange = (member: TeamMembershipWithUser, newRole: 'admin' | 'user') => {
     if (member.role === newRole) return
 
+    const memberName = member.users.name || 'このメンバー'
+    const roleText = newRole === 'admin' ? '管理者' : 'ユーザー'
+    const confirmMessage = `${memberName}を${roleText}に変更しますか？`
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(confirmMessage)
+      if (!confirmed) return
+      executeRoleChange(member, newRole)
+    } else {
+      Alert.alert('ロール変更確認', confirmMessage, [
+        { text: 'キャンセル', style: 'cancel' },
+        {
+          text: '変更',
+          onPress: () => executeRoleChange(member, newRole),
+        },
+      ])
+    }
+  }
+
+  const executeRoleChange = async (member: TeamMembershipWithUser, newRole: 'admin' | 'user') => {
     setProcessingMemberId(member.id)
     try {
       await updateRoleMutation.mutateAsync({

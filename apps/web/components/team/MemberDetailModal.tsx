@@ -75,6 +75,8 @@ export default function MemberDetailModal({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isRemoving, setIsRemoving] = useState(false)
+  const [showRoleChangeConfirm, setShowRoleChangeConfirm] = useState<'admin' | 'user' | null>(null)
+  const [isChangingRole, setIsChangingRole] = useState(false)
   
   const { supabase } = useAuth()
 
@@ -258,30 +260,43 @@ export default function MemberDetailModal({
   // 静的種目リスト
   const STYLES = ['自由形', '平泳ぎ', '背泳ぎ', 'バタフライ', '個人メドレー']
 
-  const handleRoleChange = async (newRole: 'admin' | 'user') => {
+  const handleRoleChangeClick = (newRole: 'admin' | 'user') => {
     if (!member) return
+    
+    // 既に同じ権限の場合は何もしない
+    if (member.role === newRole) {
+      return
+    }
+    
+    // 確認モーダルを表示
+    setShowRoleChangeConfirm(newRole)
+  }
+
+  const handleRoleChangeConfirm = async () => {
+    if (!member || !showRoleChangeConfirm) return
 
     try {
       setError(null)
-      
-      // 既に同じ権限の場合は何もしない
-      if (member.role === newRole) {
-        return
-      }
+      setIsChangingRole(true)
 
       const { error } = await (supabase
         .from('team_memberships'))
-        .update({ role: newRole })
+        .update({ role: showRoleChangeConfirm })
         .eq('id', member.id)
 
       if (error) throw error
 
       // ローカル状態を更新
-      member.role = newRole
+      member.role = showRoleChangeConfirm
       onMembershipChange?.()
+      
+      // 確認モーダルを閉じる
+      setShowRoleChangeConfirm(null)
     } catch (err) {
       console.error('権限変更エラー:', err)
       setError('権限の変更に失敗しました')
+    } finally {
+      setIsChangingRole(false)
     }
   }
 
@@ -600,6 +615,7 @@ export default function MemberDetailModal({
   if (!member) return null
 
   return (
+    <>
     <BaseModal isOpen={isOpen} onClose={onClose} size="xl">
       <div className="w-full max-w-4xl mx-auto p-6" data-testid="team-member-detail-modal">
         {/* エラー表示 */}
@@ -681,7 +697,7 @@ export default function MemberDetailModal({
               {/* 権限切り替え */}
                 <div className="flex items-center bg-gray-100 rounded-lg p-1" data-testid="team-member-role-toggle">
                 <button
-                  onClick={() => handleRoleChange('user')}
+                  onClick={() => handleRoleChangeClick('user')}
                   className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                     member.role === 'user'
                       ? 'bg-white text-gray-900 shadow-sm'
@@ -692,7 +708,7 @@ export default function MemberDetailModal({
                   ユーザー
                 </button>
                 <button
-                  onClick={() => handleRoleChange('admin')}
+                  onClick={() => handleRoleChangeClick('admin')}
                   className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                     member.role === 'admin'
                       ? 'bg-yellow-100 text-yellow-800 shadow-sm'
@@ -754,5 +770,55 @@ export default function MemberDetailModal({
         </div>
       </div>
     </BaseModal>
+
+    {/* ロール変更確認モーダル */}
+    {showRoleChangeConfirm && (
+      <div className="fixed inset-0 z-90 overflow-y-auto">
+        <div className="flex min-h-screen items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={() => setShowRoleChangeConfirm(null)} />
+          
+          <div className="relative bg-white rounded-lg shadow-2xl border-2 border-yellow-300 w-full max-w-lg" data-testid="role-change-confirm-modal">
+            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+              <div className="sm:flex sm:items-start">
+                <div className="mx-auto shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 sm:mx-0 sm:h-10 sm:w-10">
+                  <StarIcon className="h-6 w-6 text-yellow-600" />
+                </div>
+                <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+                    ロールを変更
+                  </h3>
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-500">
+                      {member?.users?.name || 'このメンバー'}さんを{showRoleChangeConfirm === 'admin' ? '管理者' : 'ユーザー'}に変更しますか？
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+              <button
+                type="button"
+                onClick={handleRoleChangeConfirm}
+                disabled={isChangingRole}
+                className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-yellow-600 text-base font-medium text-white hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
+                data-testid="confirm-role-change-button"
+              >
+                {isChangingRole ? '変更中...' : '変更'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowRoleChangeConfirm(null)}
+                disabled={isChangingRole}
+                className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
+                data-testid="cancel-role-change-button"
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+  </>
   )
 }
