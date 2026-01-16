@@ -119,7 +119,11 @@ export default function MilestoneCreateModal({
           className="fixed inset-0 bg-black/40 transition-opacity"
           onClick={handleClose}
         />
-        <div className="relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        >
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">
@@ -127,6 +131,7 @@ export default function MilestoneCreateModal({
               </h3>
               <button
                 onClick={handleClose}
+                aria-label="閉じる"
                 className="text-gray-400 hover:text-gray-600"
               >
                 <XMarkIcon className="h-6 w-6" />

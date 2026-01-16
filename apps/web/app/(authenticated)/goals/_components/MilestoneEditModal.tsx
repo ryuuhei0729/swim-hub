@@ -5,7 +5,7 @@ import { XMarkIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui'
 import { useAuth } from '@/contexts'
 import { GoalAPI } from '@apps/shared/api/goals'
-import { format } from 'date-fns'
+import { parseISO, isValid, format } from 'date-fns'
 import type { Style, Milestone, MilestoneParams, MilestoneTimeParams, MilestoneRepsTimeParams, MilestoneSetParams, UpdateMilestoneInput } from '@apps/shared/types'
 import MilestoneForm from './forms/MilestoneForm'
 import { DEFAULT_TIME_PARAMS, DEFAULT_REPS_TIME_PARAMS, DEFAULT_SET_PARAMS } from './constants'
@@ -44,7 +44,19 @@ export default function MilestoneEditModal({
     if (isOpen && milestone) {
       setType(milestone.type)
       setTitle(milestone.title)
-      setDeadline(milestone.deadline ? format(new Date(milestone.deadline), 'yyyy-MM-dd') : '')
+      // タイムゾーンシフトを避けるため、YYYY-MM-DD形式の文字列はそのまま使用
+      // それ以外の形式の場合はparseISOで安全にパース
+      if (milestone.deadline) {
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+        if (dateRegex.test(milestone.deadline)) {
+          setDeadline(milestone.deadline)
+        } else {
+          const parsedDate = parseISO(milestone.deadline)
+          setDeadline(isValid(parsedDate) ? format(parsedDate, 'yyyy-MM-dd') : '')
+        }
+      } else {
+        setDeadline('')
+      }
       setParams(milestone.params)
     }
   }, [isOpen, milestone])
@@ -104,7 +116,11 @@ export default function MilestoneEditModal({
           className="fixed inset-0 bg-black/40 transition-opacity"
           onClick={onClose}
         />
-        <div className="relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        >
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">
@@ -112,6 +128,7 @@ export default function MilestoneEditModal({
               </h3>
               <button
                 onClick={onClose}
+                aria-label="閉じる"
                 className="text-gray-400 hover:text-gray-600"
               >
                 <XMarkIcon className="h-6 w-6" />

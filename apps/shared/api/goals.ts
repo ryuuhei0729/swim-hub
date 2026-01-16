@@ -5,28 +5,42 @@
 
 import { SupabaseClient } from '@supabase/supabase-js'
 import {
-  Competition,
-  CompetitionInsert,
-  Record,
-  Style
+  CompetitionInsert
 } from '../types/database'
 import {
+  CreateGoalInput,
+  CreateMilestoneInput,
   Goal,
   GoalInsert,
   GoalUpdate,
   GoalWithMilestones,
   Milestone,
   MilestoneInsert,
-  MilestoneUpdate,
-  MilestoneStatus,
-  CreateGoalInput,
-  UpdateGoalInput,
-  CreateMilestoneInput,
-  UpdateMilestoneInput,
-  MilestoneTimeParams,
   MilestoneRepsTimeParams,
-  MilestoneSetParams
+  MilestoneSetParams,
+  MilestoneStatus,
+  MilestoneTimeParams,
+  MilestoneUpdate,
+  UpdateGoalInput,
+  UpdateMilestoneInput
 } from '../types/goals'
+
+// スタイルコード→日本語名のマッピング（practice_logsは日本語名で格納されている）
+const STYLE_CODE_TO_JAPANESE: Record<string, string> = {
+  freestyle: '自由形',
+  backstroke: '背泳ぎ',
+  breaststroke: '平泳ぎ',
+  butterfly: 'バタフライ',
+  individual_medley: '個人メドレー'
+}
+
+/**
+ * スタイルコードを日本語名に変換
+ * practice_logsのstyleカラムは日本語名で格納されているため、クエリ時に変換が必要
+ */
+function getStyleJapanese(styleCode: string): string {
+  return STYLE_CODE_TO_JAPANESE[styleCode.toLowerCase()] || styleCode
+}
 
 export class GoalAPI {
   constructor(private supabase: SupabaseClient) {}
@@ -520,7 +534,8 @@ export class GoalAPI {
   }> {
     const params = milestone.params as MilestoneTimeParams
 
-    // 練習記録から検索
+    // 練習記録から検索（practice_logsのstyleは日本語名で格納されている）
+    const styleJp = getStyleJapanese(params.style)
     const { data: practiceLogs, error: practiceError } = await this.supabase
       .from('practice_logs')
       .select(`
@@ -529,7 +544,7 @@ export class GoalAPI {
       `)
       .eq('user_id', userId)
       .eq('distance', params.distance)
-      .eq('style', params.style)
+      .eq('style', styleJp)
       .order('created_at', { ascending: false })
 
     if (!practiceError && practiceLogs) {
@@ -602,7 +617,8 @@ export class GoalAPI {
   }> {
     const params = milestone.params as MilestoneRepsTimeParams
 
-    // 条件に一致するpractice_logsを取得
+    // 条件に一致するpractice_logsを取得（practice_logsのstyleは日本語名で格納されている）
+    const styleJp = getStyleJapanese(params.style)
     const { data: logs, error: logError } = await this.supabase
       .from('practice_logs')
       .select(`
@@ -611,7 +627,7 @@ export class GoalAPI {
       `)
       .eq('user_id', userId)
       .eq('distance', params.distance)
-      .eq('style', params.style)
+      .eq('style', styleJp)
       .eq('swim_category', params.swim_category)
       .gte('rep_count', params.reps)
       .order('created_at', { ascending: false })
@@ -678,13 +694,14 @@ export class GoalAPI {
   }> {
     const params = milestone.params as MilestoneSetParams
 
-    // 条件に一致するpractice_logsを取得
+    // 条件に一致するpractice_logsを取得（practice_logsのstyleは日本語名で格納されている）
+    const styleJp = getStyleJapanese(params.style)
     const { data: logs, error: logError } = await this.supabase
       .from('practice_logs')
       .select('id')
       .eq('user_id', userId)
       .eq('distance', params.distance)
-      .eq('style', params.style)
+      .eq('style', styleJp)
       .eq('swim_category', params.swim_category)
       .eq('rep_count', params.reps)
       .gte('set_count', params.sets)
@@ -708,6 +725,154 @@ export class GoalAPI {
         }
       }
     }
+  }
+
+  // =========================================================================
+  // レコード存在確認ロジック（ステータス遷移用）
+  // =========================================================================
+
+  /**
+   * マイルストーンに関連するレコードが存在するか確認
+   * @private
+   */
+  private async hasRecordsForMilestone(
+    userId: string,
+    milestone: Milestone
+  ): Promise<boolean> {
+    if (milestone.type === 'time') {
+      return await this.hasTimeRecords(userId, milestone)
+    } else if (milestone.type === 'reps_time') {
+      return await this.hasRepsTimeRecords(userId, milestone)
+    } else if (milestone.type === 'set') {
+      return await this.hasSetRecords(userId, milestone)
+    }
+    return false
+  }
+
+  /**
+   * time型のレコード存在確認
+   * @private
+   */
+  private async hasTimeRecords(
+    userId: string,
+    milestone: Milestone
+  ): Promise<boolean> {
+    const params = milestone.params as MilestoneTimeParams
+    const styleJp = getStyleJapanese(params.style)
+
+    // 練習記録を確認（practice_timesが存在するか）
+    const { data: practiceLogs, error: practiceError } = await this.supabase
+      .from('practice_logs')
+      .select(`
+        id,
+        practice_times(id)
+      `)
+      .eq('user_id', userId)
+      .eq('distance', params.distance)
+      .eq('style', styleJp)
+      .limit(1)
+
+    if (!practiceError && practiceLogs && practiceLogs.length > 0) {
+      // practice_timesが存在するか確認
+      for (const log of practiceLogs) {
+        const times = Array.isArray(log.practice_times) 
+          ? log.practice_times 
+          : (log.practice_times ? [log.practice_times] : [])
+        if (times.length > 0) {
+          return true
+        }
+      }
+    }
+
+    // 大会記録を確認
+    const { data: records, error: recordError } = await this.supabase
+      .from('records')
+      .select(`
+        id,
+        styles!inner(distance, style)
+      `)
+      .eq('user_id', userId)
+      .eq('styles.distance', params.distance)
+      .eq('styles.style', params.style.toLowerCase())
+      .limit(1)
+
+    if (!recordError && records && records.length > 0) {
+      return true
+    }
+
+    return false
+  }
+
+  /**
+   * reps_time型のレコード存在確認
+   * @private
+   */
+  private async hasRepsTimeRecords(
+    userId: string,
+    milestone: Milestone
+  ): Promise<boolean> {
+    const params = milestone.params as MilestoneRepsTimeParams
+    const styleJp = getStyleJapanese(params.style)
+
+    // 条件に一致するpractice_logsを確認（practice_timesが存在するか）
+    const { data: logs, error: logError } = await this.supabase
+      .from('practice_logs')
+      .select(`
+        id,
+        practice_times(id)
+      `)
+      .eq('user_id', userId)
+      .eq('distance', params.distance)
+      .eq('style', styleJp)
+      .eq('swim_category', params.swim_category)
+      .gte('rep_count', params.reps)
+      .limit(1)
+
+    if (logError || !logs || logs.length === 0) {
+      return false
+    }
+
+    // practice_timesが存在するか確認
+    for (const log of logs) {
+      const times = Array.isArray(log.practice_times) 
+        ? log.practice_times 
+        : (log.practice_times ? [log.practice_times] : [])
+      if (times.length > 0) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  /**
+   * set型のレコード存在確認
+   * @private
+   */
+  private async hasSetRecords(
+    userId: string,
+    milestone: Milestone
+  ): Promise<boolean> {
+    const params = milestone.params as MilestoneSetParams
+    const styleJp = getStyleJapanese(params.style)
+
+    // 条件に一致するpractice_logsを確認
+    const { data: logs, error: logError } = await this.supabase
+      .from('practice_logs')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('distance', params.distance)
+      .eq('style', styleJp)
+      .eq('swim_category', params.swim_category)
+      .eq('rep_count', params.reps)
+      .gte('set_count', params.sets)
+      .limit(1)
+
+    if (logError || !logs || logs.length === 0) {
+      return false
+    }
+
+    return true
   }
 
   /**
@@ -755,10 +920,11 @@ export class GoalAPI {
             })
         }
       } else if (!achieved && milestone.status === 'not_started') {
-        // 初回タイム記録時に「進行中」に変更
-        // TODO: 実際にタイム記録があるかチェック
-        // 一旦、達成判定を実行した時点で「進行中」にする
-        await this.updateMilestoneStatus(milestone.id, 'in_progress')
+        // 関連レコードが存在する場合のみ「進行中」に変更
+        const hasRecords = await this.hasRecordsForMilestone(userId, milestone)
+        if (hasRecords) {
+          await this.updateMilestoneStatus(milestone.id, 'in_progress')
+        }
       }
 
       // 期限切れチェック

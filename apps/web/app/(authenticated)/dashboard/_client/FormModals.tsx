@@ -220,14 +220,14 @@ export function FormModals({
       const editPayload = editingData.editData as { entries?: Array<Record<string, unknown>> }
       if (Array.isArray(editPayload.entries)) {
         return editPayload.entries.map((entry, index) => ({
-          id: entry.id || `entry-${index + 1}`,
+          id: String(entry.id ?? `entry-${index + 1}`),
           styleId: String(entry.styleId ?? entry.style_id ?? ''),
           entryTime: typeof entry.entryTime === 'number'
             ? entry.entryTime
             : typeof entry.entry_time === 'number'
               ? entry.entry_time
               : 0,
-          note: entry.note ?? ''
+          note: String(entry.note ?? '')
         }))
       }
     }
@@ -236,14 +236,14 @@ export function FormModals({
     if ('entries' in editingData && Array.isArray((editingData as { entries?: Array<Record<string, unknown>> }).entries)) {
       const entries = (editingData as { entries: Array<Record<string, unknown>> }).entries
       return entries.map((entry, index) => ({
-        id: entry.id || `entry-${index + 1}`,
+        id: String(entry.id ?? `entry-${index + 1}`),
         styleId: String(entry.styleId ?? entry.style_id ?? ''),
         entryTime: typeof entry.entryTime === 'number'
           ? entry.entryTime
           : typeof entry.entry_time === 'number'
             ? entry.entry_time
             : 0,
-        note: entry.note ?? ''
+        note: String(entry.note ?? '')
       }))
     }
 
@@ -296,16 +296,21 @@ export function FormModals({
     ) {
       const editPayload = editingData.editData as { entries?: Array<Record<string, unknown>> }
       if (Array.isArray(editPayload.entries) && editPayload.entries.length > 0) {
-        return editPayload.entries.map((entry) => ({
-          styleId: Number(entry.styleId ?? entry.style_id),
-          styleName: entry.style?.name_jp ?? String(entry.styleName ?? ''),
-          entryTime:
-            typeof entry.entryTime === 'number'
-              ? entry.entryTime
-              : typeof entry.entry_time === 'number'
-                ? entry.entry_time
-                : undefined
-        }))
+        return editPayload.entries.map((entry) => {
+          const style = entry.style && typeof entry.style === 'object' && 'name_jp' in entry.style
+            ? entry.style as { name_jp?: string }
+            : null
+          return {
+            styleId: Number(entry.styleId ?? entry.style_id),
+            styleName: style?.name_jp ?? String(entry.styleName ?? ''),
+            entryTime:
+              typeof entry.entryTime === 'number'
+                ? entry.entryTime
+                : typeof entry.entry_time === 'number'
+                  ? entry.entry_time
+                  : undefined
+          }
+        })
       }
     }
 

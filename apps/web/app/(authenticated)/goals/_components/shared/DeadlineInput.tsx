@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { Button, Input } from '@/components/ui'
-import { format } from 'date-fns'
+import { parseISO, isValid, format } from 'date-fns'
 
 interface DeadlineInputProps {
   value: string
@@ -22,7 +22,17 @@ export default function DeadlineInput({
 }: DeadlineInputProps) {
   const handleSetGoalDeadline = () => {
     if (goalCompetitionDate) {
-      onChange(format(new Date(goalCompetitionDate), 'yyyy-MM-dd'))
+      // YYYY-MM-DD形式の文字列はそのまま使用（タイムゾーンシフトを避ける）
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+      if (dateRegex.test(goalCompetitionDate)) {
+        onChange(goalCompetitionDate)
+      } else {
+        // それ以外の形式の場合はparseISOで安全にパース
+        const parsedDate = parseISO(goalCompetitionDate)
+        if (isValid(parsedDate)) {
+          onChange(format(parsedDate, 'yyyy-MM-dd'))
+        }
+      }
     }
   }
 
