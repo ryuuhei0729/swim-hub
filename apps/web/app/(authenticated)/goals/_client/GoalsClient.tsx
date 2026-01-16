@@ -1,10 +1,10 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/contexts'
 import { GoalAPI } from '@apps/shared/api/goals'
 import { RecordAPI } from '@apps/shared/api/records'
-import type { Goal, Style, GoalWithMilestones, Competition } from '@apps/shared/types'
+import type { Goal, Style, GoalWithMilestones } from '@apps/shared/types'
 import GoalList from '../_components/GoalList'
 import GoalDetail from '../_components/GoalDetail'
 import GoalCreateModal from '../_components/GoalCreateModal'
@@ -31,14 +31,15 @@ export default function GoalsClient({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingGoal, setEditingGoal] = useState<GoalWithMilestones | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const goalAPI = new GoalAPI(supabase)
-  const recordAPI = new RecordAPI(supabase)
+  const goalAPI = useMemo(() => new GoalAPI(supabase), [supabase])
+  const recordAPI = useMemo(() => new RecordAPI(supabase), [supabase])
 
   // 初期目標を選択（1つ以上ある場合）
   useEffect(() => {
     if (initialGoals.length > 0 && !selectedGoalId) {
       setSelectedGoalId(initialGoals[0].id)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // 初回マウント時のみ実行
 
   // 選択された目標の詳細を取得
@@ -58,7 +59,7 @@ export default function GoalsClient({
     } else {
       setSelectedGoal(null)
     }
-  }, [selectedGoalId, supabase])
+  }, [selectedGoalId, supabase, goalAPI])
 
   // 目標一覧を再取得
   const refreshGoals = async () => {

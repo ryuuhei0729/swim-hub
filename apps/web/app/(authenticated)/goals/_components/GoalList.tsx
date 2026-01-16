@@ -1,10 +1,8 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { TrashIcon, PencilIcon } from '@heroicons/react/24/outline'
 import { formatTime } from '@/utils/formatters'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
 import { useAuth } from '@/contexts'
 import { GoalAPI } from '@apps/shared/api/goals'
 import type { Goal } from '@apps/shared/types'
@@ -30,7 +28,7 @@ export default function GoalList({
 }: GoalListProps) {
   const { supabase } = useAuth()
   const [progressMap, setProgressMap] = useState<Record<string, number>>({})
-  const goalAPI = new GoalAPI(supabase)
+  const goalAPI = useMemo(() => new GoalAPI(supabase), [supabase])
 
   // 各目標の達成率を計算
   useEffect(() => {
@@ -51,7 +49,7 @@ export default function GoalList({
     if (goals.length > 0) {
       calculateProgresses()
     }
-  }, [goals, supabase])
+  }, [goals, supabase, goalAPI])
 
   const handleDelete = async (e: React.MouseEvent, goalId: string) => {
     e.stopPropagation()

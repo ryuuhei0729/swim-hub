@@ -27,7 +27,7 @@ export default function MilestoneCreateModal({
   onClose,
   onSuccess,
   goalId,
-  styles,
+  styles: _styles,
   goalCompetitionDate
 }: MilestoneCreateModalProps) {
   const { supabase } = useAuth()

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { ChevronDownIcon, ChevronUpIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { formatTime } from '@/utils/formatters'
 import { StyleAPI } from '@apps/shared/api/styles'
@@ -56,11 +56,7 @@ export default function TeamEntrySection({ teamId, isAdmin: _isAdmin }: TeamEntr
     entryTime?: string
   }>>({})
 
-  useEffect(() => {
-    loadData()
-  }, [teamId])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true)
       const styleAPI = new StyleAPI(supabase)
@@ -106,7 +102,11 @@ export default function TeamEntrySection({ teamId, isAdmin: _isAdmin }: TeamEntr
     } finally {
       setLoading(false)
     }
-  }
+  }, [teamId, supabase])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
 
   const toggleCompetition = (competitionId: string) => {
     const newExpanded = new Set(expandedCompetitions)

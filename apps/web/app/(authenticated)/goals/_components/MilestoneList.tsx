@@ -7,7 +7,7 @@ import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { useAuth } from '@/contexts'
 import { GoalAPI } from '@apps/shared/api/goals'
-import type { Milestone, MilestoneTimeParams, MilestoneRepsTimeParams, MilestoneSetParams, Style } from '@apps/shared/types'
+import type { Milestone, Style } from '@apps/shared/types'
 import { isMilestoneTimeParams, isMilestoneRepsTimeParams, isMilestoneSetParams } from '@apps/shared/types/goals'
 import MilestoneEditModal from './MilestoneEditModal'
 

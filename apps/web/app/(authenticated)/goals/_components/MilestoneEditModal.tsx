@@ -7,7 +7,6 @@ import { useAuth } from '@/contexts'
 import { GoalAPI } from '@apps/shared/api/goals'
 import { format } from 'date-fns'
 import type { Style, Milestone, MilestoneParams, MilestoneTimeParams, MilestoneRepsTimeParams, MilestoneSetParams, UpdateMilestoneInput } from '@apps/shared/types'
-import { isMilestoneTimeParams, isMilestoneRepsTimeParams, isMilestoneSetParams } from '@apps/shared/types/goals'
 import MilestoneForm from './forms/MilestoneForm'
 import { DEFAULT_TIME_PARAMS, DEFAULT_REPS_TIME_PARAMS, DEFAULT_SET_PARAMS } from './constants'
 
@@ -28,7 +27,7 @@ export default function MilestoneEditModal({
   onClose,
   onSuccess,
   milestone,
-  styles,
+  styles: _styles,
   goalCompetitionDate
 }: MilestoneEditModalProps) {
   const { supabase } = useAuth()

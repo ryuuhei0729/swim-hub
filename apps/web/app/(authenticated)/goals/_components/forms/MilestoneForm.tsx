@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { Input } from '@/components/ui'
-import type { MilestoneParams, MilestoneTimeParams, MilestoneRepsTimeParams, MilestoneSetParams } from '@apps/shared/types'
+import type { MilestoneParams } from '@apps/shared/types'
 import { isMilestoneTimeParams, isMilestoneRepsTimeParams, isMilestoneSetParams } from '@apps/shared/types/goals'
 import { TimeParamsForm, RepsTimeParamsForm, SetParamsForm } from './MilestoneParamsForm'
 import DeadlineInput from '../shared/DeadlineInput'

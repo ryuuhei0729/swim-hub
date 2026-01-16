@@ -1,11 +1,10 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
-import { Button } from '@/components/ui'
 import { useAuth } from '@/contexts'
 import { GoalAPI } from '@apps/shared/api/goals'
-import type { Milestone, MilestoneParams, MilestoneTimeParams, MilestoneRepsTimeParams, MilestoneSetParams } from '@apps/shared/types'
+import type { Milestone, MilestoneTimeParams, MilestoneRepsTimeParams, MilestoneSetParams } from '@apps/shared/types'
 import { isMilestoneTimeParams, isMilestoneRepsTimeParams, isMilestoneSetParams } from '@apps/shared/types/goals'
 
 interface MilestoneSelectorModalProps {
@@ -26,7 +25,7 @@ export default function MilestoneSelectorModal({
   const [milestones, setMilestones] = useState<Milestone[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
-  const goalAPI = new GoalAPI(supabase)
+  const goalAPI = useMemo(() => new GoalAPI(supabase), [supabase])
 
   // アクティブなマイルストーンを取得
   useEffect(() => {
@@ -54,7 +53,7 @@ export default function MilestoneSelectorModal({
           setIsLoading(false)
         })
     }
-  }, [isOpen, user, supabase])
+  }, [isOpen, user, supabase, goalAPI])
 
   const formatMilestoneTitle = (milestone: Milestone): string => {
     if (isMilestoneTimeParams(milestone.params)) {

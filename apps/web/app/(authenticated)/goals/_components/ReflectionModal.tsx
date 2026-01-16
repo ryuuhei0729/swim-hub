@@ -5,10 +5,9 @@ import { XMarkIcon } from '@heroicons/react/24/outline'
 import { Button, Input } from '@/components/ui'
 import { useAuth } from '@/contexts'
 import { GoalAPI } from '@apps/shared/api/goals'
-import { formatTime } from '@/utils/formatters'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import type { Milestone, MilestoneParams, MilestoneTimeParams, MilestoneRepsTimeParams, MilestoneSetParams, UpdateMilestoneInput } from '@apps/shared/types'
+import type { Milestone, MilestoneTimeParams, MilestoneRepsTimeParams, MilestoneSetParams, UpdateMilestoneInput } from '@apps/shared/types'
 import { isMilestoneTimeParams, isMilestoneRepsTimeParams, isMilestoneSetParams } from '@apps/shared/types/goals'
 
 interface ReflectionModalProps {

@@ -56,7 +56,7 @@ export interface ValidationResult {
 }
 
 // 包括的なフォームバリデーション
-export const validateForm = (data: Record<string, any>, rules: Record<string, any>): ValidationResult => {
+export const validateForm = (data: Record<string, unknown>, rules: Record<string, unknown>): ValidationResult => {
   const errors: Record<string, string> = {}
   
   Object.keys(rules).forEach(field => {

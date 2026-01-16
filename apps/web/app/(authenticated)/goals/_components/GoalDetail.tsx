@@ -26,7 +26,7 @@ export default function GoalDetail({
   goal,
   styles,
   onUpdate,
-  onDelete
+  onDelete: _onDelete
 }: GoalDetailProps) {
   const { supabase } = useAuth()
   const [isMilestoneModalOpen, setIsMilestoneModalOpen] = useState(false)

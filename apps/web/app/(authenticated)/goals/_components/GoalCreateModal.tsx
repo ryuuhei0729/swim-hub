@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui'
 import { useAuth } from '@/contexts'
@@ -43,8 +43,8 @@ export default function GoalCreateModal({
   const [useBestTime, setUseBestTime] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
-  const goalAPI = new GoalAPI(supabase)
-  const recordAPI = new RecordAPI(supabase)
+  const goalAPI = useMemo(() => new GoalAPI(supabase), [supabase])
+  const recordAPI = useMemo(() => new RecordAPI(supabase), [supabase])
 
   // 大会一覧を取得（未来の日付のみ）
   useEffect(() => {
@@ -57,7 +57,7 @@ export default function GoalCreateModal({
           setCompetitions([])
         })
     }
-  }, [isOpen, competitionMode, supabase])
+  }, [isOpen, competitionMode, supabase, recordAPI])
 
   // ベストタイムを取得
   const handleGetBestTime = async () => {

@@ -125,7 +125,7 @@ export default function MyPageClient({
 
       const { error } = await supabase
         .from('users')
-        .update(dbUpdate as any)
+        .update(dbUpdate as Record<string, unknown>)
         .eq('id', user.id)
 
       if (error) throw error
@@ -147,7 +147,7 @@ export default function MyPageClient({
     try {
       const { error } = await supabase
         .from('users')
-        .update({ profile_image_path: newAvatarUrl } as any)
+        .update({ profile_image_path: newAvatarUrl } as Record<string, unknown>)
         .eq('id', user.id)
 
       if (error) throw error

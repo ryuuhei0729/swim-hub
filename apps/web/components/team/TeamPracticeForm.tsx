@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthProvider'
 import { TeamPracticesAPI } from '@apps/shared/api/teams/practices'
 import { Button, Input } from '@/components/ui'
@@ -33,6 +33,17 @@ export default function TeamPracticeForm({
   const modalRef = useRef<HTMLDivElement>(null)
   const _firstFocusableRef = useRef<HTMLButtonElement>(null)
   const _lastFocusableRef = useRef<HTMLButtonElement>(null)
+
+  const handleClose = useCallback(() => {
+    setFormData({
+      date: new Date().toISOString().split('T')[0],
+      title: '',
+      place: '',
+      note: ''
+    })
+    setError(null)
+    onClose()
+  }, [onClose])
 
   // フォーカストラップ機能
   useEffect(() => {
@@ -84,7 +95,7 @@ export default function TeamPracticeForm({
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [isOpen])
+  }, [isOpen, handleClose])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -127,20 +138,6 @@ export default function TeamPracticeForm({
       setError(err instanceof Error ? err.message : 'チーム練習記録の作成に失敗しました')
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleClose = () => {
-    if (!loading) {
-      onClose()
-      // フォームをリセット
-      setFormData({
-        date: new Date().toISOString().split('T')[0],
-        title: '',
-        place: '',
-        note: ''
-      })
-      setError(null)
     }
   }
 

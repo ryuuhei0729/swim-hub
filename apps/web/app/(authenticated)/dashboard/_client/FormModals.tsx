@@ -217,7 +217,7 @@ export function FormModals({
 
     // CalendarItem経由で渡される editData.entries を優先
     if ('editData' in editingData && editingData.editData && typeof editingData.editData === 'object') {
-      const editPayload = editingData.editData as { entries?: Array<any> }
+      const editPayload = editingData.editData as { entries?: Array<Record<string, unknown>> }
       if (Array.isArray(editPayload.entries)) {
         return editPayload.entries.map((entry, index) => ({
           id: entry.id || `entry-${index + 1}`,
@@ -233,8 +233,8 @@ export function FormModals({
     }
 
     // editingDataが直接entriesプロパティを持っている場合（DayDetailModalから渡される場合）
-    if ('entries' in editingData && Array.isArray((editingData as { entries?: Array<any> }).entries)) {
-      const entries = (editingData as { entries: Array<any> }).entries
+    if ('entries' in editingData && Array.isArray((editingData as { entries?: Array<Record<string, unknown>> }).entries)) {
+      const entries = (editingData as { entries: Array<Record<string, unknown>> }).entries
       return entries.map((entry, index) => ({
         id: entry.id || `entry-${index + 1}`,
         styleId: String(entry.styleId ?? entry.style_id ?? ''),
@@ -294,7 +294,7 @@ export function FormModals({
       editingData.editData &&
       typeof editingData.editData === 'object'
     ) {
-      const editPayload = editingData.editData as { entries?: Array<any> }
+      const editPayload = editingData.editData as { entries?: Array<Record<string, unknown>> }
       if (Array.isArray(editPayload.entries) && editPayload.entries.length > 0) {
         return editPayload.entries.map((entry) => ({
           styleId: Number(entry.styleId ?? entry.style_id),

@@ -91,7 +91,7 @@ export default function TeamRecords({ teamId, isAdmin: _isAdmin = false }: TeamR
         if (recordsError) throw recordsError
 
         // SupabaseのJOIN結果をTeamRecord型に変換
-        const transformedRecords: TeamRecord[] = (recordsData || []).map((record: any) => ({
+        const transformedRecords: TeamRecord[] = (recordsData || []).map((record: Record<string, unknown>) => ({
           id: record.id,
           user_id: record.user_id,
           time: record.time,
