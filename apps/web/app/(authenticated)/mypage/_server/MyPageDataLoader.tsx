@@ -39,6 +39,9 @@ interface UserProfileData {
   bio?: string | null
   avatar_url?: string | null
   profile_image_path?: string | null
+  google_calendar_enabled?: boolean
+  google_calendar_sync_practices?: boolean
+  google_calendar_sync_competitions?: boolean
 }
 
 /**
@@ -50,7 +53,7 @@ async function getProfile(
 ): Promise<UserProfileData | null> {
   const { data, error } = await supabase
     .from('users')
-    .select('id, name, birthday, bio, profile_image_path')
+    .select('id, name, birthday, bio, profile_image_path, google_calendar_enabled, google_calendar_sync_practices, google_calendar_sync_competitions')
     .eq('id', userId)
     .single()
 
@@ -67,6 +70,9 @@ async function getProfile(
     birthday: string | null
     bio: string | null
     profile_image_path: string | null
+    google_calendar_enabled: boolean
+    google_calendar_sync_practices: boolean
+    google_calendar_sync_competitions: boolean
   }
 
   return {
@@ -75,7 +81,10 @@ async function getProfile(
     birthday: userData.birthday,
     bio: userData.bio,
     avatar_url: userData.profile_image_path,
-    profile_image_path: userData.profile_image_path
+    profile_image_path: userData.profile_image_path,
+    google_calendar_enabled: userData.google_calendar_enabled,
+    google_calendar_sync_practices: userData.google_calendar_sync_practices,
+    google_calendar_sync_competitions: userData.google_calendar_sync_competitions
   }
 }
 

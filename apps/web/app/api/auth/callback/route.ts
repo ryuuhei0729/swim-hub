@@ -115,38 +115,41 @@ export async function GET(request: NextRequest) {
       return errorResponse
     }
 
-    // Google OAuthの場合、Google Calendar連携を有効化
-    const provider = data.user?.app_metadata?.provider
-    if (provider === 'google' && data.user) {
-      // Google Calendar連携を有効化（マイページで確認される）
-      // リフレッシュトークンはRPC関数で暗号化して保存
-      const refreshToken = data.session.provider_refresh_token || null
-      
-      // RPC関数でトークンを暗号化して保存（トークンが存在する場合のみ）
-      let tokenError: Error | null = null
-      if (refreshToken) {
-        // @ts-expect-error - @supabase/ssr v0.8.0のcreateServerClientはDatabase['public']['Functions']の型推論をサポートしていない
-        const { error } = await supabase.rpc('set_google_refresh_token', {
-          p_user_id: data.user.id,
-          p_token: refreshToken
-        })
-        tokenError = error
-      }
-      
-      // google_calendar_enabledフラグを更新
-      const { error: updateError } = await supabase
-        .from('users')
-        // @ts-expect-error: Supabaseの型推論がupdateでneverになる既知の問題のため
-        .update({ google_calendar_enabled: true })
-        .eq('id', data.user.id)
-      
-      if (tokenError || updateError) {
-        // エラーは無視（既に有効化されている可能性がある）
-        if (tokenError) {
-          console.error('Google Calendar連携有効化エラー（トークン保存）:', tokenError)
+    // calendar_connectパラメータがある場合のみ、Google Calendar連携を有効化
+    const isCalendarConnect = requestUrl.searchParams.get('calendar_connect') === 'true'
+    if (isCalendarConnect) {
+      const provider = data.user?.app_metadata?.provider
+      if (provider === 'google' && data.user) {
+        // Google Calendar連携を有効化（マイページで確認される）
+        // リフレッシュトークンはRPC関数で暗号化して保存
+        const refreshToken = data.session.provider_refresh_token || null
+        
+        // RPC関数でトークンを暗号化して保存（トークンが存在する場合のみ）
+        let tokenError: Error | null = null
+        if (refreshToken) {
+          // @ts-expect-error - @supabase/ssr v0.8.0のcreateServerClientはDatabase['public']['Functions']の型推論をサポートしていない
+          const { error } = await supabase.rpc('set_google_refresh_token', {
+            p_user_id: data.user.id,
+            p_token: refreshToken
+          })
+          tokenError = error
         }
-        if (updateError) {
-          console.error('Google Calendar連携有効化エラー（ユーザー更新）:', updateError)
+        
+        // google_calendar_enabledフラグを更新
+        const { error: updateError } = await supabase
+          .from('users')
+          // @ts-expect-error: Supabaseの型推論がupdateでneverになる既知の問題のため
+          .update({ google_calendar_enabled: true })
+          .eq('id', data.user.id)
+        
+        if (tokenError || updateError) {
+          // エラーは無視（既に有効化されている可能性がある）
+          if (tokenError) {
+            console.error('Google Calendar連携有効化エラー（トークン保存）:', tokenError)
+          }
+          if (updateError) {
+            console.error('Google Calendar連携有効化エラー（ユーザー更新）:', updateError)
+          }
         }
       }
     }
@@ -164,7 +167,11 @@ export async function GET(request: NextRequest) {
 
     // リダイレクト（Cookieを設定）
     // redirectToは既に検証済みなので安全に結合
-    const successResponse = NextResponse.redirect(requestUrl.origin + redirectTo)
+    // カレンダー連携成功時は、リダイレクト先にパラメータを追加
+    const finalRedirectTo = isCalendarConnect 
+      ? `${redirectTo}${redirectTo.includes('?') ? '&' : '?'}calendar_connected=true`
+      : redirectTo
+    const successResponse = NextResponse.redirect(requestUrl.origin + finalRedirectTo)
     setCookiesOnResponse(successResponse)
     return successResponse
   } catch (error) {
