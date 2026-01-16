@@ -455,11 +455,11 @@ export class PracticeAPI {
   /**
    * 練習タグ更新
    */
-  async updatePracticeTag(id: string, name: string, color: string): Promise<void> {
+  async updatePracticeTag(id: string, name: string, color: string): Promise<import('../types/database').PracticeTag> {
     const { data: { user } } = await this.supabase.auth.getUser()
     if (!user) throw new Error('認証が必要です')
 
-    const { error } = await this.supabase
+    const { data, error } = await this.supabase
       .from('practice_tags')
       .update({
         name: name.trim(),
@@ -467,8 +467,11 @@ export class PracticeAPI {
       })
       .eq('id', id)
       .eq('user_id', user.id)
+      .select()
+      .single()
 
     if (error) throw error
+    return data as import('../types/database').PracticeTag
   }
 
   /**

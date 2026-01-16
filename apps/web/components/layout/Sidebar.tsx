@@ -14,7 +14,8 @@ import {
   ChevronRightIcon,
   UsersIcon,
   UserIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  FlagIcon
 } from '@heroicons/react/24/outline'
 
 interface SidebarProps {
@@ -48,6 +49,12 @@ const baseNavigation: NavigationItem[] = [
     href: '/competition', 
     icon: TrophyIcon,
     description: '大会結果とタイム記録',
+  },
+  { 
+    name: '目標管理', 
+    href: '/goals', 
+    icon: FlagIcon,
+    description: '目標設定と達成状況',
   },
   { 
     name: 'マイページ', 
