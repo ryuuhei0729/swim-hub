@@ -229,6 +229,7 @@ export class RecordAPI {
         created_at,
         pool_type,
         is_relaying,
+        style_id,
         styles!records_style_id_fkey (
           name_jp,
           distance
@@ -257,6 +258,7 @@ export class RecordAPI {
       created_at: string
       pool_type: number
       is_relaying: boolean
+      style_id: number
       styles?: { name_jp: string; distance: number } | null
       competitions?: { title: string; date: string } | null
     }
@@ -278,6 +280,7 @@ export class RecordAPI {
         created_at: record.created_at,
         pool_type: record.pool_type,
         is_relaying: record.is_relaying,
+        style_id: record.style_id,
         styles: styleData
           ? { name_jp: styleData.name_jp, distance: styleData.distance }
           : null,
@@ -338,6 +341,7 @@ export class RecordAPI {
             created_at: record.created_at,
             pool_type: poolType,
             is_relaying: false,
+            style_id: record.style_id,
             style: {
               name_jp: record.styles?.name_jp || 'Unknown',
               distance: record.styles?.distance || 0,
@@ -393,6 +397,7 @@ export class RecordAPI {
             created_at: relayingTime.created_at,
             pool_type: poolType,
             is_relaying: true,
+            style_id: record.style_id,
             style: {
               name_jp: record.styles?.name_jp || 'Unknown',
               distance: record.styles?.distance || 0,
