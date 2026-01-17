@@ -191,20 +191,28 @@ describe('GoalAPI - マイルストーン状態遷移', () => {
           // recordsテーブルにレコードが存在
           // eqが3回呼ばれる（user_id, styles.distance, styles.style）ため、チェーンできるようにする
           // styles!inner結合の結果を含むデータを返す
-          const recordsQueryBuilder = {
-            select: vi.fn().mockReturnValue(recordsQueryBuilder),
-            eq: vi.fn().mockReturnValue(recordsQueryBuilder),
-            limit: vi.fn().mockResolvedValue({
-              data: [{
-                id: 'record-1',
-                styles: {
-                  distance: 100,
-                  style: 'freestyle'
-                }
-              }],
-              error: null
-            })
+          const recordsQueryBuilder: {
+            select: ReturnType<typeof vi.fn>
+            eq: ReturnType<typeof vi.fn>
+            limit: ReturnType<typeof vi.fn>
+          } = {
+            select: vi.fn(),
+            eq: vi.fn(),
+            limit: vi.fn()
           }
+          // 循環参照を解決するため、後からメソッドを設定
+          recordsQueryBuilder.select = vi.fn().mockReturnValue(recordsQueryBuilder)
+          recordsQueryBuilder.eq = vi.fn().mockReturnValue(recordsQueryBuilder)
+          recordsQueryBuilder.limit = vi.fn().mockResolvedValue({
+            data: [{
+              id: 'record-1',
+              styles: {
+                distance: 100,
+                style: 'freestyle'
+              }
+            }],
+            error: null
+          })
           return recordsQueryBuilder
         })
 

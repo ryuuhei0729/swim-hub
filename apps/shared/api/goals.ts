@@ -914,14 +914,89 @@ export class GoalAPI {
 
         // 達成記録を保存（milestone_achievements）
         if (achievementData) {
-          await this.supabase
-            .from('milestone_achievements')
-            .insert({
-              milestone_id: milestone.id,
-              practice_log_id: achievementData.practiceLogId || null,
-              record_id: achievementData.recordId || null,
-              achieved_value: achievementData.achievedValue
-            })
+          try {
+            // 重複チェック: 既に同じマイルストーン・同じレコードのachievementが存在するか確認
+            let shouldInsert = true
+            
+            if (achievementData.practiceLogId) {
+              const existingCheck = await this.supabase
+                .from('milestone_achievements')
+                .select('id')
+                .eq('milestone_id', milestone.id)
+                .eq('practice_log_id', achievementData.practiceLogId)
+                .maybeSingle()
+              
+              if (existingCheck.error && existingCheck.error.code !== 'PGRST116') {
+                // PGRST116は「not found」エラー（正常なケース）
+                console.warn(
+                  `マイルストーン ${milestone.id} の達成記録重複チェック中にエラー:`,
+                  existingCheck.error
+                )
+              } else if (existingCheck.data) {
+                // 既に存在する場合はスキップ（並行実行時の重複防止）
+                shouldInsert = false
+              }
+            } else if (achievementData.recordId) {
+              const existingCheck = await this.supabase
+                .from('milestone_achievements')
+                .select('id')
+                .eq('milestone_id', milestone.id)
+                .eq('record_id', achievementData.recordId)
+                .maybeSingle()
+              
+              if (existingCheck.error && existingCheck.error.code !== 'PGRST116') {
+                // PGRST116は「not found」エラー（正常なケース）
+                console.warn(
+                  `マイルストーン ${milestone.id} の達成記録重複チェック中にエラー:`,
+                  existingCheck.error
+                )
+              } else if (existingCheck.data) {
+                // 既に存在する場合はスキップ（並行実行時の重複防止）
+                shouldInsert = false
+              }
+            }
+
+            // 達成記録を挿入（重複がない場合のみ）
+            if (shouldInsert) {
+              const { error: achievementError } = await this.supabase
+                .from('milestone_achievements')
+                .insert({
+                  milestone_id: milestone.id,
+                  practice_log_id: achievementData.practiceLogId || null,
+                  record_id: achievementData.recordId || null,
+                  achieved_value: achievementData.achievedValue
+                })
+
+              if (achievementError) {
+                // ユニーク制約エラー（重複）の場合は警告のみで続行
+                // その他のエラーもログに記録して続行（他のマイルストーンの処理を中断しない）
+                const isDuplicateError = 
+                  achievementError.code === '23505' || // PostgreSQL unique violation
+                  achievementError.message?.includes('duplicate') ||
+                  achievementError.message?.includes('unique')
+                
+                if (isDuplicateError) {
+                  console.warn(
+                    `マイルストーン ${milestone.id} の達成記録は既に存在します（並行実行による重複）:`,
+                    achievementError.message
+                  )
+                } else {
+                  console.error(
+                    `マイルストーン ${milestone.id} の達成記録の保存に失敗:`,
+                    achievementError
+                  )
+                }
+                // エラーが発生してもループを継続（他のマイルストーンの処理を続行）
+              }
+            }
+          } catch (error) {
+            // 予期しないエラーもキャッチしてログに記録し、処理を続行
+            console.error(
+              `マイルストーン ${milestone.id} の達成記録保存中に予期しないエラー:`,
+              error
+            )
+            // エラーが発生してもループを継続
+          }
         }
       } else if (!achieved && milestone.status === 'not_started') {
         // 関連レコードが存在する場合のみ「進行中」に変更

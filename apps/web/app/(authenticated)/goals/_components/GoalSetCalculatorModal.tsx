@@ -46,12 +46,22 @@ export default function GoalSetCalculatorModal({
   const calculatedTargetTime = useMemo(() => {
     if (!age) return null
 
+    // 性別が未設定の場合は計算を中止
+    if (profile?.gender === null || profile?.gender === undefined) {
+      return null
+    }
+
+    // 性別が明示的に0または1の場合のみ計算を続行
+    if (profile.gender !== 0 && profile.gender !== 1) {
+      return null
+    }
+
     const Y = goal.target_time // 100m目標タイム
     const X2 = age // 年齢
     const X3 = 3 // 主観的達成度（固定値: 3）
     // データベース: gender 0=男性, 1=女性
     // 計算式: X4 1=男性, 0=女性
-    const X4 = profile?.gender === 0 ? 1 : 0 // 性別（男=1, 女=0）
+    const X4 = profile.gender === 0 ? 1 : 0 // 性別（男=1, 女=0）
     const X5 = practicePoolType // ゴールセット実施水路（長水路=1, 短水路=0）
     const X6 = goal.competition.pool_type // 競技会の水路（長水路=1, 短水路=0）
     const X7 = getStyleCoefficient(style.style) // 種目係数（自由形=0, バタフライ=0.00001, 背泳ぎ=1.53, 平泳ぎ=2.34）
@@ -110,24 +120,6 @@ export default function GoalSetCalculatorModal({
             </div>
 
             <div className="space-y-4">
-              {/* ゴールセットの説明 */}
-              <div className="bg-gray-100 rounded-lg p-3 text-xs text-gray-600">
-                <p className="mb-2">
-                  <a
-                    href="https://sites.google.com/view/goalset-racetime-prediction/%E3%83%95%E3%82%A3%E3%83%BC%E3%83%89%E3%83%90%E3%83%83%E3%82%AF/%E9%87%8D%E5%9B%9E%E5%B8%B0%E5%BC%8F"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline"
-                  >
-                    順天堂大学水泳研究室の重回帰式
-                  </a>
-                  を使用して、目標タイムを達成するためにゴールセット（50m×6本×3セット）で出すべき平均タイムを逆算します。
-                </p>
-                <p className="text-gray-500">
-                  ※主観的達成度（1〜5段階）は「3」で固定して計算しています。
-                </p>
-              </div>
-
               {/* 自動取得情報（確認用） */}
               <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                 <h4 className="text-sm font-medium text-gray-700 mb-2">
@@ -160,12 +152,18 @@ export default function GoalSetCalculatorModal({
                           年齢が設定されていません。プロフィールで設定してください。
                         </div>
                       )}
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">性別:</span>
-                        <span className="font-medium">
-                          {profile?.gender === 1 ? '女子' : '男子'}
-                        </span>
-                      </div>
+                      {profile?.gender !== null && profile?.gender !== undefined ? (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">性別:</span>
+                          <span className="font-medium">
+                            {profile.gender === 1 ? '女子' : '男子'}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="text-red-600 text-xs">
+                          性別が設定されていません。プロフィールで設定してください。
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -187,7 +185,7 @@ export default function GoalSetCalculatorModal({
               </div>
 
               {/* 計算結果 */}
-              {calculatedTargetTime && age !== null ? (
+              {calculatedTargetTime && age !== null && (profile?.gender === 0 || profile?.gender === 1) ? (
                 <div
                   className={`rounded-lg p-4 ${
                     calculatedTargetTime.warning
@@ -218,9 +216,35 @@ export default function GoalSetCalculatorModal({
                     プロフィール設定で生年月日を入力してください。
                   </div>
                 </div>
+              ) : profile?.gender === null || profile?.gender === undefined ? (
+                <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4">
+                  <div className="text-sm text-red-700">
+                    性別が設定されていないため、計算できません。
+                    <br />
+                    プロフィール設定で性別を入力してください。
+                  </div>
+                </div>
               ) : (
                 <div className="text-center text-gray-500">計算中...</div>
               )}
+
+              {/* ゴールセットの説明 */}
+              <div className="bg-gray-100 rounded-lg p-3 text-xs text-gray-600">
+                <p className="mb-2">
+                  <a
+                    href="https://sites.google.com/view/goalset-racetime-prediction/%E3%83%95%E3%82%A3%E3%83%BC%E3%83%89%E3%83%90%E3%83%83%E3%82%AF/%E9%87%8D%E5%9B%9E%E5%B8%B0%E5%BC%8F"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    順天堂大学水泳研究室の重回帰式
+                  </a>
+                  を使用して、目標タイムを達成するためにゴールセット（50m×6本×3セット）で出すべき平均タイムを逆算します。
+                </p>
+                <p className="text-gray-500">
+                  ※主観的達成度（1〜5段階）は「3」で固定して計算しています。
+                </p>
+              </div>
             </div>
 
             {/* ボタン */}
@@ -235,7 +259,13 @@ export default function GoalSetCalculatorModal({
               <Button
                 type="button"
                 onClick={handleConfirm}
-                disabled={!calculatedTargetTime || calculatedTargetTime.value <= 0 || age === null}
+                disabled={
+                  !calculatedTargetTime ||
+                  calculatedTargetTime.value <= 0 ||
+                  age === null ||
+                  profile?.gender === null ||
+                  profile?.gender === undefined
+                }
               >
                 この値を使用
               </Button>

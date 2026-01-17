@@ -76,7 +76,11 @@ export function TimeParamsForm({ params, onChange }: TimeParamsFormProps) {
         <Input
           type="number"
           value={params.distance}
-          onChange={(e) => onChange({ ...params, distance: parseInt(e.target.value, 10) })}
+          onChange={(e) => {
+            const parsed = parseInt(e.target.value, 10)
+            const value = Number.isFinite(parsed) ? parsed : 0
+            onChange({ ...params, distance: value })
+          }}
           required
         />
       </div>
@@ -121,6 +125,107 @@ interface RepsTimeParamsFormProps {
 }
 
 export function RepsTimeParamsForm({ params, onChange }: RepsTimeParamsFormProps) {
+  const [averageTimeDisplayValue, setAverageTimeDisplayValue] = useState<string>('')
+  const [averageTimeError, setAverageTimeError] = useState<string>('')
+  const [circleDisplayValue, setCircleDisplayValue] = useState<string>('')
+  const [circleError, setCircleError] = useState<string>('')
+
+  // params.target_average_timeが変更されたときに表示値を更新
+  useEffect(() => {
+    if (params.target_average_time > 0) {
+      setAverageTimeDisplayValue(formatTime(params.target_average_time))
+      setAverageTimeError('')
+    } else {
+      setAverageTimeDisplayValue('')
+    }
+  }, [params.target_average_time])
+
+  // params.circleが変更されたときに表示値を更新
+  useEffect(() => {
+    if (params.circle > 0) {
+      setCircleDisplayValue(formatTime(params.circle))
+      setCircleError('')
+    } else {
+      setCircleDisplayValue('')
+    }
+  }, [params.circle])
+
+  const handleAverageTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setAverageTimeDisplayValue(value)
+
+    // 空の場合はエラーをクリア
+    if (value.trim() === '') {
+      setAverageTimeError('')
+      onChange({ ...params, target_average_time: 0 })
+      return
+    }
+
+    // 入力値を秒数に変換
+    const seconds = parseTimeToSeconds(value)
+    
+    // 有効な値の場合のみ更新
+    if (!isNaN(seconds) && seconds >= 0) {
+      setAverageTimeError('')
+      onChange({ ...params, target_average_time: seconds })
+    }
+  }
+
+  const handleAverageTimeBlur = () => {
+    // フォーカスが外れたときにバリデーション
+    if (averageTimeDisplayValue.trim() === '') {
+      setAverageTimeError('平均目標タイムを入力してください')
+      return
+    }
+
+    const seconds = parseTimeToSeconds(averageTimeDisplayValue)
+    if (isNaN(seconds) || seconds < 0) {
+      setAverageTimeError('有効なタイム形式で入力してください（例: 1:14.28 または 74.28）')
+    } else {
+      setAverageTimeError('')
+      // 表示値を正規化
+      setAverageTimeDisplayValue(formatTime(seconds))
+    }
+  }
+
+  const handleCircleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setCircleDisplayValue(value)
+
+    // 空の場合はエラーをクリア
+    if (value.trim() === '') {
+      setCircleError('')
+      onChange({ ...params, circle: 0 })
+      return
+    }
+
+    // 入力値を秒数に変換
+    const seconds = parseTimeToSeconds(value)
+    
+    // 有効な値の場合のみ更新
+    if (!isNaN(seconds) && seconds >= 0) {
+      setCircleError('')
+      onChange({ ...params, circle: seconds })
+    }
+  }
+
+  const handleCircleBlur = () => {
+    // フォーカスが外れたときにバリデーション
+    if (circleDisplayValue.trim() === '') {
+      setCircleError('サークルを入力してください')
+      return
+    }
+
+    const seconds = parseTimeToSeconds(circleDisplayValue)
+    if (isNaN(seconds) || seconds < 0) {
+      setCircleError('有効なタイム形式で入力してください（例: 1:30 または 90）')
+    } else {
+      setCircleError('')
+      // 表示値を正規化
+      setCircleDisplayValue(formatTime(seconds))
+    }
+  }
+
   return (
     <div className="space-y-3">
       <div>
@@ -130,7 +235,11 @@ export function RepsTimeParamsForm({ params, onChange }: RepsTimeParamsFormProps
         <Input
           type="number"
           value={params.distance}
-          onChange={(e) => onChange({ ...params, distance: parseInt(e.target.value, 10) })}
+          onChange={(e) => {
+            const parsed = parseInt(e.target.value, 10)
+            const value = Number.isFinite(parsed) ? parsed : 0
+            onChange({ ...params, distance: value })
+          }}
           required
         />
       </div>
@@ -141,7 +250,11 @@ export function RepsTimeParamsForm({ params, onChange }: RepsTimeParamsFormProps
         <Input
           type="number"
           value={params.reps}
-          onChange={(e) => onChange({ ...params, reps: parseInt(e.target.value, 10) })}
+          onChange={(e) => {
+            const parsed = parseInt(e.target.value, 10)
+            const value = Number.isFinite(parsed) ? parsed : 0
+            onChange({ ...params, reps: value })
+          }}
           required
         />
       </div>
@@ -152,21 +265,34 @@ export function RepsTimeParamsForm({ params, onChange }: RepsTimeParamsFormProps
         <Input
           type="number"
           value={params.sets}
-          onChange={(e) => onChange({ ...params, sets: parseInt(e.target.value, 10) })}
+          onChange={(e) => {
+            const parsed = parseInt(e.target.value, 10)
+            const value = Number.isFinite(parsed) ? parsed : 0
+            onChange({ ...params, sets: value })
+          }}
           required
         />
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          平均目標タイム (秒)
+          平均目標タイム
         </label>
         <Input
-          type="number"
-          step="0.01"
-          value={params.target_average_time}
-          onChange={(e) => onChange({ ...params, target_average_time: parseFloat(e.target.value) })}
+          type="text"
+          value={averageTimeDisplayValue}
+          onChange={handleAverageTimeChange}
+          onBlur={handleAverageTimeBlur}
+          placeholder="例: 1:14.28 または 74.28"
           required
+          className={averageTimeError ? 'border-red-500' : ''}
         />
+        {averageTimeError ? (
+          <p className="text-xs text-red-500 mt-1">{averageTimeError}</p>
+        ) : (
+          <p className="text-xs text-gray-500 mt-1">
+            形式: 分:秒.小数（例: 1:14.28）または 秒.小数（例: 74.28）
+          </p>
+        )}
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -190,15 +316,24 @@ export function RepsTimeParamsForm({ params, onChange }: RepsTimeParamsFormProps
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          サークル (秒)
+          サークル
         </label>
         <Input
-          type="number"
-          step="0.01"
-          value={params.circle}
-          onChange={(e) => onChange({ ...params, circle: parseFloat(e.target.value) })}
+          type="text"
+          value={circleDisplayValue}
+          onChange={handleCircleChange}
+          onBlur={handleCircleBlur}
+          placeholder="例: 1:30 または 90"
           required
+          className={circleError ? 'border-red-500' : ''}
         />
+        {circleError ? (
+          <p className="text-xs text-red-500 mt-1">{circleError}</p>
+        ) : (
+          <p className="text-xs text-gray-500 mt-1">
+            形式: 分:秒.小数（例: 1:30）または 秒.小数（例: 90）
+          </p>
+        )}
       </div>
     </div>
   )
@@ -210,6 +345,57 @@ interface SetParamsFormProps {
 }
 
 export function SetParamsForm({ params, onChange }: SetParamsFormProps) {
+  const [circleDisplayValue, setCircleDisplayValue] = useState<string>('')
+  const [circleError, setCircleError] = useState<string>('')
+
+  // params.circleが変更されたときに表示値を更新
+  useEffect(() => {
+    if (params.circle > 0) {
+      setCircleDisplayValue(formatTime(params.circle))
+      setCircleError('')
+    } else {
+      setCircleDisplayValue('')
+    }
+  }, [params.circle])
+
+  const handleCircleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setCircleDisplayValue(value)
+
+    // 空の場合はエラーをクリア
+    if (value.trim() === '') {
+      setCircleError('')
+      onChange({ ...params, circle: 0 })
+      return
+    }
+
+    // 入力値を秒数に変換
+    const seconds = parseTimeToSeconds(value)
+    
+    // 有効な値の場合のみ更新
+    if (!isNaN(seconds) && seconds >= 0) {
+      setCircleError('')
+      onChange({ ...params, circle: seconds })
+    }
+  }
+
+  const handleCircleBlur = () => {
+    // フォーカスが外れたときにバリデーション
+    if (circleDisplayValue.trim() === '') {
+      setCircleError('サークルを入力してください')
+      return
+    }
+
+    const seconds = parseTimeToSeconds(circleDisplayValue)
+    if (isNaN(seconds) || seconds < 0) {
+      setCircleError('有効なタイム形式で入力してください（例: 1:30 または 90）')
+    } else {
+      setCircleError('')
+      // 表示値を正規化
+      setCircleDisplayValue(formatTime(seconds))
+    }
+  }
+
   return (
     <div className="space-y-3">
       <div>
@@ -219,7 +405,11 @@ export function SetParamsForm({ params, onChange }: SetParamsFormProps) {
         <Input
           type="number"
           value={params.distance}
-          onChange={(e) => onChange({ ...params, distance: parseInt(e.target.value, 10) })}
+          onChange={(e) => {
+            const parsed = parseInt(e.target.value, 10)
+            const value = Number.isFinite(parsed) ? parsed : 0
+            onChange({ ...params, distance: value })
+          }}
           required
         />
       </div>
@@ -230,7 +420,11 @@ export function SetParamsForm({ params, onChange }: SetParamsFormProps) {
         <Input
           type="number"
           value={params.reps}
-          onChange={(e) => onChange({ ...params, reps: parseInt(e.target.value, 10) })}
+          onChange={(e) => {
+            const parsed = parseInt(e.target.value, 10)
+            const value = Number.isFinite(parsed) ? parsed : 0
+            onChange({ ...params, reps: value })
+          }}
           required
         />
       </div>
@@ -241,21 +435,34 @@ export function SetParamsForm({ params, onChange }: SetParamsFormProps) {
         <Input
           type="number"
           value={params.sets}
-          onChange={(e) => onChange({ ...params, sets: parseInt(e.target.value, 10) })}
+          onChange={(e) => {
+            const parsed = parseInt(e.target.value, 10)
+            const value = Number.isFinite(parsed) ? parsed : 0
+            onChange({ ...params, sets: value })
+          }}
           required
         />
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          サークル (秒)
+          サークル
         </label>
         <Input
-          type="number"
-          step="0.01"
-          value={params.circle}
-          onChange={(e) => onChange({ ...params, circle: parseFloat(e.target.value) })}
+          type="text"
+          value={circleDisplayValue}
+          onChange={handleCircleChange}
+          onBlur={handleCircleBlur}
+          placeholder="例: 1:30 または 90"
           required
+          className={circleError ? 'border-red-500' : ''}
         />
+        {circleError ? (
+          <p className="text-xs text-red-500 mt-1">{circleError}</p>
+        ) : (
+          <p className="text-xs text-gray-500 mt-1">
+            形式: 分:秒.小数（例: 1:30）または 秒.小数（例: 90）
+          </p>
+        )}
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">

@@ -136,16 +136,16 @@ export default function GoalEditModal({
       const parsedStyleId = parseInt(styleId, 10)
 
       // バリデーション: targetTimeSeconds（必須）
-      if (!Number.isFinite(targetTimeSeconds) || Number.isNaN(targetTimeSeconds) || targetTimeSeconds < 0) {
-        setValidationError('目標タイムが無効です。正しい形式で入力してください。')
+      if (!Number.isFinite(targetTimeSeconds) || Number.isNaN(targetTimeSeconds) || targetTimeSeconds <= 0 || targetTimeSeconds > 3600) {
+        setValidationError('目標タイムを正しく入力してください（0秒超〜60分以内）')
         setIsLoading(false)
         return
       }
 
       // バリデーション: startTimeSeconds（startTimeが提供されている場合のみ）
       if (startTime) {
-        if (startTimeSeconds === null || !Number.isFinite(startTimeSeconds) || Number.isNaN(startTimeSeconds) || startTimeSeconds < 0) {
-          setValidationError('開始タイムが無効です。正しい形式で入力してください。')
+        if (startTimeSeconds === null || !Number.isFinite(startTimeSeconds) || Number.isNaN(startTimeSeconds) || startTimeSeconds <= 0 || startTimeSeconds > 3600) {
+          setValidationError('開始タイムを正しく入力してください（0秒超〜60分以内）')
           setIsLoading(false)
           return
         }
