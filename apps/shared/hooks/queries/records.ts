@@ -8,6 +8,7 @@ import { SupabaseClient } from '@supabase/supabase-js'
 import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
 import { RecordAPI } from '../../api/records'
+import { GoalAPI } from '../../api/goals'
 import type {
   Competition,
   CompetitionInsert,
@@ -147,8 +148,19 @@ export function useCreateRecordMutation(supabase: SupabaseClient, api?: RecordAP
     mutationFn: async (record: Omit<RecordInsert, 'user_id'>) => {
       return await recordApi.createRecord(record)
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: recordKeys.lists() })
+      
+      // マイルストーンのステータスを自動更新
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const goalAPI = new GoalAPI(supabase)
+          await goalAPI.updateAllMilestoneStatuses(user.id)
+        }
+      } catch (error) {
+        console.error('マイルストーンステータス更新エラー:', error)
+      }
     },
   })
 }
@@ -164,8 +176,19 @@ export function useUpdateRecordMutation(supabase: SupabaseClient, api?: RecordAP
     mutationFn: async ({ id, updates }: { id: string; updates: RecordUpdate }) => {
       return await recordApi.updateRecord(id, updates)
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: recordKeys.lists() })
+      
+      // マイルストーンのステータスを自動更新
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const goalAPI = new GoalAPI(supabase)
+          await goalAPI.updateAllMilestoneStatuses(user.id)
+        }
+      } catch (error) {
+        console.error('マイルストーンステータス更新エラー:', error)
+      }
     },
   })
 }

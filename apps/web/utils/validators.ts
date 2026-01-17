@@ -32,7 +32,7 @@ export const isValidDate = (date: string): boolean => {
 }
 
 // 必須フィールドの検証
-export const isRequired = (value: string | number | null | undefined): boolean => {
+export const isRequired = (value: string | number | null | undefined | unknown): boolean => {
   if (typeof value === 'string') {
     return value.trim().length > 0
   }
@@ -55,40 +55,51 @@ export interface ValidationResult {
   errors: Record<string, string>
 }
 
+// バリデーションルールの型
+export interface ValidationRule {
+  required?: boolean
+  email?: boolean
+  password?: boolean
+  phone?: boolean
+  minLength?: number
+  maxLength?: number
+  label?: string
+}
+
 // 包括的なフォームバリデーション
-export const validateForm = (data: Record<string, any>, rules: Record<string, any>): ValidationResult => {
+export const validateForm = (data: Record<string, unknown>, rules: Record<string, unknown>): ValidationResult => {
   const errors: Record<string, string> = {}
   
   Object.keys(rules).forEach(field => {
     const value = data[field]
-    const rule = rules[field]
+    const rule = (rules[field] ?? {}) as ValidationRule
     
     if (rule.required && !isRequired(value)) {
       errors[field] = `${rule.label || field}は必須です`
       return
     }
     
-    if (value && rule.email && !isValidEmail(value)) {
+    if (value && typeof value === 'string' && rule.email && !isValidEmail(value)) {
       errors[field] = '有効なメールアドレスを入力してください'
       return
     }
     
-    if (value && rule.password && !isValidPassword(value)) {
+    if (value && typeof value === 'string' && rule.password && !isValidPassword(value)) {
       errors[field] = 'パスワードは8文字以上で、大文字・小文字・数字を含む必要があります'
       return
     }
     
-    if (value && rule.phone && !isValidPhoneNumber(value)) {
+    if (value && typeof value === 'string' && rule.phone && !isValidPhoneNumber(value)) {
       errors[field] = '有効な電話番号を入力してください'
       return
     }
     
-    if (value && rule.minLength && value.length < rule.minLength) {
+    if (value && typeof value === 'string' && typeof rule.minLength === 'number' && value.length < rule.minLength) {
       errors[field] = `${rule.label || field}は${rule.minLength}文字以上で入力してください`
       return
     }
     
-    if (value && rule.maxLength && value.length > rule.maxLength) {
+    if (value && typeof value === 'string' && typeof rule.maxLength === 'number' && value.length > rule.maxLength) {
       errors[field] = `${rule.label || field}は${rule.maxLength}文字以下で入力してください`
       return
     }

@@ -8,6 +8,7 @@ import type { TeamMembershipWithUser } from '@apps/shared/types/database'
 interface UserProfile {
   id: string
   name: string
+  gender?: number
   birthday?: string | null
   bio?: string | null
   profile_image_path?: string | null
@@ -26,6 +27,11 @@ export default function ProfileDisplay({ profile, teams = [] }: ProfileDisplayPr
       month: 'long',
       day: 'numeric'
     })
+  }
+
+  const formatGender = (gender: number | undefined) => {
+    if (gender === undefined || gender === null) return '未設定'
+    return gender === 0 ? '男性' : '女性'
   }
 
   // 承認済みかつアクティブなチームのみフィルタリング
@@ -62,14 +68,25 @@ export default function ProfileDisplay({ profile, teams = [] }: ProfileDisplayPr
           </h3>
           
 
-          {/* 生年月日と参加チーム（横並び） */}
+          {/* 生年月日・性別と参加チーム（横並び） */}
           <div className="mt-2 sm:mt-4 flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6">
-            {/* 生年月日 */}
-            <div className="flex-1">
-              <dt className="text-xs sm:text-sm font-medium text-gray-500">生年月日</dt>
-              <dd className="mt-1 text-xs sm:text-sm text-gray-900">
-                {formatBirthday(profile.birthday)}
-              </dd>
+            {/* 生年月日と性別 */}
+            <div className="flex-1 flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6">
+              {/* 生年月日 */}
+              <div className="flex-1">
+                <dt className="text-xs sm:text-sm font-medium text-gray-500">生年月日</dt>
+                <dd className="mt-1 text-xs sm:text-sm text-gray-900">
+                  {formatBirthday(profile.birthday)}
+                </dd>
+              </div>
+
+              {/* 性別 */}
+              <div className="flex-1">
+                <dt className="text-xs sm:text-sm font-medium text-gray-500">性別</dt>
+                <dd className="mt-1 text-xs sm:text-sm text-gray-900">
+                  {formatGender(profile.gender)}
+                </dd>
+              </div>
             </div>
 
             {/* 参加チーム */}

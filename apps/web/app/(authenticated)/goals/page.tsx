@@ -1,24 +1,27 @@
-'use client'
+import { Suspense } from 'react'
+import GoalDataLoader from './_server/GoalDataLoader'
 
-export default function GoalsPage() {
+/**
+ * 目標管理ページ（Server Component）
+ * データ取得をサーバー側で実行し、Client Componentに渡す
+ */
+export default async function GoalsPage() {
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow p-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">
-          目標管理
-        </h1>
-        <p className="text-gray-600">
-          個人・チームの目標を設定・追跡します。
-        </p>
-      </div>
-      
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="text-center py-12">
-          <p className="text-gray-500">
-            目標管理機能は実装予定です
-          </p>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <Suspense
+        fallback={
+          <div className="p-6 space-y-6">
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="animate-pulse">
+                <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            </div>
+          </div>
+        }
+      >
+        <GoalDataLoader />
+      </Suspense>
     </div>
   )
 }

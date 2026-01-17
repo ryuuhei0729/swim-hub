@@ -59,7 +59,7 @@ export function useCalendarData(displayDate: Date, _userId?: string) {
     } finally {
       setLoading(false)
     }
-  }, [startDate, endDate, displayDate])
+  }, [startDate, endDate, displayDate, api, supabase.auth])
 
   // 初回データ取得
   useEffect(() => {

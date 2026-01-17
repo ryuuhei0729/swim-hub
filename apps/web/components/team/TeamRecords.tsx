@@ -91,14 +91,24 @@ export default function TeamRecords({ teamId, isAdmin: _isAdmin = false }: TeamR
         if (recordsError) throw recordsError
 
         // SupabaseのJOIN結果をTeamRecord型に変換
-        const transformedRecords: TeamRecord[] = (recordsData || []).map((record: any) => ({
-          id: record.id,
-          user_id: record.user_id,
-          time: record.time,
-          created_at: record.created_at,
-          users: Array.isArray(record.users) && record.users.length > 0 ? record.users[0] : record.users,
-          styles: Array.isArray(record.styles) && record.styles.length > 0 ? record.styles[0] : record.styles,
-          competitions: Array.isArray(record.competitions) && record.competitions.length > 0 ? record.competitions[0] : record.competitions,
+        const transformedRecords: TeamRecord[] = (recordsData || []).map((record: Record<string, unknown>) => ({
+          id: String(record.id ?? ''),
+          user_id: String(record.user_id ?? ''),
+          time: typeof record.time === 'number'
+            ? record.time
+            : typeof record.time === 'string' && Number.isFinite(Number(record.time))
+              ? Number(record.time)
+              : 0,
+          created_at: String(record.created_at ?? ''),
+          users: Array.isArray(record.users) && record.users.length > 0 
+            ? (record.users[0] as TeamRecord['users'])
+            : (record.users as TeamRecord['users'] | undefined),
+          styles: Array.isArray(record.styles) && record.styles.length > 0
+            ? (record.styles[0] as TeamRecord['styles'])
+            : (record.styles as TeamRecord['styles'] | undefined),
+          competitions: Array.isArray(record.competitions) && record.competitions.length > 0
+            ? (record.competitions[0] as TeamRecord['competitions'])
+            : (record.competitions as TeamRecord['competitions'] | undefined),
         }))
 
         setRecords(transformedRecords)

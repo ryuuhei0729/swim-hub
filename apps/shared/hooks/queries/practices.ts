@@ -8,6 +8,7 @@ import { SupabaseClient } from '@supabase/supabase-js'
 import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
 import { PracticeAPI } from '../../api/practices'
+import { GoalAPI } from '../../api/goals'
 import type {
     Practice,
     PracticeInsert,
@@ -289,9 +290,21 @@ export function useCreatePracticeMutation(supabase: SupabaseClient, api?: Practi
       
       return created
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       // 関連するクエリを無効化して再取得
       queryClient.invalidateQueries({ queryKey: practiceKeys.lists() })
+      
+      // マイルストーンのステータスを自動更新
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const goalAPI = new GoalAPI(supabase)
+          await goalAPI.updateAllMilestoneStatuses(user.id)
+        }
+      } catch (error) {
+        // エラーは無視（メイン処理に影響しない）
+        console.error('マイルストーンステータス更新エラー:', error)
+      }
     },
   })
 }
@@ -468,9 +481,20 @@ export function useCreatePracticeLogMutation(supabase: SupabaseClient, api?: Pra
     mutationFn: async (log: Omit<PracticeLogInsert, 'user_id'>) => {
       return await practiceApi.createPracticeLog(log)
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       // 関連するクエリを無効化して再取得（リレーションデータも含める）
       queryClient.invalidateQueries({ queryKey: practiceKeys.lists() })
+      
+      // マイルストーンのステータスを自動更新
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const goalAPI = new GoalAPI(supabase)
+          await goalAPI.updateAllMilestoneStatuses(user.id)
+        }
+      } catch (error) {
+        console.error('マイルストーンステータス更新エラー:', error)
+      }
     },
   })
 }
@@ -486,9 +510,20 @@ export function useUpdatePracticeLogMutation(supabase: SupabaseClient, api?: Pra
     mutationFn: async ({ id, updates }: { id: string; updates: PracticeLogUpdate }) => {
       return await practiceApi.updatePracticeLog(id, updates)
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       // 関連するクエリを無効化して再取得
       queryClient.invalidateQueries({ queryKey: practiceKeys.lists() })
+      
+      // マイルストーンのステータスを自動更新
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const goalAPI = new GoalAPI(supabase)
+          await goalAPI.updateAllMilestoneStatuses(user.id)
+        }
+      } catch (error) {
+        console.error('マイルストーンステータス更新エラー:', error)
+      }
     },
   })
 }
@@ -522,9 +557,20 @@ export function useCreatePracticeTimesMutation(supabase: SupabaseClient, api?: P
     mutationFn: async (times: Omit<PracticeTimeInsert, 'user_id'>[]) => {
       return await practiceApi.createPracticeTimes(times as PracticeTimeInsert[])
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       // 関連するクエリを無効化して再取得
       queryClient.invalidateQueries({ queryKey: practiceKeys.lists() })
+      
+      // マイルストーンのステータスを自動更新
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const goalAPI = new GoalAPI(supabase)
+          await goalAPI.updateAllMilestoneStatuses(user.id)
+        }
+      } catch (error) {
+        console.error('マイルストーンステータス更新エラー:', error)
+      }
     },
   })
 }
@@ -546,9 +592,20 @@ export function useReplacePracticeTimesMutation(supabase: SupabaseClient, api?: 
     }) => {
       return await practiceApi.replacePracticeTimes(practiceLogId, times)
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       // 関連するクエリを無効化して再取得
       queryClient.invalidateQueries({ queryKey: practiceKeys.lists() })
+      
+      // マイルストーンのステータスを自動更新
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const goalAPI = new GoalAPI(supabase)
+          await goalAPI.updateAllMilestoneStatuses(user.id)
+        }
+      } catch (error) {
+        console.error('マイルストーンステータス更新エラー:', error)
+      }
     },
   })
 }

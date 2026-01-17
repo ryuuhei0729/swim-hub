@@ -28,14 +28,20 @@ export default function GoogleCalendarSyncSettings({
   const syncPractices = profile?.google_calendar_sync_practices ?? true
   const syncCompetitions = profile?.google_calendar_sync_competitions ?? true
 
-  // Google認証を開始
+  // Google認証を開始（カレンダー連携用）
   const handleConnectGoogle = async () => {
     setLoading(true)
     setError(null)
     
+    // カレンダー連携用のOAuth認証（calendar_connectパラメータ付きでコールバックにリダイレクト）
+    const appUrl = typeof window !== 'undefined' 
+      ? window.location.origin 
+      : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const callbackUrl = `${appUrl}/api/auth/callback?calendar_connect=true&redirect_to=/mypage`
+    
     const { error } = await signInWithOAuth('google', {
-      redirectTo: '/mypage',
-      scopes: 'https://www.googleapis.com/auth/calendar',
+      redirectTo: callbackUrl,
+      scopes: 'https://www.googleapis.com/auth/calendar.events',
       queryParams: {
         access_type: 'offline',
         prompt: 'consent'
@@ -153,19 +159,16 @@ export default function GoogleCalendarSyncSettings({
   useEffect(() => {
     if (!user) return
 
-    // URLパラメータからcodeを確認（OAuthコールバック時）
     const urlParams = new URLSearchParams(window.location.search)
-    const code = urlParams.get('code')
+    const calendarConnected = urlParams.get('calendar_connected')
     
-    if (code && !isEnabled) {
-      // OAuthコールバック後、プロフィールを再取得
-      setTimeout(() => {
-        onUpdate()
-        // URLパラメータをクリーンアップ
-        window.history.replaceState({}, '', '/mypage')
-      }, 1000)
+    if (calendarConnected === 'true') {
+      // カレンダー連携完了後、プロフィールを再取得
+      onUpdate()
+      // URLパラメータをクリーンアップ
+      window.history.replaceState({}, '', '/mypage')
     }
-  }, [user, isEnabled, onUpdate])
+  }, [user, onUpdate])
 
   return (
     <div className="bg-white rounded-lg shadow p-4 sm:p-6">

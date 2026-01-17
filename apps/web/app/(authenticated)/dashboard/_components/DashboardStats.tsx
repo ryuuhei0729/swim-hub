@@ -25,10 +25,8 @@ export default function DashboardStats() {
 
         // 今月の練習回数を取得
         const today = new Date()
-        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
-          .toISOString().split('T')[0]
-        const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
-          .toISOString().split('T')[0]
+        const startOfMonth = format(new Date(today.getFullYear(), today.getMonth(), 1), 'yyyy-MM-dd')
+        const endOfMonth = format(new Date(today.getFullYear(), today.getMonth() + 1, 0), 'yyyy-MM-dd')
 
         const { count: practices } = await supabase
           .from('practices')

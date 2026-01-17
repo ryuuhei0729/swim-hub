@@ -88,7 +88,8 @@ export default function AvatarUpload({
         .list(userFolderPath)
       
       // 404エラーは「ディレクトリが存在しない（削除するものがない）」として扱う
-      if (listError && (listError as any).statusCode !== '404' && (listError as any).statusCode !== 404) {
+      const errorCode = listError ? (listError as { statusCode?: string | number }).statusCode : undefined
+      if (listError && errorCode !== '404' && errorCode !== 404) {
         throw listError
       }
       

@@ -90,8 +90,7 @@ export default function TagInput({
       const randomColor = getRandomColor()
       
       // DBに直接挿入
-      // TODO: Supabase型推論の制約回避のため一時的にas any
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('practice_tags')
         .insert({
           user_id: user.id,

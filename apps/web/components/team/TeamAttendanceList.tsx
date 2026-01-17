@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAuth } from '@/contexts'
 import { AttendanceAPI, TeamAttendanceWithDetails } from '@swim-hub/shared'
 import { AttendanceStatus } from '@swim-hub/shared/types/database'
@@ -26,11 +26,7 @@ export default function TeamAttendanceList({
   const { supabase } = useAuth()
   const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase])
 
-  useEffect(() => {
-    loadAttendances()
-  }, [practiceId, competitionId])
-
-  const loadAttendances = async () => {
+  const loadAttendances = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -56,7 +52,11 @@ export default function TeamAttendanceList({
     } finally {
       setLoading(false)
     }
-  }
+  }, [practiceId, competitionId, attendanceAPI])
+
+  useEffect(() => {
+    loadAttendances()
+  }, [loadAttendances])
 
   const handleStatusChange = async (attendanceId: string, status: AttendanceStatus | null, note?: string) => {
     try {

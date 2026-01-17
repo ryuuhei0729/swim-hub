@@ -46,7 +46,7 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
     }
 
     loadMembers()
-  }, [teamId])
+  }, [teamId, api])
 
   // 招待コードを取得
   const loadInviteCode = async () => {
