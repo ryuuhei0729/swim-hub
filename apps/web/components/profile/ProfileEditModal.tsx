@@ -25,6 +25,7 @@ export default function ProfileEditModal({
   const [formData, setFormData] = useState({
     name: '',
     birthday: '',
+    gender: 0,
     bio: ''
   })
   const [isUpdating, setIsUpdating] = useState(false)
@@ -37,6 +38,7 @@ export default function ProfileEditModal({
       setFormData({
         name: profile.name || '',
         birthday: profile.birthday ? profile.birthday.split('T')[0] : '', // YYYY-MM-DD形式
+        gender: profile.gender !== undefined ? profile.gender : 0,
         bio: profile.bio || ''
       })
     }
@@ -60,6 +62,7 @@ export default function ProfileEditModal({
       await onUpdate({
         name: formData.name.trim(),
         birthday,
+        gender: formData.gender,
         bio: formData.bio.trim() || null
       })
       // 成功時は即時にモーダルを閉じる
@@ -73,11 +76,11 @@ export default function ProfileEditModal({
   }
 
   const handleChange = (field: keyof typeof formData) => (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     setFormData(prev => ({
       ...prev,
-      [field]: e.target.value
+      [field]: field === 'gender' ? parseInt(e.target.value, 10) : e.target.value
     }))
     setError(null)
   }
@@ -138,7 +141,7 @@ export default function ProfileEditModal({
                 />
               </div>
 
-              {/* 名前 + 生年月日 */}
+              {/* 名前 + 生年月日・性別 */}
               <div className="space-y-4">
                 {/* 名前 */}
                 <div>
@@ -156,19 +159,38 @@ export default function ProfileEditModal({
                     disabled={isUpdating}
                   />
                 </div>
-                {/* 生年月日 */}
-                <div>
-                  <label htmlFor="birthday" className="block text-sm font-medium text-gray-700 mb-2">
-                    生年月日
-                  </label>
-                  <Input
-                    id="birthday"
-                    type="date"
-                    value={formData.birthday}
-                    onChange={handleChange('birthday')}
-                    className="w-full"
-                    disabled={isUpdating}
-                  />
+                {/* 生年月日と性別（横並び） */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* 生年月日 */}
+                  <div>
+                    <label htmlFor="birthday" className="block text-sm font-medium text-gray-700 mb-2">
+                      生年月日
+                    </label>
+                    <Input
+                      id="birthday"
+                      type="date"
+                      value={formData.birthday}
+                      onChange={handleChange('birthday')}
+                      className="w-full"
+                      disabled={isUpdating}
+                    />
+                  </div>
+                  {/* 性別 */}
+                  <div>
+                    <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-2">
+                      性別
+                    </label>
+                    <select
+                      id="gender"
+                      value={formData.gender}
+                      onChange={handleChange('gender')}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                      disabled={isUpdating}
+                    >
+                      <option value={0}>男性</option>
+                      <option value={1}>女性</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 

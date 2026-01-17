@@ -35,6 +35,7 @@ interface BestTime {
 interface UserProfileData {
   id: string
   name: string
+  gender?: number
   birthday?: string | null
   bio?: string | null
   avatar_url?: string | null
@@ -53,7 +54,7 @@ async function getProfile(
 ): Promise<UserProfileData | null> {
   const { data, error } = await supabase
     .from('users')
-    .select('id, name, birthday, bio, profile_image_path, google_calendar_enabled, google_calendar_sync_practices, google_calendar_sync_competitions')
+    .select('id, name, gender, birthday, bio, profile_image_path, google_calendar_enabled, google_calendar_sync_practices, google_calendar_sync_competitions')
     .eq('id', userId)
     .single()
 
@@ -67,6 +68,7 @@ async function getProfile(
   const userData = data as {
     id: string
     name: string
+    gender: number
     birthday: string | null
     bio: string | null
     profile_image_path: string | null
@@ -78,6 +80,7 @@ async function getProfile(
   return {
     id: userData.id,
     name: userData.name,
+    gender: userData.gender,
     birthday: userData.birthday,
     bio: userData.bio,
     avatar_url: userData.profile_image_path,

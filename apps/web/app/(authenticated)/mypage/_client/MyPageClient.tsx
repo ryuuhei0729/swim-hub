@@ -42,6 +42,7 @@ interface BestTime {
 interface UserProfile {
   id: string
   name: string
+  gender?: number
   birthday?: string | null
   bio?: string | null
   avatar_url?: string | null
@@ -102,6 +103,7 @@ export default function MyPageClient({
   const profile: UserProfile | null = queryProfile ? {
     id: queryProfile.id,
     name: queryProfile.name,
+    gender: queryProfile.gender,
     birthday: queryProfile.birthday,
     bio: queryProfile.bio,
     avatar_url: queryProfile.profile_image_path,
@@ -118,6 +120,7 @@ export default function MyPageClient({
       // データベースのカラム名に合わせて変換
       const dbUpdate: UserUpdate = {}
       if (updatedProfile.name !== undefined) dbUpdate.name = updatedProfile.name
+      if (updatedProfile.gender !== undefined) dbUpdate.gender = updatedProfile.gender
       if (updatedProfile.birthday !== undefined) dbUpdate.birthday = updatedProfile.birthday
       if (updatedProfile.bio !== undefined) dbUpdate.bio = updatedProfile.bio
       if (updatedProfile.avatar_url !== undefined) dbUpdate.profile_image_path = updatedProfile.avatar_url

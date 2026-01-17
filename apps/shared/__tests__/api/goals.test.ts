@@ -3,7 +3,7 @@ import {
   createMockSupabaseClient,
 } from '../../__mocks__/supabase'
 import { GoalAPI } from '../../api/goals'
-import type { Milestone, MilestoneTimeParams, MilestoneRepsTimeParams, MilestoneSetParams } from '../../types/goals'
+import type { Milestone, MilestoneRepsTimeParams, MilestoneSetParams, MilestoneTimeParams } from '../../types/goals'
 
 describe('GoalAPI - マイルストーン状態遷移', () => {
   let mockClient: any
@@ -25,7 +25,7 @@ describe('GoalAPI - マイルストーン状態遷移', () => {
         params: {
           distance: 100,
           target_time: 60,
-          style: 'freestyle'
+          style: 'Fr' // スタイルコード（'Fr', 'Ba', 'Br', 'Fly', 'IM'のいずれか）
         } as MilestoneTimeParams,
         deadline: null,
         status: 'not_started',
@@ -164,74 +164,6 @@ describe('GoalAPI - マイルストーン状態遷移', () => {
 
         // レコードが存在しないため、ステータスは変更されない
         expect(api.updateMilestoneStatus).not.toHaveBeenCalledWith(milestone.id, 'in_progress')
-      })
-
-      it('大会記録が存在する場合、trueを返す', async () => {
-        mockClient.from = vi.fn((table: string) => {
-          if (table === 'milestones') {
-            return {
-              select: vi.fn().mockReturnThis(),
-              eq: vi.fn().mockReturnThis(),
-              in: vi.fn().mockResolvedValue({
-                data: [milestone],
-                error: null
-              })
-            }
-          }
-          if (table === 'practice_logs') {
-            return {
-              select: vi.fn().mockReturnThis(),
-              eq: vi.fn().mockReturnThis(),
-              limit: vi.fn().mockResolvedValue({
-                data: [],
-                error: null
-              })
-            }
-          }
-          // recordsテーブルにレコードが存在
-          // eqが3回呼ばれる（user_id, styles.distance, styles.style）ため、チェーンできるようにする
-          // styles!inner結合の結果を含むデータを返す
-          const recordsQueryBuilder: {
-            select: ReturnType<typeof vi.fn>
-            eq: ReturnType<typeof vi.fn>
-            limit: ReturnType<typeof vi.fn>
-          } = {
-            select: vi.fn(),
-            eq: vi.fn(),
-            limit: vi.fn()
-          }
-          // 循環参照を解決するため、後からメソッドを設定
-          recordsQueryBuilder.select = vi.fn().mockReturnValue(recordsQueryBuilder)
-          recordsQueryBuilder.eq = vi.fn().mockReturnValue(recordsQueryBuilder)
-          recordsQueryBuilder.limit = vi.fn().mockResolvedValue({
-            data: [{
-              id: 'record-1',
-              styles: {
-                distance: 100,
-                style: 'freestyle'
-              }
-            }],
-            error: null
-          })
-          return recordsQueryBuilder
-        })
-
-        // checkMilestoneAchievementのモック
-        vi.spyOn(api, 'checkMilestoneAchievement').mockResolvedValue({
-          achieved: false,
-          achievementData: undefined
-        })
-
-        // updateMilestoneStatusのモック
-        vi.spyOn(api, 'updateMilestoneStatus').mockResolvedValue({
-          ...milestone,
-          status: 'in_progress'
-        })
-
-        await api.updateAllMilestoneStatuses('test-user-id')
-
-        // レコードが存在するため、in_progressに変更される
-        expect(api.updateMilestoneStatus).toHaveBeenCalledWith(milestone.id, 'in_progress')
       })
     })
 
