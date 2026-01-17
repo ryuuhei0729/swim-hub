@@ -6,7 +6,7 @@ import type { MilestoneParams } from '@apps/shared/types'
 import { isMilestoneTimeParams, isMilestoneRepsTimeParams, isMilestoneSetParams } from '@apps/shared/types/goals'
 import { TimeParamsForm, RepsTimeParamsForm, SetParamsForm } from './MilestoneParamsForm'
 import DeadlineInput from '../shared/DeadlineInput'
-import { MILESTONE_TEMPLATES } from '../templates/milestoneTemplates'
+import { MILESTONE_TEMPLATES, type MilestoneTemplate } from '../templates/milestoneTemplates'
 
 interface MilestoneFormProps {
   type: 'time' | 'reps_time' | 'set'
@@ -21,6 +21,7 @@ interface MilestoneFormProps {
   showTemplateSelector?: boolean
   selectedTemplate?: string
   onTemplateSelect?: (templateId: string) => void
+  availableTemplates?: MilestoneTemplate[]
 }
 
 /**
@@ -38,7 +39,8 @@ export default function MilestoneForm({
   goalCompetitionDate,
   showTemplateSelector = false,
   selectedTemplate = '',
-  onTemplateSelect
+  onTemplateSelect,
+  availableTemplates = MILESTONE_TEMPLATES
 }: MilestoneFormProps) {
   return (
     <div className="space-y-4">
@@ -58,7 +60,7 @@ export default function MilestoneForm({
             className="w-full px-3 py-2 border border-gray-300 rounded-md"
           >
             <option value="">テンプレートを選択（空欄で手動入力）</option>
-            {MILESTONE_TEMPLATES.map((template) => (
+            {availableTemplates.map((template) => (
               <option key={template.id} value={template.id}>
                 {template.name} - {template.description}
               </option>

@@ -189,14 +189,23 @@ describe('GoalAPI - マイルストーン状態遷移', () => {
             }
           }
           // recordsテーブルにレコードが存在
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
+          // eqが3回呼ばれる（user_id, styles.distance, styles.style）ため、チェーンできるようにする
+          // styles!inner結合の結果を含むデータを返す
+          const recordsQueryBuilder = {
+            select: vi.fn().mockReturnValue(recordsQueryBuilder),
+            eq: vi.fn().mockReturnValue(recordsQueryBuilder),
             limit: vi.fn().mockResolvedValue({
-              data: [{ id: 'record-1' }],
+              data: [{
+                id: 'record-1',
+                styles: {
+                  distance: 100,
+                  style: 'freestyle'
+                }
+              }],
               error: null
             })
           }
+          return recordsQueryBuilder
         })
 
         // checkMilestoneAchievementのモック

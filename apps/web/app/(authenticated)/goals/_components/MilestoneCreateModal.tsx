@@ -1,13 +1,14 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui'
 import { useAuth } from '@/contexts'
 import { GoalAPI } from '@apps/shared/api/goals'
-import type { Style, MilestoneParams, MilestoneTimeParams, MilestoneRepsTimeParams, MilestoneSetParams } from '@apps/shared/types'
+import type { GoalWithMilestones, Style, MilestoneParams, MilestoneTimeParams, MilestoneRepsTimeParams, MilestoneSetParams, MilestoneGoalSetParams } from '@apps/shared/types'
 import { MILESTONE_TEMPLATES } from './templates/milestoneTemplates'
 import MilestoneForm from './forms/MilestoneForm'
+import GoalSetCalculatorModal from './GoalSetCalculatorModal'
 import { DEFAULT_TIME_PARAMS, DEFAULT_REPS_TIME_PARAMS, DEFAULT_SET_PARAMS } from './constants'
 
 interface MilestoneCreateModalProps {
@@ -15,6 +16,7 @@ interface MilestoneCreateModalProps {
   onClose: () => void
   onSuccess: () => Promise<void>
   goalId: string
+  goal: GoalWithMilestones
   styles: Style[]
   goalCompetitionDate: string
 }
@@ -27,6 +29,7 @@ export default function MilestoneCreateModal({
   onClose,
   onSuccess,
   goalId,
+  goal,
   styles: _styles,
   goalCompetitionDate
 }: MilestoneCreateModalProps) {
@@ -37,20 +40,93 @@ export default function MilestoneCreateModal({
   const [selectedTemplate, setSelectedTemplate] = useState<string>('')
   const [params, setParams] = useState<MilestoneParams>(DEFAULT_TIME_PARAMS)
   const [isLoading, setIsLoading] = useState(false)
+  const [isGoalSetModalOpen, setIsGoalSetModalOpen] = useState(false)
 
   const goalAPI = new GoalAPI(supabase)
 
+  // Goalが100m種目かどうかをチェック
+  const is100mGoal = useMemo(() => {
+    return goal.style.distance === 100
+  }, [goal.style.distance])
+
+  // 100m種目の場合のみゴールセットテンプレートを表示
+  const availableTemplates = useMemo(() => {
+    if (is100mGoal) {
+      return MILESTONE_TEMPLATES
+    }
+    return MILESTONE_TEMPLATES.filter(t => t.id !== 'goalset_50m_6x3')
+  }, [is100mGoal])
+
   // テンプレート適用
   const handleTemplateSelect = (templateId: string) => {
-    const template = MILESTONE_TEMPLATES.find(t => t.id === templateId)
+    const template = availableTemplates.find(t => t.id === templateId)
     if (!template) {
       setSelectedTemplate('')
+      return
+    }
+
+    // ゴールセットテンプレートが選択された場合、計算モーダルを表示
+    if (templateId === 'goalset_50m_6x3') {
+      setIsGoalSetModalOpen(true)
+      return
+    }
+
+    // タイムトライアルテンプレートが選択された場合、goalから値を取得
+    if (templateId === 'time_trial') {
+      const styleMap: Record<string, string> = {
+        'fr': 'Fr',
+        'br': 'Br',
+        'ba': 'Ba',
+        'fly': 'Fly',
+        'im': 'Im'
+      }
+      const styleValue = styleMap[goal.style.style] || 'Fr'
+
+      const timeTrialParams: MilestoneTimeParams = {
+        distance: goal.style.distance,
+        target_time: Math.round((goal.target_time * 1.01) * 100) / 100,
+        style: styleValue
+      }
+
+      setType('time')
+      setSelectedTemplate('time_trial')
+      setParams(timeTrialParams)
       return
     }
 
     setType(template.type)
     setSelectedTemplate(templateId)
     setParams(template.defaultParams)
+  }
+
+  // ゴールセット計算結果を適用
+  const handleGoalSetConfirm = (targetAverageTime: number, practicePoolType: number) => {
+    // style.styleは'fr' | 'br' | 'ba' | 'fly' | 'im'の形式
+    // MilestoneGoalSetParamsのstyleは'Fr' | 'Br' | 'Ba' | 'Fly' | 'Im'の形式（先頭大文字）
+    const styleMap: Record<string, string> = {
+      'fr': 'Fr',
+      'br': 'Br',
+      'ba': 'Ba',
+      'fly': 'Fly',
+      'im': 'Im'
+    }
+    const styleValue = styleMap[goal.style.style] || 'Fr'
+
+    const goalSetParams: MilestoneGoalSetParams = {
+      distance: 50,
+      reps: 6,
+      sets: 3,
+      target_average_time: targetAverageTime,
+      style: styleValue,
+      swim_category: 'Swim',
+      circle: 90,
+      practice_pool_type: practicePoolType
+    }
+
+    setType('reps_time')
+    setSelectedTemplate('goalset_50m_6x3')
+    setParams(goalSetParams)
+    setIsGoalSetModalOpen(false)
   }
 
   // タイプ変更時にパラメータをリセット
@@ -152,6 +228,7 @@ export default function MilestoneCreateModal({
                 showTemplateSelector={true}
                 selectedTemplate={selectedTemplate}
                 onTemplateSelect={handleTemplateSelect}
+                availableTemplates={availableTemplates}
               />
 
               {/* ボタン */}
@@ -175,6 +252,15 @@ export default function MilestoneCreateModal({
           </div>
         </div>
       </div>
+
+      {/* ゴールセット計算モーダル */}
+      <GoalSetCalculatorModal
+        isOpen={isGoalSetModalOpen}
+        onClose={() => setIsGoalSetModalOpen(false)}
+        onConfirm={handleGoalSetConfirm}
+        goal={goal}
+        style={goal.style}
+      />
     </div>
   )
 }

@@ -57,6 +57,7 @@ export type MilestoneParams =
   | MilestoneTimeParams 
   | MilestoneRepsTimeParams 
   | MilestoneSetParams
+  | MilestoneGoalSetParams
 
 export interface MilestoneTimeParams {
   distance: number
@@ -72,6 +73,11 @@ export interface MilestoneRepsTimeParams {
   style: string
   swim_category: 'Swim' | 'Pull' | 'Kick'
   circle: number
+}
+
+// ゴールセット用パラメータ（reps_time型を拡張）
+export interface MilestoneGoalSetParams extends MilestoneRepsTimeParams {
+  practice_pool_type: number // ゴールセット実施水路（0: 短水路, 1: 長水路）
 }
 
 export interface MilestoneSetParams {
@@ -128,6 +134,10 @@ export function isMilestoneRepsTimeParams(params: MilestoneParams): params is Mi
 
 export function isMilestoneSetParams(params: MilestoneParams): params is MilestoneSetParams {
   return 'sets' in params && 'circle' in params && !('target_average_time' in params)
+}
+
+export function isMilestoneGoalSetParams(params: MilestoneParams): params is MilestoneGoalSetParams {
+  return 'practice_pool_type' in params && 'target_average_time' in params && 'reps' in params
 }
 
 // =============================================================================

@@ -132,6 +132,7 @@ export default function GoalDetail({
         onClose={() => setIsMilestoneModalOpen(false)}
         onSuccess={onUpdate}
         goalId={goal.id}
+        goal={goal}
         styles={styles}
         goalCompetitionDate={goal.competition.date}
       />

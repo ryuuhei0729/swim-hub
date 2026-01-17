@@ -1,103 +1,44 @@
-import type { MilestoneParams, MilestoneTimeParams, MilestoneRepsTimeParams, MilestoneSetParams } from '@apps/shared/types'
+import type { MilestoneGoalSetParams, MilestoneParams, MilestoneTimeParams } from '@apps/shared/types'
 
 export interface MilestoneTemplate {
   id: string
   name: string
   description: string
   type: 'time' | 'reps_time' | 'set'
-  category: 'sprint' | 'middle' | 'long' | 'endurance'
+  category: 'sprint' | 'middle' | 'long' | 'endurance' | 'any'
   defaultParams: MilestoneParams
 }
 
 export const MILESTONE_TEMPLATES: MilestoneTemplate[] = [
-  // スプリント系
+  // タイムトライアル
   {
-    id: 'sprint_50m_single',
-    name: '50mタイムトライアル',
-    description: '50m×1本の目標タイム達成',
+    id: 'time_trial',
+    name: 'タイムトライアル',
+    description: '練習,大会でのタイム測定を自動的に観測',
     type: 'time',
-    category: 'sprint',
+    category: 'any',
     defaultParams: {
-      distance: 50,
-      target_time: 30.0,
-      style: 'Fr'
+      distance: 100, // デフォルト値（実際はgoalから自動取得）
+      target_time: 60.0, // デフォルト値（実際はgoalから自動取得し、* 1.01）
+      style: 'Fr' // デフォルト値（実際はgoalから自動取得）
     } as MilestoneTimeParams
   },
+  // ゴールセット
   {
-    id: 'sprint_50m_reps',
-    name: '50m×10本平均',
-    description: '50m×10本の平均タイム達成',
-    type: 'reps_time',
-    category: 'sprint',
-    defaultParams: {
-      distance: 50,
-      reps: 10,
-      sets: 1,
-      target_average_time: 35.0,
-      style: 'Fr',
-      swim_category: 'Swim',
-      circle: 60
-    } as MilestoneRepsTimeParams
-  },
-  // 中距離系
-  {
-    id: 'middle_100m_single',
-    name: '100mタイムトライアル',
-    description: '100m×1本の目標タイム達成',
-    type: 'time',
-    category: 'middle',
-    defaultParams: {
-      distance: 100,
-      target_time: 60.0,
-      style: 'Fr'
-    } as MilestoneTimeParams
-  },
-  {
-    id: 'middle_100m_reps',
-    name: '100m×5本平均',
-    description: '100m×5本の平均タイム達成',
+    id: 'goalset_50m_6x3',
+    name: 'ゴールセット',
+    description: '50m×6本×3セット（100m目標タイムから逆算）',
     type: 'reps_time',
     category: 'middle',
     defaultParams: {
-      distance: 100,
-      reps: 5,
-      sets: 1,
-      target_average_time: 70.0,
-      style: 'Fr',
-      swim_category: 'Swim',
-      circle: 120
-    } as MilestoneRepsTimeParams
-  },
-  // 長距離・持久力系
-  {
-    id: 'endurance_200m_set',
-    name: '200m×4本×3セット完遂',
-    description: '200m×4本×3セットの完遂',
-    type: 'set',
-    category: 'endurance',
-    defaultParams: {
-      distance: 200,
-      reps: 4,
+      distance: 50,
+      reps: 6,
       sets: 3,
-      circle: 140,
-      style: 'Fr',
-      swim_category: 'Swim'
-    } as MilestoneSetParams
-  },
-  {
-    id: 'endurance_400m_reps',
-    name: '400m×4本平均',
-    description: '400m×4本の平均タイム達成',
-    type: 'reps_time',
-    category: 'endurance',
-    defaultParams: {
-      distance: 400,
-      reps: 4,
-      sets: 1,
-      target_average_time: 300.0,
+      target_average_time: 35.0, // デフォルト値（実際は逆算で計算）
       style: 'Fr',
       swim_category: 'Swim',
-      circle: 360
-    } as MilestoneRepsTimeParams
+      circle: 90,
+      practice_pool_type: 0 // デフォルト: 短水路（実際はモーダルで選択）
+    } as MilestoneGoalSetParams
   }
 ]
