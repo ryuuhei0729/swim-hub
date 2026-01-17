@@ -27,11 +27,11 @@ import {
 
 // スタイルコード→日本語名のマッピング（practice_logsは日本語名で格納されている）
 const STYLE_CODE_TO_JAPANESE: Record<string, string> = {
-  freestyle: '自由形',
-  backstroke: '背泳ぎ',
-  breaststroke: '平泳ぎ',
-  butterfly: 'バタフライ',
-  individual_medley: '個人メドレー'
+  fr: '自由形',
+  ba: '背泳ぎ',
+  br: '平泳ぎ',
+  fly: 'バタフライ',
+  im: '個人メドレー'
 }
 
 /**
@@ -652,8 +652,9 @@ export class GoalAPI {
 
       for (const [setNum, setTimes] of setGroups.entries()) {
         if (setTimes.length >= params.reps) {
-          // 最初のN本の平均を計算
-          const firstNTimes = setTimes.slice(0, params.reps)
+          // rep_number順にソートしてから最初のN本の平均を計算
+          const sortedTimes = [...setTimes].sort((a, b) => a.rep_number - b.rep_number)
+          const firstNTimes = sortedTimes.slice(0, params.reps)
           const avgTime = firstNTimes.reduce((sum, t) => sum + t.time, 0) / params.reps
           
           if (avgTime <= params.target_average_time) {
@@ -908,6 +909,9 @@ export class GoalAPI {
           new Date().toISOString()
         )
 
+        // ローカル変数も更新（期限切れチェックで正しく判定するため）
+        milestone.status = 'achieved'
+
         // 達成記録を保存（milestone_achievements）
         if (achievementData) {
           await this.supabase
@@ -924,6 +928,8 @@ export class GoalAPI {
         const hasRecords = await this.hasRecordsForMilestone(userId, milestone)
         if (hasRecords) {
           await this.updateMilestoneStatus(milestone.id, 'in_progress')
+          // ローカル変数も更新（期限切れチェックで正しく判定するため）
+          milestone.status = 'in_progress'
         }
       }
 

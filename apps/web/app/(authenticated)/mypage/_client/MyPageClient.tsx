@@ -163,6 +163,14 @@ export default function MyPageClient({
     }
   }, [user, supabase, queryClient])
 
+  const handleGoogleCalendarUpdate = useCallback(() => {
+    // プロフィールを再取得
+    if (user) {
+      queryClient.invalidateQueries({ queryKey: userKeys.profile(user.id) })
+      queryClient.invalidateQueries({ queryKey: userKeys.currentProfile() })
+    }
+  }, [user, queryClient])
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* ヘッダー */}
@@ -219,13 +227,7 @@ export default function MyPageClient({
         {/* Googleカレンダー連携設定 */}
         <GoogleCalendarSyncSettings
           profile={dbProfile}
-          onUpdate={() => {
-            // プロフィールを再取得
-            if (user) {
-              queryClient.invalidateQueries({ queryKey: userKeys.profile(user.id) })
-              queryClient.invalidateQueries({ queryKey: userKeys.currentProfile() })
-            }
-          }}
+          onUpdate={handleGoogleCalendarUpdate}
         />
       </div>
 

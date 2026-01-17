@@ -3,6 +3,7 @@
 // =============================================================================
 
 import React from 'react'
+import { format } from 'date-fns'
 import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-server-auth'
 import { PracticeAPI } from '@apps/shared/api/practices'
 import { getCachedStyles, getUserTags } from '@/lib/data-loaders/common'
@@ -19,8 +20,8 @@ async function getPractices(
   const practiceAPI = new PracticeAPI(supabase)
   
   // 過去1年分を取得（usePracticesフックと同じロジック）
-  const end = new Date().toISOString().split('T')[0]
-  const start = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const end = format(new Date(), 'yyyy-MM-dd')
+  const start = format(new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd')
   
   return await practiceAPI.getPractices(start, end)
 }

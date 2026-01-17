@@ -72,7 +72,7 @@ export const validateForm = (data: Record<string, unknown>, rules: Record<string
   
   Object.keys(rules).forEach(field => {
     const value = data[field]
-    const rule = rules[field] as ValidationRule
+    const rule = (rules[field] ?? {}) as ValidationRule
     
     if (rule.required && !isRequired(value)) {
       errors[field] = `${rule.label || field}は必須です`
@@ -94,12 +94,12 @@ export const validateForm = (data: Record<string, unknown>, rules: Record<string
       return
     }
     
-    if (value && typeof value === 'string' && rule.minLength && value.length < rule.minLength) {
+    if (value && typeof value === 'string' && typeof rule.minLength === 'number' && value.length < rule.minLength) {
       errors[field] = `${rule.label || field}は${rule.minLength}文字以上で入力してください`
       return
     }
     
-    if (value && typeof value === 'string' && rule.maxLength && value.length > rule.maxLength) {
+    if (value && typeof value === 'string' && typeof rule.maxLength === 'number' && value.length > rule.maxLength) {
       errors[field] = `${rule.label || field}は${rule.maxLength}文字以下で入力してください`
       return
     }

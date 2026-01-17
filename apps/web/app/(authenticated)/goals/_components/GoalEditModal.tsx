@@ -44,22 +44,45 @@ export default function GoalEditModal({
   const [startTime, setStartTime] = useState<string>('')
   const [useBestTime, setUseBestTime] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [validationError, setValidationError] = useState<string | null>(null)
 
   const goalAPI = useMemo(() => new GoalAPI(supabase), [supabase])
   const recordAPI = useMemo(() => new RecordAPI(supabase), [supabase])
 
-  // 大会一覧を取得（未来の日付のみ）
+  // 大会一覧を取得（未来の大会 + 編集中目標の大会）
   useEffect(() => {
     if (isOpen && competitionMode === 'existing') {
       const today = format(new Date(), 'yyyy-MM-dd')
+      const existingCompetitionId = goal?.competition_id
+
       recordAPI.getCompetitions(today)
-        .then(setCompetitions)
+        .then(async (futureCompetitions) => {
+          // 既存の大会が未来の大会リストに含まれているか確認
+          const existingIncluded = futureCompetitions.some(c => c.id === existingCompetitionId)
+          
+          if (existingCompetitionId && !existingIncluded) {
+            // 既存の大会が含まれていない場合、個別に取得してマージ
+            const { data: existingCompetition } = await supabase
+              .from('competitions')
+              .select('*')
+              .eq('id', existingCompetitionId)
+              .single()
+            
+            if (existingCompetition) {
+              setCompetitions([existingCompetition, ...futureCompetitions])
+            } else {
+              setCompetitions(futureCompetitions)
+            }
+          } else {
+            setCompetitions(futureCompetitions)
+          }
+        })
         .catch((error) => {
           console.error('大会一覧取得エラー:', error)
           setCompetitions([])
         })
     }
-  }, [isOpen, competitionMode, supabase, recordAPI])
+  }, [isOpen, competitionMode, supabase, recordAPI, goal?.competition_id])
 
   // 既存の目標データでフォームを初期化
   useEffect(() => {
@@ -70,6 +93,7 @@ export default function GoalEditModal({
       setTargetTime(formatTime(goal.target_time))
       setStartTime(goal.start_time ? formatTime(goal.start_time) : '')
       setUseBestTime(false)
+      setValidationError(null)
     }
   }, [isOpen, goal])
 
@@ -103,10 +127,38 @@ export default function GoalEditModal({
     if (!user) return
 
     setIsLoading(true)
+    setValidationError(null)
+
     try {
+      // タイムを秒数に変換
       const targetTimeSeconds = parseTimeToSeconds(targetTime)
       const startTimeSeconds = startTime ? parseTimeToSeconds(startTime) : null
+      const parsedStyleId = parseInt(styleId, 10)
 
+      // バリデーション: targetTimeSeconds（必須）
+      if (!Number.isFinite(targetTimeSeconds) || Number.isNaN(targetTimeSeconds) || targetTimeSeconds < 0) {
+        setValidationError('目標タイムが無効です。正しい形式で入力してください。')
+        setIsLoading(false)
+        return
+      }
+
+      // バリデーション: startTimeSeconds（startTimeが提供されている場合のみ）
+      if (startTime) {
+        if (startTimeSeconds === null || !Number.isFinite(startTimeSeconds) || Number.isNaN(startTimeSeconds) || startTimeSeconds < 0) {
+          setValidationError('開始タイムが無効です。正しい形式で入力してください。')
+          setIsLoading(false)
+          return
+        }
+      }
+
+      // バリデーション: styleId（必須）
+      if (!Number.isFinite(parsedStyleId) || Number.isNaN(parsedStyleId) || parsedStyleId <= 0) {
+        setValidationError('種目が選択されていません。')
+        setIsLoading(false)
+        return
+      }
+
+      // バリデーションが通ったので、大会作成と目標更新を実行
       let competitionId = selectedCompetitionId
       
       // 新規大会を作成する場合
@@ -121,9 +173,10 @@ export default function GoalEditModal({
         competitionId = newComp.id
       }
 
+      // バリデーション済みの値のみを使用して目標を更新
       await goalAPI.updateGoal(goal.id, {
         competitionId: competitionId,
-        styleId: parseInt(styleId, 10),
+        styleId: parsedStyleId,
         targetTime: targetTimeSeconds,
         startTime: startTimeSeconds
       } as Omit<UpdateGoalInput, 'id'>)
@@ -151,6 +204,7 @@ export default function GoalEditModal({
     setTargetTime('')
     setStartTime('')
     setUseBestTime(false)
+    setValidationError(null)
     onClose()
   }
 
@@ -183,6 +237,14 @@ export default function GoalEditModal({
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {validationError && (
+                <div
+                  className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-md"
+                  role="alert"
+                >
+                  {validationError}
+                </div>
+              )}
               <GoalForm
                 competitionMode={competitionMode}
                 onCompetitionModeChange={setCompetitionMode}

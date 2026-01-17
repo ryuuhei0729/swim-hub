@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
+import { format } from 'date-fns'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '@/contexts'
 import { GoalAPI } from '@apps/shared/api/goals'
@@ -35,7 +36,7 @@ export default function MilestoneSelectorModal({
       goalAPI.getGoals({ status: 'active' })
         .then(async (goals) => {
           const allMilestones: Milestone[] = []
-          const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD形式
+          const today = format(new Date(), 'yyyy-MM-dd') // ローカル日付のYYYY-MM-DD形式
           for (const goal of goals) {
             const goalMilestones = await goalAPI.getMilestones(goal.id, {
               status: ['not_started', 'in_progress'], // 未達成・進行中のマイルストーン

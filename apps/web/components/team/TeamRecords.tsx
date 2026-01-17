@@ -94,7 +94,11 @@ export default function TeamRecords({ teamId, isAdmin: _isAdmin = false }: TeamR
         const transformedRecords: TeamRecord[] = (recordsData || []).map((record: Record<string, unknown>) => ({
           id: String(record.id ?? ''),
           user_id: String(record.user_id ?? ''),
-          time: typeof record.time === 'number' ? record.time : 0,
+          time: typeof record.time === 'number'
+            ? record.time
+            : typeof record.time === 'string' && Number.isFinite(Number(record.time))
+              ? Number(record.time)
+              : 0,
           created_at: String(record.created_at ?? ''),
           users: Array.isArray(record.users) && record.users.length > 0 
             ? (record.users[0] as TeamRecord['users'])

@@ -90,12 +90,39 @@ export default function GoalCreateModal({
 
     setIsLoading(true)
     try {
+      // 目標タイムのバリデーション
       const targetTimeSeconds = parseTimeToSeconds(targetTime)
-      const startTimeSeconds = startTime ? parseTimeToSeconds(startTime) : null
+      if (!Number.isFinite(targetTimeSeconds) || targetTimeSeconds <= 0 || targetTimeSeconds > 3600) {
+        alert('目標タイムを正しく入力してください（0秒超〜60分以内）')
+        setIsLoading(false)
+        return
+      }
+
+      // 開始タイムのバリデーション（入力がある場合のみ）
+      let startTimeSeconds: number | null = null
+      if (startTime && startTime.trim() !== '') {
+        startTimeSeconds = parseTimeToSeconds(startTime)
+        if (!Number.isFinite(startTimeSeconds) || startTimeSeconds <= 0 || startTimeSeconds > 3600) {
+          alert('開始タイムを正しく入力してください（0秒超〜60分以内）')
+          setIsLoading(false)
+          return
+        }
+      }
+
+      // competitionIdのバリデーション（既存大会選択時）
+      let competitionId: string | undefined
+      if (competitionMode === 'existing') {
+        if (!selectedCompetitionId || selectedCompetitionId.trim() === '') {
+          alert('大会を選択してください')
+          setIsLoading(false)
+          return
+        }
+        competitionId = selectedCompetitionId
+      }
 
       await goalAPI.createGoal({
         userId: user.id,
-        competitionId: competitionMode === 'existing' ? selectedCompetitionId : undefined,
+        competitionId: competitionId,
         competitionData: competitionMode === 'new' ? {
           title: newCompetition.title,
           date: newCompetition.date,

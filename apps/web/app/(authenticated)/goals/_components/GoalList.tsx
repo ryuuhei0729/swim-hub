@@ -54,8 +54,13 @@ export default function GoalList({
   const handleDelete = async (e: React.MouseEvent, goalId: string) => {
     e.stopPropagation()
     if (confirm('この目標を削除しますか？')) {
-      await goalAPI.deleteGoal(goalId)
-      await onDeleteGoal()
+      try {
+        await goalAPI.deleteGoal(goalId)
+        await onDeleteGoal()
+      } catch (error) {
+        console.error('目標削除エラー:', error)
+        alert('目標の削除に失敗しました')
+      }
     }
   }
 
@@ -122,6 +127,7 @@ export default function GoalList({
                   onClick={(e) => handleEdit(e, goal.id)}
                   className="text-gray-400 hover:text-gray-600 transition-colors p-1"
                   title="編集"
+                  aria-label="編集"
                 >
                   <PencilIcon className="w-4 h-4" />
                 </button>
@@ -129,6 +135,7 @@ export default function GoalList({
                   onClick={(e) => handleDelete(e, goal.id)}
                   className="text-gray-400 hover:text-red-600 transition-colors p-1"
                   title="削除"
+                  aria-label="削除"
                 >
                   <TrashIcon className="w-4 h-4" />
                 </button>

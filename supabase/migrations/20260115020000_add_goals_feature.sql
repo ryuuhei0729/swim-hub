@@ -168,7 +168,33 @@ CREATE POLICY "Users can view achievements of their milestones"
     )
   );
 
-DROP POLICY IF EXISTS "System can create achievements" ON milestone_achievements;
-CREATE POLICY "System can create achievements"
+DROP POLICY IF EXISTS "Users can create their own achievements" ON milestone_achievements;
+CREATE POLICY "Users can create their own achievements"
   ON milestone_achievements FOR INSERT
-  WITH CHECK (true); -- システムが自動作成するため
+  WITH CHECK (
+    -- マイルストーンの所有者のみが達成記録を作成できる
+    EXISTS (
+      SELECT 1 FROM milestones
+      JOIN goals ON goals.id = milestones.goal_id
+      WHERE milestones.id = milestone_achievements.milestone_id
+      AND goals.user_id = auth.uid()
+    )
+    AND (
+      -- practice_log_idが指定されている場合、それも所有者のものである必要がある
+      practice_log_id IS NULL OR
+      EXISTS (
+        SELECT 1 FROM practice_logs
+        WHERE practice_logs.id = milestone_achievements.practice_log_id
+        AND practice_logs.user_id = auth.uid()
+      )
+    )
+    AND (
+      -- record_idが指定されている場合、それも所有者のものである必要がある
+      record_id IS NULL OR
+      EXISTS (
+        SELECT 1 FROM records
+        WHERE records.id = milestone_achievements.record_id
+        AND records.user_id = auth.uid()
+      )
+    )
+  );

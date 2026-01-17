@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { format } from 'date-fns'
 import { useAuth } from '@/contexts/AuthProvider'
 import { TeamPracticesAPI } from '@apps/shared/api/teams/practices'
 import { Button, Input } from '@/components/ui'
@@ -23,7 +24,7 @@ export default function TeamPracticeForm({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0], // YYYY-MM-DD形式
+    date: format(new Date(), 'yyyy-MM-dd'), // ローカル日付のYYYY-MM-DD形式
     title: '',
     place: '',
     note: ''
@@ -36,7 +37,7 @@ export default function TeamPracticeForm({
 
   const handleClose = useCallback(() => {
     setFormData({
-      date: new Date().toISOString().split('T')[0],
+      date: format(new Date(), 'yyyy-MM-dd'),
       title: '',
       place: '',
       note: ''
@@ -128,7 +129,7 @@ export default function TeamPracticeForm({
       
       // フォームをリセット
       setFormData({
-        date: new Date().toISOString().split('T')[0],
+        date: format(new Date(), 'yyyy-MM-dd'),
         title: '',
         place: '',
         note: ''

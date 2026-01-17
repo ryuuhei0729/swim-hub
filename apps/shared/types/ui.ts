@@ -399,6 +399,7 @@ export interface BestTime {
   created_at: string
   pool_type: number // 0: 短水路, 1: 長水路
   is_relaying: boolean
+  style_id: number // 種目ID（追加）
   style: {
     name_jp: string
     distance: number
