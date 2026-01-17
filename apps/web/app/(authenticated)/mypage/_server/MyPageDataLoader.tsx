@@ -65,29 +65,31 @@ async function getProfile(
 
   if (!data) return null
 
+  // Supabaseから取得したデータの型（null/undefinedを許容）
   const userData = data as {
     id: string
     name: string
-    gender: number
-    birthday: string | null
-    bio: string | null
-    profile_image_path: string | null
-    google_calendar_enabled: boolean
-    google_calendar_sync_practices: boolean
-    google_calendar_sync_competitions: boolean
+    gender?: number | null
+    birthday?: string | null
+    bio?: string | null
+    profile_image_path?: string | null
+    google_calendar_enabled?: boolean | null
+    google_calendar_sync_practices?: boolean | null
+    google_calendar_sync_competitions?: boolean | null
   }
 
+  // UserProfileDataに合わせて変換（null/undefinedを適切に処理）
   return {
     id: userData.id,
     name: userData.name,
-    gender: userData.gender,
-    birthday: userData.birthday,
-    bio: userData.bio,
-    avatar_url: userData.profile_image_path,
-    profile_image_path: userData.profile_image_path,
-    google_calendar_enabled: userData.google_calendar_enabled,
-    google_calendar_sync_practices: userData.google_calendar_sync_practices,
-    google_calendar_sync_competitions: userData.google_calendar_sync_competitions
+    gender: userData.gender ?? undefined,
+    birthday: userData.birthday ?? undefined,
+    bio: userData.bio ?? undefined,
+    avatar_url: userData.profile_image_path ?? undefined,
+    profile_image_path: userData.profile_image_path ?? undefined,
+    google_calendar_enabled: userData.google_calendar_enabled ?? undefined,
+    google_calendar_sync_practices: userData.google_calendar_sync_practices ?? undefined,
+    google_calendar_sync_competitions: userData.google_calendar_sync_competitions ?? undefined
   }
 }
 

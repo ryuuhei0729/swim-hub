@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { SupabaseClient } from '@supabase/supabase-js'
+import { format } from 'date-fns'
 import {
   CompetitionInsert
 } from '../types/database'
@@ -419,7 +420,7 @@ export class GoalAPI {
     const { data: { user } } = await this.supabase.auth.getUser()
     if (!user) throw new Error('認証が必要です')
 
-    const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD形式
+    const today = format(new Date(), 'yyyy-MM-dd') // ローカル日付のYYYY-MM-DD形式
 
     const { data, error } = await this.supabase
       .from('milestones')
@@ -895,7 +896,7 @@ export class GoalAPI {
       return
     }
 
-    const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD形式
+    const today = format(new Date(), 'yyyy-MM-dd') // ローカル日付のYYYY-MM-DD形式
 
     for (const milestone of milestones) {
       // 達成判定
@@ -1010,7 +1011,11 @@ export class GoalAPI {
 
       // 期限切れチェック
       if (milestone.deadline) {
-        const deadline = new Date(milestone.deadline).toISOString().split('T')[0]
+        // deadlineは既にYYYY-MM-DD形式の文字列として格納されているため、そのまま使用
+        // ただし、Dateオブジェクトの場合はformatで変換
+        const deadline = typeof milestone.deadline === 'string' 
+          ? milestone.deadline 
+          : format(new Date(milestone.deadline), 'yyyy-MM-dd')
         if (deadline < today && milestone.status !== 'achieved') {
           await this.updateMilestoneStatus(milestone.id, 'expired')
         }

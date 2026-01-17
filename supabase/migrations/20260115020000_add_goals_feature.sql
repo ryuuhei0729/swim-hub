@@ -140,6 +140,13 @@ CREATE POLICY "Users can update milestones of their goals"
       WHERE goals.id = milestones.goal_id
       AND goals.user_id = auth.uid()
     )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM goals
+      WHERE goals.id = milestones.goal_id
+      AND goals.user_id = auth.uid()
+    )
   );
 
 DROP POLICY IF EXISTS "Users can delete milestones of their goals" ON milestones;
