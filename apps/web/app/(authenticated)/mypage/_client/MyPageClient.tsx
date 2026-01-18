@@ -42,6 +42,7 @@ interface BestTime {
 interface UserProfile {
   id: string
   name: string
+  gender?: number
   birthday?: string | null
   bio?: string | null
   avatar_url?: string | null
@@ -102,6 +103,7 @@ export default function MyPageClient({
   const profile: UserProfile | null = queryProfile ? {
     id: queryProfile.id,
     name: queryProfile.name,
+    gender: queryProfile.gender,
     birthday: queryProfile.birthday,
     bio: queryProfile.bio,
     avatar_url: queryProfile.profile_image_path,
@@ -118,6 +120,7 @@ export default function MyPageClient({
       // データベースのカラム名に合わせて変換
       const dbUpdate: UserUpdate = {}
       if (updatedProfile.name !== undefined) dbUpdate.name = updatedProfile.name
+      if (updatedProfile.gender !== undefined) dbUpdate.gender = updatedProfile.gender
       if (updatedProfile.birthday !== undefined) dbUpdate.birthday = updatedProfile.birthday
       if (updatedProfile.bio !== undefined) dbUpdate.bio = updatedProfile.bio
       if (updatedProfile.avatar_url !== undefined) dbUpdate.profile_image_path = updatedProfile.avatar_url
@@ -125,7 +128,7 @@ export default function MyPageClient({
 
       const { error } = await supabase
         .from('users')
-        .update(dbUpdate as any)
+        .update(dbUpdate as Record<string, unknown>)
         .eq('id', user.id)
 
       if (error) throw error
@@ -147,7 +150,7 @@ export default function MyPageClient({
     try {
       const { error } = await supabase
         .from('users')
-        .update({ profile_image_path: newAvatarUrl } as any)
+        .update({ profile_image_path: newAvatarUrl } as Record<string, unknown>)
         .eq('id', user.id)
 
       if (error) throw error
@@ -162,6 +165,14 @@ export default function MyPageClient({
       throw err
     }
   }, [user, supabase, queryClient])
+
+  const handleGoogleCalendarUpdate = useCallback(() => {
+    // プロフィールを再取得
+    if (user) {
+      queryClient.invalidateQueries({ queryKey: userKeys.profile(user.id) })
+      queryClient.invalidateQueries({ queryKey: userKeys.currentProfile() })
+    }
+  }, [user, queryClient])
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -219,13 +230,7 @@ export default function MyPageClient({
         {/* Googleカレンダー連携設定 */}
         <GoogleCalendarSyncSettings
           profile={dbProfile}
-          onUpdate={() => {
-            // プロフィールを再取得
-            if (user) {
-              queryClient.invalidateQueries({ queryKey: userKeys.profile(user.id) })
-              queryClient.invalidateQueries({ queryKey: userKeys.currentProfile() })
-            }
-          }}
+          onUpdate={handleGoogleCalendarUpdate}
         />
       </div>
 

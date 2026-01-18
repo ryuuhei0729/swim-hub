@@ -250,7 +250,7 @@ export default function PracticeClient({
     setEditingData({
       id: log.id,
       practiceId: log.practiceId,
-      date: log.practice?.date || new Date().toISOString().split('T')[0],
+      date: log.practice?.date || format(new Date(), 'yyyy-MM-dd'),
       place: log.practice?.place || '',
       note: log.practice?.note || '',
       style: log.style,
@@ -318,7 +318,7 @@ export default function PracticeClient({
         // 新規作成時の処理
         const firstMenu = menus[0] || {}
         const practiceInput = {
-          date: firstMenu.practiceDate || new Date().toISOString().split('T')[0],
+          date: firstMenu.practiceDate || format(new Date(), 'yyyy-MM-dd'),
           title: firstMenu.title || null,
           place: firstMenu.place || null,
           note: firstMenu.note || null

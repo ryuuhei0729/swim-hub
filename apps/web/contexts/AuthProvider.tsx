@@ -109,11 +109,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         provider,
         options: {
           redirectTo,
-          scopes: options?.scopes || 'https://www.googleapis.com/auth/calendar',
-          queryParams: options?.queryParams || {
-            access_type: 'offline',
-            prompt: 'consent'
-          }
+          ...(options?.scopes && { scopes: options.scopes }),
+          ...(options?.queryParams && { queryParams: options.queryParams })
         }
       })
       

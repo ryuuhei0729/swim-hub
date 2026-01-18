@@ -8,6 +8,10 @@ import TimeInputModal from './TimeInputModal'
 import TagInput from './TagInput'
 import { useAuth } from '@/contexts'
 import { PracticeTag } from '@apps/shared/types/database'
+import { PracticeAPI } from '@apps/shared/api/practices'
+import MilestoneSelectorModal from '@/app/(authenticated)/goals/_components/MilestoneSelectorModal'
+import type { MilestoneTimeParams, MilestoneRepsTimeParams, MilestoneSetParams } from '@apps/shared/types'
+import { isMilestoneTimeParams, isMilestoneRepsTimeParams, isMilestoneSetParams } from '@apps/shared/types/goals'
 
 type Tag = PracticeTag
 
@@ -88,7 +92,8 @@ export default function PracticeLogForm({
   setAvailableTags,
   styles: _styles = []
 }: PracticeLogFormProps) {
-  const { supabase: _supabase } = useAuth()
+  const { supabase: _supabase, user } = useAuth()
+  const practiceAPI = new PracticeAPI(_supabase)
 
   // タイム表示のフォーマット関数
   const formatTime = (seconds: number): string => {
@@ -131,6 +136,9 @@ export default function PracticeLogForm({
   // タイム入力モーダルの状態
   const [showTimeModal, setShowTimeModal] = useState(false)
   const [currentMenuId, setCurrentMenuId] = useState<string | null>(null)
+
+  // マイルストーン選択モーダルの状態
+  const [isMilestoneSelectorOpen, setIsMilestoneSelectorOpen] = useState(false)
 
   // フォームを初期化（編集データがある場合とない場合）
   useEffect(() => {
@@ -342,16 +350,27 @@ export default function PracticeLogForm({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="font-medium text-gray-900">練習メニュー</h4>
-                <Button
-                  type="button"
-                  onClick={addMenu}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-                  disabled={isLoading}
-                  data-testid="add-menu-button"
-                >
-                  <PlusIcon className="h-4 w-4" />
-                  メニューを追加
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    onClick={() => setIsMilestoneSelectorOpen(true)}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                    disabled={isLoading}
+                  >
+                    📌 マイルストーンから作成
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={addMenu}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+                    disabled={isLoading}
+                    data-testid="add-menu-button"
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                    メニューを追加
+                  </Button>
+                </div>
               </div>
 
               {menus.map((menu, index) => (
@@ -717,6 +736,113 @@ export default function PracticeLogForm({
           menuNumber={menus.findIndex(m => m.id === currentMenuId) + 1}
         />
       )}
+
+      {/* マイルストーン選択モーダル */}
+      <MilestoneSelectorModal
+        isOpen={isMilestoneSelectorOpen}
+        onClose={() => setIsMilestoneSelectorOpen(false)}
+        onSelect={async (milestone) => {
+          // マイルストーンのパラメータでフォームを自動入力
+          const params = milestone.params
+          let newMenu: PracticeMenu
+
+          // milestone tagを取得または作成
+          // タイトルベースのタグ名を使用（わかりやすくするため）
+          const tagName = `milestone:${milestone.title}`
+          // 後方互換性のため、ID形式のタグも検索
+          const legacyTagName = `milestone:${milestone.id}`
+          let milestoneTag: Tag | null = null
+
+          // 既存のタグを検索（まずタイトル形式、次にID形式）
+          const existingTag = availableTags.find(t => 
+            t.name === tagName || t.name === legacyTagName
+          )
+          if (existingTag) {
+            milestoneTag = existingTag
+            // 既存タグがID形式の場合は、タイトル形式に更新
+            if (existingTag.name === legacyTagName && user) {
+              try {
+                const updatedTag = await practiceAPI.updatePracticeTag(existingTag.id, tagName, existingTag.color)
+                milestoneTag = updatedTag
+                // 利用可能タグリストも更新
+                setAvailableTags(availableTags.map(t => 
+                  t.id === existingTag.id ? updatedTag : t
+                ))
+              } catch (error) {
+                console.error('milestone tag更新エラー:', error)
+                // 更新に失敗しても既存タグを使用
+              }
+            }
+          } else if (user) {
+            // タグが存在しない場合は作成
+            try {
+              const createdTag = await practiceAPI.createPracticeTag(tagName, '#3B82F6')
+              milestoneTag = createdTag
+              setAvailableTags([...availableTags, createdTag])
+            } catch (error) {
+              console.error('milestone tag作成エラー:', error)
+            }
+          }
+
+          if (isMilestoneTimeParams(params)) {
+            const p = params as MilestoneTimeParams
+            newMenu = {
+              id: String(Date.now()),
+              style: p.style,
+              swimCategory: 'Swim',
+              distance: p.distance,
+              reps: 1,
+              sets: 1,
+              circleMin: 0,
+              circleSec: 0,
+              note: '',
+              tags: milestoneTag ? [milestoneTag] : [],
+              times: []
+            }
+          } else if (isMilestoneRepsTimeParams(params)) {
+            const p = params as MilestoneRepsTimeParams
+            const circleTime = p.circle
+            const circleMin = Math.floor(circleTime / 60)
+            const circleSec = circleTime % 60
+            newMenu = {
+              id: String(Date.now()),
+              style: p.style,
+              swimCategory: p.swim_category,
+              distance: p.distance,
+              reps: p.reps,
+              sets: p.sets,
+              circleMin: circleMin,
+              circleSec: circleSec,
+              note: '',
+              tags: milestoneTag ? [milestoneTag] : [],
+              times: []
+            }
+          } else if (isMilestoneSetParams(params)) {
+            const p = params as MilestoneSetParams
+            const circleTime = p.circle
+            const circleMin = Math.floor(circleTime / 60)
+            const circleSec = circleTime % 60
+            newMenu = {
+              id: String(Date.now()),
+              style: p.style,
+              swimCategory: p.swim_category,
+              distance: p.distance,
+              reps: p.reps,
+              sets: p.sets,
+              circleMin: circleMin,
+              circleSec: circleSec,
+              note: '',
+              tags: milestoneTag ? [milestoneTag] : [],
+              times: []
+            }
+          } else {
+            return // 未知のタイプ
+          }
+
+          // 既存のメニューをクリアして新しいメニューを設定
+          setMenus([newMenu])
+        }}
+      />
     </div>
   )
 }

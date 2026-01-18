@@ -75,6 +75,8 @@ export default function MemberDetailModal({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isRemoving, setIsRemoving] = useState(false)
+  const [isRoleChangeConfirmOpen, setIsRoleChangeConfirmOpen] = useState(false)
+  const [pendingRole, setPendingRole] = useState<'admin' | 'user' | null>(null)
   
   const { supabase } = useAuth()
 
@@ -283,6 +285,28 @@ export default function MemberDetailModal({
       console.error('権限変更エラー:', err)
       setError('権限の変更に失敗しました')
     }
+  }
+
+  // 確認モーダルを開く
+  const handleRoleChangeClick = (newRole: 'admin' | 'user') => {
+    if (member?.role === newRole) return
+    setPendingRole(newRole)
+    setIsRoleChangeConfirmOpen(true)
+  }
+
+  // 確認後にロール変更を実行
+  const confirmRoleChange = async () => {
+    if (pendingRole) {
+      await handleRoleChange(pendingRole)
+    }
+    setIsRoleChangeConfirmOpen(false)
+    setPendingRole(null)
+  }
+
+  // キャンセル
+  const cancelRoleChange = () => {
+    setIsRoleChangeConfirmOpen(false)
+    setPendingRole(null)
   }
 
   const handleRemoveMember = async () => {
@@ -600,6 +624,7 @@ export default function MemberDetailModal({
   if (!member) return null
 
   return (
+    <>
     <BaseModal isOpen={isOpen} onClose={onClose} size="xl">
       <div className="w-full max-w-4xl mx-auto p-6" data-testid="team-member-detail-modal">
         {/* エラー表示 */}
@@ -681,7 +706,7 @@ export default function MemberDetailModal({
               {/* 権限切り替え */}
                 <div className="flex items-center bg-gray-100 rounded-lg p-1" data-testid="team-member-role-toggle">
                 <button
-                  onClick={() => handleRoleChange('user')}
+                  onClick={() => handleRoleChangeClick('user')}
                   className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                     member.role === 'user'
                       ? 'bg-white text-gray-900 shadow-sm'
@@ -692,7 +717,7 @@ export default function MemberDetailModal({
                   ユーザー
                 </button>
                 <button
-                  onClick={() => handleRoleChange('admin')}
+                  onClick={() => handleRoleChangeClick('admin')}
                   className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                     member.role === 'admin'
                       ? 'bg-yellow-100 text-yellow-800 shadow-sm'
@@ -754,5 +779,35 @@ export default function MemberDetailModal({
         </div>
       </div>
     </BaseModal>
+
+    {/* 権限変更確認モーダル */}
+    <BaseModal
+      isOpen={isRoleChangeConfirmOpen}
+      onClose={cancelRoleChange}
+      title="権限変更の確認"
+      size="sm"
+    >
+      <div className="p-4">
+        <p className="text-gray-700 mb-6">
+          {member?.users?.name}さんの権限を
+          「{pendingRole === 'admin' ? '管理者' : 'ユーザー'}」に変更しますか？
+        </p>
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={cancelRoleChange}
+            className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            キャンセル
+          </button>
+          <button
+            onClick={confirmRoleChange}
+            className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
+          >
+            変更する
+          </button>
+        </div>
+      </div>
+    </BaseModal>
+    </>
   )
 }

@@ -11,3 +11,5 @@ export * from './ui'
 // 認証関連型
 export * from './auth'
 
+// 目標管理型
+export * from './goals'

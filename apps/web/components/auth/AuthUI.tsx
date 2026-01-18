@@ -41,12 +41,7 @@ export const AuthUI: React.FC = () => {
       const { data, error: authError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo,
-          scopes: 'https://www.googleapis.com/auth/calendar',
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent'
-          }
+          redirectTo
         }
       })
 

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 
@@ -43,7 +43,7 @@ export default function TimeInputModal({
   const [times, setTimes] = useState<TimeEntry[]>([])
 
   // 全てのセット・レップの組み合わせを生成する関数
-  const generateTimeCombinations = (): TimeEntry[] => {
+  const generateTimeCombinations = useCallback((): TimeEntry[] => {
     const allCombinations: TimeEntry[] = []
     for (let set = 1; set <= setCount; set++) {
       for (let rep = 1; rep <= repCount; rep++) {
@@ -64,14 +64,14 @@ export default function TimeInputModal({
       }
     }
     return allCombinations
-  }
+  }, [setCount, repCount, initialTimes])
 
   // 依存する値が変更されたときに組み合わせを再生成
   useEffect(() => {
     if (isOpen) {
       setTimes(generateTimeCombinations())
     }
-  }, [setCount, repCount, initialTimes, isOpen])
+  }, [setCount, repCount, initialTimes, isOpen, generateTimeCombinations])
 
   if (!isOpen) return null
 

@@ -1,9 +1,12 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts'
 import CalendarContainer from '../_components/CalendarContainer'
 import TeamAnnouncementsSection from '../_components/TeamAnnouncementsSection'
+import ReflectionModal from '@/app/(authenticated)/goals/_components/ReflectionModal'
+import { GoalAPI } from '@apps/shared/api/goals'
+import type { Milestone } from '@apps/shared/types'
 import {
   useCreatePracticeMutation,
   useUpdatePracticeMutation,
@@ -62,6 +65,8 @@ export default function DashboardClient({
 }: DashboardClientProps) {
   const { user, supabase } = useAuth()
   const [notificationsRefreshKey, setNotificationsRefreshKey] = useState(0)
+  const [expiredMilestone, setExpiredMilestone] = useState<Milestone | null>(null)
+  const [hasCheckedMilestones, setHasCheckedMilestones] = useState(false)
   
   // Zustandストア
   const {
@@ -111,6 +116,30 @@ export default function DashboardClient({
     setAvailableTags(tags)
     setCompetitionStyles(styles)
   }, [tags, styles, setAvailableTags, setCompetitionStyles])
+
+  // 期限切れマイルストーンチェック（ログイン時）
+  useEffect(() => {
+    if (!user || hasCheckedMilestones) return
+
+    const checkExpiredMilestones = async () => {
+      try {
+        const goalAPI = new GoalAPI(supabase)
+        const expired = await goalAPI.getExpiredMilestones()
+        
+        if (expired && expired.length > 0) {
+          // 最初の1件のみ表示（1回のみ表示のため）
+          setExpiredMilestone(expired[0])
+        }
+        
+        setHasCheckedMilestones(true)
+      } catch (error) {
+        console.error('期限切れマイルストーン取得エラー:', error)
+        setHasCheckedMilestones(true)
+      }
+    }
+
+    checkExpiredMilestones()
+  }, [user, supabase, hasCheckedMilestones])
 
   // カレンダーイベントハンドラーは useCalendarHandlers カスタムフックから取得
 
@@ -302,6 +331,25 @@ export default function DashboardClient({
           onRecordLogSubmit={handleRecordLogSubmit}
           styles={styles}
         />
+
+        {/* 期限切れ内省モーダル */}
+        {expiredMilestone && (
+          <ReflectionModal
+            isOpen={!!expiredMilestone}
+            onClose={() => setExpiredMilestone(null)}
+            milestone={expiredMilestone}
+            onSave={async () => {
+              // 保存後、次の期限切れマイルストーンをチェック
+              const goalAPI = new GoalAPI(supabase)
+              const expired = await goalAPI.getExpiredMilestones()
+              if (expired && expired.length > 0) {
+                setExpiredMilestone(expired[0])
+              } else {
+                setExpiredMilestone(null)
+              }
+            }}
+          />
+        )}
       </div>
     </div>
   )

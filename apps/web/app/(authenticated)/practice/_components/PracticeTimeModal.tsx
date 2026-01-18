@@ -33,47 +33,47 @@ type PracticeFromDB = Practice & {
 
 // 型ガード関数
 const isPracticeTag = (value: unknown): value is PracticeTag => {
+  if (typeof value !== 'object' || value === null) return false
+  const obj = value as Record<string, unknown>
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    'id' in value &&
-    'name' in value &&
-    'color' in value &&
-    typeof (value as any).id === 'string' &&
-    typeof (value as any).name === 'string' &&
-    typeof (value as any).color === 'string'
+    'id' in obj &&
+    'name' in obj &&
+    'color' in obj &&
+    typeof obj.id === 'string' &&
+    typeof obj.name === 'string' &&
+    typeof obj.color === 'string'
   )
 }
 
 const isPracticeTime = (value: unknown): value is PracticeTime => {
+  if (typeof value !== 'object' || value === null) return false
+  const obj = value as Record<string, unknown>
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    'id' in value &&
-    'time' in value &&
-    'rep_number' in value &&
-    'set_number' in value &&
-    typeof (value as any).id === 'string' &&
-    typeof (value as any).time === 'number' &&
-    typeof (value as any).rep_number === 'number' &&
-    typeof (value as any).set_number === 'number'
+    'id' in obj &&
+    'time' in obj &&
+    'rep_number' in obj &&
+    'set_number' in obj &&
+    typeof obj.id === 'string' &&
+    typeof obj.time === 'number' &&
+    typeof obj.rep_number === 'number' &&
+    typeof obj.set_number === 'number'
   )
 }
 
 const isPracticeLogTagRelation = (value: unknown): value is PracticeLogTagRelation => {
+  if (typeof value !== 'object' || value === null) return false
+  const obj = value as Record<string, unknown>
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    'practice_tag_id' in value &&
-    typeof (value as any).practice_tag_id === 'string' &&
-    (!('practice_tags' in value) || (value as any).practice_tags === null || isPracticeTag((value as any).practice_tags))
+    'practice_tag_id' in obj &&
+    typeof obj.practice_tag_id === 'string' &&
+    (!('practice_tags' in obj) || obj.practice_tags === null || isPracticeTag(obj.practice_tags))
   )
 }
 
 const isPracticeLogFromDB = (value: unknown): value is PracticeLogFromDB => {
   if (!(typeof value === 'object' && value !== null)) return false
   
-  const obj = value as any
+  const obj = value as Record<string, unknown>
   
   // 基本フィールドのチェック
   if (
@@ -106,7 +106,7 @@ const isPracticeLogFromDB = (value: unknown): value is PracticeLogFromDB => {
 const isPracticeFromDB = (value: unknown): value is PracticeFromDB => {
   if (!(typeof value === 'object' && value !== null)) return false
   
-  const obj = value as any
+  const obj = value as Record<string, unknown>
   
   // 基本フィールドのチェック
   if (
@@ -236,7 +236,7 @@ export default function PracticeTimeModal({
     }
 
     loadPractice()
-  }, [isOpen, practiceId])
+  }, [isOpen, practiceId, supabase])
 
   if (!isOpen) return null
 
