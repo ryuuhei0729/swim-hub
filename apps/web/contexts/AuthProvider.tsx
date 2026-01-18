@@ -54,7 +54,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [supabaseClient])
 
   // サインアップ
-  const signUp = useCallback(async (email: string, password: string, name?: string) => {
+  const signUp = useCallback(async (
+    email: string, 
+    password: string, 
+    name?: string,
+    gender?: number,
+    birthday?: string
+  ) => {
     if (!supabaseClient) {
       return { data: null, error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
     }
@@ -70,7 +76,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password,
         options: {
           data: {
-            name: name || ''
+            name: name || '',
+            gender: gender ?? 0,
+            birthday: birthday || null
           },
           // メール認証後のリダイレクト先を設定
           emailRedirectTo: `${window.location.origin}/api/auth/callback?redirect_to=/dashboard`
