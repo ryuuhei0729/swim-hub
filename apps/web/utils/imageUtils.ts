@@ -17,6 +17,7 @@ export const createImage = (url: string): Promise<HTMLImageElement> => {
 
 /**
  * トリミングした画像をCanvasで生成
+ * WebP形式で出力し、ファイルサイズを最適化
  */
 export const getCroppedImg = (
   image: HTMLImageElement,
@@ -31,12 +32,13 @@ export const getCroppedImg = (
   }
 
   // 出力サイズ（小さめの正方形）- プロフィール画像用
-  const outputSize = 200
+  const outputSize = 150
   canvas.width = outputSize
   canvas.height = outputSize
 
-  // 画像のスムージングを無効化（シャープな画像のため）
-  ctx.imageSmoothingEnabled = false
+  // 画像のスムージングを有効化（縮小時の品質向上）
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
 
   // トリミング範囲をCanvasに描画
   ctx.drawImage(
@@ -52,6 +54,7 @@ export const getCroppedImg = (
   )
 
   return new Promise((resolve, reject) => {
+    // WebP形式で出力（JPEGより約25-35%小さいファイルサイズ）
     canvas.toBlob(
       (blob) => {
         if (!blob) {
@@ -59,15 +62,18 @@ export const getCroppedImg = (
           return
         }
         
+        // ファイル名の拡張子をwebpに変更
+        const webpFileName = fileName.replace(/\.\w+$/, '.webp')
+        
         // Fileオブジェクトに変換
-        const file = new File([blob], fileName, {
-          type: 'image/jpeg',
+        const file = new File([blob], webpFileName, {
+          type: 'image/webp',
           lastModified: Date.now(),
         })
         resolve(file)
       },
-      'image/jpeg',
-      0.7 // 品質70%（より強力な圧縮）
+      'image/webp',
+      0.6 // 品質60%（WebPは低品質でも高画質を維持）
     )
   })
 }
