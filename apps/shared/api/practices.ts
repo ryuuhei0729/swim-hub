@@ -586,6 +586,7 @@ export class PracticeAPI {
 
   /**
    * 複数の練習画像を一括アップロード
+   * エラー発生時は成功済みの画像をすべてロールバック（ストレージ＋DB削除）
    */
   async uploadPracticeImages(
     practiceId: string,
@@ -597,19 +598,37 @@ export class PracticeAPI {
   ): Promise<PracticeImage[]> {
     const results: PracticeImage[] = []
     
-    for (let i = 0; i < images.length; i++) {
-      const img = images[i]
-      const result = await this.uploadPracticeImage(
-        practiceId,
-        img.originalFile,
-        img.thumbnailFile,
-        img.originalFileName,
-        i
-      )
-      results.push(result)
-    }
+    try {
+      for (let i = 0; i < images.length; i++) {
+        const img = images[i]
+        const result = await this.uploadPracticeImage(
+          practiceId,
+          img.originalFile,
+          img.thumbnailFile,
+          img.originalFileName,
+          i
+        )
+        results.push(result)
+      }
 
-    return results
+      return results
+    } catch (error) {
+      // ロールバック: 成功済みの画像をすべて削除
+      console.error('画像アップロード中にエラーが発生。ロールバックを開始:', error)
+      
+      // 逆順で削除（最後に追加したものから削除）
+      for (let i = results.length - 1; i >= 0; i--) {
+        try {
+          await this.deletePracticeImage(results[i].id)
+        } catch (deleteError) {
+          // 削除エラーはログに記録するが、ロールバック処理は継続
+          console.error(`画像ID ${results[i].id} の削除に失敗:`, deleteError)
+        }
+      }
+
+      // 元のエラーを再スロー
+      throw error
+    }
   }
 
   /**

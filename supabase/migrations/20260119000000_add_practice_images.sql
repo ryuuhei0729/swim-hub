@@ -167,6 +167,6 @@ USING (
 -- 権限付与
 -- =============================================================================
 
-GRANT ALL ON TABLE "public"."practice_images" TO "anon";
+GRANT SELECT ON TABLE "public"."practice_images" TO "anon";
 GRANT ALL ON TABLE "public"."practice_images" TO "authenticated";
 GRANT ALL ON TABLE "public"."practice_images" TO "service_role";

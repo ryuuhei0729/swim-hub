@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useCallback, useEffect } from 'react'
+import Image from 'next/image'
 import { XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import { PhotoIcon } from '@heroicons/react/24/solid'
 
@@ -97,12 +98,13 @@ export default function ImageGallery({ images, className = '' }: ImageGalleryPro
               key={image.id}
               type="button"
               onClick={() => handleThumbnailClick(index)}
-              className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 hover:border-green-400 hover:ring-2 hover:ring-green-200 transition-all focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 hover:border-green-400 hover:ring-2 hover:ring-green-200 transition-all focus:outline-none focus:ring-2 focus:ring-green-500 relative"
             >
-              <img
+              <Image
                 src={image.thumbnailUrl}
                 alt={image.fileName || `画像 ${index + 1}`}
-                className="w-full h-full object-cover"
+                fill
+                className="object-cover"
                 loading="lazy"
               />
             </button>
@@ -166,14 +168,18 @@ export default function ImageGallery({ images, className = '' }: ImageGalleryPro
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
               </div>
             )}
-            <img
-              src={selectedImage.originalUrl}
-              alt={selectedImage.fileName || '拡大画像'}
-              className={`max-w-full max-h-[90vh] object-contain transition-opacity duration-200 ${
-                isLoading ? 'opacity-0' : 'opacity-100'
-              }`}
-              onLoad={handleImageLoad}
-            />
+            <div className="relative w-full h-full">
+              <Image
+                src={selectedImage.originalUrl}
+                alt={selectedImage.fileName || '拡大画像'}
+                fill
+                className={`object-contain transition-opacity duration-200 ${
+                  isLoading ? 'opacity-0' : 'opacity-100'
+                }`}
+                onLoad={handleImageLoad}
+                loading="lazy"
+              />
+            </div>
           </div>
 
           {/* ファイル名 */}

@@ -39,7 +39,7 @@ export default function PracticeImageUploader({
   const totalImageCount = visibleExistingImages.length + newFiles.length
   const canAddMore = totalImageCount < PRACTICE_IMAGE_CONFIG.MAX_IMAGES
 
-  const handleFiles = useCallback((files: FileList | File[]) => {
+  const handleFiles = useCallback(async (files: FileList | File[]) => {
     setError(null)
     const fileArray = Array.from(files)
     
@@ -53,8 +53,10 @@ export default function PracticeImageUploader({
     const validFiles: PracticeImageFile[] = []
     
     for (const file of fileArray) {
-      const validation = validatePracticeImageFile(file)
+      const validation = await validatePracticeImageFile(file)
       if (!validation.valid) {
+        // バリデーション失敗時は、既に作成されたオブジェクトURLをクリーンアップ
+        validFiles.forEach(item => URL.revokeObjectURL(item.previewUrl))
         setError(validation.error || '無効なファイルです')
         return
       }
@@ -86,7 +88,7 @@ export default function PracticeImageUploader({
     setIsDragging(false)
   }, [])
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     setIsDragging(false)
@@ -95,14 +97,14 @@ export default function PracticeImageUploader({
 
     const files = e.dataTransfer.files
     if (files.length > 0) {
-      handleFiles(files)
+      await handleFiles(files)
     }
   }, [disabled, canAddMore, handleFiles])
 
-  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (files && files.length > 0) {
-      handleFiles(files)
+      await handleFiles(files)
     }
     // リセットして同じファイルを再選択できるようにする
     e.target.value = ''
@@ -129,6 +131,13 @@ export default function PracticeImageUploader({
       fileInputRef.current?.click()
     }
   }, [disabled, canAddMore])
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      handleClick()
+    }
+  }, [handleClick])
 
   return (
     <div className="space-y-3">
@@ -207,20 +216,24 @@ export default function PracticeImageUploader({
 
       {/* ドラッグ&ドロップエリア */}
       {canAddMore && (
-        <div
+        <button
+          type="button"
           onClick={handleClick}
+          onKeyDown={handleKeyDown}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
+          disabled={disabled}
           className={`
             relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer
-            transition-colors duration-200
+            transition-colors duration-200 w-full
             ${isDragging 
               ? 'border-green-500 bg-green-50' 
               : 'border-gray-300 hover:border-green-400 hover:bg-green-50/50'
             }
             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
           `}
+          aria-label="画像をアップロード"
         >
           <input
             ref={fileInputRef}
@@ -246,7 +259,7 @@ export default function PracticeImageUploader({
               JPEG, PNG, WebP, HEIC（各10MBまで）
             </p>
           </div>
-        </div>
+        </button>
       )}
 
       {/* 最大枚数に達した場合のメッセージ */}

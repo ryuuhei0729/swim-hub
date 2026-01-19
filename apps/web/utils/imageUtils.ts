@@ -62,8 +62,10 @@ export const getCroppedImg = (
           return
         }
         
-        // ファイル名の拡張子をwebpに変更
-        const webpFileName = fileName.replace(/\.\w+$/, '.webp')
+        // ファイル名の拡張子をwebpに変更（拡張子がない場合は追加）
+        const webpFileName = /\.\w+$/.test(fileName)
+          ? fileName.replace(/\.\w+$/, '.webp')
+          : `${fileName}.webp`
         
         // Fileオブジェクトに変換
         const file = new File([blob], webpFileName, {
@@ -88,10 +90,10 @@ export const validateImageFile = (file: File): { valid: boolean; error?: string 
     return { valid: false, error: 'ファイルサイズは5MB以下にしてください' }
   }
 
-  // ファイル形式チェック（JPEG・PNGのみ）
-  const allowedTypes = ['image/jpeg', 'image/png']
+  // ファイル形式チェック（JPEG・PNG・WebPのみ）
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
   if (!allowedTypes.includes(file.type)) {
-    return { valid: false, error: 'JPEG、PNG形式の画像ファイルを選択してください' }
+    return { valid: false, error: 'JPEG、PNG、WebP形式の画像ファイルを選択してください' }
   }
 
   return { valid: true }
@@ -141,9 +143,72 @@ export const PRACTICE_IMAGE_CONFIG = {
 } as const
 
 /**
- * 練習画像ファイルのバリデーション
+ * ブラウザがHEIC/HEIF形式をデコードできるかチェック
+ * @returns Promise<boolean> - デコード可能な場合true
  */
-export const validatePracticeImageFile = (file: File): { valid: boolean; error?: string } => {
+let heicSupportCache: boolean | null = null
+
+// テスト用：キャッシュをリセットする関数
+export const resetHeicSupportCache = () => {
+  heicSupportCache = null
+}
+
+export const canDecodeHeic = async (): Promise<boolean> => {
+  // キャッシュがあればそれを返す
+  if (heicSupportCache !== null) {
+    return heicSupportCache
+  }
+
+  try {
+    // 1x1ピクセルの透明なWebP画像のbase64（フォールバック用）
+    // HEIC/HEIFのテスト用データURLを作成するのは難しいため、
+    // 実際にImageオブジェクトが'image/heic'をサポートしているかを
+    // より実践的な方法でチェックする
+    
+    // Canvas APIを使ってブラウザのデコード機能をチェック
+    // HTMLImageElementがHEICをサポートしているか確認
+    const testCanvas = document.createElement('canvas')
+    const testCtx = testCanvas.getContext('2d')
+    
+    if (!testCtx) {
+      heicSupportCache = false
+      return false
+    }
+
+    // Image.decode()をサポートしているブラウザでは、より確実なチェックができる
+    // しかし、実際にはHEICファイルを使わないとテストできないため、
+    // ブラウザのユーザーエージェントやWebP/HEIC変換ライブラリの有無で判定する
+    
+    // Safari on iOS/macOS は HEIC をネイティブサポート
+    // Chromeなど他のブラウザは通常サポートしていない
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    const isMacOS = /Macintosh/.test(navigator.userAgent)
+    
+    // SafariまたはiOS/macOSの場合のみHEICをサポートと判定
+    heicSupportCache = isSafari || isIOS || isMacOS
+    return heicSupportCache
+  } catch {
+    heicSupportCache = false
+    return false
+  }
+}
+
+/**
+ * HEIC/HEIFファイルかどうかを判定
+ */
+const isHeicOrHeif = (file: File): boolean => {
+  const fileExtension = file.name.toLowerCase().split('.').pop()
+  const isHeicByExtension = ['heic', 'heif'].includes(fileExtension || '')
+  const isHeicByType = file.type === 'image/heic' || file.type === 'image/heif'
+  
+  return isHeicByExtension || isHeicByType
+}
+
+/**
+ * 練習画像ファイルのバリデーション（非同期版）
+ */
+export const validatePracticeImageFile = async (file: File): Promise<{ valid: boolean; error?: string }> => {
   // ファイルサイズチェック（10MB以下）
   if (file.size > PRACTICE_IMAGE_CONFIG.MAX_FILE_SIZE) {
     return { valid: false, error: 'ファイルサイズは10MB以下にしてください' }
@@ -158,6 +223,17 @@ export const validatePracticeImageFile = (file: File): { valid: boolean; error?:
   
   if (!isValidByExtension && !isValidByType) {
     return { valid: false, error: 'JPEG、PNG、WebP、HEIC形式の画像ファイルを選択してください' }
+  }
+
+  // HEIC/HEIF形式の場合、ブラウザサポートをチェック
+  if (isHeicOrHeif(file)) {
+    const canDecode = await canDecodeHeic()
+    if (!canDecode) {
+      return { 
+        valid: false, 
+        error: 'HEIC形式はこのブラウザでサポートされていません。JPEG、PNG、WebP形式をご利用ください。' 
+      }
+    }
   }
 
   return { valid: true }
@@ -214,8 +290,10 @@ export const resizeImageToWebP = (
           return
         }
         
-        // ファイル名の拡張子をwebpに変更
-        const webpFileName = fileName.replace(/\.\w+$/, '.webp')
+        // ファイル名の拡張子をwebpに変更（拡張子がない場合は追加）
+        const webpFileName = /\.\w+$/.test(fileName)
+          ? fileName.replace(/\.\w+$/, '.webp')
+          : `${fileName}.webp`
         
         const file = new File([blob], webpFileName, {
           type: 'image/webp',
@@ -264,8 +342,8 @@ export const createImageFromFile = (file: File): Promise<HTMLImageElement> => {
 export const processPracticeImage = async (
   file: File
 ): Promise<{ original: File; thumbnail: File }> => {
-  // バリデーション
-  const validation = validatePracticeImageFile(file)
+  // バリデーション（非同期）
+  const validation = await validatePracticeImageFile(file)
   if (!validation.valid) {
     throw new Error(validation.error)
   }
