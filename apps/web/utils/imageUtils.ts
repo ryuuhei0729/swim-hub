@@ -186,7 +186,7 @@ export const canDecodeHeic = async (): Promise<boolean> => {
     const isMacOS = /Macintosh/.test(navigator.userAgent)
     
     // SafariまたはiOS/macOSの場合のみHEICをサポートと判定
-    heicSupportCache = isSafari || isIOS || isMacOS
+    heicSupportCache = isIOS || (isSafari && isMacOS)
     return heicSupportCache
   } catch {
     heicSupportCache = false
@@ -219,7 +219,8 @@ export const validatePracticeImageFile = async (file: File): Promise<{ valid: bo
   const fileExtension = file.name.toLowerCase().split('.').pop()
   const isValidByExtension = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'].includes(fileExtension || '')
   const allowedTypes: readonly string[] = PRACTICE_IMAGE_CONFIG.ALLOWED_TYPES
-  const isValidByType = allowedTypes.includes(file.type) || file.type === ''
+  // 空のMIMEタイプは拡張子が有効な場合のみ許可
+  const isValidByType = allowedTypes.includes(file.type) || (file.type === '' && isValidByExtension)
   
   if (!isValidByExtension && !isValidByType) {
     return { valid: false, error: 'JPEG、PNG、WebP、HEIC形式の画像ファイルを選択してください' }

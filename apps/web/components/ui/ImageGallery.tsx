@@ -159,7 +159,7 @@ export default function ImageGallery({ images, className = '' }: ImageGalleryPro
 
           {/* 画像 */}
           <div 
-            className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center"
+            className="relative w-[90vw] h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* ローディング */}
@@ -168,18 +168,16 @@ export default function ImageGallery({ images, className = '' }: ImageGalleryPro
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
               </div>
             )}
-            <div className="relative w-full h-full">
-              <Image
-                src={selectedImage.originalUrl}
-                alt={selectedImage.fileName || '拡大画像'}
-                fill
-                className={`object-contain transition-opacity duration-200 ${
-                  isLoading ? 'opacity-0' : 'opacity-100'
-                }`}
-                onLoad={handleImageLoad}
-                loading="lazy"
-              />
-            </div>
+            <Image
+              src={selectedImage.originalUrl}
+              alt={selectedImage.fileName || '拡大画像'}
+              fill
+              className={`object-contain transition-opacity duration-200 ${
+                isLoading ? 'opacity-0' : 'opacity-100'
+              }`}
+              onLoad={handleImageLoad}
+              loading="lazy"
+            />
           </div>
 
           {/* ファイル名 */}
