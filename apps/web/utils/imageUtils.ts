@@ -73,7 +73,7 @@ export const getCroppedImg = (
         resolve(file)
       },
       'image/webp',
-      0.6 // 品質60%（WebPは低品質でも高画質を維持）
+      0.7 // 品質70%（WebPは低品質でも高画質を維持）
     )
   })
 }
