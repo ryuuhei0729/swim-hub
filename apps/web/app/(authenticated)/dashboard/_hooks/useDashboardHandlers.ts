@@ -10,8 +10,10 @@ import type {
     PracticeMenuFormData,
     RecordFormDataInternal
 } from '@/stores/types'
-import { EntryAPI } from '@apps/shared/api'
+import { EntryAPI, PracticeAPI } from '@apps/shared/api'
 import type { Style } from '@apps/shared/types/database'
+import type { PracticeImageData } from '@/components/forms/PracticeBasicForm'
+import { processPracticeImage } from '@/utils/imageUtils'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@swim-hub/shared/types/database'
 import { useCallback } from 'react'
@@ -93,7 +95,10 @@ export function useDashboardHandlers({
     refreshCalendar
 }: UseDashboardHandlersProps) {
   // 練習予定作成・更新
-  const handlePracticeBasicSubmit = useCallback(async (basicData: { date: string; title: string; place: string; note: string }) => {
+  const handlePracticeBasicSubmit = useCallback(async (
+    basicData: { date: string; title: string; place: string; note: string },
+    imageData?: PracticeImageData
+  ) => {
     setLoading(true)
     try {
       // 有効なPracticeInsert/Updateフィールドのみを送信
@@ -104,13 +109,42 @@ export function useDashboardHandlers({
         note: basicData.note || null
       }
       
+      let practiceId: string | undefined
+      
       if (editingData && editingData.id) {
         await updatePractice(editingData.id, payload)
+        practiceId = editingData.id
         closePracticeBasicForm()
       } else {
         const createdPractice = await createPractice(payload)
+        practiceId = createdPractice?.id
         closePracticeBasicForm()
         openPracticeLogForm(createdPractice?.id)
+      }
+
+      // 画像の処理
+      if (practiceId && imageData) {
+        const practiceAPI = new PracticeAPI(supabase)
+        
+        // 削除対象の画像を削除
+        if (imageData.deletedIds.length > 0) {
+          await practiceAPI.deletePracticeImages(imageData.deletedIds)
+        }
+        
+        // 新規画像をアップロード
+        if (imageData.newFiles.length > 0) {
+          const processedImages = await Promise.all(
+            imageData.newFiles.map(async (fileData) => {
+              const { original, thumbnail } = await processPracticeImage(fileData.file)
+              return {
+                originalFile: original,
+                thumbnailFile: thumbnail,
+                originalFileName: fileData.file.name
+              }
+            })
+          )
+          await practiceAPI.uploadPracticeImages(practiceId, processedImages)
+        }
       }
       
       refreshCalendar()
@@ -119,7 +153,7 @@ export function useDashboardHandlers({
     } finally {
       setLoading(false)
     }
-  }, [editingData, updatePractice, createPractice, closePracticeBasicForm, openPracticeLogForm, refreshCalendar, setLoading])
+  }, [editingData, updatePractice, createPractice, closePracticeBasicForm, openPracticeLogForm, refreshCalendar, setLoading, supabase])
 
   // 練習メニュー作成・更新処理
   const handlePracticeLogSubmit = useCallback(async (formDataArray: PracticeMenuFormData[]) => {

@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts'
 import { CalendarItemType, DayDetailModalProps, CalendarItem, EntryInfo, isPracticeMetadata, isCompetitionMetadata, isRecordMetadata, isTeamInfo } from '@/types'
 import { LapTimeDisplay } from '@/components/forms/LapTimeDisplay'
 import { BestTimeBadge } from '@/components/ui'
+import ImageGallery, { GalleryImage } from '@/components/ui/ImageGallery'
 import type {
   Record,
   Practice,
@@ -824,6 +825,7 @@ function PracticeDetails({
   }
   const { supabase } = useAuth()
   const [practice, setPractice] = useState<PracticeWithFormattedLogs | null>(null)
+  const [practiceImages, setPracticeImages] = useState<GalleryImage[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
@@ -841,6 +843,13 @@ function PracticeDetails({
               practice_log_tags (
                 practice_tag:practice_tags (*)
               )
+            ),
+            practice_images (
+              id,
+              original_path,
+              thumbnail_path,
+              file_name,
+              display_order
             )
           `)
           .eq('id', practiceId)
@@ -863,8 +872,16 @@ function PracticeDetails({
           practice_log_tags?: Array<{ practice_tag: PracticeTag }>
           practice_times?: PracticeTime[]
         }
+        type PracticeImageFromDB = {
+          id: string
+          original_path: string
+          thumbnail_path: string
+          file_name: string
+          display_order: number
+        }
         type PracticeFromDB = Practice & {
           practice_logs?: PracticeLogFromDB[]
+          practice_images?: PracticeImageFromDB[]
         }
         const practiceData = data as PracticeFromDB
         const formattedPractice: PracticeWithFormattedLogs = {
@@ -889,7 +906,18 @@ function PracticeDetails({
           }))
         }
         
+        // 画像データを変換
+        const images: GalleryImage[] = (practiceData.practice_images || [])
+          .sort((a, b) => a.display_order - b.display_order)
+          .map((img: PracticeImageFromDB) => ({
+            id: img.id,
+            thumbnailUrl: supabase.storage.from('practice-images').getPublicUrl(img.thumbnail_path).data.publicUrl,
+            originalUrl: supabase.storage.from('practice-images').getPublicUrl(img.original_path).data.publicUrl,
+            fileName: img.file_name
+          }))
+        
         setPractice(formattedPractice)
+        setPracticeImages(images)
       } catch (err) {
         console.error('練習詳細の取得エラー:', err)
         setError(err as Error)
@@ -1282,6 +1310,13 @@ function PracticeDetails({
             )
           })}
         </div>
+        
+        {/* 添付画像 */}
+        {practiceImages.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-green-200">
+            <ImageGallery images={practiceImages} />
+          </div>
+        )}
       </div>
     </div>
   )
