@@ -273,8 +273,7 @@ export const processPracticeImage = async (
   // 画像を読み込み
   const image = await createImageFromFile(file)
 
-  // ファイル名からUUIDを生成するための基本名
-  const baseName = file.name.replace(/\.\w+$/, '')
+  // UUIDを生成
   const uuid = crypto.randomUUID()
 
   // オリジナル画像を生成（最大1600px）
