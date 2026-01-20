@@ -2,15 +2,17 @@
 // ダッシュボードハンドラー関数用カスタムフック
 // =============================================================================
 
+import type { PracticeImageData } from '@/components/forms/PracticeBasicForm'
 import { useCompetitionFormStore, usePracticeFormStore } from '@/stores'
 import type {
-    EditingData,
-    EntryFormData,
-    EntryWithStyle,
-    PracticeMenuFormData,
-    RecordFormDataInternal
+  EditingData,
+  EntryFormData,
+  EntryWithStyle,
+  PracticeMenuFormData,
+  RecordFormDataInternal
 } from '@/stores/types'
-import { EntryAPI } from '@apps/shared/api'
+import { processPracticeImage } from '@/utils/imageUtils'
+import { EntryAPI, PracticeAPI } from '@apps/shared/api'
 import type { Style } from '@apps/shared/types/database'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@swim-hub/shared/types/database'
@@ -93,7 +95,10 @@ export function useDashboardHandlers({
     refreshCalendar
 }: UseDashboardHandlersProps) {
   // 練習予定作成・更新
-  const handlePracticeBasicSubmit = useCallback(async (basicData: { date: string; title: string; place: string; note: string }) => {
+  const handlePracticeBasicSubmit = useCallback(async (
+    basicData: { date: string; title: string; place: string; note: string },
+    imageData?: PracticeImageData
+  ) => {
     setLoading(true)
     try {
       // 有効なPracticeInsert/Updateフィールドのみを送信
@@ -104,13 +109,66 @@ export function useDashboardHandlers({
         note: basicData.note || null
       }
       
+      let practiceId: string | undefined
+      
       if (editingData && editingData.id) {
         await updatePractice(editingData.id, payload)
+        practiceId = editingData.id
         closePracticeBasicForm()
       } else {
         const createdPractice = await createPractice(payload)
+        practiceId = createdPractice?.id
         closePracticeBasicForm()
         openPracticeLogForm(createdPractice?.id)
+      }
+
+      // 画像の処理（安全な順序: アップロード → 検証 → 削除）
+      if (practiceId && imageData) {
+        const practiceAPI = new PracticeAPI(supabase)
+        let uploadedImages: import('@apps/shared/types/database').PracticeImage[] = []
+        
+        try {
+          // Step 1: 新規画像をアップロード（先に実行してデータ損失を防ぐ）
+          if (imageData.newFiles.length > 0) {
+            const processedImages = await Promise.all(
+              imageData.newFiles.map(async (fileData) => {
+                const { original, thumbnail } = await processPracticeImage(fileData.file)
+                return {
+                  originalFile: original,
+                  thumbnailFile: thumbnail,
+                  originalFileName: fileData.file.name
+                }
+              })
+            )
+            uploadedImages = await practiceAPI.uploadPracticeImages(practiceId, processedImages)
+            
+            // Step 2: アップロード成功を確認
+            if (uploadedImages.length !== processedImages.length) {
+              throw new Error('一部の画像のアップロードに失敗しました')
+            }
+          }
+          
+          // Step 3: アップロード成功後に削除を実行
+          if (imageData.deletedIds.length > 0) {
+            await practiceAPI.deletePracticeImages(imageData.deletedIds)
+          }
+        } catch (imageError) {
+          console.error('画像処理エラー:', imageError)
+          
+          // Step 4: ロールバック - アップロードした画像を削除
+          if (uploadedImages.length > 0) {
+            try {
+              const uploadedIds = uploadedImages.map(img => img.id)
+              await practiceAPI.deletePracticeImages(uploadedIds)
+              console.log('ロールバック完了: アップロードした画像を削除しました')
+            } catch (rollbackError) {
+              console.error('ロールバック失敗:', rollbackError)
+            }
+          }
+          
+          // 画像処理エラーを再スロー
+          throw new Error('画像の処理に失敗しました')
+        }
       }
       
       refreshCalendar()
@@ -119,7 +177,7 @@ export function useDashboardHandlers({
     } finally {
       setLoading(false)
     }
-  }, [editingData, updatePractice, createPractice, closePracticeBasicForm, openPracticeLogForm, refreshCalendar, setLoading])
+  }, [editingData, updatePractice, createPractice, closePracticeBasicForm, openPracticeLogForm, refreshCalendar, setLoading, supabase])
 
   // 練習メニュー作成・更新処理
   const handlePracticeLogSubmit = useCallback(async (formDataArray: PracticeMenuFormData[]) => {

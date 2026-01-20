@@ -132,11 +132,14 @@ describe('PracticeForm', () => {
       await user.type(noteInput, 'テスト練習')
       await user.click(submitButton)
 
-      expect(mockOnSubmit).toHaveBeenCalledWith({
-        practiceDate: expect.any(String),
-        place: 'テストプール',
-        note: 'テスト練習'
-      })
+      expect(mockOnSubmit).toHaveBeenCalledWith(
+        {
+          practiceDate: expect.any(String),
+          place: 'テストプール',
+          note: 'テスト練習'
+        },
+        undefined // 画像データがない場合はundefined
+      )
     })
 
     it('送信中はローディング状態が表示される', async () => {

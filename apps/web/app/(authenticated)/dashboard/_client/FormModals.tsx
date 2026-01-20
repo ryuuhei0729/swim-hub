@@ -14,12 +14,13 @@ import type {
   RecordFormDataInternal,
   EntryWithStyle
 } from '@/stores/types'
+import type { PracticeImageData } from '@/components/forms/PracticeBasicForm'
 import { convertRecordFormData } from '@/stores/types'
 import { getCompetitionId } from '../_utils/dashboardHelpers'
 import { useAuth } from '@/contexts'
 
 interface FormModalsProps {
-  onPracticeBasicSubmit: (basicData: { date: string; title: string; place: string; note: string }) => Promise<void>
+  onPracticeBasicSubmit: (basicData: { date: string; title: string; place: string; note: string }, imageData?: PracticeImageData) => Promise<void>
   onPracticeLogSubmit: (formDataArray: PracticeMenuFormData[]) => Promise<void>
   onCompetitionBasicSubmit: (basicData: { date: string; endDate: string; title: string; place: string; poolType: number; note: string }) => Promise<void>
   onEntrySubmit: (entriesData: EntryFormData[]) => Promise<void>
@@ -358,20 +359,34 @@ export function FormModals({
           
           // CalendarItem型の場合
           if ('type' in editingData && (editingData.type === 'practice' || editingData.type === 'team_practice')) {
-            const item = editingData as { date?: string; place?: string; note?: string; metadata?: { practice?: { place?: string } } }
+            const item = editingData as { 
+              date?: string
+              place?: string
+              note?: string
+              metadata?: { practice?: { place?: string } }
+              editData?: { images?: Array<{ id: string; thumbnailUrl: string; originalUrl: string; fileName: string }> }
+            }
             return {
               date: item.date,
               place: item.place || item.metadata?.practice?.place || '',
-              note: item.note || ''
+              note: item.note || '',
+              images: item.editData?.images
             }
           }
           
           // EditingData型の場合（旧フォーマット）
           if ('metadata' in editingData && editingData.metadata) {
+            const item = editingData as {
+              date?: string
+              note?: string
+              metadata?: { practice?: { place?: string } }
+              editData?: { images?: Array<{ id: string; thumbnailUrl: string; originalUrl: string; fileName: string }> }
+            }
             return {
-              date: editingData.date,
-              place: editingData.metadata.practice?.place || '',
-              note: editingData.note || ''
+              date: item.date,
+              place: item.metadata?.practice?.place || '',
+              note: item.note || '',
+              images: item.editData?.images
             }
           }
           
