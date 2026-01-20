@@ -118,8 +118,10 @@ export async function GET(request: NextRequest) {
     // calendar_connectパラメータがある場合のみ、Google Calendar連携を有効化
     const isCalendarConnect = requestUrl.searchParams.get('calendar_connect') === 'true'
     if (isCalendarConnect) {
-      const provider = data.user?.app_metadata?.provider
-      if (provider === 'google' && data.user) {
+      // providers配列にgoogleが含まれているかチェック（メールで登録後にGoogleでログインした場合も対応）
+      const providers = data.user?.app_metadata?.providers as string[] | undefined
+      const hasGoogleProvider = providers?.includes('google') ?? false
+      if (hasGoogleProvider && data.user) {
         // Google Calendar連携を有効化（マイページで確認される）
         // リフレッシュトークンはRPC関数で暗号化して保存
         const refreshToken = data.session.provider_refresh_token || null

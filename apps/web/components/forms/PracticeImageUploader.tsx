@@ -225,7 +225,7 @@ export default function PracticeImageUploader({
           onDrop={handleDrop}
           disabled={disabled}
           className={`
-            relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer
+            relative border-2 border-dashed rounded-lg py-4 px-4 text-center cursor-pointer
             transition-colors duration-200 w-full
             ${isDragging 
               ? 'border-green-500 bg-green-50' 
@@ -245,19 +245,17 @@ export default function PracticeImageUploader({
             disabled={disabled}
           />
           
-          <div className="space-y-2">
+          <div className="flex items-center justify-center gap-3">
             {isDragging ? (
-              <ArrowUpTrayIcon className="mx-auto h-10 w-10 text-green-500" />
+              <ArrowUpTrayIcon className="h-6 w-6 text-green-500 shrink-0" />
             ) : (
-              <PhotoIcon className="mx-auto h-10 w-10 text-gray-400" />
+              <PhotoIcon className="h-6 w-6 text-gray-400 shrink-0" />
             )}
             <div className="text-sm text-gray-600">
               <span className="text-green-600 font-medium">クリックして選択</span>
-              <span className="text-gray-500"> または ドラッグ&ドロップ</span>
+              <span className="text-gray-500"> または ドラッグ&ドロップ</span><br />
+              <span className="text-xs text-gray-400 ml-2">JPEG, PNG, WebP, HEIC（各10MBまで）</span>
             </div>
-            <p className="text-xs text-gray-500">
-              JPEG, PNG, WebP, HEIC（各10MBまで）
-            </p>
           </div>
         </button>
       )}

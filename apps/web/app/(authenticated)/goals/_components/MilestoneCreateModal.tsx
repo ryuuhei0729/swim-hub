@@ -91,12 +91,14 @@ export default function MilestoneCreateModal({
       setType('time')
       setSelectedTemplate('time_trial')
       setParams(timeTrialParams)
+      setTitle(template.name) // タイトルを自動設定
       return
     }
 
     setType(template.type)
     setSelectedTemplate(templateId)
     setParams(template.defaultParams)
+    setTitle(template.name) // タイトルを自動設定
   }
 
   // ゴールセット計算結果を適用
@@ -126,6 +128,7 @@ export default function MilestoneCreateModal({
     setType('reps_time')
     setSelectedTemplate('goalset_50m_6x3')
     setParams(goalSetParams)
+    setTitle('ゴールセット') // タイトルを自動設定
     setIsGoalSetModalOpen(false)
   }
 
