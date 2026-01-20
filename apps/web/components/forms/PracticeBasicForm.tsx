@@ -1,16 +1,25 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Button, Input } from '@/components/ui'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
+import PracticeImageUploader, { 
+  PracticeImageFile, 
+  ExistingImage 
+} from './PracticeImageUploader'
 
-interface PracticeBasicData {
+export interface PracticeBasicData {
   date: string
   title: string
   place: string
   note: string
+}
+
+export interface PracticeImageData {
+  newFiles: PracticeImageFile[]
+  deletedIds: string[]
 }
 
 type EditPracticeBasicData = {
@@ -18,12 +27,13 @@ type EditPracticeBasicData = {
   title?: string | null
   place?: string
   note?: string
+  images?: ExistingImage[]
 }
 
 interface PracticeBasicFormProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: PracticeBasicData) => Promise<void>
+  onSubmit: (data: PracticeBasicData, imageData?: PracticeImageData) => Promise<void>
   selectedDate: Date
   editData?: EditPracticeBasicData // 編集時のデータ
   isLoading?: boolean
@@ -47,6 +57,12 @@ export default function PracticeBasicForm({
     note: ''
   })
 
+  // 画像データ
+  const [imageData, setImageData] = useState<PracticeImageData>({
+    newFiles: [],
+    deletedIds: []
+  })
+
   // 初期化済みフラグ（モーダルが開かれた時だけ初期化するため）
   const [isInitialized, setIsInitialized] = useState(false)
   // フォームに変更があるかどうかを追跡
@@ -60,6 +76,8 @@ export default function PracticeBasicForm({
       setIsInitialized(false)
       setHasUnsavedChanges(false)
       setIsSubmitted(false)
+      // 画像データもリセット
+      setImageData({ newFiles: [], deletedIds: [] })
     }
   }, [isOpen])
 
@@ -68,7 +86,7 @@ export default function PracticeBasicForm({
     if (isOpen && isInitialized) {
       setHasUnsavedChanges(true)
     }
-  }, [formData, isOpen, isInitialized])
+  }, [formData, imageData, isOpen, isInitialized])
 
   // ブラウザバックや閉じるボタンでの離脱を防ぐ
   useEffect(() => {
@@ -124,6 +142,11 @@ export default function PracticeBasicForm({
     }
   }, [isOpen, selectedDate, editData, isInitialized])
 
+  // 画像の変更ハンドラー
+  const handleImagesChange = useCallback((newFiles: PracticeImageFile[], deletedIds: string[]) => {
+    setImageData({ newFiles, deletedIds })
+  }, [])
+
   if (!isOpen) return null
 
   const handleClose = () => {
@@ -133,6 +156,10 @@ export default function PracticeBasicForm({
         return
       }
     }
+    // プレビューURLをクリーンアップ
+    imageData.newFiles.forEach(file => {
+      URL.revokeObjectURL(file.previewUrl)
+    })
     onClose()
   }
 
@@ -143,7 +170,9 @@ export default function PracticeBasicForm({
 
     setIsSubmitted(true)
     try {
-      await onSubmit(formData)
+      // 画像データがある場合は一緒に送信
+      const hasImageChanges = imageData.newFiles.length > 0 || imageData.deletedIds.length > 0
+      await onSubmit(formData, hasImageChanges ? imageData : undefined)
       setHasUnsavedChanges(false)
       // onClose()は呼ばない - handlePracticeBasicSubmitが適切にモーダルを管理する
       // (編集時・新規作成時: closePracticeBasicForm(), 新規作成時は続けてopenPracticeLogForm())
@@ -163,9 +192,9 @@ export default function PracticeBasicForm({
         />
 
         {/* モーダルコンテンツ */}
-        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-lg">
+        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-lg max-h-[90vh] overflow-y-auto">
           {/* ヘッダー */}
-          <div className="bg-white px-6 py-4 border-b border-gray-200">
+          <div className="bg-white px-6 py-4 border-b border-gray-200 sticky top-0 z-10">
             <div className="flex items-center justify-between">
               <h3 className="text-lg leading-6 font-medium text-gray-900">
                 {editData ? '練習予定を編集' : '練習予定を作成'}
@@ -246,6 +275,15 @@ export default function PracticeBasicForm({
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="練習に関する特記事項（天候、体調など）"
                 data-testid="practice-note"
+              />
+            </div>
+
+            {/* 画像添付 */}
+            <div className="border-t border-gray-200 pt-6">
+              <PracticeImageUploader
+                existingImages={editData?.images}
+                onImagesChange={handleImagesChange}
+                disabled={isLoading}
               />
             </div>
 
