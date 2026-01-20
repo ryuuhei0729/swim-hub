@@ -11,6 +11,8 @@ import BestTimesTable from '@/components/profile/BestTimesTable'
 import ProfileDisplay from '@/components/profile/ProfileDisplay'
 import ProfileEditModal from '@/components/profile/ProfileEditModal'
 import GoogleCalendarSyncSettings from '@/components/settings/GoogleCalendarSyncSettings'
+import TeamCreateModal from '@/components/team/TeamCreateModal'
+import TeamJoinModal from '@/components/team/TeamJoinModal'
 import type { UserUpdate, UserProfile as DatabaseUserProfile } from '@apps/shared/types/database'
 
 interface BestTime {
@@ -93,6 +95,8 @@ export default function MyPageClient({
   }, [user, supabase])
   const [bestTimes, setBestTimes] = useState<BestTime[]>(initialBestTimes)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isCreateTeamModalOpen, setIsCreateTeamModalOpen] = useState(false)
+  const [isJoinTeamModalOpen, setIsJoinTeamModalOpen] = useState(false)
 
   // サーバー側から取得した初期データを設定
   React.useEffect(() => {
@@ -174,6 +178,30 @@ export default function MyPageClient({
     }
   }, [user, queryClient])
 
+  // チーム一覧を再取得する関数
+  const reloadTeams = useCallback(async () => {
+    if (!user || !supabase) return
+    try {
+      const coreApi = new TeamCoreAPI(supabase)
+      const loadedTeams = await coreApi.getMyTeams()
+      setTeams(loadedTeams)
+    } catch (error) {
+      console.error('チーム一覧の再取得エラー:', error)
+    }
+  }, [user, supabase])
+
+  // チーム作成成功時のハンドラー
+  const handleCreateTeamSuccess = useCallback((_teamId: string) => {
+    setIsCreateTeamModalOpen(false)
+    reloadTeams()
+  }, [reloadTeams])
+
+  // チーム参加成功時のハンドラー
+  const handleJoinTeamSuccess = useCallback((_teamId: string) => {
+    setIsJoinTeamModalOpen(false)
+    reloadTeams()
+  }, [reloadTeams])
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* ヘッダー */}
@@ -204,6 +232,8 @@ export default function MyPageClient({
             <ProfileDisplay
               profile={profile}
               teams={teams}
+              onCreateTeam={() => setIsCreateTeamModalOpen(true)}
+              onJoinTeam={() => setIsJoinTeamModalOpen(true)}
             />
           )}
         </div>
@@ -244,6 +274,20 @@ export default function MyPageClient({
           onAvatarChange={handleAvatarChange}
         />
       )}
+
+      {/* チーム作成モーダル */}
+      <TeamCreateModal
+        isOpen={isCreateTeamModalOpen}
+        onClose={() => setIsCreateTeamModalOpen(false)}
+        onSuccess={handleCreateTeamSuccess}
+      />
+
+      {/* チーム参加モーダル */}
+      <TeamJoinModal
+        isOpen={isJoinTeamModalOpen}
+        onClose={() => setIsJoinTeamModalOpen(false)}
+        onSuccess={handleJoinTeamSuccess}
+      />
     </div>
   )
 }

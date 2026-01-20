@@ -1,7 +1,8 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
+import { PlusIcon, UserPlusIcon, UsersIcon } from '@heroicons/react/24/outline'
 import { Avatar } from '@/components/ui'
 import type { TeamMembershipWithUser } from '@apps/shared/types/database'
 
@@ -17,9 +18,30 @@ interface UserProfile {
 interface ProfileDisplayProps {
   profile: UserProfile
   teams?: TeamMembershipWithUser[]
+  onCreateTeam?: () => void
+  onJoinTeam?: () => void
 }
 
-export default function ProfileDisplay({ profile, teams = [] }: ProfileDisplayProps) {
+export default function ProfileDisplay({ profile, teams = [], onCreateTeam, onJoinTeam }: ProfileDisplayProps) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // メニュー外クリックで閉じる
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false)
+      }
+    }
+
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isMenuOpen])
   const formatBirthday = (birthday: string | null | undefined) => {
     if (!birthday) return '未設定'
     return new Date(birthday).toLocaleDateString('ja-JP', {
@@ -91,7 +113,55 @@ export default function ProfileDisplay({ profile, teams = [] }: ProfileDisplayPr
 
             {/* 参加チーム */}
             <div className="flex-1">
-              <dt className="text-xs sm:text-sm font-medium text-gray-500">参加チーム</dt>
+              <dt className="text-xs sm:text-sm font-medium text-gray-500 flex items-center gap-1">
+                参加チーム
+                {(onCreateTeam || onJoinTeam) && (
+                  <div className="relative" ref={menuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setIsMenuOpen(!isMenuOpen)}
+                      className="inline-flex items-center justify-center w-5 h-5 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                      title="チームを追加"
+                    >
+                      <PlusIcon className="w-4 h-4" />
+                    </button>
+                    
+                    {/* ドロップダウンメニュー */}
+                    {isMenuOpen && (
+                      <div className="absolute left-0 mt-1 w-40 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
+                        <div className="py-1">
+                          {onCreateTeam && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsMenuOpen(false)
+                                onCreateTeam()
+                              }}
+                              className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            >
+                              <UsersIcon className="w-4 h-4 mr-2 text-gray-400" />
+                              チームを作成
+                            </button>
+                          )}
+                          {onJoinTeam && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsMenuOpen(false)
+                                onJoinTeam()
+                              }}
+                              className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            >
+                              <UserPlusIcon className="w-4 h-4 mr-2 text-gray-400" />
+                              チームに参加
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </dt>
               <dd className="mt-1">
                 {approvedTeams.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
