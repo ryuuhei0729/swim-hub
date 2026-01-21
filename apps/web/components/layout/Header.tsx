@@ -54,7 +54,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 fixed top-0 left-0 right-0 z-40">
-      <div className="flex items-center justify-between px-2 py-2 sm:px-4 sm:py-3 lg:pl-4 lg:pr-8">
+      <div className="flex items-center justify-between px-4 py-3 sm:px-6 lg:pl-4 lg:pr-8">
         {/* 左側：メニューボタンとロゴ */}
         <div className="flex items-center">
           <button

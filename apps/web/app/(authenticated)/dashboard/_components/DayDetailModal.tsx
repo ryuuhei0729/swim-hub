@@ -1423,41 +1423,30 @@ function CompetitionDetails({
 }) {
   const { supabase, user } = useAuth()
   const [actualRecords, setActualRecords] = useState<CalendarItem[]>([])
-  const [competitionImages, setCompetitionImages] = useState<GalleryImage[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const loadRecords = async () => {
       try {
         setLoading(true)
-        let recordQuery = supabase
+        let query = supabase
           .from('records')
           .select(`
-              *,
-              style:styles(*),
-              competition:competitions(*),
-              split_times(*)
-            `)
+            *,
+            style:styles(*),
+            competition:competitions(*),
+            split_times(*)
+          `)
           .eq('competition_id', competitionId)
 
         // チーム大会の場合は自分の記録だけを表示
         if (isTeamCompetition && user?.id) {
-          recordQuery = recordQuery.eq('user_id', user.id)
+          query = query.eq('user_id', user.id)
         }
 
-        const imagesQuery = supabase
-          .from('competition_images')
-          .select('id, original_path, thumbnail_path, file_name, display_order')
-          .eq('competition_id', competitionId)
-          .order('display_order')
-
-        const [{ data, error }, { data: imageData, error: imageError }] = await Promise.all([
-          recordQuery,
-          imagesQuery
-        ])
+        const { data, error } = await query
 
         if (error) throw error
-        if (imageError) throw imageError
 
         // calendar_view形式に変換
         type RecordFromDB = {
@@ -1514,28 +1503,9 @@ function CompetitionDetails({
         }))
 
         setActualRecords(formattedRecords)
-
-        // 画像データを変換
-        type CompetitionImageFromDB = {
-          id: string
-          original_path: string
-          thumbnail_path: string
-          file_name: string
-          display_order: number
-        }
-        const images: GalleryImage[] = ((imageData || []) as CompetitionImageFromDB[])
-          .sort((a, b) => a.display_order - b.display_order)
-          .map((img: CompetitionImageFromDB) => ({
-            id: img.id,
-            thumbnailUrl: supabase.storage.from('competition-images').getPublicUrl(img.thumbnail_path).data.publicUrl,
-            originalUrl: supabase.storage.from('competition-images').getPublicUrl(img.original_path).data.publicUrl,
-            fileName: img.file_name
-          }))
-        setCompetitionImages(images)
       } catch (err) {
         console.error('記録の取得エラー:', err)
         setActualRecords([])
-        setCompetitionImages([])
       } finally {
         setLoading(false)
       }
@@ -1790,13 +1760,6 @@ function CompetitionDetails({
             </div>
           )}
         </div>
-
-        {/* 添付画像 */}
-        {competitionImages.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-blue-200">
-            <ImageGallery images={competitionImages} />
-          </div>
-        )}
       </div>
     </div>
   )
@@ -1849,7 +1812,6 @@ function CompetitionWithEntry({
   const router = useRouter()
   const { supabase } = useAuth()
   const entryApi = useMemo(() => new EntryAPI(supabase), [supabase])
-  const [competitionImages, setCompetitionImages] = useState<GalleryImage[]>([])
   const [entries, setEntries] = useState<CompetitionEntryDisplay[]>(() => {
     if (styleId && styleName) {
       return [
@@ -1878,31 +1840,6 @@ function CompetitionWithEntry({
           router.replace('/login')
           return
         }
-
-        // 添付画像を取得
-        const { data: imageData, error: imageError } = await supabase
-          .from('competition_images')
-          .select('id, original_path, thumbnail_path, file_name, display_order')
-          .eq('competition_id', competitionId)
-          .order('display_order')
-        if (imageError) throw imageError
-
-        type CompetitionImageFromDB = {
-          id: string
-          original_path: string
-          thumbnail_path: string
-          file_name: string
-          display_order: number
-        }
-        const images: GalleryImage[] = ((imageData || []) as CompetitionImageFromDB[])
-          .sort((a, b) => a.display_order - b.display_order)
-          .map((img: CompetitionImageFromDB) => ({
-            id: img.id,
-            thumbnailUrl: supabase.storage.from('competition-images').getPublicUrl(img.thumbnail_path).data.publicUrl,
-            originalUrl: supabase.storage.from('competition-images').getPublicUrl(img.original_path).data.publicUrl,
-            fileName: img.file_name
-          }))
-        setCompetitionImages(images)
 
         // competitionのentry_statusを取得
         const { data: competitionData, error: competitionError } = await supabase
@@ -1946,7 +1883,6 @@ function CompetitionWithEntry({
         }
       } catch (err) {
         console.error('エントリーデータの取得エラー:', err)
-        setCompetitionImages([])
       } finally {
         setLoading(false)
       }
@@ -2168,13 +2104,6 @@ function CompetitionWithEntry({
           </svg>
           <span>大会記録を追加</span>
         </button>
-
-        {/* 添付画像 */}
-        {competitionImages.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-blue-200">
-            <ImageGallery images={competitionImages} />
-          </div>
-        )}
       </div>
     </div>
   )

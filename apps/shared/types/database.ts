@@ -167,23 +167,6 @@ export interface Competition {
 export type CompetitionInsert = Omit<Competition, 'id' | 'created_at' | 'updated_at'>
 export type CompetitionUpdate = Partial<Omit<CompetitionInsert, 'user_id'>>
 
-// 大会画像
-export interface CompetitionImage {
-  id: string
-  competition_id: string
-  user_id: string
-  original_path: string
-  thumbnail_path: string
-  file_name: string
-  file_size: number
-  display_order: number
-  created_at: string
-  updated_at: string
-}
-
-export type CompetitionImageInsert = Omit<CompetitionImage, 'id' | 'created_at' | 'updated_at'>
-export type CompetitionImageUpdate = Partial<Omit<CompetitionImageInsert, 'competition_id' | 'user_id'>>
-
 // 記録
 export interface Record {
   id: string

@@ -53,7 +53,7 @@ describe('Button', () => {
     it('小サイズが表示される', () => {
       render(<Button size="sm">小</Button>)
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('h-8', 'px-3', 'text-xs', 'sm:text-sm')
+      expect(button).toHaveClass('h-8', 'px-3', 'text-sm')
     })
 
     it('中サイズが表示される', () => {
@@ -65,7 +65,7 @@ describe('Button', () => {
     it('大サイズが表示される', () => {
       render(<Button size="lg">大</Button>)
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('h-12', 'px-6', 'text-base', 'sm:text-lg')
+      expect(button).toHaveClass('h-12', 'px-6', 'text-lg')
     })
   })
 

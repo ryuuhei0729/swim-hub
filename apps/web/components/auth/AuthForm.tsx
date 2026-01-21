@@ -131,12 +131,12 @@ export const AuthForm: React.FC<AuthFormProps> = ({
   }
 
   return (
-    <div className="max-w-md w-full space-y-4 sm:space-y-6 md:space-y-8 bg-white p-4 sm:p-8 md:p-10 rounded-2xl shadow-xl transform transition-all duration-300">
+    <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-2xl shadow-xl transform transition-all duration-300">
       <div className="text-center">
-        <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-gray-900 mb-2">
+        <h2 className="text-3xl font-extrabold text-gray-900 mb-2">
           {formMode === 'signin' ? 'ログイン' : 'アカウント作成'}
         </h2>
-        <p className="text-xs sm:text-sm text-gray-600">
+        <p className="text-sm text-gray-600">
           {formMode === 'signin' ? 'SwimHubへようこそ' : '新しいアカウントを作成'}
         </p>
       </div>
@@ -167,8 +167,8 @@ export const AuthForm: React.FC<AuthFormProps> = ({
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="mt-4 sm:mt-6 space-y-4 sm:space-y-6" data-testid="auth-form">
-        <div className="space-y-4 sm:space-y-5">
+      <form onSubmit={handleSubmit} className="mt-6 space-y-6" data-testid="auth-form">
+        <div className="space-y-5">
           {formMode === 'signup' && (
             <>
               <div>

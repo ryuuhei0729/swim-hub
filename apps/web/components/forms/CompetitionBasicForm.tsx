@@ -4,10 +4,6 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Button, Input } from '@/components/ui'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
-import CompetitionImageUploader, {
-  CompetitionImageFile,
-  ExistingImage
-} from './CompetitionImageUploader'
 
 interface CompetitionBasicFormData {
   date: string
@@ -18,11 +14,6 @@ interface CompetitionBasicFormData {
   note: string
 }
 
-export interface CompetitionImageData {
-  newFiles: CompetitionImageFile[]
-  deletedIds: string[]
-}
-
 type EditCompetitionBasicData = {
   date?: string
   end_date?: string | null // 終了日（複数日開催の場合）
@@ -31,13 +22,12 @@ type EditCompetitionBasicData = {
   place?: string
   pool_type?: number
   note?: string
-  images?: ExistingImage[]
 }
 
 interface CompetitionBasicFormProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: CompetitionBasicFormData, imageData?: CompetitionImageData) => Promise<void>
+  onSubmit: (data: CompetitionBasicFormData) => Promise<void>
   selectedDate: Date
   editData?: EditCompetitionBasicData
   isLoading?: boolean
@@ -65,12 +55,6 @@ export default function CompetitionBasicForm({
     note: ''
   })
 
-  // 画像データ
-  const [imageData, setImageData] = useState<CompetitionImageData>({
-    newFiles: [],
-    deletedIds: []
-  })
-
   // 初期化済みフラグ（モーダルが開かれた時だけ初期化するため）
   const [isInitialized, setIsInitialized] = useState(false)
   // フォームに変更があるかどうかを追跡
@@ -86,8 +70,6 @@ export default function CompetitionBasicForm({
       setIsInitialized(false)
       setHasUnsavedChanges(false)
       setIsSubmitted(false)
-      // 画像データもリセット
-      setImageData({ newFiles: [], deletedIds: [] })
       initialFormDataRef.current = null
     }
   }, [isOpen])
@@ -97,10 +79,9 @@ export default function CompetitionBasicForm({
     if (!isOpen || !isInitialized || !initialFormDataRef.current) return
 
     // 初期値と現在の値を比較
-    const formChanged = JSON.stringify(formData) !== JSON.stringify(initialFormDataRef.current)
-    const hasImageChanges = imageData.newFiles.length > 0 || imageData.deletedIds.length > 0
-    setHasUnsavedChanges(formChanged || hasImageChanges)
-  }, [formData, imageData, isOpen, isInitialized])
+    const hasChanged = JSON.stringify(formData) !== JSON.stringify(initialFormDataRef.current)
+    setHasUnsavedChanges(hasChanged)
+  }, [formData, isOpen, isInitialized])
 
   // ブラウザバックや閉じるボタンでの離脱を防ぐ
   useEffect(() => {
@@ -176,9 +157,7 @@ export default function CompetitionBasicForm({
 
     setIsSubmitted(true)
     try {
-      // 画像データがある場合は一緒に送信
-      const hasImageChanges = imageData.newFiles.length > 0 || imageData.deletedIds.length > 0
-      await onSubmit(formData, hasImageChanges ? imageData : undefined)
+      await onSubmit(formData)
       setHasUnsavedChanges(false)
       // onClose()は呼ばない - handleCompetitionBasicSubmitが適切にモーダルを管理する
       // (編集時: closeCompetitionBasicForm(), 新規作成時: openEntryLogForm())
@@ -195,10 +174,6 @@ export default function CompetitionBasicForm({
         return
       }
     }
-    // プレビューURLをクリーンアップ
-    imageData.newFiles.forEach(file => {
-      URL.revokeObjectURL(file.previewUrl)
-    })
     setFormData({
       date: format(new Date(), 'yyyy-MM-dd'),
       endDate: '',
@@ -210,14 +185,10 @@ export default function CompetitionBasicForm({
     onClose()
   }
 
-  const handleImagesChange = (newFiles: CompetitionImageFile[], deletedIds: string[]) => {
-    setImageData({ newFiles, deletedIds })
-  }
-
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-60 overflow-y-auto" data-testid="competition-form-modal">
+    <div className="fixed inset-0 z-[60] overflow-y-auto" data-testid="competition-form-modal">
       <div className="flex min-h-screen items-center justify-center p-4">
         {/* オーバーレイ */}
         <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose}></div>
@@ -332,15 +303,6 @@ export default function CompetitionBasicForm({
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   data-testid="competition-note"
-                />
-              </div>
-
-              {/* 画像添付 */}
-              <div className="border-t border-gray-200 pt-6">
-                <CompetitionImageUploader
-                  existingImages={editData?.images}
-                  onImagesChange={handleImagesChange}
-                  disabled={isLoading}
                 />
               </div>
             </form>
