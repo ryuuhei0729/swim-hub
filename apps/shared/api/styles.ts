@@ -4,7 +4,7 @@
 // =============================================================================
 
 import { SupabaseClient } from '@supabase/supabase-js'
-import { Style } from '../types/database'
+import { Style } from '../types'
 
 export class StyleAPI {
   constructor(private supabase: SupabaseClient) {}

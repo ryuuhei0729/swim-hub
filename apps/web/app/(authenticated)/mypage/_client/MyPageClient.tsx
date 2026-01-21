@@ -13,7 +13,7 @@ import ProfileEditModal from '@/components/profile/ProfileEditModal'
 import GoogleCalendarSyncSettings from '@/components/settings/GoogleCalendarSyncSettings'
 import TeamCreateModal from '@/components/team/TeamCreateModal'
 import TeamJoinModal from '@/components/team/TeamJoinModal'
-import type { UserUpdate, UserProfile as DatabaseUserProfile } from '@apps/shared/types/database'
+import type { UserUpdate, UserProfile as DatabaseUserProfile } from '@apps/shared/types'
 
 interface BestTime {
   id: string
@@ -68,11 +68,11 @@ export default function MyPageClient({
   const queryClient = useQueryClient()
   const { profile: queryProfile } = useUserQuery(supabase, {
     userId: user?.id,
-    initialProfile: initialProfile as import('@apps/shared/types/database').UserProfile | null,
+    initialProfile: initialProfile as import('@swim-hub/shared/types').UserProfile | null,
   })
   
   // チーム一覧を直接取得（useTeamsQueryが空配列を返す問題の回避）
-  const [teams, setTeams] = React.useState<import('@apps/shared/types/database').TeamMembershipWithUser[]>([])
+  const [teams, setTeams] = React.useState<import('@swim-hub/shared/types').TeamMembershipWithUser[]>([])
 
   React.useEffect(() => {
     if (!user || !supabase) {

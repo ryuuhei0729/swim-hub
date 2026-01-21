@@ -12,7 +12,7 @@ import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ErrorView } from '@/components/layout/ErrorView'
 import { usePracticeFilterStore } from '@/stores/practiceFilterStore'
 import type { MainStackParamList } from '@/navigation/types'
-import type { PracticeWithLogs, PracticeTag } from '@swim-hub/shared/types/database'
+import type { PracticeWithLogs, PracticeTag } from '@swim-hub/shared/types'
 
 type PracticesScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>
 

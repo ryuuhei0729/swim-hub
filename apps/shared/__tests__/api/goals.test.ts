@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  createMockQueryBuilder,
   createMockSupabaseClient,
 } from '../../__mocks__/supabase'
 import { GoalAPI } from '../../api/goals'
@@ -217,7 +218,7 @@ describe('GoalAPI - マイルストーン状態遷移', () => {
               })
             }
           }
-          return createMockSupabaseClient().from(table)
+          return createMockQueryBuilder([])
         })
 
         // checkMilestoneAchievementのモック
@@ -261,7 +262,7 @@ describe('GoalAPI - マイルストーン状態遷移', () => {
               })
             }
           }
-          return createMockSupabaseClient().from(table)
+          return createMockQueryBuilder([])
         })
 
         // checkMilestoneAchievementのモック
@@ -326,7 +327,7 @@ describe('GoalAPI - マイルストーン状態遷移', () => {
               })
             }
           }
-          return createMockSupabaseClient().from(table)
+          return createMockQueryBuilder([])
         })
 
         // checkMilestoneAchievementのモック
@@ -370,7 +371,7 @@ describe('GoalAPI - マイルストーン状態遷移', () => {
               })
             }
           }
-          return createMockSupabaseClient().from(table)
+          return createMockQueryBuilder([])
         })
 
         // checkMilestoneAchievementのモック

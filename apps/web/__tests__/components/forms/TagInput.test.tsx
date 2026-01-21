@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import TagInput from '@/components/forms/TagInput'
-import { PracticeTag } from '@apps/shared/types/database'
+import { PracticeTag } from '@apps/shared/types'
 
 const mockedUseAuth = vi.hoisted(() => vi.fn())
 

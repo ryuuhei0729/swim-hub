@@ -4,7 +4,7 @@
 
 import React from 'react'
 import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-server-auth'
-import type { TeamMembership, Team } from '@apps/shared/types/database'
+import type { TeamMembership, Team } from '@apps/shared/types'
 
 interface TeamMembershipWithTeam extends TeamMembership {
   team?: Team

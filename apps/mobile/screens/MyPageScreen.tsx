@@ -7,7 +7,7 @@ import { useBestTimesQuery } from '@/hooks/useBestTimesQuery'
 import { ProfileDisplay, ProfileEditModal, BestTimesTable } from '@/components/profile'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ErrorView } from '@/components/layout/ErrorView'
-import type { UserProfile } from '@swim-hub/shared/types/database'
+import type { UserProfile } from '@swim-hub/shared/types'
 
 /**
  * マイページ画面

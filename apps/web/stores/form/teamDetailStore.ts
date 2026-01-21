@@ -4,7 +4,7 @@
 
 import type { TeamTabType } from '@/components/team/TeamTabs'
 import type { MemberDetail } from '@/components/team/MemberDetailModal'
-import type { TeamMembership, TeamWithMembers } from '@apps/shared/types/database'
+import type { TeamMembership, TeamWithMembers } from '@apps/shared/types'
 import { create } from 'zustand'
 
 interface TeamDetailState {

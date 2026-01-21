@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { create } from 'zustand'
-import type { Style } from '@apps/shared/types/database'
+import type { Style } from '@apps/shared/types'
 import type { EditingData, EntryWithStyle } from '../types'
 
 interface CompetitionFormState {

@@ -55,7 +55,7 @@ export default function TeamCompetitionForm({
       if (authError) throw authError
       if (!user) throw new Error('認証が必要です')
 
-      const competitionInput: import('@apps/shared/types/database').CompetitionInsert = {
+      const competitionInput: import('@swim-hub/shared/types').CompetitionInsert = {
         user_id: user.id,
         title: formData.title || null,
         date: formData.date,

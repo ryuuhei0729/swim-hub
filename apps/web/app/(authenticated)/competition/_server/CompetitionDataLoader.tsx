@@ -7,7 +7,7 @@ import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-s
 import { RecordAPI } from '@apps/shared/api/records'
 import { getCachedStyles } from '@/lib/data-loaders/common'
 import CompetitionClient from '../_client/CompetitionClient'
-import type { Style, RecordWithDetails } from '@apps/shared/types/database'
+import type { Style, RecordWithDetails } from '@apps/shared/types'
 
 /**
  * 大会記録データを取得

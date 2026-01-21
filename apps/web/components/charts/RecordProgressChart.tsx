@@ -13,7 +13,7 @@ import {
 } from 'recharts'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import type { Record, Competition } from '@apps/shared/types/database'
+import type { Record, Competition } from '@apps/shared/types'
 import { formatTime } from '@/utils/formatters'
 
 // カスタムツールチップ（コンポーネント外に定義）

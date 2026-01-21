@@ -1,5 +1,4 @@
 import { format, getDay, parse } from 'date-fns'
-import ExcelJS from 'exceljs'
 
 // =============================================================================
 // 練習一括登録用Excel処理
@@ -31,7 +30,7 @@ function getDayOfWeekName(date: Date): string {
 /**
  * シートの書式設定を適用（練習用）
  */
-function applyPracticeSheetFormatting(worksheet: ExcelJS.Worksheet) {
+function applyPracticeSheetFormatting(worksheet: any) {
   // 列幅の設定
   worksheet.getColumn(1).width = 12 // 日付
   worksheet.getColumn(2).width = 8  // 曜日
@@ -60,7 +59,7 @@ function applyPracticeSheetFormatting(worksheet: ExcelJS.Worksheet) {
   }
 
   // データ行の書式設定
-  worksheet.eachRow((row, rowNumber) => {
+  worksheet.eachRow((row: any, rowNumber: number) => {
     if (rowNumber === 1) return // ヘッダー行はスキップ
 
     // 日付セルから曜日を判定
@@ -131,7 +130,8 @@ function applyPracticeSheetFormatting(worksheet: ExcelJS.Worksheet) {
 /**
  * 練習一括登録用Excelテンプレートを生成
  */
-export async function generatePracticeExcelTemplate(year: number): Promise<ExcelJS.Workbook> {
+export async function generatePracticeExcelTemplate(year: number): Promise<any> {
+  const ExcelJS = (await import('exceljs')).default
   const workbook = new ExcelJS.Workbook()
 
   // サンプルシートを作成
@@ -216,7 +216,7 @@ export async function downloadPracticeExcelTemplate(year: number): Promise<void>
 export function parsePracticeExcelFile(file: File): Promise<ParsedPracticeData> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    
+
     reader.onload = async (e) => {
       try {
         const data = e.target?.result
@@ -225,6 +225,7 @@ export function parsePracticeExcelFile(file: File): Promise<ParsedPracticeData> 
           return
         }
 
+        const ExcelJS = (await import('exceljs')).default
         const workbook = new ExcelJS.Workbook()
         await workbook.xlsx.load(data as ArrayBuffer)
 

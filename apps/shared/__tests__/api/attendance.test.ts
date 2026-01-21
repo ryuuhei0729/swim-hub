@@ -10,7 +10,7 @@ import {
   type TeamAttendance,
   type TeamAttendanceInsert,
   type TeamAttendanceUpdate
-} from '../../types/database'
+} from '../../types'
 
 type TableResponse = {
   data: any
@@ -42,7 +42,7 @@ const createSupabaseMock = (options: { userId?: string } = {}) => {
     builderHistory.set(table, history)
 
     return builder
-  })
+  }) as unknown as typeof client.from
 
   return {
     client,

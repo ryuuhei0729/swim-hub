@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
-import type { Database } from '@swim-hub/shared/types/database'
+import type { Database } from '@swim-hub/shared/types'
 import type { Session } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
@@ -255,7 +255,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [supabaseClient])
 
   // プロフィール更新（React Queryのミューテーションに移行予定）
-  const updateProfile = useCallback(async (updates: Partial<import('@apps/shared/types/database').UserProfile>) => {
+  const updateProfile = useCallback(async (updates: Partial<import('@swim-hub/shared/types').UserProfile>) => {
     if (!supabaseClient) {
       return { error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
     }
@@ -263,18 +263,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!authState.user) {
         return { error: new Error('User not authenticated') as unknown as import('@supabase/supabase-js').AuthError }
       }
-      
-      const userUpdate: Database['public']['Tables']['users']['Update'] = updates
+
       const { error } = await supabaseClient
         .from('users')
         // @ts-expect-error: Supabaseの型推論がupdateでneverになる既知の問題のため
-        .update(userUpdate)
+        .update(updates)
         .eq('id', authState.user.id)
-      
+
       if (error) {
         return { error: (error as unknown) as import('@supabase/supabase-js').AuthError }
       }
-      
+
       return { error: null }
     } catch (error) {
       console.error('Profile update error:', error)

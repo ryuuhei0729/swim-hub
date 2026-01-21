@@ -7,7 +7,7 @@ import { SupabaseClient } from '@supabase/supabase-js'
 import type {
   CompetitionImage,
   CompetitionImageInsert
-} from '../types/database'
+} from '../types'
 
 export class CompetitionAPI {
   constructor(private supabase: SupabaseClient) {}

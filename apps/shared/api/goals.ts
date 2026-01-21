@@ -7,7 +7,7 @@ import { SupabaseClient } from '@supabase/supabase-js'
 import { format } from 'date-fns'
 import {
   CompetitionInsert
-} from '../types/database'
+} from '../types'
 import {
   CreateGoalInput,
   CreateMilestoneInput,

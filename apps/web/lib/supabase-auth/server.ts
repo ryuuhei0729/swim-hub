@@ -1,7 +1,7 @@
 "use server";
 
 import { CookieOptions, createServerClient } from '@supabase/ssr'
-import type { Database } from '@swim-hub/shared/types/database'
+import type { Database } from '@swim-hub/shared/types'
 import { cookies } from 'next/headers'
 
 export async function createClient() {

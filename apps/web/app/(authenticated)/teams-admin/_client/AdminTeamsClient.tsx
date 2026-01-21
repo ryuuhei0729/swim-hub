@@ -3,7 +3,7 @@
 import React from 'react'
 import Link from 'next/link'
 import { UsersIcon, ShieldCheckIcon } from '@heroicons/react/24/outline'
-import { TeamMembershipWithUser } from '@apps/shared/types/database'
+import { TeamMembershipWithUser } from '@apps/shared/types'
 
 interface AdminTeamsClientProps {
   // サーバー側で取得したデータ

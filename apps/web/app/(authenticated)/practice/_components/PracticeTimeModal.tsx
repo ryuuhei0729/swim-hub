@@ -8,7 +8,7 @@ import type {
   PracticeLog,
   PracticeTime,
   PracticeTag
-} from '@apps/shared/types/database'
+} from '@apps/shared/types'
 
 interface PracticeTimeModalProps {
   isOpen: boolean

@@ -6,7 +6,7 @@ import React from 'react'
 import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-server-auth'
 import { TeamCoreAPI } from '@apps/shared/api/teams/core'
 import TeamAdminClient from '../_client/TeamAdminClient'
-import type { TeamMembership, TeamWithMembers } from '@apps/shared/types/database'
+import type { TeamMembership, TeamWithMembers } from '@apps/shared/types'
 import { notFound } from 'next/navigation'
 
 interface TeamAdminDataLoaderProps {

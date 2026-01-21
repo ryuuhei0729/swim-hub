@@ -12,7 +12,7 @@ import type {
   TeamAnnouncement,
   TeamAnnouncementInsert,
   TeamAnnouncementUpdate
-} from '../../types/database'
+} from '../../types'
 import { announcementKeys } from './keys'
 
 export interface UseTeamAnnouncementsQueryOptions {
@@ -107,11 +107,8 @@ export function useTeamAnnouncementQuery(
   return useQuery({
     queryKey: announcementKeys.detail(teamId, id),
     queryFn: async () => {
-      // TeamAnnouncementsAPIにはgetメソッドがないため、listから取得
-      const announcements = await api.list(teamId)
-      const announcement = announcements.find(a => a.id === id)
-      if (!announcement) throw new Error('お知らせが見つかりません')
-      return announcement
+      // 直接getメソッドで取得（最適化）
+      return await api.get(teamId, id)
     },
     enabled: !!teamId && !!id,
     initialData: options?.initialData,

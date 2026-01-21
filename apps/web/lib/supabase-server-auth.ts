@@ -5,7 +5,7 @@
 
 import { createServerClient } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '@swim-hub/shared/types/database'
+import type { Database, UserProfile } from '@swim-hub/shared/types'
 import { cookies } from 'next/headers'
 
 /**
@@ -77,13 +77,13 @@ export async function getServerUser() {
 
 /**
  * サーバー側でユーザープロフィールを取得
- * 
+ *
  * @param userId ユーザーID（省略時は現在のユーザー）
  * @returns ユーザープロフィール、取得できない場合はnull
  */
 export async function getServerUserProfile(
   userId?: string
-): Promise<Database['public']['Tables']['users']['Row'] | null> {
+): Promise<UserProfile | null> {
   const supabase = await createAuthenticatedServerClient()
   
   // userIdが指定されていない場合は現在のユーザーを取得

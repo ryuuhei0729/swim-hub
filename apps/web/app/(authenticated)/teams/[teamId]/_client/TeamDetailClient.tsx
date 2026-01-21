@@ -13,7 +13,7 @@ import MyMonthlyAttendance from '@/components/team/MyMonthlyAttendance'
 import MemberDetailModal from '@/components/team/MemberDetailModal'
 import type { MemberDetail } from '@/components/team/MemberDetailModal'
 import type { TeamTabType } from '@/components/team/TeamTabs'
-import { TeamMembership, TeamWithMembers } from '@swim-hub/shared/types/database'
+import { TeamMembership, TeamWithMembers } from '@swim-hub/shared/types'
 import { useTeamDetailStore } from '@/stores'
 import { ClipboardDocumentIcon, CheckIcon } from '@heroicons/react/24/outline'
 

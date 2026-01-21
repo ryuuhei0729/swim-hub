@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, Pressable, TextInput, Alert, Modal 
 import { Feather } from '@expo/vector-icons'
 import { useAuth } from '@/contexts/AuthProvider'
 import { AttendanceAPI, TeamAttendanceWithDetails } from '@swim-hub/shared'
-import { AttendanceStatus, TeamEvent } from '@swim-hub/shared/types/database'
+import { AttendanceStatus, TeamEvent } from '@swim-hub/shared/types'
 import { getMonthDateRange } from '@swim-hub/shared/utils/date'
 import { format, startOfMonth, endOfMonth, addMonths } from 'date-fns'
 import { ja } from 'date-fns/locale'

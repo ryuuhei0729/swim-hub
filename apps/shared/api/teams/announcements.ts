@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { SupabaseClient } from '@supabase/supabase-js'
-import { TeamAnnouncement, TeamAnnouncementInsert, TeamAnnouncementUpdate } from '../../types/database'
+import { TeamAnnouncement, TeamAnnouncementInsert, TeamAnnouncementUpdate } from '../../types'
 
 export class TeamAnnouncementsAPI {
   constructor(private supabase: SupabaseClient) {}
@@ -30,6 +30,36 @@ export class TeamAnnouncementsAPI {
         throw new Error('表示終了日時は表示開始日時より後の日時を指定してください')
       }
     }
+  }
+
+  async get(teamId: string, id: string): Promise<TeamAnnouncement> {
+    const { data: { user }, error: authError } = await this.supabase.auth.getUser()
+    if (authError) throw authError
+    if (!user) throw new Error('認証が必要です')
+
+    // チームメンバーシップ確認
+    const { data: membership, error: membershipError } = await this.supabase
+      .from('team_memberships')
+      .select('id')
+      .eq('team_id', teamId)
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single()
+
+    if (membershipError) throw membershipError
+    if (!membership) throw new Error('チームへのアクセス権限がありません')
+
+    const { data, error } = await this.supabase
+      .from('announcements')
+      .select('*')
+      .eq('id', id)
+      .eq('team_id', teamId)
+      .single()
+
+    if (error) throw error
+    if (!data) throw new Error('お知らせが見つかりません')
+
+    return data as TeamAnnouncement
   }
 
   async list(teamId: string, viewOnly: boolean = false): Promise<TeamAnnouncement[]> {

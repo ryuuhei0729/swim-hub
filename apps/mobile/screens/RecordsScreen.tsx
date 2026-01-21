@@ -11,7 +11,7 @@ import { RecordItem } from '@/components/records'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ErrorView } from '@/components/layout/ErrorView'
 import type { MainStackParamList } from '@/navigation/types'
-import type { RecordWithDetails } from '@swim-hub/shared/types/database'
+import type { RecordWithDetails } from '@swim-hub/shared/types'
 
 type RecordsScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>
 

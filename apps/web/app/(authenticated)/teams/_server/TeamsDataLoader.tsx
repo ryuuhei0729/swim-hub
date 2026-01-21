@@ -6,7 +6,7 @@ import React from 'react'
 import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-server-auth'
 import { TeamCoreAPI } from '@apps/shared/api/teams/core'
 import TeamsClient from '../_client/TeamsClient'
-import type { TeamMembershipWithUser } from '@apps/shared/types/database'
+import type { TeamMembershipWithUser } from '@apps/shared/types'
 
 /**
  * チーム情報を取得

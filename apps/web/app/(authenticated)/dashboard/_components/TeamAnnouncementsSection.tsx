@@ -6,7 +6,7 @@ import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { useAuth } from '@/contexts'
 import { TeamAnnouncements } from '@/components/team'
-import type { TeamMembership, Team } from '@apps/shared/types/database'
+import type { TeamMembership, Team } from '@apps/shared/types'
 
 interface TeamAnnouncementsSectionProps {
   teams: Array<TeamMembership & { team?: Team }>

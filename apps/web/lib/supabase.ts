@@ -1,6 +1,6 @@
 import { createBrowserClient } from '@supabase/ssr'
 import { type SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '@swim-hub/shared/types/database'
+import type { Database } from '@swim-hub/shared/types'
 
 // ブラウザ環境でSupabaseクライアントを管理（Hot Reload対応）
 declare global {

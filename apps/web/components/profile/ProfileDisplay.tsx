@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { PlusIcon, UserPlusIcon, UsersIcon } from '@heroicons/react/24/outline'
 import { Avatar } from '@/components/ui'
-import type { TeamMembershipWithUser } from '@apps/shared/types/database'
+import type { TeamMembershipWithUser } from '@apps/shared/types'
 
 interface UserProfile {
   id: string

@@ -5,7 +5,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import { SplitTimeItem } from '../SplitTimeItem'
-import type { SplitTime } from '@swim-hub/shared/types/database'
+import type { SplitTime } from '@swim-hub/shared/types'
 
 describe('SplitTimeItem', () => {
   const mockSplitTime: SplitTime = {

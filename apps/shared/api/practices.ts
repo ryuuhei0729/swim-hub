@@ -16,7 +16,7 @@ import {
     PracticeWithLogs,
     PracticeImage,
     PracticeImageInsert
-} from '../types/database'
+} from '../types'
 
 export class PracticeAPI {
   constructor(private supabase: SupabaseClient) {}
@@ -369,23 +369,28 @@ export class PracticeAPI {
 
   /**
    * 練習記録の変更をリアルタイム購読
+   * @param callback - 変更時のコールバック関数
+   * @param userId - (オプション) ユーザーIDでフィルタリング。指定した場合、該当ユーザーのみの変更を受信
    */
-  subscribeToPractices(callback: (practice: Practice) => void) {
+  subscribeToPractices(callback: (practice: Practice) => void, userId?: string) {
+    const config: any = {
+      event: '*',
+      schema: 'public',
+      table: 'practices'
+    }
+
+    // ユーザーIDでフィルタリング (帯域幅削減)
+    if (userId) {
+      config.filter = `user_id=eq.${userId}`
+    }
+
     return this.supabase
       .channel('practices-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'practices'
-        },
-        (payload) => {
-          if (payload.new) {
-            callback(payload.new as Practice)
-          }
+      .on('postgres_changes', config, (payload) => {
+        if (payload.new) {
+          callback(payload.new as Practice)
         }
-      )
+      })
       .subscribe()
   }
 
@@ -419,7 +424,7 @@ export class PracticeAPI {
   /**
    * 練習タグ一覧取得
    */
-  async getPracticeTags(): Promise<import('../types/database').PracticeTag[]> {
+  async getPracticeTags(): Promise<import('../types').PracticeTag[]> {
     const { data: { user } } = await this.supabase.auth.getUser()
     if (!user) throw new Error('認証が必要です')
 
@@ -430,13 +435,13 @@ export class PracticeAPI {
       .order('name')
 
     if (error) throw error
-    return (data || []) as import('../types/database').PracticeTag[]
+    return (data || []) as import('../types').PracticeTag[]
   }
 
   /**
    * 練習タグ作成
    */
-  async createPracticeTag(name: string, color: string): Promise<import('../types/database').PracticeTag> {
+  async createPracticeTag(name: string, color: string): Promise<import('../types').PracticeTag> {
     const { data: { user } } = await this.supabase.auth.getUser()
     if (!user) throw new Error('認証が必要です')
 
@@ -451,13 +456,13 @@ export class PracticeAPI {
       .single()
 
     if (error) throw error
-    return data as import('../types/database').PracticeTag
+    return data as import('../types').PracticeTag
   }
 
   /**
    * 練習タグ更新
    */
-  async updatePracticeTag(id: string, name: string, color: string): Promise<import('../types/database').PracticeTag> {
+  async updatePracticeTag(id: string, name: string, color: string): Promise<import('../types').PracticeTag> {
     const { data: { user } } = await this.supabase.auth.getUser()
     if (!user) throw new Error('認証が必要です')
 
@@ -473,7 +478,7 @@ export class PracticeAPI {
       .single()
 
     if (error) throw error
-    return data as import('../types/database').PracticeTag
+    return data as import('../types').PracticeTag
   }
 
   /**

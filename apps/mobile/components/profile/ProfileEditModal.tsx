@@ -3,7 +3,7 @@ import { View, Text, Modal, Pressable, TextInput, StyleSheet, ScrollView } from 
 import { Picker } from '@react-native-picker/picker'
 import { AvatarUpload } from './AvatarUpload'
 import { useAuth } from '@/contexts/AuthProvider'
-import type { UserProfile } from '@swim-hub/shared/types/database'
+import type { UserProfile } from '@swim-hub/shared/types'
 import { base64ToArrayBuffer } from '@/utils/base64'
 
 interface ProfileEditModalProps {

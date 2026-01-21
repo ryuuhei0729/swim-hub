@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { SupabaseClient } from '@supabase/supabase-js'
-import { TeamMembership, TeamMembershipInsert, TeamMembershipWithUser } from '../../types/database'
+import { TeamMembership, TeamMembershipInsert, TeamMembershipWithUser } from '../../types'
 
 export class TeamMembersAPI {
   constructor(private supabase: SupabaseClient) {}

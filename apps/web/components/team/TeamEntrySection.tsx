@@ -5,9 +5,10 @@ import { ChevronDownIcon, ChevronUpIcon, PencilIcon, TrashIcon } from '@heroicon
 import { formatTime } from '@/utils/formatters'
 import { StyleAPI } from '@apps/shared/api/styles'
 import { EntryAPI } from '@apps/shared/api/entries'
-import { EntryWithDetails } from '@apps/shared/types/database'
+import { EntryWithDetails } from '@apps/shared/types'
 import { useAuth } from '@/contexts/AuthProvider'
-import type { Style } from '@apps/shared/types/database'
+import type { Style } from '@apps/shared/types'
+import { parseISO } from 'date-fns'
 
 interface TeamEntrySectionProps {
   teamId: string
@@ -393,7 +394,7 @@ export default function TeamEntrySection({ teamId, isAdmin: _isAdmin }: TeamEntr
                   <div className="text-left">
                     <h3 className="font-semibold text-gray-900">{competition.title || '大会'}</h3>
                     <div className="flex items-center space-x-3 text-sm text-gray-600 mt-1">
-                      <span>📅 {new Date(competition.date).toLocaleDateString('ja-JP')}</span>
+                      <span>📅 {parseISO(competition.date).toLocaleDateString('ja-JP')}</span>
                       {competition.place && <span>📍 {competition.place}</span>}
                     </div>
                   </div>

@@ -1,6 +1,6 @@
 import { competitionToCalendarEvent, fetchGoogleCalendarWithTokenRefresh, practiceToCalendarEvent, refreshGoogleAccessToken } from '@/lib/google-calendar'
 import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-server-auth'
-import type { Competition, Practice } from '@apps/shared/types/database'
+import type { Competition, Practice } from '@apps/shared/types'
 import { NextRequest, NextResponse } from 'next/server'
 
 /**
