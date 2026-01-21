@@ -2,7 +2,7 @@
 
 import React, { Suspense, useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
-import type { PracticeTag, Style } from '@apps/shared/types/database'
+import type { PracticeTag, Style } from '@apps/shared/types'
 import type { TimeEntry, EntryInfo } from '@apps/shared/types/ui'
 import {
   usePracticeFormStore,

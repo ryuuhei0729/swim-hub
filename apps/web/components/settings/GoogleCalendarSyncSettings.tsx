@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts'
 import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
-import type { UserProfile } from '@apps/shared/types/database'
+import type { UserProfile } from '@apps/shared/types'
 
 interface GoogleCalendarSyncSettingsProps {
   profile: UserProfile | null

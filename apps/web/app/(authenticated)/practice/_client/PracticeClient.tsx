@@ -23,7 +23,7 @@ import type {
   PracticeTime,
   PracticeWithLogs,
   Style
-} from '@apps/shared/types/database'
+} from '@apps/shared/types'
 import {
   usePracticeFilterStore,
   usePracticeRecordStore

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { Button, Input } from '@/components/ui'
 import AvatarUpload from './AvatarUpload'
-import type { UserProfile } from '@apps/shared/types/database'
+import type { UserProfile } from '@apps/shared/types'
 
 
 interface ProfileEditModalProps {

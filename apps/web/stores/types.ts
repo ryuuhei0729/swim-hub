@@ -2,7 +2,7 @@
 // Zustandストア用型定義
 // =============================================================================
 
-import type { PracticeTag } from '@apps/shared/types/database'
+import type { PracticeTag } from '@apps/shared/types'
 import type { CalendarItem, EntryInfo, TimeEntry } from '@apps/shared/types/ui'
 
 // =============================================================================

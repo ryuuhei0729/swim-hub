@@ -11,7 +11,7 @@ import {
   TeamAttendanceInsert,
   TeamAttendanceUpdate,
   TeamAttendanceWithDetails
-} from '../types/database'
+} from '../types'
 import { getMonthDateRange } from '../utils/date'
 
 export class AttendanceAPI {

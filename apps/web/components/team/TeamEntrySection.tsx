@@ -5,9 +5,9 @@ import { ChevronDownIcon, ChevronUpIcon, PencilIcon, TrashIcon } from '@heroicon
 import { formatTime } from '@/utils/formatters'
 import { StyleAPI } from '@apps/shared/api/styles'
 import { EntryAPI } from '@apps/shared/api/entries'
-import { EntryWithDetails } from '@apps/shared/types/database'
+import { EntryWithDetails } from '@apps/shared/types'
 import { useAuth } from '@/contexts/AuthProvider'
-import type { Style } from '@apps/shared/types/database'
+import type { Style } from '@apps/shared/types'
 
 interface TeamEntrySectionProps {
   teamId: string

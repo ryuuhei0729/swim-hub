@@ -5,7 +5,7 @@ import {
   useCreateAnnouncementMutation,
   useUpdateAnnouncementMutation,
 } from '@apps/shared/hooks/queries/teams'
-import type { TeamAnnouncement } from '@swim-hub/shared/types/database'
+import type { TeamAnnouncement } from '@swim-hub/shared/types'
 
 interface TeamAnnouncementFormProps {
   visible: boolean

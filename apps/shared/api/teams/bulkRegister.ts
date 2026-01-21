@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { SupabaseClient } from '@supabase/supabase-js'
-import { CompetitionInsert, PracticeInsert } from '../../types/database'
+import { CompetitionInsert, PracticeInsert } from '../../types'
 
 export interface BulkRegisterInput {
   practices: Array<{

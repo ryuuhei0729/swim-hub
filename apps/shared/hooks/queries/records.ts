@@ -19,7 +19,7 @@ import type {
   RecordWithDetails,
   SplitTime,
   SplitTimeInsert
-} from '../../types/database'
+} from '../../types'
 import type { BestTime } from '../../types/ui'
 import { recordKeys } from './keys'
 

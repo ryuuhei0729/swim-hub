@@ -3,7 +3,7 @@
 // =============================================================================
 
 import type { MemberDetail } from '@/components/team/MemberDetailModal'
-import type { Team, TeamMembership } from '@apps/shared/types/database'
+import type { Team, TeamMembership } from '@apps/shared/types'
 import { create } from 'zustand'
 
 interface TeamMembershipWithTeam extends TeamMembership {

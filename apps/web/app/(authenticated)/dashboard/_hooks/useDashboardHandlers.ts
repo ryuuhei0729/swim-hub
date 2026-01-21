@@ -14,9 +14,9 @@ import type {
 } from '@/stores/types'
 import { processCompetitionImage, processPracticeImage } from '@/utils/imageUtils'
 import { CompetitionAPI, EntryAPI, PracticeAPI } from '@apps/shared/api'
-import type { Style } from '@apps/shared/types/database'
+import type { Style } from '@apps/shared/types'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '@swim-hub/shared/types/database'
+import type { Database } from '@swim-hub/shared/types'
 import { useCallback } from 'react'
 import { getCompetitionId, getPracticeId, getRecordCompetitionId } from '../_utils/dashboardHelpers'
 

@@ -2,7 +2,7 @@
 
 import { getSafeRedirectUrl } from "@/utils/redirect"
 import { CookieOptions, createServerClient } from "@supabase/ssr"
-import type { Database } from '@swim-hub/shared/types/database'
+import type { Database } from '@swim-hub/shared/types'
 import { NextResponse, type NextRequest } from "next/server"
 
 // 1. クッキー情報からUserデータを取得する

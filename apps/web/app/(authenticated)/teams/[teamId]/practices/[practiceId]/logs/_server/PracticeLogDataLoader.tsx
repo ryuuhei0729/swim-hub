@@ -2,7 +2,7 @@ import { redirect, notFound } from 'next/navigation'
 import { createAuthenticatedServerClient } from '@/lib/supabase-server-auth'
 import { getServerUser } from '@/lib/supabase-server'
 import PracticeLogClient from '../_client/PracticeLogClient'
-import { PracticeTag, Practice } from '@apps/shared/types/database'
+import { PracticeTag, Practice } from '@apps/shared/types'
 
 interface PracticeLogDataLoaderProps {
   teamId: string

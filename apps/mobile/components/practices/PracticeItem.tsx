@@ -2,7 +2,7 @@ import React, { useMemo, useCallback } from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { format } from 'date-fns'
-import type { PracticeWithLogs } from '@swim-hub/shared/types/database'
+import type { PracticeWithLogs } from '@swim-hub/shared/types'
 import { formatCircleTime } from '@/utils/formatters'
 
 interface PracticeItemProps {

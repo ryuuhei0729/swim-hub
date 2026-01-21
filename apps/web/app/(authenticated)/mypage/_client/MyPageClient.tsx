@@ -13,7 +13,7 @@ import ProfileEditModal from '@/components/profile/ProfileEditModal'
 import GoogleCalendarSyncSettings from '@/components/settings/GoogleCalendarSyncSettings'
 import TeamCreateModal from '@/components/team/TeamCreateModal'
 import TeamJoinModal from '@/components/team/TeamJoinModal'
-import type { UserUpdate, UserProfile as DatabaseUserProfile } from '@apps/shared/types/database'
+import type { UserUpdate, UserProfile as DatabaseUserProfile } from '@apps/shared/types'
 
 interface BestTime {
   id: string

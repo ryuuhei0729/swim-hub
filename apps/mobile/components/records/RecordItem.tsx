@@ -5,7 +5,7 @@ import { format, parseISO } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { toZonedTime } from 'date-fns-tz'
 import { formatTime } from '@/utils/formatters'
-import type { RecordWithDetails } from '@swim-hub/shared/types/database'
+import type { RecordWithDetails } from '@swim-hub/shared/types'
 
 interface RecordItemProps {
   record: RecordWithDetails

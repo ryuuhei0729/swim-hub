@@ -4,7 +4,7 @@
 // =============================================================================
 
 import { SupabaseClient } from '@supabase/supabase-js'
-import { CalendarItemType } from '../types/database'
+import { CalendarItemType } from '../types'
 import { CalendarItem } from '../types/ui'
 
 export class DashboardAPI {

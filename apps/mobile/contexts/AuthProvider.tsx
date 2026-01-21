@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import type { Database } from '@swim-hub/shared/types/database'
+import type { Database } from '@swim-hub/shared/types'
 import type { AuthState, AuthContextType } from '@swim-hub/shared/types/auth'
 import { getQueryClient } from '@/providers/QueryProvider'
 

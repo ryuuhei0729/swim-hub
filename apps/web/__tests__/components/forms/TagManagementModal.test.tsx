@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import TagManagementModal from '@/components/forms/TagManagementModal'
-import { PracticeTag } from '@apps/shared/types/database'
+import { PracticeTag } from '@apps/shared/types'
 
 const mockTag = {
   id: 'tag-1',

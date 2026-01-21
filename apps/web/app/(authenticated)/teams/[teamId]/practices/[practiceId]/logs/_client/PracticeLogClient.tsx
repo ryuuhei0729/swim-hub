@@ -7,7 +7,7 @@ import { Button } from '@/components/ui'
 import { ArrowLeftIcon, PlusIcon, TrashIcon, ClockIcon, CalendarDaysIcon, MapPinIcon, UserGroupIcon, XMarkIcon, CheckIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
 import TagInput from '@/components/forms/TagInput'
 import TeamTimeInputModal, { TeamTimeEntry } from '@/components/team/TeamTimeInputModal'
-import { PracticeTag, Practice } from '@apps/shared/types/database'
+import { PracticeTag, Practice } from '@apps/shared/types'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 

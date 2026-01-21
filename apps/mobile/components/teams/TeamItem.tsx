@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback } from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
-import type { TeamMembershipWithUser } from '@swim-hub/shared/types/database'
+import type { TeamMembershipWithUser } from '@swim-hub/shared/types'
 
 interface TeamItemProps {
   membership: TeamMembershipWithUser

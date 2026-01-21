@@ -2,7 +2,7 @@
 // Competition Page用の大会記録フォームZustandストア
 // =============================================================================
 
-import type { Record, Style } from '@apps/shared/types/database'
+import type { Record, Style } from '@apps/shared/types'
 import { create } from 'zustand'
 
 // Competition Page専用の型定義

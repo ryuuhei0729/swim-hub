@@ -12,7 +12,7 @@ import type {
   TeamAnnouncement,
   TeamAnnouncementInsert,
   TeamAnnouncementUpdate
-} from '../../types/database'
+} from '../../types'
 import { announcementKeys } from './keys'
 
 export interface UseTeamAnnouncementsQueryOptions {

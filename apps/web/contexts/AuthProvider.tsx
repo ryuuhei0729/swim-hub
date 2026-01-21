@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
-import type { Database } from '@swim-hub/shared/types/database'
+import type { Database } from '@swim-hub/shared/types'
 import type { Session } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'

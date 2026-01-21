@@ -5,7 +5,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { TeamAttendanceWithDetails } from '../types/database'
+import { TeamAttendanceWithDetails } from '../types'
 import { TeamMember } from '../utils/team'
 
 /**

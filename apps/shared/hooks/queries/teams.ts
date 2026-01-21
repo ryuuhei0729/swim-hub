@@ -18,7 +18,7 @@ import type {
     TeamMembershipWithUser,
     TeamUpdate,
     TeamWithMembers
-} from '../../types/database'
+} from '../../types'
 import { teamKeys } from './keys'
 
 export interface UseTeamsQueryOptions {

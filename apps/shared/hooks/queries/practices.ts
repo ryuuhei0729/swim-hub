@@ -20,7 +20,7 @@ import type {
     PracticeTimeInsert,
     PracticeUpdate,
     PracticeWithLogs
-} from '../../types/database'
+} from '../../types'
 import { practiceKeys } from './keys'
 
 export interface UsePracticesQueryOptions {

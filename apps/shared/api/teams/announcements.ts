@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { SupabaseClient } from '@supabase/supabase-js'
-import { TeamAnnouncement, TeamAnnouncementInsert, TeamAnnouncementUpdate } from '../../types/database'
+import { TeamAnnouncement, TeamAnnouncementInsert, TeamAnnouncementUpdate } from '../../types'
 
 export class TeamAnnouncementsAPI {
   constructor(private supabase: SupabaseClient) {}

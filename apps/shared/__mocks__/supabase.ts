@@ -1,5 +1,5 @@
 import { vi } from 'vitest'
-import type { PoolType, Record as RecordRow, RecordWithDetails } from '../types/database'
+import type { PoolType, Record as RecordRow, RecordWithDetails } from '../types'
 
 /**
  * Supabase Client のモックヘルパー

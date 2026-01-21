@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAuth } from '@/contexts'
 import { TeamAttendancesAPI } from '@apps/shared/api/teams/attendances'
-import { AttendanceStatusType, TeamEvent, TeamAttendanceWithDetails } from '@swim-hub/shared/types/database'
+import { AttendanceStatusType, TeamEvent, TeamAttendanceWithDetails } from '@swim-hub/shared/types'
 import { fetchTeamMembers, TeamMember } from '@swim-hub/shared/utils/team'
 import { useAttendanceGrouping } from '@swim-hub/shared/hooks/useAttendanceGrouping'
 import { format } from 'date-fns'

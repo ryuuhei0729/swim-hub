@@ -21,7 +21,7 @@ import type {
   TeamAttendanceWithDetails,
   SplitTime,
   PoolType
-} from '@apps/shared/types/database'
+} from '@apps/shared/types'
 import { AttendanceAPI, EntryAPI } from '@swim-hub/shared'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'

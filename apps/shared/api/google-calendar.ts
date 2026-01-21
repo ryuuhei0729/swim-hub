@@ -2,7 +2,7 @@
 // Google Calendar API連携
 // =============================================================================
 
-import type { Competition, Practice } from '../types/database'
+import type { Competition, Practice } from '../types'
 
 /**
  * Google Calendar同期結果

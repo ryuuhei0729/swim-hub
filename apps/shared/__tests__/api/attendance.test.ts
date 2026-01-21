@@ -10,7 +10,7 @@ import {
   type TeamAttendance,
   type TeamAttendanceInsert,
   type TeamAttendanceUpdate
-} from '../../types/database'
+} from '../../types'
 
 type TableResponse = {
   data: any
