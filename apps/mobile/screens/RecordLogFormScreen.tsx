@@ -406,7 +406,7 @@ export const RecordLogFormScreen: React.FC = () => {
         for (const formData of formDataList) {
           if (formData.time <= 0) continue // タイム未入力のものはスキップ
 
-          const recordData: Omit<import('@apps/shared/types/database').RecordInsert, 'user_id'> = {
+          const recordData: Omit<import('@swim-hub/shared/types').RecordInsert, 'user_id'> = {
             competition_id: competitionId,
             style_id: parseInt(formData.styleId),
             time: formData.time,

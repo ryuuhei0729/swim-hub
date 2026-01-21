@@ -280,8 +280,11 @@ describe('TeamMembersAPI', () => {
               if (options && 'count' in options && options.count === 'exact') {
                 // then()でcountを含むレスポンスを返す
                 /* biome-ignore lint/suspicious/noThenProperty: Supabaseのthenableクエリビルダーをモックするため */
-                builder.then = (resolve: (value: { data: any; error: any; count?: number }) => any) => {
-                  return Promise.resolve({ data: null, error: null, count: 3 }).then(resolve)
+                builder.then = <TResult1 = unknown, TResult2 = never>(
+                  onfulfilled?: ((value: { data: unknown; error: unknown; count?: number }) => TResult1 | PromiseLike<TResult1>) | null,
+                  onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
+                ): Promise<TResult1 | TResult2> => {
+                  return Promise.resolve({ data: null, error: null, count: 3 }).then(onfulfilled, onrejected)
                 }
               }
               return builder

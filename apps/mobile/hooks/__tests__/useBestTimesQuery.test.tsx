@@ -3,6 +3,7 @@
 // =============================================================================
 
 import { createMockCompetition, createMockRecord, createMockStyle, createMockSupabaseClient } from '@/__mocks__/supabase'
+import type { MockSupabaseClient } from '@/__mocks__/types'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
 import React from 'react'
@@ -15,7 +16,7 @@ type SelectBuilder<T> = {
   order: ReturnType<typeof vi.fn>
   then: <TResult1 = { data: T; error: null }, TResult2 = never>(
     onfulfilled?: ((value: { data: T; error: null }) => TResult1 | PromiseLike<TResult1>) | null,
-    onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
   ) => Promise<TResult1 | TResult2>
 }
 
@@ -49,7 +50,7 @@ const createWrapper = () => {
 }
 
 describe('useBestTimesQuery', () => {
-  let mockClient: any
+  let mockClient: MockSupabaseClient
 
   beforeEach(() => {
     vi.clearAllMocks()

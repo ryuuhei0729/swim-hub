@@ -25,21 +25,21 @@ interface UseDashboardHandlersProps {
   user: { id: string } | null
   styles: Style[]
   // Practice hooks（実際の型に合わせる）
-  createPractice: (practice: Omit<import('@apps/shared/types/database').PracticeInsert, 'user_id'>) => Promise<import('@apps/shared/types/database').Practice>
-  updatePractice: (id: string, updates: import('@apps/shared/types/database').PracticeUpdate) => Promise<import('@apps/shared/types/database').Practice>
-  createPracticeLog: (log: Omit<import('@apps/shared/types/database').PracticeLogInsert, 'user_id'>) => Promise<import('@apps/shared/types/database').PracticeLog>
-  updatePracticeLog: (id: string, updates: import('@apps/shared/types/database').PracticeLogUpdate) => Promise<import('@apps/shared/types/database').PracticeLog>
-  createPracticeTime: (time: import('@apps/shared/types/database').PracticeTimeInsert) => Promise<import('@apps/shared/types/database').PracticeTime>
+  createPractice: (practice: Omit<import('@swim-hub/shared/types').PracticeInsert, 'user_id'>) => Promise<import('@swim-hub/shared/types').Practice>
+  updatePractice: (id: string, updates: import('@swim-hub/shared/types').PracticeUpdate) => Promise<import('@swim-hub/shared/types').Practice>
+  createPracticeLog: (log: Omit<import('@swim-hub/shared/types').PracticeLogInsert, 'user_id'>) => Promise<import('@swim-hub/shared/types').PracticeLog>
+  updatePracticeLog: (id: string, updates: import('@swim-hub/shared/types').PracticeLogUpdate) => Promise<import('@swim-hub/shared/types').PracticeLog>
+  createPracticeTime: (time: import('@swim-hub/shared/types').PracticeTimeInsert) => Promise<import('@swim-hub/shared/types').PracticeTime>
   deletePracticeTime: (id: string) => Promise<void>
   deletePractice: (id: string) => Promise<void>
   // Record hooks（実際の型に合わせる）
-  createRecord: (record: Omit<import('@apps/shared/types/database').RecordInsert, 'user_id'>) => Promise<import('@apps/shared/types/database').Record>
-  updateRecord: (id: string, updates: import('@apps/shared/types/database').RecordUpdate) => Promise<import('@apps/shared/types/database').Record>
-  createCompetition: (competition: Omit<import('@apps/shared/types/database').CompetitionInsert, 'user_id'>) => Promise<import('@apps/shared/types/database').Competition>
-  updateCompetition: (id: string, updates: import('@apps/shared/types/database').CompetitionUpdate) => Promise<import('@apps/shared/types/database').Competition>
+  createRecord: (record: Omit<import('@swim-hub/shared/types').RecordInsert, 'user_id'>) => Promise<import('@swim-hub/shared/types').Record>
+  updateRecord: (id: string, updates: import('@swim-hub/shared/types').RecordUpdate) => Promise<import('@swim-hub/shared/types').Record>
+  createCompetition: (competition: Omit<import('@swim-hub/shared/types').CompetitionInsert, 'user_id'>) => Promise<import('@swim-hub/shared/types').Competition>
+  updateCompetition: (id: string, updates: import('@swim-hub/shared/types').CompetitionUpdate) => Promise<import('@swim-hub/shared/types').Competition>
   deleteCompetition: (id: string) => Promise<void>
-  createSplitTimes: (params: { recordId: string; splitTimes: Array<{ distance: number; split_time?: number; splitTime?: number }> }) => Promise<import('@apps/shared/types/database').SplitTime[]>
-  replaceSplitTimes: (params: { recordId: string; splitTimes: Omit<import('@apps/shared/types/database').SplitTimeInsert, 'record_id'>[] }) => Promise<import('@apps/shared/types/database').SplitTime[]>
+  createSplitTimes: (params: { recordId: string; splitTimes: Array<{ distance: number; split_time?: number; splitTime?: number }> }) => Promise<import('@swim-hub/shared/types').SplitTime[]>
+  replaceSplitTimes: (params: { recordId: string; splitTimes: Omit<import('@swim-hub/shared/types').SplitTimeInsert, 'record_id'>[] }) => Promise<import('@swim-hub/shared/types').SplitTime[]>
   // Form store actions
   editingData: EditingData | null
   createdPracticeId: string | null
@@ -126,7 +126,7 @@ export function useDashboardHandlers({
       // 画像の処理（安全な順序: アップロード → 検証 → 削除）
       if (practiceId && imageData) {
         const practiceAPI = new PracticeAPI(supabase)
-        let uploadedImages: import('@apps/shared/types/database').PracticeImage[] = []
+        let uploadedImages: import('@swim-hub/shared/types').PracticeImage[] = []
         
         try {
           // Step 1: 新規画像をアップロード（先に実行してデータ損失を防ぐ）
@@ -250,7 +250,7 @@ export function useDashboardHandlers({
                 set_number: timeEntry.setNumber,
                 rep_number: timeEntry.repNumber,
                 time: timeEntry.time
-              } as import('@apps/shared/types/database').PracticeTimeInsert)
+              } as import('@swim-hub/shared/types').PracticeTimeInsert)
             }
           }
         }
@@ -401,7 +401,7 @@ export function useDashboardHandlers({
       // 画像の処理（安全な順序: アップロード → 検証 → 削除）
       if (competitionId && imageData) {
         const competitionAPI = new CompetitionAPI(supabase)
-        let uploadedImages: import('@apps/shared/types/database').CompetitionImage[] = []
+        let uploadedImages: import('@swim-hub/shared/types').CompetitionImage[] = []
         
         try {
           // Step 1: 新規画像をアップロード（先に実行してデータ損失を防ぐ）
@@ -655,7 +655,7 @@ export function useDashboardHandlers({
 
       if (effectiveEditingData && effectiveEditingData.id) {
         const formData = dataArray[0]
-        const updates: import('@apps/shared/types/database').RecordUpdate = {
+        const updates: import('@swim-hub/shared/types').RecordUpdate = {
           style_id: parseInt(formData.styleId),
           time: formData.time,
           video_url: formData.videoUrl || null,
@@ -675,7 +675,7 @@ export function useDashboardHandlers({
           }))
           await replaceSplitTimes({
             recordId: effectiveEditingData.id,
-            splitTimes: splitTimesData as Omit<import('@apps/shared/types/database').SplitTimeInsert, 'record_id'>[]
+            splitTimes: splitTimesData as Omit<import('@swim-hub/shared/types').SplitTimeInsert, 'record_id'>[]
           })
         }
       } else {
@@ -697,7 +697,7 @@ export function useDashboardHandlers({
         const competitionPoolType = (competition as { pool_type: 0 | 1 }).pool_type
 
         for (const formData of dataArray) {
-          const recordForCreate: Omit<import('@apps/shared/types/database').RecordInsert, 'user_id'> = {
+          const recordForCreate: Omit<import('@swim-hub/shared/types').RecordInsert, 'user_id'> = {
             style_id: parseInt(formData.styleId),
             time: formData.time,
             video_url: formData.videoUrl || null,

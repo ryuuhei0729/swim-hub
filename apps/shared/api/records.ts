@@ -555,39 +555,51 @@ export class RecordAPI {
 
   /**
    * 記録の変更をリアルタイム購読
+   * @param callback - 変更時のコールバック関数
+   * @param userId - (オプション) ユーザーIDでフィルタリング。指定した場合、該当ユーザーのみの変更を受信
    */
-  subscribeToRecords(callback: (record: Record) => void) {
+  subscribeToRecords(callback: (record: Record) => void, userId?: string) {
+    const config: any = {
+      event: '*',
+      schema: 'public',
+      table: 'records'
+    }
+
+    // ユーザーIDでフィルタリング (帯域幅削減)
+    if (userId) {
+      config.filter = `user_id=eq.${userId}`
+    }
+
     return this.supabase
       .channel('records-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'records'
-        },
-        (payload) => {
-          if (payload.new) {
-            callback(payload.new as Record)
-          }
+      .on('postgres_changes', config, (payload) => {
+        if (payload.new) {
+          callback(payload.new as Record)
         }
-      )
+      })
       .subscribe()
   }
 
   /**
    * 大会の変更をリアルタイム購読
+   * @param callback - 変更時のコールバック関数
+   * @param userId - (オプション) ユーザーIDでフィルタリング。指定した場合、該当ユーザーのみの変更を受信
    */
-  subscribeToCompetitions(callback: (competition: Competition) => void) {
+  subscribeToCompetitions(callback: (competition: Competition) => void, userId?: string) {
+    const config: any = {
+      event: '*',
+      schema: 'public',
+      table: 'competitions'
+    }
+
+    // ユーザーIDでフィルタリング (帯域幅削減)
+    if (userId) {
+      config.filter = `user_id=eq.${userId}`
+    }
+
     return this.supabase
       .channel('competitions-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'competitions'
-        },
+      .on('postgres_changes', config,
         (payload) => {
           if (payload.new) {
             callback(payload.new as Competition)

@@ -1,48 +1,24 @@
 import { vi } from 'vitest'
 import type { PoolType, Record as RecordRow, RecordWithDetails } from '../types'
+import type { MockQueryBuilder, MockSupabaseClient } from './types'
 
 /**
  * Supabase Client のモックヘルパー
  * テストで使用する汎用的なモックを提供
  */
 
-export interface MockQueryBuilder {
-  select: ReturnType<typeof vi.fn>
-  insert: ReturnType<typeof vi.fn>
-  update: ReturnType<typeof vi.fn>
-  delete: ReturnType<typeof vi.fn>
-  upsert: ReturnType<typeof vi.fn>
-  eq: ReturnType<typeof vi.fn>
-  neq: ReturnType<typeof vi.fn>
-  gt: ReturnType<typeof vi.fn>
-  gte: ReturnType<typeof vi.fn>
-  lt: ReturnType<typeof vi.fn>
-  lte: ReturnType<typeof vi.fn>
-  is: ReturnType<typeof vi.fn>
-  like: ReturnType<typeof vi.fn>
-  ilike: ReturnType<typeof vi.fn>
-  in: ReturnType<typeof vi.fn>
-  contains: ReturnType<typeof vi.fn>
-  overlaps: ReturnType<typeof vi.fn>
-  or: ReturnType<typeof vi.fn>
-  order: ReturnType<typeof vi.fn>
-  limit: ReturnType<typeof vi.fn>
-  range: ReturnType<typeof vi.fn>
-  returns: ReturnType<typeof vi.fn>
-  single: ReturnType<typeof vi.fn>
-  maybeSingle: ReturnType<typeof vi.fn>
-  then: <T>(resolve: (value: { data: any; error: any; count?: number }) => T) => Promise<T>
-}
+// MockQueryBuilder と MockSupabaseClient は types.ts から export
+export type { MockQueryBuilder, MockSupabaseClient } from './types'
 
 /**
  * クエリビルダーのモックを作成
  */
-export const createMockQueryBuilder = (
-  returnData: any = [],
-  returnError: any = null,
+export const createMockQueryBuilder = <T = unknown>(
+  returnData: T = [] as T,
+  returnError: unknown = null,
   count?: number
-): MockQueryBuilder => {
-  const mockBuilder: any = {
+): MockQueryBuilder<T> => {
+  const builder = {
     select: vi.fn(),
     insert: vi.fn(),
     update: vi.fn(),
@@ -67,26 +43,43 @@ export const createMockQueryBuilder = (
     returns: vi.fn(),
     single: vi.fn(),
     maybeSingle: vi.fn(),
+    then: <TResult1 = { data: T; error: unknown; count?: number }, TResult2 = never>(
+      onfulfilled?: ((value: { data: T; error: unknown; count?: number }) => TResult1 | PromiseLike<TResult1>) | null,
+      onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
+    ): Promise<TResult1 | TResult2> => {
+      return Promise.resolve({ data: returnData, error: returnError, count }).then(onfulfilled, onrejected)
+    }
   }
 
   // チェーンメソッドは自分自身を返す
-  Object.keys(mockBuilder).forEach((key) => {
-    if (key !== 'single' && key !== 'maybeSingle') {
-      mockBuilder[key].mockReturnValue(mockBuilder)
-    }
-  })
+  builder.select.mockReturnValue(builder)
+  builder.insert.mockReturnValue(builder)
+  builder.update.mockReturnValue(builder)
+  builder.delete.mockReturnValue(builder)
+  builder.upsert.mockReturnValue(builder)
+  builder.eq.mockReturnValue(builder)
+  builder.neq.mockReturnValue(builder)
+  builder.gt.mockReturnValue(builder)
+  builder.gte.mockReturnValue(builder)
+  builder.lt.mockReturnValue(builder)
+  builder.lte.mockReturnValue(builder)
+  builder.is.mockReturnValue(builder)
+  builder.like.mockReturnValue(builder)
+  builder.ilike.mockReturnValue(builder)
+  builder.in.mockReturnValue(builder)
+  builder.contains.mockReturnValue(builder)
+  builder.overlaps.mockReturnValue(builder)
+  builder.or.mockReturnValue(builder)
+  builder.order.mockReturnValue(builder)
+  builder.limit.mockReturnValue(builder)
+  builder.range.mockReturnValue(builder)
+  builder.returns.mockReturnValue(builder)
 
   // single() と maybeSingle() は結果を返す
-  mockBuilder.single.mockResolvedValue({ data: returnData, error: returnError, count })
-  mockBuilder.maybeSingle.mockResolvedValue({ data: returnData, error: returnError, count })
-  // returns()はチェーンメソッドとして動作するため、mockBuilderを返す（ループで既に設定されている）
+  builder.single.mockResolvedValue({ data: returnData, error: returnError, count })
+  builder.maybeSingle.mockResolvedValue({ data: returnData, error: returnError, count })
 
-  // デフォルトの Promise 解決（select の最終結果など）
-  mockBuilder.then = (resolve: (value: { data: any; error: any; count?: number }) => any) => {
-    return Promise.resolve({ data: returnData, error: returnError, count }).then(resolve)
-  }
-
-  return mockBuilder
+  return builder as MockQueryBuilder<T>
 }
 
 /**
@@ -94,16 +87,16 @@ export const createMockQueryBuilder = (
  */
 export const createMockSupabaseClient = (options: {
   userId?: string
-  queryData?: any
-  queryError?: any
-} = {}) => {
+  queryData?: unknown
+  queryError?: unknown
+} = {}): MockSupabaseClient => {
   const {
     userId = 'test-user-id',
     queryData = [],
     queryError = null,
   } = options
 
-  const mockClient: any = {
+  const mockClient: MockSupabaseClient = {
     auth: {
       getUser: vi.fn().mockResolvedValue({
         data: {
@@ -142,6 +135,29 @@ export const createMockSupabaseClient = (options: {
   }
 
   return mockClient
+}
+
+/**
+ * Selectクエリ用のシンプルなモッククエリビルダーを作成
+ * テストでよく使うselect().eq().single()パターンを簡単に作成できる
+ */
+export const createMockSelectBuilder = <T>(data: T, error: unknown = null): MockQueryBuilder<T> => {
+  const builder: Partial<MockQueryBuilder<T>> = {
+    select: vi.fn(),
+    eq: vi.fn(),
+    order: vi.fn(),
+    single: vi.fn(),
+  }
+
+  // チェーンメソッドは自分自身を返す
+  builder.select!.mockReturnValue(builder)
+  builder.eq!.mockReturnValue(builder)
+  builder.order!.mockReturnValue(builder)
+
+  // single() は結果を返す
+  builder.single!.mockResolvedValue({ data, error })
+
+  return builder as MockQueryBuilder<T>
 }
 
 /**

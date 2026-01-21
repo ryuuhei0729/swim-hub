@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@swim-hub/shared/types'
 import type { AuthState, AuthContextType } from '@swim-hub/shared/types/auth'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { getQueryClient } from '@/providers/QueryProvider'
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -186,7 +187,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [])
 
   // プロフィール更新
-  const updateProfile = useCallback(async (updates: Partial<import('@swim-hub/shared/types/database').UserProfile>) => {
+  const updateProfile = useCallback(async (updates: Partial<import('@swim-hub/shared/types').UserProfile>) => {
     if (!supabase) {
       return { error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
     }
@@ -320,7 +321,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // supabaseがnullの場合のフォールバック（実際には使用されない）
   const value: AuthContextType = {
     ...authState,
-    supabase: supabase || ({} as any),
+    supabase: supabase || ({} as SupabaseClient<Database>),
     signIn,
     signUp,
     signInWithOAuth,

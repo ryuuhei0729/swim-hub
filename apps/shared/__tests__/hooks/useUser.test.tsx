@@ -1,7 +1,8 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createMockSupabaseClient, createMockTeamMembershipWithUser } from '../../__mocks__/supabase'
+import { createMockSupabaseClient, createMockTeamMembershipWithUser, createMockSelectBuilder } from '../../__mocks__/supabase'
+import type { MockSupabaseClient } from '../../__mocks__/types'
 import { useUserQuery, useUserProfileQuery } from '../../hooks/queries/user'
 import React from 'react'
 
@@ -19,7 +20,7 @@ const createWrapper = () => {
 }
 
 describe('useUserQuery', () => {
-  let mockClient: any
+  let mockClient: MockSupabaseClient
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -45,18 +46,10 @@ describe('useUserQuery', () => {
     })
 
     // usersテーブルのクエリをモック
-    const profileBuilder: any = {
-      select: vi.fn(() => profileBuilder),
-      eq: vi.fn(() => profileBuilder),
-      single: vi.fn().mockResolvedValue({ data: mockProfile, error: null }),
-    }
+    const profileBuilder = createMockSelectBuilder(mockProfile)
 
     // team_membershipsテーブルのクエリをモック（2回eqが呼ばれる）
-    const teamsBuilder: any = {
-      select: vi.fn(() => teamsBuilder),
-      eq: vi.fn(() => teamsBuilder),
-      order: vi.fn().mockResolvedValue({ data: mockTeams, error: null }),
-    }
+    const teamsBuilder = createMockSelectBuilder(mockTeams)
 
     // fromメソッドを上書き（createMockSupabaseClientのデフォルトを上書き）
     mockClient.from = vi.fn((table: string) => {
@@ -99,18 +92,10 @@ describe('useUserQuery', () => {
     })
 
     // usersテーブルのクエリをモック
-    const profileBuilder: any = {
-      select: vi.fn(() => profileBuilder),
-      eq: vi.fn(() => profileBuilder),
-      single: vi.fn().mockResolvedValue({ data: mockProfile, error: null }),
-    }
+    const profileBuilder = createMockSelectBuilder(mockProfile)
 
     // team_membershipsテーブルのクエリをモック
-    const teamsBuilder: any = {
-      select: vi.fn(() => teamsBuilder),
-      eq: vi.fn(() => teamsBuilder),
-      order: vi.fn().mockResolvedValue({ data: [], error: null }),
-    }
+    const teamsBuilder = createMockSelectBuilder([])
 
     // fromメソッドを上書き（createMockSupabaseClientのデフォルトを上書き）
     mockClient.from = vi.fn((table: string) => {
@@ -140,11 +125,8 @@ describe('useUserQuery', () => {
       data: { user: { id: 'user-1' } },
     })
 
-    const profileBuilder: any = {
-      select: vi.fn(() => profileBuilder),
-      eq: vi.fn(() => profileBuilder),
-      single: vi.fn().mockRejectedValue(error),
-    }
+    const profileBuilder = createMockSelectBuilder(null, error)
+    profileBuilder.single.mockRejectedValue(error)
 
     mockClient.from = vi.fn((table: string) => {
       if (table === 'users') return profileBuilder
@@ -162,7 +144,7 @@ describe('useUserQuery', () => {
 })
 
 describe('useUserProfileQuery', () => {
-  let mockClient: any
+  let mockClient: MockSupabaseClient
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -185,11 +167,7 @@ describe('useUserProfileQuery', () => {
       data: { user: { id: 'user-1' } },
     })
 
-    const profileBuilder: any = {
-      select: vi.fn(() => profileBuilder),
-      eq: vi.fn(() => profileBuilder),
-      single: vi.fn().mockResolvedValue({ data: mockProfile, error: null }),
-    }
+    const profileBuilder = createMockSelectBuilder(mockProfile)
 
     mockClient.from = vi.fn((table: string) => {
       if (table === 'users') return profileBuilder
@@ -222,11 +200,7 @@ describe('useUserProfileQuery', () => {
       data: { user: { id: 'user-1' } },
     })
 
-    const profileBuilder: any = {
-      select: vi.fn(() => profileBuilder),
-      eq: vi.fn(() => profileBuilder),
-      single: vi.fn().mockResolvedValue({ data: mockProfile, error: null }),
-    }
+    const profileBuilder = createMockSelectBuilder(mockProfile)
 
     mockClient.from = vi.fn((table: string) => {
       if (table === 'users') return profileBuilder
@@ -250,11 +224,8 @@ describe('useUserProfileQuery', () => {
       data: { user: { id: 'user-1' } },
     })
 
-    const profileBuilder: any = {
-      select: vi.fn(() => profileBuilder),
-      eq: vi.fn(() => profileBuilder),
-      single: vi.fn().mockRejectedValue(error),
-    }
+    const profileBuilder = createMockSelectBuilder(null, error)
+    profileBuilder.single.mockRejectedValue(error)
 
     mockClient.from = vi.fn((table: string) => {
       if (table === 'users') return profileBuilder

@@ -2,6 +2,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMockSupabaseClient, createMockPractice, createMockPracticeWithLogs } from '../../__mocks__/supabase'
+import type { MockSupabaseClient } from '../../__mocks__/types'
 import { PracticeAPI } from '../../api/practices'
 import { usePracticesQuery, useCreatePracticeMutation, useUpdatePracticeMutation, useDeletePracticeMutation } from '../../hooks/queries/practices'
 import React from 'react'
@@ -20,7 +21,7 @@ const createWrapper = () => {
 }
 
 describe('usePracticesQuery', () => {
-  let mockClient: any
+  let mockClient: MockSupabaseClient
   let mockApi: PracticeAPI
 
   beforeEach(() => {
@@ -79,7 +80,7 @@ describe('usePracticesQuery', () => {
 })
 
 describe('useCreatePracticeMutation', () => {
-  let mockClient: any
+  let mockClient: MockSupabaseClient
   let mockApi: PracticeAPI
 
   beforeEach(() => {
@@ -111,7 +112,7 @@ describe('useCreatePracticeMutation', () => {
 })
 
 describe('useUpdatePracticeMutation', () => {
-  let mockClient: any
+  let mockClient: MockSupabaseClient
   let mockApi: PracticeAPI
 
   beforeEach(() => {
@@ -143,7 +144,7 @@ describe('useUpdatePracticeMutation', () => {
 })
 
 describe('useDeletePracticeMutation', () => {
-  let mockClient: any
+  let mockClient: MockSupabaseClient
   let mockApi: PracticeAPI
 
   beforeEach(() => {

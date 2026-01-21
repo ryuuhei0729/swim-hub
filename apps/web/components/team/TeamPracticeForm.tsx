@@ -114,7 +114,7 @@ export default function TeamPracticeForm({
       if (!user) throw new Error('認証が必要です')
 
       const practicesAPI = new TeamPracticesAPI(supabase)
-      const practiceInput: import('@apps/shared/types/database').PracticeInsert = {
+      const practiceInput: import('@swim-hub/shared/types').PracticeInsert = {
         user_id: user.id,
         date: formData.date,
         title: formData.title || null,

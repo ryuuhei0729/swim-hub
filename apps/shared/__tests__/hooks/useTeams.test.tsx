@@ -2,6 +2,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMockSupabaseClient, createMockTeam, createMockTeamMembershipWithUser } from '../../__mocks__/supabase'
+import type { MockSupabaseClient } from '../../__mocks__/types'
 import { TeamCoreAPI, TeamMembersAPI, TeamAnnouncementsAPI } from '../../api/teams'
 import { useTeamsQuery, useCreateTeamMutation, useUpdateTeamMutation, useDeleteTeamMutation } from '../../hooks/queries/teams'
 import React from 'react'
@@ -20,7 +21,7 @@ const createWrapper = () => {
 }
 
 describe('useTeamsQuery', () => {
-  let mockClient: any
+  let mockClient: MockSupabaseClient
   let mockCoreApi: TeamCoreAPI
   let mockMembersApi: TeamMembersAPI
   let mockAnnouncementsApi: TeamAnnouncementsAPI
@@ -80,7 +81,7 @@ describe('useTeamsQuery', () => {
 })
 
 describe('useCreateTeamMutation', () => {
-  let mockClient: any
+  let mockClient: MockSupabaseClient
   let mockCoreApi: TeamCoreAPI
 
   beforeEach(() => {
@@ -111,7 +112,7 @@ describe('useCreateTeamMutation', () => {
 })
 
 describe('useUpdateTeamMutation', () => {
-  let mockClient: any
+  let mockClient: MockSupabaseClient
   let mockCoreApi: TeamCoreAPI
 
   beforeEach(() => {
@@ -141,7 +142,7 @@ describe('useUpdateTeamMutation', () => {
 })
 
 describe('useDeleteTeamMutation', () => {
-  let mockClient: any
+  let mockClient: MockSupabaseClient
   let mockCoreApi: TeamCoreAPI
 
   beforeEach(() => {

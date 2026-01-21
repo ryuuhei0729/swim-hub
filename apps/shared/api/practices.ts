@@ -369,23 +369,28 @@ export class PracticeAPI {
 
   /**
    * 練習記録の変更をリアルタイム購読
+   * @param callback - 変更時のコールバック関数
+   * @param userId - (オプション) ユーザーIDでフィルタリング。指定した場合、該当ユーザーのみの変更を受信
    */
-  subscribeToPractices(callback: (practice: Practice) => void) {
+  subscribeToPractices(callback: (practice: Practice) => void, userId?: string) {
+    const config: any = {
+      event: '*',
+      schema: 'public',
+      table: 'practices'
+    }
+
+    // ユーザーIDでフィルタリング (帯域幅削減)
+    if (userId) {
+      config.filter = `user_id=eq.${userId}`
+    }
+
     return this.supabase
       .channel('practices-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'practices'
-        },
-        (payload) => {
-          if (payload.new) {
-            callback(payload.new as Practice)
-          }
+      .on('postgres_changes', config, (payload) => {
+        if (payload.new) {
+          callback(payload.new as Practice)
         }
-      )
+      })
       .subscribe()
   }
 

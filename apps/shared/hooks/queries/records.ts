@@ -88,13 +88,22 @@ export function useRecordsQuery(
   useEffect(() => {
     if (!enableRealtime || !recordsQuery.data) return
 
-    const recordsChannel = api.subscribeToRecords(() => {
-      // 関連するクエリを無効化して再取得（リレーションデータも含める）
-      queryClient.invalidateQueries({ queryKey: recordKeys.lists() })
+    let recordsChannel: ReturnType<typeof api.subscribeToRecords> | null = null
+
+    // ユーザーIDを取得してフィルタ付きサブスクリプションを開始
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+
+      recordsChannel = api.subscribeToRecords(() => {
+        // 関連するクエリを無効化して再取得（リレーションデータも含める）
+        queryClient.invalidateQueries({ queryKey: recordKeys.lists() })
+      }, user.id) // user_idフィルタを追加
     })
 
     return () => {
-      supabase.removeChannel(recordsChannel)
+      if (recordsChannel) {
+        supabase.removeChannel(recordsChannel)
+      }
     }
   }, [api, enableRealtime, queryClient, recordsQuery.data, supabase])
 
@@ -102,25 +111,34 @@ export function useRecordsQuery(
   useEffect(() => {
     if (!enableRealtime || !competitionsQuery.data) return
 
-    const competitionsChannel = api.subscribeToCompetitions((newCompetition) => {
-      queryClient.setQueryData<Competition[]>(
-        recordKeys.competitionsList({ startDate, endDate }),
-        (old: Competition[] | undefined) => {
-          if (!old) return old
+    let competitionsChannel: ReturnType<typeof api.subscribeToCompetitions> | null = null
 
-          const index = old.findIndex((c: Competition) => c.id === newCompetition.id)
-          if (index >= 0) {
-            const updated = [...old]
-            updated[index] = newCompetition
-            return updated
+    // ユーザーIDを取得してフィルタ付きサブスクリプションを開始
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+
+      competitionsChannel = api.subscribeToCompetitions((newCompetition) => {
+        queryClient.setQueryData<Competition[]>(
+          recordKeys.competitionsList({ startDate, endDate }),
+          (old: Competition[] | undefined) => {
+            if (!old) return old
+
+            const index = old.findIndex((c: Competition) => c.id === newCompetition.id)
+            if (index >= 0) {
+              const updated = [...old]
+              updated[index] = newCompetition
+              return updated
+            }
+            return [newCompetition, ...old]
           }
-          return [newCompetition, ...old]
-        }
-      )
+        )
+      }, user.id) // user_idフィルタを追加
     })
 
     return () => {
-      supabase.removeChannel(competitionsChannel)
+      if (competitionsChannel) {
+        supabase.removeChannel(competitionsChannel)
+      }
     }
   }, [api, enableRealtime, queryClient, startDate, endDate, competitionsQuery.data, supabase])
 

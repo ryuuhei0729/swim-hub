@@ -255,7 +255,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [supabaseClient])
 
   // プロフィール更新（React Queryのミューテーションに移行予定）
-  const updateProfile = useCallback(async (updates: Partial<import('@apps/shared/types/database').UserProfile>) => {
+  const updateProfile = useCallback(async (updates: Partial<import('@swim-hub/shared/types').UserProfile>) => {
     if (!supabaseClient) {
       return { error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
     }
