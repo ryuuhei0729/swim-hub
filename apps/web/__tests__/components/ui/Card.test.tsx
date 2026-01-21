@@ -39,7 +39,7 @@ describe('Card', () => {
         </Card>
       )
       const header = screen.getByText('ヘッダー')
-      expect(header).toHaveClass('flex', 'flex-col', 'space-y-1.5', 'p-6')
+      expect(header).toHaveClass('flex', 'flex-col', 'space-y-1.5', 'p-3', 'sm:p-6')
     })
 
     it('カスタムclassNameが適用される', () => {
@@ -144,7 +144,7 @@ describe('Card', () => {
         </Card>
       )
       const content = screen.getByText('コンテンツ')
-      expect(content).toHaveClass('p-6', 'pt-0')
+      expect(content).toHaveClass('p-3', 'pt-0', 'sm:p-6', 'sm:pt-0')
     })
 
     it('カスタムclassNameが適用される', () => {
@@ -175,7 +175,7 @@ describe('Card', () => {
         </Card>
       )
       const footer = screen.getByText('フッター')
-      expect(footer).toHaveClass('flex', 'items-center', 'p-6', 'pt-0')
+      expect(footer).toHaveClass('flex', 'items-center', 'p-3', 'pt-0', 'sm:p-6', 'sm:pt-0')
     })
 
     it('カスタムclassNameが適用される', () => {
