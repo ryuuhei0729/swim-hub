@@ -3,15 +3,15 @@
 // =============================================================================
 
 import type { EditingData, EntryWithStyle } from '@/stores/types'
-import type { CalendarItemType, PracticeLogWithTimes, PracticeTag } from '@apps/shared/types'
+import type { CalendarItemType, PracticeLogWithTimes, PracticeTag, PracticeImage, CompetitionImage } from '@apps/shared/types'
 import type { CalendarItem, EntryInfo, TimeEntry } from '@apps/shared/types/ui'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@swim-hub/shared/types'
 import { parseISO, startOfDay } from 'date-fns'
 import { useCallback } from 'react'
 
-type PracticeImageRow = Database['public']['Tables']['practice_images']['Row']
-type CompetitionImageRow = Database['public']['Tables']['competition_images']['Row']
+type PracticeImageRow = PracticeImage
+type CompetitionImageRow = CompetitionImage
 
 // スプリットタイム型（編集時に使用）
 export interface RecordSplitTime {

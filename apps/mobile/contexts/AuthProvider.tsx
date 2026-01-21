@@ -195,18 +195,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!authState.user) {
         return { error: new Error('User not authenticated') as unknown as import('@supabase/supabase-js').AuthError }
       }
-      
-      const userUpdate: Database['public']['Tables']['users']['Update'] = updates
+
       const { error } = await supabase
         .from('users')
         // @ts-expect-error: Supabaseの型推論がupdateでneverになる既知の問題のため
-        .update(userUpdate)
+        .update(updates)
         .eq('id', authState.user.id)
-      
+
       if (error) {
         return { error: (error as unknown) as import('@supabase/supabase-js').AuthError }
       }
-      
+
       return { error: null }
     } catch (error) {
       console.error('Profile update error:', error)

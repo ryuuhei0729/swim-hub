@@ -91,6 +91,7 @@ describe('RecordAPI', () => {
         note: 'テストメモ',
         is_relaying: false,
         pool_type: 0 as 0,
+        reaction_time: null,
       }
       const createdRecord = createMockRecord(newRecord)
 
@@ -101,7 +102,7 @@ describe('RecordAPI', () => {
           data: createdRecord,
           error: null,
         }),
-      }))
+      })) as unknown as typeof mockClient.from
 
       const result = await api.createRecord(newRecord)
 
@@ -122,6 +123,7 @@ describe('RecordAPI', () => {
           note: 'テストメモ',
           is_relaying: false,
           pool_type: 0 as 0,
+          reaction_time: null,
         })
       ).rejects.toThrow('認証が必要です')
     })

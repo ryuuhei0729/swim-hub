@@ -14,7 +14,7 @@ import type {
 } from '@/stores/types'
 import { processCompetitionImage, processPracticeImage } from '@/utils/imageUtils'
 import { CompetitionAPI, EntryAPI, PracticeAPI } from '@apps/shared/api'
-import type { Style } from '@apps/shared/types'
+import type { Style, PracticeLogTagInsert } from '@apps/shared/types'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@swim-hub/shared/types'
 import { useCallback } from 'react'
@@ -213,13 +213,13 @@ export function useDashboardHandlers({
         
         if (menu.tags && menu.tags.length > 0) {
           for (const tag of menu.tags) {
-            const insertData: Database['public']['Tables']['practice_log_tags']['Insert'] = {
+            const insertData: PracticeLogTagInsert = {
               practice_log_id: practiceLogId,
               practice_tag_id: tag.id
             }
             // Supabaseの型推論が正しく機能しないため、型アサーションを使用
             const queryBuilder = supabase.from('practice_log_tags') as unknown as {
-              insert: (values: Database['public']['Tables']['practice_log_tags']['Insert']) => Promise<{ error: { message: string } | null }>
+              insert: (values: PracticeLogTagInsert) => Promise<{ error: { message: string } | null }>
             }
             const { error } = await queryBuilder.insert(insertData)
             
@@ -278,13 +278,13 @@ export function useDashboardHandlers({
           
           if (menu.tags && menu.tags.length > 0 && createdLog) {
             for (const tag of menu.tags) {
-              const insertData: Database['public']['Tables']['practice_log_tags']['Insert'] = {
+              const insertData: PracticeLogTagInsert = {
                 practice_log_id: createdLog.id,
                 practice_tag_id: tag.id
               }
               // Supabaseの型推論が正しく機能しないため、型アサーションを使用
               const queryBuilder = supabase.from('practice_log_tags') as unknown as {
-                insert: (values: Database['public']['Tables']['practice_log_tags']['Insert']) => Promise<{ error: { message: string } | null }>
+                insert: (values: PracticeLogTagInsert) => Promise<{ error: { message: string } | null }>
               }
               const { error } = await queryBuilder.insert(insertData)
               

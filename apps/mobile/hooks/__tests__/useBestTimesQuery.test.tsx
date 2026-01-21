@@ -2,8 +2,7 @@
 // useBestTimesQuery.test.ts - ベストタイム取得フックのユニットテスト
 // =============================================================================
 
-import { createMockCompetition, createMockRecord, createMockStyle, createMockSupabaseClient } from '@/__mocks__/supabase'
-import type { MockSupabaseClient } from '@/__mocks__/types'
+import { createMockCompetition, createMockRecord, createMockStyle, createMockSupabaseClient, type MockSupabaseClient } from '@/__mocks__/supabase'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
 import React from 'react'
@@ -75,7 +74,7 @@ describe('useBestTimesQuery', () => {
       },
     ]
 
-    mockClient.from = vi.fn(() => createSelectBuilder(mockData))
+    mockClient.from = vi.fn(() => createSelectBuilder(mockData)) as unknown as typeof mockClient.from
 
     const { result } = renderHook(
       () => useBestTimesQuery(mockClient, { userId: 'test-user-id' }),
@@ -102,7 +101,7 @@ describe('useBestTimesQuery', () => {
       },
     ]
 
-    mockClient.from = vi.fn(() => createSelectBuilder(mockRecords))
+    mockClient.from = vi.fn(() => createSelectBuilder(mockRecords)) as unknown as typeof mockClient.from
 
     const { result } = renderHook(
       () => useBestTimesQuery(mockClient, { userId: 'test-user-id' }),
@@ -132,7 +131,7 @@ describe('useBestTimesQuery', () => {
       },
     ]
 
-    mockClient.from = vi.fn(() => createSelectBuilder(mockRecords))
+    mockClient.from = vi.fn(() => createSelectBuilder(mockRecords)) as unknown as typeof mockClient.from
 
     const { result } = renderHook(
       () => useBestTimesQuery(mockClient, { userId: 'test-user-id' }),
@@ -155,7 +154,7 @@ describe('useBestTimesQuery', () => {
       error: null,
     })
 
-    mockClient.from = vi.fn(() => createSelectBuilder([]))
+    mockClient.from = vi.fn(() => createSelectBuilder([])) as unknown as typeof mockClient.from
 
     const { result } = renderHook(() => useBestTimesQuery(mockClient, {}), {
       wrapper: createWrapper(),
@@ -183,7 +182,7 @@ describe('useBestTimesQuery', () => {
   })
 
   it('データが空の場合、空配列を返す', async () => {
-    mockClient.from = vi.fn(() => createSelectBuilder([]))
+    mockClient.from = vi.fn(() => createSelectBuilder([])) as unknown as typeof mockClient.from
 
     const { result } = renderHook(
       () => useBestTimesQuery(mockClient, { userId: 'test-user-id' }),

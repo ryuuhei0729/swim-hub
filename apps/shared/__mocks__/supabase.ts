@@ -96,7 +96,7 @@ export const createMockSupabaseClient = (options: {
     queryError = null,
   } = options
 
-  const mockClient: MockSupabaseClient = {
+  const mockClient = {
     auth: {
       getUser: vi.fn().mockResolvedValue({
         data: {
@@ -132,7 +132,7 @@ export const createMockSupabaseClient = (options: {
       return channel
     }),
     removeChannel: vi.fn(),
-  }
+  } as unknown as MockSupabaseClient
 
   return mockClient
 }
@@ -206,6 +206,7 @@ export const createMockRecord = (overrides: Partial<RecordRow> = {}): RecordRow 
   is_relaying: false,
   note: 'テスト記録',
   video_url: null,
+  reaction_time: null,
   created_at: '2025-01-15T10:00:00Z',
   updated_at: '2025-01-15T10:00:00Z',
   ...overrides,

@@ -9,8 +9,8 @@ import type { AttendanceStatusType, CalendarItemType, PoolType } from './common'
 // 1. 基本型定義
 // =============================================================================
 
-// 練習（日単位）
-export interface Practice {
+// 練習（日単位）- DBテーブルカラムのみ
+export interface BasePractice {
   id: string
   user_id: string
   date: string
@@ -22,6 +22,10 @@ export interface Practice {
   google_event_id?: string | null // Google CalendarイベントID
   created_at: string
   updated_at: string
+}
+
+// 練習 - DBカラム + 派生/互換性フィールド
+export interface Practice extends BasePractice {
   // CalendarItemとの互換性のための追加プロパティ
   item_type?: CalendarItemType
   item_date?: string
@@ -41,7 +45,7 @@ export interface Practice {
   practice_logs?: PracticeLog[]
 }
 
-export type PracticeInsert = Omit<Practice, 'id' | 'created_at' | 'updated_at'>
+export type PracticeInsert = Omit<BasePractice, 'id' | 'created_at' | 'updated_at'>
 export type PracticeUpdate = Partial<Omit<PracticeInsert, 'user_id'>>
 
 // 練習ログ（セット単位）

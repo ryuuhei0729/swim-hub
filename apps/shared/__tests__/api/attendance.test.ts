@@ -42,7 +42,7 @@ const createSupabaseMock = (options: { userId?: string } = {}) => {
     builderHistory.set(table, history)
 
     return builder
-  })
+  }) as unknown as typeof client.from
 
   return {
     client,

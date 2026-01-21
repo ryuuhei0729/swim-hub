@@ -4,20 +4,9 @@ import { vi } from 'vitest'
 
 /**
  * テスト用のモックSupabaseクライアント型
- * 実際にモックされるメソッドのみを含む
+ * SupabaseClientと互換性を持つようにする
  */
-export type MockSupabaseClient = {
-  auth: {
-    getUser: ReturnType<typeof vi.fn>
-    signInWithPassword: ReturnType<typeof vi.fn>
-    signOut: ReturnType<typeof vi.fn>
-    getSession: ReturnType<typeof vi.fn>
-  }
-  from: ReturnType<typeof vi.fn>
-  rpc: ReturnType<typeof vi.fn>
-  channel: ReturnType<typeof vi.fn>
-  removeChannel: ReturnType<typeof vi.fn>
-}
+export type MockSupabaseClient = SupabaseClient<Database>
 
 /**
  * テスト用のモッククエリビルダー型

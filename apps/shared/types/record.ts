@@ -12,8 +12,8 @@ import type { UserProfile } from './user'
 // 1. 基本型定義
 // =============================================================================
 
-// 記録
-export interface Record {
+// 記録（DB実テーブルカラムのみ）
+export interface RecordBase {
   id: string
   user_id: string
   competition_id: string | null
@@ -22,26 +22,31 @@ export interface Record {
   video_url: string | null
   note: string | null
   is_relaying: boolean
-  reaction_time?: number | null // 反応時間（リアクションタイム）を秒単位で記録。範囲は0.40~1.00秒程度。
+  reaction_time: number | null // 反応時間（リアクションタイム）を秒単位で記録。範囲は0.40~1.00秒程度。
+  pool_type: PoolType // DB上はNOT NULL
   created_at: string
   updated_at: string
+}
+
+// 記録（派生フィールド・JOIN結果を含む）
+export interface Record extends RecordBase {
   // CalendarItemとの互換性のための追加プロパティ
   item_type?: CalendarItemType
   item_date?: string
   title?: string
   place?: string
   time_result?: number
-  pool_type: PoolType // DB上はNOT NULL
   tags?: string[]
   competition_name?: string
   team_practice?: boolean
   team_record?: boolean
+  // JOIN結果
   split_times?: SplitTime[]
   competition?: Competition | null
   style?: Style
 }
 
-export type RecordInsert = Omit<Record, 'id' | 'created_at' | 'updated_at'>
+export type RecordInsert = Omit<RecordBase, 'id' | 'created_at' | 'updated_at'>
 export type RecordUpdate = Partial<Omit<RecordInsert, 'user_id'>>
 
 // スプリットタイム

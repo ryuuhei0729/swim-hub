@@ -478,9 +478,226 @@ export type Database = {
           updated_at?: string
         }
       }
+      teams: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          invite_code: string | null
+          created_by: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          invite_code?: string | null
+          created_by: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          invite_code?: string | null
+          created_by?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      announcements: {
+        Row: {
+          id: string
+          team_id: string
+          title: string
+          content: string
+          created_by: string
+          is_published: boolean
+          start_at: string | null
+          end_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          team_id: string
+          title: string
+          content: string
+          created_by: string
+          is_published?: boolean
+          start_at?: string | null
+          end_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          team_id?: string
+          title?: string
+          content?: string
+          created_by?: string
+          is_published?: boolean
+          start_at?: string | null
+          end_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      goals: {
+        Row: {
+          id: string
+          user_id: string
+          competition_id: string
+          style_id: number
+          target_time: number
+          start_time: number | null
+          status: 'active' | 'achieved' | 'cancelled'
+          achieved_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          competition_id: string
+          style_id: number
+          target_time: number
+          start_time?: number | null
+          status?: 'active' | 'achieved' | 'cancelled'
+          achieved_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          competition_id?: string
+          style_id?: number
+          target_time?: number
+          start_time?: number | null
+          status?: 'active' | 'achieved' | 'cancelled'
+          achieved_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      team_attendance: {
+        Row: {
+          id: string
+          user_id: string
+          status: 'present' | 'absent' | 'other' | null
+          note: string | null
+          created_at: string
+          updated_at: string
+          practice_id: string | null
+          competition_id: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          status?: 'present' | 'absent' | 'other' | null
+          note?: string | null
+          created_at?: string
+          updated_at?: string
+          practice_id?: string | null
+          competition_id?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          status?: 'present' | 'absent' | 'other' | null
+          note?: string | null
+          created_at?: string
+          updated_at?: string
+          practice_id?: string | null
+          competition_id?: string | null
+        }
+      }
+      milestones: {
+        Row: {
+          id: string
+          goal_id: string
+          title: string
+          type: 'time' | 'reps_time' | 'set'
+          params: Record<string, any>
+          deadline: string | null
+          status: 'not_started' | 'in_progress' | 'achieved' | 'expired'
+          achieved_at: string | null
+          reflection_done: boolean
+          reflection_note: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          goal_id: string
+          title: string
+          type: 'time' | 'reps_time' | 'set'
+          params: Record<string, any>
+          deadline?: string | null
+          status?: 'not_started' | 'in_progress' | 'achieved' | 'expired'
+          achieved_at?: string | null
+          reflection_done?: boolean
+          reflection_note?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          goal_id?: string
+          title?: string
+          type?: 'time' | 'reps_time' | 'set'
+          params?: Record<string, any>
+          deadline?: string | null
+          status?: 'not_started' | 'in_progress' | 'achieved' | 'expired'
+          achieved_at?: string | null
+          reflection_done?: boolean
+          reflection_note?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      milestone_achievements: {
+        Row: {
+          id: string
+          milestone_id: string
+          practice_log_id: string | null
+          record_id: string | null
+          achieved_value: Record<string, any>
+          achieved_at: string
+        }
+        Insert: {
+          id?: string
+          milestone_id: string
+          practice_log_id?: string | null
+          record_id?: string | null
+          achieved_value: Record<string, any>
+          achieved_at?: string
+        }
+        Update: {
+          id?: string
+          milestone_id?: string
+          practice_log_id?: string | null
+          record_id?: string | null
+          achieved_value?: Record<string, any>
+          achieved_at?: string
+        }
+      }
     }
     Views: {
-      [_ in never]: never
+      calendar_view: {
+        Row: {
+          id: string
+          item_type: 'practice' | 'team_practice' | 'practice_log' | 'competition' | 'team_competition' | 'entry' | 'record'
+          item_date: string
+          title: string | null
+          place: string | null
+          note: string | null
+          metadata: Record<string, any>
+        }
+      }
     }
     Functions: {
       set_google_refresh_token: {
