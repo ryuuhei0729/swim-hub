@@ -3,6 +3,7 @@
 // =============================================================================
 
 import type { PracticeImageData } from '@/components/forms/PracticeBasicForm'
+import type { CompetitionImageData } from '@/components/forms/CompetitionBasicForm'
 import { useCompetitionFormStore, usePracticeFormStore } from '@/stores'
 import type {
   EditingData,
@@ -11,8 +12,8 @@ import type {
   PracticeMenuFormData,
   RecordFormDataInternal
 } from '@/stores/types'
-import { processPracticeImage } from '@/utils/imageUtils'
-import { EntryAPI, PracticeAPI } from '@apps/shared/api'
+import { processCompetitionImage, processPracticeImage } from '@/utils/imageUtils'
+import { CompetitionAPI, EntryAPI, PracticeAPI } from '@apps/shared/api'
 import type { Style } from '@apps/shared/types/database'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@swim-hub/shared/types/database'
@@ -360,12 +361,17 @@ export function useDashboardHandlers({
   }, [supabase, refreshCalendar, deletePractice, deleteCompetition])
 
   // 大会情報作成・更新
-  const handleCompetitionBasicSubmit = useCallback(async (basicData: { date: string; endDate: string; title: string; place: string; poolType: number; note: string }) => {
+  const handleCompetitionBasicSubmit = useCallback(async (
+    basicData: { date: string; endDate: string; title: string; place: string; poolType: number; note: string },
+    imageData?: CompetitionImageData
+  ) => {
     setLoading(true)
     try {
       // 終了日は空文字の場合はnullに変換
       const endDate = basicData.endDate ? basicData.endDate : null
       
+      let competitionId: string | undefined
+
       if (competitionEditingData && competitionEditingData.id) {
         await updateCompetition(competitionEditingData.id, {
           date: basicData.date,
@@ -375,8 +381,8 @@ export function useDashboardHandlers({
           pool_type: basicData.poolType,
           note: basicData.note || null
         })
+        competitionId = competitionEditingData.id
         closeCompetitionBasicForm()
-        refreshCalendar()
       } else {
         const newCompetition = await createCompetition({
           date: basicData.date,
@@ -386,17 +392,68 @@ export function useDashboardHandlers({
           pool_type: basicData.poolType,
           note: basicData.note || null
         })
-        refreshCalendar()
+        competitionId = newCompetition.id
         // openEntryLogFormがisBasicFormOpen: falseをセットするので、closeCompetitionBasicFormは不要
         // closeCompetitionBasicFormを呼ぶとcreatedCompetitionIdがnullにリセットされてしまう
         openEntryLogForm(newCompetition.id)
       }
+
+      // 画像の処理（安全な順序: アップロード → 検証 → 削除）
+      if (competitionId && imageData) {
+        const competitionAPI = new CompetitionAPI(supabase)
+        let uploadedImages: import('@apps/shared/types/database').CompetitionImage[] = []
+        
+        try {
+          // Step 1: 新規画像をアップロード（先に実行してデータ損失を防ぐ）
+          if (imageData.newFiles.length > 0) {
+            const processedImages = await Promise.all(
+              imageData.newFiles.map(async (fileData) => {
+                const { original, thumbnail } = await processCompetitionImage(fileData.file)
+                return {
+                  originalFile: original,
+                  thumbnailFile: thumbnail,
+                  originalFileName: fileData.file.name
+                }
+              })
+            )
+            uploadedImages = await competitionAPI.uploadCompetitionImages(competitionId, processedImages)
+            
+            // Step 2: アップロード成功を確認
+            if (uploadedImages.length !== processedImages.length) {
+              throw new Error('一部の画像のアップロードに失敗しました')
+            }
+          }
+          
+          // Step 3: アップロード成功後に削除を実行
+          if (imageData.deletedIds.length > 0) {
+            await competitionAPI.deleteCompetitionImages(imageData.deletedIds)
+          }
+        } catch (imageError) {
+          console.error('画像処理エラー:', imageError)
+          
+          // Step 4: ロールバック - アップロードした画像を削除
+          if (uploadedImages.length > 0) {
+            try {
+              const uploadedIds = uploadedImages.map(img => img.id)
+              await competitionAPI.deleteCompetitionImages(uploadedIds)
+              console.log('ロールバック完了: アップロードした画像を削除しました')
+            } catch (rollbackError) {
+              console.error('ロールバック失敗:', rollbackError)
+            }
+          }
+          
+          // 画像処理エラーを再スロー
+          throw new Error('画像の処理に失敗しました')
+        }
+      }
+
+      refreshCalendar()
     } catch (error) {
       console.error('大会情報の処理に失敗しました:', error)
     } finally {
       setLoading(false)
     }
-  }, [competitionEditingData, updateCompetition, createCompetition, closeCompetitionBasicForm, refreshCalendar, openEntryLogForm, setLoading])
+  }, [competitionEditingData, updateCompetition, createCompetition, closeCompetitionBasicForm, refreshCalendar, openEntryLogForm, setLoading, supabase])
 
   // エントリー登録
   const handleEntrySubmit = useCallback(async (entriesData: EntryFormData[]) => {

@@ -15,6 +15,7 @@ import type {
   EntryWithStyle
 } from '@/stores/types'
 import type { PracticeImageData } from '@/components/forms/PracticeBasicForm'
+import type { CompetitionImageData } from '@/components/forms/CompetitionBasicForm'
 import { convertRecordFormData } from '@/stores/types'
 import { getCompetitionId } from '../_utils/dashboardHelpers'
 import { useAuth } from '@/contexts'
@@ -22,7 +23,7 @@ import { useAuth } from '@/contexts'
 interface FormModalsProps {
   onPracticeBasicSubmit: (basicData: { date: string; title: string; place: string; note: string }, imageData?: PracticeImageData) => Promise<void>
   onPracticeLogSubmit: (formDataArray: PracticeMenuFormData[]) => Promise<void>
-  onCompetitionBasicSubmit: (basicData: { date: string; endDate: string; title: string; place: string; poolType: number; note: string }) => Promise<void>
+  onCompetitionBasicSubmit: (basicData: { date: string; endDate: string; title: string; place: string; poolType: number; note: string }, imageData?: CompetitionImageData) => Promise<void>
   onEntrySubmit: (entriesData: EntryFormData[]) => Promise<void>
   onEntrySkip: () => void
   onRecordLogSubmit: (formDataList: RecordFormDataInternal[]) => Promise<void>
@@ -461,7 +462,8 @@ export function FormModals({
             title?: string; 
             place?: string; 
             note?: string; 
-            metadata?: { competition?: { title?: string; place?: string; pool_type?: number } } 
+            metadata?: { competition?: { title?: string; place?: string; pool_type?: number } }
+            editData?: { images?: Array<{ id: string; thumbnailUrl: string; originalUrl: string; fileName: string }> }
           }
           
           return {
@@ -470,7 +472,8 @@ export function FormModals({
             competition_name: data.metadata?.competition?.title,
             place: data.place || data.metadata?.competition?.place || '',
             pool_type: data.metadata?.competition?.pool_type,
-            note: data.note || ''
+            note: data.note || '',
+            images: data.editData?.images
           }
         })()}
         isLoading={competitionIsLoading}

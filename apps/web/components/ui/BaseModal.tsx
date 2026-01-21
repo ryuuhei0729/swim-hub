@@ -31,7 +31,7 @@ export default function BaseModal({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center p-4">
+      <div className="flex min-h-screen items-center justify-center p-0 sm:p-4">
         {/* オーバーレイ */}
         <div 
           className="fixed inset-0 bg-black/40 transition-opacity"
@@ -42,9 +42,9 @@ export default function BaseModal({
         <div className={`relative bg-white rounded-lg shadow-xl w-full ${sizeClasses[size]}`}>
           {/* ヘッダー */}
           {(title || showCloseButton) && (
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between p-3 sm:p-6 border-b border-gray-200">
               {title && (
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900">
                   {title}
                 </h3>
               )}
@@ -61,7 +61,7 @@ export default function BaseModal({
           )}
           
           {/* コンテンツ */}
-          <div className="p-6">
+          <div className="p-3 sm:p-6">
             {children}
           </div>
         </div>

@@ -143,6 +143,11 @@ export const PRACTICE_IMAGE_CONFIG = {
 } as const
 
 /**
+ * 大会画像用の定数（練習画像と同じ設定）
+ */
+export const COMPETITION_IMAGE_CONFIG = PRACTICE_IMAGE_CONFIG
+
+/**
  * ブラウザがHEIC/HEIF形式をデコードできるかチェック
  * @returns Promise<boolean> - デコード可能な場合true
  */
@@ -400,3 +405,11 @@ export const processPracticeImages = async (
 
   return results
 }
+
+// =============================================================================
+// 大会画像用のユーティリティ関数（練習画像と同等）
+// =============================================================================
+
+export const validateCompetitionImageFile = validatePracticeImageFile
+export const processCompetitionImage = processPracticeImage
+export const processCompetitionImages = processPracticeImages

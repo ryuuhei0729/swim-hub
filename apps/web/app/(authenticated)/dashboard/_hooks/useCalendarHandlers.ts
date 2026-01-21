@@ -200,7 +200,47 @@ export function useCalendarHandlers({
         }
       }
     } else if (item.type === 'competition' || item.type === 'team_competition') {
-      openCompetitionBasicForm(dateObj, item)
+      // 大会編集時は画像情報を取得
+      let itemWithImages = item
+      if (item.id) {
+        try {
+          // competition_imagesテーブルは新規追加のため、型アサーションを使用
+          type CompetitionImageRow = {
+            id: string
+            original_path: string
+            thumbnail_path: string
+            file_name: string
+            display_order: number
+          }
+
+          const { data: images } = await supabase
+            .from('competition_images' as 'competitions') // 型システムを回避
+            .select('id, original_path, thumbnail_path, file_name, display_order')
+            .eq('competition_id' as 'id', item.id)
+            .order('display_order' as 'id') as { data: CompetitionImageRow[] | null }
+
+          if (images && images.length > 0) {
+            const formattedImages = images.map((img: CompetitionImageRow) => ({
+              id: img.id,
+              thumbnailUrl: supabase.storage.from('competition-images').getPublicUrl(img.thumbnail_path).data.publicUrl,
+              originalUrl: supabase.storage.from('competition-images').getPublicUrl(img.original_path).data.publicUrl,
+              fileName: img.file_name
+            }))
+
+            // itemに画像情報を追加
+            itemWithImages = {
+              ...item,
+              editData: {
+                ...(item.editData || {}),
+                images: formattedImages
+              }
+            }
+          }
+        } catch (error) {
+          console.error('画像情報の取得エラー:', error)
+        }
+      }
+      openCompetitionBasicForm(dateObj, itemWithImages)
     }
   }, [parseDateString, openPracticeBasicForm, openPracticeLogForm, openEntryLogForm, openCompetitionBasicForm, openRecordLogForm, supabase])
 
