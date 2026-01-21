@@ -627,6 +627,44 @@ export type Database = {
           updated_at?: string
         }
       }
+      competition_images: {
+        Row: {
+          id: string
+          competition_id: string
+          user_id: string
+          original_path: string
+          thumbnail_path: string
+          file_name: string
+          file_size: number
+          display_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          competition_id: string
+          user_id: string
+          original_path: string
+          thumbnail_path: string
+          file_name: string
+          file_size: number
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          competition_id?: string
+          user_id?: string
+          original_path?: string
+          thumbnail_path?: string
+          file_name?: string
+          file_size?: number
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
       practices: {
         Row: {
           id: string

@@ -10,6 +10,9 @@ import type { Database } from '@swim-hub/shared/types/database'
 import { parseISO, startOfDay } from 'date-fns'
 import { useCallback } from 'react'
 
+type PracticeImageRow = Database['public']['Tables']['practice_images']['Row']
+type CompetitionImageRow = Database['public']['Tables']['competition_images']['Row']
+
 // スプリットタイム型（編集時に使用）
 export interface RecordSplitTime {
   distance: number
@@ -91,23 +94,16 @@ export function useCalendarHandlers({
       let itemWithImages = item
       if (item.id) {
         try {
-          // practice_imagesテーブルは新規追加のため、型アサーションを使用
-          type PracticeImageRow = {
-            id: string
-            original_path: string
-            thumbnail_path: string
-            file_name: string
-            display_order: number
-          }
-          
-          const { data: images } = await supabase
-            .from('practice_images' as 'practices') // 型システムを回避
-            .select('id, original_path, thumbnail_path, file_name, display_order')
-            .eq('practice_id' as 'id', item.id)
-            .order('display_order' as 'id') as { data: PracticeImageRow[] | null }
+          // NOTE: Supabaseの型推論が環境によってneverになることがあるため、Row型を明示して受け取る
+          const { data: images } = (await supabase
+            .from('practice_images')
+            // NOTE: PostgRESTのselect型推論が崩れてneverになるケースがあるため、ここでは '*' を使用する
+            .select('*')
+            .eq('practice_id', item.id)
+            .order('display_order')) as unknown as { data: PracticeImageRow[] | null }
           
           if (images && images.length > 0) {
-            const formattedImages = images.map((img: PracticeImageRow) => ({
+            const formattedImages = images.map((img) => ({
               id: img.id,
               thumbnailUrl: supabase.storage.from('practice-images').getPublicUrl(img.thumbnail_path).data.publicUrl,
               originalUrl: supabase.storage.from('practice-images').getPublicUrl(img.original_path).data.publicUrl,
@@ -204,23 +200,16 @@ export function useCalendarHandlers({
       let itemWithImages = item
       if (item.id) {
         try {
-          // competition_imagesテーブルは新規追加のため、型アサーションを使用
-          type CompetitionImageRow = {
-            id: string
-            original_path: string
-            thumbnail_path: string
-            file_name: string
-            display_order: number
-          }
-
-          const { data: images } = await supabase
-            .from('competition_images' as 'competitions') // 型システムを回避
-            .select('id, original_path, thumbnail_path, file_name, display_order')
-            .eq('competition_id' as 'id', item.id)
-            .order('display_order' as 'id') as { data: CompetitionImageRow[] | null }
+          // NOTE: Supabaseの型推論が環境によってneverになることがあるため、Row型を明示して受け取る
+          const { data: images } = (await supabase
+            .from('competition_images')
+            // NOTE: PostgRESTのselect型推論が崩れてneverになるケースがあるため、ここでは '*' を使用する
+            .select('*')
+            .eq('competition_id', item.id)
+            .order('display_order')) as unknown as { data: CompetitionImageRow[] | null }
 
           if (images && images.length > 0) {
-            const formattedImages = images.map((img: CompetitionImageRow) => ({
+            const formattedImages = images.map((img) => ({
               id: img.id,
               thumbnailUrl: supabase.storage.from('competition-images').getPublicUrl(img.thumbnail_path).data.publicUrl,
               originalUrl: supabase.storage.from('competition-images').getPublicUrl(img.original_path).data.publicUrl,
