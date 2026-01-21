@@ -180,14 +180,14 @@ export default function PracticeForm({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <div className="flex items-center justify-center min-h-screen pt-4 px-0 pb-20 text-center sm:block sm:p-0">
         <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose}></div>
 
         <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full max-h-[90vh] overflow-y-auto">
           {/* ヘッダー */}
-          <div className="bg-white px-6 py-4 border-b border-gray-200 sticky top-0 z-10">
+          <div className="bg-white px-3 py-3 sm:px-6 sm:py-4 border-b border-gray-200 sticky top-0 z-10">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
+              <h3 className="text-base sm:text-lg leading-6 font-medium text-gray-900">
                 {editData ? '練習記録を編集' : '練習記録を追加'}
               </h3>
               <button
@@ -201,7 +201,7 @@ export default function PracticeForm({
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <form onSubmit={handleSubmit} className="p-3 sm:p-6 space-y-4 sm:space-y-6">
             {/* 練習日 */}
             <div>
               <label htmlFor="practice-date" className="block text-sm font-medium text-gray-700 mb-2">
@@ -247,7 +247,7 @@ export default function PracticeForm({
             </div>
 
             {/* 画像添付 */}
-            <div className="border-t border-gray-200 pt-6">
+            <div className="border-t border-gray-200 pt-4 sm:pt-6">
               <PracticeImageUploader
                 existingImages={editData?.images}
                 onImagesChange={handleImagesChange}
@@ -256,7 +256,7 @@ export default function PracticeForm({
             </div>
 
             {/* ボタン */}
-            <div className="flex justify-end gap-3 pt-6 border-t">
+            <div className="flex justify-end gap-2 sm:gap-3 pt-4 sm:pt-6 border-t">
               <Button
                 type="button"
                 onClick={handleClose}
