@@ -19,6 +19,7 @@ export const useAttendanceStatus = (
 
   const loadAttendanceData = useCallback(async (event: TeamEvent) => {
     try {
+      setError(null)
       setLoading(true)
 
       const attendances = event.type === 'practice'

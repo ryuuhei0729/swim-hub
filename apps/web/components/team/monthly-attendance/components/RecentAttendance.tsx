@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react'
 import { TeamEvent, TeamAttendanceWithDetails } from '@swim-hub/shared/types'
 import { AttendanceEditState } from '../hooks/useAttendanceEdit'
 import { getStatusBadge } from './StatusBadge'
+import { parseISO } from 'date-fns'
 
 interface RecentAttendanceProps {
   events: TeamEvent[]
@@ -38,7 +39,7 @@ export const RecentAttendance = React.memo(({
     const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear
 
     return events.filter((event) => {
-      const eventDate = new Date(event.date)
+      const eventDate = parseISO(event.date)
       const eventYear = eventDate.getFullYear()
       const eventMonth = eventDate.getMonth() + 1
 
@@ -97,9 +98,13 @@ export const RecentAttendance = React.memo(({
           {filteredEvents.map((event) => {
             const editState = editStates[event.id] || { status: null, note: '' }
             const isSaving = savingEventIds.has(event.id)
-            const existingAttendance = attendances.find(
-              (a) => (a.practice_id || a.competition_id) === event.id
-            )
+            const existingAttendance = attendances.find((a) => {
+              if (event.type === 'practice') {
+                return a.practice_id === event.id
+              } else {
+                return a.competition_id === event.id
+              }
+            })
             const hasChanges = existingAttendance
               ? existingAttendance.status !== editState.status ||
                 (existingAttendance.note || '').trim() !== (editState.note || '').trim()
@@ -117,7 +122,7 @@ export const RecentAttendance = React.memo(({
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex-1 flex items-center gap-2">
                     <span className="text-sm font-bold text-gray-900 whitespace-nowrap">
-                      {new Date(event.date).toLocaleDateString('ja-JP', {
+                      {parseISO(event.date).toLocaleDateString('ja-JP', {
                         month: 'long',
                         day: 'numeric',
                         weekday: 'short'

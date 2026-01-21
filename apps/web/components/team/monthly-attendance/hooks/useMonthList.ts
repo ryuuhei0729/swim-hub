@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { AttendanceAPI } from '@swim-hub/shared'
 import { getMonthDateRange } from '@swim-hub/shared/utils/date'
-import { format, startOfMonth, endOfMonth, addMonths } from 'date-fns'
+import { format, startOfMonth, endOfMonth, addMonths, parseISO } from 'date-fns'
 
 export interface MonthItem {
   year: number
@@ -106,10 +106,8 @@ export const useMonthList = (
       ]
 
       allDates.forEach(dateStr => {
-        const date = new Date(dateStr)
-        const year = date.getFullYear()
-        const month = date.getMonth() + 1
-        const monthKey = `${year}-${String(month).padStart(2, '0')}`
+        const date = parseISO(dateStr)
+        const monthKey = format(date, 'yyyy-MM')
         monthSet.add(monthKey)
       })
 

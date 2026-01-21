@@ -5,6 +5,7 @@ import BaseModal from '@/components/ui/BaseModal'
 import { TeamEvent } from '@swim-hub/shared/types'
 import { AttendanceEditState } from '../hooks/useAttendanceEdit'
 import { getStatusBadge } from './StatusBadge'
+import { parseISO } from 'date-fns'
 
 interface MonthDetailModalProps {
   isOpen: boolean
@@ -78,7 +79,7 @@ export const MonthDetailModal = React.memo(({
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex-1 flex items-center gap-2">
                           <span className="text-sm font-bold text-gray-900 whitespace-nowrap">
-                            {new Date(event.date).toLocaleDateString('ja-JP', {
+                            {parseISO(event.date).toLocaleDateString('ja-JP', {
                               month: 'long',
                               day: 'numeric',
                               weekday: 'short'

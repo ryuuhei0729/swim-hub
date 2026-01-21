@@ -6,7 +6,7 @@ import { AttendanceAPI, TeamAttendanceWithDetails } from '@swim-hub/shared'
 import { AttendanceStatus, TeamEvent } from '@swim-hub/shared/types'
 import { getMonthDateRange } from '@swim-hub/shared/utils/date'
 import { sanitizeTextInput } from '@swim-hub/shared/utils/sanitize'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 
 interface AttendanceEditState {
   status: AttendanceStatus | null
@@ -71,7 +71,7 @@ export const useRecentAttendance = (
         type: 'competition' as const
       }))
       const allEvents = [...practices, ...competitions].sort(
-        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+        (a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime()
       )
       setEvents(allEvents)
 
@@ -170,7 +170,7 @@ export const useRecentAttendance = (
     }
 
     if (event.attendance_status === 'closed') {
-      const date = new Date(event.date)
+      const date = parseISO(event.date)
       const dateStr = `${date.getMonth() + 1}/${date.getDate()}`
       const confirmed = window.confirm(
         `提出締め切り後の編集になります（${dateStr}）。備考に編集日時が自動的に追加されます。保存しますか？`
@@ -308,7 +308,7 @@ export const useRecentAttendance = (
         }
       }
 
-      const eventDate = new Date(event.date)
+      const eventDate = parseISO(event.date)
       const eventYear = eventDate.getFullYear()
       const eventMonth = eventDate.getMonth() + 1
 

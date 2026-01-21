@@ -14,7 +14,7 @@ import { StyleAPI } from '@apps/shared/api/styles'
 import { formatTime } from '@/utils/formatters'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import type { MainStackParamList } from '@/navigation/types'
-import type { Style, PoolType } from '@apps/shared/types'
+import type { Style, PoolType, RecordInsert } from '@apps/shared/types'
 
 type RecordLogFormScreenRouteProp = RouteProp<MainStackParamList, 'RecordLogForm'>
 type RecordLogFormScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>
@@ -406,7 +406,7 @@ export const RecordLogFormScreen: React.FC = () => {
         for (const formData of formDataList) {
           if (formData.time <= 0) continue // タイム未入力のものはスキップ
 
-          const recordData: Omit<import('@swim-hub/shared/types').RecordInsert, 'user_id'> = {
+          const recordData: Omit<RecordInsert, 'user_id'> = {
             competition_id: competitionId,
             style_id: parseInt(formData.styleId),
             time: formData.time,

@@ -5,7 +5,7 @@ import { SupabaseClient } from '@supabase/supabase-js'
 import { AttendanceAPI, TeamAttendanceWithDetails } from '@swim-hub/shared'
 import { AttendanceStatus, TeamEvent } from '@swim-hub/shared/types'
 import { sanitizeTextInput } from '@swim-hub/shared/utils/sanitize'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 
 export interface AttendanceEditState {
   status: AttendanceStatus | null
@@ -102,7 +102,24 @@ export const useAttendanceEdit = (
             return null
           }
 
-          const sanitizedNote = editState.note ? sanitizeTextInput(editState.note, NOTE_MAX_LENGTH) : null
+          let noteToSanitize = editState.note
+
+          // 既存の出席記録を更新する場合で、締切後の編集の場合はタイムスタンプを追加
+          if (existingAttendance && event.attendance_status === 'closed') {
+            const now = new Date()
+            const editTimestamp = format(now, 'MM/dd HH:mm')
+            const editNote = `(${editTimestamp}締切後編集)`
+
+            if (noteToSanitize) {
+              // 既存のタイムスタンプを削除
+              noteToSanitize = noteToSanitize.replace(/\s*\(\d{2}\/\d{2}\s+\d{2}:\d{2}締切後編集\)/g, '').trim()
+              noteToSanitize = noteToSanitize ? `${noteToSanitize} ${editNote}` : editNote
+            } else {
+              noteToSanitize = editNote
+            }
+          }
+
+          const sanitizedNote = noteToSanitize ? sanitizeTextInput(noteToSanitize, NOTE_MAX_LENGTH) : null
 
           return {
             attendanceId: existingAttendance?.id || '',
@@ -133,7 +150,7 @@ export const useAttendanceEdit = (
       if (closedEvents.length > 0) {
         const eventDates = closedEvents
           .map((event) => {
-            const date = new Date(event.date)
+            const date = parseISO(event.date)
             return `${date.getMonth() + 1}/${date.getDate()}`
           })
           .join('、')

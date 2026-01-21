@@ -5,6 +5,7 @@ import { SupabaseClient } from '@supabase/supabase-js'
 import { AttendanceAPI, TeamAttendanceWithDetails } from '@swim-hub/shared'
 import { TeamEvent } from '@swim-hub/shared/types'
 import { getMonthDateRange } from '@swim-hub/shared/utils/date'
+import { parseISO } from 'date-fns'
 
 export const useMonthDetail = (
   teamId: string,
@@ -52,7 +53,7 @@ export const useMonthDetail = (
         type: 'competition' as const
       }))
       const allEvents = [...practices, ...competitions].sort(
-        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+        (a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime()
       )
       setEvents(allEvents)
 

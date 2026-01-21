@@ -87,10 +87,11 @@ export function usePracticesQuery(
     if (!enableRealtime || !query.data) return
 
     let channel: ReturnType<typeof api.subscribeToPractices> | null = null
+    let isActive = true
 
     // ユーザーIDを取得してフィルタ付きサブスクリプションを開始
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return
+      if (!user || !isActive) return
 
       channel = api.subscribeToPractices((newPractice) => {
         queryClient.setQueriesData<PracticeWithLogs[]>(
@@ -122,6 +123,7 @@ export function usePracticesQuery(
     })
 
     return () => {
+      isActive = false
       if (channel) {
         supabase.removeChannel(channel)
       }

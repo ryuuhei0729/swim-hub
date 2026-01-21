@@ -33,11 +33,12 @@ export class TeamAnnouncementsAPI {
   }
 
   async get(teamId: string, id: string): Promise<TeamAnnouncement> {
-    const { data: { user } } = await this.supabase.auth.getUser()
+    const { data: { user }, error: authError } = await this.supabase.auth.getUser()
+    if (authError) throw authError
     if (!user) throw new Error('認証が必要です')
 
     // チームメンバーシップ確認
-    const { data: membership } = await this.supabase
+    const { data: membership, error: membershipError } = await this.supabase
       .from('team_memberships')
       .select('id')
       .eq('team_id', teamId)
@@ -45,6 +46,7 @@ export class TeamAnnouncementsAPI {
       .eq('is_active', true)
       .single()
 
+    if (membershipError) throw membershipError
     if (!membership) throw new Error('チームへのアクセス権限がありません')
 
     const { data, error } = await this.supabase

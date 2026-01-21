@@ -88,19 +88,28 @@ export function useRecordsQuery(
   useEffect(() => {
     if (!enableRealtime || !recordsQuery.data) return
 
+    let isActive = true
     let recordsChannel: ReturnType<typeof api.subscribeToRecords> | null = null
 
     // ユーザーIDを取得してフィルタ付きサブスクリプションを開始
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return
+    const setupSubscription = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!isActive || !user) return
 
-      recordsChannel = api.subscribeToRecords(() => {
-        // 関連するクエリを無効化して再取得（リレーションデータも含める）
-        queryClient.invalidateQueries({ queryKey: recordKeys.lists() })
-      }, user.id) // user_idフィルタを追加
-    })
+        recordsChannel = api.subscribeToRecords(() => {
+          // 関連するクエリを無効化して再取得（リレーションデータも含める）
+          queryClient.invalidateQueries({ queryKey: recordKeys.lists() })
+        }, user.id) // user_idフィルタを追加
+      } catch (error) {
+        console.error('Failed to setup records subscription:', error)
+      }
+    }
+
+    setupSubscription()
 
     return () => {
+      isActive = false
       if (recordsChannel) {
         supabase.removeChannel(recordsChannel)
       }
@@ -111,31 +120,40 @@ export function useRecordsQuery(
   useEffect(() => {
     if (!enableRealtime || !competitionsQuery.data) return
 
+    let isActive = true
     let competitionsChannel: ReturnType<typeof api.subscribeToCompetitions> | null = null
 
     // ユーザーIDを取得してフィルタ付きサブスクリプションを開始
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return
+    const setupSubscription = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!isActive || !user) return
 
-      competitionsChannel = api.subscribeToCompetitions((newCompetition) => {
-        queryClient.setQueryData<Competition[]>(
-          recordKeys.competitionsList({ startDate, endDate }),
-          (old: Competition[] | undefined) => {
-            if (!old) return old
+        competitionsChannel = api.subscribeToCompetitions((newCompetition) => {
+          queryClient.setQueryData<Competition[]>(
+            recordKeys.competitionsList({ startDate, endDate }),
+            (old: Competition[] | undefined) => {
+              if (!old) return old
 
-            const index = old.findIndex((c: Competition) => c.id === newCompetition.id)
-            if (index >= 0) {
-              const updated = [...old]
-              updated[index] = newCompetition
-              return updated
+              const index = old.findIndex((c: Competition) => c.id === newCompetition.id)
+              if (index >= 0) {
+                const updated = [...old]
+                updated[index] = newCompetition
+                return updated
+              }
+              return [newCompetition, ...old]
             }
-            return [newCompetition, ...old]
-          }
-        )
-      }, user.id) // user_idフィルタを追加
-    })
+          )
+        }, user.id) // user_idフィルタを追加
+      } catch (error) {
+        console.error('Failed to setup competitions subscription:', error)
+      }
+    }
+
+    setupSubscription()
 
     return () => {
+      isActive = false
       if (competitionsChannel) {
         supabase.removeChannel(competitionsChannel)
       }
