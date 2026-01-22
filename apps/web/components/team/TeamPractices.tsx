@@ -61,50 +61,51 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
     try {
       setLoading(true)
       setError(null)
-      
+
       const offset = (currentPage - 1) * pageSize
-      
-      // 総件数を取得
-      const { count, error: countError } = await supabase
-        .from('practices')
-        .select('*', { count: 'exact', head: true })
-        .eq('team_id', teamId)
 
-      if (countError) throw countError
-      setTotalCount(count || 0)
-      
-      // チームIDが設定された練習記録を取得
-      const { data: practicesData, error: practicesError } = await supabase
-        .from('practices')
-        .select(`
-          id,
-          user_id,
-          date,
-          title,
-          place,
-          note,
-          created_at,
-          created_by,
-          users!practices_user_id_fkey (
-            name
-          ),
-          created_by_user:users!practices_created_by_fkey (
-            name
-          ),
-          practice_logs (
+      // 総件数とデータを並列取得（パフォーマンス最適化）
+      const [countResult, practicesResult] = await Promise.all([
+        // 総件数を取得
+        supabase
+          .from('practices')
+          .select('*', { count: 'exact', head: true })
+          .eq('team_id', teamId),
+        // チームIDが設定された練習記録を取得
+        supabase
+          .from('practices')
+          .select(`
             id,
-            style,
-            distance,
-            practice_times (time)
-          )
-        `)
-        .eq('team_id', teamId)
-        .order('date', { ascending: false })
-        .range(offset, offset + pageSize - 1)
+            user_id,
+            date,
+            title,
+            place,
+            note,
+            created_at,
+            created_by,
+            users!practices_user_id_fkey (
+              name
+            ),
+            created_by_user:users!practices_created_by_fkey (
+              name
+            ),
+            practice_logs (
+              id,
+              style,
+              distance,
+              practice_times (time)
+            )
+          `)
+          .eq('team_id', teamId)
+          .order('date', { ascending: false })
+          .range(offset, offset + pageSize - 1)
+      ])
 
-      if (practicesError) throw practicesError
+      if (countResult.error) throw countResult.error
+      if (practicesResult.error) throw practicesResult.error
 
-      setPractices((practicesData || []) as unknown as TeamPractice[])
+      setTotalCount(countResult.count || 0)
+      setPractices((practicesResult.data || []) as unknown as TeamPractice[])
     } catch (err) {
       console.error('チーム練習情報の取得に失敗:', err)
       setError('チーム練習情報の取得に失敗しました')

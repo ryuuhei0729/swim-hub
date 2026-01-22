@@ -75,62 +75,63 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
     try {
       setLoading(true)
       setError(null)
-      
-      const offset = (currentPage - 1) * pageSize
-      
-      // 総件数を取得
-      const { count, error: countError } = await supabase
-        .from('competitions')
-        .select('*', { count: 'exact', head: true })
-        .eq('team_id', teamId)
 
-      if (countError) throw countError
-      setTotalCount(count || 0)
-      
-      // チームIDが設定された大会を取得（エントリー情報も含む）
-      const { data: competitionsData, error: competitionsError } = await supabase
-        .from('competitions')
-        .select(`
-          id,
-          user_id,
-          team_id,
-          title,
-          date,
-          place,
-          entry_status,
-          note,
-          created_at,
-          created_by,
-          users!competitions_user_id_fkey (
-            name
-          ),
-          created_by_user:users!competitions_created_by_fkey (
-            name
-          ),
-          records (
-            id,
-            time,
-            users!records_user_id_fkey (
-              name
-            )
-          ),
-          entries (
+      const offset = (currentPage - 1) * pageSize
+
+      // 総件数とデータを並列取得（パフォーマンス最適化）
+      const [countResult, competitionsResult] = await Promise.all([
+        // 総件数を取得
+        supabase
+          .from('competitions')
+          .select('*', { count: 'exact', head: true })
+          .eq('team_id', teamId),
+        // チームIDが設定された大会を取得（エントリー情報も含む）
+        supabase
+          .from('competitions')
+          .select(`
             id,
             user_id,
-            style_id,
-            entry_time,
-            users!entries_user_id_fkey (
+            team_id,
+            title,
+            date,
+            place,
+            entry_status,
+            note,
+            created_at,
+            created_by,
+            users!competitions_user_id_fkey (
               name
+            ),
+            created_by_user:users!competitions_created_by_fkey (
+              name
+            ),
+            records (
+              id,
+              time,
+              users!records_user_id_fkey (
+                name
+              )
+            ),
+            entries (
+              id,
+              user_id,
+              style_id,
+              entry_time,
+              users!entries_user_id_fkey (
+                name
+              )
             )
-          )
-        `)
-        .eq('team_id', teamId)
-        .order('date', { ascending: false })
-        .range(offset, offset + pageSize - 1)
+          `)
+          .eq('team_id', teamId)
+          .order('date', { ascending: false })
+          .range(offset, offset + pageSize - 1)
+      ])
 
-      if (competitionsError) throw competitionsError
+      if (countResult.error) throw countResult.error
+      if (competitionsResult.error) throw competitionsResult.error
 
-      setCompetitions((competitionsData || []) as unknown as TeamCompetition[])
+      setTotalCount(countResult.count || 0)
+      setCompetitions((competitionsResult.data || []) as unknown as TeamCompetition[])
     } catch (err) {
       console.error('チーム大会情報の取得に失敗:', err)
       setError('チーム大会情報の取得に失敗しました')

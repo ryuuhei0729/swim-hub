@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { memo } from 'react'
 import { parseISO, isValid } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { formatInTimeZone } from 'date-fns-tz'
@@ -17,7 +17,10 @@ interface EventListItemProps {
   onClick: () => void
 }
 
-export function EventListItem({
+/**
+ * イベントリストアイテム（React.memoで再レンダリング最適化）
+ */
+export const EventListItem = memo(function EventListItem({
   event,
   editState,
   isSaving,
@@ -105,4 +108,4 @@ export function EventListItem({
       </div>
     </div>
   )
-}
+})

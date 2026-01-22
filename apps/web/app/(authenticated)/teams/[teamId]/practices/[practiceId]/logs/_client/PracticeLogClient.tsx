@@ -1,13 +1,20 @@
 'use client'
 
 import React, { useState } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthProvider'
 import { Button } from '@/components/ui'
 import { ArrowLeftIcon, PlusIcon, TrashIcon, ClockIcon, CalendarDaysIcon, MapPinIcon, UserGroupIcon, XMarkIcon, CheckIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
 import TagInput from '@/components/forms/TagInput'
-import TeamTimeInputModal, { TeamTimeEntry } from '@/components/team/TeamTimeInputModal'
+import type { TeamTimeEntry } from '@/components/team/TeamTimeInputModal'
 import { PracticeTag, Practice } from '@apps/shared/types'
+
+// TeamTimeInputModalを動的インポート（バンドルサイズ削減）
+const TeamTimeInputModal = dynamic(
+  () => import('@/components/team/TeamTimeInputModal'),
+  { ssr: false }
+)
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 

@@ -1,11 +1,17 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
+import dynamic from 'next/dynamic'
 import { Button, Input } from '@/components/ui'
 import { XMarkIcon, PlusIcon, TrashIcon, ClockIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
-import TimeInputModal from './TimeInputModal'
 import TagInput from './TagInput'
+
+// TimeInputModalを動的インポート（バンドルサイズ削減）
+const TimeInputModal = dynamic(
+  () => import('./TimeInputModal'),
+  { ssr: false }
+)
 import { useAuth } from '@/contexts'
 import { PracticeTag } from '@apps/shared/types'
 import { PracticeAPI } from '@apps/shared/api/practices'

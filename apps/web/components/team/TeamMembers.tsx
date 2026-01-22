@@ -1,13 +1,13 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts'
 import { TeamMembersAPI } from '@apps/shared/api/teams/members'
 import { TeamMembershipWithUser } from '@apps/shared/types'
 import { Avatar } from '@/components/ui'
-import { 
-  UserPlusIcon, 
+import {
+  UserPlusIcon,
   UserMinusIcon,
   StarIcon
 } from '@heroicons/react/24/outline'
@@ -16,6 +16,54 @@ export interface TeamMembersProps {
   teamId: string
   isAdmin?: boolean
 }
+
+/**
+ * メンバーアイテムコンポーネント（React.memoで再レンダリング最適化）
+ */
+interface MemberItemProps {
+  member: TeamMembershipWithUser
+  isAdmin: boolean
+}
+
+const MemberItem = memo(function MemberItem({ member, isAdmin }: MemberItemProps) {
+  return (
+    <div
+      className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+    >
+      <div className="flex items-center space-x-3">
+        <div className="shrink-0">
+          <Avatar
+            avatarUrl={member.users?.profile_image_path || null}
+            userName={member.users?.name || 'Unknown User'}
+            size="md"
+          />
+        </div>
+        <div>
+          <div className="flex items-center space-x-2">
+            <p className="text-sm font-medium text-gray-900">
+              {member.users?.name || 'Unknown User'}
+            </p>
+            {member.role === 'admin' && (
+              <StarIcon className="h-4 w-4 text-yellow-500" title="管理者" />
+            )}
+          </div>
+          <p className="text-sm text-gray-500">
+            参加日: {new Date(member.joined_at + 'T00:00:00').toLocaleDateString('ja-JP')}
+          </p>
+        </div>
+      </div>
+
+      {isAdmin && member.role === 'user' && (
+        <button
+          className="text-red-600 hover:text-red-800 p-2"
+          title="メンバーを削除"
+        >
+          <UserMinusIcon className="h-5 w-5" />
+        </button>
+      )}
+    </div>
+  )
+})
 
 export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProps) {
   const router = useRouter()
@@ -49,7 +97,7 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
   }, [teamId, api])
 
   // 招待コードを取得
-  const loadInviteCode = async () => {
+  const loadInviteCode = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('teams')
@@ -62,16 +110,16 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
     } catch (err) {
       console.error('招待コードの取得に失敗:', err)
     }
-  }
+  }, [supabase, teamId])
 
-  const handleInviteClick = () => {
+  const handleInviteClick = useCallback(() => {
     loadInviteCode()
     setShowInviteModal(true)
-  }
+  }, [loadInviteCode])
 
-  const handleCopyInviteCode = () => {
+  const handleCopyInviteCode = useCallback(() => {
     navigator.clipboard.writeText(inviteCode)
-  }
+  }, [inviteCode])
 
   if (loading) {
     return (
@@ -131,42 +179,11 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
       {/* メンバー一覧 */}
       <div className="space-y-4">
         {members.map((member) => (
-          <div 
+          <MemberItem
             key={member.id}
-            className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200"
-          >
-            <div className="flex items-center space-x-3">
-              <div className="shrink-0">
-                <Avatar
-                  avatarUrl={member.users?.profile_image_path || null}
-                  userName={member.users?.name || 'Unknown User'}
-                  size="md"
-                />
-              </div>
-              <div>
-                <div className="flex items-center space-x-2">
-                  <p className="text-sm font-medium text-gray-900">
-                    {member.users?.name || 'Unknown User'}
-                  </p>
-                  {member.role === 'admin' && (
-                    <StarIcon className="h-4 w-4 text-yellow-500" title="管理者" />
-                  )}
-                </div>
-                <p className="text-sm text-gray-500">
-                  参加日: {new Date(member.joined_at + 'T00:00:00').toLocaleDateString('ja-JP')}
-                </p>
-              </div>
-            </div>
-            
-            {isAdmin && member.role === 'user' && (
-              <button
-                className="text-red-600 hover:text-red-800 p-2"
-                title="メンバーを削除"
-              >
-                <UserMinusIcon className="h-5 w-5" />
-              </button>
-            )}
-          </div>
+            member={member}
+            isAdmin={isAdmin}
+          />
         ))}
         
         {members.length === 0 && (

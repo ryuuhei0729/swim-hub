@@ -1,10 +1,23 @@
 'use client'
 
 import React, { useState, useMemo, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { TrophyIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
 import { Button, BestTimeBadge, Pagination } from '@/components/ui'
-import RecordProgressChart from '@/components/charts/RecordProgressChart'
 import RecordLogForm, { type RecordLogFormData } from '@/components/forms/RecordLogForm'
+
+// rechartsを含むRecordProgressChartを動的インポート（バンドルサイズ削減）
+const RecordProgressChart = dynamic(
+  () => import('@/components/charts/RecordProgressChart'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-96 bg-gray-50 rounded-lg border border-gray-200">
+        <div className="animate-pulse text-gray-400">グラフを読み込み中...</div>
+      </div>
+    )
+  }
+)
 import { format, isAfter, startOfDay } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
@@ -705,7 +718,7 @@ export default function CompetitionClient({
 
       {/* 詳細モーダル */}
       {showDetailModal && selectedRecord && (
-        <div className="fixed inset-0 z-[70] overflow-y-auto">
+        <div className="fixed inset-0 z-70 overflow-y-auto">
           <div className="flex min-h-screen items-center justify-center p-4">
             {/* オーバーレイ */}
             <div 
