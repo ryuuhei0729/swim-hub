@@ -11,7 +11,7 @@ import {
   formatTimeShort,
   parseTime,
   parseTimeStrict,
-  type TimeEntry
+  type TimeEntryLike
 } from '../../utils/time'
 
 describe('time utilities', () => {
@@ -21,7 +21,7 @@ describe('time utilities', () => {
   describe('calcFastest', () => {
     describe('正常系', () => {
       it('最速タイムを返す', () => {
-        const times: TimeEntry[] = [
+        const times: TimeEntryLike[] = [
           { time: 30.0 },
           { time: 28.5 },
           { time: 32.0 }
@@ -30,12 +30,12 @@ describe('time utilities', () => {
       })
 
       it('1件のタイムはそのまま返す', () => {
-        const times: TimeEntry[] = [{ time: 30.0 }]
+        const times: TimeEntryLike[] = [{ time: 30.0 }]
         expect(calcFastest(times)).toBe(30.0)
       })
 
       it('小数点を含むタイムを正しく比較する', () => {
-        const times: TimeEntry[] = [
+        const times: TimeEntryLike[] = [
           { time: 30.01 },
           { time: 30.00 },
           { time: 30.02 }
@@ -50,7 +50,7 @@ describe('time utilities', () => {
       })
 
       it('タイムが0以下のエントリは無視する', () => {
-        const times: TimeEntry[] = [
+        const times: TimeEntryLike[] = [
           { time: 0 },
           { time: -1 },
           { time: 30.0 }
@@ -59,7 +59,7 @@ describe('time utilities', () => {
       })
 
       it('すべてのタイムが無効な場合はnullを返す', () => {
-        const times: TimeEntry[] = [
+        const times: TimeEntryLike[] = [
           { time: 0 },
           { time: -1 },
           { time: null as unknown as number }
@@ -72,7 +72,7 @@ describe('time utilities', () => {
   describe('calcAverage', () => {
     describe('正常系', () => {
       it('平均タイムを返す', () => {
-        const times: TimeEntry[] = [
+        const times: TimeEntryLike[] = [
           { time: 30.0 },
           { time: 32.0 },
           { time: 34.0 }
@@ -81,12 +81,12 @@ describe('time utilities', () => {
       })
 
       it('1件のタイムはそのまま返す', () => {
-        const times: TimeEntry[] = [{ time: 30.0 }]
+        const times: TimeEntryLike[] = [{ time: 30.0 }]
         expect(calcAverage(times)).toBe(30.0)
       })
 
       it('小数点を含む平均を計算する', () => {
-        const times: TimeEntry[] = [
+        const times: TimeEntryLike[] = [
           { time: 30.0 },
           { time: 31.0 }
         ]
@@ -100,7 +100,7 @@ describe('time utilities', () => {
       })
 
       it('タイムが0以下のエントリは無視する', () => {
-        const times: TimeEntry[] = [
+        const times: TimeEntryLike[] = [
           { time: 0 },
           { time: 30.0 },
           { time: 32.0 }
@@ -109,7 +109,7 @@ describe('time utilities', () => {
       })
 
       it('すべてのタイムが無効な場合はnullを返す', () => {
-        const times: TimeEntry[] = [
+        const times: TimeEntryLike[] = [
           { time: 0 },
           { time: -1 }
         ]
@@ -121,7 +121,7 @@ describe('time utilities', () => {
   describe('calcSum', () => {
     describe('正常系', () => {
       it('合計タイムを返す', () => {
-        const times: TimeEntry[] = [
+        const times: TimeEntryLike[] = [
           { time: 30.0 },
           { time: 32.0 },
           { time: 33.0 }
@@ -130,7 +130,7 @@ describe('time utilities', () => {
       })
 
       it('1件のタイムはそのまま返す', () => {
-        const times: TimeEntry[] = [{ time: 30.0 }]
+        const times: TimeEntryLike[] = [{ time: 30.0 }]
         expect(calcSum(times)).toBe(30.0)
       })
     })
@@ -141,7 +141,7 @@ describe('time utilities', () => {
       })
 
       it('タイムが0以下のエントリは無視する', () => {
-        const times: TimeEntry[] = [
+        const times: TimeEntryLike[] = [
           { time: 0 },
           { time: 30.0 },
           { time: -10 }
@@ -443,7 +443,7 @@ describe('time utilities', () => {
     })
 
     it('複数のタイムから最速と平均を計算する', () => {
-      const times: TimeEntry[] = [
+      const times: TimeEntryLike[] = [
         { time: 55.42 },
         { time: 56.10 },
         { time: 54.80 }

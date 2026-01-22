@@ -4,23 +4,29 @@
 
 import { TimeEntry } from '../types/ui'
 
+// 型を再エクスポート
+export type { TimeEntry }
+
+// タイム計算用の最小限の型（time フィールドのみ必須）
+export type TimeEntryLike = Pick<TimeEntry, 'time'>
+
 // =============================================================================
 // タイム計算関数
 // =============================================================================
 
-export function calcFastest(times: TimeEntry[]): number | null {
+export function calcFastest(times: TimeEntryLike[]): number | null {
   const valid = times.map(t => t.time).filter(t => typeof t === 'number' && t > 0)
   if (valid.length === 0) return null
   return Math.min(...valid)
 }
 
-export function calcAverage(times: TimeEntry[]): number | null {
+export function calcAverage(times: TimeEntryLike[]): number | null {
   const valid = times.map(t => t.time).filter(t => typeof t === 'number' && t > 0)
   if (valid.length === 0) return null
   return valid.reduce((sum, t) => sum + t, 0) / valid.length
 }
 
-export function calcSum(times: TimeEntry[]): number {
+export function calcSum(times: TimeEntryLike[]): number {
   return times.map(t => t.time).filter(t => typeof t === 'number' && t > 0)
     .reduce((sum, t) => sum + t, 0)
 }

@@ -1,6 +1,5 @@
 import { renderHook, act } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { format } from 'date-fns'
 
 import { useRecordForm } from '../../components/forms/record/hooks/useRecordForm'
 import type { SwimStyle, EditData } from '../../components/forms/record/types'

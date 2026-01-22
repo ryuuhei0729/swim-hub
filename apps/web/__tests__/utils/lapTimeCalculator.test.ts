@@ -5,7 +5,6 @@ import {
   calculateLapTimesForInterval,
   calculateRaceLapTimesTable,
   getLapIntervalsForRace,
-  type LapTime,
   type SplitTime
 } from '../../utils/lapTimeCalculator'
 
