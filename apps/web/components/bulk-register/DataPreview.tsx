@@ -1,6 +1,6 @@
 import React from 'react'
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline'
-import { format } from 'date-fns'
+import { format, isValid } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import type { ParsedData } from '@/types/bulk-register'
 
@@ -83,7 +83,9 @@ export function DataPreview({ parsedData, loading, onRegister }: DataPreviewProp
                   {parsedData.data.practices.slice(0, 10).map((practice, index) => (
                     <tr key={index}>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {format(new Date(practice.date), 'yyyy年MM月dd日', { locale: ja })}
+                        {isValid(new Date(practice.date))
+                          ? format(new Date(practice.date), 'yyyy年MM月dd日', { locale: ja })
+                          : '-'}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                         {practice.title || '-'}
@@ -141,13 +143,14 @@ export function DataPreview({ parsedData, loading, onRegister }: DataPreviewProp
                   {parsedData.data.competitions.slice(0, 10).map((competition, index) => (
                     <tr key={index}>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {format(new Date(competition.date), 'yyyy年MM月dd日', { locale: ja })}
+                        {isValid(new Date(competition.date))
+                          ? format(new Date(competition.date), 'yyyy年MM月dd日', { locale: ja })
+                          : '-'}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {competition.end_date
+                        {competition.end_date && isValid(new Date(competition.end_date))
                           ? format(new Date(competition.end_date), 'yyyy年MM月dd日', { locale: ja })
-                          : '-'
-                        }
+                          : '-'}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                         {competition.title || '-'}

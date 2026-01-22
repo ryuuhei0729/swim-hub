@@ -1,4 +1,6 @@
 import React from 'react'
+import { format, parseISO } from 'date-fns'
+import { ja } from 'date-fns/locale'
 import { Avatar } from '@/components/ui'
 import { StarIcon } from '@heroicons/react/24/outline'
 import type { MemberDetail } from '@/types/member-detail'
@@ -46,7 +48,7 @@ export function ProfileSection({ member, currentUserId }: ProfileSectionProps) {
 
           <div className="text-sm text-gray-600 mb-4">
             {member.users?.birthday && (
-              <p>生年月日: {new Date(member.users.birthday).toLocaleDateString('ja-JP')}</p>
+              <p>生年月日: {format(parseISO(member.users.birthday), 'yyyy年MM月dd日', { locale: ja })}</p>
             )}
           </div>
 

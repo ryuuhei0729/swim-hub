@@ -10,6 +10,7 @@ import type {
   EntryFormData,
   EntryFormErrors
 } from '@/types/team-entry'
+import { formatTime } from '@/utils/formatters'
 
 const DEFAULT_FORM_DATA: EntryFormData = {
   styleId: '',
@@ -270,7 +271,6 @@ export function useTeamEntry(supabase: SupabaseClient, teamId: string) {
   // エントリー編集開始
   const handleEditEntry = useCallback(
     (competitionId: string, entry: UserEntry) => {
-      const { formatTime } = require('@/utils/formatters')
       updateFormData(competitionId, {
         styleId: entry.style_id.toString(),
         entryTime: entry.entry_time ? formatTime(entry.entry_time) : '',

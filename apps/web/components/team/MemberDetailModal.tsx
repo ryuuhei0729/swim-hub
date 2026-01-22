@@ -59,7 +59,7 @@ export default function MemberDetailModal({
     if (pendingRole && member) {
       try {
         await handleRoleChange(member, pendingRole)
-        member.role = pendingRole
+        // onMembershipChange is called within handleRoleChange to trigger parent reload
       } catch {
         // エラーはhookで処理される
       }

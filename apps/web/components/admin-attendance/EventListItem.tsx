@@ -1,4 +1,8 @@
+'use client'
+
 import React from 'react'
+import { format } from 'date-fns'
+import { ja } from 'date-fns/locale/ja'
 import { TeamEvent } from '@swim-hub/shared/types'
 import type { EventStatusEditState } from '@/types/admin-attendance'
 
@@ -22,12 +26,7 @@ export function EventListItem({
   onClick
 }: EventListItemProps) {
   const formatEventDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('ja-JP', {
-      month: 'long',
-      day: 'numeric',
-      weekday: 'short'
-    })
+    return format(new Date(dateStr), 'MMMM d日 (EEE)', { locale: ja })
   }
 
   return (

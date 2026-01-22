@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useCallback } from 'react'
 import { SupabaseClient } from '@supabase/supabase-js'
 import type { MemberDetail } from '@/types/member-detail'

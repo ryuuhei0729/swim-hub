@@ -152,18 +152,30 @@ export const MembersTimeTable: React.FC<MembersTimeTableProps> = ({
                 return (
                   <th
                     key={`${style}-${distance}`}
-                    onClick={() => onSort(style, distance)}
-                    className={`px-2 py-2 text-center text-xs font-semibold text-gray-700 border-r border-gray-300 last:border-r-0 cursor-pointer hover:bg-opacity-80 transition-colors ${styleHeaderBgClass[style]} ${isSorted ? 'ring-2 ring-blue-500' : ''}`}
-                    title="クリックでソート"
+                    className={`p-0 border-r border-gray-300 last:border-r-0 ${styleHeaderBgClass[style]}`}
                   >
-                    <div className="flex items-center justify-center space-x-1">
-                      <span>{distance}m</span>
-                      {isSorted && (
-                        <span className="text-blue-600">
-                          {sortOrder === 'asc' ? '↑' : '↓'}
-                        </span>
-                      )}
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onSort(style, distance)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          onSort(style, distance)
+                        }
+                      }}
+                      className={`w-full px-2 py-2 text-center text-xs font-semibold text-gray-700 cursor-pointer hover:bg-opacity-80 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset ${isSorted ? 'ring-2 ring-blue-500 ring-inset' : ''}`}
+                      title="クリックでソート"
+                      aria-label={`${style} ${distance}m でソート${isSorted ? (sortOrder === 'asc' ? '（昇順）' : '（降順）') : ''}`}
+                    >
+                      <div className="flex items-center justify-center space-x-1">
+                        <span>{distance}m</span>
+                        {isSorted && (
+                          <span className="text-blue-600">
+                            {sortOrder === 'asc' ? '↑' : '↓'}
+                          </span>
+                        )}
+                      </div>
+                    </button>
                   </th>
                 )
               })
@@ -176,7 +188,16 @@ export const MembersTimeTable: React.FC<MembersTimeTableProps> = ({
               <tr
                 key={member.id}
                 onClick={() => onMemberClick(member)}
-                className={`cursor-pointer transition-colors ${
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    onMemberClick(member)
+                  }
+                }}
+                tabIndex={0}
+                role="button"
+                aria-label={`${member.users?.name || 'Unknown User'} の詳細を表示`}
+                className={`cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset ${
                   member.user_id === currentUserId
                     ? 'bg-blue-50 hover:bg-blue-100'
                     : 'hover:bg-gray-50'

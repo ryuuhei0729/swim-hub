@@ -1,4 +1,6 @@
 import React from 'react'
+import { format } from 'date-fns'
+import { ja } from 'date-fns/locale/ja'
 import { BaseModal } from '@/components/ui'
 import { TeamEvent, TeamAttendanceWithDetails } from '@swim-hub/shared/types'
 import { TeamMember } from '@swim-hub/shared/utils/team'
@@ -22,12 +24,7 @@ export function AttendanceStatusModal({
   onClose
 }: AttendanceStatusModalProps) {
   const formatEventDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('ja-JP', {
-      month: 'long',
-      day: 'numeric',
-      weekday: 'short'
-    })
+    return format(new Date(dateStr), 'MMMM d日 (EEE)', { locale: ja })
   }
 
   return (
