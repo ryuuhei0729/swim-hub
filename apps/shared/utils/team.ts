@@ -6,8 +6,12 @@ import { SupabaseClient } from '@supabase/supabase-js'
 
 /**
  * チームメンバーの基本情報
+ * 注意: idフィールドはユーザーID（user_id）を表します。
+ * team_membershipsテーブルのuser_idから取得されます。
+ * membership_idではありません。
  */
 export interface TeamMember {
+  /** ユーザーID（team_memberships.user_idから取得） */
   id: string
   name: string
 }
