@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 export interface ImageFile {
   id: string
@@ -23,7 +23,7 @@ export interface ImageValidationResult {
 export interface UseImageUploadOptions {
   /** 最大画像枚数 */
   maxImages: number
-  /** 現在の画像枚数（既存 + 新規） */
+  /** 現在の画像枚数 */
   currentCount: number
   /** ファイルバリデーション関数 */
   validateFile: (file: File) => Promise<ImageValidationResult>

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui'
 import { XMarkIcon } from '@heroicons/react/24/outline'
+import { formatTime, parseTime } from '@apps/shared/utils/time'
 
 interface TimeEntry {
   id: string
@@ -31,15 +32,6 @@ export default function TimeInputModal({
   initialTimes = [],
   menuNumber
 }: TimeInputModalProps) {
-  const formatTime = (seconds: number) => {
-    if (seconds === 0) return ''
-    const minutes = Math.floor(seconds / 60)
-    const remainingSeconds = seconds % 60
-    return minutes > 0 
-      ? `${minutes}:${remainingSeconds.toFixed(2).padStart(5, '0')}`
-      : `${remainingSeconds.toFixed(2)}`
-  }
-
   const [times, setTimes] = useState<TimeEntry[]>([])
 
   // 全てのセット・レップの組み合わせを生成する関数
@@ -83,24 +75,6 @@ export default function TimeInputModal({
         time: parseTime(value)
       } : t
     ))
-  }
-
-  const parseTime = (timeString: string) => {
-    if (!timeString) return 0
-    
-    // "1:30.50" 形式
-    if (timeString.includes(':')) {
-      const [minutes, seconds] = timeString.split(':')
-      return parseInt(minutes) * 60 + parseFloat(seconds)
-    }
-    
-    // "30.50s" 形式
-    if (timeString.endsWith('s')) {
-      return parseFloat(timeString.slice(0, -1))
-    }
-    
-    // 数値のみ
-    return parseFloat(timeString)
   }
 
   const handleSubmit = () => {
