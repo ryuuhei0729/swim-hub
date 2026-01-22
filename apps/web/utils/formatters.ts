@@ -1,5 +1,9 @@
 // 時間フォーマッター
 export const formatTime = (seconds: number): string => {
+  // Handle invalid inputs: NaN, Infinity, negative numbers
+  if (!Number.isFinite(seconds) || seconds < 0) {
+    return '0.00'
+  }
   const minutes = Math.floor(seconds / 60)
   const remainingSeconds = (seconds % 60).toFixed(2)
   return minutes > 0 ? `${minutes}:${remainingSeconds.padStart(5, '0')}` : remainingSeconds

@@ -52,6 +52,94 @@ export interface TeamCompetition {
   }[]
 }
 
+// Supabaseクエリ結果の型定義
+// Note: Supabaseはリレーションを配列として返す場合がある
+interface RawCompetitionUser {
+  name: string
+}
+
+interface RawCompetitionRecord {
+  id: string
+  time: number
+  users?: RawCompetitionUser | RawCompetitionUser[] | null
+}
+
+interface RawCompetitionEntry {
+  id: string
+  user_id: string
+  style_id: number
+  entry_time: number | null
+  users?: RawCompetitionUser | RawCompetitionUser[] | null
+}
+
+interface RawCompetitionData {
+  id: string
+  user_id: string
+  team_id: string
+  title: string
+  date: string
+  place: string | null
+  entry_status: string | null
+  note: string | null
+  created_at: string
+  created_by: string | null
+  users?: RawCompetitionUser | RawCompetitionUser[] | null
+  created_by_user?: RawCompetitionUser | RawCompetitionUser[] | null
+  records?: RawCompetitionRecord[] | null
+  entries?: RawCompetitionEntry[] | null
+}
+
+/**
+ * Supabaseが返すユーザー情報（配列または単一オブジェクト）を単一オブジェクトに正規化
+ */
+function normalizeUser(
+  user: RawCompetitionUser | RawCompetitionUser[] | null | undefined
+): { name: string } | undefined {
+  if (!user) return undefined
+  if (Array.isArray(user)) {
+    return user.length > 0 ? { name: user[0].name } : undefined
+  }
+  return { name: user.name }
+}
+
+/**
+ * Supabaseのクエリ結果をTeamCompetition[]に変換するマッパー関数
+ */
+function mapToTeamCompetitions(data: RawCompetitionData[] | null): TeamCompetition[] {
+  if (!data) return []
+
+  return data.map((item): TeamCompetition => ({
+    id: item.id,
+    user_id: item.user_id,
+    team_id: item.team_id,
+    title: item.title,
+    date: item.date,
+    place: item.place,
+    entry_status: isValidEntryStatus(item.entry_status) ? item.entry_status : undefined,
+    note: item.note,
+    created_at: item.created_at,
+    created_by: item.created_by,
+    users: normalizeUser(item.users),
+    created_by_user: normalizeUser(item.created_by_user),
+    records: item.records?.map(record => ({
+      id: record.id,
+      time: record.time,
+      users: normalizeUser(record.users),
+    })),
+    entries: item.entries?.map(entry => ({
+      id: entry.id,
+      user_id: entry.user_id,
+      style_id: entry.style_id,
+      entry_time: entry.entry_time,
+      users: normalizeUser(entry.users),
+    })),
+  }))
+}
+
+function isValidEntryStatus(status: string | null): status is 'before' | 'open' | 'closed' {
+  return status === 'before' || status === 'open' || status === 'closed'
+}
+
 export interface TeamCompetitionsProps {
   teamId: string
   isAdmin?: boolean
@@ -131,7 +219,7 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
       if (competitionsResult.error) throw competitionsResult.error
 
       setTotalCount(countResult.count || 0)
-      setCompetitions((competitionsResult.data || []) as unknown as TeamCompetition[])
+      setCompetitions(mapToTeamCompetitions(competitionsResult.data as RawCompetitionData[] | null))
     } catch (err) {
       console.error('チーム大会情報の取得に失敗:', err)
       setError('チーム大会情報の取得に失敗しました')

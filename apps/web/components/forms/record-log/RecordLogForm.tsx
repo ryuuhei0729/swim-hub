@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Button } from '@/components/ui'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
@@ -81,19 +81,24 @@ export default function RecordLogForm({
     }
   }, [isOpen, hasUnsavedChanges, isSubmitted])
 
+  const [formError, setFormError] = useState<string | null>(null)
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setFormError(null)
     setIsSubmitted(true)
 
     const { hasStyleError, submitList } = prepareSubmitData()
 
     if (hasStyleError) {
-      console.error('種目を選択してください')
+      setFormError('種目を選択してください')
+      setIsSubmitted(false)
       return
     }
 
     if (submitList.length === 0) {
-      console.error('タイムを入力してください（形式: 分:秒.小数 または 秒.小数）')
+      setFormError('タイムを入力してください（形式: 分:秒.小数 または 秒.小数）')
+      setIsSubmitted(false)
       return
     }
 
@@ -169,6 +174,16 @@ export default function RecordLogForm({
             </div>
 
             <div className="px-4 pb-6 sm:px-6 sm:pb-6 space-y-6">
+              {formError && (
+                <div
+                  className="rounded-md bg-red-50 border border-red-200 p-4"
+                  role="alert"
+                  aria-live="polite"
+                  data-testid="record-form-error"
+                >
+                  <p className="text-sm text-red-700">{formError}</p>
+                </div>
+              )}
               {formDataList.map((formData, index) => {
                 const entryInfo = entryDataList[index]
 

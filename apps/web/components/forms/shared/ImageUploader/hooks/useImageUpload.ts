@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 
 export interface ImageFile {
   id: string
@@ -109,6 +109,24 @@ export const useImageUpload = ({
   const totalCount = currentCount - deletedIds.length + newFiles.length
   const canAddMore = totalCount < maxImages
 
+  // Blob URLのメモリリークを防ぐためのクリーンアップ
+  // アンマウント時およびnewFilesが変更された際に古いURLを解放
+  useEffect(() => {
+    // 現在のpreviewUrlを保持（クリーンアップ時に使用）
+    const currentPreviewUrls = newFiles.map((f) => f.previewUrl)
+
+    return () => {
+      // アンマウント時またはnewFilesが変更された際にblob URLを解放
+      currentPreviewUrls.forEach((url) => {
+        URL.revokeObjectURL(url)
+      })
+      // ファイル入力をリセット
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }, [newFiles])
+
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
       setError(null)
@@ -124,20 +142,32 @@ export const useImageUpload = ({
       const validFiles: ImageFile[] = []
 
       for (const file of fileArray) {
-        const validation = await validateFile(file)
-        if (!validation.valid) {
-          // バリデーション失敗時は、既に作成されたオブジェクトURLをクリーンアップ
+        let previewUrl: string | null = null
+        try {
+          const validation = await validateFile(file)
+          if (!validation.valid) {
+            // バリデーション失敗時は、既に作成されたオブジェクトURLをクリーンアップ
+            validFiles.forEach((item) => URL.revokeObjectURL(item.previewUrl))
+            setError(validation.error || '無効なファイルです')
+            return
+          }
+
+          previewUrl = URL.createObjectURL(file)
+          validFiles.push({
+            id: crypto.randomUUID(),
+            file,
+            previewUrl,
+          })
+        } catch (err) {
+          // 例外発生時は、既に作成されたオブジェクトURLをクリーンアップ
           validFiles.forEach((item) => URL.revokeObjectURL(item.previewUrl))
-          setError(validation.error || '無効なファイルです')
+          // 現在のファイルでpreviewUrlが作成済みの場合も解放
+          if (previewUrl) {
+            URL.revokeObjectURL(previewUrl)
+          }
+          setError(err instanceof Error ? err.message : '無効なファイルです')
           return
         }
-
-        const previewUrl = URL.createObjectURL(file)
-        validFiles.push({
-          id: crypto.randomUUID(),
-          file,
-          previewUrl,
-        })
       }
 
       const updatedNewFiles = [...newFiles, ...validFiles]

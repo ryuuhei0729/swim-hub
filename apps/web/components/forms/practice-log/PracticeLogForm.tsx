@@ -107,8 +107,8 @@ export default function PracticeLogForm({
             existingTag.color
           )
           milestoneTag = updatedTag
-          setAvailableTags(
-            availableTags.map((t) => (t.id === existingTag.id ? updatedTag : t))
+          setAvailableTags((prev) =>
+            prev.map((t) => (t.id === existingTag.id ? updatedTag : t))
           )
         } catch (error) {
           console.error('milestone tag更新エラー:', error)
@@ -118,7 +118,7 @@ export default function PracticeLogForm({
       try {
         const createdTag = await practiceAPI.createPracticeTag(tagName, '#3B82F6')
         milestoneTag = createdTag
-        setAvailableTags([...availableTags, createdTag])
+        setAvailableTags((prev) => [...prev, createdTag])
       } catch (error) {
         console.error('milestone tag作成エラー:', error)
       }
@@ -206,6 +206,7 @@ export default function PracticeLogForm({
                 type="button"
                 onClick={onClose}
                 className="text-gray-400 hover:text-gray-600"
+                aria-label="練習記録を閉じる"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>

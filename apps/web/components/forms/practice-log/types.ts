@@ -57,7 +57,7 @@ export interface PracticeLogFormProps {
   editData?: PracticeLogEditData | null
   isLoading?: boolean
   availableTags: Tag[]
-  setAvailableTags: (tags: Tag[]) => void
+  setAvailableTags: (tags: Tag[] | ((prev: Tag[]) => Tag[])) => void
   styles?: Array<{ id: string | number; name_jp: string; distance: number }>
 }
 

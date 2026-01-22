@@ -76,10 +76,14 @@ export default function RecordBasicInfo({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label
+            htmlFor="tournament-pool-type"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
             プール種別
           </label>
           <select
+            id="tournament-pool-type"
             value={formData.poolType}
             onChange={(e) => onFieldChange('poolType', parseInt(e.target.value))}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"

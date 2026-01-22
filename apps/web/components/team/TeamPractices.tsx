@@ -15,7 +15,9 @@ import { ja } from 'date-fns/locale'
 import TeamPracticeForm from './TeamPracticeForm'
 import { Pagination } from '@/components/ui'
 
-export interface TeamPractice {
+// Supabase から返されるスネークケースの型
+// Supabaseのリレーションは配列または単一オブジェクトで返る可能性がある
+interface PracticeRecord {
   id: string
   user_id: string
   date: string
@@ -24,12 +26,8 @@ export interface TeamPractice {
   note: string | null
   created_at: string
   created_by: string | null
-  users?: {
-    name: string
-  }
-  created_by_user?: {
-    name: string
-  }
+  users?: { name: string } | { name: string }[]
+  created_by_user?: { name: string } | { name: string }[]
   practice_logs?: {
     id: string
     style: string
@@ -38,6 +36,64 @@ export interface TeamPractice {
       time: number
     }[]
   }[]
+}
+
+// UI で使用するキャメルケースの型
+export interface TeamPractice {
+  id: string
+  userId: string
+  date: string
+  title: string | null
+  place: string | null
+  note: string | null
+  createdAt: string
+  createdBy: string | null
+  users?: {
+    name: string
+  }
+  createdByUser?: {
+    name: string
+  }
+  practiceLogs?: {
+    id: string
+    style: string
+    distance: number
+    practiceTimes?: {
+      time: number
+    }[]
+  }[]
+}
+
+// ヘルパー: 配列または単一オブジェクトを単一オブジェクトに正規化
+function normalizeUser(
+  user: { name: string } | { name: string }[] | undefined
+): { name: string } | undefined {
+  if (!user) return undefined
+  return Array.isArray(user) ? user[0] : user
+}
+
+// スネークケース → キャメルケース変換関数
+function mapPracticeRecordToTeamPractice(record: PracticeRecord): TeamPractice {
+  return {
+    id: record.id,
+    userId: record.user_id,
+    date: record.date,
+    title: record.title,
+    place: record.place,
+    note: record.note,
+    createdAt: record.created_at,
+    createdBy: record.created_by,
+    users: normalizeUser(record.users),
+    createdByUser: normalizeUser(record.created_by_user),
+    practiceLogs: record.practice_logs?.map((log) => ({
+      id: log.id,
+      style: log.style,
+      distance: log.distance,
+      practiceTimes: log.practice_times?.map((pt) => ({
+        time: pt.time,
+      })),
+    })),
+  }
 }
 
 export interface TeamPracticesProps {
@@ -105,7 +161,10 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
       if (practicesResult.error) throw practicesResult.error
 
       setTotalCount(countResult.count || 0)
-      setPractices((practicesResult.data || []) as unknown as TeamPractice[])
+      const mappedPractices = (practicesResult.data || []).map((record) =>
+        mapPracticeRecordToTeamPractice(record as PracticeRecord)
+      )
+      setPractices(mappedPractices)
     } catch (err) {
       console.error('チーム練習情報の取得に失敗:', err)
       setError('チーム練習情報の取得に失敗しました')
@@ -208,7 +267,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
       <div className="space-y-4">
         {practices.map((practice) => {
           const practiceDate = format(new Date(practice.date), 'M月d日(E)', { locale: ja })
-          const hasLogs = practice.practice_logs && practice.practice_logs.length > 0
+          const hasLogs = practice.practiceLogs && practice.practiceLogs.length > 0
           const ariaLabel = isAdmin 
             ? `${practiceDate}の練習記録${hasLogs ? 'を編集' : 'を追加'}`
             : undefined
@@ -230,7 +289,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
                         {practiceDate}
                       </span>
                       <span className="text-sm text-gray-500">
-                        by {practice.users?.name || practice.created_by_user?.name || 'Unknown'}
+                        by {practice.users?.name || practice.createdByUser?.name || 'Unknown'}
                       </span>
                     </div>
                     
@@ -255,7 +314,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
                       <div className="flex items-center space-x-2">
                         <ClockIcon className="h-4 w-4 text-green-500" />
                         <span className="text-sm text-green-600 font-medium">
-                          {practice.practice_logs!.length}セットの練習記録あり
+                          {practice.practiceLogs!.length}セットの練習記録あり
                         </span>
                         <span className="text-xs text-gray-500 flex items-center">
                           <PencilSquareIcon className="h-3 w-3 mr-1" />
@@ -278,7 +337,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
                   
                   <div className="text-right">
                     <p className="text-xs text-gray-500">
-                      {format(new Date(practice.created_at), 'M/d HH:mm')}
+                      {format(new Date(practice.createdAt), 'M/d HH:mm')}
                     </p>
                   </div>
                 </div>
@@ -298,7 +357,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
                         {practiceDate}
                       </span>
                       <span className="text-sm text-gray-500">
-                        by {practice.users?.name || practice.created_by_user?.name || 'Unknown'}
+                        by {practice.users?.name || practice.createdByUser?.name || 'Unknown'}
                       </span>
                     </div>
                     
@@ -317,7 +376,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
                       <div className="flex items-center space-x-2">
                         <ClockIcon className="h-4 w-4 text-green-500" />
                         <span className="text-sm text-green-600 font-medium">
-                          {practice.practice_logs!.length}セットの練習記録あり
+                          {practice.practiceLogs!.length}セットの練習記録あり
                         </span>
                       </div>
                     ) : (
@@ -332,7 +391,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
                   
                   <div className="text-right">
                     <p className="text-xs text-gray-500">
-                      {format(new Date(practice.created_at), 'M/d HH:mm')}
+                      {format(new Date(practice.createdAt), 'M/d HH:mm')}
                     </p>
                   </div>
                 </div>

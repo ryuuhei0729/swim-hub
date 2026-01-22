@@ -40,16 +40,25 @@ export default function RecordSetItem({
   const relayId = `record-${record.id}-relay`
   const currentStyle = styles.find((s) => s.id === record.styleId)
 
-  // スプリットタイムを距離でソート
-  const sortedSplitTimes = [...record.splitTimes]
+  // 安全な数値パース関数
+  const safeParseDistance = (value: string | number | undefined): number => {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : 0
+    }
+    if (typeof value === 'string') {
+      const parsed = parseInt(value, 10)
+      return Number.isFinite(parsed) ? parsed : 0
+    }
+    return 0
+  }
+
+  // スプリットタイムを距離でソート（originalIndexをソート前にキャプチャ）
+  const sortedSplitTimes = record.splitTimes
+    .map((split, originalIndex) => ({ split, originalIndex }))
     .sort((a, b) => {
-      const distA = typeof a.distance === 'number' ? a.distance : 0
-      const distB = typeof b.distance === 'number' ? b.distance : 0
+      const distA = safeParseDistance(a.split.distance)
+      const distB = safeParseDistance(b.split.distance)
       return distA - distB
-    })
-    .map((split) => {
-      const originalIndex = record.splitTimes.findIndex((st) => st.uiKey === split.uiKey)
-      return { split, originalIndex }
     })
 
   return (
@@ -202,11 +211,17 @@ export default function RecordSetItem({
               type="text"
               placeholder="距離 (m)"
               value={split.distance}
-              onChange={(e) =>
-                onUpdateSplitTime(originalIndex, {
-                  distance: e.target.value === '' ? '' : parseInt(e.target.value),
-                })
-              }
+              onChange={(e) => {
+                const value = e.target.value
+                if (value === '') {
+                  onUpdateSplitTime(originalIndex, { distance: '' })
+                } else {
+                  const parsed = parseInt(value, 10)
+                  onUpdateSplitTime(originalIndex, {
+                    distance: Number.isFinite(parsed) ? parsed : '',
+                  })
+                }
+              }}
               className="w-24"
               data-testid={`record-split-distance-${recordIndex + 1}-${originalIndex + 1}`}
             />
@@ -256,9 +271,9 @@ export default function RecordSetItem({
 
         {/* Lap-Time表示 */}
         <LapTimeDisplay
-          splitTimes={record.splitTimes.map((st) => ({
-            distance: st.distance,
-            splitTime: st.splitTime,
+          splitTimes={sortedSplitTimes.map(({ split }) => ({
+            distance: split.distance,
+            splitTime: split.splitTime,
           }))}
           raceDistance={currentStyle?.distance}
         />

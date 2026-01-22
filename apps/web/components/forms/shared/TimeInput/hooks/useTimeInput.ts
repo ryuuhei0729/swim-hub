@@ -63,13 +63,12 @@ export const useTimeInput = (): TimeInputHookReturn => {
    * @returns フォーマットされた時間文字列
    */
   const formatTime = useCallback((seconds: number): string => {
-    if (seconds === 0) return ''
+    if (seconds === 0) return '0.00'
 
     const min = Math.floor(seconds / 60)
-    const sec = Math.floor(seconds % 60)
-    const ms = Math.round((seconds % 1) * 100)
+    const remainingSeconds = (seconds % 60).toFixed(2)
 
-    return `${min}:${sec.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`
+    return `${min}:${remainingSeconds.padStart(5, '0')}`
   }, [])
 
   /**

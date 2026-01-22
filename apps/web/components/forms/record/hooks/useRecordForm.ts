@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { format } from 'date-fns'
 import type {
   RecordFormData,
@@ -52,6 +52,7 @@ export const useRecordForm = ({
   const [isInitialized, setIsInitialized] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const isInitialChangeRef = useRef(true)
 
   // モーダルが閉じた時にリセット
   useEffect(() => {
@@ -59,6 +60,7 @@ export const useRecordForm = ({
       setIsInitialized(false)
       setHasUnsavedChanges(false)
       setIsSubmitted(false)
+      isInitialChangeRef.current = true
     }
   }, [isOpen])
 
@@ -74,10 +76,14 @@ export const useRecordForm = ({
 
   // フォームに変更があったことを記録
   useEffect(() => {
-    if (isOpen && isInitialized) {
+    if (isOpen) {
+      if (isInitialChangeRef.current) {
+        isInitialChangeRef.current = false
+        return
+      }
       setHasUnsavedChanges(true)
     }
-  }, [formData, isOpen, isInitialized])
+  }, [formData, isOpen])
 
   // 編集データがある場合、フォームを初期化
   useEffect(() => {

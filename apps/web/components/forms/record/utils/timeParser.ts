@@ -8,19 +8,35 @@ import { formatTime } from '@/utils/formatters'
 export function parseTimeString(timeString: string): number {
   if (!timeString) return 0
 
+  const trimmed = timeString.trim()
+  if (!trimmed) return 0
+
   // "1:30.50" 形式
-  if (timeString.includes(':')) {
-    const [minutes, seconds] = timeString.split(':')
-    return parseInt(minutes) * 60 + parseFloat(seconds)
+  if (trimmed.includes(':')) {
+    const [minutesPart, secondsPart] = trimmed.split(':')
+    const minutes = parseInt(minutesPart)
+    const seconds = parseFloat(secondsPart)
+    if (!Number.isFinite(minutes) || !Number.isFinite(seconds)) {
+      return 0
+    }
+    return minutes * 60 + seconds
   }
 
   // "30.50s" 形式
-  if (timeString.endsWith('s')) {
-    return parseFloat(timeString.slice(0, -1))
+  if (trimmed.endsWith('s')) {
+    const seconds = parseFloat(trimmed.slice(0, -1))
+    if (!Number.isFinite(seconds)) {
+      return 0
+    }
+    return seconds
   }
 
   // 数値のみ
-  return parseFloat(timeString)
+  const result = parseFloat(trimmed)
+  if (!Number.isFinite(result)) {
+    return 0
+  }
+  return result
 }
 
 /**

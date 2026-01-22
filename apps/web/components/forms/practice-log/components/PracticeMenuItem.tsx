@@ -6,7 +6,7 @@ import { TrashIcon, ClockIcon, ChevronDownIcon } from '@heroicons/react/24/outli
 import TagInput from '../../TagInput'
 import type { PracticeMenu, Tag } from '../types'
 import { SWIM_STYLES, SWIM_CATEGORIES } from '../types'
-import { formatTime } from '../utils/formatters'
+import { formatTime } from '@/utils/formatters'
 
 interface PracticeMenuItemProps {
   menu: PracticeMenu
@@ -50,6 +50,7 @@ export default function PracticeMenuItem({
             onClick={onRemove}
             className="text-red-500 hover:text-red-700"
             disabled={isLoading}
+            aria-label={`メニュー ${menuIndex + 1} を削除`}
             data-testid={`practice-menu-remove-button-${menuIndex + 1}`}
           >
             <TrashIcon className="h-5 w-5" />
