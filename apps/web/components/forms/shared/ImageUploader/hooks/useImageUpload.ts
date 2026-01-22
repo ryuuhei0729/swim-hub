@@ -104,28 +104,30 @@ export const useImageUpload = ({
   const [isDragging, setIsDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const newFilesRef = useRef<ImageFile[]>([])
 
   // 現在の合計枚数（既存 - 削除 + 新規）
   const totalCount = currentCount - deletedIds.length + newFiles.length
   const canAddMore = totalCount < maxImages
 
-  // Blob URLのメモリリークを防ぐためのクリーンアップ
-  // アンマウント時およびnewFilesが変更された際に古いURLを解放
+  // newFilesが変更されたらrefを更新（クリーンアップ用に最新の状態を保持）
   useEffect(() => {
-    // 現在のpreviewUrlを保持（クリーンアップ時に使用）
-    const currentPreviewUrls = newFiles.map((f) => f.previewUrl)
+    newFilesRef.current = newFiles
+  }, [newFiles])
 
+  // Blob URLのメモリリークを防ぐためのクリーンアップ（アンマウント時のみ）
+  useEffect(() => {
     return () => {
-      // アンマウント時またはnewFilesが変更された際にblob URLを解放
-      currentPreviewUrls.forEach((url) => {
-        URL.revokeObjectURL(url)
+      // アンマウント時にblob URLを解放
+      newFilesRef.current.forEach((f) => {
+        URL.revokeObjectURL(f.previewUrl)
       })
       // ファイル入力をリセット
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
     }
-  }, [newFiles])
+  }, [])
 
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
