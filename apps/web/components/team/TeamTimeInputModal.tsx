@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui'
 import { XMarkIcon } from '@heroicons/react/24/outline'
+import { formatTimeShort, parseTime } from '@apps/shared/utils/time'
 
 interface TeamMember {
   id: string
@@ -75,33 +76,6 @@ export default function TeamTimeInputModal({
     }
   }, [isOpen, teamMembers, setCount, repCount, initialTimes])
 
-  const formatTime = (seconds: number) => {
-    if (seconds === 0) return ''
-    const minutes = Math.floor(seconds / 60)
-    const remainingSeconds = seconds % 60
-    return minutes > 0 
-      ? `${minutes}:${remainingSeconds.toFixed(2).padStart(5, '0')}`
-      : `${remainingSeconds.toFixed(2)}`
-  }
-
-  const parseTime = (timeString: string) => {
-    if (!timeString) return 0
-    
-    // "1:30.50" 形式
-    if (timeString.includes(':')) {
-      const [minutes, seconds] = timeString.split(':')
-      return parseInt(minutes) * 60 + parseFloat(seconds)
-    }
-    
-    // "30.50s" 形式
-    if (timeString.endsWith('s')) {
-      return parseFloat(timeString.slice(0, -1))
-    }
-    
-    // 数値のみ
-    return parseFloat(timeString)
-  }
-
   const handleTimeChange = (memberId: string, timeIndex: number, value: string) => {
     setTeamTimes(prev => prev.map(entry => {
       if (entry.memberId === memberId) {
@@ -137,7 +111,7 @@ export default function TeamTimeInputModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[70] overflow-y-auto" data-testid="team-time-input-modal">
+    <div className="fixed inset-0 z-70 overflow-y-auto" data-testid="team-time-input-modal">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div 
           className="fixed inset-0 bg-black/40 transition-opacity" 
@@ -207,7 +181,7 @@ export default function TeamTimeInputModal({
                           </td>
                         ))}
                         <td className="px-3 py-3 text-center text-sm font-medium text-blue-600">
-                          {average > 0 ? formatTime(average) : '-'}
+                          {average > 0 ? formatTimeShort(average) : '-'}
                         </td>
                       </tr>
                     )

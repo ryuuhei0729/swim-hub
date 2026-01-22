@@ -3,11 +3,12 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts'
-import { 
+import {
   TrophyIcon,
   StarIcon,
   UserIcon
 } from '@heroicons/react/24/outline'
+import { formatTime } from '@apps/shared/utils/time'
 
 export interface TeamRecord {
   id: string
@@ -122,12 +123,6 @@ export default function TeamRecords({ teamId, isAdmin: _isAdmin = false }: TeamR
 
     loadTeamRecords()
   }, [teamId, selectedStyle, supabase])
-
-  const formatTime = (time: number): string => {
-    const minutes = Math.floor(time / 60)
-    const seconds = time % 60
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`
-  }
 
   const getRankIcon = (index: number) => {
     switch (index) {

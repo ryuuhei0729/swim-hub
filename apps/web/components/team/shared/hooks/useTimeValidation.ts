@@ -1,4 +1,6 @@
 import { useCallback } from 'react'
+import { parseTimeStrict } from '@apps/shared/utils/time'
+import { validateSwimTime, validateTimeString } from '@apps/shared/utils/validators'
 
 /**
  * タイムバリデーションの結果型
@@ -10,6 +12,7 @@ export interface ValidationResult {
 
 /**
  * エントリータイムのパース・バリデーションを提供するカスタムフック
+ * 共通ユーティリティ関数をReactコンポーネント向けにラップします。
  *
  * TeamEntrySectionで使用
  */
@@ -25,47 +28,7 @@ export const useTimeValidation = () => {
    * @returns パースされた秒数、または無効な場合はnull
    */
   const parseTime = useCallback((timeStr: string): number | null => {
-    if (!timeStr || timeStr.trim() === '') return null
-
-    const trimmed = timeStr.trim()
-
-    try {
-      const parts = trimmed.split(':')
-      // コロンが2つ以上ある場合は不正な形式（例: "1:2:3"）
-      if (parts.length > 2) {
-        return null
-      }
-
-      if (parts.length === 2) {
-        // "MM:SS.ms" 形式
-        const minutesStr = parts[0].trim()
-        const secondsStr = parts[1].trim()
-
-        const minutes = parseInt(minutesStr, 10)
-        const seconds = parseFloat(secondsStr)
-
-        // 両方の値が有効な数値であることを確認
-        if (!Number.isFinite(minutes) || !Number.isFinite(seconds) ||
-            Number.isNaN(minutes) || Number.isNaN(seconds) ||
-            minutes < 0 || seconds < 0) {
-          return null
-        }
-
-        return minutes * 60 + seconds
-      } else {
-        // "SS.ms" 形式
-        const seconds = parseFloat(trimmed)
-
-        // 単一の数値が有効であることを確認
-        if (!Number.isFinite(seconds) || Number.isNaN(seconds) || seconds < 0) {
-          return null
-        }
-
-        return seconds
-      }
-    } catch {
-      return null
-    }
+    return parseTimeStrict(timeStr)
   }, [])
 
   /**
@@ -75,15 +38,17 @@ export const useTimeValidation = () => {
    * @returns バリデーション結果
    */
   const validateTime = useCallback((timeStr: string): ValidationResult => {
-    if (!timeStr || timeStr.trim() === '') {
+    // 空チェック
+    const stringResult = validateTimeString(timeStr)
+    if (!stringResult.valid) {
       return {
         isValid: false,
-        error: 'タイムを入力してください'
+        error: stringResult.error
       }
     }
 
-    const parsedTime = parseTime(timeStr)
-
+    // パースしてバリデーション
+    const parsedTime = parseTimeStrict(timeStr)
     if (parsedTime === null) {
       return {
         isValid: false,
@@ -91,25 +56,19 @@ export const useTimeValidation = () => {
       }
     }
 
-    if (parsedTime <= 0) {
+    // 競泳タイムとしてのバリデーション（1時間以内）
+    const swimResult = validateSwimTime(parsedTime)
+    if (!swimResult.valid) {
       return {
         isValid: false,
-        error: 'タイムは0より大きい必要があります'
-      }
-    }
-
-    // 妥当性チェック: 1時間以上は異常値
-    if (parsedTime > 3600) {
-      return {
-        isValid: false,
-        error: 'タイムが大きすぎます'
+        error: swimResult.error
       }
     }
 
     return {
       isValid: true
     }
-  }, [parseTime])
+  }, [])
 
   return {
     parseTime,

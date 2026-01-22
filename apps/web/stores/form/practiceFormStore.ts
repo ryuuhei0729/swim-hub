@@ -28,14 +28,14 @@ interface PracticeFormActions {
   closeBasicForm: () => void
   closeLogForm: () => void
   closeAll: () => void
-  
+
   // データ操作
   setSelectedDate: (date: Date | null) => void
   setEditingData: (data: EditingData | null) => void
   setCreatedPracticeId: (id: string | null) => void
-  setAvailableTags: (tags: PracticeTag[]) => void
+  setAvailableTags: (tags: PracticeTag[] | ((prev: PracticeTag[]) => PracticeTag[])) => void
   setLoading: (loading: boolean) => void
-  
+
   // リセット
   reset: () => void
 }
@@ -105,7 +105,10 @@ export const usePracticeFormStore = create<PracticeFormState & PracticeFormActio
   setSelectedDate: (date) => set({ selectedDate: date }),
   setEditingData: (data) => set({ editingData: data }),
   setCreatedPracticeId: (id) => set({ createdPracticeId: id }),
-  setAvailableTags: (tags) => set({ availableTags: tags }),
+  setAvailableTags: (tags) =>
+    set((state) => ({
+      availableTags: typeof tags === 'function' ? tags(state.availableTags) : tags,
+    })),
   setLoading: (loading) => set({ isLoading: loading }),
   
   // リセット

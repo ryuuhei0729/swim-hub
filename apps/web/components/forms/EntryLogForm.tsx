@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Button, Input } from '@/components/ui'
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
-import { formatTime } from '@/utils/formatters'
+import { formatTime, formatTimeShort, parseTime } from '@apps/shared/utils/time'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 
@@ -263,32 +263,11 @@ export default function EntryLogForm({
   }
 
   const formatTimeDisplay = (seconds: number): string => {
-    if (seconds === 0) return ''
-    return formatTime(seconds)
+    return formatTimeShort(seconds)
   }
 
   const parseTimeString = (timeString: string): number => {
-    if (!timeString) return 0
-    
-    const trimmed = timeString.trim()
-    if (!trimmed) return 0
-    
-    // "1:30.50" 形式
-    if (trimmed.includes(':')) {
-      const [minutesStr, secondsStr] = trimmed.split(':')
-      const minutes = parseInt(minutesStr)
-      const seconds = parseFloat(secondsStr)
-      
-      if (!Number.isFinite(minutes) || !Number.isFinite(seconds)) {
-        return 0
-      }
-      
-      return minutes * 60 + seconds
-    }
-    
-    // "30.50" 形式
-    const parsed = parseFloat(trimmed)
-    return Number.isFinite(parsed) ? parsed : 0
+    return parseTime(timeString)
   }
 
   return (

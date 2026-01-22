@@ -98,7 +98,7 @@ export default function ImageGallery({ images, className = '' }: ImageGalleryPro
               key={image.id}
               type="button"
               onClick={() => handleThumbnailClick(index)}
-              className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 hover:border-green-400 hover:ring-2 hover:ring-green-200 transition-all focus:outline-none focus:ring-2 focus:ring-green-500 relative"
+              className="shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 hover:border-green-400 hover:ring-2 hover:ring-green-200 transition-all focus:outline-none focus:ring-2 focus:ring-green-500 relative"
             >
               <Image
                 src={image.thumbnailUrl}
@@ -115,7 +115,7 @@ export default function ImageGallery({ images, className = '' }: ImageGalleryPro
       {/* 拡大表示モーダル */}
       {selectedImage && (
         <div 
-          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center"
+          className="fixed inset-0 z-100 bg-black/90 flex items-center justify-center"
           onClick={handleClose}
         >
           {/* 閉じるボタン */}
