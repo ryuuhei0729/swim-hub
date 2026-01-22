@@ -1,12 +1,12 @@
 'use client'
 
-import { useCallback } from 'react'
 import {
-  parseTime as sharedParseTime,
   formatTimeFull,
-  formatTimeShort as sharedFormatTimeShort
+  formatTimeShort as sharedFormatTimeShort,
+  parseTime as sharedParseTime
 } from '@apps/shared/utils/time'
 import { validateTime as sharedValidateTime } from '@apps/shared/utils/validators'
+import { useCallback } from 'react'
 
 export interface TimeInputHookReturn {
   /** MM:SS.ms または SS.ms 形式の文字列を秒数に変換 */
@@ -30,7 +30,7 @@ export interface TimeInputHookReturn {
  * // "1:30.50" -> 90.5 秒
  * const seconds = parseTime("1:30.50")
  *
- * // 90.5 秒 -> "0:30.50"
+ * // 90.5 秒 -> "1:30.50"
  * const formatted = formatTime(90.5)
  * ```
  */
