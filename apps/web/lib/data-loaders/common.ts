@@ -5,9 +5,9 @@
 
 import { createAuthenticatedServerClient } from '@/lib/supabase-server-auth'
 import { StyleAPI } from '@apps/shared/api/styles'
-import type { PracticeTag, Style } from '@apps/shared/types/database'
+import type { PracticeTag, Style } from '@apps/shared/types'
 import { createClient } from '@supabase/supabase-js'
-import type { Database } from '@swim-hub/shared/types/database'
+import type { Database } from '@swim-hub/shared/types'
 import { unstable_cache } from 'next/cache'
 
 /**

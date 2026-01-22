@@ -2,7 +2,7 @@
 // 出欠管理タブ用Zustandストア
 // =============================================================================
 
-import type { TeamEvent } from '@apps/shared/types/database'
+import type { TeamEvent } from '@apps/shared/types'
 import { create } from 'zustand'
 
 interface AttendanceTabState {

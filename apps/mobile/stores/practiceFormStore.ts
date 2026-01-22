@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { format } from 'date-fns'
-import type { Practice } from '@swim-hub/shared/types/database'
+import type { Practice } from '@swim-hub/shared/types'
 import { create } from 'zustand'
 
 interface PracticeFormState {

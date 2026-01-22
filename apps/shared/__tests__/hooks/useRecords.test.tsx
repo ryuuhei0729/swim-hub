@@ -2,6 +2,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMockSupabaseClient, createMockRecordWithDetails, createMockRecord, createMockCompetition } from '../../__mocks__/supabase'
+import type { MockSupabaseClient } from '../../__mocks__/types'
 import { RecordAPI } from '../../api/records'
 import { useRecordsQuery, useCreateRecordMutation, useUpdateRecordMutation, useDeleteRecordMutation } from '../../hooks/queries/records'
 import React from 'react'
@@ -20,7 +21,7 @@ const createWrapper = () => {
 }
 
 describe('useRecordsQuery', () => {
-  let mockClient: any
+  let mockClient: MockSupabaseClient
   let mockApi: RecordAPI
 
   beforeEach(() => {
@@ -85,7 +86,7 @@ describe('useRecordsQuery', () => {
 })
 
 describe('useCreateRecordMutation', () => {
-  let mockClient: any
+  let mockClient: MockSupabaseClient
   let mockApi: RecordAPI
 
   beforeEach(() => {
@@ -120,7 +121,7 @@ describe('useCreateRecordMutation', () => {
 })
 
 describe('useUpdateRecordMutation', () => {
-  let mockClient: any
+  let mockClient: MockSupabaseClient
   let mockApi: RecordAPI
 
   beforeEach(() => {
@@ -151,7 +152,7 @@ describe('useUpdateRecordMutation', () => {
 })
 
 describe('useDeleteRecordMutation', () => {
-  let mockClient: any
+  let mockClient: MockSupabaseClient
   let mockApi: RecordAPI
 
   beforeEach(() => {

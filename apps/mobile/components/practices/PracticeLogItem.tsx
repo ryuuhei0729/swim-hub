@@ -1,7 +1,7 @@
 import React from 'react'
 import { View, Text, StyleSheet, ScrollView } from 'react-native'
 import { formatTime } from '@/utils/formatters'
-import type { PracticeLogWithTags } from '@swim-hub/shared/types/database'
+import type { PracticeLogWithTags } from '@swim-hub/shared/types'
 
 interface PracticeLogItemProps {
   log: PracticeLogWithTags

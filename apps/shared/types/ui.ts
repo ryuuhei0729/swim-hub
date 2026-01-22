@@ -2,7 +2,7 @@
 // UI・フォーム関連型定義 - Swim Hub共通パッケージ
 // =============================================================================
 
-import { CalendarItemType, PracticeLog, PracticeLogWithTimes, PracticeTag, Record as RecordRow, SplitTime } from './database'
+import { CalendarItemType, PracticeLog, PracticeLogWithTimes, PracticeTag, Record as RecordRow, SplitTime } from './index'
 
 // =============================================================================
 // 1. カレンダー関連

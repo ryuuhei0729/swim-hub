@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthProvider'
 import { formatTime, formatCircleTime } from '@/utils/formatters'
 import { EntryAPI } from '@apps/shared/api/entries'
 import type { CalendarItem } from '@apps/shared/types/ui'
-import type { PracticeTime } from '@apps/shared/types/database'
+import type { PracticeTime } from '@apps/shared/types'
 
 interface DayDetailModalProps {
   visible: boolean

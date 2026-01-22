@@ -30,7 +30,7 @@ import type {
   Team,
   Style,
   PracticeTag
-} from '@apps/shared/types/database'
+} from '@apps/shared/types'
 import type {
   CalendarItem,
   MonthlySummary

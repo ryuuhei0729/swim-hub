@@ -2,7 +2,7 @@ import React from 'react'
 import { View, Text, FlatList, Pressable, StyleSheet } from 'react-native'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import type { TeamAnnouncement } from '@swim-hub/shared/types/database'
+import type { TeamAnnouncement } from '@swim-hub/shared/types'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ErrorView } from '@/components/layout/ErrorView'
 

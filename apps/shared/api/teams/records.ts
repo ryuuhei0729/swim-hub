@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { SupabaseClient } from '@supabase/supabase-js'
-import { Competition, CompetitionInsert, CompetitionUpdate } from '../../types/database'
+import { Competition, CompetitionInsert, CompetitionUpdate } from '../../types'
 
 export class TeamRecordsAPI {
   constructor(private supabase: SupabaseClient) {}

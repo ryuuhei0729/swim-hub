@@ -15,7 +15,7 @@ import { StyleAPI } from '@apps/shared/api/styles'
 import { formatTime } from '@/utils/formatters'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import type { MainStackParamList } from '@/navigation/types'
-import type { Style, PoolType, Competition } from '@apps/shared/types/database'
+import type { Style, PoolType, Competition } from '@apps/shared/types'
 
 type RecordFormScreenRouteProp = RouteProp<MainStackParamList, 'RecordForm'>
 type RecordFormScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>

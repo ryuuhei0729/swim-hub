@@ -1,7 +1,7 @@
 import React from 'react'
 import { View, Text, StyleSheet } from 'react-native'
 import { formatTime } from '@/utils/formatters'
-import type { SplitTime } from '@swim-hub/shared/types/database'
+import type { SplitTime } from '@swim-hub/shared/types'
 
 interface SplitTimeItemProps {
   splitTime: SplitTime

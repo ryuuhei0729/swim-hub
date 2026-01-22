@@ -11,7 +11,7 @@ import { useCompetitionFormStore, type EntryInfo } from '@/stores/competitionFor
 import { formatTime } from '@/utils/formatters'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import type { MainStackParamList } from '@/navigation/types'
-import type { Style } from '@apps/shared/types/database'
+import type { Style } from '@apps/shared/types'
 
 type EntryFormScreenRouteProp = RouteProp<MainStackParamList, 'EntryForm'>
 type EntryFormScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>

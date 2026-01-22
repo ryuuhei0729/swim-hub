@@ -9,7 +9,7 @@ import { TeamItem, TeamCreateModal, TeamJoinModal } from '@/components/teams'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ErrorView } from '@/components/layout/ErrorView'
 import type { MainStackParamList } from '@/navigation/types'
-import type { TeamMembershipWithUser } from '@swim-hub/shared/types/database'
+import type { TeamMembershipWithUser } from '@swim-hub/shared/types'
 
 type TeamsScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>
 

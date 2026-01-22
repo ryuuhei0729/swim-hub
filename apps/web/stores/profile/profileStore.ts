@@ -2,7 +2,7 @@
 // プロフィール管理用Zustandストア
 // =============================================================================
 
-import type { UserProfile } from '@apps/shared/types/database'
+import type { UserProfile } from '@apps/shared/types'
 import { create } from 'zustand'
 
 interface BestTime {

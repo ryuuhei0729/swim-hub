@@ -7,7 +7,7 @@ import {
   useUpdateMemberRoleMutation,
   useRemoveMemberMutation,
 } from '@apps/shared/hooks/queries/teams'
-import type { TeamMembershipWithUser } from '@swim-hub/shared/types/database'
+import type { TeamMembershipWithUser } from '@swim-hub/shared/types'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ErrorView } from '@/components/layout/ErrorView'
 

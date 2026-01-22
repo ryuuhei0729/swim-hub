@@ -8,7 +8,7 @@ import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-s
 import { PracticeAPI } from '@apps/shared/api/practices'
 import { getCachedStyles, getUserTags } from '@/lib/data-loaders/common'
 import PracticeClient from '../_client/PracticeClient'
-import type { Style, PracticeTag, PracticeWithLogs } from '@apps/shared/types/database'
+import type { Style, PracticeTag, PracticeWithLogs } from '@apps/shared/types'
 
 /**
  * 練習記録データを取得（過去1年分）

@@ -2,7 +2,7 @@
 // 大会記録フォーム用Zustandストア（モバイル版）
 // =============================================================================
 
-import type { RecordWithDetails } from '@swim-hub/shared/types/database'
+import type { RecordWithDetails } from '@swim-hub/shared/types'
 import { create } from 'zustand'
 
 interface SplitTimeForm {

@@ -2,7 +2,7 @@ import { redirect, notFound } from 'next/navigation'
 import { createAuthenticatedServerClient } from '@/lib/supabase-server-auth'
 import { getServerUser } from '@/lib/supabase-server'
 import RecordClient from '../_client/RecordClient'
-import { Competition, Style } from '@apps/shared/types/database'
+import { Competition, Style } from '@apps/shared/types'
 
 interface RecordDataLoaderProps {
   teamId: string

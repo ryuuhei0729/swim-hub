@@ -5,7 +5,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import { PracticeLogItem } from '../PracticeLogItem'
-import type { PracticeLogWithTags } from '@swim-hub/shared/types/database'
+import type { PracticeLogWithTags } from '@swim-hub/shared/types'
 
 describe('PracticeLogItem', () => {
   const mockLog: PracticeLogWithTags = {

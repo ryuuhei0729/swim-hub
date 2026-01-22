@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { View, Text, Modal, Pressable, TextInput, StyleSheet, ScrollView } from 'react-native'
 import { useAuth } from '@/contexts/AuthProvider'
 import { useCreateTeamMutation } from '@apps/shared/hooks/queries/teams'
-import type { TeamInsert } from '@swim-hub/shared/types/database'
+import type { TeamInsert } from '@swim-hub/shared/types'
 
 interface TeamCreateModalProps {
   visible: boolean

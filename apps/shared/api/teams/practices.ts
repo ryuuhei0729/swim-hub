@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { SupabaseClient } from '@supabase/supabase-js'
-import { Practice, PracticeInsert, PracticeUpdate } from '../../types/database'
+import { Practice, PracticeInsert, PracticeUpdate } from '../../types'
 
 export class TeamPracticesAPI {
   constructor(private supabase: SupabaseClient) {}

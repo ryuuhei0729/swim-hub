@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import type { Database } from '@swim-hub/shared/types/database'
+import type { Database } from '@swim-hub/shared/types'
 import Constants from 'expo-constants'
 
 // 環境変数からSupabase設定を取得

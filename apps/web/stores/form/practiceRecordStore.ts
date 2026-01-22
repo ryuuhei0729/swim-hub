@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { create } from 'zustand'
-import type { Style, PracticeTag, PracticeLog, PracticeTime } from '@apps/shared/types/database'
+import type { Style, PracticeTag, PracticeLog, PracticeTime } from '@apps/shared/types'
 
 // Practice Page専用の型定義
 export type PracticeLogWithFormattedData = PracticeLog & {

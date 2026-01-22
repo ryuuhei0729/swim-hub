@@ -5,7 +5,7 @@
 import React from 'react'
 import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-server-auth'
 import AdminTeamsClient from '../_client/AdminTeamsClient'
-import type { TeamMembershipWithUser } from '@apps/shared/types/database'
+import type { TeamMembershipWithUser } from '@apps/shared/types'
 
 /**
  * 管理者権限を持つチーム一覧を取得

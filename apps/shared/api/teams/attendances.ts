@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { SupabaseClient } from '@supabase/supabase-js'
-import { TeamAttendance, TeamAttendanceInsert, TeamAttendanceUpdate, TeamAttendanceWithDetails, AttendanceStatusType } from '../../types/database'
+import { TeamAttendance, TeamAttendanceInsert, TeamAttendanceUpdate, TeamAttendanceWithDetails, AttendanceStatusType } from '../../types'
 
 export class TeamAttendancesAPI {
   constructor(private supabase: SupabaseClient) {}

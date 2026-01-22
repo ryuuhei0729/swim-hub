@@ -9,7 +9,7 @@ import { getCachedStyles, getUserTags, getUserTeams } from '@/lib/data-loaders/c
 import { endOfMonth, startOfMonth } from 'date-fns'
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz'
 import DashboardClient from '../_client/DashboardClient'
-import type { Style, PracticeTag, TeamMembership, Team } from '@apps/shared/types/database'
+import type { Style, PracticeTag, TeamMembership, Team } from '@apps/shared/types'
 import type { CalendarItem, MonthlySummary } from '@apps/shared/types/ui'
 
 interface TeamMembershipWithTeam extends TeamMembership {

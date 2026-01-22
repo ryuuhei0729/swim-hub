@@ -7,7 +7,7 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import type { TeamMembershipWithUser, UserProfile } from '../../types/database'
+import type { TeamMembershipWithUser, UserProfile } from '../../types'
 import { teamKeys, userKeys } from './keys'
 import { useTeamsQuery } from './teams'
 

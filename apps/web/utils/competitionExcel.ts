@@ -1,5 +1,4 @@
 import { format, parse } from 'date-fns'
-import ExcelJS from 'exceljs'
 
 // =============================================================================
 // 大会一括登録用Excel処理
@@ -25,7 +24,7 @@ export interface ParsedCompetitionData {
 /**
  * シートの書式設定を適用（大会用）
  */
-function applyCompetitionSheetFormatting(worksheet: ExcelJS.Worksheet) {
+function applyCompetitionSheetFormatting(worksheet: any) {
   // 列幅の設定
   worksheet.getColumn(1).width = 12 // 開始日
   worksheet.getColumn(2).width = 12 // 終了日
@@ -60,7 +59,7 @@ function applyCompetitionSheetFormatting(worksheet: ExcelJS.Worksheet) {
   }
 
   // データ行の書式設定
-  worksheet.eachRow((row, rowNumber) => {
+  worksheet.eachRow((row: any, rowNumber: number) => {
     if (rowNumber === 1) return // ヘッダー行はスキップ
 
     for (let col = 1; col <= 6; col++) {
@@ -94,7 +93,8 @@ function applyCompetitionSheetFormatting(worksheet: ExcelJS.Worksheet) {
 /**
  * 大会一括登録用Excelテンプレートを生成
  */
-export async function generateCompetitionExcelTemplate(year: number): Promise<ExcelJS.Workbook> {
+export async function generateCompetitionExcelTemplate(year: number): Promise<any> {
+  const ExcelJS = (await import('exceljs')).default
   const workbook = new ExcelJS.Workbook()
 
   // ==============================================
@@ -271,6 +271,7 @@ export function parseCompetitionExcelFile(file: File): Promise<ParsedCompetition
           return
         }
 
+        const ExcelJS = (await import('exceljs')).default
         const workbook = new ExcelJS.Workbook()
         await workbook.xlsx.load(data as ArrayBuffer)
 
@@ -315,7 +316,7 @@ export function parseCompetitionExcelFile(file: File): Promise<ParsedCompetition
  * 大会の行をパースする共通処理
  */
 function processCompetitionRow(
-  row: ExcelJS.Row,
+  row: any,
   rowNumber: number,
   sheetName: string,
   result: ParsedCompetitionData

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { Button, Input } from '@/components/ui'
 import AvatarUpload from './AvatarUpload'
-import type { UserProfile } from '@apps/shared/types/database'
+import type { UserProfile } from '@apps/shared/types'
 
 
 interface ProfileEditModalProps {
@@ -102,11 +102,11 @@ export default function ProfileEditModal({
       />
       
       {/* モーダル */}
-      <div className="flex min-h-full items-center justify-center p-4">
+      <div className="flex min-h-full items-center justify-center p-0 sm:p-4">
         <div className="relative bg-white rounded-lg shadow-xl max-w-3xl w-full">
           {/* ヘッダー */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">
+          <div className="flex items-center justify-between p-3 sm:p-6 border-b border-gray-200">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">
               プロフィール編集
             </h3>
             <button
@@ -121,7 +121,7 @@ export default function ProfileEditModal({
           </div>
 
           {/* ボディ */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <form onSubmit={handleSubmit} className="p-3 sm:p-6 space-y-4 sm:space-y-6">
             {/* フィードバックメッセージ */}
             {error && (
               <div className="rounded-md bg-red-50 p-4">
@@ -130,7 +130,7 @@ export default function ProfileEditModal({
             )}
 
             {/* 上段: 左=アバター / 右=名前+生年月日 */}
-            <div className="grid grid-cols-1 md:grid-cols-[160px_1fr] gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-[160px_1fr] gap-4 sm:gap-8">
               {/* アバター */}
               <div className="flex items-start">
                 <AvatarUpload
@@ -160,7 +160,7 @@ export default function ProfileEditModal({
                   />
                 </div>
                 {/* 生年月日と性別（横並び） */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                   {/* 生年月日 */}
                   <div>
                     <label htmlFor="birthday" className="block text-sm font-medium text-gray-700 mb-2">
@@ -216,7 +216,7 @@ export default function ProfileEditModal({
             </div>
 
             {/* ボタン */}
-            <div className="flex justify-end space-x-3">
+            <div className="flex justify-end gap-2 sm:gap-3">
               <Button
                 type="button"
                 variant="secondary"

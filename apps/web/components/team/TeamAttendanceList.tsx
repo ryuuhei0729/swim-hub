@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAuth } from '@/contexts'
 import { AttendanceAPI, TeamAttendanceWithDetails } from '@swim-hub/shared'
-import { AttendanceStatus } from '@swim-hub/shared/types/database'
+import { AttendanceStatus } from '@swim-hub/shared/types'
 
 export interface TeamAttendanceListProps {
   practiceId?: string

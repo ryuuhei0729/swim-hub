@@ -45,6 +45,7 @@ swimhub-*-*.json
 *.swp
 *.swo
 *~
+*-e
 
 # OS
 .DS_Store

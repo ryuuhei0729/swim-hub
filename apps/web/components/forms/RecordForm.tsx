@@ -464,17 +464,17 @@ export default function RecordForm({
 
 
   return (
-    <div className="fixed inset-0 z-[70] overflow-y-auto" data-testid="record-form-modal">
-      <div className="flex min-h-screen items-center justify-center p-4">
+    <div className="fixed inset-0 z-70 overflow-y-auto" data-testid="record-form-modal">
+      <div className="flex min-h-screen items-center justify-center p-0 sm:p-4">
         {/* オーバーレイ */}
         <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose}></div>
 
         {/* モーダルコンテンツ */}
         <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
           {/* ヘッダー */}
-          <div className="bg-white px-6 py-4 border-b border-gray-200">
+          <div className="bg-white px-3 py-3 sm:px-6 sm:py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
+              <h3 className="text-base sm:text-lg leading-6 font-medium text-gray-900">
                 {editData ? '大会記録を編集' : '大会記録を追加'}
               </h3>
               <button
@@ -488,9 +488,9 @@ export default function RecordForm({
             </div>
           </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-3 sm:p-6 space-y-4 sm:space-y-6">
           {/* 大会情報 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
             <div>
               <label htmlFor="record-date" className="block text-sm font-medium text-gray-700 mb-2">
                 大会日
@@ -520,7 +520,7 @@ export default function RecordForm({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
             <div>
               <label htmlFor="competition-name" className="block text-sm font-medium text-gray-700 mb-2">
                 大会名
@@ -556,9 +556,9 @@ export default function RecordForm({
           </div>
 
           {/* 記録セクション */}
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">記録</h3>
+              <h3 className="text-base sm:text-lg font-medium text-gray-900">記録</h3>
               <Button
                 type="button"
                 onClick={addRecord}
@@ -576,9 +576,9 @@ export default function RecordForm({
               const relayId = `record-${record.id}-relay`
 
               return (
-              <div key={record.id} className="border border-gray-200 rounded-lg p-4 space-y-4 bg-blue-50">
+              <div key={record.id} className="border border-gray-200 rounded-lg p-3 sm:p-4 space-y-3 sm:space-y-4 bg-blue-50">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-medium text-gray-700">種目 {recordIndex + 1}</h4>
+                  <h4 className="text-sm sm:text-base font-medium text-gray-700">種目 {recordIndex + 1}</h4>
                   {formData.records.length > 1 && (
                     <button
                       type="button"
@@ -592,7 +592,7 @@ export default function RecordForm({
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-4">
                   <div>
                       <label htmlFor={styleId} className="block text-sm font-medium text-gray-700 mb-2">
                       種目
@@ -773,7 +773,7 @@ export default function RecordForm({
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       動画URL
@@ -820,7 +820,7 @@ export default function RecordForm({
           </div>
 
           {/* ボタン */}
-          <div className="flex justify-end gap-3 pt-6 border-t">
+          <div className="flex justify-end gap-2 sm:gap-3 pt-4 sm:pt-6 border-t">
             <Button
               type="button"
               onClick={handleClose}

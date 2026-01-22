@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { ChevronDownIcon, XMarkIcon, EllipsisVerticalIcon } from '@heroicons/react/24/outline'
 import TagManagementModal from './TagManagementModal'
 import { useAuth } from '@/contexts'
-import { PracticeTag } from '@apps/shared/types/database'
+import { PracticeTag } from '@apps/shared/types'
 
 type Tag = PracticeTag
 

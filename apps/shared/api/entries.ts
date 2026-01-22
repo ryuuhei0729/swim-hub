@@ -9,7 +9,7 @@ import {
   EntryInsert,
   EntryUpdate,
   EntryWithDetails
-} from '../types/database'
+} from '../types'
 
 export class EntryAPI {
   constructor(private supabase: SupabaseClient) {}
