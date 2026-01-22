@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useCallback, useMemo } from 'react'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { StyleAPI } from '@apps/shared/api/styles'
@@ -156,35 +158,40 @@ export function useTeamEntry(supabase: SupabaseClient, teamId: string) {
   // フォームデータ更新
   const updateFormData = useCallback(
     (competitionId: string, updates: Partial<EntryFormData>) => {
-      setFormData((prev) => ({
-        ...prev,
-        [competitionId]: {
-          ...getFormData(competitionId),
+      setFormData((prev) => {
+        const currentForm = prev[competitionId] || DEFAULT_FORM_DATA
+        const newForm = {
+          ...currentForm,
           ...updates
         }
-      }))
 
-      // エントリータイムが更新された場合、バリデーション
-      if ('entryTime' in updates) {
-        const entryTimeError = validateEntryTime(updates.entryTime || '')
-        setErrors((prev) => {
-          const newErrors = { ...prev }
-          if (entryTimeError) {
-            newErrors[competitionId] = {
-              ...newErrors[competitionId],
-              entryTime: entryTimeError
+        // エントリータイムが更新された場合、バリデーション
+        if ('entryTime' in updates) {
+          const entryTimeError = validateEntryTime(newForm.entryTime)
+          setErrors((prevErrors) => {
+            const newErrors = { ...prevErrors }
+            if (entryTimeError) {
+              newErrors[competitionId] = {
+                ...newErrors[competitionId],
+                entryTime: entryTimeError
+              }
+            } else if (newErrors[competitionId]) {
+              delete newErrors[competitionId].entryTime
+              if (Object.keys(newErrors[competitionId]).length === 0) {
+                delete newErrors[competitionId]
+              }
             }
-          } else if (newErrors[competitionId]) {
-            delete newErrors[competitionId].entryTime
-            if (Object.keys(newErrors[competitionId]).length === 0) {
-              delete newErrors[competitionId]
-            }
-          }
-          return newErrors
-        })
-      }
+            return newErrors
+          })
+        }
+
+        return {
+          ...prev,
+          [competitionId]: newForm
+        }
+      })
     },
-    [getFormData]
+    []
   )
 
   // ユーザーエントリー再取得
@@ -220,10 +227,26 @@ export function useTeamEntry(supabase: SupabaseClient, teamId: string) {
         return
       }
 
+      // エントリータイムのバリデーション
+      const entryTimeError = validateEntryTime(form.entryTime)
+      if (entryTimeError) {
+        setErrors((prev) => ({
+          ...prev,
+          [competitionId]: {
+            ...prev[competitionId],
+            entryTime: entryTimeError
+          }
+        }))
+        console.error('タイムの形式が正しくありません:', form.entryTime)
+        return
+      }
+
+      // バリデーション通過後にパース（空文字の場合はnull）
+      const entryTime = parseTime(form.entryTime)
+
       try {
         setSubmitting(true)
 
-        const entryTime = parseTime(form.entryTime)
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error('認証が必要です')
 

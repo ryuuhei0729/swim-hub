@@ -1,8 +1,9 @@
 'use client'
 
 import React from 'react'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale/ja'
+import { parseISO, isValid } from 'date-fns'
+import { ja } from 'date-fns/locale'
+import { formatInTimeZone } from 'date-fns-tz'
 import { TeamEvent } from '@swim-hub/shared/types'
 import type { EventStatusEditState } from '@/types/admin-attendance'
 
@@ -26,7 +27,20 @@ export function EventListItem({
   onClick
 }: EventListItemProps) {
   const formatEventDate = (dateStr: string) => {
-    return format(new Date(dateStr), 'MMMM d日 (EEE)', { locale: ja })
+    const parsed = parseISO(dateStr)
+    if (!isValid(parsed)) {
+      return '-'
+    }
+    return formatInTimeZone(parsed, 'Asia/Tokyo', 'MMMM d日 (EEE)', { locale: ja })
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      if (e.key === ' ') {
+        e.preventDefault()
+      }
+      onClick?.()
+    }
   }
 
   return (
@@ -35,6 +49,10 @@ export function EventListItem({
         event.type === 'competition' ? 'bg-purple-50' : 'bg-white'
       }`}
       onClick={onClick}
+      role="button"
+      tabIndex={0}
+      aria-label={`${formatEventDate(event.date)} ${event.type === 'competition' ? (event.title || '大会') : (event.title || '練習')}の詳細を表示`}
+      onKeyDown={handleKeyDown}
     >
       <div className="flex items-center justify-between gap-4">
         {/* 左側：日付、タイトル、場所 */}

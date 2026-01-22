@@ -1,3 +1,5 @@
+'use client'
+
 import React from 'react'
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { format, isValid } from 'date-fns'
@@ -159,7 +161,7 @@ export function DataPreview({ parsedData, loading, onRegister }: DataPreviewProp
                         {competition.place || '-'}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {competition.pool_type === 0 ? '25m' : '50m'}
+                        {competition.pool_type === 0 ? '25m' : competition.pool_type === 1 ? '50m' : '-'}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500">
                         {competition.note || '-'}
