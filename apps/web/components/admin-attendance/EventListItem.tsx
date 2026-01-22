@@ -1,6 +1,5 @@
 import React from 'react'
 import { TeamEvent } from '@swim-hub/shared/types'
-import { format } from 'date-fns'
 import type { EventStatusEditState } from '@/types/admin-attendance'
 
 interface EventListItemProps {

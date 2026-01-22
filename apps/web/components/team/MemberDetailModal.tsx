@@ -36,7 +36,7 @@ export default function MemberDetailModal({
   const [pendingRole, setPendingRole] = useState<'admin' | 'user' | null>(null)
 
   const { supabase } = useAuth()
-  const { error, isRemoving, handleRoleChange, handleRemoveMember, setError } = useMemberDetail(
+  const { error, isRemoving, handleRoleChange, handleRemoveMember } = useMemberDetail(
     supabase,
     currentUserId,
     onMembershipChange

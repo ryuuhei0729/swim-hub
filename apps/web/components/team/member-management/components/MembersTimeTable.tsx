@@ -11,7 +11,7 @@ import type { TeamMember } from '../hooks/useMembers'
 interface MembersTimeTableProps {
   members: TeamMember[]
   currentUserId: string
-  memberBestTimes: Map<string, BestTime[]>
+  _memberBestTimes: Map<string, BestTime[]>
   includeRelaying: boolean
   sortStyle: string | null
   sortDistance: number | null
@@ -65,7 +65,7 @@ const getDistancesForStyle = (style: string): number[] => {
 /**
  * タイム表示用のヘルパー関数
  */
-const getTimeDisplay = (bestTime: BestTime, includeRelaying: boolean) => {
+const getTimeDisplay = (bestTime: BestTime, _includeRelaying: boolean) => {
   const timeStr = formatTime(bestTime.time)
   const suffixes: string[] = []
 
@@ -91,7 +91,7 @@ const getTimeDisplay = (bestTime: BestTime, includeRelaying: boolean) => {
 export const MembersTimeTable: React.FC<MembersTimeTableProps> = ({
   members,
   currentUserId,
-  memberBestTimes,
+  _memberBestTimes,
   includeRelaying,
   sortStyle,
   sortDistance,
