@@ -8,3 +8,4 @@ export * from '@apps/shared/types/ui'
 
 // Web専用型定義
 export * from './web-specific'
+export * from './team-entry'

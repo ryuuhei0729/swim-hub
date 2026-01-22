@@ -1,6 +1,8 @@
 import type { Style } from '@apps/shared/types'
 
-export interface Competition {
+// TeamEntrySectionで使用するための大会型
+// 共有Competition型とは別に定義（entry_statusなど独自フィールドを持つ）
+export interface EntryCompetition {
   id: string
   title: string
   date: string
@@ -29,4 +31,42 @@ export interface EntryFormData {
 
 export interface EntryFormErrors {
   entryTime?: string
+}
+
+// コンポーネントProps
+export interface TeamEntrySectionProps {
+  teamId: string
+  isAdmin: boolean
+}
+
+export interface CompetitionCardProps {
+  competition: EntryCompetition
+  entries: UserEntry[]
+  isExpanded: boolean
+  onToggle: () => void
+  children: React.ReactNode
+}
+
+export interface EntryListProps {
+  entries: UserEntry[]
+  onEdit: (entry: UserEntry) => void
+  onDelete: (entryId: string) => void
+  submitting: boolean
+}
+
+export interface EntryItemProps {
+  entry: UserEntry
+  onEdit: () => void
+  onDelete: () => void
+  submitting: boolean
+}
+
+export interface EntryFormProps {
+  formData: EntryFormData
+  errors: EntryFormErrors
+  styles: Style[]
+  submitting: boolean
+  onUpdateForm: (updates: Partial<EntryFormData>) => void
+  onSubmit: () => void
+  onCancelEdit: () => void
 }
