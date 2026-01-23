@@ -93,8 +93,9 @@ export default function PracticeLogForm({
     }
 
     const handlePopState = () => {
-      // プログラム的なナビゲーション中は無視
+      // プログラム的なナビゲーション中は無視し、フラグをリセット
       if (isNavigatingBack.current) {
+        isNavigatingBack.current = false
         return
       }
       if (hasUnsavedChanges && !isSubmitted) {
@@ -149,6 +150,7 @@ export default function PracticeLogForm({
       setHasUnsavedChanges(false)
     } catch (error) {
       console.error('フォーム送信エラー:', error)
+    } finally {
       setIsSubmitted(false)
     }
   }

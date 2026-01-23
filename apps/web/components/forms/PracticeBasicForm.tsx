@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Button, Input, ConfirmDialog, DatePicker } from '@/components/ui'
 import PlaceCombobox from '@/components/ui/PlaceCombobox'
 import FormStepper from '@/components/ui/FormStepper'
@@ -13,7 +13,7 @@ const PRACTICE_STEPS = [
   { id: 'basic', label: '基本情報', description: '日付・場所' },
   { id: 'log', label: '練習記録', description: 'メニュー・タイム' }
 ]
-import { format } from 'date-fns'
+import { format, parseISO, isValid } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import PracticeImageUploader, {
   PracticeImageFile,
@@ -87,6 +87,8 @@ export default function PracticeBasicForm({
   const [confirmContext, setConfirmContext] = useState<'close' | 'back'>('close')
   // 場所の候補一覧
   const [placeSuggestions, setPlaceSuggestions] = useState<string[]>([])
+  // popstateイベントをスキップするためのフラグ
+  const skipPopstateRef = useRef(false)
 
   // 場所の候補を取得
   useEffect(() => {
@@ -135,6 +137,10 @@ export default function PracticeBasicForm({
     }
 
     const handlePopState = (_e: PopStateEvent) => {
+      if (skipPopstateRef.current) {
+        skipPopstateRef.current = false
+        return
+      }
       if (hasUnsavedChanges && !isSubmitted) {
         // 履歴を戻す（ダイアログ表示中は戻らない）
         window.history.pushState(null, '', window.location.href)
@@ -206,6 +212,8 @@ export default function PracticeBasicForm({
   const handleConfirmClose = () => {
     if (confirmContext === 'back') {
       // ブラウザバックの場合は履歴を戻す
+      // popstateハンドラーが再トリガーされないようにフラグを設定
+      skipPopstateRef.current = true
       window.history.back()
     }
     cleanupAndClose()
@@ -217,11 +225,14 @@ export default function PracticeBasicForm({
 
   // 日付が今日以前かどうかを判定
   const isDateTodayOrPast = () => {
-    const selectedDateValue = new Date(formData.date)
+    const parsedDate = parseISO(formData.date)
+    if (!isValid(parsedDate)) {
+      return false
+    }
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    selectedDateValue.setHours(0, 0, 0, 0)
-    return selectedDateValue <= today
+    parsedDate.setHours(0, 0, 0, 0)
+    return parsedDate <= today
   }
 
   // フォーム送信の共通処理

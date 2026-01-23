@@ -49,10 +49,11 @@ export default function RecordForm({
   // 確認ダイアログの状態
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
 
-  // isOpen が false になったら確認ダイアログをリセット
+  // isOpen が false になったら確認ダイアログとバリデーションエラーをリセット
   useEffect(() => {
     if (!isOpen) {
       setShowConfirmDialog(false)
+      setRecordDateError(undefined)
     }
   }, [isOpen])
 

@@ -203,11 +203,18 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
     _imageData?: PracticeImageData,
     _continueToNext?: boolean
   ) => {
+    // ユーザーがログインしていない場合はエラーを表示して早期リターン
+    if (!user) {
+      setError('練習記録を作成するにはログインが必要です')
+      closeBasicForm()
+      return
+    }
+
     setFormLoading(true)
     try {
       const api = new TeamPracticesAPI(supabase)
       await api.create({
-        user_id: user?.id || '',
+        user_id: user.id,
         team_id: teamId,
         date: basicData.date,
         title: basicData.title || null,
@@ -220,6 +227,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
       loadTeamPractices()
     } catch (err) {
       console.error('練習の作成に失敗:', err)
+      setError('練習の作成に失敗しました')
     } finally {
       setFormLoading(false)
     }

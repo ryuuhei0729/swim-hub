@@ -5,7 +5,7 @@ import { Button, Input, ConfirmDialog, DatePicker } from '@/components/ui'
 import PlaceCombobox from '@/components/ui/PlaceCombobox'
 import FormStepper from '@/components/ui/FormStepper'
 import { XMarkIcon } from '@heroicons/react/24/outline'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
 import { CompetitionAPI } from '@apps/shared/api'
 
 // 大会記録フォームのステップ定義
@@ -111,9 +111,8 @@ export default function CompetitionBasicForm({
   // 場所の候補を取得
   useEffect(() => {
     if (!isOpen) return
-    if (!supabase) return
 
-    const client = supabase
+    const client = createClient()
     const fetchPlaces = async () => {
       try {
         const competitionAPI = new CompetitionAPI(client)

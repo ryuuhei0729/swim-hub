@@ -105,7 +105,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       const inputValue = e.target.value
       setValue(inputValue)
 
-      if (validateOn === 'change' && validationRules && touched) {
+      if (validateOn === 'change' && validationRules) {
+        setTouched(true)
         const validationError = runValidation(inputValue)
         setInternalError(validationError)
       } else if (validateOn === 'blur' && internalError && validationRules) {
@@ -117,7 +118,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       }
 
       onChange?.(e)
-    }, [validateOn, validationRules, touched, runValidation, onChange, internalError])
+    }, [validateOn, validationRules, runValidation, onChange, internalError])
 
     // エラー状態の決定（外部エラー優先）
     const displayError = externalError || internalError

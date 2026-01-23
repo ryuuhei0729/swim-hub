@@ -257,10 +257,15 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
     _imageData?: CompetitionImageData,
     _options?: { continueToNext?: boolean; skipEntry?: boolean }
   ) => {
+    if (!user) {
+      console.error('大会の作成に失敗: ユーザーがログインしていません')
+      return
+    }
+
     setFormLoading(true)
     try {
-      await supabase.from('competitions').insert({
-        user_id: user?.id || '',
+      const { error } = await supabase.from('competitions').insert({
+        user_id: user.id,
         team_id: teamId,
         date: basicData.date,
         end_date: basicData.endDate || null,
@@ -270,9 +275,14 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
         note: basicData.note || null,
       })
 
+      if (error) {
+        console.error('大会の作成に失敗:', error)
+        return
+      }
+
       closeBasicForm()
       setCurrentPage(1)
-      loadTeamCompetitions()
+      // useEffectがcurrentPageの変更を検知して自動的にloadTeamCompetitionsを呼び出す
     } catch (err) {
       console.error('大会の作成に失敗:', err)
     } finally {
