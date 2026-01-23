@@ -98,7 +98,8 @@ export function useDashboardHandlers({
   // 練習予定作成・更新
   const handlePracticeBasicSubmit = useCallback(async (
     basicData: { date: string; title: string; place: string; note: string },
-    imageData?: PracticeImageData
+    imageData?: PracticeImageData,
+    continueToNext: boolean = true
   ) => {
     setLoading(true)
     try {
@@ -109,9 +110,9 @@ export function useDashboardHandlers({
         place: basicData.place || null,
         note: basicData.note || null
       }
-      
+
       let practiceId: string | undefined
-      
+
       if (editingData && editingData.id) {
         await updatePractice(editingData.id, payload)
         practiceId = editingData.id
@@ -120,7 +121,9 @@ export function useDashboardHandlers({
         const createdPractice = await createPractice(payload)
         practiceId = createdPractice?.id
         closePracticeBasicForm()
-        openPracticeLogForm(createdPractice?.id)
+        if (continueToNext) {
+          openPracticeLogForm(createdPractice?.id)
+        }
       }
 
       // 画像の処理（安全な順序: アップロード → 検証 → 削除）
@@ -363,13 +366,16 @@ export function useDashboardHandlers({
   // 大会情報作成・更新
   const handleCompetitionBasicSubmit = useCallback(async (
     basicData: { date: string; endDate: string; title: string; place: string; poolType: number; note: string },
-    imageData?: CompetitionImageData
+    imageData?: CompetitionImageData,
+    options?: { continueToNext?: boolean; skipEntry?: boolean }
   ) => {
+    const { continueToNext = true, skipEntry = false } = options || {}
+
     setLoading(true)
     try {
       // 終了日は空文字の場合はnullに変換
       const endDate = basicData.endDate ? basicData.endDate : null
-      
+
       let competitionId: string | undefined
 
       if (competitionEditingData && competitionEditingData.id) {
@@ -393,9 +399,20 @@ export function useDashboardHandlers({
           note: basicData.note || null
         })
         competitionId = newCompetition.id
-        // openEntryLogFormがisBasicFormOpen: falseをセットするので、closeCompetitionBasicFormは不要
+        // openEntryLogForm/openRecordLogFormがisBasicFormOpen: falseをセットするので、closeCompetitionBasicFormは不要
         // closeCompetitionBasicFormを呼ぶとcreatedCompetitionIdがnullにリセットされてしまう
-        openEntryLogForm(newCompetition.id)
+        if (continueToNext) {
+          if (skipEntry) {
+            // エントリーをスキップして記録入力へ（今日/過去の日付の場合）
+            openRecordLogForm(newCompetition.id, [])
+          } else {
+            // エントリー登録へ（未来の日付の場合）
+            openEntryLogForm(newCompetition.id)
+          }
+        } else {
+          // 保存して終了（今日/過去の日付で「保存して終了」を選んだ場合）
+          closeCompetitionBasicForm()
+        }
       }
 
       // 画像の処理（安全な順序: アップロード → 検証 → 削除）

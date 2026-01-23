@@ -16,6 +16,8 @@ interface FormStepperProps {
   onStepClick?: (stepIndex: number) => void
   allowClickNavigation?: boolean
   className?: string
+  /** スキップされたステップのインデックス配列（グレーアウト＋取り消し線で表示） */
+  skippedSteps?: number[]
 }
 
 export default function FormStepper({
@@ -23,7 +25,8 @@ export default function FormStepper({
   currentStep,
   onStepClick,
   allowClickNavigation = false,
-  className
+  className,
+  skippedSteps = []
 }: FormStepperProps) {
   const handleStepClick = (index: number) => {
     if (!allowClickNavigation || !onStepClick) return
@@ -56,7 +59,8 @@ export default function FormStepper({
       {/* デスクトップ向け: ステッパー表示 */}
       <ol className="hidden sm:flex items-center w-full">
         {steps.map((step, index) => {
-          const isCompleted = index < currentStep
+          const isSkipped = skippedSteps.includes(index)
+          const isCompleted = index < currentStep && !isSkipped
           const isCurrent = index === currentStep
           const isClickable = allowClickNavigation && isCompleted
 
@@ -71,11 +75,11 @@ export default function FormStepper({
               <button
                 type="button"
                 onClick={() => handleStepClick(index)}
-                disabled={!isClickable}
+                disabled={!isClickable || isSkipped}
                 className={cn(
                   'flex items-center gap-3 group',
-                  isClickable && 'cursor-pointer',
-                  !isClickable && 'cursor-default'
+                  isClickable && !isSkipped && 'cursor-pointer',
+                  (!isClickable || isSkipped) && 'cursor-default'
                 )}
                 aria-current={isCurrent ? 'step' : undefined}
               >
@@ -83,13 +87,14 @@ export default function FormStepper({
                 <span
                   className={cn(
                     'flex items-center justify-center w-10 h-10 rounded-full border-2 text-sm font-medium transition-colors',
-                    isCompleted && 'bg-blue-600 border-blue-600 text-white',
-                    isCurrent && 'border-blue-600 text-blue-600 bg-blue-50',
-                    !isCompleted && !isCurrent && 'border-gray-300 text-gray-500',
-                    isClickable && 'group-hover:bg-blue-700 group-hover:border-blue-700'
+                    isSkipped && 'bg-gray-100 border-gray-300 text-gray-400',
+                    !isSkipped && isCompleted && 'bg-blue-600 border-blue-600 text-white',
+                    !isSkipped && isCurrent && 'border-blue-600 text-blue-600 bg-blue-50',
+                    !isSkipped && !isCompleted && !isCurrent && 'border-gray-300 text-gray-500',
+                    isClickable && !isSkipped && 'group-hover:bg-blue-700 group-hover:border-blue-700'
                   )}
                 >
-                  {isCompleted ? (
+                  {isCompleted && !isSkipped ? (
                     <CheckIcon className="w-5 h-5" aria-hidden="true" />
                   ) : (
                     index + 1
@@ -101,16 +106,20 @@ export default function FormStepper({
                   <span
                     className={cn(
                       'text-sm font-medium transition-colors',
-                      isCompleted && 'text-blue-600',
-                      isCurrent && 'text-blue-600',
-                      !isCompleted && !isCurrent && 'text-gray-500',
-                      isClickable && 'group-hover:text-blue-700'
+                      isSkipped && 'text-gray-400 line-through',
+                      !isSkipped && isCompleted && 'text-blue-600',
+                      !isSkipped && isCurrent && 'text-blue-600',
+                      !isSkipped && !isCompleted && !isCurrent && 'text-gray-500',
+                      isClickable && !isSkipped && 'group-hover:text-blue-700'
                     )}
                   >
                     {step.label}
                   </span>
                   {step.description && (
-                    <span className="text-xs text-gray-400">
+                    <span className={cn(
+                      'text-xs',
+                      isSkipped ? 'text-gray-300 line-through' : 'text-gray-400'
+                    )}>
                       {step.description}
                     </span>
                   )}
@@ -122,7 +131,7 @@ export default function FormStepper({
                 <div
                   className={cn(
                     'flex-1 h-0.5 mx-4 transition-colors',
-                    isCompleted ? 'bg-blue-600' : 'bg-gray-300'
+                    isCompleted && !isSkipped ? 'bg-blue-600' : 'bg-gray-300'
                   )}
                   aria-hidden="true"
                 />

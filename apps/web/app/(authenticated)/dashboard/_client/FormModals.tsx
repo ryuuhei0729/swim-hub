@@ -20,10 +20,15 @@ import { convertRecordFormData } from '@/stores/types'
 import { getCompetitionId } from '../_utils/dashboardHelpers'
 import { useAuth } from '@/contexts'
 
+interface CompetitionSubmitOptions {
+  continueToNext?: boolean
+  skipEntry?: boolean
+}
+
 interface FormModalsProps {
-  onPracticeBasicSubmit: (basicData: { date: string; title: string; place: string; note: string }, imageData?: PracticeImageData) => Promise<void>
+  onPracticeBasicSubmit: (basicData: { date: string; title: string; place: string; note: string }, imageData?: PracticeImageData, continueToNext?: boolean) => Promise<void>
   onPracticeLogSubmit: (formDataArray: PracticeMenuFormData[]) => Promise<void>
-  onCompetitionBasicSubmit: (basicData: { date: string; endDate: string; title: string; place: string; poolType: number; note: string }, imageData?: CompetitionImageData) => Promise<void>
+  onCompetitionBasicSubmit: (basicData: { date: string; endDate: string; title: string; place: string; poolType: number; note: string }, imageData?: CompetitionImageData, options?: CompetitionSubmitOptions) => Promise<void>
   onEntrySubmit: (entriesData: EntryFormData[]) => Promise<void>
   onEntrySkip: () => void
   onRecordLogSubmit: (formDataList: RecordFormDataInternal[]) => Promise<void>

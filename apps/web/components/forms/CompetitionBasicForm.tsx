@@ -2,8 +2,11 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { Button, Input, ConfirmDialog, DatePicker } from '@/components/ui'
+import PlaceCombobox from '@/components/ui/PlaceCombobox'
 import FormStepper from '@/components/ui/FormStepper'
 import { XMarkIcon } from '@heroicons/react/24/outline'
+import { supabase } from '@/lib/supabase'
+import { CompetitionAPI } from '@apps/shared/api'
 
 // 大会記録フォームのステップ定義
 const COMPETITION_STEPS = [
@@ -42,10 +45,15 @@ type EditCompetitionBasicData = {
   images?: ExistingImage[]
 }
 
+interface SubmitOptions {
+  continueToNext?: boolean
+  skipEntry?: boolean
+}
+
 interface CompetitionBasicFormProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: CompetitionBasicFormData, imageData?: CompetitionImageData) => Promise<void>
+  onSubmit: (data: CompetitionBasicFormData, imageData?: CompetitionImageData, options?: SubmitOptions) => Promise<void>
   selectedDate: Date
   editData?: EditCompetitionBasicData
   isLoading?: boolean
@@ -91,6 +99,26 @@ export default function CompetitionBasicForm({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   // 確認ダイアログのコンテキスト（close: モーダル閉じる, back: ブラウザバック）
   const [confirmContext, setConfirmContext] = useState<'close' | 'back'>('close')
+  // 場所の候補一覧
+  const [placeSuggestions, setPlaceSuggestions] = useState<string[]>([])
+
+  // 場所の候補を取得
+  useEffect(() => {
+    if (!isOpen) return
+    if (!supabase) return
+
+    const client = supabase
+    const fetchPlaces = async () => {
+      try {
+        const competitionAPI = new CompetitionAPI(client)
+        const places = await competitionAPI.getUniqueCompetitionPlaces()
+        setPlaceSuggestions(places)
+      } catch (error) {
+        console.error('場所候補の取得に失敗:', error)
+      }
+    }
+    fetchPlaces()
+  }, [isOpen])
 
   // モーダルが閉じた時に初期化フラグをリセット
   useEffect(() => {
@@ -176,30 +204,6 @@ export default function CompetitionBasicForm({
     setIsInitialized(true)
   }, [isOpen, selectedDate, editData, isInitialized])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    // バリデーション（dateとpoolTypeのみ必須）
-    // 終了日が設定されている場合、開始日以降であることを確認
-    if (formData.endDate && formData.endDate < formData.date) {
-      console.error('終了日は開始日以降の日付を指定してください')
-      return
-    }
-
-    setIsSubmitted(true)
-    try {
-      // 画像データがある場合は一緒に送信
-      const hasImageChanges = imageData.newFiles.length > 0 || imageData.deletedIds.length > 0
-      await onSubmit(formData, hasImageChanges ? imageData : undefined)
-      setHasUnsavedChanges(false)
-      // onClose()は呼ばない - handleCompetitionBasicSubmitが適切にモーダルを管理する
-      // (編集時: closeCompetitionBasicForm(), 新規作成時: openEntryLogForm())
-    } catch (error) {
-      console.error('フォーム送信エラー:', error)
-      setIsSubmitted(false)
-    }
-  }
-
   const handleClose = () => {
     if (hasUnsavedChanges && !isSubmitted) {
       setConfirmContext('close')
@@ -242,6 +246,58 @@ export default function CompetitionBasicForm({
     setImageData({ newFiles, deletedIds })
   }
 
+  // 日付が今日以前かどうかを判定
+  const isDateTodayOrPast = () => {
+    const selectedDateValue = new Date(formData.date)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    selectedDateValue.setHours(0, 0, 0, 0)
+    return selectedDateValue <= today
+  }
+
+  // フォーム送信の共通処理
+  const submitForm = async (options: SubmitOptions) => {
+    // バリデーション
+    if (formData.endDate && formData.endDate < formData.date) {
+      console.error('終了日は開始日以降の日付を指定してください')
+      return
+    }
+
+    setIsSubmitted(true)
+    try {
+      const hasImageChanges = imageData.newFiles.length > 0 || imageData.deletedIds.length > 0
+      await onSubmit(formData, hasImageChanges ? imageData : undefined, options)
+      setHasUnsavedChanges(false)
+    } catch (error) {
+      console.error('フォーム送信エラー:', error)
+      setIsSubmitted(false)
+    }
+  }
+
+  // 保存して終了（次へ進まない）
+  const handleSubmitAndClose = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await submitForm({ continueToNext: false })
+  }
+
+  // 次へ進む（エントリー登録へ - 未来の日付用）
+  const handleSubmitToEntry = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await submitForm({ continueToNext: true, skipEntry: false })
+  }
+
+  // 次へ進む（記録入力へ - 今日/過去の日付用）
+  const handleSubmitToRecord = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await submitForm({ continueToNext: true, skipEntry: true })
+  }
+
+  // 編集モードでの更新
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await submitForm({ continueToNext: false })
+  }
+
   if (!isOpen) return null
 
   return (
@@ -268,12 +324,16 @@ export default function CompetitionBasicForm({
             {/* ステッププログレス（新規作成時のみ表示） */}
             {!editData && (
               <div className="mb-4">
-                <FormStepper steps={COMPETITION_STEPS} currentStep={0} />
+                <FormStepper
+                  steps={COMPETITION_STEPS}
+                  currentStep={0}
+                  skippedSteps={isDateTodayOrPast() ? [1] : []}
+                />
               </div>
             )}
 
             {/* フォーム */}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
               {/* 日付（開始日・終了日） */}
               <div className="grid grid-cols-2 gap-4">
                 <DatePicker
@@ -309,19 +369,14 @@ export default function CompetitionBasicForm({
               </div>
 
               {/* 場所 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  場所
-                </label>
-                <Input
-                  type="text"
-                  value={formData.place}
-                  onChange={(e) => setFormData({ ...formData, place: e.target.value })}
-                  placeholder="例: 東京アクアティクスセンター"
-                  className="w-full"
-                  data-testid="competition-place"
-                />
-              </div>
+              <PlaceCombobox
+                label="場所"
+                value={formData.place}
+                onChange={(value) => setFormData({ ...formData, place: value })}
+                suggestions={placeSuggestions}
+                placeholder="例: 東京アクアティクスセンター"
+                data-testid="competition-place"
+              />
 
               {/* プール種別 */}
               <div>
@@ -370,15 +425,54 @@ export default function CompetitionBasicForm({
           </div>
 
           {/* フッター */}
-          <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <Button
-              onClick={handleSubmit}
-              disabled={isLoading}
-              className="w-full sm:w-auto sm:ml-3"
-              data-testid={editData ? 'competition-update-button' : 'competition-next-button'}
-            >
-              {isLoading ? '保存中...' : editData ? '更新' : '次へ（記録登録）'}
-            </Button>
+          <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse sm:gap-3">
+            {/* 編集モード */}
+            {editData && (
+              <Button
+                onClick={handleUpdate}
+                disabled={isLoading}
+                className="w-full sm:w-auto"
+                data-testid="competition-update-button"
+              >
+                {isLoading ? '更新中...' : '更新'}
+              </Button>
+            )}
+
+            {/* 新規作成 - 未来の日付 */}
+            {!editData && !isDateTodayOrPast() && (
+              <Button
+                onClick={handleSubmitToEntry}
+                disabled={isLoading}
+                className="w-full sm:w-auto"
+                data-testid="competition-next-button"
+              >
+                {isLoading ? '保存中...' : '次へ（エントリー登録）'}
+              </Button>
+            )}
+
+            {/* 新規作成 - 今日/過去の日付 */}
+            {!editData && isDateTodayOrPast() && (
+              <>
+                <Button
+                  onClick={handleSubmitToRecord}
+                  disabled={isLoading}
+                  className="w-full sm:w-auto"
+                  data-testid="competition-record-button"
+                >
+                  {isLoading ? '保存中...' : '次へ（記録入力）'}
+                </Button>
+                <Button
+                  onClick={handleSubmitAndClose}
+                  variant="outline"
+                  disabled={isLoading}
+                  className="mt-3 w-full sm:mt-0 sm:w-auto"
+                  data-testid="competition-close-button"
+                >
+                  {isLoading ? '保存中...' : '保存して終了'}
+                </Button>
+              </>
+            )}
+
             <Button
               variant="outline"
               onClick={handleClose}

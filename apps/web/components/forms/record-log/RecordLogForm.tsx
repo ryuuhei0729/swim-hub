@@ -194,7 +194,11 @@ export default function RecordLogForm({
               {/* ステッププログレス（編集モードでない場合のみ表示） */}
               {!editData && (
                 <div className="mb-4">
-                  <FormStepper steps={COMPETITION_STEPS} currentStep={2} />
+                  <FormStepper
+                    steps={COMPETITION_STEPS}
+                    currentStep={2}
+                    skippedSteps={entryDataList.length === 0 ? [1] : []}
+                  />
                 </div>
               )}
             </div>
