@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { Button, ConfirmDialog } from '@/components/ui'
 import FormStepper from '@/components/ui/FormStepper'
@@ -80,6 +80,8 @@ export default function PracticeLogForm({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   // 確認ダイアログのコンテキスト
   const [confirmContext, setConfirmContext] = useState<'close' | 'back'>('close')
+  // プログラム的なナビゲーション中はpopstateを無視するフラグ
+  const isNavigatingBack = useRef(false)
 
   // ブラウザバックや閉じるボタンでの離脱を防ぐ
   useEffect(() => {
@@ -91,6 +93,10 @@ export default function PracticeLogForm({
     }
 
     const handlePopState = () => {
+      // プログラム的なナビゲーション中は無視
+      if (isNavigatingBack.current) {
+        return
+      }
       if (hasUnsavedChanges && !isSubmitted) {
         window.history.pushState(null, '', window.location.href)
         setConfirmContext('back')
@@ -119,13 +125,16 @@ export default function PracticeLogForm({
 
   const handleConfirmClose = useCallback(() => {
     if (confirmContext === 'back') {
+      // popstateリスナーが再度ダイアログを開かないようにフラグを設定
+      isNavigatingBack.current = true
+      setHasUnsavedChanges(false)
       setShowConfirmDialog(false)
       window.history.back()
       return
     }
     setShowConfirmDialog(false)
     onClose()
-  }, [confirmContext, onClose])
+  }, [confirmContext, onClose, setHasUnsavedChanges])
 
   const handleCancelClose = useCallback(() => {
     setShowConfirmDialog(false)

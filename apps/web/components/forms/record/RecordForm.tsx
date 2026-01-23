@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { parseISO, isValid } from 'date-fns'
 import { Button, ConfirmDialog } from '@/components/ui'
 import { XMarkIcon, PlusIcon } from '@heroicons/react/24/outline'
@@ -48,6 +48,13 @@ export default function RecordForm({
 
   // 確認ダイアログの状態
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+
+  // isOpen が false になったら確認ダイアログをリセット
+  useEffect(() => {
+    if (!isOpen) {
+      setShowConfirmDialog(false)
+    }
+  }, [isOpen])
 
   // バリデーションエラーの状態
   const [recordDateError, setRecordDateError] = useState<string | undefined>(undefined)

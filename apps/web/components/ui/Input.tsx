@@ -1,10 +1,10 @@
 'use client'
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { cn } from '@/utils'
 import { CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline'
 
-export type ValidationTrigger = 'blur' | 'change' | 'submit'
+export type ValidationTrigger = 'blur' | 'change'
 
 export interface ValidationRule {
   validate: (value: string) => boolean
@@ -48,7 +48,32 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
 
     const [internalError, setInternalError] = useState<string | null>(null)
     const [touched, setTouched] = useState(false)
-    const [value, setValue] = useState<string>('')
+    const [value, setValue] = useState<string>(
+      typeof props.value === 'string' ? props.value :
+      typeof props.value === 'number' ? String(props.value) :
+      typeof props.defaultValue === 'string' ? props.defaultValue :
+      typeof props.defaultValue === 'number' ? String(props.defaultValue) : ''
+    )
+
+    // props.value が変更されたときに内部 state を同期
+    useEffect(() => {
+      if (props.value !== undefined) {
+        const newValue = typeof props.value === 'string' ? props.value : String(props.value)
+        setValue(newValue)
+
+        // バリデーションルールがあり、touched 状態の場合は再バリデーション
+        if (validationRules && touched) {
+          let validationError: string | null = null
+          for (const rule of validationRules) {
+            if (!rule.validate(newValue)) {
+              validationError = rule.message
+              break
+            }
+          }
+          setInternalError(validationError)
+        }
+      }
+    }, [props.value, validationRules, touched])
 
     // バリデーション実行
     const runValidation = useCallback((inputValue: string): string | null => {
