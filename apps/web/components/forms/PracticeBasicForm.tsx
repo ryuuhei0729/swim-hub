@@ -47,6 +47,7 @@ interface PracticeBasicFormProps {
   selectedDate: Date
   editData?: EditPracticeBasicData // 編集時のデータ
   isLoading?: boolean
+  teamMode?: boolean // チームモード: 保存して次へボタンを非表示
 }
 
 export default function PracticeBasicForm({
@@ -55,7 +56,8 @@ export default function PracticeBasicForm({
   onSubmit,
   selectedDate,
   editData,
-  isLoading = false
+  isLoading = false,
+  teamMode = false
 }: PracticeBasicFormProps) {
   // selectedDateの有効性を確保
   const validDate = selectedDate && !isNaN(selectedDate.getTime()) ? selectedDate : new Date()
@@ -378,8 +380,8 @@ export default function PracticeBasicForm({
                 </Button>
               )}
 
-              {/* 新規作成 - 未来の日付 */}
-              {!editData && !isDateTodayOrPast() && (
+              {/* 新規作成 - チームモードまたは未来の日付: 保存ボタンのみ */}
+              {!editData && (teamMode || !isDateTodayOrPast()) && (
                 <Button
                   type="submit"
                   disabled={isLoading}
@@ -390,8 +392,8 @@ export default function PracticeBasicForm({
                 </Button>
               )}
 
-              {/* 新規作成 - 今日/過去の日付 */}
-              {!editData && isDateTodayOrPast() && (
+              {/* 新規作成 - 今日/過去の日付（チームモード以外）: 保存して終了 + 保存して次へ */}
+              {!editData && !teamMode && isDateTodayOrPast() && (
                 <>
                   <Button
                     type="button"

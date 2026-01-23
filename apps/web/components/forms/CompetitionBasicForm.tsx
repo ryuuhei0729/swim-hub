@@ -57,6 +57,7 @@ interface CompetitionBasicFormProps {
   selectedDate: Date
   editData?: EditCompetitionBasicData
   isLoading?: boolean
+  teamMode?: boolean // チームモード: 保存ボタンのみ表示
 }
 
 const POOL_TYPES = [
@@ -70,7 +71,8 @@ export default function CompetitionBasicForm({
   onSubmit,
   selectedDate,
   editData,
-  isLoading = false
+  isLoading = false,
+  teamMode = false
 }: CompetitionBasicFormProps) {
   const [formData, setFormData] = useState<CompetitionBasicFormData>({
     date: format(selectedDate, 'yyyy-MM-dd'),
@@ -469,8 +471,20 @@ export default function CompetitionBasicForm({
               </Button>
             )}
 
-            {/* 新規作成 - 未来の日付 */}
-            {!editData && !isDateTodayOrPast() && (
+            {/* 新規作成 - チームモード: 保存ボタンのみ */}
+            {!editData && teamMode && (
+              <Button
+                onClick={handleSubmitAndClose}
+                disabled={isLoading}
+                className="w-full sm:w-auto"
+                data-testid="competition-save-button"
+              >
+                {isLoading ? '保存中...' : '保存'}
+              </Button>
+            )}
+
+            {/* 新規作成 - 未来の日付（チームモード以外） */}
+            {!editData && !teamMode && !isDateTodayOrPast() && (
               <Button
                 onClick={handleSubmitToEntry}
                 disabled={isLoading}
@@ -481,8 +495,8 @@ export default function CompetitionBasicForm({
               </Button>
             )}
 
-            {/* 新規作成 - 今日/過去の日付 */}
-            {!editData && isDateTodayOrPast() && (
+            {/* 新規作成 - 今日/過去の日付（チームモード以外） */}
+            {!editData && !teamMode && isDateTodayOrPast() && (
               <>
                 <Button
                   onClick={handleSubmitToRecord}

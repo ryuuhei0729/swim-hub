@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { useAuth } from '@/contexts/AuthProvider'
-import { 
-  PlusIcon, 
+import {
+  PlusIcon,
   CalendarDaysIcon,
   MapPinIcon,
   TrophyIcon,
@@ -13,9 +14,15 @@ import {
 } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import TeamCompetitionForm from './TeamCompetitionForm'
+import { useCompetitionFormStore } from '@/stores'
+import type { CompetitionImageData } from '@/components/forms/CompetitionBasicForm'
 import TeamCompetitionEntryModal from './TeamCompetitionEntryModal'
 import { Pagination } from '@/components/ui'
+
+const CompetitionBasicForm = dynamic(
+  () => import('@/components/forms/CompetitionBasicForm'),
+  { ssr: false }
+)
 
 export interface TeamCompetition {
   id: string
@@ -146,17 +153,25 @@ export interface TeamCompetitionsProps {
 }
 
 export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompetitionsProps) {
-  const { supabase } = useAuth()
+  const { supabase, user } = useAuth()
   const router = useRouter()
   const [competitions, setCompetitions] = useState<TeamCompetition[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [showCompetitionForm, setShowCompetitionForm] = useState(false)
   const [selectedCompetition, setSelectedCompetition] = useState<TeamCompetition | null>(null)
   const [showEntryModal, setShowEntryModal] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
   const pageSize = 20
+
+  const {
+    isBasicFormOpen,
+    selectedDate,
+    isLoading: formLoading,
+    openBasicForm,
+    closeBasicForm,
+    setLoading: setFormLoading,
+  } = useCompetitionFormStore()
 
   // チームの大会一覧を取得（関数として抽出）
   const loadTeamCompetitions = useCallback(async () => {
@@ -234,14 +249,35 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
   }, [loadTeamCompetitions])
 
   const handleAddCompetition = () => {
-    setShowCompetitionForm(true)
+    openBasicForm(new Date())
   }
 
-  const handleCompetitionCreated = () => {
-    // 大会一覧を再読み込み（画面全体ではなくデータのみ）
-    // 新しいデータが追加された場合、最初のページに戻る
-    setCurrentPage(1)
-    loadTeamCompetitions()
+  const handleCompetitionBasicSubmit = async (
+    basicData: { date: string; endDate: string; title: string; place: string; poolType: number; note: string },
+    _imageData?: CompetitionImageData,
+    _options?: { continueToNext?: boolean; skipEntry?: boolean }
+  ) => {
+    setFormLoading(true)
+    try {
+      await supabase.from('competitions').insert({
+        user_id: user?.id || '',
+        team_id: teamId,
+        date: basicData.date,
+        end_date: basicData.endDate || null,
+        title: basicData.title || null,
+        place: basicData.place || null,
+        pool_type: basicData.poolType,
+        note: basicData.note || null,
+      })
+
+      closeBasicForm()
+      setCurrentPage(1)
+      loadTeamCompetitions()
+    } catch (err) {
+      console.error('大会の作成に失敗:', err)
+    } finally {
+      setFormLoading(false)
+    }
   }
 
   const handlePageChange = (page: number) => {
@@ -469,12 +505,16 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
       </div>
 
       {/* チーム大会作成モーダル */}
-      <TeamCompetitionForm
-        isOpen={showCompetitionForm}
-        onClose={() => setShowCompetitionForm(false)}
-        teamId={teamId}
-        onSuccess={handleCompetitionCreated}
-      />
+      <Suspense fallback={null}>
+        <CompetitionBasicForm
+          isOpen={isBasicFormOpen}
+          onClose={closeBasicForm}
+          onSubmit={handleCompetitionBasicSubmit}
+          selectedDate={selectedDate || new Date()}
+          isLoading={formLoading}
+          teamMode={true}
+        />
+      </Suspense>
 
       {/* エントリー管理モーダル */}
       {showEntryModal && selectedCompetition && (

@@ -27,6 +27,11 @@ export interface TeamAdminTabsProps {
 
 const adminTabs: TeamAdminTab[] = [
   {
+    id: 'attendance',
+    name: '出欠',
+    icon: ClipboardDocumentCheckIcon
+  },
+  {
     id: 'announcements',
     name: 'お知らせ',
     icon: MegaphoneIcon
@@ -45,11 +50,6 @@ const adminTabs: TeamAdminTab[] = [
     id: 'competitions',
     name: '大会',
     icon: TrophyIcon
-  },
-  {
-    id: 'attendance',
-    name: '出欠',
-    icon: ClipboardDocumentCheckIcon
   },
   {
     id: 'bulk-register',
