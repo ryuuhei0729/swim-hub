@@ -1,7 +1,7 @@
 'use client'
 
-import React from 'react'
-import { Button } from '@/components/ui'
+import React, { useState } from 'react'
+import { Button, ConfirmDialog } from '@/components/ui'
 import { XMarkIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { useRecordForm, useUnsavedChangesWarning } from './hooks'
 import { RecordBasicInfo, RecordSetItem } from './components'
@@ -45,16 +45,26 @@ export default function RecordForm({
   // ブラウザ離脱警告
   useUnsavedChangesWarning({ isOpen, hasUnsavedChanges, isSubmitted })
 
+  // 確認ダイアログの状態
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+
   if (!isOpen) return null
 
   const handleClose = () => {
     if (hasUnsavedChanges && !isSubmitted) {
-      const confirmed = window.confirm(
-        '入力内容が保存されていません。このまま閉じますか？'
-      )
-      if (!confirmed) return
+      setShowConfirmDialog(true)
+      return
     }
     onClose()
+  }
+
+  const handleConfirmClose = () => {
+    setShowConfirmDialog(false)
+    onClose()
+  }
+
+  const handleCancelClose = () => {
+    setShowConfirmDialog(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -179,6 +189,18 @@ export default function RecordForm({
           </form>
         </div>
       </div>
+
+      {/* 確認ダイアログ */}
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        onConfirm={handleConfirmClose}
+        onCancel={handleCancelClose}
+        title="入力内容が保存されていません"
+        message="入力内容が保存されていません。このまま閉じますか？"
+        confirmLabel="閉じる"
+        cancelLabel="編集を続ける"
+        variant="warning"
+      />
     </div>
   )
 }

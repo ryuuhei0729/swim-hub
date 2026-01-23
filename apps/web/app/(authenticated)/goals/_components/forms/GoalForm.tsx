@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Button, Input } from '@/components/ui'
+import { Button, Input, DatePicker } from '@/components/ui'
 import { format } from 'date-fns'
 import type { Style, Competition } from '@apps/shared/types'
 import { POOL_TYPES } from '../constants'
@@ -112,10 +112,10 @@ export default function GoalForm({
               onChange={(e) => onNewCompetitionChange({ ...newCompetition, title: e.target.value })}
               required
             />
-            <Input
-              type="date"
+            <DatePicker
+              label="大会日"
               value={newCompetition.date}
-              onChange={(e) => onNewCompetitionChange({ ...newCompetition, date: e.target.value })}
+              onChange={(date) => onNewCompetitionChange({ ...newCompetition, date })}
               required
             />
             <Input

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { format } from 'date-fns'
 import { useAuth } from '@/contexts/AuthProvider'
 import { TeamPracticesAPI } from '@apps/shared/api/teams/practices'
-import { Button, Input } from '@/components/ui'
+import { Button, Input, DatePicker } from '@/components/ui'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 
 interface TeamPracticeFormProps {
@@ -202,17 +202,11 @@ export default function TeamPracticeForm({
 
             {/* 練習日 */}
             <div>
-              <label htmlFor="practice-date" className="block text-sm font-medium text-gray-700 mb-2">
-                練習日 <span className="text-red-500">*</span>
-              </label>
-              <Input
-                id="practice-date"
-                type="date"
+              <DatePicker
+                label="練習日"
                 value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                onChange={(date) => setFormData({ ...formData, date })}
                 required
-                aria-describedby="practice-date-error"
-                data-testid="team-practice-date"
               />
             </div>
 

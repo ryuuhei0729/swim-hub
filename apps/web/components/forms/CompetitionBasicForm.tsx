@@ -1,8 +1,16 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Button, Input } from '@/components/ui'
+import { Button, Input, ConfirmDialog, DatePicker } from '@/components/ui'
+import FormStepper from '@/components/ui/FormStepper'
 import { XMarkIcon } from '@heroicons/react/24/outline'
+
+// 大会記録フォームのステップ定義
+const COMPETITION_STEPS = [
+  { id: 'basic', label: '大会情報', description: '日程・場所' },
+  { id: 'entry', label: 'エントリー', description: '種目・タイム' },
+  { id: 'record', label: '記録入力', description: '結果・スプリット' }
+]
 import { format } from 'date-fns'
 import CompetitionImageUploader, {
   CompetitionImageFile,
@@ -79,6 +87,10 @@ export default function CompetitionBasicForm({
   const [isSubmitted, setIsSubmitted] = useState(false)
   // 初期値を保存（初期化時の変更を無視するため）
   const initialFormDataRef = useRef<CompetitionBasicFormData | null>(null)
+  // 確認ダイアログの表示状態
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  // 確認ダイアログのコンテキスト（close: モーダル閉じる, back: ブラウザバック）
+  const [confirmContext, setConfirmContext] = useState<'close' | 'back'>('close')
 
   // モーダルが閉じた時に初期化フラグをリセット
   useEffect(() => {
@@ -86,6 +98,7 @@ export default function CompetitionBasicForm({
       setIsInitialized(false)
       setHasUnsavedChanges(false)
       setIsSubmitted(false)
+      setShowConfirmDialog(false)
       // 画像データもリセット
       setImageData({ newFiles: [], deletedIds: [] })
       initialFormDataRef.current = null
@@ -113,11 +126,10 @@ export default function CompetitionBasicForm({
 
     const handlePopState = (_e: PopStateEvent) => {
       if (hasUnsavedChanges && !isSubmitted) {
-        const confirmed = window.confirm('入力内容が保存されていません。このまま戻りますか？')
-        if (!confirmed) {
-          // 履歴を戻す
-          window.history.pushState(null, '', window.location.href)
-        }
+        // 履歴を戻す（ダイアログ表示中は戻らない）
+        window.history.pushState(null, '', window.location.href)
+        setConfirmContext('back')
+        setShowConfirmDialog(true)
       }
     }
 
@@ -190,11 +202,14 @@ export default function CompetitionBasicForm({
 
   const handleClose = () => {
     if (hasUnsavedChanges && !isSubmitted) {
-      const confirmed = window.confirm('入力内容が保存されていません。このまま閉じますか？')
-      if (!confirmed) {
-        return
-      }
+      setConfirmContext('close')
+      setShowConfirmDialog(true)
+      return
     }
+    cleanupAndClose()
+  }
+
+  const cleanupAndClose = () => {
     // プレビューURLをクリーンアップ
     imageData.newFiles.forEach(file => {
       URL.revokeObjectURL(file.previewUrl)
@@ -207,7 +222,20 @@ export default function CompetitionBasicForm({
       poolType: 0,
       note: ''
     })
+    setShowConfirmDialog(false)
     onClose()
+  }
+
+  const handleConfirmClose = () => {
+    if (confirmContext === 'back') {
+      // ブラウザバックの場合は履歴を戻す
+      window.history.back()
+    }
+    cleanupAndClose()
+  }
+
+  const handleCancelClose = () => {
+    setShowConfirmDialog(false)
   }
 
   const handleImagesChange = (newFiles: CompetitionImageFile[], deletedIds: string[]) => {
@@ -237,37 +265,32 @@ export default function CompetitionBasicForm({
                 <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
+            {/* ステッププログレス（新規作成時のみ表示） */}
+            {!editData && (
+              <div className="mb-4">
+                <FormStepper steps={COMPETITION_STEPS} currentStep={0} />
+              </div>
+            )}
 
             {/* フォーム */}
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* 日付（開始日・終了日） */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    開始日 <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    required
-                    className="w-full"
-                    data-testid="competition-date"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    終了日 <span className="text-gray-400 text-xs">（複数日の場合）</span>
-                  </label>
-                  <Input
-                    type="date"
-                    value={formData.endDate}
-                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                    min={formData.date}
-                    className="w-full"
-                    data-testid="competition-end-date"
-                  />
-                </div>
+                <DatePicker
+                  label="開始日"
+                  value={formData.date}
+                  onChange={(date) => setFormData({ ...formData, date })}
+                  required
+                  placeholder="開始日を選択"
+                />
+                <DatePicker
+                  label="終了日"
+                  value={formData.endDate}
+                  onChange={(date) => setFormData({ ...formData, endDate: date })}
+                  minDate={formData.date ? new Date(formData.date) : undefined}
+                  placeholder="終了日を選択"
+                  helperText="複数日の場合"
+                />
               </div>
 
               {/* 大会名 */}
@@ -367,6 +390,20 @@ export default function CompetitionBasicForm({
           </div>
         </div>
       </div>
+
+      {/* 確認ダイアログ */}
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        onConfirm={handleConfirmClose}
+        onCancel={handleCancelClose}
+        title="入力内容が保存されていません"
+        message={confirmContext === 'back'
+          ? '入力内容が保存されていません。このまま戻りますか？'
+          : '入力内容が保存されていません。このまま閉じますか？'}
+        confirmLabel={confirmContext === 'back' ? '戻る' : '閉じる'}
+        cancelLabel="編集を続ける"
+        variant="warning"
+      />
     </div>
   )
 }

@@ -91,7 +91,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
             >
               <div className="hidden sm:block text-right">
-                <div className="text-sm font-medium text-gray-900 truncate max-w-[8rem]">
+                <div className="text-sm font-medium text-gray-900 truncate max-w-32">
                   {profile?.name || user?.email?.split('@')[0] || 'ユーザー'}
                 </div>
               </div>

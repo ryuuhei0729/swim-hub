@@ -1,8 +1,15 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { Button, Input } from '@/components/ui'
+import { Button, Input, ConfirmDialog, DatePicker } from '@/components/ui'
+import FormStepper from '@/components/ui/FormStepper'
 import { XMarkIcon } from '@heroicons/react/24/outline'
+
+// 練習記録フォームのステップ定義
+const PRACTICE_STEPS = [
+  { id: 'basic', label: '基本情報', description: '日付・場所' },
+  { id: 'log', label: '練習記録', description: 'メニュー・タイム' }
+]
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import PracticeImageUploader, { 
@@ -69,6 +76,10 @@ export default function PracticeBasicForm({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   // 送信済みフラグ（送信後は警告を出さない）
   const [isSubmitted, setIsSubmitted] = useState(false)
+  // 確認ダイアログの表示状態
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  // 確認ダイアログのコンテキスト（close: モーダル閉じる, back: ブラウザバック）
+  const [confirmContext, setConfirmContext] = useState<'close' | 'back'>('close')
 
   // モーダルが閉じた時に初期化フラグをリセット
   useEffect(() => {
@@ -76,6 +87,7 @@ export default function PracticeBasicForm({
       setIsInitialized(false)
       setHasUnsavedChanges(false)
       setIsSubmitted(false)
+      setShowConfirmDialog(false)
       // 画像データもリセット
       setImageData({ newFiles: [], deletedIds: [] })
     }
@@ -99,11 +111,10 @@ export default function PracticeBasicForm({
 
     const handlePopState = (_e: PopStateEvent) => {
       if (hasUnsavedChanges && !isSubmitted) {
-        const confirmed = window.confirm('入力内容が保存されていません。このまま戻りますか？')
-        if (!confirmed) {
-          // 履歴を戻す
-          window.history.pushState(null, '', window.location.href)
-        }
+        // 履歴を戻す（ダイアログ表示中は戻らない）
+        window.history.pushState(null, '', window.location.href)
+        setConfirmContext('back')
+        setShowConfirmDialog(true)
       }
     }
 
@@ -151,16 +162,32 @@ export default function PracticeBasicForm({
 
   const handleClose = () => {
     if (hasUnsavedChanges && !isSubmitted) {
-      const confirmed = window.confirm('入力内容が保存されていません。このまま閉じますか？')
-      if (!confirmed) {
-        return
-      }
+      setConfirmContext('close')
+      setShowConfirmDialog(true)
+      return
     }
+    cleanupAndClose()
+  }
+
+  const cleanupAndClose = () => {
     // プレビューURLをクリーンアップ
     imageData.newFiles.forEach(file => {
       URL.revokeObjectURL(file.previewUrl)
     })
+    setShowConfirmDialog(false)
     onClose()
+  }
+
+  const handleConfirmClose = () => {
+    if (confirmContext === 'back') {
+      // ブラウザバックの場合は履歴を戻す
+      window.history.back()
+    }
+    cleanupAndClose()
+  }
+
+  const handleCancelClose = () => {
+    setShowConfirmDialog(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -183,12 +210,12 @@ export default function PracticeBasicForm({
   }
 
   return (
-    <div className="fixed inset-0 z-[60] overflow-y-auto" data-testid="practice-form-modal">
+    <div className="fixed inset-0 z-60 overflow-y-auto" data-testid="practice-form-modal">
       <div className="flex min-h-screen items-center justify-center p-4">
         {/* オーバーレイ */}
         <div
           className="fixed inset-0 bg-black/40 transition-opacity"
-          onClick={onClose}
+          onClick={handleClose}
         />
 
         {/* モーダルコンテンツ */}
@@ -210,24 +237,24 @@ export default function PracticeBasicForm({
             <p className="mt-2 text-sm text-gray-600">
               {validDate ? format(validDate, 'M月d日(E)', { locale: ja }) : '選択された日付'}の練習予定を{editData ? '編集' : '作成'}します
             </p>
+            {/* ステッププログレス（新規作成時のみ表示） */}
+            {!editData && (
+              <div className="mt-4">
+                <FormStepper steps={PRACTICE_STEPS} currentStep={0} />
+              </div>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
             {/* 練習日 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                練習日 <span className="text-red-500">*</span>
-              </label>
-              <Input
-                type="date"
-                value={formData.date}
-                onChange={(e) =>
-                  setFormData({ ...formData, date: e.target.value })
-                }
-                required
-                data-testid="practice-date"
-              />
-            </div>
+            <DatePicker
+              label="練習日"
+              value={formData.date}
+              onChange={(date) => setFormData({ ...formData, date })}
+              required
+              placeholder="練習日を選択"
+              data-testid="practice-date"
+            />
 
             {/* 練習タイトル */}
             <div>
@@ -309,6 +336,20 @@ export default function PracticeBasicForm({
           </form>
         </div>
       </div>
+
+      {/* 確認ダイアログ */}
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        onConfirm={handleConfirmClose}
+        onCancel={handleCancelClose}
+        title="入力内容が保存されていません"
+        message={confirmContext === 'back'
+          ? '入力内容が保存されていません。このまま戻りますか？'
+          : '入力内容が保存されていません。このまま閉じますか？'}
+        confirmLabel={confirmContext === 'back' ? '戻る' : '閉じる'}
+        cancelLabel="編集を続ける"
+        variant="warning"
+      />
     </div>
   )
 }
