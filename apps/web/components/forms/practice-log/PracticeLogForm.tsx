@@ -119,7 +119,9 @@ export default function PracticeLogForm({
 
   const handleConfirmClose = useCallback(() => {
     if (confirmContext === 'back') {
+      setShowConfirmDialog(false)
       window.history.back()
+      return
     }
     setShowConfirmDialog(false)
     onClose()

@@ -323,13 +323,11 @@ export function useCalendarHandlers({
           const isTeamCompetition = !!(competitionData as { team_id?: string | null }).team_id
           const competitionDate = (competitionData as { date?: string | null }).date
 
-          // 日付が今日以前かどうかを判定
+          // 日付が今日以前かどうかを判定（parseDateStringを使用してUTCパース問題を回避）
           const isDateTodayOrPast = () => {
             if (!competitionDate) return false
-            const compDate = new Date(competitionDate)
-            const today = new Date()
-            today.setHours(0, 0, 0, 0)
-            compDate.setHours(0, 0, 0, 0)
+            const compDate = parseDateString(competitionDate)
+            const today = startOfDay(new Date())
             return compDate <= today
           }
 

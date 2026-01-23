@@ -99,8 +99,12 @@ export default function CompetitionBasicForm({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   // 確認ダイアログのコンテキスト（close: モーダル閉じる, back: ブラウザバック）
   const [confirmContext, setConfirmContext] = useState<'close' | 'back'>('close')
+  // 確認ダイアログで「確認」を押した後のナビゲーション中フラグ（popstateの重複発火を防ぐ）
+  const isNavigatingRef = useRef(false)
   // 場所の候補一覧
   const [placeSuggestions, setPlaceSuggestions] = useState<string[]>([])
+  // バリデーションエラー
+  const [validationError, setValidationError] = useState<string | null>(null)
 
   // 場所の候補を取得
   useEffect(() => {
@@ -130,6 +134,8 @@ export default function CompetitionBasicForm({
       // 画像データもリセット
       setImageData({ newFiles: [], deletedIds: [] })
       initialFormDataRef.current = null
+      isNavigatingRef.current = false
+      setValidationError(null)
     }
   }, [isOpen])
 
@@ -153,6 +159,9 @@ export default function CompetitionBasicForm({
     }
 
     const handlePopState = (_e: PopStateEvent) => {
+      // ナビゲーション中または既にダイアログ表示中は無視
+      if (isNavigatingRef.current || showConfirmDialog) return
+
       if (hasUnsavedChanges && !isSubmitted) {
         // 履歴を戻す（ダイアログ表示中は戻らない）
         window.history.pushState(null, '', window.location.href)
@@ -231,6 +240,11 @@ export default function CompetitionBasicForm({
   }
 
   const handleConfirmClose = () => {
+    // 先に状態をクリアしてpopstateの重複発火を防ぐ
+    setHasUnsavedChanges(false)
+    setShowConfirmDialog(false)
+    isNavigatingRef.current = true
+
     if (confirmContext === 'back') {
       // ブラウザバックの場合は履歴を戻す
       window.history.back()
@@ -259,7 +273,7 @@ export default function CompetitionBasicForm({
   const submitForm = async (options: SubmitOptions) => {
     // バリデーション
     if (formData.endDate && formData.endDate < formData.date) {
-      console.error('終了日は開始日以降の日付を指定してください')
+      setValidationError('終了日は開始日以降の日付を指定してください')
       return
     }
 
@@ -268,6 +282,7 @@ export default function CompetitionBasicForm({
       const hasImageChanges = imageData.newFiles.length > 0 || imageData.deletedIds.length > 0
       await onSubmit(formData, hasImageChanges ? imageData : undefined, options)
       setHasUnsavedChanges(false)
+      setValidationError(null)
     } catch (error) {
       console.error('フォーム送信エラー:', error)
       setIsSubmitted(false)
@@ -334,19 +349,35 @@ export default function CompetitionBasicForm({
 
             {/* フォーム */}
             <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+              {/* バリデーションエラー */}
+              {validationError && (
+                <div
+                  role="alert"
+                  className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-3"
+                >
+                  {validationError}
+                </div>
+              )}
+
               {/* 日付（開始日・終了日） */}
               <div className="grid grid-cols-2 gap-4">
                 <DatePicker
                   label="開始日"
                   value={formData.date}
-                  onChange={(date) => setFormData({ ...formData, date })}
+                  onChange={(date) => {
+                    setFormData({ ...formData, date })
+                    setValidationError(null)
+                  }}
                   required
                   placeholder="開始日を選択"
                 />
                 <DatePicker
                   label="終了日"
                   value={formData.endDate}
-                  onChange={(date) => setFormData({ ...formData, endDate: date })}
+                  onChange={(date) => {
+                    setFormData({ ...formData, endDate: date })
+                    setValidationError(null)
+                  }}
                   minDate={formData.date ? new Date(formData.date) : undefined}
                   placeholder="終了日を選択"
                   helperText="複数日の場合"

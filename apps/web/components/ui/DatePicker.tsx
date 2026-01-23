@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useCallback, useId } from 'react'
 import { format, parseISO, isValid, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, getDay, isToday } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon, XMarkIcon } from '@heroicons/react/24/outline'
@@ -62,8 +62,8 @@ export default function DatePicker({
   const inputRef = useRef<HTMLButtonElement>(null)
   const calendarRef = useRef<HTMLDivElement>(null)
 
-  const [inputId] = useState(() => `datepicker-${Math.random().toString(36).substring(2, 9)}`)
-  const errorId = `${inputId}-error`
+  const id = useId()
+  const errorId = `${id}-error`
 
   // 選択中の日付
   const selectedDate = value
@@ -190,7 +190,7 @@ export default function DatePicker({
     <div className={cn('relative', className)} ref={containerRef}>
       {label && (
         <label
-          htmlFor={inputId}
+          htmlFor={id}
           className="block text-sm font-medium text-gray-700 mb-2"
         >
           {label}
@@ -201,7 +201,7 @@ export default function DatePicker({
       {/* 日付表示ボタン */}
       <button
         ref={inputRef}
-        id={inputId}
+        id={id}
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}

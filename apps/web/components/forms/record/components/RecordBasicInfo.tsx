@@ -8,6 +8,7 @@ import { POOL_TYPES } from '../types'
 interface RecordBasicInfoProps {
   formData: RecordFormData
   onFieldChange: (field: keyof RecordFormData, value: string | number) => void
+  recordDateError?: string
 }
 
 /**
@@ -16,6 +17,7 @@ interface RecordBasicInfoProps {
 export default function RecordBasicInfo({
   formData,
   onFieldChange,
+  recordDateError,
 }: RecordBasicInfoProps) {
   return (
     <>
@@ -27,6 +29,7 @@ export default function RecordBasicInfo({
             value={formData.recordDate}
             onChange={(date) => onFieldChange('recordDate', date)}
             required
+            error={recordDateError}
           />
         </div>
         <div>

@@ -38,6 +38,7 @@ export default function TimeInputModal({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [confirmContext, setConfirmContext] = useState<'close' | 'back'>('close')
   const isInitializedRef = useRef(false)
+  const ignorePopStateRef = useRef(false)
 
   // 全てのセット・レップの組み合わせを生成する関数
   const generateTimeCombinations = useCallback((): TimeEntry[] => {
@@ -95,6 +96,10 @@ export default function TimeInputModal({
     }
 
     const handlePopState = () => {
+      if (ignorePopStateRef.current) {
+        ignorePopStateRef.current = false
+        return
+      }
       if (hasUnsavedChanges && !isSubmitted) {
         window.history.pushState(null, '', window.location.href)
         setConfirmContext('back')
@@ -123,6 +128,7 @@ export default function TimeInputModal({
 
   const handleConfirmClose = useCallback(() => {
     if (confirmContext === 'back') {
+      ignorePopStateRef.current = true
       window.history.back()
     }
     setShowConfirmDialog(false)

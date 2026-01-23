@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { Button, ConfirmDialog } from '@/components/ui'
 import FormStepper from '@/components/ui/FormStepper'
 import { XMarkIcon } from '@heroicons/react/24/outline'
@@ -69,6 +69,10 @@ export default function RecordLogForm({
     }
 
     const handlePopState = () => {
+      // ガードフラグが立っている場合は何もしない（再入防止）
+      if (isHandlingBackRef.current) {
+        return
+      }
       if (hasUnsavedChanges && !isSubmitted) {
         // 履歴を戻す（ダイアログ表示中は戻らない）
         window.history.pushState(null, '', window.location.href)
@@ -84,6 +88,8 @@ export default function RecordLogForm({
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
       window.removeEventListener('popstate', handlePopState)
+      // アンマウント時にガードフラグをクリア
+      isHandlingBackRef.current = false
     }
   }, [isOpen, hasUnsavedChanges, isSubmitted])
 
@@ -92,6 +98,8 @@ export default function RecordLogForm({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   // 確認ダイアログのコンテキスト（close: モーダル閉じる, back: ブラウザバック）
   const [confirmContext, setConfirmContext] = useState<'close' | 'back'>('close')
+  // ブラウザバック処理中のガードフラグ（再入防止用）
+  const isHandlingBackRef = useRef(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -133,6 +141,9 @@ export default function RecordLogForm({
 
   const handleConfirmClose = () => {
     if (confirmContext === 'back') {
+      // ガードフラグを立ててからナビゲーション実行（再入防止）
+      isHandlingBackRef.current = true
+      resetUnsavedChanges()
       window.history.back()
     }
     setShowConfirmDialog(false)

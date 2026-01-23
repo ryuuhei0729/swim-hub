@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { useAuth } from '@/contexts/AuthProvider'
 import { TeamRecordsAPI } from '@apps/shared/api/teams/records'
 import { Button, Input, DatePicker } from '@/components/ui'
@@ -181,7 +181,7 @@ export default function TeamCompetitionForm({
                   label="終了日"
                   value={formData.endDate}
                   onChange={(date) => setFormData({ ...formData, endDate: date })}
-                  minDate={formData.date ? new Date(formData.date) : undefined}
+                  minDate={formData.date ? parseISO(formData.date) : undefined}
                   helperText="複数日の場合"
                 />
               </div>

@@ -28,13 +28,24 @@ export default function FormStepper({
   className,
   skippedSteps = []
 }: FormStepperProps) {
+  // Guard: return null if no steps
+  if (steps.length === 0) {
+    return null
+  }
+
+  // Clamp currentStep to valid range [0, steps.length - 1]
+  const clampedStep = Math.max(0, Math.min(currentStep, steps.length - 1))
+
   const handleStepClick = (index: number) => {
     if (!allowClickNavigation || !onStepClick) return
     // 完了済みのステップのみクリック可能
-    if (index < currentStep) {
+    if (index < clampedStep) {
       onStepClick(index)
     }
   }
+
+  // Safe division for progress width
+  const progressWidth = ((clampedStep + 1) / Math.max(1, steps.length)) * 100
 
   return (
     <nav aria-label="フォームの進捗" className={className}>
@@ -42,16 +53,16 @@ export default function FormStepper({
       <div className="sm:hidden">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-gray-700">
-            ステップ {currentStep + 1} / {steps.length}
+            ステップ {clampedStep + 1} / {steps.length}
           </span>
           <span className="text-sm text-gray-500">
-            {steps[currentStep]?.label}
+            {steps[clampedStep]?.label}
           </span>
         </div>
         <div className="overflow-hidden rounded-full bg-gray-200">
           <div
             className="h-2 rounded-full bg-blue-600 transition-all duration-300"
-            style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+            style={{ width: `${progressWidth}%` }}
           />
         </div>
       </div>
@@ -60,8 +71,8 @@ export default function FormStepper({
       <ol className="hidden sm:flex items-center w-full">
         {steps.map((step, index) => {
           const isSkipped = skippedSteps.includes(index)
-          const isCompleted = index < currentStep && !isSkipped
-          const isCurrent = index === currentStep
+          const isCompleted = index < clampedStep && !isSkipped
+          const isCurrent = index === clampedStep
           const isClickable = allowClickNavigation && isCompleted
 
           return (
@@ -146,25 +157,32 @@ export default function FormStepper({
 
 // ステップナビゲーション用のヘルパーフック
 export function useFormSteps(totalSteps: number, initialStep = 0) {
-  const [currentStep, setCurrentStep] = React.useState(initialStep)
+  // Ensure totalSteps is at least 0
+  const safeTotalSteps = Math.max(0, totalSteps)
+  // Clamp initialStep to valid range
+  const safeInitialStep = safeTotalSteps > 0
+    ? Math.max(0, Math.min(initialStep, safeTotalSteps - 1))
+    : 0
+
+  const [currentStep, setCurrentStep] = React.useState(safeInitialStep)
 
   const nextStep = React.useCallback(() => {
-    setCurrentStep(prev => Math.min(prev + 1, totalSteps - 1))
-  }, [totalSteps])
+    setCurrentStep(prev => Math.min(prev + 1, Math.max(0, safeTotalSteps - 1)))
+  }, [safeTotalSteps])
 
   const prevStep = React.useCallback(() => {
     setCurrentStep(prev => Math.max(prev - 1, 0))
   }, [])
 
   const goToStep = React.useCallback((step: number) => {
-    if (step >= 0 && step < totalSteps) {
+    if (safeTotalSteps > 0 && step >= 0 && step < safeTotalSteps) {
       setCurrentStep(step)
     }
-  }, [totalSteps])
+  }, [safeTotalSteps])
 
   const isFirstStep = currentStep === 0
-  const isLastStep = currentStep === totalSteps - 1
-  const progress = ((currentStep + 1) / totalSteps) * 100
+  const isLastStep = safeTotalSteps > 0 ? currentStep === safeTotalSteps - 1 : true
+  const progress = ((currentStep + 1) / Math.max(1, safeTotalSteps)) * 100
 
   return {
     currentStep,

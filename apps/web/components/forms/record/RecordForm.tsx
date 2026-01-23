@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import { parseISO, isValid } from 'date-fns'
 import { Button, ConfirmDialog } from '@/components/ui'
 import { XMarkIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { useRecordForm, useUnsavedChangesWarning } from './hooks'
@@ -48,6 +49,9 @@ export default function RecordForm({
   // 確認ダイアログの状態
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
 
+  // バリデーションエラーの状態
+  const [recordDateError, setRecordDateError] = useState<string | undefined>(undefined)
+
   if (!isOpen) return null
 
   const handleClose = () => {
@@ -69,9 +73,23 @@ export default function RecordForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // recordDate のバリデーション
+    const sanitized = sanitizeFormData()
+    if (!sanitized.recordDate || sanitized.recordDate === '') {
+      setRecordDateError('大会日を入力してください')
+      return
+    }
+    const parsedDate = parseISO(sanitized.recordDate)
+    if (!isValid(parsedDate)) {
+      setRecordDateError('有効な日付を入力してください')
+      return
+    }
+    setRecordDateError(undefined)
+
     setIsSubmitted(true)
     try {
-      await onSubmit(sanitizeFormData())
+      await onSubmit(sanitized)
       resetUnsavedChanges()
       onClose()
     } catch (error) {
@@ -114,7 +132,11 @@ export default function RecordForm({
 
           <form onSubmit={handleSubmit} className="p-3 sm:p-6 space-y-4 sm:space-y-6">
             {/* 大会情報 */}
-            <RecordBasicInfo formData={formData} onFieldChange={handleFieldChange} />
+            <RecordBasicInfo
+              formData={formData}
+              onFieldChange={handleFieldChange}
+              recordDateError={recordDateError}
+            />
 
             {/* 記録セクション */}
             <div className="space-y-3 sm:space-y-4">

@@ -46,7 +46,8 @@ describe('RecordForm', () => {
       )
 
       expect(screen.getByText('大会記録を追加')).toBeInTheDocument()
-      expect(screen.getByLabelText('大会日')).toBeInTheDocument()
+      // DatePickerはbutton要素を使用しているため、getByLabelTextではなくgetByTextでラベルを確認
+      expect(screen.getByText('大会日')).toBeInTheDocument()
       expect(screen.getByLabelText('開催地')).toBeInTheDocument()
       expect(screen.getByLabelText('大会名')).toBeInTheDocument()
     })

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { ConfirmDialog } from '@/components/ui'
 
@@ -35,6 +35,10 @@ export default function TeamCreateForm({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   // 確認ダイアログのコンテキスト（close: モーダル閉じる, back: ブラウザバック）
   const [confirmContext, setConfirmContext] = useState<'close' | 'back'>('close')
+  // pushStateが既に呼ばれたかを追跡
+  const pushedRef = useRef(false)
+  // プログラムによるpopstateを無視するフラグ
+  const ignorePopRef = useRef(false)
 
   // モーダルが閉じた時にリセット
   useEffect(() => {
@@ -42,6 +46,8 @@ export default function TeamCreateForm({
       setHasUnsavedChanges(false)
       setIsSubmitted(false)
       setShowConfirmDialog(false)
+      pushedRef.current = false
+      ignorePopRef.current = false
     }
   }, [isOpen])
 
@@ -55,16 +61,27 @@ export default function TeamCreateForm({
     }
 
     const handlePopState = () => {
+      // プログラムによるpopstateは無視
+      if (ignorePopRef.current) {
+        ignorePopRef.current = false
+        return
+      }
+
       if (hasUnsavedChanges && !isSubmitted) {
         // 履歴を戻す（ダイアログ表示中は戻らない）
         window.history.pushState(null, '', window.location.href)
         setConfirmContext('back')
         setShowConfirmDialog(true)
+        ignorePopRef.current = true
       }
     }
 
     window.addEventListener('beforeunload', handleBeforeUnload)
-    window.history.pushState(null, '', window.location.href)
+    // 一度だけpushStateを呼ぶ
+    if (!pushedRef.current) {
+      window.history.pushState(null, '', window.location.href)
+      pushedRef.current = true
+    }
     window.addEventListener('popstate', handlePopState)
 
     return () => {
@@ -131,6 +148,7 @@ export default function TeamCreateForm({
 
   const handleConfirmClose = () => {
     if (confirmContext === 'back') {
+      ignorePopRef.current = true
       window.history.back()
     }
     cleanupAndClose()
