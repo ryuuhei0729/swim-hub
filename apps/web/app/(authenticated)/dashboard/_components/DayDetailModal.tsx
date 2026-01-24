@@ -1,10 +1,12 @@
 'use client'
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { XMarkIcon, PencilIcon, TrashIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, PencilIcon, TrashIcon, ClipboardDocumentCheckIcon, ShareIcon } from '@heroicons/react/24/outline'
 import { BoltIcon, TrophyIcon } from '@heroicons/react/24/solid'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
+import { ShareCardModal } from '@/components/share'
+import type { CompetitionShareData, PracticeShareData, PracticeMenuItem } from '@/components/share'
 import { formatTime } from '@/utils/formatters'
 import { useAuth } from '@/contexts'
 import { CalendarItemType, DayDetailModalProps, CalendarItem, EntryInfo, isPracticeMetadata, isCompetitionMetadata, isRecordMetadata, isTeamInfo } from '@/types'
@@ -828,6 +830,8 @@ function PracticeDetails({
   const [practiceImages, setPracticeImages] = useState<GalleryImage[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [sharePracticeData, setSharePracticeData] = useState<PracticeShareData | null>(null)
 
   useEffect(() => {
     const loadPractice = async () => {
@@ -1123,17 +1127,59 @@ function PracticeDetails({
                 {/* 練習内容: 距離 × 本数 × セット数 サークル 泳法 */}
                 <div className="bg-white rounded-lg p-3 mb-3 border border-green-300 relative">
                   {/* 編集・削除ボタン（右上） */}
+                  {/* シェア・編集・削除ボタン（右上） */}
                   <div className="absolute top-3 right-3 flex items-center space-x-2">
+                    <button
+                      onClick={() => {
+                        // この日の全メニューをシェアデータに変換
+                        const menuItems: PracticeMenuItem[] = practiceLogs.map(log => ({
+                          style: log.style,
+                          category: log.swim_category || 'Swim',
+                          distance: log.distance,
+                          repCount: log.repCount,
+                          setCount: log.setCount,
+                          circle: log.circle ?? undefined,
+                          times: log.times?.map(t => ({
+                            setNumber: t.setNumber,
+                            repNumber: t.repNumber,
+                            time: t.time
+                          })),
+                          note: log.note ?? undefined
+                        }))
+
+                        const totalDistance = practiceLogs.reduce((sum, log) =>
+                          sum + (log.distance * log.repCount * log.setCount), 0)
+
+                        setSharePracticeData({
+                          date: practice.date
+                            ? format(new Date(practice.date), 'yyyy年M月d日（E）', { locale: ja })
+                            : '',
+                          title: practice.note || '練習',
+                          place: place ?? undefined,
+                          menuItems,
+                          totalDistance,
+                          totalSets: practiceLogs.length,
+                          userName: '',
+                          teamName: teamName
+                        })
+                        setShowShareModal(true)
+                      }}
+                      className="p-2 text-gray-500 hover:text-cyan-600 rounded-lg hover:bg-cyan-100 transition-colors"
+                      title="練習をシェア"
+                      data-testid="share-practice-log-button"
+                    >
+                      <ShareIcon className="h-4 w-4" />
+                    </button>
                     <button
                       onClick={() => {
                         // 編集に必要な情報を保持したまま渡す
                         // styleの値をコード値に変換（ラベルの場合はコード値に変換）
                         const styleValue = formattedLog.style
                         // ラベルの場合はコード値に変換
-                        const styleCode = SWIM_STYLES.find(s => s.label === styleValue)?.value || 
-                                         SWIM_STYLES.find(s => s.value === styleValue)?.value || 
+                        const styleCode = SWIM_STYLES.find(s => s.label === styleValue)?.value ||
+                                         SWIM_STYLES.find(s => s.value === styleValue)?.value ||
                                          styleValue || 'Fr'
-                        
+
                         const formData = {
                           id: formattedLog.id,
                           user_id: practice.user_id,
@@ -1318,6 +1364,19 @@ function PracticeDetails({
           </div>
         )}
       </div>
+
+      {/* シェアカードモーダル */}
+      {showShareModal && sharePracticeData && (
+        <ShareCardModal
+          isOpen={showShareModal}
+          onClose={() => {
+            setShowShareModal(false)
+            setSharePracticeData(null)
+          }}
+          type="practice"
+          data={sharePracticeData}
+        />
+      )}
     </div>
   )
 }
@@ -1425,6 +1484,8 @@ function CompetitionDetails({
   const [actualRecords, setActualRecords] = useState<CalendarItem[]>([])
   const [competitionImages, setCompetitionImages] = useState<GalleryImage[]>([])
   const [loading, setLoading] = useState(true)
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [shareRecordData, setShareRecordData] = useState<CompetitionShareData | null>(null)
 
   useEffect(() => {
     const loadRecords = async () => {
@@ -1481,6 +1542,13 @@ function CompetitionDetails({
             name_jp: string
             distance: number
           } | null
+          split_times?: Array<{
+            id: string
+            record_id: string
+            distance: number
+            split_time: number
+            created_at: string
+          }>
         }
         const formattedRecords = ((data || []) as RecordFromDB[]).map((record): CalendarItem => ({
           id: record.id,
@@ -1505,7 +1573,7 @@ function CompetitionDetails({
                 distance: 0
               },
               competition_id: record.competition_id || undefined,
-              split_times: []
+              split_times: record.split_times || []
             },
             competition: record.competition || undefined,
             style: record.style || undefined,
@@ -1695,9 +1763,40 @@ function CompetitionDetails({
               <div key={record.id} className="bg-blue-50 rounded-lg p-4">
                 {/* 記録内容 */}
                 <div className="bg-white rounded-lg p-3 mb-3 border border-blue-300 relative">
-                  {/* 編集・削除ボタン（右上） */}
+                  {/* シェア・編集・削除ボタン（右上） */}
                   <div className="absolute top-1 right-3 flex flex-col items-end gap-1">
                     <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => {
+                          const competition = record.metadata?.competition
+                          const recordData = record.metadata?.record
+                          const style = record.metadata?.style || recordData?.style
+                          setShareRecordData({
+                            competitionName: competitionName || competition?.title || '大会',
+                            date: competition?.date
+                              ? format(new Date(competition.date), 'yyyy年M月d日', { locale: ja })
+                              : record.date
+                              ? format(new Date(record.date), 'yyyy年M月d日', { locale: ja })
+                              : '',
+                            place: place || competition?.place || '',
+                            poolType: (poolType ?? competition?.pool_type) === 1 ? 'long' : 'short',
+                            eventName: style?.name_jp || '',
+                            raceDistance: style?.distance || 0,
+                            time: recordData?.time || 0,
+                            reactionTime: recordData?.reaction_time ?? undefined,
+                            splitTimes: recordData?.split_times,
+                            isBestTime: false,
+                            userName: '',
+                            teamName: teamName,
+                          })
+                          setShowShareModal(true)
+                        }}
+                        className="p-2 text-gray-500 hover:text-cyan-600 rounded-lg hover:bg-cyan-100 transition-colors"
+                        title="記録をシェア"
+                        data-testid="share-record-button"
+                      >
+                        <ShareIcon className="h-4 w-4" />
+                      </button>
                       <button
                         onClick={openRecordEditor}
                         className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
@@ -1798,6 +1897,19 @@ function CompetitionDetails({
           </div>
         )}
       </div>
+
+      {/* シェアカードモーダル */}
+      {showShareModal && shareRecordData && (
+        <ShareCardModal
+          isOpen={showShareModal}
+          onClose={() => {
+            setShowShareModal(false)
+            setShareRecordData(null)
+          }}
+          type="competition"
+          data={shareRecordData}
+        />
+      )}
     </div>
   )
 }

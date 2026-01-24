@@ -2,9 +2,11 @@
 
 import React, { useState, useMemo, useEffect } from 'react'
 import dynamic from 'next/dynamic'
-import { TrophyIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
+import { TrophyIcon, PencilIcon, TrashIcon, EyeIcon, ShareIcon } from '@heroicons/react/24/outline'
 import { Button, BestTimeBadge, Pagination } from '@/components/ui'
 import RecordLogForm, { type RecordLogFormData } from '@/components/forms/RecordLogForm'
+import { ShareCardModal } from '@/components/share'
+import type { CompetitionShareData } from '@/components/share'
 
 // rechartsを含むRecordProgressChartを動的インポート（バンドルサイズ削減）
 const RecordProgressChart = dynamic(
@@ -53,6 +55,7 @@ export default function CompetitionClient({
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 20
   const [selectedChartStyleId, setSelectedChartStyleId] = useState<number | null>(null)
+  const [showShareModal, setShowShareModal] = useState(false)
   
   // Zustandストア
   const {
@@ -827,10 +830,18 @@ export default function CompetitionClient({
               </div>
 
               {/* フッター */}
-              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse sm:gap-2">
                 <button
                   type="button"
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  className="w-full inline-flex justify-center items-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-800 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:w-auto sm:text-sm"
+                  onClick={() => setShowShareModal(true)}
+                >
+                  <ShareIcon className="h-4 w-4 mr-2" />
+                  シェア
+                </button>
+                <button
+                  type="button"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
                   onClick={() => {
                     closeDetailModal()
                   }}
@@ -841,6 +852,31 @@ export default function CompetitionClient({
             </div>
           </div>
         </div>
+      )}
+
+      {/* シェアカードモーダル */}
+      {showShareModal && selectedRecord && (
+        <ShareCardModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          type="competition"
+          data={{
+            competitionName: selectedRecord.competition?.title || '大会',
+            date: selectedRecord.competition?.date
+              ? format(new Date(selectedRecord.competition.date), 'yyyy年M月d日', { locale: ja })
+              : '',
+            place: selectedRecord.competition?.place || '',
+            poolType: selectedRecord.pool_type === 1 ? 'long' : 'short',
+            eventName: selectedRecord.style?.name_jp || '',
+            raceDistance: selectedRecord.style?.distance || 0,
+            time: selectedRecord.time,
+            reactionTime: selectedRecord.reaction_time ?? undefined,
+            splitTimes: selectedRecord.split_times,
+            isBestTime: false, // TODO: ベストタイム判定を追加
+            userName: '', // TODO: ユーザー名を取得
+            teamName: undefined,
+          } as CompetitionShareData}
+        />
       )}
     </div>
   )

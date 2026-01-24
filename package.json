@@ -83,5 +83,9 @@
     "monorepo"
   ],
   "author": "開発チーム",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "html-to-image": "^1.11.13",
+    "html2canvas": "^1.4.1"
+  }
 }
