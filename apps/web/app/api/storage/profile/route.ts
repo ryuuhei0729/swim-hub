@@ -5,9 +5,11 @@
 import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-server-auth'
 import { isR2Enabled, uploadToR2, listR2Objects, deleteMultipleFromR2 } from '@/lib/r2'
 import { NextRequest, NextResponse } from 'next/server'
+import { randomUUID } from 'crypto'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const ALLOWED_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif'])
 
 /**
  * POST: プロフィール画像をアップロード
@@ -35,9 +37,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'JPEG、PNG、WebPのみ対応しています' }, { status: 400 })
     }
 
-    // ファイル名を生成
-    const ext = file.name.split('.').pop() || 'webp'
-    const fileName = `${Date.now()}.${ext}`
+    // ファイル名を生成（セキュリティ対策済み）
+    // パス文字を除去してファイル名のみ取得
+    const sanitizedName = file.name.replace(/^.*[\\/]/, '')
+    // 拡張子を抽出し、許可リストで検証
+    const rawExt = sanitizedName.split('.').pop()?.toLowerCase() || ''
+    const ext = ALLOWED_EXTENSIONS.has(rawExt) ? rawExt : 'webp'
+    // 衝突耐性のあるUUIDを使用
+    const fileName = `${randomUUID()}.${ext}`
     const key = `profiles/avatars/${user.id}/${fileName}`
 
     // R2が有効な場合はR2を使用
