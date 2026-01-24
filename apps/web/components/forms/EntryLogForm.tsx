@@ -1,9 +1,17 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Button, Input } from '@/components/ui'
+import { Button, Input, ConfirmDialog } from '@/components/ui'
+import FormStepper from '@/components/ui/FormStepper'
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
-import { formatTime } from '@/utils/formatters'
+
+// 大会記録フォームのステップ定義
+const COMPETITION_STEPS = [
+  { id: 'basic', label: '大会情報', description: '日程・場所' },
+  { id: 'entry', label: 'エントリー', description: '種目・タイム' },
+  { id: 'record', label: '記録入力', description: '結果・スプリット' }
+]
+import { formatTime, formatTimeShort, parseTime } from '@apps/shared/utils/time'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 
@@ -78,6 +86,10 @@ export default function EntryLogForm({
   const [isSubmitted, setIsSubmitted] = useState(false)
   // 初期値を保存（初期化時の変更を無視するため）
   const initialEntriesRef = useRef<EntryData[] | null>(null)
+  // 確認ダイアログの表示状態
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  // 確認ダイアログのコンテキスト（close: モーダル閉じる, back: ブラウザバック）
+  const [confirmContext, setConfirmContext] = useState<'close' | 'back'>('close')
 
   // モーダルが閉じた時に初期化フラグをリセット
   useEffect(() => {
@@ -85,6 +97,7 @@ export default function EntryLogForm({
       setIsInitialized(false)
       setHasUnsavedChanges(false)
       setIsSubmitted(false)
+      setShowConfirmDialog(false)
       initialEntriesRef.current = null
     }
   }, [isOpen])
@@ -109,11 +122,10 @@ export default function EntryLogForm({
 
     const handlePopState = (_e: PopStateEvent) => {
       if (hasUnsavedChanges && !isSubmitted) {
-        const confirmed = window.confirm('入力内容が保存されていません。このまま戻りますか？')
-        if (!confirmed) {
-          // 履歴を戻す
-          window.history.pushState(null, '', window.location.href)
-        }
+        // 履歴を戻す（ダイアログ表示中は戻らない）
+        window.history.pushState(null, '', window.location.href)
+        setConfirmContext('back')
+        setShowConfirmDialog(true)
       }
     }
 
@@ -201,12 +213,23 @@ export default function EntryLogForm({
 
   const handleClose = () => {
     if (hasUnsavedChanges && !isSubmitted) {
-      const confirmed = window.confirm('入力内容が保存されていません。このまま閉じますか？')
-      if (!confirmed) {
-        return
-      }
+      setConfirmContext('close')
+      setShowConfirmDialog(true)
+      return
     }
     onClose()
+  }
+
+  const handleConfirmClose = () => {
+    if (confirmContext === 'back') {
+      window.history.back()
+    }
+    setShowConfirmDialog(false)
+    onClose()
+  }
+
+  const handleCancelClose = () => {
+    setShowConfirmDialog(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -263,32 +286,11 @@ export default function EntryLogForm({
   }
 
   const formatTimeDisplay = (seconds: number): string => {
-    if (seconds === 0) return ''
-    return formatTime(seconds)
+    return formatTimeShort(seconds)
   }
 
   const parseTimeString = (timeString: string): number => {
-    if (!timeString) return 0
-    
-    const trimmed = timeString.trim()
-    if (!trimmed) return 0
-    
-    // "1:30.50" 形式
-    if (trimmed.includes(':')) {
-      const [minutesStr, secondsStr] = trimmed.split(':')
-      const minutes = parseInt(minutesStr)
-      const seconds = parseFloat(secondsStr)
-      
-      if (!Number.isFinite(minutes) || !Number.isFinite(seconds)) {
-        return 0
-      }
-      
-      return minutes * 60 + seconds
-    }
-    
-    // "30.50" 形式
-    const parsed = parseFloat(trimmed)
-    return Number.isFinite(parsed) ? parsed : 0
+    return parseTime(timeString)
   }
 
   return (
@@ -329,6 +331,12 @@ export default function EntryLogForm({
                 <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
+            {/* ステッププログレス（編集モードでない場合のみ表示） */}
+            {!editData && (
+              <div className="mt-4">
+                <FormStepper steps={COMPETITION_STEPS} currentStep={1} />
+              </div>
+            )}
             <p className="mt-3 text-sm text-gray-600">
               大会にエントリーする種目とエントリータイムを入力してください。
               <br />
@@ -482,6 +490,20 @@ export default function EntryLogForm({
           </form>
         </div>
       </div>
+
+      {/* 確認ダイアログ */}
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        onConfirm={handleConfirmClose}
+        onCancel={handleCancelClose}
+        title="入力内容が保存されていません"
+        message={confirmContext === 'back'
+          ? '入力内容が保存されていません。このまま戻りますか？'
+          : '入力内容が保存されていません。このまま閉じますか？'}
+        confirmLabel={confirmContext === 'back' ? '戻る' : '閉じる'}
+        cancelLabel="編集を続ける"
+        variant="warning"
+      />
     </div>
   )
 }

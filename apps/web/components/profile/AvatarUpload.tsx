@@ -1,10 +1,16 @@
 'use client'
 
 import React, { useState, useRef } from 'react'
+import dynamic from 'next/dynamic'
 import { CameraIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '@/contexts'
-import ImageCropModal from './ImageCropModal'
 import { validateImageFile } from '@/utils/imageUtils'
+
+// react-easy-cropを含むImageCropModalを動的インポート（バンドルサイズ削減）
+const ImageCropModal = dynamic(
+  () => import('./ImageCropModal'),
+  { ssr: false }
+)
 
 interface AvatarUploadProps {
   currentAvatarUrl?: string | null

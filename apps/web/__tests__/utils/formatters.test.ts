@@ -26,6 +26,14 @@ describe('formatTime', () => {
     expect(formatTime(0)).toBe('0.00')
     expect(formatTime(0.01)).toBe('0.01')
   })
+
+  it('無効な入力に対して0.00を返す', () => {
+    expect(formatTime(-1)).toBe('0.00')
+    expect(formatTime(-100.5)).toBe('0.00')
+    expect(formatTime(NaN)).toBe('0.00')
+    expect(formatTime(Infinity)).toBe('0.00')
+    expect(formatTime(-Infinity)).toBe('0.00')
+  })
 })
 
 describe('formatDate', () => {

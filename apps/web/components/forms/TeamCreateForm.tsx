@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
+import { ConfirmDialog } from '@/components/ui'
 
 export interface TeamCreateFormData {
   name: string
@@ -26,6 +27,68 @@ export default function TeamCreateForm({
     description: ''
   })
   const [errors, setErrors] = useState<Partial<TeamCreateFormData>>({})
+  // フォームに変更があるかどうかを追跡
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  // 送信済みフラグ（送信後は警告を出さない）
+  const [isSubmitted, setIsSubmitted] = useState(false)
+  // 確認ダイアログの表示状態
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  // 確認ダイアログのコンテキスト（close: モーダル閉じる, back: ブラウザバック）
+  const [confirmContext, setConfirmContext] = useState<'close' | 'back'>('close')
+  // pushStateが既に呼ばれたかを追跡
+  const pushedRef = useRef(false)
+  // プログラムによるpopstateを無視するフラグ
+  const ignorePopRef = useRef(false)
+
+  // モーダルが閉じた時にリセット
+  useEffect(() => {
+    if (!isOpen) {
+      setHasUnsavedChanges(false)
+      setIsSubmitted(false)
+      setShowConfirmDialog(false)
+      pushedRef.current = false
+      ignorePopRef.current = false
+    }
+  }, [isOpen])
+
+  // ブラウザバックや閉じるボタンでの離脱を防ぐ
+  useEffect(() => {
+    if (!isOpen || !hasUnsavedChanges || isSubmitted) return
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+
+    const handlePopState = () => {
+      // プログラムによるpopstateは無視
+      if (ignorePopRef.current) {
+        ignorePopRef.current = false
+        return
+      }
+
+      if (hasUnsavedChanges && !isSubmitted) {
+        // 履歴を戻す（ダイアログ表示中は戻らない）
+        window.history.pushState(null, '', window.location.href)
+        setConfirmContext('back')
+        setShowConfirmDialog(true)
+        ignorePopRef.current = true
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    // 一度だけpushStateを呼ぶ
+    if (!pushedRef.current) {
+      window.history.pushState(null, '', window.location.href)
+      pushedRef.current = true
+    }
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [isOpen, hasUnsavedChanges, isSubmitted])
 
   // フォームバリデーション
   const validateForm = (): boolean => {
@@ -48,31 +111,57 @@ export default function TeamCreateForm({
   // フォーム送信
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validateForm()) {
       return
     }
 
+    setIsSubmitted(true)
     try {
       await onSubmit(formData)
       // 成功時はフォームをリセット
       setFormData({ name: '', description: '' })
       setErrors({})
+      setHasUnsavedChanges(false)
     } catch (error) {
       console.error('チーム作成エラー:', error)
+      setIsSubmitted(false)
     }
   }
 
   // フォームリセット
   const handleClose = () => {
+    if (hasUnsavedChanges && !isSubmitted) {
+      setConfirmContext('close')
+      setShowConfirmDialog(true)
+      return
+    }
+    cleanupAndClose()
+  }
+
+  const cleanupAndClose = () => {
     setFormData({ name: '', description: '' })
     setErrors({})
+    setShowConfirmDialog(false)
     onClose()
+  }
+
+  const handleConfirmClose = () => {
+    if (confirmContext === 'back') {
+      ignorePopRef.current = true
+      window.history.back()
+    }
+    cleanupAndClose()
+  }
+
+  const handleCancelClose = () => {
+    setShowConfirmDialog(false)
   }
 
   // 入力値変更
   const handleInputChange = (field: keyof TeamCreateFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+    setHasUnsavedChanges(true)
     // エラーをクリア
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }))
@@ -82,7 +171,7 @@ export default function TeamCreateForm({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[60] overflow-y-auto" data-testid="team-create-modal">
+    <div className="fixed inset-0 z-60 overflow-y-auto" data-testid="team-create-modal">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         {/* オーバーレイ */}
         <div 
@@ -185,6 +274,20 @@ export default function TeamCreateForm({
           </form>
         </div>
       </div>
+
+      {/* 確認ダイアログ */}
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        onConfirm={handleConfirmClose}
+        onCancel={handleCancelClose}
+        title="入力内容が保存されていません"
+        message={confirmContext === 'back'
+          ? '入力内容が保存されていません。このまま戻りますか？'
+          : '入力内容が保存されていません。このまま閉じますか？'}
+        confirmLabel={confirmContext === 'back' ? '戻る' : '閉じる'}
+        cancelLabel="編集を続ける"
+        variant="warning"
+      />
     </div>
   )
 }

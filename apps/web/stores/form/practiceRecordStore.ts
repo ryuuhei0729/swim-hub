@@ -83,7 +83,7 @@ interface PracticeRecordActions {
   
   // マスターデータ
   setStyles: (styles: Style[]) => void
-  setTags: (tags: PracticeTag[]) => void
+  setTags: (tags: PracticeTag[] | ((prev: PracticeTag[]) => PracticeTag[])) => void
   
   // UI状態
   setLoading: (loading: boolean) => void
@@ -140,7 +140,10 @@ export const usePracticeRecordStore = create<PracticeRecordState & PracticeRecor
   
   // マスターデータ
   setStyles: (styles) => set({ styles }),
-  setTags: (tags) => set({ tags }),
+  setTags: (tags) =>
+    set((state) => ({
+      tags: typeof tags === 'function' ? tags(state.tags) : tags,
+    })),
   
   // UI状態
   setLoading: (loading) => set({ isLoading: loading }),

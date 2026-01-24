@@ -126,7 +126,7 @@ export default function TagManagementModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[80] overflow-y-auto" data-testid="tag-management-modal">
+    <div className="fixed inset-0 z-80 overflow-y-auto" data-testid="tag-management-modal">
       <div className="flex min-h-screen items-center justify-center p-4">
         <div
           className="fixed inset-0 bg-black/40 transition-opacity"
@@ -253,7 +253,7 @@ export default function TagManagementModal({
 
       {/* 削除確認モーダル */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-[90] overflow-y-auto">
+        <div className="fixed inset-0 z-90 overflow-y-auto">
           <div className="flex min-h-screen items-center justify-center p-4">
             <div className="fixed inset-0 bg-black/40 transition-opacity" />
             

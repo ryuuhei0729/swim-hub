@@ -24,6 +24,11 @@ export interface TeamTabsProps {
 
 const tabs: TeamTab[] = [
   {
+    id: 'attendance',
+    name: '出欠',
+    icon: ClipboardDocumentCheckIcon
+  },
+  {
     id: 'members',
     name: 'メンバー',
     icon: UsersIcon
@@ -37,11 +42,6 @@ const tabs: TeamTab[] = [
     id: 'competitions',
     name: '大会',
     icon: TrophyIcon
-  },
-  {
-    id: 'attendance',
-    name: '出欠',
-    icon: ClipboardDocumentCheckIcon
   }
 ]
 

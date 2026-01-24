@@ -1,13 +1,23 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
-import { Button, Input } from '@/components/ui'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { Button, Input, ConfirmDialog, DatePicker } from '@/components/ui'
+import PlaceCombobox from '@/components/ui/PlaceCombobox'
+import FormStepper from '@/components/ui/FormStepper'
 import { XMarkIcon } from '@heroicons/react/24/outline'
-import { format } from 'date-fns'
+import { supabase } from '@/lib/supabase'
+import { PracticeAPI } from '@apps/shared/api'
+
+// 練習記録フォームのステップ定義
+const PRACTICE_STEPS = [
+  { id: 'basic', label: '基本情報', description: '日付・場所' },
+  { id: 'log', label: '練習記録', description: 'メニュー・タイム' }
+]
+import { format, parseISO, isValid } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import PracticeImageUploader, { 
-  PracticeImageFile, 
-  ExistingImage 
+import PracticeImageUploader, {
+  PracticeImageFile,
+  ExistingImage
 } from './PracticeImageUploader'
 
 export interface PracticeBasicData {
@@ -33,10 +43,11 @@ type EditPracticeBasicData = {
 interface PracticeBasicFormProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: PracticeBasicData, imageData?: PracticeImageData) => Promise<void>
+  onSubmit: (data: PracticeBasicData, imageData?: PracticeImageData, continueToNext?: boolean) => Promise<void>
   selectedDate: Date
   editData?: EditPracticeBasicData // 編集時のデータ
   isLoading?: boolean
+  teamMode?: boolean // チームモード: 保存して次へボタンを非表示
 }
 
 export default function PracticeBasicForm({
@@ -45,7 +56,8 @@ export default function PracticeBasicForm({
   onSubmit,
   selectedDate,
   editData,
-  isLoading = false
+  isLoading = false,
+  teamMode = false
 }: PracticeBasicFormProps) {
   // selectedDateの有効性を確保
   const validDate = selectedDate && !isNaN(selectedDate.getTime()) ? selectedDate : new Date()
@@ -69,6 +81,32 @@ export default function PracticeBasicForm({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   // 送信済みフラグ（送信後は警告を出さない）
   const [isSubmitted, setIsSubmitted] = useState(false)
+  // 確認ダイアログの表示状態
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  // 確認ダイアログのコンテキスト（close: モーダル閉じる, back: ブラウザバック）
+  const [confirmContext, setConfirmContext] = useState<'close' | 'back'>('close')
+  // 場所の候補一覧
+  const [placeSuggestions, setPlaceSuggestions] = useState<string[]>([])
+  // popstateイベントをスキップするためのフラグ
+  const skipPopstateRef = useRef(false)
+
+  // 場所の候補を取得
+  useEffect(() => {
+    if (!isOpen) return
+    if (!supabase) return
+
+    const client = supabase
+    const fetchPlaces = async () => {
+      try {
+        const practiceAPI = new PracticeAPI(client)
+        const places = await practiceAPI.getUniquePlaces()
+        setPlaceSuggestions(places)
+      } catch (error) {
+        console.error('場所候補の取得に失敗:', error)
+      }
+    }
+    fetchPlaces()
+  }, [isOpen])
 
   // モーダルが閉じた時に初期化フラグをリセット
   useEffect(() => {
@@ -76,6 +114,7 @@ export default function PracticeBasicForm({
       setIsInitialized(false)
       setHasUnsavedChanges(false)
       setIsSubmitted(false)
+      setShowConfirmDialog(false)
       // 画像データもリセット
       setImageData({ newFiles: [], deletedIds: [] })
     }
@@ -98,12 +137,15 @@ export default function PracticeBasicForm({
     }
 
     const handlePopState = (_e: PopStateEvent) => {
+      if (skipPopstateRef.current) {
+        skipPopstateRef.current = false
+        return
+      }
       if (hasUnsavedChanges && !isSubmitted) {
-        const confirmed = window.confirm('入力内容が保存されていません。このまま戻りますか？')
-        if (!confirmed) {
-          // 履歴を戻す
-          window.history.pushState(null, '', window.location.href)
-        }
+        // 履歴を戻す（ダイアログ表示中は戻らない）
+        window.history.pushState(null, '', window.location.href)
+        setConfirmContext('back')
+        setShowConfirmDialog(true)
       }
     }
 
@@ -151,44 +193,89 @@ export default function PracticeBasicForm({
 
   const handleClose = () => {
     if (hasUnsavedChanges && !isSubmitted) {
-      const confirmed = window.confirm('入力内容が保存されていません。このまま閉じますか？')
-      if (!confirmed) {
-        return
-      }
+      setConfirmContext('close')
+      setShowConfirmDialog(true)
+      return
     }
+    cleanupAndClose()
+  }
+
+  const cleanupAndClose = () => {
     // プレビューURLをクリーンアップ
     imageData.newFiles.forEach(file => {
       URL.revokeObjectURL(file.previewUrl)
     })
+    setShowConfirmDialog(false)
     onClose()
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    // バリデーション（dateのみ必須）
+  const handleConfirmClose = () => {
+    if (confirmContext === 'back') {
+      // ブラウザバックの場合は履歴を戻す
+      // popstateハンドラーが再トリガーされないようにフラグを設定
+      skipPopstateRef.current = true
+      window.history.back()
+    }
+    cleanupAndClose()
+  }
 
+  const handleCancelClose = () => {
+    setShowConfirmDialog(false)
+  }
+
+  // 日付が今日以前かどうかを判定
+  const isDateTodayOrPast = () => {
+    const parsedDate = parseISO(formData.date)
+    if (!isValid(parsedDate)) {
+      return false
+    }
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    parsedDate.setHours(0, 0, 0, 0)
+    return parsedDate <= today
+  }
+
+  // フォーム送信の共通処理
+  const submitForm = async (continueToNext: boolean) => {
     setIsSubmitted(true)
     try {
-      // 画像データがある場合は一緒に送信
       const hasImageChanges = imageData.newFiles.length > 0 || imageData.deletedIds.length > 0
-      await onSubmit(formData, hasImageChanges ? imageData : undefined)
+      await onSubmit(formData, hasImageChanges ? imageData : undefined, continueToNext)
       setHasUnsavedChanges(false)
-      // onClose()は呼ばない - handlePracticeBasicSubmitが適切にモーダルを管理する
-      // (編集時・新規作成時: closePracticeBasicForm(), 新規作成時は続けてopenPracticeLogForm())
     } catch (error) {
       console.error('練習記録の保存に失敗しました:', error)
       setIsSubmitted(false)
     }
   }
 
+  // 保存して終了（次へ進まない）
+  const handleSubmitAndClose = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await submitForm(false)
+  }
+
+  // 保存して次へ進む（デフォルトの送信動作）
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    // 編集モードまたは未来の日付の場合は、continueToNext=falseとして扱う
+    // 今日/過去の日付で新規作成の場合のみ、continueToNext=trueとなる
+    const shouldContinue = !editData && isDateTodayOrPast()
+    await submitForm(shouldContinue)
+  }
+
+  // 保存して次へ進む（明示的に次へ進む）
+  const handleSubmitAndContinue = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await submitForm(true)
+  }
+
   return (
-    <div className="fixed inset-0 z-[60] overflow-y-auto" data-testid="practice-form-modal">
+    <div className="fixed inset-0 z-60 overflow-y-auto" data-testid="practice-form-modal">
       <div className="flex min-h-screen items-center justify-center p-4">
         {/* オーバーレイ */}
         <div
           className="fixed inset-0 bg-black/40 transition-opacity"
-          onClick={onClose}
+          onClick={handleClose}
         />
 
         {/* モーダルコンテンツ */}
@@ -210,24 +297,24 @@ export default function PracticeBasicForm({
             <p className="mt-2 text-sm text-gray-600">
               {validDate ? format(validDate, 'M月d日(E)', { locale: ja }) : '選択された日付'}の練習予定を{editData ? '編集' : '作成'}します
             </p>
+            {/* ステッププログレス（新規作成時のみ表示） */}
+            {!editData && (
+              <div className="mt-4">
+                <FormStepper steps={PRACTICE_STEPS} currentStep={0} />
+              </div>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
             {/* 練習日 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                練習日 <span className="text-red-500">*</span>
-              </label>
-              <Input
-                type="date"
-                value={formData.date}
-                onChange={(e) =>
-                  setFormData({ ...formData, date: e.target.value })
-                }
-                required
-                data-testid="practice-date"
-              />
-            </div>
+            <DatePicker
+              label="練習日"
+              value={formData.date}
+              onChange={(date) => setFormData({ ...formData, date })}
+              required
+              placeholder="練習日を選択"
+              data-testid="practice-date"
+            />
 
             {/* 練習タイトル */}
             <div>
@@ -246,20 +333,14 @@ export default function PracticeBasicForm({
             </div>
 
             {/* 練習場所 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                練習場所
-              </label>
-              <Input
-                type="text"
-                value={formData.place}
-                onChange={(e) =>
-                  setFormData({ ...formData, place: e.target.value })
-                }
-                placeholder="例: 市営プール、学校プール"
-                data-testid="practice-place"
-              />
-            </div>
+            <PlaceCombobox
+              label="練習場所"
+              value={formData.place}
+              onChange={(value) => setFormData({ ...formData, place: value })}
+              suggestions={placeSuggestions}
+              placeholder="例: 市営プール、学校プール"
+              data-testid="practice-place"
+            />
 
             {/* メモ */}
             <div>
@@ -297,18 +378,72 @@ export default function PracticeBasicForm({
               >
                 キャンセル
               </Button>
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="bg-blue-600 hover:bg-blue-700"
-                data-testid={editData ? 'update-practice-button' : 'save-practice-button'}
-              >
-                {isLoading ? (editData ? '更新中...' : '作成中...') : (editData ? '練習予定を更新' : '練習予定を作成')}
-              </Button>
+
+              {/* 編集モード */}
+              {editData && (
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="bg-blue-600 hover:bg-blue-700"
+                  data-testid="update-practice-button"
+                >
+                  {isLoading ? '更新中...' : '更新'}
+                </Button>
+              )}
+
+              {/* 新規作成 - チームモードまたは未来の日付: 保存ボタンのみ */}
+              {!editData && (teamMode || !isDateTodayOrPast()) && (
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="bg-blue-600 hover:bg-blue-700"
+                  data-testid="save-practice-button"
+                >
+                  {isLoading ? '保存中...' : '保存'}
+                </Button>
+              )}
+
+              {/* 新規作成 - 今日/過去の日付（チームモード以外）: 保存して終了 + 保存して次へ */}
+              {!editData && !teamMode && isDateTodayOrPast() && (
+                <>
+                  <Button
+                    type="button"
+                    onClick={handleSubmitAndClose}
+                    variant="outline"
+                    disabled={isLoading}
+                    data-testid="save-practice-close-button"
+                  >
+                    {isLoading ? '保存中...' : '保存して終了'}
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleSubmitAndContinue}
+                    disabled={isLoading}
+                    className="bg-blue-600 hover:bg-blue-700"
+                    data-testid="save-practice-continue-button"
+                  >
+                    {isLoading ? '保存中...' : '保存して次へ'}
+                  </Button>
+                </>
+              )}
             </div>
           </form>
         </div>
       </div>
+
+      {/* 確認ダイアログ */}
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        onConfirm={handleConfirmClose}
+        onCancel={handleCancelClose}
+        title="入力内容が保存されていません"
+        message={confirmContext === 'back'
+          ? '入力内容が保存されていません。このまま戻りますか？'
+          : '入力内容が保存されていません。このまま閉じますか？'}
+        confirmLabel={confirmContext === 'back' ? '戻る' : '閉じる'}
+        cancelLabel="編集を続ける"
+        variant="warning"
+      />
     </div>
   )
 }

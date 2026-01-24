@@ -25,21 +25,25 @@ async function getTeamData(
   membership: TeamMembership | null
 }> {
   const coreAPI = new TeamCoreAPI(supabase)
-  
+
   try {
-    // チーム情報を取得（メンバー情報も含む）
-    const teamData = await coreAPI.getTeam(teamId)
-    
-    // 現在のユーザーのメンバーシップ情報を取得（承認済みのみ）
-    // 承認待ちのメンバーはこのページにアクセスできない
-    const { data: membershipData, error: membershipError } = await supabase
-      .from('team_memberships')
-      .select('*')
-      .eq('team_id', teamId)
-      .eq('user_id', userId)
-      .eq('status', 'approved')
-      .eq('is_active', true)
-      .single()
+    // チーム情報とメンバーシップ情報を並列で取得（パフォーマンス最適化）
+    const [teamData, membershipResult] = await Promise.all([
+      // チーム情報を取得（メンバー情報も含む）
+      coreAPI.getTeam(teamId),
+      // 現在のユーザーのメンバーシップ情報を取得（承認済みのみ）
+      // 承認待ちのメンバーはこのページにアクセスできない
+      supabase
+        .from('team_memberships')
+        .select('*')
+        .eq('team_id', teamId)
+        .eq('user_id', userId)
+        .eq('status', 'approved')
+        .eq('is_active', true)
+        .single()
+    ])
+
+    const { data: membershipData, error: membershipError } = membershipResult
 
     // メンバーシップが見つからない場合はnullを返す（エラーではない）
     if (membershipError && membershipError.code !== 'PGRST116') {

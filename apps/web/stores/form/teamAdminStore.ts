@@ -43,7 +43,7 @@ const initialState: TeamAdminState = {
   team: null,
   membership: null,
   loading: true,
-  activeTab: 'announcements',
+  activeTab: 'attendance',
   selectedMember: null,
   isMemberModalOpen: false,
 }

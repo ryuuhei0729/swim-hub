@@ -1,10 +1,10 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { useAuth } from '@/contexts/AuthProvider'
 import { TeamRecordsAPI } from '@apps/shared/api/teams/records'
-import { Button, Input } from '@/components/ui'
+import { Button, Input, DatePicker } from '@/components/ui'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 
 interface TeamCompetitionFormProps {
@@ -169,27 +169,20 @@ export default function TeamCompetitionForm({
             {/* 大会日（開始日・終了日） */}
             <div className="grid grid-cols-2 gap-2 sm:gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  開始日 <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  type="date"
+                <DatePicker
+                  label="開始日"
                   value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  onChange={(date) => setFormData({ ...formData, date })}
                   required
-                  data-testid="team-competition-date"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  終了日 <span className="text-gray-400 text-xs">（複数日の場合）</span>
-                </label>
-                <Input
-                  type="date"
+                <DatePicker
+                  label="終了日"
                   value={formData.endDate}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  min={formData.date}
-                  data-testid="team-competition-end-date"
+                  onChange={(date) => setFormData({ ...formData, endDate: date })}
+                  minDate={formData.date ? parseISO(formData.date) : undefined}
+                  helperText="複数日の場合"
                 />
               </div>
             </div>

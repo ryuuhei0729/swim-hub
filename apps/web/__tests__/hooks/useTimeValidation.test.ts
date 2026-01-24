@@ -241,7 +241,8 @@ describe('useTimeValidation', () => {
       it('0秒はエラー', () => {
         const { result } = renderHook(() => useTimeValidation())
 
-        const validation = result.current.validateTime('0')
+        // '0'は小数点がないため形式エラー、'0.00'は正しい形式で0秒エラー
+        const validation = result.current.validateTime('0.00')
 
         expect(validation.isValid).toBe(false)
         expect(validation.error).toBe('タイムは0より大きい必要があります')
@@ -287,7 +288,8 @@ describe('useTimeValidation', () => {
       it('非常に小さい正の値はOK', () => {
         const { result } = renderHook(() => useTimeValidation())
 
-        const validation = result.current.validateTime('0.001')
+        // 0.001は小数点以下3桁で形式エラー、0.01は最小の有効値
+        const validation = result.current.validateTime('0.01')
 
         expect(validation.isValid).toBe(true)
       })
@@ -296,7 +298,8 @@ describe('useTimeValidation', () => {
         const { result } = renderHook(() => useTimeValidation())
 
         // 3600秒 = 60分 = 1時間、実装は > 3600 でチェックしているのでOK
-        const validation = result.current.validateTime('3600')
+        // 整数形式は許可されないため、60:00.00形式を使用
+        const validation = result.current.validateTime('60:00.00')
 
         expect(validation.isValid).toBe(true)
       })
