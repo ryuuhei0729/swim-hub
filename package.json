@@ -53,13 +53,13 @@
   "devDependencies": {
     "@alloc/quick-lru": "^5.2.0",
     "@dotenvx/dotenvx-ext-vault": "^0.3.2",
-    "@playwright/test": "^1.56.1",
+    "@playwright/test": "^1.58.0",
     "@types/node": "^25",
     "dotenv": "^17.2.3",
     "enhanced-resolve": "^5.18.4",
     "supabase": "^2.71.1",
     "tapable": "^2.3.0",
-    "turbo": "^2.6.0",
+    "turbo": "^2.7.5",
     "typescript": "^5"
   },
   "overrides": {
