@@ -1,10 +1,12 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { CalendarDaysIcon, ClockIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { CalendarDaysIcon, ClockIcon, PencilIcon, TrashIcon, ShareIcon } from '@heroicons/react/24/outline'
 import { Button, Pagination } from '@/components/ui'
 import PracticeLogForm from '@/components/forms/PracticeLogForm'
 import PracticeTimeModal from '../_components/PracticeTimeModal'
+import { ShareCardModal } from '@/components/share'
+import type { PracticeShareData, PracticeMenuItem } from '@/components/share'
 import { format, isAfter, startOfDay } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { useAuth } from '@/contexts'
@@ -51,7 +53,9 @@ export default function PracticeClient({
   const { supabase } = useAuth()
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 20
-  
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [shareData, setShareData] = useState<PracticeShareData | null>(null)
+
   // Zustandストア
   const {
     selectedTagIds,
@@ -271,6 +275,48 @@ export default function PracticeClient({
       id: log.practiceId,
       place: log.practice?.place
     })
+  }
+
+  // シェアボタンのハンドラー
+  const handleSharePractice = (log: PracticeLogWithFormattedData) => {
+    // この日の全ログを取得
+    const practiceDate = log.practice?.date
+    const logsForDate = practiceLogs.filter(l => l.practice?.date === practiceDate)
+
+    // メニュー項目に変換
+    const menuItems: PracticeMenuItem[] = logsForDate.map(l => ({
+      style: l.style,
+      category: l.swim_category || 'Swim',
+      distance: l.distance,
+      repCount: l.rep_count,
+      setCount: l.set_count || 1,
+      circle: l.circle ?? undefined,
+      times: l.practice_times?.map(t => ({
+        setNumber: t.set_number,
+        repNumber: t.rep_number,
+        time: t.time
+      })),
+      note: l.note ?? undefined
+    }))
+
+    // 合計距離と合計セット数を計算
+    const totalDistance = logsForDate.reduce((sum, l) =>
+      sum + (l.distance * l.rep_count * (l.set_count || 1)), 0)
+    const totalSets = logsForDate.length
+
+    setShareData({
+      date: practiceDate
+        ? format(new Date(practiceDate), 'yyyy年M月d日（E）', { locale: ja })
+        : '',
+      title: log.practice?.note || '練習',
+      place: log.practice?.place ?? undefined,
+      menuItems,
+      totalDistance,
+      totalSets,
+      userName: '', // TODO: ユーザー名を取得
+      teamName: undefined
+    })
+    setShowShareModal(true)
   }
   
   const handlePracticeSubmit = async (formDataArray: PracticeMenuFormData[]) => {
@@ -659,6 +705,15 @@ export default function PracticeClient({
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center justify-end space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSharePractice(log)}
+                            className="flex items-center space-x-1 text-cyan-600 hover:text-cyan-700"
+                          >
+                            <ShareIcon className="h-4 w-4" />
+                            <span>シェア</span>
+                          </Button>
                           {log.practice_times && log.practice_times.length > 0 && (
                             <Button
                               variant="outline"
@@ -762,6 +817,15 @@ export default function PracticeClient({
                       </div>
                       
                       <div className="flex flex-col space-y-1 ml-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSharePractice(log)}
+                          className="flex items-center justify-center space-x-1 text-xs px-2 py-1 text-cyan-600 hover:text-cyan-700"
+                        >
+                          <ShareIcon className="h-3 w-3" />
+                          <span>シェア</span>
+                        </Button>
                         {log.practice_times && log.practice_times.length > 0 && (
                           <Button
                             variant="outline"
@@ -859,6 +923,19 @@ export default function PracticeClient({
           onClose={handleTimeModalClose}
           practiceId={selectedPracticeForTime.id}
           place={selectedPracticeForTime.place || undefined}
+        />
+      )}
+
+      {/* シェアカードモーダル */}
+      {showShareModal && shareData && (
+        <ShareCardModal
+          isOpen={showShareModal}
+          onClose={() => {
+            setShowShareModal(false)
+            setShareData(null)
+          }}
+          type="practice"
+          data={shareData}
         />
       )}
     </div>
