@@ -1,8 +1,11 @@
-// proxy.ts
+// middleware.ts - Next.js 15 Edge Middleware
 import { updateSession } from '@/lib/supabase-auth/middleware'
 import { type NextRequest } from 'next/server'
 
-export async function proxy(request: NextRequest) {
+// Cloudflare Workers 対応: Edge Runtime を使用
+export const runtime = 'experimental-edge'
+
+export async function middleware(request: NextRequest) {
     return await updateSession(request)
 }
 

@@ -31,7 +31,7 @@
 
 ### 現在の構成
 
-- **フレームワーク**: Next.js 16 (App Router)
+- **フレームワーク**: Next.js 15.1 (App Router)
 - **状態管理**: Zustand + React Query
 - **データベース**: Supabase (PostgreSQL)
 - **リアルタイム**: Supabase Realtime

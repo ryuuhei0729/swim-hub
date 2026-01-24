@@ -470,7 +470,7 @@ export function useDashboardHandlers({
     } finally {
       setLoading(false)
     }
-  }, [competitionEditingData, updateCompetition, createCompetition, closeCompetitionBasicForm, refreshCalendar, openEntryLogForm, setLoading, supabase])
+  }, [competitionEditingData, updateCompetition, createCompetition, closeCompetitionBasicForm, refreshCalendar, openEntryLogForm, openRecordLogForm, setLoading, supabase])
 
   // エントリー登録
   const handleEntrySubmit = useCallback(async (entriesData: EntryFormData[]) => {

@@ -34,7 +34,7 @@ swim-hub/
 - **Database**: PostgreSQL (Supabase)
 - **API**: Supabase Client (直接アクセス)
 - **Auth**: Supabase Auth
-- **Storage**: Supabase Storage
+- **Storage**: Cloudflare R2（プライマリ）、Supabase Storage（フォールバック）
 - **Security**: Row Level Security (RLS)
 
 ## Mobile

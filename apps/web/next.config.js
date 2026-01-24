@@ -19,14 +19,15 @@ const nextConfig = {
   
   // 画像設定
   images: {
-    // 開発環境では画像最適化を無効化（ローカルSupabaseへのアクセス問題を回避）
-    unoptimized: process.env.NODE_ENV === 'development',
-    // 最新フォーマットを優先（本番環境のみ有効）
+    // Cloudflare Workers環境では画像最適化が利用できないため無効化
+    unoptimized: true,
+    // 最新フォーマットを優先
     formats: ['image/avif', 'image/webp'],
     // レスポンシブ画像のサイズ設定
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
     remotePatterns: [
+      // Supabase Storage
       {
         protocol: 'https',
         hostname: '*.supabase.co',
@@ -45,6 +46,13 @@ const nextConfig = {
         hostname: 'localhost',
         port: '54321',
         pathname: '/storage/v1/object/public/**',
+      },
+      // Cloudflare R2
+      {
+        protocol: 'https',
+        hostname: '*.r2.dev',
+        port: '',
+        pathname: '/**',
       },
     ],
   },

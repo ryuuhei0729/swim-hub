@@ -26,7 +26,7 @@
 ```
 swim-hub/
 ├── apps/
-│   ├── web/              # Next.js 16アプリケーション
+│   ├── web/              # Next.js 15.1アプリケーション
 │   │   ├── app/
 │   │   │   ├── (authenticated)/    # 認証済みルート（17ページ）
 │   │   │   └── (unauthenticated)/  # 未認証ルート
@@ -1495,7 +1495,7 @@ useEffect(() => {
 
 #### 8. サーバーコンポーネントの活用
 
-**Next.js 16のServer Componentsを最大限活用**:
+**Next.js 15のServer Componentsを最大限活用**:
 
 ```typescript
 // ✅ apps/web/app/(authenticated)/dashboard/page.tsx

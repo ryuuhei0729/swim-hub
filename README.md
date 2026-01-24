@@ -52,9 +52,9 @@
 | --- | --- |
 | Frontend | TypeScript 5, Next.js 15 (App Router), React 19, Tailwind CSS 4|
 | Backend | Supabase Auth / Storage / Realtime, Row Level Security |
-| Infrastructure | Vercel (web), Supabase (DB/Storage) |
+| Infrastructure | Cloudflare Workers (web), Supabase (DB), Cloudflare R2 (Storage) |
 | Database | PostgreSQL (Supabase) |
-| Monitoring | Supabase Logs, Vercel Analytics（導入予定） |
+| Monitoring | Supabase Logs, Cloudflare Analytics |
 | Environment setup | Supabase CLI, npm scripts |
 | CI/CD | GitHub Actions, CodeRabbit Review |
 | Design | Figma（UIモック）, Lucidchart（フロー図） |

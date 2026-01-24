@@ -9,27 +9,19 @@ export type Environment = 'development' | 'preview' | 'production'
  * 現在の環境を取得
  */
 export function getEnvironment(): Environment {
-  // Vercel環境変数を優先
-  if (process.env.VERCEL_ENV === 'production') {
+  // 明示的な環境指定（Cloudflare Workers / wrangler.jsonc の vars で設定）
+  if (process.env.ENVIRONMENT === 'production' || process.env.NEXT_PUBLIC_ENVIRONMENT === 'production') {
     return 'production'
   }
-  if (process.env.VERCEL_ENV === 'preview') {
+  if (process.env.ENVIRONMENT === 'preview' || process.env.NEXT_PUBLIC_ENVIRONMENT === 'preview') {
     return 'preview'
   }
-  
+
   // Next.js環境変数をフォールバック
   if (process.env.NODE_ENV === 'production') {
     return 'production'
   }
-  
-  // 明示的な環境指定
-  if (process.env.NEXT_PUBLIC_ENVIRONMENT === 'preview') {
-    return 'preview'
-  }
-  if (process.env.NEXT_PUBLIC_ENVIRONMENT === 'production') {
-    return 'production'
-  }
-  
+
   // デフォルトは開発環境
   return 'development'
 }
@@ -45,9 +37,9 @@ export const envConfig = {
     debug: true,
   },
   preview: {
-    name: 'プレビュー環境', 
+    name: 'プレビュー環境',
     supabaseProject: 'swimmer-dev', // 開発用DBを使用
-    appUrl: process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://preview.example.com',
+    appUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://preview.swim-hub.app',
     debug: true,
   },
   production: {
