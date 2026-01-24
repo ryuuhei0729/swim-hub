@@ -8,52 +8,44 @@ import { StyleAPI } from '@apps/shared/api/styles'
 import type { PracticeTag, Style } from '@apps/shared/types'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@swim-hub/shared/types'
-import { unstable_cache } from 'next/cache'
 
 /**
- * Stylesデータをキャッシュ付きで取得
- * Stylesは全ユーザー共通の静的データなので、長時間キャッシュ可能
- * 
- * Next.jsのキャッシュ戦略に従い、認証なしクライアントを使用：
- * - 全ユーザー間でキャッシュを共有できる（パフォーマンス向上）
+ * Stylesデータを取得
+ * Stylesは全ユーザー共通の静的データ
+ *
+ * Next.jsの戦略に従い、認証なしクライアントを使用：
  * - RLSポリシー「Everyone can view styles」により認証なしでも取得可能
- * - 認証情報を含まないリクエストは`unstable_cache`に適している
- * 
- * @param cacheKey - キャッシュキー（ページ固有のキーを指定）
- * @param revalidate - キャッシュの再検証時間（秒）、デフォルト: 3600（1時間）
+ */
+export async function getStyles(): Promise<Style[]> {
+  // 認証なしクライアントを使用
+  // RLSポリシー「Everyone can view styles」により取得可能
+  const supabase = createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+  const styleAPI = new StyleAPI(supabase)
+  try {
+    const styles = await styleAPI.getStyles()
+    // データが空の場合は警告を出力
+    if (!styles || styles.length === 0) {
+      console.warn('[getStyles] 種目データが空です')
+    }
+    return styles
+  } catch (error) {
+    console.error('[getStyles] 種目取得エラー:', error)
+    throw error
+  }
+}
+
+/**
+ * 後方互換性のためのエイリアス
+ * @deprecated getStyles() を使用してください
  */
 export async function getCachedStyles(
-  cacheKey: string = 'styles',
-  revalidate: number = 3600
+  _cacheKey?: string,
+  _revalidate?: number
 ): Promise<Style[]> {
-  return unstable_cache(
-    async () => {
-      // 認証なしクライアントを使用（全ユーザー共通のキャッシュを実現）
-      // RLSポリシー「Everyone can view styles」により取得可能
-      const supabase = createClient<Database>(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
-      const styleAPI = new StyleAPI(supabase)
-      try {
-        const styles = await styleAPI.getStyles()
-        // データが空の場合は警告を出力
-        if (!styles || styles.length === 0) {
-          console.warn(`[getCachedStyles] 種目データが空です。キャッシュキー: ${cacheKey}`)
-        }
-        return styles
-      } catch (error) {
-        console.error(`[getCachedStyles] 種目取得エラー (キャッシュキー: ${cacheKey}):`, error)
-        // エラーを再スローして、呼び出し元で適切に処理できるようにする
-        throw error
-      }
-    },
-    [cacheKey],
-    {
-      revalidate,
-      tags: ['styles']
-    }
-  )()
+  return getStyles()
 }
 
 /**

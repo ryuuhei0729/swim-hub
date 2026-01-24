@@ -19,13 +19,13 @@ interface AvatarUploadProps {
   disabled?: boolean
 }
 
-export default function AvatarUpload({ 
-  currentAvatarUrl, 
-  userName, 
-  onAvatarChange, 
-  disabled = false 
+export default function AvatarUpload({
+  currentAvatarUrl,
+  userName,
+  onAvatarChange,
+  disabled = false
 }: AvatarUploadProps) {
-  const { user, supabase } = useAuth()
+  const { user } = useAuth()
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isCropModalOpen, setIsCropModalOpen] = useState(false)
@@ -65,76 +65,29 @@ export default function AvatarUpload({
     }
   }
 
-  // URLからファイルパスを抽出するヘルパー関数
-  const extractFilePathFromUrl = (url: string): string | null => {
-    try {
-      const urlObj = new URL(url)
-      const pathParts = urlObj.pathname.split('/')
-      const profileImagesIndex = pathParts.indexOf('profile-images')
-      if (profileImagesIndex === -1) {
-        return null
-      }
-      return pathParts.slice(profileImagesIndex + 1).join('/') // avatars/{userId}/{filename}
-    } catch (err) {
-      console.warn('URL解析エラー:', err)
-      return null
-    }
-  }
-
   const handleRemoveAvatar = async () => {
     if (!user) return
 
+    setIsUploading(true)
+    setError(null)
+
     try {
-      // User:1 - ProfileImage:1 の関係を保つため、ユーザーフォルダ内のすべてのファイルを削除
-      const userFolderPath = `avatars/${user.id}`
-      
-      // ユーザーフォルダ内のファイル一覧を取得
-      const { data: files, error: listError } = await supabase.storage
-        .from('profile-images')
-        .list(userFolderPath)
-      
-      // 404エラーは「ディレクトリが存在しない（削除するものがない）」として扱う
-      const errorCode = listError ? (listError as { statusCode?: string | number }).statusCode : undefined
-      if (listError && errorCode !== '404' && errorCode !== 404) {
-        throw listError
+      // API Route経由で削除
+      const response = await fetch('/api/storage/profile', {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || '画像の削除に失敗しました')
       }
-      
-      if (files && files.length > 0) {
-        // すべてのファイルを削除
-        const filePathsToDelete = files.map(file => `${userFolderPath}/${file.name}`)
-        console.log('プロフィール画像を削除中:', filePathsToDelete)
-        
-        const { error: deleteError } = await supabase.storage
-          .from('profile-images')
-          .remove(filePathsToDelete)
-        
-        if (deleteError) {
-          throw deleteError
-        }
-        
-        console.log('プロフィール画像を削除しました:', filePathsToDelete.length, 'ファイル')
-      }
-      
-      // レガシーURLベースのパス削除（fallback）
-      if (currentAvatarUrl) {
-        const legacyFilePath = extractFilePathFromUrl(currentAvatarUrl)
-        if (legacyFilePath) {
-          console.log('レガシーパスの削除を試行:', legacyFilePath)
-          const { error: legacyDeleteError } = await supabase.storage
-            .from('profile-images')
-            .remove([legacyFilePath])
-          
-          if (legacyDeleteError) {
-            console.warn('レガシーパスの削除に失敗:', legacyDeleteError)
-            // レガシーパスの削除失敗は続行
-          }
-        }
-      }
-      
+
       onAvatarChange(null)
     } catch (err) {
       console.error('画像削除エラー:', err)
-      setError('画像の削除に失敗しました')
+      setError(err instanceof Error ? err.message : '画像の削除に失敗しました')
+    } finally {
+      setIsUploading(false)
     }
   }
 
@@ -145,65 +98,26 @@ export default function AvatarUpload({
     setError(null)
 
     try {
-      // ユーザーフォルダのパス: avatars/{userId}/
-      const userFolderPath = `avatars/${user.id}`
-      
-      // User:1 - ProfileImage:1 の関係を保つため、ユーザーフォルダ内のすべてのファイルを削除
-      try {
-        // ユーザーフォルダ内のファイル一覧を取得
-        const { data: files, error: listError } = await supabase.storage
-          .from('profile-images')
-          .list(userFolderPath)
-        
-        if (listError) {
-          console.warn('ファイル一覧取得エラー:', listError)
-        } else if (files && files.length > 0) {
-          // すべてのファイルを削除
-          const filePathsToDelete = files.map(file => `${userFolderPath}/${file.name}`)
-          console.log('既存のプロフィール画像を削除中:', filePathsToDelete)
-          
-          const { error: deleteError } = await supabase.storage
-            .from('profile-images')
-            .remove(filePathsToDelete)
-          
-          if (deleteError) {
-            console.warn('既存画像の削除に失敗:', deleteError)
-          } else {
-            console.log('既存のプロフィール画像を削除しました:', filePathsToDelete.length, 'ファイル')
-          }
-        }
-      } catch (deleteErr) {
-        console.warn('既存画像の削除処理でエラー:', deleteErr)
-        // エラーが発生しても続行（新規ユーザーなど、フォルダが存在しない場合もある）
+      // FormDataを作成
+      const formData = new FormData()
+      formData.append('file', croppedFile)
+
+      // API Route経由でアップロード
+      const response = await fetch('/api/storage/profile', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || '画像のアップロードに失敗しました')
       }
 
-      // ファイル名を生成（ユニークにするためタイムスタンプを追加）
-      const fileExt = croppedFile.name.split('.').pop()
-      const fileName = `${Date.now()}.${fileExt}`
-      // ユーザーIDを含むパス構造: avatars/{userId}/{fileName}
-      const filePath = `${userFolderPath}/${fileName}`
-
-      // Supabase Storageにアップロード
-      console.log('新しい画像をアップロード中:', filePath)
-      const { error: uploadError } = await supabase.storage
-        .from('profile-images')
-        .upload(filePath, croppedFile, {
-          cacheControl: '3600',
-          upsert: false
-        })
-
-      if (uploadError) throw uploadError
-
-      // 公開URLを取得
-      const { data } = supabase.storage
-        .from('profile-images')
-        .getPublicUrl(filePath)
-
-      console.log('新しい画像のアップロード完了:', data.publicUrl)
-      onAvatarChange(data.publicUrl)
+      const { url } = await response.json()
+      onAvatarChange(url)
     } catch (err) {
       console.error('アップロードエラー:', err)
-      setError('画像のアップロードに失敗しました')
+      setError(err instanceof Error ? err.message : '画像のアップロードに失敗しました')
     } finally {
       // メモリリークを防ぐため、生成したオブジェクトURLを解放
       try {
@@ -238,7 +152,7 @@ export default function AvatarUpload({
   return (
     <div className="relative">
       {/* アバター表示 */}
-      <div 
+      <div
         className={`
           relative h-40 w-40 md:h-40 md:w-40 rounded-full flex items-center justify-center cursor-pointer
           ${disabled || isUploading ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-80'}

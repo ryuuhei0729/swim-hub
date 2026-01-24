@@ -8,6 +8,9 @@ yarn-error.log*
 .next/
 /apps/web/.next/
 /apps/web/out/
+
+# OpenNext
+/apps/web/.open-next/
 /packages/*/dist/
 /packages/*/build/
 
@@ -15,9 +18,12 @@ yarn-error.log*
 .env
 .env.local
 .env.*.local
-# .env.development はgit管理（dotenvxで暗号化済み）
-# .env.production はVercelの環境変数を使用するため、git管理外
+# .env.development, .env.production - 機密情報を含むためgit管理外
+apps/web/.env.development
 apps/web/.env.production
+# Wrangler (Cloudflare Workers) 環境変数
+.dev.vars
+apps/web/.dev.vars
 # モバイルアプリ（apps/mobile/）の環境変数ファイルはgit管理（dotenvxで暗号化済み）
 # EAS Submit用の環境変数ファイル（機密情報のためgit管理外）
 apps/mobile/.env

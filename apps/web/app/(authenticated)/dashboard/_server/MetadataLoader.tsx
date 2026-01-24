@@ -4,7 +4,6 @@
 // =============================================================================
 
 import React from 'react'
-import { unstable_cache } from 'next/cache'
 import { createClient } from '@supabase/supabase-js'
 import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-server-auth'
 import { StyleAPI } from '@apps/shared/api/styles'
@@ -19,41 +18,31 @@ interface MetadataLoaderProps {
 }
 
 /**
- * Stylesデータをキャッシュ付きで取得
- * Stylesは全ユーザー共通の静的データなので、長時間キャッシュ可能
- * 
- * Next.jsのキャッシュ戦略に従い、認証なしクライアントを使用：
- * - 全ユーザー間でキャッシュを共有できる（パフォーマンス向上）
+ * Stylesデータを取得
+ * Stylesは全ユーザー共通の静的データ
+ *
+ * 認証なしクライアントを使用：
  * - RLSポリシー「Everyone can view styles」により認証なしでも取得可能
  */
-async function getCachedStyles() {
-  return unstable_cache(
-    async () => {
-      // 認証なしクライアントを使用（全ユーザー共通のキャッシュを実現）
-      // RLSポリシー「Everyone can view styles」により取得可能
-      const supabase = createClient<Database>(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
-      const styleAPI = new StyleAPI(supabase)
-      try {
-        const styles = await styleAPI.getStyles()
-        // データが空の場合は警告を出力
-        if (!styles || styles.length === 0) {
-          console.warn('[MetadataLoader] 種目データが空です')
-        }
-        return styles
-      } catch (error) {
-        console.error('[MetadataLoader] 種目取得エラー:', error)
-        throw error
-      }
-    },
-    ['dashboard-styles'], // キャッシュキー
-    {
-      revalidate: 3600, // 1時間キャッシュ
-      tags: ['styles'] // タグベースの再検証用
+async function getStyles() {
+  // 認証なしクライアントを使用
+  // RLSポリシー「Everyone can view styles」により取得可能
+  const supabase = createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+  const styleAPI = new StyleAPI(supabase)
+  try {
+    const styles = await styleAPI.getStyles()
+    // データが空の場合は警告を出力
+    if (!styles || styles.length === 0) {
+      console.warn('[MetadataLoader] 種目データが空です')
     }
-  )()
+    return styles
+  } catch (error) {
+    console.error('[MetadataLoader] 種目取得エラー:', error)
+    throw error
+  }
 }
 
 /**
@@ -91,9 +80,8 @@ export default async function MetadataLoader({
 
   try {
     // 並行取得でパフォーマンス最適化
-    // Stylesはキャッシュ付き、Tagsは通常取得（ユーザー固有のため）
     const [stylesResult, tagsResult] = await Promise.all([
-      getCachedStyles().catch((error) => {
+      getStyles().catch((error) => {
         console.error('[MetadataLoader] Styles取得エラー:', {
           error,
           message: error instanceof Error ? error.message : String(error),

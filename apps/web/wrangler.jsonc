@@ -1,0 +1,35 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "swim-hub",
+  // ⚠️ 重要: 2025-04-01 以降を指定（process.env が正しく動作するため）
+  "compatibility_date": "2025-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // OpenNext がビルド時に生成するファイル（変更不要）
+  "main": ".open-next/worker.js",
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+
+  // 環境変数（シークレットは wrangler secret で設定）
+  "vars": {
+    "NEXT_PUBLIC_ENVIRONMENT": "production"
+  },
+
+  // R2 バケット（画像ストレージ）
+  "r2_buckets": [
+    {
+      "binding": "R2_BUCKET",
+      "bucket_name": "swim-hub-images-prod"
+    }
+  ],
+
+  // ISR/データキャッシュ用 KV
+  "kv_namespaces": [
+    {
+      "binding": "NEXT_CACHE_KV",
+      "id": "be34a0f15dc94db5ba58f017b0bbe41a"
+    }
+  ]
+}
