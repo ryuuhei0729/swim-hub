@@ -55,10 +55,11 @@ npm install @opennextjs/cloudflare wrangler --save-dev
   },
 
   // R2 バケット（画像ストレージ）
+  // 開発: swim-hub-images-dev / 本番: swim-hub-images-prod
   "r2_buckets": [
     {
       "binding": "R2_BUCKET",
-      "bucket_name": "swim-hub-images"
+      "bucket_name": "swim-hub-images-prod"  // 開発時は swim-hub-images-dev に変更
     }
   ],
 
@@ -154,13 +155,18 @@ Node.js Runtime で動作するため、Edge 制限は緩和されています�
 
 ### 2.1 R2バケット作成
 
-Cloudflareダッシュボードで作成：
+Cloudflareダッシュボードで作成済み：
 
 ```
-swim-hub-images/
-  ├── profiles/      # プロフィール画像
-  ├── practices/     # 練習記録画像
-  └── competitions/  # 大会記録画像
+swim-hub-images-dev   ← 開発用
+swim-hub-images-prod  ← 本番用
+```
+
+各バケット内のフォルダ構造：
+```
+├── profiles/      # プロフィール画像
+├── practices/     # 練習記録画像
+└── competitions/  # 大会記録画像
 ```
 
 ### 2.2 R2クライアント実装
