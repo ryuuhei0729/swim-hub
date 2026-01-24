@@ -475,7 +475,7 @@ npm run deploy
 | `apps/web/lib/image-url.ts` | 画像URL取得（フォールバック対応） | ✅ |
 | `apps/web/app/api/storage/profile/route.ts` | プロフィール画像 API | ✅ |
 | `apps/web/app/api/storage/images/route.ts` | 練習/大会画像 API | ✅ |
-| `scripts/migrate-storage-to-r2.ts` | Storage移行スクリプト | 未実装 |
+| `scripts/migrate-storage-to-r2.ts` | Storage移行スクリプト | ✅ |
 
 ### 修正（✅ 完了）
 | ファイル | 変更内容 | 状態 |

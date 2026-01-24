@@ -31,7 +31,7 @@
   "kv_namespaces": [
     {
       "binding": "NEXT_CACHE_KV",
-      "id": "be34a0f15dc94db5ba58f017b0bbe41a"
+      "id": "ffc8c9770ea64e54a6f2fd4a02dca13e"
     }
   ],
 
@@ -51,11 +51,11 @@
           "bucket_name": "swim-hub-images-dev"
         }
       ],
-      // KV（本番と同じものを使用）
+      // KV（プレビュー専用 - 本番キャッシュとの分離）
       "kv_namespaces": [
         {
           "binding": "NEXT_CACHE_KV",
-          "id": "be34a0f15dc94db5ba58f017b0bbe41a"
+          "id": "d6d0ee3ecb8141a28f4aa5408331d31f"
         }
       ]
     }
