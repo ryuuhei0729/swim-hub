@@ -1150,15 +1150,22 @@ function PracticeDetails({
                         const totalDistance = practiceLogs.reduce((sum, log) =>
                           sum + (log.distance * log.repCount * log.setCount), 0)
 
+                        const totalSets = practiceLogs.reduce((sum, log) =>
+                          sum + (log.setCount || 0), 0)
+
+                        // 日付を安全にパースしてフォーマット
+                        const parsedDate = practice.date ? parseISO(practice.date) : null
+                        const formattedDate = parsedDate && isValid(parsedDate)
+                          ? format(parsedDate, 'yyyy年M月d日（E）', { locale: ja })
+                          : ''
+
                         setSharePracticeData({
-                          date: practice.date
-                            ? format(new Date(practice.date), 'yyyy年M月d日（E）', { locale: ja })
-                            : '',
+                          date: formattedDate,
                           title: practice.note || '練習',
                           place: place ?? undefined,
                           menuItems,
                           totalDistance,
-                          totalSets: practiceLogs.length,
+                          totalSets,
                           userName: '',
                           teamName: teamName
                         })
