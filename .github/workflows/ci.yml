@@ -324,3 +324,30 @@ jobs:
       run: npm run build
       env:
         DOTENV_PRIVATE_KEY_PRODUCTION: ${{ secrets.DOTENV_PRIVATE_KEY_PRODUCTION }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download node_modules artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: node-modules
+        path: .
+
+    - name: Setup Node.js and Install dependencies
+      uses: ./.github/actions/setup-node
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Deploy to Cloudflare Workers
+      working-directory: apps/web
+      run: npm run deploy
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        DOTENV_PRIVATE_KEY_PRODUCTION: ${{ secrets.DOTENV_PRIVATE_KEY_PRODUCTION }}

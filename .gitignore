@@ -38,9 +38,6 @@ apps/web/.env.keys
 # MCP Configuration (contains sensitive tokens)
 .mcp.json
 
-# Vercel (個人固有の設定のためgit管理外)
-.vercel/
-
 # Google Cloud Platform Service Account Keys
 swimhub-479706-fa49932fb92d.json
 swimhub-*-*.json

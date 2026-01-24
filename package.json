@@ -18,7 +18,6 @@
     "ios:run:sim": "cd apps/mobile && npx dotenvx run -f .env.development -- expo run:ios --simulator \"iPhone 16\"",
     "build": "npm run build --workspace=apps/web",
     "build:web": "npm run build --workspace=apps/web",
-    "build:vercel": "npm run build:vercel --workspace=apps/web",
     "build:mobile:android": "cd apps/mobile && eas build -p android",
     "build:mobile:ios": "cd apps/mobile && eas build -p ios",
     "start": "npm run start --workspace=apps/web",

@@ -7,7 +7,6 @@
     "dev": "dotenvx run -f .env.local -- next dev",
     "dev:https": "dotenvx run -f .env.local -- node server.js",
     "build": "dotenvx run -f .env.local -- next build",
-    "build:vercel": "next build",
     "start": "dotenvx run -f .env.local -- next start",
     "preview": "dotenvx decrypt -f .env.development --stdout > .dev.vars && opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
