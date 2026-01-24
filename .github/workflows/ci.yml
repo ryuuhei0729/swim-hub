@@ -8,7 +8,7 @@ on:
 
 concurrency:
   # PRの場合はPR番号を使用、pushの場合はrefを使用
-  # developブランチへのpushはPRイベントのみで処理（2重実行を防止）
+  # 同一PR/ブランチで新しいワークフローが開始されると古いものはキャンセル
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
@@ -328,6 +328,14 @@ jobs:
         DOTENV_PRIVATE_KEY_PRODUCTION: ${{ github.ref == 'refs/heads/main' && secrets.DOTENV_PRIVATE_KEY_PRODUCTION || '' }}
         DOTENV_PRIVATE_KEY_DEVELOPMENT: ${{ github.ref == 'refs/heads/develop' && secrets.DOTENV_PRIVATE_KEY_DEVELOPMENT || '' }}
 
+    - name: Upload build output artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-output
+        path: apps/web/.next
+        retention-days: 1
+        compression-level: 9
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
@@ -341,6 +349,12 @@ jobs:
       with:
         name: node-modules
         path: .
+
+    - name: Download build output artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: build-output
+        path: apps/web/.next
 
     - name: Setup Node.js and Install dependencies
       uses: ./.github/actions/setup-node
@@ -368,6 +382,12 @@ jobs:
       with:
         name: node-modules
         path: .
+
+    - name: Download build output artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: build-output
+        path: apps/web/.next
 
     - name: Setup Node.js and Install dependencies
       uses: ./.github/actions/setup-node
