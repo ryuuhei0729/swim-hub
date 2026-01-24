@@ -1,7 +1,8 @@
 'use client'
 
-import React from 'react'
-import { Button } from '@/components/ui'
+import React, { useState, useEffect } from 'react'
+import { parseISO, isValid } from 'date-fns'
+import { Button, ConfirmDialog } from '@/components/ui'
 import { XMarkIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { useRecordForm, useUnsavedChangesWarning } from './hooks'
 import { RecordBasicInfo, RecordSetItem } from './components'
@@ -45,23 +46,58 @@ export default function RecordForm({
   // ブラウザ離脱警告
   useUnsavedChangesWarning({ isOpen, hasUnsavedChanges, isSubmitted })
 
+  // 確認ダイアログの状態
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+
+  // isOpen が false になったら確認ダイアログとバリデーションエラーをリセット
+  useEffect(() => {
+    if (!isOpen) {
+      setShowConfirmDialog(false)
+      setRecordDateError(undefined)
+    }
+  }, [isOpen])
+
+  // バリデーションエラーの状態
+  const [recordDateError, setRecordDateError] = useState<string | undefined>(undefined)
+
   if (!isOpen) return null
 
   const handleClose = () => {
     if (hasUnsavedChanges && !isSubmitted) {
-      const confirmed = window.confirm(
-        '入力内容が保存されていません。このまま閉じますか？'
-      )
-      if (!confirmed) return
+      setShowConfirmDialog(true)
+      return
     }
     onClose()
   }
 
+  const handleConfirmClose = () => {
+    setShowConfirmDialog(false)
+    onClose()
+  }
+
+  const handleCancelClose = () => {
+    setShowConfirmDialog(false)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // recordDate のバリデーション
+    const sanitized = sanitizeFormData()
+    if (!sanitized.recordDate || sanitized.recordDate === '') {
+      setRecordDateError('大会日を入力してください')
+      return
+    }
+    const parsedDate = parseISO(sanitized.recordDate)
+    if (!isValid(parsedDate)) {
+      setRecordDateError('有効な日付を入力してください')
+      return
+    }
+    setRecordDateError(undefined)
+
     setIsSubmitted(true)
     try {
-      await onSubmit(sanitizeFormData())
+      await onSubmit(sanitized)
       resetUnsavedChanges()
       onClose()
     } catch (error) {
@@ -104,7 +140,11 @@ export default function RecordForm({
 
           <form onSubmit={handleSubmit} className="p-3 sm:p-6 space-y-4 sm:space-y-6">
             {/* 大会情報 */}
-            <RecordBasicInfo formData={formData} onFieldChange={handleFieldChange} />
+            <RecordBasicInfo
+              formData={formData}
+              onFieldChange={handleFieldChange}
+              recordDateError={recordDateError}
+            />
 
             {/* 記録セクション */}
             <div className="space-y-3 sm:space-y-4">
@@ -179,6 +219,18 @@ export default function RecordForm({
           </form>
         </div>
       </div>
+
+      {/* 確認ダイアログ */}
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        onConfirm={handleConfirmClose}
+        onCancel={handleCancelClose}
+        title="入力内容が保存されていません"
+        message="入力内容が保存されていません。このまま閉じますか？"
+        confirmLabel="閉じる"
+        cancelLabel="編集を続ける"
+        variant="warning"
+      />
     </div>
   )
 }

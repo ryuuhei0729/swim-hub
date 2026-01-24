@@ -1,8 +1,16 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
-import { Button } from '@/components/ui'
+import React, { useEffect, useState, useRef } from 'react'
+import { Button, ConfirmDialog } from '@/components/ui'
+import FormStepper from '@/components/ui/FormStepper'
 import { XMarkIcon } from '@heroicons/react/24/outline'
+
+// 大会記録フォームのステップ定義
+const COMPETITION_STEPS = [
+  { id: 'basic', label: '大会情報', description: '日程・場所' },
+  { id: 'entry', label: 'エントリー', description: '種目・タイム' },
+  { id: 'record', label: '記録入力', description: '結果・スプリット' }
+]
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { useRecordLogForm } from './hooks/useRecordLogForm'
@@ -61,13 +69,15 @@ export default function RecordLogForm({
     }
 
     const handlePopState = () => {
+      // ガードフラグが立っている場合は何もしない（再入防止）
+      if (isHandlingBackRef.current) {
+        return
+      }
       if (hasUnsavedChanges && !isSubmitted) {
-        const confirmed = window.confirm(
-          '入力内容が保存されていません。このまま戻りますか？'
-        )
-        if (!confirmed) {
-          window.history.pushState(null, '', window.location.href)
-        }
+        // 履歴を戻す（ダイアログ表示中は戻らない）
+        window.history.pushState(null, '', window.location.href)
+        setConfirmContext('back')
+        setShowConfirmDialog(true)
       }
     }
 
@@ -78,10 +88,18 @@ export default function RecordLogForm({
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
       window.removeEventListener('popstate', handlePopState)
+      // アンマウント時にガードフラグをクリア
+      isHandlingBackRef.current = false
     }
   }, [isOpen, hasUnsavedChanges, isSubmitted])
 
   const [formError, setFormError] = useState<string | null>(null)
+  // 確認ダイアログの表示状態
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  // 確認ダイアログのコンテキスト（close: モーダル閉じる, back: ブラウザバック）
+  const [confirmContext, setConfirmContext] = useState<'close' | 'back'>('close')
+  // ブラウザバック処理中のガードフラグ（再入防止用）
+  const isHandlingBackRef = useRef(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -113,15 +131,28 @@ export default function RecordLogForm({
 
   const handleClose = () => {
     if (hasUnsavedChanges && !isSubmitted) {
-      const confirmed = window.confirm(
-        '入力内容が保存されていません。このまま閉じますか？'
-      )
-      if (!confirmed) {
-        return
-      }
+      setConfirmContext('close')
+      setShowConfirmDialog(true)
+      return
     }
     resetFormData()
     onClose()
+  }
+
+  const handleConfirmClose = () => {
+    if (confirmContext === 'back') {
+      // ガードフラグを立ててからナビゲーション実行（再入防止）
+      isHandlingBackRef.current = true
+      resetUnsavedChanges()
+      window.history.back()
+    }
+    setShowConfirmDialog(false)
+    resetFormData()
+    onClose()
+  }
+
+  const handleCancelClose = () => {
+    setShowConfirmDialog(false)
   }
 
   if (!isOpen) return null
@@ -171,6 +202,16 @@ export default function RecordLogForm({
                   <XMarkIcon className="h-6 w-6" />
                 </button>
               </div>
+              {/* ステッププログレス（編集モードでない場合のみ表示） */}
+              {!editData && (
+                <div className="mb-4">
+                  <FormStepper
+                    steps={COMPETITION_STEPS}
+                    currentStep={2}
+                    skippedSteps={entryDataList.length === 0 ? [1] : []}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="px-4 pb-6 sm:px-6 sm:pb-6 space-y-6">
@@ -247,6 +288,20 @@ export default function RecordLogForm({
           </form>
         </div>
       </div>
+
+      {/* 確認ダイアログ */}
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        onConfirm={handleConfirmClose}
+        onCancel={handleCancelClose}
+        title="入力内容が保存されていません"
+        message={confirmContext === 'back'
+          ? '入力内容が保存されていません。このまま戻りますか？'
+          : '入力内容が保存されていません。このまま閉じますか？'}
+        confirmLabel={confirmContext === 'back' ? '戻る' : '閉じる'}
+        cancelLabel="編集を続ける"
+        variant="warning"
+      />
     </div>
   )
 }

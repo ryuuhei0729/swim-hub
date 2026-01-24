@@ -1,12 +1,12 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { Button, Input } from '@/components/ui'
+import { Button, Input, ConfirmDialog, DatePicker } from '@/components/ui'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
-import PracticeImageUploader, { 
-  PracticeImageFile, 
-  ExistingImage 
+import PracticeImageUploader, {
+  PracticeImageFile,
+  ExistingImage
 } from './PracticeImageUploader'
 
 export interface PracticeFormData {
@@ -62,6 +62,10 @@ export default function PracticeForm({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   // 送信済みフラグ（送信後は警告を出さない）
   const [isSubmitted, setIsSubmitted] = useState(false)
+  // 確認ダイアログの表示状態
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  // 確認ダイアログのコンテキスト（close: モーダル閉じる, back: ブラウザバック）
+  const [confirmContext, setConfirmContext] = useState<'close' | 'back'>('close')
 
   // モーダルが閉じた時に初期化フラグをリセット
   useEffect(() => {
@@ -69,6 +73,7 @@ export default function PracticeForm({
       setIsInitialized(false)
       setHasUnsavedChanges(false)
       setIsSubmitted(false)
+      setShowConfirmDialog(false)
       // 画像データもリセット
       setImageData({ newFiles: [], deletedIds: [] })
     }
@@ -92,11 +97,10 @@ export default function PracticeForm({
 
     const handlePopState = (_e: PopStateEvent) => {
       if (hasUnsavedChanges && !isSubmitted) {
-        const confirmed = window.confirm('入力内容が保存されていません。このまま戻りますか？')
-        if (!confirmed) {
-          // 履歴を戻す
-          window.history.pushState(null, '', window.location.href)
-        }
+        // 履歴を戻す（ダイアログ表示中は戻らない）
+        window.history.pushState(null, '', window.location.href)
+        setConfirmContext('back')
+        setShowConfirmDialog(true)
       }
     }
 
@@ -151,16 +155,32 @@ export default function PracticeForm({
 
   const handleClose = () => {
     if (hasUnsavedChanges && !isSubmitted) {
-      const confirmed = window.confirm('入力内容が保存されていません。このまま閉じますか？')
-      if (!confirmed) {
-        return
-      }
+      setConfirmContext('close')
+      setShowConfirmDialog(true)
+      return
     }
+    cleanupAndClose()
+  }
+
+  const cleanupAndClose = () => {
     // プレビューURLをクリーンアップ
     imageData.newFiles.forEach(file => {
       URL.revokeObjectURL(file.previewUrl)
     })
+    setShowConfirmDialog(false)
     onClose()
+  }
+
+  const handleConfirmClose = () => {
+    if (confirmContext === 'back') {
+      // ブラウザバックの場合は履歴を戻す
+      window.history.back()
+    }
+    cleanupAndClose()
+  }
+
+  const handleCancelClose = () => {
+    setShowConfirmDialog(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -203,18 +223,13 @@ export default function PracticeForm({
 
           <form onSubmit={handleSubmit} className="p-3 sm:p-6 space-y-4 sm:space-y-6">
             {/* 練習日 */}
-            <div>
-              <label htmlFor="practice-date" className="block text-sm font-medium text-gray-700 mb-2">
-                練習日
-              </label>
-              <Input
-                id="practice-date"
-                type="date"
-                value={formData.practiceDate}
-                onChange={(e) => setFormData(prev => ({ ...prev, practiceDate: e.target.value }))}
-                required
-              />
-            </div>
+            <DatePicker
+              label="練習日"
+              value={formData.practiceDate}
+              onChange={(date) => setFormData(prev => ({ ...prev, practiceDate: date }))}
+              required
+              placeholder="練習日を選択"
+            />
 
             {/* 練習場所 */}
             <div>
@@ -276,6 +291,20 @@ export default function PracticeForm({
           </form>
         </div>
       </div>
+
+      {/* 確認ダイアログ */}
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        onConfirm={handleConfirmClose}
+        onCancel={handleCancelClose}
+        title="入力内容が保存されていません"
+        message={confirmContext === 'back'
+          ? '入力内容が保存されていません。このまま戻りますか？'
+          : '入力内容が保存されていません。このまま閉じますか？'}
+        confirmLabel={confirmContext === 'back' ? '戻る' : '閉じる'}
+        cancelLabel="編集を続ける"
+        variant="warning"
+      />
     </div>
   )
 }

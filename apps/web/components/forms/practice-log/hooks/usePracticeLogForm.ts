@@ -16,6 +16,10 @@ interface UsePracticeLogFormReturn {
   setShowTimeModal: (value: boolean) => void
   currentMenuId: string | null
   setCurrentMenuId: (value: string | null) => void
+  hasUnsavedChanges: boolean
+  setHasUnsavedChanges: (value: boolean) => void
+  isSubmitted: boolean
+  setIsSubmitted: (value: boolean) => void
   addMenu: () => void
   removeMenu: (id: string) => void
   updateMenu: (id: string, field: keyof PracticeMenu, value: string | number | '' | Tag[]) => void
@@ -52,15 +56,25 @@ export const usePracticeLogForm = ({
   const [menus, setMenus] = useState<PracticeMenu[]>([createDefaultMenu()])
   const [showTimeModal, setShowTimeModal] = useState(false)
   const [currentMenuId, setCurrentMenuId] = useState<string | null>(null)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [isSubmitted, setIsSubmitted] = useState(false)
 
   const hasInitializedRef = useRef(false)
   const initializedKeyRef = useRef<string | null>(null)
 
-  // フォームを初期化
+  // モーダルが閉じた時にリセット
   useEffect(() => {
     if (!isOpen) {
       hasInitializedRef.current = false
       initializedKeyRef.current = null
+      setHasUnsavedChanges(false)
+      setIsSubmitted(false)
+    }
+  }, [isOpen])
+
+  // フォームを初期化
+  useEffect(() => {
+    if (!isOpen) {
       return
     }
 
@@ -98,6 +112,13 @@ export const usePracticeLogForm = ({
     hasInitializedRef.current = true
     initializedKeyRef.current = key
   }, [isOpen, editData])
+
+  // メニュー変更時に未保存フラグを立てる
+  useEffect(() => {
+    if (isOpen && hasInitializedRef.current) {
+      setHasUnsavedChanges(true)
+    }
+  }, [menus, isOpen])
 
   const addMenu = useCallback(() => {
     const newId = String(Date.now())
@@ -175,6 +196,10 @@ export const usePracticeLogForm = ({
     setShowTimeModal,
     currentMenuId,
     setCurrentMenuId,
+    hasUnsavedChanges,
+    setHasUnsavedChanges,
+    isSubmitted,
+    setIsSubmitted,
     addMenu,
     removeMenu,
     updateMenu,

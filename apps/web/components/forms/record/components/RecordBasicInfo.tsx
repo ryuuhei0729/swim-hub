@@ -1,13 +1,14 @@
 'use client'
 
 import React from 'react'
-import { Input } from '@/components/ui'
+import { Input, DatePicker } from '@/components/ui'
 import type { RecordFormData } from '../types'
 import { POOL_TYPES } from '../types'
 
 interface RecordBasicInfoProps {
   formData: RecordFormData
   onFieldChange: (field: keyof RecordFormData, value: string | number) => void
+  recordDateError?: string
 }
 
 /**
@@ -16,25 +17,19 @@ interface RecordBasicInfoProps {
 export default function RecordBasicInfo({
   formData,
   onFieldChange,
+  recordDateError,
 }: RecordBasicInfoProps) {
   return (
     <>
       {/* 大会日・開催地 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
         <div>
-          <label
-            htmlFor="record-date"
-            className="block text-sm font-medium text-gray-700 mb-2"
-          >
-            大会日
-          </label>
-          <Input
-            id="record-date"
-            type="date"
+          <DatePicker
+            label="大会日"
             value={formData.recordDate}
-            onChange={(e) => onFieldChange('recordDate', e.target.value)}
+            onChange={(date) => onFieldChange('recordDate', date)}
             required
-            data-testid="tournament-date"
+            error={recordDateError}
           />
         </div>
         <div>

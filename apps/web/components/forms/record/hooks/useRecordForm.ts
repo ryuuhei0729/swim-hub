@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { format } from 'date-fns'
+import { format, isValid } from 'date-fns'
 import type {
   RecordFormData,
   RecordSet,
@@ -66,7 +66,7 @@ export const useRecordForm = ({
 
   // initialDateが変更された時にフォームデータを更新
   useEffect(() => {
-    if (isOpen && initialDate) {
+    if (isOpen && initialDate && isValid(initialDate)) {
       setFormData((prev) => ({
         ...prev,
         recordDate: format(initialDate, 'yyyy-MM-dd'),
@@ -110,8 +110,10 @@ export const useRecordForm = ({
           })
         )
 
+        const today = new Date()
+        const defaultDate = isValid(today) ? format(today, 'yyyy-MM-dd') : ''
         setFormData({
-          recordDate: editData.recordDate || format(new Date(), 'yyyy-MM-dd'),
+          recordDate: editData.recordDate || defaultDate,
           place: editData.place || '',
           competitionName: editData.competitionName || '',
           poolType: editData.poolType || 0,
@@ -123,8 +125,10 @@ export const useRecordForm = ({
       }
 
       // 単一のRecordの場合の従来の処理
+      const todaySingle = new Date()
+      const defaultDateSingle = isValid(todaySingle) ? format(todaySingle, 'yyyy-MM-dd') : ''
       setFormData({
-        recordDate: editData.recordDate || format(new Date(), 'yyyy-MM-dd'),
+        recordDate: editData.recordDate || defaultDateSingle,
         place: editData.place || '',
         competitionName: editData.competitionName || '',
         poolType: editData.poolType || 0,
@@ -385,10 +389,16 @@ export const useRecordForm = ({
 }
 
 function createInitialFormData(initialDate?: Date, styles?: SwimStyle[]): RecordFormData {
+  const today = new Date()
+  const validInitialDate = initialDate && isValid(initialDate) ? initialDate : null
+  const validToday = isValid(today) ? today : null
+
   return {
-    recordDate: initialDate
-      ? format(initialDate, 'yyyy-MM-dd')
-      : format(new Date(), 'yyyy-MM-dd'),
+    recordDate: validInitialDate
+      ? format(validInitialDate, 'yyyy-MM-dd')
+      : validToday
+        ? format(validToday, 'yyyy-MM-dd')
+        : '',
     place: '',
     competitionName: '',
     poolType: 0,

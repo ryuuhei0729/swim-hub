@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import RecordForm from '../../../components/forms/RecordForm'
@@ -46,7 +46,8 @@ describe('RecordForm', () => {
       )
 
       expect(screen.getByText('大会記録を追加')).toBeInTheDocument()
-      expect(screen.getByLabelText('大会日')).toBeInTheDocument()
+      // DatePickerはbutton要素を使用しているため、getByLabelTextではなくgetByTextでラベルを確認
+      expect(screen.getByText('大会日')).toBeInTheDocument()
       expect(screen.getByLabelText('開催地')).toBeInTheDocument()
       expect(screen.getByLabelText('大会名')).toBeInTheDocument()
     })
@@ -322,11 +323,9 @@ describe('RecordForm', () => {
   })
 
   describe('フォームクローズ', () => {
-    it('閉じるボタンをクリックしたときonCloseが呼ばれる', async () => {
+    it('変更がない状態で閉じるボタンをクリックしたときonCloseが呼ばれる', async () => {
       const user = userEvent.setup()
-      // window.confirmをモック（未保存の変更がない場合は確認なし）
-      window.confirm = vi.fn(() => true)
-      
+
       render(
         <RecordForm
           isOpen={true}
@@ -339,7 +338,111 @@ describe('RecordForm', () => {
       const closeButton = screen.getByRole('button', { name: 'キャンセル' })
       await user.click(closeButton)
 
+      // 初期状態では変更がないので直接閉じる、または確認ダイアログが表示される
+      // 確認ダイアログが表示された場合は「閉じる」をクリック
+      const dialog = screen.queryByRole('dialog')
+      if (dialog) {
+        const confirmCloseButton = within(dialog).getByRole('button', { name: '閉じる' })
+        await user.click(confirmCloseButton)
+      }
+
       expect(mockOnClose).toHaveBeenCalled()
+    })
+
+    it('未保存の変更がある場合は確認ダイアログが表示される', async () => {
+      const user = userEvent.setup()
+
+      render(
+        <RecordForm
+          isOpen={true}
+          onClose={mockOnClose}
+          onSubmit={mockOnSubmit}
+          styles={mockStyles}
+        />
+      )
+
+      // フォームに変更を加える
+      const locationInput = screen.getByLabelText('開催地')
+      await user.type(locationInput, 'テストプール')
+
+      // キャンセルボタンをクリック
+      const closeButton = screen.getByRole('button', { name: 'キャンセル' })
+      await user.click(closeButton)
+
+      // 確認ダイアログが表示される
+      await waitFor(() => {
+        expect(screen.getByText('入力内容が保存されていません')).toBeInTheDocument()
+      })
+    })
+
+    it('確認ダイアログで「閉じる」を選択するとフォームが閉じる', async () => {
+      const user = userEvent.setup()
+
+      render(
+        <RecordForm
+          isOpen={true}
+          onClose={mockOnClose}
+          onSubmit={mockOnSubmit}
+          styles={mockStyles}
+        />
+      )
+
+      // フォームに変更を加える
+      const locationInput = screen.getByLabelText('開催地')
+      await user.type(locationInput, 'テストプール')
+
+      // キャンセルボタンをクリック
+      const closeButton = screen.getByRole('button', { name: 'キャンセル' })
+      await user.click(closeButton)
+
+      // 確認ダイアログで「閉じる」をクリック
+      await waitFor(() => {
+        expect(screen.getByText('入力内容が保存されていません')).toBeInTheDocument()
+      })
+
+      // 確認ダイアログ内の「閉じる」ボタンを取得（role="dialog"の中）
+      const dialog = screen.getByRole('dialog')
+      const confirmCloseButton = within(dialog).getByRole('button', { name: '閉じる' })
+      await user.click(confirmCloseButton)
+
+      expect(mockOnClose).toHaveBeenCalled()
+    })
+
+    it('確認ダイアログで「編集を続ける」を選択するとダイアログが閉じる', async () => {
+      const user = userEvent.setup()
+
+      render(
+        <RecordForm
+          isOpen={true}
+          onClose={mockOnClose}
+          onSubmit={mockOnSubmit}
+          styles={mockStyles}
+        />
+      )
+
+      // フォームに変更を加える
+      const locationInput = screen.getByLabelText('開催地')
+      await user.type(locationInput, 'テストプール')
+
+      // キャンセルボタンをクリック
+      const closeButton = screen.getByRole('button', { name: 'キャンセル' })
+      await user.click(closeButton)
+
+      // 確認ダイアログで「編集を続ける」をクリック
+      await waitFor(() => {
+        expect(screen.getByText('入力内容が保存されていません')).toBeInTheDocument()
+      })
+
+      const continueEditButton = screen.getByRole('button', { name: '編集を続ける' })
+      await user.click(continueEditButton)
+
+      // ダイアログが閉じる
+      await waitFor(() => {
+        expect(screen.queryByText('入力内容が保存されていません')).not.toBeInTheDocument()
+      })
+
+      // onCloseは呼ばれていない
+      expect(mockOnClose).not.toHaveBeenCalled()
     })
   })
 })

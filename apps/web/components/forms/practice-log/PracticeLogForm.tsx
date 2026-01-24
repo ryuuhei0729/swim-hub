@@ -1,9 +1,16 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import dynamic from 'next/dynamic'
-import { Button } from '@/components/ui'
+import { Button, ConfirmDialog } from '@/components/ui'
+import FormStepper from '@/components/ui/FormStepper'
 import { XMarkIcon, PlusIcon } from '@heroicons/react/24/outline'
+
+// 練習記録フォームのステップ定義
+const PRACTICE_STEPS = [
+  { id: 'basic', label: '基本情報', description: '日付・場所' },
+  { id: 'log', label: '練習記録', description: 'メニュー・タイム' }
+]
 import { useAuth } from '@/contexts'
 import { PracticeAPI } from '@apps/shared/api/practices'
 import MilestoneSelectorModal from '@/app/(authenticated)/goals/_components/MilestoneSelectorModal'
@@ -53,6 +60,10 @@ export default function PracticeLogForm({
     setShowTimeModal,
     currentMenuId,
     setCurrentMenuId,
+    hasUnsavedChanges,
+    setHasUnsavedChanges,
+    isSubmitted,
+    setIsSubmitted,
     addMenu,
     removeMenu,
     updateMenu,
@@ -65,14 +76,82 @@ export default function PracticeLogForm({
 
   // マイルストーン選択モーダルの状態
   const [isMilestoneSelectorOpen, setIsMilestoneSelectorOpen] = useState(false)
+  // 確認ダイアログの表示状態
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  // 確認ダイアログのコンテキスト
+  const [confirmContext, setConfirmContext] = useState<'close' | 'back'>('close')
+  // プログラム的なナビゲーション中はpopstateを無視するフラグ
+  const isNavigatingBack = useRef(false)
+
+  // ブラウザバックや閉じるボタンでの離脱を防ぐ
+  useEffect(() => {
+    if (!isOpen || !hasUnsavedChanges || isSubmitted) return
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+
+    const handlePopState = () => {
+      // プログラム的なナビゲーション中は無視し、フラグをリセット
+      if (isNavigatingBack.current) {
+        isNavigatingBack.current = false
+        return
+      }
+      if (hasUnsavedChanges && !isSubmitted) {
+        window.history.pushState(null, '', window.location.href)
+        setConfirmContext('back')
+        setShowConfirmDialog(true)
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.history.pushState(null, '', window.location.href)
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [isOpen, hasUnsavedChanges, isSubmitted])
+
+  const handleClose = useCallback(() => {
+    if (hasUnsavedChanges && !isSubmitted) {
+      setConfirmContext('close')
+      setShowConfirmDialog(true)
+      return
+    }
+    onClose()
+  }, [hasUnsavedChanges, isSubmitted, onClose])
+
+  const handleConfirmClose = useCallback(() => {
+    if (confirmContext === 'back') {
+      // popstateリスナーが再度ダイアログを開かないようにフラグを設定
+      isNavigatingBack.current = true
+      setHasUnsavedChanges(false)
+      setShowConfirmDialog(false)
+      window.history.back()
+      return
+    }
+    setShowConfirmDialog(false)
+    onClose()
+  }, [confirmContext, onClose, setHasUnsavedChanges])
+
+  const handleCancelClose = useCallback(() => {
+    setShowConfirmDialog(false)
+  }, [])
 
   if (!isOpen) return null
 
   const handleSubmit = async () => {
+    setIsSubmitted(true)
     try {
       await onSubmit(prepareSubmitData())
+      setHasUnsavedChanges(false)
     } catch (error) {
       console.error('フォーム送信エラー:', error)
+    } finally {
+      setIsSubmitted(false)
     }
   }
 
@@ -191,7 +270,7 @@ export default function PracticeLogForm({
         {/* オーバーレイ */}
         <div
           className="fixed inset-0 bg-black/40 transition-opacity"
-          onClick={onClose}
+          onClick={handleClose}
         />
 
         {/* モーダルコンテンツ */}
@@ -204,13 +283,19 @@ export default function PracticeLogForm({
               </h3>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 className="text-gray-400 hover:text-gray-600"
                 aria-label="練習記録を閉じる"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
+            {/* ステッププログレス（新規作成時のみ表示） */}
+            {!editData && (
+              <div className="mt-4">
+                <FormStepper steps={PRACTICE_STEPS} currentStep={1} />
+              </div>
+            )}
           </div>
 
           <form onSubmit={handleFormSubmit} className="p-6 space-y-6">
@@ -262,7 +347,7 @@ export default function PracticeLogForm({
             <div className="flex justify-end gap-3 pt-6 border-t sticky bottom-0 bg-white">
               <Button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 variant="secondary"
                 disabled={isLoading}
                 data-testid="practice-log-cancel-button"
@@ -320,6 +405,20 @@ export default function PracticeLogForm({
         isOpen={isMilestoneSelectorOpen}
         onClose={() => setIsMilestoneSelectorOpen(false)}
         onSelect={handleMilestoneSelect}
+      />
+
+      {/* 確認ダイアログ */}
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        onConfirm={handleConfirmClose}
+        onCancel={handleCancelClose}
+        title="入力内容が保存されていません"
+        message={confirmContext === 'back'
+          ? '入力内容が保存されていません。このまま戻りますか？'
+          : '入力内容が保存されていません。このまま閉じますか？'}
+        confirmLabel={confirmContext === 'back' ? '戻る' : '閉じる'}
+        cancelLabel="編集を続ける"
+        variant="warning"
       />
     </div>
   )

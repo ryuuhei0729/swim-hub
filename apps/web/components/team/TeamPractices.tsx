@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { useAuth } from '@/contexts/AuthProvider'
-import { 
-  PlusIcon, 
+import {
+  PlusIcon,
   CalendarDaysIcon,
   MapPinIcon,
   ClockIcon,
@@ -12,8 +13,15 @@ import {
 } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import TeamPracticeForm from './TeamPracticeForm'
+import { usePracticeFormStore } from '@/stores'
+import type { PracticeImageData } from '@/components/forms/PracticeBasicForm'
+import { TeamPracticesAPI } from '@apps/shared/api/teams/practices'
 import { Pagination } from '@/components/ui'
+
+const PracticeBasicForm = dynamic(
+  () => import('@/components/forms/PracticeBasicForm'),
+  { ssr: false }
+)
 
 // Supabase から返されるスネークケースの型
 // Supabaseのリレーションは配列または単一オブジェクトで返る可能性がある
@@ -102,15 +110,23 @@ export interface TeamPracticesProps {
 }
 
 export default function TeamPractices({ teamId, isAdmin = false }: TeamPracticesProps) {
-  const { supabase } = useAuth()
+  const { supabase, user } = useAuth()
   const router = useRouter()
   const [practices, setPractices] = useState<TeamPractice[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [showPracticeForm, setShowPracticeForm] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
   const pageSize = 20
+
+  const {
+    isBasicFormOpen,
+    selectedDate,
+    isLoading: formLoading,
+    openBasicForm,
+    closeBasicForm,
+    setLoading: setFormLoading,
+  } = usePracticeFormStore()
 
   // チームの練習記録を取得（関数として抽出）
   const loadTeamPractices = useCallback(async () => {
@@ -179,14 +195,42 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
   }, [loadTeamPractices])
 
   const handleAddPractice = () => {
-    setShowPracticeForm(true)
+    openBasicForm(new Date())
   }
 
-  const handlePracticeCreated = () => {
-    // 練習記録一覧を再読み込み（画面全体ではなくデータのみ）
-    // 新しいデータが追加された場合、最初のページに戻る
-    setCurrentPage(1)
-    loadTeamPractices()
+  const handlePracticeBasicSubmit = async (
+    basicData: { date: string; title: string; place: string; note: string },
+    _imageData?: PracticeImageData,
+    _continueToNext?: boolean
+  ) => {
+    // ユーザーがログインしていない場合はエラーを表示して早期リターン
+    if (!user) {
+      setError('練習記録を作成するにはログインが必要です')
+      closeBasicForm()
+      return
+    }
+
+    setFormLoading(true)
+    try {
+      const api = new TeamPracticesAPI(supabase)
+      await api.create({
+        user_id: user.id,
+        team_id: teamId,
+        date: basicData.date,
+        title: basicData.title || null,
+        place: basicData.place || null,
+        note: basicData.note || null,
+      })
+
+      closeBasicForm()
+      setCurrentPage(1)
+      // loadTeamPracticesはuseEffectで自動実行される
+    } catch (err) {
+      console.error('練習の作成に失敗:', err)
+      setError('練習の作成に失敗しました')
+    } finally {
+      setFormLoading(false)
+    }
   }
 
   const handlePageChange = (page: number) => {
@@ -431,12 +475,16 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
       </div>
 
       {/* チーム練習記録作成モーダル */}
-      <TeamPracticeForm
-        isOpen={showPracticeForm}
-        onClose={() => setShowPracticeForm(false)}
-        teamId={teamId}
-        onSuccess={handlePracticeCreated}
-      />
+      <Suspense fallback={null}>
+        <PracticeBasicForm
+          isOpen={isBasicFormOpen}
+          onClose={closeBasicForm}
+          onSubmit={handlePracticeBasicSubmit}
+          selectedDate={selectedDate || new Date()}
+          isLoading={formLoading}
+          teamMode={true}
+        />
+      </Suspense>
     </>
   )
 }

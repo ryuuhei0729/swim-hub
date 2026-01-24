@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
-import { Button } from '@/components/ui'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { Button, ConfirmDialog } from '@/components/ui'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { formatTime, parseTime } from '@apps/shared/utils/time'
 
@@ -33,6 +33,12 @@ export default function TimeInputModal({
   menuNumber
 }: TimeInputModalProps) {
   const [times, setTimes] = useState<TimeEntry[]>([])
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [isSubmitted, setIsSubmitted] = useState(false)
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [confirmContext, setConfirmContext] = useState<'close' | 'back'>('close')
+  const isInitializedRef = useRef(false)
+  const ignorePopStateRef = useRef(false)
 
   // 全てのセット・レップの組み合わせを生成する関数
   const generateTimeCombinations = useCallback((): TimeEntry[] => {
@@ -62,22 +68,96 @@ export default function TimeInputModal({
   useEffect(() => {
     if (isOpen) {
       setTimes(generateTimeCombinations())
+      isInitializedRef.current = false
+      // 初期化後に少し待ってからフラグを立てる（初回設定で未保存扱いにならないようにする）
+      setTimeout(() => {
+        isInitializedRef.current = true
+      }, 100)
     }
   }, [setCount, repCount, initialTimes, isOpen, generateTimeCombinations])
+
+  // モーダルが閉じた時にリセット
+  useEffect(() => {
+    if (!isOpen) {
+      setHasUnsavedChanges(false)
+      setIsSubmitted(false)
+      setShowConfirmDialog(false)
+      isInitializedRef.current = false
+    }
+  }, [isOpen])
+
+  // ブラウザバックでの離脱を防ぐ
+  useEffect(() => {
+    if (!isOpen || !hasUnsavedChanges || isSubmitted) return
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+
+    const handlePopState = () => {
+      if (ignorePopStateRef.current) {
+        ignorePopStateRef.current = false
+        return
+      }
+      if (hasUnsavedChanges && !isSubmitted) {
+        window.history.pushState(null, '', window.location.href)
+        setConfirmContext('back')
+        setShowConfirmDialog(true)
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.history.pushState(null, '', window.location.href)
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [isOpen, hasUnsavedChanges, isSubmitted])
+
+  const handleClose = useCallback(() => {
+    if (hasUnsavedChanges && !isSubmitted) {
+      setConfirmContext('close')
+      setShowConfirmDialog(true)
+      return
+    }
+    onClose()
+  }, [hasUnsavedChanges, isSubmitted, onClose])
+
+  const handleConfirmClose = useCallback(() => {
+    if (confirmContext === 'back') {
+      ignorePopStateRef.current = true
+      window.history.back()
+    }
+    setShowConfirmDialog(false)
+    onClose()
+  }, [confirmContext, onClose])
+
+  const handleCancelClose = useCallback(() => {
+    setShowConfirmDialog(false)
+  }, [])
 
   if (!isOpen) return null
 
   const handleTimeChange = (id: string, value: string) => {
-    setTimes(prev => prev.map(t => 
-      t.id === id ? { 
-        ...t, 
+    setTimes(prev => prev.map(t =>
+      t.id === id ? {
+        ...t,
         displayValue: value,
         time: parseTime(value)
       } : t
     ))
+    // 初期化完了後の変更のみ追跡
+    if (isInitializedRef.current) {
+      setHasUnsavedChanges(true)
+    }
   }
 
   const handleSubmit = () => {
+    setIsSubmitted(true)
+    setHasUnsavedChanges(false)
     onSubmit(times)
     onClose()
   }
@@ -111,9 +191,9 @@ export default function TimeInputModal({
   return (
     <div className="fixed inset-0 z-80 overflow-y-auto" data-testid="time-input-modal">
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div 
-          className="fixed inset-0 bg-black/40 transition-opacity" 
-          onClick={onClose}
+        <div
+          className="fixed inset-0 bg-black/40 transition-opacity"
+          onClick={handleClose}
         ></div>
 
         <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-4xl">
@@ -126,7 +206,8 @@ export default function TimeInputModal({
               <button
                 type="button"
                 className="text-gray-400 hover:text-gray-500"
-                onClick={onClose}
+                onClick={handleClose}
+                aria-label="タイム入力を閉じる"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -204,7 +285,7 @@ export default function TimeInputModal({
             <Button
               type="button"
               variant="outline"
-              onClick={onClose}
+              onClick={handleClose}
               className="mt-3 w-full sm:mt-0 sm:w-auto"
             >
               キャンセル
@@ -212,6 +293,20 @@ export default function TimeInputModal({
           </div>
         </div>
       </div>
+
+      {/* 確認ダイアログ */}
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        onConfirm={handleConfirmClose}
+        onCancel={handleCancelClose}
+        title="入力内容が保存されていません"
+        message={confirmContext === 'back'
+          ? '入力内容が保存されていません。このまま戻りますか？'
+          : '入力内容が保存されていません。このまま閉じますか？'}
+        confirmLabel={confirmContext === 'back' ? '戻る' : '閉じる'}
+        cancelLabel="編集を続ける"
+        variant="warning"
+      />
     </div>
   )
 }

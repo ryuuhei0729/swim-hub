@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Button, Input } from '@/components/ui'
+import { Button, DatePicker } from '@/components/ui'
 import { parseISO, isValid, format } from 'date-fns'
 
 interface DeadlineInputProps {
@@ -38,22 +38,19 @@ export default function DeadlineInput({
 
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        {label}
-      </label>
-      <div className="flex gap-2 items-center">
+      <div className="flex gap-2 items-end">
         <div className="flex-1">
-          <Input
-            type="date"
+          <DatePicker
+            label={label}
             value={value}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={onChange}
           />
         </div>
         <Button
           type="button"
           variant="outline"
           onClick={handleSetGoalDeadline}
-          className="whitespace-nowrap"
+          className="whitespace-nowrap h-10"
         >
           目標の期限と揃える
         </Button>

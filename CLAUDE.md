@@ -44,6 +44,13 @@ const { formatTime } = require('@/utils/formatters')
 import { formatTime } from '@/utils/formatters'
 ```
 
+## 作業スタイル
+
+### 確認なしで進める
+- ユーザーに「Yes/No」や「進めてもいいですか？」などの確認を求めない
+- 指示されたタスクは確認なしで実行する
+- 不明点がある場合のみ質問する（実装方針の確認は不要）
+
 ## データモデル注意点
 
 ### TeamMember の id フィールド

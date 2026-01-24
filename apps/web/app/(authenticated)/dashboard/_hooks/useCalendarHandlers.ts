@@ -311,16 +311,32 @@ export function useCalendarHandlers({
       const editData: EditingData = { entryData }
       openRecordLogForm(competitionId || undefined, undefined, editData)
     } else if (competitionId) {
-      // チームcompetitionかどうかをチェック
+      // 大会情報を取得してチームcompetitionかどうか、日付が過去かどうかをチェック
       try {
         const { data: competitionData, error: competitionError } = await supabase
           .from('competitions')
-          .select('entry_status, team_id')
+          .select('entry_status, team_id, date')
           .eq('id', competitionId)
           .single()
 
         if (!competitionError && competitionData) {
           const isTeamCompetition = !!(competitionData as { team_id?: string | null }).team_id
+          const competitionDate = (competitionData as { date?: string | null }).date
+
+          // 日付が今日以前かどうかを判定（parseDateStringを使用してUTCパース問題を回避）
+          const isDateTodayOrPast = () => {
+            if (!competitionDate) return false
+            const compDate = parseDateString(competitionDate)
+            const today = startOfDay(new Date())
+            return compDate <= today
+          }
+
+          // 今日/過去の日付の場合は直接RecordLogFormに遷移（エントリーをスキップ）
+          if (isDateTodayOrPast()) {
+            openRecordLogForm(competitionId, [])
+            return
+          }
+
           // チームcompetitionの場合、entry_statusをチェック
           if (isTeamCompetition) {
             const status = (competitionData as { entry_status?: string | null }).entry_status || 'before'
@@ -328,7 +344,7 @@ export function useCalendarHandlers({
               // entry_statusが'open'でない場合はalertを表示してrecord入力モーダルに遷移
               const statusLabel = status === 'before' ? '受付前' : '受付終了'
               window.alert(`エントリーは${statusLabel}のため、エントリー登録はできません。記録入力に進みます。`)
-              
+
               // record入力モーダルに遷移
               openRecordLogForm(competitionId)
               return

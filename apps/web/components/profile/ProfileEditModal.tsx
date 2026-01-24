@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
-import { Button, Input } from '@/components/ui'
+import { Button, Input, DatePicker } from '@/components/ui'
 import AvatarUpload from './AvatarUpload'
 import type { UserProfile } from '@apps/shared/types'
 
@@ -163,15 +163,15 @@ export default function ProfileEditModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                   {/* 生年月日 */}
                   <div>
-                    <label htmlFor="birthday" className="block text-sm font-medium text-gray-700 mb-2">
-                      生年月日
-                    </label>
-                    <Input
-                      id="birthday"
-                      type="date"
+                    <DatePicker
+                      label="生年月日"
                       value={formData.birthday}
-                      onChange={handleChange('birthday')}
-                      className="w-full"
+                      onChange={(date) => {
+                        setFormData(prev => ({ ...prev, birthday: date }))
+                        setError(null)
+                      }}
+                      maxDate={new Date()}
+                      defaultMonth={new Date(2000, 0, 1)}
                       disabled={isUpdating}
                     />
                   </div>

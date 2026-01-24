@@ -209,5 +209,40 @@ export class CompetitionAPI {
       .getPublicUrl(path)
     return data.publicUrl
   }
+
+  // =========================================================================
+  // 場所候補の取得
+  // =========================================================================
+
+  /**
+   * 過去の大会で使用した場所一覧を取得（重複排除・最近使われた順）
+   */
+  async getUniqueCompetitionPlaces(): Promise<string[]> {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+
+    const { data, error } = await this.supabase
+      .from('competitions')
+      .select('place, date')
+      .eq('user_id', user.id)
+      .not('place', 'is', null)
+      .not('place', 'eq', '')
+      .order('date', { ascending: false })
+
+    if (error) throw error
+
+    // 重複排除しつつ、最近使われた順を維持
+    const seen = new Set<string>()
+    const uniquePlaces: string[] = []
+    for (const item of data || []) {
+      const place = item.place?.trim()
+      if (place && !seen.has(place)) {
+        seen.add(place)
+        uniquePlaces.push(place)
+      }
+    }
+
+    return uniquePlaces
+  }
 }
 
