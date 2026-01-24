@@ -323,7 +323,10 @@ jobs:
       working-directory: apps/web
       run: npm run build
       env:
-        DOTENV_PRIVATE_KEY_PRODUCTION: ${{ secrets.DOTENV_PRIVATE_KEY_PRODUCTION }}
+        # Select the appropriate secret based on branch
+        # main -> PRODUCTION, develop -> DEVELOPMENT, others -> empty (for fork PRs etc.)
+        DOTENV_PRIVATE_KEY_PRODUCTION: ${{ github.ref == 'refs/heads/main' && secrets.DOTENV_PRIVATE_KEY_PRODUCTION || '' }}
+        DOTENV_PRIVATE_KEY_DEVELOPMENT: ${{ github.ref == 'refs/heads/develop' && secrets.DOTENV_PRIVATE_KEY_DEVELOPMENT || '' }}
 
   deploy:
     needs: build
