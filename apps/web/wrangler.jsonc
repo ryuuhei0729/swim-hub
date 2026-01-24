@@ -12,12 +12,14 @@
     "binding": "ASSETS"
   },
 
-  // 環境変数（シークレットは wrangler secret で設定）
+  // ========================================
+  // 本番環境（デフォルト）
+  // ========================================
   "vars": {
     "NEXT_PUBLIC_ENVIRONMENT": "production"
   },
 
-  // R2 バケット（画像ストレージ）
+  // R2 バケット（本番）
   "r2_buckets": [
     {
       "binding": "R2_BUCKET",
@@ -25,11 +27,37 @@
     }
   ],
 
-  // ISR/データキャッシュ用 KV
+  // ISR/データキャッシュ用 KV（本番）
   "kv_namespaces": [
     {
       "binding": "NEXT_CACHE_KV",
       "id": "be34a0f15dc94db5ba58f017b0bbe41a"
     }
-  ]
+  ],
+
+  // ========================================
+  // プレビュー環境（dev）
+  // deploy:preview で使用
+  // ========================================
+  "env": {
+    "preview": {
+      "vars": {
+        "NEXT_PUBLIC_ENVIRONMENT": "development"
+      },
+      // R2 バケット（開発用）
+      "r2_buckets": [
+        {
+          "binding": "R2_BUCKET",
+          "bucket_name": "swim-hub-images-dev"
+        }
+      ],
+      // KV（本番と同じものを使用）
+      "kv_namespaces": [
+        {
+          "binding": "NEXT_CACHE_KV",
+          "id": "be34a0f15dc94db5ba58f017b0bbe41a"
+        }
+      ]
+    }
+  }
 }
