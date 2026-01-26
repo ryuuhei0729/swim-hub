@@ -18,9 +18,8 @@ yarn-error.log*
 .env
 .env.local
 .env.*.local
-# .env.development, .env.production - 機密情報を含むためgit管理外
-apps/web/.env.development
-apps/web/.env.production
+# .env.development, .env.production - dotenvxで暗号化済みのためgit管理OK
+# (暗号化されていない場合は絶対にコミットしないこと)
 # Wrangler (Cloudflare Workers) 環境変数
 .dev.vars
 apps/web/.dev.vars
