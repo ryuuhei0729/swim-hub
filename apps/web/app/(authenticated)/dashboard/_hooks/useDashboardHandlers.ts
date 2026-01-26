@@ -13,7 +13,7 @@ import type {
   RecordFormDataInternal
 } from '@/stores/types'
 import { processCompetitionImage, processPracticeImage } from '@/utils/imageUtils'
-import { CompetitionAPI, EntryAPI, PracticeAPI } from '@apps/shared/api'
+import { CompetitionAPI, EntryAPI } from '@apps/shared/api'
 import type { Style, PracticeLogTagInsert } from '@apps/shared/types'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@swim-hub/shared/types'
@@ -128,11 +128,10 @@ export function useDashboardHandlers({
 
       // 画像の処理（安全な順序: アップロード → 検証 → 削除）
       if (practiceId && imageData) {
-        const practiceAPI = new PracticeAPI(supabase)
-        let uploadedImages: import('@swim-hub/shared/types').PracticeImage[] = []
-        
+        const uploadedImages: import('@swim-hub/shared/types').PracticeImage[] = []
+
         try {
-          // Step 1: 新規画像をアップロード（先に実行してデータ損失を防ぐ）
+          // Step 1: 新規画像をアップロード（API Route経由でR2/Supabase Storageにアップロード）
           if (imageData.newFiles.length > 0) {
             const processedImages = await Promise.all(
               imageData.newFiles.map(async (fileData) => {
@@ -144,32 +143,65 @@ export function useDashboardHandlers({
                 }
               })
             )
-            uploadedImages = await practiceAPI.uploadPracticeImages(practiceId, processedImages)
-            
+
+            // API Route経由でアップロード（R2優先、Supabase Storageフォールバック）
+            for (let i = 0; i < processedImages.length; i++) {
+              const img = processedImages[i]
+              const formData = new FormData()
+              formData.append('originalFile', img.originalFile)
+              formData.append('thumbnailFile', img.thumbnailFile)
+              formData.append('practiceId', practiceId)
+              formData.append('originalFileName', img.originalFileName)
+              formData.append('displayOrder', i.toString())
+
+              const response = await fetch('/api/storage/images/practice', {
+                method: 'POST',
+                body: formData
+              })
+
+              if (!response.ok) {
+                const errorData = await response.json()
+                throw new Error(errorData.error || '画像のアップロードに失敗しました')
+              }
+
+              const result = await response.json()
+              uploadedImages.push(result)
+            }
+
             // Step 2: アップロード成功を確認
             if (uploadedImages.length !== processedImages.length) {
               throw new Error('一部の画像のアップロードに失敗しました')
             }
           }
-          
-          // Step 3: アップロード成功後に削除を実行
+
+          // Step 3: アップロード成功後に削除を実行（API Route経由）
           if (imageData.deletedIds.length > 0) {
-            await practiceAPI.deletePracticeImages(imageData.deletedIds)
+            for (const imageId of imageData.deletedIds) {
+              const response = await fetch(`/api/storage/images/practice?imageId=${imageId}`, {
+                method: 'DELETE'
+              })
+              if (!response.ok) {
+                console.error(`画像ID ${imageId} の削除に失敗`)
+              }
+            }
           }
         } catch (imageError) {
           console.error('画像処理エラー:', imageError)
-          
-          // Step 4: ロールバック - アップロードした画像を削除
+
+          // Step 4: ロールバック - アップロードした画像を削除（API Route経由）
           if (uploadedImages.length > 0) {
             try {
-              const uploadedIds = uploadedImages.map(img => img.id)
-              await practiceAPI.deletePracticeImages(uploadedIds)
+              for (const img of uploadedImages) {
+                await fetch(`/api/storage/images/practice?imageId=${img.id}`, {
+                  method: 'DELETE'
+                })
+              }
               console.log('ロールバック完了: アップロードした画像を削除しました')
             } catch (rollbackError) {
               console.error('ロールバック失敗:', rollbackError)
             }
           }
-          
+
           // 画像処理エラーを再スロー
           throw new Error('画像の処理に失敗しました')
         }
@@ -181,7 +213,7 @@ export function useDashboardHandlers({
     } finally {
       setLoading(false)
     }
-  }, [editingData, updatePractice, createPractice, closePracticeBasicForm, openPracticeLogForm, refreshCalendar, setLoading, supabase])
+  }, [editingData, updatePractice, createPractice, closePracticeBasicForm, openPracticeLogForm, refreshCalendar, setLoading])
 
   // 練習メニュー作成・更新処理
   const handlePracticeLogSubmit = useCallback(async (formDataArray: PracticeMenuFormData[]) => {
