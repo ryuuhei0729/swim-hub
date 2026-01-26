@@ -326,12 +326,15 @@ jobs:
 
     - name: Build Next.js app
       working-directory: apps/web
-      run: npm run build
+      run: |
+        if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          npx dotenvx run -f .env.production -- next build
+        else
+          npx dotenvx run -f .env.development -- next build
+        fi
       env:
-        # Select the appropriate secret based on branch
-        # main -> PRODUCTION, develop -> DEVELOPMENT, others -> empty (for fork PRs etc.)
-        DOTENV_PRIVATE_KEY_PRODUCTION: ${{ github.ref == 'refs/heads/main' && secrets.DOTENV_PRIVATE_KEY_PRODUCTION || '' }}
-        DOTENV_PRIVATE_KEY_DEVELOPMENT: ${{ github.ref == 'refs/heads/develop' && secrets.DOTENV_PRIVATE_KEY_DEVELOPMENT || '' }}
+        DOTENV_PRIVATE_KEY_PRODUCTION: ${{ secrets.DOTENV_PRIVATE_KEY_PRODUCTION }}
+        DOTENV_PRIVATE_KEY_DEVELOPMENT: ${{ secrets.DOTENV_PRIVATE_KEY_DEVELOPMENT }}
 
     - name: Upload build output artifact
       uses: actions/upload-artifact@v4
@@ -340,6 +343,7 @@ jobs:
         path: apps/web/.next
         retention-days: 1
         compression-level: 9
+        if-no-files-found: error
 
   deploy:
     needs: build
