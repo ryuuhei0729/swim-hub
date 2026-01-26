@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "dotenvx run -f .env.local -- next dev",
     "dev:https": "dotenvx run -f .env.local -- node server.js",
-    "build": "dotenvx run -f .env.local -- next build",
+    "build": "next build",
+    "build:local": "dotenvx run -f .env.local -- next build",
     "start": "dotenvx run -f .env.local -- next start",
     "preview": "dotenvx decrypt -f .env.development --stdout > .dev.vars && opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "dotenvx run -f .env.production -- opennextjs-cloudflare build && opennextjs-cloudflare deploy",
