@@ -179,7 +179,7 @@ export default function CompetitionBasicForm({
       window.removeEventListener('beforeunload', handleBeforeUnload)
       window.removeEventListener('popstate', handlePopState)
     }
-  }, [isOpen, hasUnsavedChanges, isSubmitted])
+  }, [isOpen, hasUnsavedChanges, isSubmitted, showConfirmDialog])
 
   // selectedDateまたはeditDataが変更された時にフォームを初期化（モーダルが開かれた時だけ）
   useEffect(() => {

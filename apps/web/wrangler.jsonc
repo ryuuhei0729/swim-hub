@@ -1,0 +1,63 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "swim-hub",
+  // ⚠️ 重要: 2025-04-01 以降を指定（process.env が正しく動作するため）
+  "compatibility_date": "2025-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // OpenNext がビルド時に生成するファイル（変更不要）
+  "main": ".open-next/worker.js",
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+
+  // ========================================
+  // 本番環境（デフォルト）
+  // ========================================
+  "vars": {
+    "NEXT_PUBLIC_ENVIRONMENT": "production"
+  },
+
+  // R2 バケット（本番）
+  "r2_buckets": [
+    {
+      "binding": "R2_BUCKET",
+      "bucket_name": "swim-hub-images-prod"
+    }
+  ],
+
+  // ISR/データキャッシュ用 KV（本番）
+  "kv_namespaces": [
+    {
+      "binding": "NEXT_CACHE_KV",
+      "id": "ffc8c9770ea64e54a6f2fd4a02dca13e"
+    }
+  ],
+
+  // ========================================
+  // プレビュー環境（dev）
+  // deploy:preview で使用
+  // ========================================
+  "env": {
+    "preview": {
+      "vars": {
+        "NEXT_PUBLIC_ENVIRONMENT": "development"
+      },
+      // R2 バケット（開発用）
+      "r2_buckets": [
+        {
+          "binding": "R2_BUCKET",
+          "bucket_name": "swim-hub-images-dev"
+        }
+      ],
+      // KV（プレビュー専用 - 本番キャッシュとの分離）
+      "kv_namespaces": [
+        {
+          "binding": "NEXT_CACHE_KV",
+          "id": "d6d0ee3ecb8141a28f4aa5408331d31f"
+        }
+      ]
+    }
+  }
+}

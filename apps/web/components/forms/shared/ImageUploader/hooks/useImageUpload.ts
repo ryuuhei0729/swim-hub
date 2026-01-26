@@ -117,14 +117,15 @@ export const useImageUpload = ({
 
   // Blob URLのメモリリークを防ぐためのクリーンアップ（アンマウント時のみ）
   useEffect(() => {
+    const currentFileInput = fileInputRef.current
     return () => {
       // アンマウント時にblob URLを解放
       newFilesRef.current.forEach((f) => {
         URL.revokeObjectURL(f.previewUrl)
       })
       // ファイル入力をリセット
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
+      if (currentFileInput) {
+        currentFileInput.value = ''
       }
     }
   }, [])

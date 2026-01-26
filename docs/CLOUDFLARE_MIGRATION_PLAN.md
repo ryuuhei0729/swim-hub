@@ -4,6 +4,7 @@
 - **移行元**: Vercel + Supabase Storage
 - **移行先**: Cloudflare Workers + OpenNext + Cloudflare R2
 - **維持**: Supabase Database（PostgreSQL）、認証、RLS、RPC関数
+- **Next.js バージョン**: **15.1.11**（Edge Middleware 対応）
 
 ---
 
@@ -11,14 +12,16 @@
 
 | 項目 | Pages + next-on-pages | Workers + OpenNext |
 |------|----------------------|-------------------|
-| Next.js 対応 | **14まで** | **14, 15, 16 対応** |
+| Next.js 対応 | **14まで** | **14, 15.1.x 対応** |
 | Runtime | Edge Runtime のみ | **Node.js Runtime** |
 | Node.js API | 制限あり | より多くのAPIが利用可能 |
 | 公式推奨 | 非推奨化の方向 | **推奨** |
 | 静的アセット | リクエストにカウント | **カウントされない** |
 | 無料枠 | - | 1日10万リクエスト |
 
-> **重要**: 本プロジェクトは Next.js 16.1.0 を使用しているため、`@cloudflare/next-on-pages` は使用できません。
+> **重要**: Next.js 15.2 以降で導入された Node.js Middleware（proxy.ts）は OpenNext で未サポートのため、**Next.js 15.1.11** を使用し、Edge Runtime の middleware.ts を使用しています。
+>
+> 参照: [Cloudflare Workers Next.js ガイド - 制限事項](https://developers.cloudflare.com/workers/framework-guides/web-apps/nextjs/#limitations)
 
 ---
 
@@ -55,10 +58,11 @@ npm install @opennextjs/cloudflare wrangler --save-dev
   },
 
   // R2 バケット（画像ストレージ）
+  // 開発: swim-hub-images-dev / 本番: swim-hub-images-prod
   "r2_buckets": [
     {
       "binding": "R2_BUCKET",
-      "bucket_name": "swim-hub-images"
+      "bucket_name": "swim-hub-images-prod"  // 開発時は swim-hub-images-dev に変更
     }
   ],
 
@@ -72,20 +76,43 @@ npm install @opennextjs/cloudflare wrangler --save-dev
 }
 ```
 
-### 0.3 open-next.config.ts 作成（オプション）
+### 0.3 open-next.config.ts 作成（必須）
 
-カスタム設定が必要な場合のみ作成：
+Cloudflare Workers で動作させるための設定：
 
 **新規ファイル**: `apps/web/open-next.config.ts`
 ```typescript
 import type { OpenNextConfig } from "@opennextjs/cloudflare";
 
 const config: OpenNextConfig = {
-  // デフォルト設定で十分な場合は空でOK
+  default: {
+    override: {
+      wrapper: "cloudflare-node",
+      converter: "edge",
+      proxyExternalRequest: "fetch",
+      incrementalCache: "dummy",
+      tagCache: "dummy",
+      queue: "dummy",
+    },
+  },
+  edgeExternals: ["node:crypto"],
+  middleware: {
+    external: true,
+    override: {
+      wrapper: "cloudflare-edge",
+      converter: "edge",
+      proxyExternalRequest: "fetch",
+      incrementalCache: "dummy",
+      tagCache: "dummy",
+      queue: "dummy",
+    },
+  },
 };
 
 export default config;
 ```
+
+> **注意**: Middleware を Edge Runtime で動作させるために `middleware.external: true` と `cloudflare-edge` wrapper が必要です。
 
 ### 0.4 package.json スクリプト追加
 
@@ -113,14 +140,29 @@ export default config;
 
 ## Phase 1: 互換性確認・修正
 
-### 1.1 Runtime 設定の削除
+### 1.1 Middleware の Edge Runtime 対応（✅ 完了）
 
-OpenNext では **Node.js Runtime** がデフォルトです。
-既存の `export const runtime = 'edge'` があれば削除または確認：
+**重要**: OpenNext/Cloudflare は Next.js 15.2+ の Node.js Middleware（proxy.ts）を未サポート。
+Edge Runtime の middleware.ts を使用する必要があります。
 
-```bash
-# Edge Runtime 指定の検索
-grep -r "runtime.*=.*edge" apps/web --include="*.ts" --include="*.tsx"
+**修正ファイル**: `apps/web/middleware.ts`
+```typescript
+// middleware.ts - Next.js 15 Edge Middleware
+import { updateSession } from '@/lib/supabase-auth/middleware'
+import { type NextRequest } from 'next/server'
+
+// Cloudflare Workers 対応: Edge Runtime を使用
+export const runtime = 'experimental-edge'
+
+export async function middleware(request: NextRequest) {
+    return await updateSession(request)
+}
+
+export const config = {
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
+}
 ```
 
 ### 1.2 Server Actions の確認
@@ -138,12 +180,7 @@ grep -r "use server" apps/web/app --include="*.ts" --include="*.tsx"
 - `crypto` モジュール → 多くは利用可能
 - 外部ライブラリの互換性
 
-### 1.3 Middleware の確認
-
-`apps/web/middleware.ts` が Workers 環境で動作するか確認。
-Supabase Auth の middleware は通常問題なく動作します。
-
-### 1.4 API Routes の確認
+### 1.3 API Routes の確認
 
 `apps/web/app/api/` 配下のルートを確認。
 Node.js Runtime で動作するため、Edge 制限は緩和されています。
@@ -154,13 +191,18 @@ Node.js Runtime で動作するため、Edge 制限は緩和されています�
 
 ### 2.1 R2バケット作成
 
-Cloudflareダッシュボードで作成：
+Cloudflareダッシュボードで作成済み：
 
 ```
-swim-hub-images/
-  ├── profiles/      # プロフィール画像
-  ├── practices/     # 練習記録画像
-  └── competitions/  # 大会記録画像
+swim-hub-images-dev   ← 開発用
+swim-hub-images-prod  ← 本番用
+```
+
+各バケット内のフォルダ構造：
+```
+├── profiles/      # プロフィール画像
+├── practices/     # 練習記録画像
+└── competitions/  # 大会記録画像
 ```
 
 ### 2.2 R2クライアント実装
@@ -244,27 +286,37 @@ export function getImageUrl(
 }
 ```
 
-### 2.5 修正対象ファイル
+### 2.5 API Routes（✅ 実装済み）
+
+クライアントサイドからの直接アップロードではなく、API Routes 経由でアップロードを行います：
+
+**新規ファイル**: `apps/web/app/api/storage/profile/route.ts`
+- プロフィール画像のアップロード/削除
+- R2優先、Supabase Storage フォールバック
+
+**新規ファイル**: `apps/web/app/api/storage/images/route.ts`
+- 練習記録/大会記録画像のアップロード/削除
+- type パラメータで `practices` / `competitions` を指定
+
+### 2.6 修正対象ファイル
 
 | ファイル | 変更内容 |
 |----------|----------|
-| `apps/shared/api/practices.ts` | upload/remove/getPublicUrl を R2 に変更 |
-| `apps/shared/api/competitions.ts` | upload/remove/getPublicUrl を R2 に変更 |
-| `apps/web/components/profile/AvatarUpload.tsx` | R2アップロードに変更 |
+| `apps/web/components/profile/AvatarUpload.tsx` | API Route 経由でアップロード（✅ 完了） |
+| `apps/shared/api/practices.ts` | 将来的にR2直接対応（現在は API Route 推奨） |
+| `apps/shared/api/competitions.ts` | 将来的にR2直接対応（現在は API Route 推奨） |
 
 ---
 
-## Phase 3: キャッシュ戦略の調整
+## Phase 3: キャッシュ戦略の調整（✅ 完了）
 
-### 3.1 `unstable_cache` の対応
+### 3.1 `unstable_cache` の削除
 
-OpenNext は ISR/キャッシュをサポートしています。
-KV Namespace を設定すれば `unstable_cache` も動作する可能性がありますが、
-シンプルにするため削除を推奨：
+`unstable_cache` は削除し、シンプルな直接取得に変更しました。
 
 **修正ファイル**:
-- `apps/web/lib/data-loaders/common.ts`
-- `apps/web/app/(authenticated)/dashboard/_server/MetadataLoader.tsx`
+- `apps/web/lib/data-loaders/common.ts`（✅ 完了）
+- `apps/web/app/(authenticated)/dashboard/_server/MetadataLoader.tsx`（✅ 完了）
 
 ```typescript
 // Before
@@ -274,9 +326,18 @@ export async function getCachedStyles(...) {
 
 // After
 export async function getStyles(): Promise<Style[]> {
-  const supabase = createClient()
-  const { data } = await supabase.from('styles').select('*')
-  return data ?? []
+  const supabase = createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+  const styleAPI = new StyleAPI(supabase)
+  return await styleAPI.getStyles()
+}
+
+// 後方互換性のための deprecated ラッパー
+/** @deprecated */
+export async function getCachedStyles(_cacheKey?: string, _revalidate?: number): Promise<Style[]> {
+  return getStyles()
 }
 ```
 
@@ -287,7 +348,7 @@ OpenNext は `revalidatePath` をサポートしています。
 
 ---
 
-## Phase 4: `next/image` の対応
+## Phase 4: `next/image` の対応（✅ 完了）
 
 ### 4.1 選択肢
 
@@ -297,29 +358,38 @@ OpenNext は `revalidatePath` をサポートしています。
 | **Cloudflare Images** | 高品質な最適化 | 月額$5〜 |
 | **カスタムloader** | 柔軟性が高い | 実装コスト |
 
-### 4.2 推奨: `unoptimized: true`（初期対応）
+### 4.2 実装: `unoptimized: true`（✅ 完了）
 
 **修正ファイル**: `apps/web/next.config.js`
 ```javascript
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
+    // Cloudflare Workers環境では画像最適化が利用できないため無効化
     unoptimized: true,
+    // 最新フォーマットを優先
+    formats: ['image/avif', 'image/webp'],
     remotePatterns: [
-      // 既存のSupabase設定
+      // Supabase Storage
       {
         protocol: 'https',
         hostname: '*.supabase.co',
+        port: '',
+        pathname: '/storage/v1/object/public/**',
       },
-      // R2
+      // ローカル環境のSupabase用設定
+      {
+        protocol: 'http',
+        hostname: '127.0.0.1',
+        port: '54321',
+        pathname: '/storage/v1/object/public/**',
+      },
+      // Cloudflare R2
       {
         protocol: 'https',
         hostname: '*.r2.dev',
-      },
-      // カスタムドメイン（設定時）
-      {
-        protocol: 'https',
-        hostname: 'images.your-domain.com',
+        port: '',
+        pathname: '/**',
       },
     ],
   },
@@ -396,25 +466,27 @@ npm run deploy
 
 ## ファイル一覧
 
-### 新規作成
-| ファイル | 内容 |
-|----------|------|
-| `apps/web/wrangler.jsonc` | Cloudflare Workers 設定 |
-| `apps/web/open-next.config.ts` | OpenNext 設定（オプション） |
-| `apps/web/lib/r2.ts` | R2クライアント |
-| `apps/web/lib/image-url.ts` | 画像URL取得（フォールバック対応） |
-| `scripts/migrate-storage-to-r2.ts` | Storage移行スクリプト |
+### 新規作成（✅ 完了）
+| ファイル | 内容 | 状態 |
+|----------|------|------|
+| `apps/web/wrangler.jsonc` | Cloudflare Workers 設定 | ✅ |
+| `apps/web/open-next.config.ts` | OpenNext 設定（必須） | ✅ |
+| `apps/web/lib/r2.ts` | R2クライアント | ✅ |
+| `apps/web/lib/image-url.ts` | 画像URL取得（フォールバック対応） | ✅ |
+| `apps/web/app/api/storage/profile/route.ts` | プロフィール画像 API | ✅ |
+| `apps/web/app/api/storage/images/route.ts` | 練習/大会画像 API | ✅ |
+| `scripts/migrate-storage-to-r2.ts` | Storage移行スクリプト | ✅ |
 
-### 修正
-| ファイル | 変更内容 |
-|----------|----------|
-| `apps/web/package.json` | OpenNext スクリプト追加 |
-| `apps/web/next.config.js` | images 設定 |
-| `apps/web/.gitignore` | `.open-next/` 追加 |
-| `apps/shared/api/practices.ts` | R2対応 |
-| `apps/shared/api/competitions.ts` | R2対応 |
-| `apps/web/components/profile/AvatarUpload.tsx` | R2対応 |
-| `apps/web/lib/data-loaders/common.ts` | `unstable_cache` 削除 |
+### 修正（✅ 完了）
+| ファイル | 変更内容 | 状態 |
+|----------|----------|------|
+| `apps/web/package.json` | OpenNext スクリプト追加、Next.js 15.1.11 | ✅ |
+| `apps/web/middleware.ts` | Edge Runtime で Supabase Auth | ✅ |
+| `apps/web/next.config.js` | images.unoptimized + R2 remotePatterns | ✅ |
+| `apps/web/.gitignore` | `.open-next/` 追加 | ✅ |
+| `apps/web/components/profile/AvatarUpload.tsx` | API Route 経由でアップロード | ✅ |
+| `apps/web/lib/data-loaders/common.ts` | `unstable_cache` 削除 | ✅ |
+| `apps/web/app/(authenticated)/dashboard/_server/MetadataLoader.tsx` | キャッシュ削除 | ✅ |
 
 ---
 
@@ -427,9 +499,14 @@ npm run deploy
 | リクエスト/日 | 100,000 | 無制限 |
 | CPU時間/リクエスト | 10ms | 30s |
 
+### Next.js バージョン制限
+- **Next.js 15.2+ の Node.js Middleware（proxy.ts）は未サポート**
+- 本プロジェクトは **Next.js 15.1.11** を使用（Edge Middleware 対応）
+- 将来的に OpenNext が Node.js Middleware をサポートした場合、アップグレード可能
+
 ### 既知の問題
 - Next.js 15.3+ で instrumentation hook エラーが発生する場合あり（[GitHub #667](https://github.com/opennextjs/opennextjs-cloudflare/issues/667)）
-- 本プロジェクトは Next.js 16.1.0 のため、動作確認必須
+- 本プロジェクトは **Next.js 15.1.11** を使用
 
 ### Wrangler バージョン
 - **3.99.0 以上** が必須

@@ -2,14 +2,14 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
 
 concurrency:
-  # PRの場合はPR番号を使用、pushの場合はrefを使用
-  # developブランチへのpushはPRイベントのみで処理（2重実行を防止）
-  group: ci-${{ github.event.pull_request.number || github.ref }}
+  # PRとpushで同じグループ名を使用することで重複実行を防ぐ
+  # PRの場合はheadブランチ、pushの場合はrefを使用
+  group: ci-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 env:
@@ -117,6 +117,9 @@ jobs:
     needs: unit-tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # pushイベントの場合、同じコミットに対するPRがあればスキップ（重複実行防止）
+    # PRイベントの場合は常に実行
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     strategy:
       fail-fast: false
       matrix:
@@ -303,6 +306,8 @@ jobs:
 
   build:
     needs: [unit-tests, e2e-tests]
+    # e2e-testsがスキップされた場合でも実行
+    if: always() && needs.unit-tests.result == 'success' && (needs.e2e-tests.result == 'success' || needs.e2e-tests.result == 'skipped')
     runs-on: ubuntu-latest
 
     steps:
@@ -323,4 +328,81 @@ jobs:
       working-directory: apps/web
       run: npm run build
       env:
+        # Select the appropriate secret based on branch
+        # main -> PRODUCTION, develop -> DEVELOPMENT, others -> empty (for fork PRs etc.)
+        DOTENV_PRIVATE_KEY_PRODUCTION: ${{ github.ref == 'refs/heads/main' && secrets.DOTENV_PRIVATE_KEY_PRODUCTION || '' }}
+        DOTENV_PRIVATE_KEY_DEVELOPMENT: ${{ github.ref == 'refs/heads/develop' && secrets.DOTENV_PRIVATE_KEY_DEVELOPMENT || '' }}
+
+    - name: Upload build output artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-output
+        path: apps/web/.next
+        retention-days: 1
+        compression-level: 9
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: needs.build.result == 'success' && github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download node_modules artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: node-modules
+        path: .
+
+    - name: Download build output artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: build-output
+        path: apps/web/.next
+
+    - name: Setup Node.js and Install dependencies
+      uses: ./.github/actions/setup-node
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Deploy to Cloudflare Workers
+      working-directory: apps/web
+      run: npm run deploy
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         DOTENV_PRIVATE_KEY_PRODUCTION: ${{ secrets.DOTENV_PRIVATE_KEY_PRODUCTION }}
+
+  deploy-preview:
+    needs: build
+    runs-on: ubuntu-latest
+    if: needs.build.result == 'success' && github.ref == 'refs/heads/develop' && github.event_name == 'push'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download node_modules artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: node-modules
+        path: .
+
+    - name: Download build output artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: build-output
+        path: apps/web/.next
+
+    - name: Setup Node.js and Install dependencies
+      uses: ./.github/actions/setup-node
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Deploy to Cloudflare Workers (Preview)
+      working-directory: apps/web
+      run: npm run deploy:preview
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        DOTENV_PRIVATE_KEY_DEVELOPMENT: ${{ secrets.DOTENV_PRIVATE_KEY_DEVELOPMENT }}

@@ -419,7 +419,7 @@ SwimHub
 - **認証**: Supabase Auth
 - **日付処理**: date-fns 4
 - **テスト**: Playwright（E2E）
-- **デプロイ**: Vercel
+- **デプロイ**: Cloudflare Workers (OpenNext)
 
 #### バックエンド
 - **BaaS**: Supabase

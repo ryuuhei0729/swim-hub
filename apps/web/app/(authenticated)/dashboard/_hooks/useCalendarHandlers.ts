@@ -359,7 +359,7 @@ export function useCalendarHandlers({
         openEntryLogForm(competitionId)
       }
     }
-  }, [openCompetitionBasicForm, openRecordLogForm, openEntryLogForm, supabase])
+  }, [openCompetitionBasicForm, openRecordLogForm, openEntryLogForm, supabase, parseDateString])
 
   // 記録編集ハンドラー
   const onEditRecord = useCallback((record: RecordForEdit) => {
