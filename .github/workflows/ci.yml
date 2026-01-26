@@ -336,6 +336,10 @@ jobs:
         DOTENV_PRIVATE_KEY_PRODUCTION: ${{ secrets.DOTENV_PRIVATE_KEY_PRODUCTION }}
         DOTENV_PRIVATE_KEY_DEVELOPMENT: ${{ secrets.DOTENV_PRIVATE_KEY_DEVELOPMENT }}
 
+    - name: Debug - List build output
+      working-directory: apps/web
+      run: ls -la .next || echo ".next directory not found"
+
     - name: Upload build output artifact
       uses: actions/upload-artifact@v4
       with:
