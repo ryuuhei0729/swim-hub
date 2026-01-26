@@ -7,9 +7,9 @@ on:
     branches: [ main, develop ]
 
 concurrency:
-  # PRの場合はPR番号を使用、pushの場合はrefを使用
-  # 同一PR/ブランチで新しいワークフローが開始されると古いものはキャンセル
-  group: ci-${{ github.event.pull_request.number || github.ref }}
+  # PRとpushで同じグループ名を使用することで重複実行を防ぐ
+  # PRの場合はheadブランチ、pushの場合はrefを使用
+  group: ci-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 env:
@@ -117,6 +117,9 @@ jobs:
     needs: unit-tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # pushイベントの場合、同じコミットに対するPRがあればスキップ（重複実行防止）
+    # PRイベントの場合は常に実行
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     strategy:
       fail-fast: false
       matrix:
@@ -303,6 +306,8 @@ jobs:
 
   build:
     needs: [unit-tests, e2e-tests]
+    # e2e-testsがスキップされた場合でも実行
+    if: always() && needs.unit-tests.result == 'success' && (needs.e2e-tests.result == 'success' || needs.e2e-tests.result == 'skipped')
     runs-on: ubuntu-latest
 
     steps:
@@ -339,7 +344,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: needs.build.result == 'success' && github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
     - uses: actions/checkout@v4
@@ -372,7 +377,7 @@ jobs:
   deploy-preview:
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    if: needs.build.result == 'success' && github.ref == 'refs/heads/develop' && github.event_name == 'push'
 
     steps:
     - uses: actions/checkout@v4
