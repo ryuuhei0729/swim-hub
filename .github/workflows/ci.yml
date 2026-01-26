@@ -348,6 +348,7 @@ jobs:
         retention-days: 1
         compression-level: 9
         if-no-files-found: error
+        include-hidden-files: true
 
   deploy:
     needs: build
