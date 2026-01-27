@@ -324,23 +324,18 @@ jobs:
       with:
         node-version: ${{ env.NODE_VERSION }}
 
+    - name: Install dotenvx
+      run: curl -sfS https://dotenvx.sh/install.sh | sh
+
     - name: Build for Cloudflare (OpenNext)
       working-directory: apps/web
       run: |
-        # 暗号化ファイルを復号化して.env.productionに置き換え
         if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-          cp .env.production .env.production.encrypted
-          # 秘密鍵を明示的に指定して復号化
-          npx dotenvx decrypt -f .env.production.encrypted -k "$DOTENV_PRIVATE_KEY_PRODUCTION" --stdout > .env.production
-          echo "=== Decrypted .env.production (checking SUPABASE_URL) ==="
-          grep "NEXT_PUBLIC_SUPABASE_URL" .env.production | head -1 || echo "SUPABASE_URL not found"
-          npx opennextjs-cloudflare build
-          mv .env.production.encrypted .env.production
+          echo "=== Building with .env.production ==="
+          dotenvx run -f .env.production -- npx opennextjs-cloudflare build
         else
-          cp .env.development .env.development.encrypted
-          npx dotenvx decrypt -f .env.development.encrypted -k "$DOTENV_PRIVATE_KEY_DEVELOPMENT" --stdout > .env.development
-          npx opennextjs-cloudflare build
-          mv .env.development.encrypted .env.development
+          echo "=== Building with .env.development ==="
+          dotenvx run -f .env.development -- npx opennextjs-cloudflare build
         fi
       env:
         DOTENV_PRIVATE_KEY_PRODUCTION: ${{ secrets.DOTENV_PRIVATE_KEY_PRODUCTION }}
