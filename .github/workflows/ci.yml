@@ -330,14 +330,15 @@ jobs:
         # 暗号化ファイルを復号化して.env.productionに置き換え
         if [ "${{ github.ref }}" = "refs/heads/main" ]; then
           cp .env.production .env.production.encrypted
-          npx dotenvx decrypt -f .env.production.encrypted --stdout > .env.production
-          echo "=== Decrypted .env.production (first 3 lines) ==="
-          head -3 .env.production
+          # 秘密鍵を明示的に指定して復号化
+          npx dotenvx decrypt -f .env.production.encrypted -k "$DOTENV_PRIVATE_KEY_PRODUCTION" --stdout > .env.production
+          echo "=== Decrypted .env.production (checking SUPABASE_URL) ==="
+          grep "NEXT_PUBLIC_SUPABASE_URL" .env.production | head -1 || echo "SUPABASE_URL not found"
           npx opennextjs-cloudflare build
           mv .env.production.encrypted .env.production
         else
           cp .env.development .env.development.encrypted
-          npx dotenvx decrypt -f .env.development.encrypted --stdout > .env.development
+          npx dotenvx decrypt -f .env.development.encrypted -k "$DOTENV_PRIVATE_KEY_DEVELOPMENT" --stdout > .env.development
           npx opennextjs-cloudflare build
           mv .env.development.encrypted .env.development
         fi
