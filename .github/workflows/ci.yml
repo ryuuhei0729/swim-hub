@@ -327,15 +327,19 @@ jobs:
     - name: Build for Cloudflare (OpenNext)
       working-directory: apps/web
       run: |
-        # .env.productionを一時的にリネームしてNext.jsの自動読み込みを防ぐ
-        mv .env.production .env.enc
+        # 暗号化ファイルを復号化して.env.productionに置き換え
         if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-          npx dotenvx run -f .env.enc -- npx opennextjs-cloudflare build
+          cp .env.production .env.production.encrypted
+          npx dotenvx decrypt -f .env.production.encrypted --stdout > .env.production
+          echo "=== Decrypted .env.production (first 3 lines) ==="
+          head -3 .env.production
+          npx opennextjs-cloudflare build
+          mv .env.production.encrypted .env.production
         else
-          mv .env.enc .env.production
-          mv .env.development .env.enc
-          npx dotenvx run -f .env.enc -- npx opennextjs-cloudflare build
-          mv .env.enc .env.development
+          cp .env.development .env.development.encrypted
+          npx dotenvx decrypt -f .env.development.encrypted --stdout > .env.development
+          npx opennextjs-cloudflare build
+          mv .env.development.encrypted .env.development
         fi
       env:
         DOTENV_PRIVATE_KEY_PRODUCTION: ${{ secrets.DOTENV_PRIVATE_KEY_PRODUCTION }}
@@ -396,7 +400,10 @@ jobs:
 
     - name: Deploy to Cloudflare Workers
       working-directory: apps/web
-      run: npm run deploy:only
+      run: |
+        # 暗号化された.env.productionをリネームしてOpenNextが読まないようにする
+        mv .env.production .env.production.skip || true
+        npm run deploy:only
       env:
         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -428,7 +435,10 @@ jobs:
 
     - name: Deploy to Cloudflare Workers (Preview)
       working-directory: apps/web
-      run: npx wrangler deploy --env preview
+      run: |
+        # 暗号化された.env.developmentをリネームしてOpenNextが読まないようにする
+        mv .env.development .env.development.skip || true
+        npx wrangler deploy --env preview
       env:
         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
