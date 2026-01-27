@@ -22,6 +22,7 @@ export interface Competition {
   entry_status?: 'before' | 'open' | 'closed' // エントリーステータス（デフォルト: before）
   attendance_status?: AttendanceStatusType | null // 出欠提出ステータス
   google_event_id?: string | null // Google CalendarイベントID
+  image_paths?: string[] // 画像パスの配列（R2/Storageのパス）
   note: string | null
   created_at: string
   updated_at: string
@@ -30,7 +31,10 @@ export interface Competition {
 export type CompetitionInsert = Omit<Competition, 'id' | 'created_at' | 'updated_at'>
 export type CompetitionUpdate = Partial<Omit<CompetitionInsert, 'user_id'>>
 
-// 大会画像
+/**
+ * 大会画像
+ * @deprecated competition_imagesテーブルは廃止予定。competitions.image_pathsを使用してください。
+ */
 export interface CompetitionImage {
   id: string
   competition_id: string
@@ -44,5 +48,7 @@ export interface CompetitionImage {
   updated_at: string
 }
 
+/** @deprecated */
 export type CompetitionImageInsert = Omit<CompetitionImage, 'id' | 'created_at' | 'updated_at'>
+/** @deprecated */
 export type CompetitionImageUpdate = Partial<Omit<CompetitionImageInsert, 'competition_id' | 'user_id'>>

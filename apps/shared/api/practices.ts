@@ -14,8 +14,6 @@ import {
     PracticeTimeInsert,
     PracticeUpdate,
     PracticeWithLogs,
-    PracticeImage,
-    PracticeImageInsert
 } from '../types'
 
 export class PracticeAPI {
@@ -499,194 +497,118 @@ export class PracticeAPI {
 
   // =========================================================================
   // 練習画像の操作
+  // NOTE: 画像パスはpractices.image_pathsで管理（practice_imagesテーブルは廃止）
   // =========================================================================
 
   /**
-   * 練習画像一覧取得
-   */
-  async getPracticeImages(practiceId: string): Promise<PracticeImage[]> {
-    const { data, error } = await this.supabase
-      .from('practice_images')
-      .select('*')
-      .eq('practice_id', practiceId)
-      .order('display_order')
-
-    if (error) throw error
-    return data || []
-  }
-
-  /**
-   * 練習画像のアップロード
+   * 練習画像をアップロード（API Route経由）
    * @param practiceId 練習記録ID
-   * @param originalFile オリジナル画像ファイル
-   * @param thumbnailFile サムネイル画像ファイル
-   * @param originalFileName 元ファイル名
-   * @param displayOrder 表示順序
-   * @returns 作成された画像レコード
+   * @param file 圧縮済み画像ファイル
+   * @returns 保存されたパス
    */
   async uploadPracticeImage(
     practiceId: string,
-    originalFile: File,
-    thumbnailFile: File,
-    originalFileName: string,
-    displayOrder: number = 0
-  ): Promise<PracticeImage> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
+    file: File
+  ): Promise<string> {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('practiceId', practiceId)
 
-    // ストレージパスを生成
-    const uuid = crypto.randomUUID()
-    const originalPath = `${user.id}/${practiceId}/original_${uuid}.webp`
-    const thumbnailPath = `${user.id}/${practiceId}/thumb_${uuid}.webp`
+    const appUrl = typeof window !== 'undefined'
+      ? window.location.origin
+      : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
-    // オリジナル画像をアップロード
-    const { error: originalError } = await this.supabase.storage
-      .from('practice-images')
-      .upload(originalPath, originalFile, {
-        contentType: 'image/webp',
-        upsert: false
-      })
+    const response = await fetch(`${appUrl}/api/storage/images/practice`, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include'
+    })
 
-    if (originalError) throw originalError
-
-    // サムネイル画像をアップロード
-    const { error: thumbnailError } = await this.supabase.storage
-      .from('practice-images')
-      .upload(thumbnailPath, thumbnailFile, {
-        contentType: 'image/webp',
-        upsert: false
-      })
-
-    if (thumbnailError) {
-      // サムネイルアップロードに失敗したらオリジナルも削除
-      await this.supabase.storage.from('practice-images').remove([originalPath])
-      throw thumbnailError
+    if (!response.ok) {
+      const errorData = await response.json() as { error?: string }
+      throw new Error(errorData.error || '画像のアップロードに失敗しました')
     }
 
-    // データベースに記録を作成
-    const insertData: PracticeImageInsert = {
-      practice_id: practiceId,
-      user_id: user.id,
-      original_path: originalPath,
-      thumbnail_path: thumbnailPath,
-      file_name: originalFileName,
-      file_size: originalFile.size,
-      display_order: displayOrder
-    }
-
-    const { data, error } = await this.supabase
-      .from('practice_images')
-      .insert(insertData)
-      .select()
-      .single()
-
-    if (error) {
-      // データベース挿入に失敗したらストレージのファイルも削除
-      await this.supabase.storage.from('practice-images').remove([originalPath, thumbnailPath])
-      throw error
-    }
-
-    return data
+    const result = await response.json() as { path: string }
+    return result.path
   }
 
   /**
    * 複数の練習画像を一括アップロード
-   * エラー発生時は成功済みの画像をすべてロールバック（ストレージ＋DB削除）
+   * エラー発生時は成功済みの画像をすべてロールバック
    */
   async uploadPracticeImages(
     practiceId: string,
-    images: Array<{
-      originalFile: File
-      thumbnailFile: File
-      originalFileName: string
-    }>
-  ): Promise<PracticeImage[]> {
-    const results: PracticeImage[] = []
-    
-    try {
-      for (let i = 0; i < images.length; i++) {
-        const img = images[i]
-        const result = await this.uploadPracticeImage(
-          practiceId,
-          img.originalFile,
-          img.thumbnailFile,
-          img.originalFileName,
-          i
-        )
-        results.push(result)
-      }
+    files: File[]
+  ): Promise<string[]> {
+    const results: string[] = []
 
+    try {
+      for (const file of files) {
+        const path = await this.uploadPracticeImage(practiceId, file)
+        results.push(path)
+      }
       return results
     } catch (error) {
       // ロールバック: 成功済みの画像をすべて削除
       console.error('画像アップロード中にエラーが発生。ロールバックを開始:', error)
-      
-      // 逆順で削除（最後に追加したものから削除）
-      for (let i = results.length - 1; i >= 0; i--) {
+
+      for (const path of results) {
         try {
-          await this.deletePracticeImage(results[i].id)
+          await this.deletePracticeImage(path)
         } catch (deleteError) {
-          // 削除エラーはログに記録するが、ロールバック処理は継続
-          console.error(`画像ID ${results[i].id} の削除に失敗:`, deleteError)
+          console.error(`画像 ${path} の削除に失敗:`, deleteError)
         }
       }
 
-      // 元のエラーを再スロー
       throw error
     }
   }
 
   /**
-   * 練習画像を削除
+   * 練習画像を削除（API Route経由）
+   * @param path 画像パス
    */
-  async deletePracticeImage(imageId: string): Promise<void> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
+  async deletePracticeImage(path: string): Promise<void> {
+    const appUrl = typeof window !== 'undefined'
+      ? window.location.origin
+      : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
-    // 画像情報を取得
-    const { data: image, error: fetchError } = await this.supabase
-      .from('practice_images')
-      .select('*')
-      .eq('id', imageId)
-      .eq('user_id', user.id)
-      .single()
+    const response = await fetch(`${appUrl}/api/storage/images/practice?path=${encodeURIComponent(path)}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    })
 
-    if (fetchError) throw fetchError
-    if (!image) throw new Error('画像が見つかりません')
-
-    // ストレージからファイルを削除
-    const { error: storageError } = await this.supabase.storage
-      .from('practice-images')
-      .remove([image.original_path, image.thumbnail_path])
-
-    if (storageError) {
-      console.error('ストレージ削除エラー:', storageError)
-      // ストレージ削除が失敗してもデータベースのレコードは削除を試みる
+    if (!response.ok) {
+      const errorData = await response.json() as { error?: string }
+      throw new Error(errorData.error || '画像の削除に失敗しました')
     }
-
-    // データベースのレコードを削除
-    const { error: deleteError } = await this.supabase
-      .from('practice_images')
-      .delete()
-      .eq('id', imageId)
-      .eq('user_id', user.id)
-
-    if (deleteError) throw deleteError
   }
 
   /**
    * 複数の練習画像を一括削除
    */
-  async deletePracticeImages(imageIds: string[]): Promise<void> {
-    for (const id of imageIds) {
-      await this.deletePracticeImage(id)
+  async deletePracticeImages(paths: string[]): Promise<void> {
+    for (const path of paths) {
+      await this.deletePracticeImage(path)
     }
   }
 
   /**
    * 画像のURL（publicUrl）を取得
+   * NOTE: R2使用時はR2_PUBLIC_URLを使用
    */
   getPracticeImageUrl(path: string): string {
+    // R2が有効な場合はR2のURLを使用
+    const r2PublicUrl = typeof window !== 'undefined'
+      ? (window as unknown as { __NEXT_PUBLIC_R2_PUBLIC_URL__?: string }).__NEXT_PUBLIC_R2_PUBLIC_URL__
+      : process.env.NEXT_PUBLIC_R2_PUBLIC_URL
+
+    if (r2PublicUrl) {
+      return `${r2PublicUrl}/practice-images/${path}`
+    }
+
+    // フォールバック: Supabase Storage
     const { data } = this.supabase.storage
       .from('practice-images')
       .getPublicUrl(path)

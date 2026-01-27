@@ -13,7 +13,7 @@ import type {
   RecordFormDataInternal
 } from '@/stores/types'
 import { processCompetitionImage, processPracticeImage } from '@/utils/imageUtils'
-import { CompetitionAPI, EntryAPI } from '@apps/shared/api'
+import { EntryAPI, PracticeAPI, CompetitionAPI } from '@apps/shared/api'
 import type { Style, PracticeLogTagInsert } from '@apps/shared/types'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@swim-hub/shared/types'
@@ -126,75 +126,70 @@ export function useDashboardHandlers({
         }
       }
 
-      // 画像の処理（安全な順序: アップロード → 検証 → 削除）
+      // 画像の処理（安全な順序: アップロード → 検証 → 削除 → DB更新）
+      // NOTE: 画像パスはpractices.image_pathsで管理（practice_imagesテーブルは廃止）
       if (practiceId && imageData) {
-        const uploadedImages: import('@swim-hub/shared/types').PracticeImage[] = []
+        const practiceAPI = new PracticeAPI(supabase)
+        const uploadedPaths: string[] = []
 
         try {
-          // Step 1: 新規画像をアップロード（API Route経由でR2/Supabase Storageにアップロード）
+          // Step 1: 新規画像をアップロード（圧縮版のみ）
           if (imageData.newFiles.length > 0) {
             const processedImages = await Promise.all(
               imageData.newFiles.map(async (fileData) => {
-                const { original, thumbnail } = await processPracticeImage(fileData.file)
-                return {
-                  originalFile: original,
-                  thumbnailFile: thumbnail,
-                  originalFileName: fileData.file.name
-                }
+                const { thumbnail } = await processPracticeImage(fileData.file)
+                return thumbnail
               })
             )
 
             // API Route経由でアップロード（R2優先、Supabase Storageフォールバック）
-            for (let i = 0; i < processedImages.length; i++) {
-              const img = processedImages[i]
-              const formData = new FormData()
-              formData.append('originalFile', img.originalFile)
-              formData.append('thumbnailFile', img.thumbnailFile)
-              formData.append('practiceId', practiceId)
-              formData.append('originalFileName', img.originalFileName)
-              formData.append('displayOrder', i.toString())
-
-              const response = await fetch('/api/storage/images/practice', {
-                method: 'POST',
-                body: formData
-              })
-
-              if (!response.ok) {
-                const errorData = await response.json() as { error?: string }
-                throw new Error(errorData.error || '画像のアップロードに失敗しました')
-              }
-
-              const result = await response.json() as import('@swim-hub/shared/types').PracticeImage
-              uploadedImages.push(result)
-            }
-
-            // Step 2: アップロード成功を確認
-            if (uploadedImages.length !== processedImages.length) {
-              throw new Error('一部の画像のアップロードに失敗しました')
+            for (const file of processedImages) {
+              const path = await practiceAPI.uploadPracticeImage(practiceId, file)
+              uploadedPaths.push(path)
             }
           }
 
-          // Step 3: アップロード成功後に削除を実行（API Route経由）
+          // Step 2: 既存のimage_pathsを取得
+          // NOTE: Supabaseの型推論が環境によってneverになることがあるため、型アサーションを使用
+          const { data: currentPractice } = await (supabase
+            .from('practices') as ReturnType<typeof supabase.from>)
+            .select('image_paths')
+            .eq('id', practiceId)
+            .single()
+
+          const practiceData = currentPractice as { image_paths?: string[] | null } | null
+          const existingPaths: string[] = practiceData?.image_paths || []
+
+          // Step 3: 削除対象のパスをストレージから削除
           if (imageData.deletedIds.length > 0) {
-            for (const imageId of imageData.deletedIds) {
-              const response = await fetch(`/api/storage/images/practice?imageId=${imageId}`, {
-                method: 'DELETE'
-              })
-              if (!response.ok) {
-                console.error(`画像ID ${imageId} の削除に失敗`)
+            for (const path of imageData.deletedIds) {
+              try {
+                await practiceAPI.deletePracticeImage(path)
+              } catch (deleteError) {
+                console.error(`画像 ${path} の削除に失敗:`, deleteError)
               }
             }
           }
+
+          // Step 4: image_pathsを更新（既存 - 削除 + 新規）
+          const newImagePaths = [
+            ...existingPaths.filter(p => !imageData.deletedIds.includes(p)),
+            ...uploadedPaths
+          ]
+
+          await (supabase
+            .from('practices') as ReturnType<typeof supabase.from>)
+            .update({ image_paths: newImagePaths } as Record<string, unknown>)
+            .eq('id', practiceId)
+
         } catch (imageError) {
           console.error('画像処理エラー:', imageError)
 
-          // Step 4: ロールバック - アップロードした画像を削除（API Route経由）
-          if (uploadedImages.length > 0) {
+          // ロールバック - アップロードした画像を削除
+          if (uploadedPaths.length > 0) {
             try {
-              for (const img of uploadedImages) {
-                await fetch(`/api/storage/images/practice?imageId=${img.id}`, {
-                  method: 'DELETE'
-                })
+              for (const path of uploadedPaths) {
+                await practiceAPI.deletePracticeImage(path)
               }
               console.log('ロールバック完了: アップロードした画像を削除しました')
             } catch (rollbackError) {
@@ -202,7 +197,6 @@ export function useDashboardHandlers({
             }
           }
 
-          // 画像処理エラーを再スロー
           throw new Error('画像の処理に失敗しました')
         }
       }
@@ -447,51 +441,76 @@ export function useDashboardHandlers({
         }
       }
 
-      // 画像の処理（安全な順序: アップロード → 検証 → 削除）
+      // 画像の処理（安全な順序: アップロード → 検証 → 削除 → DB更新）
+      // NOTE: 画像パスはcompetitions.image_pathsで管理（competition_imagesテーブルは廃止）
       if (competitionId && imageData) {
         const competitionAPI = new CompetitionAPI(supabase)
-        let uploadedImages: import('@swim-hub/shared/types').CompetitionImage[] = []
-        
+        const uploadedPaths: string[] = []
+
         try {
-          // Step 1: 新規画像をアップロード（先に実行してデータ損失を防ぐ）
+          // Step 1: 新規画像をアップロード（圧縮版のみ）
           if (imageData.newFiles.length > 0) {
             const processedImages = await Promise.all(
               imageData.newFiles.map(async (fileData) => {
-                const { original, thumbnail } = await processCompetitionImage(fileData.file)
-                return {
-                  originalFile: original,
-                  thumbnailFile: thumbnail,
-                  originalFileName: fileData.file.name
-                }
+                const { thumbnail } = await processCompetitionImage(fileData.file)
+                return thumbnail
               })
             )
-            uploadedImages = await competitionAPI.uploadCompetitionImages(competitionId, processedImages)
-            
-            // Step 2: アップロード成功を確認
-            if (uploadedImages.length !== processedImages.length) {
-              throw new Error('一部の画像のアップロードに失敗しました')
+
+            for (const file of processedImages) {
+              const path = await competitionAPI.uploadCompetitionImage(competitionId, file)
+              uploadedPaths.push(path)
             }
           }
-          
-          // Step 3: アップロード成功後に削除を実行
+
+          // Step 2: 既存のimage_pathsを取得
+          // NOTE: Supabaseの型推論が環境によってneverになることがあるため、型アサーションを使用
+          const { data: currentCompetition } = await (supabase
+            .from('competitions') as ReturnType<typeof supabase.from>)
+            .select('image_paths')
+            .eq('id', competitionId)
+            .single()
+
+          const competitionData = currentCompetition as { image_paths?: string[] | null } | null
+          const existingPaths: string[] = competitionData?.image_paths || []
+
+          // Step 3: 削除対象のパスをストレージから削除
           if (imageData.deletedIds.length > 0) {
-            await competitionAPI.deleteCompetitionImages(imageData.deletedIds)
+            for (const path of imageData.deletedIds) {
+              try {
+                await competitionAPI.deleteCompetitionImage(path)
+              } catch (deleteError) {
+                console.error(`画像 ${path} の削除に失敗:`, deleteError)
+              }
+            }
           }
+
+          // Step 4: image_pathsを更新（既存 - 削除 + 新規）
+          const newImagePaths = [
+            ...existingPaths.filter(p => !imageData.deletedIds.includes(p)),
+            ...uploadedPaths
+          ]
+
+          await (supabase
+            .from('competitions') as ReturnType<typeof supabase.from>)
+            .update({ image_paths: newImagePaths } as Record<string, unknown>)
+            .eq('id', competitionId)
+
         } catch (imageError) {
           console.error('画像処理エラー:', imageError)
-          
-          // Step 4: ロールバック - アップロードした画像を削除
-          if (uploadedImages.length > 0) {
+
+          // ロールバック - アップロードした画像を削除
+          if (uploadedPaths.length > 0) {
             try {
-              const uploadedIds = uploadedImages.map(img => img.id)
-              await competitionAPI.deleteCompetitionImages(uploadedIds)
+              for (const path of uploadedPaths) {
+                await competitionAPI.deleteCompetitionImage(path)
+              }
               console.log('ロールバック完了: アップロードした画像を削除しました')
             } catch (rollbackError) {
               console.error('ロールバック失敗:', rollbackError)
             }
           }
-          
-          // 画像処理エラーを再スロー
+
           throw new Error('画像の処理に失敗しました')
         }
       }

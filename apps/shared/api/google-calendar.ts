@@ -31,6 +31,7 @@ export async function syncPracticeToGoogleCalendar(
       headers: {
         'Content-Type': 'application/json'
       },
+      credentials: 'include',
       body: JSON.stringify({
         type: 'practice',
         data: practice,
@@ -79,6 +80,7 @@ export async function syncCompetitionToGoogleCalendar(
       headers: {
         'Content-Type': 'application/json'
       },
+      credentials: 'include',
       body: JSON.stringify({
         type: 'competition',
         data: competition,

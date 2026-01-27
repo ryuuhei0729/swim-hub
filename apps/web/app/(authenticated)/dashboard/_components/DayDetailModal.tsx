@@ -205,7 +205,7 @@ export default function DayDetailModal({
                         isTeamPractice={isPracticeMetadata(item.metadata) ? !!item.metadata.team_id : false}
                         teamId={isPracticeMetadata(item.metadata) ? item.metadata.team_id : undefined}
                         teamName={isPracticeMetadata(item.metadata) && isTeamInfo(item.metadata.team) ? item.metadata.team.name : undefined}
-                        onEdit={() => {
+                        onEdit={(images) => {
                           // practiceの編集
                           const practiceData = {
                             id: practiceId,
@@ -214,7 +214,8 @@ export default function DayDetailModal({
                             title: '練習',
                             place: item.place || '',
                             note: item.note || undefined,
-                            metadata: isPracticeMetadata(item.metadata) ? (item.metadata.practice || {}) : {}
+                            metadata: isPracticeMetadata(item.metadata) ? (item.metadata.practice || {}) : {},
+                            editData: { images }
                           }
                           onEditItem?.(practiceData)
                         }}
@@ -301,7 +302,7 @@ export default function DayDetailModal({
                         isTeamCompetition={!!item.metadata?.team_id}
                         deletedEntryIds={deletedEntryIds}
                         onAddRecord={onAddRecord}
-                        onEditCompetition={() => {
+                        onEditCompetition={(images) => {
                           // 大会情報を編集
                           const competitionData = {
                             id: competitionId,
@@ -319,7 +320,8 @@ export default function DayDetailModal({
                                 place: item.place || '',
                                 pool_type: item.metadata?.competition?.pool_type || 0
                               }
-                            }
+                            },
+                            editData: { images }
                           }
                           onEditItem?.(competitionData)
                         }}
@@ -436,7 +438,7 @@ export default function DayDetailModal({
                         isTeamCompetition={record.metadata?.competition?.team_id != null}
                         teamId={record.metadata?.competition?.team_id}
                         teamName={record.metadata?.competition?.team_id && isRecordMetadata(record.metadata) && isTeamInfo(record.metadata.team) ? record.metadata.team.name : undefined}
-                        onEdit={() => {
+                        onEdit={(images) => {
                           const competitionData = {
                             id: compId,
                             type: 'competition' as const,
@@ -453,7 +455,8 @@ export default function DayDetailModal({
                                 place: record.place || '',
                                 pool_type: poolType
                               }
-                            }
+                            },
+                            editData: { images }
                           }
                           onEditItem?.(competitionData)
                           // 編集フォームを開いた後、モーダルは開いたまま
@@ -794,7 +797,7 @@ function PracticeDetails({
   practiceId: string
   place?: string
   practiceLogUpdateKey?: string
-  onEdit?: () => void
+  onEdit?: (images?: GalleryImage[]) => void
   onDelete?: () => void
   onAddPracticeLog?: (practiceId: string) => void
   onEditPracticeLog?: (log: PracticeLogWithTimes & { tags?: PracticeTag[] }) => void
@@ -847,13 +850,6 @@ function PracticeDetails({
               practice_log_tags (
                 practice_tag:practice_tags (*)
               )
-            ),
-            practice_images (
-              id,
-              original_path,
-              thumbnail_path,
-              file_name,
-              display_order
             )
           `)
           .eq('id', practiceId)
@@ -861,7 +857,7 @@ function PracticeDetails({
 
         if (error) throw error
         if (!data) throw new Error('Practice data not found')
-        
+
         // データ整形（camelCase構造に変換）
         type PracticeLogFromDB = {
           id: string
@@ -876,16 +872,9 @@ function PracticeDetails({
           practice_log_tags?: Array<{ practice_tag: PracticeTag }>
           practice_times?: PracticeTime[]
         }
-        type PracticeImageFromDB = {
-          id: string
-          original_path: string
-          thumbnail_path: string
-          file_name: string
-          display_order: number
-        }
         type PracticeFromDB = Practice & {
           practice_logs?: PracticeLogFromDB[]
-          practice_images?: PracticeImageFromDB[]
+          image_paths?: string[]
         }
         const practiceData = data as PracticeFromDB
         const formattedPractice: PracticeWithFormattedLogs = {
@@ -909,16 +898,21 @@ function PracticeDetails({
             })) || []
           }))
         }
-        
-        // 画像データを変換
-        const images: GalleryImage[] = (practiceData.practice_images || [])
-          .sort((a, b) => a.display_order - b.display_order)
-          .map((img: PracticeImageFromDB) => ({
-            id: img.id,
-            thumbnailUrl: supabase.storage.from('practice-images').getPublicUrl(img.thumbnail_path).data.publicUrl,
-            originalUrl: supabase.storage.from('practice-images').getPublicUrl(img.original_path).data.publicUrl,
-            fileName: img.file_name
-          }))
+
+        // 画像データを変換（image_pathsから）
+        const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL
+        const imagePaths = practiceData.image_paths || []
+        const images: GalleryImage[] = imagePaths.map((path: string, index: number) => {
+          const imageUrl = r2PublicUrl
+            ? `${r2PublicUrl}/practice-images/${path}`
+            : supabase.storage.from('practice-images').getPublicUrl(path).data.publicUrl
+          return {
+            id: path, // パスをIDとして使用
+            thumbnailUrl: imageUrl,
+            originalUrl: imageUrl,
+            fileName: path.split('/').pop() || `image-${index + 1}`
+          }
+        })
         
         setPractice(formattedPractice)
         setPracticeImages(images)
@@ -1036,7 +1030,7 @@ function PracticeDetails({
           </div>
           <div className="flex items-center space-x-2 ml-4">
             <button
-              onClick={onEdit}
+              onClick={() => onEdit?.(practiceImages)}
               className="p-2 text-gray-500 hover:text-green-600 rounded-lg hover:bg-green-100 transition-colors"
               title="練習記録を編集"
               data-testid="edit-practice-button"
@@ -1476,7 +1470,7 @@ function CompetitionDetails({
   poolType?: number
   note?: string
   records?: CalendarItem[]
-  onEdit?: () => void
+  onEdit?: (images?: GalleryImage[]) => void
   onDelete?: () => void
   onAddRecord?: (params: { competitionId?: string; entryData?: { styleId: number; styleName: string } }) => void
   onEditRecord?: (record: Record) => void
@@ -1498,6 +1492,31 @@ function CompetitionDetails({
     const loadRecords = async () => {
       try {
         setLoading(true)
+
+        // 大会の画像パスを直接取得（recordsの有無に関わらず）
+        const { data: competitionData } = await (supabase
+          .from('competitions') as ReturnType<typeof supabase.from>)
+          .select('image_paths')
+          .eq('id', competitionId)
+          .single()
+
+        const competition = competitionData as { image_paths?: string[] | null } | null
+        const imagePaths = competition?.image_paths || []
+        const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL
+        const images: GalleryImage[] = imagePaths.map((path: string, index: number) => {
+          const imageUrl = r2PublicUrl
+            ? `${r2PublicUrl}/competition-images/${path}`
+            : supabase.storage.from('competition-images').getPublicUrl(path).data.publicUrl
+          return {
+            id: path, // パスをIDとして使用
+            thumbnailUrl: imageUrl,
+            originalUrl: imageUrl,
+            fileName: path.split('/').pop() || `image-${index + 1}`
+          }
+        })
+        setCompetitionImages(images)
+
+        // recordsを取得
         let recordQuery = supabase
           .from('records')
           .select(`
@@ -1513,19 +1532,9 @@ function CompetitionDetails({
           recordQuery = recordQuery.eq('user_id', user.id)
         }
 
-        const imagesQuery = supabase
-          .from('competition_images')
-          .select('id, original_path, thumbnail_path, file_name, display_order')
-          .eq('competition_id', competitionId)
-          .order('display_order')
-
-        const [{ data, error }, { data: imageData, error: imageError }] = await Promise.all([
-          recordQuery,
-          imagesQuery
-        ])
+        const { data, error } = await recordQuery
 
         if (error) throw error
-        if (imageError) throw imageError
 
         // calendar_view形式に変換
         type RecordFromDB = {
@@ -1589,24 +1598,6 @@ function CompetitionDetails({
         }))
 
         setActualRecords(formattedRecords)
-
-        // 画像データを変換
-        type CompetitionImageFromDB = {
-          id: string
-          original_path: string
-          thumbnail_path: string
-          file_name: string
-          display_order: number
-        }
-        const images: GalleryImage[] = ((imageData || []) as CompetitionImageFromDB[])
-          .sort((a, b) => a.display_order - b.display_order)
-          .map((img: CompetitionImageFromDB) => ({
-            id: img.id,
-            thumbnailUrl: supabase.storage.from('competition-images').getPublicUrl(img.thumbnail_path).data.publicUrl,
-            originalUrl: supabase.storage.from('competition-images').getPublicUrl(img.original_path).data.publicUrl,
-            fileName: img.file_name
-          }))
-        setCompetitionImages(images)
       } catch (err) {
         console.error('記録の取得エラー:', err)
         setActualRecords([])
@@ -1668,7 +1659,7 @@ function CompetitionDetails({
           </div>
           <div className="flex items-center space-x-2 ml-4">
             <button
-              onClick={onEdit}
+              onClick={() => onEdit?.(competitionImages)}
               className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
               title="大会情報を編集"
               data-testid="edit-competition-button"
@@ -1959,7 +1950,7 @@ function CompetitionWithEntry({
   isTeamCompetition?: boolean
   deletedEntryIds?: string[]
   onAddRecord?: (params: { competitionId?: string; entryData?: { styleId: number; styleName: string }; entryDataList?: EntryInfo[] }) => void
-  onEditCompetition?: () => void
+  onEditCompetition?: (images?: GalleryImage[]) => void
   onDeleteCompetition?: () => void
   onEditEntry?: () => void
   onDeleteEntry?: (entryId: string) => void
@@ -1998,40 +1989,31 @@ function CompetitionWithEntry({
           return
         }
 
-        // 添付画像を取得
-        const { data: imageData, error: imageError } = await supabase
-          .from('competition_images')
-          .select('id, original_path, thumbnail_path, file_name, display_order')
-          .eq('competition_id', competitionId)
-          .order('display_order')
-        if (imageError) throw imageError
-
-        type CompetitionImageFromDB = {
-          id: string
-          original_path: string
-          thumbnail_path: string
-          file_name: string
-          display_order: number
-        }
-        const images: GalleryImage[] = ((imageData || []) as CompetitionImageFromDB[])
-          .sort((a, b) => a.display_order - b.display_order)
-          .map((img: CompetitionImageFromDB) => ({
-            id: img.id,
-            thumbnailUrl: supabase.storage.from('competition-images').getPublicUrl(img.thumbnail_path).data.publicUrl,
-            originalUrl: supabase.storage.from('competition-images').getPublicUrl(img.original_path).data.publicUrl,
-            fileName: img.file_name
-          }))
-        setCompetitionImages(images)
-
-        // competitionのentry_statusを取得
+        // competitionのentry_statusとimage_pathsを取得
         const { data: competitionData, error: competitionError } = await supabase
           .from('competitions')
-          .select('entry_status')
+          .select('entry_status, image_paths')
           .eq('id', competitionId)
           .single()
 
         if (!competitionError && competitionData) {
           setEntryStatus(competitionData.entry_status || 'before')
+
+          // 画像データを変換（image_pathsから）
+          const imagePaths = (competitionData as { image_paths?: string[] }).image_paths || []
+          const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL
+          const images: GalleryImage[] = imagePaths.map((path: string, index: number) => {
+            const imageUrl = r2PublicUrl
+              ? `${r2PublicUrl}/competition-images/${path}`
+              : supabase.storage.from('competition-images').getPublicUrl(path).data.publicUrl
+            return {
+              id: path, // パスをIDとして使用
+              thumbnailUrl: imageUrl,
+              originalUrl: imageUrl,
+              fileName: path.split('/').pop() || `image-${index + 1}`
+            }
+          })
+          setCompetitionImages(images)
         }
 
         // EntryAPIを使用してエントリーを取得
@@ -2167,7 +2149,7 @@ function CompetitionWithEntry({
           <div className="flex items-center gap-2">
             {onEditCompetition && (
               <button
-                onClick={onEditCompetition}
+                onClick={() => onEditCompetition(competitionImages)}
                 className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
                 title="大会を編集"
                 data-testid="edit-competition-button"

@@ -20,6 +20,7 @@ export interface BasePractice {
   team_id?: string | null
   attendance_status?: AttendanceStatusType | null // 出欠提出ステータス
   google_event_id?: string | null // Google CalendarイベントID
+  image_paths?: string[] // 画像パスの配列（R2/Storageのパス）
   created_at: string
   updated_at: string
 }
@@ -67,7 +68,10 @@ export interface PracticeLog {
 export type PracticeLogInsert = Omit<PracticeLog, 'id' | 'created_at' | 'updated_at'>
 export type PracticeLogUpdate = Partial<Omit<PracticeLogInsert, 'practice_id'>>
 
-// 練習画像
+/**
+ * 練習画像
+ * @deprecated practice_imagesテーブルは廃止予定。practices.image_pathsを使用してください。
+ */
 export interface PracticeImage {
   id: string
   practice_id: string
@@ -81,7 +85,9 @@ export interface PracticeImage {
   updated_at: string
 }
 
+/** @deprecated */
 export type PracticeImageInsert = Omit<PracticeImage, 'id' | 'created_at' | 'updated_at'>
+/** @deprecated */
 export type PracticeImageUpdate = Partial<Omit<PracticeImageInsert, 'practice_id' | 'user_id'>>
 
 // 練習タイム

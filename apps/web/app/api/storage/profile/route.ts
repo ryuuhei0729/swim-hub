@@ -45,12 +45,12 @@ export async function POST(request: NextRequest) {
     const ext = ALLOWED_EXTENSIONS.has(rawExt) ? rawExt : 'webp'
     // 衝突耐性のあるUUIDを使用
     const fileName = `${randomUUID()}.${ext}`
-    const key = `profiles/avatars/${user.id}/${fileName}`
+    const key = `profile-images/${user.id}/${fileName}`
 
     // R2が有効な場合はR2を使用
     if (isR2Enabled()) {
       // 既存の画像を削除
-      const existingFiles = await listR2Objects(`profiles/avatars/${user.id}/`)
+      const existingFiles = await listR2Objects(`profile-images/${user.id}/`)
       if (existingFiles.length > 0) {
         await deleteMultipleFromR2(existingFiles)
       }
@@ -113,7 +113,7 @@ export async function DELETE() {
 
     // R2が有効な場合はR2を使用
     if (isR2Enabled()) {
-      const existingFiles = await listR2Objects(`profiles/avatars/${user.id}/`)
+      const existingFiles = await listR2Objects(`profile-images/${user.id}/`)
       if (existingFiles.length > 0) {
         await deleteMultipleFromR2(existingFiles)
       }
