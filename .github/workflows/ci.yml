@@ -324,13 +324,18 @@ jobs:
       with:
         node-version: ${{ env.NODE_VERSION }}
 
-    - name: Build Next.js app
+    - name: Build for Cloudflare (OpenNext)
       working-directory: apps/web
       run: |
+        # .env.productionを一時的にリネームしてNext.jsの自動読み込みを防ぐ
+        mv .env.production .env.enc
         if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-          npx dotenvx run -f .env.production -- next build
+          npx dotenvx run -f .env.enc -- npx opennextjs-cloudflare build
         else
-          npx dotenvx run -f .env.development -- next build
+          mv .env.enc .env.production
+          mv .env.development .env.enc
+          npx dotenvx run -f .env.enc -- npx opennextjs-cloudflare build
+          mv .env.enc .env.development
         fi
       env:
         DOTENV_PRIVATE_KEY_PRODUCTION: ${{ secrets.DOTENV_PRIVATE_KEY_PRODUCTION }}
@@ -338,13 +343,17 @@ jobs:
 
     - name: Debug - List build output
       working-directory: apps/web
-      run: ls -la .next || echo ".next directory not found"
+      run: |
+        ls -la .next || echo ".next directory not found"
+        ls -la .open-next || echo ".open-next directory not found"
 
     - name: Upload build output artifact
       uses: actions/upload-artifact@v4
       with:
         name: build-output
-        path: apps/web/.next
+        path: |
+          apps/web/.next
+          apps/web/.open-next
         retention-days: 1
         compression-level: 9
         if-no-files-found: error
@@ -368,20 +377,29 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: build-output
-        path: apps/web/.next
+        path: apps/web
 
     - name: Setup Node.js and Install dependencies
       uses: ./.github/actions/setup-node
       with:
         node-version: ${{ env.NODE_VERSION }}
 
+    - name: Debug - Check downloaded artifacts
+      working-directory: apps/web
+      run: |
+        echo "=== apps/web contents ==="
+        ls -la
+        echo "=== .next exists? ==="
+        ls -la .next || echo ".next not found"
+        echo "=== .open-next exists? ==="
+        ls -la .open-next || echo ".open-next not found"
+
     - name: Deploy to Cloudflare Workers
       working-directory: apps/web
-      run: npm run deploy
+      run: npm run deploy:only
       env:
         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        DOTENV_PRIVATE_KEY_PRODUCTION: ${{ secrets.DOTENV_PRIVATE_KEY_PRODUCTION }}
 
   deploy-preview:
     needs: build
@@ -401,7 +419,7 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: build-output
-        path: apps/web/.next
+        path: apps/web
 
     - name: Setup Node.js and Install dependencies
       uses: ./.github/actions/setup-node
@@ -410,8 +428,7 @@ jobs:
 
     - name: Deploy to Cloudflare Workers (Preview)
       working-directory: apps/web
-      run: npm run deploy:preview
+      run: npx wrangler deploy --env preview
       env:
         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        DOTENV_PRIVATE_KEY_DEVELOPMENT: ${{ secrets.DOTENV_PRIVATE_KEY_DEVELOPMENT }}
