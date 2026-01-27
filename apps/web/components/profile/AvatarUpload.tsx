@@ -78,7 +78,7 @@ export default function AvatarUpload({
       })
 
       if (!response.ok) {
-        const data = await response.json()
+        const data = await response.json() as { error?: string }
         throw new Error(data.error || '画像の削除に失敗しました')
       }
 
@@ -109,11 +109,11 @@ export default function AvatarUpload({
       })
 
       if (!response.ok) {
-        const data = await response.json()
+        const data = await response.json() as { error?: string }
         throw new Error(data.error || '画像のアップロードに失敗しました')
       }
 
-      const { url } = await response.json()
+      const { url } = await response.json() as { url: string }
       onAvatarChange(url)
     } catch (err) {
       console.error('アップロードエラー:', err)

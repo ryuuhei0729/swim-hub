@@ -1,40 +1,29 @@
 /**
  * Cloudflare R2 クライアント
- * S3互換APIを使用してR2バケットを操作
+ * Cloudflare Workers環境ではR2バインディングを使用
+ * ローカル開発環境ではS3互換APIを使用（フォールバック）
  */
-import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3'
 
-// R2クライアントの初期化（遅延初期化）
-let r2Client: S3Client | null = null
+/// <reference types="@cloudflare/workers-types" />
 
-function getR2Client(): S3Client {
-  if (!r2Client) {
-    const accountId = process.env.R2_ACCOUNT_ID
-    const accessKeyId = process.env.R2_ACCESS_KEY_ID
-    const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY
-
-    if (!accountId || !accessKeyId || !secretAccessKey) {
-      throw new Error('R2環境変数が設定されていません')
-    }
-
-    r2Client = new S3Client({
-      region: 'auto',
-      endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-      credentials: {
-        accessKeyId,
-        secretAccessKey,
-      },
-    })
+// CloudflareEnvを拡張してR2_BUCKETバインディングを追加
+declare global {
+  interface CloudflareEnv {
+    R2_BUCKET?: R2Bucket
   }
-  return r2Client
 }
 
-const getBucketName = (): string => {
-  const bucketName = process.env.R2_BUCKET_NAME
-  if (!bucketName) {
-    throw new Error('R2_BUCKET_NAMEが設定されていません')
+/**
+ * R2バケットを取得（Cloudflare Workers環境）
+ */
+async function getR2Bucket(): Promise<R2Bucket> {
+  const { getCloudflareContext } = await import('@opennextjs/cloudflare')
+  const ctx = await getCloudflareContext({ async: true })
+  const bucket = ctx.env.R2_BUCKET
+  if (!bucket) {
+    throw new Error('R2_BUCKETバインディングが設定されていません')
   }
-  return bucketName
+  return bucket
 }
 
 const getPublicUrl = (): string => {
@@ -47,15 +36,11 @@ const getPublicUrl = (): string => {
 
 /**
  * R2が有効かどうかを確認
+ * バインディングが設定されているかどうかはランタイムでしか確認できないため、
+ * 公開URLの設定有無で判断
  */
 export function isR2Enabled(): boolean {
-  return !!(
-    process.env.R2_ACCOUNT_ID &&
-    process.env.R2_ACCESS_KEY_ID &&
-    process.env.R2_SECRET_ACCESS_KEY &&
-    process.env.R2_BUCKET_NAME &&
-    process.env.R2_PUBLIC_URL
-  )
+  return !!process.env.R2_PUBLIC_URL
 }
 
 /**
@@ -70,17 +55,13 @@ export async function uploadToR2(
   key: string,
   contentType: string
 ): Promise<string> {
-  const client = getR2Client()
-  const bucketName = getBucketName()
+  const bucket = await getR2Bucket()
 
-  await client.send(
-    new PutObjectCommand({
-      Bucket: bucketName,
-      Key: key,
-      Body: file,
-      ContentType: contentType,
-    })
-  )
+  await bucket.put(key, file, {
+    httpMetadata: {
+      contentType,
+    },
+  })
 
   return `${getPublicUrl()}/${key}`
 }
@@ -90,15 +71,8 @@ export async function uploadToR2(
  * @param key ファイルのキー（パス）
  */
 export async function deleteFromR2(key: string): Promise<void> {
-  const client = getR2Client()
-  const bucketName = getBucketName()
-
-  await client.send(
-    new DeleteObjectCommand({
-      Bucket: bucketName,
-      Key: key,
-    })
-  )
+  const bucket = await getR2Bucket()
+  await bucket.delete(key)
 }
 
 /**
@@ -107,18 +81,12 @@ export async function deleteFromR2(key: string): Promise<void> {
  * @returns ファイルキーの配列
  */
 export async function listR2Objects(prefix: string): Promise<string[]> {
-  const client = getR2Client()
-  const bucketName = getBucketName()
+  const bucket = await getR2Bucket()
 
-  const response = await client.send(
-    new ListObjectsV2Command({
-      Bucket: bucketName,
-      Prefix: prefix,
-    })
-  )
+  const listed = await bucket.list({ prefix })
 
-  return (response.Contents || [])
-    .map(obj => obj.Key)
+  return listed.objects
+    .map(obj => obj.key)
     .filter((key): key is string => key !== undefined)
 }
 
@@ -127,9 +95,9 @@ export async function listR2Objects(prefix: string): Promise<string[]> {
  * @param keys ファイルキーの配列
  */
 export async function deleteMultipleFromR2(keys: string[]): Promise<void> {
-  for (const key of keys) {
-    await deleteFromR2(key)
-  }
+  const bucket = await getR2Bucket()
+  // R2は一括削除をサポートしていないので個別に削除
+  await Promise.all(keys.map(key => bucket.delete(key)))
 }
 
 /**

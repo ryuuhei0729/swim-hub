@@ -54,6 +54,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260127.0",
     "@eslint/eslintrc": "^3",
     "@next/bundle-analyzer": "^15.5.9",
     "@opennextjs/cloudflare": "^1.15.1",

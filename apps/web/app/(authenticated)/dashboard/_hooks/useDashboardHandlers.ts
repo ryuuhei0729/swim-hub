@@ -160,11 +160,11 @@ export function useDashboardHandlers({
               })
 
               if (!response.ok) {
-                const errorData = await response.json()
+                const errorData = await response.json() as { error?: string }
                 throw new Error(errorData.error || '画像のアップロードに失敗しました')
               }
 
-              const result = await response.json()
+              const result = await response.json() as import('@swim-hub/shared/types').PracticeImage
               uploadedImages.push(result)
             }
 
