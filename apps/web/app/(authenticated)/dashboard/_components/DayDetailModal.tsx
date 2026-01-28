@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { XMarkIcon, PencilIcon, TrashIcon, ClipboardDocumentCheckIcon, ShareIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, PencilIcon, TrashIcon, ClipboardDocumentCheckIcon, ShareIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline'
 import { BoltIcon, TrophyIcon } from '@heroicons/react/24/solid'
 import { format, parseISO, isValid } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -119,23 +119,22 @@ export default function DayDetailModal({
             {/* エントリーがない場合 */}
             {entries.length === 0 && (
               <div className="text-center py-8">
-                <p className="text-gray-500 mb-4" data-testid="empty-day-message">この日の記録はありません</p>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => onAddItem?.(date, 'practice')}
-                    className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500"
-                    data-testid="add-practice-button"
-                  >
-                    <span className="mr-2">💪</span>
-                    練習予定を追加
-                  </button>
+                <div className="flex gap-3">
                   <button
                     onClick={() => onAddItem?.(date, 'record')}
-                    className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-blue-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 flex flex-col items-center justify-center px-4 py-12 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-blue-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300"
                     data-testid="add-record-button"
                   >
-                    <span className="mr-2">🏊‍♂️</span>
+                    <TrophyIcon className="h-8 w-8 text-blue-500 mb-2" />
                     大会記録を追加
+                  </button>
+                  <button
+                    onClick={() => onAddItem?.(date, 'practice')}
+                    className="flex-1 flex flex-col items-center justify-center px-4 py-12 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    data-testid="add-practice-button"
+                  >
+                    <ClipboardDocumentListIcon className="h-8 w-8 text-green-500 mb-2" />
+                    練習予定を追加
                   </button>
                 </div>
               </div>
@@ -489,20 +488,20 @@ export default function DayDetailModal({
                 <h4 className="text-sm font-medium text-gray-700 mb-3">記録を追加</h4>
                 <div className="grid grid-cols-2 gap-3">
                   <button
-                    onClick={() => onAddItem?.(date, 'practice')}
-                    className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500"
-                    data-testid="add-practice-button"
-                  >
-                    <span className="mr-2">💪</span>
-                    練習記録
-                  </button>
-                  <button
                     onClick={() => onAddItem?.(date, 'record')}
                     className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-blue-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     data-testid="add-record-button"
                   >
-                    <span className="mr-2">🏊‍♂️</span>
+                    <TrophyIcon className="h-5 w-5 text-blue-500 mr-2" />
                     大会記録
+                  </button>
+                  <button
+                    onClick={() => onAddItem?.(date, 'practice')}
+                    className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    data-testid="add-practice-button"
+                  >
+                    <ClipboardDocumentListIcon className="h-5 w-5 text-green-500 mr-2" />
+                    練習記録
                   </button>
                 </div>
               </div>
