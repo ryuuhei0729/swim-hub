@@ -63,6 +63,7 @@ export interface MilestoneTimeParams {
   distance: number
   target_time: number
   style: string
+  swim_category: 'Swim' | 'Pull' | 'Kick'
 }
 
 export interface MilestoneRepsTimeParams {

@@ -88,7 +88,8 @@ export default function MilestoneCreateModal({
       const timeTrialParams: MilestoneTimeParams = {
         distance: goal.style.distance,
         target_time: Math.round((goal.target_time * 1.01) * 100) / 100,
-        style: styleValue
+        style: styleValue,
+        swim_category: 'Swim'
       }
 
       setType('time')
@@ -254,44 +255,46 @@ export default function MilestoneCreateModal({
                 availableTemplates={availableTemplates}
               />
 
-              {/* テンプレートにも追加するチェックボックス（reps_timeまたはsetタイプの場合のみ） */}
-              {(type === 'reps_time' || type === 'set') && (
-                <div className="border-t pt-4">
-                  <label className="flex items-start gap-3 cursor-pointer">
+              {/* ボタン行（チェックボックス含む） */}
+              <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                {/* テンプレートにも追加するチェックボックス（reps_timeまたはsetタイプの場合のみ） */}
+                {(type === 'reps_time' || type === 'set') ? (
+                  <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={addToTemplate}
                       onChange={(e) => setAddToTemplate(e.target.checked)}
-                      className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                     <div>
                       <span className="text-sm font-medium text-gray-700">
-                        テンプレートにも追加する
+                        テンプレートにも追加
                       </span>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        練習作成時にすぐ使えます
-                      </p>
+                      <span className="text-xs text-gray-500 ml-1">
+                        (練習作成時に使用)
+                      </span>
                     </div>
                   </label>
-                </div>
-              )}
+                ) : (
+                  <div />
+                )}
 
-              {/* ボタン */}
-              <div className="flex justify-end gap-3 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleClose}
-                  disabled={isLoading}
-                >
-                  キャンセル
-                </Button>
-                <Button
-                  type="submit"
-                  loading={isLoading}
-                >
-                  作成
-                </Button>
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleClose}
+                    disabled={isLoading}
+                  >
+                    キャンセル
+                  </Button>
+                  <Button
+                    type="submit"
+                    loading={isLoading}
+                  >
+                    作成
+                  </Button>
+                </div>
               </div>
             </form>
           </div>

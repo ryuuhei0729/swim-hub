@@ -1,60 +1,45 @@
 'use client'
 
 import React, { useState } from 'react'
-import { XMarkIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, TrophyIcon, FlagIcon } from '@heroicons/react/24/outline'
 import { Button, Input } from '@/components/ui'
 import { useAuth } from '@/contexts'
 import { GoalAPI } from '@apps/shared/api/goals'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import type { Milestone, MilestoneTimeParams, MilestoneRepsTimeParams, MilestoneSetParams, UpdateMilestoneInput } from '@apps/shared/types'
-import { isMilestoneTimeParams, isMilestoneRepsTimeParams, isMilestoneSetParams } from '@apps/shared/types/goals'
+import { formatTime } from '@/utils/formatters'
+import type { GoalWithMilestones } from '@apps/shared/types'
 
-interface ReflectionModalProps {
+interface GoalReflectionModalProps {
   isOpen: boolean
   onClose: () => void
-  milestone: Milestone
+  goal: GoalWithMilestones
   onSave: () => Promise<void>
 }
 
 const REFLECTION_OPTIONS = [
-  { id: 'goal_too_high', label: '目標が高すぎた' },
-  { id: 'period_too_short', label: '期間が短かった' },
+  { id: 'goal_too_high', label: '目標タイムが高すぎた' },
+  { id: 'period_too_short', label: '準備期間が短かった' },
   { id: 'practice_insufficient', label: '練習量が足りなかった' },
   { id: 'condition_poor', label: 'コンディション不良' },
   { id: 'other', label: 'その他' }
 ]
 
 /**
- * 期限切れ内省モーダル
+ * 目標期限切れ振り返りモーダル
  */
-export default function ReflectionModal({
+export default function GoalReflectionModal({
   isOpen,
   onClose,
-  milestone,
+  goal,
   onSave
-}: ReflectionModalProps) {
+}: GoalReflectionModalProps) {
   const { supabase } = useAuth()
   const [selectedOptions, setSelectedOptions] = useState<string[]>([])
   const [otherNote, setOtherNote] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
   const goalAPI = new GoalAPI(supabase)
-
-  const formatMilestoneTitle = (): string => {
-    const params = milestone.params
-    if (isMilestoneTimeParams(params)) {
-      const p = params as MilestoneTimeParams
-      return `${p.distance}m × 1本: ${p.target_time}秒`
-    } else if (isMilestoneRepsTimeParams(params)) {
-      const p = params as MilestoneRepsTimeParams
-      return `${p.distance}m × ${p.reps}本 @${p.target_average_time}秒 平均`
-    } else if (isMilestoneSetParams(params)) {
-      const p = params as MilestoneSetParams
-      return `${p.distance}m × ${p.reps}本 × ${p.sets}セット (@${p.circle}秒サークル) 完遂`
-    }
-    return milestone.title
-  }
 
   const handleOptionToggle = (optionId: string) => {
     setSelectedOptions(prev => {
@@ -66,40 +51,29 @@ export default function ReflectionModal({
     })
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
+  // 達成を記録
+  const handleAchieved = async () => {
     setIsLoading(true)
     try {
-      // 内省メモを構築
-      const reflectionNote = [
-        ...selectedOptions.map(id => {
-          const option = REFLECTION_OPTIONS.find(o => o.id === id)
-          return option?.label || id
-        }),
-        otherNote ? `その他: ${otherNote}` : ''
-      ].filter(Boolean).join('\n')
-
-      await goalAPI.updateMilestone(milestone.id, {
-        reflectionNote: reflectionNote || null
-      } as Omit<UpdateMilestoneInput, 'id'>)
-
+      await goalAPI.updateGoal(goal.id, {
+        status: 'achieved'
+      })
       await onSave()
       handleClose()
     } catch (error) {
-      console.error('内省メモ保存エラー:', error)
-      alert('内省メモの保存に失敗しました')
+      console.error('目標更新エラー:', error)
+      alert('目標の更新に失敗しました')
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleAction = async () => {
+  // 未達成として保存（振り返りメモ付き）
+  const handleNotAchieved = async () => {
     setIsLoading(true)
-
     try {
-      // 内省メモを構築して保存
-      const reflectionNote = [
+      // 振り返りメモを構築（将来的にDBに保存する際に使用）
+      const _reflectionNote = [
         ...selectedOptions.map(id => {
           const option = REFLECTION_OPTIONS.find(o => o.id === id)
           return option?.label || id
@@ -107,16 +81,16 @@ export default function ReflectionModal({
         otherNote ? `その他: ${otherNote}` : ''
       ].filter(Boolean).join('\n')
 
-      await goalAPI.updateMilestone(milestone.id, {
-        reflectionNote: reflectionNote || null
-      } as Omit<UpdateMilestoneInput, 'id'>)
+      // 目標をキャンセル状態に更新
+      await goalAPI.updateGoal(goal.id, {
+        status: 'cancelled'
+      })
 
-      // 新しいマイルストーンを作成 → 振り返りを保存してモーダルを閉じる
       await onSave()
       handleClose()
     } catch (error) {
-      console.error('アクション実行エラー:', error)
-      alert('処理に失敗しました')
+      console.error('目標更新エラー:', error)
+      alert('目標の更新に失敗しました')
     } finally {
       setIsLoading(false)
     }
@@ -130,6 +104,9 @@ export default function ReflectionModal({
 
   if (!isOpen) return null
 
+  const achievedMilestones = goal.milestones.filter(m => m.status === 'achieved')
+  const totalMilestones = goal.milestones.length
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
@@ -141,7 +118,7 @@ export default function ReflectionModal({
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">
-                マイルストーンの振り返り
+                大会目標の振り返り
               </h3>
               <button
                 onClick={handleClose}
@@ -153,23 +130,65 @@ export default function ReflectionModal({
 
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-2">
-                以下のマイルストーンが期限を迎えました
+                以下の大会目標が期限を迎えました
               </p>
               <div className="bg-gray-50 rounded-lg p-4">
-                <p className="font-medium text-gray-900">{milestone.title}</p>
+                <p className="font-medium text-gray-900">{goal.competition.title || '大会'}</p>
                 <p className="text-sm text-gray-600 mt-1">
-                  {formatMilestoneTitle()}
+                  {goal.style?.name_jp || '種目'} | 目標: {formatTime(goal.target_time)}
                 </p>
-                {milestone.deadline && (
+                {goal.start_time && (
                   <p className="text-xs text-gray-500 mt-1">
-                    期限: {format(new Date(milestone.deadline), 'yyyy年M月d日', { locale: ja })}
+                    初期タイム: {formatTime(goal.start_time)}
+                  </p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  大会日: {format(new Date(goal.competition.date), 'yyyy年M月d日', { locale: ja })}
+                </p>
+                {totalMilestones > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    マイルストーン達成: {achievedMilestones.length}/{totalMilestones}
                   </p>
                 )}
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* 振り返り選択 */}
+            {/* 達成したかどうかの選択 */}
+            <div className="mb-4">
+              <p className="text-sm font-medium text-gray-700 mb-3">
+                目標は達成できましたか？
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  type="button"
+                  onClick={handleAchieved}
+                  disabled={isLoading}
+                  className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700"
+                >
+                  <TrophyIcon className="w-5 h-5" />
+                  達成した！
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    // 未達成セクションを表示
+                    const reflectionSection = document.getElementById('reflection-section')
+                    if (reflectionSection) {
+                      reflectionSection.classList.remove('hidden')
+                    }
+                  }}
+                  disabled={isLoading}
+                  className="flex items-center justify-center gap-2"
+                >
+                  <FlagIcon className="w-5 h-5" />
+                  達成できなかった
+                </Button>
+              </div>
+            </div>
+
+            {/* 振り返りセクション（未達成時に表示） */}
+            <div id="reflection-section" className="hidden space-y-4 border-t pt-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   振り返り（選択式）
@@ -204,26 +223,8 @@ export default function ReflectionModal({
                 </div>
               )}
 
-              {/* 次のアクション */}
-              <div>
-                <p className="text-sm font-medium text-gray-700 mb-2">
-                  次のアクション
-                </p>
-                <div className="space-y-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    disabled={isLoading}
-                    onClick={handleAction}
-                  >
-                    新しいマイルストーンを作成
-                  </Button>
-                </div>
-              </div>
-
-              {/* ボタン */}
-              <div className="flex justify-end gap-3 pt-4">
+              {/* 保存ボタン */}
+              <div className="flex justify-end gap-3 pt-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -233,13 +234,14 @@ export default function ReflectionModal({
                   スキップ
                 </Button>
                 <Button
-                  type="submit"
+                  type="button"
+                  onClick={handleNotAchieved}
                   loading={isLoading}
                 >
                   保存
                 </Button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       </div>

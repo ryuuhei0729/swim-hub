@@ -81,6 +81,8 @@ export default function PracticeBasicForm({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   // 送信済みフラグ（送信後は警告を出さない）
   const [isSubmitted, setIsSubmitted] = useState(false)
+  // 初期値を保存（初期化時の変更を無視するため）
+  const initialFormDataRef = useRef<PracticeBasicData | null>(null)
   // 確認ダイアログの表示状態
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   // 確認ダイアログのコンテキスト（close: モーダル閉じる, back: ブラウザバック）
@@ -117,14 +119,18 @@ export default function PracticeBasicForm({
       setShowConfirmDialog(false)
       // 画像データもリセット
       setImageData({ newFiles: [], deletedIds: [] })
+      initialFormDataRef.current = null
     }
   }, [isOpen])
 
-  // フォームに変更があったことを記録
+  // フォームに変更があったことを記録（初期値と比較して、実際にユーザーが変更した場合のみ）
   useEffect(() => {
-    if (isOpen && isInitialized) {
-      setHasUnsavedChanges(true)
-    }
+    if (!isOpen || !isInitialized || !initialFormDataRef.current) return
+
+    // 初期値と現在の値を比較
+    const formChanged = JSON.stringify(formData) !== JSON.stringify(initialFormDataRef.current)
+    const hasImageChanges = imageData.newFiles.length > 0 || imageData.deletedIds.length > 0
+    setHasUnsavedChanges(formChanged || hasImageChanges)
   }, [formData, imageData, isOpen, isInitialized])
 
   // ブラウザバックや閉じるボタンでの離脱を防ぐ
@@ -163,25 +169,29 @@ export default function PracticeBasicForm({
   useEffect(() => {
     if (!isOpen || isInitialized) return
 
+    let initialData: PracticeBasicData
     if (editData) {
       // 編集モード
-      setFormData({
+      initialData = {
         date: editData.date || format(selectedDate, 'yyyy-MM-dd'),
         title: editData.title || '',
         place: editData.place || '',
         note: editData.note || ''
-      })
-      setIsInitialized(true)
+      }
     } else {
       // 新規作成モード
-      setFormData({
+      initialData = {
         date: format(selectedDate, 'yyyy-MM-dd'),
         title: '',
         place: '',
         note: ''
-      })
-      setIsInitialized(true)
+      }
     }
+
+    setFormData(initialData)
+    // 初期値を保存（初期化時の変更を無視するため）
+    initialFormDataRef.current = { ...initialData }
+    setIsInitialized(true)
   }, [isOpen, selectedDate, editData, isInitialized])
 
   // 画像の変更ハンドラー
@@ -365,7 +375,7 @@ export default function PracticeBasicForm({
             </div>
 
             {/* 画像添付 */}
-            <div className="border-t border-gray-200 pt-6">
+            <div>
               <PracticeImageUploader
                 existingImages={editData?.images}
                 onImagesChange={handleImagesChange}

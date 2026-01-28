@@ -414,6 +414,56 @@ export class GoalAPI {
   }
 
   /**
+   * 期限切れ目標取得（ログイン時）
+   * 大会日付が過去で、statusがactiveのもの
+   */
+  async getExpiredGoals(): Promise<GoalWithMilestones[]> {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+
+    const today = format(new Date(), 'yyyy-MM-dd')
+
+    // まずactiveな目標を全て取得し、クライアント側で期限切れをフィルタ
+    const { data, error } = await this.supabase
+      .from('goals')
+      .select(`
+        *,
+        competition:competitions(*),
+        style:styles(*),
+        milestones(*)
+      `)
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+
+    if (error) throw error
+
+    // 期限切れ（大会日付が過去）のものをフィルタ
+    const expiredGoals = (data || [])
+      .map((item: any) => {
+        const competition = Array.isArray(item.competition) ? item.competition[0] : item.competition
+        const style = Array.isArray(item.style) ? item.style[0] : item.style
+        const milestones = Array.isArray(item.milestones) ? item.milestones : (item.milestones ? [item.milestones] : [])
+        return {
+          ...item,
+          competition,
+          style,
+          milestones
+        } as GoalWithMilestones
+      })
+      .filter((goal: GoalWithMilestones) => {
+        // 大会日付が今日より前のものを期限切れとして扱う
+        if (!goal.competition?.date) return false
+        return goal.competition.date < today
+      })
+      .sort((a: GoalWithMilestones, b: GoalWithMilestones) => {
+        // 大会日付の降順でソート
+        return (b.competition?.date || '').localeCompare(a.competition?.date || '')
+      })
+
+    return expiredGoals
+  }
+
+  /**
    * 期限切れマイルストーン取得（ログイン時）
    */
   async getExpiredMilestones(): Promise<Milestone[]> {

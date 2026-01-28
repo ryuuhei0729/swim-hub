@@ -61,12 +61,15 @@ export const usePracticeLogForm = ({
 
   const hasInitializedRef = useRef(false)
   const initializedKeyRef = useRef<string | null>(null)
+  // 初期値を保存（初期化時の変更を無視するため）
+  const initialMenusRef = useRef<PracticeMenu[] | null>(null)
 
   // モーダルが閉じた時にリセット
   useEffect(() => {
     if (!isOpen) {
       hasInitializedRef.current = false
       initializedKeyRef.current = null
+      initialMenusRef.current = null
       setHasUnsavedChanges(false)
       setIsSubmitted(false)
     }
@@ -84,13 +87,14 @@ export const usePracticeLogForm = ({
       return
     }
 
+    let initialData: PracticeMenu[]
     if (editData) {
       const circleTime = editData.circle || 0
       const circleMin = Math.floor(circleTime / 60)
       const circleSec = circleTime % 60
       const swimCategory = editData.swim_category || 'Swim'
 
-      setMenus([
+      initialData = [
         {
           id: editData.id || '1',
           style: editData.style || 'Fr',
@@ -104,20 +108,25 @@ export const usePracticeLogForm = ({
           tags: editData.tags || [],
           times: editData.times?.flatMap((item) => item.times) || [],
         },
-      ])
+      ]
     } else {
-      setMenus([createDefaultMenu()])
+      initialData = [createDefaultMenu()]
     }
 
+    setMenus(initialData)
+    // 初期値を保存（初期化時の変更を無視するため）
+    initialMenusRef.current = JSON.parse(JSON.stringify(initialData))
     hasInitializedRef.current = true
     initializedKeyRef.current = key
   }, [isOpen, editData])
 
-  // メニュー変更時に未保存フラグを立てる
+  // メニュー変更時に未保存フラグを立てる（初期値と比較して、実際にユーザーが変更した場合のみ）
   useEffect(() => {
-    if (isOpen && hasInitializedRef.current) {
-      setHasUnsavedChanges(true)
-    }
+    if (!isOpen || !hasInitializedRef.current || !initialMenusRef.current) return
+
+    // 初期値と現在の値を比較
+    const menusChanged = JSON.stringify(menus) !== JSON.stringify(initialMenusRef.current)
+    setHasUnsavedChanges(menusChanged)
   }, [menus, isOpen])
 
   const addMenu = useCallback(() => {
