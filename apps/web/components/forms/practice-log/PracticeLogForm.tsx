@@ -61,7 +61,7 @@ export default function PracticeLogForm({
     handleTimeSave,
     getCurrentMenu,
     prepareSubmitData,
-  } = usePracticeLogForm({ isOpen, editData })
+  } = usePracticeLogForm({ isOpen, editData, availableTags })
 
   // テンプレート選択モーダルの状態
   const [isTemplateSelectorOpen, setIsTemplateSelectorOpen] = useState(false)

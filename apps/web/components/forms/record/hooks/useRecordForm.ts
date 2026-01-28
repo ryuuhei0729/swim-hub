@@ -368,7 +368,7 @@ export const useRecordForm = ({
         // （ゴールタイム=split_timeなので途中経過ではない）
         const filteredSplitTimes = record.splitTimes
           .filter((st) => {
-            if (raceDistance && st.distance === raceDistance) {
+            if (raceDistance && Number(st.distance) === raceDistance) {
               return false
             }
             return true

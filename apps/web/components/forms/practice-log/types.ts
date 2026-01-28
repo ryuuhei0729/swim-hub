@@ -43,6 +43,7 @@ export interface PracticeLogEditData {
   circle?: number | null
   note?: string | null
   tags?: Tag[]
+  tag_ids?: string[]
   times?: Array<{
     memberId: string
     times: TimeEntry[]

@@ -324,18 +324,15 @@ jobs:
       with:
         node-version: ${{ env.NODE_VERSION }}
 
-    - name: Install dotenvx
-      run: curl -sfS https://dotenvx.sh/install.sh | sh
-
     - name: Build for Cloudflare (OpenNext)
       working-directory: apps/web
       run: |
         if [ "${{ github.ref }}" = "refs/heads/main" ]; then
           echo "=== Building with .env.production ==="
-          dotenvx run -f .env.production -- npx opennextjs-cloudflare build
+          npx @dotenvx/dotenvx run -f .env.production -- npx opennextjs-cloudflare build
         else
           echo "=== Building with .env.development ==="
-          dotenvx run -f .env.development -- npx opennextjs-cloudflare build
+          npx @dotenvx/dotenvx run -f .env.development -- npx opennextjs-cloudflare build
         fi
       env:
         DOTENV_PRIVATE_KEY_PRODUCTION: ${{ secrets.DOTENV_PRIVATE_KEY_PRODUCTION }}

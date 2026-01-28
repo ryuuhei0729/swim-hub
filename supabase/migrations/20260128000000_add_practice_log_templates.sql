@@ -3,7 +3,7 @@
 -- 練習ログのテンプレートを保存する
 -- =============================================================================
 
-CREATE TABLE practice_log_templates (
+CREATE TABLE IF NOT EXISTS practice_log_templates (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name VARCHAR(100) NOT NULL,
@@ -23,14 +23,15 @@ CREATE TABLE practice_log_templates (
 );
 
 -- インデックス
-CREATE INDEX idx_practice_log_templates_user_id
+CREATE INDEX IF NOT EXISTS idx_practice_log_templates_user_id
   ON practice_log_templates(user_id);
-CREATE INDEX idx_practice_log_templates_use_count
+CREATE INDEX IF NOT EXISTS idx_practice_log_templates_use_count
   ON practice_log_templates(user_id, use_count DESC);
 
 -- RLS
 ALTER TABLE practice_log_templates ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can manage own templates" ON practice_log_templates;
 CREATE POLICY "Users can manage own templates"
   ON practice_log_templates
   FOR ALL
@@ -50,12 +51,13 @@ BEGIN
       updated_at = now()
   WHERE id = template_id AND user_id = auth.uid();
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- =============================================================================
 -- updated_at 自動更新トリガー
 -- =============================================================================
 
+DROP TRIGGER IF EXISTS update_practice_log_templates_updated_at ON practice_log_templates;
 CREATE TRIGGER update_practice_log_templates_updated_at
   BEFORE UPDATE ON practice_log_templates
   FOR EACH ROW

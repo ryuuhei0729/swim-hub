@@ -7,6 +7,7 @@ import type { TimeEntry } from '@apps/shared/types/ui'
 interface UsePracticeLogFormOptions {
   isOpen: boolean
   editData?: PracticeLogEditData | null
+  availableTags?: Tag[]
 }
 
 interface UsePracticeLogFormReturn {
@@ -52,6 +53,7 @@ function createDefaultMenu(id: string = '1'): PracticeMenu {
 export const usePracticeLogForm = ({
   isOpen,
   editData,
+  availableTags = [],
 }: UsePracticeLogFormOptions): UsePracticeLogFormReturn => {
   const [menus, setMenus] = useState<PracticeMenu[]>([createDefaultMenu()])
   const [showTimeModal, setShowTimeModal] = useState(false)
@@ -94,6 +96,12 @@ export const usePracticeLogForm = ({
       const circleSec = circleTime % 60
       const swimCategory = editData.swim_category || 'Swim'
 
+      // tagsが存在する場合はそのまま使用、なければtag_idsから変換
+      let tags: Tag[] = editData.tags || []
+      if (tags.length === 0 && editData.tag_ids && editData.tag_ids.length > 0) {
+        tags = availableTags.filter((tag) => editData.tag_ids!.includes(tag.id))
+      }
+
       initialData = [
         {
           id: editData.id || '1',
@@ -105,7 +113,7 @@ export const usePracticeLogForm = ({
           circleMin: circleMin || 0,
           circleSec: circleSec || 0,
           note: editData.note || '',
-          tags: editData.tags || [],
+          tags,
           times: editData.times?.flatMap((item) => item.times) || [],
         },
       ]
@@ -118,7 +126,7 @@ export const usePracticeLogForm = ({
     initialMenusRef.current = JSON.parse(JSON.stringify(initialData))
     hasInitializedRef.current = true
     initializedKeyRef.current = key
-  }, [isOpen, editData])
+  }, [isOpen, editData, availableTags])
 
   // メニュー変更時に未保存フラグを立てる（初期値と比較して、実際にユーザーが変更した場合のみ）
   useEffect(() => {
