@@ -13,13 +13,14 @@ import { CalendarItem, CalendarItemType, CalendarProps } from '@/types'
 const _WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
 
 // カレンダー表示コンポーネント（表示ロジック）
-export default function CalendarView({ 
-  entries: _propEntries, 
-  onDateClick, 
+export default function CalendarView({
+  entries: _propEntries,
+  onDateClick,
   onAddItem,
   onEditItem,
   onDeleteItem,
   onAddPracticeLog,
+  onAddPracticeLogFromTemplate,
   onEditPracticeLog,
   onDeletePracticeLog,
   onAddRecord,
@@ -334,6 +335,7 @@ export default function CalendarView({
             onAddItem?.(date, type)
           }}
           onAddPracticeLog={onAddPracticeLog}
+          onAddPracticeLogFromTemplate={onAddPracticeLogFromTemplate}
           onEditPracticeLog={onEditPracticeLog}
           onDeletePracticeLog={onDeletePracticeLog}
           onAddRecord={onAddRecord}

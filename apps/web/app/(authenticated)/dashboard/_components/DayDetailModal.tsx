@@ -22,11 +22,13 @@ import type {
   PracticeTag,
   TeamAttendanceWithDetails,
   SplitTime,
-  PoolType
+  PoolType,
+  PracticeLogTemplate
 } from '@apps/shared/types'
 import { AttendanceAPI, EntryAPI } from '@swim-hub/shared'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { PracticeLogTemplateSelectModal } from '@/components/practice-log-templates/PracticeLogTemplateSelectModal'
 
 export default function DayDetailModal({
   isOpen,
@@ -37,6 +39,7 @@ export default function DayDetailModal({
   onDeleteItem,
   onAddItem,
   onAddPracticeLog,
+  onAddPracticeLogFromTemplate,
   onEditPracticeLog,
   onDeletePracticeLog,
   onAddRecord,
@@ -146,9 +149,9 @@ export default function DayDetailModal({
                 <div className="space-y-3">
                   {/* 練習（practice_logがない場合のみ） */}
                   {practiceItems.map((item) => (
-                    <PracticeDetails 
-                      key={item.id} 
-                      practiceId={item.id} 
+                    <PracticeDetails
+                      key={item.id}
+                      practiceId={item.id}
                       place={item.place}
                       isTeamPractice={item.type === 'team_practice'}
                       teamId={item.metadata?.team_id}
@@ -156,6 +159,7 @@ export default function DayDetailModal({
                       onEdit={() => onEditItem?.(item)}
                       onDelete={() => setShowDeleteConfirm({id: item.id, type: item.type})}
                       onAddPracticeLog={onAddPracticeLog}
+                      onAddPracticeLogFromTemplate={onAddPracticeLogFromTemplate}
                       onEditPracticeLog={onEditPracticeLog}
                       onDeletePracticeLog={onDeletePracticeLog}
                       onShowAttendance={item.type === 'team_practice' && item.metadata?.team_id ? () => {
@@ -196,7 +200,7 @@ export default function DayDetailModal({
                       .join(',')
                     
                     return (
-                      <PracticeDetails 
+                      <PracticeDetails
                         key={item.id}
                         practiceId={practiceId}
                         place={item.place}
@@ -223,6 +227,7 @@ export default function DayDetailModal({
                           setShowDeleteConfirm({id: practiceId, type: 'practice' as const})
                         }}
                         onAddPracticeLog={onAddPracticeLog}
+                        onAddPracticeLogFromTemplate={onAddPracticeLogFromTemplate}
                         onEditPracticeLog={onEditPracticeLog}
                         onDeletePracticeLog={onDeletePracticeLog}
                         onShowAttendance={isPracticeMetadata(item.metadata) && item.metadata.team_id ? () => {
@@ -779,26 +784,28 @@ function AttendanceModal({
 }
 
 // 練習記録の詳細表示
-function PracticeDetails({ 
-  practiceId, 
-  place, 
+function PracticeDetails({
+  practiceId,
+  place,
   practiceLogUpdateKey,
-  onEdit, 
+  onEdit,
   onDelete,
   onAddPracticeLog,
+  onAddPracticeLogFromTemplate,
   onEditPracticeLog,
   onDeletePracticeLog,
   isTeamPractice = false,
   teamId,
   teamName,
   onShowAttendance
-}: { 
+}: {
   practiceId: string
   place?: string
   practiceLogUpdateKey?: string
   onEdit?: (images?: GalleryImage[]) => void
   onDelete?: () => void
   onAddPracticeLog?: (practiceId: string) => void
+  onAddPracticeLogFromTemplate?: (practiceId: string, template: PracticeLogTemplate) => void
   onEditPracticeLog?: (log: PracticeLogWithTimes & { tags?: PracticeTag[] }) => void
   onDeletePracticeLog?: (logId: string) => void
   isTeamPractice?: boolean
@@ -834,6 +841,7 @@ function PracticeDetails({
   const [error, setError] = useState<Error | null>(null)
   const [showShareModal, setShowShareModal] = useState(false)
   const [sharePracticeData, setSharePracticeData] = useState<PracticeShareData | null>(null)
+  const [showTemplateSelect, setShowTemplateSelect] = useState(false)
 
   useEffect(() => {
     const loadPractice = async () => {
@@ -1052,14 +1060,25 @@ function PracticeDetails({
           {/* PracticeLogsがない場合 */}
           {practiceLogs.length === 0 && (
             <div className="bg-white border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-              <button
-                onClick={() => onAddPracticeLog?.(practiceId)}
-                className="inline-flex items-center px-4 py-2 border border-green-300 rounded-lg shadow-sm text-sm font-medium text-green-700 bg-white hover:bg-green-50 hover:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
-                data-testid="add-practice-log-button"
-              >
-                <span className="mr-2">➕</span>
-                練習メニューを追加
-              </button>
+              <p className="text-sm text-gray-500 mb-4">練習メニューを追加してください</p>
+              <div className="flex items-center justify-center gap-3">
+                <button
+                  onClick={() => setShowTemplateSelect(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 border border-blue-300 rounded-lg shadow-sm text-sm font-medium text-blue-700 bg-white hover:bg-blue-50 hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                  data-testid="add-from-template-button"
+                >
+                  <ClipboardDocumentListIcon className="h-5 w-5" />
+                  テンプレートから
+                </button>
+                <button
+                  onClick={() => onAddPracticeLog?.(practiceId)}
+                  className="inline-flex items-center gap-2 px-4 py-2 border border-green-300 rounded-lg shadow-sm text-sm font-medium text-green-700 bg-white hover:bg-green-50 hover:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+                  data-testid="add-new-button"
+                >
+                  <PencilIcon className="h-5 w-5" />
+                  新規
+                </button>
+              </div>
             </div>
           )}
 
@@ -1377,13 +1396,22 @@ function PracticeDetails({
           data={sharePracticeData}
         />
       )}
+
+      {/* テンプレート選択モーダル */}
+      <PracticeLogTemplateSelectModal
+        isOpen={showTemplateSelect}
+        onClose={() => setShowTemplateSelect(false)}
+        onSelect={(template) => {
+          onAddPracticeLogFromTemplate?.(practiceId, template)
+        }}
+      />
     </div>
   )
 }
 
 
 // 大会記録のスプリットタイム一覧
-function RecordSplitTimes({ recordId, raceDistance }: { recordId: string; raceDistance?: number }) {
+function RecordSplitTimes({ recordId, raceDistance, recordTime }: { recordId: string; raceDistance?: number; recordTime?: number }) {
   const { supabase } = useAuth()
   const [splits, setSplits] = useState<SplitTime[]>([])
   const [loading, setLoading] = useState(true)
@@ -1400,7 +1428,7 @@ function RecordSplitTimes({ recordId, raceDistance }: { recordId: string; raceDi
           .order('distance', { ascending: true })
 
         if (error) throw error
-        
+
         setSplits(data || [])
       } catch (err) {
         console.error('スプリットタイムの取得エラー:', err)
@@ -1424,19 +1452,35 @@ function RecordSplitTimes({ recordId, raceDistance }: { recordId: string; raceDi
     )
   }
 
+  // DBにsplit_timeがない場合は表示しない
   if (!splits.length) {
     return null
   }
 
+  // DBから取得したsplit_timesに、ゴールタイム（種目の距離）を追加して表示用データを作成
+  const displaySplitTimes = (() => {
+    const baseSplits = splits.map(st => ({
+      distance: st.distance,
+      splitTime: st.split_time
+    }))
+
+    // ゴールタイムを最終splitとして追加（種目の距離と同じ距離のsplitがない場合）
+    if (raceDistance && recordTime && recordTime > 0) {
+      const hasGoalSplit = baseSplits.some(st => st.distance === raceDistance)
+      if (!hasGoalSplit) {
+        return [...baseSplits, { distance: raceDistance, splitTime: recordTime }]
+      }
+    }
+
+    return baseSplits
+  })()
+
   return (
     <div className="mt-3">
       {/* 距離別Lap表示 */}
-      {splits.length > 0 && (
+      {displaySplitTimes.length > 0 && (
         <LapTimeDisplay
-          splitTimes={splits.map(st => ({
-            distance: st.distance,
-            splitTime: st.split_time
-          }))}
+          splitTimes={displaySplitTimes}
           raceDistance={raceDistance}
         />
       )}
@@ -1852,9 +1896,10 @@ function CompetitionDetails({
                 </div>
 
                 {/* スプリットタイム */}
-                <RecordSplitTimes 
+                <RecordSplitTimes
                   recordId={record.id}
                   raceDistance={record.metadata?.style?.distance || record.metadata?.record?.style?.distance}
+                  recordTime={record.metadata?.record?.time}
                 />
 
                 {/* メモ */}

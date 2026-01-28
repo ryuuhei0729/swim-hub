@@ -5,6 +5,7 @@ import { XMarkIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui'
 import { useAuth } from '@/contexts'
 import { GoalAPI } from '@apps/shared/api/goals'
+import { PracticeLogTemplateAPI } from '@swim-hub/shared/api'
 import type { GoalWithMilestones, Style, MilestoneParams, MilestoneTimeParams, MilestoneRepsTimeParams, MilestoneSetParams, MilestoneGoalSetParams } from '@apps/shared/types'
 import { MILESTONE_TEMPLATES } from './templates/milestoneTemplates'
 import MilestoneForm from './forms/MilestoneForm'
@@ -41,8 +42,10 @@ export default function MilestoneCreateModal({
   const [params, setParams] = useState<MilestoneParams>(DEFAULT_TIME_PARAMS)
   const [isLoading, setIsLoading] = useState(false)
   const [isGoalSetModalOpen, setIsGoalSetModalOpen] = useState(false)
+  const [addToTemplate, setAddToTemplate] = useState(false)
 
   const goalAPI = new GoalAPI(supabase)
+  const templateAPI = new PracticeLogTemplateAPI(supabase)
 
   // Goalが100m種目かどうかをチェック
   const is100mGoal = useMemo(() => {
@@ -157,6 +160,22 @@ export default function MilestoneCreateModal({
         deadline: deadline || null
       })
 
+      // テンプレートにも追加する場合
+      if (addToTemplate && (type === 'reps_time' || type === 'set')) {
+        const milestoneTitle = title || getDefaultTitle(type, params)
+        const p = params as MilestoneRepsTimeParams | MilestoneSetParams
+
+        await templateAPI.createTemplate({
+          name: milestoneTitle,
+          style: p.style || 'Fr',
+          swim_category: (p.swim_category as 'Swim' | 'Pull' | 'Kick') || 'Swim',
+          distance: p.distance,
+          rep_count: p.reps,
+          set_count: 'sets' in p ? p.sets : 1,
+          circle: p.circle || null,
+        })
+      }
+
       await onSuccess()
       handleClose()
     } catch (error) {
@@ -186,6 +205,7 @@ export default function MilestoneCreateModal({
     setDeadline('')
     setSelectedTemplate('')
     setParams(DEFAULT_TIME_PARAMS)
+    setAddToTemplate(false)
     onClose()
   }
 
@@ -233,6 +253,28 @@ export default function MilestoneCreateModal({
                 onTemplateSelect={handleTemplateSelect}
                 availableTemplates={availableTemplates}
               />
+
+              {/* テンプレートにも追加するチェックボックス（reps_timeまたはsetタイプの場合のみ） */}
+              {(type === 'reps_time' || type === 'set') && (
+                <div className="border-t pt-4">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={addToTemplate}
+                      onChange={(e) => setAddToTemplate(e.target.checked)}
+                      className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-gray-700">
+                        テンプレートにも追加する
+                      </span>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        練習作成時にすぐ使えます
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              )}
 
               {/* ボタン */}
               <div className="flex justify-end gap-3 pt-4">

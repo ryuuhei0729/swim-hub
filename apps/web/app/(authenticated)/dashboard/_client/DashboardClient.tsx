@@ -276,6 +276,7 @@ export default function DashboardClient({
     onEditItem,
     onDeleteItem: onDeleteCalendarItem,
     onAddPracticeLog,
+    onAddPracticeLogFromTemplate,
     onEditPracticeLog,
     onDeletePracticeLog,
     onAddRecord,
@@ -305,7 +306,7 @@ export default function DashboardClient({
         />
         
         {/* カレンダーコンポーネント */}
-        <CalendarContainer 
+        <CalendarContainer
           refreshKey={calendarRefreshKey}
           initialCalendarItems={initialCalendarItems}
           initialMonthlySummary={initialMonthlySummary}
@@ -314,6 +315,7 @@ export default function DashboardClient({
           onEditItem={onEditItem}
           onDeleteItem={onDeleteCalendarItem}
           onAddPracticeLog={onAddPracticeLog}
+          onAddPracticeLogFromTemplate={onAddPracticeLogFromTemplate}
           onEditPracticeLog={onEditPracticeLog}
           onDeletePracticeLog={onDeletePracticeLog}
           onAddRecord={onAddRecord}

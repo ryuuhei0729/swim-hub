@@ -374,6 +374,10 @@ export const useRecordLogForm = ({
           return acc
         }
 
+        // 種目の距離を取得
+        const style = styles.find((s) => s.id.toString() === styleId)
+        const raceDistance = style?.distance
+
         const validSplitTimes = data.splitTimes
           .map((st) => {
             const distance =
@@ -388,6 +392,9 @@ export const useRecordLogForm = ({
             return null
           })
           .filter((st): st is { distance: number; splitTime: number } => st !== null)
+          // 種目の距離と同じ距離のsplit_timeは保存しない
+          // （ゴールタイム=split_timeなので途中経過ではない）
+          .filter((st) => !(raceDistance && st.distance === raceDistance))
 
         acc.push({
           ...data,
@@ -400,7 +407,7 @@ export const useRecordLogForm = ({
     )
 
     return { hasStyleError, submitList }
-  }, [formDataList, entryDataList])
+  }, [formDataList, entryDataList, styles])
 
   return {
     formDataList,

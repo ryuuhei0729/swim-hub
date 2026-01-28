@@ -3,7 +3,7 @@
 // =============================================================================
 
 import type { EditingData, EntryWithStyle } from '@/stores/types'
-import type { CalendarItemType, PracticeLogWithTimes, PracticeTag } from '@apps/shared/types'
+import type { CalendarItemType, PracticeLogWithTimes, PracticeTag, PracticeLogTemplate } from '@apps/shared/types'
 import type { CalendarItem, EntryInfo, TimeEntry } from '@apps/shared/types/ui'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@swim-hub/shared/types'
@@ -242,6 +242,21 @@ export function useCalendarHandlers({
     openPracticeLogForm(practiceId)
   }, [openPracticeLogForm])
 
+  // テンプレートから練習ログ追加ハンドラー
+  const onAddPracticeLogFromTemplate = useCallback((practiceId: string, template: PracticeLogTemplate) => {
+    const editData: EditingData = {
+      practiceId,
+      style: template.style,
+      swim_category: template.swim_category,
+      distance: template.distance,
+      rep_count: template.rep_count,
+      set_count: template.set_count,
+      circle: template.circle,
+      note: template.note || undefined,
+    }
+    openPracticeLogForm(practiceId, editData)
+  }, [openPracticeLogForm])
+
   // 練習ログ編集ハンドラー
   const onEditPracticeLog = useCallback((log: (PracticeLogWithTimes & { tags?: PracticeTag[] }) & {
     practiceId?: string
@@ -405,6 +420,7 @@ export function useCalendarHandlers({
     onEditItem,
     onDeleteItem,
     onAddPracticeLog,
+    onAddPracticeLogFromTemplate,
     onEditPracticeLog,
     onDeletePracticeLog,
     onAddRecord,

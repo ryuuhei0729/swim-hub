@@ -83,3 +83,14 @@ export const userKeys = {
   currentTeams: () => [...userKeys.all, 'current', 'teams'] as const,
 } as const
 
+/**
+ * 練習ログテンプレートのクエリキー
+ */
+export const practiceLogTemplateKeys = {
+  all: ['practiceLogTemplates'] as const,
+  lists: () => [...practiceLogTemplateKeys.all, 'list'] as const,
+  list: () => [...practiceLogTemplateKeys.lists()] as const,
+  detail: (id: string) => [...practiceLogTemplateKeys.all, 'detail', id] as const,
+  count: () => [...practiceLogTemplateKeys.all, 'count'] as const,
+} as const
+

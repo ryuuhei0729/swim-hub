@@ -186,19 +186,19 @@ export const PracticeShareCard = forwardRef<
         {/* フッター：ブランディング */}
         <div className="pt-4 mt-4 border-t border-slate-100">
           <div className="flex items-center justify-center gap-2">
-            <svg
-              className="w-5 h-5 text-sky-500"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <path d="M8 12l2 2 4-4" />
-            </svg>
+            <img
+              src="/favicon.png"
+              alt="SwimHub"
+              className="w-5 h-5 object-contain"
+            />
             <span className="text-slate-700 text-sm font-semibold tracking-wide">
               SwimHub
             </span>
+            <img
+              src="/favicon.png"
+              alt="SwimHub"
+              className="w-5 h-5 object-contain"
+            />
           </div>
         </div>
       </div>
