@@ -100,6 +100,35 @@ export class PracticeLogTemplateAPI {
   // =========================================================================
 
   /**
+   * テンプレートを更新
+   */
+  async updateTemplate(
+    templateId: string,
+    input: Partial<CreatePracticeLogTemplateInput>
+  ): Promise<PracticeLogTemplate> {
+    const { data, error } = await this.supabase
+      .from('practice_log_templates')
+      .update({
+        ...(input.name !== undefined && { name: input.name }),
+        ...(input.style !== undefined && { style: input.style }),
+        ...(input.swim_category !== undefined && { swim_category: input.swim_category }),
+        ...(input.distance !== undefined && { distance: input.distance }),
+        ...(input.rep_count !== undefined && { rep_count: input.rep_count }),
+        ...(input.set_count !== undefined && { set_count: input.set_count }),
+        ...(input.circle !== undefined && { circle: input.circle }),
+        ...(input.note !== undefined && { note: input.note }),
+        ...(input.tag_ids !== undefined && { tag_ids: input.tag_ids }),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', templateId)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  }
+
+  /**
    * テンプレートを使用（use_countをインクリメント）
    */
   async useTemplate(templateId: string): Promise<void> {

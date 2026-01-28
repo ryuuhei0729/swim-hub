@@ -1,14 +1,22 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { XMarkIcon } from '@heroicons/react/24/outline'
-import { useCreatePracticeLogTemplateMutation } from '@swim-hub/shared/hooks'
-import type { CreatePracticeLogTemplateInput } from '@swim-hub/shared/types'
+import {
+  useCreatePracticeLogTemplateMutation,
+  useUpdatePracticeLogTemplateMutation,
+} from '@swim-hub/shared/hooks'
+import { usePracticeTagsQuery } from '@swim-hub/shared/hooks/queries/practices'
+import type { CreatePracticeLogTemplateInput, PracticeLogTemplate } from '@swim-hub/shared/types'
+import type { PracticeTag } from '@swim-hub/shared/types'
+import TagInput from '@/components/forms/TagInput'
+import { Button } from '@/components/ui'
 
 interface PracticeLogTemplateCreateModalProps {
   isOpen: boolean
   onClose: () => void
+  editData?: PracticeLogTemplate | null
 }
 
 const STYLES = ['Fr', 'Ba', 'Br', 'Fly', 'IM']
@@ -18,6 +26,7 @@ const DISTANCES = [25, 50, 100, 200, 400, 800, 1500]
 export function PracticeLogTemplateCreateModal({
   isOpen,
   onClose,
+  editData,
 }: PracticeLogTemplateCreateModalProps) {
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,6 +34,10 @@ export function PracticeLogTemplateCreateModal({
   )
 
   const createMutation = useCreatePracticeLogTemplateMutation(supabase)
+  const updateMutation = useUpdatePracticeLogTemplateMutation(supabase)
+  const { data: tagsData } = usePracticeTagsQuery(supabase)
+
+  const isEditMode = !!editData
 
   const [formData, setFormData] = useState<CreatePracticeLogTemplateInput>({
     name: '',
@@ -33,44 +46,105 @@ export function PracticeLogTemplateCreateModal({
     distance: 50,
     rep_count: 1,
     set_count: 1,
-    circle: null,
+    circle: 90,
     note: '',
+    tag_ids: [],
   })
 
   const [circleMinutes, setCircleMinutes] = useState(1)
   const [circleSeconds, setCircleSeconds] = useState(30)
-  const [useCircle, setUseCircle] = useState(false)
+  const [availableTags, setAvailableTags] = useState<PracticeTag[]>([])
+  const [selectedTags, setSelectedTags] = useState<PracticeTag[]>([])
+
+  // タグデータを設定
+  useEffect(() => {
+    if (tagsData) {
+      setAvailableTags(tagsData)
+    }
+  }, [tagsData])
+
+  // 編集モード時にフォームにデータを設定
+  useEffect(() => {
+    if (isOpen && editData) {
+      const circleTime = editData.circle || 90
+      const min = Math.floor(circleTime / 60)
+      const sec = circleTime % 60
+
+      setFormData({
+        name: editData.name,
+        style: editData.style,
+        swim_category: editData.swim_category,
+        distance: editData.distance,
+        rep_count: editData.rep_count,
+        set_count: editData.set_count,
+        circle: circleTime,
+        note: editData.note || '',
+        tag_ids: editData.tag_ids || [],
+      })
+      setCircleMinutes(min)
+      setCircleSeconds(sec)
+
+      // 既存のタグを選択状態に
+      if (editData.tag_ids && tagsData) {
+        const selected = tagsData.filter((tag) => editData.tag_ids.includes(tag.id))
+        setSelectedTags(selected)
+      }
+    } else if (isOpen && !editData) {
+      // 新規作成時はフォームをリセット
+      setFormData({
+        name: '',
+        style: 'Fr',
+        swim_category: 'Swim',
+        distance: 50,
+        rep_count: 1,
+        set_count: 1,
+        circle: 90,
+        note: '',
+        tag_ids: [],
+      })
+      setCircleMinutes(1)
+      setCircleSeconds(30)
+      setSelectedTags([])
+    }
+  }, [isOpen, editData, tagsData])
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault()
 
+      const circleInSeconds = circleMinutes * 60 + circleSeconds
       const input: CreatePracticeLogTemplateInput = {
         ...formData,
-        circle: useCircle ? circleMinutes * 60 + circleSeconds : null,
+        circle: circleInSeconds,
         note: formData.note || null,
+        tag_ids: selectedTags.map((tag) => tag.id),
       }
 
       try {
-        await createMutation.mutateAsync(input)
-        // フォームをリセット
-        setFormData({
-          name: '',
-          style: 'Fr',
-          swim_category: 'Swim',
-          distance: 50,
-          rep_count: 1,
-          set_count: 1,
-          circle: null,
-          note: '',
-        })
-        setUseCircle(false)
+        if (isEditMode && editData) {
+          await updateMutation.mutateAsync({
+            templateId: editData.id,
+            input,
+          })
+        } else {
+          await createMutation.mutateAsync(input)
+        }
         onClose()
       } catch (error) {
-        console.error('テンプレート作成エラー:', error)
+        console.error('テンプレート保存エラー:', error)
       }
     },
-    [formData, useCircle, circleMinutes, circleSeconds, createMutation, onClose]
+    [
+      formData,
+      circleMinutes,
+      circleSeconds,
+      selectedTags,
+      isEditMode,
+      editData,
+      createMutation,
+      updateMutation,
+      onClose,
+    ]
   )
 
   const handleKeyDown = useCallback(
@@ -82,14 +156,24 @@ export function PracticeLogTemplateCreateModal({
     [onClose]
   )
 
+  const handleTagsChange = useCallback((tags: PracticeTag[]) => {
+    setSelectedTags(tags)
+  }, [])
+
+  const handleAvailableTagsUpdate = useCallback((tags: PracticeTag[]) => {
+    setAvailableTags(tags)
+  }, [])
+
   if (!isOpen) return null
+
+  const isPending = createMutation.isPending || updateMutation.isPending
 
   return (
     <div
       className="fixed inset-0 z-50 overflow-y-auto"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="create-template-title"
+      aria-labelledby="template-modal-title"
       onKeyDown={handleKeyDown}
     >
       <div className="flex min-h-screen items-center justify-center p-4">
@@ -101,24 +185,24 @@ export function PracticeLogTemplateCreateModal({
         />
 
         {/* モーダルコンテンツ */}
-        <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg">
+        <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
           {/* ヘッダー */}
-          <div className="flex items-center justify-between p-4 border-b">
-            <h2 id="create-template-title" className="text-lg font-semibold">
-              新しいテンプレートを作成
+          <div className="flex items-center justify-between p-3 sm:p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
+            <h2 id="template-modal-title" className="text-base sm:text-lg font-semibold text-gray-900">
+              {isEditMode ? 'テンプレートを編集' : '新しいテンプレートを作成'}
             </h2>
             <button
               type="button"
               onClick={onClose}
-              className="p-1 rounded hover:bg-gray-100"
+              className="text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-1"
               aria-label="閉じる"
             >
-              <XMarkIcon className="h-6 w-6 text-gray-500" />
+              <XMarkIcon className="h-6 w-6" />
             </button>
           </div>
 
           {/* フォーム */}
-          <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          <form onSubmit={handleSubmit} className="p-3 sm:p-6 space-y-4">
             {/* テンプレート名 */}
             <div>
               <label
@@ -131,9 +215,7 @@ export function PracticeLogTemplateCreateModal({
                 id="template-name"
                 type="text"
                 value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="例: 朝練キック"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
@@ -153,9 +235,7 @@ export function PracticeLogTemplateCreateModal({
                 <select
                   id="template-style"
                   value={formData.style}
-                  onChange={(e) =>
-                    setFormData({ ...formData, style: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, style: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   {STYLES.map((style) => (
@@ -262,43 +342,45 @@ export function PracticeLogTemplateCreateModal({
               </div>
             </div>
 
-            {/* サークル */}
+            {/* サークル（必須） */}
             <div>
-              <label className="flex items-center gap-2 mb-2">
-                <input
-                  type="checkbox"
-                  checked={useCircle}
-                  onChange={(e) => setUseCircle(e.target.checked)}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="text-sm font-medium text-gray-700">
-                  サークルを設定
-                </span>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                サークル <span className="text-red-500">*</span>
               </label>
-              {useCircle && (
-                <div className="flex items-center gap-2 ml-6">
-                  <input
-                    type="number"
-                    min={0}
-                    max={59}
-                    value={circleMinutes}
-                    onChange={(e) => setCircleMinutes(Number(e.target.value))}
-                    className="w-16 px-2 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center"
-                    aria-label="サークル 分"
-                  />
-                  <span className="text-gray-600">分</span>
-                  <input
-                    type="number"
-                    min={0}
-                    max={59}
-                    value={circleSeconds}
-                    onChange={(e) => setCircleSeconds(Number(e.target.value))}
-                    className="w-16 px-2 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center"
-                    aria-label="サークル 秒"
-                  />
-                  <span className="text-gray-600">秒</span>
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  max={59}
+                  value={circleMinutes}
+                  onChange={(e) => setCircleMinutes(Number(e.target.value))}
+                  className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center"
+                  aria-label="サークル 分"
+                />
+                <span className="text-gray-600">分</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={59}
+                  value={circleSeconds}
+                  onChange={(e) => setCircleSeconds(Number(e.target.value))}
+                  className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center"
+                  aria-label="サークル 秒"
+                />
+                <span className="text-gray-600">秒</span>
+              </div>
+            </div>
+
+            {/* タグ */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">タグ</label>
+              <TagInput
+                selectedTags={selectedTags}
+                availableTags={availableTags}
+                onTagsChange={handleTagsChange}
+                onAvailableTagsUpdate={handleAvailableTagsUpdate}
+                placeholder="タグを選択または作成"
+              />
             </div>
 
             {/* メモ */}
@@ -312,9 +394,7 @@ export function PracticeLogTemplateCreateModal({
               <textarea
                 id="template-note"
                 value={formData.note || ''}
-                onChange={(e) =>
-                  setFormData({ ...formData, note: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                 placeholder="メモを入力..."
                 rows={2}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
@@ -322,21 +402,26 @@ export function PracticeLogTemplateCreateModal({
             </div>
 
             {/* ボタン */}
-            <div className="flex justify-end gap-3 pt-4">
-              <button
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 mt-6">
+              <Button
                 type="button"
+                variant="outline"
                 onClick={onClose}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 キャンセル
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
-                disabled={!formData.name || createMutation.isPending}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                disabled={!formData.name || isPending}
               >
-                {createMutation.isPending ? '作成中...' : '作成'}
-              </button>
+                {isPending
+                  ? isEditMode
+                    ? '更新中...'
+                    : '作成中...'
+                  : isEditMode
+                    ? '更新'
+                    : '作成'}
+              </Button>
             </div>
           </form>
         </div>

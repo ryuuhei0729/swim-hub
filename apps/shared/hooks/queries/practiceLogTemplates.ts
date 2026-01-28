@@ -88,6 +88,32 @@ export function useCreatePracticeLogTemplateMutation(
 }
 
 /**
+ * テンプレートを更新するmutation hook
+ */
+export function useUpdatePracticeLogTemplateMutation(
+  supabase: SupabaseClient
+): UseMutationResult<
+  PracticeLogTemplate,
+  Error,
+  { templateId: string; input: Partial<CreatePracticeLogTemplateInput> }
+> {
+  const queryClient = useQueryClient()
+  const api = useMemo(
+    () => new PracticeLogTemplateAPI(supabase),
+    [supabase]
+  )
+
+  return useMutation({
+    mutationFn: ({ templateId, input }) => api.updateTemplate(templateId, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: practiceLogTemplateKeys.all,
+      })
+    },
+  })
+}
+
+/**
  * テンプレートを削除するmutation hook
  */
 export function useDeletePracticeLogTemplateMutation(

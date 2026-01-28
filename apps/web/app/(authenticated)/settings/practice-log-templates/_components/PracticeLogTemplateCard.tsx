@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid'
-import { StarIcon as StarIconOutline, EllipsisVerticalIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { StarIcon as StarIconOutline, EllipsisVerticalIcon, TrashIcon, PencilIcon } from '@heroicons/react/24/outline'
 import type { PracticeLogTemplate } from '@swim-hub/shared/types'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
@@ -10,6 +10,7 @@ interface PracticeLogTemplateCardProps {
   template: PracticeLogTemplate
   onToggleFavorite: (templateId: string) => void
   onDelete: (templateId: string) => void
+  onEdit: (template: PracticeLogTemplate) => void
   isLoading?: boolean
 }
 
@@ -17,6 +18,7 @@ export function PracticeLogTemplateCard({
   template,
   onToggleFavorite,
   onDelete,
+  onEdit,
   isLoading,
 }: PracticeLogTemplateCardProps) {
   const [showMenu, setShowMenu] = useState(false)
@@ -33,6 +35,11 @@ export function PracticeLogTemplateCard({
     onToggleFavorite(template.id)
     setShowMenu(false)
   }, [template.id, onToggleFavorite])
+
+  const handleEditClick = useCallback(() => {
+    setShowMenu(false)
+    onEdit(template)
+  }, [template, onEdit])
 
   const handleDeleteClick = useCallback(() => {
     setShowMenu(false)
@@ -99,6 +106,14 @@ export function PracticeLogTemplateCard({
                   aria-label="メニューを閉じる"
                 />
                 <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-20 border border-gray-200">
+                  <button
+                    type="button"
+                    onClick={handleEditClick}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  >
+                    <PencilIcon className="h-4 w-4" />
+                    編集
+                  </button>
                   <button
                     type="button"
                     onClick={handleToggleFavorite}

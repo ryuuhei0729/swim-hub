@@ -306,19 +306,22 @@ export default function PracticeBasicForm({
           </div>
 
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
-            {/* 練習日 */}
-            <DatePicker
-              label="練習日"
-              value={formData.date}
-              onChange={(date) => setFormData({ ...formData, date })}
-              required
-              placeholder="練習日を選択"
-              data-testid="practice-date"
-            />
+            {/* グリッドレイアウト: 練習日・タイトル・場所 */}
+            <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-4 items-center">
+              {/* 練習日 */}
+              <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                練習日 <span className="text-red-500">*</span>
+              </label>
+              <DatePicker
+                value={formData.date}
+                onChange={(date) => setFormData({ ...formData, date })}
+                required
+                placeholder="練習日を選択"
+                data-testid="practice-date"
+              />
 
-            {/* 練習タイトル */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              {/* 練習タイトル */}
+              <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
                 練習タイトル
               </label>
               <Input
@@ -330,17 +333,19 @@ export default function PracticeBasicForm({
                 placeholder="例: Swim, AM, 16:00"
                 data-testid="practice-title"
               />
-            </div>
 
-            {/* 練習場所 */}
-            <PlaceCombobox
-              label="練習場所"
-              value={formData.place}
-              onChange={(value) => setFormData({ ...formData, place: value })}
-              suggestions={placeSuggestions}
-              placeholder="例: 市営プール、学校プール"
-              data-testid="practice-place"
-            />
+              {/* 練習場所 */}
+              <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                練習場所
+              </label>
+              <PlaceCombobox
+                value={formData.place}
+                onChange={(value) => setFormData({ ...formData, place: value })}
+                suggestions={placeSuggestions}
+                placeholder="例: 市営プール、学校プール"
+                data-testid="practice-place"
+              />
+            </div>
 
             {/* メモ */}
             <div>

@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 import { PracticeLogTemplateList } from './_components/PracticeLogTemplateList'
 import { PracticeLogTemplateCreateModal } from './_components/PracticeLogTemplateCreateModal'
+import type { PracticeLogTemplate } from '@swim-hub/shared/types'
 
 export default function PracticeLogTemplatesPage() {
   const router = useRouter()
-  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showModal, setShowModal] = useState(false)
+  const [editData, setEditData] = useState<PracticeLogTemplate | null>(null)
 
   const handleBack = useCallback(() => {
     router.back()
@@ -23,6 +25,21 @@ export default function PracticeLogTemplatesPage() {
     },
     [handleBack]
   )
+
+  const handleCreateNew = useCallback(() => {
+    setEditData(null)
+    setShowModal(true)
+  }, [])
+
+  const handleEdit = useCallback((template: PracticeLogTemplate) => {
+    setEditData(template)
+    setShowModal(true)
+  }, [])
+
+  const handleCloseModal = useCallback(() => {
+    setShowModal(false)
+    setEditData(null)
+  }, [])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -44,13 +61,14 @@ export default function PracticeLogTemplatesPage() {
 
       {/* コンテンツ */}
       <main className="max-w-2xl mx-auto px-4 py-6">
-        <PracticeLogTemplateList onCreateNew={() => setShowCreateModal(true)} />
+        <PracticeLogTemplateList onCreateNew={handleCreateNew} onEdit={handleEdit} />
       </main>
 
-      {/* 作成モーダル */}
+      {/* 作成・編集モーダル */}
       <PracticeLogTemplateCreateModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        isOpen={showModal}
+        onClose={handleCloseModal}
+        editData={editData}
       />
     </div>
   )

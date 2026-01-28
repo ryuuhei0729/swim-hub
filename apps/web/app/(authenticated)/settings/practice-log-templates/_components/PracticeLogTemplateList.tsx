@@ -10,14 +10,16 @@ import {
   useTogglePracticeLogTemplateFavoriteMutation,
 } from '@swim-hub/shared/hooks'
 import { PracticeLogTemplateCard } from './PracticeLogTemplateCard'
+import type { PracticeLogTemplate } from '@swim-hub/shared/types'
 
 const MAX_TEMPLATES = 10 // 無料ユーザーの上限
 
 interface PracticeLogTemplateListProps {
   onCreateNew: () => void
+  onEdit: (template: PracticeLogTemplate) => void
 }
 
-export function PracticeLogTemplateList({ onCreateNew }: PracticeLogTemplateListProps) {
+export function PracticeLogTemplateList({ onCreateNew, onEdit }: PracticeLogTemplateListProps) {
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -103,6 +105,7 @@ export function PracticeLogTemplateList({ onCreateNew }: PracticeLogTemplateList
                 template={template}
                 onToggleFavorite={handleToggleFavorite}
                 onDelete={handleDelete}
+                onEdit={onEdit}
                 isLoading={
                   toggleFavoriteMutation.isPending || deleteMutation.isPending
                 }
@@ -127,6 +130,7 @@ export function PracticeLogTemplateList({ onCreateNew }: PracticeLogTemplateList
                 template={template}
                 onToggleFavorite={handleToggleFavorite}
                 onDelete={handleDelete}
+                onEdit={onEdit}
                 isLoading={
                   toggleFavoriteMutation.isPending || deleteMutation.isPending
                 }
