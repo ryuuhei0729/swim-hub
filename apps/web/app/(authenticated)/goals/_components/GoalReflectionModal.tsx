@@ -5,7 +5,7 @@ import { XMarkIcon, TrophyIcon, FlagIcon } from '@heroicons/react/24/outline'
 import { Button, Input } from '@/components/ui'
 import { useAuth } from '@/contexts'
 import { GoalAPI } from '@apps/shared/api/goals'
-import { format } from 'date-fns'
+import { format, isValid } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
 import type { GoalWithMilestones } from '@apps/shared/types'
@@ -38,6 +38,7 @@ export default function GoalReflectionModal({
   const [selectedOptions, setSelectedOptions] = useState<string[]>([])
   const [otherNote, setOtherNote] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isReflectionOpen, setIsReflectionOpen] = useState(false)
 
   const goalAPI = new GoalAPI(supabase)
 
@@ -99,6 +100,7 @@ export default function GoalReflectionModal({
   const handleClose = () => {
     setSelectedOptions([])
     setOtherNote('')
+    setIsReflectionOpen(false)
     onClose()
   }
 
@@ -143,7 +145,9 @@ export default function GoalReflectionModal({
                   </p>
                 )}
                 <p className="text-xs text-gray-500 mt-1">
-                  大会日: {format(new Date(goal.competition.date), 'yyyy年M月d日', { locale: ja })}
+                  大会日: {goal.competition.date && isValid(new Date(goal.competition.date))
+                    ? format(new Date(goal.competition.date), 'yyyy年M月d日', { locale: ja })
+                    : '未定'}
                 </p>
                 {totalMilestones > 0 && (
                   <p className="text-xs text-gray-500 mt-1">
@@ -171,13 +175,7 @@ export default function GoalReflectionModal({
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => {
-                    // 未達成セクションを表示
-                    const reflectionSection = document.getElementById('reflection-section')
-                    if (reflectionSection) {
-                      reflectionSection.classList.remove('hidden')
-                    }
-                  }}
+                  onClick={() => setIsReflectionOpen(true)}
                   disabled={isLoading}
                   className="flex items-center justify-center gap-2"
                 >
@@ -188,7 +186,8 @@ export default function GoalReflectionModal({
             </div>
 
             {/* 振り返りセクション（未達成時に表示） */}
-            <div id="reflection-section" className="hidden space-y-4 border-t pt-4">
+            {isReflectionOpen && (
+            <div className="space-y-4 border-t pt-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   振り返り（選択式）
@@ -242,6 +241,7 @@ export default function GoalReflectionModal({
                 </Button>
               </div>
             </div>
+            )}
           </div>
         </div>
       </div>

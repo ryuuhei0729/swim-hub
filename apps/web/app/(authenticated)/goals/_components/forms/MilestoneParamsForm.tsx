@@ -248,17 +248,22 @@ export function RepsTimeParamsForm({ params, onChange }: RepsTimeParamsFormProps
     const value = e.target.value
     setCircleMin(value)
     const min = value === '' ? 0 : parseInt(value, 10)
-    const sec = circleSec === '' ? 0 : parseInt(circleSec, 10)
-    const totalSeconds = (Number.isFinite(min) ? min : 0) * 60 + (Number.isFinite(sec) ? sec : 0)
+    const parsedSec = circleSec === '' ? 0 : parseInt(circleSec, 10)
+    const clampedSec = Number.isFinite(parsedSec) ? Math.max(0, Math.min(parsedSec, 59)) : 0
+    if (clampedSec !== parsedSec && circleSec !== '') {
+      setCircleSec(String(clampedSec))
+    }
+    const totalSeconds = (Number.isFinite(min) ? min : 0) * 60 + clampedSec
     onChange({ ...params, circle: totalSeconds })
   }
 
   const handleCircleSecChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
-    setCircleSec(value)
+    const parsedSec = value === '' ? 0 : parseInt(value, 10)
+    const clampedSec = Number.isFinite(parsedSec) ? Math.max(0, Math.min(parsedSec, 59)) : 0
+    setCircleSec(value === '' ? '' : String(clampedSec))
     const min = circleMin === '' ? 0 : parseInt(circleMin, 10)
-    const sec = value === '' ? 0 : Math.min(parseInt(value, 10), 59)
-    const totalSeconds = (Number.isFinite(min) ? min : 0) * 60 + (Number.isFinite(sec) ? sec : 0)
+    const totalSeconds = (Number.isFinite(min) ? min : 0) * 60 + clampedSec
     onChange({ ...params, circle: totalSeconds })
   }
 
@@ -438,17 +443,22 @@ export function SetParamsForm({ params, onChange }: SetParamsFormProps) {
     const value = e.target.value
     setCircleMin(value)
     const min = value === '' ? 0 : parseInt(value, 10)
-    const sec = circleSec === '' ? 0 : parseInt(circleSec, 10)
-    const totalSeconds = (Number.isFinite(min) ? min : 0) * 60 + (Number.isFinite(sec) ? sec : 0)
+    const parsedSec = circleSec === '' ? 0 : parseInt(circleSec, 10)
+    const clampedSec = Number.isFinite(parsedSec) ? Math.max(0, Math.min(parsedSec, 59)) : 0
+    if (clampedSec !== parsedSec && circleSec !== '') {
+      setCircleSec(String(clampedSec))
+    }
+    const totalSeconds = (Number.isFinite(min) ? min : 0) * 60 + clampedSec
     onChange({ ...params, circle: totalSeconds })
   }
 
   const handleCircleSecChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
-    setCircleSec(value)
+    const parsedSec = value === '' ? 0 : parseInt(value, 10)
+    const clampedSec = Number.isFinite(parsedSec) ? Math.max(0, Math.min(parsedSec, 59)) : 0
+    setCircleSec(value === '' ? '' : String(clampedSec))
     const min = circleMin === '' ? 0 : parseInt(circleMin, 10)
-    const sec = value === '' ? 0 : Math.min(parseInt(value, 10), 59)
-    const totalSeconds = (Number.isFinite(min) ? min : 0) * 60 + (Number.isFinite(sec) ? sec : 0)
+    const totalSeconds = (Number.isFinite(min) ? min : 0) * 60 + clampedSec
     onChange({ ...params, circle: totalSeconds })
   }
 

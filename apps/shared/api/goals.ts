@@ -4,7 +4,7 @@
 // =============================================================================
 
 import { SupabaseClient } from '@supabase/supabase-js'
-import { format } from 'date-fns'
+import { format, parseISO, isValid, startOfDay } from 'date-fns'
 import {
   CompetitionInsert
 } from '../types'
@@ -421,23 +421,25 @@ export class GoalAPI {
     const { data: { user } } = await this.supabase.auth.getUser()
     if (!user) throw new Error('認証が必要です')
 
-    const today = format(new Date(), 'yyyy-MM-dd')
+    const todayDate = startOfDay(new Date())
+    const todayStr = format(todayDate, 'yyyy-MM-dd')
 
-    // まずactiveな目標を全て取得し、クライアント側で期限切れをフィルタ
+    // activeな目標を取得し、サーバー側で大会日付が今日より前のものをフィルタ
     const { data, error } = await this.supabase
       .from('goals')
       .select(`
         *,
-        competition:competitions(*),
+        competition:competitions!inner(*),
         style:styles(*),
         milestones(*)
       `)
       .eq('user_id', user.id)
       .eq('status', 'active')
+      .lt('competitions.date', todayStr)
 
     if (error) throw error
 
-    // 期限切れ（大会日付が過去）のものをフィルタ
+    // クライアント側でデータ整形と追加の日付バリデーション
     const expiredGoals = (data || [])
       .map((item: any) => {
         const competition = Array.isArray(item.competition) ? item.competition[0] : item.competition
@@ -451,13 +453,18 @@ export class GoalAPI {
         } as GoalWithMilestones
       })
       .filter((goal: GoalWithMilestones) => {
-        // 大会日付が今日より前のものを期限切れとして扱う
+        // 大会日付のバリデーション
         if (!goal.competition?.date) return false
-        return goal.competition.date < today
+        const competitionDate = parseISO(goal.competition.date)
+        if (!isValid(competitionDate)) return false
+        // 日付のみで比較（タイムゾーン問題を回避）
+        return startOfDay(competitionDate) < todayDate
       })
       .sort((a: GoalWithMilestones, b: GoalWithMilestones) => {
         // 大会日付の降順でソート
-        return (b.competition?.date || '').localeCompare(a.competition?.date || '')
+        const dateA = a.competition?.date ? parseISO(a.competition.date) : new Date(0)
+        const dateB = b.competition?.date ? parseISO(b.competition.date) : new Date(0)
+        return dateB.getTime() - dateA.getTime()
       })
 
     return expiredGoals
