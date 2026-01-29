@@ -58,7 +58,7 @@
     "enhanced-resolve": "^5.18.4",
     "supabase": "^2.71.1",
     "tapable": "^2.3.0",
-    "turbo": "^2.6.0",
+    "turbo": "^2.7.6",
     "typescript": "^5"
   },
   "overrides": {
