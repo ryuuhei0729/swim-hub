@@ -44,6 +44,7 @@ export default function DeadlineInput({
             label={label}
             value={value}
             onChange={onChange}
+            popupPosition="top"
           />
         </div>
         <Button

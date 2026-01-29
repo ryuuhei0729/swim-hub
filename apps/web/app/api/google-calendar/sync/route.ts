@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Google Calendarへの同期に失敗しました' }, { status: response.status })
     }
 
-    const result = await response.json()
+    const result = await response.json() as { id?: string }
 
     return NextResponse.json({
       success: true,

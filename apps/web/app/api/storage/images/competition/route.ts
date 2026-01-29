@@ -1,9 +1,9 @@
 /**
- * 練習記録画像のアップロード/削除 API
+ * 大会記録画像のアップロード/削除 API
  * R2優先、Supabase Storageフォールバック
  *
  * 注意: 圧縮版画像のみ保存（オリジナルは保存しない）
- * DB登録なし - パスはpractices.image_pathsで管理
+ * DB登録なし - パスはcompetitions.image_pathsで管理
  */
 import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-server-auth'
 import { isR2Enabled, uploadToR2, deleteFromR2 } from '@/lib/r2'
@@ -14,8 +14,8 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
 /**
- * POST: 練習画像をアップロード（圧縮版のみ）
- * Body: FormData with file, practiceId
+ * POST: 大会画像をアップロード（圧縮版のみ）
+ * Body: FormData with file, competitionId
  * Returns: { path: string } - 保存されたパス
  */
 export async function POST(request: NextRequest) {
@@ -29,11 +29,11 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData()
     const file = formData.get('file') as File | null
-    const practiceId = formData.get('practiceId') as string | null
+    const competitionId = formData.get('competitionId') as string | null
 
-    if (!file || !practiceId) {
+    if (!file || !competitionId) {
       return NextResponse.json({
-        error: 'file, practiceId が必要です'
+        error: 'file, competitionId が必要です'
       }, { status: 400 })
     }
 
@@ -49,20 +49,20 @@ export async function POST(request: NextRequest) {
     // ファイル名を生成
     const uuid = crypto.randomUUID()
     const fileName = `${uuid}.webp`
-    const filePath = `${user.id}/${practiceId}/${fileName}`
+    const filePath = `${user.id}/${competitionId}/${fileName}`
 
     const r2Enabled = isR2Enabled()
 
     if (r2Enabled) {
       // R2にアップロード
-      r2Key = `practice-images/${filePath}`
+      r2Key = `competition-images/${filePath}`
       const buffer = Buffer.from(await file.arrayBuffer())
       await uploadToR2(buffer, r2Key, 'image/webp')
     } else {
       // Supabase Storageにアップロード
       const supabase = await createAuthenticatedServerClient()
       const { error: uploadError } = await supabase.storage
-        .from('practice-images')
+        .from('competition-images')
         .upload(filePath, file, {
           contentType: 'image/webp',
           upsert: false
@@ -81,13 +81,13 @@ export async function POST(request: NextRequest) {
     if (r2Key && isR2Enabled()) {
       await deleteFromR2(r2Key).catch(console.error)
     }
-    console.error('練習画像アップロードエラー:', error)
+    console.error('大会画像アップロードエラー:', error)
     return NextResponse.json({ error: '予期しないエラーが発生しました' }, { status: 500 })
   }
 }
 
 /**
- * DELETE: 練習画像を削除
+ * DELETE: 大会画像を削除
  * Query: path - 削除する画像のパス
  */
 export async function DELETE(request: NextRequest) {
@@ -122,12 +122,12 @@ export async function DELETE(request: NextRequest) {
 
     const r2Enabled = isR2Enabled()
     if (r2Enabled) {
-      const r2Key = `practice-images/${path}`
+      const r2Key = `competition-images/${path}`
       await deleteFromR2(r2Key)
     } else {
       const supabase = await createAuthenticatedServerClient()
       const { error: deleteError } = await supabase.storage
-        .from('practice-images')
+        .from('competition-images')
         .remove([path])
 
       if (deleteError) {
@@ -138,7 +138,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('練習画像削除エラー:', error)
+    console.error('大会画像削除エラー:', error)
     return NextResponse.json({ error: '予期しないエラーが発生しました' }, { status: 500 })
   }
 }

@@ -31,6 +31,7 @@ export async function syncPracticeToGoogleCalendar(
       headers: {
         'Content-Type': 'application/json'
       },
+      credentials: 'include',
       body: JSON.stringify({
         type: 'practice',
         data: practice,
@@ -40,14 +41,14 @@ export async function syncPracticeToGoogleCalendar(
     })
 
     if (!response.ok) {
-      const error = await response.json()
+      const error = await response.json() as { error?: string }
       return {
         success: false,
         error: error.error || '同期に失敗しました'
       }
     }
 
-    const result = await response.json()
+    const result = await response.json() as { googleEventId?: string }
     return {
       success: true,
       googleEventId: result.googleEventId
@@ -70,8 +71,8 @@ export async function syncCompetitionToGoogleCalendar(
   googleEventId?: string
 ): Promise<GoogleCalendarSyncResult> {
   try {
-    const appUrl = typeof window !== 'undefined' 
-      ? window.location.origin 
+    const appUrl = typeof window !== 'undefined'
+      ? window.location.origin
       : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
     const response = await fetch(`${appUrl}/api/google-calendar/sync`, {
@@ -79,6 +80,7 @@ export async function syncCompetitionToGoogleCalendar(
       headers: {
         'Content-Type': 'application/json'
       },
+      credentials: 'include',
       body: JSON.stringify({
         type: 'competition',
         data: competition,
@@ -88,14 +90,14 @@ export async function syncCompetitionToGoogleCalendar(
     })
 
     if (!response.ok) {
-      const error = await response.json()
+      const error = await response.json() as { error?: string }
       return {
         success: false,
         error: error.error || '同期に失敗しました'
       }
     }
 
-    const result = await response.json()
+    const result = await response.json() as { googleEventId?: string }
     return {
       success: true,
       googleEventId: result.googleEventId
@@ -108,5 +110,3 @@ export async function syncCompetitionToGoogleCalendar(
     }
   }
 }
-
-

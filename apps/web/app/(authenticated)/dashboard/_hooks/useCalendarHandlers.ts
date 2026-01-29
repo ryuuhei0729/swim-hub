@@ -3,15 +3,12 @@
 // =============================================================================
 
 import type { EditingData, EntryWithStyle } from '@/stores/types'
-import type { CalendarItemType, PracticeLogWithTimes, PracticeTag, PracticeImage, CompetitionImage } from '@apps/shared/types'
+import type { CalendarItemType, PracticeLogWithTimes, PracticeTag, PracticeLogTemplate } from '@apps/shared/types'
 import type { CalendarItem, EntryInfo, TimeEntry } from '@apps/shared/types/ui'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@swim-hub/shared/types'
 import { parseISO, startOfDay } from 'date-fns'
 import { useCallback } from 'react'
-
-type PracticeImageRow = PracticeImage
-type CompetitionImageRow = CompetitionImage
 
 // スプリットタイム型（編集時に使用）
 export interface RecordSplitTime {
@@ -88,28 +85,35 @@ export function useCalendarHandlers({
   // アイテム編集ハンドラー
   const onEditItem = useCallback(async (item: CalendarItem) => {
     const dateObj = parseDateString(item.date)
-    
+
     if (item.type === 'practice' || item.type === 'team_practice') {
-      // 練習編集時は画像情報を取得
+      // 練習編集時は画像情報を取得（practice_imagesテーブルから）
       let itemWithImages = item
       if (item.id) {
         try {
-          // NOTE: Supabaseの型推論が環境によってneverになることがあるため、Row型を明示して受け取る
-          const { data: images } = (await supabase
+          type PracticeImageRow = {
+            id: string
+            thumbnail_path: string
+            original_path: string
+            file_name: string
+            display_order: number
+          }
+          const { data: practiceImagesData } = await supabase
             .from('practice_images')
-            // NOTE: PostgRESTのselect型推論が崩れてneverになるケースがあるため、ここでは '*' を使用する
-            .select('*')
+            .select('id, thumbnail_path, original_path, file_name, display_order')
             .eq('practice_id', item.id)
-            .order('display_order')) as unknown as { data: PracticeImageRow[] | null }
-          
-          if (images && images.length > 0) {
-            const formattedImages = images.map((img) => ({
+            .order('display_order', { ascending: true })
+
+          const practiceImages = (practiceImagesData || []) as PracticeImageRow[]
+
+          if (practiceImages.length > 0) {
+            const formattedImages = practiceImages.map((img) => ({
               id: img.id,
               thumbnailUrl: supabase.storage.from('practice-images').getPublicUrl(img.thumbnail_path).data.publicUrl,
               originalUrl: supabase.storage.from('practice-images').getPublicUrl(img.original_path).data.publicUrl,
               fileName: img.file_name
             }))
-            
+
             // itemに画像情報を追加
             itemWithImages = {
               ...item,
@@ -196,24 +200,25 @@ export function useCalendarHandlers({
         }
       }
     } else if (item.type === 'competition' || item.type === 'team_competition') {
-      // 大会編集時は画像情報を取得
+      // 大会編集時は画像情報を取得（image_pathsから）
       let itemWithImages = item
       if (item.id) {
         try {
-          // NOTE: Supabaseの型推論が環境によってneverになることがあるため、Row型を明示して受け取る
-          const { data: images } = (await supabase
-            .from('competition_images')
-            // NOTE: PostgRESTのselect型推論が崩れてneverになるケースがあるため、ここでは '*' を使用する
-            .select('*')
-            .eq('competition_id', item.id)
-            .order('display_order')) as unknown as { data: CompetitionImageRow[] | null }
+          const { data: competitionData } = await (supabase
+            .from('competitions') as ReturnType<typeof supabase.from>)
+            .select('image_paths')
+            .eq('id', item.id)
+            .single()
 
-          if (images && images.length > 0) {
-            const formattedImages = images.map((img) => ({
-              id: img.id,
-              thumbnailUrl: supabase.storage.from('competition-images').getPublicUrl(img.thumbnail_path).data.publicUrl,
-              originalUrl: supabase.storage.from('competition-images').getPublicUrl(img.original_path).data.publicUrl,
-              fileName: img.file_name
+          const competition = competitionData as { image_paths?: string[] | null } | null
+          const imagePaths = competition?.image_paths || []
+
+          if (imagePaths.length > 0) {
+            const formattedImages = imagePaths.map((path, index) => ({
+              id: path, // パスをIDとして使用
+              thumbnailUrl: supabase.storage.from('competition-images').getPublicUrl(path).data.publicUrl,
+              originalUrl: supabase.storage.from('competition-images').getPublicUrl(path).data.publicUrl,
+              fileName: path.split('/').pop() || `image-${index}`
             }))
 
             // itemに画像情報を追加
@@ -241,6 +246,22 @@ export function useCalendarHandlers({
   // 練習ログ追加ハンドラー
   const onAddPracticeLog = useCallback((practiceId: string) => {
     openPracticeLogForm(practiceId)
+  }, [openPracticeLogForm])
+
+  // テンプレートから練習ログ追加ハンドラー
+  const onAddPracticeLogFromTemplate = useCallback((practiceId: string, template: PracticeLogTemplate) => {
+    const editData: EditingData = {
+      practiceId,
+      style: template.style,
+      swim_category: template.swim_category,
+      distance: template.distance,
+      rep_count: template.rep_count,
+      set_count: template.set_count,
+      circle: template.circle,
+      note: template.note || undefined,
+      tag_ids: template.tag_ids,
+    }
+    openPracticeLogForm(practiceId, editData)
   }, [openPracticeLogForm])
 
   // 練習ログ編集ハンドラー
@@ -406,6 +427,7 @@ export function useCalendarHandlers({
     onEditItem,
     onDeleteItem,
     onAddPracticeLog,
+    onAddPracticeLogFromTemplate,
     onEditPracticeLog,
     onDeletePracticeLog,
     onAddRecord,

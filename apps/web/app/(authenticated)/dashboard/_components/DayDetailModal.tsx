@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { XMarkIcon, PencilIcon, TrashIcon, ClipboardDocumentCheckIcon, ShareIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, PencilIcon, TrashIcon, ClipboardDocumentCheckIcon, ShareIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline'
 import { BoltIcon, TrophyIcon } from '@heroicons/react/24/solid'
 import { format, parseISO, isValid } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -22,11 +22,13 @@ import type {
   PracticeTag,
   TeamAttendanceWithDetails,
   SplitTime,
-  PoolType
+  PoolType,
+  PracticeLogTemplate
 } from '@apps/shared/types'
 import { AttendanceAPI, EntryAPI } from '@swim-hub/shared'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { PracticeLogTemplateSelectModal } from '@/components/practice-log-templates/PracticeLogTemplateSelectModal'
 
 export default function DayDetailModal({
   isOpen,
@@ -37,6 +39,7 @@ export default function DayDetailModal({
   onDeleteItem,
   onAddItem,
   onAddPracticeLog,
+  onAddPracticeLogFromTemplate,
   onEditPracticeLog,
   onDeletePracticeLog,
   onAddRecord,
@@ -119,23 +122,22 @@ export default function DayDetailModal({
             {/* エントリーがない場合 */}
             {entries.length === 0 && (
               <div className="text-center py-8">
-                <p className="text-gray-500 mb-4" data-testid="empty-day-message">この日の記録はありません</p>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => onAddItem?.(date, 'practice')}
-                    className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500"
-                    data-testid="add-practice-button"
-                  >
-                    <span className="mr-2">💪</span>
-                    練習予定を追加
-                  </button>
+                <div className="flex gap-3">
                   <button
                     onClick={() => onAddItem?.(date, 'record')}
-                    className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-blue-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 flex flex-col items-center justify-center px-4 py-12 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-blue-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300"
                     data-testid="add-record-button"
                   >
-                    <span className="mr-2">🏊‍♂️</span>
+                    <TrophyIcon className="h-8 w-8 text-blue-500 mb-2" />
                     大会記録を追加
+                  </button>
+                  <button
+                    onClick={() => onAddItem?.(date, 'practice')}
+                    className="flex-1 flex flex-col items-center justify-center px-4 py-12 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    data-testid="add-practice-button"
+                  >
+                    <ClipboardDocumentListIcon className="h-8 w-8 text-green-500 mb-2" />
+                    練習予定を追加
                   </button>
                 </div>
               </div>
@@ -147,9 +149,9 @@ export default function DayDetailModal({
                 <div className="space-y-3">
                   {/* 練習（practice_logがない場合のみ） */}
                   {practiceItems.map((item) => (
-                    <PracticeDetails 
-                      key={item.id} 
-                      practiceId={item.id} 
+                    <PracticeDetails
+                      key={item.id}
+                      practiceId={item.id}
                       place={item.place}
                       isTeamPractice={item.type === 'team_practice'}
                       teamId={item.metadata?.team_id}
@@ -157,6 +159,7 @@ export default function DayDetailModal({
                       onEdit={() => onEditItem?.(item)}
                       onDelete={() => setShowDeleteConfirm({id: item.id, type: item.type})}
                       onAddPracticeLog={onAddPracticeLog}
+                      onAddPracticeLogFromTemplate={onAddPracticeLogFromTemplate}
                       onEditPracticeLog={onEditPracticeLog}
                       onDeletePracticeLog={onDeletePracticeLog}
                       onShowAttendance={item.type === 'team_practice' && item.metadata?.team_id ? () => {
@@ -197,7 +200,7 @@ export default function DayDetailModal({
                       .join(',')
                     
                     return (
-                      <PracticeDetails 
+                      <PracticeDetails
                         key={item.id}
                         practiceId={practiceId}
                         place={item.place}
@@ -205,7 +208,7 @@ export default function DayDetailModal({
                         isTeamPractice={isPracticeMetadata(item.metadata) ? !!item.metadata.team_id : false}
                         teamId={isPracticeMetadata(item.metadata) ? item.metadata.team_id : undefined}
                         teamName={isPracticeMetadata(item.metadata) && isTeamInfo(item.metadata.team) ? item.metadata.team.name : undefined}
-                        onEdit={() => {
+                        onEdit={(images) => {
                           // practiceの編集
                           const practiceData = {
                             id: practiceId,
@@ -214,7 +217,8 @@ export default function DayDetailModal({
                             title: '練習',
                             place: item.place || '',
                             note: item.note || undefined,
-                            metadata: isPracticeMetadata(item.metadata) ? (item.metadata.practice || {}) : {}
+                            metadata: isPracticeMetadata(item.metadata) ? (item.metadata.practice || {}) : {},
+                            editData: { images }
                           }
                           onEditItem?.(practiceData)
                         }}
@@ -223,6 +227,7 @@ export default function DayDetailModal({
                           setShowDeleteConfirm({id: practiceId, type: 'practice' as const})
                         }}
                         onAddPracticeLog={onAddPracticeLog}
+                        onAddPracticeLogFromTemplate={onAddPracticeLogFromTemplate}
                         onEditPracticeLog={onEditPracticeLog}
                         onDeletePracticeLog={onDeletePracticeLog}
                         onShowAttendance={isPracticeMetadata(item.metadata) && item.metadata.team_id ? () => {
@@ -301,7 +306,7 @@ export default function DayDetailModal({
                         isTeamCompetition={!!item.metadata?.team_id}
                         deletedEntryIds={deletedEntryIds}
                         onAddRecord={onAddRecord}
-                        onEditCompetition={() => {
+                        onEditCompetition={(images) => {
                           // 大会情報を編集
                           const competitionData = {
                             id: competitionId,
@@ -319,7 +324,8 @@ export default function DayDetailModal({
                                 place: item.place || '',
                                 pool_type: item.metadata?.competition?.pool_type || 0
                               }
-                            }
+                            },
+                            editData: { images }
                           }
                           onEditItem?.(competitionData)
                         }}
@@ -436,7 +442,7 @@ export default function DayDetailModal({
                         isTeamCompetition={record.metadata?.competition?.team_id != null}
                         teamId={record.metadata?.competition?.team_id}
                         teamName={record.metadata?.competition?.team_id && isRecordMetadata(record.metadata) && isTeamInfo(record.metadata.team) ? record.metadata.team.name : undefined}
-                        onEdit={() => {
+                        onEdit={(images) => {
                           const competitionData = {
                             id: compId,
                             type: 'competition' as const,
@@ -453,7 +459,8 @@ export default function DayDetailModal({
                                 place: record.place || '',
                                 pool_type: poolType
                               }
-                            }
+                            },
+                            editData: { images }
                           }
                           onEditItem?.(competitionData)
                           // 編集フォームを開いた後、モーダルは開いたまま
@@ -486,20 +493,20 @@ export default function DayDetailModal({
                 <h4 className="text-sm font-medium text-gray-700 mb-3">記録を追加</h4>
                 <div className="grid grid-cols-2 gap-3">
                   <button
-                    onClick={() => onAddItem?.(date, 'practice')}
-                    className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500"
-                    data-testid="add-practice-button"
-                  >
-                    <span className="mr-2">💪</span>
-                    練習記録
-                  </button>
-                  <button
                     onClick={() => onAddItem?.(date, 'record')}
                     className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-blue-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     data-testid="add-record-button"
                   >
-                    <span className="mr-2">🏊‍♂️</span>
+                    <TrophyIcon className="h-5 w-5 text-blue-500 mr-2" />
                     大会記録
+                  </button>
+                  <button
+                    onClick={() => onAddItem?.(date, 'practice')}
+                    className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    data-testid="add-practice-button"
+                  >
+                    <ClipboardDocumentListIcon className="h-5 w-5 text-green-500 mr-2" />
+                    練習記録
                   </button>
                 </div>
               </div>
@@ -777,26 +784,28 @@ function AttendanceModal({
 }
 
 // 練習記録の詳細表示
-function PracticeDetails({ 
-  practiceId, 
-  place, 
+function PracticeDetails({
+  practiceId,
+  place,
   practiceLogUpdateKey,
-  onEdit, 
+  onEdit,
   onDelete,
   onAddPracticeLog,
+  onAddPracticeLogFromTemplate,
   onEditPracticeLog,
   onDeletePracticeLog,
   isTeamPractice = false,
   teamId,
   teamName,
   onShowAttendance
-}: { 
+}: {
   practiceId: string
   place?: string
   practiceLogUpdateKey?: string
-  onEdit?: () => void
+  onEdit?: (images?: GalleryImage[]) => void
   onDelete?: () => void
   onAddPracticeLog?: (practiceId: string) => void
+  onAddPracticeLogFromTemplate?: (practiceId: string, template: PracticeLogTemplate) => void
   onEditPracticeLog?: (log: PracticeLogWithTimes & { tags?: PracticeTag[] }) => void
   onDeletePracticeLog?: (logId: string) => void
   isTeamPractice?: boolean
@@ -832,6 +841,7 @@ function PracticeDetails({
   const [error, setError] = useState<Error | null>(null)
   const [showShareModal, setShowShareModal] = useState(false)
   const [sharePracticeData, setSharePracticeData] = useState<PracticeShareData | null>(null)
+  const [showTemplateSelect, setShowTemplateSelect] = useState(false)
 
   useEffect(() => {
     const loadPractice = async () => {
@@ -847,13 +857,6 @@ function PracticeDetails({
               practice_log_tags (
                 practice_tag:practice_tags (*)
               )
-            ),
-            practice_images (
-              id,
-              original_path,
-              thumbnail_path,
-              file_name,
-              display_order
             )
           `)
           .eq('id', practiceId)
@@ -861,7 +864,7 @@ function PracticeDetails({
 
         if (error) throw error
         if (!data) throw new Error('Practice data not found')
-        
+
         // データ整形（camelCase構造に変換）
         type PracticeLogFromDB = {
           id: string
@@ -876,16 +879,9 @@ function PracticeDetails({
           practice_log_tags?: Array<{ practice_tag: PracticeTag }>
           practice_times?: PracticeTime[]
         }
-        type PracticeImageFromDB = {
-          id: string
-          original_path: string
-          thumbnail_path: string
-          file_name: string
-          display_order: number
-        }
         type PracticeFromDB = Practice & {
           practice_logs?: PracticeLogFromDB[]
-          practice_images?: PracticeImageFromDB[]
+          image_paths?: string[]
         }
         const practiceData = data as PracticeFromDB
         const formattedPractice: PracticeWithFormattedLogs = {
@@ -909,16 +905,21 @@ function PracticeDetails({
             })) || []
           }))
         }
-        
-        // 画像データを変換
-        const images: GalleryImage[] = (practiceData.practice_images || [])
-          .sort((a, b) => a.display_order - b.display_order)
-          .map((img: PracticeImageFromDB) => ({
-            id: img.id,
-            thumbnailUrl: supabase.storage.from('practice-images').getPublicUrl(img.thumbnail_path).data.publicUrl,
-            originalUrl: supabase.storage.from('practice-images').getPublicUrl(img.original_path).data.publicUrl,
-            fileName: img.file_name
-          }))
+
+        // 画像データを変換（image_pathsから）
+        const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL
+        const imagePaths = practiceData.image_paths || []
+        const images: GalleryImage[] = imagePaths.map((path: string, index: number) => {
+          const imageUrl = r2PublicUrl
+            ? `${r2PublicUrl}/practice-images/${path}`
+            : supabase.storage.from('practice-images').getPublicUrl(path).data.publicUrl
+          return {
+            id: path, // パスをIDとして使用
+            thumbnailUrl: imageUrl,
+            originalUrl: imageUrl,
+            fileName: path.split('/').pop() || `image-${index + 1}`
+          }
+        })
         
         setPractice(formattedPractice)
         setPracticeImages(images)
@@ -1036,7 +1037,7 @@ function PracticeDetails({
           </div>
           <div className="flex items-center space-x-2 ml-4">
             <button
-              onClick={onEdit}
+              onClick={() => onEdit?.(practiceImages)}
               className="p-2 text-gray-500 hover:text-green-600 rounded-lg hover:bg-green-100 transition-colors"
               title="練習記録を編集"
               data-testid="edit-practice-button"
@@ -1059,14 +1060,25 @@ function PracticeDetails({
           {/* PracticeLogsがない場合 */}
           {practiceLogs.length === 0 && (
             <div className="bg-white border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-              <button
-                onClick={() => onAddPracticeLog?.(practiceId)}
-                className="inline-flex items-center px-4 py-2 border border-green-300 rounded-lg shadow-sm text-sm font-medium text-green-700 bg-white hover:bg-green-50 hover:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
-                data-testid="add-practice-log-button"
-              >
-                <span className="mr-2">➕</span>
-                練習メニューを追加
-              </button>
+              <p className="text-sm text-gray-500 mb-4">練習メニューを追加してください</p>
+              <div className="flex items-center justify-center gap-3">
+                <button
+                  onClick={() => setShowTemplateSelect(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 border border-blue-300 rounded-lg shadow-sm text-sm font-medium text-blue-700 bg-white hover:bg-blue-50 hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                  data-testid="add-from-template-button"
+                >
+                  <ClipboardDocumentListIcon className="h-5 w-5" />
+                  テンプレートから
+                </button>
+                <button
+                  onClick={() => onAddPracticeLog?.(practiceId)}
+                  className="inline-flex items-center gap-2 px-4 py-2 border border-green-300 rounded-lg shadow-sm text-sm font-medium text-green-700 bg-white hover:bg-green-50 hover:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+                  data-testid="add-new-button"
+                >
+                  <PencilIcon className="h-5 w-5" />
+                  新規
+                </button>
+              </div>
             </div>
           )}
 
@@ -1384,13 +1396,22 @@ function PracticeDetails({
           data={sharePracticeData}
         />
       )}
+
+      {/* テンプレート選択モーダル */}
+      <PracticeLogTemplateSelectModal
+        isOpen={showTemplateSelect}
+        onClose={() => setShowTemplateSelect(false)}
+        onSelect={(template) => {
+          onAddPracticeLogFromTemplate?.(practiceId, template)
+        }}
+      />
     </div>
   )
 }
 
 
 // 大会記録のスプリットタイム一覧
-function RecordSplitTimes({ recordId, raceDistance }: { recordId: string; raceDistance?: number }) {
+function RecordSplitTimes({ recordId, raceDistance, recordTime }: { recordId: string; raceDistance?: number; recordTime?: number }) {
   const { supabase } = useAuth()
   const [splits, setSplits] = useState<SplitTime[]>([])
   const [loading, setLoading] = useState(true)
@@ -1407,7 +1428,7 @@ function RecordSplitTimes({ recordId, raceDistance }: { recordId: string; raceDi
           .order('distance', { ascending: true })
 
         if (error) throw error
-        
+
         setSplits(data || [])
       } catch (err) {
         console.error('スプリットタイムの取得エラー:', err)
@@ -1431,19 +1452,35 @@ function RecordSplitTimes({ recordId, raceDistance }: { recordId: string; raceDi
     )
   }
 
+  // DBにsplit_timeがない場合は表示しない
   if (!splits.length) {
     return null
   }
 
+  // DBから取得したsplit_timesに、ゴールタイム（種目の距離）を追加して表示用データを作成
+  const displaySplitTimes = (() => {
+    const baseSplits = splits.map(st => ({
+      distance: st.distance,
+      splitTime: st.split_time
+    }))
+
+    // ゴールタイムを最終splitとして追加（種目の距離と同じ距離のsplitがない場合）
+    if (raceDistance && recordTime && recordTime > 0) {
+      const hasGoalSplit = baseSplits.some(st => st.distance === raceDistance)
+      if (!hasGoalSplit) {
+        return [...baseSplits, { distance: raceDistance, splitTime: recordTime }]
+      }
+    }
+
+    return baseSplits
+  })()
+
   return (
     <div className="mt-3">
       {/* 距離別Lap表示 */}
-      {splits.length > 0 && (
+      {displaySplitTimes.length > 0 && (
         <LapTimeDisplay
-          splitTimes={splits.map(st => ({
-            distance: st.distance,
-            splitTime: st.split_time
-          }))}
+          splitTimes={displaySplitTimes}
           raceDistance={raceDistance}
         />
       )}
@@ -1476,7 +1513,7 @@ function CompetitionDetails({
   poolType?: number
   note?: string
   records?: CalendarItem[]
-  onEdit?: () => void
+  onEdit?: (images?: GalleryImage[]) => void
   onDelete?: () => void
   onAddRecord?: (params: { competitionId?: string; entryData?: { styleId: number; styleName: string } }) => void
   onEditRecord?: (record: Record) => void
@@ -1498,6 +1535,31 @@ function CompetitionDetails({
     const loadRecords = async () => {
       try {
         setLoading(true)
+
+        // 大会の画像パスを直接取得（recordsの有無に関わらず）
+        const { data: competitionData } = await (supabase
+          .from('competitions') as ReturnType<typeof supabase.from>)
+          .select('image_paths')
+          .eq('id', competitionId)
+          .single()
+
+        const competition = competitionData as { image_paths?: string[] | null } | null
+        const imagePaths = competition?.image_paths || []
+        const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL
+        const images: GalleryImage[] = imagePaths.map((path: string, index: number) => {
+          const imageUrl = r2PublicUrl
+            ? `${r2PublicUrl}/competition-images/${path}`
+            : supabase.storage.from('competition-images').getPublicUrl(path).data.publicUrl
+          return {
+            id: path, // パスをIDとして使用
+            thumbnailUrl: imageUrl,
+            originalUrl: imageUrl,
+            fileName: path.split('/').pop() || `image-${index + 1}`
+          }
+        })
+        setCompetitionImages(images)
+
+        // recordsを取得
         let recordQuery = supabase
           .from('records')
           .select(`
@@ -1513,19 +1575,9 @@ function CompetitionDetails({
           recordQuery = recordQuery.eq('user_id', user.id)
         }
 
-        const imagesQuery = supabase
-          .from('competition_images')
-          .select('id, original_path, thumbnail_path, file_name, display_order')
-          .eq('competition_id', competitionId)
-          .order('display_order')
-
-        const [{ data, error }, { data: imageData, error: imageError }] = await Promise.all([
-          recordQuery,
-          imagesQuery
-        ])
+        const { data, error } = await recordQuery
 
         if (error) throw error
-        if (imageError) throw imageError
 
         // calendar_view形式に変換
         type RecordFromDB = {
@@ -1589,24 +1641,6 @@ function CompetitionDetails({
         }))
 
         setActualRecords(formattedRecords)
-
-        // 画像データを変換
-        type CompetitionImageFromDB = {
-          id: string
-          original_path: string
-          thumbnail_path: string
-          file_name: string
-          display_order: number
-        }
-        const images: GalleryImage[] = ((imageData || []) as CompetitionImageFromDB[])
-          .sort((a, b) => a.display_order - b.display_order)
-          .map((img: CompetitionImageFromDB) => ({
-            id: img.id,
-            thumbnailUrl: supabase.storage.from('competition-images').getPublicUrl(img.thumbnail_path).data.publicUrl,
-            originalUrl: supabase.storage.from('competition-images').getPublicUrl(img.original_path).data.publicUrl,
-            fileName: img.file_name
-          }))
-        setCompetitionImages(images)
       } catch (err) {
         console.error('記録の取得エラー:', err)
         setActualRecords([])
@@ -1668,7 +1702,7 @@ function CompetitionDetails({
           </div>
           <div className="flex items-center space-x-2 ml-4">
             <button
-              onClick={onEdit}
+              onClick={() => onEdit?.(competitionImages)}
               className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
               title="大会情報を編集"
               data-testid="edit-competition-button"
@@ -1862,9 +1896,10 @@ function CompetitionDetails({
                 </div>
 
                 {/* スプリットタイム */}
-                <RecordSplitTimes 
+                <RecordSplitTimes
                   recordId={record.id}
                   raceDistance={record.metadata?.style?.distance || record.metadata?.record?.style?.distance}
+                  recordTime={record.metadata?.record?.time}
                 />
 
                 {/* メモ */}
@@ -1959,7 +1994,7 @@ function CompetitionWithEntry({
   isTeamCompetition?: boolean
   deletedEntryIds?: string[]
   onAddRecord?: (params: { competitionId?: string; entryData?: { styleId: number; styleName: string }; entryDataList?: EntryInfo[] }) => void
-  onEditCompetition?: () => void
+  onEditCompetition?: (images?: GalleryImage[]) => void
   onDeleteCompetition?: () => void
   onEditEntry?: () => void
   onDeleteEntry?: (entryId: string) => void
@@ -1998,40 +2033,31 @@ function CompetitionWithEntry({
           return
         }
 
-        // 添付画像を取得
-        const { data: imageData, error: imageError } = await supabase
-          .from('competition_images')
-          .select('id, original_path, thumbnail_path, file_name, display_order')
-          .eq('competition_id', competitionId)
-          .order('display_order')
-        if (imageError) throw imageError
-
-        type CompetitionImageFromDB = {
-          id: string
-          original_path: string
-          thumbnail_path: string
-          file_name: string
-          display_order: number
-        }
-        const images: GalleryImage[] = ((imageData || []) as CompetitionImageFromDB[])
-          .sort((a, b) => a.display_order - b.display_order)
-          .map((img: CompetitionImageFromDB) => ({
-            id: img.id,
-            thumbnailUrl: supabase.storage.from('competition-images').getPublicUrl(img.thumbnail_path).data.publicUrl,
-            originalUrl: supabase.storage.from('competition-images').getPublicUrl(img.original_path).data.publicUrl,
-            fileName: img.file_name
-          }))
-        setCompetitionImages(images)
-
-        // competitionのentry_statusを取得
+        // competitionのentry_statusとimage_pathsを取得
         const { data: competitionData, error: competitionError } = await supabase
           .from('competitions')
-          .select('entry_status')
+          .select('entry_status, image_paths')
           .eq('id', competitionId)
           .single()
 
         if (!competitionError && competitionData) {
           setEntryStatus(competitionData.entry_status || 'before')
+
+          // 画像データを変換（image_pathsから）
+          const imagePaths = (competitionData as { image_paths?: string[] }).image_paths || []
+          const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL
+          const images: GalleryImage[] = imagePaths.map((path: string, index: number) => {
+            const imageUrl = r2PublicUrl
+              ? `${r2PublicUrl}/competition-images/${path}`
+              : supabase.storage.from('competition-images').getPublicUrl(path).data.publicUrl
+            return {
+              id: path, // パスをIDとして使用
+              thumbnailUrl: imageUrl,
+              originalUrl: imageUrl,
+              fileName: path.split('/').pop() || `image-${index + 1}`
+            }
+          })
+          setCompetitionImages(images)
         }
 
         // EntryAPIを使用してエントリーを取得
@@ -2167,7 +2193,7 @@ function CompetitionWithEntry({
           <div className="flex items-center gap-2">
             {onEditCompetition && (
               <button
-                onClick={onEditCompetition}
+                onClick={() => onEditCompetition(competitionImages)}
                 className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
                 title="大会を編集"
                 data-testid="edit-competition-button"

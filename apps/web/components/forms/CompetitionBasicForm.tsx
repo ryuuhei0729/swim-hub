@@ -373,7 +373,7 @@ export default function CompetitionBasicForm({
                   placeholder="開始日を選択"
                 />
                 <DatePicker
-                  label="終了日"
+                  label="終了日(複数日の場合)"
                   value={formData.endDate}
                   onChange={(date) => {
                     setFormData({ ...formData, endDate: date })
@@ -381,13 +381,13 @@ export default function CompetitionBasicForm({
                   }}
                   minDate={formData.date ? new Date(formData.date) : undefined}
                   placeholder="終了日を選択"
-                  helperText="複数日の場合"
                 />
               </div>
 
-              {/* 大会名 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+              {/* 大会名・場所・プール種別 */}
+              <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-4 items-center">
+                {/* 大会名 */}
+                <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
                   大会名
                 </label>
                 <Input
@@ -395,25 +395,24 @@ export default function CompetitionBasicForm({
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="例: 全国大会, 対抗戦, タイムトライアル"
-                  className="w-full"
                   data-testid="competition-title"
                 />
-              </div>
 
-              {/* 場所 */}
-              <PlaceCombobox
-                label="場所"
-                value={formData.place}
-                onChange={(value) => setFormData({ ...formData, place: value })}
-                suggestions={placeSuggestions}
-                placeholder="例: 東京アクアティクスセンター"
-                data-testid="competition-place"
-              />
+                {/* 場所 */}
+                <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                  場所
+                </label>
+                <PlaceCombobox
+                  value={formData.place}
+                  onChange={(value) => setFormData({ ...formData, place: value })}
+                  suggestions={placeSuggestions}
+                  placeholder="例: 東京アクアティクスセンター"
+                  data-testid="competition-place"
+                />
 
-              {/* プール種別 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  プール種別 <span className="text-red-500">*</span>
+                {/* プール種別 */}
+                <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                  水路 <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formData.poolType}
@@ -446,7 +445,7 @@ export default function CompetitionBasicForm({
               </div>
 
               {/* 画像添付 */}
-              <div className="border-t border-gray-200 pt-6">
+              <div>
                 <CompetitionImageUploader
                   existingImages={editData?.images}
                   onImagesChange={handleImagesChange}

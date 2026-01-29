@@ -5,6 +5,7 @@ import { XMarkIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui'
 import { useAuth } from '@/contexts'
 import { GoalAPI } from '@apps/shared/api/goals'
+import { PracticeLogTemplateAPI } from '@swim-hub/shared/api'
 import type { GoalWithMilestones, Style, MilestoneParams, MilestoneTimeParams, MilestoneRepsTimeParams, MilestoneSetParams, MilestoneGoalSetParams } from '@apps/shared/types'
 import { MILESTONE_TEMPLATES } from './templates/milestoneTemplates'
 import MilestoneForm from './forms/MilestoneForm'
@@ -41,8 +42,10 @@ export default function MilestoneCreateModal({
   const [params, setParams] = useState<MilestoneParams>(DEFAULT_TIME_PARAMS)
   const [isLoading, setIsLoading] = useState(false)
   const [isGoalSetModalOpen, setIsGoalSetModalOpen] = useState(false)
+  const [addToTemplate, setAddToTemplate] = useState(false)
 
   const goalAPI = new GoalAPI(supabase)
+  const templateAPI = new PracticeLogTemplateAPI(supabase)
 
   // Goalが100m種目かどうかをチェック
   const is100mGoal = useMemo(() => {
@@ -85,7 +88,8 @@ export default function MilestoneCreateModal({
       const timeTrialParams: MilestoneTimeParams = {
         distance: goal.style.distance,
         target_time: Math.round((goal.target_time * 1.01) * 100) / 100,
-        style: styleValue
+        style: styleValue,
+        swim_category: 'Swim'
       }
 
       setType('time')
@@ -157,6 +161,22 @@ export default function MilestoneCreateModal({
         deadline: deadline || null
       })
 
+      // テンプレートにも追加する場合
+      if (addToTemplate && (type === 'reps_time' || type === 'set')) {
+        const milestoneTitle = title || getDefaultTitle(type, params)
+        const p = params as MilestoneRepsTimeParams | MilestoneSetParams
+
+        await templateAPI.createTemplate({
+          name: milestoneTitle,
+          style: p.style || 'Fr',
+          swim_category: (p.swim_category as 'Swim' | 'Pull' | 'Kick') || 'Swim',
+          distance: p.distance,
+          rep_count: p.reps,
+          set_count: 'sets' in p ? p.sets : 1,
+          circle: p.circle || null,
+        })
+      }
+
       await onSuccess()
       handleClose()
     } catch (error) {
@@ -186,6 +206,7 @@ export default function MilestoneCreateModal({
     setDeadline('')
     setSelectedTemplate('')
     setParams(DEFAULT_TIME_PARAMS)
+    setAddToTemplate(false)
     onClose()
   }
 
@@ -234,22 +255,46 @@ export default function MilestoneCreateModal({
                 availableTemplates={availableTemplates}
               />
 
-              {/* ボタン */}
-              <div className="flex justify-end gap-3 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleClose}
-                  disabled={isLoading}
-                >
-                  キャンセル
-                </Button>
-                <Button
-                  type="submit"
-                  loading={isLoading}
-                >
-                  作成
-                </Button>
+              {/* ボタン行（チェックボックス含む） */}
+              <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                {/* テンプレートにも追加するチェックボックス（reps_timeまたはsetタイプの場合のみ） */}
+                {(type === 'reps_time' || type === 'set') ? (
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={addToTemplate}
+                      onChange={(e) => setAddToTemplate(e.target.checked)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-gray-700">
+                        テンプレートにも追加
+                      </span>
+                      <span className="text-xs text-gray-500 ml-1">
+                        (練習作成時に使用)
+                      </span>
+                    </div>
+                  </label>
+                ) : (
+                  <div />
+                )}
+
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleClose}
+                    disabled={isLoading}
+                  >
+                    キャンセル
+                  </Button>
+                  <Button
+                    type="submit"
+                    loading={isLoading}
+                  >
+                    作成
+                  </Button>
+                </div>
               </div>
             </form>
           </div>

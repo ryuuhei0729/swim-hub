@@ -192,9 +192,9 @@ export default function MyPageClient({
 
   // チーム作成成功時のハンドラー
   const handleCreateTeamSuccess = useCallback((_teamId: string) => {
-    setIsCreateTeamModalOpen(false)
-    reloadTeams()
-  }, [reloadTeams])
+    // ページをリロードして最新状態を反映
+    window.location.reload()
+  }, [])
 
   // チーム参加成功時のハンドラー
   const handleJoinTeamSuccess = useCallback((_teamId: string) => {

@@ -30,7 +30,8 @@ export const SWIM_CATEGORIES = [
 export const DEFAULT_TIME_PARAMS: MilestoneTimeParams = {
   distance: 50,
   target_time: 30.0,
-  style: 'Fr'
+  style: 'Fr',
+  swim_category: 'Swim'
 }
 
 export const DEFAULT_REPS_TIME_PARAMS: MilestoneRepsTimeParams = {

@@ -39,6 +39,7 @@ export type EditingData =
       set_count?: number
       circle?: number | null
       tags?: PracticeTag[]
+      tag_ids?: string[]
       times?: Array<{ memberId: string; times: TimeEntry[] }>
     }
   | null

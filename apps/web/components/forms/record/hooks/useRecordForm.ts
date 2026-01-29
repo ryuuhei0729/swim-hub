@@ -360,15 +360,31 @@ export const useRecordForm = ({
   const sanitizeFormData = useCallback((): RecordFormData => {
     return {
       ...formData,
-      records: formData.records.map((record) => ({
-        ...record,
-        splitTimes: record.splitTimes.map((st) => ({
-          distance: st.distance,
-          splitTime: st.splitTime,
-        })),
-      })),
+      records: formData.records.map((record) => {
+        const style = styles.find((s) => s.id === record.styleId)
+        const raceDistance = style?.distance
+
+        // 種目の距離と同じ距離のsplit_timeは保存しない
+        // （ゴールタイム=split_timeなので途中経過ではない）
+        const filteredSplitTimes = record.splitTimes
+          .filter((st) => {
+            if (raceDistance && Number(st.distance) === raceDistance) {
+              return false
+            }
+            return true
+          })
+          .map((st) => ({
+            distance: st.distance,
+            splitTime: st.splitTime,
+          }))
+
+        return {
+          ...record,
+          splitTimes: filteredSplitTimes,
+        }
+      }),
     }
-  }, [formData])
+  }, [formData, styles])
 
   return {
     formData,

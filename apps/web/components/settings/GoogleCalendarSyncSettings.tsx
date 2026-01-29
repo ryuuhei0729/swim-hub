@@ -140,11 +140,16 @@ export default function GoogleCalendarSyncSettings({
       })
 
       if (!response.ok) {
-        const error = await response.json()
+        const error = await response.json() as { error?: string }
         throw new Error(error.error || '一括同期に失敗しました')
       }
 
-      const result = await response.json()
+      const result = await response.json() as {
+        results: {
+          practices: { success: number; error: number }
+          competitions: { success: number; error: number }
+        }
+      }
       setBulkSyncResult(result.results)
       onUpdate() // プロフィールを再取得
     } catch (err) {

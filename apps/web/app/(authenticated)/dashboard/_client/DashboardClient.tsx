@@ -5,8 +5,9 @@ import { useAuth } from '@/contexts'
 import CalendarContainer from '../_components/CalendarContainer'
 import TeamAnnouncementsSection from '../_components/TeamAnnouncementsSection'
 import ReflectionModal from '@/app/(authenticated)/goals/_components/ReflectionModal'
+import GoalReflectionModal from '@/app/(authenticated)/goals/_components/GoalReflectionModal'
 import { GoalAPI } from '@apps/shared/api/goals'
-import type { Milestone } from '@apps/shared/types'
+import type { Milestone, GoalWithMilestones } from '@apps/shared/types'
 import {
   useCreatePracticeMutation,
   useUpdatePracticeMutation,
@@ -65,8 +66,9 @@ export default function DashboardClient({
 }: DashboardClientProps) {
   const { user, supabase } = useAuth()
   const [notificationsRefreshKey, setNotificationsRefreshKey] = useState(0)
+  const [expiredGoal, setExpiredGoal] = useState<GoalWithMilestones | null>(null)
   const [expiredMilestone, setExpiredMilestone] = useState<Milestone | null>(null)
-  const [hasCheckedMilestones, setHasCheckedMilestones] = useState(false)
+  const [hasCheckedExpired, setHasCheckedExpired] = useState(false)
   
   // Zustandストア
   const {
@@ -117,29 +119,38 @@ export default function DashboardClient({
     setCompetitionStyles(styles)
   }, [tags, styles, setAvailableTags, setCompetitionStyles])
 
-  // 期限切れマイルストーンチェック（ログイン時）
+  // 期限切れ目標・マイルストーンチェック（ログイン時）
+  // 目標を優先してチェックし、目標がなければマイルストーンをチェック
   useEffect(() => {
-    if (!user || hasCheckedMilestones) return
+    if (!user || hasCheckedExpired) return
 
-    const checkExpiredMilestones = async () => {
+    const checkExpired = async () => {
       try {
         const goalAPI = new GoalAPI(supabase)
-        const expired = await goalAPI.getExpiredMilestones()
-        
-        if (expired && expired.length > 0) {
-          // 最初の1件のみ表示（1回のみ表示のため）
-          setExpiredMilestone(expired[0])
+
+        // まず期限切れ目標をチェック（優先）
+        const expiredGoals = await goalAPI.getExpiredGoals()
+        if (expiredGoals && expiredGoals.length > 0) {
+          setExpiredGoal(expiredGoals[0])
+          setHasCheckedExpired(true)
+          return
         }
-        
-        setHasCheckedMilestones(true)
+
+        // 期限切れ目標がなければマイルストーンをチェック
+        const expiredMilestones = await goalAPI.getExpiredMilestones()
+        if (expiredMilestones && expiredMilestones.length > 0) {
+          setExpiredMilestone(expiredMilestones[0])
+        }
+
+        setHasCheckedExpired(true)
       } catch (error) {
-        console.error('期限切れマイルストーン取得エラー:', error)
-        setHasCheckedMilestones(true)
+        console.error('期限切れチェックエラー:', error)
+        setHasCheckedExpired(true)
       }
     }
 
-    checkExpiredMilestones()
-  }, [user, supabase, hasCheckedMilestones])
+    checkExpired()
+  }, [user, supabase, hasCheckedExpired])
 
   // カレンダーイベントハンドラーは useCalendarHandlers カスタムフックから取得
 
@@ -276,6 +287,7 @@ export default function DashboardClient({
     onEditItem,
     onDeleteItem: onDeleteCalendarItem,
     onAddPracticeLog,
+    onAddPracticeLogFromTemplate,
     onEditPracticeLog,
     onDeletePracticeLog,
     onAddRecord,
@@ -305,7 +317,7 @@ export default function DashboardClient({
         />
         
         {/* カレンダーコンポーネント */}
-        <CalendarContainer 
+        <CalendarContainer
           refreshKey={calendarRefreshKey}
           initialCalendarItems={initialCalendarItems}
           initialMonthlySummary={initialMonthlySummary}
@@ -314,6 +326,7 @@ export default function DashboardClient({
           onEditItem={onEditItem}
           onDeleteItem={onDeleteCalendarItem}
           onAddPracticeLog={onAddPracticeLog}
+          onAddPracticeLogFromTemplate={onAddPracticeLogFromTemplate}
           onEditPracticeLog={onEditPracticeLog}
           onDeletePracticeLog={onDeletePracticeLog}
           onAddRecord={onAddRecord}
@@ -332,8 +345,32 @@ export default function DashboardClient({
           styles={styles}
         />
 
-        {/* 期限切れ内省モーダル */}
-        {expiredMilestone && (
+        {/* 期限切れ目標モーダル（優先） */}
+        {expiredGoal && (
+          <GoalReflectionModal
+            isOpen={!!expiredGoal}
+            onClose={() => setExpiredGoal(null)}
+            goal={expiredGoal}
+            onSave={async () => {
+              // 保存後、次の期限切れ目標をチェック
+              const goalAPI = new GoalAPI(supabase)
+              const expiredGoals = await goalAPI.getExpiredGoals()
+              if (expiredGoals && expiredGoals.length > 0) {
+                setExpiredGoal(expiredGoals[0])
+              } else {
+                setExpiredGoal(null)
+                // 目標がなくなったらマイルストーンをチェック
+                const expiredMilestones = await goalAPI.getExpiredMilestones()
+                if (expiredMilestones && expiredMilestones.length > 0) {
+                  setExpiredMilestone(expiredMilestones[0])
+                }
+              }
+            }}
+          />
+        )}
+
+        {/* 期限切れマイルストーン内省モーダル */}
+        {!expiredGoal && expiredMilestone && (
           <ReflectionModal
             isOpen={!!expiredMilestone}
             onClose={() => setExpiredMilestone(null)}

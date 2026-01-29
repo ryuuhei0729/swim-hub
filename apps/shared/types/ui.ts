@@ -3,6 +3,7 @@
 // =============================================================================
 
 import { CalendarItemType, PracticeLog, PracticeLogWithTimes, PracticeTag, Record as RecordRow, SplitTime } from './index'
+import type { PracticeLogTemplate } from './practiceLogTemplate'
 
 // =============================================================================
 // 1. カレンダー関連
@@ -311,6 +312,7 @@ export interface CalendarProps {
   onEditItem?: (item: CalendarItem) => void
   onDeleteItem?: (itemId: string, itemType: CalendarItemType) => void
   onAddPracticeLog?: (practiceId: string) => void
+  onAddPracticeLogFromTemplate?: (practiceId: string, template: PracticeLogTemplate) => void
   onEditPracticeLog?: (log: PracticeLogWithTimes & { tags?: PracticeTag[] }) => void
   onDeletePracticeLog?: (logId: string) => void
   onAddRecord?: (params: { competitionId?: string; entryData?: EntryInfo; entryDataList?: EntryInfo[] }) => void
@@ -334,6 +336,7 @@ export interface DayDetailModalProps {
   onDeleteItem?: (itemId: string, itemType: CalendarItemType) => void
   onAddItem?: (date: Date, type: CalendarItemType) => void
   onAddPracticeLog?: (practiceId: string) => void
+  onAddPracticeLogFromTemplate?: (practiceId: string, template: PracticeLogTemplate) => void
   onEditPracticeLog?: (log: PracticeLogWithTimes & { tags?: PracticeTag[] }) => void
   onDeletePracticeLog?: (logId: string) => void
   onAddRecord?: (params: { competitionId?: string; entryData?: EntryInfo; entryDataList?: EntryInfo[] }) => void
