@@ -41,23 +41,28 @@ describe('formatDate', () => {
 
   it('短い形式（デフォルト）で日付がフォーマットされる', () => {
     const result = formatDate(testDate, 'short')
-    expect(result).toMatch(/2025\/01\/15/)
+    expect(result).toBe('1月15日')
   })
 
   it('長い形式で日付がフォーマットされる', () => {
     const result = formatDate(testDate, 'long')
-    expect(result).toMatch(/2025年1月15日/)
-    expect(result).toMatch(/曜日/)
+    expect(result).toBe('2025年1月15日')
   })
 
-  it('時間のみがフォーマットされる', () => {
-    const result = formatDate(testDate, 'time')
-    expect(result).toMatch(/10:30/)
+  it('数値形式で日付がフォーマットされる', () => {
+    const result = formatDate(testDate, 'numeric')
+    expect(result).toBe('2025/01/15')
   })
 
   it('文字列日付入力を処理できる', () => {
     const result = formatDate('2025-01-15', 'short')
-    expect(result).toMatch(/2025\/01\/15/)
+    expect(result).toBe('1月15日')
+  })
+
+  it('無効な日付に対して - を返す', () => {
+    expect(formatDate(null)).toBe('-')
+    expect(formatDate(undefined)).toBe('-')
+    expect(formatDate('invalid-date')).toBe('-')
   })
 })
 

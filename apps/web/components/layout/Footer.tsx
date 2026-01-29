@@ -1,13 +1,14 @@
 import React from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { 
+import {
   HeartIcon,
   ShieldCheckIcon,
   DocumentTextIcon,
   QuestionMarkCircleIcon,
   EnvelopeIcon
 } from '@heroicons/react/24/outline'
+import { formatDate } from '@apps/shared/utils/date'
 
 export default function Footer() {
   const currentYear = new Date().getFullYear()
@@ -94,7 +95,7 @@ export default function Footer() {
             <div className="flex items-center space-x-4 text-xs text-gray-400">
               <span>Version 1.0.0</span>
               <span>•</span>
-              <span>Last updated: {new Date().toLocaleDateString('ja-JP')}</span>
+              <span>Last updated: {formatDate(new Date(), 'numeric')}</span>
             </div>
           </div>
         </div>

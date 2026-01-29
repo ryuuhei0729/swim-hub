@@ -25,7 +25,7 @@
     "lint": "npm run lint --workspaces --if-present",
     "lint:web": "npm run lint --workspace=apps/web",
     "lint:mobile": "npm run lint --workspace=apps/mobile",
-    "test": "npm run test --workspaces --if-present",
+    "test": "npm run test --workspace=apps/web && npm run test --workspace=apps/mobile",
     "test:unit": "npm run test --workspace=apps/web && npm run test --workspace=apps/shared",
     "test:watch": "npm run test:watch --workspace=apps/web",
     "test:coverage": "npm run test:coverage --workspaces --if-present",
