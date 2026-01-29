@@ -359,6 +359,8 @@ export class EntryAPI {
    * チーム管理者のみが実行可能
    */
   async deleteEntriesByCompetition(competitionId: string): Promise<void> {
+    await requireAuth(this.supabase)
+
     // 1. 大会情報を取得してチームIDを確認
     const { data: comp, error: compError } = await this.supabase
       .from('competitions')

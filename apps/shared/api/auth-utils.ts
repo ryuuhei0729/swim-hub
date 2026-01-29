@@ -25,14 +25,21 @@ export async function requireTeamMembership(
   userId?: string
 ): Promise<void> {
   const uid = userId ?? (await requireAuth(supabase))
-  const { data: membership } = await supabase
+  const { data: membership, error } = await supabase
     .from('team_memberships')
     .select('id')
     .eq('team_id', teamId)
     .eq('user_id', uid)
     .eq('is_active', true)
     .single()
-  if (!membership) throw new Error('チームへのアクセス権限がありません')
+
+  if (error && error.code !== 'PGRST116') {
+    // PGRST116 = "no rows returned" - this is expected when membership doesn't exist
+    throw new Error(`チームメンバーシップの確認中にエラーが発生しました: ${error.message}`)
+  }
+  if (!membership) {
+    throw new Error('チームへのアクセス権限がありません')
+  }
 }
 
 /**
@@ -46,7 +53,7 @@ export async function requireTeamAdmin(
   userId?: string
 ): Promise<void> {
   const uid = userId ?? (await requireAuth(supabase))
-  const { data: membership } = await supabase
+  const { data: membership, error } = await supabase
     .from('team_memberships')
     .select('role')
     .eq('team_id', teamId)
@@ -54,5 +61,12 @@ export async function requireTeamAdmin(
     .eq('is_active', true)
     .eq('role', 'admin')
     .single()
-  if (!membership) throw new Error('管理者権限が必要です')
+
+  if (error && error.code !== 'PGRST116') {
+    // PGRST116 = "no rows returned" - this is expected when admin membership doesn't exist
+    throw new Error(`管理者権限の確認中にエラーが発生しました: ${error.message}`)
+  }
+  if (!membership) {
+    throw new Error('管理者権限が必要です')
+  }
 }

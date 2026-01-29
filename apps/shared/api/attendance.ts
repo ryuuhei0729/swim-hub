@@ -26,6 +26,8 @@ export class AttendanceAPI {
    * 練習の出欠一覧取得
    */
   async getAttendanceByPractice(practiceId: string): Promise<TeamAttendanceWithDetails[]> {
+    await requireAuth(this.supabase)
+
     // practiceに紐づくteam_idを取得
     const { data: practiceData } = await this.supabase
       .from('practices')
@@ -62,6 +64,8 @@ export class AttendanceAPI {
    * 大会の出欠一覧取得
    */
   async getAttendanceByCompetition(competitionId: string): Promise<TeamAttendanceWithDetails[]> {
+    await requireAuth(this.supabase)
+
     // competitionに紐づくteam_idを取得
     const { data: competitionData } = await this.supabase
       .from('competitions')

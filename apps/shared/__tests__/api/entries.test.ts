@@ -1315,10 +1315,6 @@ describe('EntryAPI', () => {
         team_id: 'team-1',
       }
 
-      const mockMembership = {
-        role: 'user', // adminではない
-      }
-
       mockClient.from = vi.fn((table: string) => {
         if (table === 'competitions') {
           return {
@@ -1330,11 +1326,13 @@ describe('EntryAPI', () => {
             }),
           }
         } else if (table === 'team_memberships') {
+          // requireTeamAdminは.eq('role', 'admin')でフィルタするため、
+          // adminでない場合はnullが返る（該当データなし）
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
-              data: mockMembership,
+              data: null,
               error: null,
             }),
           }

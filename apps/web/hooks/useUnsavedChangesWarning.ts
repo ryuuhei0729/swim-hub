@@ -64,12 +64,14 @@ export function useUnsavedChangesWarning({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [confirmContext, setConfirmContext] = useState<'close' | 'back'>('close')
   const ignorePopStateRef = useRef(false)
+  const pushedRef = useRef(false)
 
   // モーダルが閉じた時にリセット
   useEffect(() => {
     if (!isOpen) {
       setShowConfirmDialog(false)
       ignorePopStateRef.current = false
+      pushedRef.current = false
     }
   }, [isOpen])
 
@@ -95,7 +97,10 @@ export function useUnsavedChangesWarning({
     }
 
     window.addEventListener('beforeunload', handleBeforeUnload)
-    window.history.pushState(null, '', window.location.href)
+    if (!pushedRef.current) {
+      window.history.pushState(null, '', window.location.href)
+      pushedRef.current = true
+    }
     window.addEventListener('popstate', handlePopState)
 
     return () => {

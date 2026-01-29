@@ -31,7 +31,7 @@ function getDayOfWeekName(date: Date): string {
 /**
  * シートの書式設定を適用（練習用）
  */
-function applyPracticeSheetFormatting(worksheet: Worksheet) {
+export function applyPracticeSheetFormatting(worksheet: Worksheet) {
   // 列幅の設定
   worksheet.getColumn(1).width = 12 // 日付
   worksheet.getColumn(2).width = 8  // 曜日

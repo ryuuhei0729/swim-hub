@@ -38,8 +38,11 @@ export function formatDate(date: string | Date | null | undefined, style: DateSt
 
 /**
  * 日付をISO形式（yyyy-MM-dd）に変換
+ * @param date 日付
+ * @returns ISO形式の日付文字列、無効な場合は空文字
  */
 export function toISODateString(date: Date): string {
+  if (!isValid(date)) return ''
   return format(date, 'yyyy-MM-dd')
 }
 
