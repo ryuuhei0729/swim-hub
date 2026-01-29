@@ -4,47 +4,14 @@
 
 import { SupabaseClient } from '@supabase/supabase-js'
 import { TeamAttendance, TeamAttendanceInsert, TeamAttendanceUpdate, TeamAttendanceWithDetails, AttendanceStatusType } from '../../types'
+import { requireAuth, requireTeamMembership, requireTeamAdmin } from '../auth-utils'
 
 export class TeamAttendancesAPI {
   constructor(private supabase: SupabaseClient) {}
 
-  // 認証必須ガード
-  private async requireAuth(): Promise<string> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
-    return user.id
-  }
-
-  // チームメンバーシップ必須ガード
-  private async requireTeamMembership(teamId: string, userId?: string): Promise<void> {
-    const uid = userId ?? (await this.requireAuth())
-    const { data: membership } = await this.supabase
-      .from('team_memberships')
-      .select('id')
-      .eq('team_id', teamId)
-      .eq('user_id', uid)
-      .eq('is_active', true)
-      .single()
-    if (!membership) throw new Error('チームへのアクセス権限がありません')
-  }
-
-  // チーム管理者権限必須ガード
-  private async requireTeamAdmin(teamId: string, userId?: string): Promise<void> {
-    const uid = userId ?? (await this.requireAuth())
-    const { data: membership } = await this.supabase
-      .from('team_memberships')
-      .select('role')
-      .eq('team_id', teamId)
-      .eq('user_id', uid)
-      .eq('is_active', true)
-      .eq('role', 'admin')
-      .single()
-    if (!membership) throw new Error('管理者権限が必要です')
-  }
-
   async listByTeam(teamId: string): Promise<TeamAttendanceWithDetails[]> {
-    const userId = await this.requireAuth()
-    await this.requireTeamMembership(teamId, userId)
+    const userId = await requireAuth(this.supabase)
+    await requireTeamMembership(this.supabase, teamId, userId)
 
     // 練習の出欠を取得（practice.team_id でフィルタ）
     const { data: practiceAttendance, error: pErr } = await this.supabase
@@ -68,7 +35,7 @@ export class TeamAttendancesAPI {
   }
 
   async listByPractice(practiceId: string): Promise<TeamAttendanceWithDetails[]> {
-    const userId = await this.requireAuth()
+    const userId = await requireAuth(this.supabase)
     // practice から team_id を特定しメンバーシップを確認
     const { data: practice, error: pErr } = await this.supabase
       .from('practices')
@@ -77,7 +44,7 @@ export class TeamAttendancesAPI {
       .single()
     if (pErr) throw pErr
     if (!practice?.team_id) throw new Error('チーム練習ではありません')
-    await this.requireTeamMembership(practice.team_id, userId)
+    await requireTeamMembership(this.supabase, practice.team_id, userId)
 
     const { data, error } = await this.supabase
       .from('team_attendance')
@@ -88,7 +55,7 @@ export class TeamAttendancesAPI {
   }
 
   async listByCompetition(competitionId: string): Promise<TeamAttendanceWithDetails[]> {
-    const userId = await this.requireAuth()
+    const userId = await requireAuth(this.supabase)
     // competition から team_id を特定しメンバーシップを確認
     const { data: competition, error: cErr } = await this.supabase
       .from('competitions')
@@ -97,7 +64,7 @@ export class TeamAttendancesAPI {
       .single()
     if (cErr) throw cErr
     if (!competition?.team_id) throw new Error('チーム大会ではありません')
-    await this.requireTeamMembership(competition.team_id, userId)
+    await requireTeamMembership(this.supabase, competition.team_id, userId)
 
     const { data, error } = await this.supabase
       .from('team_attendance')
@@ -108,7 +75,7 @@ export class TeamAttendancesAPI {
   }
 
   async upsert(input: TeamAttendanceInsert): Promise<TeamAttendance> {
-    const userId = await this.requireAuth()
+    const userId = await requireAuth(this.supabase)
     // 対象team_idを特定してメンバーシップ確認
     let teamId: string | null = null
     if (input.practice_id) {
@@ -129,7 +96,7 @@ export class TeamAttendancesAPI {
       teamId = competition?.team_id ?? null
     }
     if (!teamId) throw new Error('チーム対象が特定できません')
-    await this.requireTeamMembership(teamId, userId)
+    await requireTeamMembership(this.supabase, teamId, userId)
 
     const { data, error } = await this.supabase
       .from('team_attendance')
@@ -141,7 +108,7 @@ export class TeamAttendancesAPI {
   }
 
   async update(id: string, updates: TeamAttendanceUpdate): Promise<TeamAttendance> {
-    const userId = await this.requireAuth()
+    const userId = await requireAuth(this.supabase)
     // 既存行から対象team_idを特定
     const { data: current, error: gErr } = await this.supabase
       .from('team_attendance')
@@ -169,7 +136,7 @@ export class TeamAttendancesAPI {
       teamId = competition?.team_id ?? null
     }
     if (!teamId) throw new Error('チーム対象が特定できません')
-    await this.requireTeamMembership(teamId, userId)
+    await requireTeamMembership(this.supabase, teamId, userId)
 
     const { data, error } = await this.supabase
       .from('team_attendance')
@@ -188,7 +155,7 @@ export class TeamAttendancesAPI {
     practiceId: string,
     status: AttendanceStatusType | null
   ): Promise<void> {
-    const userId = await this.requireAuth()
+    const userId = await requireAuth(this.supabase)
     
     // practiceからteam_idを取得
     const { data: practice, error: pErr } = await this.supabase
@@ -203,8 +170,8 @@ export class TeamAttendancesAPI {
     }
     
     // 管理者権限確認
-    await this.requireTeamAdmin(practice.team_id, userId)
-    
+    await requireTeamAdmin(this.supabase, practice.team_id, userId)
+
     // attendance_statusを更新
     const { error } = await this.supabase
       .from('practices')
@@ -221,7 +188,7 @@ export class TeamAttendancesAPI {
     competitionId: string,
     status: AttendanceStatusType | null
   ): Promise<void> {
-    const userId = await this.requireAuth()
+    const userId = await requireAuth(this.supabase)
     
     // competitionからteam_idを取得
     const { data: competition, error: cErr } = await this.supabase
@@ -236,8 +203,8 @@ export class TeamAttendancesAPI {
     }
     
     // 管理者権限確認
-    await this.requireTeamAdmin(competition.team_id, userId)
-    
+    await requireTeamAdmin(this.supabase, competition.team_id, userId)
+
     // attendance_statusを更新
     const { error } = await this.supabase
       .from('competitions')

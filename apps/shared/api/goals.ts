@@ -8,6 +8,7 @@ import { format, parseISO, isValid, startOfDay } from 'date-fns'
 import {
   CompetitionInsert
 } from '../types'
+import { normalizeRelation, normalizeRelationArray } from '../utils/supabase-helpers'
 import {
   CreateGoalInput,
   CreateMilestoneInput,
@@ -183,10 +184,10 @@ export class GoalAPI {
     }
 
     // レスポンスの型変換（Supabaseの配列/単一オブジェクトの不整合に対応）
-    const goal = data as any
-    const competition = Array.isArray(goal.competition) ? goal.competition[0] : goal.competition
-    const style = Array.isArray(goal.style) ? goal.style[0] : goal.style
-    const milestones = Array.isArray(goal.milestones) ? goal.milestones : (goal.milestones ? [goal.milestones] : [])
+    const goal = data as GoalQueryResult
+    const competition = normalizeRelation(goal.competition)
+    const style = normalizeRelation(goal.style)
+    const milestones = normalizeRelationArray(goal.milestones)
 
     return {
       ...goal,
@@ -448,14 +449,11 @@ export class GoalAPI {
     // クライアント側でデータ整形と追加の日付バリデーション
     const expiredGoals = ((data || []) as GoalQueryResult[])
       .map((item) => {
-        const competition = Array.isArray(item.competition) ? item.competition[0] : item.competition
-        const style = Array.isArray(item.style) ? item.style[0] : item.style
-        const milestones = Array.isArray(item.milestones) ? item.milestones : (item.milestones ? [item.milestones] : [])
         return {
           ...item,
-          competition,
-          style,
-          milestones
+          competition: normalizeRelation(item.competition),
+          style: normalizeRelation(item.style),
+          milestones: normalizeRelationArray(item.milestones)
         } as GoalWithMilestones
       })
       .filter((goal: GoalWithMilestones) => {

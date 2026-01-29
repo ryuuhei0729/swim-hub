@@ -13,52 +13,17 @@ import type {
   EntryFormErrors
 } from '@/types/team-entry'
 import { formatTime } from '@/utils/formatters'
+import { parseTimeStrict as parseTime } from '@apps/shared/utils/time'
+import { normalizeRelation } from '@apps/shared/utils/supabase-helpers'
+
+// parseTime を re-export（後方互換性のため）
+export { parseTimeStrict as parseTime } from '@apps/shared/utils/time'
 
 const DEFAULT_FORM_DATA: EntryFormData = {
   styleId: '',
   entryTime: '',
   note: '',
   editingEntryId: null
-}
-
-// タイム文字列をパース（秒数に変換）
-export function parseTime(timeStr: string): number | null {
-  if (!timeStr || timeStr.trim() === '') return null
-
-  const trimmed = timeStr.trim()
-
-  try {
-    const parts = trimmed.split(':')
-    if (parts.length > 2) return null
-
-    if (parts.length === 2) {
-      const minutes = parseInt(parts[0].trim(), 10)
-      const seconds = parseFloat(parts[1].trim())
-
-      if (
-        !Number.isFinite(minutes) ||
-        !Number.isFinite(seconds) ||
-        Number.isNaN(minutes) ||
-        Number.isNaN(seconds) ||
-        minutes < 0 ||
-        seconds < 0
-      ) {
-        return null
-      }
-
-      return minutes * 60 + seconds
-    } else {
-      const seconds = parseFloat(trimmed)
-
-      if (!Number.isFinite(seconds) || Number.isNaN(seconds) || seconds < 0) {
-        return null
-      }
-
-      return seconds
-    }
-  } catch {
-    return null
-  }
 }
 
 // エントリータイムのバリデーション
@@ -119,7 +84,7 @@ export function useTeamEntry(supabase: SupabaseClient, teamId: string) {
             )
             const convertedEntries = mine.map((entry: EntryWithDetails) => ({
               ...entry,
-              style: Array.isArray(entry.style) ? entry.style[0] : entry.style
+              style: normalizeRelation(entry.style)
             }))
             entriesData[comp.id] = convertedEntries
           })
@@ -206,7 +171,7 @@ export function useTeamEntry(supabase: SupabaseClient, teamId: string) {
       )
       const convertedEntries = mine.map((entry: EntryWithDetails) => ({
         ...entry,
-        style: Array.isArray(entry.style) ? entry.style[0] : entry.style
+        style: normalizeRelation(entry.style)
       }))
 
       setUserEntries((prev) => ({

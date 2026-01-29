@@ -4,6 +4,7 @@
 
 import { SupabaseClient } from '@supabase/supabase-js'
 import { TeamAnnouncement, TeamAnnouncementInsert, TeamAnnouncementUpdate } from '../../types'
+import { requireAuth, requireTeamMembership, requireTeamAdmin } from '../auth-utils'
 
 export class TeamAnnouncementsAPI {
   constructor(private supabase: SupabaseClient) {}
@@ -33,21 +34,7 @@ export class TeamAnnouncementsAPI {
   }
 
   async get(teamId: string, id: string): Promise<TeamAnnouncement> {
-    const { data: { user }, error: authError } = await this.supabase.auth.getUser()
-    if (authError) throw authError
-    if (!user) throw new Error('認証が必要です')
-
-    // チームメンバーシップ確認
-    const { data: membership, error: membershipError } = await this.supabase
-      .from('team_memberships')
-      .select('id')
-      .eq('team_id', teamId)
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .single()
-
-    if (membershipError) throw membershipError
-    if (!membership) throw new Error('チームへのアクセス権限がありません')
+    await requireTeamMembership(this.supabase, teamId)
 
     const { data, error } = await this.supabase
       .from('announcements')
@@ -63,19 +50,7 @@ export class TeamAnnouncementsAPI {
   }
 
   async list(teamId: string, viewOnly: boolean = false): Promise<TeamAnnouncement[]> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
-
-    // チームメンバーシップ確認
-    const { data: membership } = await this.supabase
-      .from('team_memberships')
-      .select('id')
-      .eq('team_id', teamId)
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .single()
-
-    if (!membership) throw new Error('チームへのアクセス権限がありません')
+    await requireTeamMembership(this.supabase, teamId)
 
     let query = this.supabase
       .from('announcements')
@@ -113,28 +88,15 @@ export class TeamAnnouncementsAPI {
   }
 
   async create(input: TeamAnnouncementInsert): Promise<TeamAnnouncement> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
+    const userId = await requireAuth(this.supabase)
+    await requireTeamAdmin(this.supabase, input.team_id)
 
     // バリデーション
     this.validateStartEndAt(input.start_at, input.end_at)
 
-    // 作成は管理者のみ（ポリシーで縛っている前提だが明示チェック）
-    const { data: membership } = await this.supabase
-      .from('team_memberships')
-      .select('role')
-      .eq('team_id', input.team_id)
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .single()
-
-    if (!membership || membership.role !== 'admin') {
-      throw new Error('お知らせの作成権限がありません')
-    }
-
     const { data, error } = await this.supabase
       .from('announcements')
-      .insert({ ...input, created_by: user.id })
+      .insert({ ...input, created_by: userId })
       .select('*')
       .single()
 
@@ -143,8 +105,16 @@ export class TeamAnnouncementsAPI {
   }
 
   async update(id: string, input: TeamAnnouncementUpdate): Promise<TeamAnnouncement> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
+    // 対象のannouncementからteam_idを取得
+    const { data: target } = await this.supabase
+      .from('announcements')
+      .select('team_id')
+      .eq('id', id)
+      .single()
+
+    if (!target) throw new Error('お知らせが見つかりません')
+
+    await requireTeamAdmin(this.supabase, target.team_id)
 
     // バリデーション（start_atまたはend_atが更新される場合）
     if (input.start_at !== undefined || input.end_at !== undefined) {
@@ -161,28 +131,6 @@ export class TeamAnnouncementsAPI {
       this.validateStartEndAt(startAt, endAt)
     }
 
-    // 更新は管理者のみ
-    // 対象のannouncementからteam_idを取得してロール確認
-    const { data: target } = await this.supabase
-      .from('announcements')
-      .select('team_id')
-      .eq('id', id)
-      .single()
-
-    if (!target) throw new Error('お知らせが見つかりません')
-
-    const { data: membership } = await this.supabase
-      .from('team_memberships')
-      .select('role')
-      .eq('team_id', target.team_id)
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .single()
-
-    if (!membership || membership.role !== 'admin') {
-      throw new Error('お知らせの更新権限がありません')
-    }
-
     const { data, error } = await this.supabase
       .from('announcements')
       .update(input)
@@ -195,9 +143,6 @@ export class TeamAnnouncementsAPI {
   }
 
   async remove(id: string): Promise<void> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
-
     const { data: target } = await this.supabase
       .from('announcements')
       .select('team_id')
@@ -206,17 +151,7 @@ export class TeamAnnouncementsAPI {
 
     if (!target) throw new Error('お知らせが見つかりません')
 
-    const { data: membership } = await this.supabase
-      .from('team_memberships')
-      .select('role')
-      .eq('team_id', target.team_id)
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .single()
-
-    if (!membership || membership.role !== 'admin') {
-      throw new Error('お知らせの削除権限がありません')
-    }
+    await requireTeamAdmin(this.supabase, target.team_id)
 
     const { error } = await this.supabase
       .from('announcements')
