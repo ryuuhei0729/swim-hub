@@ -21,16 +21,16 @@ describe('useNetworkStatus', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     // 静的モックの状態をリセット
-    ;(NetInfo as any)._setState({
+    ;(NetInfo as unknown as { _setState: (state: Partial<NetInfoState>) => void })._setState({
       isConnected: true,
       isInternetReachable: true,
-      type: 'wifi',
+      type: 'wifi' as NetInfoStateType,
     })
   })
 
   it('初期状態を正しく返す', async () => {
     // モック: 接続済み状態を返す
-    ;(NetInfo.fetch as any).mockResolvedValue(
+    vi.mocked(NetInfo.fetch).mockResolvedValue(
       createState({
         isConnected: true,
         isInternetReachable: true,
@@ -49,7 +49,7 @@ describe('useNetworkStatus', () => {
 
   it('オフライン状態を正しく検知する', async () => {
     // モック: オフライン状態を返す
-    ;(NetInfo.fetch as any).mockResolvedValue(
+    vi.mocked(NetInfo.fetch).mockResolvedValue(
       createState({
         isConnected: false,
         isInternetReachable: false,
@@ -70,12 +70,12 @@ describe('useNetworkStatus', () => {
     let listener: ((state: NetInfoState) => void) | undefined
 
     // モック: addEventListenerを実装
-    ;(NetInfo.addEventListener as any).mockImplementation((callback: (state: NetInfoState) => void) => {
+    vi.mocked(NetInfo.addEventListener).mockImplementation((callback: (state: NetInfoState) => void) => {
       listener = callback
       return () => {} // unsubscribe関数
     })
 
-    ;(NetInfo.fetch as any).mockResolvedValue(
+    vi.mocked(NetInfo.fetch).mockResolvedValue(
       createState({
         isConnected: true,
         isInternetReachable: true,
@@ -106,7 +106,7 @@ describe('useNetworkStatus', () => {
   })
 
   it('isInternetReachableがnullの場合を正しく処理する', async () => {
-    ;(NetInfo.fetch as any).mockResolvedValue(
+    vi.mocked(NetInfo.fetch).mockResolvedValue(
       createState({
         isConnected: true,
         isInternetReachable: null,
@@ -125,9 +125,9 @@ describe('useNetworkStatus', () => {
 
   it('クリーンアップ時にイベントリスナーを解除する', () => {
     const unsubscribe = vi.fn()
-    ;(NetInfo.addEventListener as any).mockReturnValue(unsubscribe)
+    vi.mocked(NetInfo.addEventListener).mockReturnValue(unsubscribe)
 
-    ;(NetInfo.fetch as any).mockResolvedValue(
+    vi.mocked(NetInfo.fetch).mockResolvedValue(
       createState({
         isConnected: true,
         isInternetReachable: true,

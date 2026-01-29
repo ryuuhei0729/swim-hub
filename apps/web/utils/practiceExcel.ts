@@ -1,4 +1,5 @@
 import { format, getDay, parse } from 'date-fns'
+import type { Worksheet, Row, Workbook } from 'exceljs'
 
 // =============================================================================
 // 練習一括登録用Excel処理
@@ -30,7 +31,7 @@ function getDayOfWeekName(date: Date): string {
 /**
  * シートの書式設定を適用（練習用）
  */
-function applyPracticeSheetFormatting(worksheet: any) {
+function applyPracticeSheetFormatting(worksheet: Worksheet) {
   // 列幅の設定
   worksheet.getColumn(1).width = 12 // 日付
   worksheet.getColumn(2).width = 8  // 曜日
@@ -59,7 +60,7 @@ function applyPracticeSheetFormatting(worksheet: any) {
   }
 
   // データ行の書式設定
-  worksheet.eachRow((row: any, rowNumber: number) => {
+  worksheet.eachRow((row: Row, rowNumber: number) => {
     if (rowNumber === 1) return // ヘッダー行はスキップ
 
     // 日付セルから曜日を判定
@@ -130,7 +131,7 @@ function applyPracticeSheetFormatting(worksheet: any) {
 /**
  * 練習一括登録用Excelテンプレートを生成
  */
-export async function generatePracticeExcelTemplate(year: number): Promise<any> {
+export async function generatePracticeExcelTemplate(year: number): Promise<Workbook> {
   const ExcelJS = (await import('exceljs')).default
   const workbook = new ExcelJS.Workbook()
 

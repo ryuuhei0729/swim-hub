@@ -229,12 +229,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // タイムアウト設定（10秒後にloadingをfalseにする）
     const timeoutId = setTimeout(() => {
-      if (isMounted && authState.loading) {
-        console.warn('認証状態の確認がタイムアウトしました')
-        setAuthState(prev => ({
-          ...prev,
-          loading: false
-        }))
+      if (isMounted) {
+        setAuthState(prev => {
+          if (prev.loading) {
+            console.warn('認証状態の確認がタイムアウトしました')
+            return { ...prev, loading: false }
+          }
+          return prev
+        })
       }
     }, 10000)
 

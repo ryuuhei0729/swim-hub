@@ -3,7 +3,7 @@
 // Web/Mobile共通で使用するSupabase API関数
 // =============================================================================
 
-import { SupabaseClient } from '@supabase/supabase-js'
+import { SupabaseClient, RealtimePostgresChangesFilter } from '@supabase/supabase-js'
 import {
   Competition,
   CompetitionInsert,
@@ -16,6 +16,9 @@ import {
   SplitTimeInsert
 } from '../types'
 import type { BestTime } from '../types/ui'
+
+// Supabaseリアルタイム購読の設定型
+type RealtimeSubscriptionConfig = RealtimePostgresChangesFilter<'*'>
 
 export class RecordAPI {
   constructor(private supabase: SupabaseClient) {}
@@ -559,16 +562,18 @@ export class RecordAPI {
    * @param userId - (オプション) ユーザーIDでフィルタリング。指定した場合、該当ユーザーのみの変更を受信
    */
   subscribeToRecords(callback: (record: Record) => void, userId?: string) {
-    const config: any = {
-      event: '*',
-      schema: 'public',
-      table: 'records'
-    }
-
-    // ユーザーIDでフィルタリング (帯域幅削減)
-    if (userId) {
-      config.filter = `user_id=eq.${userId}`
-    }
+    const config: RealtimeSubscriptionConfig = userId
+      ? {
+          event: '*',
+          schema: 'public',
+          table: 'records',
+          filter: `user_id=eq.${userId}`
+        }
+      : {
+          event: '*',
+          schema: 'public',
+          table: 'records'
+        }
 
     return this.supabase
       .channel('records-changes')
@@ -586,16 +591,18 @@ export class RecordAPI {
    * @param userId - (オプション) ユーザーIDでフィルタリング。指定した場合、該当ユーザーのみの変更を受信
    */
   subscribeToCompetitions(callback: (competition: Competition) => void, userId?: string) {
-    const config: any = {
-      event: '*',
-      schema: 'public',
-      table: 'competitions'
-    }
-
-    // ユーザーIDでフィルタリング (帯域幅削減)
-    if (userId) {
-      config.filter = `user_id=eq.${userId}`
-    }
+    const config: RealtimeSubscriptionConfig = userId
+      ? {
+          event: '*',
+          schema: 'public',
+          table: 'competitions',
+          filter: `user_id=eq.${userId}`
+        }
+      : {
+          event: '*',
+          schema: 'public',
+          table: 'competitions'
+        }
 
     return this.supabase
       .channel('competitions-changes')

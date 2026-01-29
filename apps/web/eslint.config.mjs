@@ -65,6 +65,8 @@ export default [
   {
     ignores: [
       '.next/**',
+      '.open-next/**',
+      '.wrangler/**',
       'node_modules/**',
       'out/**',
       'dist/**',
@@ -73,6 +75,7 @@ export default [
       'coverage/**',
       'e2e/**',
       'server.js', // Next.js HTTPS開発サーバー（CommonJS）
+      'next-env.d.ts', // Next.js自動生成ファイル
     ],
   },
 ]

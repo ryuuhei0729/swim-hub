@@ -8,6 +8,28 @@ import { TeamMembership, TeamMembershipInsert, TeamMembershipWithUser } from '..
 export class TeamMembersAPI {
   constructor(private supabase: SupabaseClient) {}
 
+  // 認証必須ガード
+  private async requireAuth(): Promise<string> {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+    return user.id
+  }
+
+  // チーム管理者権限必須ガード
+  private async requireTeamAdmin(teamId: string): Promise<void> {
+    const userId = await this.requireAuth()
+    const { data: membership } = await this.supabase
+      .from('team_memberships')
+      .select('role')
+      .eq('team_id', teamId)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .single()
+    if (!membership || membership.role !== 'admin') {
+      throw new Error('管理者権限が必要です')
+    }
+  }
+
   async list(teamId: string): Promise<TeamMembershipWithUser[]> {
     const { data: { user } } = await this.supabase.auth.getUser()
     if (!user) throw new Error('認証が必要です')
@@ -179,22 +201,8 @@ export class TeamMembersAPI {
    * 承認待ちのメンバーシップ一覧を取得（管理者のみ）
    */
   async listPending(teamId: string): Promise<TeamMembershipWithUser[]> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
-    
-    // 管理者権限チェック
-    const { data: membership } = await this.supabase
-      .from('team_memberships')
-      .select('role')
-      .eq('team_id', teamId)
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .single()
-    
-    if (!membership || membership.role !== 'admin') {
-      throw new Error('管理者権限が必要です')
-    }
-    
+    await this.requireTeamAdmin(teamId)
+
     const { data, error } = await this.supabase
       .from('team_memberships')
       .select('*, users:users(*), teams:teams(*)')
@@ -210,22 +218,8 @@ export class TeamMembersAPI {
    * 承認待ちのメンバーシップ数を取得（管理者のみ）
    */
   async countPending(teamId: string): Promise<number> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
-    
-    // 管理者権限チェック
-    const { data: membership } = await this.supabase
-      .from('team_memberships')
-      .select('role')
-      .eq('team_id', teamId)
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .single()
-    
-    if (!membership || membership.role !== 'admin') {
-      throw new Error('管理者権限が必要です')
-    }
-    
+    await this.requireTeamAdmin(teamId)
+
     const { count, error } = await this.supabase
       .from('team_memberships')
       .select('*', { count: 'exact', head: true })
@@ -240,9 +234,6 @@ export class TeamMembersAPI {
    * メンバーシップを承認
    */
   async approve(membershipId: string): Promise<TeamMembership> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
-
     // メンバーシップを取得してチームIDを確認
     const { data: membership, error: fetchError } = await this.supabase
       .from('team_memberships')
@@ -257,17 +248,7 @@ export class TeamMembersAPI {
     }
 
     // 管理者権限チェック
-    const { data: adminMembership } = await this.supabase
-      .from('team_memberships')
-      .select('role')
-      .eq('team_id', membership.team_id)
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .single()
-    
-    if (!adminMembership || adminMembership.role !== 'admin') {
-      throw new Error('管理者権限が必要です')
-    }
+    await this.requireTeamAdmin(membership.team_id)
 
     // 承認
     const { data: updated, error } = await this.supabase
@@ -290,9 +271,6 @@ export class TeamMembersAPI {
    * メンバーシップを拒否
    */
   async reject(membershipId: string): Promise<TeamMembership> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
-
     // メンバーシップを取得してチームIDを確認
     const { data: membership, error: fetchError } = await this.supabase
       .from('team_memberships')
@@ -307,17 +285,7 @@ export class TeamMembersAPI {
     }
 
     // 管理者権限チェック
-    const { data: adminMembership } = await this.supabase
-      .from('team_memberships')
-      .select('role')
-      .eq('team_id', membership.team_id)
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .single()
-    
-    if (!adminMembership || adminMembership.role !== 'admin') {
-      throw new Error('管理者権限が必要です')
-    }
+    await this.requireTeamAdmin(membership.team_id)
 
     // 拒否
     const { data: updated, error } = await this.supabase

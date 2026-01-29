@@ -25,6 +25,14 @@ import {
   UpdateGoalInput,
   UpdateMilestoneInput
 } from '../types/goals'
+import type { Competition, Style } from '../types'
+
+// Supabaseクエリ結果の型（配列/単一オブジェクトの不整合に対応）
+interface GoalQueryResult extends Goal {
+  competition?: Competition | Competition[]
+  style?: Style | Style[]
+  milestones?: Milestone | Milestone[]
+}
 
 // スタイルコード→日本語名のマッピング（practice_logsは日本語名で格納されている）
 const STYLE_CODE_TO_JAPANESE: Record<string, string> = {
@@ -146,10 +154,8 @@ export class GoalAPI {
     
     // レスポンスの型変換（Supabaseの配列/単一オブジェクトの不整合に対応）
     if (!data) return []
-    
-    return (data || []).map((item: any) => {
-      const competition = Array.isArray(item.competition) ? item.competition[0] : item.competition
-      const style = Array.isArray(item.style) ? item.style[0] : item.style
+
+    return (data as GoalQueryResult[]).map((item) => {
       // Goal型の基本フィールドのみを返す（competitionとstyleは別途取得）
       const { competition: _comp, style: _style, ...goalData } = item
       return goalData as Goal
@@ -440,8 +446,8 @@ export class GoalAPI {
     if (error) throw error
 
     // クライアント側でデータ整形と追加の日付バリデーション
-    const expiredGoals = (data || [])
-      .map((item: any) => {
+    const expiredGoals = ((data || []) as GoalQueryResult[])
+      .map((item) => {
         const competition = Array.isArray(item.competition) ? item.competition[0] : item.competition
         const style = Array.isArray(item.style) ? item.style[0] : item.style
         const milestones = Array.isArray(item.milestones) ? item.milestones : (item.milestones ? [item.milestones] : [])

@@ -182,8 +182,8 @@ describe('getMaxImageSize', () => {
 })
 
 describe('getCroppedImg', () => {
-  let mockCanvas: any
-  let mockContext: any
+  let mockCanvas: Partial<HTMLCanvasElement> & { toBlob: ReturnType<typeof vi.fn> }
+  let mockContext: Partial<CanvasRenderingContext2D>
   let mockImage: HTMLImageElement
 
   beforeEach(() => {
@@ -207,7 +207,7 @@ describe('getCroppedImg', () => {
     // document.createElementのモック
     vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
       if (tagName === 'canvas') {
-        return mockCanvas as any
+        return mockCanvas as unknown as HTMLCanvasElement
       }
       return document.createElement(tagName)
     })

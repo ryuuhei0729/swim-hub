@@ -162,25 +162,18 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
 
             // 404エラーは「ディレクトリが存在しない（削除するものがない）」として扱う
             const errorStatusCode = (listError as { statusCode?: string | number } | null)?.statusCode
-            if (listError && errorStatusCode !== '404' && errorStatusCode !== 404) {
-              console.warn('ファイル一覧取得エラー:', listError)
-            } else if (files && files.length > 0) {
-              // すべてのファイルを削除
-              const filePathsToDelete = files.map((f) => `${userFolderPath}/${f.name}`)
-              console.log('既存のプロフィール画像を削除中:', filePathsToDelete)
+            if (!listError || errorStatusCode === '404' || errorStatusCode === 404) {
+              if (files && files.length > 0) {
+                // すべてのファイルを削除
+                const filePathsToDelete = files.map((f) => `${userFolderPath}/${f.name}`)
 
-              const { error: deleteError } = await supabase.storage
-                .from('profile-images')
-                .remove(filePathsToDelete)
-
-              if (deleteError) {
-                console.warn('既存画像の削除に失敗:', deleteError)
-              } else {
-                console.log('既存のプロフィール画像を削除しました:', filePathsToDelete.length, 'ファイル')
+                await supabase.storage
+                  .from('profile-images')
+                  .remove(filePathsToDelete)
               }
             }
-          } catch (deleteErr) {
-            console.warn('既存画像の削除処理でエラー:', deleteErr)
+          } catch {
+            // エラーが発生しても続行（新規ユーザーなど、フォルダが存在しない場合もある）
             // エラーが発生しても続行（新規ユーザーなど、フォルダが存在しない場合もある）
           }
 
@@ -197,7 +190,6 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
           const contentType = fileExt === 'png' ? 'image/png' : 'image/jpeg'
 
           // Supabase Storageにアップロード（React NativeではArrayBufferを使用）
-          console.log('新しい画像をアップロード中:', filePath, 'サイズ:', arrayBuffer.byteLength, 'bytes')
           const { error: uploadError } = await supabase.storage
             .from('profile-images')
             .upload(filePath, arrayBuffer, {
@@ -218,8 +210,6 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
           if (!publicUrl) {
             throw new Error('公開URLの取得に失敗しました')
           }
-
-          console.log('新しい画像のアップロード完了:', publicUrl)
 
           // データベースのusersテーブルを更新（WEBの実装と同様）
           await onAvatarChange(publicUrl)

@@ -45,52 +45,26 @@ export class TeamAttendancesAPI {
   async listByTeam(teamId: string): Promise<TeamAttendanceWithDetails[]> {
     const userId = await this.requireAuth()
     await this.requireTeamMembership(teamId, userId)
-    // 1) チームの練習ID一覧
-    const { data: teamPractices, error: pErr } = await this.supabase
-      .from('practices')
-      .select('id')
-      .eq('team_id', teamId)
+
+    // 練習の出欠を取得（practice.team_id でフィルタ）
+    const { data: practiceAttendance, error: pErr } = await this.supabase
+      .from('team_attendance')
+      .select('*, user:users(*), practice:practices!inner(*), competition:competitions(*)')
+      .eq('practice.team_id', teamId)
     if (pErr) throw pErr
 
-    const practiceIds = (teamPractices ?? []).map(p => p.id)
-
-    // 2) チームの大会ID一覧
-    const { data: teamCompetitions, error: cErr } = await this.supabase
-      .from('competitions')
-      .select('id')
-      .eq('team_id', teamId)
+    // 大会の出欠を取得（competition.team_id でフィルタ）
+    const { data: competitionAttendance, error: cErr } = await this.supabase
+      .from('team_attendance')
+      .select('*, user:users(*), practice:practices(*), competition:competitions!inner(*)')
+      .eq('competition.team_id', teamId)
     if (cErr) throw cErr
 
-    const competitionIds = (teamCompetitions ?? []).map(c => c.id)
-
-    // 3) 練習の出欠
-    let practiceAttendance: TeamAttendanceWithDetails[] = []
-    if (practiceIds.length > 0) {
-      const { data, error } = await this.supabase
-        .from('team_attendance')
-        .select('*, user:users(*), practice:practices(*), competition:competitions(*)')
-        .in('practice_id', practiceIds)
-      if (error) throw error
-      practiceAttendance = (data ?? []) as TeamAttendanceWithDetails[]
-    }
-
-    // 4) 大会の出欠
-    let competitionAttendance: TeamAttendanceWithDetails[] = []
-    if (competitionIds.length > 0) {
-      const { data, error } = await this.supabase
-        .from('team_attendance')
-        .select('*, user:users(*), practice:practices(*), competition:competitions(*)')
-        .in('competition_id', competitionIds)
-      if (error) throw error
-      competitionAttendance = (data ?? []) as TeamAttendanceWithDetails[]
-    }
-
-    const merged = [
-      ...(practiceAttendance ?? []),
-      ...(competitionAttendance ?? [])
-    ] as unknown as TeamAttendanceWithDetails[]
-
-    return merged
+    // マージして返す
+    return [
+      ...((practiceAttendance ?? []) as TeamAttendanceWithDetails[]),
+      ...((competitionAttendance ?? []) as TeamAttendanceWithDetails[])
+    ]
   }
 
   async listByPractice(practiceId: string): Promise<TeamAttendanceWithDetails[]> {

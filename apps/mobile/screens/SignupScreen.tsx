@@ -24,8 +24,7 @@ export const SignupScreen: React.FC = () => {
     <SignupForm
       onSuccess={() => {
         // Phase 3でナビゲーションを実装予定
-        // 現時点ではサインアップ成功時の処理は後で実装
-        console.log('サインアップ成功')
+        // AuthProviderが状態変更を検知してMainStackに自動切り替え
       }}
     />
   )
