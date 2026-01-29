@@ -2,7 +2,8 @@
 // useNetworkStatus.test.ts - ネットワーク状態監視フックのユニットテスト
 // =============================================================================
 
-import type { NetInfoState, NetInfoStateType } from '@react-native-community/netinfo'
+import { NetInfoStateType } from '@react-native-community/netinfo'
+import type { NetInfoState } from '@react-native-community/netinfo'
 import NetInfo from '@react-native-community/netinfo'
 import { renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -10,7 +11,7 @@ import { useNetworkStatus } from '../useNetworkStatus'
 
 const createState = (state: Partial<Omit<NetInfoState, 'type'>> & { type?: NetInfoStateType }): NetInfoState =>
   ({
-    type: 'unknown' as NetInfoStateType,
+    type: NetInfoStateType.unknown,
     isConnected: false,
     isInternetReachable: false,
     details: null,
@@ -24,7 +25,7 @@ describe('useNetworkStatus', () => {
     ;(NetInfo as unknown as { _setState: (state: Partial<NetInfoState>) => void })._setState({
       isConnected: true,
       isInternetReachable: true,
-      type: 'wifi' as NetInfoStateType,
+      type: NetInfoStateType.wifi,
     })
   })
 
@@ -34,7 +35,7 @@ describe('useNetworkStatus', () => {
       createState({
         isConnected: true,
         isInternetReachable: true,
-        type: 'wifi' as NetInfoStateType,
+        type: NetInfoStateType.wifi,
       })
     )
 
@@ -43,7 +44,7 @@ describe('useNetworkStatus', () => {
     await waitFor(() => {
       expect(result.current.isConnected).toBe(true)
       expect(result.current.isInternetReachable).toBe(true)
-      expect(result.current.type).toBe('wifi')
+      expect(result.current.type).toBe(NetInfoStateType.wifi)
     })
   })
 
@@ -53,7 +54,7 @@ describe('useNetworkStatus', () => {
       createState({
         isConnected: false,
         isInternetReachable: false,
-        type: 'none' as NetInfoStateType,
+        type: NetInfoStateType.none,
       })
     )
 
@@ -62,7 +63,7 @@ describe('useNetworkStatus', () => {
     await waitFor(() => {
       expect(result.current.isConnected).toBe(false)
       expect(result.current.isInternetReachable).toBe(false)
-      expect(result.current.type).toBe('none')
+      expect(result.current.type).toBe(NetInfoStateType.none)
     })
   })
 
@@ -79,7 +80,7 @@ describe('useNetworkStatus', () => {
       createState({
         isConnected: true,
         isInternetReachable: true,
-        type: 'wifi' as NetInfoStateType,
+        type: NetInfoStateType.wifi,
       })
     )
 
@@ -94,14 +95,14 @@ describe('useNetworkStatus', () => {
       createState({
         isConnected: false,
         isInternetReachable: false,
-        type: 'none' as NetInfoStateType,
+        type: NetInfoStateType.none,
       })
     )
 
     await waitFor(() => {
       expect(result.current.isConnected).toBe(false)
       expect(result.current.isInternetReachable).toBe(false)
-      expect(result.current.type).toBe('none')
+      expect(result.current.type).toBe(NetInfoStateType.none)
     })
   })
 
@@ -110,7 +111,7 @@ describe('useNetworkStatus', () => {
       createState({
         isConnected: true,
         isInternetReachable: null,
-        type: 'cellular' as NetInfoStateType,
+        type: NetInfoStateType.cellular,
       })
     )
 
@@ -119,7 +120,7 @@ describe('useNetworkStatus', () => {
     await waitFor(() => {
       expect(result.current.isConnected).toBe(true)
       expect(result.current.isInternetReachable).toBe(null)
-      expect(result.current.type).toBe('cellular')
+      expect(result.current.type).toBe(NetInfoStateType.cellular)
     })
   })
 
@@ -131,7 +132,7 @@ describe('useNetworkStatus', () => {
       createState({
         isConnected: true,
         isInternetReachable: true,
-        type: 'wifi' as NetInfoStateType,
+        type: NetInfoStateType.wifi,
       })
     )
 

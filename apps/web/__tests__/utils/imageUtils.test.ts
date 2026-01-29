@@ -182,7 +182,12 @@ describe('getMaxImageSize', () => {
 })
 
 describe('getCroppedImg', () => {
-  let mockCanvas: Partial<HTMLCanvasElement> & { toBlob: ReturnType<typeof vi.fn> }
+  let mockCanvas: {
+    width: number
+    height: number
+    getContext: ReturnType<typeof vi.fn>
+    toBlob: ReturnType<typeof vi.fn>
+  }
   let mockContext: Partial<CanvasRenderingContext2D>
   let mockImage: HTMLImageElement
 
@@ -193,7 +198,7 @@ describe('getCroppedImg', () => {
     mockContext = {
       drawImage: vi.fn(),
       imageSmoothingEnabled: false,
-      imageSmoothingQuality: '',
+      imageSmoothingQuality: 'high',
     }
 
     // Canvasのモック
