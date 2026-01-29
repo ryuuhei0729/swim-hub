@@ -2,32 +2,24 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import dynamic from 'next/dynamic'
-import { Button, ConfirmDialog } from '@/components/ui'
+import { createBrowserClient } from '@supabase/ssr'
+import { Button, ConfirmDialog, Input } from '@/components/ui'
 import FormStepper from '@/components/ui/FormStepper'
-import { XMarkIcon, PlusIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, PlusIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline'
+import { useCreatePracticeLogTemplateMutation } from '@swim-hub/shared/hooks'
+import type { CreatePracticeLogTemplateInput } from '@swim-hub/shared/types'
 
 // 練習記録フォームのステップ定義
 const PRACTICE_STEPS = [
   { id: 'basic', label: '基本情報', description: '日付・場所' },
   { id: 'log', label: '練習記録', description: 'メニュー・タイム' }
 ]
-import { useAuth } from '@/contexts'
-import { PracticeAPI } from '@apps/shared/api/practices'
-import MilestoneSelectorModal from '@/app/(authenticated)/goals/_components/MilestoneSelectorModal'
-import type {
-  MilestoneTimeParams,
-  MilestoneRepsTimeParams,
-  MilestoneSetParams,
-} from '@apps/shared/types'
-import {
-  isMilestoneTimeParams,
-  isMilestoneRepsTimeParams,
-  isMilestoneSetParams,
-} from '@apps/shared/types/goals'
+import { PracticeLogTemplateSelectModal } from '@/components/practice-log-templates/PracticeLogTemplateSelectModal'
+import type { PracticeLogTemplate } from '@swim-hub/shared/types'
 
 import { usePracticeLogForm } from './hooks'
 import { PracticeMenuItem } from './components'
-import type { PracticeLogFormProps, PracticeMenu, Tag } from './types'
+import type { PracticeLogFormProps, PracticeMenu } from './types'
 
 // TimeInputModalを動的インポート（バンドルサイズ削減）
 const TimeInputModal = dynamic(() => import('../TimeInputModal'), { ssr: false })
@@ -50,9 +42,6 @@ export default function PracticeLogForm({
   setAvailableTags,
   styles: _styles = [],
 }: PracticeLogFormProps) {
-  const { supabase, user } = useAuth()
-  const practiceAPI = new PracticeAPI(supabase)
-
   const {
     menus,
     setMenus,
@@ -72,16 +61,32 @@ export default function PracticeLogForm({
     handleTimeSave,
     getCurrentMenu,
     prepareSubmitData,
-  } = usePracticeLogForm({ isOpen, editData })
+  } = usePracticeLogForm({ isOpen, editData, availableTags })
 
-  // マイルストーン選択モーダルの状態
-  const [isMilestoneSelectorOpen, setIsMilestoneSelectorOpen] = useState(false)
+  // テンプレート選択モーダルの状態
+  const [isTemplateSelectorOpen, setIsTemplateSelectorOpen] = useState(false)
   // 確認ダイアログの表示状態
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   // 確認ダイアログのコンテキスト
   const [confirmContext, setConfirmContext] = useState<'close' | 'back'>('close')
   // プログラム的なナビゲーション中はpopstateを無視するフラグ
   const isNavigatingBack = useRef(false)
+
+  // テンプレートとして保存するチェックボックスの状態
+  const [saveAsTemplate, setSaveAsTemplate] = useState(false)
+  // テンプレート保存モーダルの状態
+  const [showTemplateSaveModal, setShowTemplateSaveModal] = useState(false)
+  // テンプレート名
+  const [templateName, setTemplateName] = useState('')
+  // テンプレート保存中フラグ
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false)
+
+  // Supabaseクライアント
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+  const createTemplateMutation = useCreatePracticeLogTemplateMutation(supabase)
 
   // ブラウザバックや閉じるボタンでの離脱を防ぐ
   useEffect(() => {
@@ -144,6 +149,16 @@ export default function PracticeLogForm({
   if (!isOpen) return null
 
   const handleSubmit = async () => {
+    // テンプレート保存チェックがONの場合、テンプレート保存モーダルを表示
+    if (saveAsTemplate) {
+      setShowTemplateSaveModal(true)
+      return
+    }
+
+    await executeSubmit()
+  }
+
+  const executeSubmit = async () => {
     setIsSubmitted(true)
     try {
       await onSubmit(prepareSubmitData())
@@ -155,107 +170,74 @@ export default function PracticeLogForm({
     }
   }
 
+  const handleTemplateSave = async () => {
+    if (!templateName.trim()) return
+
+    setIsSavingTemplate(true)
+    try {
+      // 最初のメニューをテンプレートとして保存
+      const firstMenu = menus[0]
+      if (!firstMenu) return
+
+      const circleTime =
+        (Number(firstMenu.circleMin) || 0) * 60 + (Number(firstMenu.circleSec) || 0)
+
+      const templateInput: CreatePracticeLogTemplateInput = {
+        name: templateName.trim(),
+        style: firstMenu.style,
+        swim_category: firstMenu.swimCategory,
+        distance: Number(firstMenu.distance) || 0,
+        rep_count: Number(firstMenu.reps) || 1,
+        set_count: Number(firstMenu.sets) || 1,
+        circle: circleTime > 0 ? circleTime : null,
+        note: firstMenu.note || null,
+        tag_ids: firstMenu.tags.map((tag) => tag.id),
+      }
+
+      await createTemplateMutation.mutateAsync(templateInput)
+
+      // モーダルを閉じてリセット
+      setShowTemplateSaveModal(false)
+      setTemplateName('')
+      setSaveAsTemplate(false)
+
+      // 練習記録も保存
+      await executeSubmit()
+    } catch (error) {
+      console.error('テンプレート保存エラー:', error)
+    } finally {
+      setIsSavingTemplate(false)
+    }
+  }
+
   const handleFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     event.stopPropagation()
   }
 
-  const handleMilestoneSelect = async (milestone: {
-    id: string
-    title: string
-    params: MilestoneTimeParams | MilestoneRepsTimeParams | MilestoneSetParams
-  }) => {
-    const params = milestone.params
-    let newMenu: PracticeMenu
+  const handleTemplateSelect = (template: PracticeLogTemplate) => {
+    // テンプレートからメニューを作成
+    const circleTime = template.circle || 0
+    const circleMin = Math.floor(circleTime / 60)
+    const circleSec = circleTime % 60
 
-    // milestone tagを取得または作成
-    const tagName = `milestone:${milestone.title}`
-    const legacyTagName = `milestone:${milestone.id}`
-    let milestoneTag: Tag | null = null
+    // テンプレートのtag_idsからタグを取得
+    const templateTags = template.tag_ids
+      ? availableTags.filter((tag) => template.tag_ids.includes(tag.id))
+      : []
 
-    const existingTag = availableTags.find(
-      (t) => t.name === tagName || t.name === legacyTagName
-    )
-    if (existingTag) {
-      milestoneTag = existingTag
-      if (existingTag.name === legacyTagName && user) {
-        try {
-          const updatedTag = await practiceAPI.updatePracticeTag(
-            existingTag.id,
-            tagName,
-            existingTag.color
-          )
-          milestoneTag = updatedTag
-          setAvailableTags((prev) =>
-            prev.map((t) => (t.id === existingTag.id ? updatedTag : t))
-          )
-        } catch (error) {
-          console.error('milestone tag更新エラー:', error)
-        }
-      }
-    } else if (user) {
-      try {
-        const createdTag = await practiceAPI.createPracticeTag(tagName, '#3B82F6')
-        milestoneTag = createdTag
-        setAvailableTags((prev) => [...prev, createdTag])
-      } catch (error) {
-        console.error('milestone tag作成エラー:', error)
-      }
-    }
-
-    if (isMilestoneTimeParams(params)) {
-      const p = params as MilestoneTimeParams
-      newMenu = {
-        id: String(Date.now()),
-        style: p.style,
-        swimCategory: 'Swim',
-        distance: p.distance,
-        reps: 1,
-        sets: 1,
-        circleMin: 0,
-        circleSec: 0,
-        note: '',
-        tags: milestoneTag ? [milestoneTag] : [],
-        times: [],
-      }
-    } else if (isMilestoneRepsTimeParams(params)) {
-      const p = params as MilestoneRepsTimeParams
-      const circleTime = p.circle
-      const circleMin = Math.floor(circleTime / 60)
-      const circleSec = circleTime % 60
-      newMenu = {
-        id: String(Date.now()),
-        style: p.style,
-        swimCategory: p.swim_category,
-        distance: p.distance,
-        reps: p.reps,
-        sets: p.sets,
-        circleMin: circleMin,
-        circleSec: circleSec,
-        note: '',
-        tags: milestoneTag ? [milestoneTag] : [],
-        times: [],
-      }
-    } else if (isMilestoneSetParams(params)) {
-      const p = params as MilestoneSetParams
-      const circleTime = p.circle
-      const circleMin = Math.floor(circleTime / 60)
-      const circleSec = circleTime % 60
-      newMenu = {
-        id: String(Date.now()),
-        style: p.style,
-        swimCategory: p.swim_category,
-        distance: p.distance,
-        reps: p.reps,
-        sets: p.sets,
-        circleMin: circleMin,
-        circleSec: circleSec,
-        note: '',
-        tags: milestoneTag ? [milestoneTag] : [],
-        times: [],
-      }
-    } else {
-      return
+    const newMenu: PracticeMenu = {
+      id: String(Date.now()),
+      style: template.style,
+      swimCategory: template.swim_category,
+      distance: template.distance,
+      reps: template.rep_count,
+      sets: template.set_count,
+      circleMin: circleMin,
+      circleSec: circleSec,
+      note: template.note || '',
+      tags: templateTags,
+      times: [],
     }
 
     setMenus([newMenu])
@@ -306,12 +288,13 @@ export default function PracticeLogForm({
                 <div className="flex gap-2">
                   <Button
                     type="button"
-                    onClick={() => setIsMilestoneSelectorOpen(true)}
+                    onClick={() => setIsTemplateSelectorOpen(true)}
                     variant="outline"
                     className="flex items-center gap-2"
                     disabled={isLoading}
                   >
-                    📌 マイルストーンから作成
+                    <ClipboardDocumentListIcon className="h-5 w-5" />
+                    テンプレートから作成
                   </Button>
                   <Button
                     type="button"
@@ -344,33 +327,57 @@ export default function PracticeLogForm({
             </div>
 
             {/* ボタン */}
-            <div className="flex justify-end gap-3 pt-6 border-t sticky bottom-0 bg-white">
-              <Button
-                type="button"
-                onClick={handleClose}
-                variant="secondary"
-                disabled={isLoading}
-                data-testid="practice-log-cancel-button"
-              >
-                キャンセル
-              </Button>
-              <Button
-                type="button"
-                disabled={isLoading}
-                onClick={() => void handleSubmit()}
-                className="bg-blue-600 hover:bg-blue-700"
-                data-testid={
-                  editData ? 'update-practice-log-button' : 'save-practice-log-button'
-                }
-              >
-                {isLoading
-                  ? editData
-                    ? '更新中...'
-                    : '保存中...'
-                  : editData
-                    ? '練習記録を更新'
-                    : '練習記録を保存'}
-              </Button>
+            <div className="flex items-center justify-between pt-6 border-t sticky bottom-0 bg-white">
+              {/* テンプレート保存チェックボックス（新規作成時のみ表示） */}
+              {!editData ? (
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="save-as-template"
+                    checked={saveAsTemplate}
+                    onChange={(e) => setSaveAsTemplate(e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+                    disabled={isLoading}
+                  />
+                  <label
+                    htmlFor="save-as-template"
+                    className="ml-2 text-sm text-gray-700 cursor-pointer select-none"
+                  >
+                    テンプレートとして保存する
+                  </label>
+                </div>
+              ) : (
+                <div />
+              )}
+
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  onClick={handleClose}
+                  variant="secondary"
+                  disabled={isLoading}
+                  data-testid="practice-log-cancel-button"
+                >
+                  キャンセル
+                </Button>
+                <Button
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => void handleSubmit()}
+                  className="bg-blue-600 hover:bg-blue-700"
+                  data-testid={
+                    editData ? 'update-practice-log-button' : 'save-practice-log-button'
+                  }
+                >
+                  {isLoading
+                    ? editData
+                      ? '更新中...'
+                      : '保存中...'
+                    : editData
+                      ? '練習記録を更新'
+                      : '練習記録を保存'}
+                </Button>
+              </div>
             </div>
           </form>
         </div>
@@ -400,11 +407,11 @@ export default function PracticeLogForm({
         />
       )}
 
-      {/* マイルストーン選択モーダル */}
-      <MilestoneSelectorModal
-        isOpen={isMilestoneSelectorOpen}
-        onClose={() => setIsMilestoneSelectorOpen(false)}
-        onSelect={handleMilestoneSelect}
+      {/* テンプレート選択モーダル */}
+      <PracticeLogTemplateSelectModal
+        isOpen={isTemplateSelectorOpen}
+        onClose={() => setIsTemplateSelectorOpen(false)}
+        onSelect={handleTemplateSelect}
       />
 
       {/* 確認ダイアログ */}
@@ -420,6 +427,85 @@ export default function PracticeLogForm({
         cancelLabel="編集を続ける"
         variant="warning"
       />
+
+      {/* テンプレート保存確認モーダル */}
+      {showTemplateSaveModal && (
+        <div
+          className="fixed inset-0 z-80 overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="template-save-modal-title"
+        >
+          <div className="flex min-h-screen items-center justify-center p-4">
+            {/* オーバーレイ */}
+            <div
+              className="fixed inset-0 bg-black/40 transition-opacity"
+              onClick={() => setShowTemplateSaveModal(false)}
+              aria-hidden="true"
+            />
+
+            {/* モーダルコンテンツ */}
+            <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md">
+              {/* ヘッダー */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                <h3
+                  id="template-save-modal-title"
+                  className="text-lg font-semibold text-gray-900"
+                >
+                  テンプレートとして保存
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowTemplateSaveModal(false)}
+                  className="text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-1"
+                  aria-label="閉じる"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              {/* コンテンツ */}
+              <div className="p-4">
+                <label
+                  htmlFor="template-name"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  テンプレート名
+                </label>
+                <Input
+                  id="template-name"
+                  type="text"
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  placeholder="例: 100m × 10本 Fr"
+                  className="w-full"
+                  autoFocus
+                />
+              </div>
+
+              {/* フッター */}
+              <div className="flex justify-end gap-3 p-4 border-t border-gray-200">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setShowTemplateSaveModal(false)}
+                  disabled={isSavingTemplate}
+                >
+                  キャンセル
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => void handleTemplateSave()}
+                  disabled={!templateName.trim() || isSavingTemplate}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {isSavingTemplate ? '保存中...' : '保存'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

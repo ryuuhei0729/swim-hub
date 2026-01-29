@@ -230,9 +230,8 @@ export default function TeamsClient({
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={(_teamId) => {
-          // チーム一覧のキャッシュを無効化して再取得
-          queryClient.invalidateQueries({ queryKey: teamKeys.list() })
-          setIsCreateModalOpen(false)
+          // ページをリロードして最新状態を反映
+          window.location.reload()
         }}
       />
 

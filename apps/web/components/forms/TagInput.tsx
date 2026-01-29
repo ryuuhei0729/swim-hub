@@ -276,7 +276,7 @@ export default function TagInput({
 
         {/* ドロップダウンメニュー */}
         {isOpen && (
-          <div className="absolute z-[70] w-full top-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto" data-testid="tag-dropdown">
+          <div className="absolute z-70 w-full top-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto" data-testid="tag-dropdown">
             {/* タグ一覧 */}
             <div className="py-1">
               {filteredTags.length > 0 ? (

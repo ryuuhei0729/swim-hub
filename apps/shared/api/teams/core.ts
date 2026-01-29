@@ -71,13 +71,14 @@ export class TeamCoreAPI {
       .single()
     if (error) throw error
     
-    // チーム作成者を自動的にadminとしてメンバーシップに追加
+    // チーム作成者を自動的にadminとしてメンバーシップに追加（承認済み状態で）
     const { error: membershipError } = await this.supabase
       .from('team_memberships')
       .insert({
         team_id: data.id,
         user_id: user.id,
         role: 'admin',
+        status: 'approved',
         is_active: true,
         joined_at: new Date().toISOString().split('T')[0]
       })

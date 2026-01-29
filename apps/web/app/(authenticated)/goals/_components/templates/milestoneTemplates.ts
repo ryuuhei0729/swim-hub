@@ -20,7 +20,8 @@ export const MILESTONE_TEMPLATES: MilestoneTemplate[] = [
     defaultParams: {
       distance: 100, // デフォルト値（実際はgoalから自動取得）
       target_time: 60.0, // デフォルト値（実際はgoalから自動取得し、* 1.01）
-      style: 'Fr' // デフォルト値（実際はgoalから自動取得）
+      style: 'Fr', // デフォルト値（実際はgoalから自動取得）
+      swim_category: 'Swim'
     } as MilestoneTimeParams
   },
   // ゴールセット

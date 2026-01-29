@@ -3,7 +3,7 @@
 // =============================================================================
 
 import type { EditingData, EntryWithStyle } from '@/stores/types'
-import type { CalendarItemType, PracticeLogWithTimes, PracticeTag } from '@apps/shared/types'
+import type { CalendarItemType, PracticeLogWithTimes, PracticeTag, PracticeLogTemplate } from '@apps/shared/types'
 import type { CalendarItem, EntryInfo, TimeEntry } from '@apps/shared/types/ui'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@swim-hub/shared/types'
@@ -87,25 +87,31 @@ export function useCalendarHandlers({
     const dateObj = parseDateString(item.date)
 
     if (item.type === 'practice' || item.type === 'team_practice') {
-      // 練習編集時は画像情報を取得（image_pathsから）
+      // 練習編集時は画像情報を取得（practice_imagesテーブルから）
       let itemWithImages = item
       if (item.id) {
         try {
-          const { data: practiceData } = await (supabase
-            .from('practices') as ReturnType<typeof supabase.from>)
-            .select('image_paths')
-            .eq('id', item.id)
-            .single()
+          type PracticeImageRow = {
+            id: string
+            thumbnail_path: string
+            original_path: string
+            file_name: string
+            display_order: number
+          }
+          const { data: practiceImagesData } = await supabase
+            .from('practice_images')
+            .select('id, thumbnail_path, original_path, file_name, display_order')
+            .eq('practice_id', item.id)
+            .order('display_order', { ascending: true })
 
-          const practice = practiceData as { image_paths?: string[] | null } | null
-          const imagePaths = practice?.image_paths || []
+          const practiceImages = (practiceImagesData || []) as PracticeImageRow[]
 
-          if (imagePaths.length > 0) {
-            const formattedImages = imagePaths.map((path, index) => ({
-              id: path, // パスをIDとして使用
-              thumbnailUrl: supabase.storage.from('practice-images').getPublicUrl(path).data.publicUrl,
-              originalUrl: supabase.storage.from('practice-images').getPublicUrl(path).data.publicUrl,
-              fileName: path.split('/').pop() || `image-${index}`
+          if (practiceImages.length > 0) {
+            const formattedImages = practiceImages.map((img) => ({
+              id: img.id,
+              thumbnailUrl: supabase.storage.from('practice-images').getPublicUrl(img.thumbnail_path).data.publicUrl,
+              originalUrl: supabase.storage.from('practice-images').getPublicUrl(img.original_path).data.publicUrl,
+              fileName: img.file_name
             }))
 
             // itemに画像情報を追加
@@ -240,6 +246,22 @@ export function useCalendarHandlers({
   // 練習ログ追加ハンドラー
   const onAddPracticeLog = useCallback((practiceId: string) => {
     openPracticeLogForm(practiceId)
+  }, [openPracticeLogForm])
+
+  // テンプレートから練習ログ追加ハンドラー
+  const onAddPracticeLogFromTemplate = useCallback((practiceId: string, template: PracticeLogTemplate) => {
+    const editData: EditingData = {
+      practiceId,
+      style: template.style,
+      swim_category: template.swim_category,
+      distance: template.distance,
+      rep_count: template.rep_count,
+      set_count: template.set_count,
+      circle: template.circle,
+      note: template.note || undefined,
+      tag_ids: template.tag_ids,
+    }
+    openPracticeLogForm(practiceId, editData)
   }, [openPracticeLogForm])
 
   // 練習ログ編集ハンドラー
@@ -405,6 +427,7 @@ export function useCalendarHandlers({
     onEditItem,
     onDeleteItem,
     onAddPracticeLog,
+    onAddPracticeLogFromTemplate,
     onEditPracticeLog,
     onDeletePracticeLog,
     onAddRecord,

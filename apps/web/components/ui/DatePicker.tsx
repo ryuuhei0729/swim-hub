@@ -31,6 +31,8 @@ interface DatePickerProps {
   className?: string
   /** カレンダーを開いた時のデフォルト表示月（値が未選択の場合に使用） */
   defaultMonth?: Date
+  /** カレンダーの展開方向 */
+  popupPosition?: 'top' | 'bottom'
 }
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
@@ -47,7 +49,8 @@ export default function DatePicker({
   maxDate,
   placeholder = '日付を選択',
   className,
-  defaultMonth
+  defaultMonth,
+  popupPosition = 'bottom'
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [currentMonth, setCurrentMonth] = useState<Date>(() => {
@@ -266,7 +269,12 @@ export default function DatePicker({
           role="dialog"
           aria-modal="true"
           aria-label="日付選択カレンダー"
-          className="absolute z-50 mt-1 p-4 bg-white border border-gray-200 rounded-lg shadow-lg animate-in fade-in slide-in-from-top-2 duration-200"
+          className={cn(
+            'absolute z-50 p-4 bg-white border border-gray-200 rounded-lg shadow-lg animate-in fade-in duration-200',
+            popupPosition === 'top'
+              ? 'bottom-full slide-in-from-bottom-2'
+              : 'mt-1 slide-in-from-top-2'
+          )}
         >
           {/* ヘッダー */}
           <div className="flex items-center justify-between mb-4">

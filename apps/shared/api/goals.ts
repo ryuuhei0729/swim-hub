@@ -4,7 +4,7 @@
 // =============================================================================
 
 import { SupabaseClient } from '@supabase/supabase-js'
-import { format } from 'date-fns'
+import { format, parseISO, isValid, startOfDay } from 'date-fns'
 import {
   CompetitionInsert
 } from '../types'
@@ -411,6 +411,63 @@ export class GoalAPI {
       .eq('id', milestoneId)
 
     if (error) throw error
+  }
+
+  /**
+   * 期限切れ目標取得（ログイン時）
+   * 大会日付が過去で、statusがactiveのもの
+   */
+  async getExpiredGoals(): Promise<GoalWithMilestones[]> {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('認証が必要です')
+
+    const todayDate = startOfDay(new Date())
+    const todayStr = format(todayDate, 'yyyy-MM-dd')
+
+    // activeな目標を取得し、サーバー側で大会日付が今日より前のものをフィルタ
+    const { data, error } = await this.supabase
+      .from('goals')
+      .select(`
+        *,
+        competition:competitions!inner(*),
+        style:styles(*),
+        milestones(*)
+      `)
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .lt('competitions.date', todayStr)
+
+    if (error) throw error
+
+    // クライアント側でデータ整形と追加の日付バリデーション
+    const expiredGoals = (data || [])
+      .map((item: any) => {
+        const competition = Array.isArray(item.competition) ? item.competition[0] : item.competition
+        const style = Array.isArray(item.style) ? item.style[0] : item.style
+        const milestones = Array.isArray(item.milestones) ? item.milestones : (item.milestones ? [item.milestones] : [])
+        return {
+          ...item,
+          competition,
+          style,
+          milestones
+        } as GoalWithMilestones
+      })
+      .filter((goal: GoalWithMilestones) => {
+        // 大会日付のバリデーション
+        if (!goal.competition?.date) return false
+        const competitionDate = parseISO(goal.competition.date)
+        if (!isValid(competitionDate)) return false
+        // 日付のみで比較（タイムゾーン問題を回避）
+        return startOfDay(competitionDate) < todayDate
+      })
+      .sort((a: GoalWithMilestones, b: GoalWithMilestones) => {
+        // 大会日付の降順でソート
+        const dateA = a.competition?.date ? parseISO(a.competition.date) : new Date(0)
+        const dateB = b.competition?.date ? parseISO(b.competition.date) : new Date(0)
+        return dateB.getTime() - dateA.getTime()
+      })
+
+    return expiredGoals
   }
 
   /**

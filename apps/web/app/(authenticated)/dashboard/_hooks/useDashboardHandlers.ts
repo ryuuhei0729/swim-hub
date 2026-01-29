@@ -126,7 +126,7 @@ export function useDashboardHandlers({
         }
       }
 
-      // 画像の処理（安全な順序: アップロード → 検証 → 削除 → DB更新）
+      // 画像の処理（安全な順序: アップロード → DB更新 → ストレージ削除）
       // NOTE: 画像パスはpractices.image_pathsで管理（practice_imagesテーブルは廃止）
       if (practiceId && imageData) {
         const practiceAPI = new PracticeAPI(supabase)
@@ -151,36 +151,53 @@ export function useDashboardHandlers({
 
           // Step 2: 既存のimage_pathsを取得
           // NOTE: Supabaseの型推論が環境によってneverになることがあるため、型アサーションを使用
-          const { data: currentPractice } = await (supabase
+          const { data: currentPractice, error: selectError } = await (supabase
             .from('practices') as ReturnType<typeof supabase.from>)
             .select('image_paths')
             .eq('id', practiceId)
             .single()
 
+          if (selectError) {
+            throw new Error(`練習データの取得に失敗しました: ${selectError.message}`)
+          }
+
           const practiceData = currentPractice as { image_paths?: string[] | null } | null
           const existingPaths: string[] = practiceData?.image_paths || []
 
-          // Step 3: 削除対象のパスをストレージから削除
-          if (imageData.deletedIds.length > 0) {
-            for (const path of imageData.deletedIds) {
-              try {
-                await practiceAPI.deletePracticeImage(path)
-              } catch (deleteError) {
-                console.error(`画像 ${path} の削除に失敗:`, deleteError)
-              }
-            }
-          }
-
-          // Step 4: image_pathsを更新（既存 - 削除 + 新規）
+          // Step 3: image_pathsを更新（既存 - 削除 + 新規）
+          // NOTE: DBを先に更新してから、ストレージの画像を削除する（DBとストレージの整合性を保つため）
           const newImagePaths = [
             ...existingPaths.filter(p => !imageData.deletedIds.includes(p)),
             ...uploadedPaths
           ]
 
-          await (supabase
+          const { error: updateError } = await (supabase
             .from('practices') as ReturnType<typeof supabase.from>)
             .update({ image_paths: newImagePaths } as Record<string, unknown>)
             .eq('id', practiceId)
+
+          if (updateError) {
+            throw new Error(`画像パスの更新に失敗しました: ${updateError.message}`)
+          }
+
+          // Step 4: 削除対象のパスをストレージから削除（DB更新成功後に実行）
+          // NOTE: DB更新後なので、削除失敗してもDBは正しい状態。ストレージに孤立ファイルが残る可能性があるが、
+          // DBに存在しない画像への参照が残るよりは安全
+          if (imageData.deletedIds.length > 0) {
+            const deleteErrors: Array<{ path: string; error: unknown }> = []
+            for (const path of imageData.deletedIds) {
+              try {
+                await practiceAPI.deletePracticeImage(path)
+              } catch (deleteError) {
+                console.error(`画像 ${path} の削除に失敗:`, deleteError)
+                deleteErrors.push({ path, error: deleteError })
+              }
+            }
+            // 削除エラーがあった場合は警告をスロー（DBは更新済みなので、呼び出し元で適切に処理可能）
+            if (deleteErrors.length > 0) {
+              console.warn(`${deleteErrors.length}件の画像削除に失敗しましたが、DB更新は完了しています`)
+            }
+          }
 
         } catch (imageError) {
           console.error('画像処理エラー:', imageError)
@@ -441,7 +458,7 @@ export function useDashboardHandlers({
         }
       }
 
-      // 画像の処理（安全な順序: アップロード → 検証 → 削除 → DB更新）
+      // 画像の処理（安全な順序: アップロード → DB更新 → ストレージ削除）
       // NOTE: 画像パスはcompetitions.image_pathsで管理（competition_imagesテーブルは廃止）
       if (competitionId && imageData) {
         const competitionAPI = new CompetitionAPI(supabase)
@@ -465,36 +482,53 @@ export function useDashboardHandlers({
 
           // Step 2: 既存のimage_pathsを取得
           // NOTE: Supabaseの型推論が環境によってneverになることがあるため、型アサーションを使用
-          const { data: currentCompetition } = await (supabase
+          const { data: currentCompetition, error: selectError } = await (supabase
             .from('competitions') as ReturnType<typeof supabase.from>)
             .select('image_paths')
             .eq('id', competitionId)
             .single()
 
+          if (selectError) {
+            throw new Error(`大会データの取得に失敗しました: ${selectError.message}`)
+          }
+
           const competitionData = currentCompetition as { image_paths?: string[] | null } | null
           const existingPaths: string[] = competitionData?.image_paths || []
 
-          // Step 3: 削除対象のパスをストレージから削除
-          if (imageData.deletedIds.length > 0) {
-            for (const path of imageData.deletedIds) {
-              try {
-                await competitionAPI.deleteCompetitionImage(path)
-              } catch (deleteError) {
-                console.error(`画像 ${path} の削除に失敗:`, deleteError)
-              }
-            }
-          }
-
-          // Step 4: image_pathsを更新（既存 - 削除 + 新規）
+          // Step 3: image_pathsを更新（既存 - 削除 + 新規）
+          // NOTE: DBを先に更新してから、ストレージの画像を削除する（DBとストレージの整合性を保つため）
           const newImagePaths = [
             ...existingPaths.filter(p => !imageData.deletedIds.includes(p)),
             ...uploadedPaths
           ]
 
-          await (supabase
+          const { error: updateError } = await (supabase
             .from('competitions') as ReturnType<typeof supabase.from>)
             .update({ image_paths: newImagePaths } as Record<string, unknown>)
             .eq('id', competitionId)
+
+          if (updateError) {
+            throw new Error(`画像パスの更新に失敗しました: ${updateError.message}`)
+          }
+
+          // Step 4: 削除対象のパスをストレージから削除（DB更新成功後に実行）
+          // NOTE: DB更新後なので、削除失敗してもDBは正しい状態。ストレージに孤立ファイルが残る可能性があるが、
+          // DBに存在しない画像への参照が残るよりは安全
+          if (imageData.deletedIds.length > 0) {
+            const deleteErrors: Array<{ path: string; error: unknown }> = []
+            for (const path of imageData.deletedIds) {
+              try {
+                await competitionAPI.deleteCompetitionImage(path)
+              } catch (deleteError) {
+                console.error(`画像 ${path} の削除に失敗:`, deleteError)
+                deleteErrors.push({ path, error: deleteError })
+              }
+            }
+            // 削除エラーがあった場合は警告をスロー（DBは更新済みなので、呼び出し元で適切に処理可能）
+            if (deleteErrors.length > 0) {
+              console.warn(`${deleteErrors.length}件の画像削除に失敗しましたが、DB更新は完了しています`)
+            }
+          }
 
         } catch (imageError) {
           console.error('画像処理エラー:', imageError)

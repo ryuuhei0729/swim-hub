@@ -12,4 +12,5 @@ export * from './queries/practices'
 export * from './queries/records'
 export * from './queries/teams'
 export * from './queries/user'
+export * from './queries/practiceLogTemplates'
 

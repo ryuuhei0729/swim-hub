@@ -525,8 +525,29 @@ export class PracticeAPI {
     })
 
     if (!response.ok) {
-      const errorData = await response.json() as { error?: string }
-      throw new Error(errorData.error || '画像のアップロードに失敗しました')
+      let errorMessage = '画像のアップロードに失敗しました'
+      let bodyText = ''
+
+      try {
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json() as { error?: string }
+          if (errorData.error) {
+            errorMessage = errorData.error
+          }
+        } else {
+          bodyText = await response.text()
+        }
+      } catch {
+        try {
+          bodyText = await response.text()
+        } catch {
+          // テキスト取得も失敗した場合は無視
+        }
+      }
+
+      const details = bodyText ? `: ${bodyText}` : ''
+      throw new Error(`${errorMessage} (HTTP ${response.status}${details})`)
     }
 
     const result = await response.json() as { path: string }
@@ -580,8 +601,29 @@ export class PracticeAPI {
     })
 
     if (!response.ok) {
-      const errorData = await response.json() as { error?: string }
-      throw new Error(errorData.error || '画像の削除に失敗しました')
+      let errorMessage = '画像の削除に失敗しました'
+      let bodyText = ''
+
+      try {
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json() as { error?: string }
+          if (errorData.error) {
+            errorMessage = errorData.error
+          }
+        } else {
+          bodyText = await response.text()
+        }
+      } catch {
+        try {
+          bodyText = await response.text()
+        } catch {
+          // テキスト取得も失敗した場合は無視
+        }
+      }
+
+      const details = bodyText ? `: ${bodyText}` : ''
+      throw new Error(`${errorMessage} (HTTP ${response.status}${details})`)
     }
   }
 

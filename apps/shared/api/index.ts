@@ -12,6 +12,7 @@ export * from './practices'
 export * from './records'
 export * from './styles'
 export * from './teams'
+export * from './practiceLogTemplates'
 // 段階移行中: 新ディレクトリのエクスポートは個別にimportする側で参照
 // export * from './teams/index'
 

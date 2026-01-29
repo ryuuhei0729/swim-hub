@@ -8,6 +8,7 @@
 import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-server-auth'
 import { isR2Enabled, uploadToR2, deleteFromR2 } from '@/lib/r2'
 import { NextRequest, NextResponse } from 'next/server'
+import nodePath from 'path'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
@@ -103,8 +104,19 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'path が必要です' }, { status: 400 })
     }
 
-    // パスにユーザーIDが含まれていることを確認（セキュリティ）
-    if (!path.startsWith(user.id)) {
+    // パストラバーサル攻撃を防ぐための検証
+    // 絶対パスやバックスラッシュを拒否
+    if (path.startsWith('/') || path.includes('\\')) {
+      return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+    }
+    // POSIX正規化して'..'セグメントを検出
+    const normalizedPath = nodePath.posix.normalize(path)
+    if (normalizedPath.includes('..')) {
+      return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+    }
+    // 最初のセグメントがユーザーIDであることを確認
+    const firstSegment = normalizedPath.split('/')[0]
+    if (firstSegment !== user.id) {
       return NextResponse.json({ error: '権限がありません' }, { status: 403 })
     }
 
