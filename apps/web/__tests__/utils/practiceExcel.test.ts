@@ -1,22 +1,27 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import type { Worksheet, Row, Cell, Column, Workbook } from 'exceljs'
+import type { Worksheet, Row, Cell, Column, Workbook, CellValue, Fill } from 'exceljs'
 
 // =============================================================================
 // Mock用のヘルパー関数・クラス
 // =============================================================================
 
-function createMockCell(value: unknown = ''): Partial<Cell> {
+function createMockCell(value: CellValue = ''): Partial<Cell> {
   return {
     value,
     font: {},
-    fill: {},
+    fill: undefined as Fill | undefined,
     alignment: {},
     border: {},
     numFmt: '',
   }
 }
 
-function createMockRow(cells: Partial<Cell>[], rowNumber: number): Partial<Row> {
+interface MockRow {
+  height: number
+  getCell: (col: number) => Partial<Cell>
+}
+
+function createMockRow(cells: Partial<Cell>[], _rowNumber: number): MockRow {
   const cellMap = new Map<number, Partial<Cell>>()
   cells.forEach((cell, index) => {
     cellMap.set(index + 1, cell)
@@ -24,12 +29,12 @@ function createMockRow(cells: Partial<Cell>[], rowNumber: number): Partial<Row> 
 
   return {
     height: 0,
-    getCell: vi.fn((col: number) => {
+    getCell: (col: number) => {
       if (!cellMap.has(col)) {
         cellMap.set(col, createMockCell())
       }
-      return cellMap.get(col) as Cell
-    }),
+      return cellMap.get(col)!
+    },
   }
 }
 
@@ -39,35 +44,49 @@ function createMockColumn(): Partial<Column> {
   }
 }
 
-function createMockWorksheet(rows: Array<{ cells: Partial<Cell>[], rowNumber: number }>): Partial<Worksheet> {
+interface MockWorksheet {
+  getColumn: (col: number) => Partial<Column>
+  getRow: (rowNum: number) => MockRow
+  eachRow: (callback: (row: Row, rowNumber: number) => void) => void
+  addRow: () => void
+  name: string
+  _columns: Map<number, Partial<Column>>
+  _rows: Map<number, MockRow>
+}
+
+function createMockWorksheet(rows: Array<{ cells: Partial<Cell>[], rowNumber: number }>): MockWorksheet {
   const columns = new Map<number, Partial<Column>>()
-  const rowMap = new Map<number, Partial<Row>>()
+  const rowMap = new Map<number, MockRow>()
 
   rows.forEach(({ cells, rowNumber }) => {
     rowMap.set(rowNumber, createMockRow(cells, rowNumber))
   })
 
-  return {
+  const worksheet: MockWorksheet = {
+    _columns: columns,
+    _rows: rowMap,
     getColumn: vi.fn((col: number) => {
       if (!columns.has(col)) {
         columns.set(col, createMockColumn())
       }
-      return columns.get(col) as Column
+      return columns.get(col)!
     }),
     getRow: vi.fn((rowNum: number) => {
       if (!rowMap.has(rowNum)) {
         rowMap.set(rowNum, createMockRow([], rowNum))
       }
-      return rowMap.get(rowNum) as Row
+      return rowMap.get(rowNum)!
     }),
     eachRow: vi.fn((callback: (row: Row, rowNumber: number) => void) => {
       rowMap.forEach((row, rowNumber) => {
-        callback(row as Row, rowNumber)
+        callback(row as unknown as Row, rowNumber)
       })
     }),
     addRow: vi.fn(),
     name: 'TestSheet',
   }
+
+  return worksheet
 }
 
 // =============================================================================
@@ -87,25 +106,17 @@ describe('applyPracticeSheetFormatting', () => {
       { cells: [createMockCell('日付'), createMockCell('曜日'), createMockCell('場所'), createMockCell('備考')], rowNumber: 1 },
     ])
 
-    applyPracticeSheetFormatting(worksheet as Worksheet)
+    applyPracticeSheetFormatting(worksheet as unknown as Worksheet)
 
     expect(worksheet.getColumn).toHaveBeenCalledWith(1)
     expect(worksheet.getColumn).toHaveBeenCalledWith(2)
     expect(worksheet.getColumn).toHaveBeenCalledWith(3)
     expect(worksheet.getColumn).toHaveBeenCalledWith(4)
 
-    const col1 = (worksheet.getColumn as ReturnType<typeof vi.fn>).mock.results.find(
-      (r: { value: Partial<Column> }, i: number) => (worksheet.getColumn as ReturnType<typeof vi.fn>).mock.calls[i][0] === 1
-    )?.value
-    const col2 = (worksheet.getColumn as ReturnType<typeof vi.fn>).mock.results.find(
-      (r: { value: Partial<Column> }, i: number) => (worksheet.getColumn as ReturnType<typeof vi.fn>).mock.calls[i][0] === 2
-    )?.value
-    const col3 = (worksheet.getColumn as ReturnType<typeof vi.fn>).mock.results.find(
-      (r: { value: Partial<Column> }, i: number) => (worksheet.getColumn as ReturnType<typeof vi.fn>).mock.calls[i][0] === 3
-    )?.value
-    const col4 = (worksheet.getColumn as ReturnType<typeof vi.fn>).mock.results.find(
-      (r: { value: Partial<Column> }, i: number) => (worksheet.getColumn as ReturnType<typeof vi.fn>).mock.calls[i][0] === 4
-    )?.value
+    const col1 = worksheet._columns.get(1)
+    const col2 = worksheet._columns.get(2)
+    const col3 = worksheet._columns.get(3)
+    const col4 = worksheet._columns.get(4)
 
     expect(col1?.width).toBe(12)
     expect(col2?.width).toBe(8)
@@ -124,9 +135,9 @@ describe('applyPracticeSheetFormatting', () => {
       { cells: headerCells, rowNumber: 1 },
     ])
 
-    applyPracticeSheetFormatting(worksheet as Worksheet)
+    applyPracticeSheetFormatting(worksheet as unknown as Worksheet)
 
-    const headerRow = (worksheet.getRow as ReturnType<typeof vi.fn>)(1)
+    const headerRow = worksheet.getRow(1)
     expect(headerRow.height).toBe(30)
 
     // ヘッダーセルのフォント設定を確認
@@ -154,9 +165,9 @@ describe('applyPracticeSheetFormatting', () => {
       { cells: [createMockCell(saturdayDate), createMockCell('土'), createMockCell(''), createMockCell('')], rowNumber: 2 },
     ])
 
-    applyPracticeSheetFormatting(worksheet as Worksheet)
+    applyPracticeSheetFormatting(worksheet as unknown as Worksheet)
 
-    const dataRow = (worksheet.getRow as ReturnType<typeof vi.fn>)(2)
+    const dataRow = worksheet.getRow(2)
     const cell = dataRow.getCell(1)
     expect(cell.fill).toEqual({
       type: 'pattern',
@@ -173,9 +184,9 @@ describe('applyPracticeSheetFormatting', () => {
       { cells: [createMockCell(sundayDate), createMockCell('日'), createMockCell(''), createMockCell('')], rowNumber: 2 },
     ])
 
-    applyPracticeSheetFormatting(worksheet as Worksheet)
+    applyPracticeSheetFormatting(worksheet as unknown as Worksheet)
 
-    const dataRow = (worksheet.getRow as ReturnType<typeof vi.fn>)(2)
+    const dataRow = worksheet.getRow(2)
     const cell = dataRow.getCell(1)
     expect(cell.fill).toEqual({
       type: 'pattern',
@@ -192,9 +203,9 @@ describe('applyPracticeSheetFormatting', () => {
       { cells: [createMockCell(mondayDate), createMockCell('月'), createMockCell(''), createMockCell('')], rowNumber: 2 },
     ])
 
-    applyPracticeSheetFormatting(worksheet as Worksheet)
+    applyPracticeSheetFormatting(worksheet as unknown as Worksheet)
 
-    const dataRow = (worksheet.getRow as ReturnType<typeof vi.fn>)(2)
+    const dataRow = worksheet.getRow(2)
     const cell = dataRow.getCell(1)
     // 平日は背景色が設定されない（fillがpatternでなく空のまま）
     expect(cell.fill).not.toHaveProperty('fgColor')
@@ -208,9 +219,9 @@ describe('applyPracticeSheetFormatting', () => {
       { cells: [createMockCell(excelSerialDate), createMockCell('土'), createMockCell(''), createMockCell('')], rowNumber: 2 },
     ])
 
-    applyPracticeSheetFormatting(worksheet as Worksheet)
+    applyPracticeSheetFormatting(worksheet as unknown as Worksheet)
 
-    const dataRow = (worksheet.getRow as ReturnType<typeof vi.fn>)(2)
+    const dataRow = worksheet.getRow(2)
     const dateCell = dataRow.getCell(1)
     expect(dateCell.numFmt).toBe('M"月"D"日"')
   })
@@ -221,7 +232,7 @@ describe('applyPracticeSheetFormatting', () => {
       { cells: [createMockCell('1月18日'), createMockCell('土'), createMockCell(''), createMockCell('')], rowNumber: 2 },
     ])
 
-    applyPracticeSheetFormatting(worksheet as Worksheet)
+    applyPracticeSheetFormatting(worksheet as unknown as Worksheet)
 
     // エラーなく処理が完了すること
     expect(worksheet.eachRow).toHaveBeenCalled()
@@ -233,9 +244,9 @@ describe('applyPracticeSheetFormatting', () => {
       { cells: [createMockCell(new Date(2025, 0, 15)), createMockCell('水'), createMockCell(''), createMockCell('')], rowNumber: 2 },
     ])
 
-    applyPracticeSheetFormatting(worksheet as Worksheet)
+    applyPracticeSheetFormatting(worksheet as unknown as Worksheet)
 
-    const dataRow = (worksheet.getRow as ReturnType<typeof vi.fn>)(2)
+    const dataRow = worksheet.getRow(2)
     const dayCell = dataRow.getCell(2)
     expect(dayCell.font).toEqual({ color: { argb: 'FF666666' } })
   })
