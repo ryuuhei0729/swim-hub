@@ -121,10 +121,10 @@ test.describe('認証フローのテスト', () => {
     await logoutButton.click()
     await page.waitForURL('**/login', { timeout: 15000 })
 
-    // ステップ2: ログインページにリダイレクトされることを確認
+    // ステップ3: ログインページにリダイレクトされることを確認
     expect(page.url()).toContain('/login')
 
-    // ステップ3: ログインフォームが表示されることを確認
+    // ステップ4: ログインフォームが表示されることを確認
     await page.waitForSelector('[data-testid="email-input"]', { timeout: 10000 })
     await expect(page.locator('[data-testid="email-input"]')).toBeVisible()
   })

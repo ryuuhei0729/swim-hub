@@ -207,8 +207,9 @@ describe('applyPracticeSheetFormatting', () => {
 
     const dataRow = worksheet.getRow(2)
     const cell = dataRow.getCell(1)
-    // 平日は背景色が設定されない（fillがpatternでなく空のまま）
-    expect(cell.fill).not.toHaveProperty('fgColor')
+    // 平日は背景色が設定されない（fillがundefinedまたはfgColorプロパティがない）
+    const fill = cell.fill as { fgColor?: unknown } | undefined
+    expect(fill?.fgColor).toBeUndefined()
   })
 
   it('日付セルにExcel数値形式が処理される', () => {
