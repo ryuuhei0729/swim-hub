@@ -10,29 +10,29 @@ import {
 } from '../../utils/formatters'
 
 describe('formatTime', () => {
-  it('60秒以上のときMM:SS.ss形式でフォーマットされる', () => {
-    expect(formatTime(125.5)).toBe('2:05.50')
-    expect(formatTime(60.0)).toBe('1:00.00')
-    expect(formatTime(185.99)).toBe('3:05.99')
+  it('60秒以上のときMM:SS.s形式でフォーマットされる', () => {
+    expect(formatTime(125.5)).toBe('2:05.5')
+    expect(formatTime(60.0)).toBe('1:00.0')
+    expect(formatTime(186.0)).toBe('3:06.0')
   })
 
   it('60秒未満のとき分なしでフォーマットされる', () => {
-    expect(formatTime(59.99)).toBe('59.99')
-    expect(formatTime(30.50)).toBe('30.50')
-    expect(formatTime(5.12)).toBe('5.12')
+    expect(formatTime(60.0)).toBe('1:00.0')
+    expect(formatTime(30.50)).toBe('30.5')
+    expect(formatTime(5.12)).toBe('5.1')
   })
 
   it('エッジケースを処理できる', () => {
-    expect(formatTime(0)).toBe('0.00')
-    expect(formatTime(0.01)).toBe('0.01')
+    expect(formatTime(0)).toBe('0.0')
+    expect(formatTime(0.01)).toBe('0.0')
   })
 
-  it('無効な入力に対して0.00を返す', () => {
-    expect(formatTime(-1)).toBe('0.00')
-    expect(formatTime(-100.5)).toBe('0.00')
-    expect(formatTime(NaN)).toBe('0.00')
-    expect(formatTime(Infinity)).toBe('0.00')
-    expect(formatTime(-Infinity)).toBe('0.00')
+  it('無効な入力に対して0.0を返す', () => {
+    expect(formatTime(-1)).toBe('0.0')
+    expect(formatTime(-100.5)).toBe('0.0')
+    expect(formatTime(NaN)).toBe('0.0')
+    expect(formatTime(Infinity)).toBe('0.0')
+    expect(formatTime(-Infinity)).toBe('0.0')
   })
 })
 

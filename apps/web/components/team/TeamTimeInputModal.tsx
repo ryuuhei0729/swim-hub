@@ -1,9 +1,15 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui'
 import { XMarkIcon } from '@heroicons/react/24/outline'
-import { formatTimeShort, parseTime } from '@apps/shared/utils/time'
+import { formatTimeShort, formatTimeAverage } from '@apps/shared/utils/time'
+import {
+  parseQuickTime,
+  QuickTimeContext,
+  defaultQuickTimeContext
+} from '@apps/shared/utils/quickTimeParser'
+import { parseTime } from '@apps/shared/utils/time'
 
 interface TeamMember {
   id: string
@@ -45,6 +51,8 @@ export default function TeamTimeInputModal({
   initialTimes
 }: TeamTimeInputModalProps) {
   const [teamTimes, setTeamTimes] = useState<TeamTimeEntry[]>([])
+  // メンバーごとのクイック入力コンテキスト
+  const [memberContexts, setMemberContexts] = useState<Record<string, QuickTimeContext>>({})
 
   // チームメンバーとタイム入力の初期化
   useEffect(() => {
@@ -76,20 +84,99 @@ export default function TeamTimeInputModal({
     }
   }, [isOpen, teamMembers, setCount, repCount, initialTimes])
 
-  const handleTimeChange = (memberId: string, timeIndex: number, value: string) => {
+  // 入力中は displayValue のみ更新（パースしない）
+  const handleTimeInput = useCallback((memberId: string, timeIndex: number, value: string) => {
     setTeamTimes(prev => prev.map(entry => {
       if (entry.memberId === memberId) {
         const newTimes = [...entry.times]
         newTimes[timeIndex] = {
           ...newTimes[timeIndex],
-          displayValue: value,
-          time: parseTime(value)
+          displayValue: value
         }
         return { ...entry, times: newTimes }
       }
       return entry
     }))
-  }
+  }, [])
+
+  // 入力確定時にパース（Enter または フォーカスアウト）
+  const handleTimeConfirm = useCallback((memberId: string, timeIndex: number, value: string) => {
+    if (!value.trim()) return
+
+    // メンバーのコンテキストを取得
+    const prevContext = memberContexts[memberId] ?? defaultQuickTimeContext
+
+    // クイック形式を試す
+    const quickResult = parseQuickTime(value, prevContext)
+
+    let time: number
+    let displayValue: string
+
+    if (quickResult) {
+      time = quickResult.time
+      displayValue = quickResult.displayValue
+      // コンテキストを更新
+      setMemberContexts(prev => ({
+        ...prev,
+        [memberId]: quickResult.context
+      }))
+    } else {
+      // フォールバック: 従来のparseTime
+      time = parseTime(value)
+      displayValue = time > 0 ? formatTimeShort(time) : value
+
+      // 従来形式でもコンテキストを更新
+      if (time > 0) {
+        const totalSeconds = Math.floor(time)
+        const seconds = totalSeconds % 60
+        const minutes = Math.floor(totalSeconds / 60)
+        const tensDigit = Math.floor(seconds / 10)
+        setMemberContexts(prev => ({
+          ...prev,
+          [memberId]: { minutes, tensDigit }
+        }))
+      }
+    }
+
+    setTeamTimes(prev => prev.map(entry => {
+      if (entry.memberId === memberId) {
+        const newTimes = [...entry.times]
+        newTimes[timeIndex] = {
+          ...newTimes[timeIndex],
+          displayValue: displayValue || value,
+          time
+        }
+        return { ...entry, times: newTimes }
+      }
+      return entry
+    }))
+  }, [memberContexts])
+
+  // Enterキーでパース＋次のフィールドへ移動
+  const handleKeyDown = useCallback((
+    e: React.KeyboardEvent<HTMLInputElement>,
+    currentIndex: number,
+    memberId: string,
+    timeIndex: number,
+    value: string
+  ) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleTimeConfirm(memberId, timeIndex, value)
+      const inputs = document.querySelectorAll<HTMLInputElement>('[data-team-time-input]')
+      const nextInput = inputs[currentIndex + 1]
+      if (nextInput) {
+        nextInput.focus()
+      }
+    }
+  }, [handleTimeConfirm])
+
+  // モーダルが開いた時にコンテキストをリセット
+  useEffect(() => {
+    if (isOpen) {
+      setMemberContexts({})
+    }
+  }, [isOpen])
 
   const getMemberTimes = (memberId: string) => {
     const memberEntry = teamTimes.find(entry => entry.memberId === memberId)
@@ -168,20 +255,26 @@ export default function TeamTimeInputModal({
                         <td className="px-4 py-3 text-sm font-medium text-gray-900">
                           {member.users?.name || 'Unknown User'}
                         </td>
-                        {Array.from({ length: setCount * repCount }, (_, timeIndex) => (
+                        {Array.from({ length: setCount * repCount }, (_, timeIndex) => {
+                          const globalIndex = memberIndex * (setCount * repCount) + timeIndex
+                          return (
                           <td key={timeIndex} className="px-3 py-3 text-center">
                             <input
                               type="text"
-                              placeholder="1:00.00"
+                              placeholder="31-2"
                               value={memberTimes[timeIndex]?.displayValue || ''}
-                              onChange={(e) => handleTimeChange(member.id, timeIndex, e.target.value)}
+                              onChange={(e) => handleTimeInput(member.id, timeIndex, e.target.value)}
+                              onBlur={(e) => handleTimeConfirm(member.id, timeIndex, e.target.value)}
+                              onKeyDown={(e) => handleKeyDown(e, globalIndex, member.id, timeIndex, memberTimes[timeIndex]?.displayValue || '')}
                               className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               data-testid={`team-time-input-${memberIndex + 1}-${timeIndex + 1}`}
+                              data-team-time-input
                             />
                           </td>
-                        ))}
+                          )
+                          })}
                         <td className="px-3 py-3 text-center text-sm font-medium text-blue-600">
-                          {average > 0 ? formatTimeShort(average) : '-'}
+                          {average > 0 ? formatTimeAverage(average) : '-'}
                         </td>
                       </tr>
                     )

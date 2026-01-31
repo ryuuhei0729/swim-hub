@@ -74,7 +74,7 @@ export default async function PracticeLogDataLoader({ teamId, practiceId }: Prac
       .eq('user_id', user.id)
       .eq('is_active', true)
       .single(),
-    
+
     // 練習情報を取得
     supabase
       .from('practices')
@@ -94,7 +94,7 @@ export default async function PracticeLogDataLoader({ teamId, practiceId }: Prac
       .eq('id', practiceId)
       .eq('team_id', teamId)
       .single(),
-    
+
     // チームメンバー一覧を取得
     supabase
       .from('team_memberships')
@@ -110,7 +110,7 @@ export default async function PracticeLogDataLoader({ teamId, practiceId }: Prac
       .eq('team_id', teamId)
       .eq('is_active', true)
       .order('role', { ascending: false }),
-    
+
     // 既存のPractice_Logを取得
     supabase
       .from('practice_logs')
@@ -142,13 +142,13 @@ export default async function PracticeLogDataLoader({ teamId, practiceId }: Prac
       `)
       .eq('practice_id', practiceId)
       .order('created_at', { ascending: true }),
-    
+
     // 利用可能なタグを取得
     supabase
       .from('practice_tags')
       .select('id, name, color, user_id')
       .order('name'),
-    
+
     // 出席情報を取得
     supabase
       .from('team_attendance')
@@ -200,4 +200,3 @@ export default async function PracticeLogDataLoader({ teamId, practiceId }: Prac
     />
   )
 }
-

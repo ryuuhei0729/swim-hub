@@ -35,10 +35,10 @@ interface PracticeMenu {
   style: string
   swimCategory: 'Swim' | 'Pull' | 'Kick'
   distance: number | ''
-  reps: number
-  sets: number
-  circleMin: number
-  circleSec: number
+  reps: number | ''
+  sets: number | ''
+  circleMin: number | ''
+  circleSec: number | ''
   note: string
   tags: Tag[]
   times: TeamTimeEntry[]
@@ -439,32 +439,33 @@ export default function PracticeLogClient({
               </div>
 
               {/* メニュー設定 */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                {/* 種目 */}
+              {/* 1行目：種目 */}
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                {/* 種目① */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     種目①
                   </label>
                   <div className="relative">
-                  <select
-                    value={menu.style}
-                    onChange={(e) => updateMenu(menu.id, 'style', e.target.value)}
+                    <select
+                      value={menu.style}
+                      onChange={(e) => updateMenu(menu.id, 'style', e.target.value)}
                       className="w-full pl-3 pr-10 py-2 bg-white border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
-                    data-testid={`team-practice-log-style-${index + 1}`}
-                  >
-                    {SWIM_STYLES.map(style => (
-                      <option key={style.value} value={style.value}>
-                        {style.label}
-                      </option>
-                    ))}
-                  </select>
-                    <ChevronDownIcon 
+                      data-testid={`team-practice-log-style-${index + 1}`}
+                    >
+                      {SWIM_STYLES.map(style => (
+                        <option key={style.value} value={style.value}>
+                          {style.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDownIcon
                       className="h-4 w-4 absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
                     />
                   </div>
                 </div>
 
-                {/* 泳法カテゴリ */}
+                {/* 種目② */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     種目②
@@ -482,16 +483,19 @@ export default function PracticeLogClient({
                         </option>
                       ))}
                     </select>
-                    <ChevronDownIcon 
+                    <ChevronDownIcon
                       className="h-4 w-4 absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
                     />
                   </div>
                 </div>
+              </div>
 
+              {/* 2行目：距離、本数、セット数、サークル */}
+              <div className="grid grid-cols-5 gap-4 mb-4">
                 {/* 距離 */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    距離 (m)
+                    距離(m)
                   </label>
                   <input
                     type="number"
@@ -504,21 +508,6 @@ export default function PracticeLogClient({
                   />
                 </div>
 
-                {/* セット数 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    セット数
-                  </label>
-                  <input
-                    type="number"
-                    value={menu.sets}
-                    onChange={(e) => updateMenu(menu.id, 'sets', Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    min="1"
-                    data-testid={`team-practice-log-sets-${index + 1}`}
-                  />
-                </div>
-
                 {/* 本数 */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -527,10 +516,56 @@ export default function PracticeLogClient({
                   <input
                     type="number"
                     value={menu.reps}
-                    onChange={(e) => updateMenu(menu.id, 'reps', Number(e.target.value))}
+                    onChange={(e) => updateMenu(menu.id, 'reps', e.target.value === '' ? '' : Number(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     min="1"
                     data-testid={`team-practice-log-reps-${index + 1}`}
+                  />
+                </div>
+
+                {/* セット数 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    セット数
+                  </label>
+                  <input
+                    type="number"
+                    value={menu.sets}
+                    onChange={(e) => updateMenu(menu.id, 'sets', e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    min="1"
+                    data-testid={`team-practice-log-sets-${index + 1}`}
+                  />
+                </div>
+
+                {/* サークル(分) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    サークル(分)
+                  </label>
+                  <input
+                    type="number"
+                    value={menu.circleMin}
+                    onChange={(e) => updateMenu(menu.id, 'circleMin', e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    min="0"
+                    data-testid={`team-practice-log-circle-min-${index + 1}`}
+                  />
+                </div>
+
+                {/* サークル(秒) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    サークル(秒)
+                  </label>
+                  <input
+                    type="number"
+                    value={menu.circleSec}
+                    onChange={(e) => updateMenu(menu.id, 'circleSec', e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    min="0"
+                    max="59"
+                    data-testid={`team-practice-log-circle-sec-${index + 1}`}
                   />
                 </div>
               </div>
@@ -612,7 +647,7 @@ export default function PracticeLogClient({
               {/* タイム入力ボタン */}
               <div className="flex items-center justify-between border-t pt-4">
                 <div className="text-sm text-gray-600">
-                  {menu.sets}セット × {menu.reps}本 = {menu.sets * menu.reps}本のタイム入力
+                  {menu.sets || 0}セット × {menu.reps || 0}本 = {(Number(menu.sets) || 0) * (Number(menu.reps) || 0)}本のタイム入力
                   <br />
                   <span className="text-xs text-gray-500">（タイム入力は任意です）</span>
                 </div>

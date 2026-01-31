@@ -1,5 +1,5 @@
 // 時間関連は共通ユーティリティからre-export
-export { formatTime, parseTime as parseTimeToSeconds } from '@apps/shared/utils/time'
+export { formatTime, formatTimeAverage, formatTimeBest, parseTime as parseTimeToSeconds } from '@apps/shared/utils/time'
 
 // 日付フォーマッターは共通ユーティリティからre-export
 export { formatDate } from '@apps/shared/utils/date'

@@ -135,8 +135,9 @@ describe('parseTimeToSeconds', () => {
     })
 
     it('部分的に無効な入力の場合', () => {
-      expect(parseTimeToSeconds('abc:30')).toBe(30) // 分がパースできない場合0として扱う
-      expect(parseTimeToSeconds('1:abc')).toBe(60) // 秒がパースできない場合0として扱う
+      // 柔軟パーサーは数字以外を区切りとして扱うため、数字部分のみ抽出
+      expect(parseTimeToSeconds('abc:30')).toBe(30) // 'abc'は無視、'30'のみ
+      expect(parseTimeToSeconds('1:abc')).toBe(1) // '1'のみ抽出
     })
   })
 

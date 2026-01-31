@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import { differenceInDays, parseISO } from 'date-fns'
 import { CalendarIcon } from '@heroicons/react/24/outline'
-import { formatTime, formatDate } from '../../utils/formatters'
+import { formatTimeBest, formatDate } from '../../utils/formatters'
 import { Tabs } from '../ui/Tabs'
 
 export interface BestTime {
@@ -197,7 +197,7 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
 
   // タイム表示用のヘルパー関数
   const getTimeDisplay = (bestTime: BestTime) => {
-    const timeStr = formatTime(bestTime.time)
+    const timeStr = formatTimeBest(bestTime.time)
     const suffixes: string[] = []
     
     // ALLタブの場合、長水路ならLを追加

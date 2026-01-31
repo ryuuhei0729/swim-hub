@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react'
 import { Tabs } from '@/components/ui'
 import { TrophyIcon, CalendarIcon } from '@heroicons/react/24/outline'
 import { differenceInDays, parseISO } from 'date-fns'
-import { formatTime, formatDate } from '@/utils/formatters'
+import { formatTimeBest, formatDate } from '@/utils/formatters'
 import type { BestTime, TabType } from '@/types/member-detail'
 
 const DISTANCES = [50, 100, 200, 400, 800]
@@ -142,7 +142,7 @@ export function BestTimesTable({ bestTimes }: BestTimesTableProps) {
   }
 
   const getTimeDisplay = (bestTime: BestTime) => {
-    const timeStr = formatTime(bestTime.time)
+    const timeStr = formatTimeBest(bestTime.time)
     const suffixes: string[] = []
 
     if (activeTab === 'all' && bestTime.pool_type === 1) {

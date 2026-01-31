@@ -7,14 +7,15 @@ import { format, parseISO, isValid } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { ShareCardModal } from '@/components/share'
 import type { PracticeShareData, PracticeMenuItem } from '@/components/share'
-import { formatTime } from '@/utils/formatters'
+import { formatTime, formatTimeAverage } from '@/utils/formatters'
 import { useAuth } from '@/contexts'
 import ImageGallery, { GalleryImage } from '@/components/ui/ImageGallery'
 import type {
   Practice,
   PracticeLogWithTimes,
   PracticeTime,
-  PracticeTag
+  PracticeTag,
+  TimeEntry
 } from '@apps/shared/types'
 import { PracticeLogTemplateSelectModal } from '@/components/practice-log-templates/PracticeLogTemplateSelectModal'
 import { AttendanceButton } from '../AttendanceSection'
@@ -354,7 +355,7 @@ export function PracticeDetails({
                                          SWIM_STYLES.find(s => s.value === styleValue)?.value ||
                                          styleValue || 'Fr'
 
-                        const formData = {
+                        const formData: PracticeLogWithTimes & { tags?: PracticeTag[]; times?: Array<{ memberId: string; times: TimeEntry[] }> } = {
                           id: formattedLog.id,
                           user_id: practice.user_id,
                           practice_id: formattedLog.practiceId,
@@ -366,13 +367,26 @@ export function PracticeDetails({
                           circle: formattedLog.circle,
                           note: formattedLog.note,
                           tags: formattedLog.tags || [],
+                          practice_times: (formattedLog.times || []).map(t => ({
+                            id: t.id,
+                            user_id: practice.user_id,
+                            practice_log_id: formattedLog.id,
+                            set_number: t.setNumber,
+                            rep_number: t.repNumber,
+                            time: t.time,
+                            created_at: formattedLog.created_at || ''
+                          })),
                           times: [{
                             memberId: '',
-                            times: formattedLog.times || []
+                            times: (formattedLog.times || []).map(t => ({
+                              setNumber: t.setNumber,
+                              repNumber: t.repNumber,
+                              time: t.time
+                            }))
                           }],
-                          created_at: formattedLog.created_at,
-                          updated_at: formattedLog.updated_at
-                        } as unknown as PracticeLogWithTimes & { tags?: PracticeTag[] }
+                          created_at: formattedLog.created_at || '',
+                          updated_at: formattedLog.updated_at || ''
+                        }
                         onEditPracticeLog?.(formData)
                       }}
                       className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
@@ -472,7 +486,7 @@ export function PracticeDetails({
                               return (
                                 <td key={setNumber} className="py-2 px-2 text-center">
                                   <span className="text-green-800 font-medium">
-                                    {average > 0 ? formatTime(average) : '-'}
+                                    {average > 0 ? formatTimeAverage(average) : '-'}
                                   </span>
                                 </td>
                               )
@@ -488,7 +502,7 @@ export function PracticeDetails({
                                   const overallAverage = allValidTimes.length > 0
                                     ? allValidTimes.reduce((sum, t) => sum + t.time, 0) / allValidTimes.length
                                     : 0
-                                  return overallAverage > 0 ? formatTime(overallAverage) : '-'
+                                  return overallAverage > 0 ? formatTimeAverage(overallAverage) : '-'
                                 })()}
                               </span>
                             </td>
