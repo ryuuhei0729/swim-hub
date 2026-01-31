@@ -442,7 +442,7 @@ export class GoalAPI {
       `)
       .eq('user_id', user.id)
       .eq('status', 'active')
-      .lt('competitions.date', todayStr)
+      .lt('competition.date', todayStr)
 
     if (error) throw error
 

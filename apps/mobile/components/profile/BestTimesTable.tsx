@@ -228,7 +228,8 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
                       <View style={styles.timeContainer}>
                         {(() => {
                           const createdAt = parseISO(bestTime.created_at)
-                          const isNew = differenceInDays(new Date(), createdAt) <= 30
+                          // 一括登録（competition なし）は New 表示対象外
+                          const isNew = bestTime.competition ? differenceInDays(new Date(), createdAt) <= 30 : false
                           const display = getTimeDisplay(bestTime)
 
                           return (

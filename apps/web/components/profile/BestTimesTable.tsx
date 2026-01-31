@@ -12,6 +12,7 @@ export interface BestTime {
   created_at: string
   pool_type: number // 0: 短水路, 1: 長水路
   is_relaying: boolean
+  note?: string // 備考（一括登録時に使用）
   style: {
     name_jp: string
     distance: number
@@ -25,6 +26,7 @@ export interface BestTime {
     id: string
     time: number
     created_at: string
+    note?: string
     competition?: {
       title: string
       date: string
@@ -290,11 +292,15 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
                   >
                     {bestTime ? (
                       <div className={`group relative inline-block pt-1 sm:pt-2 ${(() => {
+                        // 一括登録（competition なし）は New 表示対象外
+                        if (!bestTime.competition) return ''
                         const createdAt = parseISO(bestTime.created_at)
                         const isNew = differenceInDays(new Date(), createdAt) <= 30
                         return isNew ? 'pr-4 sm:pr-6' : ''
                       })()}`}>
                         {(() => {
+                          // 一括登録（competition なし）は New 表示対象外
+                          if (!bestTime.competition) return null
                           const createdAt = parseISO(bestTime.created_at)
                           const isNew = differenceInDays(new Date(), createdAt) <= 30
                           return isNew ? (
@@ -303,6 +309,8 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
                         })()}
                         {/* 通常表示：ベストタイム */}
                         <span className={`font-semibold text-xs sm:text-base md:text-lg ${(() => {
+                          // 一括登録（competition なし）は New 表示対象外
+                          if (!bestTime.competition) return 'text-gray-900'
                           const createdAt = parseISO(bestTime.created_at)
                           return differenceInDays(new Date(), createdAt) <= 30 ? 'text-red-600' : 'text-gray-900'
                         })()}`}>
@@ -325,9 +333,13 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
                             <CalendarIcon className="h-3 w-3" />
                             <span>{formatDate(bestTime.created_at)}</span>
                           </div>
-                          {bestTime.competition && (
+                          {bestTime.competition ? (
                             <div className="text-blue-300">
                               {bestTime.competition.title}
+                            </div>
+                          ) : (
+                            <div className="text-gray-400">
+                              {bestTime.note || '一括登録'}
                             </div>
                           )}
                           {/* 矢印 */}
