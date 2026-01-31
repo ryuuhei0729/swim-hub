@@ -19,6 +19,22 @@ const createWrapper = () => {
   )
 }
 
+// テスト用のモックプロフィールを作成するヘルパー
+const createMockProfile = (overrides = {}) => ({
+  id: 'user-1',
+  name: 'テストユーザー',
+  gender: 0,
+  birthday: null,
+  profile_image_path: null,
+  bio: null,
+  google_calendar_enabled: false,
+  google_calendar_sync_practices: false,
+  google_calendar_sync_competitions: false,
+  created_at: '2025-01-01T00:00:00Z',
+  updated_at: '2025-01-01T00:00:00Z',
+  ...overrides,
+})
+
 describe('useUserQuery', () => {
   let mockClient: MockSupabaseClient
 
@@ -28,16 +44,7 @@ describe('useUserQuery', () => {
   })
 
   it('ユーザープロフィールとチーム情報を取得できる', async () => {
-    const mockProfile = {
-      id: 'user-1',
-      name: 'テストユーザー',
-      gender: 0,
-      birthday: null,
-      profile_image_path: null,
-      bio: null,
-      created_at: '2025-01-01T00:00:00Z',
-      updated_at: '2025-01-01T00:00:00Z',
-    }
+    const mockProfile = createMockProfile()
     const mockTeams = [createMockTeamMembershipWithUser()]
 
     // auth.getUserをモック
@@ -56,13 +63,13 @@ describe('useUserQuery', () => {
       if (table === 'users') return profileBuilder
       if (table === 'team_memberships') return teamsBuilder
       return profileBuilder
-    })
+    }) as any
 
     const { result } = renderHook(
-      () => useUserQuery(mockClient, { 
-        userId: 'user-1', 
+      () => useUserQuery(mockClient, {
+        userId: 'user-1',
         initialProfile: mockProfile,
-        initialTeams: mockTeams 
+        initialTeams: mockTeams
       }),
       { wrapper: createWrapper() }
     )
@@ -76,16 +83,7 @@ describe('useUserQuery', () => {
   })
 
   it('userIdが指定されていない場合、現在のユーザーを取得できる', async () => {
-    const mockProfile = {
-      id: 'user-1',
-      name: 'テストユーザー',
-      gender: 0,
-      birthday: null,
-      profile_image_path: null,
-      bio: null,
-      created_at: '2025-01-01T00:00:00Z',
-      updated_at: '2025-01-01T00:00:00Z',
-    }
+    const mockProfile = createMockProfile()
 
     mockClient.auth.getUser = vi.fn().mockResolvedValue({
       data: { user: { id: 'user-1' } },
@@ -102,7 +100,7 @@ describe('useUserQuery', () => {
       if (table === 'users') return profileBuilder
       if (table === 'team_memberships') return teamsBuilder
       return profileBuilder
-    })
+    }) as any
 
     const { result } = renderHook(
       () => useUserQuery(mockClient, { initialProfile: mockProfile }),
@@ -131,7 +129,7 @@ describe('useUserQuery', () => {
     mockClient.from = vi.fn((table: string) => {
       if (table === 'users') return profileBuilder
       return profileBuilder
-    })
+    }) as any
 
     const { result } = renderHook(
       () => useUserQuery(mockClient, { userId: 'user-1' }),
@@ -152,16 +150,7 @@ describe('useUserProfileQuery', () => {
   })
 
   it('ユーザープロフィールを取得できる', async () => {
-    const mockProfile = {
-      id: 'user-1',
-      name: 'テストユーザー',
-      gender: 0,
-      birthday: null,
-      profile_image_path: null,
-      bio: null,
-      created_at: '2025-01-01T00:00:00Z',
-      updated_at: '2025-01-01T00:00:00Z',
-    }
+    const mockProfile = createMockProfile()
 
     mockClient.auth.getUser = vi.fn().mockResolvedValue({
       data: { user: { id: 'user-1' } },
@@ -172,7 +161,7 @@ describe('useUserProfileQuery', () => {
     mockClient.from = vi.fn((table: string) => {
       if (table === 'users') return profileBuilder
       return profileBuilder
-    })
+    }) as any
 
     const { result } = renderHook(
       () => useUserProfileQuery(mockClient, 'user-1'),
@@ -185,16 +174,7 @@ describe('useUserProfileQuery', () => {
   })
 
   it('userIdが指定されていない場合、現在のユーザーを取得できる', async () => {
-    const mockProfile = {
-      id: 'user-1',
-      name: 'テストユーザー',
-      gender: 0,
-      birthday: null,
-      profile_image_path: null,
-      bio: null,
-      created_at: '2025-01-01T00:00:00Z',
-      updated_at: '2025-01-01T00:00:00Z',
-    }
+    const mockProfile = createMockProfile()
 
     mockClient.auth.getUser = vi.fn().mockResolvedValue({
       data: { user: { id: 'user-1' } },
@@ -205,7 +185,7 @@ describe('useUserProfileQuery', () => {
     mockClient.from = vi.fn((table: string) => {
       if (table === 'users') return profileBuilder
       return profileBuilder
-    })
+    }) as any
 
     const { result } = renderHook(
       () => useUserProfileQuery(mockClient),
@@ -230,7 +210,7 @@ describe('useUserProfileQuery', () => {
     mockClient.from = vi.fn((table: string) => {
       if (table === 'users') return profileBuilder
       return profileBuilder
-    })
+    }) as any
 
     const { result } = renderHook(
       () => useUserProfileQuery(mockClient, 'user-1'),
@@ -241,4 +221,3 @@ describe('useUserProfileQuery', () => {
     expect(result.current.error).toEqual(error)
   })
 })
-

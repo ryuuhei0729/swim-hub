@@ -117,23 +117,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         { usePracticeFilterStore },
         { usePracticeTimeStore },
         { useCompetitionFormStore },
-        { useRecordFormStore },
-        { useRecordFilterStore },
+        { useRecordStore },
       ] = await Promise.all([
         import('@/stores/practiceFormStore'),
         import('@/stores/practiceFilterStore'),
         import('@/stores/practiceTimeStore'),
         import('@/stores/competitionFormStore'),
-        import('@/stores/recordFormStore'),
-        import('@/stores/recordFilterStore'),
+        import('@/stores/recordStore'),
       ])
-      
+
       usePracticeFormStore.getState().reset()
       usePracticeFilterStore.getState().reset()
       usePracticeTimeStore.getState().reset()
       useCompetitionFormStore.getState().reset()
-      useRecordFormStore.getState().reset()
-      useRecordFilterStore.getState().reset()
+      useRecordStore.getState().reset()
       
       return { error: null }
     } catch (error) {
@@ -266,22 +263,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             import('@/stores/practiceFilterStore'),
             import('@/stores/practiceTimeStore'),
             import('@/stores/competitionFormStore'),
-            import('@/stores/recordFormStore'),
-            import('@/stores/recordFilterStore'),
+            import('@/stores/recordStore'),
           ]).then(([
             { usePracticeFormStore },
             { usePracticeFilterStore },
             { usePracticeTimeStore },
             { useCompetitionFormStore },
-            { useRecordFormStore },
-            { useRecordFilterStore },
+            { useRecordStore },
           ]) => {
             usePracticeFormStore.getState().reset()
             usePracticeFilterStore.getState().reset()
             usePracticeTimeStore.getState().reset()
             useCompetitionFormStore.getState().reset()
-            useRecordFormStore.getState().reset()
-            useRecordFilterStore.getState().reset()
+            useRecordStore.getState().reset()
           }).catch((error) => {
             console.warn('ストアのリセットに失敗:', error)
           })

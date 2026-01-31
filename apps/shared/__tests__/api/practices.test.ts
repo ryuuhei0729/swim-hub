@@ -292,5 +292,395 @@ describe('PracticeAPI', () => {
       expect(mockClient.from).toHaveBeenCalledWith('practice_logs')
     })
   })
+
+  describe('練習記録件数取得', () => {
+    it('期間内の練習記録件数を取得できる', async () => {
+      mockClient.from = vi.fn(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockResolvedValue({
+          count: 5,
+          error: null,
+        }),
+      }))
+
+      const result = await api.countPractices('2025-01-01', '2025-01-31')
+
+      expect(mockClient.from).toHaveBeenCalledWith('practices')
+      expect(result).toBe(5)
+    })
+
+    it('認証されていないときエラーになる', async () => {
+      mockClient = createMockSupabaseClient({ userId: '' })
+      api = new PracticeAPI(mockClient)
+
+      await expect(api.countPractices('2025-01-01', '2025-01-31')).rejects.toThrow('認証が必要です')
+    })
+
+    it('countがnullの場合は0を返す', async () => {
+      mockClient.from = vi.fn(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockResolvedValue({
+          count: null,
+          error: null,
+        }),
+      }))
+
+      const result = await api.countPractices('2025-01-01', '2025-01-31')
+
+      expect(result).toBe(0)
+    })
+  })
+
+  describe('練習記録取得（ID指定）', () => {
+    it('IDで練習記録を取得できる', async () => {
+      const mockPractice = createMockPractice()
+      mockClient.from = vi.fn(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: mockPractice,
+          error: null,
+        }),
+      }))
+
+      const result = await api.getPracticeById('practice-1')
+
+      expect(mockClient.from).toHaveBeenCalledWith('practices')
+      expect(result).toEqual(mockPractice)
+    })
+
+    it('存在しない場合はnullを返す', async () => {
+      mockClient.from = vi.fn(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: null,
+          error: { code: 'PGRST116' },
+        }),
+      }))
+
+      const result = await api.getPracticeById('non-existent')
+
+      expect(result).toBeNull()
+    })
+
+    it('認証されていないときエラーになる', async () => {
+      mockClient = createMockSupabaseClient({ userId: '' })
+      api = new PracticeAPI(mockClient)
+
+      await expect(api.getPracticeById('practice-1')).rejects.toThrow('認証が必要です')
+    })
+
+    it('その他のエラーの場合は例外を投げる', async () => {
+      const error = new Error('Unknown error')
+      mockClient.from = vi.fn(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: null,
+          error,
+        }),
+      }))
+
+      await expect(api.getPracticeById('practice-1')).rejects.toThrow('Unknown error')
+    })
+  })
+
+  describe('練習記録取得（limit/offset付き）', () => {
+    it('limitを指定して取得できる', async () => {
+      const mockPractices = [createMockPractice()]
+      const builder: any = {
+        select: vi.fn(),
+        eq: vi.fn(),
+        gte: vi.fn(),
+        lte: vi.fn(),
+        order: vi.fn(),
+        limit: vi.fn(),
+        then: vi.fn()
+      }
+      builder.select.mockReturnValue(builder)
+      builder.eq.mockReturnValue(builder)
+      builder.gte.mockReturnValue(builder)
+      builder.lte.mockReturnValue(builder)
+      builder.order.mockReturnValue(builder)
+      builder.limit.mockReturnValue(builder)
+      builder.then.mockImplementation((onFulfilled: any) =>
+        Promise.resolve({ data: mockPractices, error: null }).then(onFulfilled)
+      )
+      mockClient.from = vi.fn().mockReturnValue(builder)
+
+      const result = await api.getPractices('2025-01-01', '2025-01-31', 10)
+
+      expect(builder.limit).toHaveBeenCalledWith(10)
+      expect(result).toEqual(mockPractices)
+    })
+
+    it('limit/offsetを指定して取得できる', async () => {
+      const mockPractices = [createMockPractice()]
+      const builder: any = {
+        select: vi.fn(),
+        eq: vi.fn(),
+        gte: vi.fn(),
+        lte: vi.fn(),
+        order: vi.fn(),
+        range: vi.fn(),
+        then: vi.fn()
+      }
+      builder.select.mockReturnValue(builder)
+      builder.eq.mockReturnValue(builder)
+      builder.gte.mockReturnValue(builder)
+      builder.lte.mockReturnValue(builder)
+      builder.order.mockReturnValue(builder)
+      builder.range.mockReturnValue(builder)
+      builder.then.mockImplementation((onFulfilled: any) =>
+        Promise.resolve({ data: mockPractices, error: null }).then(onFulfilled)
+      )
+      mockClient.from = vi.fn().mockReturnValue(builder)
+
+      const result = await api.getPractices('2025-01-01', '2025-01-31', 10, 20)
+
+      expect(builder.range).toHaveBeenCalledWith(20, 29)
+      expect(result).toEqual(mockPractices)
+    })
+  })
+
+  describe('練習タイム操作', () => {
+    it('練習タイムを作成できる', async () => {
+      const newTime = {
+        user_id: 'test-user-id',
+        practice_log_id: 'log-1',
+        set_number: 1,
+        rep_number: 1,
+        time: 25.5,
+      }
+      const createdTime = { id: 'time-1', ...newTime }
+
+      mockClient.from = vi.fn(() => ({
+        insert: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: createdTime,
+          error: null,
+        }),
+      }))
+
+      const result = await api.createPracticeTime(newTime)
+
+      expect(mockClient.from).toHaveBeenCalledWith('practice_times')
+      expect(result).toEqual(createdTime)
+    })
+
+    it('複数の練習タイムを作成できる', async () => {
+      const newTimes = [
+        { user_id: 'test-user-id', practice_log_id: 'log-1', set_number: 1, rep_number: 1, time: 25.5 },
+        { user_id: 'test-user-id', practice_log_id: 'log-1', set_number: 1, rep_number: 2, time: 26.0 },
+      ]
+      const createdTimes = newTimes.map((t, i) => ({ id: `time-${i}`, ...t }))
+
+      mockClient.from = vi.fn(() => ({
+        insert: vi.fn().mockReturnThis(),
+        select: vi.fn().mockResolvedValue({
+          data: createdTimes,
+          error: null,
+        }),
+      }))
+
+      const result = await api.createPracticeTimes(newTimes)
+
+      expect(mockClient.from).toHaveBeenCalledWith('practice_times')
+      expect(result).toEqual(createdTimes)
+    })
+
+    it('空配列の場合は空配列を返す', async () => {
+      const result = await api.createPracticeTimes([])
+      expect(result).toEqual([])
+    })
+
+    it('練習タイムを置き換えできる', async () => {
+      const newTimes = [
+        { set_number: 1, rep_number: 1, time: 24.5 },
+        { set_number: 1, rep_number: 2, time: 25.0 },
+      ]
+      const createdTimes = newTimes.map((t, i) => ({
+        id: `time-${i}`,
+        practice_log_id: 'log-1',
+        ...t,
+      }))
+
+      // delete用のモック
+      const deleteBuilder = {
+        delete: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ error: null }),
+      }
+      // insert用のモック
+      const insertBuilder = {
+        insert: vi.fn().mockReturnThis(),
+        select: vi.fn().mockResolvedValue({ data: createdTimes, error: null }),
+      }
+
+      let callCount = 0
+      mockClient.from = vi.fn(() => {
+        callCount++
+        return callCount === 1 ? deleteBuilder : insertBuilder
+      })
+
+      const result = await api.replacePracticeTimes('log-1', newTimes)
+
+      expect(result).toEqual(createdTimes)
+    })
+
+    it('練習タイム置き換えで空配列の場合は削除のみ行う', async () => {
+      const deleteBuilder = {
+        delete: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ error: null }),
+      }
+      mockClient.from = vi.fn(() => deleteBuilder)
+
+      const result = await api.replacePracticeTimes('log-1', [])
+
+      expect(deleteBuilder.delete).toHaveBeenCalled()
+      expect(result).toEqual([])
+    })
+
+    it('練習タイムを削除できる', async () => {
+      mockClient.from = vi.fn(() => ({
+        delete: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({
+          data: null,
+          error: null,
+        }),
+      }))
+
+      await expect(api.deletePracticeTime('time-1')).resolves.toBeUndefined()
+
+      expect(mockClient.from).toHaveBeenCalledWith('practice_times')
+    })
+  })
+
+  describe('練習タグ操作', () => {
+    it('練習タグ一覧を取得できる', async () => {
+      const mockTags = [
+        { id: 'tag-1', name: 'タグ1', color: '#ff0000', user_id: 'user-1' },
+        { id: 'tag-2', name: 'タグ2', color: '#00ff00', user_id: 'user-1' },
+      ]
+      mockClient.from = vi.fn(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({
+          data: mockTags,
+          error: null,
+        }),
+      }))
+
+      const result = await api.getPracticeTags()
+
+      expect(mockClient.from).toHaveBeenCalledWith('practice_tags')
+      expect(result).toEqual(mockTags)
+    })
+
+    it('練習タグを作成できる', async () => {
+      const createdTag = {
+        id: 'tag-1',
+        name: '新規タグ',
+        color: '#ff0000',
+        user_id: 'test-user-id',
+      }
+      mockClient.from = vi.fn(() => ({
+        insert: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: createdTag,
+          error: null,
+        }),
+      }))
+
+      const result = await api.createPracticeTag('新規タグ', '#ff0000')
+
+      expect(mockClient.from).toHaveBeenCalledWith('practice_tags')
+      expect(result).toEqual(createdTag)
+    })
+
+    it('認証されていないとき練習タグ作成でエラーになる', async () => {
+      mockClient = createMockSupabaseClient({ userId: '' })
+      api = new PracticeAPI(mockClient)
+
+      await expect(api.createPracticeTag('タグ', '#fff')).rejects.toThrow('認証が必要です')
+    })
+
+    it('練習タグを更新できる', async () => {
+      const updatedTag = {
+        id: 'tag-1',
+        name: '更新後タグ',
+        color: '#00ff00',
+        user_id: 'test-user-id',
+      }
+      mockClient.from = vi.fn(() => ({
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: updatedTag,
+          error: null,
+        }),
+      }))
+
+      const result = await api.updatePracticeTag('tag-1', '更新後タグ', '#00ff00')
+
+      expect(mockClient.from).toHaveBeenCalledWith('practice_tags')
+      expect(result).toEqual(updatedTag)
+    })
+
+    it('練習タグを削除できる', async () => {
+      mockClient.from = vi.fn(() => ({
+        delete: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            eq: vi.fn().mockResolvedValue({
+              data: null,
+              error: null,
+            }),
+          })),
+        })),
+      }))
+
+      await expect(api.deletePracticeTag('tag-1')).resolves.toBeUndefined()
+
+      expect(mockClient.from).toHaveBeenCalledWith('practice_tags')
+    })
+  })
+
+  describe('ユニークな場所取得', () => {
+    it('ユニークな場所一覧を取得できる', async () => {
+      const mockPlaces = [
+        { place: 'プールA' },
+        { place: 'プールB' },
+        { place: null },
+      ]
+      mockClient.from = vi.fn(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        not: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({
+          data: mockPlaces,
+          error: null,
+        }),
+      }))
+
+      const result = await api.getUniquePlaces()
+
+      expect(mockClient.from).toHaveBeenCalledWith('practices')
+      expect(result).toEqual(['プールA', 'プールB'])
+    })
+
+    it('認証されていないときエラーになる', async () => {
+      mockClient = createMockSupabaseClient({ userId: '' })
+      api = new PracticeAPI(mockClient)
+
+      await expect(api.getUniquePlaces()).rejects.toThrow('認証が必要です')
+    })
+  })
 })
 

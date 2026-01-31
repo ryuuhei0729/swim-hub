@@ -92,6 +92,7 @@ describe('useCreatePracticeMutation', () => {
   it('練習記録を作成できる', async () => {
     const newPractice = {
       date: '2025-01-15',
+      title: 'テスト練習',
       place: 'テストプール',
       note: 'テストメモ'
     }

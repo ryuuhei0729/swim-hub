@@ -314,21 +314,45 @@ class TeamAttendancesAPI extends BaseTeamAPI { ... }
 
 ---
 
-## 8. Zustandストアの整理 【Low】
+## 8. Zustandストアの整理 【Low】 ✅ 完了
 
-### 現状
+### 実施内容
 
-- Web: 15ストア
-- Mobile: 9ストア
+以下のストアを統合しました：
 
-### 統合検討対象
+| 統合前                                               | 統合後               | 場所     |
+| ------------------------------------------------- | ------------------ | ------ |
+| `practiceFormStore` + `practiceFilterStore`       | `practiceStore`    | Web    |
+| `competitionFormStore` + `competitionFilterStore` | `competitionStore` | Web    |
+| `recordFormStore` + `recordFilterStore`           | `recordStore`      | Mobile |
 
+### 新しいストア構造
 
-| 現在                                                | 統合案                |
-| ------------------------------------------------- | ------------------ |
-| `practiceFormStore` + `practiceFilterStore`       | `practiceStore`    |
-| `competitionFormStore` + `competitionFilterStore` | `competitionStore` |
-| `recordLogFormStore` + `recordFormStore`          | `recordStore`      |
+**Web:**
+- `apps/web/stores/practice/practiceStore.ts` - 練習用統合ストア（Form + Filter）
+- `apps/web/stores/competition/competitionStore.ts` - 大会用統合ストア（Form + Filter）
+
+**Mobile:**
+- `apps/mobile/stores/recordStore.ts` - 大会記録用統合ストア（Form + Filter）
+
+### 後方互換性
+
+各統合ストアから旧名のエイリアスをエクスポートしているため、既存コードは変更なしで動作します：
+- `usePracticeFormStore`, `usePracticeFilterStore` → `usePracticeStore`
+- `useCompetitionFormStore`, `useCompetitionFilterStore` → `useCompetitionStore`
+- `useRecordFormStore`, `useRecordFilterStore` → `useRecordStore`
+
+### 現在のストア構成
+
+**Web: 13ストア（15→13）**
+- 統合ストア: practiceStore, competitionStore
+- フォーム: attendanceTabStore, commonFormStore, competitionRecordStore, practiceRecordStore, teamDetailStore, teamAdminStore
+- その他: modalStore, profileStore, teamStore, uiStore
+
+**Mobile: 7ストア（9→7）**
+- 統合ストア: recordStore
+- フォーム: competitionFormStore, practiceFormStore, practiceTimeStore
+- フィルター: practiceFilterStore
 
 
 ---
@@ -364,15 +388,40 @@ export const handleSupabaseError = (error: PostgrestError): never => {
 
 ---
 
-## 10. テストカバレッジの向上 【Low】
+## 10. テストカバレッジの向上 【Low】 ✅ 完了
 
-現在のカバレッジ閾値: 50%（lines/statements）
+**達成カバレッジ: 75.11% lines（目標75% 達成）**
 
-### 優先テスト対象
+### 改善済みファイル
 
-1. API層 (`apps/shared/api/`) - ビジネスロジックの中心
-2. カスタムフック (`apps/shared/hooks/`) - 状態管理
-3. ユーティリティ関数 (`apps/shared/utils/`) - 共通処理
+| ファイル | 改善前 | 改善後 |
+|---------|-------|-------|
+| `utils/date.ts` | 30.43% | **100%** |
+| `utils/supabase-helpers.ts` | 0% | **100%** |
+| `api/teams/bulkRegister.ts` | 0% | **92%** |
+| `api/goals.ts` | 17.37% | **67.21%** |
+| `api/practices.ts` | 25.24% | **45.87%** |
+| `api/records.ts` | 32.09% | **53.70%** |
+| `hooks/queries/practices.ts` | 38.98% | **77.57%** |
+| `hooks/queries/records.ts` | 38.98% | **72.15%** |
+| `hooks/queries/teams.ts` | 38.98% | **85.23%** |
+| utils全体 | 88.31% | **98.59%** |
+
+### 追加されたテストファイル
+
+- `__tests__/hooks/queries/practices.test.ts` - 14テスト
+- `__tests__/hooks/queries/records.test.ts` - 18テスト
+- `__tests__/hooks/queries/teams.test.ts` - 16テスト
+- `__tests__/utils/test-utils.tsx` - テストユーティリティ
+
+### カバレッジ詳細
+
+| 指標 | カバレッジ |
+|------|-----------|
+| Lines | **75.11%** ✅ |
+| Statements | 71.35% |
+| Branches | 62.92% |
+| Functions | 66.67% |
 
 ---
 
@@ -395,8 +444,8 @@ export const handleSupabaseError = (error: PostgrestError): never => {
 
 1. TODOコメントの実装
 2. ✅ コード重複の解消（認証・権限チェック、時刻パース、Supabase型変換、モーダル離脱防止）
-3. ストアの整理
-4. テストカバレッジ向上
+3. ✅ ストアの整理（Web: 15→13、Mobile: 9→7）
+4. ✅ テストカバレッジ向上（61.86% → 75.11% lines）
 
 ---
 
@@ -465,4 +514,34 @@ swim-hub/
   - beforeunload / popstate イベント処理
   - ConfirmDialog との連携機能
 
-*このドキュメントは 2026-01-30 時点の分析に基づいています。*
+### 2026-01-31 ストアの整理 完了
+
+- **Web: practiceStore統合**:
+  - `apps/web/stores/practice/practiceStore.ts` を新規作成
+  - `practiceFormStore` + `practiceFilterStore` を統合
+  - 後方互換エイリアスをエクスポート
+- **Web: competitionStore統合**:
+  - `apps/web/stores/competition/competitionStore.ts` を新規作成
+  - `competitionFormStore` + `competitionFilterStore` を統合
+  - 後方互換エイリアスをエクスポート
+- **Mobile: recordStore統合**:
+  - `apps/mobile/stores/recordStore.ts` を新規作成
+  - `recordFormStore` + `recordFilterStore` を統合
+  - 後方互換エイリアスをエクスポート
+- **ストア数削減**: Web 15→13、Mobile 9→7
+
+### 2026-01-31 テストカバレッジ向上 完了
+
+- **目標達成**: 75.11% lines（目標75%）
+- **hooks/queries層のテスト追加**:
+  - `practices.test.ts`: 14テスト（usePracticesQuery, mutations, tagsなど）
+  - `records.test.ts`: 18テスト（useRecordsQuery, bestTimes, split times, competitionsなど）
+  - `teams.test.ts`: 16テスト（useTeamsQuery, members, announcementsなど）
+- **テストユーティリティ作成**:
+  - `test-utils.tsx`: React Query hook用テストヘルパー
+  - `createTestQueryClient()`, `createWrapper()`, `renderQueryHook()`
+- **API層テスト拡充**:
+  - `practices.test.ts`: practice times, tags, unique placesのテスト追加
+  - `records.test.ts`: split times replacement, best times, bulk recordsのテスト追加
+
+*このドキュメントは 2026-01-31 時点の分析に基づいています。*
