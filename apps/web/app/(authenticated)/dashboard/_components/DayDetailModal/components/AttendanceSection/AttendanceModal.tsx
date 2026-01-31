@@ -18,17 +18,20 @@ export function AttendanceModal({
   const { supabase } = useAuth()
   const [attendances, setAttendances] = useState<TeamAttendanceWithDetails[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase])
 
   const loadAttendances = useCallback(async () => {
     try {
       setLoading(true)
+      setError(null)
       const data = eventType === 'practice'
         ? await attendanceAPI.getAttendanceByPractice(eventId)
         : await attendanceAPI.getAttendanceByCompetition(eventId)
       setAttendances(data)
     } catch (err) {
       console.error('出欠情報の取得に失敗:', err)
+      setError('出欠情報の取得に失敗しました')
     } finally {
       setLoading(false)
     }
@@ -83,6 +86,17 @@ export function AttendanceModal({
               <div className="text-center py-8">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
                 <p className="mt-2 text-gray-500">読み込み中...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-8">
+                <p className="text-red-600 mb-4">{error}</p>
+                <button
+                  type="button"
+                  onClick={loadAttendances}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  再試行
+                </button>
               </div>
             ) : (
               <>

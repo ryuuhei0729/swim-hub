@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { View, Text, Pressable } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { useAuth } from '@/contexts/AuthProvider'
@@ -28,7 +28,8 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
   const [actualRecords, setActualRecords] = useState<RecordData[]>([])
   const [loading, setLoading] = useState(true)
   const [splitTimesMap, setSplitTimesMap] = useState<Map<string, Array<{ distance: number; split_time: number }>>>(new Map())
-  const [loadingSplits, setLoadingSplits] = useState<Set<string>>(new Set())
+  const [_loadingSplits, setLoadingSplits] = useState<Set<string>>(new Set())
+  const loadingSplitsRef = useRef<Set<string>>(new Set())
 
   // プール種別のテキストを取得
   const getPoolTypeText = (poolType: number): string => {
@@ -113,7 +114,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
 
     const loadSplitTimes = async () => {
       const recordIds = actualRecords.map(r => r.id)
-      const recordsToLoad = recordIds.filter(id => !loadingSplits.has(id))
+      const recordsToLoad = recordIds.filter(id => !loadingSplitsRef.current.has(id))
 
       if (recordsToLoad.length === 0) return
 
@@ -122,6 +123,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
 
         try {
           if (cancelled) return
+          loadingSplitsRef.current.add(recordId)
           setLoadingSplits(prev => new Set(prev).add(recordId))
 
           const { data, error } = await supabase
@@ -150,6 +152,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
           console.error('スプリットタイム取得エラー:', error)
         } finally {
           if (!cancelled) {
+            loadingSplitsRef.current.delete(recordId)
             setLoadingSplits(prev => {
               const newSet = new Set(prev)
               newSet.delete(recordId)
@@ -165,7 +168,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
     return () => {
       cancelled = true
     }
-  }, [actualRecords, supabase, loadingSplits])
+  }, [actualRecords, supabase])
 
   return (
     <View style={styles.competitionRecordContainer}>

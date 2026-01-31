@@ -166,9 +166,10 @@ export const useRecordStore = create<RecordState & RecordActions>()((set) => ({
           id: st.id,
         })),
         errors: {},
+        isLoading: false,
       })
     } else {
-      // 作成モード: 空のフォームで初期化
+      // 作成モード: 空のフォームで初期化（initialFormStateにisLoading: falseが含まれる）
       set({
         ...initialFormState,
       })

@@ -22,7 +22,7 @@ export function CompetitionDetails({
   place,
   poolType,
   note,
-  records = [],
+  records: _records = [],
   onEdit,
   onDelete,
   onAddRecord,
@@ -47,8 +47,8 @@ export function CompetitionDetails({
         setLoading(true)
 
         // 大会の画像パスを直接取得
-        const { data: competitionData } = await (supabase
-          .from('competitions') as ReturnType<typeof supabase.from>)
+        const { data: competitionData } = await supabase
+          .from('competitions')
           .select('image_paths')
           .eq('id', competitionId)
           .single()
@@ -426,7 +426,7 @@ export function CompetitionDetails({
           })}
 
           {/* 「大会記録を追加」ボタン（Recordsがある場合でも表示） */}
-          {records.length > 0 && (
+          {actualRecords.length > 0 && (
             <div className="text-center pt-2">
               <button
                 onClick={() => {

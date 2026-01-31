@@ -12,7 +12,6 @@ import { useAuth } from '@/contexts'
 import ImageGallery, { GalleryImage } from '@/components/ui/ImageGallery'
 import type {
   Practice,
-  PracticeLog,
   PracticeLogWithTimes,
   PracticeTime,
   PracticeTag
