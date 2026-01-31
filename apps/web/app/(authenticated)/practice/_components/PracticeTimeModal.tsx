@@ -242,7 +242,7 @@ export default function PracticeTimeModal({
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-[70] overflow-y-auto">
+      <div className="fixed inset-0 z-70 overflow-y-auto">
         <div className="flex min-h-screen items-center justify-center p-4">
           {/* オーバーレイ */}
           <div className="fixed inset-0 bg-black/40 transition-opacity" />
@@ -262,7 +262,7 @@ export default function PracticeTimeModal({
 
   if (error) {
     return (
-      <div className="fixed inset-0 z-[70] overflow-y-auto">
+      <div className="fixed inset-0 z-70 overflow-y-auto">
         <div className="flex min-h-screen items-center justify-center p-4">
           {/* オーバーレイ */}
           <div className="fixed inset-0 bg-black/40 transition-opacity" />
@@ -298,7 +298,7 @@ export default function PracticeTimeModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[70] overflow-y-auto">
+    <div className="fixed inset-0 z-70 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
         {/* オーバーレイ */}
         <div 

@@ -166,7 +166,13 @@ export default function TimeInputModal({
 
   // 入力確定時にパース（Enter または フォーカスアウト）
   const handleTimeConfirm = (id: string, value: string) => {
-    if (!value.trim()) return
+    if (!value.trim()) {
+      // 空入力の場合はクリア
+      setTimes(prev => prev.map(t =>
+        t.id === id ? { ...t, displayValue: '', time: 0 } : t
+      ))
+      return
+    }
     const { time, displayValue } = parseInput(value)
     setTimes(prev => prev.map(t =>
       t.id === id ? {

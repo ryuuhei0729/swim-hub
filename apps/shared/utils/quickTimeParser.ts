@@ -147,8 +147,8 @@ function parseThreePartFormat(
   secondsPart: string,
   msPart: string
 ): QuickTimeResult | null {
-  const minutes = parseInt(minutesPart, 10)
-  const seconds = parseInt(secondsPart, 10)
+  let minutes = parseInt(minutesPart, 10)
+  let seconds = parseInt(secondsPart, 10)
   const msValue = parseInt(msPart, 10)
 
   if (isNaN(minutes) || isNaN(seconds) || isNaN(msValue)) {
@@ -158,6 +158,13 @@ function parseThreePartFormat(
   // 小数部を正規化
   const ms = msPart.length === 1 ? msValue * 10 : msValue
   const msDecimal = ms / 100
+
+  // 秒が60以上の場合は分に繰り上げ
+  if (seconds >= 60) {
+    const carry = Math.floor(seconds / 60)
+    minutes = minutes + carry
+    seconds = seconds % 60
+  }
 
   const totalSeconds = minutes * 60 + seconds + msDecimal
   const tensDigit = Math.floor(seconds / 10) % 10

@@ -103,7 +103,7 @@ describe('applyPracticeSheetFormatting', () => {
 
   it('列幅が正しく設定される', () => {
     const worksheet = createMockWorksheet([
-      { cells: [createMockCell('日付'), createMockCell('曜日'), createMockCell('場所'), createMockCell('備考')], rowNumber: 1 },
+      { cells: [createMockCell('日付'), createMockCell('曜日'), createMockCell('タイトル'), createMockCell('場所'), createMockCell('備考')], rowNumber: 1 },
     ])
 
     applyPracticeSheetFormatting(worksheet as unknown as Worksheet)
@@ -112,22 +112,26 @@ describe('applyPracticeSheetFormatting', () => {
     expect(worksheet.getColumn).toHaveBeenCalledWith(2)
     expect(worksheet.getColumn).toHaveBeenCalledWith(3)
     expect(worksheet.getColumn).toHaveBeenCalledWith(4)
+    expect(worksheet.getColumn).toHaveBeenCalledWith(5)
 
     const col1 = worksheet._columns.get(1)
     const col2 = worksheet._columns.get(2)
     const col3 = worksheet._columns.get(3)
     const col4 = worksheet._columns.get(4)
+    const col5 = worksheet._columns.get(5)
 
     expect(col1?.width).toBe(12)
     expect(col2?.width).toBe(8)
     expect(col3?.width).toBe(25)
-    expect(col4?.width).toBe(35)
+    expect(col4?.width).toBe(25)
+    expect(col5?.width).toBe(35)
   })
 
   it('ヘッダー行に書式が適用される', () => {
     const headerCells = [
       createMockCell('日付'),
       createMockCell('曜日'),
+      createMockCell('タイトル'),
       createMockCell('場所'),
       createMockCell('備考'),
     ]
@@ -161,8 +165,8 @@ describe('applyPracticeSheetFormatting', () => {
     // 2025年1月18日は土曜日
     const saturdayDate = new Date(2025, 0, 18)
     const worksheet = createMockWorksheet([
-      { cells: [createMockCell('日付'), createMockCell('曜日'), createMockCell('場所'), createMockCell('備考')], rowNumber: 1 },
-      { cells: [createMockCell(saturdayDate), createMockCell('土'), createMockCell(''), createMockCell('')], rowNumber: 2 },
+      { cells: [createMockCell('日付'), createMockCell('曜日'), createMockCell('タイトル'), createMockCell('場所'), createMockCell('備考')], rowNumber: 1 },
+      { cells: [createMockCell(saturdayDate), createMockCell('土'), createMockCell(''), createMockCell(''), createMockCell('')], rowNumber: 2 },
     ])
 
     applyPracticeSheetFormatting(worksheet as unknown as Worksheet)
@@ -180,8 +184,8 @@ describe('applyPracticeSheetFormatting', () => {
     // 2025年1月19日は日曜日
     const sundayDate = new Date(2025, 0, 19)
     const worksheet = createMockWorksheet([
-      { cells: [createMockCell('日付'), createMockCell('曜日'), createMockCell('場所'), createMockCell('備考')], rowNumber: 1 },
-      { cells: [createMockCell(sundayDate), createMockCell('日'), createMockCell(''), createMockCell('')], rowNumber: 2 },
+      { cells: [createMockCell('日付'), createMockCell('曜日'), createMockCell('タイトル'), createMockCell('場所'), createMockCell('備考')], rowNumber: 1 },
+      { cells: [createMockCell(sundayDate), createMockCell('日'), createMockCell(''), createMockCell(''), createMockCell('')], rowNumber: 2 },
     ])
 
     applyPracticeSheetFormatting(worksheet as unknown as Worksheet)
@@ -199,8 +203,8 @@ describe('applyPracticeSheetFormatting', () => {
     // 2025年1月20日は月曜日
     const mondayDate = new Date(2025, 0, 20)
     const worksheet = createMockWorksheet([
-      { cells: [createMockCell('日付'), createMockCell('曜日'), createMockCell('場所'), createMockCell('備考')], rowNumber: 1 },
-      { cells: [createMockCell(mondayDate), createMockCell('月'), createMockCell(''), createMockCell('')], rowNumber: 2 },
+      { cells: [createMockCell('日付'), createMockCell('曜日'), createMockCell('タイトル'), createMockCell('場所'), createMockCell('備考')], rowNumber: 1 },
+      { cells: [createMockCell(mondayDate), createMockCell('月'), createMockCell(''), createMockCell(''), createMockCell('')], rowNumber: 2 },
     ])
 
     applyPracticeSheetFormatting(worksheet as unknown as Worksheet)
@@ -216,8 +220,8 @@ describe('applyPracticeSheetFormatting', () => {
     // Excelのシリアル日付（2025年1月18日 = 45675）
     const excelSerialDate = 45675
     const worksheet = createMockWorksheet([
-      { cells: [createMockCell('日付'), createMockCell('曜日'), createMockCell('場所'), createMockCell('備考')], rowNumber: 1 },
-      { cells: [createMockCell(excelSerialDate), createMockCell('土'), createMockCell(''), createMockCell('')], rowNumber: 2 },
+      { cells: [createMockCell('日付'), createMockCell('曜日'), createMockCell('タイトル'), createMockCell('場所'), createMockCell('備考')], rowNumber: 1 },
+      { cells: [createMockCell(excelSerialDate), createMockCell('土'), createMockCell(''), createMockCell(''), createMockCell('')], rowNumber: 2 },
     ])
 
     applyPracticeSheetFormatting(worksheet as unknown as Worksheet)
@@ -229,8 +233,8 @@ describe('applyPracticeSheetFormatting', () => {
 
   it('文字列形式の日付も処理される', () => {
     const worksheet = createMockWorksheet([
-      { cells: [createMockCell('日付'), createMockCell('曜日'), createMockCell('場所'), createMockCell('備考')], rowNumber: 1 },
-      { cells: [createMockCell('1月18日'), createMockCell('土'), createMockCell(''), createMockCell('')], rowNumber: 2 },
+      { cells: [createMockCell('日付'), createMockCell('曜日'), createMockCell('タイトル'), createMockCell('場所'), createMockCell('備考')], rowNumber: 1 },
+      { cells: [createMockCell('1月18日'), createMockCell('土'), createMockCell(''), createMockCell(''), createMockCell('')], rowNumber: 2 },
     ])
 
     applyPracticeSheetFormatting(worksheet as unknown as Worksheet)
@@ -241,8 +245,8 @@ describe('applyPracticeSheetFormatting', () => {
 
   it('曜日セルのフォントがグレーに設定される', () => {
     const worksheet = createMockWorksheet([
-      { cells: [createMockCell('日付'), createMockCell('曜日'), createMockCell('場所'), createMockCell('備考')], rowNumber: 1 },
-      { cells: [createMockCell(new Date(2025, 0, 15)), createMockCell('水'), createMockCell(''), createMockCell('')], rowNumber: 2 },
+      { cells: [createMockCell('日付'), createMockCell('曜日'), createMockCell('タイトル'), createMockCell('場所'), createMockCell('備考')], rowNumber: 1 },
+      { cells: [createMockCell(new Date(2025, 0, 15)), createMockCell('水'), createMockCell(''), createMockCell(''), createMockCell('')], rowNumber: 2 },
     ])
 
     applyPracticeSheetFormatting(worksheet as unknown as Worksheet)
@@ -289,8 +293,9 @@ describe('generatePracticeExcelTemplate', () => {
 
     expect(headerRow.getCell(1).value).toBe('日付')
     expect(headerRow.getCell(2).value).toBe('曜日')
-    expect(headerRow.getCell(3).value).toBe('場所')
-    expect(headerRow.getCell(4).value).toBe('備考')
+    expect(headerRow.getCell(3).value).toBe('タイトル')
+    expect(headerRow.getCell(4).value).toBe('場所')
+    expect(headerRow.getCell(5).value).toBe('備考')
   })
 
   it('サンプルシートにサンプルデータが含まれる', async () => {
@@ -299,11 +304,12 @@ describe('generatePracticeExcelTemplate', () => {
     const row2 = sampleSheet.getRow(2)
     const row3 = sampleSheet.getRow(3)
 
-    // サンプルデータの場所と備考を確認
-    expect(row2.getCell(3).value).toBe('市民プール')
-    expect(row2.getCell(4).value).toBe('通常練習')
-    expect(row3.getCell(3).value).toBe('県立プール')
-    expect(row3.getCell(4).value).toBe('強化練習')
+    // サンプルデータのタイトル、場所、備考を確認
+    expect(row2.getCell(3).value).toBe('通常練習')
+    expect(row2.getCell(4).value).toBe('市民プール')
+    expect(row3.getCell(3).value).toBe('強化練習')
+    expect(row3.getCell(4).value).toBe('県立プール')
+    expect(row3.getCell(5).value).toBe('コーチ指導あり')
   })
 
   it('月別シートに正しい日数分のデータ行がある', async () => {
@@ -438,8 +444,8 @@ describe('parsePracticeExcelFile', () => {
     const workbook = new ExcelJS.Workbook()
     const sheet = workbook.addWorksheet('1月')
 
-    sheet.addRow(['日付', '曜日', '場所', '備考'])
-    const dataRow = sheet.addRow([new Date(2025, 0, 15), '水', '市民プール', 'テスト練習'])
+    sheet.addRow(['日付', '曜日', 'タイトル', '場所', '備考'])
+    const dataRow = sheet.addRow([new Date(2025, 0, 15), '水', '', '市民プール', 'テスト練習'])
     dataRow.getCell(1).numFmt = 'M"月"D"日"'
 
     const buffer = await workbook.xlsx.writeBuffer()
@@ -464,8 +470,8 @@ describe('parsePracticeExcelFile', () => {
     const workbook = new ExcelJS.Workbook()
     const sheet = workbook.addWorksheet('1月')
 
-    sheet.addRow(['日付', '曜日', '場所', '備考'])
-    sheet.addRow(['', '水', '市民プール', 'テスト練習']) // 日付なし
+    sheet.addRow(['日付', '曜日', 'タイトル', '場所', '備考'])
+    sheet.addRow(['', '水', '', '市民プール', 'テスト練習']) // 日付なし
 
     const buffer = await workbook.xlsx.writeBuffer()
     const file = new File([buffer], 'test.xlsx', {
@@ -489,10 +495,10 @@ describe('parsePracticeExcelFile', () => {
     const workbook = new ExcelJS.Workbook()
     const sheet = workbook.addWorksheet('1月')
 
-    sheet.addRow(['日付', '曜日', '場所', '備考'])
-    sheet.addRow(['', '水', '市民プール', 'テスト1']) // 日付なし
-    sheet.addRow([new Date(2025, 0, 15), '水', '市民プール', 'テスト2']) // 正常
-    sheet.addRow(['invalid', '木', '県立プール', 'テスト3']) // 無効な日付形式
+    sheet.addRow(['日付', '曜日', 'タイトル', '場所', '備考'])
+    sheet.addRow(['', '水', '', '市民プール', 'テスト1']) // 日付なし
+    sheet.addRow([new Date(2025, 0, 15), '水', '', '市民プール', 'テスト2']) // 正常
+    sheet.addRow(['invalid', '木', '', '県立プール', 'テスト3']) // 無効な日付形式
 
     const buffer = await workbook.xlsx.writeBuffer()
     const file = new File([buffer], 'test.xlsx', {
@@ -513,8 +519,8 @@ describe('parsePracticeExcelFile', () => {
     const workbook = new ExcelJS.Workbook()
     const sheet = workbook.addWorksheet('1月')
 
-    sheet.addRow(['日付', '曜日', '場所', '備考'])
-    sheet.addRow(['2025-01-20', '月', '市民プール', 'テスト'])
+    sheet.addRow(['日付', '曜日', 'タイトル', '場所', '備考'])
+    sheet.addRow(['2025-01-20', '月', '', '市民プール', 'テスト'])
 
     const buffer = await workbook.xlsx.writeBuffer()
     const file = new File([buffer], 'test.xlsx', {
@@ -533,8 +539,8 @@ describe('parsePracticeExcelFile', () => {
     const workbook = new ExcelJS.Workbook()
     const sheet = workbook.addWorksheet('1月')
 
-    sheet.addRow(['日付', '曜日', '場所', '備考'])
-    sheet.addRow(['1月20日', '月', '市民プール', 'テスト'])
+    sheet.addRow(['日付', '曜日', 'タイトル', '場所', '備考'])
+    sheet.addRow(['1月20日', '月', '', '市民プール', 'テスト'])
 
     const buffer = await workbook.xlsx.writeBuffer()
     const file = new File([buffer], 'test.xlsx', {
@@ -554,9 +560,9 @@ describe('parsePracticeExcelFile', () => {
     const workbook = new ExcelJS.Workbook()
     const sheet = workbook.addWorksheet('1月')
 
-    sheet.addRow(['日付', '曜日', '場所', '備考'])
+    sheet.addRow(['日付', '曜日', 'タイトル', '場所', '備考'])
     // Excelシリアル日付: 2025-01-15 ≈ 45672
-    sheet.addRow([45672, '水', '市民プール', 'テスト'])
+    sheet.addRow([45672, '水', '', '市民プール', 'テスト'])
 
     const buffer = await workbook.xlsx.writeBuffer()
     const file = new File([buffer], 'test.xlsx', {
@@ -575,12 +581,12 @@ describe('parsePracticeExcelFile', () => {
     const workbook = new ExcelJS.Workbook()
 
     const sheet1 = workbook.addWorksheet('1月')
-    sheet1.addRow(['日付', '曜日', '場所', '備考'])
-    sheet1.addRow([new Date(2025, 0, 15), '水', 'プールA', 'メモ1'])
+    sheet1.addRow(['日付', '曜日', 'タイトル', '場所', '備考'])
+    sheet1.addRow([new Date(2025, 0, 15), '水', '', 'プールA', 'メモ1'])
 
     const sheet2 = workbook.addWorksheet('2月')
-    sheet2.addRow(['日付', '曜日', '場所', '備考'])
-    sheet2.addRow([new Date(2025, 1, 10), '月', 'プールB', 'メモ2'])
+    sheet2.addRow(['日付', '曜日', 'タイトル', '場所', '備考'])
+    sheet2.addRow([new Date(2025, 1, 10), '月', '', 'プールB', 'メモ2'])
 
     const buffer = await workbook.xlsx.writeBuffer()
     const file = new File([buffer], 'test.xlsx', {

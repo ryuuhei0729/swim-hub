@@ -112,8 +112,10 @@ export function formatTimeAverage(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) {
     return '0.00'
   }
-  const minutes = Math.floor(seconds / 60)
-  const remainingSeconds = (seconds % 60).toFixed(2)
+  // 小数第2位で丸めてから分と秒を計算（59.995 → 60.00 → 1:00.00 のケースを正しく処理）
+  const rounded = Math.round(seconds * 100) / 100
+  const minutes = Math.floor(rounded / 60)
+  const remainingSeconds = (rounded % 60).toFixed(2)
   return minutes > 0 ? `${minutes}:${remainingSeconds.padStart(5, '0')}` : remainingSeconds
 }
 
@@ -131,8 +133,10 @@ export function formatTimeBest(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) {
     return '0.00'
   }
-  const minutes = Math.floor(seconds / 60)
-  const remainingSeconds = (seconds % 60).toFixed(2)
+  // 小数第2位で丸めてから分と秒を計算（59.995 → 60.00 → 1:00.00 のケースを正しく処理）
+  const rounded = Math.round(seconds * 100) / 100
+  const minutes = Math.floor(rounded / 60)
+  const remainingSeconds = (rounded % 60).toFixed(2)
   return minutes > 0 ? `${minutes}:${remainingSeconds.padStart(5, '0')}` : remainingSeconds
 }
 
