@@ -33,6 +33,8 @@ interface DatePickerProps {
   defaultMonth?: Date
   /** カレンダーの展開方向 */
   popupPosition?: 'top' | 'bottom'
+  /** カレンダーの水平位置 */
+  popupAlign?: 'left' | 'right'
 }
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
@@ -50,7 +52,8 @@ export default function DatePicker({
   placeholder = '日付を選択',
   className,
   defaultMonth,
-  popupPosition = 'bottom'
+  popupPosition = 'bottom',
+  popupAlign = 'left'
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [currentMonth, setCurrentMonth] = useState<Date>(() => {
@@ -221,12 +224,12 @@ export default function DatePicker({
         )}
       >
         <span className={cn(
-          'flex items-center gap-2',
+          'flex items-center gap-2 whitespace-nowrap',
           !selectedDate && 'text-gray-400'
         )}>
-          <CalendarIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+          <CalendarIcon className="h-5 w-5 text-gray-400 shrink-0" aria-hidden="true" />
           {selectedDate && isValid(selectedDate)
-            ? format(selectedDate, 'yyyy年MM月dd日', { locale: ja })
+            ? format(selectedDate, 'yyyy/MM/dd')
             : placeholder}
         </span>
 
@@ -270,10 +273,11 @@ export default function DatePicker({
           aria-modal="true"
           aria-label="日付選択カレンダー"
           className={cn(
-            'absolute z-50 p-4 bg-white border border-gray-200 rounded-lg shadow-lg animate-in fade-in duration-200',
+            'absolute z-50 p-4 bg-white border border-gray-200 rounded-lg shadow-lg animate-in fade-in duration-200 min-w-[280px]',
             popupPosition === 'top'
               ? 'bottom-full slide-in-from-bottom-2'
-              : 'mt-1 slide-in-from-top-2'
+              : 'mt-1 slide-in-from-top-2',
+            popupAlign === 'left' ? 'left-0' : 'right-0'
           )}
         >
           {/* ヘッダー */}

@@ -289,12 +289,12 @@ export default function PracticeBasicForm({
         />
 
         {/* モーダルコンテンツ */}
-        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-lg max-h-[90vh] flex flex-col">
           {/* ヘッダー */}
-          <div className="bg-white px-6 py-4 border-b border-gray-200 sticky top-0 z-10">
+          <div className="bg-white px-6 py-4 border-b border-gray-200 shrink-0">
             <div className="flex items-center justify-between">
               <h3 className="text-lg leading-6 font-medium text-gray-900">
-                {editData ? '練習予定を編集' : '練習予定を作成'}
+                {editData ? '予定を編集' : '予定を作成'}
               </h3>
               <button
                 type="button"
@@ -315,7 +315,8 @@ export default function PracticeBasicForm({
             )}
           </div>
 
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {/* グリッドレイアウト: 練習日・タイトル・場所 */}
             <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-4 items-center">
               {/* 練習日 */}
@@ -382,9 +383,10 @@ export default function PracticeBasicForm({
                 disabled={isLoading}
               />
             </div>
+            </div>
 
-            {/* ボタン */}
-            <div className="flex justify-end gap-3 pt-6 border-t">
+            {/* フッター（固定） */}
+            <div className="shrink-0 bg-white border-t px-6 py-4 flex justify-end gap-3">
               <Button
                 type="button"
                 onClick={handleClose}

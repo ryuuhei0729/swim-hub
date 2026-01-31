@@ -298,9 +298,9 @@ export default function EntryLogForm({
       <div className="flex min-h-screen items-center justify-center p-4">
         <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose}></div>
 
-        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-3xl">
+        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-3xl max-h-[90vh] flex flex-col">
           {/* ヘッダー */}
-          <div className="bg-white px-6 py-4 border-b border-gray-200">
+          <div className="bg-white px-6 py-4 border-b border-gray-200 shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 {(competitionTitle || competitionDate) && (
@@ -344,7 +344,8 @@ export default function EntryLogForm({
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {/* エントリー一覧 */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -455,9 +456,10 @@ export default function EntryLogForm({
                 </div>
               ))}
             </div>
+            </div>
 
-            {/* ボタン */}
-            <div className="flex justify-between items-center pt-6 border-t">
+            {/* フッター（固定） */}
+            <div className="shrink-0 bg-white border-t px-6 py-4 flex justify-between items-center">
               <Button
                 type="button"
                 onClick={onSkip}
@@ -467,7 +469,7 @@ export default function EntryLogForm({
               >
                 エントリーをスキップ
               </Button>
-              
+
               <div className="flex gap-3">
                 <Button
                   type="button"

@@ -256,9 +256,9 @@ export default function PracticeLogForm({
         />
 
         {/* モーダルコンテンツ */}
-        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-4xl max-h-[90vh] flex flex-col">
           {/* ヘッダー */}
-          <div className="bg-white px-6 py-4 border-b border-gray-200 sticky top-0 z-10">
+          <div className="bg-white px-6 py-4 border-b border-gray-200 shrink-0">
             <div className="flex items-center justify-between">
               <h3 className="text-lg leading-6 font-medium text-gray-900">
                 {editData ? '練習記録を編集' : '練習記録を追加'}
@@ -280,11 +280,11 @@ export default function PracticeLogForm({
             )}
           </div>
 
-          <form onSubmit={handleFormSubmit} className="p-6 space-y-6">
+          <form onSubmit={handleFormSubmit} className="flex flex-col flex-1 overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {/* メニューセクション */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="font-medium text-gray-900">練習メニュー</h4>
+              <div className="flex items-center justify-end">
                 <div className="flex gap-2">
                   <Button
                     type="button"
@@ -325,9 +325,10 @@ export default function PracticeLogForm({
                 />
               ))}
             </div>
+            </div>
 
-            {/* ボタン */}
-            <div className="flex items-center justify-between pt-6 border-t sticky bottom-0 bg-white">
+            {/* フッター（固定） */}
+            <div className="shrink-0 bg-white border-t px-6 py-4 flex items-center justify-between">
               {/* テンプレート保存チェックボックス（新規作成時のみ表示） */}
               {!editData ? (
                 <div className="flex items-center">
@@ -374,8 +375,8 @@ export default function PracticeLogForm({
                       ? '更新中...'
                       : '保存中...'
                     : editData
-                      ? '練習記録を更新'
-                      : '練習記録を保存'}
+                      ? '更新'
+                      : '保存'}
                 </Button>
               </div>
             </div>

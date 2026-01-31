@@ -119,8 +119,8 @@ export default function PracticeMenuItem({
           </div>
         </div>
 
-        {/* 3行目：距離、本数、セット数、サークル */}
-        <div className="grid grid-cols-5 gap-4">
+        {/* 3行目：距離、本数、セット数（モバイル）/ 距離、本数、セット数、サークル（PC）*/}
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               距離(m) <span className="text-red-500">*</span>
@@ -166,6 +166,38 @@ export default function PracticeMenuItem({
             />
           </div>
 
+          <div className="hidden sm:block">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              サークル(分)
+            </label>
+            <Input
+              type="number"
+              value={menu.circleMin}
+              onChange={(e) => onUpdate('circleMin', e.target.value)}
+              placeholder="1"
+              min="0"
+              data-testid="practice-circle-min-pc"
+            />
+          </div>
+
+          <div className="hidden sm:block">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              サークル(秒)
+            </label>
+            <Input
+              type="number"
+              value={menu.circleSec}
+              onChange={(e) => onUpdate('circleSec', e.target.value)}
+              placeholder="30"
+              min="0"
+              max="59"
+              data-testid="practice-circle-sec-pc"
+            />
+          </div>
+        </div>
+
+        {/* 4行目：サークル（モバイルのみ） */}
+        <div className="grid grid-cols-2 gap-2 sm:hidden">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               サークル(分)

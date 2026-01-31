@@ -154,17 +154,15 @@ export default function RecordLogEntry({
             type="text"
             value={formData.timeDisplayValue}
             onChange={(e) => onTimeChange(e.target.value)}
-            placeholder="例: 1:23.45 または 32.45"
+            placeholder="例: 1:23.45   32.45"
             className="w-full"
             data-testid={`record-time-${sectionIndex}`}
           />
-          <p className="text-xs text-gray-500 mt-1">
-            形式: 分:秒.小数（例: 1:23.45）または 秒.小数（例: 32.45）
-          </p>
         </div>
-        <div className="w-42">
+        <div className="w-20 sm:w-36">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            リアクションタイム
+            <span className="sm:hidden">RT</span>
+            <span className="hidden sm:inline">リアクションタイム</span>
           </label>
           <Input
             type="number"
@@ -198,37 +196,35 @@ export default function RecordLogEntry({
       {/* スプリットタイム */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">
             スプリットタイム
           </label>
-          <div className="flex gap-2">
+          <div className="flex gap-1">
             <Button
               type="button"
               onClick={onAddSplitTimesEvery25m}
               variant="outline"
-              className="text-xs"
+              className="text-[10px] px-2 py-1 h-7"
               disabled={isLoading || !raceDistance}
               data-testid={`record-split-add-25m-button-${sectionIndex}`}
             >
-              <PlusIcon className="h-4 w-4 mr-1" />
+              <PlusIcon className="h-3 w-3 mr-0.5" />
               追加(25mごと)
             </Button>
             <Button
               type="button"
               onClick={onAddSplitTime}
               variant="outline"
-              className="text-xs"
+              className="text-[10px] px-2 py-1 h-7"
               disabled={isLoading}
               data-testid={`record-split-add-button-${sectionIndex}`}
             >
-              <PlusIcon className="h-4 w-4 mr-1" />
+              <PlusIcon className="h-3 w-3 mr-0.5" />
               追加
             </Button>
           </div>
         </div>
-        {formData.splitTimes.length === 0 ? (
-          <p className="text-sm text-gray-500">スプリットタイムはありません</p>
-        ) : (
+        {formData.splitTimes.length > 0 && (
           <div className="space-y-2">
             {sortedSplitTimes.map(({ st, originalIndex }, splitIndex) => (
               <div
@@ -256,7 +252,7 @@ export default function RecordLogEntry({
                   onChange={(e) =>
                     onSplitTimeChange(originalIndex, 'splitTime', e.target.value)
                   }
-                  placeholder="例: 28.50 または 0:28.50"
+                  placeholder="例: 28.50"
                   className="flex-1"
                   data-testid={`record-split-time-${sectionIndex}-${originalIndex + 1}`}
                 />

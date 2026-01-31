@@ -22,7 +22,7 @@ export default function RecordBasicInfo({
   return (
     <>
       {/* 大会日・開催地 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
         <div>
           <DatePicker
             label="大会日"
@@ -52,7 +52,7 @@ export default function RecordBasicInfo({
       </div>
 
       {/* 大会名・プール種別 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
         <div>
           <label
             htmlFor="competition-name"
