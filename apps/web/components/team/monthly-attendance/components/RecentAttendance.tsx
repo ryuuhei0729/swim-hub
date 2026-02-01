@@ -5,6 +5,7 @@ import { TeamEvent, TeamAttendanceWithDetails } from '@swim-hub/shared/types'
 import { AttendanceEditState } from '../hooks/useAttendanceEdit'
 import { getStatusBadge } from './StatusBadge'
 import { parseISO } from 'date-fns'
+import { formatDate } from '@apps/shared/utils/date'
 
 interface RecentAttendanceProps {
   events: TeamEvent[]
@@ -122,11 +123,7 @@ export const RecentAttendance = React.memo(({
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex-1 flex items-center gap-2">
                     <span className="text-sm font-bold text-gray-900 whitespace-nowrap">
-                      {parseISO(event.date).toLocaleDateString('ja-JP', {
-                        month: 'long',
-                        day: 'numeric',
-                        weekday: 'short'
-                      })}
+                      {formatDate(event.date, 'shortWithWeekday')}
                     </span>
                     <h3 className="text-xs font-medium text-gray-900">
                       {event.type === 'competition' ? event.title : '練習'}

@@ -323,9 +323,9 @@ export default function CompetitionBasicForm({
         <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose}></div>
 
         {/* モーダルコンテンツ */}
-        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-lg">
+        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-lg max-h-[90vh] flex flex-col">
           {/* ヘッダー */}
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 flex-1 overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg leading-6 font-medium text-gray-900">
                 {editData ? '大会情報編集' : '大会情報登録'}
@@ -381,6 +381,7 @@ export default function CompetitionBasicForm({
                   }}
                   minDate={formData.date ? new Date(formData.date) : undefined}
                   placeholder="終了日を選択"
+                  popupAlign="right"
                 />
               </div>
 
@@ -455,8 +456,8 @@ export default function CompetitionBasicForm({
             </form>
           </div>
 
-          {/* フッター */}
-          <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse sm:gap-3">
+          {/* フッター（固定） */}
+          <div className="shrink-0 bg-gray-50 px-4 py-3 pb-8 sm:px-6 sm:flex sm:flex-row-reverse sm:gap-3">
             {/* 編集モード */}
             {editData && (
               <Button

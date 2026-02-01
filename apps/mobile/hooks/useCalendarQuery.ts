@@ -7,6 +7,7 @@ import type { CalendarItem } from '@apps/shared/types/ui'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { endOfMonth, startOfMonth } from 'date-fns'
+import { toISODateString } from '@apps/shared/utils/date'
 import { useMemo } from 'react'
 
 export interface UseCalendarQueryOptions {
@@ -34,11 +35,11 @@ export function useCalendarQuery(
   const monthEnd = useMemo(() => endOfMonth(currentDate), [currentDate])
 
   const startDate = useMemo(
-    () => monthStart.toISOString().split('T')[0],
+    () => toISODateString(monthStart),
     [monthStart]
   )
   const endDate = useMemo(
-    () => monthEnd.toISOString().split('T')[0],
+    () => toISODateString(monthEnd),
     [monthEnd]
   )
 

@@ -8,6 +8,7 @@ import { format, parseISO, isValid, startOfDay } from 'date-fns'
 import {
   CompetitionInsert
 } from '../types'
+import { normalizeRelation, normalizeRelationArray } from '../utils/supabase-helpers'
 import {
   CreateGoalInput,
   CreateMilestoneInput,
@@ -25,6 +26,14 @@ import {
   UpdateGoalInput,
   UpdateMilestoneInput
 } from '../types/goals'
+import type { Competition, Style } from '../types'
+
+// Supabaseクエリ結果の型（配列/単一オブジェクトの不整合に対応）
+interface GoalQueryResult extends Goal {
+  competition?: Competition | Competition[]
+  style?: Style | Style[]
+  milestones?: Milestone | Milestone[]
+}
 
 // スタイルコード→日本語名のマッピング（practice_logsは日本語名で格納されている）
 const STYLE_CODE_TO_JAPANESE: Record<string, string> = {
@@ -146,10 +155,8 @@ export class GoalAPI {
     
     // レスポンスの型変換（Supabaseの配列/単一オブジェクトの不整合に対応）
     if (!data) return []
-    
-    return (data || []).map((item: any) => {
-      const competition = Array.isArray(item.competition) ? item.competition[0] : item.competition
-      const style = Array.isArray(item.style) ? item.style[0] : item.style
+
+    return (data as GoalQueryResult[]).map((item) => {
       // Goal型の基本フィールドのみを返す（competitionとstyleは別途取得）
       const { competition: _comp, style: _style, ...goalData } = item
       return goalData as Goal
@@ -177,10 +184,10 @@ export class GoalAPI {
     }
 
     // レスポンスの型変換（Supabaseの配列/単一オブジェクトの不整合に対応）
-    const goal = data as any
-    const competition = Array.isArray(goal.competition) ? goal.competition[0] : goal.competition
-    const style = Array.isArray(goal.style) ? goal.style[0] : goal.style
-    const milestones = Array.isArray(goal.milestones) ? goal.milestones : (goal.milestones ? [goal.milestones] : [])
+    const goal = data as GoalQueryResult
+    const competition = normalizeRelation(goal.competition)
+    const style = normalizeRelation(goal.style)
+    const milestones = normalizeRelationArray(goal.milestones)
 
     return {
       ...goal,
@@ -435,21 +442,18 @@ export class GoalAPI {
       `)
       .eq('user_id', user.id)
       .eq('status', 'active')
-      .lt('competitions.date', todayStr)
+      .lt('competition.date', todayStr)
 
     if (error) throw error
 
     // クライアント側でデータ整形と追加の日付バリデーション
-    const expiredGoals = (data || [])
-      .map((item: any) => {
-        const competition = Array.isArray(item.competition) ? item.competition[0] : item.competition
-        const style = Array.isArray(item.style) ? item.style[0] : item.style
-        const milestones = Array.isArray(item.milestones) ? item.milestones : (item.milestones ? [item.milestones] : [])
+    const expiredGoals = ((data || []) as GoalQueryResult[])
+      .map((item) => {
         return {
           ...item,
-          competition,
-          style,
-          milestones
+          competition: normalizeRelation(item.competition),
+          style: normalizeRelation(item.style),
+          milestones: normalizeRelationArray(item.milestones)
         } as GoalWithMilestones
       })
       .filter((goal: GoalWithMilestones) => {

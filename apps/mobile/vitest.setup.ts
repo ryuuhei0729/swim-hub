@@ -8,7 +8,7 @@ import { afterEach, vi } from 'vitest'
 
 // Reactの複数インスタンスを防ぐため、グローバルに設定
 if (typeof globalThis !== 'undefined') {
-  ;(globalThis as any).React = React
+  ;(globalThis as unknown as { React: typeof React }).React = React
 }
 
 // 各テスト後にクリーンアップ

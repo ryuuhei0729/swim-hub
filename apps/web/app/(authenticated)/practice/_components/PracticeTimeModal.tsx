@@ -3,12 +3,40 @@
 import React, { useState, useEffect } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '@/contexts'
+import { formatTime, formatTimeAverage } from '@/utils/formatters'
 import type {
   Practice,
   PracticeLog,
   PracticeTime,
   PracticeTag
 } from '@apps/shared/types'
+
+// 種目の選択肢
+const SWIM_STYLES = [
+  { value: 'Fr', label: '自由形' },
+  { value: 'Ba', label: '背泳ぎ' },
+  { value: 'Br', label: '平泳ぎ' },
+  { value: 'Fly', label: 'バタフライ' },
+  { value: 'IM', label: '個人メドレー' }
+]
+
+// コード値をラベルに変換する関数
+const getStyleLabel = (styleValue: string): string => {
+  const style = SWIM_STYLES.find(s => s.value === styleValue)
+  if (style) return style.label
+  if (SWIM_STYLES.some(s => s.label === styleValue)) return styleValue
+  return styleValue
+}
+
+// 色の明度に基づいてテキスト色を決定する関数
+const getTextColor = (backgroundColor: string) => {
+  const hex = backgroundColor.replace('#', '')
+  const r = parseInt(hex.substr(0, 2), 16)
+  const g = parseInt(hex.substr(2, 2), 16)
+  const b = parseInt(hex.substr(4, 2), 16)
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000
+  return brightness > 128 ? '#000000' : '#FFFFFF'
+}
 
 interface PracticeTimeModalProps {
   isOpen: boolean
@@ -137,6 +165,7 @@ type FormattedPracticeTime = {
 type FormattedPracticeLog = {
   id: string
   style: string
+  swim_category?: 'Swim' | 'Pull' | 'Kick'
   repCount: number
   setCount: number
   distance: number
@@ -149,6 +178,7 @@ type FormattedPracticeLog = {
 type FormattedPractice = {
   id: string
   date: string
+  title: string | null
   place: string | null
   note: string | null
   practiceLogs: FormattedPracticeLog[]
@@ -204,11 +234,13 @@ export default function PracticeTimeModal({
         const formattedPractice: FormattedPractice = {
           id: practiceData.id,
           date: practiceData.date,
+          title: practiceData.title,
           place: practiceData.place,
           note: practiceData.note,
           practiceLogs: (practiceData.practice_logs || []).map((log: PracticeLogFromDB): FormattedPracticeLog => ({
             id: log.id,
             style: log.style,
+            swim_category: log.swim_category,
             repCount: log.rep_count,
             setCount: log.set_count,
             distance: log.distance,
@@ -242,7 +274,7 @@ export default function PracticeTimeModal({
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-[70] overflow-y-auto">
+      <div className="fixed inset-0 z-70 overflow-y-auto">
         <div className="flex min-h-screen items-center justify-center p-4">
           {/* オーバーレイ */}
           <div className="fixed inset-0 bg-black/40 transition-opacity" />
@@ -262,7 +294,7 @@ export default function PracticeTimeModal({
 
   if (error) {
     return (
-      <div className="fixed inset-0 z-[70] overflow-y-auto">
+      <div className="fixed inset-0 z-70 overflow-y-auto">
         <div className="flex min-h-screen items-center justify-center p-4">
           {/* オーバーレイ */}
           <div className="fixed inset-0 bg-black/40 transition-opacity" />
@@ -286,19 +318,8 @@ export default function PracticeTimeModal({
 
   const practiceLogs = practice.practiceLogs || []
 
-
-  // タイム表示のフォーマット関数
-  const formatTime = (seconds: number): string => {
-    if (seconds === 0) return '0.00'
-    const minutes = Math.floor(seconds / 60)
-    const remainingSeconds = seconds % 60
-    return minutes > 0
-      ? `${minutes}:${remainingSeconds.toFixed(2).padStart(5, '0')}`
-      : `${remainingSeconds.toFixed(2)}`
-  }
-
   return (
-    <div className="fixed inset-0 z-[70] overflow-y-auto">
+    <div className="fixed inset-0 z-70 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
         {/* オーバーレイ */}
         <div 
@@ -321,6 +342,30 @@ export default function PracticeTimeModal({
               </button>
             </div>
 
+            {/* タイトル・場所・メモ */}
+            {(practice.title || place || practice.note) && (
+              <div className="flex items-center gap-4 mb-2 flex-wrap">
+                {practice.title && (
+                  <p className="text-sm text-gray-700 flex items-center gap-1">
+                    <span className="text-gray-500">🏷️</span>
+                    {practice.title}
+                  </p>
+                )}
+                {place && (
+                  <p className="text-sm text-gray-700 flex items-center gap-1">
+                    <span className="text-gray-500">📍</span>
+                    {place}
+                  </p>
+                )}
+                {practice.note && (
+                  <p className="text-sm text-gray-700 flex items-center gap-1">
+                    <span>📝</span>
+                    {practice.note}
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="mt-3 space-y-4">
               {practiceLogs.map((log: FormattedPracticeLog, _index: number) => {
                 const allTimes = log.times || []
@@ -341,9 +386,10 @@ export default function PracticeTimeModal({
                             {log.tags.map((tag: PracticeTag) => (
                               <span
                                 key={tag.id}
-                                className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full text-black"
+                                className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full"
                                 style={{
-                                  backgroundColor: tag.color
+                                  backgroundColor: tag.color,
+                                  color: getTextColor(tag.color)
                                 }}
                               >
                                 {tag.name}
@@ -355,10 +401,10 @@ export default function PracticeTimeModal({
                     </div>
 
                     {/* 練習内容: 距離 × 本数 × セット数 サークル 泳法 */}
-                    <div className="bg-white rounded-lg p-3 mb-3 border border-green-200">
+                    <div className="bg-white rounded-lg p-3 mb-3 border border-green-300">
                       <div className="text-xs font-medium text-gray-500 mb-1">練習内容</div>
                         <div className="text-sm text-gray-800">
-                          <span className="text-lg font-semibold text-green-700">{log.distance}</span>m ×
+                          <span className="text-lg font-semibold text-green-700">{log.distance}</span>m ×{' '}
                           <span className="text-lg font-semibold text-green-700">{log.repCount}</span>
                           {log.setCount > 1 && (
                             <>
@@ -366,11 +412,20 @@ export default function PracticeTimeModal({
                               <span className="text-lg font-semibold text-green-700">{log.setCount}</span>
                             </>
                           )}
-                          {' '}
+                          {'　　'}
                           <span className="text-lg font-semibold text-green-700">
                             {log.circle ? `${Math.floor(log.circle / 60)}'${Math.floor(log.circle % 60).toString().padStart(2, '0')}"` : '-'}
                           </span>
-                          <span className="text-lg font-semibold text-green-700"> {log.style}</span>
+                          {'　'}
+                          <span className="text-lg font-semibold text-green-700">{getStyleLabel(log.style)}</span>
+                          {log.swim_category && log.swim_category !== 'Swim' && (
+                            <>
+                              {'　'}
+                              <span className="text-lg font-semibold text-green-700">
+                                {log.swim_category}
+                              </span>
+                            </>
+                          )}
                         </div>
                     </div>
 
@@ -391,10 +446,10 @@ export default function PracticeTimeModal({
                           <div className="w-1 h-4 bg-green-500 rounded-full"></div>
                           <p className="text-sm font-medium text-green-700">タイム</p>
                         </div>
-                        <div className="bg-white rounded-lg p-3 border border-green-200 overflow-x-auto">
+                        <div className="bg-white rounded-lg p-3 border border-green-300 overflow-x-auto">
                           <table className="w-full text-sm">
                             <thead>
-                              <tr className="border-b border-green-200">
+                              <tr className="border-b border-green-300">
                                 <th className="text-left py-2 px-2 font-medium text-green-800"></th>
                                 {Array.from({ length: log.setCount }, (_, setIndex) => (
                                   <th key={setIndex + 1} className="text-center py-2 px-2 font-medium text-green-800">
@@ -427,9 +482,9 @@ export default function PracticeTimeModal({
                                   </tr>
                                 )
                               })}
-                              {/* 平均行 */}
+                              {/* セット平均行 */}
                               <tr className="border-b border-green-100 bg-green-50">
-                                <td className="py-2 px-2 font-medium text-green-800">平均</td>
+                                <td className="py-2 px-2 font-medium text-green-800">セット平均</td>
                                 {Array.from({ length: log.setCount }, (_, setIndex) => {
                                   const setNumber = setIndex + 1
                                   const setTimes = allTimes.filter((t: FormattedPracticeTime) => t.setNumber === setNumber && t.time > 0)
@@ -439,7 +494,7 @@ export default function PracticeTimeModal({
                                   return (
                                     <td key={setNumber} className="py-2 px-2 text-center">
                                       <span className="text-green-800 font-medium">
-                                        {average > 0 ? formatTime(average) : '-'}
+                                        {average > 0 ? formatTimeAverage(average) : '-'}
                                       </span>
                                     </td>
                                   )
@@ -455,7 +510,7 @@ export default function PracticeTimeModal({
                                       const overallAverage = allValidTimes.length > 0
                                         ? allValidTimes.reduce((sum: number, t: FormattedPracticeTime) => sum + t.time, 0) / allValidTimes.length
                                         : 0
-                                      return overallAverage > 0 ? formatTime(overallAverage) : '-'
+                                      return overallAverage > 0 ? formatTimeAverage(overallAverage) : '-'
                                     })()}
                                   </span>
                                 </td>

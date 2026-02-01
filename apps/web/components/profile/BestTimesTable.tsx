@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import { differenceInDays, parseISO } from 'date-fns'
 import { CalendarIcon } from '@heroicons/react/24/outline'
-import { formatTime, formatDate } from '../../utils/formatters'
+import { formatTimeBest, formatDate } from '../../utils/formatters'
 import { Tabs } from '../ui/Tabs'
 
 export interface BestTime {
@@ -12,6 +12,7 @@ export interface BestTime {
   created_at: string
   pool_type: number // 0: 短水路, 1: 長水路
   is_relaying: boolean
+  note?: string // 備考（一括登録時に使用）
   style: {
     name_jp: string
     distance: number
@@ -25,6 +26,7 @@ export interface BestTime {
     id: string
     time: number
     created_at: string
+    note?: string
     competition?: {
       title: string
       date: string
@@ -197,7 +199,7 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
 
   // タイム表示用のヘルパー関数
   const getTimeDisplay = (bestTime: BestTime) => {
-    const timeStr = formatTime(bestTime.time)
+    const timeStr = formatTimeBest(bestTime.time)
     const suffixes: string[] = []
     
     // ALLタブの場合、長水路ならLを追加
@@ -262,13 +264,13 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
         <table className="min-w-full table-fixed border-separate border-spacing-0">
         <thead className="sticky top-0 z-10">
           <tr>
-            <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-left text-[10px] sm:text-xs md:text-sm font-semibold text-gray-700 border-r border-gray-300 min-w-[48px] sm:min-w-[64px] w-[56px] sm:w-[72px] h-[32px] sm:h-[44px] tracking-wide">
+            <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-left text-[10px] sm:text-xs md:text-sm font-semibold text-gray-700 border-r border-gray-300 min-w-[40px] sm:min-w-[64px] w-[48px] sm:w-[72px] h-[32px] sm:h-[44px] tracking-wide">
               距離
             </th>
             {STYLES.map((style) => (
               <th
                 key={style}
-                className={`px-1.5 sm:px-3 py-1 sm:py-2 text-center text-[10px] sm:text-xs md:text-sm font-semibold text-gray-800 border-r border-gray-300 last:border-r-0 min-w-[80px] sm:min-w-[110px] h-[32px] sm:h-[44px] ${styleHeaderBgClass[style]}`}
+                className={`px-1.5 sm:px-3 py-1 sm:py-2 text-center text-[10px] sm:text-xs md:text-sm font-semibold text-gray-800 border-r border-gray-300 last:border-r-0 min-w-[64px] sm:min-w-[110px] h-[32px] sm:h-[44px] ${styleHeaderBgClass[style]}`}
               >
                 {style}
               </th>
@@ -278,7 +280,7 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
         <tbody className="bg-white">
           {DISTANCES.map((distance, rowIdx) => (
             <tr key={distance}>
-              <td className={`px-1.5 sm:px-3 py-1.5 sm:py-3 text-[10px] sm:text-xs md:text-sm font-semibold text-gray-600 border-r border-gray-300 bg-gray-50 min-w-[48px] sm:min-w-[64px] w-[56px] sm:w-[72px] h-[48px] sm:h-[64px] ${rowIdx > 0 ? 'border-t border-gray-300' : ''}`}>
+              <td className={`px-1.5 sm:px-3 py-1.5 sm:py-3 text-[10px] sm:text-xs md:text-sm font-semibold text-gray-600 border-r border-gray-300 bg-gray-50 min-w-[40px] sm:min-w-[64px] w-[48px] sm:w-[72px] h-[48px] sm:h-[64px] ${rowIdx > 0 ? 'border-t border-gray-300' : ''}`}>
                 {distance}m
               </td>
               {STYLES.map((style) => {
@@ -286,15 +288,19 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
                 return (
                   <td
                     key={style}
-                    className={`px-1.5 sm:px-3 py-1.5 sm:py-3 text-center text-[10px] sm:text-xs md:text-sm text-gray-900 border-r border-gray-300 last:border-r-0 min-w-[80px] sm:min-w-[110px] h-[48px] sm:h-[64px] ${rowIdx > 0 ? 'border-t border-gray-300' : ''} ${isInvalidCombination(style, distance) ? 'bg-gray-200' : styleCellBgClass[style]}`}
+                    className={`px-1.5 sm:px-3 py-1.5 sm:py-3 text-center text-[10px] sm:text-xs md:text-sm text-gray-900 border-r border-gray-300 last:border-r-0 min-w-[64px] sm:min-w-[110px] h-[48px] sm:h-[64px] ${rowIdx > 0 ? 'border-t border-gray-300' : ''} ${isInvalidCombination(style, distance) ? 'bg-gray-200' : styleCellBgClass[style]}`}
                   >
                     {bestTime ? (
                       <div className={`group relative inline-block pt-1 sm:pt-2 ${(() => {
+                        // 一括登録（competition なし）は New 表示対象外
+                        if (!bestTime.competition) return ''
                         const createdAt = parseISO(bestTime.created_at)
                         const isNew = differenceInDays(new Date(), createdAt) <= 30
                         return isNew ? 'pr-4 sm:pr-6' : ''
                       })()}`}>
                         {(() => {
+                          // 一括登録（competition なし）は New 表示対象外
+                          if (!bestTime.competition) return null
                           const createdAt = parseISO(bestTime.created_at)
                           const isNew = differenceInDays(new Date(), createdAt) <= 30
                           return isNew ? (
@@ -303,6 +309,8 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
                         })()}
                         {/* 通常表示：ベストタイム */}
                         <span className={`font-semibold text-xs sm:text-base md:text-lg ${(() => {
+                          // 一括登録（competition なし）は New 表示対象外
+                          if (!bestTime.competition) return 'text-gray-900'
                           const createdAt = parseISO(bestTime.created_at)
                           return differenceInDays(new Date(), createdAt) <= 30 ? 'text-red-600' : 'text-gray-900'
                         })()}`}>
@@ -325,9 +333,13 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
                             <CalendarIcon className="h-3 w-3" />
                             <span>{formatDate(bestTime.created_at)}</span>
                           </div>
-                          {bestTime.competition && (
+                          {bestTime.competition ? (
                             <div className="text-blue-300">
                               {bestTime.competition.title}
+                            </div>
+                          ) : (
+                            <div className="text-gray-400">
+                              {bestTime.note || '一括登録'}
                             </div>
                           )}
                           {/* 矢印 */}

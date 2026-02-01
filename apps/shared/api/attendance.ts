@@ -13,6 +13,7 @@ import {
   TeamAttendanceWithDetails
 } from '../types'
 import { getMonthDateRange } from '../utils/date'
+import { requireAuth, requireTeamMembership, requireTeamAdmin } from './auth-utils'
 
 export class AttendanceAPI {
   constructor(private supabase: SupabaseClient) {}
@@ -25,8 +26,7 @@ export class AttendanceAPI {
    * 練習の出欠一覧取得
    */
   async getAttendanceByPractice(practiceId: string): Promise<TeamAttendanceWithDetails[]> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
+    await requireAuth(this.supabase)
 
     // practiceに紐づくteam_idを取得
     const { data: practiceData } = await this.supabase
@@ -39,18 +39,7 @@ export class AttendanceAPI {
       throw new Error('チーム練習ではありません')
     }
 
-    // チームメンバーシップ確認
-    const { data: membership } = await this.supabase
-      .from('team_memberships')
-      .select('id')
-      .eq('team_id', practiceData.team_id)
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .single()
-
-    if (!membership) {
-      throw new Error('チームへのアクセス権限がありません')
-    }
+    await requireTeamMembership(this.supabase, practiceData.team_id)
 
     const { data, error } = await this.supabase
       .from('team_attendance')
@@ -75,8 +64,7 @@ export class AttendanceAPI {
    * 大会の出欠一覧取得
    */
   async getAttendanceByCompetition(competitionId: string): Promise<TeamAttendanceWithDetails[]> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
+    await requireAuth(this.supabase)
 
     // competitionに紐づくteam_idを取得
     const { data: competitionData } = await this.supabase
@@ -89,18 +77,7 @@ export class AttendanceAPI {
       throw new Error('チーム大会ではありません')
     }
 
-    // チームメンバーシップ確認
-    const { data: membership } = await this.supabase
-      .from('team_memberships')
-      .select('id')
-      .eq('team_id', competitionData.team_id)
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .single()
-
-    if (!membership) {
-      throw new Error('チームへのアクセス権限がありません')
-    }
+    await requireTeamMembership(this.supabase, competitionData.team_id)
 
     const { data, error } = await this.supabase
       .from('team_attendance')
@@ -129,21 +106,8 @@ export class AttendanceAPI {
     year: number,
     month: number
   ): Promise<TeamAttendanceWithDetails[]> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
-
-    // チームメンバーシップ確認
-    const { data: membership } = await this.supabase
-      .from('team_memberships')
-      .select('id')
-      .eq('team_id', teamId)
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .single()
-
-    if (!membership) {
-      throw new Error('チームへのアクセス権限がありません')
-    }
+    const userId = await requireAuth(this.supabase)
+    await requireTeamMembership(this.supabase, teamId, userId)
 
     // 月の開始日と終了日を計算
     const [startDateStr, endDateStr] = getMonthDateRange(year, month)
@@ -180,7 +144,7 @@ export class AttendanceAPI {
             user:users(*),
             practice:practices(*)
           `)
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .in('practice_id', practiceIds)
       : { data: [], error: null }
 
@@ -195,7 +159,7 @@ export class AttendanceAPI {
             user:users(*),
             competition:competitions(*)
           `)
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .in('competition_id', competitionIds)
       : { data: [], error: null }
 
@@ -224,8 +188,7 @@ export class AttendanceAPI {
       note: string | null
     }>
   ): Promise<TeamAttendance[]> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
+    const userId = await requireAuth(this.supabase)
 
     if (updates.length === 0) {
       return []
@@ -256,7 +219,7 @@ export class AttendanceAPI {
     }
 
     // 全て自分の出欠情報か確認
-    const allOwned = existingAttendances.every(a => a.user_id === user.id)
+    const allOwned = existingAttendances.every(a => a.user_id === userId)
     if (!allOwned) {
       throw new Error('自分の出欠情報のみ更新可能です')
     }
@@ -310,11 +273,10 @@ export class AttendanceAPI {
    * 自分の出欠情報を更新
    */
   async updateMyAttendance(
-    attendanceId: string, 
+    attendanceId: string,
     updates: TeamAttendanceUpdate
   ): Promise<TeamAttendance> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
+    const userId = await requireAuth(this.supabase)
 
     // 自分の出欠情報か確認
     const { data: existingAttendance } = await this.supabase
@@ -323,7 +285,7 @@ export class AttendanceAPI {
       .eq('id', attendanceId)
       .single()
 
-    if (!existingAttendance || existingAttendance.user_id !== user.id) {
+    if (!existingAttendance || existingAttendance.user_id !== userId) {
       throw new Error('自分の出欠情報のみ更新可能です')
     }
 
@@ -365,29 +327,14 @@ export class AttendanceAPI {
    * 出欠情報を作成（管理者用）
    */
   async createAttendance(attendance: TeamAttendanceInsert): Promise<TeamAttendance> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
-
     // team_idを取得して管理者権限確認
     const teamId = await this.getTeamIdForAttendance(attendance)
-    
+
     if (!teamId) {
       throw new Error('チーム情報が見つかりません')
     }
 
-    // 管理者権限確認
-    const { data: membership } = await this.supabase
-      .from('team_memberships')
-      .select('role')
-      .eq('team_id', teamId)
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .eq('role', 'admin')
-      .single()
-
-    if (!membership) {
-      throw new Error('管理者権限が必要です')
-    }
+    await requireTeamAdmin(this.supabase, teamId)
 
     const { data, error } = await this.supabase
       .from('team_attendance')
@@ -403,12 +350,9 @@ export class AttendanceAPI {
    * 出欠情報を更新（管理者用）
    */
   async updateAttendance(
-    attendanceId: string, 
+    attendanceId: string,
     updates: TeamAttendanceUpdate
   ): Promise<TeamAttendance> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
-
     // 出欠情報に紐づくteam_idを取得
     const { data: attendance } = await this.supabase
       .from('team_attendance')
@@ -428,19 +372,7 @@ export class AttendanceAPI {
       throw new Error('チーム情報が見つかりません')
     }
 
-    // 管理者権限確認
-    const { data: membership } = await this.supabase
-      .from('team_memberships')
-      .select('role')
-      .eq('team_id', teamId)
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .eq('role', 'admin')
-      .single()
-
-    if (!membership) {
-      throw new Error('管理者権限が必要です')
-    }
+    await requireTeamAdmin(this.supabase, teamId)
 
     const { data, error } = await this.supabase
       .from('team_attendance')

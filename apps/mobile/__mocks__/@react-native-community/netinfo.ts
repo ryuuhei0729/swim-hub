@@ -4,16 +4,29 @@
 
 import { vi } from 'vitest'
 
+// NetInfoStateType enum を定義（元のモジュールからインポートできないため）
+export enum NetInfoStateType {
+  unknown = 'unknown',
+  none = 'none',
+  cellular = 'cellular',
+  wifi = 'wifi',
+  bluetooth = 'bluetooth',
+  ethernet = 'ethernet',
+  wimax = 'wimax',
+  vpn = 'vpn',
+  other = 'other',
+}
+
 type NetInfoMockState = {
   isConnected: boolean
   isInternetReachable: boolean | null
-  type: string
+  type: NetInfoStateType
 }
 
 let currentState: NetInfoMockState = {
   isConnected: true,
   isInternetReachable: true,
-  type: 'wifi',
+  type: NetInfoStateType.wifi,
 }
 
 const listeners: Array<(state: NetInfoMockState) => void> = []
@@ -42,6 +55,6 @@ export default NetInfo
 export type NetInfoState = {
   isConnected: boolean | null
   isInternetReachable: boolean | null
-  type: string
+  type: NetInfoStateType
   details: unknown
 }

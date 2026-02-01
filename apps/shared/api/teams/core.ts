@@ -4,21 +4,21 @@
 
 import { SupabaseClient } from '@supabase/supabase-js'
 import { Team, TeamInsert, TeamMembershipWithUser, TeamUpdate, TeamWithMembers } from '../../types'
+import { requireAuth, requireTeamMembership } from '../auth-utils'
 
 export class TeamCoreAPI {
   constructor(private supabase: SupabaseClient) {}
 
   // NOTE: 実体は既存 teams.ts から段階的に移行する
   async getMyTeams(): Promise<TeamMembershipWithUser[]> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
+    const userId = await requireAuth(this.supabase)
     // 承認済み（status='approved' && is_active=true）と承認待ち（status='pending'）の両方を取得
     // RLSポリシーにより、自分のメンバーシップ（user_id = auth.uid()）は全て取得可能
     // 承認済みの場合はis_active=trueのみ、承認待ちの場合はis_activeの条件なし
     const { data, error } = await this.supabase
       .from('team_memberships')
       .select(`*, teams:teams(*), users:users(*)`)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .in('status', ['approved', 'pending'])
       .order('joined_at', { ascending: false })
     if (error) throw error
@@ -33,17 +33,7 @@ export class TeamCoreAPI {
   }
 
   async getTeam(teamId: string): Promise<TeamWithMembers> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
-
-    const { data: membership } = await this.supabase
-      .from('team_memberships')
-      .select('id')
-      .eq('team_id', teamId)
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .single()
-    if (!membership) throw new Error('チームへのアクセス権限がありません')
+    await requireTeamMembership(this.supabase, teamId)
 
     const { data, error } = await this.supabase
       .from('teams')
@@ -55,28 +45,27 @@ export class TeamCoreAPI {
   }
 
   async createTeam(input: TeamInsert): Promise<Team> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
-    
+    const userId = await requireAuth(this.supabase)
+
     // created_byを含む挿入データを作成
     const insertData = {
       ...input,
-      created_by: user.id
+      created_by: userId
     }
-    
+
     const { data, error } = await this.supabase
       .from('teams')
       .insert(insertData)
       .select('*')
       .single()
     if (error) throw error
-    
+
     // チーム作成者を自動的にadminとしてメンバーシップに追加（承認済み状態で）
     const { error: membershipError } = await this.supabase
       .from('team_memberships')
       .insert({
         team_id: data.id,
-        user_id: user.id,
+        user_id: userId,
         role: 'admin',
         status: 'approved',
         is_active: true,

@@ -24,8 +24,7 @@ export const ResetPasswordScreen: React.FC = () => {
     <PasswordResetForm
       onSuccess={() => {
         // Phase 3でナビゲーションを実装予定
-        // 現時点ではメール送信成功時の処理は後で実装
-        console.log('パスワードリセットメール送信成功')
+        // AuthProviderが状態変更を検知してMainStackに自動切り替え
       }}
     />
   )

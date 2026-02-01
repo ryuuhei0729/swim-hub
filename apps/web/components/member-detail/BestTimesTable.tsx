@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react'
 import { Tabs } from '@/components/ui'
 import { TrophyIcon, CalendarIcon } from '@heroicons/react/24/outline'
 import { differenceInDays, parseISO } from 'date-fns'
-import { formatTime, formatDate } from '@/utils/formatters'
+import { formatTimeBest, formatDate } from '@/utils/formatters'
 import type { BestTime, TabType } from '@/types/member-detail'
 
 const DISTANCES = [50, 100, 200, 400, 800]
@@ -142,7 +142,7 @@ export function BestTimesTable({ bestTimes }: BestTimesTableProps) {
   }
 
   const getTimeDisplay = (bestTime: BestTime) => {
-    const timeStr = formatTime(bestTime.time)
+    const timeStr = formatTimeBest(bestTime.time)
     const suffixes: string[] = []
 
     if (activeTab === 'all' && bestTime.pool_type === 1) {
@@ -223,7 +223,8 @@ export function BestTimesTable({ bestTimes }: BestTimesTableProps) {
                 {STYLES.map((style) => {
                   const bestTime = getBestTime(style, distance)
                   const createdAt = bestTime ? parseISO(bestTime.created_at) : null
-                  const isNew = createdAt ? differenceInDays(new Date(), createdAt) <= 30 : false
+                  // 一括登録（competition なし）は New 表示対象外
+                  const isNew = bestTime?.competition && createdAt ? differenceInDays(new Date(), createdAt) <= 30 : false
                   return (
                     <td
                       key={style}
@@ -254,9 +255,13 @@ export function BestTimesTable({ bestTimes }: BestTimesTableProps) {
                               <CalendarIcon className="h-2.5 w-2.5" />
                               <span>{formatDate(bestTime.created_at)}</span>
                             </div>
-                            {bestTime.competition && (
+                            {bestTime.competition ? (
                               <div className="text-blue-300">
                                 {bestTime.competition.title}
+                              </div>
+                            ) : (
+                              <div className="text-gray-400">
+                                {bestTime.note || '一括登録'}
                               </div>
                             )}
                             <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>

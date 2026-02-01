@@ -18,9 +18,18 @@
   html {
     @apply scroll-smooth;
   }
-  
+
   body {
     @apply antialiased bg-gray-50 text-gray-900;
+  }
+
+  /* モバイルでのinputズーム防止（16px未満だとiOS/Androidでズームする） */
+  @media screen and (max-width: 768px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
   }
 
   /* フォントサイズとライン高の統一 */

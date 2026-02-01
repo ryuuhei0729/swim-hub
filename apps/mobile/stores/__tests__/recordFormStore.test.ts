@@ -4,7 +4,7 @@
 
 import { createMockRecordWithDetails } from '@/__mocks__/supabase'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { useRecordFormStore } from '../recordFormStore'
+import { useRecordFormStore } from '../recordStore'
 
 describe('recordFormStore', () => {
   beforeEach(() => {

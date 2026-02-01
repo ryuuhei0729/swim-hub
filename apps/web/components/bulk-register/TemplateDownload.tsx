@@ -74,7 +74,7 @@ export function TemplateDownload({ loading, onLoadingChange, onError }: Template
             </button>
           </div>
           <p className="text-xs text-gray-500">
-            列: 日付 | 曜日 | 場所 | 備考
+            列: 日付 | 曜日 | タイトル | 場所 | 備考
           </p>
         </div>
 

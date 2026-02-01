@@ -411,9 +411,8 @@ export function useDeletePracticeMutation(supabase: SupabaseClient, api?: Practi
           .eq('id', id)
           .single()
         googleEventId = existing?.google_event_id || null
-        console.log('Practice削除 - google_event_id:', googleEventId)
-      } catch (err) {
-        console.error('Practice取得エラー:', err)
+      } catch {
+        // Practice取得エラーは無視（削除処理は続行）
       }
       
       await practiceApi.deletePractice(id)
@@ -429,23 +428,9 @@ export function useDeletePracticeMutation(supabase: SupabaseClient, api?: Practi
               .eq('id', user.id)
               .single()
 
-            console.log('Practice削除 - プロフィール:', {
-              google_calendar_enabled: profile?.google_calendar_enabled,
-              google_calendar_sync_practices: profile?.google_calendar_sync_practices,
-              googleEventId
-            })
-            
-            if (profile?.google_calendar_enabled && profile?.google_calendar_sync_practices) {
-              if (googleEventId) {
-                const { syncPracticeToGoogleCalendar } = await import('../../api/google-calendar')
-                const result = await syncPracticeToGoogleCalendar(practiceData, 'delete', googleEventId)
-                console.log('Practice削除 - 同期結果:', result)
-                if (!result.success) {
-                  console.error('Google Calendar削除エラー:', result.error)
-                }
-              } else {
-                console.warn('Practice削除 - google_event_idが存在しないため、Google Calendar削除をスキップ')
-              }
+            if (profile?.google_calendar_enabled && profile?.google_calendar_sync_practices && googleEventId) {
+              const { syncPracticeToGoogleCalendar } = await import('../../api/google-calendar')
+              await syncPracticeToGoogleCalendar(practiceData, 'delete', googleEventId)
             }
           }
         } catch (err) {

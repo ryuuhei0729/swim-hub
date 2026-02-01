@@ -3,7 +3,7 @@
 // Web/Mobile共通で使用するSupabase API関数
 // =============================================================================
 
-import { SupabaseClient } from '@supabase/supabase-js'
+import { SupabaseClient, RealtimePostgresChangesFilter } from '@supabase/supabase-js'
 import {
   Competition,
   CompetitionInsert,
@@ -16,6 +16,9 @@ import {
   SplitTimeInsert
 } from '../types'
 import type { BestTime } from '../types/ui'
+
+// Supabaseリアルタイム購読の設定型
+type RealtimeSubscriptionConfig = RealtimePostgresChangesFilter<'*'>
 
 export class RecordAPI {
   constructor(private supabase: SupabaseClient) {}
@@ -229,6 +232,7 @@ export class RecordAPI {
         created_at,
         pool_type,
         is_relaying,
+        note,
         style_id,
         styles!records_style_id_fkey (
           name_jp,
@@ -258,6 +262,7 @@ export class RecordAPI {
       created_at: string
       pool_type: number
       is_relaying: boolean
+      note?: string | null
       style_id: number
       styles?: { name_jp: string; distance: number } | null
       competitions?: { title: string; date: string } | null
@@ -280,6 +285,7 @@ export class RecordAPI {
         created_at: record.created_at,
         pool_type: record.pool_type,
         is_relaying: record.is_relaying,
+        note: record.note,
         style_id: record.style_id,
         styles: styleData
           ? { name_jp: styleData.name_jp, distance: styleData.distance }
@@ -299,6 +305,7 @@ export class RecordAPI {
         id: string
         time: number
         created_at: string
+        note?: string
         competition?: {
           title: string
           date: string
@@ -321,6 +328,7 @@ export class RecordAPI {
             id: record.id,
             time: record.time,
             created_at: record.created_at,
+            note: record.note || undefined,
             competition: record.competitions
               ? {
                   title: record.competitions.title,
@@ -341,6 +349,7 @@ export class RecordAPI {
             created_at: record.created_at,
             pool_type: poolType,
             is_relaying: false,
+            note: record.note || undefined,
             style_id: record.style_id,
             style: {
               name_jp: record.styles?.name_jp || 'Unknown',
@@ -397,6 +406,7 @@ export class RecordAPI {
             created_at: relayingTime.created_at,
             pool_type: poolType,
             is_relaying: true,
+            note: relayingTime.note,
             style_id: record.style_id,
             style: {
               name_jp: record.styles?.name_jp || 'Unknown',
@@ -559,16 +569,18 @@ export class RecordAPI {
    * @param userId - (オプション) ユーザーIDでフィルタリング。指定した場合、該当ユーザーのみの変更を受信
    */
   subscribeToRecords(callback: (record: Record) => void, userId?: string) {
-    const config: any = {
-      event: '*',
-      schema: 'public',
-      table: 'records'
-    }
-
-    // ユーザーIDでフィルタリング (帯域幅削減)
-    if (userId) {
-      config.filter = `user_id=eq.${userId}`
-    }
+    const config: RealtimeSubscriptionConfig = userId
+      ? {
+          event: '*',
+          schema: 'public',
+          table: 'records',
+          filter: `user_id=eq.${userId}`
+        }
+      : {
+          event: '*',
+          schema: 'public',
+          table: 'records'
+        }
 
     return this.supabase
       .channel('records-changes')
@@ -586,16 +598,18 @@ export class RecordAPI {
    * @param userId - (オプション) ユーザーIDでフィルタリング。指定した場合、該当ユーザーのみの変更を受信
    */
   subscribeToCompetitions(callback: (competition: Competition) => void, userId?: string) {
-    const config: any = {
-      event: '*',
-      schema: 'public',
-      table: 'competitions'
-    }
-
-    // ユーザーIDでフィルタリング (帯域幅削減)
-    if (userId) {
-      config.filter = `user_id=eq.${userId}`
-    }
+    const config: RealtimeSubscriptionConfig = userId
+      ? {
+          event: '*',
+          schema: 'public',
+          table: 'competitions',
+          filter: `user_id=eq.${userId}`
+        }
+      : {
+          event: '*',
+          schema: 'public',
+          table: 'competitions'
+        }
 
     return this.supabase
       .channel('competitions-changes')

@@ -33,11 +33,45 @@ export const CompetitionShareCard = forwardRef<
       }))
   }, [data.splitTimes])
 
-  // 種目別Lapの計算
+  // 種目別Lapの計算（最終タイムを追加）
   const raceLapTimesTable = useMemo(() => {
     if (!data.raceDistance || validSplitTimes.length === 0) return []
-    return calculateRaceLapTimesTable(validSplitTimes, data.raceDistance)
-  }, [validSplitTimes, data.raceDistance])
+    const table = calculateRaceLapTimesTable(validSplitTimes, data.raceDistance)
+
+    // 最後の行がレース距離でない場合、最終タイムを追加
+    const lastRow = table[table.length - 1]
+    if (lastRow && lastRow.distance < data.raceDistance && data.time > 0) {
+      const intervals = getLapIntervalsForRace(data.raceDistance)
+      const lapTimes: Record<number, number | null> = {}
+
+      // 各間隔についてlap-timeを計算
+      for (const interval of intervals) {
+        if (data.raceDistance % interval === 0) {
+          // 前の間隔の距離のsplit-timeを探す
+          const prevDistance = data.raceDistance - interval
+          const prevRow = table.find(row => row.distance === prevDistance)
+
+          if (prevRow && prevRow.splitTime !== null) {
+            lapTimes[interval] = data.time - prevRow.splitTime
+          } else if (prevDistance === 0) {
+            lapTimes[interval] = data.time
+          } else {
+            lapTimes[interval] = null
+          }
+        } else {
+          lapTimes[interval] = null
+        }
+      }
+
+      table.push({
+        distance: data.raceDistance,
+        splitTime: data.time,
+        lapTimes
+      })
+    }
+
+    return table
+  }, [validSplitTimes, data.raceDistance, data.time])
 
   const lapIntervals = useMemo(() => {
     if (!data.raceDistance) return []

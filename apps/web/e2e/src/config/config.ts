@@ -65,6 +65,11 @@ export interface TestEnvironment {
     email: string
     password: string
   }
+  /** 2つ目のアカウント（チーム参加テスト等で使用） */
+  secondaryCredentials?: {
+    email: string
+    password: string
+  }
 }
 
 /**
@@ -106,9 +111,17 @@ export class EnvConfig {
       )
     }
 
+    // 2つ目のアカウント（オプション）
+    const secondaryEmail = process.env.E2E_EMAIL_B
+    const secondaryPassword = process.env.E2E_PASSWORD_B
+    const secondaryCredentials = secondaryEmail && secondaryPassword
+      ? { email: secondaryEmail, password: secondaryPassword }
+      : undefined
+
     return {
       baseUrl,
-      credentials: { email, password }
+      credentials: { email, password },
+      secondaryCredentials
     }
   }
 }

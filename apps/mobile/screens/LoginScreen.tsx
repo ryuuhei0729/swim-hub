@@ -34,7 +34,6 @@ export const LoginScreen: React.FC = () => {
           // ログイン成功時は、App.tsxのAppNavigatorが認証状態を検知して
           // 自動的にMainStackに切り替えます
           // この時点でisAuthenticatedがtrueになるため、上記のリダイレクトUIが表示されます
-          console.log('ログイン成功')
         }}
       />
     </SafeAreaView>

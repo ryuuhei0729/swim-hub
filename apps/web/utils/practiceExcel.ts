@@ -1,4 +1,5 @@
 import { format, getDay, parse } from 'date-fns'
+import type { Worksheet, Row, Workbook } from 'exceljs'
 
 // =============================================================================
 // 練習一括登録用Excel処理
@@ -30,18 +31,19 @@ function getDayOfWeekName(date: Date): string {
 /**
  * シートの書式設定を適用（練習用）
  */
-function applyPracticeSheetFormatting(worksheet: any) {
+export function applyPracticeSheetFormatting(worksheet: Worksheet) {
   // 列幅の設定
   worksheet.getColumn(1).width = 12 // 日付
   worksheet.getColumn(2).width = 8  // 曜日
-  worksheet.getColumn(3).width = 25 // 場所
-  worksheet.getColumn(4).width = 35 // 備考
+  worksheet.getColumn(3).width = 25 // タイトル
+  worksheet.getColumn(4).width = 25 // 場所
+  worksheet.getColumn(5).width = 35 // 備考
 
   // ヘッダー行の書式設定
   const headerRow = worksheet.getRow(1)
   headerRow.height = 30
-  
-  for (let col = 1; col <= 4; col++) {
+
+  for (let col = 1; col <= 5; col++) {
     const headerCell = headerRow.getCell(col)
     headerCell.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } }
     headerCell.fill = {
@@ -59,7 +61,7 @@ function applyPracticeSheetFormatting(worksheet: any) {
   }
 
   // データ行の書式設定
-  worksheet.eachRow((row: any, rowNumber: number) => {
+  worksheet.eachRow((row: Row, rowNumber: number) => {
     if (rowNumber === 1) return // ヘッダー行はスキップ
 
     // 日付セルから曜日を判定
@@ -100,7 +102,7 @@ function applyPracticeSheetFormatting(worksheet: any) {
     }
 
     // 各列の書式設定
-    for (let col = 1; col <= 4; col++) {
+    for (let col = 1; col <= 5; col++) {
       const cell = row.getCell(col)
       cell.alignment = { vertical: 'middle', horizontal: col <= 2 ? 'center' : 'left' }
       if (rowBackgroundColor) {
@@ -130,31 +132,33 @@ function applyPracticeSheetFormatting(worksheet: any) {
 /**
  * 練習一括登録用Excelテンプレートを生成
  */
-export async function generatePracticeExcelTemplate(year: number): Promise<any> {
+export async function generatePracticeExcelTemplate(year: number): Promise<Workbook> {
   const ExcelJS = (await import('exceljs')).default
   const workbook = new ExcelJS.Workbook()
 
   // サンプルシートを作成
   const sampleSheet = workbook.addWorksheet('サンプル')
-  sampleSheet.addRow(['日付', '曜日', '場所', '備考'])
+  sampleSheet.addRow(['日付', '曜日', 'タイトル', '場所', '備考'])
 
   // サンプルデータ
   const sampleDate1 = new Date(year, 0, 15)
   const sampleDate2 = new Date(year, 0, 22)
-  
+
   const row1 = sampleSheet.addRow([
     new Date(year, 0, 15, 12, 0, 0),
     getDayOfWeekName(sampleDate1),
+    '通常練習',
     '市民プール',
-    '通常練習'
+    ''
   ])
   row1.getCell(1).numFmt = 'M"月"D"日"'
 
   const row2 = sampleSheet.addRow([
     new Date(year, 0, 22, 12, 0, 0),
     getDayOfWeekName(sampleDate2),
+    '強化練習',
     '県立プール',
-    '強化練習'
+    'コーチ指導あり'
   ])
   row2.getCell(1).numFmt = 'M"月"D"日"'
 
@@ -165,19 +169,20 @@ export async function generatePracticeExcelTemplate(year: number): Promise<any> 
   
   for (let month = 0; month < 12; month++) {
     const worksheet = workbook.addWorksheet(monthNames[month])
-    worksheet.addRow(['日付', '曜日', '場所', '備考'])
+    worksheet.addRow(['日付', '曜日', 'タイトル', '場所', '備考'])
 
     // 各月の日付データを追加
     const lastDayUTC = new Date(Date.UTC(year, month + 1, 0, 0, 0, 0, 0))
     const lastDayOfMonth = lastDayUTC.getUTCDate()
-    
+
     for (let day = 1; day <= lastDayOfMonth; day++) {
       const localDate = new Date(year, month, day)
       const dayOfWeek = getDayOfWeekName(localDate)
-      
+
       const row = worksheet.addRow([
         new Date(year, month, day, 12, 0, 0),
         dayOfWeek,
+        '',
         '',
         ''
       ])
@@ -242,8 +247,9 @@ export function parsePracticeExcelFile(file: File): Promise<ParsedPracticeData> 
             if (rowNumber === 1) return // ヘッダー行をスキップ
 
             const dateCell = row.getCell(1)
-            const placeCell = row.getCell(3)
-            const noteCell = row.getCell(4)
+            const titleCell = row.getCell(3)
+            const placeCell = row.getCell(4)
+            const noteCell = row.getCell(5)
 
             // 日付の取得
             let dateValue: string = ''
@@ -273,6 +279,7 @@ export function parsePracticeExcelFile(file: File): Promise<ParsedPracticeData> 
               }
             }
 
+            const title = String(titleCell.value || '').trim()
             const place = String(placeCell.value || '').trim()
             const note = String(noteCell.value || '').trim()
 
@@ -301,7 +308,7 @@ export function parsePracticeExcelFile(file: File): Promise<ParsedPracticeData> 
 
             result.practices.push({
               date: dateValue,
-              title: null, // Excelフォーマットにはtitleカラムがないため、null
+              title: title || null,
               place: place || null,
               note: note || null
             })

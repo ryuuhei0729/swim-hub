@@ -6,6 +6,7 @@ import {
 } from '@apps/shared/hooks/queries/announcements'
 import { useAuth } from '@/contexts'
 import type { TeamAnnouncement } from '@/types'
+import { formatDateTime } from '@apps/shared/utils/date'
 
 interface AnnouncementDetailProps {
   teamId: string
@@ -41,15 +42,6 @@ export const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({
     }
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ja-JP', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
 
   if (loading) {
     return (
@@ -127,9 +119,9 @@ export const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({
                   下書き
                 </span>
               )}
-              <span>作成: {formatDate(announcement.created_at)}</span>
+              <span>作成: {formatDateTime(announcement.created_at)}</span>
               {announcement.updated_at !== announcement.created_at && (
-                <span>更新: {formatDate(announcement.updated_at)}</span>
+                <span>更新: {formatDateTime(announcement.updated_at)}</span>
               )}
             </div>
             
@@ -139,13 +131,13 @@ export const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({
                 <p className="text-sm font-medium text-gray-700 mb-1">表示期間</p>
                 <div className="text-sm text-gray-600">
                   {announcement.start_at ? (
-                    <span>開始: {formatDate(announcement.start_at)}</span>
+                    <span>開始: {formatDateTime(announcement.start_at)}</span>
                   ) : (
                     <span>開始: 制限なし</span>
                   )}
                   {announcement.start_at && announcement.end_at && <span className="mx-2">〜</span>}
                   {announcement.end_at ? (
-                    <span>終了: {formatDate(announcement.end_at)}</span>
+                    <span>終了: {formatDateTime(announcement.end_at)}</span>
                   ) : (
                     <span>終了: 制限なし</span>
                   )}

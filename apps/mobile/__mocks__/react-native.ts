@@ -94,9 +94,9 @@ export const TextInput = ({ ...props }: Record<string, unknown>) =>
 // React NativeのStyleSheetは数値や文字列のスタイルを返すが、
 // DOM要素ではオブジェクト形式が必要なため、変換を行う
 export const StyleSheet = {
-  create: <T extends Record<string, any>>(styles: T): T => {
+  create: <T extends Record<string, Record<string, unknown>>>(styles: T): T => {
     // スタイルオブジェクトをそのまま返す（DOM要素でも動作するように）
-    const result: Record<string, any> = {}
+    const result: Record<string, Record<string, unknown>> = {}
     Object.keys(styles).forEach((key) => {
       const style = styles[key]
       if (typeof style === 'object' && style !== null) {

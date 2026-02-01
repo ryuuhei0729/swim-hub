@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Button, ConfirmDialog } from '@/components/ui'
 import { XMarkIcon } from '@heroicons/react/24/outline'
-import { formatTime, parseTime } from '@apps/shared/utils/time'
+import { formatTime, formatTimeAverage } from '@apps/shared/utils/time'
+import { useQuickTimeInput } from '@/components/forms/shared/TimeInput/hooks'
 
 interface TimeEntry {
   id: string
@@ -39,6 +40,7 @@ export default function TimeInputModal({
   const [confirmContext, setConfirmContext] = useState<'close' | 'back'>('close')
   const isInitializedRef = useRef(false)
   const ignorePopStateRef = useRef(false)
+  const { parseInput, resetContext } = useQuickTimeInput()
 
   // 全てのセット・レップの組み合わせを生成する関数
   const generateTimeCombinations = useCallback((): TimeEntry[] => {
@@ -85,6 +87,13 @@ export default function TimeInputModal({
       isInitializedRef.current = false
     }
   }, [isOpen])
+
+  // モーダルオープン時にコンテキストをリセット
+  useEffect(() => {
+    if (isOpen) {
+      resetContext()
+    }
+  }, [isOpen, resetContext])
 
   // ブラウザバックでの離脱を防ぐ
   useEffect(() => {
@@ -141,17 +150,49 @@ export default function TimeInputModal({
 
   if (!isOpen) return null
 
+  // 入力中は displayValue のみ更新（パースしない）
   const handleTimeChange = (id: string, value: string) => {
     setTimes(prev => prev.map(t =>
       t.id === id ? {
         ...t,
-        displayValue: value,
-        time: parseTime(value)
+        displayValue: value
       } : t
     ))
     // 初期化完了後の変更のみ追跡
     if (isInitializedRef.current) {
       setHasUnsavedChanges(true)
+    }
+  }
+
+  // 入力確定時にパース（Enter または フォーカスアウト）
+  const handleTimeConfirm = (id: string, value: string) => {
+    if (!value.trim()) {
+      // 空入力の場合はクリア
+      setTimes(prev => prev.map(t =>
+        t.id === id ? { ...t, displayValue: '', time: 0 } : t
+      ))
+      return
+    }
+    const { time, displayValue } = parseInput(value)
+    setTimes(prev => prev.map(t =>
+      t.id === id ? {
+        ...t,
+        displayValue: displayValue || value,
+        time
+      } : t
+    ))
+  }
+
+  // Enterキーでパース＋次のフィールドへ移動
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, currentIndex: number, id: string, value: string) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleTimeConfirm(id, value)
+      const inputs = document.querySelectorAll<HTMLInputElement>('[data-time-input]')
+      const nextInput = inputs[currentIndex + 1]
+      if (nextInput) {
+        nextInput.focus()
+      }
     }
   }
 
@@ -190,7 +231,7 @@ export default function TimeInputModal({
 
   return (
     <div className="fixed inset-0 z-80 overflow-y-auto" data-testid="time-input-modal">
-      <div className="flex min-h-screen items-center justify-center p-4">
+      <div className="flex min-h-screen items-center justify-center px-4 sm:px-0 py-4">
         <div
           className="fixed inset-0 bg-black/40 transition-opacity"
           onClick={handleClose}
@@ -233,29 +274,33 @@ export default function TimeInputModal({
                         セット {setNumber}
                       </h4>
                       <div className="text-sm text-gray-600">
-                        平均: {setAverage > 0 ? formatTime(setAverage) : '未入力'} 
+                        平均: {setAverage > 0 ? formatTimeAverage(setAverage) : '未入力'} 
                         {validTimesCount > 0 && ` (${validTimesCount}本)`}
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                      {setTimes.map((timeEntry) => (
+                    <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {setTimes.map((timeEntry, repIndex) => {
+                        const globalIndex = setIndex * repCount + repIndex
+                        return (
                         <div key={timeEntry.id} className="space-y-1">
                           <label className="block text-xs font-medium text-gray-700">
                             {timeEntry.repNumber}本目
                           </label>
                           <input
                             type="text"
-                            placeholder="例: 1:30.50"
+                            placeholder="例: 31-2"
                             value={timeEntry.displayValue || ''}
-                            onChange={(e) => {
-                              handleTimeChange(timeEntry.id, e.target.value)
-                            }}
+                            onChange={(e) => handleTimeChange(timeEntry.id, e.target.value)}
+                            onBlur={(e) => handleTimeConfirm(timeEntry.id, e.target.value)}
+                            onKeyDown={(e) => handleKeyDown(e, globalIndex, timeEntry.id, timeEntry.displayValue || '')}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             data-testid={`time-input-${timeEntry.setNumber}-${timeEntry.repNumber}`}
+                            data-time-input
                           />
                         </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   </div>
                 )
@@ -268,16 +313,16 @@ export default function TimeInputModal({
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-700">全体平均:</span>
               <span className="text-lg font-bold text-blue-600">
-                {getOverallAverage() > 0 ? formatTime(getOverallAverage()) : '未入力'}
+                {getOverallAverage() > 0 ? formatTimeAverage(getOverallAverage()) : '未入力'}
               </span>
             </div>
           </div>
 
           {/* フッター */}
-          <div className="bg-gray-50 px-6 py-3 sm:flex sm:flex-row-reverse">
+          <div className="bg-gray-50 px-6 py-3 flex flex-col sm:flex-row-reverse gap-2 sm:gap-3">
             <Button
               onClick={handleSubmit}
-              className="w-full sm:w-auto sm:ml-3"
+              className="w-full sm:w-auto"
               data-testid="save-times-button"
             >
               保存
@@ -286,7 +331,7 @@ export default function TimeInputModal({
               type="button"
               variant="outline"
               onClick={handleClose}
-              className="mt-3 w-full sm:mt-0 sm:w-auto"
+              className="w-full sm:w-auto"
             >
               キャンセル
             </Button>

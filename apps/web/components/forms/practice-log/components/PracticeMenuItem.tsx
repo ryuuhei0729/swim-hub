@@ -6,7 +6,7 @@ import { TrashIcon, ClockIcon, ChevronDownIcon } from '@heroicons/react/24/outli
 import TagInput from '../../TagInput'
 import type { PracticeMenu, Tag } from '../types'
 import { SWIM_STYLES, SWIM_CATEGORIES } from '../types'
-import { formatTime } from '@/utils/formatters'
+import { formatTime, formatTimeAverage } from '@/utils/formatters'
 
 interface PracticeMenuItemProps {
   menu: PracticeMenu
@@ -38,7 +38,7 @@ export default function PracticeMenuItem({
 }: PracticeMenuItemProps) {
   return (
     <div
-      className="border border-gray-200 rounded-lg p-4 space-y-4 bg-blue-50"
+      className="border border-gray-200 rounded-lg p-4 space-y-4 bg-green-50"
       data-testid="practice-menu-container"
     >
       {/* メニューヘッダー */}
@@ -119,8 +119,8 @@ export default function PracticeMenuItem({
           </div>
         </div>
 
-        {/* 3行目：距離、本数、セット数、サークル */}
-        <div className="grid grid-cols-5 gap-4">
+        {/* 3行目：距離、本数、セット数（モバイル）/ 距離、本数、セット数、サークル（PC）*/}
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               距離(m) <span className="text-red-500">*</span>
@@ -166,6 +166,38 @@ export default function PracticeMenuItem({
             />
           </div>
 
+          <div className="hidden sm:block">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              サークル(分)
+            </label>
+            <Input
+              type="number"
+              value={menu.circleMin}
+              onChange={(e) => onUpdate('circleMin', e.target.value)}
+              placeholder="1"
+              min="0"
+              data-testid="practice-circle-min-pc"
+            />
+          </div>
+
+          <div className="hidden sm:block">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              サークル(秒)
+            </label>
+            <Input
+              type="number"
+              value={menu.circleSec}
+              onChange={(e) => onUpdate('circleSec', e.target.value)}
+              placeholder="30"
+              min="0"
+              max="59"
+              data-testid="practice-circle-sec-pc"
+            />
+          </div>
+        </div>
+
+        {/* 4行目：サークル（モバイルのみ） */}
+        <div className="grid grid-cols-2 gap-2 sm:hidden">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               サークル(分)
@@ -310,7 +342,7 @@ function PracticeTimesDisplay({ menu }: { menu: PracticeMenu }) {
                 return (
                   <td key={setNumber} className="py-2 px-2 text-center">
                     <span className="text-gray-800 font-medium">
-                      {average > 0 ? formatTime(average) : '-'}
+                      {average > 0 ? formatTimeAverage(average) : '-'}
                     </span>
                   </td>
                 )
@@ -336,7 +368,7 @@ function PracticeTimesDisplay({ menu }: { menu: PracticeMenu }) {
                         ? allValidTimes.reduce((sum: number, t) => sum + t.time, 0) /
                           allValidTimes.length
                         : 0
-                    return overallAverage > 0 ? formatTime(overallAverage) : '-'
+                    return overallAverage > 0 ? formatTimeAverage(overallAverage) : '-'
                   })()}
                 </span>
               </td>

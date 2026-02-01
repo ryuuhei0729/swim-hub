@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { PlusIcon, UserPlusIcon, UsersIcon } from '@heroicons/react/24/outline'
+import { formatDate } from '@apps/shared/utils/date'
 import { Avatar } from '@/components/ui'
 import type { TeamMembershipWithUser } from '@apps/shared/types'
 
@@ -44,11 +45,7 @@ export default function ProfileDisplay({ profile, teams = [], onCreateTeam, onJo
   }, [isMenuOpen])
   const formatBirthday = (birthday: string | null | undefined) => {
     if (!birthday) return '未設定'
-    return new Date(birthday).toLocaleDateString('ja-JP', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
+    return formatDate(birthday, 'long')
   }
 
   const formatGender = (gender: number | undefined) => {

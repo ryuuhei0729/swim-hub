@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { CalendarDaysIcon, ClockIcon, PencilIcon, TrashIcon, ShareIcon } from '@heroicons/react/24/outline'
+import { CalendarDaysIcon, PencilIcon, TrashIcon, ShareIcon } from '@heroicons/react/24/outline'
 import { Button, Pagination } from '@/components/ui'
 import PracticeLogForm from '@/components/forms/PracticeLogForm'
 import PracticeTimeModal from '../_components/PracticeTimeModal'
@@ -640,19 +640,28 @@ export default function PracticeClient({
                       タグ
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      タイム
+                      平均タイム
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      メモ
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      操作
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {paginatedPracticeLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-gray-50">
+                    <tr
+                      key={log.id}
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => handleTimeLog(log)}
+                      tabIndex={0}
+                      role="button"
+                      aria-label="練習詳細を表示"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          handleTimeLog(log)
+                        }
+                      }}
+                    >
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                         {log.practice?.date ? format(new Date(log.practice.date), 'MM/dd', { locale: ja }) : '-'}
                       </td>
@@ -666,7 +675,7 @@ export default function PracticeClient({
                         {log.circle ? `${Math.floor(log.circle / 60)}'${Math.floor(log.circle % 60).toString().padStart(2, '0')}"` : '-'}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {log.style}
+                        {log.style}{log.swim_category && log.swim_category !== 'Swim' ? `(${log.swim_category})` : ''}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         {log.tags && log.tags.length > 0 ? (
@@ -700,49 +709,44 @@ export default function PracticeClient({
                           <span className="text-gray-400">-</span>
                         )}
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-900 max-w-xs truncate">
-                        {log.note || '-'}
-                      </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center justify-end space-x-2">
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleSharePractice(log)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleSharePractice(log)
+                            }}
                             className="flex items-center space-x-1 text-cyan-600 hover:text-cyan-700"
                           >
                             <ShareIcon className="h-4 w-4" />
-                            <span>シェア</span>
+                            <span className="text-xs">シェア</span>
                           </Button>
-                          {log.practice_times && log.practice_times.length > 0 && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleTimeLog(log)}
-                              className="flex items-center space-x-1"
-                            >
-                              <ClockIcon className="h-4 w-4" />
-                              <span>タイム</span>
-                            </Button>
-                          )}
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleEditLog(log)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleEditLog(log)
+                            }}
                             className="flex items-center space-x-1"
                           >
                             <PencilIcon className="h-4 w-4" />
-                            <span>編集</span>
+                            <span className="text-xs">編集</span>
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDeleteLog(log.id)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeleteLog(log.id)
+                            }}
                             disabled={isLoading}
                             className="flex items-center space-x-1 text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <TrashIcon className="h-4 w-4" />
-                            <span>{isLoading ? '削除中...' : '削除'}</span>
+                            <span className="text-xs">{isLoading ? '削除中...' : '削除'}</span>
                           </Button>
                         </div>
                       </td>
@@ -757,7 +761,20 @@ export default function PracticeClient({
             <div className="lg:hidden">
               <div className="divide-y divide-gray-200">
                 {paginatedPracticeLogs.map((log) => (
-                  <div key={log.id} className="p-5 sm:p-6 hover:bg-gray-50">
+                  <div
+                    key={log.id}
+                    className="p-5 sm:p-6 hover:bg-gray-50 cursor-pointer"
+                    onClick={() => handleTimeLog(log)}
+                    tabIndex={0}
+                    role="button"
+                    aria-label="練習詳細を表示"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        handleTimeLog(log)
+                      }
+                    }}
+                  >
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center space-x-2 mb-2">
@@ -770,7 +787,7 @@ export default function PracticeClient({
                             </div>
                           )}
                         </div>
-                        
+
                         <div className="space-y-1">
                           <div className="text-sm font-medium text-gray-900">
                             {log.distance}m × {log.rep_count}本 × {log.set_count}セット
@@ -778,14 +795,14 @@ export default function PracticeClient({
                           <div className="text-sm text-gray-600">
                             {log.circle ? `${Math.floor(log.circle / 60)}'${Math.floor(log.circle % 60).toString().padStart(2, '0')}"` : '-'} {log.style}
                           </div>
-                          
+
                           {log.tags && log.tags.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-2">
                               {log.tags.map((tag: PracticeTag) => (
                                 <span
                                   key={tag.id}
                                   className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-black"
-                                  style={{ 
+                                  style={{
                                     backgroundColor: tag.color
                                   }}
                                 >
@@ -794,7 +811,7 @@ export default function PracticeClient({
                               ))}
                             </div>
                           )}
-                          
+
                           {log.practice_times && log.practice_times.length > 0 && (
                             <div className="mt-2">
                               <div className="text-xs text-gray-500 mb-1">平均タイム:</div>
@@ -807,7 +824,7 @@ export default function PracticeClient({
                               </div>
                             </div>
                           )}
-                          
+
                           {log.note && (
                             <div className="text-xs text-gray-600 mt-2 truncate">
                               {log.note}
@@ -815,32 +832,27 @@ export default function PracticeClient({
                           )}
                         </div>
                       </div>
-                      
+
                       <div className="flex flex-col space-y-1 ml-4">
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleSharePractice(log)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleSharePractice(log)
+                          }}
                           className="flex items-center justify-center space-x-1 text-xs px-2 py-1 text-cyan-600 hover:text-cyan-700"
                         >
                           <ShareIcon className="h-3 w-3" />
                           <span>シェア</span>
                         </Button>
-                        {log.practice_times && log.practice_times.length > 0 && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleTimeLog(log)}
-                            className="flex items-center justify-center space-x-1 text-xs px-2 py-1"
-                          >
-                            <ClockIcon className="h-3 w-3" />
-                            <span>タイム</span>
-                          </Button>
-                        )}
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleEditLog(log)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleEditLog(log)
+                          }}
                           className="flex items-center justify-center space-x-1 text-xs px-2 py-1"
                         >
                           <PencilIcon className="h-3 w-3" />
@@ -849,7 +861,10 @@ export default function PracticeClient({
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleDeleteLog(log.id)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteLog(log.id)
+                          }}
                           disabled={isLoading}
                           className="flex items-center justify-center space-x-1 text-xs px-2 py-1 text-red-600 hover:text-red-700"
                         >

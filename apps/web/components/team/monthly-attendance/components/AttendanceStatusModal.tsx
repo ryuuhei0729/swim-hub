@@ -5,7 +5,7 @@ import BaseModal from '@/components/ui/BaseModal'
 import { TeamEvent, TeamAttendanceWithDetails } from '@swim-hub/shared/types'
 import { TeamMember } from '@swim-hub/shared/utils/team'
 import { AttendanceGroupingDisplay } from './AttendanceGroupingDisplay'
-import { parseISO } from 'date-fns'
+import { formatDate } from '@apps/shared/utils/date'
 
 interface AttendanceStatusModalProps {
   isOpen: boolean
@@ -25,11 +25,7 @@ export const AttendanceStatusModal = React.memo(({
   loading
 }: AttendanceStatusModalProps) => {
   const title = event
-    ? `${parseISO(event.date).toLocaleDateString('ja-JP', {
-        month: 'long',
-        day: 'numeric',
-        weekday: 'short'
-      })}の出欠状況`
+    ? `${formatDate(event.date, 'shortWithWeekday')}の出欠状況`
     : ''
 
   return (

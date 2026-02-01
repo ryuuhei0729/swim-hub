@@ -148,7 +148,7 @@ export default function CalendarGrid({
                       <div
                         key={`${item.type}-${item.id}`}
                         className={`
-                          text-[10px] px-0.5 sm:px-1 py-0.5 rounded-md truncate transition-all duration-200
+                          text-[8px] sm:text-[10px] px-0.5 sm:px-1 py-0.5 rounded-md truncate transition-all duration-200
                           ${getItemColor(item.type)}
                           ${item.type === 'record' ? 'border-2 border-blue-400' : item.type === 'practice_log' ? 'border-2 border-green-400' : 'border'}
                           hover:opacity-80 hover:scale-105 cursor-pointer

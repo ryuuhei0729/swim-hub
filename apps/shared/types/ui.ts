@@ -402,6 +402,7 @@ export interface BestTime {
   created_at: string
   pool_type: number // 0: 短水路, 1: 長水路
   is_relaying: boolean
+  note?: string // 備考（一括登録時に使用）
   style_id: number // 種目ID（追加）
   style: {
     name_jp: string
@@ -416,6 +417,7 @@ export interface BestTime {
     id: string
     time: number
     created_at: string
+    note?: string
     competition?: {
       title: string
       date: string

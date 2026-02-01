@@ -195,7 +195,7 @@ export default function ImageUploader({
             )}
             <div className="text-sm text-gray-600">
               <span className="text-green-600 font-medium">クリックして選択</span>
-              <span className="text-gray-500"> または ドラッグ&ドロップ</span>
+              <span className="text-gray-500 hidden sm:inline"> または ドラッグ&ドロップ</span>
               <br />
               <span className="text-xs text-gray-400 ml-2">{formatDescription}</span>
             </div>

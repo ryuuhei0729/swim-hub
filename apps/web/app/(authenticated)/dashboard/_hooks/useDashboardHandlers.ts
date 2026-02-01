@@ -208,9 +208,8 @@ export function useDashboardHandlers({
               for (const path of uploadedPaths) {
                 await practiceAPI.deletePracticeImage(path)
               }
-              console.log('ロールバック完了: アップロードした画像を削除しました')
-            } catch (rollbackError) {
-              console.error('ロールバック失敗:', rollbackError)
+            } catch {
+              // ロールバック失敗は無視（メインのエラーを優先）
             }
           }
 
@@ -224,7 +223,7 @@ export function useDashboardHandlers({
     } finally {
       setLoading(false)
     }
-  }, [editingData, updatePractice, createPractice, closePracticeBasicForm, openPracticeLogForm, refreshCalendar, setLoading])
+  }, [editingData, updatePractice, createPractice, closePracticeBasicForm, openPracticeLogForm, refreshCalendar, setLoading, supabase])
 
   // 練習メニュー作成・更新処理
   const handlePracticeLogSubmit = useCallback(async (formDataArray: PracticeMenuFormData[]) => {
@@ -539,9 +538,8 @@ export function useDashboardHandlers({
               for (const path of uploadedPaths) {
                 await competitionAPI.deleteCompetitionImage(path)
               }
-              console.log('ロールバック完了: アップロードした画像を削除しました')
-            } catch (rollbackError) {
-              console.error('ロールバック失敗:', rollbackError)
+            } catch {
+              // ロールバック失敗は無視（メインのエラーを優先）
             }
           }
 

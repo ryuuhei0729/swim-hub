@@ -63,13 +63,15 @@ export function ShareCardModal({
       const file = new File([blob], 'swimhub-share.png', { type: 'image/png' })
 
       if (navigator.canShare({ files: [file] })) {
+        const shareText =
+          type === 'competition'
+            ? '【Swimhub】\n大会記録をシェアしました！\n\n水泳記録管理アプリ「SwimHub」で記録を管理しよう!\nhttps://swim-hub.app'
+            : '【Swimhub】\n練習記録をシェアしました！\n\n水泳記録管理アプリ「SwimHub」で練習を記録しよう!\nhttps://swim-hub.app'
+
         await navigator.share({
           files: [file],
           title: 'SwimHub',
-          text:
-            type === 'competition'
-              ? '大会記録をシェア!'
-              : '今日の練習メニュー!',
+          text: shareText,
         })
       } else {
         // ファイル共有がサポートされていない場合はダウンロード

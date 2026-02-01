@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { beforeEach, describe, expect, it } from 'vitest'
-import { useRecordFilterStore } from '../recordFilterStore'
+import { useRecordFilterStore } from '../recordStore'
 
 describe('recordFilterStore', () => {
   beforeEach(() => {

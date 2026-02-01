@@ -100,6 +100,8 @@ describe('useCreateRecordMutation', () => {
       competition_id: 'competition-id',
       style_id: 1,
       time: 60.5,
+      pool_type: 0 as const,
+      reaction_time: null,
       note: 'テスト記録',
       video_url: null,
       is_relaying: false,

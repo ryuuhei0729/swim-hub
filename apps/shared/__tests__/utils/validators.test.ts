@@ -287,7 +287,9 @@ describe('validators', () => {
     })
 
     it('今日の日付で成功する', () => {
-      const today = new Date().toISOString().split('T')[0]
+      // ローカル日付を使用（validateFutureDateがローカル時間で比較するため）
+      const now = new Date()
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
       const result = validateFutureDate(today)
       expect(result.valid).toBe(true)
     })

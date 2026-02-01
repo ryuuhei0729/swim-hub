@@ -241,7 +241,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
   // 練習ログ入力ページへ遷移
   const handlePracticeClick = (practiceId: string) => {
     if (isAdmin) {
-      router.push(`/teams/${teamId}/practices/${practiceId}/logs`)
+      router.push(`/teams-admin/${teamId}/practices/${practiceId}/logs`)
     }
   }
 
