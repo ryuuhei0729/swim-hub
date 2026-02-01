@@ -38,7 +38,7 @@ export default function PracticeMenuItem({
 }: PracticeMenuItemProps) {
   return (
     <div
-      className="border border-gray-200 rounded-lg p-4 space-y-4 bg-blue-50"
+      className="border border-gray-200 rounded-lg p-4 space-y-4 bg-green-50"
       data-testid="practice-menu-container"
     >
       {/* メニューヘッダー */}

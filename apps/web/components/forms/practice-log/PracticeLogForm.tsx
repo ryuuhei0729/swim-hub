@@ -299,7 +299,7 @@ export default function PracticeLogForm({
                   <Button
                     type="button"
                     onClick={addMenu}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+                    className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
                     disabled={isLoading}
                     data-testid="add-menu-button"
                   >
@@ -328,16 +328,16 @@ export default function PracticeLogForm({
             </div>
 
             {/* フッター（固定） */}
-            <div className="shrink-0 bg-white border-t px-6 py-4 flex items-center justify-between">
+            <div className="shrink-0 bg-gray-50 px-4 py-3 sm:px-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               {/* テンプレート保存チェックボックス（新規作成時のみ表示） */}
               {!editData ? (
-                <div className="flex items-center">
+                <div className="flex items-center order-2 sm:order-1">
                   <input
                     type="checkbox"
                     id="save-as-template"
                     checked={saveAsTemplate}
                     onChange={(e) => setSaveAsTemplate(e.target.checked)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+                    className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded cursor-pointer"
                     disabled={isLoading}
                   />
                   <label
@@ -348,15 +348,16 @@ export default function PracticeLogForm({
                   </label>
                 </div>
               ) : (
-                <div />
+                <div className="order-2 sm:order-1" />
               )}
 
-              <div className="flex gap-3">
+              <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 order-1 sm:order-2">
                 <Button
                   type="button"
                   onClick={handleClose}
-                  variant="secondary"
+                  variant="outline"
                   disabled={isLoading}
+                  className="w-full sm:w-auto"
                   data-testid="practice-log-cancel-button"
                 >
                   キャンセル
@@ -365,7 +366,7 @@ export default function PracticeLogForm({
                   type="button"
                   disabled={isLoading}
                   onClick={() => void handleSubmit()}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="w-full sm:w-auto"
                   data-testid={
                     editData ? 'update-practice-log-button' : 'save-practice-log-button'
                   }
@@ -458,7 +459,7 @@ export default function PracticeLogForm({
                 <button
                   type="button"
                   onClick={() => setShowTemplateSaveModal(false)}
-                  className="text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-1"
+                  className="text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 rounded-md p-1"
                   aria-label="閉じる"
                 >
                   <XMarkIcon className="h-6 w-6" />
@@ -498,7 +499,7 @@ export default function PracticeLogForm({
                   type="button"
                   onClick={() => void handleTemplateSave()}
                   disabled={!templateName.trim() || isSavingTemplate}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-green-600 hover:bg-green-700"
                 >
                   {isSavingTemplate ? '保存中...' : '保存'}
                 </Button>

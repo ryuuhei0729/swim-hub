@@ -202,7 +202,7 @@ export function CompetitionDetails({
       <div className="bg-blue-50 rounded-xl px-1 py-3 sm:p-3" data-testid="record-detail-modal">
         {/* Competition全体のヘッダー */}
         <div className="flex items-start justify-between">
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
               <span className={`text-lg font-semibold px-3 py-1 rounded-lg flex items-center gap-2 ${
                 isTeamCompetition
@@ -217,7 +217,7 @@ export function CompetitionDetails({
                 <AttendanceButton onClick={onShowAttendance} />
               )}
             </div>
-            {(place || poolType != null) && (
+            {(place || poolType != null || note) && (
               <div className="text-sm text-gray-700 mb-2 flex flex-wrap items-center gap-3">
                 {place && (
                   <span className="flex items-center gap-1" data-testid="competition-place-display">
@@ -231,12 +231,13 @@ export function CompetitionDetails({
                     {_getPoolTypeText(poolType)}
                   </span>
                 )}
+                {note && (
+                  <span className="flex items-center gap-1 break-all">
+                    <span className="shrink-0">📝</span>
+                    {note}
+                  </span>
+                )}
               </div>
-            )}
-            {note && (
-              <p className="text-sm text-gray-600 mt-2">
-                💭 {note}
-              </p>
             )}
           </div>
           <div className="flex items-center space-x-2 ml-4">

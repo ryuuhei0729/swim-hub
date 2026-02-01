@@ -16,6 +16,8 @@ import { ja } from 'date-fns/locale'
 import { useRecordLogForm } from './hooks/useRecordLogForm'
 import { RecordLogEntry } from './components'
 import type { RecordLogFormProps } from './types'
+import { useBestTimes } from '@/hooks/useBestTimes'
+import { useAuth } from '@/contexts'
 
 /**
  * 記録ログフォームコンポーネント
@@ -29,11 +31,22 @@ export default function RecordLogForm({
   competitionId: _competitionId,
   competitionTitle,
   competitionDate,
+  poolType = 0,
   editData,
   isLoading = false,
   styles = [],
   entryDataList = [],
 }: RecordLogFormProps) {
+  const { supabase, user } = useAuth()
+  const { bestTimes, loadBestTimes } = useBestTimes(supabase)
+
+  // ベストタイムを取得
+  useEffect(() => {
+    if (isOpen && user?.id) {
+      loadBestTimes(user.id)
+    }
+  }, [isOpen, user?.id, loadBestTimes])
+
   const {
     formDataList,
     hasUnsavedChanges,
@@ -167,54 +180,54 @@ export default function RecordLogForm({
         ></div>
 
         {/* モーダルコンテンツ */}
-        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-3xl">
-          <form onSubmit={handleSubmit}>
-            {/* ヘッダー */}
-            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex-1">
-                  {(competitionTitle || competitionDate) && (
-                    <div className="mt-3 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200">
-                      <p className="text-lg font-bold text-gray-900">
-                        {competitionDate && competitionTitle && (
-                          <>
-                            <span className="text-base font-semibold text-blue-700">
-                              {format(new Date(competitionDate), 'yyyy年M月d日(E)', {
-                                locale: ja,
-                              })}
-                            </span>
-                            <span className="ml-3">{competitionTitle}</span>
-                          </>
-                        )}
-                        {competitionDate && !competitionTitle && (
-                          format(new Date(competitionDate), 'yyyy年M月d日(E)', { locale: ja })
-                        )}
-                        {!competitionDate && competitionTitle && competitionTitle}
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <XMarkIcon className="h-6 w-6" />
-                </button>
+        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-3xl max-h-[90vh] flex flex-col">
+          {/* ヘッダー */}
+          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 shrink-0">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex-1">
+                {(competitionTitle || competitionDate) && (
+                  <div className="mt-3 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-lg font-bold text-gray-900">
+                      {competitionDate && competitionTitle && (
+                        <>
+                          <span className="text-base font-semibold text-blue-700">
+                            {format(new Date(competitionDate), 'yyyy年M月d日(E)', {
+                              locale: ja,
+                            })}
+                          </span>
+                          <span className="ml-3">{competitionTitle}</span>
+                        </>
+                      )}
+                      {competitionDate && !competitionTitle && (
+                        format(new Date(competitionDate), 'yyyy年M月d日(E)', { locale: ja })
+                      )}
+                      {!competitionDate && competitionTitle && competitionTitle}
+                    </p>
+                  </div>
+                )}
               </div>
-              {/* ステッププログレス（編集モードでない場合のみ表示） */}
-              {!editData && (
-                <div className="mb-4">
-                  <FormStepper
-                    steps={COMPETITION_STEPS}
-                    currentStep={2}
-                    skippedSteps={entryDataList.length === 0 ? [1] : []}
-                  />
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={handleClose}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
             </div>
+            {/* ステッププログレス（編集モードでない場合のみ表示） */}
+            {!editData && (
+              <div className="mb-4">
+                <FormStepper
+                  steps={COMPETITION_STEPS}
+                  currentStep={2}
+                  skippedSteps={entryDataList.length === 0 ? [1] : []}
+                />
+              </div>
+            )}
+          </div>
 
-            <div className="px-4 pb-6 sm:px-6 sm:pb-6 space-y-6">
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+            <div className="flex-1 overflow-y-auto px-4 pb-6 sm:px-6 sm:pb-6 space-y-6">
               {formError && (
                 <div
                   className="rounded-md bg-red-50 border border-red-200 p-4"
@@ -239,6 +252,8 @@ export default function RecordLogForm({
                     index={index}
                     entryInfo={entryInfo}
                     styles={styles}
+                    poolType={poolType}
+                    bestTimes={bestTimes}
                     isLoading={isLoading}
                     onTimeChange={(value) => handleTimeChange(index, value)}
                     onToggleRelaying={(checked) =>
@@ -265,24 +280,24 @@ export default function RecordLogForm({
               })}
             </div>
 
-            {/* フッター */}
-            <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="w-full sm:w-auto sm:ml-3"
-                data-testid={editData ? 'update-record-button' : 'save-record-button'}
-              >
-                {isLoading ? '保存中...' : editData ? '更新' : '保存'}
-              </Button>
+            {/* フッター（固定） */}
+            <div className="shrink-0 bg-gray-50 px-4 py-3 sm:px-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3">
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleClose}
                 disabled={isLoading}
-                className="mt-3 w-full sm:mt-0 sm:w-auto"
+                className="w-full sm:w-auto"
               >
                 キャンセル
+              </Button>
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full sm:w-auto"
+                data-testid={editData ? 'update-record-button' : 'save-record-button'}
+              >
+                {isLoading ? '保存中...' : editData ? '更新' : '保存'}
               </Button>
             </div>
           </form>

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { Button, Input, ConfirmDialog } from '@/components/ui'
 import FormStepper from '@/components/ui/FormStepper'
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
@@ -14,6 +14,8 @@ const COMPETITION_STEPS = [
 import { formatTime, formatTimeShort, parseTime } from '@apps/shared/utils/time'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
+import { useBestTimes } from '@/hooks/useBestTimes'
+import { useAuth } from '@/contexts'
 
 interface EntryData {
   id: string
@@ -50,6 +52,8 @@ interface EntryLogFormProps {
   competitionId: string
   competitionTitle?: string // 大会名（nullの場合は「大会」と表示）
   competitionDate?: string // 大会日付
+  /** プールタイプ（0: 短水路, 1: 長水路） */
+  poolType?: number
   isLoading?: boolean
   styles?: Array<{ id: string; nameJp: string; distance: number }>
   editData?: EditEntryData // 編集用の既存データ
@@ -64,11 +68,74 @@ export default function EntryLogForm({
   competitionId: _competitionId,
   competitionTitle,
   competitionDate,
+  poolType = 0,
   isLoading = false,
   styles = [],
   editData,
   initialEntries = []
 }: EntryLogFormProps) {
+  const { supabase, user } = useAuth()
+  const { bestTimes, loadBestTimes } = useBestTimes(supabase)
+
+  // ベストタイムを取得
+  useEffect(() => {
+    if (isOpen && user?.id) {
+      loadBestTimes(user.id)
+    }
+  }, [isOpen, user?.id, loadBestTimes])
+
+  // styleIdからベストタイムを取得するヘルパー関数（優先順位付き）
+  // 1. 同じ水路・非リレー
+  // 2. 同じ水路・リレー（引き継ぎあり）
+  // 3. 異なる水路・非リレー
+  // 4. 異なる水路・リレー（引き継ぎあり）
+  const getBestTimeForStyle = useMemo(() => {
+    return (styleId: string): { time: number; label: string } | null => {
+      if (!bestTimes.length || !styleId) return null
+
+      const style = styles.find(s => s.id === styleId)
+      if (!style) return null
+
+      const styleName = style.nameJp
+      const otherPoolType = poolType === 0 ? 1 : 0
+      const otherPoolLabel = poolType === 0 ? '長水路' : '短水路'
+
+      // 1. 同じ水路・非リレー
+      const samePoolNonRelay = bestTimes.find((bt) =>
+        bt.style.name_jp === styleName && bt.pool_type === poolType && !bt.is_relaying
+      )
+      if (samePoolNonRelay) {
+        return { time: samePoolNonRelay.time, label: 'ベストタイム' }
+      }
+
+      // 2. 同じ水路・リレー（relayingTimeを探す）
+      const samePoolRelay = bestTimes.find((bt) =>
+        bt.style.name_jp === styleName && bt.pool_type === poolType && bt.relayingTime
+      )
+      if (samePoolRelay?.relayingTime) {
+        return { time: samePoolRelay.relayingTime.time, label: 'ベストタイム(引継)' }
+      }
+
+      // 3. 異なる水路・非リレー
+      const otherPoolNonRelay = bestTimes.find((bt) =>
+        bt.style.name_jp === styleName && bt.pool_type === otherPoolType && !bt.is_relaying
+      )
+      if (otherPoolNonRelay) {
+        return { time: otherPoolNonRelay.time, label: `ベストタイム(${otherPoolLabel})` }
+      }
+
+      // 4. 異なる水路・リレー
+      const otherPoolRelay = bestTimes.find((bt) =>
+        bt.style.name_jp === styleName && bt.pool_type === otherPoolType && bt.relayingTime
+      )
+      if (otherPoolRelay?.relayingTime) {
+        return { time: otherPoolRelay.relayingTime.time, label: `ベストタイム(${otherPoolLabel}引継)` }
+      }
+
+      return null
+    }
+  }, [bestTimes, styles, poolType])
+
   const [entries, setEntries] = useState<EntryData[]>([
     {
       id: '1',
@@ -337,7 +404,7 @@ export default function EntryLogForm({
                 <FormStepper steps={COMPETITION_STEPS} currentStep={1} />
               </div>
             )}
-            <p className="mt-3 text-sm text-gray-600">
+            <p className="mt-3 text-[10px] sm:text-sm text-gray-600">
               大会にエントリーする種目とエントリータイムを入力してください。
               <br />
               エントリーをスキップして記録のみ登録することもできます。
@@ -381,16 +448,16 @@ export default function EntryLogForm({
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
                     {/* 種目選択 */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        種目 <span className="text-red-500">*</span>
+                    <div className="flex items-start gap-2 sm:flex-1">
+                      <label className="text-sm font-medium text-gray-700 whitespace-nowrap shrink-0 h-10 flex items-center">
+                        エントリー種目 <span className="text-red-500">*</span>
                       </label>
                       <select
                         value={entry.styleId}
                         onChange={(e) => updateEntry(entry.id, { styleId: e.target.value })}
-                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="flex-1 min-w-0 px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                         disabled={isLoading}
                         data-testid={`entry-style-${index + 1}`}
@@ -405,52 +472,58 @@ export default function EntryLogForm({
                     </div>
 
                     {/* エントリータイム */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <div className="flex items-start gap-2 sm:flex-1">
+                      <label className="text-sm font-medium text-gray-700 whitespace-nowrap shrink-0 h-10 flex items-center">
                         エントリータイム
                       </label>
-                      <Input
-                        type="text"
-                        value={
-                          entry.entryTimeDisplayValue !== undefined 
-                            ? entry.entryTimeDisplayValue 
-                            : (entry.entryTime > 0 ? formatTimeDisplay(entry.entryTime) : '')
-                        }
-                        onChange={(e) => {
-                          const timeStr = e.target.value
-                          updateEntry(entry.id, { entryTimeDisplayValue: timeStr })
-                        }}
-                        onBlur={(e) => {
-                          const timeStr = e.target.value
-                          if (timeStr === '') {
-                            updateEntry(entry.id, { entryTime: 0, entryTimeDisplayValue: undefined })
-                          } else {
-                            const time = parseTimeString(timeStr)
-                            updateEntry(entry.id, { entryTime: time, entryTimeDisplayValue: undefined })
+                      <div className="flex-1 min-w-0">
+                        <Input
+                          type="text"
+                          value={
+                            entry.entryTimeDisplayValue !== undefined
+                              ? entry.entryTimeDisplayValue
+                              : (entry.entryTime > 0 ? formatTimeDisplay(entry.entryTime) : '')
                           }
-                        }}
-                        placeholder="例: 1:30.50"
-                        disabled={isLoading}
-                        data-testid={`entry-time-${index + 1}`}
-                      />
-                      <p className="mt-1 text-xs text-gray-500">
-                        未記入の場合はエントリータイムなしで登録されます
-                      </p>
+                          onChange={(e) => {
+                            const timeStr = e.target.value
+                            updateEntry(entry.id, { entryTimeDisplayValue: timeStr })
+                          }}
+                          onBlur={(e) => {
+                            const timeStr = e.target.value
+                            if (timeStr === '') {
+                              updateEntry(entry.id, { entryTime: 0, entryTimeDisplayValue: undefined })
+                            } else {
+                              const time = parseTimeString(timeStr)
+                              updateEntry(entry.id, { entryTime: time, entryTimeDisplayValue: undefined })
+                            }
+                          }}
+                          placeholder="1:30.50"
+                          disabled={isLoading}
+                          data-testid={`entry-time-${index + 1}`}
+                          className="w-full"
+                        />
+                        {getBestTimeForStyle(entry.styleId) && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            {getBestTimeForStyle(entry.styleId)!.label}: {formatTime(getBestTimeForStyle(entry.styleId)!.time)}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
 
                   {/* メモ */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="flex items-center gap-2 w-full">
+                    <label className="text-sm font-medium text-gray-700 whitespace-nowrap shrink-0">
                       メモ
                     </label>
-                    <Input
+                    <input
                       type="text"
                       value={entry.note}
                       onChange={(e) => updateEntry(entry.id, { note: e.target.value })}
                       placeholder="特記事項など"
                       disabled={isLoading}
                       data-testid={`entry-note-${index + 1}`}
+                      className="flex-1 min-w-0 h-10 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50"
                     />
                   </div>
                 </div>
@@ -459,31 +532,34 @@ export default function EntryLogForm({
             </div>
 
             {/* フッター（固定） */}
-            <div className="shrink-0 bg-white border-t px-6 py-4 flex justify-between items-center">
+            <div className="shrink-0 bg-gray-50 px-4 py-3 sm:px-6 sm:py-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-3">
               <Button
                 type="button"
-                onClick={onSkip}
-                variant="outline"
+                onClick={handleClose}
+                variant="secondary"
                 disabled={isLoading}
-                data-testid="entry-skip-button"
+                data-testid="entry-cancel-button"
+                className="w-full sm:w-auto order-last sm:order-first"
               >
-                エントリーをスキップ
+                キャンセル
               </Button>
 
-              <div className="flex gap-3">
+              <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
                 <Button
                   type="button"
-                  onClick={handleClose}
-                  variant="secondary"
+                  onClick={onSkip}
+                  variant="outline"
                   disabled={isLoading}
-                  data-testid="entry-cancel-button"
+                  data-testid="entry-skip-button"
+                  className="w-full sm:w-auto"
                 >
-                  キャンセル
+                  エントリーをスキップ
                 </Button>
                 <Button
                   type="submit"
                   disabled={isLoading}
                   data-testid="entry-submit-button"
+                  className="w-full sm:w-auto"
                 >
                   {isLoading ? '登録中...' : 'エントリー登録'}
                 </Button>

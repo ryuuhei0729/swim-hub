@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { PencilIcon, TrashIcon, ShareIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline'
+import { PencilIcon, TrashIcon, ShareIcon } from '@heroicons/react/24/outline'
 import { BoltIcon } from '@heroicons/react/24/solid'
 import { format, parseISO, isValid } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -17,7 +17,6 @@ import type {
   PracticeTag,
   TimeEntry
 } from '@apps/shared/types'
-import { PracticeLogTemplateSelectModal } from '@/components/practice-log-templates/PracticeLogTemplateSelectModal'
 import { AttendanceButton } from '../AttendanceSection'
 import type { PracticeDetailsProps, FormattedPracticeLog } from '../../types'
 
@@ -59,7 +58,6 @@ export function PracticeDetails({
   onEdit,
   onDelete,
   onAddPracticeLog,
-  onAddPracticeLogFromTemplate,
   onEditPracticeLog,
   onDeletePracticeLog,
   isTeamPractice = false,
@@ -74,7 +72,6 @@ export function PracticeDetails({
   const [error, setError] = useState<Error | null>(null)
   const [showShareModal, setShowShareModal] = useState(false)
   const [sharePracticeData, setSharePracticeData] = useState<PracticeShareData | null>(null)
-  const [showTemplateSelect, setShowTemplateSelect] = useState(false)
 
   useEffect(() => {
     const loadPractice = async () => {
@@ -192,7 +189,7 @@ export function PracticeDetails({
       <div className="bg-green-50 rounded-xl px-1 py-3 sm:p-3" data-testid="practice-detail-modal">
         {/* Practice全体のヘッダー */}
         <div className="flex items-start justify-between">
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <div
               className="flex items-center gap-2 mb-2"
               data-testid="practice-log-summary"
@@ -210,12 +207,26 @@ export function PracticeDetails({
                 <AttendanceButton onClick={onShowAttendance} />
               )}
             </div>
-            {place && (
-              <p className="text-sm text-gray-700 mb-2 flex items-center gap-1">
-                <span className="text-gray-500">📍</span>
-                {place}
-              </p>
-            )}
+            <div className="flex items-center gap-4 mb-2 flex-wrap">
+              {practice.title && (
+                <p className="text-sm text-gray-700 flex items-center gap-1">
+                  <span className="text-gray-500">🏷️</span>
+                  {practice.title}
+                </p>
+              )}
+              {place && (
+                <p className="text-sm text-gray-700 flex items-center gap-1">
+                  <span className="text-gray-500">📍</span>
+                  {place}
+                </p>
+              )}
+              {practice.note && (
+                <p className="text-sm text-gray-700 flex items-center gap-1 break-all">
+                  <span className="shrink-0">📝</span>
+                  {practice.note}
+                </p>
+              )}
+            </div>
           </div>
           <div className="flex items-center space-x-2 ml-4">
             <button
@@ -241,26 +252,15 @@ export function PracticeDetails({
         <div className="space-y-3">
           {/* PracticeLogsがない場合 */}
           {practiceLogs.length === 0 && (
-            <div className="bg-white border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-              <p className="text-sm text-gray-500 mb-4">練習メニューを追加してください</p>
-              <div className="flex items-center justify-center gap-3">
-                <button
-                  onClick={() => setShowTemplateSelect(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 border border-blue-300 rounded-lg shadow-sm text-sm font-medium text-blue-700 bg-white hover:bg-blue-50 hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-                  data-testid="add-from-template-button"
-                >
-                  <ClipboardDocumentListIcon className="h-5 w-5" />
-                  テンプレートから
-                </button>
-                <button
-                  onClick={() => onAddPracticeLog?.(practiceId)}
-                  className="inline-flex items-center gap-2 px-4 py-2 border border-green-300 rounded-lg shadow-sm text-sm font-medium text-green-700 bg-white hover:bg-green-50 hover:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
-                  data-testid="add-new-button"
-                >
-                  <PencilIcon className="h-5 w-5" />
-                  新規
-                </button>
-              </div>
+            <div className="bg-white border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+              <button
+                onClick={() => onAddPracticeLog?.(practiceId)}
+                className="inline-flex items-center gap-2 px-4 py-2 border border-green-300 rounded-lg shadow-sm text-sm font-medium text-green-700 bg-white hover:bg-green-50 hover:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+                data-testid="add-new-button"
+              >
+                <PencilIcon className="h-5 w-5" />
+                メニューを追加
+              </button>
             </div>
           )}
 
@@ -563,14 +563,6 @@ export function PracticeDetails({
         />
       )}
 
-      {/* テンプレート選択モーダル */}
-      <PracticeLogTemplateSelectModal
-        isOpen={showTemplateSelect}
-        onClose={() => setShowTemplateSelect(false)}
-        onSelect={(template) => {
-          onAddPracticeLogFromTemplate?.(practiceId, template)
-        }}
-      />
     </div>
   )
 }

@@ -386,12 +386,13 @@ export default function PracticeBasicForm({
             </div>
 
             {/* フッター（固定） */}
-            <div className="shrink-0 bg-white border-t px-6 py-4 flex justify-end gap-3">
+            <div className="shrink-0 bg-gray-50 px-4 py-3 sm:px-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3">
               <Button
                 type="button"
                 onClick={handleClose}
-                variant="secondary"
+                variant="outline"
                 disabled={isLoading}
+                className="w-full sm:w-auto"
               >
                 キャンセル
               </Button>
@@ -401,7 +402,7 @@ export default function PracticeBasicForm({
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="w-full sm:w-auto"
                   data-testid="update-practice-button"
                 >
                   {isLoading ? '更新中...' : '更新'}
@@ -413,7 +414,7 @@ export default function PracticeBasicForm({
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="w-full sm:w-auto"
                   data-testid="save-practice-button"
                 >
                   {isLoading ? '保存中...' : '保存'}
@@ -428,6 +429,7 @@ export default function PracticeBasicForm({
                     onClick={handleSubmitAndClose}
                     variant="outline"
                     disabled={isLoading}
+                    className="w-full sm:w-auto"
                     data-testid="save-practice-close-button"
                   >
                     {isLoading ? '保存中...' : '保存して終了'}
@@ -436,7 +438,7 @@ export default function PracticeBasicForm({
                     type="button"
                     onClick={handleSubmitAndContinue}
                     disabled={isLoading}
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="w-full sm:w-auto"
                     data-testid="save-practice-continue-button"
                   >
                     {isLoading ? '保存中...' : '保存して次へ'}

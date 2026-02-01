@@ -95,7 +95,7 @@ export const AnnouncementList: React.FC<AnnouncementListProps> = ({
       {/* お知らせ一覧 */}
       {filteredAnnouncements.length === 0 ? (
         !hideEmptyMessage && (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-2 text-gray-500">
             <p>お知らせはありません</p>
           </div>
         )
