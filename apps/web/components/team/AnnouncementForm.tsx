@@ -152,15 +152,15 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <div className="flex items-center justify-center min-h-screen p-4">
         {/* オーバーレイ */}
-        <div 
-          className="fixed inset-0 bg-black/40 transition-opacity" 
+        <div
+          className="fixed inset-0 bg-black/40 transition-opacity"
           onClick={handleClose}
         />
 
         {/* モーダルコンテンツ */}
-        <div className="relative bg-white rounded-lg text-left shadow-xl transform transition-all sm:my-8 sm:max-w-2xl sm:w-full max-h-[90vh] flex flex-col">
+        <div className="relative bg-white rounded-lg text-left shadow-xl transform transition-all w-full max-w-2xl max-h-[90vh] flex flex-col">
           {/* ヘッダー */}
           <div className="shrink-0 bg-white px-6 py-4 border-b border-gray-200">
             <div className="flex justify-between items-center">
