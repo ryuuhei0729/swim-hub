@@ -643,7 +643,6 @@ export default function PracticeClient({
                       平均タイム
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      操作
                     </th>
                   </tr>
                 </thead>

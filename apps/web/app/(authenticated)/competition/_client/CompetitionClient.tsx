@@ -1,25 +1,11 @@
 'use client'
 
 import React, { useState, useMemo, useEffect } from 'react'
-import dynamic from 'next/dynamic'
-import { TrophyIcon, PencilIcon, TrashIcon, EyeIcon, ShareIcon } from '@heroicons/react/24/outline'
+import { TrophyIcon, PencilIcon, TrashIcon, ShareIcon } from '@heroicons/react/24/outline'
 import { Button, BestTimeBadge, Pagination } from '@/components/ui'
 import RecordLogForm, { type RecordLogFormData } from '@/components/forms/RecordLogForm'
 import { ShareCardModal } from '@/components/share'
 import type { CompetitionShareData } from '@/components/share'
-
-// rechartsを含むRecordProgressChartを動的インポート（バンドルサイズ削減）
-const RecordProgressChart = dynamic(
-  () => import('@/components/charts/RecordProgressChart'),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex items-center justify-center h-96 bg-gray-50 rounded-lg border border-gray-200">
-        <div className="animate-pulse text-gray-400">グラフを読み込み中...</div>
-      </div>
-    )
-  }
-)
 import { format, isAfter, startOfDay } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { formatTime } from '@/utils/formatters'
@@ -54,7 +40,6 @@ export default function CompetitionClient({
   const { supabase } = useAuth()
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 20
-  const [selectedChartStyleId, setSelectedChartStyleId] = useState<number | null>(null)
   const [showShareModal, setShowShareModal] = useState(false)
   
   // Zustandストア
@@ -495,48 +480,6 @@ export default function CompetitionClient({
         </div>
       </div>
 
-      {/* 成長度合いグラフセクション */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            成長度合いグラフ
-          </h2>
-          <div className="w-full md:w-64">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              種目を選択
-            </label>
-            <select
-              value={selectedChartStyleId || ''}
-              onChange={(e) => setSelectedChartStyleId(e.target.value ? parseInt(e.target.value) : null)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">種目を選択してください</option>
-              {participatedStyles.map((style: Style) => (
-                <option key={style.id} value={style.id}>
-                  {style.name_jp}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div className="mt-6">
-          <RecordProgressChart
-            records={displayRecords.filter((record: Record) => {
-              // 日付フィルタリング：今日より未来の日付は除外（グラフ用）
-              const competition = record.competition as Competition
-              if (competition?.date) {
-                const competitionDate = startOfDay(new Date(competition.date))
-                if (isAfter(competitionDate, today)) {
-                  return false
-                }
-              }
-              return true
-            })}
-            selectedStyleId={selectedChartStyleId}
-          />
-        </div>
-      </div>
-
       {/* 大会記録一覧（表形式） */}
       <div className="bg-white rounded-lg shadow">
         {displayRecords.length === 0 ? (
@@ -593,16 +536,26 @@ export default function CompetitionClient({
                     プール
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    メモ
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    操作
+                    
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {paginatedRecords.map((record: Record) => (
-                  <tr key={record.id} className="hover:bg-gray-50">
+                  <tr
+                    key={record.id}
+                    className="hover:bg-gray-50 cursor-pointer"
+                    onClick={() => handleViewRecord(record)}
+                    tabIndex={0}
+                    role="button"
+                    aria-label="大会記録詳細を表示"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        handleViewRecord(record)
+                      }
+                    }}
+                  >
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {(record.competition as Competition)?.date ? format(new Date((record.competition as Competition).date), 'MM/dd', { locale: ja }) : '-'}
                     </td>
@@ -626,24 +579,15 @@ export default function CompetitionClient({
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {record.pool_type === 1 ? '長水路' : record.pool_type === 0 ? '短水路' : '-'}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
-                      {record.note || '-'}
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleViewRecord(record)}
-                          className="flex items-center space-x-1"
-                        >
-                          <EyeIcon className="h-4 w-4" />
-                          <span>詳細</span>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditRecord(record)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleEditRecord(record)
+                          }}
                           className="flex items-center space-x-1"
                         >
                           <PencilIcon className="h-4 w-4" />
@@ -652,7 +596,10 @@ export default function CompetitionClient({
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleDeleteRecord(record.id)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteRecord(record.id)
+                          }}
                           disabled={isLoading}
                           className="flex items-center space-x-1 text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
