@@ -1,18 +1,23 @@
 'use client'
 
-import React from 'react'
+import React, { useMemo } from 'react'
 import { Button, Input } from '@/components/ui'
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { formatTime } from '@/utils/formatters'
 import { LapTimeDisplay } from '../../LapTimeDisplay'
 import type { EntryInfo } from '@apps/shared/types/ui'
 import type { RecordLogFormState, StyleOption } from '../types'
+import type { BestTime } from '@/types/member-detail'
 
 interface RecordLogEntryProps {
   formData: RecordLogFormState
   index: number
   entryInfo?: EntryInfo
   styles: StyleOption[]
+  /** プールタイプ（0: 短水路, 1: 長水路） */
+  poolType: number
+  /** ユーザーのベストタイム一覧 */
+  bestTimes: BestTime[]
   isLoading: boolean
   onTimeChange: (value: string) => void
   onToggleRelaying: (checked: boolean) => void
@@ -38,6 +43,8 @@ export default function RecordLogEntry({
   index,
   entryInfo,
   styles,
+  poolType,
+  bestTimes,
   isLoading,
   onTimeChange,
   onToggleRelaying,
@@ -59,6 +66,67 @@ export default function RecordLogEntry({
   const currentStyleId = entryInfo ? String(entryInfo.styleId) : formData.styleId
   const currentStyle = styles.find((s) => s.id.toString() === currentStyleId)
   const raceDistance = currentStyle?.distance
+
+  // 現在の種目・プールタイプ・リレーフラグに基づいてベストタイムを取得（優先順位付き）
+  // リレーOFFの場合: 1. 同じ水路・非リレー → 2. 同じ水路・リレー → 3. 異なる水路・非リレー → 4. 異なる水路・リレー
+  // リレーONの場合: 1. 同じ水路・リレー → 2. 同じ水路・非リレー → 3. 異なる水路・リレー → 4. 異なる水路・非リレー
+  const currentBestTime = useMemo((): { time: number; label: string } | null => {
+    if (!currentStyle || !bestTimes.length) return null
+
+    const styleName = currentStyle.nameJp
+    const isRelaying = formData.isRelaying
+    const otherPoolType = poolType === 0 ? 1 : 0
+    const otherPoolLabel = poolType === 0 ? '長水路' : '短水路'
+
+    // 同じ水路のベストタイムを検索
+    const samePool = bestTimes.find((bt) =>
+      bt.style.name_jp === styleName && bt.pool_type === poolType
+    )
+    // 異なる水路のベストタイムを検索
+    const otherPool = bestTimes.find((bt) =>
+      bt.style.name_jp === styleName && bt.pool_type === otherPoolType
+    )
+
+    if (isRelaying) {
+      // リレーONの場合の優先順位
+      // 1. 同じ水路・リレー
+      if (samePool?.relayingTime) {
+        return { time: samePool.relayingTime.time, label: 'ベストタイム(引継)' }
+      }
+      // 2. 同じ水路・非リレー
+      if (samePool && !samePool.is_relaying) {
+        return { time: samePool.time, label: 'ベストタイム' }
+      }
+      // 3. 異なる水路・リレー
+      if (otherPool?.relayingTime) {
+        return { time: otherPool.relayingTime.time, label: `ベストタイム(${otherPoolLabel}引継)` }
+      }
+      // 4. 異なる水路・非リレー
+      if (otherPool && !otherPool.is_relaying) {
+        return { time: otherPool.time, label: `ベストタイム(${otherPoolLabel})` }
+      }
+    } else {
+      // リレーOFFの場合の優先順位
+      // 1. 同じ水路・非リレー
+      if (samePool && !samePool.is_relaying) {
+        return { time: samePool.time, label: 'ベストタイム' }
+      }
+      // 2. 同じ水路・リレー
+      if (samePool?.relayingTime) {
+        return { time: samePool.relayingTime.time, label: 'ベストタイム(引継)' }
+      }
+      // 3. 異なる水路・非リレー
+      if (otherPool && !otherPool.is_relaying) {
+        return { time: otherPool.time, label: `ベストタイム(${otherPoolLabel})` }
+      }
+      // 4. 異なる水路・リレー
+      if (otherPool?.relayingTime) {
+        return { time: otherPool.relayingTime.time, label: `ベストタイム(${otherPoolLabel}引継)` }
+      }
+    }
+
+    return null
+  }, [currentStyle, bestTimes, poolType, formData.isRelaying])
 
   // スプリットタイムを距離でソート
   const sortedSplitTimes = [...formData.splitTimes]
@@ -105,33 +173,34 @@ export default function RecordLogEntry({
     >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <h4 className="text-base font-semibold text-gray-900">
-          記録入力 {sectionIndex}
+          種目 {sectionIndex}
         </h4>
-        {entryInfo && (
-          <div className="text-sm text-blue-800 bg-blue-100 px-3 py-1 rounded-full inline-flex items-center gap-2">
-            <span className="font-medium">{entryInfo.styleName}</span>
-            {entryInfo.entryTime && entryInfo.entryTime > 0 && (
-              <span className="text-blue-700">entry: {formatTime(entryInfo.entryTime)}</span>
-            )}
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {entryInfo && entryInfo.entryTime && entryInfo.entryTime > 0 && (
+            <div className="text-xs text-blue-800 bg-blue-100 px-3 py-1 rounded-full inline-flex items-center gap-2">
+              <span className="text-blue-700">エントリータイム: {formatTime(entryInfo.entryTime)}</span>
+            </div>
+          )}
+          {currentBestTime && (
+            <div className="text-xs text-green-800 bg-green-100 px-3 py-1 rounded-full inline-flex items-center gap-2">
+              <span className="text-green-700">{currentBestTime.label}: {formatTime(currentBestTime.time)}</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* 種目 */}
+      {/* 種目とリレー */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           種目 <span className="text-red-500">*</span>
         </label>
-        {entryInfo ? (
-          <div className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-100 text-gray-700">
-            {entryInfo.styleName}
-          </div>
-        ) : (
+        <div className="flex items-center gap-3">
           <select
-            value={formData.styleId}
+            value={entryInfo ? String(entryInfo.styleId) : formData.styleId}
             onChange={(e) => onStyleChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
             required
+            disabled={!!entryInfo}
             data-testid={`record-style-${sectionIndex}`}
           >
             <option value="">種目を選択</option>
@@ -141,7 +210,20 @@ export default function RecordLogEntry({
               </option>
             ))}
           </select>
-        )}
+          <div className="flex items-center shrink-0">
+            <input
+              type="checkbox"
+              id={`isRelaying-${sectionIndex}`}
+              checked={formData.isRelaying}
+              onChange={(e) => onToggleRelaying(e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              data-testid={`record-relay-${sectionIndex}`}
+            />
+            <label htmlFor={`isRelaying-${sectionIndex}`} className="ml-2 text-sm text-gray-700 whitespace-nowrap">
+              リレー種目
+            </label>
+          </div>
+        </div>
       </div>
 
       {/* タイムとリアクションタイム */}
@@ -154,17 +236,15 @@ export default function RecordLogEntry({
             type="text"
             value={formData.timeDisplayValue}
             onChange={(e) => onTimeChange(e.target.value)}
-            placeholder="例: 1:23.45 または 32.45"
+            placeholder="例: 1:23.45   32.45"
             className="w-full"
             data-testid={`record-time-${sectionIndex}`}
           />
-          <p className="text-xs text-gray-500 mt-1">
-            形式: 分:秒.小数（例: 1:23.45）または 秒.小数（例: 32.45）
-          </p>
         </div>
-        <div className="w-42">
+        <div className="w-20 sm:w-36">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            リアクションタイム
+            <span className="sm:hidden">RT</span>
+            <span className="hidden sm:inline">リアクションタイム</span>
           </label>
           <Input
             type="number"
@@ -180,55 +260,38 @@ export default function RecordLogEntry({
         </div>
       </div>
 
-      {/* リレー */}
-      <div className="flex items-center">
-        <input
-          type="checkbox"
-          id={`isRelaying-${sectionIndex}`}
-          checked={formData.isRelaying}
-          onChange={(e) => onToggleRelaying(e.target.checked)}
-          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-          data-testid={`record-relay-${sectionIndex}`}
-        />
-        <label htmlFor={`isRelaying-${sectionIndex}`} className="ml-2 text-sm text-gray-700">
-          リレー種目
-        </label>
-      </div>
-
       {/* スプリットタイム */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">
             スプリットタイム
           </label>
-          <div className="flex gap-2">
+          <div className="flex gap-1">
             <Button
               type="button"
               onClick={onAddSplitTimesEvery25m}
               variant="outline"
-              className="text-xs"
+              className="text-[10px] px-2 py-1 h-7"
               disabled={isLoading || !raceDistance}
               data-testid={`record-split-add-25m-button-${sectionIndex}`}
             >
-              <PlusIcon className="h-4 w-4 mr-1" />
+              <PlusIcon className="h-3 w-3 mr-0.5" />
               追加(25mごと)
             </Button>
             <Button
               type="button"
               onClick={onAddSplitTime}
               variant="outline"
-              className="text-xs"
+              className="text-[10px] px-2 py-1 h-7"
               disabled={isLoading}
               data-testid={`record-split-add-button-${sectionIndex}`}
             >
-              <PlusIcon className="h-4 w-4 mr-1" />
+              <PlusIcon className="h-3 w-3 mr-0.5" />
               追加
             </Button>
           </div>
         </div>
-        {formData.splitTimes.length === 0 ? (
-          <p className="text-sm text-gray-500">スプリットタイムはありません</p>
-        ) : (
+        {formData.splitTimes.length > 0 && (
           <div className="space-y-2">
             {sortedSplitTimes.map(({ st, originalIndex }, splitIndex) => (
               <div
@@ -256,7 +319,7 @@ export default function RecordLogEntry({
                   onChange={(e) =>
                     onSplitTimeChange(originalIndex, 'splitTime', e.target.value)
                   }
-                  placeholder="例: 28.50 または 0:28.50"
+                  placeholder="例: 28.50"
                   className="flex-1"
                   data-testid={`record-split-time-${sectionIndex}-${originalIndex + 1}`}
                 />

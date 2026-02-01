@@ -107,18 +107,18 @@ export default function TeamCompetitionForm({
 
   return (
     <div className="fixed inset-0 z-60 overflow-y-auto" data-testid="team-competition-modal">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-0 pb-20 text-center sm:block sm:p-0">
+      <div className="flex items-center justify-center min-h-screen pt-4 px-4 sm:px-0 pb-20 text-center sm:block sm:p-0">
         <div
           className="fixed inset-0 bg-black/40 transition-opacity z-10"
           onClick={handleClose}
         />
 
-        <div className="relative z-20 inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full" data-testid="team-competition-dialog">
+        <div className="relative z-20 bg-white rounded-lg text-left shadow-xl transform transition-all sm:my-8 sm:max-w-lg sm:w-full max-h-[90vh] flex flex-col" data-testid="team-competition-dialog">
           {/* ヘッダー */}
-          <div className="bg-white px-3 py-3 sm:px-6 sm:py-4 border-b border-gray-200">
+          <div className="bg-white px-3 py-3 sm:px-6 sm:py-4 border-b border-gray-200 shrink-0">
             <div className="flex items-center justify-between">
               <h3 className="text-base sm:text-lg leading-6 font-medium text-gray-900">
-                チーム大会を追加
+                大会を追加
               </h3>
               <button
                 type="button"
@@ -135,7 +135,8 @@ export default function TeamCompetitionForm({
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-3 sm:p-6 space-y-4 sm:space-y-6" data-testid="team-competition-form">
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden" data-testid="team-competition-form">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
             {/* エラー表示 */}
             {error && (
               <div className="rounded-md bg-red-50 p-4" data-testid="team-competition-error">
@@ -232,9 +233,10 @@ export default function TeamCompetitionForm({
                 data-testid="team-competition-note"
               />
             </div>
+            </div>
 
-            {/* ボタン */}
-            <div className="flex justify-end gap-2 sm:gap-3 pt-4 sm:pt-6 border-t">
+            {/* フッター（固定） */}
+            <div className="shrink-0 bg-white border-t px-3 sm:px-6 py-4 flex justify-end gap-2 sm:gap-3">
               <Button
                 type="button"
                 onClick={handleClose}

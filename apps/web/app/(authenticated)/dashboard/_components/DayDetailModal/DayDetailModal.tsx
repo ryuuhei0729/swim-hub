@@ -240,7 +240,7 @@ export default function DayDetailModal({
                             id: practiceId,
                             type: 'practice' as const,
                             date: item.date || '',
-                            title: '練習',
+                            title: item.title || '練習',
                             place: item.place || '',
                             note: item.note || undefined,
                             metadata: isPracticeMetadata(item.metadata) ? (item.metadata.practice || {}) : {},

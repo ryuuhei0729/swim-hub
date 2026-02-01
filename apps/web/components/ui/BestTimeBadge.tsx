@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts'
+import { formatTime } from '@/utils/formatters'
 
 interface BestTimeBadgeProps {
   recordId: string
@@ -10,11 +11,13 @@ interface BestTimeBadgeProps {
   recordDate?: string | null
   poolType?: number | null
   isRelaying?: boolean
+  showDiff?: boolean // ベストとの差分を表示するか
 }
 
 /**
  * ベストタイム更新チェックバッジ
  * 記録が過去のベストタイムを更新した場合に表示される
+ * showDiff=trueの場合、ベストでない時も差分を表示
  */
 export default function BestTimeBadge({
   recordId,
@@ -22,10 +25,12 @@ export default function BestTimeBadge({
   currentTime,
   recordDate,
   poolType,
-  isRelaying
+  isRelaying,
+  showDiff = false
 }: BestTimeBadgeProps) {
   const { supabase } = useAuth()
   const [isBestTime, setIsBestTime] = useState<boolean | null>(null)
+  const [bestTimeDiff, setBestTimeDiff] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -121,6 +126,13 @@ export default function BestTimeBadge({
         // 以前の記録がない、または現在のタイムが以前のベストより速い場合
         const isBest = previousBestTime === null || currentTime < previousBestTime
         setIsBestTime(isBest)
+
+        // ベストとの差分を計算（ベストでない場合のみ）
+        if (!isBest && previousBestTime !== null) {
+          setBestTimeDiff(currentTime - previousBestTime)
+        } else {
+          setBestTimeDiff(null)
+        }
       } catch (err) {
         console.error('ベストタイムチェックエラー:', err)
         setIsBestTime(null)
@@ -132,14 +144,28 @@ export default function BestTimeBadge({
     checkBestTime()
   }, [recordId, styleId, currentTime, recordDate, poolType, isRelaying, supabase])
 
-  if (loading || isBestTime === null || !isBestTime) {
+  if (loading || isBestTime === null) {
     return null
   }
 
-  return (
-    <div className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-100 border border-yellow-400 rounded-md">
-      <span className="text-xs font-bold text-yellow-800">🏆 Best time！</span>
-    </div>
-  )
+  // ベストタイムの場合
+  if (isBestTime) {
+    return (
+      <span className="inline-flex items-center px-1 py-0.5 bg-yellow-100 border border-yellow-400 rounded text-[9px] sm:text-xs font-bold text-yellow-800 whitespace-nowrap">
+        🏆 Best Time!!
+      </span>
+    )
+  }
+
+  // ベストでない場合、差分を表示（showDiff=trueの場合のみ）
+  if (showDiff && bestTimeDiff !== null && bestTimeDiff > 0) {
+    return (
+      <span className="inline-flex items-center text-[9px] sm:text-xs text-gray-500 whitespace-nowrap">
+        (Best+{formatTime(bestTimeDiff)})
+      </span>
+    )
+  }
+
+  return null
 }
 

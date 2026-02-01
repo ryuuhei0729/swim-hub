@@ -120,12 +120,12 @@ export default function RecordForm({
         ></div>
 
         {/* モーダルコンテンツ */}
-        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-4xl max-h-[90vh] flex flex-col">
           {/* ヘッダー */}
-          <div className="bg-white px-3 py-3 sm:px-6 sm:py-4 border-b border-gray-200">
+          <div className="bg-white px-3 py-3 sm:px-6 sm:py-4 border-b border-gray-200 shrink-0">
             <div className="flex items-center justify-between">
               <h3 className="text-base sm:text-lg leading-6 font-medium text-gray-900">
-                {editData ? '大会記録を編集' : '大会記録を追加'}
+                {editData ? '記録を編集' : '記録を追加'}
               </h3>
               <button
                 type="button"
@@ -138,7 +138,8 @@ export default function RecordForm({
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
             {/* 大会情報 */}
             <RecordBasicInfo
               formData={formData}
@@ -196,9 +197,10 @@ export default function RecordForm({
                 data-testid="tournament-note"
               />
             </div>
+            </div>
 
-            {/* ボタン */}
-            <div className="flex justify-end gap-2 sm:gap-3 pt-4 sm:pt-6 border-t">
+            {/* フッター（固定） */}
+            <div className="shrink-0 bg-white border-t px-4 sm:px-6 py-4 flex justify-end gap-2 sm:gap-3">
               <Button
                 type="button"
                 onClick={handleClose}

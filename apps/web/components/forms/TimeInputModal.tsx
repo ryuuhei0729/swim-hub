@@ -231,7 +231,7 @@ export default function TimeInputModal({
 
   return (
     <div className="fixed inset-0 z-80 overflow-y-auto" data-testid="time-input-modal">
-      <div className="flex min-h-screen items-center justify-center p-4">
+      <div className="flex min-h-screen items-center justify-center px-4 sm:px-0 py-4">
         <div
           className="fixed inset-0 bg-black/40 transition-opacity"
           onClick={handleClose}
@@ -279,7 +279,7 @@ export default function TimeInputModal({
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                       {setTimes.map((timeEntry, repIndex) => {
                         const globalIndex = setIndex * repCount + repIndex
                         return (
@@ -319,10 +319,10 @@ export default function TimeInputModal({
           </div>
 
           {/* フッター */}
-          <div className="bg-gray-50 px-6 py-3 sm:flex sm:flex-row-reverse">
+          <div className="bg-gray-50 px-6 py-3 flex flex-col sm:flex-row-reverse gap-2 sm:gap-3">
             <Button
               onClick={handleSubmit}
-              className="w-full sm:w-auto sm:ml-3"
+              className="w-full sm:w-auto"
               data-testid="save-times-button"
             >
               保存
@@ -331,7 +331,7 @@ export default function TimeInputModal({
               type="button"
               variant="outline"
               onClick={handleClose}
-              className="mt-3 w-full sm:mt-0 sm:w-auto"
+              className="w-full sm:w-auto"
             >
               キャンセル
             </Button>

@@ -15,7 +15,7 @@ function EntryFormComponent({
   return (
     <div className="mt-4">
       <h4 className="text-sm font-semibold text-orange-900 mb-3">
-        {isEditing ? '✏️ エントリーを編集' : '➕ エントリーを追加'}
+        {isEditing ? '✏️ 編集' : '➕ 追加'}
       </h4>
       <div className="space-y-3">
         {/* 種目選択 */}

@@ -256,9 +256,9 @@ export default function PracticeLogForm({
         />
 
         {/* モーダルコンテンツ */}
-        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-4xl max-h-[90vh] flex flex-col">
           {/* ヘッダー */}
-          <div className="bg-white px-6 py-4 border-b border-gray-200 sticky top-0 z-10">
+          <div className="bg-white px-6 py-4 border-b border-gray-200 shrink-0">
             <div className="flex items-center justify-between">
               <h3 className="text-lg leading-6 font-medium text-gray-900">
                 {editData ? '練習記録を編集' : '練習記録を追加'}
@@ -280,11 +280,11 @@ export default function PracticeLogForm({
             )}
           </div>
 
-          <form onSubmit={handleFormSubmit} className="p-6 space-y-6">
+          <form onSubmit={handleFormSubmit} className="flex flex-col flex-1 overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {/* メニューセクション */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="font-medium text-gray-900">練習メニュー</h4>
+              <div className="flex items-center justify-end">
                 <div className="flex gap-2">
                   <Button
                     type="button"
@@ -299,7 +299,7 @@ export default function PracticeLogForm({
                   <Button
                     type="button"
                     onClick={addMenu}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+                    className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
                     disabled={isLoading}
                     data-testid="add-menu-button"
                   >
@@ -325,18 +325,19 @@ export default function PracticeLogForm({
                 />
               ))}
             </div>
+            </div>
 
-            {/* ボタン */}
-            <div className="flex items-center justify-between pt-6 border-t sticky bottom-0 bg-white">
+            {/* フッター（固定） */}
+            <div className="shrink-0 bg-gray-50 px-4 py-3 sm:px-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               {/* テンプレート保存チェックボックス（新規作成時のみ表示） */}
               {!editData ? (
-                <div className="flex items-center">
+                <div className="flex items-center order-2 sm:order-1">
                   <input
                     type="checkbox"
                     id="save-as-template"
                     checked={saveAsTemplate}
                     onChange={(e) => setSaveAsTemplate(e.target.checked)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+                    className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded cursor-pointer"
                     disabled={isLoading}
                   />
                   <label
@@ -347,15 +348,16 @@ export default function PracticeLogForm({
                   </label>
                 </div>
               ) : (
-                <div />
+                <div className="order-2 sm:order-1" />
               )}
 
-              <div className="flex gap-3">
+              <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 order-1 sm:order-2">
                 <Button
                   type="button"
                   onClick={handleClose}
-                  variant="secondary"
+                  variant="outline"
                   disabled={isLoading}
+                  className="w-full sm:w-auto"
                   data-testid="practice-log-cancel-button"
                 >
                   キャンセル
@@ -364,7 +366,7 @@ export default function PracticeLogForm({
                   type="button"
                   disabled={isLoading}
                   onClick={() => void handleSubmit()}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="w-full sm:w-auto"
                   data-testid={
                     editData ? 'update-practice-log-button' : 'save-practice-log-button'
                   }
@@ -374,8 +376,8 @@ export default function PracticeLogForm({
                       ? '更新中...'
                       : '保存中...'
                     : editData
-                      ? '練習記録を更新'
-                      : '練習記録を保存'}
+                      ? '更新'
+                      : '保存'}
                 </Button>
               </div>
             </div>
@@ -457,7 +459,7 @@ export default function PracticeLogForm({
                 <button
                   type="button"
                   onClick={() => setShowTemplateSaveModal(false)}
-                  className="text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-1"
+                  className="text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 rounded-md p-1"
                   aria-label="閉じる"
                 >
                   <XMarkIcon className="h-6 w-6" />
@@ -497,7 +499,7 @@ export default function PracticeLogForm({
                   type="button"
                   onClick={() => void handleTemplateSave()}
                   disabled={!templateName.trim() || isSavingTemplate}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-green-600 hover:bg-green-700"
                 >
                   {isSavingTemplate ? '保存中...' : '保存'}
                 </Button>

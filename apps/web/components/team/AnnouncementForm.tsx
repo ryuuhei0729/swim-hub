@@ -160,9 +160,10 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
         />
 
         {/* モーダルコンテンツ */}
-        <div className="relative inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
-          <div className="bg-white px-6 py-4 sm:p-6 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-4">
+        <div className="relative bg-white rounded-lg text-left shadow-xl transform transition-all sm:my-8 sm:max-w-2xl sm:w-full max-h-[90vh] flex flex-col">
+          {/* ヘッダー */}
+          <div className="shrink-0 bg-white px-6 py-4 border-b border-gray-200">
+            <div className="flex justify-between items-center">
           <h2 className="text-xl font-semibold">
             {editData ? 'お知らせを編集' : '新しいお知らせ'}
           </h2>
@@ -173,8 +174,11 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
           >
             ✕
           </button>
-        </div>
+            </div>
+          </div>
 
+          {/* コンテンツ */}
+          <div className="flex-1 overflow-y-auto px-6 py-4">
         <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
           {/* タイトル */}
           <div>
@@ -229,7 +233,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
                     setErrors({ ...errors, startAt: undefined })
                   }}
               disabled={isLoading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  className="w-full px-3 py-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
             />
               </div>
 
@@ -247,7 +251,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
                     setErrors({ ...errors, endAt: undefined })
                   }}
                   disabled={isLoading}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 ${
+                  className={`w-full px-3 py-3 sm:py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 ${
                     errors.endAt ? 'border-red-500' : 'border-gray-300'
                   }`}
                 />
@@ -258,13 +262,16 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
             )}
           </div>
 
-          {/* ボタン */}
-          <div className="flex items-center gap-3 pt-4">
+        </form>
+          </div>
+
+          {/* フッター（固定） */}
+          <div className="shrink-0 bg-white border-t px-6 py-4 flex flex-col sm:flex-row items-center gap-3">
             <button
               type="button"
               onClick={(e) => handleSubmit(e, false)}
               disabled={isLoading || !title.trim() || !content.trim()}
-              className="mr-auto px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto sm:mr-auto px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? '保存中...' : '下書きとして保存'}
             </button>
@@ -272,7 +279,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
               type="button"
               onClick={handleClose}
               disabled={isLoading}
-              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+              className="w-full sm:w-auto px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
             >
               キャンセル
             </button>
@@ -280,12 +287,10 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
               type="button"
               onClick={(e) => handleSubmit(e, true)}
               disabled={isLoading || !title.trim() || !content.trim()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? '保存中...' : editData ? '公開して更新' : '公開して作成'}
             </button>
-          </div>
-        </form>
           </div>
         </div>
       </div>

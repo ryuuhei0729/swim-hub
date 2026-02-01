@@ -11,10 +11,39 @@ import { formatTime } from '@/utils/formatters'
 import { useAuth } from '@/contexts'
 import { BestTimeBadge } from '@/components/ui'
 import ImageGallery, { GalleryImage } from '@/components/ui/ImageGallery'
-import type { CalendarItem, Record, SplitTime, PoolType } from '@apps/shared/types'
+import type { CalendarItem, Record as RecordType, SplitTime, PoolType } from '@apps/shared/types'
 import { AttendanceButton } from '../AttendanceSection'
 import { RecordSplitTimes } from './RecordSplitTimes'
 import type { CompetitionDetailsProps } from '../../types'
+
+// 種目名を短縮形に変換（例: "200m自由形" → "200Fr"）
+const getShortStyleName = (nameJp: string | undefined, distance?: number): string => {
+  if (!nameJp) return ''
+
+  // 種目コードマッピング
+  const styleMap: Record<string, string> = {
+    '自由形': 'Fr',
+    '背泳ぎ': 'Ba',
+    '平泳ぎ': 'Br',
+    'バタフライ': 'Fly',
+    '個人メドレー': 'IM',
+    'メドレーリレー': 'MR',
+    'フリーリレー': 'FR',
+  }
+
+  // 距離を抽出（例: "200m自由形" → 200）
+  const distMatch = nameJp.match(/(\d+)m/)
+  const dist = distMatch ? distMatch[1] : (distance ? String(distance) : '')
+
+  // 種目名を抽出してコードに変換
+  for (const [jpName, code] of Object.entries(styleMap)) {
+    if (nameJp.includes(jpName)) {
+      return `${dist}${code}`
+    }
+  }
+
+  return nameJp // 変換できない場合はそのまま返す
+}
 
 export function CompetitionDetails({
   competitionId,
@@ -170,10 +199,10 @@ export function CompetitionDetails({
   return (
     <div className="mt-3">
       {/* Competition全体の枠 */}
-      <div className="bg-blue-50 rounded-xl p-3" data-testid="record-detail-modal">
+      <div className="bg-blue-50 rounded-xl px-1 py-3 sm:p-3" data-testid="record-detail-modal">
         {/* Competition全体のヘッダー */}
         <div className="flex items-start justify-between">
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
               <span className={`text-lg font-semibold px-3 py-1 rounded-lg flex items-center gap-2 ${
                 isTeamCompetition
@@ -188,7 +217,7 @@ export function CompetitionDetails({
                 <AttendanceButton onClick={onShowAttendance} />
               )}
             </div>
-            {(place || poolType != null) && (
+            {(place || poolType != null || note) && (
               <div className="text-sm text-gray-700 mb-2 flex flex-wrap items-center gap-3">
                 {place && (
                   <span className="flex items-center gap-1" data-testid="competition-place-display">
@@ -202,12 +231,13 @@ export function CompetitionDetails({
                     {_getPoolTypeText(poolType)}
                   </span>
                 )}
+                {note && (
+                  <span className="flex items-center gap-1 break-all">
+                    <span className="shrink-0">📝</span>
+                    {note}
+                  </span>
+                )}
               </div>
-            )}
-            {note && (
-              <p className="text-sm text-gray-600 mt-2">
-                💭 {note}
-              </p>
             )}
           </div>
           <div className="flex items-center space-x-2 ml-4">
@@ -290,7 +320,7 @@ export function CompetitionDetails({
               }
               if (fullRecord) {
                 const recordData = fullRecord as FullRecord
-                const editData: Record = {
+                const editData: RecordType = {
                   id: recordData.id,
                   user_id: '',
                   competition_id: recordData.competition_id,
@@ -311,12 +341,14 @@ export function CompetitionDetails({
             }
 
             return (
-              <div key={record.id} className="bg-blue-50 rounded-lg p-4">
+              <div key={record.id} className="bg-blue-50 rounded-lg px-1 py-2 sm:p-3">
                 {/* 記録内容 */}
-                <div className="bg-white rounded-lg p-3 mb-3 border border-blue-300 relative">
-                  {/* シェア・編集・削除ボタン（右上） */}
-                  <div className="absolute top-1 right-3 flex flex-col items-end gap-1">
-                    <div className="flex items-center space-x-2">
+                <div className="bg-white rounded-lg p-2 sm:p-3 mb-1 border border-blue-300">
+                  {/* 1行目：ラベルとアイコン */}
+                  <div className="grid grid-cols-[1fr_2fr_1fr] sm:grid-cols-[2fr_2fr_1fr] gap-2 items-center mb-1">
+                    <div className="text-xs font-medium text-gray-500">種目</div>
+                    <div className="text-xs font-medium text-gray-500">タイム</div>
+                    <div className="flex items-center justify-end gap-0.5">
                       <button
                         onClick={() => {
                           const competition = record.metadata?.competition
@@ -342,7 +374,7 @@ export function CompetitionDetails({
                           })
                           setShowShareModal(true)
                         }}
-                        className="p-2 text-gray-500 hover:text-cyan-600 rounded-lg hover:bg-cyan-100 transition-colors"
+                        className="p-1 text-gray-500 hover:text-cyan-600 rounded-lg hover:bg-cyan-100 transition-colors"
                         title="記録をシェア"
                         data-testid="share-record-button"
                       >
@@ -350,7 +382,7 @@ export function CompetitionDetails({
                       </button>
                       <button
                         onClick={openRecordEditor}
-                        className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                        className="p-1 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
                         title="記録を編集"
                         data-testid="edit-record-button"
                       >
@@ -358,50 +390,50 @@ export function CompetitionDetails({
                       </button>
                       <button
                         onClick={() => onDeleteRecord?.(record.id)}
-                        className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                        className="p-1 text-gray-500 hover:text-red-600 rounded-lg hover:bg-red-100 transition-colors"
                         title="記録を削除"
                         data-testid="delete-record-button"
                       >
                         <TrashIcon className="h-4 w-4" />
                       </button>
                     </div>
-                    {record.metadata?.record?.reaction_time != null && typeof record.metadata?.record?.reaction_time === 'number' && (
-                      <span className="text-s text-gray-600 font-normal whitespace-nowrap" data-testid="record-reaction-time-display">
-                        ( RT {record.metadata.record.reaction_time.toFixed(2)} )
-                      </span>
-                    )}
                   </div>
-                  {/* 2行×2列の表構造 */}
-                  <div className="grid grid-cols-[auto_1fr] gap-x-20 gap-y-1 items-end">
-                    {/* 1行目：カラム名 */}
-                    <div className="text-xs font-medium text-gray-500 py-0 leading-tight self-start">種目</div>
-                    <div className="text-xs font-medium text-gray-500 py-0 leading-tight self-start">タイム</div>
-
-                    {/* 2行目：データ */}
-                    <div className="text-xl font-bold text-blue-700 whitespace-nowrap">
-                      {record.metadata?.style?.name_jp || record.metadata?.record?.style?.name_jp || record.title}
-                      {record.metadata?.record?.is_relaying && <span className="font-bold text-red-600 ml-2">R</span>}
+                  {/* 2行目：種目、タイム+Best、リアクションタイム */}
+                  <div className="grid grid-cols-[1fr_2fr_1fr] sm:grid-cols-[2fr_2fr_1fr] gap-2 items-end">
+                    <div className="text-base sm:text-xl font-bold text-blue-700">
+                      <span className="sm:hidden">
+                        {getShortStyleName(
+                          record.metadata?.style?.name_jp || record.metadata?.record?.style?.name_jp,
+                          record.metadata?.style?.distance || record.metadata?.record?.style?.distance
+                        ) || record.title}
+                      </span>
+                      <span className="hidden sm:inline">
+                        {record.metadata?.style?.name_jp || record.metadata?.record?.style?.name_jp || record.title}
+                      </span>
+                      {record.metadata?.record?.is_relaying && <span className="font-bold text-red-600 ml-1">R</span>}
                     </div>
-                    {record.metadata?.record?.time ? (
-                      <div className="flex items-end gap-4">
-                        <div className="relative text-2xl font-bold text-blue-700" data-testid="record-time-display">
-                          <span className="inline-block">{formatTime(record.metadata.record.time)}</span>
-                        </div>
-                        <BestTimeBadge
-                          recordId={record.id}
-                          styleId={(() => {
-                            const id = record.metadata?.style?.id || record.metadata?.record?.style?.id
-                            return typeof id === 'number' ? id : undefined
-                          })()}
-                          currentTime={record.metadata.record.time}
-                          recordDate={record.metadata?.competition?.date}
-                          poolType={record.metadata?.competition?.pool_type ?? record.metadata?.pool_type}
-                          isRelaying={record.metadata?.record?.is_relaying}
-                        />
-                      </div>
-                    ) : (
-                      <div></div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl sm:text-3xl font-bold text-blue-700" data-testid="record-time-display">
+                        {record.metadata?.record?.time ? formatTime(record.metadata.record.time) : '-'}
+                      </span>
+                      <BestTimeBadge
+                        recordId={record.id}
+                        styleId={(() => {
+                          const id = record.metadata?.style?.id || record.metadata?.record?.style?.id
+                          return typeof id === 'number' ? id : undefined
+                        })()}
+                        currentTime={record.metadata?.record?.time || 0}
+                        recordDate={record.metadata?.competition?.date}
+                        poolType={record.metadata?.competition?.pool_type ?? record.metadata?.pool_type}
+                        isRelaying={record.metadata?.record?.is_relaying}
+                        showDiff={true}
+                      />
+                    </div>
+                    <div className="text-xs sm:text-sm text-gray-600 text-right" data-testid="record-reaction-time-display">
+                      {record.metadata?.record?.reaction_time != null && typeof record.metadata?.record?.reaction_time === 'number'
+                        ? `RT ${record.metadata.record.reaction_time.toFixed(2)}`
+                        : ''}
+                    </div>
                   </div>
                 </div>
 

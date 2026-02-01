@@ -141,7 +141,7 @@ export default function RecordSetItem({
                 data-testid={`record-time-${recordIndex + 1}`}
               />
             </div>
-            <div className="w-36">
+            <div className="w-full sm:w-36">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 リアクションタイム
               </label>

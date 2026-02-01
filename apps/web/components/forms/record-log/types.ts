@@ -66,6 +66,8 @@ export interface RecordLogFormProps {
   competitionId: string
   competitionTitle?: string
   competitionDate?: string
+  /** プールタイプ（0: 短水路, 1: 長水路） */
+  poolType?: number
   editData?: RecordLogEditData | null
   isLoading?: boolean
   styles?: StyleOption[]

@@ -73,7 +73,7 @@ export function FormModals({
   styles
 }: FormModalsProps) {
   const { supabase } = useAuth()
-  const [competitionInfo, setCompetitionInfo] = useState<{ title?: string; date?: string } | null>(null)
+  const [competitionInfo, setCompetitionInfo] = useState<{ title?: string; date?: string; poolType?: number } | null>(null)
 
   const {
     isBasicFormOpen: isPracticeBasicFormOpen,
@@ -136,14 +136,15 @@ export function FormModals({
       try {
         const { data, error } = await supabase
           .from('competitions')
-          .select('title, date')
+          .select('title, date, pool_type')
           .eq('id', computedCompetitionId)
           .single()
 
         if (!error && data) {
           setCompetitionInfo({
             title: data.title || undefined,
-            date: data.date || undefined
+            date: data.date || undefined,
+            poolType: data.pool_type ?? undefined
           })
         } else {
           setCompetitionInfo(null)
@@ -209,6 +210,40 @@ export function FormModals({
     
     // competitionEditingDataに情報がない場合は、データベースから取得した情報を使用
     return competitionInfo?.date
+  }, [competitionEditingData, competitionInfo])
+
+  // 大会のプールタイプを取得（competitionEditingDataまたはcompetitionInfoから）
+  const computedPoolType = React.useMemo(() => {
+    if (competitionEditingData && typeof competitionEditingData === 'object') {
+      const data = competitionEditingData as {
+        poolType?: number
+        pool_type?: number
+        metadata?: { competition?: { pool_type?: number } }
+        editData?: { competition?: { pool_type?: number } }
+      }
+
+      // DayDetailModalから渡される場合: editData.competition.pool_type
+      if (data.editData) {
+        const editData = data.editData as { competition?: { pool_type?: number } }
+        if (editData.competition?.pool_type !== undefined) {
+          return editData.competition.pool_type
+        }
+      }
+
+      // その他の場合: metadata.competition.pool_type または poolType/pool_type
+      if (data.metadata?.competition?.pool_type !== undefined) {
+        return data.metadata.competition.pool_type
+      }
+      if (data.poolType !== undefined) {
+        return data.poolType
+      }
+      if (data.pool_type !== undefined) {
+        return data.pool_type
+      }
+    }
+
+    // competitionEditingDataに情報がない場合は、データベースから取得した情報を使用
+    return competitionInfo?.poolType
   }, [competitionEditingData, competitionInfo])
 
   // Entryフォーム初期値を取得するヘルパー関数
@@ -365,8 +400,9 @@ export function FormModals({
           
           // CalendarItem型の場合
           if ('type' in editingData && (editingData.type === 'practice' || editingData.type === 'team_practice')) {
-            const item = editingData as { 
+            const item = editingData as {
               date?: string
+              title?: string
               place?: string
               note?: string
               metadata?: { practice?: { place?: string } }
@@ -374,6 +410,7 @@ export function FormModals({
             }
             return {
               date: item.date,
+              title: item.title || '',
               place: item.place || item.metadata?.practice?.place || '',
               note: item.note || '',
               images: item.editData?.images
@@ -384,12 +421,14 @@ export function FormModals({
           if ('metadata' in editingData && editingData.metadata) {
             const item = editingData as {
               date?: string
+              title?: string
               note?: string
               metadata?: { practice?: { place?: string } }
               editData?: { images?: Array<{ id: string; thumbnailUrl: string; originalUrl: string; fileName: string }> }
             }
             return {
               date: item.date,
+              title: item.title || '',
               place: item.metadata?.practice?.place || '',
               note: item.note || '',
               images: item.editData?.images
@@ -495,22 +534,23 @@ export function FormModals({
         competitionId={computedCompetitionId}
         competitionTitle={computedCompetitionTitle}
         competitionDate={computedCompetitionDate}
+        poolType={computedPoolType}
         isLoading={competitionIsLoading}
         styles={styles.map(s => ({ id: s.id.toString(), nameJp: s.name_jp, distance: s.distance }))}
         editData={(() => {
           if (!competitionEditingData || competitionEditingData === null || typeof competitionEditingData !== 'object') {
             return undefined
           }
-          
+
           if ('type' in competitionEditingData && competitionEditingData.type === 'entry') {
-            const data = competitionEditingData as { 
-              id?: string; 
-              type: string; 
-              styleId?: number; 
-              entryTime?: number; 
-              note?: string 
+            const data = competitionEditingData as {
+              id?: string;
+              type: string;
+              styleId?: number;
+              entryTime?: number;
+              note?: string
             }
-            
+
             return {
               id: data.id,
               styleId: data.styleId,
@@ -518,7 +558,7 @@ export function FormModals({
               note: data.note
             }
           }
-          
+
           return undefined
         })()}
         initialEntries={entryInitialEntries}
@@ -537,6 +577,7 @@ export function FormModals({
         competitionId={computedCompetitionId}
         competitionTitle={computedCompetitionTitle}
         competitionDate={computedCompetitionDate}
+        poolType={computedPoolType}
         editData={(() => {
           if (!competitionEditingData || competitionEditingData === null || typeof competitionEditingData !== 'object' || !('id' in competitionEditingData)) {
             return null
