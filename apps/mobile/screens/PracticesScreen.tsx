@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react'
+import React, { useMemo, useCallback, useState } from 'react'
 import { View, Text, FlatList, StyleSheet, Pressable, RefreshControl, ScrollView } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
@@ -32,15 +32,15 @@ export const PracticesScreen: React.FC = () => {
     toggleTagFilter,
   } = usePracticeFilterStore()
 
-  // デフォルトの日付範囲（過去1年間）
-  const defaultStartDate = useMemo(() => {
+  // デフォルトの日付範囲（過去1年間）- 初期化時に一度だけ計算
+  const [defaultStartDate] = useState(() => {
     const date = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
     return date.toISOString().split('T')[0]
-  }, [])
+  })
 
-  const defaultEndDate = useMemo(() => {
+  const [defaultEndDate] = useState(() => {
     return new Date().toISOString().split('T')[0]
-  }, [])
+  })
 
   const practiceApi = useMemo(() => new PracticeAPI(supabase), [supabase])
   

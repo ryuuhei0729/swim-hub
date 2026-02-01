@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react'
+import React, { useMemo, useState } from 'react'
 import { View, Text, StyleSheet, PanResponder } from 'react-native'
 import { startOfMonth, endOfMonth, eachDayOfInterval, getDay, format } from 'date-fns'
 import { CalendarHeader } from './CalendarHeader'
@@ -63,8 +63,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     return entriesByDate.get(dateKey) || []
   }
 
-  // スワイプジェスチャーの検出
-  const panResponder = useRef(
+  // スワイプジェスチャーの検出（useStateで初期化し、refを使わない）
+  const [panResponder] = useState(() =>
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, gestureState) => {
@@ -86,7 +86,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         }
       },
     })
-  ).current
+  )
 
   return (
     <View style={styles.container} {...panResponder.panHandlers}>
