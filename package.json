@@ -65,7 +65,10 @@
     "tar": "^7.5.4",
     "diff": "^5.2.2",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "@aws-sdk/client-cloudfront": "^3.750.0",
+    "@aws-sdk/client-sts": "^3.750.0",
+    "fast-xml-parser": "^5.3.4"
   },
   "engines": {
     "node": "20.x",
