@@ -179,7 +179,9 @@ describe('TeamAnnouncementsAPI', () => {
     })
 
     it('管理者以外はお知らせを作成できない', async () => {
-      supabaseMock.queueTable('team_memberships', [{ data: { role: 'user' } }])
+      // requireTeamAdminは.eq('role', 'admin')でフィルタするため、
+      // adminでない場合はnullが返る（該当データなし）
+      supabaseMock.queueTable('team_memberships', [{ data: null }])
 
       await expect(
         api.create({
@@ -191,7 +193,7 @@ describe('TeamAnnouncementsAPI', () => {
           end_at: null,
           created_by: 'dummy'
         })
-      ).rejects.toThrow('お知らせの作成権限がありません')
+      ).rejects.toThrow('管理者権限が必要です')
     })
   })
 
@@ -247,10 +249,14 @@ describe('TeamAnnouncementsAPI', () => {
     it('end_atがstart_atより前の場合はエラー', async () => {
       const startDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
       const endDate = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString()
-      // バリデーション用の既存データ取得
+      // updateは複数のクエリを発行する:
+      // 1. team_id取得用
+      // 2. バリデーション用の既存データ取得
       supabaseMock.queueTable('announcements', [
+        { data: { team_id: 'team-1' } },
         { data: { start_at: startDate, end_at: null } }
       ])
+      supabaseMock.queueTable('team_memberships', [{ data: { role: 'admin' } }])
 
       await expect(api.update('announcement-1', { end_at: endDate })).rejects.toThrow(
         '表示終了日時は表示開始日時より後の日時を指定してください'
@@ -267,10 +273,12 @@ describe('TeamAnnouncementsAPI', () => {
 
     it('管理者以外はお知らせを更新できない', async () => {
       supabaseMock.queueTable('announcements', [{ data: { team_id: 'team-1' } }])
-      supabaseMock.queueTable('team_memberships', [{ data: { role: 'user' } }])
+      // requireTeamAdminは.eq('role', 'admin')でフィルタするため、
+      // adminでない場合はnullが返る（該当データなし）
+      supabaseMock.queueTable('team_memberships', [{ data: null }])
 
       await expect(api.update('announcement-1', { title: '更新' })).rejects.toThrow(
-        'お知らせの更新権限がありません'
+        '管理者権限が必要です'
       )
     })
 
@@ -310,9 +318,11 @@ describe('TeamAnnouncementsAPI', () => {
 
     it('管理者以外はお知らせを削除できない', async () => {
       supabaseMock.queueTable('announcements', [{ data: { team_id: 'team-1' } }])
-      supabaseMock.queueTable('team_memberships', [{ data: { role: 'user' } }])
+      // requireTeamAdminは.eq('role', 'admin')でフィルタするため、
+      // adminでない場合はnullが返る（該当データなし）
+      supabaseMock.queueTable('team_memberships', [{ data: null }])
 
-      await expect(api.remove('announcement-1')).rejects.toThrow('お知らせの削除権限がありません')
+      await expect(api.remove('announcement-1')).rejects.toThrow('管理者権限が必要です')
     })
 
     it('未認証の場合はエラーとなる', async () => {

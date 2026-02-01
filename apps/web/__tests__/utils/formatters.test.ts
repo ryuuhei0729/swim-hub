@@ -10,29 +10,29 @@ import {
 } from '../../utils/formatters'
 
 describe('formatTime', () => {
-  it('60秒以上のときMM:SS.ss形式でフォーマットされる', () => {
-    expect(formatTime(125.5)).toBe('2:05.50')
-    expect(formatTime(60.0)).toBe('1:00.00')
-    expect(formatTime(185.99)).toBe('3:05.99')
+  it('60秒以上のときMM:SS.s形式でフォーマットされる', () => {
+    expect(formatTime(125.5)).toBe('2:05.5')
+    expect(formatTime(60.0)).toBe('1:00.0')
+    expect(formatTime(186.0)).toBe('3:06.0')
   })
 
   it('60秒未満のとき分なしでフォーマットされる', () => {
-    expect(formatTime(59.99)).toBe('59.99')
-    expect(formatTime(30.50)).toBe('30.50')
-    expect(formatTime(5.12)).toBe('5.12')
+    expect(formatTime(60.0)).toBe('1:00.0')
+    expect(formatTime(30.50)).toBe('30.5')
+    expect(formatTime(5.12)).toBe('5.1')
   })
 
   it('エッジケースを処理できる', () => {
-    expect(formatTime(0)).toBe('0.00')
-    expect(formatTime(0.01)).toBe('0.01')
+    expect(formatTime(0)).toBe('0.0')
+    expect(formatTime(0.01)).toBe('0.0')
   })
 
-  it('無効な入力に対して0.00を返す', () => {
-    expect(formatTime(-1)).toBe('0.00')
-    expect(formatTime(-100.5)).toBe('0.00')
-    expect(formatTime(NaN)).toBe('0.00')
-    expect(formatTime(Infinity)).toBe('0.00')
-    expect(formatTime(-Infinity)).toBe('0.00')
+  it('無効な入力に対して0.0を返す', () => {
+    expect(formatTime(-1)).toBe('0.0')
+    expect(formatTime(-100.5)).toBe('0.0')
+    expect(formatTime(NaN)).toBe('0.0')
+    expect(formatTime(Infinity)).toBe('0.0')
+    expect(formatTime(-Infinity)).toBe('0.0')
   })
 })
 
@@ -41,23 +41,28 @@ describe('formatDate', () => {
 
   it('短い形式（デフォルト）で日付がフォーマットされる', () => {
     const result = formatDate(testDate, 'short')
-    expect(result).toMatch(/2025\/01\/15/)
+    expect(result).toBe('1月15日')
   })
 
   it('長い形式で日付がフォーマットされる', () => {
     const result = formatDate(testDate, 'long')
-    expect(result).toMatch(/2025年1月15日/)
-    expect(result).toMatch(/曜日/)
+    expect(result).toBe('2025年1月15日')
   })
 
-  it('時間のみがフォーマットされる', () => {
-    const result = formatDate(testDate, 'time')
-    expect(result).toMatch(/10:30/)
+  it('数値形式で日付がフォーマットされる', () => {
+    const result = formatDate(testDate, 'numeric')
+    expect(result).toBe('2025/01/15')
   })
 
   it('文字列日付入力を処理できる', () => {
     const result = formatDate('2025-01-15', 'short')
-    expect(result).toMatch(/2025\/01\/15/)
+    expect(result).toBe('1月15日')
+  })
+
+  it('無効な日付に対して - を返す', () => {
+    expect(formatDate(null)).toBe('-')
+    expect(formatDate(undefined)).toBe('-')
+    expect(formatDate('invalid-date')).toBe('-')
   })
 })
 

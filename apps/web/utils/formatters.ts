@@ -1,33 +1,9 @@
 // 時間関連は共通ユーティリティからre-export
-export { formatTime, parseTime as parseTimeToSeconds } from '@apps/shared/utils/time'
+export { formatTime, formatTimeAverage, formatTimeBest, parseTime as parseTimeToSeconds } from '@apps/shared/utils/time'
 
-// 日付フォーマッター
-export const formatDate = (date: string | Date, format: 'short' | 'long' | 'time' = 'short'): string => {
-  const d = new Date(date)
-  
-  switch (format) {
-    case 'short':
-      return d.toLocaleDateString('ja-JP', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      })
-    case 'long':
-      return d.toLocaleDateString('ja-JP', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        weekday: 'long'
-      })
-    case 'time':
-      return d.toLocaleTimeString('ja-JP', {
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    default:
-      return d.toLocaleDateString('ja-JP')
-  }
-}
+// 日付フォーマッターは共通ユーティリティからre-export
+export { formatDate } from '@apps/shared/utils/date'
+export type { DateStyle } from '@apps/shared/utils/date'
 
 // 数値フォーマッター
 export const formatNumber = (num: number, decimals: number = 0): string => {

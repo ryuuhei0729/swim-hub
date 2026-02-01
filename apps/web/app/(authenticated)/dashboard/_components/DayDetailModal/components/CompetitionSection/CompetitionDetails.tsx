@@ -1,0 +1,467 @@
+'use client'
+
+import React, { useState, useEffect } from 'react'
+import { PencilIcon, TrashIcon, ShareIcon } from '@heroicons/react/24/outline'
+import { TrophyIcon } from '@heroicons/react/24/solid'
+import { format } from 'date-fns'
+import { ja } from 'date-fns/locale'
+import { ShareCardModal } from '@/components/share'
+import type { CompetitionShareData } from '@/components/share'
+import { formatTime } from '@/utils/formatters'
+import { useAuth } from '@/contexts'
+import { BestTimeBadge } from '@/components/ui'
+import ImageGallery, { GalleryImage } from '@/components/ui/ImageGallery'
+import type { CalendarItem, Record, SplitTime, PoolType } from '@apps/shared/types'
+import { AttendanceButton } from '../AttendanceSection'
+import { RecordSplitTimes } from './RecordSplitTimes'
+import type { CompetitionDetailsProps } from '../../types'
+
+export function CompetitionDetails({
+  competitionId,
+  competitionName,
+  place,
+  poolType,
+  note,
+  records: _records = [],
+  onEdit,
+  onDelete,
+  onAddRecord,
+  onEditRecord,
+  onDeleteRecord,
+  onClose,
+  isTeamCompetition = false,
+  teamId,
+  teamName,
+  onShowAttendance
+}: CompetitionDetailsProps) {
+  const { supabase, user } = useAuth()
+  const [actualRecords, setActualRecords] = useState<CalendarItem[]>([])
+  const [competitionImages, setCompetitionImages] = useState<GalleryImage[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [shareRecordData, setShareRecordData] = useState<CompetitionShareData | null>(null)
+
+  useEffect(() => {
+    const loadRecords = async () => {
+      try {
+        setLoading(true)
+
+        // 大会の画像パスを直接取得
+        const { data: competitionData } = await supabase
+          .from('competitions')
+          .select('image_paths')
+          .eq('id', competitionId)
+          .single()
+
+        const competition = competitionData as { image_paths?: string[] | null } | null
+        const imagePaths = competition?.image_paths || []
+        const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL
+        const images: GalleryImage[] = imagePaths.map((path: string, index: number) => {
+          const imageUrl = r2PublicUrl
+            ? `${r2PublicUrl}/competition-images/${path}`
+            : supabase.storage.from('competition-images').getPublicUrl(path).data.publicUrl
+          return {
+            id: path,
+            thumbnailUrl: imageUrl,
+            originalUrl: imageUrl,
+            fileName: path.split('/').pop() || `image-${index + 1}`
+          }
+        })
+        setCompetitionImages(images)
+
+        // recordsを取得
+        let recordQuery = supabase
+          .from('records')
+          .select(`
+              *,
+              style:styles(*),
+              competition:competitions(*),
+              split_times(*)
+            `)
+          .eq('competition_id', competitionId)
+
+        // チーム大会の場合は自分の記録だけを表示
+        if (isTeamCompetition && user?.id) {
+          recordQuery = recordQuery.eq('user_id', user.id)
+        }
+
+        const { data, error } = await recordQuery
+
+        if (error) throw error
+
+        // calendar_view形式に変換
+        type RecordFromDB = {
+          id: string
+          competition_id: string | null
+          style_id: number
+          time: number
+          video_url: string | null
+          note: string | null
+          is_relaying: boolean
+          reaction_time?: number | null
+          competition?: {
+            id: string
+            title: string
+            date: string
+            place: string | null
+            pool_type: number
+          } | null
+          style?: {
+            id: number
+            name_jp: string
+            distance: number
+          } | null
+          split_times?: Array<{
+            id: string
+            record_id: string
+            distance: number
+            split_time: number
+            created_at: string
+          }>
+        }
+        const formattedRecords = ((data || []) as RecordFromDB[]).map((record): CalendarItem => ({
+          id: record.id,
+          type: 'record' as const,
+          date: record.competition?.date || '',
+          title: record.competition?.title || '',
+          place: record.competition?.place || '',
+          note: record.note || undefined,
+          metadata: {
+            record: {
+              time: record.time,
+              is_relaying: record.is_relaying,
+              video_url: record.video_url || undefined,
+              reaction_time: record.reaction_time ?? null,
+              style: record.style ? {
+                id: record.style.id.toString(),
+                name_jp: record.style.name_jp,
+                distance: record.style.distance
+              } : {
+                id: record.style_id.toString(),
+                name_jp: '',
+                distance: 0
+              },
+              competition_id: record.competition_id || undefined,
+              split_times: record.split_times || []
+            },
+            competition: record.competition || undefined,
+            style: record.style || undefined,
+            pool_type: record.competition?.pool_type || 0
+          }
+        }))
+
+        setActualRecords(formattedRecords)
+      } catch (err) {
+        console.error('記録の取得エラー:', err)
+        setActualRecords([])
+        setCompetitionImages([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadRecords()
+  }, [competitionId, supabase, isTeamCompetition, user?.id])
+
+  const _getPoolTypeText = (poolType: number) => {
+    return poolType === 1 ? '長水路(50m)' : '短水路(25m)'
+  }
+
+  return (
+    <div className="mt-3">
+      {/* Competition全体の枠 */}
+      <div className="bg-blue-50 rounded-xl p-3" data-testid="record-detail-modal">
+        {/* Competition全体のヘッダー */}
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <span className={`text-lg font-semibold px-3 py-1 rounded-lg flex items-center gap-2 ${
+                isTeamCompetition
+                  ? 'text-violet-800 bg-violet-200'
+                  : 'text-blue-800 bg-blue-200'
+              }`} data-testid="competition-title-display">
+                <TrophyIcon className="h-5 w-5" />
+                {competitionName || '大会'}
+                {isTeamCompetition && teamName && <span className="text-sm">({teamName})</span>}
+              </span>
+              {isTeamCompetition && teamId && onShowAttendance && (
+                <AttendanceButton onClick={onShowAttendance} />
+              )}
+            </div>
+            {(place || poolType != null) && (
+              <div className="text-sm text-gray-700 mb-2 flex flex-wrap items-center gap-3">
+                {place && (
+                  <span className="flex items-center gap-1" data-testid="competition-place-display">
+                    <span className="text-gray-500">📍</span>
+                    {place}
+                  </span>
+                )}
+                {poolType != null && (
+                  <span className="flex items-center gap-1">
+                    <span className="text-gray-500">🏊‍♀️</span>
+                    {_getPoolTypeText(poolType)}
+                  </span>
+                )}
+              </div>
+            )}
+            {note && (
+              <p className="text-sm text-gray-600 mt-2">
+                💭 {note}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center space-x-2 ml-4">
+            <button
+              onClick={() => onEdit?.(competitionImages)}
+              className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+              title="大会情報を編集"
+              data-testid="edit-competition-button"
+            >
+              <PencilIcon className="h-5 w-5" />
+            </button>
+            <button
+              onClick={onDelete}
+              className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+              title="大会を削除"
+              data-testid="delete-competition-button"
+            >
+              <TrashIcon className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Recordsのコンテナ */}
+        <div className="space-y-3">
+          {/* Loading状態 */}
+          {loading && (
+            <div className="bg-white border-2 border-dashed border-blue-300 rounded-lg p-6 text-center">
+              <div className="text-gray-500">
+                <span className="text-2xl">⏳</span>
+                <p className="text-sm mt-2">記録を読み込み中...</p>
+              </div>
+            </div>
+          )}
+
+          {/* Recordsがない場合 */}
+          {!loading && actualRecords.length === 0 && (
+            <div className="bg-white border-2 border-dashed border-blue-300 rounded-lg p-6 text-center">
+              <button
+                onClick={() => {
+                  onAddRecord?.({ competitionId })
+                  onClose?.()
+                }}
+                className="inline-flex items-center px-4 py-2 border border-blue-300 rounded-lg shadow-sm text-sm font-medium text-blue-700 bg-white hover:bg-blue-50 hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+              >
+                <span className="mr-2">➕</span>
+                大会記録を追加
+              </button>
+            </div>
+          )}
+
+          {/* Recordsがある場合の表示 */}
+          {!loading && actualRecords.map((record, _index: number) => {
+            const openRecordEditor = async () => {
+              const { data: fullRecord } = await supabase
+                .from('records')
+                .select(`
+                  id,
+                  style_id,
+                  time,
+                  video_url,
+                  note,
+                  is_relaying,
+                  reaction_time,
+                  competition_id,
+                  split_times (*)
+                `)
+                .eq('id', record.id)
+                .single()
+
+              type FullRecord = {
+                id: string
+                style_id: number
+                time: number
+                is_relaying: boolean
+                note: string | null
+                video_url: string | null
+                reaction_time?: number | null
+                competition_id: string
+                split_times: SplitTime[]
+              }
+              if (fullRecord) {
+                const recordData = fullRecord as FullRecord
+                const editData: Record = {
+                  id: recordData.id,
+                  user_id: '',
+                  competition_id: recordData.competition_id,
+                  style_id: recordData.style_id,
+                  time: recordData.time,
+                  video_url: recordData.video_url,
+                  note: recordData.note,
+                  is_relaying: recordData.is_relaying,
+                  reaction_time: recordData.reaction_time ?? null,
+                  created_at: '',
+                  updated_at: '',
+                  pool_type: ((record.metadata as { pool_type?: number } | undefined)?.pool_type ?? 0) as PoolType,
+                  split_times: recordData.split_times || []
+                }
+                onEditRecord?.(editData)
+              }
+              onClose?.()
+            }
+
+            return (
+              <div key={record.id} className="bg-blue-50 rounded-lg p-4">
+                {/* 記録内容 */}
+                <div className="bg-white rounded-lg p-3 mb-3 border border-blue-300 relative">
+                  {/* シェア・編集・削除ボタン（右上） */}
+                  <div className="absolute top-1 right-3 flex flex-col items-end gap-1">
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => {
+                          const competition = record.metadata?.competition
+                          const recordData = record.metadata?.record
+                          const style = record.metadata?.style || recordData?.style
+                          setShareRecordData({
+                            competitionName: competitionName || competition?.title || '大会',
+                            date: competition?.date
+                              ? format(new Date(competition.date), 'yyyy年M月d日', { locale: ja })
+                              : record.date
+                              ? format(new Date(record.date), 'yyyy年M月d日', { locale: ja })
+                              : '',
+                            place: place || competition?.place || '',
+                            poolType: (poolType ?? competition?.pool_type) === 1 ? 'long' : 'short',
+                            eventName: style?.name_jp || '',
+                            raceDistance: style?.distance || 0,
+                            time: recordData?.time || 0,
+                            reactionTime: recordData?.reaction_time ?? undefined,
+                            splitTimes: recordData?.split_times,
+                            isBestTime: false,
+                            userName: '',
+                            teamName: teamName,
+                          })
+                          setShowShareModal(true)
+                        }}
+                        className="p-2 text-gray-500 hover:text-cyan-600 rounded-lg hover:bg-cyan-100 transition-colors"
+                        title="記録をシェア"
+                        data-testid="share-record-button"
+                      >
+                        <ShareIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={openRecordEditor}
+                        className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                        title="記録を編集"
+                        data-testid="edit-record-button"
+                      >
+                        <PencilIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => onDeleteRecord?.(record.id)}
+                        className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                        title="記録を削除"
+                        data-testid="delete-record-button"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    </div>
+                    {record.metadata?.record?.reaction_time != null && typeof record.metadata?.record?.reaction_time === 'number' && (
+                      <span className="text-s text-gray-600 font-normal whitespace-nowrap" data-testid="record-reaction-time-display">
+                        ( RT {record.metadata.record.reaction_time.toFixed(2)} )
+                      </span>
+                    )}
+                  </div>
+                  {/* 2行×2列の表構造 */}
+                  <div className="grid grid-cols-[auto_1fr] gap-x-20 gap-y-1 items-end">
+                    {/* 1行目：カラム名 */}
+                    <div className="text-xs font-medium text-gray-500 py-0 leading-tight self-start">種目</div>
+                    <div className="text-xs font-medium text-gray-500 py-0 leading-tight self-start">タイム</div>
+
+                    {/* 2行目：データ */}
+                    <div className="text-xl font-bold text-blue-700 whitespace-nowrap">
+                      {record.metadata?.style?.name_jp || record.metadata?.record?.style?.name_jp || record.title}
+                      {record.metadata?.record?.is_relaying && <span className="font-bold text-red-600 ml-2">R</span>}
+                    </div>
+                    {record.metadata?.record?.time ? (
+                      <div className="flex items-end gap-4">
+                        <div className="relative text-2xl font-bold text-blue-700" data-testid="record-time-display">
+                          <span className="inline-block">{formatTime(record.metadata.record.time)}</span>
+                        </div>
+                        <BestTimeBadge
+                          recordId={record.id}
+                          styleId={(() => {
+                            const id = record.metadata?.style?.id || record.metadata?.record?.style?.id
+                            return typeof id === 'number' ? id : undefined
+                          })()}
+                          currentTime={record.metadata.record.time}
+                          recordDate={record.metadata?.competition?.date}
+                          poolType={record.metadata?.competition?.pool_type ?? record.metadata?.pool_type}
+                          isRelaying={record.metadata?.record?.is_relaying}
+                        />
+                      </div>
+                    ) : (
+                      <div></div>
+                    )}
+                  </div>
+                </div>
+
+                {/* スプリットタイム */}
+                <RecordSplitTimes
+                  recordId={record.id}
+                  raceDistance={record.metadata?.style?.distance || record.metadata?.record?.style?.distance}
+                  recordTime={record.metadata?.record?.time}
+                />
+
+                {/* メモ */}
+                {(record.note) && (
+                  <div className=" rounded-lg p-3 mb-1 border border-slate-200 mt-2">
+                    <div className="text-xs font-medium text-gray-500 mb-1">メモ</div>
+                    <div className="text-sm text-gray-700">
+                      {record.note}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+
+          {/* 「大会記録を追加」ボタン（Recordsがある場合でも表示） */}
+          {actualRecords.length > 0 && (
+            <div className="text-center pt-2">
+              <button
+                onClick={() => {
+                  onAddRecord?.({ competitionId })
+                  onClose?.()
+                }}
+                className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 rounded transition-colors"
+              >
+                <span className="mr-1">➕</span>
+                大会記録を追加
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* 添付画像 */}
+        {competitionImages.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-blue-200">
+            <ImageGallery images={competitionImages} />
+          </div>
+        )}
+      </div>
+
+      {/* シェアカードモーダル */}
+      {showShareModal && shareRecordData && (
+        <ShareCardModal
+          isOpen={showShareModal}
+          onClose={() => {
+            setShowShareModal(false)
+            setShareRecordData(null)
+          }}
+          type="competition"
+          data={shareRecordData}
+        />
+      )}
+    </div>
+  )
+}

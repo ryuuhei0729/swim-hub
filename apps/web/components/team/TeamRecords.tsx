@@ -9,6 +9,7 @@ import {
   UserIcon
 } from '@heroicons/react/24/outline'
 import { formatTime } from '@apps/shared/utils/time'
+import { formatDate } from '@apps/shared/utils/date'
 
 export interface TeamRecord {
   id: string
@@ -232,7 +233,7 @@ export default function TeamRecords({ teamId, isAdmin: _isAdmin = false }: TeamR
                     <span>•</span>
                     <span>{record.competitions.title}</span>
                     <span>•</span>
-                    <span>{new Date(record.competitions.date + 'T00:00:00').toLocaleDateString('ja-JP')}</span>
+                    <span>{formatDate(record.competitions.date, 'numeric')}</span>
                   </>
                 )}
               </div>

@@ -10,7 +10,7 @@ import {
   useRecordsQuery,
   useReplaceSplitTimesMutation,
 } from '@apps/shared/hooks/queries/records'
-import { useRecordFormStore } from '@/stores/recordFormStore'
+import { useRecordFormStore } from '@/stores/recordStore'
 import { StyleAPI } from '@apps/shared/api/styles'
 import { formatTime } from '@/utils/formatters'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'

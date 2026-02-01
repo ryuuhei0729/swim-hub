@@ -1,12 +1,13 @@
 'use client'
 
 import React from 'react'
-import { 
-  UsersIcon, 
-  ClockIcon, 
-  TrophyIcon, 
-  CalendarDaysIcon 
+import {
+  UsersIcon,
+  ClockIcon,
+  TrophyIcon,
+  CalendarDaysIcon
 } from '@heroicons/react/24/outline'
+import { formatDate } from '@apps/shared/utils/date'
 
 export interface TeamStats {
   memberCount: number
@@ -103,7 +104,7 @@ function formatLastActivity(dateString: string): string {
   const now = new Date()
   const diffTime = Math.abs(now.getTime() - date.getTime())
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  
+
   if (diffDays === 1) {
     return '昨日'
   } else if (diffDays <= 7) {
@@ -112,6 +113,6 @@ function formatLastActivity(dateString: string): string {
     const weeks = Math.floor(diffDays / 7)
     return `${weeks}週間前`
   } else {
-    return date.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })
+    return formatDate(dateString, 'short')
   }
 }

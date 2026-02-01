@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
-import { parseISO } from 'date-fns'
+import { formatDate } from '@apps/shared/utils/date'
 import type { CompetitionCardProps } from '@/types/team-entry'
 
 function CompetitionCardComponent({
@@ -25,7 +25,7 @@ function CompetitionCardComponent({
             </h3>
             <div className="flex items-center space-x-3 text-sm text-gray-600 mt-1">
               <span>
-                📅 {parseISO(competition.date).toLocaleDateString('ja-JP')}
+                📅 {formatDate(competition.date, 'numeric')}
               </span>
               {competition.place && <span>📍 {competition.place}</span>}
             </div>

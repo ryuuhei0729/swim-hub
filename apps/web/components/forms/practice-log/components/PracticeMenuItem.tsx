@@ -6,7 +6,7 @@ import { TrashIcon, ClockIcon, ChevronDownIcon } from '@heroicons/react/24/outli
 import TagInput from '../../TagInput'
 import type { PracticeMenu, Tag } from '../types'
 import { SWIM_STYLES, SWIM_CATEGORIES } from '../types'
-import { formatTime } from '@/utils/formatters'
+import { formatTime, formatTimeAverage } from '@/utils/formatters'
 
 interface PracticeMenuItemProps {
   menu: PracticeMenu
@@ -310,7 +310,7 @@ function PracticeTimesDisplay({ menu }: { menu: PracticeMenu }) {
                 return (
                   <td key={setNumber} className="py-2 px-2 text-center">
                     <span className="text-gray-800 font-medium">
-                      {average > 0 ? formatTime(average) : '-'}
+                      {average > 0 ? formatTimeAverage(average) : '-'}
                     </span>
                   </td>
                 )
@@ -336,7 +336,7 @@ function PracticeTimesDisplay({ menu }: { menu: PracticeMenu }) {
                         ? allValidTimes.reduce((sum: number, t) => sum + t.time, 0) /
                           allValidTimes.length
                         : 0
-                    return overallAverage > 0 ? formatTime(overallAverage) : '-'
+                    return overallAverage > 0 ? formatTimeAverage(overallAverage) : '-'
                   })()}
                 </span>
               </td>

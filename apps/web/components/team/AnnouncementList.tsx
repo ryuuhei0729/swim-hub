@@ -7,6 +7,7 @@ import {
 } from '@apps/shared/hooks/queries/announcements'
 import { useAuth } from '@/contexts'
 import type { TeamAnnouncement } from '@/types'
+import { formatDateTime } from '@apps/shared/utils/date'
 
 interface AnnouncementListProps {
   teamId: string
@@ -51,15 +52,6 @@ export const AnnouncementList: React.FC<AnnouncementListProps> = ({
     }
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ja-JP', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
 
   if (loading) {
     return (
@@ -130,7 +122,7 @@ export const AnnouncementList: React.FC<AnnouncementListProps> = ({
                     {announcement.content}
                   </p>
                   <div className="text-xs text-gray-500">
-                    <span>更新: {formatDate(announcement.updated_at)}</span>
+                    <span>更新: {formatDateTime(announcement.updated_at)}</span>
                   </div>
                 </div>
                 

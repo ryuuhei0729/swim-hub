@@ -11,6 +11,7 @@ import {
   UserMinusIcon,
   StarIcon
 } from '@heroicons/react/24/outline'
+import { formatDate } from '@apps/shared/utils/date'
 
 export interface TeamMembersProps {
   teamId: string
@@ -48,7 +49,7 @@ const MemberItem = memo(function MemberItem({ member, isAdmin }: MemberItemProps
             )}
           </div>
           <p className="text-sm text-gray-500">
-            参加日: {new Date(member.joined_at + 'T00:00:00').toLocaleDateString('ja-JP')}
+            参加日: {formatDate(member.joined_at, 'numeric')}
           </p>
         </div>
       </div>

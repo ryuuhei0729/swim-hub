@@ -156,40 +156,44 @@ describe('time utilities', () => {
   // =============================================================================
   describe('formatTime', () => {
     describe('正常系', () => {
-      it('0秒は"0.00"を返す', () => {
-        expect(formatTime(0)).toBe('0.00')
+      it('0秒は"0.0"を返す', () => {
+        expect(formatTime(0)).toBe('0.0')
       })
 
-      it('1分未満の秒数はSS.ms形式を返す', () => {
-        expect(formatTime(30.5)).toBe('30.50')
-        expect(formatTime(59.99)).toBe('59.99')
+      it('1分未満の秒数はSS.m形式を返す', () => {
+        expect(formatTime(30.5)).toBe('30.5')
+        expect(formatTime(59.94)).toBe('59.9')
       })
 
-      it('1分以上の秒数はM:SS.ms形式を返す', () => {
-        expect(formatTime(60)).toBe('1:00.00')
-        expect(formatTime(65.42)).toBe('1:05.42')
-        expect(formatTime(125.5)).toBe('2:05.50')
+      it('59.99秒は60.0秒に丸まるため1:00.0形式を返す', () => {
+        expect(formatTime(59.99)).toBe('1:00.0')
+      })
+
+      it('1分以上の秒数はM:SS.m形式を返す', () => {
+        expect(formatTime(60)).toBe('1:00.0')
+        expect(formatTime(65.42)).toBe('1:05.4')
+        expect(formatTime(125.5)).toBe('2:05.5')
       })
 
       it('10分以上の秒数も正しくフォーマットする', () => {
-        expect(formatTime(600)).toBe('10:00.00')
-        expect(formatTime(3599.99)).toBe('59:59.99')
+        expect(formatTime(600)).toBe('10:00.0')
+        expect(formatTime(3599.99)).toBe('60:00.0')
       })
     })
 
     describe('異常系', () => {
-      it('負の秒数は"0.00"を返す', () => {
-        expect(formatTime(-1)).toBe('0.00')
-        expect(formatTime(-100)).toBe('0.00')
+      it('負の秒数は"0.0"を返す', () => {
+        expect(formatTime(-1)).toBe('0.0')
+        expect(formatTime(-100)).toBe('0.0')
       })
 
-      it('Infinityは"0.00"を返す', () => {
-        expect(formatTime(Infinity)).toBe('0.00')
-        expect(formatTime(-Infinity)).toBe('0.00')
+      it('Infinityは"0.0"を返す', () => {
+        expect(formatTime(Infinity)).toBe('0.0')
+        expect(formatTime(-Infinity)).toBe('0.0')
       })
 
-      it('NaNは"0.00"を返す', () => {
-        expect(formatTime(NaN)).toBe('0.00')
+      it('NaNは"0.0"を返す', () => {
+        expect(formatTime(NaN)).toBe('0.0')
       })
     })
   })
@@ -200,14 +204,18 @@ describe('time utilities', () => {
         expect(formatTimeShort(0)).toBe('')
       })
 
-      it('1分未満の秒数はSS.ms形式を返す', () => {
-        expect(formatTimeShort(30.5)).toBe('30.50')
-        expect(formatTimeShort(59.99)).toBe('59.99')
+      it('1分未満の秒数はSS.m形式を返す', () => {
+        expect(formatTimeShort(30.5)).toBe('30.5')
+        expect(formatTimeShort(59.94)).toBe('59.9')
       })
 
-      it('1分以上の秒数はM:SS.ms形式を返す', () => {
-        expect(formatTimeShort(60)).toBe('1:00.00')
-        expect(formatTimeShort(65.42)).toBe('1:05.42')
+      it('59.99秒は60.0秒に丸まるため1:00.0形式を返す', () => {
+        expect(formatTimeShort(59.99)).toBe('1:00.0')
+      })
+
+      it('1分以上の秒数はM:SS.m形式を返す', () => {
+        expect(formatTimeShort(60)).toBe('1:00.0')
+        expect(formatTimeShort(65.42)).toBe('1:05.4')
       })
     })
 
@@ -228,32 +236,32 @@ describe('time utilities', () => {
 
   describe('formatTimeFull', () => {
     describe('正常系', () => {
-      it('0秒は"0:00.00"を返す', () => {
-        expect(formatTimeFull(0)).toBe('0:00.00')
+      it('0秒は"0:00.0"を返す', () => {
+        expect(formatTimeFull(0)).toBe('0:00.0')
       })
 
       it('1分未満でも分を表示する', () => {
-        expect(formatTimeFull(30.5)).toBe('0:30.50')
-        expect(formatTimeFull(59.99)).toBe('0:59.99')
+        expect(formatTimeFull(30.5)).toBe('0:30.5')
+        expect(formatTimeFull(59.99)).toBe('1:00.0')
       })
 
       it('1分以上の秒数を正しくフォーマットする', () => {
-        expect(formatTimeFull(60)).toBe('1:00.00')
-        expect(formatTimeFull(65.42)).toBe('1:05.42')
+        expect(formatTimeFull(60)).toBe('1:00.0')
+        expect(formatTimeFull(65.42)).toBe('1:05.4')
       })
     })
 
     describe('異常系', () => {
-      it('負の秒数は"0:00.00"を返す', () => {
-        expect(formatTimeFull(-1)).toBe('0:00.00')
+      it('負の秒数は"0:00.0"を返す', () => {
+        expect(formatTimeFull(-1)).toBe('0:00.0')
       })
 
-      it('Infinityは"0:00.00"を返す', () => {
-        expect(formatTimeFull(Infinity)).toBe('0:00.00')
+      it('Infinityは"0:00.0"を返す', () => {
+        expect(formatTimeFull(Infinity)).toBe('0:00.0')
       })
 
-      it('NaNは"0:00.00"を返す', () => {
-        expect(formatTimeFull(NaN)).toBe('0:00.00')
+      it('NaNは"0:00.0"を返す', () => {
+        expect(formatTimeFull(NaN)).toBe('0:00.0')
       })
     })
   })
@@ -321,13 +329,39 @@ describe('time utilities', () => {
         expect(parseTime('invalid')).toBe(0)
       })
 
-      it('コロンが複数ある場合は0を返す', () => {
-        expect(parseTime('1:2:3')).toBe(0)
-      })
-
       it('負の値は0を返す', () => {
         expect(parseTime('-1:23.45')).toBe(0)
         expect(parseTime('-23.45')).toBe(0)
+      })
+    })
+
+    describe('柔軟な区切り文字', () => {
+      it('ハイフン区切りをパースできる（2パーツ: SS-ms）', () => {
+        expect(parseTime('31-2')).toBe(31.20)
+        expect(parseTime('31-20')).toBe(31.20)
+        expect(parseTime('59-99')).toBe(59.99)
+      })
+
+      it('3パーツ形式をパースできる（M-SS-ms）', () => {
+        expect(parseTime('1-05-3')).toBe(65.30)
+        expect(parseTime('1-05-30')).toBe(65.30)
+        expect(parseTime('2-30-50')).toBe(150.50)
+      })
+
+      it('全角文字を区切りとして認識する', () => {
+        expect(parseTime('1：05。30')).toBe(65.30)
+        expect(parseTime('31ー2')).toBe(31.20)
+      })
+
+      it('従来形式との互換性', () => {
+        expect(parseTime('1:23.45')).toBe(83.45)
+        expect(parseTime('23.45')).toBe(23.45)
+        expect(parseTime('30')).toBe(30)
+      })
+
+      it('混合区切り文字をパースできる', () => {
+        expect(parseTime('1:05-3')).toBe(65.30)
+        expect(parseTime('1-05.3')).toBe(65.30)
       })
     })
   })
@@ -425,21 +459,21 @@ describe('time utilities', () => {
       const timeStr = '55.42'
       const seconds = parseTime(timeStr)
       expect(seconds).toBe(55.42)
-      expect(formatTime(seconds)).toBe('55.42')
+      expect(formatTime(seconds)).toBe('55.4')
     })
 
     it('200m個人メドレーのタイムを処理する', () => {
       const timeStr = '2:15.30'
       const seconds = parseTime(timeStr)
       expect(seconds).toBe(135.3)
-      expect(formatTime(seconds)).toBe('2:15.30')
+      expect(formatTime(seconds)).toBe('2:15.3')
     })
 
     it('1500m自由形のタイムを処理する', () => {
       const timeStr = '16:30.00'
       const seconds = parseTime(timeStr)
       expect(seconds).toBe(990)
-      expect(formatTime(seconds)).toBe('16:30.00')
+      expect(formatTime(seconds)).toBe('16:30.0')
     })
 
     it('複数のタイムから最速と平均を計算する', () => {

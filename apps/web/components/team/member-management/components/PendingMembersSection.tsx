@@ -3,6 +3,7 @@
 import React from 'react'
 import { Avatar } from '@/components/ui'
 import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
+import { formatDate } from '@apps/shared/utils/date'
 import type { TeamMember } from '../hooks/useMembers'
 
 interface PendingMembersSectionProps {
@@ -60,7 +61,7 @@ export const PendingMembersSection: React.FC<PendingMembersSectionProps> = ({
                     {pendingMember.users?.name || 'Unknown User'}
                   </p>
                   <p className="text-xs text-gray-500">
-                    申請日: {new Date(pendingMember.created_at || pendingMember.joined_at).toLocaleDateString('ja-JP')}
+                    申請日: {formatDate(pendingMember.created_at || pendingMember.joined_at, 'numeric')}
                   </p>
                 </div>
               </div>

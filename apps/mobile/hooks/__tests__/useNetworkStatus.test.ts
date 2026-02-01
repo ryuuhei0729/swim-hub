@@ -2,7 +2,8 @@
 // useNetworkStatus.test.ts - ネットワーク状態監視フックのユニットテスト
 // =============================================================================
 
-import type { NetInfoState, NetInfoStateType } from '@react-native-community/netinfo'
+import { NetInfoStateType } from '@react-native-community/netinfo'
+import type { NetInfoState } from '@react-native-community/netinfo'
 import NetInfo from '@react-native-community/netinfo'
 import { renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -10,7 +11,7 @@ import { useNetworkStatus } from '../useNetworkStatus'
 
 const createState = (state: Partial<Omit<NetInfoState, 'type'>> & { type?: NetInfoStateType }): NetInfoState =>
   ({
-    type: 'unknown' as NetInfoStateType,
+    type: NetInfoStateType.unknown,
     isConnected: false,
     isInternetReachable: false,
     details: null,
@@ -21,20 +22,20 @@ describe('useNetworkStatus', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     // 静的モックの状態をリセット
-    ;(NetInfo as any)._setState({
+    ;(NetInfo as unknown as { _setState: (state: Partial<NetInfoState>) => void })._setState({
       isConnected: true,
       isInternetReachable: true,
-      type: 'wifi',
+      type: NetInfoStateType.wifi,
     })
   })
 
   it('初期状態を正しく返す', async () => {
     // モック: 接続済み状態を返す
-    ;(NetInfo.fetch as any).mockResolvedValue(
+    vi.mocked(NetInfo.fetch).mockResolvedValue(
       createState({
         isConnected: true,
         isInternetReachable: true,
-        type: 'wifi' as NetInfoStateType,
+        type: NetInfoStateType.wifi,
       })
     )
 
@@ -43,17 +44,17 @@ describe('useNetworkStatus', () => {
     await waitFor(() => {
       expect(result.current.isConnected).toBe(true)
       expect(result.current.isInternetReachable).toBe(true)
-      expect(result.current.type).toBe('wifi')
+      expect(result.current.type).toBe(NetInfoStateType.wifi)
     })
   })
 
   it('オフライン状態を正しく検知する', async () => {
     // モック: オフライン状態を返す
-    ;(NetInfo.fetch as any).mockResolvedValue(
+    vi.mocked(NetInfo.fetch).mockResolvedValue(
       createState({
         isConnected: false,
         isInternetReachable: false,
-        type: 'none' as NetInfoStateType,
+        type: NetInfoStateType.none,
       })
     )
 
@@ -62,7 +63,7 @@ describe('useNetworkStatus', () => {
     await waitFor(() => {
       expect(result.current.isConnected).toBe(false)
       expect(result.current.isInternetReachable).toBe(false)
-      expect(result.current.type).toBe('none')
+      expect(result.current.type).toBe(NetInfoStateType.none)
     })
   })
 
@@ -70,16 +71,16 @@ describe('useNetworkStatus', () => {
     let listener: ((state: NetInfoState) => void) | undefined
 
     // モック: addEventListenerを実装
-    ;(NetInfo.addEventListener as any).mockImplementation((callback: (state: NetInfoState) => void) => {
+    vi.mocked(NetInfo.addEventListener).mockImplementation((callback: (state: NetInfoState) => void) => {
       listener = callback
       return () => {} // unsubscribe関数
     })
 
-    ;(NetInfo.fetch as any).mockResolvedValue(
+    vi.mocked(NetInfo.fetch).mockResolvedValue(
       createState({
         isConnected: true,
         isInternetReachable: true,
-        type: 'wifi' as NetInfoStateType,
+        type: NetInfoStateType.wifi,
       })
     )
 
@@ -94,23 +95,23 @@ describe('useNetworkStatus', () => {
       createState({
         isConnected: false,
         isInternetReachable: false,
-        type: 'none' as NetInfoStateType,
+        type: NetInfoStateType.none,
       })
     )
 
     await waitFor(() => {
       expect(result.current.isConnected).toBe(false)
       expect(result.current.isInternetReachable).toBe(false)
-      expect(result.current.type).toBe('none')
+      expect(result.current.type).toBe(NetInfoStateType.none)
     })
   })
 
   it('isInternetReachableがnullの場合を正しく処理する', async () => {
-    ;(NetInfo.fetch as any).mockResolvedValue(
+    vi.mocked(NetInfo.fetch).mockResolvedValue(
       createState({
         isConnected: true,
         isInternetReachable: null,
-        type: 'cellular' as NetInfoStateType,
+        type: NetInfoStateType.cellular,
       })
     )
 
@@ -119,19 +120,19 @@ describe('useNetworkStatus', () => {
     await waitFor(() => {
       expect(result.current.isConnected).toBe(true)
       expect(result.current.isInternetReachable).toBe(null)
-      expect(result.current.type).toBe('cellular')
+      expect(result.current.type).toBe(NetInfoStateType.cellular)
     })
   })
 
   it('クリーンアップ時にイベントリスナーを解除する', () => {
     const unsubscribe = vi.fn()
-    ;(NetInfo.addEventListener as any).mockReturnValue(unsubscribe)
+    vi.mocked(NetInfo.addEventListener).mockReturnValue(unsubscribe)
 
-    ;(NetInfo.fetch as any).mockResolvedValue(
+    vi.mocked(NetInfo.fetch).mockResolvedValue(
       createState({
         isConnected: true,
         isInternetReachable: true,
-        type: 'wifi' as NetInfoStateType,
+        type: NetInfoStateType.wifi,
       })
     )
 

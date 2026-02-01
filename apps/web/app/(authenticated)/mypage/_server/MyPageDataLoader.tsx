@@ -12,6 +12,7 @@ interface BestTime {
   created_at: string
   pool_type: number // 0: 短水路, 1: 長水路
   is_relaying: boolean
+  note?: string // 備考（一括登録時に使用）
   style: {
     name_jp: string
     distance: number
@@ -25,6 +26,7 @@ interface BestTime {
     id: string
     time: number
     created_at: string
+    note?: string
     competition?: {
       title: string
       date: string
@@ -108,6 +110,7 @@ async function getBestTimes(
       created_at,
       pool_type,
       is_relaying,
+      note,
       styles!records_style_id_fkey (
         name_jp,
         distance
@@ -133,6 +136,7 @@ async function getBestTimes(
     created_at: string
     pool_type: number
     is_relaying: boolean
+    note?: string | null
     styles?: { name_jp: string; distance: number } | null
     competitions?: { title: string; date: string } | null
   }
@@ -144,6 +148,7 @@ async function getBestTimes(
     id: string
     time: number
     created_at: string
+    note?: string
     competition?: {
       title: string
       date: string
@@ -159,12 +164,13 @@ async function getBestTimes(
 
       if (record.is_relaying) {
         // 引き継ぎありのタイム
-        if (!relayingBestTimesByStyleAndPool.has(key) || 
+        if (!relayingBestTimesByStyleAndPool.has(key) ||
             record.time < relayingBestTimesByStyleAndPool.get(key)!.time) {
           relayingBestTimesByStyleAndPool.set(key, {
             id: record.id,
             time: record.time,
             created_at: record.created_at,
+            note: record.note || undefined,
             competition: record.competitions ? {
               title: record.competitions.title,
               date: record.competitions.date
@@ -173,7 +179,7 @@ async function getBestTimes(
         }
       } else {
         // 引き継ぎなしのタイム
-        if (!bestTimesByStyleAndPool.has(key) || 
+        if (!bestTimesByStyleAndPool.has(key) ||
             record.time < bestTimesByStyleAndPool.get(key)!.time) {
           bestTimesByStyleAndPool.set(key, {
             id: record.id,
@@ -181,6 +187,7 @@ async function getBestTimes(
             created_at: record.created_at,
             pool_type: poolType,
             is_relaying: false,
+            note: record.note || undefined,
             style: {
               name_jp: record.styles?.name_jp || 'Unknown',
               distance: record.styles?.distance || 0
@@ -225,6 +232,7 @@ async function getBestTimes(
           created_at: relayingTime.created_at,
           pool_type: poolType,
           is_relaying: true,
+          note: relayingTime.note,
           style: {
             name_jp: record.styles?.name_jp || 'Unknown',
             distance: record.styles?.distance || 0

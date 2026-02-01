@@ -3,7 +3,7 @@
 import React from 'react'
 import { Avatar } from '@/components/ui'
 import { StarIcon, CalendarIcon } from '@heroicons/react/24/outline'
-import { formatTime, formatDate } from '@/utils/formatters'
+import { formatTimeBest, formatDate } from '@/utils/formatters'
 import { differenceInDays, parseISO } from 'date-fns'
 import type { BestTime } from '../../shared/hooks/useMemberBestTimes'
 import type { TeamMember } from '../hooks/useMembers'
@@ -65,7 +65,7 @@ const getDistancesForStyle = (style: string): number[] => {
  * タイム表示用のヘルパー関数
  */
 const getTimeDisplay = (bestTime: BestTime, _includeRelaying: boolean) => {
-  const timeStr = formatTime(bestTime.time)
+  const timeStr = formatTimeBest(bestTime.time)
   const suffixes: string[] = []
 
   // 長水路ならLを追加

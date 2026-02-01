@@ -10,6 +10,7 @@ import {
   EntryUpdate,
   EntryWithDetails
 } from '../types'
+import { requireAuth, requireTeamMembership, requireTeamAdmin } from './auth-utils'
 
 export class EntryAPI {
   constructor(private supabase: SupabaseClient) {}
@@ -22,8 +23,7 @@ export class EntryAPI {
    * 大会別のエントリー一覧取得
    */
   async getEntriesByCompetition(competitionId: string): Promise<EntryWithDetails[]> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
+    await requireAuth(this.supabase)
 
     const { data, error } = await this.supabase
       .from('entries')
@@ -45,8 +45,7 @@ export class EntryAPI {
    * セキュリティのため、常に認証されたユーザー自身のエントリーのみを取得します
    */
   async getEntriesByUser(): Promise<EntryWithDetails[]> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
+    const userId = await requireAuth(this.supabase)
 
     const { data, error } = await this.supabase
       .from('entries')
@@ -57,7 +56,7 @@ export class EntryAPI {
         user:users(*),
         team:teams(*)
       `)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -68,21 +67,7 @@ export class EntryAPI {
    * チーム別のエントリー一覧取得
    */
   async getEntriesByTeam(teamId: string): Promise<EntryWithDetails[]> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
-
-    // チームメンバーシップ確認
-    const { data: membership } = await this.supabase
-      .from('team_memberships')
-      .select('id')
-      .eq('team_id', teamId)
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .single()
-
-    if (!membership) {
-      throw new Error('チームへのアクセス権限がありません')
-    }
+    await requireTeamMembership(this.supabase, teamId)
 
     const { data, error } = await this.supabase
       .from('entries')
@@ -105,8 +90,7 @@ export class EntryAPI {
    * エントリーの所有者またはチーム管理者のみがアクセス可能
    */
   async getEntry(entryId: string): Promise<EntryWithDetails> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
+    const userId = await requireAuth(this.supabase)
 
     const { data, error } = await this.supabase
       .from('entries')
@@ -124,7 +108,7 @@ export class EntryAPI {
 
     // アクセス制御チェック
     // 1. エントリーの所有者かどうかチェック
-    if (data.user_id === user.id) {
+    if (data.user_id === userId) {
       return data as EntryWithDetails
     }
 
@@ -134,7 +118,7 @@ export class EntryAPI {
         .from('team_memberships')
         .select('role')
         .eq('team_id', data.team_id)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('is_active', true)
         .single()
 
@@ -155,14 +139,13 @@ export class EntryAPI {
    * 個人エントリー作成
    */
   async createPersonalEntry(entry: Omit<EntryInsert, 'team_id' | 'user_id'>): Promise<Entry> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
+    const userId = await requireAuth(this.supabase)
 
     const { data, error } = await this.supabase
       .from('entries')
       .insert({
         ...entry,
-        user_id: user.id,
+        user_id: userId,
         team_id: null // 個人エントリー
       })
       .select()
@@ -178,19 +161,18 @@ export class EntryAPI {
    * 一般メンバーは自分のエントリーのみ作成可能
    */
   async createTeamEntry(
-    teamId: string, 
-    userId: string,
+    teamId: string,
+    targetUserId: string,
     entry: Omit<EntryInsert, 'team_id' | 'user_id'>
   ): Promise<Entry> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
+    const currentUserId = await requireAuth(this.supabase)
 
     // チームメンバーシップ確認
     const { data: membership } = await this.supabase
       .from('team_memberships')
       .select('id, role')
       .eq('team_id', teamId)
-      .eq('user_id', user.id)
+      .eq('user_id', currentUserId)
       .eq('is_active', true)
       .single()
 
@@ -200,7 +182,7 @@ export class EntryAPI {
 
     // アクセス制御チェック
     // 管理者以外は自分のエントリーのみ作成可能
-    if (membership.role !== 'admin' && userId !== user.id) {
+    if (membership.role !== 'admin' && targetUserId !== currentUserId) {
       throw new Error('自分のエントリーのみ作成可能です')
     }
 
@@ -209,7 +191,7 @@ export class EntryAPI {
       .insert({
         ...entry,
         team_id: teamId,
-        user_id: userId
+        user_id: targetUserId
       })
       .select()
       .single()
@@ -231,21 +213,7 @@ export class EntryAPI {
       note?: string | null
     }>
   ): Promise<Entry[]> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
-
-    // チーム管理者権限確認
-    const { data: membership } = await this.supabase
-      .from('team_memberships')
-      .select('id, role')
-      .eq('team_id', teamId)
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .single()
-
-    if (!membership || membership.role !== 'admin') {
-      throw new Error('チーム管理者権限が必要です')
-    }
+    await requireTeamAdmin(this.supabase, teamId)
 
     const insertData = entries.map(entry => ({
       team_id: teamId,
@@ -275,8 +243,7 @@ export class EntryAPI {
    * competition_idとuser_idの更新は禁止
    */
   async updateEntry(entryId: string, updates: EntryUpdate): Promise<Entry> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
+    const userId = await requireAuth(this.supabase)
 
     // 1. 既存エントリーを取得
     const { data: existingEntry, error: fetchError } = await this.supabase
@@ -293,7 +260,7 @@ export class EntryAPI {
 
     // 2. アクセス制御チェック
     // エントリーの所有者かどうかチェック
-    if (existingEntry.user_id === user.id) {
+    if (existingEntry.user_id === userId) {
       // 所有者の場合は更新可能
     } else if (existingEntry.team_id) {
       // チームエントリーの場合、チーム管理者かどうかチェック
@@ -301,7 +268,7 @@ export class EntryAPI {
         .from('team_memberships')
         .select('role')
         .eq('team_id', existingEntry.team_id)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('is_active', true)
         .single()
 
@@ -344,8 +311,7 @@ export class EntryAPI {
    * エントリーの所有者またはチーム管理者のみが削除可能
    */
   async deleteEntry(entryId: string): Promise<void> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
+    const userId = await requireAuth(this.supabase)
 
     // 1. 既存エントリーを取得（所有者とチーム情報を含む）
     const { data: existingEntry, error: fetchError } = await this.supabase
@@ -359,7 +325,7 @@ export class EntryAPI {
 
     // 2. アクセス制御チェック
     // エントリーの所有者かどうかチェック
-    if (existingEntry.user_id === user.id) {
+    if (existingEntry.user_id === userId) {
       // 所有者の場合は削除可能
     } else if (existingEntry.team_id) {
       // チームエントリーの場合、チーム管理者かどうかチェック
@@ -367,7 +333,7 @@ export class EntryAPI {
         .from('team_memberships')
         .select('role')
         .eq('team_id', existingEntry.team_id)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('is_active', true)
         .single()
 
@@ -393,8 +359,7 @@ export class EntryAPI {
    * チーム管理者のみが実行可能
    */
   async deleteEntriesByCompetition(competitionId: string): Promise<void> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
+    await requireAuth(this.supabase)
 
     // 1. 大会情報を取得してチームIDを確認
     const { data: comp, error: compError } = await this.supabase
@@ -407,18 +372,7 @@ export class EntryAPI {
     if (!comp?.team_id) throw new Error('チーム大会ではありません')
 
     // 2. チーム管理者権限を確認
-    const { data: membership, error: membershipError } = await this.supabase
-      .from('team_memberships')
-      .select('role')
-      .eq('team_id', comp.team_id)
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .single()
-
-    if (membershipError) throw membershipError
-    if (!membership || membership.role !== 'admin') {
-      throw new Error('管理者権限が必要です')
-    }
+    await requireTeamAdmin(this.supabase, comp.team_id)
 
     // 3. エントリー削除実行
     const { error } = await this.supabase

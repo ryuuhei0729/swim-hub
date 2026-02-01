@@ -1,6 +1,9 @@
 {
   "extends": "../../tools/typescript-config/library.json",
-  "include": ["**/*.ts"],
+  "compilerOptions": {
+    "jsx": "react-jsx"
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules", "dist"]
 }
 

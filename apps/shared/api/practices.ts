@@ -3,7 +3,7 @@
 // Web/Mobile共通で使用するSupabase API関数
 // =============================================================================
 
-import { SupabaseClient } from '@supabase/supabase-js'
+import { SupabaseClient, RealtimePostgresChangesFilter } from '@supabase/supabase-js'
 import {
     Practice,
     PracticeInsert,
@@ -15,6 +15,9 @@ import {
     PracticeUpdate,
     PracticeWithLogs,
 } from '../types'
+
+// Supabaseリアルタイム購読の設定型
+type RealtimeSubscriptionConfig = RealtimePostgresChangesFilter<'*'>
 
 export class PracticeAPI {
   constructor(private supabase: SupabaseClient) {}
@@ -371,16 +374,18 @@ export class PracticeAPI {
    * @param userId - (オプション) ユーザーIDでフィルタリング。指定した場合、該当ユーザーのみの変更を受信
    */
   subscribeToPractices(callback: (practice: Practice) => void, userId?: string) {
-    const config: any = {
-      event: '*',
-      schema: 'public',
-      table: 'practices'
-    }
-
-    // ユーザーIDでフィルタリング (帯域幅削減)
-    if (userId) {
-      config.filter = `user_id=eq.${userId}`
-    }
+    const config: RealtimeSubscriptionConfig = userId
+      ? {
+          event: '*',
+          schema: 'public',
+          table: 'practices',
+          filter: `user_id=eq.${userId}`
+        }
+      : {
+          event: '*',
+          schema: 'public',
+          table: 'practices'
+        }
 
     return this.supabase
       .channel('practices-changes')

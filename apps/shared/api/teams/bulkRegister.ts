@@ -4,6 +4,7 @@
 
 import { SupabaseClient } from '@supabase/supabase-js'
 import { CompetitionInsert, PracticeInsert } from '../../types'
+import { requireAuth, requireTeamAdmin } from '../auth-utils'
 
 export interface BulkRegisterInput {
   practices: Array<{
@@ -36,27 +37,8 @@ export class TeamBulkRegisterAPI {
    * CompetitionとPracticeを一括登録
    */
   async bulkRegister(teamId: string, input: BulkRegisterInput): Promise<BulkRegisterResult> {
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) {
-      throw new Error('認証が必要です')
-    }
-
-    // チーム管理者権限確認
-    const { data: membership, error: membershipError } = await this.supabase
-      .from('team_memberships')
-      .select('id, role')
-      .eq('team_id', teamId)
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .single()
-
-    if (membershipError || !membership) {
-      throw new Error('チームメンバーシップが見つかりません')
-    }
-
-    if (membership.role !== 'admin') {
-      throw new Error('チーム管理者権限が必要です')
-    }
+    const userId = await requireAuth(this.supabase)
+    await requireTeamAdmin(this.supabase, teamId)
 
     const errors: string[] = []
     let practicesCreated = 0
@@ -66,7 +48,7 @@ export class TeamBulkRegisterAPI {
     if (input.practices.length > 0) {
       try {
         const practiceInserts: PracticeInsert[] = input.practices.map(practice => ({
-          user_id: user.id,
+          user_id: userId,
           date: practice.date,
           title: practice.title || null,
           place: practice.place || null,
@@ -93,7 +75,7 @@ export class TeamBulkRegisterAPI {
     if (input.competitions.length > 0) {
       try {
         const competitionInserts: CompetitionInsert[] = input.competitions.map(competition => ({
-          user_id: user.id,
+          user_id: userId,
           team_id: teamId,
           title: competition.title || null,
           date: competition.date,

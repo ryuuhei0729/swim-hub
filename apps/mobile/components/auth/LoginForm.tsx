@@ -171,8 +171,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
             style={styles.linkContainer}
             onPress={() => {
               // Phase 3でナビゲーションを実装予定
-              // 現時点では暫定的にログに出力
-              console.log('パスワードリセット画面へ遷移（Phase 3で実装予定）')
+              // navigation.navigate('ResetPassword')
             }}
           >
             <Text style={styles.linkText}>パスワードを忘れた方はこちら</Text>

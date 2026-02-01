@@ -83,23 +83,12 @@ export const CompetitionBasicFormScreen: React.FC = () => {
         }
 
         if (competition) {
-          console.log('取得した大会データ:', competition)
           setDate(competition.date)
           setEndDate(competition.end_date || '')
           setTitle(competition.title || '')
           setPlace(competition.place || '')
           setPoolType(competition.pool_type ?? 0)
           setNote(competition.note || '')
-          console.log('フォーム状態を更新:', {
-            date: competition.date,
-            endDate: competition.end_date || '',
-            title: competition.title || '',
-            place: competition.place || '',
-            poolType: competition.pool_type ?? 0,
-            note: competition.note || '',
-          })
-        } else {
-          console.log('大会データが見つかりませんでした')
         }
       } catch (error) {
         if (!isMounted) return

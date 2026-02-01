@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
+import { addMonthsImmutable, formatDate, toISODateString } from '@apps/shared/utils/date'
 import { useAuth } from '@/contexts'
 import { TeamAnnouncements } from '@/components/team'
 import type { TeamMembership, Team } from '@apps/shared/types'
@@ -53,10 +52,9 @@ export default function TeamAnnouncementsSection({
       try {
         // 直近1ヶ月の日付範囲を計算（今日～1ヶ月後）
         const now = new Date()
-        const oneMonthLater = new Date(now)
-        oneMonthLater.setMonth(oneMonthLater.getMonth() + 1)
-        const startDateStr = format(now, 'yyyy-MM-dd')
-        const endDateStr = format(oneMonthLater, 'yyyy-MM-dd')
+        const oneMonthLater = addMonthsImmutable(now, 1)
+        const startDateStr = toISODateString(now)
+        const endDateStr = toISODateString(oneMonthLater)
 
         // 出欠未回答情報を取得
         const unansweredList: UnansweredAttendance[] = []
@@ -276,7 +274,7 @@ export default function TeamAnnouncementsSection({
                             <span>{entry.competitionName}</span>
                             {' '}
                             <span className="text-gray-500">
-                              ({format(new Date(entry.competitionDate), 'M月d日', { locale: ja })})
+                              ({formatDate(entry.competitionDate, 'short')})
                             </span>
                           </button>
                         </li>

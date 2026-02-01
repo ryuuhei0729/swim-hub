@@ -24,11 +24,8 @@ export default function ContactPage() {
     setIsSubmitting(true)
     setSubmitStatus('idle')
 
-    // 実際の実装では、ここでAPIエンドポイントに送信
-    // 現在はプレースホルダーとして、コンソールに出力
+    // TODO: 実際の実装では、ここでAPIエンドポイントに送信
     try {
-      console.log('お問い合わせ内容:', formData)
-      
       // シミュレーション: 送信処理
       await new Promise(resolve => setTimeout(resolve, 1000))
       

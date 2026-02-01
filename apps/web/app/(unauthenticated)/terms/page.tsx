@@ -1,6 +1,7 @@
 import React from 'react'
 import Link from 'next/link'
 import { ArrowLeftIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
+import { formatDate } from '@apps/shared/utils/date'
 
 export const metadata = {
   title: '利用規約 | SwimHub',
@@ -25,7 +26,7 @@ export default function TermsPage() {
             <h1 className="text-3xl font-bold text-gray-900">利用規約</h1>
           </div>
           <p className="text-sm text-gray-500">
-            最終更新日: {new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}
+            最終更新日: {formatDate(new Date(), 'long')}
           </p>
         </div>
 

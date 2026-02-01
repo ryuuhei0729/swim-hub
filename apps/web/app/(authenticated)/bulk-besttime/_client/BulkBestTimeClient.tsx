@@ -4,6 +4,7 @@ import React, { useState, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts'
 import { RecordAPI } from '@apps/shared/api/records'
+import { parseTime } from '@apps/shared/utils/time'
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
@@ -92,76 +93,6 @@ const POOL_TYPES = [
 // =============================================================================
 
 /**
- * タイム文字列を秒数に変換
- */
-function parseTimeToSeconds(timeStr: string): number | null {
-  if (!timeStr || typeof timeStr !== 'string') return null
-  
-  const cleanStr = timeStr.trim()
-  if (!cleanStr) return null
-  
-  // 形式1: m:ss.00 または mm:ss.00
-  const colonFormat2Decimal = /^(\d{1,2}):(\d{2})\.(\d{2})$/
-  const colonMatch2Decimal = cleanStr.match(colonFormat2Decimal)
-  if (colonMatch2Decimal) {
-    const minutes = parseInt(colonMatch2Decimal[1], 10)
-    const seconds = parseInt(colonMatch2Decimal[2], 10)
-    const centiseconds = parseInt(colonMatch2Decimal[3], 10)
-    if (seconds >= 60) return null
-    return minutes * 60 + seconds + centiseconds / 100
-  }
-  
-  // 形式2: m:ss.0 または mm:ss.0
-  const colonFormat1Decimal = /^(\d{1,2}):(\d{2})\.(\d{1})$/
-  const colonMatch1Decimal = cleanStr.match(colonFormat1Decimal)
-  if (colonMatch1Decimal) {
-    const minutes = parseInt(colonMatch1Decimal[1], 10)
-    const seconds = parseInt(colonMatch1Decimal[2], 10)
-    const deciseconds = parseInt(colonMatch1Decimal[3], 10)
-    if (seconds >= 60) return null
-    return minutes * 60 + seconds + deciseconds / 10
-  }
-  
-  // 形式3: m:ss または mm:ss
-  const colonFormatNoDecimal = /^(\d{1,2}):(\d{2})$/
-  const colonMatchNoDecimal = cleanStr.match(colonFormatNoDecimal)
-  if (colonMatchNoDecimal) {
-    const minutes = parseInt(colonMatchNoDecimal[1], 10)
-    const seconds = parseInt(colonMatchNoDecimal[2], 10)
-    if (seconds >= 60) return null
-    return minutes * 60 + seconds
-  }
-  
-  // 形式4: ss.00
-  const simpleFormat2Decimal = /^(\d{1,2})\.(\d{2})$/
-  const simpleMatch2Decimal = cleanStr.match(simpleFormat2Decimal)
-  if (simpleMatch2Decimal) {
-    const totalSeconds = parseInt(simpleMatch2Decimal[1], 10)
-    const centiseconds = parseInt(simpleMatch2Decimal[2], 10)
-    return totalSeconds + centiseconds / 100
-  }
-  
-  // 形式5: ss.0
-  const simpleFormat1Decimal = /^(\d{1,2})\.(\d{1})$/
-  const simpleMatch1Decimal = cleanStr.match(simpleFormat1Decimal)
-  if (simpleMatch1Decimal) {
-    const totalSeconds = parseInt(simpleMatch1Decimal[1], 10)
-    const deciseconds = parseInt(simpleMatch1Decimal[2], 10)
-    return totalSeconds + deciseconds / 10
-  }
-  
-  // 形式6: ss
-  const simpleFormatNoDecimal = /^(\d{1,2})$/
-  const simpleMatchNoDecimal = cleanStr.match(simpleFormatNoDecimal)
-  if (simpleMatchNoDecimal) {
-    const totalSeconds = parseInt(simpleMatchNoDecimal[1], 10)
-    return totalSeconds
-  }
-  
-  return null
-}
-
-/**
  * style_idを取得
  */
 function getStyleId(styleCode: string, distance: number): number | null {
@@ -232,9 +163,9 @@ export default function BulkBestTimeClient() {
     // タイムが変更された場合、バリデーション
     if (field === 'time') {
       if (value.trim()) {
-        const timeInSeconds = parseTimeToSeconds(value)
-        if (timeInSeconds === null || timeInSeconds <= 0) {
-          updated.error = 'タイム形式が不正です（例: 1:23.45 または 23.45）'
+        const timeInSeconds = parseTime(value)
+        if (timeInSeconds <= 0) {
+          updated.error = 'タイム形式が不正です（例: 1:23.45 または 31-2）'
           updated.timeInSeconds = undefined
         } else {
           updated.error = undefined
