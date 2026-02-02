@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { TrashIcon, PencilIcon } from '@heroicons/react/24/outline'
-import { formatTime } from '@/utils/formatters'
+import { formatTimeBest } from '@/utils/formatters'
 import { useAuth } from '@/contexts'
 import { GoalAPI } from '@apps/shared/api/goals'
 import type { Goal } from '@apps/shared/types'
@@ -144,7 +144,7 @@ export default function GoalList({
 
             <div className="mt-3">
               <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-                <span>目標: {formatTime(goal.target_time)}</span>
+                <span>目標: {formatTimeBest(goal.target_time)}</span>
                 <span>{progress.toFixed(0)}%</span>
               </div>
               <ProgressBar progress={progress} />

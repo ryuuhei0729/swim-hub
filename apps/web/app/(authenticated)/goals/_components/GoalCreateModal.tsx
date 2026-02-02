@@ -6,7 +6,7 @@ import { Button } from '@/components/ui'
 import { useAuth } from '@/contexts'
 import { GoalAPI } from '@apps/shared/api/goals'
 import { RecordAPI } from '@apps/shared/api/records'
-import { parseTimeToSeconds, formatTime } from '@/utils/formatters'
+import { parseTimeToSeconds, formatTimeBest } from '@/utils/formatters'
 import type { Style, Competition } from '@apps/shared/types'
 import { format } from 'date-fns'
 import GoalForm from './forms/GoalForm'
@@ -71,7 +71,7 @@ export default function GoalCreateModal({
       const bestTime = bestTimes.find(bt => bt.style.name_jp === selectedStyle.name_jp)
 
       if (bestTime) {
-        setStartTime(formatTime(bestTime.time))
+        setStartTime(formatTimeBest(bestTime.time))
         setUseBestTime(true)
       } else {
         alert('この種目のベストタイムが見つかりませんでした')

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { CheckCircleIcon, ClockIcon, ExclamationTriangleIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
-import { formatTime } from '@/utils/formatters'
+import { formatTimeBest } from '@/utils/formatters'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { useAuth } from '@/contexts'
@@ -46,11 +46,11 @@ export default function MilestoneList({
 
   const formatMilestoneTitle = (milestone: Milestone): string => {
     if (isMilestoneTimeParams(milestone.params)) {
-      return `${milestone.params.distance}m × 1本: ${formatTime(milestone.params.target_time)}`
+      return `${milestone.params.distance}m × 1本: ${formatTimeBest(milestone.params.target_time)}`
     } else if (isMilestoneRepsTimeParams(milestone.params)) {
-      return `${milestone.params.distance}m × ${milestone.params.reps}本 @${formatTime(milestone.params.target_average_time)} 平均`
+      return `${milestone.params.distance}m × ${milestone.params.reps}本 @${formatTimeBest(milestone.params.target_average_time)} 平均`
     } else if (isMilestoneSetParams(milestone.params)) {
-      return `${milestone.params.distance}m × ${milestone.params.reps}本 × ${milestone.params.sets}セット (@${formatTime(milestone.params.circle)}サークル) 完遂`
+      return `${milestone.params.distance}m × ${milestone.params.reps}本 × ${milestone.params.sets}セット (@${formatTimeBest(milestone.params.circle)}サークル) 完遂`
     }
     return milestone.title
   }

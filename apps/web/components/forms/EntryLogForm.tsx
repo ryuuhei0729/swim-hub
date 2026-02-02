@@ -11,7 +11,7 @@ const COMPETITION_STEPS = [
   { id: 'entry', label: 'エントリー', description: '種目・タイム' },
   { id: 'record', label: '記録入力', description: '結果・スプリット' }
 ]
-import { formatTime, formatTimeShort, parseTime } from '@apps/shared/utils/time'
+import { formatTimeBest, formatTimeShort, parseTime } from '@apps/shared/utils/time'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { useBestTimes } from '@/hooks/useBestTimes'
@@ -218,7 +218,7 @@ export default function EntryLogForm({
           entryTime: entry.entryTime || 0,
           entryTimeDisplayValue:
             entry.entryTimeDisplayValue ??
-            (entry.entryTime && entry.entryTime > 0 ? formatTime(entry.entryTime) : ''),
+            (entry.entryTime && entry.entryTime > 0 ? formatTimeBest(entry.entryTime) : ''),
           note: entry.note || ''
         }))
     } else if (editData) {
@@ -241,7 +241,7 @@ export default function EntryLogForm({
               entryTime: entry.entryTime ?? entry.entry_time ?? 0,
               entryTimeDisplayValue:
                 entry.entryTime ?? entry.entry_time
-                  ? formatTime(Number(entry.entryTime ?? entry.entry_time))
+                  ? formatTimeBest(Number(entry.entryTime ?? entry.entry_time))
                   : '',
               note: entry.note || ''
             }))
@@ -253,7 +253,7 @@ export default function EntryLogForm({
             id: editData.id || '1',
             styleId: String(editData.style_id || editData.styleId || styles[0]?.id || ''),
             entryTime: editData.entry_time || 0,
-            entryTimeDisplayValue: editData.entry_time ? formatTime(editData.entry_time) : '',
+            entryTimeDisplayValue: editData.entry_time ? formatTimeBest(editData.entry_time) : '',
             note: editData.note || ''
           }
         ]
@@ -504,7 +504,7 @@ export default function EntryLogForm({
                         />
                         {getBestTimeForStyle(entry.styleId) && (
                           <p className="text-xs text-gray-500 mt-1">
-                            {getBestTimeForStyle(entry.styleId)!.label}: {formatTime(getBestTimeForStyle(entry.styleId)!.time)}
+                            {getBestTimeForStyle(entry.styleId)!.label}: {formatTimeBest(getBestTimeForStyle(entry.styleId)!.time)}
                           </p>
                         )}
                       </div>

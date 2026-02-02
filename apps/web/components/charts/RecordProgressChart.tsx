@@ -14,7 +14,7 @@ import {
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import type { Record, Competition } from '@apps/shared/types'
-import { formatTime } from '@/utils/formatters'
+import { formatTimeBest } from '@/utils/formatters'
 
 // カスタムツールチップ（コンポーネント外に定義）
 const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ value?: number; name?: string; color?: string; payload?: { dateLabel?: string } }> }) => {
@@ -28,7 +28,7 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<
           if (!entry.value) return null
           return (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
-              {`${entry.name}: ${formatTime(entry.value)}`}
+              {`${entry.name}: ${formatTimeBest(entry.value)}`}
             </p>
           )
         })}
@@ -176,7 +176,7 @@ export default function RecordProgressChart({
 
   // カスタムY軸フォーマッター（秒を分:秒形式に変換）
   const formatYAxis = (value: number) => {
-    return formatTime(value)
+    return formatTimeBest(value)
   }
 
   if (!selectedStyleId) {

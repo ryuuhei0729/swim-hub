@@ -8,7 +8,7 @@ import { ArrowLeftIcon, PlusIcon, TrashIcon, CalendarDaysIcon, MapPinIcon, UserG
 import { Competition, Style } from '@apps/shared/types'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { formatTime, parseTimeToSeconds } from '@/utils/formatters'
+import { formatTimeBest, parseTimeToSeconds } from '@/utils/formatters'
 import { LapTimeDisplay } from '@/components/forms/LapTimeDisplay'
 
 interface TeamMember {
@@ -142,7 +142,7 @@ export default function RecordClient({
         memberUserId: record.user_id,
         memberName: record.users?.name || 'Unknown',
         time: record.time,
-        timeDisplayValue: formatTime(record.time),
+        timeDisplayValue: formatTimeBest(record.time),
         reactionTime: record.reaction_time?.toString() || '',
         isRelaying: record.is_relaying,
         note: record.note || '',
@@ -150,7 +150,7 @@ export default function RecordClient({
           id: st.id || String(idx + 1),
           distance: st.distance,
           splitTime: st.split_time,
-          displayValue: formatTime(st.split_time)
+          displayValue: formatTimeBest(st.split_time)
         }))
       })
     }
@@ -272,7 +272,7 @@ export default function RecordClient({
               // 既存のsplit-timeを更新
               updatedSplitTimes = updatedSplitTimes.map((st, idx) =>
                 idx === existingSplitIndex
-                  ? { ...st, splitTime: newTime, displayValue: formatTime(newTime) }
+                  ? { ...st, splitTime: newTime, displayValue: formatTimeBest(newTime) }
                   : st
               )
             } else {
@@ -283,7 +283,7 @@ export default function RecordClient({
                   id: Date.now().toString(),
                   distance: raceDistance,
                   splitTime: newTime,
-                  displayValue: formatTime(newTime)
+                  displayValue: formatTimeBest(newTime)
                 }
               ]
             }
@@ -427,7 +427,7 @@ export default function RecordClient({
               ...mr,
               splitTimes: updatedSplitTimes,
               time: updatedSplit.splitTime,
-              timeDisplayValue: updatedSplit.displayValue || formatTime(updatedSplit.splitTime)
+              timeDisplayValue: updatedSplit.displayValue || formatTimeBest(updatedSplit.splitTime)
             }
           }
 

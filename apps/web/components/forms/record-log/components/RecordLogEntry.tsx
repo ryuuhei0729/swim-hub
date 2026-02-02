@@ -3,7 +3,7 @@
 import React, { useMemo } from 'react'
 import { Button, Input } from '@/components/ui'
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
-import { formatTime } from '@/utils/formatters'
+import { formatTimeBest } from '@/utils/formatters'
 import { LapTimeDisplay } from '../../LapTimeDisplay'
 import type { EntryInfo } from '@apps/shared/types/ui'
 import type { RecordLogFormState, StyleOption } from '../types'
@@ -178,12 +178,12 @@ export default function RecordLogEntry({
         <div className="flex flex-wrap items-center gap-2">
           {entryInfo && entryInfo.entryTime && entryInfo.entryTime > 0 && (
             <div className="text-xs text-blue-800 bg-blue-100 px-3 py-1 rounded-full inline-flex items-center gap-2">
-              <span className="text-blue-700">エントリータイム: {formatTime(entryInfo.entryTime)}</span>
+              <span className="text-blue-700">エントリータイム: {formatTimeBest(entryInfo.entryTime)}</span>
             </div>
           )}
           {currentBestTime && (
             <div className="text-xs text-green-800 bg-green-100 px-3 py-1 rounded-full inline-flex items-center gap-2">
-              <span className="text-green-700">{currentBestTime.label}: {formatTime(currentBestTime.time)}</span>
+              <span className="text-green-700">{currentBestTime.label}: {formatTimeBest(currentBestTime.time)}</span>
             </div>
           )}
         </div>

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
-import { formatTime } from '@/utils/formatters'
+import { formatTimeBest } from '@/utils/formatters'
 import { useAuth } from '@/contexts'
 import { EntryAPI } from '@swim-hub/shared'
 import { useRouter } from 'next/navigation'
@@ -291,7 +291,7 @@ export function CompetitionWithEntry({
                         <div className="flex items-baseline gap-2">
                           <span className="font-semibold text-orange-900 min-w-[72px]">エントリータイム:</span>
                           <span className="text-gray-900 font-mono font-semibold">
-                            {formatTime(entry.entryTime)}
+                            {formatTimeBest(entry.entryTime)}
                           </span>
                         </div>
                       )}

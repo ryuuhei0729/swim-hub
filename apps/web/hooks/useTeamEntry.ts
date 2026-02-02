@@ -12,7 +12,7 @@ import type {
   EntryFormData,
   EntryFormErrors
 } from '@/types/team-entry'
-import { formatTime } from '@/utils/formatters'
+import { formatTimeBest } from '@/utils/formatters'
 import { parseTimeStrict as parseTime } from '@apps/shared/utils/time'
 import { normalizeRelation } from '@apps/shared/utils/supabase-helpers'
 
@@ -261,7 +261,7 @@ export function useTeamEntry(supabase: SupabaseClient, teamId: string) {
     (competitionId: string, entry: UserEntry) => {
       updateFormData(competitionId, {
         styleId: entry.style_id.toString(),
-        entryTime: entry.entry_time ? formatTime(entry.entry_time) : '',
+        entryTime: entry.entry_time ? formatTimeBest(entry.entry_time) : '',
         note: entry.note || '',
         editingEntryId: entry.id
       })

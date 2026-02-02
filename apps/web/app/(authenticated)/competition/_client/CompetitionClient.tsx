@@ -8,7 +8,7 @@ import { ShareCardModal } from '@/components/share'
 import type { CompetitionShareData } from '@/components/share'
 import { format, isAfter, startOfDay } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { formatTime } from '@/utils/formatters'
+import { formatTimeBest } from '@/utils/formatters'
 import { useAuth } from '@/contexts'
 import { LapTimeDisplay } from '@/components/forms/LapTimeDisplay'
 import {
@@ -571,7 +571,7 @@ export default function CompetitionClient({
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {record.time ? (
                         <>
-                          {formatTime(record.time)}
+                          {formatTimeBest(record.time)}
                           {record.is_relaying && <span className="font-bold text-red-600 ml-1">R</span>}
                         </>
                       ) : '-'}
@@ -710,7 +710,7 @@ export default function CompetitionClient({
                         <h5 className="font-medium text-gray-900 mb-2">
                           {selectedRecord.style?.name_jp || '記録'}: {selectedRecord.time ? (
                             <>
-                              {formatTime(selectedRecord.time)}
+                              {formatTimeBest(selectedRecord.time)}
                               {selectedRecord.is_relaying && <span className="font-bold text-red-600 ml-1">R</span>}
                             </>
                           ) : '-'}
@@ -734,7 +734,7 @@ export default function CompetitionClient({
                           <div className="flex items-center gap-2 mb-1">
                             <div className="relative text-lg font-semibold text-blue-700 pr-20">
                               <span className="inline-block">
-                                ⏱️ {formatTime(selectedRecord.time)}{selectedRecord.is_relaying && <span className="font-bold text-red-600 ml-1">R</span>}
+                                ⏱️ {formatTimeBest(selectedRecord.time)}{selectedRecord.is_relaying && <span className="font-bold text-red-600 ml-1">R</span>}
                               </span>
                               {selectedRecord.reaction_time != null && typeof selectedRecord.reaction_time === 'number' && (
                                 <span className="absolute -bottom-0.5 right-0 text-[10px] text-gray-500 font-normal whitespace-nowrap" data-testid="record-reaction-time-display">
