@@ -7,7 +7,7 @@ import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { ShareCardModal } from '@/components/share'
 import type { CompetitionShareData } from '@/components/share'
-import { formatTime } from '@/utils/formatters'
+import { formatTimeBest } from '@/utils/formatters'
 import { useAuth } from '@/contexts'
 import { BestTimeBadge } from '@/components/ui'
 import ImageGallery, { GalleryImage } from '@/components/ui/ImageGallery'
@@ -414,7 +414,7 @@ export function CompetitionDetails({
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xl sm:text-3xl font-bold text-blue-700" data-testid="record-time-display">
-                        {record.metadata?.record?.time ? formatTime(record.metadata.record.time) : '-'}
+                        {record.metadata?.record?.time ? formatTimeBest(record.metadata.record.time) : '-'}
                       </span>
                       <BestTimeBadge
                         recordId={record.id}

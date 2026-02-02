@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts'
 import { GoalAPI } from '@apps/shared/api/goals'
 import { format, isValid } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { formatTime } from '@/utils/formatters'
+import { formatTimeBest } from '@/utils/formatters'
 import type { GoalWithMilestones } from '@apps/shared/types'
 
 interface GoalReflectionModalProps {
@@ -137,11 +137,11 @@ export default function GoalReflectionModal({
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="font-medium text-gray-900">{goal.competition.title || '大会'}</p>
                 <p className="text-sm text-gray-600 mt-1">
-                  {goal.style?.name_jp || '種目'} | 目標: {formatTime(goal.target_time)}
+                  {goal.style?.name_jp || '種目'} | 目標: {formatTimeBest(goal.target_time)}
                 </p>
                 {goal.start_time && (
                   <p className="text-xs text-gray-500 mt-1">
-                    初期タイム: {formatTime(goal.start_time)}
+                    初期タイム: {formatTimeBest(goal.start_time)}
                   </p>
                 )}
                 <p className="text-xs text-gray-500 mt-1">

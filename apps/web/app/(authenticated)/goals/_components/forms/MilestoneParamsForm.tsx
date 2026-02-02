@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Input } from '@/components/ui'
 import type { MilestoneTimeParams, MilestoneRepsTimeParams, MilestoneSetParams } from '@apps/shared/types'
-import { formatTime, parseTimeToSeconds } from '@/utils/formatters'
+import { formatTimeBest, parseTimeToSeconds } from '@/utils/formatters'
 import StyleSelector from '../shared/StyleSelector'
 import SwimCategorySelector from '../shared/SwimCategorySelector'
 
@@ -20,7 +20,7 @@ export function TimeParamsForm({ params, onChange }: TimeParamsFormProps) {
   // params.target_timeが変更されたときに表示値を更新
   useEffect(() => {
     if (params.target_time > 0) {
-      setTimeDisplayValue(formatTime(params.target_time))
+      setTimeDisplayValue(formatTimeBest(params.target_time))
       setTimeError('')
     } else {
       setTimeDisplayValue('')
@@ -71,7 +71,7 @@ export function TimeParamsForm({ params, onChange }: TimeParamsFormProps) {
     } else {
       setTimeError('')
       // 表示値を正規化
-      setTimeDisplayValue(formatTime(seconds))
+      setTimeDisplayValue(formatTimeBest(seconds))
     }
   }
 
@@ -159,7 +159,7 @@ export function RepsTimeParamsForm({ params, onChange }: RepsTimeParamsFormProps
   // params.target_average_timeが変更されたときに表示値を更新
   useEffect(() => {
     if (params.target_average_time > 0) {
-      setAverageTimeDisplayValue(formatTime(params.target_average_time))
+      setAverageTimeDisplayValue(formatTimeBest(params.target_average_time))
       setAverageTimeError('')
     } else {
       setAverageTimeDisplayValue('')
@@ -213,7 +213,7 @@ export function RepsTimeParamsForm({ params, onChange }: RepsTimeParamsFormProps
       setAverageTimeError('有効なタイム形式で入力してください')
     } else {
       setAverageTimeError('')
-      setAverageTimeDisplayValue(formatTime(seconds))
+      setAverageTimeDisplayValue(formatTimeBest(seconds))
     }
   }
 

@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
-import { formatTime } from '@/utils/formatters'
+import { formatTimeBest } from '@/utils/formatters'
 import type { EntryItemProps } from '@/types/team-entry'
 
 function EntryItemComponent({
@@ -19,7 +19,7 @@ function EntryItemComponent({
           <p className="text-sm text-gray-600">
             エントリータイム:{' '}
             <span className="font-mono font-semibold">
-              {formatTime(entry.entry_time)}
+              {formatTimeBest(entry.entry_time)}
             </span>
           </p>
         )}

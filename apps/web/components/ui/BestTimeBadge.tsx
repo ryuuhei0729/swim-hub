@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts'
-import { formatTime } from '@/utils/formatters'
+import { formatTimeBest } from '@/utils/formatters'
 
 interface BestTimeBadgeProps {
   recordId: string
@@ -161,7 +161,7 @@ export default function BestTimeBadge({
   if (showDiff && bestTimeDiff !== null && bestTimeDiff > 0) {
     return (
       <span className="inline-flex items-center text-[9px] sm:text-xs text-gray-500 whitespace-nowrap">
-        (Best+{formatTime(bestTimeDiff)})
+        (Best+{formatTimeBest(bestTimeDiff)})
       </span>
     )
   }

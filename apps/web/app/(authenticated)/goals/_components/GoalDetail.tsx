@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { PlusIcon } from '@heroicons/react/24/outline'
-import { formatTime } from '@/utils/formatters'
+import { formatTimeBest } from '@/utils/formatters'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { useAuth } from '@/contexts'
@@ -74,13 +74,13 @@ export default function GoalDetail({
           <div>
             <p className="text-sm text-gray-600">目標タイム</p>
             <p className="text-lg font-semibold text-gray-900">
-              {formatTime(goal.target_time)}
+              {formatTimeBest(goal.target_time)}
             </p>
           </div>
           <div>
             <p className="text-sm text-gray-600">初期タイム</p>
             <p className="text-lg font-semibold text-gray-900">
-              {goal.start_time ? formatTime(goal.start_time) : '未設定'}
+              {goal.start_time ? formatTimeBest(goal.start_time) : '未設定'}
             </p>
           </div>
         </div>
