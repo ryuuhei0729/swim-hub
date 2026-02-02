@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { formatTime } from '@/utils/formatters'
+import { formatTimeBest } from '@/utils/formatters'
 import { EntryAPI } from '@apps/shared/api/entries'
 import { RecordAPI } from '@apps/shared/api/records'
 import { useAuth } from '@/contexts/AuthProvider'
@@ -301,7 +301,7 @@ export default function TeamCompetitionEntryModal({
                                 </p>
                                 {entry.entry_time && (
                                   <p className="text-sm text-gray-600 mt-1">
-                                    エントリータイム: <span className="font-mono font-semibold">{formatTime(entry.entry_time)}</span>
+                                    エントリータイム: <span className="font-mono font-semibold">{formatTimeBest(entry.entry_time)}</span>
                                   </p>
                                 )}
                                 {entry.note && (

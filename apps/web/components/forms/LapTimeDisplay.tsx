@@ -8,7 +8,7 @@ import {
   getLapIntervalsForRace,
   type SplitTime
 } from '@/utils/lapTimeCalculator'
-import { formatTime } from '@/utils/formatters'
+import { formatTimeBest } from '@/utils/formatters'
 
 interface LapTimeDisplayProps {
   splitTimes: Array<{ distance: number | ''; splitTime: number }>
@@ -80,7 +80,7 @@ export function LapTimeDisplay({ splitTimes, raceDistance }: LapTimeDisplayProps
                       {lap.fromDistance}m - {lap.toDistance}m
                     </span>
                     <span className="text-sm font-medium text-gray-900">
-                      {formatTime(lap.lapTime)}
+                      {formatTimeBest(lap.lapTime)}
                     </span>
                   </div>
                 ))}
@@ -123,7 +123,7 @@ export function LapTimeDisplay({ splitTimes, raceDistance }: LapTimeDisplayProps
                           {row.distance}m
                         </td>
                         <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
-                          {row.splitTime !== null ? formatTime(row.splitTime) : '-'}
+                          {row.splitTime !== null ? formatTimeBest(row.splitTime) : '-'}
                         </td>
                         {lapIntervals.map((interval) => (
                           <td
@@ -131,7 +131,7 @@ export function LapTimeDisplay({ splitTimes, raceDistance }: LapTimeDisplayProps
                             className="px-3 py-2 whitespace-nowrap text-sm text-gray-900"
                           >
                             {row.lapTimes[interval] !== null && row.lapTimes[interval] !== undefined
-                              ? formatTime(row.lapTimes[interval]!)
+                              ? formatTimeBest(row.lapTimes[interval]!)
                               : '-'}
                           </td>
                         ))}

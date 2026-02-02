@@ -35,6 +35,8 @@ interface DatePickerProps {
   popupPosition?: 'top' | 'bottom'
   /** カレンダーの水平位置 */
   popupAlign?: 'left' | 'right'
+  /** テスト用のdata-testid */
+  'data-testid'?: string
 }
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
@@ -53,7 +55,8 @@ export default function DatePicker({
   className,
   defaultMonth,
   popupPosition = 'bottom',
-  popupAlign = 'left'
+  popupAlign = 'left',
+  'data-testid': dataTestId
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [currentMonth, setCurrentMonth] = useState<Date>(() => {
@@ -204,6 +207,16 @@ export default function DatePicker({
         </label>
       )}
 
+      {/* テスト用の隠しinput（inputValueでアクセス可能にする） */}
+      {dataTestId && (
+        <input
+          type="hidden"
+          data-testid={dataTestId}
+          value={selectedDate && isValid(selectedDate) ? format(selectedDate, 'yyyy-MM-dd') : ''}
+          readOnly
+        />
+      )}
+
       {/* 日付表示ボタン */}
       <button
         ref={inputRef}
@@ -215,6 +228,7 @@ export default function DatePicker({
         aria-expanded={isOpen}
         aria-invalid={!!error}
         aria-describedby={error ? errorId : undefined}
+        data-testid={dataTestId ? `${dataTestId}-button` : undefined}
         className={cn(
           'flex items-center justify-between w-full h-10 px-3 py-2 text-sm border rounded-md bg-white transition-colors',
           'focus:outline-none focus:ring-2 focus:border-transparent',

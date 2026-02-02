@@ -8,7 +8,7 @@ import {
   StarIcon,
   UserIcon
 } from '@heroicons/react/24/outline'
-import { formatTime } from '@apps/shared/utils/time'
+import { formatTimeBest } from '@apps/shared/utils/time'
 import { formatDate } from '@apps/shared/utils/date'
 
 export interface TeamRecord {
@@ -242,7 +242,7 @@ export default function TeamRecords({ teamId, isAdmin: _isAdmin = false }: TeamR
             {/* タイム */}
             <div className="shrink-0 text-right">
               <p className="text-lg font-bold text-gray-900">
-                {formatTime(record.time)}
+                {formatTimeBest(record.time)}
               </p>
             </div>
           </div>

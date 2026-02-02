@@ -371,6 +371,7 @@ export default function CompetitionBasicForm({
                   }}
                   required
                   placeholder="開始日を選択"
+                  data-testid="competition-date"
                 />
                 <DatePicker
                   label="終了日(複数日の場合)"
@@ -382,6 +383,7 @@ export default function CompetitionBasicForm({
                   minDate={formData.date ? new Date(formData.date) : undefined}
                   placeholder="終了日を選択"
                   popupAlign="right"
+                  data-testid="competition-end-date"
                 />
               </div>
 

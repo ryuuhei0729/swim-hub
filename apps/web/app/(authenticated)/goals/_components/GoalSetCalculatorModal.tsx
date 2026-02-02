@@ -11,7 +11,7 @@ import {
   calculateAge,
   getStyleCoefficient
 } from '@/utils/goalSetCalculator'
-import { formatTime } from '@/utils/formatters'
+import { formatTimeBest } from '@/utils/formatters'
 
 interface GoalSetCalculatorModalProps {
   isOpen: boolean
@@ -129,7 +129,7 @@ export default function GoalSetCalculatorModal({
                   <div className="flex justify-between">
                     <span className="text-gray-600">目標:</span>
                     <span className="font-medium">
-                      {style.name_jp} {formatTime(goal.target_time)}
+                      {style.name_jp} {formatTimeBest(goal.target_time)}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -196,7 +196,7 @@ export default function GoalSetCalculatorModal({
                   <div className="text-center">
                     <div className="text-sm text-gray-600 mb-1">ゴールセット目標</div>
                     <div className="text-2xl font-bold text-gray-900 mb-1">
-                      {formatTime(calculatedTargetTime.value)}
+                      {formatTimeBest(calculatedTargetTime.value)}
                     </div>
                     <div className="text-xs text-gray-500">
                       50m平均（50m×6本×3セット）
