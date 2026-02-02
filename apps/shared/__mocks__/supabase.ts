@@ -1,4 +1,4 @@
-import { vi } from 'vitest'
+import { vi, Mock } from 'vitest'
 import type { PoolType, Record as RecordRow, RecordWithDetails } from '../types'
 import type { MockQueryBuilder, MockSupabaseClient } from './types'
 
@@ -9,6 +9,16 @@ import type { MockQueryBuilder, MockSupabaseClient } from './types'
 
 // MockQueryBuilder と MockSupabaseClient は types.ts から export
 export type { MockQueryBuilder, MockSupabaseClient } from './types'
+
+/**
+ * Supabase Realtime Channel のモック型
+ */
+interface MockChannel {
+  on: Mock
+  subscribe: Mock
+  unsubscribe: Mock
+  send: Mock
+}
 
 /**
  * クエリビルダーのモックを作成
@@ -118,17 +128,16 @@ export const createMockSupabaseClient = (options: {
     }),
     rpc: vi.fn().mockResolvedValue({ data: queryData, error: queryError }),
     channel: vi.fn(() => {
-      const channel: {
-        on: ReturnType<typeof vi.fn>
-        subscribe: ReturnType<typeof vi.fn>
-        unsubscribe: ReturnType<typeof vi.fn>
-        send: ReturnType<typeof vi.fn>
-      } = {
-        on: vi.fn(() => channel),
-        subscribe: vi.fn(() => channel),
+      const channel: MockChannel = {
+        on: vi.fn(),
+        subscribe: vi.fn(),
         unsubscribe: vi.fn(),
-        send: vi.fn(() => channel),
+        send: vi.fn(),
       }
+      // チェーンメソッドは自身を返す
+      channel.on.mockReturnValue(channel)
+      channel.subscribe.mockReturnValue(channel)
+      channel.send.mockReturnValue(channel)
       return channel
     }),
     removeChannel: vi.fn(),

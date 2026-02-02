@@ -16,8 +16,8 @@ const mockRevokeObjectURL = vi.fn()
 const mockRandomUUID = vi.fn()
 
 describe('useImageUpload', () => {
-  let mockValidateFile: Mock<(file: File) => Promise<ImageValidationResult>>
-  let mockOnImagesChange: Mock<(newFiles: ImageFile[], deletedIds: string[]) => void>
+  let mockValidateFile: Mock<[File], Promise<ImageValidationResult>>
+  let mockOnImagesChange: Mock<[ImageFile[], string[]], void>
 
   const createMockFile = (name = 'test.jpg', type = 'image/jpeg', size = 1024) => {
     const file = new File(['test content'], name, { type })
@@ -46,8 +46,8 @@ describe('useImageUpload', () => {
     mockRandomUUID.mockImplementation(() => `uuid-${++uuidCounter}`)
     global.crypto.randomUUID = mockRandomUUID
 
-    mockValidateFile = vi.fn().mockResolvedValue({ valid: true })
-    mockOnImagesChange = vi.fn()
+    mockValidateFile = vi.fn<[File], Promise<ImageValidationResult>>().mockResolvedValue({ valid: true })
+    mockOnImagesChange = vi.fn<[ImageFile[], string[]], void>()
   })
 
   afterEach(() => {

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach, Mock } from 'vitest'
 import { waitFor, act } from '@testing-library/react'
 import { createMockSupabaseClient, createMockPracticeWithLogs, createMockPractice } from '../../../__mocks__/supabase'
 import { PracticeAPI } from '../../../api/practices'
@@ -34,18 +34,20 @@ vi.mock('../../../api/goals', () => ({
   })),
 }))
 
+interface MockPracticeAPI {
+  getPractices: Mock
+  countPractices: Mock
+  getPracticeById: Mock
+  createPractice: Mock
+  updatePractice: Mock
+  deletePractice: Mock
+  getPracticeTags: Mock
+  subscribeToPractices: Mock
+}
+
 describe('Practice Query Hooks', () => {
   let mockSupabase: ReturnType<typeof createMockSupabaseClient>
-  let mockApi: {
-    getPractices: ReturnType<typeof vi.fn>
-    countPractices: ReturnType<typeof vi.fn>
-    getPracticeById: ReturnType<typeof vi.fn>
-    createPractice: ReturnType<typeof vi.fn>
-    updatePractice: ReturnType<typeof vi.fn>
-    deletePractice: ReturnType<typeof vi.fn>
-    getPracticeTags: ReturnType<typeof vi.fn>
-    subscribeToPractices: ReturnType<typeof vi.fn>
-  }
+  let mockApi: MockPracticeAPI
 
   beforeEach(() => {
     vi.clearAllMocks()

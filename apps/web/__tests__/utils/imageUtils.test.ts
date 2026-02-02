@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi, Mock } from 'vitest'
 import {
   getAspectRatio,
   getCroppedImg,
@@ -181,14 +181,22 @@ describe('getMaxImageSize', () => {
   })
 })
 
+interface MockCanvasContext {
+  drawImage: Mock
+  imageSmoothingEnabled: boolean
+  imageSmoothingQuality: ImageSmoothingQuality
+}
+
+interface MockCanvas {
+  width: number
+  height: number
+  getContext: Mock
+  toBlob: Mock
+}
+
 describe('getCroppedImg', () => {
-  let mockCanvas: {
-    width: number
-    height: number
-    getContext: ReturnType<typeof vi.fn>
-    toBlob: ReturnType<typeof vi.fn>
-  }
-  let mockContext: Partial<CanvasRenderingContext2D>
+  let mockCanvas: MockCanvas
+  let mockContext: MockCanvasContext
   let mockImage: HTMLImageElement
 
   beforeEach(() => {
