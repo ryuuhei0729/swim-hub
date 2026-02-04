@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach, Mock } from 'vitest'
 import { waitFor, act } from '@testing-library/react'
 import {
   createMockSupabaseClient,
@@ -49,24 +49,26 @@ vi.mock('../../../api/goals', () => ({
   })),
 }))
 
+interface MockRecordAPI {
+  getRecords: Mock
+  countRecords: Mock
+  getCompetitions: Mock
+  createRecord: Mock
+  updateRecord: Mock
+  deleteRecord: Mock
+  createCompetition: Mock
+  updateCompetition: Mock
+  deleteCompetition: Mock
+  getBestTimes: Mock
+  createSplitTimes: Mock
+  replaceSplitTimes: Mock
+  subscribeToRecords: Mock
+  subscribeToCompetitions: Mock
+}
+
 describe('Record Query Hooks', () => {
   let mockSupabase: ReturnType<typeof createMockSupabaseClient>
-  let mockApi: {
-    getRecords: ReturnType<typeof vi.fn>
-    countRecords: ReturnType<typeof vi.fn>
-    getCompetitions: ReturnType<typeof vi.fn>
-    createRecord: ReturnType<typeof vi.fn>
-    updateRecord: ReturnType<typeof vi.fn>
-    deleteRecord: ReturnType<typeof vi.fn>
-    createCompetition: ReturnType<typeof vi.fn>
-    updateCompetition: ReturnType<typeof vi.fn>
-    deleteCompetition: ReturnType<typeof vi.fn>
-    getBestTimes: ReturnType<typeof vi.fn>
-    createSplitTimes: ReturnType<typeof vi.fn>
-    replaceSplitTimes: ReturnType<typeof vi.fn>
-    subscribeToRecords: ReturnType<typeof vi.fn>
-    subscribeToCompetitions: ReturnType<typeof vi.fn>
-  }
+  let mockApi: MockRecordAPI
 
   beforeEach(() => {
     vi.clearAllMocks()

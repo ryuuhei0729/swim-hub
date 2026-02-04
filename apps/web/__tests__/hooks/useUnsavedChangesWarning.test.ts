@@ -1,13 +1,13 @@
 import { act, renderHook } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi, MockInstance } from 'vitest'
 
 import { useUnsavedChangesWarning } from '../../hooks/useUnsavedChangesWarning'
 
 describe('useUnsavedChangesWarning', () => {
-  let addEventListenerSpy: ReturnType<typeof vi.spyOn>
-  let removeEventListenerSpy: ReturnType<typeof vi.spyOn>
-  let historyBackSpy: ReturnType<typeof vi.spyOn>
-  let historyPushStateSpy: ReturnType<typeof vi.spyOn>
+  let addEventListenerSpy: MockInstance
+  let removeEventListenerSpy: MockInstance
+  let historyBackSpy: MockInstance
+  let historyPushStateSpy: MockInstance
 
   beforeEach(() => {
     vi.clearAllMocks()
