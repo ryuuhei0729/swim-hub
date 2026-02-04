@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert } from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -12,6 +12,12 @@ import {
 import { practiceKeys } from '@apps/shared/hooks/queries/keys'
 import { usePracticeFormStore } from '@/stores/practiceFormStore'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
+import { ImageUploader, ImageFile, ExistingImage } from '@/components/shared/ImageUploader'
+import {
+  uploadImages,
+  deleteImages,
+  getExistingImagesFromPaths,
+} from '@/utils/imageUpload'
 import type { MainStackParamList } from '@/navigation/types'
 
 type PracticeFormScreenRouteProp = RouteProp<MainStackParamList, 'PracticeForm'>
@@ -25,7 +31,7 @@ export const PracticeFormScreen: React.FC = () => {
   const route = useRoute<PracticeFormScreenRouteProp>()
   const navigation = useNavigation<PracticeFormScreenNavigationProp>()
   const { practiceId, date: initialDateParam } = route.params || {}
-  const { supabase } = useAuth()
+  const { supabase, user } = useAuth()
   const queryClient = useQueryClient()
   const isEditMode = !!practiceId
 
@@ -52,6 +58,17 @@ export const PracticeFormScreen: React.FC = () => {
   const [loadingPractice, setLoadingPractice] = useState(isEditMode)
   const initializedRef = useRef(false)
 
+  // 画像の状態管理
+  const [newImageFiles, setNewImageFiles] = useState<ImageFile[]>([])
+  const [deletedImageIds, setDeletedImageIds] = useState<string[]>([])
+  const [existingImages, setExistingImages] = useState<ExistingImage[]>([])
+
+  // 画像変更のハンドラー
+  const handleImagesChange = useCallback((newFiles: ImageFile[], deletedIds: string[]) => {
+    setNewImageFiles(newFiles)
+    setDeletedImageIds(deletedIds)
+  }, [])
+
   // 編集モード時は、usePracticesQueryでデータを取得してから該当のものを検索
   const {
     data: practices = [],
@@ -71,6 +88,13 @@ export const PracticeFormScreen: React.FC = () => {
       const practice = practices.find((p) => p.id === practiceId)
       if (practice) {
         initialize(practice)
+        // 既存画像を読み込み
+        const images = getExistingImagesFromPaths(
+          supabase,
+          practice.image_paths,
+          'practice-images'
+        )
+        setExistingImages(images)
         initializedRef.current = true
         setLoadingPractice(false)
       } else if (!loadingPractices) {
@@ -87,7 +111,7 @@ export const PracticeFormScreen: React.FC = () => {
       setLoadingPractice(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEditMode, practiceId, loadingPractices, initialDateParam, practices])
+  }, [isEditMode, practiceId, loadingPractices, initialDateParam, practices, supabase])
 
   // ミューテーション
   const createMutation = useCreatePracticeMutation(supabase)
@@ -133,18 +157,51 @@ export const PracticeFormScreen: React.FC = () => {
       return
     }
 
+    if (!user) {
+      Alert.alert('エラー', '認証が必要です', [{ text: 'OK' }])
+      return
+    }
+
     setLoading(true)
     clearErrors()
 
     try {
-      const formData = {
-        date,
-        title: title && title.trim() !== '' ? title.trim() : null,
-        place: place && place.trim() !== '' ? place.trim() : null,
-        note: note && note.trim() !== '' ? note.trim() : null,
-      }
-
       if (isEditMode && practiceId) {
+        // 削除対象画像をストレージから削除
+        if (deletedImageIds.length > 0) {
+          await deleteImages(supabase, deletedImageIds, 'practice-images')
+        }
+
+        // 新規画像をアップロード
+        let newImagePaths: string[] = []
+        if (newImageFiles.length > 0) {
+          const uploadResults = await uploadImages(
+            supabase,
+            user.id,
+            practiceId,
+            newImageFiles.map((f) => ({
+              base64: f.base64,
+              fileExtension: f.fileExtension,
+            })),
+            'practice-images'
+          )
+          newImagePaths = uploadResults.map((r) => r.path)
+        }
+
+        // 既存画像パスから削除されたものを除外し、新規画像パスを追加
+        const currentPaths = existingImages
+          .filter((img) => !deletedImageIds.includes(img.id))
+          .map((img) => img.id) // idがパス
+        const updatedImagePaths = [...currentPaths, ...newImagePaths]
+
+        const formData = {
+          date,
+          title: title && title.trim() !== '' ? title.trim() : null,
+          place: place && place.trim() !== '' ? place.trim() : null,
+          note: note && note.trim() !== '' ? note.trim() : null,
+          image_paths: updatedImagePaths.length > 0 ? updatedImagePaths : undefined,
+        }
+
         // 更新
         await updateMutation.mutateAsync({
           id: practiceId,
@@ -158,7 +215,36 @@ export const PracticeFormScreen: React.FC = () => {
         navigation.goBack()
       } else {
         // 作成
-        await createMutation.mutateAsync(formData)
+        const formData = {
+          date,
+          title: title && title.trim() !== '' ? title.trim() : null,
+          place: place && place.trim() !== '' ? place.trim() : null,
+          note: note && note.trim() !== '' ? note.trim() : null,
+        }
+
+        const createdPractice = await createMutation.mutateAsync(formData)
+
+        // 新規画像をアップロード
+        if (newImageFiles.length > 0) {
+          const uploadResults = await uploadImages(
+            supabase,
+            user.id,
+            createdPractice.id,
+            newImageFiles.map((f) => ({
+              base64: f.base64,
+              fileExtension: f.fileExtension,
+            })),
+            'practice-images'
+          )
+          const imagePaths = uploadResults.map((r) => r.path)
+
+          // 練習記録を画像パスで更新
+          await updateMutation.mutateAsync({
+            id: createdPractice.id,
+            updates: { image_paths: imagePaths },
+          })
+        }
+
         // カレンダーと練習一覧のクエリを無効化してリフレッシュ
         queryClient.invalidateQueries({ queryKey: ['calendar'] })
         queryClient.invalidateQueries({ queryKey: practiceKeys.lists() })
@@ -184,18 +270,51 @@ export const PracticeFormScreen: React.FC = () => {
       return
     }
 
+    if (!user) {
+      Alert.alert('エラー', '認証が必要です', [{ text: 'OK' }])
+      return
+    }
+
     setLoading(true)
     clearErrors()
 
     try {
-      const formData = {
-        date,
-        title: title && title.trim() !== '' ? title.trim() : null,
-        place: place && place.trim() !== '' ? place.trim() : null,
-        note: note && note.trim() !== '' ? note.trim() : null,
-      }
-
       if (isEditMode && practiceId) {
+        // 削除対象画像をストレージから削除
+        if (deletedImageIds.length > 0) {
+          await deleteImages(supabase, deletedImageIds, 'practice-images')
+        }
+
+        // 新規画像をアップロード
+        let newImagePaths: string[] = []
+        if (newImageFiles.length > 0) {
+          const uploadResults = await uploadImages(
+            supabase,
+            user.id,
+            practiceId,
+            newImageFiles.map((f) => ({
+              base64: f.base64,
+              fileExtension: f.fileExtension,
+            })),
+            'practice-images'
+          )
+          newImagePaths = uploadResults.map((r) => r.path)
+        }
+
+        // 既存画像パスから削除されたものを除外し、新規画像パスを追加
+        const currentPaths = existingImages
+          .filter((img) => !deletedImageIds.includes(img.id))
+          .map((img) => img.id)
+        const updatedImagePaths = [...currentPaths, ...newImagePaths]
+
+        const formData = {
+          date,
+          title: title && title.trim() !== '' ? title.trim() : null,
+          place: place && place.trim() !== '' ? place.trim() : null,
+          note: note && note.trim() !== '' ? note.trim() : null,
+          image_paths: updatedImagePaths.length > 0 ? updatedImagePaths : undefined,
+        }
+
         // 編集モード: 練習を更新
         await updateMutation.mutateAsync({
           id: practiceId,
@@ -206,10 +325,40 @@ export const PracticeFormScreen: React.FC = () => {
         reset()
         navigation.navigate('PracticeLogForm', {
           practiceId: practiceId,
+          returnTo: 'dashboard',
         })
       } else {
         // 作成
+        const formData = {
+          date,
+          title: title && title.trim() !== '' ? title.trim() : null,
+          place: place && place.trim() !== '' ? place.trim() : null,
+          note: note && note.trim() !== '' ? note.trim() : null,
+        }
+
         const createdPractice = await createMutation.mutateAsync(formData)
+
+        // 新規画像をアップロード
+        if (newImageFiles.length > 0) {
+          const uploadResults = await uploadImages(
+            supabase,
+            user.id,
+            createdPractice.id,
+            newImageFiles.map((f) => ({
+              base64: f.base64,
+              fileExtension: f.fileExtension,
+            })),
+            'practice-images'
+          )
+          const imagePaths = uploadResults.map((r) => r.path)
+
+          // 練習記録を画像パスで更新
+          await updateMutation.mutateAsync({
+            id: createdPractice.id,
+            updates: { image_paths: imagePaths },
+          })
+        }
+
         // カレンダーと練習一覧のクエリを無効化してリフレッシュ
         queryClient.invalidateQueries({ queryKey: ['calendar'] })
         queryClient.invalidateQueries({ queryKey: practiceKeys.lists() })
@@ -217,6 +366,7 @@ export const PracticeFormScreen: React.FC = () => {
         reset()
         navigation.navigate('PracticeLogForm', {
           practiceId: createdPractice.id,
+          returnTo: 'dashboard',
         })
       }
     } catch (error) {
@@ -309,6 +459,17 @@ export const PracticeFormScreen: React.FC = () => {
             numberOfLines={4}
             textAlignVertical="top"
             editable={!storeLoading}
+          />
+        </View>
+
+        {/* 画像 */}
+        <View style={styles.field}>
+          <ImageUploader
+            existingImages={existingImages}
+            onImagesChange={handleImagesChange}
+            maxImages={3}
+            disabled={storeLoading}
+            label="画像"
           />
         </View>
 

@@ -1,6 +1,6 @@
 import React from 'react'
 import { View, Text, StyleSheet, ScrollView } from 'react-native'
-import { formatTime } from '@/utils/formatters'
+import { formatTime, getStyleLabel } from '@/utils/formatters'
 import type { PracticeLogWithTags } from '@swim-hub/shared/types'
 
 interface PracticeLogItemProps {
@@ -12,8 +12,8 @@ interface PracticeLogItemProps {
  * 練習ログの1件を表示（種目、距離、セット数、レップ数、タイム、タグ）
  */
 export const PracticeLogItem: React.FC<PracticeLogItemProps> = ({ log }) => {
-  // 種目の表示（styleは文字列なのでそのまま表示）
-  const styleDisplay = log.style || '不明'
+  // 種目の表示（"Fr" → "自由形" に変換）
+  const styleDisplay = getStyleLabel(log.style)
   
   // タイム一覧をソート（セット番号、レップ番号順）
   const sortedTimes = [...(log.practice_times || [])].sort((a, b) => {

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert } from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthProvider'
 import {
   useCreateRecordMutation,
   useUpdateRecordMutation,
+  useUpdateCompetitionMutation,
   useRecordsQuery,
   useReplaceSplitTimesMutation,
 } from '@apps/shared/hooks/queries/records'
@@ -14,8 +15,15 @@ import { useRecordFormStore } from '@/stores/recordStore'
 import { StyleAPI } from '@apps/shared/api/styles'
 import { formatTime } from '@/utils/formatters'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
+import { ImageUploader, ImageFile, ExistingImage } from '@/components/shared/ImageUploader'
+import {
+  uploadImages,
+  deleteImages,
+  getExistingImagesFromPaths,
+} from '@/utils/imageUpload'
 import type { MainStackParamList } from '@/navigation/types'
 import type { Style, PoolType, Competition } from '@apps/shared/types'
+import { useQuickTimeInput } from '@/hooks/useQuickTimeInput'
 
 type RecordFormScreenRouteProp = RouteProp<MainStackParamList, 'RecordForm'>
 type RecordFormScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>
@@ -28,9 +36,13 @@ export const RecordFormScreen: React.FC = () => {
   const route = useRoute<RecordFormScreenRouteProp>()
   const navigation = useNavigation<RecordFormScreenNavigationProp>()
   const { recordId, competitionId: routeCompetitionId } = route.params || {}
-  const { supabase } = useAuth()
+  const { supabase, user } = useAuth()
   const queryClient = useQueryClient()
   const isEditMode = !!recordId
+
+  // クイック入力フック（メインタイム用、スプリットタイム用）
+  const { parseInput: parseMainTime } = useQuickTimeInput()
+  const { parseInput: parseSplitTime } = useQuickTimeInput()
 
   // Zustandストア
   const {
@@ -62,6 +74,17 @@ export const RecordFormScreen: React.FC = () => {
   const [styleList, setStyleList] = useState<Style[]>([])
   const [loadingStyles, setLoadingStyles] = useState(true)
   const [competitions, setCompetitions] = useState<Competition[]>([])
+
+  // 画像の状態管理
+  const [newImageFiles, setNewImageFiles] = useState<ImageFile[]>([])
+  const [deletedImageIds, setDeletedImageIds] = useState<string[]>([])
+  const [existingImages, setExistingImages] = useState<ExistingImage[]>([])
+
+  // 画像変更のハンドラー
+  const handleImagesChange = useCallback((newFiles: ImageFile[], deletedIds: string[]) => {
+    setNewImageFiles(newFiles)
+    setDeletedImageIds(deletedIds)
+  }, [])
 
   // 編集モード時は、useRecordsQueryでデータを取得してから該当のものを検索
   const {
@@ -109,6 +132,27 @@ export const RecordFormScreen: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeCompetitionId, isEditMode])
 
+  // 大会が選択されたら既存画像を読み込み
+  const currentCompetitionId = routeCompetitionId || storeCompetitionId
+  useEffect(() => {
+    if (!currentCompetitionId || competitions.length === 0) {
+      setExistingImages([])
+      return
+    }
+
+    const selectedCompetition = competitions.find((c) => c.id === currentCompetitionId)
+    if (selectedCompetition) {
+      const images = getExistingImagesFromPaths(
+        supabase,
+        selectedCompetition.image_paths,
+        'competition-images'
+      )
+      setExistingImages(images)
+    } else {
+      setExistingImages([])
+    }
+  }, [currentCompetitionId, competitions, supabase])
+
   const hasInitializedForEdit = useRef(false)
 
   // 編集モード切り替え・レコードID変更時に初期化フラグをリセット
@@ -148,41 +192,7 @@ export const RecordFormScreen: React.FC = () => {
   const createMutation = useCreateRecordMutation(supabase)
   const updateMutation = useUpdateRecordMutation(supabase)
   const replaceSplitTimesMutation = useReplaceSplitTimesMutation(supabase)
-
-  // タイム文字列を秒数に変換
-  const parseTime = (timeStr: string): number | null => {
-    if (!timeStr || timeStr.trim() === '') return null
-    
-    const trimmed = timeStr.trim()
-    
-    // 分:秒.小数形式をパース
-    if (trimmed.includes(':')) {
-      const parts = trimmed.split(':')
-      // コロンが2つ以上ある場合は不正な形式（例: "1:2:3"）
-      if (parts.length !== 2) {
-        return null
-      }
-      
-      const minutes = parseFloat(parts[0])
-      const seconds = parseFloat(parts[1])
-      
-      if (!Number.isFinite(minutes) || !Number.isFinite(seconds) ||
-          Number.isNaN(minutes) || Number.isNaN(seconds) ||
-          minutes < 0 || seconds < 0) {
-        return null
-      }
-      
-      return minutes * 60 + seconds
-    }
-    
-    // 秒数のみの場合
-    const seconds = parseFloat(trimmed)
-    if (!Number.isFinite(seconds) || Number.isNaN(seconds) || seconds < 0) {
-      return null
-    }
-    
-    return seconds
-  }
+  const updateCompetitionMutation = useUpdateCompetitionMutation(supabase)
 
   // バリデーション
   const validate = (): boolean => {
@@ -228,6 +238,11 @@ export const RecordFormScreen: React.FC = () => {
       return
     }
 
+    if (!user) {
+      Alert.alert('エラー', '認証が必要です', [{ text: 'OK' }])
+      return
+    }
+
     setLoading(true)
     clearErrors()
 
@@ -236,6 +251,44 @@ export const RecordFormScreen: React.FC = () => {
       const finalCompetitionId = routeCompetitionId || storeCompetitionId
       const selectedCompetition = competitions.find((c) => c.id === finalCompetitionId)
       const poolType: PoolType = (selectedCompetition?.pool_type ?? 0) as PoolType // デフォルトは短水路
+
+      // 画像の処理（大会に紐づける）
+      if (finalCompetitionId && (deletedImageIds.length > 0 || newImageFiles.length > 0)) {
+        // 削除対象画像をストレージから削除
+        if (deletedImageIds.length > 0) {
+          await deleteImages(supabase, deletedImageIds, 'competition-images')
+        }
+
+        // 新規画像をアップロード
+        let newImagePaths: string[] = []
+        if (newImageFiles.length > 0) {
+          const uploadResults = await uploadImages(
+            supabase,
+            user.id,
+            finalCompetitionId,
+            newImageFiles.map((f) => ({
+              base64: f.base64,
+              fileExtension: f.fileExtension,
+            })),
+            'competition-images'
+          )
+          newImagePaths = uploadResults.map((r) => r.path)
+        }
+
+        // 既存画像パスから削除されたものを除外し、新規画像パスを追加
+        const currentPaths = existingImages
+          .filter((img) => !deletedImageIds.includes(img.id))
+          .map((img) => img.id) // idがパス
+        const updatedImagePaths = [...currentPaths, ...newImagePaths]
+
+        // 大会の画像パスを更新
+        await updateCompetitionMutation.mutateAsync({
+          id: finalCompetitionId,
+          updates: {
+            image_paths: updatedImagePaths.length > 0 ? updatedImagePaths : undefined,
+          },
+        })
+      }
 
       const recordData = {
         competition_id: finalCompetitionId,
@@ -309,11 +362,12 @@ export const RecordFormScreen: React.FC = () => {
       setTime(null)
       return
     }
-    
-    const parsed = parseTime(text)
-    if (parsed === null) {
+
+    // クイック入力形式をサポート（例: 31-2 → 31.20秒）
+    const { time: parsed } = parseMainTime(text)
+    if (parsed <= 0) {
       // 不正な形式の場合、エラーメッセージを表示
-      setError('time', 'タイムの形式が正しくありません（例: 1:23.45 または 83.45）')
+      setError('time', 'タイムの形式が正しくありません（例: 1:23.45 または 31-2）')
       setTime(null)
     } else {
       // 正常にパースできた場合、エラーをクリア
@@ -413,7 +467,7 @@ export const RecordFormScreen: React.FC = () => {
             style={[styles.input, errors.time && styles.inputError]}
             value={time !== null ? formatTime(time) : ''}
             onChangeText={handleTimeChange}
-            placeholder="分:秒.小数 または 秒数"
+            placeholder="例: 1:23.45 または 31-2"
             placeholderTextColor="#9CA3AF"
             editable={!storeLoading}
           />
@@ -472,14 +526,15 @@ export const RecordFormScreen: React.FC = () => {
                     updateSplitTime(index, { splitTime: 0 })
                     return
                   }
-                  
-                  const parsed = parseTime(text)
-                  if (parsed !== null) {
+
+                  // クイック入力形式をサポート（例: 31-2 → 31.20秒）
+                  const { time: parsed } = parseSplitTime(text)
+                  if (parsed > 0) {
                     updateSplitTime(index, { splitTime: parsed })
                   }
                   // 不正な形式の場合は何もしない（既存の値を維持）
                 }}
-                placeholder="タイム"
+                placeholder="例: 31-2"
                 placeholderTextColor="#9CA3AF"
                 editable={!storeLoading}
               />
@@ -507,6 +562,17 @@ export const RecordFormScreen: React.FC = () => {
             numberOfLines={4}
             textAlignVertical="top"
             editable={!storeLoading}
+          />
+        </View>
+
+        {/* 画像 */}
+        <View style={styles.field}>
+          <ImageUploader
+            existingImages={existingImages}
+            onImagesChange={handleImagesChange}
+            maxImages={3}
+            disabled={storeLoading}
+            label="画像"
           />
         </View>
 

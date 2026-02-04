@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert } from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -8,27 +8,24 @@ import { useAuth } from '@/contexts/AuthProvider'
 import {
   useCreatePracticeLogMutation,
   useUpdatePracticeLogMutation,
+  usePracticeTagsQuery,
+  useCreatePracticeTagMutation,
+  useUpdatePracticeTagMutation,
+  useDeletePracticeTagMutation,
 } from '@apps/shared/hooks/queries/practices'
 import { practiceKeys } from '@apps/shared/hooks/queries/keys'
 import { PracticeAPI } from '@apps/shared/api/practices'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
+import { TagChips, TagSelectModal, TagManageModal } from '@/components/shared'
 import type { MainStackParamList } from '@/navigation/types'
 import type { PracticeTag, PracticeTime } from '@apps/shared/types'
 import type { TimeEntry } from '@apps/shared/types/ui'
-import { formatTime } from '@/utils/formatters'
+import { formatTime, SWIM_STYLES } from '@/utils/formatters'
 import { usePracticeTimeStore } from '@/stores/practiceTimeStore'
+import { getRandomTagColor } from '@/constants/tagColors'
 
 type PracticeLogFormScreenRouteProp = RouteProp<MainStackParamList, 'PracticeLogForm'>
 type PracticeLogFormScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>
-
-// 種目の選択肢
-const SWIM_STYLES = [
-  { value: 'Fr', label: '自由形' },
-  { value: 'Ba', label: '背泳ぎ' },
-  { value: 'Br', label: '平泳ぎ' },
-  { value: 'Fly', label: 'バタフライ' },
-  { value: 'IM', label: '個人メドレー' },
-]
 
 // 泳法カテゴリの選択肢
 const SWIM_CATEGORIES = [
@@ -58,7 +55,7 @@ interface PracticeMenu {
 export const PracticeLogFormScreen: React.FC = () => {
   const route = useRoute<PracticeLogFormScreenRouteProp>()
   const navigation = useNavigation<PracticeLogFormScreenNavigationProp>()
-  const { practiceId, practiceLogId } = route.params
+  const { practiceId, practiceLogId, returnTo } = route.params
   const { supabase } = useAuth()
   const queryClient = useQueryClient()
   const isEditMode = practiceLogId !== undefined
@@ -80,30 +77,23 @@ export const PracticeLogFormScreen: React.FC = () => {
     },
   ])
 
-  // 利用可能なタグ（タグ機能実装時に使用）
-  // const [availableTags, setAvailableTags] = useState<PracticeTag[]>([])
-  // const [loadingTags, setLoadingTags] = useState(true)
+  // タグ関連の状態
+  const [showTagSelectModal, setShowTagSelectModal] = useState(false)
+  const [showTagManageModal, setShowTagManageModal] = useState(false)
+  const [editingTag, setEditingTag] = useState<PracticeTag | null>(null)
+  const [activeMenuIndex, setActiveMenuIndex] = useState(0)
+
+  // タグ取得（React Query）
+  const { data: availableTags = [] } = usePracticeTagsQuery(supabase)
+
+  // タグミューテーション
+  const createTagMutation = useCreatePracticeTagMutation(supabase)
+  const updateTagMutation = useUpdatePracticeTagMutation(supabase)
+  const deleteTagMutation = useDeletePracticeTagMutation(supabase)
 
   // 既存データの取得（編集モード時）
   const [loadingPracticeLog, setLoadingPracticeLog] = useState(isEditMode)
   const initializedRef = useRef(false)
-
-  // タグ一覧を取得（タグ機能実装時に有効化）
-  // useEffect(() => {
-  //   const loadTags = async () => {
-  //     try {
-  //       setLoadingTags(true)
-  //       const api = new PracticeAPI(supabase)
-  //       const tags = await api.getPracticeTags()
-  //       setAvailableTags(tags)
-  //     } catch (error) {
-  //       console.error('タグ取得エラー:', error)
-  //     } finally {
-  //       setLoadingTags(false)
-  //     }
-  //   }
-  //   loadTags()
-  // }, [supabase])
 
   // 既存データの取得（編集モード時）
   useEffect(() => {
@@ -232,6 +222,64 @@ export const PracticeLogFormScreen: React.FC = () => {
     )
   }
 
+  // タグ選択モーダルを開く
+  const openTagSelectModal = useCallback((menuIndex: number) => {
+    setActiveMenuIndex(menuIndex)
+    setShowTagSelectModal(true)
+  }, [])
+
+  // タグ管理モーダルを開く（新規作成）
+  const openTagCreateModal = useCallback(() => {
+    setShowTagSelectModal(false) // まずTagSelectModalを閉じる
+    setTimeout(() => {
+      setEditingTag(null)
+      setShowTagManageModal(true)
+    }, 100)
+  }, [])
+
+  // タグ管理モーダルを開く（編集）
+  const openTagEditModal = useCallback((tag: PracticeTag) => {
+    setShowTagSelectModal(false) // まずTagSelectModalを閉じる
+    setTimeout(() => {
+      setEditingTag(tag)
+      setShowTagManageModal(true)
+    }, 100)
+  }, [])
+
+  // タグ選択変更
+  const handleTagsChange = useCallback((tags: PracticeTag[]) => {
+    const menu = menus[activeMenuIndex]
+    if (menu) {
+      updateMenu(menu.id, 'tags', tags)
+    }
+  }, [menus, activeMenuIndex])
+
+  // タグ保存（作成/更新）
+  const handleSaveTag = useCallback(async (name: string, color: string) => {
+    if (editingTag) {
+      await updateTagMutation.mutateAsync({ id: editingTag.id, name, color })
+    } else {
+      const newTag = await createTagMutation.mutateAsync({ name, color })
+      // 新規作成したタグを選択中のメニューに追加
+      const menu = menus[activeMenuIndex]
+      if (menu) {
+        updateMenu(menu.id, 'tags', [...menu.tags, newTag])
+      }
+    }
+  }, [editingTag, updateTagMutation, createTagMutation, menus, activeMenuIndex])
+
+  // タグ削除
+  const handleDeleteTag = useCallback(async (id: string) => {
+    await deleteTagMutation.mutateAsync(id)
+    // 削除したタグをすべてのメニューから削除
+    setMenus((prev) =>
+      prev.map((menu) => ({
+        ...menu,
+        tags: menu.tags.filter((t) => t.id !== id),
+      }))
+    )
+  }, [deleteTagMutation])
+
   // タイム入力画面へ遷移
   const handleTimeInput = (menuId: string) => {
     const menu = menus.find((m) => m.id === menuId)
@@ -344,8 +392,12 @@ export const PracticeLogFormScreen: React.FC = () => {
             })) : []
           )
 
-          // タグを更新
-          // TODO: タグの更新処理を実装
+          // タグを更新（replace_practice_log_tags RPC使用）
+          const { error: tagError } = await supabase.rpc('replace_practice_log_tags', {
+            p_practice_log_id: practiceLogId,
+            p_tag_ids: menu.tags.map((t) => t.id),
+          })
+          if (tagError) throw tagError
         } else {
           // 作成
           const createdLog = await createMutation.mutateAsync(logData)
@@ -360,8 +412,14 @@ export const PracticeLogFormScreen: React.FC = () => {
             })) : []
           )
 
-          // タグを作成
-          // TODO: タグの作成処理を実装
+          // タグを作成（replace_practice_log_tags RPC使用）
+          if (menu.tags.length > 0) {
+            const { error: tagError } = await supabase.rpc('replace_practice_log_tags', {
+              p_practice_log_id: createdLog.id,
+              p_tag_ids: menu.tags.map((t) => t.id),
+            })
+            if (tagError) throw tagError
+          }
         }
       }
 
@@ -370,8 +428,12 @@ export const PracticeLogFormScreen: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['calendar'] })
       queryClient.invalidateQueries({ queryKey: practiceKeys.lists() })
 
-      // 成功: 前の画面に戻る（練習タブから来た場合は練習タブに戻る）
-      navigation.goBack()
+      // 成功: 遷移元に応じて戻る
+      if (returnTo === 'dashboard') {
+        navigation.navigate('MainTabs', { screen: 'Dashboard' })
+      } else {
+        navigation.goBack()
+      }
     } catch (error) {
       console.error('保存エラー:', error)
       Alert.alert(
@@ -422,6 +484,18 @@ export const PracticeLogFormScreen: React.FC = () => {
                     <Feather name="trash-2" size={18} color="#EF4444" />
                   </Pressable>
                 )}
+              </View>
+
+              {/* タグ入力 */}
+              <View style={styles.field}>
+                <Text style={styles.label}>タグ</Text>
+                <TagChips
+                  tags={menu.tags}
+                  onPress={() => openTagSelectModal(index)}
+                  onRemove={(tagId) =>
+                    updateMenu(menu.id, 'tags', menu.tags.filter((t) => t.id !== tagId))
+                  }
+                />
               </View>
 
               {/* 種目 */}
@@ -643,14 +717,6 @@ export const PracticeLogFormScreen: React.FC = () => {
                   textAlignVertical="top"
                 />
               </View>
-
-              {/* タグ入力 */}
-              <View style={styles.field}>
-                <Text style={styles.label}>タグ</Text>
-                <Text style={styles.tagPlaceholder}>
-                  タグ機能は後で実装します
-                </Text>
-              </View>
             </View>
           ))}
         </View>
@@ -671,6 +737,31 @@ export const PracticeLogFormScreen: React.FC = () => {
           </Pressable>
         </View>
       </View>
+
+      {/* タグ選択モーダル */}
+      <TagSelectModal
+        visible={showTagSelectModal}
+        onClose={() => setShowTagSelectModal(false)}
+        selectedTags={menus[activeMenuIndex]?.tags || []}
+        availableTags={availableTags}
+        onTagsChange={handleTagsChange}
+        onCreateTag={openTagCreateModal}
+        onEditTag={openTagEditModal}
+        onDeleteTag={(tag) => handleDeleteTag(tag.id)}
+      />
+
+      {/* タグ管理モーダル */}
+      <TagManageModal
+        visible={showTagManageModal}
+        onClose={() => {
+          setShowTagManageModal(false)
+          // タグ管理モーダルを閉じた後、タグ選択モーダルを再度開く
+          setTimeout(() => setShowTagSelectModal(true), 100)
+        }}
+        tag={editingTag}
+        onSave={handleSaveTag}
+        onDelete={handleDeleteTag}
+      />
     </ScrollView>
   )
 }
@@ -865,11 +956,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     marginTop: 4,
-  },
-  tagPlaceholder: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    fontStyle: 'italic',
   },
   buttonContainer: {
     flexDirection: 'row',

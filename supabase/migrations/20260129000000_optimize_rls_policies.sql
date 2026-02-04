@@ -133,6 +133,7 @@ CREATE POLICY "Users can create their own achievements"
 DROP POLICY IF EXISTS "Users can view own records" ON records;
 DROP POLICY IF EXISTS "Team members can view teammates' personal records" ON records;
 DROP POLICY IF EXISTS "Team members can view team records" ON records;
+DROP POLICY IF EXISTS "Records select policy" ON records;
 
 CREATE POLICY "Records select policy" ON records
 FOR SELECT USING (
@@ -160,6 +161,7 @@ FOR SELECT USING (
 -- INSERT: 2つのポリシーを1つに統合
 DROP POLICY IF EXISTS "Users can insert own records" ON records;
 DROP POLICY IF EXISTS "Team admins can insert team member records" ON records;
+DROP POLICY IF EXISTS "Records insert policy" ON records;
 
 CREATE POLICY "Records insert policy" ON records
 FOR INSERT WITH CHECK (
@@ -188,6 +190,7 @@ FOR INSERT WITH CHECK (
 -- UPDATE: 2つのポリシーを1つに統合
 DROP POLICY IF EXISTS "Users can update own records" ON records;
 DROP POLICY IF EXISTS "Team admins can update team member records" ON records;
+DROP POLICY IF EXISTS "Records update policy" ON records;
 
 CREATE POLICY "Records update policy" ON records
 FOR UPDATE USING (
@@ -216,6 +219,7 @@ FOR UPDATE USING (
 -- DELETE: 2つのポリシーを1つに統合
 DROP POLICY IF EXISTS "Users can delete own records" ON records;
 DROP POLICY IF EXISTS "Team admins can delete team member records" ON records;
+DROP POLICY IF EXISTS "Records delete policy" ON records;
 
 CREATE POLICY "Records delete policy" ON records
 FOR DELETE USING (
@@ -248,6 +252,7 @@ FOR DELETE USING (
 -- SELECT: 2つのポリシーを1つに統合
 DROP POLICY IF EXISTS "Users can view own split_times" ON split_times;
 DROP POLICY IF EXISTS "Team members can view team split_times" ON split_times;
+DROP POLICY IF EXISTS "Split times select policy" ON split_times;
 
 CREATE POLICY "Split times select policy" ON split_times
 FOR SELECT USING (
@@ -275,6 +280,7 @@ FOR SELECT USING (
 -- INSERT: 2つのポリシーを1つに統合
 DROP POLICY IF EXISTS "Users can insert own split_times" ON split_times;
 DROP POLICY IF EXISTS "Team admins can insert team member split_times" ON split_times;
+DROP POLICY IF EXISTS "Split times insert policy" ON split_times;
 
 CREATE POLICY "Split times insert policy" ON split_times
 FOR INSERT WITH CHECK (
@@ -303,6 +309,7 @@ FOR INSERT WITH CHECK (
 -- UPDATE: 2つのポリシーを1つに統合
 DROP POLICY IF EXISTS "Users can update own split_times" ON split_times;
 DROP POLICY IF EXISTS "Team admins can update team member split_times" ON split_times;
+DROP POLICY IF EXISTS "Split times update policy" ON split_times;
 
 CREATE POLICY "Split times update policy" ON split_times
 FOR UPDATE USING (
@@ -331,6 +338,7 @@ FOR UPDATE USING (
 -- DELETE: 2つのポリシーを1つに統合
 DROP POLICY IF EXISTS "Users can delete own split_times" ON split_times;
 DROP POLICY IF EXISTS "Team admins can delete team member split_times" ON split_times;
+DROP POLICY IF EXISTS "Split times delete policy" ON split_times;
 
 CREATE POLICY "Split times delete policy" ON split_times
 FOR DELETE USING (

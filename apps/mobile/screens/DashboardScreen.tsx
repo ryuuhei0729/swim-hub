@@ -162,7 +162,7 @@ export const DashboardScreen: React.FC = () => {
 
   // 練習ログ追加
   const handleAddPracticeLog = (practiceId: string) => {
-    navigation.navigate('PracticeLogForm', { practiceId })
+    navigation.navigate('PracticeLogForm', { practiceId, returnTo: 'dashboard' })
   }
 
   // 練習ログ編集
@@ -170,7 +170,7 @@ export const DashboardScreen: React.FC = () => {
     const practiceId = item.metadata?.practice_id || item.metadata?.practice?.id
     const practiceLogId = item.id
     if (practiceId) {
-      navigation.navigate('PracticeLogForm', { practiceId, practiceLogId })
+      navigation.navigate('PracticeLogForm', { practiceId, practiceLogId, returnTo: 'dashboard' })
     }
   }
 
