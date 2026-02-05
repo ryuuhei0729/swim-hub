@@ -255,28 +255,38 @@ export const PracticeLogFormScreen: React.FC = () => {
 
   // タグ保存（作成/更新）
   const handleSaveTag = useCallback(async (name: string, color: string) => {
-    if (editingTag) {
-      await updateTagMutation.mutateAsync({ id: editingTag.id, name, color })
-    } else {
-      const newTag = await createTagMutation.mutateAsync({ name, color })
-      // 新規作成したタグを選択中のメニューに追加
-      const menu = menus[activeMenuIndex]
-      if (menu) {
-        updateMenu(menu.id, 'tags', [...menu.tags, newTag])
+    try {
+      if (editingTag) {
+        await updateTagMutation.mutateAsync({ id: editingTag.id, name, color })
+      } else {
+        const newTag = await createTagMutation.mutateAsync({ name, color })
+        // 新規作成したタグを選択中のメニューに追加
+        const menu = menus[activeMenuIndex]
+        if (menu) {
+          updateMenu(menu.id, 'tags', [...menu.tags, newTag])
+        }
       }
+    } catch (error) {
+      console.error('タグ保存エラー:', error)
+      Alert.alert('エラー', 'タグの保存に失敗しました。もう一度お試しください。')
     }
   }, [editingTag, updateTagMutation, createTagMutation, menus, activeMenuIndex])
 
   // タグ削除
   const handleDeleteTag = useCallback(async (id: string) => {
-    await deleteTagMutation.mutateAsync(id)
-    // 削除したタグをすべてのメニューから削除
-    setMenus((prev) =>
-      prev.map((menu) => ({
-        ...menu,
-        tags: menu.tags.filter((t) => t.id !== id),
-      }))
-    )
+    try {
+      await deleteTagMutation.mutateAsync(id)
+      // 削除したタグをすべてのメニューから削除
+      setMenus((prev) =>
+        prev.map((menu) => ({
+          ...menu,
+          tags: menu.tags.filter((t) => t.id !== id),
+        }))
+      )
+    } catch (error) {
+      console.error('タグ削除エラー:', error)
+      Alert.alert('エラー', 'タグの削除に失敗しました。もう一度お試しください。')
+    }
   }, [deleteTagMutation])
 
   // タイム入力画面へ遷移

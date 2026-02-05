@@ -200,12 +200,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
     try {
       if (competitionId) {
         // 編集モード
-        // 削除対象画像をストレージから削除
-        if (deletedImageIds.length > 0) {
-          await deleteImages(supabase, deletedImageIds, 'competition-images')
-        }
-
-        // 新規画像をアップロード
+        // 1. 新規画像をアップロード
         let newImagePaths: string[] = []
         if (newImageFiles.length > 0) {
           const uploadResults = await uploadImages(
@@ -221,7 +216,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
           newImagePaths = uploadResults.map((r) => r.path)
         }
 
-        // 既存画像パスから削除されたものを除外し、新規画像パスを追加
+        // 2. 既存画像パスから削除されたものを除外し、新規画像パスを追加
         const currentPaths = existingImages
           .filter((img) => !deletedImageIds.includes(img.id))
           .map((img) => img.id)
@@ -237,10 +232,16 @@ export const CompetitionBasicFormScreen: React.FC = () => {
           image_paths: updatedImagePaths.length > 0 ? updatedImagePaths : [],
         }
 
+        // 3. DB更新
         await updateMutation.mutateAsync({
           id: competitionId,
           updates: formData,
         })
+
+        // 4. DB更新成功後に削除対象画像をストレージから削除
+        if (deletedImageIds.length > 0) {
+          await deleteImages(supabase, deletedImageIds, 'competition-images')
+        }
       } else {
         // 新規作成モード
         const formData = {
@@ -268,11 +269,17 @@ export const CompetitionBasicFormScreen: React.FC = () => {
           )
           const imagePaths = uploadResults.map((r) => r.path)
 
-          // 大会を画像パスで更新
-          await updateMutation.mutateAsync({
-            id: newCompetition.id,
-            updates: { image_paths: imagePaths },
-          })
+          // 大会を画像パスで更新（失敗時はアップロード済みファイルを削除）
+          try {
+            await updateMutation.mutateAsync({
+              id: newCompetition.id,
+              updates: { image_paths: imagePaths },
+            })
+          } catch (updateError) {
+            // 更新失敗時はアップロード済みファイルをクリーンアップ
+            await deleteImages(supabase, imagePaths, 'competition-images')
+            throw updateError
+          }
         }
       }
 
@@ -312,12 +319,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
     try {
       if (competitionId) {
         // 編集モード
-        // 削除対象画像をストレージから削除
-        if (deletedImageIds.length > 0) {
-          await deleteImages(supabase, deletedImageIds, 'competition-images')
-        }
-
-        // 新規画像をアップロード
+        // 1. 新規画像をアップロード
         let newImagePaths: string[] = []
         if (newImageFiles.length > 0) {
           const uploadResults = await uploadImages(
@@ -333,7 +335,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
           newImagePaths = uploadResults.map((r) => r.path)
         }
 
-        // 既存画像パスから削除されたものを除外し、新規画像パスを追加
+        // 2. 既存画像パスから削除されたものを除外し、新規画像パスを追加
         const currentPaths = existingImages
           .filter((img) => !deletedImageIds.includes(img.id))
           .map((img) => img.id)
@@ -349,10 +351,17 @@ export const CompetitionBasicFormScreen: React.FC = () => {
           image_paths: updatedImagePaths.length > 0 ? updatedImagePaths : [],
         }
 
+        // 3. DB更新
         await updateMutation.mutateAsync({
           id: competitionId,
           updates: formData,
         })
+
+        // 4. DB更新成功後に削除対象画像をストレージから削除
+        if (deletedImageIds.length > 0) {
+          await deleteImages(supabase, deletedImageIds, 'competition-images')
+        }
+
         // カレンダーのクエリを無効化してリフレッシュ
         queryClient.invalidateQueries({ queryKey: ['calendar'] })
         // エントリー登録フォームに遷移
@@ -387,11 +396,17 @@ export const CompetitionBasicFormScreen: React.FC = () => {
           )
           const imagePaths = uploadResults.map((r) => r.path)
 
-          // 大会を画像パスで更新
-          await updateMutation.mutateAsync({
-            id: newCompetition.id,
-            updates: { image_paths: imagePaths },
-          })
+          // 大会を画像パスで更新（失敗時はアップロード済みファイルを削除）
+          try {
+            await updateMutation.mutateAsync({
+              id: newCompetition.id,
+              updates: { image_paths: imagePaths },
+            })
+          } catch (updateError) {
+            // 更新失敗時はアップロード済みファイルをクリーンアップ
+            await deleteImages(supabase, imagePaths, 'competition-images')
+            throw updateError
+          }
         }
 
         // ストアに保存
