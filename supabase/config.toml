@@ -126,7 +126,10 @@ additional_redirect_urls = [
   "http://127.0.0.1:3000",
   "http://localhost:3000",
   "https://swim-hub.app/**",
-  "https://swim-hub.vercel.app/**"
+  "https://swim-hub.vercel.app/**",
+  # モバイルアプリ用カスタムURLスキーム
+  "swimhub://auth/callback",
+  "swimhub://**"
 ]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600

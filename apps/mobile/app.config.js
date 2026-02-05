@@ -9,6 +9,8 @@ const baseConfig = require('./app.json')
 // 環境変数の確認（デバッグ用）
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
+const webApiUrl = process.env.EXPO_PUBLIC_WEB_API_URL
 
 if (process.env.NODE_ENV === 'development') {
   console.log('app.config.js - 環境変数の確認:')
@@ -23,6 +25,8 @@ module.exports = {
     ...baseConfig.expo.extra,
     supabaseUrl: supabaseUrl,
     supabaseAnonKey: supabaseAnonKey,
+    googleWebClientId: googleWebClientId,
+    webApiUrl: webApiUrl || 'https://swimhub.app',
     environment: process.env.EXPO_PUBLIC_ENVIRONMENT || 'development',
     // EASプロジェクトID
     eas: {

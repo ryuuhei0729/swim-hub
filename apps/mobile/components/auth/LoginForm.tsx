@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from 'react-native'
 import { useAuth } from '@/contexts/AuthProvider'
+import { useGoogleAuth } from '@/hooks/useGoogleAuth'
+import { GoogleLoginButton } from './GoogleLoginButton'
 
 interface LoginFormProps {
   onSuccess?: () => void
@@ -13,6 +15,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   const [error, setError] = useState<string | null>(null)
 
   const { signIn } = useAuth()
+  const { signInWithGoogle, loading: googleLoading, error: googleError, clearError: clearGoogleError } = useGoogleAuth()
 
   type AuthError = {
     status?: number
@@ -108,6 +111,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
     }
   }
 
+  const handleGoogleLogin = async () => {
+    setError(null)
+    clearGoogleError()
+    const result = await signInWithGoogle()
+    if (result.success) {
+      onSuccess?.()
+    }
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.formContainer}>
@@ -166,6 +178,27 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
               <Text style={styles.buttonText}>ログイン</Text>
             )}
           </Pressable>
+
+          {/* 区切り線 */}
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>または</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Googleログインボタン */}
+          <GoogleLoginButton
+            onPress={handleGoogleLogin}
+            loading={googleLoading}
+            disabled={loading}
+          />
+
+          {/* Googleログインエラー表示 */}
+          {googleError && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{googleError}</Text>
+            </View>
+          )}
 
           <Pressable
             style={styles.linkContainer}
@@ -276,5 +309,20 @@ const styles = StyleSheet.create({
     color: '#2563EB',
     fontSize: 14,
     fontWeight: '500',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 16,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#D1D5DB',
+  },
+  dividerText: {
+    marginHorizontal: 12,
+    fontSize: 14,
+    color: '#6B7280',
   },
 })

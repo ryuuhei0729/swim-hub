@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native'
 import { StatusBar } from 'expo-status-bar'
 import { View, ActivityIndicator, StyleSheet, Text } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
+import Constants from 'expo-constants'
 import { AuthProvider, useAuth } from './contexts/AuthProvider'
 import QueryProvider from './providers/QueryProvider'
 import { NetworkProvider, useNetwork } from './providers/NetworkProvider'
@@ -11,6 +12,13 @@ import { AuthStack } from './navigation/AuthStack'
 import { MainStack } from './navigation/MainStack'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { supabase } from './lib/supabase'
+
+// グローバル変数でWeb API URLを設定（shared packageから参照される）
+declare global {
+  // eslint-disable-next-line no-var
+  var __SWIM_HUB_WEB_API_URL__: string | undefined
+}
+globalThis.__SWIM_HUB_WEB_API_URL__ = Constants.expoConfig?.extra?.webApiUrl || 'https://swimhub.app'
 
 /**
  * Supabase未初期化時のエラー画面
