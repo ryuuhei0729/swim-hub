@@ -22,7 +22,6 @@ import {
   deleteImages,
   getImagePublicUrl,
   getExistingImagesFromPaths,
-  type ImageBucket,
 } from '../imageUpload'
 import { randomUUID } from 'expo-crypto'
 
