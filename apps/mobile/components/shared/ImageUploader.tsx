@@ -92,27 +92,19 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 
   // blob URLのクリーンアップ
   useEffect(() => {
-    // 既存のblob URLを解放
-    previousBlobUrlsRef.current.forEach((url) => {
-      if (url.startsWith('blob:')) {
-        URL.revokeObjectURL(url)
-      }
-    })
+    // 前回のblob URLを保持（クリーンアップ用）
+    const urlsToRevoke = previousBlobUrlsRef.current
 
     // 現在の新規ファイルのURIを保持
     previousBlobUrlsRef.current = newFiles.map((f) => f.uri).filter((uri) => uri.startsWith('blob:'))
 
+    // クリーンアップ時に前回のblob URLを解放
     return () => {
-      previousBlobUrlsRef.current.forEach((url) => {
+      urlsToRevoke.forEach((url) => {
         URL.revokeObjectURL(url)
       })
     }
   }, [newFiles])
-
-  // 変更を親に通知
-  useEffect(() => {
-    onImagesChange(newFiles, deletedIds)
-  }, [newFiles, deletedIds, onImagesChange])
 
   const handleImageSelect = async () => {
     if (disabled || currentImageCount >= maxImages) return
@@ -166,7 +158,11 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         }
 
         if (newImages.length > 0) {
-          setNewFiles((prev) => [...prev, ...newImages])
+          setNewFiles((prev) => {
+            const updated = [...prev, ...newImages]
+            onImagesChange(updated, deletedIds)
+            return updated
+          })
         }
       }
       input.click()
@@ -209,14 +205,16 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         }
 
         const fileExt = getFileExtensionFromAsset(asset)
-        setNewFiles((prev) => [
-          ...prev,
-          {
-            uri: asset.uri,
-            base64: asset.base64!,
-            fileExtension: fileExt,
-          },
-        ])
+        const newImage: ImageFile = {
+          uri: asset.uri,
+          base64: asset.base64!,
+          fileExtension: fileExt,
+        }
+        setNewFiles((prev) => {
+          const updated = [...prev, newImage]
+          onImagesChange(updated, deletedIds)
+          return updated
+        })
       } catch (err) {
         console.error('画像選択エラー:', err)
         const errorMessage = err instanceof Error ? err.message : '画像の選択に失敗しました'
@@ -230,7 +228,11 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     if (disabled) return
 
     const confirmRemove = () => {
-      setDeletedIds((prev) => [...prev, id])
+      setDeletedIds((prev) => {
+        const updated = [...prev, id]
+        onImagesChange(newFiles, updated)
+        return updated
+      })
     }
 
     if (Platform.OS === 'web') {
@@ -247,7 +249,11 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 
   const handleRemoveNew = (index: number) => {
     if (disabled) return
-    setNewFiles((prev) => prev.filter((_, i) => i !== index))
+    setNewFiles((prev) => {
+      const updated = prev.filter((_, i) => i !== index)
+      onImagesChange(updated, deletedIds)
+      return updated
+    })
   }
 
   const canAddMore = currentImageCount < maxImages

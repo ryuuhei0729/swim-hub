@@ -53,38 +53,44 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
         // OAuth URLを構築
         const { url, redirectUri } = buildGoogleAuthUrl(options)
 
-        console.log('=== Google OAuth Debug ===')
-        console.log('Full OAuth URL:', url)
-        console.log('Redirect URI:', redirectUri)
-        console.log('URL breakdown:')
-        try {
-          const urlObj = new URL(url)
-          console.log('  - Host:', urlObj.host)
-          console.log('  - Pathname:', urlObj.pathname)
-          console.log('  - Search params:', urlObj.search)
-        } catch (e) {
-          console.log('  - URL parse error:', e)
+        if (__DEV__) {
+          console.log('=== Google OAuth Debug ===')
+          // URLからトークンを含む可能性のあるフラグメントを除去してログ出力
+          const maskSensitiveUrl = (urlStr: string) => {
+            const hashIndex = urlStr.indexOf('#')
+            return hashIndex !== -1 ? `${urlStr.substring(0, hashIndex)}#[MASKED]` : urlStr
+          }
+          console.log('OAuth URL (masked):', maskSensitiveUrl(url))
+          console.log('Redirect URI:', redirectUri)
+          console.log('=========================')
         }
-        console.log('=========================')
 
         // システムブラウザで認証画面を開く
         const result = await WebBrowser.openAuthSessionAsync(url, redirectUri)
 
-        console.log('WebBrowser result:', result)
+        if (__DEV__) {
+          console.log('WebBrowser result type:', result.type)
+        }
 
         if (result.type === 'success' && result.url) {
-          console.log('Callback URL:', result.url)
+          if (__DEV__) {
+            // URLフラグメントにトークンが含まれるため、マスクして出力
+            const callbackBase = result.url.split('#')[0]
+            console.log('Callback URL (base only):', callbackBase)
+          }
 
           // コールバックURLからトークンを抽出
           const tokens = extractTokensFromUrl(result.url)
 
-          console.log('Extracted tokens:', {
-            hasAccessToken: !!tokens.accessToken,
-            hasRefreshToken: !!tokens.refreshToken,
-            hasProviderToken: !!tokens.providerToken,
-            hasProviderRefreshToken: !!tokens.providerRefreshToken,
-            error: tokens.error,
-          })
+          if (__DEV__) {
+            console.log('Extracted tokens:', {
+              hasAccessToken: !!tokens.accessToken,
+              hasRefreshToken: !!tokens.refreshToken,
+              hasProviderToken: !!tokens.providerToken,
+              hasProviderRefreshToken: !!tokens.providerRefreshToken,
+              error: tokens.error,
+            })
+          }
 
           if (tokens.error) {
             setError(tokens.error)
@@ -104,12 +110,16 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
               return { success: false, error: sessionError }
             }
 
-            console.log('Session set successfully!')
+            if (__DEV__) {
+              console.log('Session set successfully!')
+            }
 
             // カレンダー連携の場合、provider_refresh_tokenを保存してフラグを更新
             // Web APIを経由してトークンを保存（pgsodiumの権限問題を回避）
             if (options?.forCalendarConnect && tokens.providerRefreshToken) {
-              console.log('Saving Google Calendar tokens via Web API...')
+              if (__DEV__) {
+                console.log('Saving Google Calendar tokens via Web API...')
+              }
 
               try {
                 const webApiUrl = globalThis.__SWIM_HUB_WEB_API_URL__ || 'https://swimhub.app'
@@ -125,7 +135,9 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
                 })
 
                 if (response.ok) {
-                  console.log('Google Calendar tokens saved successfully via Web API!')
+                  if (__DEV__) {
+                    console.log('Google Calendar tokens saved successfully via Web API!')
+                  }
                 } else {
                   const errorData = await response.json().catch(() => ({})) as { error?: string }
                   console.error('Failed to save Google Calendar tokens:', errorData.error || response.status)

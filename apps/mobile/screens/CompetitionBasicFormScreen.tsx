@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useState, useEffect, useCallback } from 'react'
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert } from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
@@ -232,7 +234,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
           place: place && place.trim() !== '' ? place.trim() : null,
           pool_type: poolType,
           note: note && note.trim() !== '' ? note.trim() : null,
-          image_paths: updatedImagePaths.length > 0 ? updatedImagePaths : undefined,
+          image_paths: updatedImagePaths.length > 0 ? updatedImagePaths : [],
         }
 
         await updateMutation.mutateAsync({
@@ -344,7 +346,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
           place: place && place.trim() !== '' ? place.trim() : null,
           pool_type: poolType,
           note: note && note.trim() !== '' ? note.trim() : null,
-          image_paths: updatedImagePaths.length > 0 ? updatedImagePaths : undefined,
+          image_paths: updatedImagePaths.length > 0 ? updatedImagePaths : [],
         }
 
         await updateMutation.mutateAsync({

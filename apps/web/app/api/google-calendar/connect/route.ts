@@ -56,8 +56,16 @@ export async function POST(request: NextRequest) {
     }
 
     // リクエストボディからprovider_refresh_tokenを取得
-    const body = await request.json() as { providerRefreshToken?: string }
-    const { providerRefreshToken } = body
+    let providerRefreshToken: string | undefined
+    try {
+      const body = await request.json() as { providerRefreshToken?: string }
+      providerRefreshToken = body.providerRefreshToken
+    } catch {
+      return NextResponse.json(
+        { error: '無効なJSONです' },
+        { status: 400 }
+      )
+    }
 
     if (!providerRefreshToken) {
       return NextResponse.json(

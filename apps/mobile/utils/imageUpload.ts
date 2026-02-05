@@ -3,6 +3,7 @@
  * 練習記録・大会記録の画像をSupabase Storageにアップロード
  */
 
+import { randomUUID } from 'expo-crypto'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { base64ToArrayBuffer } from './base64'
 
@@ -23,14 +24,10 @@ export interface UploadResult {
 }
 
 /**
- * UUIDを生成
+ * UUIDを生成（暗号学的に安全なexpo-cryptoを使用）
  */
-function generateUUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0
-    const v = c === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
+export function generateUUID(): string {
+  return randomUUID()
 }
 
 /**

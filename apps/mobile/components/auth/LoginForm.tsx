@@ -112,6 +112,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   }
 
   const handleGoogleLogin = async () => {
+    if (googleLoading) {
+      return
+    }
     setError(null)
     clearGoogleError()
     const result = await signInWithGoogle()
@@ -190,7 +193,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
           <GoogleLoginButton
             onPress={handleGoogleLogin}
             loading={googleLoading}
-            disabled={loading}
+            disabled={loading || googleLoading}
           />
 
           {/* Googleログインエラー表示 */}

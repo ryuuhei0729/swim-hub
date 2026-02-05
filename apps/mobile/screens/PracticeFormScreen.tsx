@@ -167,11 +167,6 @@ export const PracticeFormScreen: React.FC = () => {
 
     try {
       if (isEditMode && practiceId) {
-        // 削除対象画像をストレージから削除
-        if (deletedImageIds.length > 0) {
-          await deleteImages(supabase, deletedImageIds, 'practice-images')
-        }
-
         // 新規画像をアップロード
         let newImagePaths: string[] = []
         if (newImageFiles.length > 0) {
@@ -199,7 +194,7 @@ export const PracticeFormScreen: React.FC = () => {
           title: title && title.trim() !== '' ? title.trim() : null,
           place: place && place.trim() !== '' ? place.trim() : null,
           note: note && note.trim() !== '' ? note.trim() : null,
-          image_paths: updatedImagePaths.length > 0 ? updatedImagePaths : undefined,
+          image_paths: updatedImagePaths.length > 0 ? updatedImagePaths : [],
         }
 
         // 更新
@@ -207,6 +202,11 @@ export const PracticeFormScreen: React.FC = () => {
           id: practiceId,
           updates: formData,
         })
+
+        // DB更新成功後に削除対象画像をストレージから削除
+        if (deletedImageIds.length > 0) {
+          await deleteImages(supabase, deletedImageIds, 'practice-images')
+        }
         // カレンダーと練習一覧のクエリを無効化してリフレッシュ
         queryClient.invalidateQueries({ queryKey: ['calendar'] })
         queryClient.invalidateQueries({ queryKey: practiceKeys.lists() })
@@ -280,11 +280,6 @@ export const PracticeFormScreen: React.FC = () => {
 
     try {
       if (isEditMode && practiceId) {
-        // 削除対象画像をストレージから削除
-        if (deletedImageIds.length > 0) {
-          await deleteImages(supabase, deletedImageIds, 'practice-images')
-        }
-
         // 新規画像をアップロード
         let newImagePaths: string[] = []
         if (newImageFiles.length > 0) {
@@ -312,7 +307,7 @@ export const PracticeFormScreen: React.FC = () => {
           title: title && title.trim() !== '' ? title.trim() : null,
           place: place && place.trim() !== '' ? place.trim() : null,
           note: note && note.trim() !== '' ? note.trim() : null,
-          image_paths: updatedImagePaths.length > 0 ? updatedImagePaths : undefined,
+          image_paths: updatedImagePaths.length > 0 ? updatedImagePaths : [],
         }
 
         // 編集モード: 練習を更新
@@ -320,6 +315,11 @@ export const PracticeFormScreen: React.FC = () => {
           id: practiceId,
           updates: formData,
         })
+
+        // DB更新成功後に削除対象画像をストレージから削除
+        if (deletedImageIds.length > 0) {
+          await deleteImages(supabase, deletedImageIds, 'practice-images')
+        }
         queryClient.invalidateQueries({ queryKey: ['calendar'] })
         queryClient.invalidateQueries({ queryKey: practiceKeys.lists() })
         reset()

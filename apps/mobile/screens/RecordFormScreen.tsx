@@ -246,49 +246,14 @@ export const RecordFormScreen: React.FC = () => {
     setLoading(true)
     clearErrors()
 
+    // アップロードした画像パス（ロールバック用）
+    let uploadedImagePaths: string[] = []
+
     try {
       // 大会からプールタイプを取得
       const finalCompetitionId = routeCompetitionId || storeCompetitionId
       const selectedCompetition = competitions.find((c) => c.id === finalCompetitionId)
       const poolType: PoolType = (selectedCompetition?.pool_type ?? 0) as PoolType // デフォルトは短水路
-
-      // 画像の処理（大会に紐づける）
-      if (finalCompetitionId && (deletedImageIds.length > 0 || newImageFiles.length > 0)) {
-        // 削除対象画像をストレージから削除
-        if (deletedImageIds.length > 0) {
-          await deleteImages(supabase, deletedImageIds, 'competition-images')
-        }
-
-        // 新規画像をアップロード
-        let newImagePaths: string[] = []
-        if (newImageFiles.length > 0) {
-          const uploadResults = await uploadImages(
-            supabase,
-            user.id,
-            finalCompetitionId,
-            newImageFiles.map((f) => ({
-              base64: f.base64,
-              fileExtension: f.fileExtension,
-            })),
-            'competition-images'
-          )
-          newImagePaths = uploadResults.map((r) => r.path)
-        }
-
-        // 既存画像パスから削除されたものを除外し、新規画像パスを追加
-        const currentPaths = existingImages
-          .filter((img) => !deletedImageIds.includes(img.id))
-          .map((img) => img.id) // idがパス
-        const updatedImagePaths = [...currentPaths, ...newImagePaths]
-
-        // 大会の画像パスを更新
-        await updateCompetitionMutation.mutateAsync({
-          id: finalCompetitionId,
-          updates: {
-            image_paths: updatedImagePaths.length > 0 ? updatedImagePaths : undefined,
-          },
-        })
-      }
 
       const recordData = {
         competition_id: finalCompetitionId,
@@ -325,6 +290,61 @@ export const RecordFormScreen: React.FC = () => {
         })
       }
 
+      // レコード保存成功後に画像の処理（大会に紐づける）
+      if (finalCompetitionId && (deletedImageIds.length > 0 || newImageFiles.length > 0)) {
+        try {
+          // 新規画像をアップロード（先にアップロードしてパスを取得）
+          if (newImageFiles.length > 0) {
+            const uploadResults = await uploadImages(
+              supabase,
+              user.id,
+              finalCompetitionId,
+              newImageFiles.map((f) => ({
+                base64: f.base64,
+                fileExtension: f.fileExtension,
+              })),
+              'competition-images'
+            )
+            uploadedImagePaths = uploadResults.map((r) => r.path)
+          }
+
+          // 既存画像パスから削除されたものを除外し、新規画像パスを追加
+          const currentPaths = existingImages
+            .filter((img) => !deletedImageIds.includes(img.id))
+            .map((img) => img.id) // idがパス
+          const updatedImagePaths = [...currentPaths, ...uploadedImagePaths]
+
+          // 大会の画像パスを更新
+          await updateCompetitionMutation.mutateAsync({
+            id: finalCompetitionId,
+            updates: {
+              image_paths: updatedImagePaths.length > 0 ? updatedImagePaths : [],
+            },
+          })
+
+          // 大会の画像パス更新成功後に削除対象画像をストレージから削除
+          if (deletedImageIds.length > 0) {
+            await deleteImages(supabase, deletedImageIds, 'competition-images')
+          }
+        } catch (imageError) {
+          // 画像処理失敗時はアップロードした画像をロールバック
+          if (uploadedImagePaths.length > 0) {
+            try {
+              await deleteImages(supabase, uploadedImagePaths, 'competition-images')
+            } catch (rollbackError) {
+              console.error('画像ロールバックエラー:', rollbackError)
+            }
+          }
+          // レコードは保存済みなので、画像エラーは警告として表示
+          console.error('画像処理エラー:', imageError)
+          Alert.alert(
+            '警告',
+            'レコードは保存されましたが、画像の処理に失敗しました',
+            [{ text: 'OK' }]
+          )
+        }
+      }
+
       // カレンダーのクエリを無効化してリフレッシュ
       queryClient.invalidateQueries({ queryKey: ['calendar'] })
 
@@ -333,6 +353,14 @@ export const RecordFormScreen: React.FC = () => {
       navigation.goBack()
     } catch (error) {
       console.error('保存エラー:', error)
+      // レコード保存失敗時はアップロードした画像をロールバック
+      if (uploadedImagePaths.length > 0) {
+        try {
+          await deleteImages(supabase, uploadedImagePaths, 'competition-images')
+        } catch (rollbackError) {
+          console.error('画像ロールバックエラー:', rollbackError)
+        }
+      }
       Alert.alert(
         'エラー',
         error instanceof Error ? error.message : '保存に失敗しました',
