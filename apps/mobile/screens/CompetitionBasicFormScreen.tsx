@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react'
+'use client'
+
+import React, { useState, useEffect, useCallback } from 'react'
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert } from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -11,6 +13,12 @@ import {
 } from '@apps/shared/hooks/queries/records'
 import { useCompetitionFormStore } from '@/stores/competitionFormStore'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
+import { ImageUploader, ImageFile, ExistingImage } from '@/components/shared/ImageUploader'
+import {
+  uploadImages,
+  deleteImages,
+  getExistingImagesFromPaths,
+} from '@/utils/imageUpload'
 import type { MainStackParamList } from '@/navigation/types'
 
 type CompetitionFormScreenRouteProp = RouteProp<MainStackParamList, 'CompetitionForm'>
@@ -29,7 +37,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
   const route = useRoute<CompetitionFormScreenRouteProp>()
   const navigation = useNavigation<CompetitionFormScreenNavigationProp>()
   const { competitionId, date: initialDateParam } = route.params
-  const { supabase } = useAuth()
+  const { supabase, user } = useAuth()
   const queryClient = useQueryClient()
 
   // フォーム状態
@@ -42,6 +50,17 @@ export const CompetitionBasicFormScreen: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [loadingCompetition, setLoadingCompetition] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // 画像の状態管理
+  const [newImageFiles, setNewImageFiles] = useState<ImageFile[]>([])
+  const [deletedImageIds, setDeletedImageIds] = useState<string[]>([])
+  const [existingImages, setExistingImages] = useState<ExistingImage[]>([])
+
+  // 画像変更のハンドラー
+  const handleImagesChange = useCallback((newFiles: ImageFile[], deletedIds: string[]) => {
+    setNewImageFiles(newFiles)
+    setDeletedImageIds(deletedIds)
+  }, [])
 
   // Zustandストア
   const { setCreatedCompetitionId, setLoading: setStoreLoading } = useCompetitionFormStore()
@@ -89,6 +108,13 @@ export const CompetitionBasicFormScreen: React.FC = () => {
           setPlace(competition.place || '')
           setPoolType(competition.pool_type ?? 0)
           setNote(competition.note || '')
+          // 既存画像を読み込み
+          const images = getExistingImagesFromPaths(
+            supabase,
+            competition.image_paths,
+            'competition-images'
+          )
+          setExistingImages(images)
         }
       } catch (error) {
         if (!isMounted) return
@@ -162,29 +188,99 @@ export const CompetitionBasicFormScreen: React.FC = () => {
       return
     }
 
+    if (!user) {
+      Alert.alert('エラー', '認証が必要です', [{ text: 'OK' }])
+      return
+    }
+
     setLoading(true)
     setStoreLoading(true)
     setErrors({})
 
     try {
-      const formData = {
-        date,
-        end_date: endDate && endDate.trim() !== '' ? endDate : null,
-        title: title && title.trim() !== '' ? title.trim() : null,
-        place: place && place.trim() !== '' ? place.trim() : null,
-        pool_type: poolType,
-        note: note && note.trim() !== '' ? note.trim() : null,
-      }
-
       if (competitionId) {
-        // 編集モード: 大会を更新
+        // 編集モード
+        // 1. 新規画像をアップロード
+        let newImagePaths: string[] = []
+        if (newImageFiles.length > 0) {
+          const uploadResults = await uploadImages(
+            supabase,
+            user.id,
+            competitionId,
+            newImageFiles.map((f) => ({
+              base64: f.base64,
+              fileExtension: f.fileExtension,
+            })),
+            'competition-images'
+          )
+          newImagePaths = uploadResults.map((r) => r.path)
+        }
+
+        // 2. 既存画像パスから削除されたものを除外し、新規画像パスを追加
+        const currentPaths = existingImages
+          .filter((img) => !deletedImageIds.includes(img.id))
+          .map((img) => img.id)
+        const updatedImagePaths = [...currentPaths, ...newImagePaths]
+
+        const formData = {
+          date,
+          end_date: endDate && endDate.trim() !== '' ? endDate : null,
+          title: title && title.trim() !== '' ? title.trim() : null,
+          place: place && place.trim() !== '' ? place.trim() : null,
+          pool_type: poolType,
+          note: note && note.trim() !== '' ? note.trim() : null,
+          image_paths: updatedImagePaths.length > 0 ? updatedImagePaths : [],
+        }
+
+        // 3. DB更新
         await updateMutation.mutateAsync({
           id: competitionId,
           updates: formData,
         })
+
+        // 4. DB更新成功後に削除対象画像をストレージから削除
+        if (deletedImageIds.length > 0) {
+          await deleteImages(supabase, deletedImageIds, 'competition-images')
+        }
       } else {
-        // 新規作成モード: 大会を作成
-        await createMutation.mutateAsync(formData)
+        // 新規作成モード
+        const formData = {
+          date,
+          end_date: endDate && endDate.trim() !== '' ? endDate : null,
+          title: title && title.trim() !== '' ? title.trim() : null,
+          place: place && place.trim() !== '' ? place.trim() : null,
+          pool_type: poolType,
+          note: note && note.trim() !== '' ? note.trim() : null,
+        }
+
+        const newCompetition = await createMutation.mutateAsync(formData)
+
+        // 新規画像をアップロード
+        if (newImageFiles.length > 0) {
+          const uploadResults = await uploadImages(
+            supabase,
+            user.id,
+            newCompetition.id,
+            newImageFiles.map((f) => ({
+              base64: f.base64,
+              fileExtension: f.fileExtension,
+            })),
+            'competition-images'
+          )
+          const imagePaths = uploadResults.map((r) => r.path)
+
+          // 大会を画像パスで更新（失敗時はアップロード済みファイルを削除）
+          try {
+            await updateMutation.mutateAsync({
+              id: newCompetition.id,
+              updates: { image_paths: imagePaths },
+            })
+          } catch (updateError) {
+            // 更新失敗時はアップロード済みファイルをクリーンアップ
+            await deleteImages(supabase, imagePaths, 'competition-images')
+            throw updateError
+          }
+        }
       }
 
       // カレンダーのクエリを無効化してリフレッシュ
@@ -211,26 +307,61 @@ export const CompetitionBasicFormScreen: React.FC = () => {
       return
     }
 
+    if (!user) {
+      Alert.alert('エラー', '認証が必要です', [{ text: 'OK' }])
+      return
+    }
+
     setLoading(true)
     setStoreLoading(true)
     setErrors({})
 
     try {
-      const formData = {
-        date,
-        end_date: endDate && endDate.trim() !== '' ? endDate : null,
-        title: title && title.trim() !== '' ? title.trim() : null,
-        place: place && place.trim() !== '' ? place.trim() : null,
-        pool_type: poolType,
-        note: note && note.trim() !== '' ? note.trim() : null,
-      }
-
       if (competitionId) {
-        // 編集モード: 大会を更新
+        // 編集モード
+        // 1. 新規画像をアップロード
+        let newImagePaths: string[] = []
+        if (newImageFiles.length > 0) {
+          const uploadResults = await uploadImages(
+            supabase,
+            user.id,
+            competitionId,
+            newImageFiles.map((f) => ({
+              base64: f.base64,
+              fileExtension: f.fileExtension,
+            })),
+            'competition-images'
+          )
+          newImagePaths = uploadResults.map((r) => r.path)
+        }
+
+        // 2. 既存画像パスから削除されたものを除外し、新規画像パスを追加
+        const currentPaths = existingImages
+          .filter((img) => !deletedImageIds.includes(img.id))
+          .map((img) => img.id)
+        const updatedImagePaths = [...currentPaths, ...newImagePaths]
+
+        const formData = {
+          date,
+          end_date: endDate && endDate.trim() !== '' ? endDate : null,
+          title: title && title.trim() !== '' ? title.trim() : null,
+          place: place && place.trim() !== '' ? place.trim() : null,
+          pool_type: poolType,
+          note: note && note.trim() !== '' ? note.trim() : null,
+          image_paths: updatedImagePaths.length > 0 ? updatedImagePaths : [],
+        }
+
+        // 3. DB更新
         await updateMutation.mutateAsync({
           id: competitionId,
           updates: formData,
         })
+
+        // 4. DB更新成功後に削除対象画像をストレージから削除
+        if (deletedImageIds.length > 0) {
+          await deleteImages(supabase, deletedImageIds, 'competition-images')
+        }
+
         // カレンダーのクエリを無効化してリフレッシュ
         queryClient.invalidateQueries({ queryKey: ['calendar'] })
         // エントリー登録フォームに遷移
@@ -239,8 +370,44 @@ export const CompetitionBasicFormScreen: React.FC = () => {
           date,
         })
       } else {
-        // 新規作成モード: 大会を作成
+        // 新規作成モード
+        const formData = {
+          date,
+          end_date: endDate && endDate.trim() !== '' ? endDate : null,
+          title: title && title.trim() !== '' ? title.trim() : null,
+          place: place && place.trim() !== '' ? place.trim() : null,
+          pool_type: poolType,
+          note: note && note.trim() !== '' ? note.trim() : null,
+        }
+
         const newCompetition = await createMutation.mutateAsync(formData)
+
+        // 新規画像をアップロード
+        if (newImageFiles.length > 0) {
+          const uploadResults = await uploadImages(
+            supabase,
+            user.id,
+            newCompetition.id,
+            newImageFiles.map((f) => ({
+              base64: f.base64,
+              fileExtension: f.fileExtension,
+            })),
+            'competition-images'
+          )
+          const imagePaths = uploadResults.map((r) => r.path)
+
+          // 大会を画像パスで更新（失敗時はアップロード済みファイルを削除）
+          try {
+            await updateMutation.mutateAsync({
+              id: newCompetition.id,
+              updates: { image_paths: imagePaths },
+            })
+          } catch (updateError) {
+            // 更新失敗時はアップロード済みファイルをクリーンアップ
+            await deleteImages(supabase, imagePaths, 'competition-images')
+            throw updateError
+          }
+        }
 
         // ストアに保存
         setCreatedCompetitionId(newCompetition.id)
@@ -380,6 +547,17 @@ export const CompetitionBasicFormScreen: React.FC = () => {
             multiline
             numberOfLines={3}
             editable={!loading}
+          />
+        </View>
+
+        {/* 画像 */}
+        <View style={styles.section}>
+          <ImageUploader
+            existingImages={existingImages}
+            onImagesChange={handleImagesChange}
+            maxImages={3}
+            disabled={loading}
+            label="画像"
           />
         </View>
       </ScrollView>

@@ -31,6 +31,11 @@ const TeamItemComponent: React.FC<TeamItemProps> = ({ membership, onPress }) => 
     onPress?.(membership)
   }, [onPress, membership])
 
+  // teamがnullの場合は何も表示しない
+  if (!team) {
+    return null
+  }
+
   return (
     <Pressable
       style={({ pressed }) => [

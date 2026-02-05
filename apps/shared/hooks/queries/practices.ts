@@ -283,7 +283,9 @@ export function useCreatePracticeMutation(supabase: SupabaseClient, api?: Practi
           
           if (profile?.google_calendar_enabled && profile?.google_calendar_sync_practices) {
             const { syncPracticeToGoogleCalendar } = await import('../../api/google-calendar')
-            const syncResult = await syncPracticeToGoogleCalendar(created, 'create')
+            // React Native用にアクセストークンを取得
+            const { data: { session } } = await supabase.auth.getSession()
+            const syncResult = await syncPracticeToGoogleCalendar(created, 'create', undefined, session?.access_token)
             
             // 同期成功時にgoogle_event_idを保存
             if (syncResult.success && syncResult.googleEventId) {
@@ -356,7 +358,9 @@ export function useUpdatePracticeMutation(supabase: SupabaseClient, api?: Practi
           
           if (profile?.google_calendar_enabled && profile?.google_calendar_sync_practices) {
             const { syncPracticeToGoogleCalendar } = await import('../../api/google-calendar')
-            const syncResult = await syncPracticeToGoogleCalendar(updated, 'update', googleEventId || undefined)
+            // React Native用にアクセストークンを取得
+            const { data: { session } } = await supabase.auth.getSession()
+            const syncResult = await syncPracticeToGoogleCalendar(updated, 'update', googleEventId || undefined, session?.access_token)
             
             // 同期成功時にgoogle_event_idを更新（新規作成された場合は新しいID）
             if (syncResult.success && syncResult.googleEventId) {
@@ -430,7 +434,9 @@ export function useDeletePracticeMutation(supabase: SupabaseClient, api?: Practi
 
             if (profile?.google_calendar_enabled && profile?.google_calendar_sync_practices && googleEventId) {
               const { syncPracticeToGoogleCalendar } = await import('../../api/google-calendar')
-              await syncPracticeToGoogleCalendar(practiceData, 'delete', googleEventId)
+              // React Native用にアクセストークンを取得
+              const { data: { session } } = await supabase.auth.getSession()
+              await syncPracticeToGoogleCalendar(practiceData, 'delete', googleEventId, session?.access_token)
             }
           }
         } catch (err) {

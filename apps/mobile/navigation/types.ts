@@ -34,6 +34,7 @@ export type MainStackParamList = {
   PracticeLogForm: {
     practiceId: string
     practiceLogId?: string
+    returnTo?: 'dashboard'
   }
   PracticeTimeForm: {
     practiceLogId?: string

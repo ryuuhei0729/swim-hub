@@ -15,6 +15,7 @@ import { formatTime } from '@/utils/formatters'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import type { MainStackParamList } from '@/navigation/types'
 import type { Style, PoolType, RecordInsert } from '@apps/shared/types'
+import { useQuickTimeInput } from '@/hooks/useQuickTimeInput'
 
 type RecordLogFormScreenRouteProp = RouteProp<MainStackParamList, 'RecordLogForm'>
 type RecordLogFormScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>
@@ -46,6 +47,9 @@ export const RecordLogFormScreen: React.FC = () => {
   const { competitionId, recordId, entryDataList = [], date: _date } = route.params
   const { supabase } = useAuth()
   const queryClient = useQueryClient()
+
+  // クイック入力フック
+  const { parseInput } = useQuickTimeInput()
 
   // フォーム状態（複数エントリー対応）
   const [formDataList, setFormDataList] = useState<RecordFormData[]>([])
@@ -197,20 +201,11 @@ export const RecordLogFormScreen: React.FC = () => {
     }
   }, [entryDataList, swimStyles, loadingStyles, recordId])
 
-  // タイム文字列を秒数に変換
+  // タイム文字列を秒数に変換（クイック入力対応）
   const parseTimeToSeconds = (timeStr: string): number => {
     if (!timeStr || timeStr.trim() === '') return 0
-
-    const parts = timeStr.split(':')
-    if (parts.length === 2) {
-      // 「分:秒.小数」形式（例: 1:23.45）
-      const minutes = parseInt(parts[0]) || 0
-      const seconds = parseFloat(parts[1]) || 0
-      return minutes * 60 + seconds
-    } else {
-      // 秒数のみの形式（例: 32.32）
-      return parseFloat(timeStr) || 0
-    }
+    const { time } = parseInput(timeStr)
+    return time
   }
 
   // フォームデータ更新
@@ -543,7 +538,7 @@ export const RecordLogFormScreen: React.FC = () => {
                   style={[styles.input, errors[`time-${index}`] && styles.inputError]}
                   value={formData.timeDisplayValue}
                   onChangeText={(text) => handleTimeChange(index, text)}
-                  placeholder="例: 2:00.00 または 120.00"
+                  placeholder="例: 2:00.00 または 2-0-0"
                   keyboardType="default"
                   editable={!loading}
                 />
@@ -637,7 +632,7 @@ export const RecordLogFormScreen: React.FC = () => {
                       onChangeText={(text) =>
                         handleSplitTimeChange(index, splitIndex, 'splitTime', text)
                       }
-                      placeholder="例: 28.00"
+                      placeholder="例: 28-0"
                       keyboardType="default"
                       editable={!loading}
                     />

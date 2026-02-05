@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { View, Text, StyleSheet, Pressable, Alert, Platform } from 'react-native'
+import { View, Text, StyleSheet, Pressable, Alert, Platform, Linking } from 'react-native'
 import * as Clipboard from 'expo-clipboard'
 import { Feather } from '@expo/vector-icons'
 import { useRoute, RouteProp } from '@react-navigation/native'
@@ -40,6 +40,13 @@ export const TeamDetailScreen: React.FC = () => {
     teamId,
     enableRealtime: false, // モバイルでは一旦無効化
   })
+
+  const WEB_APP_URL = 'https://www.swim-hub.app/dashboard'
+
+  // Web版を開く
+  const handleOpenWebApp = () => {
+    Linking.openURL(WEB_APP_URL)
+  }
 
   // 招待コードをコピー
   const handleCopyInviteCode = async () => {
@@ -135,15 +142,21 @@ export const TeamDetailScreen: React.FC = () => {
           />
         )
       case 'practices':
-        return (
-          <View style={styles.placeholderContainer}>
-            <Text style={styles.placeholderText}>練習機能は実装予定です</Text>
-          </View>
-        )
       case 'competitions':
         return (
-          <View style={styles.placeholderContainer}>
-            <Text style={styles.placeholderText}>大会機能は実装予定です</Text>
+          <View style={styles.webGuideContainer}>
+            <Feather name="monitor" size={48} color="#9CA3AF" />
+            <Text style={styles.webGuideTitle}>
+              {activeTab === 'practices' ? '練習管理' : '大会管理'}
+            </Text>
+            <Text style={styles.webGuideText}>
+              チーム管理機能に関してはWEB版をご利用ください。
+            </Text>
+            <Pressable style={styles.webGuideButton} onPress={handleOpenWebApp}>
+              <Feather name="external-link" size={16} color="#FFFFFF" />
+              <Text style={styles.webGuideButtonText}>WEB版を開く</Text>
+            </Pressable>
+            <Text style={styles.webGuideUrl}>{WEB_APP_URL}</Text>
           </View>
         )
       case 'attendance':
@@ -265,15 +278,47 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 400,
   },
-  placeholderContainer: {
+  webGuideContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 40,
+    backgroundColor: '#FFFFFF',
+    margin: 16,
+    borderRadius: 12,
   },
-  placeholderText: {
-    fontSize: 16,
+  webGuideTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#374151',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  webGuideText: {
+    fontSize: 14,
     color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  webGuideButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  webGuideButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  webGuideUrl: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 12,
   },
   errorContainer: {
     flex: 1,

@@ -269,7 +269,9 @@ export function useCreateCompetitionMutation(supabase: SupabaseClient, api?: Rec
           
           if (profile?.google_calendar_enabled && profile?.google_calendar_sync_competitions) {
             const { syncCompetitionToGoogleCalendar } = await import('../../api/google-calendar')
-            const syncResult = await syncCompetitionToGoogleCalendar(created, 'create')
+            // React Native用にアクセストークンを取得
+            const { data: { session } } = await supabase.auth.getSession()
+            const syncResult = await syncCompetitionToGoogleCalendar(created, 'create', undefined, session?.access_token)
             
             // 同期成功時にgoogle_event_idを保存
             if (syncResult.success && syncResult.googleEventId) {
@@ -335,7 +337,9 @@ export function useUpdateCompetitionMutation(supabase: SupabaseClient, api?: Rec
           
           if (profile?.google_calendar_enabled && profile?.google_calendar_sync_competitions) {
             const { syncCompetitionToGoogleCalendar } = await import('../../api/google-calendar')
-            const syncResult = await syncCompetitionToGoogleCalendar(updated, 'update', googleEventId || undefined)
+            // React Native用にアクセストークンを取得
+            const { data: { session } } = await supabase.auth.getSession()
+            const syncResult = await syncCompetitionToGoogleCalendar(updated, 'update', googleEventId || undefined, session?.access_token)
             
             // 同期成功時にgoogle_event_idを更新（新規作成された場合は新しいID）
             if (syncResult.success && syncResult.googleEventId) {
@@ -403,7 +407,9 @@ export function useDeleteCompetitionMutation(supabase: SupabaseClient, api?: Rec
             
             if (profile?.google_calendar_enabled && profile?.google_calendar_sync_competitions && googleEventId) {
               const { syncCompetitionToGoogleCalendar } = await import('../../api/google-calendar')
-              await syncCompetitionToGoogleCalendar(competitionData, 'delete', googleEventId)
+              // React Native用にアクセストークンを取得
+              const { data: { session } } = await supabase.auth.getSession()
+              await syncCompetitionToGoogleCalendar(competitionData, 'delete', googleEventId, session?.access_token)
             }
           }
         } catch (err) {
