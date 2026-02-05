@@ -22,7 +22,6 @@ import type { PracticeTag, PracticeTime } from '@apps/shared/types'
 import type { TimeEntry } from '@apps/shared/types/ui'
 import { formatTime, SWIM_STYLES } from '@/utils/formatters'
 import { usePracticeTimeStore } from '@/stores/practiceTimeStore'
-import { getRandomTagColor } from '@/constants/tagColors'
 
 type PracticeLogFormScreenRouteProp = RouteProp<MainStackParamList, 'PracticeLogForm'>
 type PracticeLogFormScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>
