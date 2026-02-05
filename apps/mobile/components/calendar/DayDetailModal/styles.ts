@@ -761,4 +761,21 @@ export const styles = StyleSheet.create({
   competitionHeaderActionButton: {
     padding: 4,
   },
+  // タグ表示用のスタイル
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 8,
+  },
+  tagChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  tagChipText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#374151',
+  },
 })

@@ -47,7 +47,8 @@
     "supabase:start": "bash supabase/start.sh",
     "supabase:stop": "npx supabase stop --workdir supabase",
     "supabase:reset": "npx supabase db reset --workdir supabase",
-    "supabase:status": "npx supabase status --workdir supabase"
+    "supabase:status": "npx supabase status --workdir supabase",
+    "android": "cd apps/mobile && expo run:android"
   },
   "devDependencies": {
     "@alloc/quick-lru": "^5.2.0",
@@ -56,7 +57,7 @@
     "@types/node": "^25",
     "dotenv": "^17.2.3",
     "enhanced-resolve": "^5.18.4",
-        "supabase": "^2.71.1",
+    "supabase": "^2.71.1",
     "tapable": "^2.3.0",
     "turbo": "^2.6.0",
     "typescript": "^5"

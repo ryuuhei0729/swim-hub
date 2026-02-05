@@ -2,11 +2,15 @@
   "expo": {
     "name": "SwimHub",
     "slug": "swim-hub-mobile",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "水泳選手の練習記録・大会記録を管理するアプリ",
+    "scheme": "swimhub",
     "orientation": "portrait",
     "icon": "./assets/icons/app-icon.png",
     "userInterfaceStyle": "light",
+    "plugins": [
+      "expo-web-browser"
+    ],
     "splash": {
       "image": "./assets/splash/splash.png",
       "resizeMode": "contain",
@@ -15,7 +19,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.swimhub",
-      "buildNumber": "1.0.1",
+      "buildNumber": "1.1.0",
       "infoPlist": {
         "NSCameraUsageDescription": "プロフィール画像を撮影するためにカメラへのアクセスが必要です",
         "NSPhotoLibraryUsageDescription": "プロフィール画像を選択するためにフォトライブラリへのアクセスが必要です",

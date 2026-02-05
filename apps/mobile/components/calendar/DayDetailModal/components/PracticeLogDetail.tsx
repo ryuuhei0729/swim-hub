@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { View, Text, Pressable } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { useAuth } from '@/contexts/AuthProvider'
-import { formatTime, formatCircleTime } from '@/utils/formatters'
-import type { PracticeTime } from '@apps/shared/types'
+import { formatTime, formatCircleTime, getStyleLabel } from '@/utils/formatters'
+import type { PracticeTime, PracticeTag } from '@apps/shared/types'
 import { styles } from '../styles'
 import { MemoizedTimeTable } from './TimeTable'
 import type { PracticeLogDetailProps, PracticeLogData, PracticeLogDetailData, PracticeLogFromDB } from '../types'
@@ -58,7 +58,15 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
           *,
           practice_logs (
             *,
-            practice_times (*)
+            practice_times (*),
+            practice_log_tags (
+              practice_tag_id,
+              practice_tags (
+                id,
+                name,
+                color
+              )
+            )
           )
         `)
         .eq('id', practiceId)
@@ -67,7 +75,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
       if (error) throw error
       if (!data) return
 
-      const formattedLogs = (data.practice_logs || []).map((log: PracticeLogFromDB) => ({
+      const formattedLogs = (data.practice_logs || []).map((log: PracticeLogFromDB & { practice_log_tags?: Array<{ practice_tags: PracticeTag }> }) => ({
         id: log.id,
         practiceId: log.practice_id,
         style: log.style,
@@ -82,6 +90,9 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
           repNumber: time.rep_number,
           setNumber: time.set_number,
         })),
+        tags: (log.practice_log_tags || [])
+          .map((plt) => plt.practice_tags)
+          .filter(Boolean) as PracticeTag[],
       }))
 
       setPracticeLogs(formattedLogs)
@@ -111,7 +122,15 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
         .from('practice_logs')
         .select(`
           *,
-          practice_times (*)
+          practice_times (*),
+          practice_log_tags (
+            practice_tag_id,
+            practice_tags (
+              id,
+              name,
+              color
+            )
+          )
         `)
         .eq('id', item.id)
         .single()
@@ -128,6 +147,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
         circle: number | null
         note: string | null
         practice_times?: PracticeTime[]
+        practice_log_tags?: Array<{ practice_tags: PracticeTag }>
       }
 
       const times = (log.practice_times || []).map((time: PracticeTime) => ({
@@ -136,6 +156,10 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
         repNumber: time.rep_number,
         setNumber: time.set_number,
       }))
+
+      const tags = (log.practice_log_tags || [])
+        .map((plt) => plt.practice_tags)
+        .filter(Boolean) as PracticeTag[]
 
       setPracticeLogDetail({
         id: log.id,
@@ -146,6 +170,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
         circle: log.circle,
         note: log.note,
         times,
+        tags,
       })
 
       // PracticeTimeの有無を親に通知
@@ -259,6 +284,17 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
             <Text style={styles.loadingText}>読み込み中...</Text>
           ) : practiceLogDetail ? (
             <>
+              {/* タグ表示 */}
+              {practiceLogDetail.tags && practiceLogDetail.tags.length > 0 && (
+                <View style={styles.tagsContainer}>
+                  {practiceLogDetail.tags.map((tag) => (
+                    <View key={tag.id} style={[styles.tagChip, { backgroundColor: tag.color }]}>
+                      <Text style={styles.tagChipText}>{tag.name}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
               {/* 練習内容 */}
               <View style={styles.practiceContentContainer}>
                 <Text style={styles.practiceContentLabel}>練習内容</Text>
@@ -276,7 +312,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                     {formatCircleTime(practiceLogDetail.circle)}
                   </Text>
                   {'　'}
-                  <Text style={styles.practiceContentValue}>{practiceLogDetail.style}</Text>
+                  <Text style={styles.practiceContentValue}>{getStyleLabel(practiceLogDetail.style)}</Text>
                 </Text>
               </View>
 
@@ -530,6 +566,17 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
           ) : (
             practiceLogs.map((log) => (
               <View key={log.id} style={styles.practiceLogDetail}>
+                {/* タグ表示 */}
+                {log.tags && log.tags.length > 0 && (
+                  <View style={styles.tagsContainer}>
+                    {log.tags.map((tag) => (
+                      <View key={tag.id} style={[styles.tagChip, { backgroundColor: tag.color }]}>
+                        <Text style={styles.tagChipText}>{tag.name}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
                 {/* 練習内容 */}
                 <View style={styles.practiceContentContainer}>
                   <Text style={styles.practiceContentLabel}>練習内容</Text>
@@ -547,7 +594,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                       {formatCircleTime(log.circle)}
                     </Text>
                     {'　'}
-                    <Text style={styles.practiceContentValue}>{log.style}</Text>
+                    <Text style={styles.practiceContentValue}>{getStyleLabel(log.style)}</Text>
                   </Text>
                 </View>
 

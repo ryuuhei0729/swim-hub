@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -6,6 +6,7 @@ import { usePracticeTimeStore } from '@/stores/practiceTimeStore'
 import type { MainStackParamList } from '@/navigation/types'
 import type { TimeEntry } from '@apps/shared/types/ui'
 import { formatTime } from '@/utils/formatters'
+import { useQuickTimeInput } from '@/hooks/useQuickTimeInput'
 
 type PracticeTimeFormScreenRouteProp = RouteProp<MainStackParamList, 'PracticeTimeForm'>
 type PracticeTimeFormScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>
@@ -26,11 +27,23 @@ export const PracticeTimeFormScreen: React.FC = () => {
   const { setCount, repCount, initialTimes = [] } = route.params
   const { setTimes: saveTimes, currentMenuId } = usePracticeTimeStore()
 
+  // クイック入力フック
+  const { parseInput, resetContext } = useQuickTimeInput()
+
   // タイムエントリー
   const [times, setTimes] = useState<TimeEntryWithDisplay[]>([])
 
+  // 入力フィールドの参照（フォーカス遷移用）
+  const inputRefs = useRef<(TextInput | null)[]>([])
+
   // 初期化
   useEffect(() => {
+    // クイック入力コンテキストをリセット
+    resetContext()
+
+    // refs配列を初期化
+    inputRefs.current = new Array(setCount * repCount).fill(null)
+
     // 全てのセット・レップの組み合わせを生成
     const allCombinations: TimeEntryWithDisplay[] = []
     for (let set = 1; set <= setCount; set++) {
@@ -49,9 +62,9 @@ export const PracticeTimeFormScreen: React.FC = () => {
       }
     }
     setTimes(allCombinations)
-  }, [setCount, repCount, initialTimes])
+  }, [setCount, repCount, initialTimes, resetContext])
 
-  // タイム入力の変更
+  // タイム入力の変更（入力中は表示値のみ更新）
   const handleTimeChange = (id: string, value: string) => {
     setTimes((prev) =>
       prev.map((t) =>
@@ -59,32 +72,34 @@ export const PracticeTimeFormScreen: React.FC = () => {
           ? {
               ...t,
               displayValue: value,
-              time: parseTime(value),
             }
           : t
       )
     )
   }
 
-  // タイム文字列を秒に変換
-  const parseTime = (timeString: string): number => {
-    if (!timeString) return 0
+  // タイム入力の確定（フォーカスアウト時 or Enter時）
+  const handleTimeConfirm = (id: string, value: string) => {
+    const { time, displayValue } = parseInput(value)
+    setTimes((prev) =>
+      prev.map((t) =>
+        t.id === id
+          ? {
+              ...t,
+              time,
+              displayValue,
+            }
+          : t
+      )
+    )
+  }
 
-    // "1:30.50" 形式
-    if (timeString.includes(':')) {
-      const parts = timeString.split(':')
-      const minutes = parseInt(parts[0]) || 0
-      const seconds = parseFloat(parts[1]) || 0
-      return minutes * 60 + seconds
+  // 次の入力フィールドへフォーカス
+  const focusNextInput = (currentIndex: number) => {
+    const nextIndex = currentIndex + 1
+    if (nextIndex < inputRefs.current.length) {
+      inputRefs.current[nextIndex]?.focus()
     }
-
-    // "30.50s" 形式
-    if (timeString.endsWith('s')) {
-      return parseFloat(timeString.slice(0, -1)) || 0
-    }
-
-    // 数値のみ
-    return parseFloat(timeString) || 0
   }
 
   // セットごとのタイムを取得
@@ -155,19 +170,35 @@ export const PracticeTimeFormScreen: React.FC = () => {
               </View>
 
               <View style={styles.timesGrid}>
-                {setTimes.map((timeEntry) => (
-                  <View key={timeEntry.id} style={styles.timeInputContainer}>
-                    <Text style={styles.timeLabel}>{timeEntry.repNumber}本目</Text>
-                    <TextInput
-                      style={styles.timeInput}
-                      value={timeEntry.displayValue || ''}
-                      onChangeText={(value) => handleTimeChange(timeEntry.id, value)}
-                      placeholder="例: 1:30.50"
-                      keyboardType="default"
-                      autoCapitalize="none"
-                    />
-                  </View>
-                ))}
+                {setTimes.map((timeEntry, repIndex) => {
+                  // 全体のインデックスを計算（セット数×本数）
+                  const globalIndex = (setNumber - 1) * repCount + repIndex
+                  const isLastInput = globalIndex === setCount * repCount - 1
+
+                  return (
+                    <View key={timeEntry.id} style={styles.timeInputContainer}>
+                      <Text style={styles.timeLabel}>{timeEntry.repNumber}本目</Text>
+                      <TextInput
+                        ref={(ref) => {
+                          inputRefs.current[globalIndex] = ref
+                        }}
+                        style={styles.timeInput}
+                        value={timeEntry.displayValue || ''}
+                        onChangeText={(value) => handleTimeChange(timeEntry.id, value)}
+                        onBlur={() => handleTimeConfirm(timeEntry.id, timeEntry.displayValue || '')}
+                        onSubmitEditing={() => {
+                          handleTimeConfirm(timeEntry.id, timeEntry.displayValue || '')
+                          focusNextInput(globalIndex)
+                        }}
+                        placeholder="例: 31-2"
+                        keyboardType="default"
+                        autoCapitalize="none"
+                        returnKeyType={isLastInput ? 'done' : 'next'}
+                        blurOnSubmit={false}
+                      />
+                    </View>
+                  )
+                })}
               </View>
             </View>
           )

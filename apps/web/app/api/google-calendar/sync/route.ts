@@ -1,7 +1,69 @@
 import { competitionToCalendarEvent, fetchGoogleCalendarWithTokenRefresh, practiceToCalendarEvent, refreshGoogleAccessToken } from '@/lib/google-calendar'
 import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-server-auth'
 import type { Competition, Practice } from '@apps/shared/types'
+import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+
+/**
+ * モバイル用Supabase設定を取得
+ */
+function getMobileSupabaseConfig() {
+  const url = process.env.MOBILE_SUPABASE_URL
+  const anonKey = process.env.MOBILE_SUPABASE_ANON_KEY
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!url || !anonKey) {
+    return null
+  }
+
+  return { url, anonKey, serviceRoleKey }
+}
+
+/**
+ * サービスロールクライアントを取得（トークン取得用）
+ */
+function getServiceRoleClient() {
+  const url = process.env.MOBILE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!url || !serviceRoleKey) {
+    return null
+  }
+
+  return createClient(url, serviceRoleKey)
+}
+
+/**
+ * Bearerトークンからモバイルユーザーを認証
+ */
+async function authenticateMobileUser(authHeader: string): Promise<{ supabase: SupabaseClient; user: User } | null> {
+  if (!authHeader.startsWith('Bearer ')) {
+    return null
+  }
+
+  const accessToken = authHeader.substring(7)
+  const config = getMobileSupabaseConfig()
+
+  if (!config) {
+    return null
+  }
+
+  // アクセストークンをヘッダーに含めて認証済みクライアントを作成
+  const supabase = createClient(config.url, config.anonKey, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  })
+  const { data: { user }, error } = await supabase.auth.getUser(accessToken)
+
+  if (error || !user) {
+    return null
+  }
+
+  return { supabase, user }
+}
 
 /**
  * Google Calendar APIへの同期処理
@@ -9,9 +71,25 @@ import { NextRequest, NextResponse } from 'next/server'
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createAuthenticatedServerClient()
-    const user = await getServerUser()
-    
+    // モバイルからのBearerトークン認証を先にチェック
+    const authHeader = request.headers.get('Authorization')
+    let supabase: SupabaseClient
+    let user: User | null = null
+
+    if (authHeader?.startsWith('Bearer ')) {
+      // モバイルアプリからのリクエスト
+      const mobileAuth = await authenticateMobileUser(authHeader)
+      if (!mobileAuth) {
+        return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
+      }
+      supabase = mobileAuth.supabase
+      user = mobileAuth.user
+    } else {
+      // Webアプリからのリクエスト（Cookie認証）
+      supabase = await createAuthenticatedServerClient()
+      user = await getServerUser()
+    }
+
     if (!user) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
@@ -38,9 +116,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Google Calendar連携が有効になっていません' }, { status: 400 })
     }
 
-    // RPC関数でトークンを復号化して取得
-    // @ts-expect-error - @supabase/ssr v0.8.0のcreateServerClientはDatabase['public']['Functions']の型推論をサポートしていない
-    const { data: refreshToken, error: tokenError } = await supabase.rpc('get_google_refresh_token', {
+    // サービスロールクライアントを取得
+    const serviceClient = getServiceRoleClient()
+    if (!serviceClient) {
+      return NextResponse.json({ error: 'サーバー設定エラー' }, { status: 500 })
+    }
+
+    // RPC関数でトークンを取得（サービスロールで実行）
+    const { data: refreshToken, error: tokenError } = await serviceClient.rpc('get_google_refresh_token', {
       p_user_id: user.id
     })
 
@@ -68,8 +151,7 @@ export async function POST(request: NextRequest) {
     let accessToken: string
     try {
       accessToken = await refreshGoogleAccessToken(refreshToken)
-    } catch (error) {
-      console.error('Google OAuthトークンリフレッシュエラー:', error)
+    } catch {
       // フォールバック: Supabaseセッションのprovider_tokenを使用
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.provider_token) {

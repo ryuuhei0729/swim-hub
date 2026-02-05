@@ -1,5 +1,5 @@
 import type { CalendarItem } from '@apps/shared/types/ui'
-import type { PracticeTime } from '@apps/shared/types'
+import type { PracticeTime, PracticeTag } from '@apps/shared/types'
 
 // DayDetailModalのProps
 export interface DayDetailModalProps {
@@ -106,6 +106,7 @@ export interface PracticeLogData {
     repNumber: number
     setNumber: number
   }>
+  tags?: PracticeTag[]
 }
 
 // 練習ログ詳細の型
@@ -118,6 +119,7 @@ export interface PracticeLogDetailData {
   circle: number | null
   note: string | null
   times: Array<{ id: string; time: number; repNumber: number; setNumber: number }>
+  tags?: PracticeTag[]
 }
 
 // 記録データの型

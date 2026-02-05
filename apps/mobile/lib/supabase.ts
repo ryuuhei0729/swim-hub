@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@swim-hub/shared/types'
 import Constants from 'expo-constants'
@@ -20,10 +21,12 @@ let supabase: ReturnType<typeof createClient<Database>> | null = null
 if (supabaseUrl && supabaseAnonKey) {
   try {
     // React Native用Supabaseクライアント
+    // AsyncStorageでセッションを永続化（タスクキル後もログイン状態を維持）
     supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
       auth: {
+        storage: AsyncStorage,
         autoRefreshToken: true,
-        persistSession: false,
+        persistSession: true,
         detectSessionInUrl: false,
       },
     })
