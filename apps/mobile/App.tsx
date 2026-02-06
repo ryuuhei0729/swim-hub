@@ -17,7 +17,7 @@ import { supabase } from './lib/supabase'
 declare global {
   var __SWIM_HUB_WEB_API_URL__: string | undefined
 }
-globalThis.__SWIM_HUB_WEB_API_URL__ = Constants.expoConfig?.extra?.webApiUrl || 'https://swimhub.app'
+globalThis.__SWIM_HUB_WEB_API_URL__ = Constants.expoConfig?.extra?.webApiUrl || 'https://swim-hub.app'
 
 /**
  * Supabase未初期化時のエラー画面

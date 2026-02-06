@@ -4,7 +4,7 @@
  */
 import Constants from 'expo-constants'
 
-const WEB_API_URL = Constants.expoConfig?.extra?.webApiUrl || 'https://swimhub.app'
+const WEB_API_URL = Constants.expoConfig?.extra?.webApiUrl || 'https://swim-hub.app'
 
 export interface BulkSyncResult {
   success: boolean

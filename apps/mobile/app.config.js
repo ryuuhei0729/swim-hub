@@ -26,7 +26,7 @@ module.exports = {
     supabaseUrl: supabaseUrl,
     supabaseAnonKey: supabaseAnonKey,
     googleWebClientId: googleWebClientId,
-    webApiUrl: webApiUrl || 'https://swimhub.app',
+    webApiUrl: webApiUrl || 'https://swim-hub.app',
     environment: process.env.EXPO_PUBLIC_ENVIRONMENT || 'development',
     // EASプロジェクトID
     eas: {
