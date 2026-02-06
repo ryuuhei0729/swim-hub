@@ -142,3 +142,6 @@ next-env.d.ts
 # Google Play Service Account Keys (機密情報のためgit管理外)
 /apps/mobile/google-service-account-key.json
 *.service-account-key.json
+
+# Apple Sign In Secret Generator (秘密鍵を含むためgit管理外)
+scripts/generate-apple-secret.js
