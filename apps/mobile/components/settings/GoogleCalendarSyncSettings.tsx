@@ -271,14 +271,22 @@ export const GoogleCalendarSyncSettings: React.FC<GoogleCalendarSyncSettingsProp
             {bulkSyncResult && (
               <View style={styles.resultContainer}>
                 <Text style={styles.resultTitle}>同期が完了しました</Text>
-                {bulkSyncResult.practices.success > 0 && (
+                {bulkSyncResult.practices.success > 0 ? (
                   <Text style={styles.resultText}>
                     練習記録: {bulkSyncResult.practices.success}件を同期
                   </Text>
+                ) : (
+                  <Text style={styles.resultText}>
+                    練習記録: 同期対象なし（既に同期済み）
+                  </Text>
                 )}
-                {bulkSyncResult.competitions.success > 0 && (
+                {bulkSyncResult.competitions.success > 0 ? (
                   <Text style={styles.resultText}>
                     大会記録: {bulkSyncResult.competitions.success}件を同期
+                  </Text>
+                ) : (
+                  <Text style={styles.resultText}>
+                    大会記録: 同期対象なし（既に同期済み）
                   </Text>
                 )}
                 {(bulkSyncResult.practices.error > 0 ||
