@@ -2,15 +2,15 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
 /**
- * モバイル用Supabase設定を取得
+ * Supabase設定を取得（MOBILE_* があればそちらを優先、なければ NEXT_PUBLIC_* を使用）
  */
-function getMobileSupabaseConfig() {
-  const url = process.env.MOBILE_SUPABASE_URL
-  const anonKey = process.env.MOBILE_SUPABASE_ANON_KEY
+function getSupabaseConfig() {
+  const url = process.env.MOBILE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+  const anonKey = process.env.MOBILE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!url || !anonKey) {
-    throw new Error('MOBILE_SUPABASE_URL または MOBILE_SUPABASE_ANON_KEY が設定されていません')
+    throw new Error('Supabase環境変数が設定されていません')
   }
 
   return { url, anonKey, serviceRoleKey }
@@ -34,8 +34,8 @@ export async function POST(request: NextRequest) {
 
     const accessToken = authHeader.substring(7)
 
-    // モバイル用Supabaseクライアントを作成（認証済み）
-    const config = getMobileSupabaseConfig()
+    // Supabaseクライアントを作成（認証済み）
+    const config = getSupabaseConfig()
 
     // アクセストークンをヘッダーに含めて認証済みクライアントを作成
     const supabase = createClient(config.url, config.anonKey, {

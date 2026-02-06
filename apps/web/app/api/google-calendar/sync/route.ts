@@ -5,11 +5,11 @@ import { createClient, type SupabaseClient, type User } from '@supabase/supabase
 import { NextRequest, NextResponse } from 'next/server'
 
 /**
- * モバイル用Supabase設定を取得
+ * Supabase設定を取得（MOBILE_* があればそちらを優先、なければ NEXT_PUBLIC_* を使用）
  */
-function getMobileSupabaseConfig() {
-  const url = process.env.MOBILE_SUPABASE_URL
-  const anonKey = process.env.MOBILE_SUPABASE_ANON_KEY
+function getSupabaseConfig() {
+  const url = process.env.MOBILE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+  const anonKey = process.env.MOBILE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!url || !anonKey) {
@@ -42,7 +42,7 @@ async function authenticateMobileUser(authHeader: string): Promise<{ supabase: S
   }
 
   const accessToken = authHeader.substring(7)
-  const config = getMobileSupabaseConfig()
+  const config = getSupabaseConfig()
 
   if (!config) {
     return null
