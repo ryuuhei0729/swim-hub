@@ -122,7 +122,7 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
               }
 
               try {
-                const webApiUrl = globalThis.__SWIM_HUB_WEB_API_URL__ || 'https://swimhub.app'
+                const webApiUrl = globalThis.__SWIM_HUB_WEB_API_URL__ || 'https://swim-hub.app'
                 const response = await fetch(`${webApiUrl}/api/google-calendar/connect`, {
                   method: 'POST',
                   headers: {

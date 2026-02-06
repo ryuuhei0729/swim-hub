@@ -2,11 +2,11 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
 /**
- * Supabase設定を取得（MOBILE_* があればそちらを優先、なければ NEXT_PUBLIC_* を使用）
+ * Supabase設定を取得
  */
 function getSupabaseConfig() {
-  const url = process.env.MOBILE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
-  const anonKey = process.env.MOBILE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!url || !anonKey) {
