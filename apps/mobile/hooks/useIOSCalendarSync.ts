@@ -78,7 +78,14 @@ export const useIOSCalendarSync = (): UseIOSCalendarSyncReturn => {
 
   // 連携有効化
   const enableSync = useCallback(async (): Promise<boolean> => {
-    if (!user || !supabase) return false
+    if (!supabase) {
+      setError('Supabaseクライアントが初期化されていません')
+      return false
+    }
+    if (!user) {
+      setError('ログインが必要です')
+      return false
+    }
 
     setLoading(true)
     setError(null)
@@ -99,11 +106,15 @@ export const useIOSCalendarSync = (): UseIOSCalendarSyncReturn => {
         .update({ ios_calendar_enabled: true })
         .eq('id', user.id)
 
-      if (updateError) throw updateError
+      if (updateError) {
+        setError(`DB更新エラー: ${updateError.message}`)
+        return false
+      }
 
       return true
-    } catch {
-      setError('連携の有効化に失敗しました')
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      setError(`連携の有効化に失敗しました: ${errorMessage}`)
       return false
     } finally {
       setLoading(false)
@@ -112,7 +123,14 @@ export const useIOSCalendarSync = (): UseIOSCalendarSyncReturn => {
 
   // 連携無効化
   const disableSync = useCallback(async (): Promise<boolean> => {
-    if (!user || !supabase) return false
+    if (!supabase) {
+      setError('Supabaseクライアントが初期化されていません')
+      return false
+    }
+    if (!user) {
+      setError('ログインが必要です')
+      return false
+    }
 
     setLoading(true)
     setError(null)
@@ -140,7 +158,14 @@ export const useIOSCalendarSync = (): UseIOSCalendarSyncReturn => {
       field: 'ios_calendar_sync_practices' | 'ios_calendar_sync_competitions',
       value: boolean
     ): Promise<boolean> => {
-      if (!user || !supabase) return false
+      if (!supabase) {
+        setError('Supabaseクライアントが初期化されていません')
+        return false
+      }
+      if (!user) {
+        setError('ログインが必要です')
+        return false
+      }
 
       setLoading(true)
       setError(null)

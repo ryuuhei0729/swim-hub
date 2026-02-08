@@ -30,8 +30,12 @@ export const requestCalendarPermissions = async (): Promise<boolean> => {
     return false
   }
 
-  const { status } = await Calendar.requestCalendarPermissionsAsync()
-  return status === 'granted'
+  try {
+    const { status } = await Calendar.requestCalendarPermissionsAsync()
+    return status === 'granted'
+  } catch {
+    return false
+  }
 }
 
 /**
