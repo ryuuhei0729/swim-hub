@@ -83,6 +83,18 @@ export default function GoogleCalendarSyncSettings({
         throw tokenError || updateError
       }
 
+      // practicesのgoogle_event_idをnullにリセット（再連携時に再同期できるように）
+      await supabase
+        .from('practices')
+        .update({ google_event_id: null })
+        .eq('user_id', user?.id)
+
+      // competitionsのgoogle_event_idをnullにリセット
+      await supabase
+        .from('competitions')
+        .update({ google_event_id: null })
+        .eq('user_id', user?.id)
+
       onUpdate()
     } catch (err) {
       console.error('連携解除エラー:', err)

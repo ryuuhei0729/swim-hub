@@ -288,6 +288,9 @@ export const createMockTeamMembershipWithUser = (overrides = {}) => ({
     // google_calendar_refresh_token は機密情報のためクライアント側では除外
     google_calendar_sync_practices: false,
     google_calendar_sync_competitions: false,
+    ios_calendar_enabled: false,
+    ios_calendar_sync_practices: true,
+    ios_calendar_sync_competitions: true,
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
   },

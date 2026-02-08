@@ -15,6 +15,10 @@ export interface UserProfile {
   // google_calendar_refresh_token は機密情報のためクライアント側では除外（pgsodiumで暗号化済み）
   google_calendar_sync_practices: boolean
   google_calendar_sync_competitions: boolean
+  // iOSカレンダー連携設定
+  ios_calendar_enabled: boolean
+  ios_calendar_sync_practices: boolean
+  ios_calendar_sync_competitions: boolean
   created_at: string
   updated_at: string
 }
