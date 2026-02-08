@@ -10,7 +10,6 @@
     "userInterfaceStyle": "light",
     "plugins": [
       "expo-web-browser",
-      "expo-apple-authentication",
       [
         "expo-calendar",
         {
@@ -27,7 +26,6 @@
       "supportsTablet": true,
       "bundleIdentifier": "app.swimhub",
       "buildNumber": "1.2.1",
-      "usesAppleSignIn": true,
       "infoPlist": {
         "NSCameraUsageDescription": "プロフィール画像を撮影するためにカメラへのアクセスが必要です",
         "NSPhotoLibraryUsageDescription": "プロフィール画像を選択するためにフォトライブラリへのアクセスが必要です",

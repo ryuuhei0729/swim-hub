@@ -283,23 +283,6 @@ max_frequency = "5s"
 # Use an external OAuth provider. The full list of providers are: `apple`, `azure`, `bitbucket`,
 # `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin_oidc`, `notion`, `twitch`,
 # `twitter`, `slack`, `spotify`, `workos`, `zoom`.
-# Apple OAuth設定（ローカル開発環境用）
-# モバイルアプリはBundle ID、WebはServices IDを使用
-[auth.external.apple]
-enabled = true
-# モバイル: app.swimhub（Bundle ID - app.jsonと一致させる）
-# Web: app.swimhub.web（Services ID）
-client_id = "app.swimhub"
-# DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
-# Apple Sign In用のClient Secret (JWT) - scripts/generate-apple-secret.js で生成
-secret = "env(SUPABASE_AUTH_EXTERNAL_APPLE_SECRET)"
-# Overrides the default auth redirectUrl.
-redirect_uri = ""
-# Overrides the default auth provider URL. Used to support self-hosted gitlab, single-tenant Azure,
-# or any other third-party OIDC providers.
-url = ""
-# If enabled, the nonce check will be skipped.
-
 # Google OAuth設定（ローカル開発環境用）
 [auth.external.google]
 enabled = true
