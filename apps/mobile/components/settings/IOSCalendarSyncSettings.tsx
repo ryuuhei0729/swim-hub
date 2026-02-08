@@ -174,7 +174,7 @@ export const IOSCalendarSyncSettings: React.FC<IOSCalendarSyncSettingsProps> = (
                 onValueChange={(value) =>
                   handleSyncSettingChange('ios_calendar_sync_practices', value)
                 }
-                disabled={syncing}
+                disabled={syncing || syncLoading}
                 trackColor={{ false: '#D1D5DB', true: '#93C5FD' }}
                 thumbColor={syncPractices ? '#2563EB' : '#F3F4F6'}
               />
@@ -186,7 +186,7 @@ export const IOSCalendarSyncSettings: React.FC<IOSCalendarSyncSettingsProps> = (
                 onValueChange={(value) =>
                   handleSyncSettingChange('ios_calendar_sync_competitions', value)
                 }
-                disabled={syncing}
+                disabled={syncing || syncLoading}
                 trackColor={{ false: '#D1D5DB', true: '#93C5FD' }}
                 thumbColor={syncCompetitions ? '#2563EB' : '#F3F4F6'}
               />

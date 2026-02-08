@@ -174,14 +174,31 @@ export const useIOSCalendarSync = (): UseIOSCalendarSyncReturn => {
       if (!user || !supabase) return { success: false }
 
       try {
-        if (action === 'delete' && practice.ios_calendar_event_id) {
+        if (action === 'delete') {
+          // ios_calendar_event_idがない場合は削除の必要なし
+          if (!practice.ios_calendar_event_id) {
+            return { success: true }
+          }
+
           const result = await deleteCalendarEvent(practice.ios_calendar_event_id)
           if (result.success) {
             // DB更新: event_idをクリア
-            await supabase
+            const { error: updateError } = await supabase
               .from('practices')
               .update({ ios_calendar_event_id: null })
               .eq('id', practice.id)
+
+            if (updateError) {
+              console.error(
+                '[IOSCalendarSync] Failed to clear event_id after deletion:',
+                {
+                  practiceId: practice.id,
+                  eventId: practice.ios_calendar_event_id,
+                  error: updateError,
+                }
+              )
+              return { success: false }
+            }
           }
           return { success: result.success }
         }
@@ -197,10 +214,23 @@ export const useIOSCalendarSync = (): UseIOSCalendarSyncReturn => {
 
         // event_idをDBに保存
         if (result.success && result.eventId) {
-          await supabase
+          const { error: updateError } = await supabase
             .from('practices')
             .update({ ios_calendar_event_id: result.eventId })
             .eq('id', practice.id)
+
+          if (updateError) {
+            // DB保存失敗時はカレンダーイベントをロールバック
+            console.error('[IOSCalendarSync] Failed to save event_id to DB:', {
+              practiceId: practice.id,
+              eventId: result.eventId,
+              error: updateError,
+            })
+
+            // 作成したイベントを削除
+            await deleteCalendarEvent(result.eventId)
+            return { success: false }
+          }
         }
 
         return { success: result.success, eventId: result.eventId }
@@ -221,14 +251,31 @@ export const useIOSCalendarSync = (): UseIOSCalendarSyncReturn => {
       if (!user || !supabase) return { success: false }
 
       try {
-        if (action === 'delete' && competition.ios_calendar_event_id) {
+        if (action === 'delete') {
+          // ios_calendar_event_idがない場合は削除の必要なし
+          if (!competition.ios_calendar_event_id) {
+            return { success: true }
+          }
+
           const result = await deleteCalendarEvent(competition.ios_calendar_event_id)
           if (result.success) {
             // DB更新: event_idをクリア
-            await supabase
+            const { error: updateError } = await supabase
               .from('competitions')
               .update({ ios_calendar_event_id: null })
               .eq('id', competition.id)
+
+            if (updateError) {
+              console.error(
+                '[IOSCalendarSync] Failed to clear event_id after deletion:',
+                {
+                  competitionId: competition.id,
+                  eventId: competition.ios_calendar_event_id,
+                  error: updateError,
+                }
+              )
+              return { success: false }
+            }
           }
           return { success: result.success }
         }
@@ -244,10 +291,23 @@ export const useIOSCalendarSync = (): UseIOSCalendarSyncReturn => {
 
         // event_idをDBに保存
         if (result.success && result.eventId) {
-          await supabase
+          const { error: updateError } = await supabase
             .from('competitions')
             .update({ ios_calendar_event_id: result.eventId })
             .eq('id', competition.id)
+
+          if (updateError) {
+            // DB保存失敗時はカレンダーイベントをロールバック
+            console.error('[IOSCalendarSync] Failed to save event_id to DB:', {
+              competitionId: competition.id,
+              eventId: result.eventId,
+              error: updateError,
+            })
+
+            // 作成したイベントを削除
+            await deleteCalendarEvent(result.eventId)
+            return { success: false }
+          }
         }
 
         return { success: result.success, eventId: result.eventId }

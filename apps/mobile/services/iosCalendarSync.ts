@@ -4,6 +4,7 @@
  */
 import * as Calendar from 'expo-calendar'
 import { Platform } from 'react-native'
+import { parseISO } from 'date-fns/parseISO'
 import type { Practice, Competition } from '@swim-hub/shared/types'
 
 export interface IOSCalendarEvent {
@@ -116,7 +117,7 @@ export const practiceToIOSEvent = (
   const title = practice.title || '練習'
   const eventTitle = teamName ? `[${teamName}] ${title}` : title
 
-  const date = new Date(practice.date)
+  const date = parseISO(practice.date)
 
   return {
     title: eventTitle,
@@ -138,10 +139,10 @@ export const competitionToIOSEvent = (
   const title = competition.title || '大会'
   const eventTitle = teamName ? `[${teamName}] ${title}` : title
 
-  const startDate = new Date(competition.date)
+  const startDate = parseISO(competition.date)
   const endDate = competition.end_date
-    ? new Date(competition.end_date)
-    : new Date(competition.date)
+    ? parseISO(competition.end_date)
+    : parseISO(competition.date)
 
   return {
     title: eventTitle,

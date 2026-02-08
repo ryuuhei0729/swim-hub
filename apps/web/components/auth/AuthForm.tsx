@@ -315,14 +315,17 @@ export const AuthForm: React.FC<AuthFormProps> = ({
           onClick={async () => {
             setLoading(true)
             setError(null)
-            const { error } = await signInWithOAuth('google', {
-              queryParams: {
-                access_type: 'offline',
-                prompt: 'consent'
+            try {
+              const { error } = await signInWithOAuth('google', {
+                queryParams: {
+                  access_type: 'offline',
+                  prompt: 'consent'
+                }
+              })
+              if (error) {
+                setError('Google認証に失敗しました。再度お試しください。')
               }
-            })
-            if (error) {
-              setError('Google認証に失敗しました。再度お試しください。')
+            } finally {
               setLoading(false)
             }
           }}
@@ -346,9 +349,12 @@ export const AuthForm: React.FC<AuthFormProps> = ({
           onClick={async () => {
             setLoading(true)
             setError(null)
-            const { error } = await signInWithOAuth('apple', {})
-            if (error) {
-              setError('Apple認証に失敗しました。再度お試しください。')
+            try {
+              const { error } = await signInWithOAuth('apple', {})
+              if (error) {
+                setError('Apple認証に失敗しました。再度お試しください。')
+              }
+            } finally {
               setLoading(false)
             }
           }}
