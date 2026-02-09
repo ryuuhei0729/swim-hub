@@ -31,13 +31,13 @@
     "test:web:remote": "E2E_SUPABASE_MODE=remote dotenvx run -f .env.development -- npx playwright test --config e2e/src/config/playwright.config.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.975.0",
+    "@aws-sdk/client-s3": "^3.985.0",
     "@dotenvx/dotenvx": "^1.51.1",
     "@heroicons/react": "^2.2.0",
     "@supabase/auth-ui-react": "^0.4.7",
     "@supabase/auth-ui-shared": "^0.1.8",
     "@supabase/ssr": "^0.8.0",
-    "@supabase/supabase-js": "^2.80.0",
+    "@supabase/supabase-js": "^2.95.3",
     "@swim-hub/shared": "*",
     "@tailwindcss/postcss": "^4.1.17",
     "@tanstack/react-query": "^5.90.10",
@@ -54,11 +54,11 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260127.0",
+    "@cloudflare/workers-types": "^4.20260207.0",
     "@eslint/eslintrc": "^3",
     "@next/bundle-analyzer": "^15.5.9",
-    "@opennextjs/cloudflare": "^1.15.1",
-    "@playwright/test": "^1.56.1",
+    "@opennextjs/cloudflare": "^1.16.3",
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/forms": "^0.5.9",
     "@tailwindcss/oxide": "^4.1.18",
@@ -72,7 +72,7 @@
     "@vitejs/plugin-react": "4.7.0",
     "@vitest/coverage-v8": "1.6.0",
     "autoprefixer": "^10.4.21",
-    "dotenv": "^17.2.3",
+    "dotenv": "^17.2.4",
     "eslint": "^9.37.0",
     "eslint-config-next": "^15.5.11",
     "eslint-plugin-react": "^7.37.5",
@@ -84,6 +84,6 @@
     "typescript": "^5",
     "typescript-eslint": "^8.34.0",
     "vitest": "1.6.1",
-    "wrangler": "^4.60.0"
+    "wrangler": "^4.63.0"
   }
 }
