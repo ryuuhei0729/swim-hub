@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
 
     if (tokenError) {
       return NextResponse.json(
-        { error: 'トークンの保存に失敗しました' },
+        { error: 'トークンの保存に失敗しました', details: tokenError.message },
         { status: 500 }
       )
     }

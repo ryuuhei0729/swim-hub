@@ -5,11 +5,14 @@
 import { useState, useCallback } from 'react'
 import * as WebBrowser from 'expo-web-browser'
 import {
-  buildGoogleAuthUrl,
+  getRedirectUri,
   extractTokensFromUrl,
   type GoogleAuthOptions,
 } from '@/lib/google-auth'
 import { supabase } from '@/lib/supabase'
+
+// WebBrowserの完了処理を登録
+WebBrowser.maybeCompleteAuthSession()
 
 export interface GoogleAuthResult {
   success: boolean
@@ -50,47 +53,42 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
       setError(null)
 
       try {
-        // OAuth URLを構築
-        const { url, redirectUri } = buildGoogleAuthUrl(options)
+        const { scopes = [], forCalendarConnect = false } = options || {}
+        const redirectUri = getRedirectUri()
 
-        if (__DEV__) {
-          console.log('=== Google OAuth Debug ===')
-          // URLからトークンを含む可能性のあるフラグメントを除去してログ出力
-          const maskSensitiveUrl = (urlStr: string) => {
-            const hashIndex = urlStr.indexOf('#')
-            return hashIndex !== -1 ? `${urlStr.substring(0, hashIndex)}#[MASKED]` : urlStr
-          }
-          console.log('OAuth URL (masked):', maskSensitiveUrl(url))
-          console.log('Redirect URI:', redirectUri)
-          console.log('=========================')
+        // スコープを構築
+        const allScopes = ['openid', 'email', 'profile', ...scopes]
+        if (forCalendarConnect) {
+          allScopes.push('https://www.googleapis.com/auth/calendar.events')
+        }
+
+        // Supabaseの signInWithOAuth を使用（skipBrowserRedirect: true）
+        const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: redirectUri,
+            scopes: allScopes.join(' '),
+            skipBrowserRedirect: true,
+            queryParams: forCalendarConnect
+              ? {
+                  access_type: 'offline',
+                  prompt: 'consent',
+                }
+              : undefined,
+          },
+        })
+
+        if (oauthError || !data.url) {
+          setError(oauthError?.message || 'OAuth URLの生成に失敗しました')
+          return { success: false, error: oauthError || new Error('OAuth URLの生成に失敗しました') }
         }
 
         // システムブラウザで認証画面を開く
-        const result = await WebBrowser.openAuthSessionAsync(url, redirectUri)
-
-        if (__DEV__) {
-          console.log('WebBrowser result type:', result.type)
-        }
+        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri)
 
         if (result.type === 'success' && result.url) {
-          if (__DEV__) {
-            // URLフラグメントにトークンが含まれるため、マスクして出力
-            const callbackBase = result.url.split('#')[0]
-            console.log('Callback URL (base only):', callbackBase)
-          }
-
           // コールバックURLからトークンを抽出
           const tokens = extractTokensFromUrl(result.url)
-
-          if (__DEV__) {
-            console.log('Extracted tokens:', {
-              hasAccessToken: !!tokens.accessToken,
-              hasRefreshToken: !!tokens.refreshToken,
-              hasProviderToken: !!tokens.providerToken,
-              hasProviderRefreshToken: !!tokens.providerRefreshToken,
-              error: tokens.error,
-            })
-          }
 
           if (tokens.error) {
             setError(tokens.error)
@@ -105,70 +103,35 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
             })
 
             if (sessionError) {
-              console.error('Session error:', sessionError)
               setError(sessionError.message)
               return { success: false, error: sessionError }
-            }
-
-            if (__DEV__) {
-              console.log('Session set successfully!')
             }
 
             // カレンダー連携の場合、provider_refresh_tokenを保存してフラグを更新
-            // Web APIを経由してトークンを保存（pgsodiumの権限問題を回避）
-            if (options?.forCalendarConnect && tokens.providerRefreshToken) {
-              if (__DEV__) {
-                console.log('Saving Google Calendar tokens via Web API...')
+            if (forCalendarConnect) {
+              // provider_refresh_tokenがない場合でもエラーを表示
+              if (!tokens.providerRefreshToken) {
+                setError('Googleカレンダーのアクセス権限が取得できませんでした。再度お試しください。')
+                return { success: false, error: new Error('provider_refresh_token not received') }
               }
 
-              try {
-                const webApiUrl = globalThis.__SWIM_HUB_WEB_API_URL__ || 'https://swim-hub.app'
-                const response = await fetch(`${webApiUrl}/api/google-calendar/connect`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${tokens.accessToken}`,
-                  },
-                  body: JSON.stringify({
-                    providerRefreshToken: tokens.providerRefreshToken,
-                  }),
-                })
+              const webApiUrl = globalThis.__SWIM_HUB_WEB_API_URL__ || 'https://swim-hub.app'
+              const response = await fetch(`${webApiUrl}/api/google-calendar/connect`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${tokens.accessToken}`,
+                },
+                body: JSON.stringify({
+                  providerRefreshToken: tokens.providerRefreshToken,
+                }),
+              })
 
-                if (response.ok) {
-                  if (__DEV__) {
-                    console.log('Google Calendar tokens saved successfully via Web API!')
-                  }
-                } else {
-                  const errorData = await response.json().catch(() => ({})) as { error?: string }
-                  console.error('Failed to save Google Calendar tokens:', errorData.error || response.status)
-                }
-              } catch (err) {
-                console.error('Failed to connect to Web API:', err)
+              if (!response.ok) {
+                const errorData = await response.json().catch(() => ({})) as { error?: string }
+                setError(errorData.error || 'カレンダー連携の保存に失敗しました')
+                return { success: false, error: new Error(errorData.error || 'カレンダー連携の保存に失敗しました') }
               }
-            }
-
-            return { success: true }
-          }
-
-          // access_tokenのみの場合（refresh_tokenがない場合）
-          if (tokens.accessToken) {
-            // ユーザー情報を取得してセッションを確認
-            const { data: { user }, error: userError } = await supabase.auth.getUser(tokens.accessToken)
-
-            if (userError || !user) {
-              setError('ユーザー情報の取得に失敗しました')
-              return { success: false, error: userError || new Error('ユーザー情報の取得に失敗しました') }
-            }
-
-            // セッションを設定（refresh_tokenがない場合はダミーを使用）
-            const { error: sessionError } = await supabase.auth.setSession({
-              access_token: tokens.accessToken,
-              refresh_token: tokens.refreshToken || '',
-            })
-
-            if (sessionError) {
-              setError(sessionError.message)
-              return { success: false, error: sessionError }
             }
 
             return { success: true }
@@ -184,7 +147,6 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
         }
 
         if (result.type === 'dismiss') {
-          // ユーザーがブラウザを閉じた場合
           setError('認証が中断されました')
           return { success: false, error: new Error('認証が中断されました') }
         }
@@ -192,7 +154,6 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
         setError('認証に失敗しました')
         return { success: false, error: new Error('認証に失敗しました') }
       } catch (err) {
-        console.error('Google auth error:', err)
         const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました'
         setError(errorMessage)
         return { success: false, error: err instanceof Error ? err : new Error(errorMessage) }

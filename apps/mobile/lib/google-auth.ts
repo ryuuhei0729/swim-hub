@@ -2,21 +2,20 @@
  * Google OAuth認証ユーティリティ
  * Expo + Supabase でのGoogle認証フローを管理
  */
-import * as WebBrowser from 'expo-web-browser'
 import { makeRedirectUri } from 'expo-auth-session'
-import Constants from 'expo-constants'
-
-// WebBrowserの完了処理を登録（Android用）
-WebBrowser.maybeCompleteAuthSession()
 
 /**
  * リダイレクトURIを生成
  * カスタムスキーム(swimhub://)を使用
  */
 export const getRedirectUri = (): string => {
+  // iOS/Androidのスタンドアロンビルドでは`native`パラメータで
+  // 明示的にカスタムスキームURIを指定する必要がある
   return makeRedirectUri({
     scheme: 'swimhub',
     path: 'auth/callback',
+    // プロダクションビルドで正しいリダイレクトURIを生成するため
+    native: 'swimhub://auth/callback',
   })
 }
 
@@ -25,62 +24,6 @@ export interface GoogleAuthOptions {
   scopes?: string[]
   /** カレンダー連携用の認証かどうか */
   forCalendarConnect?: boolean
-}
-
-export interface GoogleAuthResult {
-  /** 認証URL */
-  url: string
-  /** リダイレクトURI */
-  redirectUri: string
-}
-
-/**
- * Supabase経由のGoogle OAuth URLを構築
- */
-export const buildGoogleAuthUrl = (
-  options: GoogleAuthOptions = {}
-): GoogleAuthResult => {
-  const { scopes = [], forCalendarConnect = false } = options
-
-  const redirectUri = getRedirectUri()
-
-  // 基本スコープ
-  const allScopes = [
-    'openid',
-    'email',
-    'profile',
-    ...scopes,
-  ]
-
-  // カレンダー連携時は追加スコープ
-  if (forCalendarConnect) {
-    allScopes.push('https://www.googleapis.com/auth/calendar.events')
-  }
-
-  const supabaseUrl = Constants.expoConfig?.extra?.supabaseUrl
-
-  if (!supabaseUrl) {
-    throw new Error('Supabase URLが設定されていません')
-  }
-
-  // Supabase OAuth URLパラメータ
-  // redirect_toにカスタムスキームを指定すると、認証後にそこにトークンが返される
-  const params = new URLSearchParams({
-    provider: 'google',
-    redirect_to: redirectUri,
-    scopes: allScopes.join(' '),
-  })
-
-  // カレンダー連携時は追加パラメータ
-  if (forCalendarConnect) {
-    params.append('access_type', 'offline')
-    params.append('prompt', 'consent')
-  }
-
-  return {
-    url: `${supabaseUrl}/auth/v1/authorize?${params.toString()}`,
-    redirectUri,
-  }
 }
 
 /**
