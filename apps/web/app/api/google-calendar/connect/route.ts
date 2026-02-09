@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { encrypt } from '@/lib/encryption'
 
 /**
  * Supabase設定を取得
@@ -19,7 +20,7 @@ function getSupabaseConfig() {
 /**
  * POST /api/google-calendar/connect
  * モバイルアプリからGoogleカレンダー連携を有効化
- * provider_refresh_tokenを保存し、フラグを更新
+ * provider_refresh_tokenを暗号化して保存し、フラグを更新
  */
 export async function POST(request: NextRequest) {
   try {
@@ -82,18 +83,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 暗号化キーの確認
+    if (!process.env.TOKEN_ENCRYPTION_KEY) {
+      console.error('TOKEN_ENCRYPTION_KEY is not set')
+      return NextResponse.json(
+        { error: 'サーバー設定エラー' },
+        { status: 500 }
+      )
+    }
+
+    // トークンを暗号化
+    const encryptedToken = encrypt(providerRefreshToken)
+
     // サービスロールクライアントを作成（RPC関数実行用）
     const serviceClient = createClient(config.url, config.serviceRoleKey)
 
-    // RPC関数でトークンを保存（サービスロールで実行）
+    // RPC関数で暗号化済みトークンを保存（サービスロールで実行）
     const { error: tokenError } = await serviceClient.rpc('set_google_refresh_token', {
       p_user_id: user.id,
-      p_token: providerRefreshToken,
+      p_token: encryptedToken,
     })
 
     if (tokenError) {
+      console.error('Failed to save token:', tokenError.message)
       return NextResponse.json(
-        { error: 'トークンの保存に失敗しました', details: tokenError.message },
+        { error: 'トークンの保存に失敗しました' },
         { status: 500 }
       )
     }
@@ -112,7 +126,8 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true })
-  } catch {
+  } catch (err) {
+    console.error('Unexpected error in google-calendar/connect:', err)
     return NextResponse.json(
       { error: '予期しないエラーが発生しました' },
       { status: 500 }
