@@ -93,23 +93,30 @@ async function handleCalendarConnection(
     // Google Calendar連携
     const refreshToken = session.provider_refresh_token || null
 
-    let tokenError: Error | null = null
-    if (refreshToken) {
-      // @ts-expect-error - Database型推論の既知の問題
-      const { error } = await supabase.rpc('set_google_refresh_token', {
-        p_user_id: user.id,
-        p_token: refreshToken
-      })
-      tokenError = error
+    if (!refreshToken) {
+      // refreshToken がない場合は何も更新しない
+      return { error: new Error('No refresh token provided for Google Calendar') }
     }
 
+    // @ts-expect-error - Database型推論の既知の問題
+    const { error: tokenError } = await supabase.rpc('set_google_refresh_token', {
+      p_user_id: user.id,
+      p_token: refreshToken
+    })
+
+    if (tokenError) {
+      // RPC エラーの場合は google_calendar_enabled を更新しない
+      return { error: tokenError }
+    }
+
+    // トークン保存成功時のみフラグを立てる
     const { error: updateError } = await supabase
       .from('users')
       // @ts-expect-error - Database型推論の既知の問題
       .update({ google_calendar_enabled: true })
       .eq('id', user.id)
 
-    return { error: tokenError || updateError }
+    return { error: updateError }
   }
 
   return { error: null }

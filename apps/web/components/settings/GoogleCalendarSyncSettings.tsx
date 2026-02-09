@@ -84,16 +84,24 @@ export default function GoogleCalendarSyncSettings({
       }
 
       // practicesのgoogle_event_idをnullにリセット（再連携時に再同期できるように）
-      await supabase
+      const { error: practicesResetError } = await supabase
         .from('practices')
         .update({ google_event_id: null })
         .eq('user_id', user?.id)
 
+      if (practicesResetError) {
+        throw practicesResetError
+      }
+
       // competitionsのgoogle_event_idをnullにリセット
-      await supabase
+      const { error: competitionsResetError } = await supabase
         .from('competitions')
         .update({ google_event_id: null })
         .eq('user_id', user?.id)
+
+      if (competitionsResetError) {
+        throw competitionsResetError
+      }
 
       onUpdate()
     } catch (err) {

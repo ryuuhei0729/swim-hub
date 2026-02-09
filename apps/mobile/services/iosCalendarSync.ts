@@ -5,6 +5,7 @@
 import * as Calendar from 'expo-calendar'
 import { Platform } from 'react-native'
 import { parseISO } from 'date-fns/parseISO'
+import { isValid } from 'date-fns/isValid'
 import type { Practice, Competition } from '@swim-hub/shared/types'
 
 export interface IOSCalendarEvent {
@@ -46,8 +47,13 @@ export const getCalendarPermissionStatus = async (): Promise<'granted' | 'denied
     return 'denied'
   }
 
-  const { status } = await Calendar.getCalendarPermissionsAsync()
-  return status
+  try {
+    const { status } = await Calendar.getCalendarPermissionsAsync()
+    return status
+  } catch (err) {
+    console.error('[IOSCalendarSync] Failed to get calendar permissions:', err)
+    return 'undetermined'
+  }
 }
 
 /**
@@ -117,11 +123,14 @@ export const getDefaultCalendarId = async (): Promise<string | null> => {
 export const practiceToIOSEvent = (
   practice: Practice,
   teamName?: string | null
-): IOSCalendarEvent => {
+): IOSCalendarEvent | null => {
   const title = practice.title || '練習'
   const eventTitle = teamName ? `[${teamName}] ${title}` : title
 
   const date = parseISO(practice.date)
+  if (!isValid(date)) {
+    return null
+  }
 
   return {
     title: eventTitle,
@@ -139,14 +148,22 @@ export const practiceToIOSEvent = (
 export const competitionToIOSEvent = (
   competition: Competition,
   teamName?: string | null
-): IOSCalendarEvent => {
+): IOSCalendarEvent | null => {
   const title = competition.title || '大会'
   const eventTitle = teamName ? `[${teamName}] ${title}` : title
 
   const startDate = parseISO(competition.date)
-  const endDate = competition.end_date
-    ? parseISO(competition.end_date)
-    : parseISO(competition.date)
+  if (!isValid(startDate)) {
+    return null
+  }
+
+  let endDate = startDate
+  if (competition.end_date) {
+    const parsedEndDate = parseISO(competition.end_date)
+    if (isValid(parsedEndDate)) {
+      endDate = parsedEndDate
+    }
+  }
 
   return {
     title: eventTitle,

@@ -65,7 +65,11 @@ export const useIOSCalendarSync = (): UseIOSCalendarSyncReturn => {
   // パーミッション状態を確認
   useEffect(() => {
     if (isAvailable) {
-      getCalendarPermissionStatus().then(setPermissionStatus)
+      getCalendarPermissionStatus()
+        .then(setPermissionStatus)
+        .catch((err) => {
+          console.error('[IOSCalendarSync] Failed to get permission status:', err)
+        })
     }
   }, [isAvailable])
 
@@ -229,6 +233,10 @@ export const useIOSCalendarSync = (): UseIOSCalendarSyncReturn => {
         }
 
         const event = practiceToIOSEvent(practice, teamName)
+        if (!event) {
+          console.error('[IOSCalendarSync] Invalid practice date:', practice.date)
+          return { success: false }
+        }
 
         if (action === 'update' && practice.ios_calendar_event_id) {
           const result = await updateCalendarEvent(practice.ios_calendar_event_id, event)
@@ -306,6 +314,10 @@ export const useIOSCalendarSync = (): UseIOSCalendarSyncReturn => {
         }
 
         const event = competitionToIOSEvent(competition, teamName)
+        if (!event) {
+          console.error('[IOSCalendarSync] Invalid competition date:', competition.date)
+          return { success: false }
+        }
 
         if (action === 'update' && competition.ios_calendar_event_id) {
           const result = await updateCalendarEvent(competition.ios_calendar_event_id, event)

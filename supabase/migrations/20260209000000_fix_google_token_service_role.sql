@@ -14,9 +14,10 @@ SET search_path = public
 AS $$
 DECLARE
   v_is_service_role boolean;
+  v_user_exists boolean;
 BEGIN
-  -- サービスロールかどうかをチェック
-  v_is_service_role := (SELECT current_setting('request.jwt.claims', true)::json->>'role') = 'service_role';
+  -- サービスロールかどうかをチェック（NULLの場合はfalseにフォールバック）
+  v_is_service_role := COALESCE((SELECT current_setting('request.jwt.claims', true)::json->>'role') = 'service_role', false);
 
   -- サービスロールでない場合は認証チェック
   IF NOT v_is_service_role THEN
@@ -26,6 +27,12 @@ BEGIN
     IF (SELECT auth.uid()) != p_user_id THEN
       RAISE EXCEPTION '自分のトークンのみ更新可能です';
     END IF;
+  END IF;
+
+  -- ユーザー存在チェック
+  SELECT EXISTS(SELECT 1 FROM public.users WHERE id = p_user_id) INTO v_user_exists;
+  IF NOT v_user_exists THEN
+    RAISE EXCEPTION '指定されたユーザーが存在しません: %', p_user_id;
   END IF;
 
   -- NULLの場合は連携解除（トークン削除 + フラグOFF）
@@ -60,8 +67,8 @@ DECLARE
   v_is_service_role boolean;
   v_token text;
 BEGIN
-  -- サービスロールかどうかをチェック
-  v_is_service_role := (SELECT current_setting('request.jwt.claims', true)::json->>'role') = 'service_role';
+  -- サービスロールかどうかをチェック（NULLの場合はfalseにフォールバック）
+  v_is_service_role := COALESCE((SELECT current_setting('request.jwt.claims', true)::json->>'role') = 'service_role', false);
 
   -- サービスロールでない場合は認証チェック
   IF NOT v_is_service_role THEN
