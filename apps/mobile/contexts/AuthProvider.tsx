@@ -66,8 +66,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [])
 
-  // OAuthログイン
-  const signInWithOAuth = useCallback(async (provider: 'google', options?: { redirectTo?: string; scopes?: string; queryParams?: Record<string, string> }) => {
+  // OAuthログイン（Google / Apple）
+  const signInWithOAuth = useCallback(async (provider: 'google' | 'apple', options?: { redirectTo?: string; scopes?: string; queryParams?: Record<string, string> }) => {
     if (!supabase) {
       return { error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
     }

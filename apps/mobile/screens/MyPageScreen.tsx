@@ -6,6 +6,7 @@ import { useUserQuery } from '@apps/shared/hooks/queries/user'
 import { useBestTimesQuery } from '@/hooks/useBestTimesQuery'
 import { ProfileDisplay, ProfileEditModal, BestTimesTable } from '@/components/profile'
 import { GoogleCalendarSyncSettings } from '@/components/settings/GoogleCalendarSyncSettings'
+import { IOSCalendarSyncSettings } from '@/components/settings/IOSCalendarSyncSettings'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ErrorView } from '@/components/layout/ErrorView'
 import type { UserProfile } from '@swim-hub/shared/types'
@@ -15,9 +16,10 @@ import type { UserProfile } from '@swim-hub/shared/types'
  * プロフィール表示・編集、ベストタイム表
  */
 export const MyPageScreen: React.FC = () => {
-  const { supabase, user } = useAuth()
+  const { supabase, user, signOut } = useAuth()
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   // プロフィールとチーム情報取得
   const {
@@ -106,6 +108,23 @@ export const MyPageScreen: React.FC = () => {
     },
     [user, supabase, refetchProfile]
   )
+
+  // ログアウト処理
+  const handleLogout = useCallback(async () => {
+    setIsLoggingOut(true)
+    try {
+      const { error } = await signOut()
+      if (error) {
+        console.error('ログアウトエラー:', error)
+        alert('ログアウトに失敗しました。もう一度お試しください。')
+      }
+    } catch (err) {
+      console.error('ログアウト処理エラー:', err)
+      alert('ログアウトに失敗しました。もう一度お試しください。')
+    } finally {
+      setIsLoggingOut(false)
+    }
+  }, [signOut])
 
   // エラー状態
   if (isError && error) {
@@ -198,6 +217,31 @@ export const MyPageScreen: React.FC = () => {
           profile={profile}
           onUpdate={refetchProfile}
         />
+
+        {/* iOSカレンダー連携セクション */}
+        <IOSCalendarSyncSettings
+          profile={profile}
+          onUpdate={refetchProfile}
+        />
+
+        {/* ログアウトセクション */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>アカウント</Text>
+          </View>
+          <Pressable
+            style={[styles.logoutButton, isLoggingOut && styles.logoutButtonDisabled]}
+            onPress={handleLogout}
+            disabled={isLoggingOut}
+            accessibilityRole="button"
+            accessibilityLabel="ログアウト"
+            accessibilityHint="アカウントからログアウトします"
+          >
+            <Text style={styles.logoutButtonText}>
+              {isLoggingOut ? 'ログアウト中...' : 'ログアウト'}
+            </Text>
+          </Pressable>
+        </View>
 
       </ScrollView>
 
@@ -303,5 +347,21 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 14,
     color: '#DC2626',
+  },
+  logoutButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#DC2626',
+    alignItems: 'center',
+  },
+  logoutButtonDisabled: {
+    backgroundColor: '#F87171',
+    opacity: 0.6,
+  },
+  logoutButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 })

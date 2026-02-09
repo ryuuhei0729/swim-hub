@@ -22,6 +22,7 @@ export interface Competition {
   entry_status?: 'before' | 'open' | 'closed' // エントリーステータス（デフォルト: before）
   attendance_status?: AttendanceStatusType | null // 出欠提出ステータス
   google_event_id?: string | null // Google CalendarイベントID
+  ios_calendar_event_id?: string | null // iOSカレンダーイベントID
   image_paths?: string[] // 画像パスの配列（R2/Storageのパス）
   note: string | null
   created_at: string

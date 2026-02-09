@@ -1,6 +1,9 @@
 /**
  * Expo設定ファイル（動的）
- * dotenvxで復号化された環境変数を読み込んで設定
+ * 環境変数を読み込んで設定
+ *
+ * ローカル開発: dotenvx run -f .env.local -- expo start
+ * EAS Build: EAS 環境変数から直接読み込み
  */
 
 // app.jsonの基本設定を読み込む

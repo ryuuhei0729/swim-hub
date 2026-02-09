@@ -1,69 +1,7 @@
 import { competitionToCalendarEvent, fetchGoogleCalendarWithTokenRefresh, practiceToCalendarEvent, refreshGoogleAccessToken } from '@/lib/google-calendar'
-import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-server-auth'
+import { getGoogleCalendarAuth } from '@/lib/google-calendar-auth'
 import type { Competition, Practice } from '@apps/shared/types'
-import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-
-/**
- * Supabase設定を取得
- */
-function getSupabaseConfig() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-  if (!url || !anonKey) {
-    return null
-  }
-
-  return { url, anonKey, serviceRoleKey }
-}
-
-/**
- * サービスロールクライアントを取得（トークン取得用）
- */
-function getServiceRoleClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-  if (!url || !serviceRoleKey) {
-    return null
-  }
-
-  return createClient(url, serviceRoleKey)
-}
-
-/**
- * Bearerトークンからモバイルユーザーを認証
- */
-async function authenticateMobileUser(authHeader: string): Promise<{ supabase: SupabaseClient; user: User } | null> {
-  if (!authHeader.startsWith('Bearer ')) {
-    return null
-  }
-
-  const accessToken = authHeader.substring(7)
-  const config = getSupabaseConfig()
-
-  if (!config) {
-    return null
-  }
-
-  // アクセストークンをヘッダーに含めて認証済みクライアントを作成
-  const supabase = createClient(config.url, config.anonKey, {
-    global: {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    },
-  })
-  const { data: { user }, error } = await supabase.auth.getUser(accessToken)
-
-  if (error || !user) {
-    return null
-  }
-
-  return { supabase, user }
-}
 
 /**
  * Google Calendar APIへの同期処理
@@ -71,65 +9,14 @@ async function authenticateMobileUser(authHeader: string): Promise<{ supabase: S
  */
 export async function POST(request: NextRequest) {
   try {
-    // モバイルからのBearerトークン認証を先にチェック
     const authHeader = request.headers.get('Authorization')
-    let supabase: SupabaseClient
-    let user: User | null = null
+    const authResult = await getGoogleCalendarAuth(authHeader)
 
-    if (authHeader?.startsWith('Bearer ')) {
-      // モバイルアプリからのリクエスト
-      const mobileAuth = await authenticateMobileUser(authHeader)
-      if (!mobileAuth) {
-        return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
-      }
-      supabase = mobileAuth.supabase
-      user = mobileAuth.user
-    } else {
-      // Webアプリからのリクエスト（Cookie認証）
-      supabase = await createAuthenticatedServerClient()
-      user = await getServerUser()
+    if ('error' in authResult) {
+      return authResult.error
     }
 
-    if (!user) {
-      return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
-    }
-
-    // ユーザーのGoogle Calendar連携設定を取得
-    const { data: profile, error: profileError } = await supabase
-      .from('users')
-      .select('google_calendar_enabled, google_calendar_sync_practices, google_calendar_sync_competitions')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError || !profile) {
-      return NextResponse.json({ error: 'ユーザー情報の取得に失敗しました' }, { status: 500 })
-    }
-
-    type ProfileData = {
-      google_calendar_enabled: boolean
-      google_calendar_sync_practices: boolean
-      google_calendar_sync_competitions: boolean
-    }
-    const profileData = profile as ProfileData
-
-    if (!profileData.google_calendar_enabled) {
-      return NextResponse.json({ error: 'Google Calendar連携が有効になっていません' }, { status: 400 })
-    }
-
-    // サービスロールクライアントを取得
-    const serviceClient = getServiceRoleClient()
-    if (!serviceClient) {
-      return NextResponse.json({ error: 'サーバー設定エラー' }, { status: 500 })
-    }
-
-    // RPC関数でトークンを取得（サービスロールで実行）
-    const { data: refreshToken, error: tokenError } = await serviceClient.rpc('get_google_refresh_token', {
-      p_user_id: user.id
-    })
-
-    if (tokenError || !refreshToken) {
-      return NextResponse.json({ error: 'Google Calendar連携トークンの取得に失敗しました' }, { status: 401 })
-    }
+    const { supabase, profile: profileData, refreshToken } = authResult.result
 
     const body = await request.json()
     const { type, data, action, googleEventId } = body as {
@@ -166,12 +53,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'googleEventIdが必要です' }, { status: 400 })
       }
 
-      // イベント削除（401エラー時に自動的にトークンをリフレッシュして再試行）
       const deleteResponse = await fetchGoogleCalendarWithTokenRefresh(
         `${calendarApiUrl}/${googleEventId}`,
-        {
-          method: 'DELETE',
-        },
+        { method: 'DELETE' },
         accessToken,
         refreshToken
       )
@@ -199,7 +83,6 @@ export async function POST(request: NextRequest) {
       ? practiceToCalendarEvent(data as Practice, teamName)
       : competitionToCalendarEvent(data as Competition, teamName)
 
-    // イベント作成・更新
     // updateアクションの場合はgoogleEventIdが必須
     if (action === 'update' && !googleEventId) {
       return NextResponse.json(
@@ -213,13 +96,9 @@ export async function POST(request: NextRequest) {
       ? `${calendarApiUrl}/${googleEventId}`
       : calendarApiUrl
 
-    // イベント作成・更新（401エラー時に自動的にトークンをリフレッシュして再試行）
     const response = await fetchGoogleCalendarWithTokenRefresh(
       url,
-      {
-        method,
-        body: JSON.stringify(event),
-      },
+      { method, body: JSON.stringify(event) },
       accessToken,
       refreshToken
     )
@@ -234,12 +113,11 @@ export async function POST(request: NextRequest) {
       success: true,
       googleEventId: result.id
     })
-  } catch {
+  } catch (err) {
+    console.error('Unexpected error in google-calendar/sync:', err)
     return NextResponse.json(
       { error: '予期しないエラーが発生しました' },
       { status: 500 }
     )
   }
 }
-
-

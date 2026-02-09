@@ -96,9 +96,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [supabaseClient])
 
-  // OAuth認証（Google）
+  // OAuth認証（Google / Apple）
   // supabase.tsから統一されたBrowser Clientを使用することで、PKCE code verifierが確実にCookieに保存・読み取りされる
-  const signInWithOAuth = useCallback(async (provider: 'google', options?: { redirectTo?: string; scopes?: string; queryParams?: Record<string, string> }) => {
+  const signInWithOAuth = useCallback(async (provider: 'google' | 'apple', options?: { redirectTo?: string; scopes?: string; queryParams?: Record<string, string> }) => {
     if (!supabaseClient) {
       return { error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
     }
