@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert } from 'react-native'
+import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, Platform, ActivityIndicator } from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useQueryClient } from '@tanstack/react-query'
@@ -9,8 +9,10 @@ import {
   useUpdatePracticeMutation,
   usePracticesQuery,
 } from '@apps/shared/hooks/queries/practices'
+import { useUserQuery } from '@apps/shared/hooks/queries/user'
 import { practiceKeys } from '@apps/shared/hooks/queries/keys'
 import { usePracticeFormStore } from '@/stores/practiceFormStore'
+import { useIOSCalendarSync } from '@/hooks/useIOSCalendarSync'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ImageUploader, ImageFile, ExistingImage } from '@/components/shared/ImageUploader'
 import {
@@ -35,6 +37,12 @@ export const PracticeFormScreen: React.FC = () => {
   const queryClient = useQueryClient()
   const isEditMode = !!practiceId
 
+  // ユーザープロフィール取得（iOSカレンダー設定確認用）
+  const { profile } = useUserQuery(supabase, { enableRealtime: false })
+
+  // iOSカレンダー同期フック
+  const { syncPractice } = useIOSCalendarSync()
+
   // Zustandストア
   const {
     date,
@@ -57,6 +65,9 @@ export const PracticeFormScreen: React.FC = () => {
   // 既存データの取得（編集モード時）
   const [loadingPractice, setLoadingPractice] = useState(isEditMode)
   const initializedRef = useRef(false)
+
+  // 二重送信防止用のref
+  const isSubmittingRef = useRef(false)
 
   // 画像の状態管理
   const [newImageFiles, setNewImageFiles] = useState<ImageFile[]>([])
@@ -153,6 +164,9 @@ export const PracticeFormScreen: React.FC = () => {
 
   // 保存処理（ダッシュボードに戻る）
   const handleSave = async () => {
+    // 二重送信防止
+    if (isSubmittingRef.current) return
+
     if (!validate()) {
       return
     }
@@ -162,6 +176,7 @@ export const PracticeFormScreen: React.FC = () => {
       return
     }
 
+    isSubmittingRef.current = true
     setLoading(true)
     clearErrors()
 
@@ -198,7 +213,7 @@ export const PracticeFormScreen: React.FC = () => {
         }
 
         // 更新
-        await updateMutation.mutateAsync({
+        const updatedPractice = await updateMutation.mutateAsync({
           id: practiceId,
           updates: formData,
         })
@@ -207,6 +222,15 @@ export const PracticeFormScreen: React.FC = () => {
         if (deletedImageIds.length > 0) {
           await deleteImages(supabase, deletedImageIds, 'practice-images')
         }
+
+        // iOSカレンダー同期（iOS端末かつ連携が有効な場合）
+        if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_practices) {
+          const practiceForSync = practices.find((p) => p.id === practiceId)
+          if (practiceForSync) {
+            await syncPractice({ ...practiceForSync, ...formData }, 'update')
+          }
+        }
+
         // カレンダーと練習一覧のクエリを無効化してリフレッシュ
         queryClient.invalidateQueries({ queryKey: ['calendar'] })
         queryClient.invalidateQueries({ queryKey: practiceKeys.lists() })
@@ -245,6 +269,11 @@ export const PracticeFormScreen: React.FC = () => {
           })
         }
 
+        // iOSカレンダー同期（iOS端末かつ連携が有効な場合）
+        if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_practices) {
+          await syncPractice(createdPractice, 'create')
+        }
+
         // カレンダーと練習一覧のクエリを無効化してリフレッシュ
         queryClient.invalidateQueries({ queryKey: ['calendar'] })
         queryClient.invalidateQueries({ queryKey: practiceKeys.lists() })
@@ -260,12 +289,16 @@ export const PracticeFormScreen: React.FC = () => {
         [{ text: 'OK' }]
       )
     } finally {
+      isSubmittingRef.current = false
       setLoading(false)
     }
   }
 
   // 続けて練習ログを作成（PracticeLogFormScreenへ遷移）
   const handleContinueToLog = async () => {
+    // 二重送信防止
+    if (isSubmittingRef.current) return
+
     if (!validate()) {
       return
     }
@@ -275,6 +308,7 @@ export const PracticeFormScreen: React.FC = () => {
       return
     }
 
+    isSubmittingRef.current = true
     setLoading(true)
     clearErrors()
 
@@ -320,6 +354,15 @@ export const PracticeFormScreen: React.FC = () => {
         if (deletedImageIds.length > 0) {
           await deleteImages(supabase, deletedImageIds, 'practice-images')
         }
+
+        // iOSカレンダー同期（iOS端末かつ連携が有効な場合）
+        if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_practices) {
+          const practiceForSync = practices.find((p) => p.id === practiceId)
+          if (practiceForSync) {
+            await syncPractice({ ...practiceForSync, ...formData }, 'update')
+          }
+        }
+
         queryClient.invalidateQueries({ queryKey: ['calendar'] })
         queryClient.invalidateQueries({ queryKey: practiceKeys.lists() })
         reset()
@@ -359,6 +402,11 @@ export const PracticeFormScreen: React.FC = () => {
           })
         }
 
+        // iOSカレンダー同期（iOS端末かつ連携が有効な場合）
+        if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_practices) {
+          await syncPractice(createdPractice, 'create')
+        }
+
         // カレンダーと練習一覧のクエリを無効化してリフレッシュ
         queryClient.invalidateQueries({ queryKey: ['calendar'] })
         queryClient.invalidateQueries({ queryKey: practiceKeys.lists() })
@@ -377,6 +425,7 @@ export const PracticeFormScreen: React.FC = () => {
         [{ text: 'OK' }]
       )
     } finally {
+      isSubmittingRef.current = false
       setLoading(false)
     }
   }
@@ -488,7 +537,7 @@ export const PracticeFormScreen: React.FC = () => {
             disabled={storeLoading}
           >
             {storeLoading ? (
-              <LoadingSpinner size="small" color="#FFFFFF" />
+              <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <Text style={styles.saveButtonText}>保存</Text>
             )}
@@ -502,7 +551,7 @@ export const PracticeFormScreen: React.FC = () => {
           disabled={storeLoading}
         >
           {storeLoading ? (
-            <LoadingSpinner size="small" color="#2563EB" />
+            <ActivityIndicator size="small" color="#2563EB" />
           ) : (
             <Text style={styles.continueButtonText}>続けて練習ログを作成</Text>
           )}

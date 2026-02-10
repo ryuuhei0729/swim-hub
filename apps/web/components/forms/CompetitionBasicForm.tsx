@@ -103,6 +103,8 @@ export default function CompetitionBasicForm({
   const [confirmContext, setConfirmContext] = useState<'close' | 'back'>('close')
   // 確認ダイアログで「確認」を押した後のナビゲーション中フラグ（popstateの重複発火を防ぐ）
   const isNavigatingRef = useRef(false)
+  // 二重送信防止用のref
+  const isSubmittingRef = useRef(false)
   // 場所の候補一覧
   const [placeSuggestions, setPlaceSuggestions] = useState<string[]>([])
   // バリデーションエラー
@@ -272,12 +274,16 @@ export default function CompetitionBasicForm({
 
   // フォーム送信の共通処理
   const submitForm = async (options: SubmitOptions) => {
+    // 二重送信防止
+    if (isSubmittingRef.current) return
+
     // バリデーション
     if (formData.endDate && formData.endDate < formData.date) {
       setValidationError('終了日は開始日以降の日付を指定してください')
       return
     }
 
+    isSubmittingRef.current = true
     setIsSubmitted(true)
     try {
       const hasImageChanges = imageData.newFiles.length > 0 || imageData.deletedIds.length > 0
@@ -286,6 +292,7 @@ export default function CompetitionBasicForm({
       setValidationError(null)
     } catch (error) {
       console.error('フォーム送信エラー:', error)
+      isSubmittingRef.current = false
       setIsSubmitted(false)
     }
   }

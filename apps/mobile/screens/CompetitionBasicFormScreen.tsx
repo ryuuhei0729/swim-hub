@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert } from 'react-native'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, Platform, ActivityIndicator } from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { format, parseISO, isValid, isBefore } from 'date-fns'
@@ -11,7 +11,9 @@ import {
   useCreateCompetitionMutation,
   useUpdateCompetitionMutation,
 } from '@apps/shared/hooks/queries/records'
+import { useUserQuery } from '@apps/shared/hooks/queries/user'
 import { useCompetitionFormStore } from '@/stores/competitionFormStore'
+import { useIOSCalendarSync } from '@/hooks/useIOSCalendarSync'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ImageUploader, ImageFile, ExistingImage } from '@/components/shared/ImageUploader'
 import {
@@ -40,6 +42,12 @@ export const CompetitionBasicFormScreen: React.FC = () => {
   const { supabase, user } = useAuth()
   const queryClient = useQueryClient()
 
+  // ユーザープロフィール取得（iOSカレンダー設定確認用）
+  const { profile } = useUserQuery(supabase, { enableRealtime: false })
+
+  // iOSカレンダー同期フック
+  const { syncCompetition } = useIOSCalendarSync()
+
   // フォーム状態
   const [date, setDate] = useState(initialDateParam || format(new Date(), 'yyyy-MM-dd'))
   const [endDate, setEndDate] = useState('')
@@ -50,6 +58,9 @@ export const CompetitionBasicFormScreen: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [loadingCompetition, setLoadingCompetition] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // 二重送信防止用のref
+  const isSubmittingRef = useRef(false)
 
   // 画像の状態管理
   const [newImageFiles, setNewImageFiles] = useState<ImageFile[]>([])
@@ -184,6 +195,9 @@ export const CompetitionBasicFormScreen: React.FC = () => {
 
   // 保存処理（保存してダッシュボードに戻る）
   const handleSave = async () => {
+    // 二重送信防止
+    if (isSubmittingRef.current) return
+
     if (!validate()) {
       return
     }
@@ -193,6 +207,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
       return
     }
 
+    isSubmittingRef.current = true
     setLoading(true)
     setStoreLoading(true)
     setErrors({})
@@ -233,7 +248,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
         }
 
         // 3. DB更新
-        await updateMutation.mutateAsync({
+        const updatedCompetition = await updateMutation.mutateAsync({
           id: competitionId,
           updates: formData,
         })
@@ -241,6 +256,11 @@ export const CompetitionBasicFormScreen: React.FC = () => {
         // 4. DB更新成功後に削除対象画像をストレージから削除
         if (deletedImageIds.length > 0) {
           await deleteImages(supabase, deletedImageIds, 'competition-images')
+        }
+
+        // 5. iOSカレンダー同期（iOS端末かつ連携が有効な場合）
+        if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_competitions) {
+          await syncCompetition(updatedCompetition, 'update')
         }
       } else {
         // 新規作成モード
@@ -281,6 +301,11 @@ export const CompetitionBasicFormScreen: React.FC = () => {
             throw updateError
           }
         }
+
+        // iOSカレンダー同期（iOS端末かつ連携が有効な場合）
+        if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_competitions) {
+          await syncCompetition(newCompetition, 'create')
+        }
       }
 
       // カレンダーのクエリを無効化してリフレッシュ
@@ -296,6 +321,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
         [{ text: 'OK' }]
       )
     } finally {
+      isSubmittingRef.current = false
       setLoading(false)
       setStoreLoading(false)
     }
@@ -303,6 +329,9 @@ export const CompetitionBasicFormScreen: React.FC = () => {
 
   // 続けてエントリーを作成（EntryFormへ遷移）
   const handleContinueToEntry = async () => {
+    // 二重送信防止
+    if (isSubmittingRef.current) return
+
     if (!validate()) {
       return
     }
@@ -312,6 +341,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
       return
     }
 
+    isSubmittingRef.current = true
     setLoading(true)
     setStoreLoading(true)
     setErrors({})
@@ -352,7 +382,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
         }
 
         // 3. DB更新
-        await updateMutation.mutateAsync({
+        const updatedCompetition = await updateMutation.mutateAsync({
           id: competitionId,
           updates: formData,
         })
@@ -360,6 +390,11 @@ export const CompetitionBasicFormScreen: React.FC = () => {
         // 4. DB更新成功後に削除対象画像をストレージから削除
         if (deletedImageIds.length > 0) {
           await deleteImages(supabase, deletedImageIds, 'competition-images')
+        }
+
+        // 5. iOSカレンダー同期（iOS端末かつ連携が有効な場合）
+        if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_competitions) {
+          await syncCompetition(updatedCompetition, 'update')
         }
 
         // カレンダーのクエリを無効化してリフレッシュ
@@ -409,6 +444,11 @@ export const CompetitionBasicFormScreen: React.FC = () => {
           }
         }
 
+        // iOSカレンダー同期（iOS端末かつ連携が有効な場合）
+        if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_competitions) {
+          await syncCompetition(newCompetition, 'create')
+        }
+
         // ストアに保存
         setCreatedCompetitionId(newCompetition.id)
 
@@ -429,6 +469,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
         [{ text: 'OK' }]
       )
     } finally {
+      isSubmittingRef.current = false
       setLoading(false)
       setStoreLoading(false)
     }
@@ -578,7 +619,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
             disabled={loading}
           >
             {loading ? (
-              <LoadingSpinner size="small" color="#FFFFFF" />
+              <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <Text style={styles.saveButtonText}>保存</Text>
             )}
@@ -592,7 +633,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
           disabled={loading}
         >
           {loading ? (
-            <LoadingSpinner size="small" color="#2563EB" />
+            <ActivityIndicator size="small" color="#2563EB" />
           ) : (
             <Text style={styles.continueButtonText}>続けてエントリーを作成</Text>
           )}

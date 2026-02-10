@@ -91,6 +91,8 @@ export default function PracticeBasicForm({
   const [placeSuggestions, setPlaceSuggestions] = useState<string[]>([])
   // popstateイベントをスキップするためのフラグ
   const skipPopstateRef = useRef(false)
+  // 二重送信防止用のref
+  const isSubmittingRef = useRef(false)
 
   // 場所の候補を取得
   useEffect(() => {
@@ -247,6 +249,10 @@ export default function PracticeBasicForm({
 
   // フォーム送信の共通処理
   const submitForm = async (continueToNext: boolean) => {
+    // 二重送信防止
+    if (isSubmittingRef.current) return
+
+    isSubmittingRef.current = true
     setIsSubmitted(true)
     try {
       const hasImageChanges = imageData.newFiles.length > 0 || imageData.deletedIds.length > 0
@@ -254,6 +260,7 @@ export default function PracticeBasicForm({
       setHasUnsavedChanges(false)
     } catch (error) {
       console.error('練習記録の保存に失敗しました:', error)
+      isSubmittingRef.current = false
       setIsSubmitted(false)
     }
   }
