@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { describe, expect, it, beforeEach, afterEach } from 'vitest'
-import { localizeAuthError, errorMessageMap } from '../authErrorLocalizer'
+import { localizeAuthError, localizeSupabaseAuthError, errorMessageMap } from '../authErrorLocalizer'
 
 // __DEV__ グローバル変数をモック
 declare const __DEV__: boolean
@@ -194,6 +194,120 @@ describe('localizeAuthError', () => {
       expect(localizeAuthError('service unavailable')).toBe(
         'サービスが一時的に利用できません。しばらくしてから再度お試しください'
       )
+    })
+  })
+})
+
+describe('localizeSupabaseAuthError', () => {
+  describe('null/undefined入力', () => {
+    it('nullはジェネリックメッセージを返す（localizeAuthErrorに空文字列で委譲）', () => {
+      expect(localizeSupabaseAuthError(null)).toBe(
+        '認証エラーが発生しました。再度お試しください'
+      )
+    })
+
+    it('undefinedはジェネリックメッセージを返す（localizeAuthErrorに空文字列で委譲）', () => {
+      expect(localizeSupabaseAuthError(undefined)).toBe(
+        '認証エラーが発生しました。再度お試しください'
+      )
+    })
+  })
+
+  describe('フィールド抽出優先度', () => {
+    it('messageフィールドのみのオブジェクトはmessageを使用する', () => {
+      expect(
+        localizeSupabaseAuthError({ message: 'invalid login credentials' })
+      ).toBe('メールアドレスまたはパスワードが正しくありません')
+    })
+
+    it('error_descriptionフィールドのみのオブジェクトはerror_descriptionを使用する', () => {
+      expect(
+        localizeSupabaseAuthError({ error_description: 'token expired' })
+      ).toBe('認証トークンの有効期限が切れました')
+    })
+
+    it('errorフィールドのみのオブジェクトはerrorを使用する', () => {
+      expect(
+        localizeSupabaseAuthError({ error: 'access_denied' })
+      ).toBe('アクセスが拒否されました')
+    })
+  })
+
+  describe('複数フィールドが存在する場合の優先度', () => {
+    it('message > error_description: messageが優先される', () => {
+      expect(
+        localizeSupabaseAuthError({
+          message: 'invalid login credentials',
+          error_description: 'token expired',
+        })
+      ).toBe('メールアドレスまたはパスワードが正しくありません')
+    })
+
+    it('message > error: messageが優先される', () => {
+      expect(
+        localizeSupabaseAuthError({
+          message: 'network error',
+          error: 'access_denied',
+        })
+      ).toBe('ネットワークエラーが発生しました。接続を確認してください')
+    })
+
+    it('error_description > error: error_descriptionが優先される', () => {
+      expect(
+        localizeSupabaseAuthError({
+          error_description: 'too many requests',
+          error: 'access_denied',
+        })
+      ).toBe('リクエスト回数が上限に達しました。しばらくお待ちください')
+    })
+
+    it('全フィールドが存在する場合、messageが最優先される', () => {
+      expect(
+        localizeSupabaseAuthError({
+          message: 'user already registered',
+          error_description: 'token expired',
+          error: 'access_denied',
+        })
+      ).toBe('このメールアドレスは既に登録されています')
+    })
+  })
+
+  describe('全フィールドがundefinedの場合のフォールバック', () => {
+    it('空オブジェクトはジェネリックメッセージを返す', () => {
+      expect(localizeSupabaseAuthError({})).toBe(
+        '認証エラーが発生しました。再度お試しください'
+      )
+    })
+
+    it('全フィールドがundefinedのオブジェクトはジェネリックメッセージを返す', () => {
+      expect(
+        localizeSupabaseAuthError({
+          message: undefined,
+          error_description: undefined,
+          error: undefined,
+        })
+      ).toBe('認証エラーが発生しました。再度お試しください')
+    })
+  })
+
+  describe('localizeAuthErrorへの委譲確認', () => {
+    it('抽出されたメッセージがlocalizeAuthErrorの結果と一致する', () => {
+      const testCases = [
+        { input: { message: 'invalid login credentials' }, extracted: 'invalid login credentials' },
+        { input: { error_description: 'session expired' }, extracted: 'session expired' },
+        { input: { error: 'timeout' }, extracted: 'timeout' },
+      ]
+
+      for (const { input, extracted } of testCases) {
+        expect(localizeSupabaseAuthError(input)).toBe(localizeAuthError(extracted))
+      }
+    })
+
+    it('null/undefinedの結果がlocalizeAuthErrorに空文字列を渡した結果と一致する', () => {
+      const emptyResult = localizeAuthError('')
+      expect(localizeSupabaseAuthError(null)).toBe(emptyResult)
+      expect(localizeSupabaseAuthError(undefined)).toBe(emptyResult)
+      expect(localizeSupabaseAuthError({})).toBe(emptyResult)
     })
   })
 })
