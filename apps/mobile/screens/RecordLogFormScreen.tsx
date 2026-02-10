@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, Switch, Modal } from 'react-native'
+import React, { useState, useEffect, useRef } from 'react'
+import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, Switch, Modal, ActivityIndicator } from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useQueryClient } from '@tanstack/react-query'
@@ -60,6 +60,9 @@ export const RecordLogFormScreen: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [showStylePicker, setShowStylePicker] = useState(false)
   const [pickingFormIndex, setPickingFormIndex] = useState<number | null>(null)
+
+  // 二重送信防止用のref
+  const isSubmittingRef = useRef(false)
 
   // ミューテーション
   const createMutation = useCreateRecordMutation(supabase)
@@ -325,10 +328,14 @@ export const RecordLogFormScreen: React.FC = () => {
 
   // 保存処理
   const handleSave = async () => {
+    // 二重送信防止
+    if (isSubmittingRef.current) return
+
     if (!validate()) {
       return
     }
 
+    isSubmittingRef.current = true
     setLoading(true)
 
     try {
@@ -461,6 +468,7 @@ export const RecordLogFormScreen: React.FC = () => {
         [{ text: 'OK' }]
       )
     } finally {
+      isSubmittingRef.current = false
       setLoading(false)
     }
   }
@@ -718,7 +726,7 @@ export const RecordLogFormScreen: React.FC = () => {
           disabled={loading}
         >
           {loading ? (
-            <LoadingSpinner size="small" color="#FFFFFF" />
+            <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
             <Text style={styles.primaryButtonText}>保存</Text>
           )}

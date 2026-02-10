@@ -1,19 +1,20 @@
 import React, { useState, useMemo, useCallback } from 'react'
-import { ScrollView, StyleSheet, RefreshControl } from 'react-native'
+import { ScrollView, StyleSheet, RefreshControl, Alert, Platform } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { addMonths, subMonths, format as formatDate } from 'date-fns'
 import { useAuth } from '@/contexts/AuthProvider'
 import { useCalendarQuery } from '@/hooks/useCalendarQuery'
+import { useUserQuery } from '@apps/shared/hooks/queries/user'
 import { CalendarView } from '@/components/calendar'
 import { DayDetailModal } from '@/components/calendar'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ErrorView } from '@/components/layout/ErrorView'
-import { useDeletePracticeMutation } from '@apps/shared/hooks/queries/practices'
+import { useDeletePracticeMutation, usePracticesQuery } from '@apps/shared/hooks/queries/practices'
 import { useDeleteRecordMutation, useDeleteCompetitionMutation } from '@apps/shared/hooks/queries/records'
 import { PracticeAPI } from '@apps/shared/api/practices'
-import { Alert } from 'react-native'
+import { useIOSCalendarSync } from '@/hooks/useIOSCalendarSync'
 import type { MainStackParamList } from '@/navigation/types'
 import type { CalendarItem } from '@apps/shared/types/ui'
 
@@ -30,6 +31,19 @@ export const DashboardScreen: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [showDayDetail, setShowDayDetail] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+
+  // ユーザープロフィール取得（iOSカレンダー設定確認用）
+  const { profile } = useUserQuery(supabase, { enableRealtime: false })
+
+  // iOSカレンダー同期フック
+  const { syncPractice, syncCompetition } = useIOSCalendarSync()
+
+  // 練習データ取得（削除時のiOSカレンダー同期用）
+  const { data: practices = [] } = usePracticesQuery(supabase, {
+    page: 1,
+    pageSize: 1000,
+    enableRealtime: false,
+  })
 
   // カレンダーデータ取得
   const {
@@ -144,6 +158,20 @@ export const DashboardScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
+              // iOSカレンダーから削除（iOS端末かつ連携が有効な場合）
+              // カレンダー同期エラーはDB削除をブロックしないようにする
+              if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_practices) {
+                const practiceToDelete = practices.find((p) => p.id === itemId)
+                if (practiceToDelete) {
+                  try {
+                    await syncPractice(practiceToDelete, 'delete')
+                  } catch (syncError) {
+                    console.warn('カレンダー同期エラー:', syncError)
+                    // カレンダー同期失敗はDB削除に影響しない
+                  }
+                }
+              }
+
               await deleteMutation.mutateAsync(itemId)
               refetch() // カレンダーをリフレッシュ
             } catch (error) {
@@ -348,6 +376,25 @@ export const DashboardScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
+              // iOSカレンダーから削除（iOS端末かつ連携が有効な場合）
+              // カレンダー同期エラーはDB削除をブロックしないようにする
+              if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_competitions) {
+                // 大会データを取得してiOSカレンダーから削除
+                try {
+                  const { data: competitionToDelete } = await supabase
+                    .from('competitions')
+                    .select('*')
+                    .eq('id', competitionId)
+                    .single()
+                  if (competitionToDelete) {
+                    await syncCompetition(competitionToDelete, 'delete')
+                  }
+                } catch (syncError) {
+                  console.warn('カレンダー同期エラー:', syncError)
+                  // カレンダー同期失敗はDB削除に影響しない
+                }
+              }
+
               await deleteCompetitionMutation.mutateAsync(competitionId)
               refetch() // カレンダーをリフレッシュ
             } catch (error) {

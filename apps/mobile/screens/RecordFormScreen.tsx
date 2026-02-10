@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert } from 'react-native'
+import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, ActivityIndicator } from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useQueryClient } from '@tanstack/react-query'
@@ -155,6 +155,9 @@ export const RecordFormScreen: React.FC = () => {
 
   const hasInitializedForEdit = useRef(false)
 
+  // 二重送信防止用のref
+  const isSubmittingRef = useRef(false)
+
   // 編集モード切り替え・レコードID変更時に初期化フラグをリセット
   useEffect(() => {
     if (!isEditMode || !recordId) {
@@ -234,6 +237,9 @@ export const RecordFormScreen: React.FC = () => {
 
   // 保存処理
   const handleSave = async () => {
+    // 二重送信防止
+    if (isSubmittingRef.current) return
+
     if (!validate()) {
       return
     }
@@ -243,6 +249,7 @@ export const RecordFormScreen: React.FC = () => {
       return
     }
 
+    isSubmittingRef.current = true
     setLoading(true)
     clearErrors()
 
@@ -367,6 +374,7 @@ export const RecordFormScreen: React.FC = () => {
         [{ text: 'OK' }]
       )
     } finally {
+      isSubmittingRef.current = false
       setLoading(false)
     }
   }
@@ -619,7 +627,7 @@ export const RecordFormScreen: React.FC = () => {
             disabled={storeLoading}
           >
             {storeLoading ? (
-              <LoadingSpinner size="small" color="#FFFFFF" />
+              <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <Text style={styles.saveButtonText}>保存</Text>
             )}
