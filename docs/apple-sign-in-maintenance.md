@@ -23,7 +23,6 @@ JWT 生成時にコンソールに表示されます。次回更新予定日を�
 ### 1. JWT を再生成
 
 ```bash
-cd /Users/ryuuhei_0729/swim-hub
 node scripts/generate-apple-client-secret.js
 ```
 

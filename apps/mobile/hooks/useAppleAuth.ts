@@ -6,11 +6,27 @@ import { useState, useCallback } from 'react'
 import * as AppleAuthentication from 'expo-apple-authentication'
 import { Platform } from 'react-native'
 import { supabase } from '@/lib/supabase'
+import { localizeSupabaseAuthError } from '@/utils/authErrorLocalizer'
 
 export interface AppleAuthResult {
   success: boolean
   error?: Error | null
 }
+
+/**
+ * expo-apple-authenticationのエラーコード
+ */
+type AppleAuthErrorCode =
+  | 'ERR_REQUEST_CANCELED'
+  | 'ERR_REQUEST_FAILED'
+  | 'ERR_REQUEST_INVALID'
+  | 'ERR_REQUEST_NOT_HANDLED'
+  | 'ERR_REQUEST_UNKNOWN'
+
+/**
+ * Apple認証エラー型
+ */
+type AppleAuthError = Error & { code?: AppleAuthErrorCode }
 
 export interface UseAppleAuthReturn {
   /** Appleログインを実行 */
@@ -84,29 +100,34 @@ export const useAppleAuth = (): UseAppleAuthReturn => {
       const { error: signInError } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
         token: credential.identityToken,
-        options: displayName ? {
-          data: {
-            name: displayName,
-          },
-        } : undefined,
       })
 
       if (signInError) {
-        setError(signInError.message)
+        setError(localizeSupabaseAuthError(signInError))
         return { success: false, error: signInError }
       }
 
+      // ユーザー名が取得できた場合はメタデータを更新
+      if (displayName) {
+        await supabase.auth.updateUser({
+          data: { name: displayName },
+        })
+      }
+
       return { success: true }
-    } catch (err) {
+    } catch (e) {
+      const err = e as AppleAuthError
+
       // ユーザーがキャンセルした場合
-      if (err instanceof Error && err.message.includes('ERR_REQUEST_CANCELED')) {
+      if (err.code === 'ERR_REQUEST_CANCELED') {
         setError('認証がキャンセルされました')
         return { success: false, error: new Error('認証がキャンセルされました') }
       }
 
-      const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました'
-      setError(errorMessage)
-      return { success: false, error: err instanceof Error ? err : new Error(errorMessage) }
+      const rawMessage = err.message || '不明なエラーが発生しました'
+      const localizedMessage = localizeSupabaseAuthError({ message: rawMessage })
+      setError(localizedMessage)
+      return { success: false, error: err }
     } finally {
       setLoading(false)
     }

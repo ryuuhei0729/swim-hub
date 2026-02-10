@@ -10,6 +10,7 @@ import {
   type GoogleAuthOptions,
 } from '@/lib/google-auth'
 import { supabase } from '@/lib/supabase'
+import { localizeSupabaseAuthError } from '@/utils/authErrorLocalizer'
 
 // WebBrowserの完了処理を登録
 WebBrowser.maybeCompleteAuthSession()
@@ -79,7 +80,8 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
         })
 
         if (oauthError || !data.url) {
-          setError(oauthError?.message || 'OAuth URLの生成に失敗しました')
+          const errorMessage = oauthError ? localizeSupabaseAuthError(oauthError) : 'OAuth URLの生成に失敗しました'
+          setError(errorMessage)
           return { success: false, error: oauthError || new Error('OAuth URLの生成に失敗しました') }
         }
 
@@ -103,7 +105,7 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
             })
 
             if (sessionError) {
-              setError(sessionError.message)
+              setError(localizeSupabaseAuthError(sessionError))
               return { success: false, error: sessionError }
             }
 
@@ -154,9 +156,10 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
         setError('認証に失敗しました')
         return { success: false, error: new Error('認証に失敗しました') }
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました'
-        setError(errorMessage)
-        return { success: false, error: err instanceof Error ? err : new Error(errorMessage) }
+        const rawMessage = err instanceof Error ? err.message : '不明なエラーが発生しました'
+        const localizedMessage = localizeSupabaseAuthError({ message: rawMessage })
+        setError(localizedMessage)
+        return { success: false, error: err instanceof Error ? err : new Error(rawMessage) }
       } finally {
         setLoading(false)
       }

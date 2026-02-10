@@ -12,10 +12,10 @@ const fs = require('fs')
 const path = require('path')
 
 // ===== 設定値（編集してください） =====
-const TEAM_ID = process.env.APPLE_TEAM_ID || 'TVJ2JG75MZ'  // Apple Developer の Team ID
-const KEY_ID = process.env.APPLE_KEY_ID || 'QKK8K4ST76'       // .p8 ファイルの Key ID
+const TEAM_ID = process.env.APPLE_TEAM_ID || ''  // Apple Developer の Team ID
+const KEY_ID = process.env.APPLE_KEY_ID || ''       // .p8 ファイルの Key ID
 const CLIENT_ID = process.env.APPLE_CLIENT_ID || 'app.swimhub.web'  // Service ID（Web用）
-const P8_FILE_PATH = process.env.APPLE_P8_PATH || path.join(__dirname, '..', 'AuthKey_QKK8K4ST76.p8')
+const P8_FILE_PATH = process.env.APPLE_P8_PATH || path.join(__dirname, '..', 'AuthKey_????????.p8') //.p8 ファイル名
 // =====================================
 
 // .p8 ファイルを読み込み
