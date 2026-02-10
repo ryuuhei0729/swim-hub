@@ -213,7 +213,7 @@ export const PracticeFormScreen: React.FC = () => {
         }
 
         // 更新
-        const updatedPractice = await updateMutation.mutateAsync({
+        await updateMutation.mutateAsync({
           id: practiceId,
           updates: formData,
         })
