@@ -283,7 +283,12 @@ export function parsePracticeExcelFile(file: File): Promise<ParsedPracticeData> 
             const place = String(placeCell.value || '').trim()
             const note = String(noteCell.value || '').trim()
 
-            // バリデーション（dateのみ必須）
+            // タイトル・場所・備考のいずれも入力されていない行はスキップ
+            if (!title && !place && !note) {
+              return
+            }
+
+            // バリデーション（dateは必須）
             const errors: string[] = []
 
             if (!dateValue) {
