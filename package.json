@@ -58,6 +58,8 @@
   },
   "devDependencies": {
     "@alloc/quick-lru": "^5.2.0",
+    "@types/jsonwebtoken": "^9.0.9",
+    "jsonwebtoken": "^9.0.3",
     "@dotenvx/dotenvx-ext-vault": "^0.3.2",
     "@playwright/test": "^1.56.1",
     "@types/node": "^25",

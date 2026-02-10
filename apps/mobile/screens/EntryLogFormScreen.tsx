@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react'
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, Modal } from 'react-native'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
+import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, Modal, ActivityIndicator } from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Feather } from '@expo/vector-icons'
@@ -56,6 +56,9 @@ export const EntryLogFormScreen: React.FC = () => {
 
   // Zustandストア
   const { setCreatedEntries, setLoading: setStoreLoading } = useCompetitionFormStore()
+
+  // 二重送信防止用のref
+  const isSubmittingRef = useRef(false)
 
   // 種目一覧を取得
   useEffect(() => {
@@ -454,10 +457,14 @@ export const EntryLogFormScreen: React.FC = () => {
 
   // 保存処理（保存してダッシュボードに戻る）
   const handleSave = async () => {
+    // 二重送信防止
+    if (isSubmittingRef.current) return
+
     if (!validate()) {
       return
     }
 
+    isSubmittingRef.current = true
     setLoading(true)
     setStoreLoading(true)
 
@@ -481,6 +488,7 @@ export const EntryLogFormScreen: React.FC = () => {
         [{ text: 'OK' }]
       )
     } finally {
+      isSubmittingRef.current = false
       setLoading(false)
       setStoreLoading(false)
     }
@@ -488,10 +496,14 @@ export const EntryLogFormScreen: React.FC = () => {
 
   // 続けて大会記録を作成（RecordLogFormへ遷移）
   const handleContinueToRecord = async () => {
+    // 二重送信防止
+    if (isSubmittingRef.current) return
+
     if (!validate()) {
       return
     }
 
+    isSubmittingRef.current = true
     setLoading(true)
     setStoreLoading(true)
 
@@ -519,6 +531,7 @@ export const EntryLogFormScreen: React.FC = () => {
         [{ text: 'OK' }]
       )
     } finally {
+      isSubmittingRef.current = false
       setLoading(false)
       setStoreLoading(false)
     }
@@ -730,7 +743,7 @@ export const EntryLogFormScreen: React.FC = () => {
             disabled={loading}
           >
             {loading ? (
-              <LoadingSpinner size="small" color="#FFFFFF" />
+              <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <Text style={styles.saveButtonText}>保存</Text>
             )}
@@ -744,7 +757,7 @@ export const EntryLogFormScreen: React.FC = () => {
           disabled={loading}
         >
           {loading ? (
-            <LoadingSpinner size="small" color="#2563EB" />
+            <ActivityIndicator size="small" color="#2563EB" />
           ) : (
             <Text style={styles.continueButtonText}>続けて大会記録を作成</Text>
           )}
