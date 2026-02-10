@@ -37,7 +37,12 @@ export class DashboardAPI {
     // チームのデータ（team_idが存在する場合）は、チームメンバーシップで既にフィルタリングされているためスキップ
     const result = calendarData
       ?.filter(item => {
-        // チームのデータの場合は、チームメンバーシップで既にフィルタリングされているためスキップ
+        // チーム練習ログの場合、ダッシュボードでは自分のログのみ表示
+        // チーム全体の記録はTeamPracticeDetailModalで閲覧する
+        if (item.metadata?.team_id && item.item_type === 'practice_log') {
+          return item.metadata?.user_id === user.id
+        }
+        // その他のチームデータは、チームメンバーシップで既にフィルタリングされているためスキップ
         if (item.metadata?.team_id) {
           return true
         }

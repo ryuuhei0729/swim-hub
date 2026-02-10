@@ -10,13 +10,15 @@ import {
   MapPinIcon,
   TrophyIcon,
   PencilSquareIcon,
-  ClipboardDocumentListIcon
+  ClipboardDocumentListIcon,
+  EyeIcon
 } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { useCompetitionFormStore } from '@/stores'
 import type { CompetitionImageData } from '@/components/forms/CompetitionBasicForm'
 import TeamCompetitionEntryModal from './TeamCompetitionEntryModal'
+import TeamCompetitionRecordsModal from './TeamCompetitionRecordsModal'
 import { Pagination } from '@/components/ui'
 
 const CompetitionBasicForm = dynamic(
@@ -160,6 +162,8 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
   const [error, setError] = useState<string | null>(null)
   const [selectedCompetition, setSelectedCompetition] = useState<TeamCompetition | null>(null)
   const [showEntryModal, setShowEntryModal] = useState(false)
+  const [showRecordsModal, setShowRecordsModal] = useState(false)
+  const [selectedCompetitionForRecords, setSelectedCompetitionForRecords] = useState<TeamCompetition | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
   const pageSize = 20
@@ -302,9 +306,16 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
   }
 
   // エントリー管理モーダルを開く
-  const handleEntryClick = (competition: TeamCompetition) => {
+  const handleEntryClick = (e: React.MouseEvent, competition: TeamCompetition) => {
+    e.stopPropagation()
     setSelectedCompetition(competition)
     setShowEntryModal(true)
+  }
+
+  // 記録一覧モーダルを開く
+  const handleOpenRecords = (competition: TeamCompetition) => {
+    setSelectedCompetitionForRecords(competition)
+    setShowRecordsModal(true)
   }
 
   if (loading) {
@@ -363,10 +374,17 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
 
       {/* 大会一覧 */}
       <div className="space-y-4">
-        {competitions.map((competition) => (
-          <div 
+        {competitions.map((competition) => {
+          const hasRecords = competition.records && competition.records.length > 0
+          return (
+          <button
             key={competition.id}
-            className="border border-gray-200 rounded-lg p-4 transition-colors duration-200 hover:bg-gray-50"
+            onClick={() => hasRecords ? handleOpenRecords(competition) : undefined}
+            aria-label={hasRecords ? `${competition.title || '大会'}の記録を閲覧` : undefined}
+            disabled={!hasRecords}
+            className={`w-full text-left border border-gray-200 rounded-lg p-4 transition-colors duration-200 ${
+              hasRecords ? 'cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500' : 'cursor-default'
+            }`}
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">
@@ -413,12 +431,10 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
                     <span className="text-sm text-green-600 font-medium">
                       📊 登録記録: {competition.records.length}件
                     </span>
-                    {isAdmin && (
-                      <span className="text-xs text-gray-500 flex items-center">
-                        <PencilSquareIcon className="h-3 w-3 mr-1" />
-                        編集可能
-                      </span>
-                    )}
+                    <span className="text-xs text-gray-500 flex items-center">
+                      <EyeIcon className="h-3 w-3 mr-1" />
+                      タップで詳細
+                    </span>
                   </div>
                 ) : (
                   <div className="mt-2 flex items-center gap-2">
@@ -459,7 +475,7 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
                 <div className="flex gap-2">
                   {/* エントリー管理ボタン */}
                   <button
-                    onClick={() => handleEntryClick(competition)}
+                    onClick={(e) => handleEntryClick(e, competition)}
                     className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
                     title="エントリー管理"
                   >
@@ -481,8 +497,9 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          </button>
+          )
+        })}
         
         {competitions.length === 0 && !loading && (
           <div className="text-center py-8">
@@ -539,6 +556,19 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
           competitionId={selectedCompetition.id}
           competitionTitle={selectedCompetition.title || '大会'}
           teamId={teamId}
+        />
+      )}
+
+      {/* 記録一覧モーダル */}
+      {showRecordsModal && selectedCompetitionForRecords && (
+        <TeamCompetitionRecordsModal
+          isOpen={showRecordsModal}
+          onClose={() => {
+            setShowRecordsModal(false)
+            setSelectedCompetitionForRecords(null)
+          }}
+          competitionId={selectedCompetitionForRecords.id}
+          competitionTitle={selectedCompetitionForRecords.title || '大会'}
         />
       )}
     </>
