@@ -379,17 +379,26 @@ describe('parsePracticeExcelFile', () => {
 
     const result = await parsePracticeExcelFile(file)
 
-    // サンプルシートは除外されるので、12ヶ月分のデータがパースされる
-    // 2025年の1年分 = 365日
-    expect(result.practices.length).toBe(365)
+    // テンプレートの月別シートはタイトル・場所・備考がすべて空なので登録対象外
+    // サンプルシートも除外されるため、0件になる
+    expect(result.practices.length).toBe(0)
     expect(result.errors.length).toBe(0)
   })
 
   it('日付が正しくパースされる', async () => {
-    const { generatePracticeExcelTemplate, parsePracticeExcelFile: parse } = await import('../../utils/practiceExcel')
+    const ExcelJS = (await import('exceljs')).default
+    const { parsePracticeExcelFile: parse } = await import('../../utils/practiceExcel')
     parsePracticeExcelFile = parse
 
-    const workbook = await generatePracticeExcelTemplate(2025)
+    const workbook = new ExcelJS.Workbook()
+    const sheet = workbook.addWorksheet('1月')
+    sheet.addRow(['日付', '曜日', 'タイトル', '場所', '備考'])
+
+    const row1 = sheet.addRow([new Date(2025, 0, 1), '水', '通常練習', '', ''])
+    row1.getCell(1).numFmt = 'M"月"D"日"'
+    const row2 = sheet.addRow([new Date(2025, 11, 31), '水', '年末練習', '', ''])
+    row2.getCell(1).numFmt = 'M"月"D"日"'
+
     const buffer = await workbook.xlsx.writeBuffer()
     const file = new File([buffer], 'test.xlsx', {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -397,18 +406,23 @@ describe('parsePracticeExcelFile', () => {
 
     const result = await parsePracticeExcelFile(file)
 
-    // 最初のエントリは1月1日
     expect(result.practices[0].date).toBe('2025-01-01')
-
-    // 最後のエントリは12月31日
-    expect(result.practices[result.practices.length - 1].date).toBe('2025-12-31')
+    expect(result.practices[1].date).toBe('2025-12-31')
   })
 
   it('空のセルが正しく処理される', async () => {
-    const { generatePracticeExcelTemplate, parsePracticeExcelFile: parse } = await import('../../utils/practiceExcel')
+    const ExcelJS = (await import('exceljs')).default
+    const { parsePracticeExcelFile: parse } = await import('../../utils/practiceExcel')
     parsePracticeExcelFile = parse
 
-    const workbook = await generatePracticeExcelTemplate(2025)
+    const workbook = new ExcelJS.Workbook()
+    const sheet = workbook.addWorksheet('1月')
+    sheet.addRow(['日付', '曜日', 'タイトル', '場所', '備考'])
+
+    // タイトルのみ入力（場所・備考は空）
+    const row = sheet.addRow([new Date(2025, 0, 1), '水', '通常練習', '', ''])
+    row.getCell(1).numFmt = 'M"月"D"日"'
+
     const buffer = await workbook.xlsx.writeBuffer()
     const file = new File([buffer], 'test.xlsx', {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -416,10 +430,11 @@ describe('parsePracticeExcelFile', () => {
 
     const result = await parsePracticeExcelFile(file)
 
-    // 月別シートのデータは場所と備考が空
-    const monthlyEntry = result.practices.find(p => p.date === '2025-01-01')
-    expect(monthlyEntry?.place).toBeNull()
-    expect(monthlyEntry?.note).toBeNull()
+    // タイトルが入力されているので登録対象になる
+    expect(result.practices.length).toBe(1)
+    // 場所と備考が空の場合はnullになる
+    expect(result.practices[0].place).toBeNull()
+    expect(result.practices[0].note).toBeNull()
   })
 
   it('サンプルシートがスキップされる', async () => {
