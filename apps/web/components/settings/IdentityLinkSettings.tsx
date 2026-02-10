@@ -42,7 +42,7 @@ const AppleIcon = () => (
 )
 
 export default function IdentityLinkSettings() {
-  const { supabase, user } = useAuth()
+  const { supabase } = useAuth()
   const [identities, setIdentities] = useState<UserIdentity[]>([])
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -192,7 +192,7 @@ export default function IdentityLinkSettings() {
               className="flex items-center justify-between py-2"
             >
               <div className="flex items-center gap-3">
-                <div className="flex-shrink-0">{provider.icon}</div>
+                <div className="shrink-0">{provider.icon}</div>
                 <div>
                   <div className="text-sm font-medium text-gray-900">
                     {provider.name}
