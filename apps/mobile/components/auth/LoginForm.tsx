@@ -2,7 +2,9 @@ import React, { useState } from 'react'
 import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from 'react-native'
 import { useAuth } from '@/contexts/AuthProvider'
 import { useGoogleAuth } from '@/hooks/useGoogleAuth'
+import { useAppleAuth } from '@/hooks/useAppleAuth'
 import { GoogleLoginButton } from './GoogleLoginButton'
+import { AppleLoginButton } from './AppleLoginButton'
 
 interface LoginFormProps {
   onSuccess?: () => void
@@ -16,6 +18,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
 
   const { signIn } = useAuth()
   const { signInWithGoogle, loading: googleLoading, error: googleError, clearError: clearGoogleError } = useGoogleAuth()
+  const { signInWithApple, loading: appleLoading, error: appleError, clearError: clearAppleError, isAvailable: isAppleAvailable } = useAppleAuth()
 
   type AuthError = {
     status?: number
@@ -123,6 +126,17 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
     }
   }
 
+  const handleAppleLogin = async () => {
+    if (appleLoading) {
+      return
+    }
+    setError(null)
+    clearAppleError()
+    const result = await signInWithApple()
+    if (result.success) {
+      onSuccess?.()
+    }
+  }
 
   return (
     <View style={styles.container}>
@@ -190,11 +204,27 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
             <View style={styles.dividerLine} />
           </View>
 
+          {/* Appleログインボタン（iOSのみ） */}
+          {isAppleAvailable && (
+            <AppleLoginButton
+              onPress={handleAppleLogin}
+              loading={appleLoading}
+              disabled={loading || googleLoading || appleLoading}
+            />
+          )}
+
+          {/* Appleログインエラー表示 */}
+          {appleError && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{appleError}</Text>
+            </View>
+          )}
+
           {/* Googleログインボタン */}
           <GoogleLoginButton
             onPress={handleGoogleLogin}
             loading={googleLoading}
-            disabled={loading || googleLoading}
+            disabled={loading || googleLoading || appleLoading}
           />
 
           {/* Googleログインエラー表示 */}
