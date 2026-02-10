@@ -8,7 +8,7 @@ declare const __DEV__: boolean
 /**
  * 既知のSupabaseエラーメッセージを日本語にマッピング
  */
-const errorMessageMap: Record<string, string> = {
+export const errorMessageMap: Record<string, string> = {
   // 認証関連
   'invalid login credentials': 'メールアドレスまたはパスワードが正しくありません',
   'invalid credentials': '認証情報が正しくありません',
