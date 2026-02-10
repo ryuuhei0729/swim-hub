@@ -143,5 +143,6 @@ next-env.d.ts
 /apps/mobile/google-service-account-key.json
 *.service-account-key.json
 
-# Apple Sign In Secret Generator (秘密鍵を含むためgit管理外)
-scripts/generate-apple-secret.js
+# Apple Sign In Secret (秘密鍵を含むためgit管理外)
+*.p8
+AuthKey_*.p8

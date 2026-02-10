@@ -95,5 +95,8 @@
     "monorepo"
   ],
   "author": "開発チーム",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "jsonwebtoken": "^9.0.3"
+  }
 }
