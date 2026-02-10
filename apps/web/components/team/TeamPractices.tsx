@@ -9,7 +9,8 @@ import {
   CalendarDaysIcon,
   MapPinIcon,
   ClockIcon,
-  PencilSquareIcon
+  PencilSquareIcon,
+  EyeIcon
 } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -17,6 +18,7 @@ import { usePracticeFormStore } from '@/stores'
 import type { PracticeImageData } from '@/components/forms/PracticeBasicForm'
 import { TeamPracticesAPI } from '@apps/shared/api/teams/practices'
 import { Pagination } from '@/components/ui'
+import TeamPracticeDetailModal from './TeamPracticeDetailModal'
 
 const PracticeBasicForm = dynamic(
   () => import('@/components/forms/PracticeBasicForm'),
@@ -117,6 +119,8 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
+  const [selectedPracticeId, setSelectedPracticeId] = useState<string | null>(null)
+  const [showDetailModal, setShowDetailModal] = useState(false)
   const pageSize = 20
 
   const {
@@ -253,6 +257,20 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
     }
   }
 
+  // 詳細モーダルを開く
+  const handleOpenDetail = (practiceId: string) => {
+    setSelectedPracticeId(practiceId)
+    setShowDetailModal(true)
+  }
+
+  // 詳細モーダルのキーボードハンドラー
+  const handleDetailKeyDown = (e: React.KeyboardEvent, practiceId: string) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      handleOpenDetail(practiceId)
+    }
+  }
+
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
@@ -318,10 +336,12 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
 
           if (isAdmin) {
             return (
-              <button
+              <div
                 key={practice.id}
                 onClick={() => handlePracticeClick(practice.id)}
                 onKeyDown={(e) => handlePracticeKeyDown(e, practice.id)}
+                tabIndex={0}
+                role="button"
                 aria-label={ariaLabel}
                 className="w-full text-left border border-gray-200 rounded-lg p-4 transition-colors duration-200 cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
@@ -378,20 +398,40 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
                       </div>
                     )}
                   </div>
-                  
-                  <div className="text-right">
+
+                  <div className="flex flex-col items-end gap-2">
                     <p className="text-xs text-gray-500">
                       {format(new Date(practice.createdAt), 'M/d HH:mm')}
                     </p>
+                    {hasLogs && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleOpenDetail(practice.id)
+                        }}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                        aria-label={`${practiceDate}の練習記録を閲覧`}
+                      >
+                        <EyeIcon className="h-3.5 w-3.5 mr-1" />
+                        詳細
+                      </button>
+                    )}
                   </div>
                 </div>
-              </button>
+              </div>
             )
           } else {
             return (
-              <div
+              <button
                 key={practice.id}
-                className="border border-gray-200 rounded-lg p-4"
+                onClick={() => hasLogs ? handleOpenDetail(practice.id) : undefined}
+                onKeyDown={(e) => hasLogs ? handleDetailKeyDown(e, practice.id) : undefined}
+                aria-label={hasLogs ? `${practiceDate}の練習記録を閲覧` : undefined}
+                className={`w-full text-left border border-gray-200 rounded-lg p-4 transition-colors duration-200 ${
+                  hasLogs ? 'cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500' : 'cursor-default'
+                }`}
+                disabled={!hasLogs}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -404,23 +444,33 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
                         by {practice.users?.name || practice.createdByUser?.name || 'Unknown'}
                       </span>
                     </div>
-                    
+
+                    {practice.title && (
+                      <div className="flex items-center space-x-2 mb-1">
+                        <span className="text-sm font-medium text-gray-900">{practice.title}</span>
+                      </div>
+                    )}
+
                     {practice.place && (
                       <div className="flex items-center space-x-2 mb-1">
                         <MapPinIcon className="h-4 w-4 text-gray-400" />
                         <span className="text-sm text-gray-600">{practice.place}</span>
                       </div>
                     )}
-                    
+
                     {practice.note && (
                       <p className="text-sm text-gray-600 mb-2">{practice.note}</p>
                     )}
-                    
+
                     {hasLogs ? (
                       <div className="flex items-center space-x-2">
                         <ClockIcon className="h-4 w-4 text-green-500" />
                         <span className="text-sm text-green-600 font-medium">
                           {practice.practiceLogs!.length}セットの練習記録あり
+                        </span>
+                        <span className="text-xs text-gray-500 flex items-center">
+                          <EyeIcon className="h-3 w-3 mr-1" />
+                          タップで詳細
                         </span>
                       </div>
                     ) : (
@@ -432,14 +482,14 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="text-right">
                     <p className="text-xs text-gray-500">
                       {format(new Date(practice.createdAt), 'M/d HH:mm')}
                     </p>
                   </div>
                 </div>
-              </div>
+              </button>
             )
           }
         })}
@@ -485,6 +535,18 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
           teamMode={true}
         />
       </Suspense>
+
+      {/* チーム練習詳細モーダル */}
+      {showDetailModal && selectedPracticeId && (
+        <TeamPracticeDetailModal
+          isOpen={showDetailModal}
+          onClose={() => {
+            setShowDetailModal(false)
+            setSelectedPracticeId(null)
+          }}
+          practiceId={selectedPracticeId}
+        />
+      )}
     </>
   )
 }

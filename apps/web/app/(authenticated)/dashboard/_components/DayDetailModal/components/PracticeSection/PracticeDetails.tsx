@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { PencilIcon, TrashIcon, ShareIcon } from '@heroicons/react/24/outline'
+import React, { useState, useEffect, lazy, Suspense } from 'react'
+import { PencilIcon, TrashIcon, ShareIcon, UsersIcon } from '@heroicons/react/24/outline'
 import { BoltIcon } from '@heroicons/react/24/solid'
 import { format, parseISO, isValid } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -19,6 +19,8 @@ import type {
 } from '@apps/shared/types'
 import { AttendanceButton } from '../AttendanceSection'
 import type { PracticeDetailsProps, FormattedPracticeLog } from '../../types'
+
+const TeamPracticeDetailModal = lazy(() => import('@/components/team/TeamPracticeDetailModal'))
 
 // 種目の選択肢
 const SWIM_STYLES = [
@@ -65,13 +67,14 @@ export function PracticeDetails({
   teamName,
   onShowAttendance
 }: PracticeDetailsProps) {
-  const { supabase } = useAuth()
+  const { supabase, user } = useAuth()
   const [practice, setPractice] = useState<PracticeWithFormattedLogs | null>(null)
   const [practiceImages, setPracticeImages] = useState<GalleryImage[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
   const [showShareModal, setShowShareModal] = useState(false)
   const [sharePracticeData, setSharePracticeData] = useState<PracticeShareData | null>(null)
+  const [showTeamDetailModal, setShowTeamDetailModal] = useState(false)
 
   useEffect(() => {
     const loadPractice = async () => {
@@ -98,6 +101,7 @@ export function PracticeDetails({
         // データ整形
         type PracticeLogFromDB = {
           id: string
+          user_id: string
           practice_id: string
           style: string
           swim_category?: 'Swim' | 'Pull' | 'Kick'
@@ -116,9 +120,13 @@ export function PracticeDetails({
           image_paths?: string[]
         }
         const practiceData = data as PracticeFromDB
+        // チーム練習の場合、ダッシュボードでは自分のログのみ表示
+        const filteredLogs = isTeamPractice && user
+          ? (practiceData.practice_logs || []).filter((log: PracticeLogFromDB) => log.user_id === user.id)
+          : (practiceData.practice_logs || [])
         const formattedPractice: PracticeWithFormattedLogs = {
           ...practiceData,
-          practiceLogs: (practiceData.practice_logs || []).map((log: PracticeLogFromDB): FormattedPracticeLog => ({
+          practiceLogs: filteredLogs.map((log: PracticeLogFromDB): FormattedPracticeLog => ({
             id: log.id,
             practiceId: log.practice_id,
             style: log.style,
@@ -128,7 +136,7 @@ export function PracticeDetails({
             distance: log.distance,
             circle: log.circle,
             note: log.note,
-            tags: log.practice_log_tags?.map((plt: { practice_tag: PracticeTag }) => plt.practice_tag) || [],
+            tags: log.practice_log_tags?.map((plt: { practice_tag: PracticeTag }) => plt.practice_tag).filter((tag): tag is PracticeTag => tag != null) || [],
             times: log.practice_times?.map((time: PracticeTime) => ({
               id: time.id,
               time: time.time,
@@ -550,6 +558,22 @@ export function PracticeDetails({
         )}
       </div>
 
+      {/* チーム全体の記録を見るボタン */}
+      {isTeamPractice && (
+        <div className="mt-3">
+          <button
+            onClick={() => setShowTeamDetailModal(true)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg border border-emerald-200 transition-colors text-sm font-medium"
+            tabIndex={0}
+            role="button"
+            aria-label="チーム全体の練習記録を見る"
+          >
+            <UsersIcon className="h-5 w-5" />
+            チーム全体の記録を見る
+          </button>
+        </div>
+      )}
+
       {/* シェアカードモーダル */}
       {showShareModal && sharePracticeData && (
         <ShareCardModal
@@ -561,6 +585,17 @@ export function PracticeDetails({
           type="practice"
           data={sharePracticeData}
         />
+      )}
+
+      {/* チーム練習詳細モーダル */}
+      {showTeamDetailModal && (
+        <Suspense fallback={null}>
+          <TeamPracticeDetailModal
+            isOpen={showTeamDetailModal}
+            onClose={() => setShowTeamDetailModal(false)}
+            practiceId={practiceId}
+          />
+        </Suspense>
       )}
 
     </div>

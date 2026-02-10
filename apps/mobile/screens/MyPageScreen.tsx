@@ -7,6 +7,8 @@ import { useBestTimesQuery } from '@/hooks/useBestTimesQuery'
 import { ProfileDisplay, ProfileEditModal, BestTimesTable } from '@/components/profile'
 import { GoogleCalendarSyncSettings } from '@/components/settings/GoogleCalendarSyncSettings'
 import { IOSCalendarSyncSettings } from '@/components/settings/IOSCalendarSyncSettings'
+import { EmailChangeSettings } from '@/components/settings/EmailChangeSettings'
+import { IdentityLinkSettings } from '@/components/settings/IdentityLinkSettings'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ErrorView } from '@/components/layout/ErrorView'
 import type { UserProfile } from '@swim-hub/shared/types'
@@ -223,6 +225,12 @@ export const MyPageScreen: React.FC = () => {
           profile={profile}
           onUpdate={refetchProfile}
         />
+
+        {/* メールアドレス変更セクション */}
+        <EmailChangeSettings />
+
+        {/* ログイン連携セクション */}
+        <IdentityLinkSettings />
 
         {/* ログアウトセクション */}
         <View style={styles.section}>

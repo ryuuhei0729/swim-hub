@@ -11,6 +11,8 @@ import BestTimesTable from '@/components/profile/BestTimesTable'
 import ProfileDisplay from '@/components/profile/ProfileDisplay'
 import ProfileEditModal from '@/components/profile/ProfileEditModal'
 import GoogleCalendarSyncSettings from '@/components/settings/GoogleCalendarSyncSettings'
+import EmailChangeSettings from '@/components/settings/EmailChangeSettings'
+import IdentityLinkSettings from '@/components/settings/IdentityLinkSettings'
 import TeamCreateModal from '@/components/team/TeamCreateModal'
 import TeamJoinModal from '@/components/team/TeamJoinModal'
 import type { UserUpdate, UserProfile as DatabaseUserProfile } from '@apps/shared/types'
@@ -262,6 +264,12 @@ export default function MyPageClient({
           profile={dbProfile}
           onUpdate={handleGoogleCalendarUpdate}
         />
+
+        {/* メールアドレス変更 */}
+        <EmailChangeSettings />
+
+        {/* ログイン連携 */}
+        <IdentityLinkSettings />
       </div>
 
       {/* プロフィール編集モーダル */}
