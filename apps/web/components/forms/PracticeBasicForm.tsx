@@ -122,6 +122,8 @@ export default function PracticeBasicForm({
       // 画像データもリセット
       setImageData({ newFiles: [], deletedIds: [] })
       initialFormDataRef.current = null
+      // 二重送信防止フラグをリセット
+      isSubmittingRef.current = false
     }
   }, [isOpen])
 
@@ -258,6 +260,8 @@ export default function PracticeBasicForm({
       const hasImageChanges = imageData.newFiles.length > 0 || imageData.deletedIds.length > 0
       await onSubmit(formData, hasImageChanges ? imageData : undefined, continueToNext)
       setHasUnsavedChanges(false)
+      // 成功時も二重送信防止フラグをリセット
+      isSubmittingRef.current = false
     } catch (error) {
       console.error('練習記録の保存に失敗しました:', error)
       isSubmittingRef.current = false

@@ -139,6 +139,8 @@ export default function CompetitionBasicForm({
       initialFormDataRef.current = null
       isNavigatingRef.current = false
       setValidationError(null)
+      // 二重送信防止フラグをリセット
+      isSubmittingRef.current = false
     }
   }, [isOpen])
 
@@ -290,6 +292,8 @@ export default function CompetitionBasicForm({
       await onSubmit(formData, hasImageChanges ? imageData : undefined, options)
       setHasUnsavedChanges(false)
       setValidationError(null)
+      // 成功時も二重送信防止フラグをリセット
+      isSubmittingRef.current = false
     } catch (error) {
       console.error('フォーム送信エラー:', error)
       isSubmittingRef.current = false
