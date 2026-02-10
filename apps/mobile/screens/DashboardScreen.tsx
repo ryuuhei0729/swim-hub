@@ -159,10 +159,16 @@ export const DashboardScreen: React.FC = () => {
           onPress: async () => {
             try {
               // iOSカレンダーから削除（iOS端末かつ連携が有効な場合）
+              // カレンダー同期エラーはDB削除をブロックしないようにする
               if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_practices) {
                 const practiceToDelete = practices.find((p) => p.id === itemId)
                 if (practiceToDelete) {
-                  await syncPractice(practiceToDelete, 'delete')
+                  try {
+                    await syncPractice(practiceToDelete, 'delete')
+                  } catch (syncError) {
+                    console.warn('カレンダー同期エラー:', syncError)
+                    // カレンダー同期失敗はDB削除に影響しない
+                  }
                 }
               }
 
@@ -371,15 +377,21 @@ export const DashboardScreen: React.FC = () => {
           onPress: async () => {
             try {
               // iOSカレンダーから削除（iOS端末かつ連携が有効な場合）
+              // カレンダー同期エラーはDB削除をブロックしないようにする
               if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_competitions) {
                 // 大会データを取得してiOSカレンダーから削除
-                const { data: competitionToDelete } = await supabase
-                  .from('competitions')
-                  .select('*')
-                  .eq('id', competitionId)
-                  .single()
-                if (competitionToDelete) {
-                  await syncCompetition(competitionToDelete, 'delete')
+                try {
+                  const { data: competitionToDelete } = await supabase
+                    .from('competitions')
+                    .select('*')
+                    .eq('id', competitionId)
+                    .single()
+                  if (competitionToDelete) {
+                    await syncCompetition(competitionToDelete, 'delete')
+                  }
+                } catch (syncError) {
+                  console.warn('カレンダー同期エラー:', syncError)
+                  // カレンダー同期失敗はDB削除に影響しない
                 }
               }
 

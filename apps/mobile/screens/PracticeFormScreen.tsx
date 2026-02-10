@@ -224,10 +224,20 @@ export const PracticeFormScreen: React.FC = () => {
         }
 
         // iOSカレンダー同期（iOS端末かつ連携が有効な場合）
+        // カレンダー同期エラーはDB保存成功後なので、別途通知してエラーを握りつぶす
         if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_practices) {
           const practiceForSync = practices.find((p) => p.id === practiceId)
           if (practiceForSync) {
-            await syncPractice({ ...practiceForSync, ...formData }, 'update')
+            try {
+              await syncPractice({ ...practiceForSync, ...formData }, 'update')
+            } catch (syncError) {
+              console.warn('カレンダー同期エラー:', syncError)
+              Alert.alert(
+                'カレンダー同期に失敗',
+                '練習記録は保存されましたが、カレンダーへの同期に失敗しました。',
+                [{ text: 'OK' }]
+              )
+            }
           }
         }
 
@@ -270,8 +280,18 @@ export const PracticeFormScreen: React.FC = () => {
         }
 
         // iOSカレンダー同期（iOS端末かつ連携が有効な場合）
+        // カレンダー同期エラーはDB保存成功後なので、別途通知してエラーを握りつぶす
         if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_practices) {
-          await syncPractice(createdPractice, 'create')
+          try {
+            await syncPractice(createdPractice, 'create')
+          } catch (syncError) {
+            console.warn('カレンダー同期エラー:', syncError)
+            Alert.alert(
+              'カレンダー同期に失敗',
+              '練習記録は保存されましたが、カレンダーへの同期に失敗しました。',
+              [{ text: 'OK' }]
+            )
+          }
         }
 
         // カレンダーと練習一覧のクエリを無効化してリフレッシュ
@@ -356,10 +376,20 @@ export const PracticeFormScreen: React.FC = () => {
         }
 
         // iOSカレンダー同期（iOS端末かつ連携が有効な場合）
+        // カレンダー同期エラーはDB保存成功後なので、別途通知してエラーを握りつぶす
         if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_practices) {
           const practiceForSync = practices.find((p) => p.id === practiceId)
           if (practiceForSync) {
-            await syncPractice({ ...practiceForSync, ...formData }, 'update')
+            try {
+              await syncPractice({ ...practiceForSync, ...formData }, 'update')
+            } catch (syncError) {
+              console.warn('カレンダー同期エラー:', syncError)
+              Alert.alert(
+                'カレンダー同期に失敗',
+                '練習記録は保存されましたが、カレンダーへの同期に失敗しました。',
+                [{ text: 'OK' }]
+              )
+            }
           }
         }
 
@@ -403,8 +433,18 @@ export const PracticeFormScreen: React.FC = () => {
         }
 
         // iOSカレンダー同期（iOS端末かつ連携が有効な場合）
+        // カレンダー同期エラーはDB保存成功後なので、別途通知してエラーを握りつぶす
         if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_practices) {
-          await syncPractice(createdPractice, 'create')
+          try {
+            await syncPractice(createdPractice, 'create')
+          } catch (syncError) {
+            console.warn('カレンダー同期エラー:', syncError)
+            Alert.alert(
+              'カレンダー同期に失敗',
+              '練習記録は保存されましたが、カレンダーへの同期に失敗しました。',
+              [{ text: 'OK' }]
+            )
+          }
         }
 
         // カレンダーと練習一覧のクエリを無効化してリフレッシュ

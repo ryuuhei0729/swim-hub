@@ -259,8 +259,18 @@ export const CompetitionBasicFormScreen: React.FC = () => {
         }
 
         // 5. iOSカレンダー同期（iOS端末かつ連携が有効な場合）
+        // カレンダー同期エラーはDB保存成功後なので、別途通知してエラーを握りつぶす
         if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_competitions) {
-          await syncCompetition(updatedCompetition, 'update')
+          try {
+            await syncCompetition(updatedCompetition, 'update')
+          } catch (syncError) {
+            console.warn('カレンダー同期エラー:', syncError)
+            Alert.alert(
+              'カレンダー同期に失敗',
+              '大会情報は保存されましたが、カレンダーへの同期に失敗しました。',
+              [{ text: 'OK' }]
+            )
+          }
         }
       } else {
         // 新規作成モード
@@ -303,8 +313,18 @@ export const CompetitionBasicFormScreen: React.FC = () => {
         }
 
         // iOSカレンダー同期（iOS端末かつ連携が有効な場合）
+        // カレンダー同期エラーはDB保存成功後なので、別途通知してエラーを握りつぶす
         if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_competitions) {
-          await syncCompetition(newCompetition, 'create')
+          try {
+            await syncCompetition(newCompetition, 'create')
+          } catch (syncError) {
+            console.warn('カレンダー同期エラー:', syncError)
+            Alert.alert(
+              'カレンダー同期に失敗',
+              '大会情報は保存されましたが、カレンダーへの同期に失敗しました。',
+              [{ text: 'OK' }]
+            )
+          }
         }
       }
 
@@ -393,8 +413,18 @@ export const CompetitionBasicFormScreen: React.FC = () => {
         }
 
         // 5. iOSカレンダー同期（iOS端末かつ連携が有効な場合）
+        // カレンダー同期エラーはDB保存成功後なので、別途通知してエラーを握りつぶす
         if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_competitions) {
-          await syncCompetition(updatedCompetition, 'update')
+          try {
+            await syncCompetition(updatedCompetition, 'update')
+          } catch (syncError) {
+            console.warn('カレンダー同期エラー:', syncError)
+            Alert.alert(
+              'カレンダー同期に失敗',
+              '大会情報は保存されましたが、カレンダーへの同期に失敗しました。',
+              [{ text: 'OK' }]
+            )
+          }
         }
 
         // カレンダーのクエリを無効化してリフレッシュ
@@ -445,8 +475,18 @@ export const CompetitionBasicFormScreen: React.FC = () => {
         }
 
         // iOSカレンダー同期（iOS端末かつ連携が有効な場合）
+        // カレンダー同期エラーはDB保存成功後なので、別途通知してエラーを握りつぶす
         if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_competitions) {
-          await syncCompetition(newCompetition, 'create')
+          try {
+            await syncCompetition(newCompetition, 'create')
+          } catch (syncError) {
+            console.warn('カレンダー同期エラー:', syncError)
+            Alert.alert(
+              'カレンダー同期に失敗',
+              '大会情報は保存されましたが、カレンダーへの同期に失敗しました。',
+              [{ text: 'OK' }]
+            )
+          }
         }
 
         // ストアに保存
