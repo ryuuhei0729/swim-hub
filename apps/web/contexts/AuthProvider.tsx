@@ -351,6 +351,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     )
 
     // 初期セッションを明示的に取得（onAuthStateChangeが呼ばれない場合のフォールバック）
+    // getSession()はローカルキャッシュ（JWT）を返すため、メール変更等の反映が遅れる
+    // getUser()でサーバーから最新のユーザー情報を取得する
     const fetchInitialSession = async () => {
       try {
         const { data: { session }, error } = await supabaseClient.auth.getSession()
@@ -362,10 +364,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               session: null,
               loading: false
             })
+          } else if (session) {
+            const { data: { user } } = await supabaseClient.auth.getUser()
+            setAuthState({
+              user: user ?? session.user,
+              session,
+              loading: false
+            })
           } else {
             setAuthState({
-              user: session?.user ?? null,
-              session,
+              user: null,
+              session: null,
               loading: false
             })
           }
