@@ -1,16 +1,16 @@
 import React, { useState, useCallback } from 'react'
 import { View, Text, ScrollView, StyleSheet, Pressable, RefreshControl } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useNavigation } from '@react-navigation/native'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { Feather } from '@expo/vector-icons'
 import { useAuth } from '@/contexts/AuthProvider'
 import { useUserQuery } from '@apps/shared/hooks/queries/user'
 import { useBestTimesQuery } from '@/hooks/useBestTimesQuery'
 import { ProfileDisplay, ProfileEditModal, BestTimesTable } from '@/components/profile'
-import { GoogleCalendarSyncSettings } from '@/components/settings/GoogleCalendarSyncSettings'
-import { IOSCalendarSyncSettings } from '@/components/settings/IOSCalendarSyncSettings'
-import { EmailChangeSettings } from '@/components/settings/EmailChangeSettings'
-import { IdentityLinkSettings } from '@/components/settings/IdentityLinkSettings'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ErrorView } from '@/components/layout/ErrorView'
+import type { MainStackParamList } from '@/navigation/types'
 import type { UserProfile } from '@swim-hub/shared/types'
 
 /**
@@ -18,6 +18,7 @@ import type { UserProfile } from '@swim-hub/shared/types'
  * プロフィール表示・編集、ベストタイム表
  */
 export const MyPageScreen: React.FC = () => {
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>()
   const { supabase, user, signOut } = useAuth()
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
@@ -214,23 +215,24 @@ export const MyPageScreen: React.FC = () => {
           )}
         </View>
 
-        {/* Googleカレンダー連携セクション */}
-        <GoogleCalendarSyncSettings
-          profile={profile}
-          onUpdate={refetchProfile}
-        />
-
-        {/* iOSカレンダー連携セクション */}
-        <IOSCalendarSyncSettings
-          profile={profile}
-          onUpdate={refetchProfile}
-        />
-
-        {/* メールアドレス変更セクション */}
-        <EmailChangeSettings />
-
-        {/* ログイン連携セクション */}
-        <IdentityLinkSettings />
+        {/* 設定ページへのリンク */}
+        <Pressable
+          style={styles.settingsLink}
+          onPress={() => navigation.navigate('Settings')}
+          accessibilityRole="button"
+          accessibilityLabel="設定画面を開く"
+        >
+          <View style={styles.settingsLinkContent}>
+            <Feather name="settings" size={20} color="#9CA3AF" />
+            <View style={styles.settingsLinkText}>
+              <Text style={styles.settingsLinkTitle}>設定</Text>
+              <Text style={styles.settingsLinkDescription}>
+                メールアドレス・ログイン連携・カレンダー連携
+              </Text>
+            </View>
+          </View>
+          <Feather name="chevron-right" size={20} color="#9CA3AF" />
+        </Pressable>
 
         {/* ログアウトセクション */}
         <View style={styles.section}>
@@ -355,6 +357,38 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 14,
     color: '#DC2626',
+  },
+  settingsLink: {
+    backgroundColor: '#FFFFFF',
+    padding: 20,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  settingsLinkContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  settingsLinkText: {
+    flex: 1,
+  },
+  settingsLinkTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  settingsLinkDescription: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
   },
   logoutButton: {
     paddingVertical: 12,

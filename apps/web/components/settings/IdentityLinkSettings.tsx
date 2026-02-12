@@ -88,7 +88,7 @@ export default function IdentityLinkSettings() {
       const { data, error: linkError } = await supabase.auth.linkIdentity({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/?redirect_to=/mypage`,
+          redirectTo: `${window.location.origin}/?redirect_to=/settings`,
         },
       })
       if (linkError) {

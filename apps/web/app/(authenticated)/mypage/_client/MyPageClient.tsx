@@ -6,16 +6,13 @@ import { useAuth } from '@/contexts'
 import { useUserQuery, userKeys } from '@apps/shared/hooks'
 import { TeamCoreAPI } from '@apps/shared/api/teams'
 import { useQueryClient } from '@tanstack/react-query'
-import { TrophyIcon, DocumentArrowUpIcon } from '@heroicons/react/24/outline'
+import { TrophyIcon, DocumentArrowUpIcon, Cog6ToothIcon } from '@heroicons/react/24/outline'
 import BestTimesTable from '@/components/profile/BestTimesTable'
 import ProfileDisplay from '@/components/profile/ProfileDisplay'
 import ProfileEditModal from '@/components/profile/ProfileEditModal'
-import GoogleCalendarSyncSettings from '@/components/settings/GoogleCalendarSyncSettings'
-import EmailChangeSettings from '@/components/settings/EmailChangeSettings'
-import IdentityLinkSettings from '@/components/settings/IdentityLinkSettings'
 import TeamCreateModal from '@/components/team/TeamCreateModal'
 import TeamJoinModal from '@/components/team/TeamJoinModal'
-import type { UserUpdate, UserProfile as DatabaseUserProfile } from '@apps/shared/types'
+import type { UserUpdate } from '@apps/shared/types'
 
 interface BestTime {
   id: string
@@ -116,9 +113,6 @@ export default function MyPageClient({
     profile_image_path: queryProfile.profile_image_path,
   } : null
 
-  // データベースのUserProfile（Google Calendar設定を含む）
-  const dbProfile: DatabaseUserProfile | null = queryProfile
-
   const handleProfileUpdate = useCallback(async (updatedProfile: Partial<UserProfile>) => {
     if (!user) return
 
@@ -171,14 +165,6 @@ export default function MyPageClient({
       throw err
     }
   }, [user, supabase, queryClient])
-
-  const handleGoogleCalendarUpdate = useCallback(() => {
-    // プロフィールを再取得
-    if (user) {
-      queryClient.invalidateQueries({ queryKey: userKeys.profile(user.id) })
-      queryClient.invalidateQueries({ queryKey: userKeys.currentProfile() })
-    }
-  }, [user, queryClient])
 
   // チーム一覧を再取得する関数
   const reloadTeams = useCallback(async () => {
@@ -259,17 +245,22 @@ export default function MyPageClient({
           <BestTimesTable bestTimes={bestTimes} />
         </div>
 
-        {/* Googleカレンダー連携設定 */}
-        <GoogleCalendarSyncSettings
-          profile={dbProfile}
-          onUpdate={handleGoogleCalendarUpdate}
-        />
-
-        {/* メールアドレス変更 */}
-        <EmailChangeSettings />
-
-        {/* ログイン連携 */}
-        <IdentityLinkSettings />
+        {/* 設定ページへのリンク */}
+        <Link
+          href="/settings"
+          className="flex items-center justify-between bg-white rounded-lg shadow p-4 sm:p-6 hover:bg-gray-50 transition-colors group"
+        >
+          <div className="flex items-center gap-3">
+            <Cog6ToothIcon className="h-5 w-5 text-gray-400 group-hover:text-gray-600" />
+            <div>
+              <span className="text-sm sm:text-base font-medium text-gray-900">設定</span>
+              <p className="text-xs sm:text-sm text-gray-500">メールアドレス・ログイン連携・カレンダー連携</p>
+            </div>
+          </div>
+          <svg className="h-5 w-5 text-gray-400 group-hover:text-gray-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+          </svg>
+        </Link>
       </div>
 
       {/* プロフィール編集モーダル */}

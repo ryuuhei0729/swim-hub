@@ -88,7 +88,7 @@ export default function EmailChangeSettings() {
       const { error: updateError } = await supabase.auth.updateUser({
         email: newEmail,
       }, {
-        emailRedirectTo: `${window.location.origin}/api/auth/callback?redirect_to=/mypage`,
+        emailRedirectTo: `${window.location.origin}/api/auth/callback?redirect_to=/settings`,
       })
 
       if (updateError) {

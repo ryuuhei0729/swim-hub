@@ -77,6 +77,7 @@ export type MainStackParamList = {
   TeamDetail: {
     teamId: string
   }
+  Settings: undefined
 }
 
 // ルートナビゲーターのパラメータ型（認証状態に応じて切り替え）
