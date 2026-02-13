@@ -49,6 +49,7 @@ swimhub-*-*.json
 .agents/
 .claude/
 .cursor/
+.kiro/
 *.swp
 *.swo
 *~
