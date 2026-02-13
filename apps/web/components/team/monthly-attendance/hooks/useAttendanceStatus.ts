@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { SupabaseClient } from '@supabase/supabase-js'
-import { TeamAttendanceWithDetails } from '@swim-hub/shared'
+import type { TeamAttendanceWithDetails } from '@swim-hub/shared/types/attendance'
 import { TeamEvent } from '@swim-hub/shared/types'
 import { TeamAttendancesAPI } from '@apps/shared/api/teams/attendances'
 import { fetchTeamMembers, TeamMember } from '@swim-hub/shared/utils/team'

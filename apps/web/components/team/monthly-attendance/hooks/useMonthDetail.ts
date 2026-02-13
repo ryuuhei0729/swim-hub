@@ -2,7 +2,8 @@
 
 import { useState, useCallback } from 'react'
 import { SupabaseClient } from '@supabase/supabase-js'
-import { AttendanceAPI, TeamAttendanceWithDetails } from '@swim-hub/shared'
+import { AttendanceAPI } from '@swim-hub/shared/api/attendance'
+import type { TeamAttendanceWithDetails } from '@swim-hub/shared/types/attendance'
 import { TeamEvent } from '@swim-hub/shared/types'
 import { getMonthDateRange } from '@swim-hub/shared/utils/date'
 import { parseISO } from 'date-fns'

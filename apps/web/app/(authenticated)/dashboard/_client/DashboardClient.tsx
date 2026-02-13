@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/contexts'
 import CalendarContainer from '../_components/CalendarContainer'
 import TeamAnnouncementsSection from '../_components/TeamAnnouncementsSection'
@@ -36,11 +36,9 @@ import type {
   CalendarItem,
   MonthlySummary
 } from '@apps/shared/types/ui'
-import {
-  usePracticeFormStore,
-  useCompetitionFormStore,
-  useUIStore
-} from '@/stores'
+import { usePracticeFormStore } from '@/stores/practice/practiceStore'
+import { useCompetitionFormStore } from '@/stores/competition/competitionStore'
+import { useUIStore } from '@/stores/ui/uiStore'
 import { FormModals } from './FormModals'
 import { useDashboardHandlers } from '../_hooks/useDashboardHandlers'
 import { useCalendarHandlers } from '../_hooks/useCalendarHandlers'
@@ -68,7 +66,7 @@ export default function DashboardClient({
   const [notificationsRefreshKey, setNotificationsRefreshKey] = useState(0)
   const [expiredGoal, setExpiredGoal] = useState<GoalWithMilestones | null>(null)
   const [expiredMilestone, setExpiredMilestone] = useState<Milestone | null>(null)
-  const [hasCheckedExpired, setHasCheckedExpired] = useState(false)
+  const hasCheckedExpiredRef = useRef(false)
   
   // Zustandストア
   const {
@@ -113,16 +111,19 @@ export default function DashboardClient({
     setStyles: setCompetitionStyles,
   } = useCompetitionFormStore()
 
-  // サーバー側から取得したデータをストアに設定
-  React.useEffect(() => {
+  // サーバー側から取得したデータをストアに設定（初回のみ）
+  const initializedRef = React.useRef(false)
+  if (!initializedRef.current) {
     setAvailableTags(tags)
     setCompetitionStyles(styles)
-  }, [tags, styles, setAvailableTags, setCompetitionStyles])
+    initializedRef.current = true
+  }
 
-  // 期限切れ目標・マイルストーンチェック（ログイン時）
+  // 期限切れ目標・マイルストーンチェック（ログイン時・1回のみ）
   // 目標を優先してチェックし、目標がなければマイルストーンをチェック
   useEffect(() => {
-    if (!user || hasCheckedExpired) return
+    if (!user || hasCheckedExpiredRef.current) return
+    hasCheckedExpiredRef.current = true
 
     const checkExpired = async () => {
       try {
@@ -132,7 +133,6 @@ export default function DashboardClient({
         const expiredGoals = await goalAPI.getExpiredGoals()
         if (expiredGoals && expiredGoals.length > 0) {
           setExpiredGoal(expiredGoals[0])
-          setHasCheckedExpired(true)
           return
         }
 
@@ -141,16 +141,13 @@ export default function DashboardClient({
         if (expiredMilestones && expiredMilestones.length > 0) {
           setExpiredMilestone(expiredMilestones[0])
         }
-
-        setHasCheckedExpired(true)
       } catch (error) {
         console.error('期限切れチェックエラー:', error)
-        setHasCheckedExpired(true)
       }
     }
 
     checkExpired()
-  }, [user, supabase, hasCheckedExpired])
+  }, [user, supabase])
 
   // カレンダーイベントハンドラーは useCalendarHandlers カスタムフックから取得
 

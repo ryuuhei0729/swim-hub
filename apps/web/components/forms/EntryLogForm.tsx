@@ -1,7 +1,9 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useMemo } from 'react'
-import { Button, Input, ConfirmDialog } from '@/components/ui'
+import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import FormStepper from '@/components/ui/FormStepper'
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
 
@@ -60,6 +62,9 @@ interface EntryLogFormProps {
   initialEntries?: EntryData[]
 }
 
+const EMPTY_STYLES: Array<{ id: string; nameJp: string; distance: number }> = []
+const EMPTY_ENTRIES: EntryData[] = []
+
 export default function EntryLogForm({
   isOpen,
   onClose,
@@ -70,9 +75,9 @@ export default function EntryLogForm({
   competitionDate,
   poolType = 0,
   isLoading = false,
-  styles = [],
+  styles = EMPTY_STYLES,
   editData,
-  initialEntries = []
+  initialEntries = EMPTY_ENTRIES
 }: EntryLogFormProps) {
   const { supabase, user } = useAuth()
   const { bestTimes, loadBestTimes } = useBestTimes(supabase)

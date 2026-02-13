@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Avatar } from '@/components/ui'
+import Avatar from '@/components/ui/Avatar'
 import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
 import { formatDate } from '@apps/shared/utils/date'
 import type { TeamMember } from '../hooks/useMembers'

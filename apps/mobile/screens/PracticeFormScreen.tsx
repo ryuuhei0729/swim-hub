@@ -12,6 +12,7 @@ import {
 import { useUserQuery } from '@apps/shared/hooks/queries/user'
 import { practiceKeys } from '@apps/shared/hooks/queries/keys'
 import { usePracticeFormStore } from '@/stores/practiceFormStore'
+import { useShallow } from 'zustand/react/shallow'
 import { useIOSCalendarSync } from '@/hooks/useIOSCalendarSync'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ImageUploader, ImageFile, ExistingImage } from '@/components/shared/ImageUploader'
@@ -60,7 +61,25 @@ export const PracticeFormScreen: React.FC = () => {
     clearErrors,
     initialize,
     reset,
-  } = usePracticeFormStore()
+  } = usePracticeFormStore(
+    useShallow((state) => ({
+      date: state.date,
+      title: state.title,
+      place: state.place,
+      note: state.note,
+      isLoading: state.isLoading,
+      errors: state.errors,
+      setDate: state.setDate,
+      setTitle: state.setTitle,
+      setPlace: state.setPlace,
+      setNote: state.setNote,
+      setLoading: state.setLoading,
+      setError: state.setError,
+      clearErrors: state.clearErrors,
+      initialize: state.initialize,
+      reset: state.reset,
+    }))
+  )
 
   // 既存データの取得（編集モード時）
   const [loadingPractice, setLoadingPractice] = useState(isEditMode)

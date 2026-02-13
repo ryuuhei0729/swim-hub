@@ -83,25 +83,23 @@ export default function DayDetailModal({
 
   // エントリー編集ハンドラー
   const handleEditEntry = async (item: CalendarItem, competitionId: string) => {
-    const { data: { user } } = await supabase.auth.getUser()
+    // getUser()とcompetitionステータスチェックを並行実行
+    const [{ data: { user } }, competitionStatusResult] = await Promise.all([
+      supabase.auth.getUser(),
+      item.metadata?.team_id
+        ? supabase.from('competitions').select('entry_status').eq('id', competitionId).single()
+        : Promise.resolve({ data: null, error: null })
+    ])
     if (!user) return
 
     // チームcompetitionの場合、entry_statusをチェック
-    if (item.metadata?.team_id) {
-      const { data: competitionData, error: competitionError } = await supabase
-        .from('competitions')
-        .select('entry_status')
-        .eq('id', competitionId)
-        .single()
-
-      if (!competitionError && competitionData) {
-        const status = competitionData.entry_status || 'before'
-        if (status !== 'open') {
-          const statusLabel = status === 'before' ? '受付前' : '受付終了'
-          window.alert(`エントリーは${statusLabel}のため、エントリー登録はできません。記録入力に進みます。`)
-          onAddRecord?.({ competitionId })
-          return
-        }
+    if (item.metadata?.team_id && !competitionStatusResult.error && competitionStatusResult.data) {
+      const status = competitionStatusResult.data.entry_status || 'before'
+      if (status !== 'open') {
+        const statusLabel = status === 'before' ? '受付前' : '受付終了'
+        window.alert(`エントリーは${statusLabel}のため、エントリー登録はできません。記録入力に進みます。`)
+        onAddRecord?.({ competitionId })
+        return
       }
     }
 

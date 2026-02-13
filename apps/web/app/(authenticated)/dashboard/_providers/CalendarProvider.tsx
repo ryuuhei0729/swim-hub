@@ -32,10 +32,13 @@ interface CalendarProviderProps {
   refreshKey?: number
 }
 
-export function CalendarProvider({ 
+const EMPTY_CALENDAR_ITEMS: CalendarItem[] = []
+const DEFAULT_MONTHLY_SUMMARY: MonthlySummary = { practiceCount: 0, recordCount: 0 }
+
+export function CalendarProvider({
   children,
-  initialCalendarItems = [],
-  initialMonthlySummary = { practiceCount: 0, recordCount: 0 },
+  initialCalendarItems = EMPTY_CALENDAR_ITEMS,
+  initialMonthlySummary = DEFAULT_MONTHLY_SUMMARY,
   initialDate = new Date(),
   refreshKey
 }: CalendarProviderProps) {

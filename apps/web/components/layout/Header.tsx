@@ -6,9 +6,9 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts'
 import { useUserQuery } from '@apps/shared/hooks'
-import { Avatar } from '@/components/ui'
-import { 
-  Bars3Icon, 
+import Avatar from '@/components/ui/Avatar'
+import {
+  Bars3Icon,
   ChevronDownIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
@@ -45,7 +45,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('mousedown', handleClickOutside, { passive: true })
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }

@@ -4,7 +4,6 @@ import type { Metadata } from 'next'
 import { Inter, Noto_Sans_JP } from 'next/font/google'
 import { AuthProvider } from '../contexts'
 import QueryProvider from '../providers/QueryProvider'
-import 'react-device-frameset/styles/marvel-devices.min.css'
 
 const inter = Inter({
   subsets: ['latin'],

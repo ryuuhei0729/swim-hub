@@ -20,13 +20,15 @@ interface FormStepperProps {
   skippedSteps?: number[]
 }
 
+const EMPTY_SKIPPED_STEPS: number[] = []
+
 export default function FormStepper({
   steps,
   currentStep,
   onStepClick,
   allowClickNavigation = false,
   className,
-  skippedSteps = []
+  skippedSteps = EMPTY_SKIPPED_STEPS
 }: FormStepperProps) {
   // Guard: return null if no steps
   if (steps.length === 0) {

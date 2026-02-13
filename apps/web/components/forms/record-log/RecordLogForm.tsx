@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useEffect, useState, useRef } from 'react'
-import { Button, ConfirmDialog } from '@/components/ui'
+import Button from '@/components/ui/Button'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import FormStepper from '@/components/ui/FormStepper'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 
@@ -15,9 +16,13 @@ import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { useRecordLogForm } from './hooks/useRecordLogForm'
 import { RecordLogEntry } from './components'
-import type { RecordLogFormProps } from './types'
+import type { RecordLogFormProps, StyleOption } from './types'
+import type { EntryInfo } from '@apps/shared/types/ui'
 import { useBestTimes } from '@/hooks/useBestTimes'
 import { useAuth } from '@/contexts'
+
+const EMPTY_STYLES: StyleOption[] = []
+const EMPTY_ENTRY_DATA_LIST: EntryInfo[] = []
 
 /**
  * 記録ログフォームコンポーネント
@@ -34,8 +39,8 @@ export default function RecordLogForm({
   poolType = 0,
   editData,
   isLoading = false,
-  styles = [],
-  entryDataList = [],
+  styles = EMPTY_STYLES,
+  entryDataList = EMPTY_ENTRY_DATA_LIST,
 }: RecordLogFormProps) {
   const { supabase, user } = useAuth()
   const { bestTimes, loadBestTimes } = useBestTimes(supabase)

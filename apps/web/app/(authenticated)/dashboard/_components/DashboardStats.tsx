@@ -1,57 +1,20 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { useAuth } from '@/contexts'
-import { format } from 'date-fns'
-import { 
+import { useDashboardStatsQuery } from '@apps/shared/hooks/queries/dashboard'
+import {
   CalendarDaysIcon,
   ChartBarIcon,
   TrophyIcon,
-  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
 
 export default function DashboardStats() {
-  const { supabase } = useAuth()
-  const [practiceCount, setPracticeCount] = useState(0)
-  const [recordCount, setRecordCount] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const { supabase, user } = useAuth()
+  const { data, isLoading } = useDashboardStatsQuery(supabase, user?.id)
 
-  useEffect(() => {
-    const loadStats = async () => {
-      try {
-        setLoading(true)
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-
-        // 今月の練習回数を取得
-        const today = new Date()
-        const startOfMonth = format(new Date(today.getFullYear(), today.getMonth(), 1), 'yyyy-MM-dd')
-        const endOfMonth = format(new Date(today.getFullYear(), today.getMonth() + 1, 0), 'yyyy-MM-dd')
-
-        const { count: practices } = await supabase
-          .from('practices')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-          .gte('date', startOfMonth)
-          .lte('date', endOfMonth)
-
-        // 大会記録数を取得（全期間）
-        const { count: records } = await supabase
-          .from('records')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-
-        setPracticeCount(practices || 0)
-        setRecordCount(records || 0)
-      } catch (error) {
-        console.error('統計データの取得に失敗:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadStats()
-  }, [supabase])
+  const practiceCount = data?.practiceCount ?? 0
+  const recordCount = data?.recordCount ?? 0
 
   const stats = [
     {
@@ -87,7 +50,7 @@ export default function DashboardStats() {
             </div>
             <div className="ml-4 flex-1">
               <p className="text-sm font-medium text-gray-500">{stat.title}</p>
-              {loading ? (
+              {isLoading ? (
                 <div className="animate-pulse h-8 bg-gray-200 rounded mt-1"></div>
               ) : (
                 <p className="text-2xl font-semibold text-gray-900">
@@ -99,82 +62,6 @@ export default function DashboardStats() {
           </div>
         </div>
       ))}
-    </div>
-  )
-}
-
-// 今後のイベント一覧コンポーネント
-export function UpcomingEventsList() {
-  const [data, _setData] = useState(null)
-  const [loading, _setLoading] = useState(true)
-  const [error, _setError] = useState(null)
-
-  if (loading) {
-    return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">今後のイベント</h2>
-        <div className="space-y-3">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-            </div>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">今後のイベント</h2>
-        <div className="flex items-center justify-center py-8">
-          <ExclamationTriangleIcon className="h-8 w-8 text-red-500 mr-2" />
-          <span className="text-red-600">データの取得に失敗しました</span>
-        </div>
-      </div>
-    )
-  }
-
-  type UpcomingEvent = {
-    id: string
-    title: string
-    date: string
-    place?: string
-  }
-  
-  const events = (data && typeof data === 'object' && 'upcomingEvents' in data 
-    ? (data as { upcomingEvents?: UpcomingEvent[] }).upcomingEvents 
-    : []) || []
-
-  return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">今後のイベント</h2>
-      {events.length === 0 ? (
-        <p className="text-gray-500 text-center py-8">今後のイベントはありません</p>
-      ) : (
-        <div className="space-y-4">
-          {events.slice(0, 5).map((event: UpcomingEvent) => (
-            <div key={event.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-              <div className="flex-1">
-                <h3 className="font-medium text-gray-900">{event.title}</h3>
-                <p className="text-sm text-gray-500">
-                  {format(new Date(event.date), 'yyyy年MM月dd日')}
-                </p>
-                {event.place && (
-                  <p className="text-sm text-gray-400">📍 {event.place}</p>
-                )}
-              </div>
-              <div className="ml-4">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  イベント
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Tabs } from '@/components/ui'
+import { Tabs } from '@/components/ui/Tabs'
 import { TrophyIcon, CalendarIcon } from '@heroicons/react/24/outline'
 import { differenceInDays, parseISO } from 'date-fns'
 import { formatTimeBest, formatDate } from '@/utils/formatters'

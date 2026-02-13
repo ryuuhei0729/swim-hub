@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import type { ComponentType, SVGProps } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts'
 import { 
   HomeIcon,
@@ -72,6 +72,7 @@ const baseNavigation: NavigationItem[] = [
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const { user, supabase } = useAuth()
   const [singleTeamId, setSingleTeamId] = useState<string | null>(null)
   const [adminTeamIds, setAdminTeamIds] = useState<string[]>([])
@@ -227,6 +228,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       }
                     `}
                     onClick={onClose}
+                    onMouseEnter={() => router.prefetch(href)}
                   >
                     <item.icon
                       className={`
@@ -273,6 +275,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     }
                   `}
                   onClick={onClose}
+                  onMouseEnter={() => router.prefetch(singleAdminTeamId ? `/teams-admin/${singleAdminTeamId}` : '/teams-admin')}
                 >
                   <ShieldCheckIcon
                     className={`

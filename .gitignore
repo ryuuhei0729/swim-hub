@@ -44,6 +44,11 @@ swimhub-*-*.json
 # IDE
 .vscode/
 .idea/
+
+# AI Tools
+.agents/
+.claude/
+.cursor/
 *.swp
 *.swo
 *~

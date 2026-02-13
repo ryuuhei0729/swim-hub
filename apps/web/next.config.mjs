@@ -1,3 +1,4 @@
+/* global process */
 import withBundleAnalyzer from '@next/bundle-analyzer'
 
 const analyzer = withBundleAnalyzer({
@@ -18,6 +19,15 @@ const nextConfig = {
 
   // 外部パッケージ設定
   serverExternalPackages: ['@supabase/supabase-js'],
+
+  // バンドル最適化: barrel importを自動的に直接importに変換
+  experimental: {
+    optimizePackageImports: [
+      '@heroicons/react/24/outline',
+      '@heroicons/react/24/solid',
+      'date-fns',
+    ],
+  },
 
   // 画像設定
   images: {

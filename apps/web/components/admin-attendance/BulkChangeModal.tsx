@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { BaseModal } from '@/components/ui'
+import BaseModal from '@/components/ui/BaseModal'
 import { TeamEvent } from '@swim-hub/shared/types'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'

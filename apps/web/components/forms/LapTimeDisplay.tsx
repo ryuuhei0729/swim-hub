@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useMemo, useState } from 'react'
-import { Tabs, Tab } from '@/components/ui'
+import { Tabs } from '@/components/ui/Tabs'
+import type { Tab } from '@/components/ui/Tabs'
 import {
   calculateAllLapTimes,
   calculateRaceLapTimesTable,

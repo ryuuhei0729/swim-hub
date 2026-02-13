@@ -533,3 +533,38 @@ export function useBestTimesQuery(
   })
 }
 
+export interface CompetitionInfo {
+  title?: string
+  date?: string
+  poolType?: number
+}
+
+/**
+ * 大会情報取得クエリ（エントリー・記録フォーム用）
+ */
+export function useCompetitionInfoQuery(
+  supabase: SupabaseClient,
+  competitionId: string | undefined
+) {
+  return useQuery<CompetitionInfo | null>({
+    queryKey: recordKeys.competitionDetail(competitionId ?? ''),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('competitions')
+        .select('title, date, pool_type')
+        .eq('id', competitionId!)
+        .single()
+
+      if (error || !data) return null
+
+      return {
+        title: data.title || undefined,
+        date: data.date || undefined,
+        poolType: data.pool_type ?? undefined,
+      }
+    },
+    enabled: !!competitionId,
+    staleTime: 5 * 60 * 1000,
+  })
+}
+

@@ -1,5 +1,5 @@
 import React from 'react'
-import { BaseModal } from '@/components/ui'
+import BaseModal from '@/components/ui/BaseModal'
 import type { MemberDetail } from '@/types/member-detail'
 
 interface RoleChangeModalProps {

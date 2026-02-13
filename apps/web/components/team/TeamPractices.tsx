@@ -14,10 +14,10 @@ import {
 } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { usePracticeFormStore } from '@/stores'
+import { usePracticeFormStore } from '@/stores/practice/practiceStore'
 import type { PracticeImageData } from '@/components/forms/PracticeBasicForm'
 import { TeamPracticesAPI } from '@apps/shared/api/teams/practices'
-import { Pagination } from '@/components/ui'
+import Pagination from '@/components/ui/Pagination'
 import TeamPracticeDetailModal from './TeamPracticeDetailModal'
 
 const PracticeBasicForm = dynamic(

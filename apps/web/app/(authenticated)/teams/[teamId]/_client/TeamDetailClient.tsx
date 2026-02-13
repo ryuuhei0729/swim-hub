@@ -3,18 +3,16 @@
 import React, { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts'
-import { 
-  TeamTabs,
-  TeamMemberManagement,
-  TeamPractices,
-  TeamCompetitions
-} from '@/components/team'
+import TeamTabs from '@/components/team/TeamTabs'
+import TeamMemberManagement from '@/components/team/TeamMemberManagement'
+import TeamPractices from '@/components/team/TeamPractices'
+import TeamCompetitions from '@/components/team/TeamCompetitions'
 import MyMonthlyAttendance from '@/components/team/MyMonthlyAttendance'
 import MemberDetailModal from '@/components/team/MemberDetailModal'
 import type { MemberDetail } from '@/components/team/MemberDetailModal'
 import type { TeamTabType } from '@/components/team/TeamTabs'
 import { TeamMembership, TeamWithMembers } from '@swim-hub/shared/types'
-import { useTeamDetailStore } from '@/stores'
+import { useTeamDetailStore } from '@/stores/form/teamDetailStore'
 import { ClipboardDocumentIcon, CheckIcon } from '@heroicons/react/24/outline'
 
 interface TeamDetailClientProps {

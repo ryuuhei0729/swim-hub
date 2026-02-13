@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts'
-import { DatePicker } from '@/components/ui'
+import DatePicker from '@/components/ui/DatePicker'
 
 interface AuthFormProps {
   mode?: 'signin' | 'signup'

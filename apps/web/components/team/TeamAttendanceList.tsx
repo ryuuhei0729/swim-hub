@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAuth } from '@/contexts'
-import { AttendanceAPI, TeamAttendanceWithDetails } from '@swim-hub/shared'
+import { AttendanceAPI } from '@swim-hub/shared/api/attendance'
+import type { TeamAttendanceWithDetails } from '@swim-hub/shared/types/attendance'
 import { AttendanceStatus } from '@swim-hub/shared/types'
 
 export interface TeamAttendanceListProps {

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
-import { Button } from '@/components/ui'
+import Button from '@/components/ui/Button'
 import { useAuth } from '@/contexts'
 import { GoalAPI } from '@apps/shared/api/goals'
 import { RecordAPI } from '@apps/shared/api/records'

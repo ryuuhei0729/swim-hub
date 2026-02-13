@@ -28,33 +28,35 @@ export class AttendanceAPI {
   async getAttendanceByPractice(practiceId: string): Promise<TeamAttendanceWithDetails[]> {
     await requireAuth(this.supabase)
 
-    // practiceに紐づくteam_idを取得
-    const { data: practiceData } = await this.supabase
-      .from('practices')
-      .select('team_id')
-      .eq('id', practiceId)
-      .single()
+    // practiceに紐づくteam_idの取得と出欠データ取得を並列実行
+    const [practiceResult, attendanceResult] = await Promise.all([
+      this.supabase
+        .from('practices')
+        .select('team_id')
+        .eq('id', practiceId)
+        .single(),
+      this.supabase
+        .from('team_attendance')
+        .select(`
+          *,
+          user:users(*),
+          practice:practices(*)
+        `)
+        .eq('practice_id', practiceId)
+        .order('created_at', { ascending: true }),
+    ])
 
+    const practiceData = practiceResult.data
     if (!practiceData || !practiceData.team_id) {
       throw new Error('チーム練習ではありません')
     }
 
     await requireTeamMembership(this.supabase, practiceData.team_id)
 
-    const { data, error } = await this.supabase
-      .from('team_attendance')
-      .select(`
-        *,
-        user:users(*),
-        practice:practices(*)
-      `)
-      .eq('practice_id', practiceId)
-      .order('created_at', { ascending: true })
-
-    if (error) throw error
+    if (attendanceResult.error) throw attendanceResult.error
 
     // team_idを追加
-    return (data as TeamAttendanceWithDetails[]).map(item => ({
+    return (attendanceResult.data as TeamAttendanceWithDetails[]).map(item => ({
       ...item,
       team_id: practiceData.team_id
     }))
@@ -66,33 +68,35 @@ export class AttendanceAPI {
   async getAttendanceByCompetition(competitionId: string): Promise<TeamAttendanceWithDetails[]> {
     await requireAuth(this.supabase)
 
-    // competitionに紐づくteam_idを取得
-    const { data: competitionData } = await this.supabase
-      .from('competitions')
-      .select('team_id')
-      .eq('id', competitionId)
-      .single()
+    // competitionに紐づくteam_idの取得と出欠データ取得を並列実行
+    const [competitionResult, attendanceResult] = await Promise.all([
+      this.supabase
+        .from('competitions')
+        .select('team_id')
+        .eq('id', competitionId)
+        .single(),
+      this.supabase
+        .from('team_attendance')
+        .select(`
+          *,
+          user:users(*),
+          competition:competitions(*)
+        `)
+        .eq('competition_id', competitionId)
+        .order('created_at', { ascending: true }),
+    ])
 
+    const competitionData = competitionResult.data
     if (!competitionData || !competitionData.team_id) {
       throw new Error('チーム大会ではありません')
     }
 
     await requireTeamMembership(this.supabase, competitionData.team_id)
 
-    const { data, error } = await this.supabase
-      .from('team_attendance')
-      .select(`
-        *,
-        user:users(*),
-        competition:competitions(*)
-      `)
-      .eq('competition_id', competitionId)
-      .order('created_at', { ascending: true })
-
-    if (error) throw error
+    if (attendanceResult.error) throw attendanceResult.error
 
     // team_idを追加
-    return (data as TeamAttendanceWithDetails[]).map(item => ({
+    return (attendanceResult.data as TeamAttendanceWithDetails[]).map(item => ({
       ...item,
       team_id: competitionData.team_id
     }))

@@ -1,13 +1,11 @@
 'use client'
 
-import React, { Suspense, useState, useEffect } from 'react'
+import React, { Suspense } from 'react'
 import dynamic from 'next/dynamic'
 import type { PracticeTag, Style } from '@apps/shared/types'
 import type { TimeEntry, EntryInfo } from '@apps/shared/types/ui'
-import {
-  usePracticeFormStore,
-  useCompetitionFormStore,
-} from '@/stores'
+import { usePracticeFormStore } from '@/stores/practice/practiceStore'
+import { useCompetitionFormStore } from '@/stores/competition/competitionStore'
 import type {
   PracticeMenuFormData,
   EntryFormData,
@@ -19,6 +17,7 @@ import type { CompetitionImageData } from '@/components/forms/CompetitionBasicFo
 import { convertRecordFormData } from '@/stores/types'
 import { getCompetitionId } from '../_utils/dashboardHelpers'
 import { useAuth } from '@/contexts'
+import { useCompetitionInfoQuery } from '@apps/shared/hooks/queries/records'
 
 interface CompetitionSubmitOptions {
   continueToNext?: boolean
@@ -73,7 +72,6 @@ export function FormModals({
   styles
 }: FormModalsProps) {
   const { supabase } = useAuth()
-  const [competitionInfo, setCompetitionInfo] = useState<{ title?: string; date?: string; poolType?: number } | null>(null)
 
   const {
     isBasicFormOpen: isPracticeBasicFormOpen,
@@ -108,55 +106,11 @@ export function FormModals({
   }, [createdCompetitionId, competitionEditingData])
 
   // competitionIdから大会情報を取得（competitionEditingDataに情報がない場合）
-  useEffect(() => {
-    const isFormOpen = isEntryLogFormOpen || isRecordLogFormOpen
-    if (!isFormOpen || !computedCompetitionId || !supabase) {
-      setCompetitionInfo(null)
-      return
-    }
-
-    // competitionEditingDataに情報がある場合は取得しない
-    if (competitionEditingData && typeof competitionEditingData === 'object') {
-      const data = competitionEditingData as { 
-        title?: string
-        date?: string
-        metadata?: { competition?: { title?: string; date?: string } }
-        editData?: { competition?: { title?: string; date?: string }; date?: string }
-      }
-      
-      // 既に情報がある場合は取得しない
-      if (data.metadata?.competition?.title || data.title || data.editData?.competition?.title) {
-        setCompetitionInfo(null)
-        return
-      }
-    }
-
-    // データベースから大会情報を取得
-    const fetchCompetitionInfo = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('competitions')
-          .select('title, date, pool_type')
-          .eq('id', computedCompetitionId)
-          .single()
-
-        if (!error && data) {
-          setCompetitionInfo({
-            title: data.title || undefined,
-            date: data.date || undefined,
-            poolType: data.pool_type ?? undefined
-          })
-        } else {
-          setCompetitionInfo(null)
-        }
-      } catch (error) {
-        console.error('大会情報の取得エラー:', error)
-        setCompetitionInfo(null)
-      }
-    }
-
-    fetchCompetitionInfo()
-  }, [isEntryLogFormOpen, isRecordLogFormOpen, computedCompetitionId, supabase, competitionEditingData])
+  const isFormOpen = isEntryLogFormOpen || isRecordLogFormOpen
+  const { data: competitionInfo } = useCompetitionInfoQuery(
+    supabase,
+    isFormOpen ? computedCompetitionId || undefined : undefined
+  )
 
   // 大会のtitleを取得（competitionEditingDataまたはcompetitionInfoから）
   const computedCompetitionTitle = React.useMemo(() => {

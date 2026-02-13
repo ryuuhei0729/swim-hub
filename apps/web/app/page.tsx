@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import 'react-device-frameset/styles/marvel-devices.min.css'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -46,32 +47,27 @@ export default function Home() {
       setWindowWidth(window.innerWidth)
     }
 
-    window.addEventListener('resize', handleResize)
+    window.addEventListener('resize', handleResize, { passive: true })
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
   // スマホ端末のスケールを計算（ウィンドウ幅に応じて動的に調整）
-  const mobileScale = useMemo(() => {
-    if (windowWidth === 0) return 0.80 // 初期値
-    // 基準: 1920pxで0.80、1280pxで0.60、768pxで0.40
-    // 線形補間で計算
+  const mobileScale = (() => {
+    if (windowWidth === 0) return 0.80
     if (windowWidth >= 1920) return 0.80
     if (windowWidth <= 768) return 0.40
-    // 768px〜1920pxの間で線形補間
     const ratio = (windowWidth - 768) / (1920 - 768)
     return 0.40 + (ratio * 0.40)
-  }, [windowWidth])
+  })()
 
   // PC端末のスケールを計算（ウィンドウ幅に応じて動的に調整）
-  const desktopScale = useMemo(() => {
-    if (windowWidth === 0) return 0.60 // 初期値
-    // 基準: 1920pxで0.60、1280pxで0.45、1024pxで0.35
+  const desktopScale = (() => {
+    if (windowWidth === 0) return 0.60
     if (windowWidth >= 1920) return 0.60
     if (windowWidth <= 1024) return 0.35
-    // 1024px〜1920pxの間で線形補間
     const ratio = (windowWidth - 1024) / (1920 - 1024)
     return 0.35 + (ratio * 0.25)
-  }, [windowWidth])
+  })()
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
