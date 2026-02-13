@@ -11,7 +11,6 @@ import type { TeamMembership, Team } from '@apps/shared/types'
 interface TeamAnnouncementsSectionProps {
   teams: Array<TeamMembership & { team?: Team }>
   openEntryLogForm: (competitionId: string) => void
-  refreshKey?: number
 }
 
 /**

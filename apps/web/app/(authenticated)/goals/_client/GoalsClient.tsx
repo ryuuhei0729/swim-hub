@@ -34,6 +34,7 @@ export default function GoalsClient({
   // React Query: 目標一覧
   const {
     data: goals = [],
+    error: goalsError,
     invalidate: invalidateGoals
   } = useGoalsQuery(supabase, {
     initialData: initialGoals,
@@ -44,6 +45,7 @@ export default function GoalsClient({
   const {
     data: selectedGoal,
     isLoading,
+    error: goalError,
     invalidate: invalidateGoalDetail
   } = useGoalDetailQuery(supabase, selectedGoalId)
 
@@ -110,18 +112,40 @@ export default function GoalsClient({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* 左側: 大会目標リスト */}
           <div className="lg:col-span-1">
-            <GoalList
-              goals={goals}
-              selectedGoalId={selectedGoalId}
-              onSelectGoal={setSelectedGoalId}
-              onDeleteGoal={handleGoalDeleted}
-              onEditGoal={handleEditGoal}
-            />
+            {goalsError ? (
+              <div className="bg-white rounded-lg shadow p-6 text-center">
+                <p className="text-red-600 mb-3">目標一覧の取得に失敗しました</p>
+                <button
+                  onClick={() => invalidateGoals()}
+                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  再読み込み
+                </button>
+              </div>
+            ) : (
+              <GoalList
+                goals={goals}
+                selectedGoalId={selectedGoalId}
+                onSelectGoal={setSelectedGoalId}
+                onDeleteGoal={handleGoalDeleted}
+                onEditGoal={handleEditGoal}
+              />
+            )}
           </div>
 
           {/* 右側: 目標詳細 */}
           <div className="lg:col-span-2">
-            {isLoading ? (
+            {goalError ? (
+              <div className="bg-white rounded-lg shadow p-6 text-center">
+                <p className="text-red-600 mb-3">目標詳細の取得に失敗しました</p>
+                <button
+                  onClick={() => invalidateGoalDetail()}
+                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  再読み込み
+                </button>
+              </div>
+            ) : isLoading ? (
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="animate-pulse">
                   <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>

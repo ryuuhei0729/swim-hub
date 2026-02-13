@@ -39,6 +39,17 @@ export function useDashboardStatsQuery(
           .eq('user_id', userId!),
       ])
 
+      const errors: string[] = []
+      if (practicesResult.error) {
+        errors.push(`practices: ${practicesResult.error.message}${practicesResult.error.details ? ` (${practicesResult.error.details})` : ''}`)
+      }
+      if (recordsResult.error) {
+        errors.push(`records: ${recordsResult.error.message}${recordsResult.error.details ? ` (${recordsResult.error.details})` : ''}`)
+      }
+      if (errors.length > 0) {
+        throw new Error(`ダッシュボード統計の取得に失敗しました: ${errors.join('; ')}`)
+      }
+
       return {
         practiceCount: practicesResult.count ?? 0,
         recordCount: recordsResult.count ?? 0,

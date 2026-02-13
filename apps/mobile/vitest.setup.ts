@@ -36,6 +36,14 @@ vi.mock('expo-status-bar', () => ({
   StatusBar: () => null,
 }))
 
+// expo-image のモック
+vi.mock('expo-image', () => ({
+  Image: ({ source, contentFit: _contentFit, ...props }: { source?: { uri?: string } | string; contentFit?: string } & Record<string, unknown>) => {
+    const src = typeof source === 'string' ? source : source?.uri
+    return React.createElement('img', { ...props, src })
+  },
+}))
+
 // 注意: @react-native-community/netinfoのモックは vitest.config.ts の resolve.alias で
 // __mocks__/@react-native-community/netinfo.ts にエイリアスされているため、ここでは不要
 

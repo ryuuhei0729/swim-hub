@@ -37,7 +37,16 @@ export const EmbeddedLoginScreen: React.FC = () => {
         onSuccess={() => {
           // AppNavigatorが認証状態を検知してMainStackに自動切り替え
         }}
-        onResetPassword={() => Linking.openURL(WEB_APP_RESET_PASSWORD_URL)}
+        onResetPassword={async () => {
+          const canOpen = await Linking.canOpenURL(WEB_APP_RESET_PASSWORD_URL)
+          if (canOpen) {
+            await Linking.openURL(WEB_APP_RESET_PASSWORD_URL).catch((err) => {
+              console.warn('Failed to open reset password URL:', err)
+            })
+          } else {
+            console.warn('Cannot open URL:', WEB_APP_RESET_PASSWORD_URL)
+          }
+        }}
       />
     </SafeAreaView>
   )

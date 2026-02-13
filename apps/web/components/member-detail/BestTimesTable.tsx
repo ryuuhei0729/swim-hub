@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useState, useMemo } from 'react'
 import { Tabs } from '@/components/ui/Tabs'
 import { TrophyIcon, CalendarIcon } from '@heroicons/react/24/outline'

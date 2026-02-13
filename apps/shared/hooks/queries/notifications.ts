@@ -71,6 +71,13 @@ export function useUnansweredAttendancesQuery(
             .order('date', { ascending: true }),
         ])
 
+        if (practicesResult.error) {
+          throw new Error(`練習データの取得に失敗しました: ${practicesResult.error.message}`)
+        }
+        if (competitionsResult.error) {
+          throw new Error(`大会データの取得に失敗しました: ${competitionsResult.error.message}`)
+        }
+
         const practices = practicesResult.data ?? []
         const competitions = competitionsResult.data ?? []
 
@@ -85,15 +92,22 @@ export function useUnansweredAttendancesQuery(
                 .select('practice_id, status')
                 .eq('user_id', userId!)
                 .in('practice_id', practiceIds)
-            : Promise.resolve({ data: [] as { practice_id: string; status: string | null }[] }),
+            : Promise.resolve({ data: [] as { practice_id: string; status: string | null }[], error: null }),
           competitionIds.length > 0
             ? supabase
                 .from('team_attendance')
                 .select('competition_id, status')
                 .eq('user_id', userId!)
                 .in('competition_id', competitionIds)
-            : Promise.resolve({ data: [] as { competition_id: string; status: string | null }[] }),
+            : Promise.resolve({ data: [] as { competition_id: string; status: string | null }[], error: null }),
         ])
+
+        if (practiceAttendances.error) {
+          throw new Error(`練習出欠データの取得に失敗しました: ${practiceAttendances.error.message}`)
+        }
+        if (competitionAttendances.error) {
+          throw new Error(`大会出欠データの取得に失敗しました: ${competitionAttendances.error.message}`)
+        }
 
         const practiceAttData = practiceAttendances.data ?? []
         const competitionAttData = competitionAttendances.data ?? []
@@ -155,21 +169,29 @@ export function useUnsubmittedEntriesQuery(
         const teamId = team.team_id
         const teamName = team.team?.name || 'チーム'
 
-        const { data: openCompetitions } = await supabase
+        const { data: openCompetitions, error: competitionsError } = await supabase
           .from('competitions')
           .select('id, title, date')
           .eq('team_id', teamId)
           .eq('entry_status', 'open')
           .order('date', { ascending: true })
 
+        if (competitionsError) {
+          throw new Error(`大会データの取得に失敗しました: ${competitionsError.message}`)
+        }
+
         if (!openCompetitions || openCompetitions.length === 0) continue
 
         const competitionIds = openCompetitions.map(c => c.id)
-        const { data: myEntries } = await supabase
+        const { data: myEntries, error: entriesError } = await supabase
           .from('entries')
           .select('competition_id')
           .eq('user_id', userId!)
           .in('competition_id', competitionIds)
+
+        if (entriesError) {
+          throw new Error(`エントリーデータの取得に失敗しました: ${entriesError.message}`)
+        }
 
         const submittedIds = new Set((myEntries ?? []).map(e => e.competition_id))
 

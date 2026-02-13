@@ -12,13 +12,13 @@ export async function generateMetadata({
   const supabase = await createAuthenticatedServerClient()
   const { data: competition } = await supabase
     .from('competitions')
-    .select('name')
+    .select('title')
     .eq('id', competitionId)
-    .single<{ name: string }>()
+    .single<{ title: string }>()
 
   return {
-    title: competition?.name
-      ? `${competition.name} - 記録入力 | SwimHub`
+    title: competition?.title
+      ? `${competition.title} - 記録入力 | SwimHub`
       : '記録入力 | SwimHub',
   }
 }

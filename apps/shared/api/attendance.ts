@@ -46,6 +46,8 @@ export class AttendanceAPI {
         .order('created_at', { ascending: true }),
     ])
 
+    if (practiceResult.error) throw practiceResult.error
+
     const practiceData = practiceResult.data
     if (!practiceData || !practiceData.team_id) {
       throw new Error('チーム練習ではありません')
@@ -85,6 +87,8 @@ export class AttendanceAPI {
         .eq('competition_id', competitionId)
         .order('created_at', { ascending: true }),
     ])
+
+    if (competitionResult.error) throw competitionResult.error
 
     const competitionData = competitionResult.data
     if (!competitionData || !competitionData.team_id) {

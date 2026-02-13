@@ -117,11 +117,11 @@ export default function Home() {
       <div className="min-h-screen bg-white">
         {/* 固定ヘッダーナビゲーション */}
         <header className="fixed top-0 left-0 right-0 z-50 bg-white/60 backdrop-blur-sm shadow-sm">
-          <nav className="max-w-7xl mx-auto px-2 sm:px-3 lg:px-4">
+          <nav className="relative max-w-7xl mx-auto px-2 sm:px-3 lg:px-4">
             <div className="flex items-center justify-between h-20">
               {/* ロゴ */}
               <Link href="/" className="flex items-center space-x-3">
-                <Image src="/favicon.png" alt="SwimHub" width={50} height={50} className="w-16 h-16" />
+                <Image src="/favicon.png" alt="SwimHub" width={64} height={64} className="w-16 h-16" />
                 <span className="text-3xl font-bold text-gray-900">SwimHub</span>
               </Link>
 

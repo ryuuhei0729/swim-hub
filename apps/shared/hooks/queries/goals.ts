@@ -55,7 +55,13 @@ export function useGoalsQuery(
         }
       })
     },
-    initialData: options.initialData ? (options.initialData as GoalWithDetails[]) : undefined,
+    initialData: options.initialData
+      ? options.initialData.map(goal => ({
+          ...goal,
+          competition: undefined,
+          style: undefined,
+        }))
+      : undefined,
     staleTime: 5 * 60 * 1000,
   })
 

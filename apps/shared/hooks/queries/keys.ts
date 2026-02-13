@@ -97,9 +97,9 @@ export const dashboardKeys = {
 export const notificationKeys = {
   all: ['notifications'] as const,
   unanswered: (userId: string, teamIds: string[]) =>
-    [...notificationKeys.all, 'unanswered', userId, ...teamIds.sort()] as const,
+    [...notificationKeys.all, 'unanswered', userId, ...[...teamIds].sort()] as const,
   unsubmitted: (userId: string, teamIds: string[]) =>
-    [...notificationKeys.all, 'unsubmitted', userId, ...teamIds.sort()] as const,
+    [...notificationKeys.all, 'unsubmitted', userId, ...[...teamIds].sort()] as const,
 } as const
 
 /**
