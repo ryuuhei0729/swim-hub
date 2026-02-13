@@ -3,6 +3,7 @@ import Image from 'next/image'
 import StaticFooter from '@/components/layout/StaticFooter'
 import {
   CalendarDaysIcon,
+  VideoCameraIcon,
   ChartBarIcon,
   TrophyIcon,
   ClipboardDocumentListIcon,
@@ -17,7 +18,6 @@ import {
   ExclamationCircleIcon,
   BellIcon
 } from '@heroicons/react/24/outline'
-import AuthRedirect from './_components/AuthRedirect'
 import ScrollNavButtons from './_components/ScrollNavButtons'
 import DeviceMockup from './_components/DeviceMockup'
 
@@ -52,7 +52,7 @@ const features = [
     bgColor: 'bg-green-100'
   },
   {
-    icon: CalendarDaysIcon,
+    icon: VideoCameraIcon,
     title: 'YouTubeリンクで泳ぎと記録を紐付け',
     description: '動画はYouTubeで管理。記録にYouTubeリンクを紐付けることで、泳ぎのフォームと記録を簡単に結びつけられます。',
     color: 'text-indigo-600',
@@ -113,7 +113,6 @@ const announcements = [
 
 export default function Home() {
   return (
-    <AuthRedirect>
       <div className="min-h-screen bg-white">
         {/* 固定ヘッダーナビゲーション */}
         <header className="fixed top-0 left-0 right-0 z-50 bg-white/60 backdrop-blur-sm shadow-sm">
@@ -496,6 +495,5 @@ export default function Home() {
         {/* 静的フッター（Google OAuth審査対応） */}
         <StaticFooter />
       </div>
-    </AuthRedirect>
   )
 }

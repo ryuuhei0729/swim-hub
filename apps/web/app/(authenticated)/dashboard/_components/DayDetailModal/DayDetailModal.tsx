@@ -7,13 +7,13 @@ import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { useAuth } from '@/contexts'
 import {
-  DayDetailModalProps,
-  CalendarItem,
+  type DayDetailModalProps,
+  type CalendarItem,
   isPracticeMetadata,
   isCompetitionMetadata,
   isRecordMetadata,
   isTeamInfo
-} from '@/types'
+} from '@apps/shared/types/ui'
 import type { PracticeLog } from '@apps/shared/types'
 import {
   PracticeDetails,

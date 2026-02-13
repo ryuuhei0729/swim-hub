@@ -3,7 +3,7 @@
 // Instagram等のSNSシェア用カードの型定義
 // =============================================================================
 
-import type { SplitTime } from '@/types'
+import type { SplitTime } from '@apps/shared/types/record'
 
 // 大会記録シェアカード用データ
 export interface CompetitionShareData {

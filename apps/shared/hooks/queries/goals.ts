@@ -21,6 +21,11 @@ export const goalKeys = {
 
 type GoalWithDetails = Goal & { competition?: { title: string | null }; style?: { name_jp: string } }
 
+type GoalsQueryData = {
+  goals: Goal[]
+  competitions: { id: string; title: string | null }[]
+}
+
 /**
  * 目標一覧取得クエリ（competition/style情報付き）
  */
@@ -37,7 +42,7 @@ export function useGoalsQuery(
   const recordAPI = useMemo(() => new RecordAPI(supabase), [supabase])
   const queryClient = useQueryClient()
 
-  const query = useQuery<GoalWithDetails[], Error>({
+  const query = useQuery<GoalsQueryData, Error, GoalWithDetails[]>({
     queryKey: goalKeys.list(),
     queryFn: async () => {
       const [goals, competitions] = await Promise.all([
@@ -45,22 +50,20 @@ export function useGoalsQuery(
         recordAPI.getCompetitions()
       ])
 
-      return goals.map(goal => {
-        const competition = competitions.find(c => c.id === goal.competition_id)
+      return { goals, competitions }
+    },
+    select: (data) =>
+      data.goals.map(goal => {
+        const competition = data.competitions.find(c => c.id === goal.competition_id)
         const style = options.styles?.find(s => s.id === goal.style_id)
         return {
           ...goal,
           competition: competition ? { title: competition.title } : undefined,
           style: style ? { name_jp: style.name_jp } : undefined
         }
-      })
-    },
+      }),
     initialData: options.initialData
-      ? options.initialData.map(goal => ({
-          ...goal,
-          competition: undefined,
-          style: undefined,
-        }))
+      ? { goals: options.initialData, competitions: [] }
       : undefined,
     staleTime: 5 * 60 * 1000,
   })

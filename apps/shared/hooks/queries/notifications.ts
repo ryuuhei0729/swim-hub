@@ -71,11 +71,9 @@ export function useUnansweredAttendancesQuery(
             .order('date', { ascending: true }),
         ])
 
-        if (practicesResult.error) {
-          throw new Error(`練習データの取得に失敗しました: ${practicesResult.error.message}`)
-        }
-        if (competitionsResult.error) {
-          throw new Error(`大会データの取得に失敗しました: ${competitionsResult.error.message}`)
+        if (practicesResult.error || competitionsResult.error) {
+          console.error(`チーム ${teamName} のデータ取得に失敗しました:`, practicesResult.error ?? competitionsResult.error)
+          continue
         }
 
         const practices = practicesResult.data ?? []
@@ -102,11 +100,9 @@ export function useUnansweredAttendancesQuery(
             : Promise.resolve({ data: [] as { competition_id: string; status: string | null }[], error: null }),
         ])
 
-        if (practiceAttendances.error) {
-          throw new Error(`練習出欠データの取得に失敗しました: ${practiceAttendances.error.message}`)
-        }
-        if (competitionAttendances.error) {
-          throw new Error(`大会出欠データの取得に失敗しました: ${competitionAttendances.error.message}`)
+        if (practiceAttendances.error || competitionAttendances.error) {
+          console.error(`チーム ${teamName} の出欠データ取得に失敗しました:`, practiceAttendances.error ?? competitionAttendances.error)
+          continue
         }
 
         const practiceAttData = practiceAttendances.data ?? []
@@ -177,7 +173,8 @@ export function useUnsubmittedEntriesQuery(
           .order('date', { ascending: true })
 
         if (competitionsError) {
-          throw new Error(`大会データの取得に失敗しました: ${competitionsError.message}`)
+          console.error(`チーム ${teamName} の大会データ取得に失敗しました:`, competitionsError)
+          continue
         }
 
         if (!openCompetitions || openCompetitions.length === 0) continue
@@ -190,7 +187,8 @@ export function useUnsubmittedEntriesQuery(
           .in('competition_id', competitionIds)
 
         if (entriesError) {
-          throw new Error(`エントリーデータの取得に失敗しました: ${entriesError.message}`)
+          console.error(`チーム ${teamName} のエントリーデータ取得に失敗しました:`, entriesError)
+          continue
         }
 
         const submittedIds = new Set((myEntries ?? []).map(e => e.competition_id))

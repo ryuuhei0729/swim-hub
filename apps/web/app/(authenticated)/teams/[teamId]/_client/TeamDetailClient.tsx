@@ -1,14 +1,17 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts'
 import TeamTabs from '@/components/team/TeamTabs'
-import TeamMemberManagement from '@/components/team/TeamMemberManagement'
-import TeamPractices from '@/components/team/TeamPractices'
-import TeamCompetitions from '@/components/team/TeamCompetitions'
-import MyMonthlyAttendance from '@/components/team/MyMonthlyAttendance'
 import MemberDetailModal from '@/components/team/MemberDetailModal'
+
+// タブコンテンツは一度に1つしか表示されないため遅延読み込み
+const TeamMemberManagement = dynamic(() => import('@/components/team/TeamMemberManagement'))
+const TeamPractices = dynamic(() => import('@/components/team/TeamPractices'))
+const TeamCompetitions = dynamic(() => import('@/components/team/TeamCompetitions'))
+const MyMonthlyAttendance = dynamic(() => import('@/components/team/MyMonthlyAttendance'))
 import type { MemberDetail } from '@/components/team/MemberDetailModal'
 import type { TeamTabType } from '@/components/team/TeamTabs'
 import { TeamMembership, TeamWithMembers } from '@swim-hub/shared/types'
