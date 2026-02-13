@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 import { CalendarDaysIcon, PencilIcon, TrashIcon, ShareIcon } from '@heroicons/react/24/outline'
 import Button from '@/components/ui/Button'
 import Pagination from '@/components/ui/Pagination'
-import PracticeLogForm from '@/components/forms/PracticeLogForm'
+const PracticeLogForm = dynamic(() => import('@/components/forms/PracticeLogForm'), { ssr: false })
 import PracticeTimeModal from '../_components/PracticeTimeModal'
 
 const ShareCardModal = dynamic(

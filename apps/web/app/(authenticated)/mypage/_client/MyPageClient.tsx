@@ -11,8 +11,10 @@ import { TrophyIcon, DocumentArrowUpIcon, Cog6ToothIcon } from '@heroicons/react
 import BestTimesTable from '@/components/profile/BestTimesTable'
 import ProfileDisplay from '@/components/profile/ProfileDisplay'
 import ProfileEditModal from '@/components/profile/ProfileEditModal'
-import TeamCreateModal from '@/components/team/TeamCreateModal'
-import TeamJoinModal from '@/components/team/TeamJoinModal'
+import dynamic from 'next/dynamic'
+
+const TeamCreateModal = dynamic(() => import('@/components/team/TeamCreateModal'))
+const TeamJoinModal = dynamic(() => import('@/components/team/TeamJoinModal'))
 import type { UserUpdate } from '@apps/shared/types'
 
 interface BestTime {

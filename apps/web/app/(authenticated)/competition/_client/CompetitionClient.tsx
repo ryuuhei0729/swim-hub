@@ -6,7 +6,9 @@ import { TrophyIcon, PencilIcon, TrashIcon, ShareIcon } from '@heroicons/react/2
 import Button from '@/components/ui/Button'
 import BestTimeBadge from '@/components/ui/BestTimeBadge'
 import Pagination from '@/components/ui/Pagination'
-import RecordLogForm, { type RecordLogFormData } from '@/components/forms/RecordLogForm'
+import type { RecordLogFormData } from '@/components/forms/record-log/types'
+
+const RecordLogForm = dynamic(() => import('@/components/forms/RecordLogForm'), { ssr: false })
 
 const ShareCardModal = dynamic(
   () => import('@/components/share/ShareCardModal').then(mod => ({ default: mod.ShareCardModal })),

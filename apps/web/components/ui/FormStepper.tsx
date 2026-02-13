@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { CheckIcon } from '@heroicons/react/24/solid'
-import { cn } from '@/utils'
+import { cn } from '@/utils/cn'
 
 export interface FormStep {
   id: string

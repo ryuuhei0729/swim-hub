@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { cn } from '@/utils'
+import { cn } from '@/utils/cn'
 
 export interface PlaceComboboxProps {
   value: string

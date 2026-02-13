@@ -28,9 +28,7 @@ export type { ValidationResult, ValidationRule } from './validators'
 export { getSafeRedirectUrl } from './redirect'
 
 // 共通ユーティリティ関数
-export const cn = (...classes: (string | undefined | null | boolean)[]): string => {
-  return classes.filter(Boolean).join(' ')
-}
+export { cn } from './cn'
 
 export const sleep = (ms: number): Promise<void> => {
   return new Promise(resolve => setTimeout(resolve, ms))

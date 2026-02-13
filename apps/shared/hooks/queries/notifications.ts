@@ -45,101 +45,106 @@ export function useUnansweredAttendancesQuery(
       const startDateStr = format(now, 'yyyy-MM-dd')
       const endDateStr = format(oneMonthLater, 'yyyy-MM-dd')
 
-      const unansweredList: UnansweredAttendance[] = []
+      // 全チームを並列で処理
+      const results = await Promise.all(
+        teams.map(async (team): Promise<UnansweredAttendance[]> => {
+          const teamId = team.team_id
+          const teamName = team.team?.name || 'チーム'
 
-      for (const team of teams) {
-        const teamId = team.team_id
-        const teamName = team.team?.name || 'チーム'
+          // 練習と大会を並列で取得
+          const [practicesResult, competitionsResult] = await Promise.all([
+            supabase
+              .from('practices')
+              .select('id, title, date, attendance_status')
+              .eq('team_id', teamId)
+              .eq('attendance_status', 'open')
+              .gte('date', startDateStr)
+              .lte('date', endDateStr)
+              .order('date', { ascending: true }),
+            supabase
+              .from('competitions')
+              .select('id, title, date, attendance_status')
+              .eq('team_id', teamId)
+              .eq('attendance_status', 'open')
+              .gte('date', startDateStr)
+              .lte('date', endDateStr)
+              .order('date', { ascending: true }),
+          ])
 
-        // 練習と大会を並列で取得
-        const [practicesResult, competitionsResult] = await Promise.all([
-          supabase
-            .from('practices')
-            .select('id, title, date, attendance_status')
-            .eq('team_id', teamId)
-            .eq('attendance_status', 'open')
-            .gte('date', startDateStr)
-            .lte('date', endDateStr)
-            .order('date', { ascending: true }),
-          supabase
-            .from('competitions')
-            .select('id, title, date, attendance_status')
-            .eq('team_id', teamId)
-            .eq('attendance_status', 'open')
-            .gte('date', startDateStr)
-            .lte('date', endDateStr)
-            .order('date', { ascending: true }),
-        ])
-
-        if (practicesResult.error || competitionsResult.error) {
-          console.error(`チーム ${teamName} のデータ取得に失敗しました:`, practicesResult.error ?? competitionsResult.error)
-          continue
-        }
-
-        const practices = practicesResult.data ?? []
-        const competitions = competitionsResult.data ?? []
-
-        // 出欠情報を並列で取得
-        const practiceIds = practices.map(p => p.id)
-        const competitionIds = competitions.map(c => c.id)
-
-        const [practiceAttendances, competitionAttendances] = await Promise.all([
-          practiceIds.length > 0
-            ? supabase
-                .from('team_attendance')
-                .select('practice_id, status')
-                .eq('user_id', userId!)
-                .in('practice_id', practiceIds)
-            : Promise.resolve({ data: [] as { practice_id: string; status: string | null }[], error: null }),
-          competitionIds.length > 0
-            ? supabase
-                .from('team_attendance')
-                .select('competition_id, status')
-                .eq('user_id', userId!)
-                .in('competition_id', competitionIds)
-            : Promise.resolve({ data: [] as { competition_id: string; status: string | null }[], error: null }),
-        ])
-
-        if (practiceAttendances.error || competitionAttendances.error) {
-          console.error(`チーム ${teamName} の出欠データ取得に失敗しました:`, practiceAttendances.error ?? competitionAttendances.error)
-          continue
-        }
-
-        const practiceAttData = practiceAttendances.data ?? []
-        const competitionAttData = competitionAttendances.data ?? []
-
-        // 未回答の練習を追加
-        for (const practice of practices) {
-          const attendance = practiceAttData.find(a => a.practice_id === practice.id)
-          if (!attendance || attendance.status === null) {
-            unansweredList.push({
-              teamId,
-              teamName,
-              eventId: practice.id,
-              eventType: 'practice',
-              eventName: practice.title || '練習',
-              eventDate: practice.date,
-            })
+          if (practicesResult.error || competitionsResult.error) {
+            console.error(`チーム ${teamName} のデータ取得に失敗しました:`, practicesResult.error ?? competitionsResult.error)
+            return []
           }
-        }
 
-        // 未回答の大会を追加
-        for (const competition of competitions) {
-          const attendance = competitionAttData.find(a => a.competition_id === competition.id)
-          if (!attendance || attendance.status === null) {
-            unansweredList.push({
-              teamId,
-              teamName,
-              eventId: competition.id,
-              eventType: 'competition',
-              eventName: competition.title || '大会',
-              eventDate: competition.date,
-            })
+          const practices = practicesResult.data ?? []
+          const competitions = competitionsResult.data ?? []
+
+          // 出欠情報を並列で取得
+          const practiceIds = practices.map(p => p.id)
+          const competitionIds = competitions.map(c => c.id)
+
+          const [practiceAttendances, competitionAttendances] = await Promise.all([
+            practiceIds.length > 0
+              ? supabase
+                  .from('team_attendance')
+                  .select('practice_id, status')
+                  .eq('user_id', userId!)
+                  .in('practice_id', practiceIds)
+              : Promise.resolve({ data: [] as { practice_id: string; status: string | null }[], error: null }),
+            competitionIds.length > 0
+              ? supabase
+                  .from('team_attendance')
+                  .select('competition_id, status')
+                  .eq('user_id', userId!)
+                  .in('competition_id', competitionIds)
+              : Promise.resolve({ data: [] as { competition_id: string; status: string | null }[], error: null }),
+          ])
+
+          if (practiceAttendances.error || competitionAttendances.error) {
+            console.error(`チーム ${teamName} の出欠データ取得に失敗しました:`, practiceAttendances.error ?? competitionAttendances.error)
+            return []
           }
-        }
-      }
 
-      return unansweredList
+          const practiceAttData = practiceAttendances.data ?? []
+          const competitionAttData = competitionAttendances.data ?? []
+
+          const items: UnansweredAttendance[] = []
+
+          // 未回答の練習を追加
+          for (const practice of practices) {
+            const attendance = practiceAttData.find(a => a.practice_id === practice.id)
+            if (!attendance || attendance.status === null) {
+              items.push({
+                teamId,
+                teamName,
+                eventId: practice.id,
+                eventType: 'practice',
+                eventName: practice.title || '練習',
+                eventDate: practice.date,
+              })
+            }
+          }
+
+          // 未回答の大会を追加
+          for (const competition of competitions) {
+            const attendance = competitionAttData.find(a => a.competition_id === competition.id)
+            if (!attendance || attendance.status === null) {
+              items.push({
+                teamId,
+                teamName,
+                eventId: competition.id,
+                eventType: 'competition',
+                eventName: competition.title || '大会',
+                eventDate: competition.date,
+              })
+            }
+          }
+
+          return items
+        })
+      )
+
+      return results.flat()
     },
     enabled: !!userId && teams.length > 0,
     staleTime: 5 * 60 * 1000,
@@ -159,54 +164,58 @@ export function useUnsubmittedEntriesQuery(
   return useQuery<UnsubmittedEntry[]>({
     queryKey: notificationKeys.unsubmitted(userId ?? '', teamIds),
     queryFn: async () => {
-      const unsubmittedList: UnsubmittedEntry[] = []
+      // 全チームを並列で処理
+      const results = await Promise.all(
+        teams.map(async (team): Promise<UnsubmittedEntry[]> => {
+          const teamId = team.team_id
+          const teamName = team.team?.name || 'チーム'
 
-      for (const team of teams) {
-        const teamId = team.team_id
-        const teamName = team.team?.name || 'チーム'
+          const { data: openCompetitions, error: competitionsError } = await supabase
+            .from('competitions')
+            .select('id, title, date')
+            .eq('team_id', teamId)
+            .eq('entry_status', 'open')
+            .order('date', { ascending: true })
 
-        const { data: openCompetitions, error: competitionsError } = await supabase
-          .from('competitions')
-          .select('id, title, date')
-          .eq('team_id', teamId)
-          .eq('entry_status', 'open')
-          .order('date', { ascending: true })
-
-        if (competitionsError) {
-          console.error(`チーム ${teamName} の大会データ取得に失敗しました:`, competitionsError)
-          continue
-        }
-
-        if (!openCompetitions || openCompetitions.length === 0) continue
-
-        const competitionIds = openCompetitions.map(c => c.id)
-        const { data: myEntries, error: entriesError } = await supabase
-          .from('entries')
-          .select('competition_id')
-          .eq('user_id', userId!)
-          .in('competition_id', competitionIds)
-
-        if (entriesError) {
-          console.error(`チーム ${teamName} のエントリーデータ取得に失敗しました:`, entriesError)
-          continue
-        }
-
-        const submittedIds = new Set((myEntries ?? []).map(e => e.competition_id))
-
-        for (const competition of openCompetitions) {
-          if (!submittedIds.has(competition.id)) {
-            unsubmittedList.push({
-              teamId,
-              teamName,
-              competitionId: competition.id,
-              competitionName: competition.title || '大会',
-              competitionDate: competition.date,
-            })
+          if (competitionsError) {
+            console.error(`チーム ${teamName} の大会データ取得に失敗しました:`, competitionsError)
+            return []
           }
-        }
-      }
 
-      return unsubmittedList
+          if (!openCompetitions || openCompetitions.length === 0) return []
+
+          const competitionIds = openCompetitions.map(c => c.id)
+          const { data: myEntries, error: entriesError } = await supabase
+            .from('entries')
+            .select('competition_id')
+            .eq('user_id', userId!)
+            .in('competition_id', competitionIds)
+
+          if (entriesError) {
+            console.error(`チーム ${teamName} のエントリーデータ取得に失敗しました:`, entriesError)
+            return []
+          }
+
+          const submittedIds = new Set((myEntries ?? []).map(e => e.competition_id))
+
+          const items: UnsubmittedEntry[] = []
+          for (const competition of openCompetitions) {
+            if (!submittedIds.has(competition.id)) {
+              items.push({
+                teamId,
+                teamName,
+                competitionId: competition.id,
+                competitionName: competition.title || '大会',
+                competitionDate: competition.date,
+              })
+            }
+          }
+
+          return items
+        })
+      )
+
+      return results.flat()
     },
     enabled: !!userId && teams.length > 0,
     staleTime: 5 * 60 * 1000,
