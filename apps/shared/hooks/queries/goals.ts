@@ -63,6 +63,7 @@ export function useGoalsQuery(
         }
       }),
     initialData: options.initialData,
+    initialDataUpdatedAt: options.initialData ? Date.now() : undefined,
     staleTime: 5 * 60 * 1000,
   })
 

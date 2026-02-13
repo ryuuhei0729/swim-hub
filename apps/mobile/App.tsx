@@ -1,9 +1,9 @@
 import React from 'react'
 import { enableScreens } from 'react-native-screens'
 import { NavigationContainer } from '@react-navigation/native'
+import { StatusBar } from 'expo-status-bar'
 
 enableScreens()
-import { StatusBar } from 'expo-status-bar'
 import { View, ActivityIndicator, StyleSheet, Text } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import Constants from 'expo-constants'
