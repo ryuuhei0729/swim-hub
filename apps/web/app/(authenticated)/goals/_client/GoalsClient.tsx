@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { useAuth } from '@/contexts'
-import type { Goal, Style, GoalWithMilestones } from '@apps/shared/types'
+import type { Goal, Style, GoalWithMilestones, Competition } from '@apps/shared/types'
 import { useGoalsQuery, useGoalDetailQuery } from '@apps/shared/hooks/queries/goals'
 import { GoalAPI } from '@apps/shared/api/goals'
 import GoalList from '../_components/GoalList'
@@ -13,6 +13,7 @@ import { PlusIcon } from '@heroicons/react/24/outline'
 
 interface GoalsClientProps {
   initialGoals: Goal[]
+  initialCompetitions: Competition[]
   styles: Style[]
 }
 
@@ -21,6 +22,7 @@ interface GoalsClientProps {
  */
 export default function GoalsClient({
   initialGoals,
+  initialCompetitions,
   styles
 }: GoalsClientProps) {
   const { supabase } = useAuth()
@@ -38,6 +40,9 @@ export default function GoalsClient({
     invalidate: invalidateGoals
   } = useGoalsQuery(supabase, {
     styles,
+    initialData: initialGoals.length > 0 || initialCompetitions.length > 0
+      ? { goals: initialGoals, competitions: initialCompetitions }
+      : undefined,
   })
 
   // React Query: 選択中の目標詳細

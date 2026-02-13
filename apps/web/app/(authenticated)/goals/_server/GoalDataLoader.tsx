@@ -20,6 +20,7 @@ export default async function GoalDataLoader() {
     return (
       <GoalsClient
         initialGoals={[]}
+        initialCompetitions={[]}
         styles={[]}
       />
     )
@@ -58,20 +59,10 @@ export default async function GoalDataLoader() {
     })()
   ])
 
-  // goalsにcompetitionとstyle情報を追加
-  const goalsWithDetails = goalsResult.map(goal => {
-    const competition = competitionsResult.find(c => c.id === goal.competition_id)
-    const style = stylesResult.find(s => s.id === goal.style_id)
-    return {
-      ...goal,
-      competition: competition ? { title: competition.title } : undefined,
-      style: style ? { name_jp: style.name_jp } : undefined
-    }
-  })
-
   return (
     <GoalsClient
-      initialGoals={goalsWithDetails}
+      initialGoals={goalsResult}
+      initialCompetitions={competitionsResult}
       styles={stylesResult}
     />
   )

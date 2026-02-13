@@ -33,6 +33,7 @@ export function useGoalsQuery(
   supabase: SupabaseClient,
   options: {
     styles?: Style[]
+    initialData?: GoalsQueryData
   } = {}
 ): UseQueryResult<GoalWithDetails[], Error> & {
   invalidate: () => Promise<void>
@@ -61,6 +62,7 @@ export function useGoalsQuery(
           style: style ? { name_jp: style.name_jp } : undefined
         }
       }),
+    initialData: options.initialData,
     staleTime: 5 * 60 * 1000,
   })
 
