@@ -84,12 +84,24 @@ export default function DayDetailModal({
   // エントリー編集ハンドラー
   const handleEditEntry = async (item: CalendarItem, competitionId: string) => {
     // getUser()とcompetitionステータスチェックを並行実行
-    const [{ data: { user } }, competitionStatusResult] = await Promise.all([
-      supabase.auth.getUser(),
-      item.metadata?.team_id
-        ? supabase.from('competitions').select('entry_status').eq('id', competitionId).single()
-        : Promise.resolve({ data: null, error: null })
-    ])
+    let user: { id: string } | null = null
+    let competitionStatusResult: { data: { entry_status?: string } | null; error: unknown } = { data: null, error: null }
+
+    try {
+      const [authResult, statusResult] = await Promise.all([
+        supabase.auth.getUser(),
+        item.metadata?.team_id
+          ? supabase.from('competitions').select('entry_status').eq('id', competitionId).single()
+          : Promise.resolve({ data: null, error: null })
+      ])
+      user = authResult.data.user
+      competitionStatusResult = statusResult
+    } catch (error) {
+      console.error('データ取得中にエラーが発生しました:', error)
+      window.alert('データの取得に失敗しました。時間をおいて再度お試しください。')
+      return
+    }
+
     if (!user) return
 
     // チームcompetitionの場合、entry_statusをチェック

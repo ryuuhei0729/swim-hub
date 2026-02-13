@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 export function useLocalStorage<T>(key: string, initialValue: T, version = 1) {
   const versionedKey = `${key}_v${version}`
@@ -45,27 +45,34 @@ export function useLocalStorage<T>(key: string, initialValue: T, version = 1) {
 
   const [storedValue, setStoredValue] = useState<T>(getInitialValue)
 
-  // 値を設定する関数（dispatch updater パターンで stale closure を回避）
-  const setValue = useCallback((value: T | ((val: T) => T)) => {
+  // 初回マウント時の書き込みをスキップするためのref
+  const isInitialMount = useRef(true)
+
+  // storedValue が変わったら localStorage に同期する
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      return
+    }
+
     try {
-      setStoredValue((prev) => {
-        const valueToStore = value instanceof Function ? value(prev) : value
-
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem(versionedKey, JSON.stringify(valueToStore))
-        }
-
-        return valueToStore
-      })
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(versionedKey, JSON.stringify(storedValue))
+      }
     } catch (error) {
       console.warn(`Error setting localStorage key "${versionedKey}":`, error)
     }
-  }, [versionedKey])
+  }, [storedValue, versionedKey])
+
+  // 値を設定する関数（純粋な state 更新のみ）
+  const setValue = useCallback((value: T | ((val: T) => T)) => {
+    setStoredValue((prev) => value instanceof Function ? value(prev) : value)
+  }, [])
 
   // 値を削除する関数
   const removeValue = useCallback(() => {
+    setStoredValue(initialValue)
     try {
-      setStoredValue(initialValue)
       if (typeof window !== 'undefined') {
         window.localStorage.removeItem(versionedKey)
       }

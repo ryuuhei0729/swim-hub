@@ -72,7 +72,7 @@ export function useUnansweredAttendancesQuery(
           ])
 
           if (practicesResult.error || competitionsResult.error) {
-            console.error(`チーム ${teamName} のデータ取得に失敗しました:`, practicesResult.error ?? competitionsResult.error)
+            console.error(`チーム ${teamName} のデータ取得に失敗しました:`, { practicesError: practicesResult.error, competitionsError: competitionsResult.error })
             return []
           }
 
@@ -101,7 +101,7 @@ export function useUnansweredAttendancesQuery(
           ])
 
           if (practiceAttendances.error || competitionAttendances.error) {
-            console.error(`チーム ${teamName} の出欠データ取得に失敗しました:`, practiceAttendances.error ?? competitionAttendances.error)
+            console.error(`チーム ${teamName} の出欠データ取得に失敗しました:`, { practiceAttendancesError: practiceAttendances.error, competitionAttendancesError: competitionAttendances.error })
             return []
           }
 

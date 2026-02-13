@@ -151,30 +151,6 @@ describe('Goal Query Hooks', () => {
       expect(result.current.data![0].style).toBeUndefined()
     })
 
-    it('initialDataが提供された場合、初期値として使用される', async () => {
-      const initialGoals = [createMockGoal({ id: 'initial-goal' })]
-
-      // queryFnが解決する前に初期データが表示されることを確認
-      mockGoalApi.getGoals.mockImplementation(
-        () => new Promise(() => {}) // 永遠に解決しない
-      )
-      mockRecordApi.getCompetitions.mockImplementation(
-        () => new Promise(() => {})
-      )
-
-      const { result } = renderQueryHook(() =>
-        useGoalsQuery(mockSupabase as any, { initialData: initialGoals })
-      )
-
-      // initialDataが即座に使用される（competition/styleはundefinedでマッピング）
-      expect(result.current.data).toHaveLength(1)
-      expect(result.current.data![0]).toMatchObject({
-        id: 'initial-goal',
-        competition: undefined,
-        style: undefined,
-      })
-    })
-
     it('invalidate()がgoalKeys.allでinvalidateQueriesを呼び出す', async () => {
       mockGoalApi.getGoals.mockResolvedValue([])
       mockRecordApi.getCompetitions.mockResolvedValue([])

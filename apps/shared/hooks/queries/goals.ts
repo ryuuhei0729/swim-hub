@@ -32,7 +32,6 @@ type GoalsQueryData = {
 export function useGoalsQuery(
   supabase: SupabaseClient,
   options: {
-    initialData?: Goal[]
     styles?: Style[]
   } = {}
 ): UseQueryResult<GoalWithDetails[], Error> & {
@@ -62,9 +61,6 @@ export function useGoalsQuery(
           style: style ? { name_jp: style.name_jp } : undefined
         }
       }),
-    initialData: options.initialData
-      ? { goals: options.initialData, competitions: [] }
-      : undefined,
     staleTime: 5 * 60 * 1000,
   })
 
