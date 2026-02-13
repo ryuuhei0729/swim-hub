@@ -37,12 +37,13 @@ export default async function CompetitionDataLoader() {
       return [] as Style[]
     }),
     // 大会記録をReact Queryキャッシュにprefetch
+    // クライアント側のuseRecordsQueryと同じキー・パラメータに揃える
     user
       ? queryClient.prefetchQuery({
-          queryKey: recordKeys.list({ page: 1, pageSize: 20 }),
+          queryKey: recordKeys.list({ startDate: undefined, endDate: undefined, styleId: undefined, page: 1, pageSize: 20 }),
           queryFn: async () => {
             const recordAPI = new RecordAPI(supabase)
-            return await recordAPI.getRecords()
+            return await recordAPI.getRecords(undefined, undefined, undefined, 20, 0)
           },
         })
       : Promise.resolve()
