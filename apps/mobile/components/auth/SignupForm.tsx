@@ -37,7 +37,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
     // エラーメッセージの日本語化と補足ヒント
     if (typeof errMsg === 'string') {
       const msg = errMsg.toLowerCase()
-      
+
       // サインアップエラーの処理（OWASP準拠）
       if (msg.includes('user already registered')) {
         return 'アカウントの作成に失敗しました。入力内容を確認してから再度お試しください。'
@@ -53,7 +53,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
       ) {
         return 'パスワードが弱すぎます。より強力なパスワードを設定してください。'
       }
-      
+
       // 共通エラーの処理
       if (msg.includes('captcha')) {
         return 'Captcha認証が必要です。Captchaを完了してから再度お試しください。'
@@ -65,7 +65,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
         return 'ネットワークエラーが発生しました。インターネット接続を確認してから再度お試しください。'
       }
     }
-    
+
     // デフォルトのエラーメッセージ
     return __DEV__
       ? `エラーが発生しました: ${errMsg}${statusText}`
@@ -77,30 +77,30 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
       setError('名前を入力してください。')
       return false
     }
-    
+
     if (!email.trim()) {
       setError('メールアドレスを入力してください。')
       return false
     }
-    
+
     // メールアドレス形式の簡易チェック
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
       setError('有効なメールアドレスを入力してください。')
       return false
     }
-    
+
     if (!password) {
       setError('パスワードを入力してください。')
       return false
     }
-    
+
     // パスワード強度チェック（最小6文字、推奨8文字以上）
     if (password.length < 6) {
       setError('パスワードは6文字以上で入力してください。')
       return false
     }
-    
+
     return true
   }
 
@@ -132,8 +132,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
     <View style={styles.container}>
       <View style={styles.formContainer}>
         <View style={styles.header}>
-          <Text style={styles.title}>アカウント作成</Text>
-          <Text style={styles.subtitle}>新しいアカウントを作成</Text>
+          <Text style={styles.title}>メールで登録</Text>
         </View>
 
         {error && (
@@ -252,10 +251,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#111827',
     marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#6B7280',
   },
   errorContainer: {
     backgroundColor: '#FEF2F2',

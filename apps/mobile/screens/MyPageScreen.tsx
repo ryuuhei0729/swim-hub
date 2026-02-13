@@ -19,10 +19,9 @@ import type { UserProfile } from '@swim-hub/shared/types'
  */
 export const MyPageScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>()
-  const { supabase, user, signOut } = useAuth()
+  const { supabase, user } = useAuth()
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
-  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   // プロフィールとチーム情報取得
   const {
@@ -112,23 +111,6 @@ export const MyPageScreen: React.FC = () => {
     [user, supabase, refetchProfile]
   )
 
-  // ログアウト処理
-  const handleLogout = useCallback(async () => {
-    setIsLoggingOut(true)
-    try {
-      const { error } = await signOut()
-      if (error) {
-        console.error('ログアウトエラー:', error)
-        alert('ログアウトに失敗しました。もう一度お試しください。')
-      }
-    } catch (err) {
-      console.error('ログアウト処理エラー:', err)
-      alert('ログアウトに失敗しました。もう一度お試しください。')
-    } finally {
-      setIsLoggingOut(false)
-    }
-  }, [signOut])
-
   // エラー状態
   if (isError && error) {
     return (
@@ -181,7 +163,17 @@ export const MyPageScreen: React.FC = () => {
       >
         {/* ヘッダー */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>マイページ</Text>
+          <View style={styles.headerRow}>
+            <Text style={styles.headerTitle}>マイページ</Text>
+            <Pressable
+              onPress={() => navigation.navigate('Settings')}
+              style={styles.settingsIconButton}
+              accessibilityRole="button"
+              accessibilityLabel="設定画面を開く"
+            >
+              <Feather name="settings" size={22} color="#6B7280" />
+            </Pressable>
+          </View>
           <Text style={styles.headerSubtitle}>プロフィールとベストタイムを管理します</Text>
         </View>
 
@@ -213,44 +205,6 @@ export const MyPageScreen: React.FC = () => {
           ) : (
             <BestTimesTable bestTimes={bestTimes} />
           )}
-        </View>
-
-        {/* 設定ページへのリンク */}
-        <Pressable
-          style={styles.settingsLink}
-          onPress={() => navigation.navigate('Settings')}
-          accessibilityRole="button"
-          accessibilityLabel="設定画面を開く"
-        >
-          <View style={styles.settingsLinkContent}>
-            <Feather name="settings" size={20} color="#9CA3AF" />
-            <View style={styles.settingsLinkText}>
-              <Text style={styles.settingsLinkTitle}>設定</Text>
-              <Text style={styles.settingsLinkDescription}>
-                メールアドレス・ログイン連携・カレンダー連携
-              </Text>
-            </View>
-          </View>
-          <Feather name="chevron-right" size={20} color="#9CA3AF" />
-        </Pressable>
-
-        {/* ログアウトセクション */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>アカウント</Text>
-          </View>
-          <Pressable
-            style={[styles.logoutButton, isLoggingOut && styles.logoutButtonDisabled]}
-            onPress={handleLogout}
-            disabled={isLoggingOut}
-            accessibilityRole="button"
-            accessibilityLabel="ログアウト"
-            accessibilityHint="アカウントからログアウトします"
-          >
-            <Text style={styles.logoutButtonText}>
-              {isLoggingOut ? 'ログアウト中...' : 'ログアウト'}
-            </Text>
-          </Pressable>
         </View>
 
       </ScrollView>
@@ -285,6 +239,15 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 8,
     marginBottom: 8,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  settingsIconButton: {
+    padding: 6,
+    borderRadius: 8,
   },
   headerTitle: {
     fontSize: 24,
@@ -357,53 +320,5 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 14,
     color: '#DC2626',
-  },
-  settingsLink: {
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  settingsLinkContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  settingsLinkText: {
-    flex: 1,
-  },
-  settingsLinkTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#111827',
-  },
-  settingsLinkDescription: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  logoutButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: '#DC2626',
-    alignItems: 'center',
-  },
-  logoutButtonDisabled: {
-    backgroundColor: '#F87171',
-    opacity: 0.6,
-  },
-  logoutButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
   },
 })

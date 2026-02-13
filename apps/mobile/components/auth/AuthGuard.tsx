@@ -1,7 +1,7 @@
 import React from 'react'
 import { View, ActivityIndicator, StyleSheet } from 'react-native'
 import { useAuth } from '@/contexts/AuthProvider'
-import { LoginScreen } from '@/screens/LoginScreen'
+import { EmailLoginScreen } from '@/screens/EmailLoginScreen'
 
 interface AuthGuardProps {
   children: React.ReactNode
@@ -29,7 +29,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
   // 未認証の場合はログイン画面を表示
   if (!isAuthenticated) {
-    return <LoginScreen />
+    return <EmailLoginScreen />
   }
 
   // 認証済みの場合は保護されたコンテンツを表示

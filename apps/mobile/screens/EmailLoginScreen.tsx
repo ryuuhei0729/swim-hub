@@ -1,11 +1,14 @@
 import React from 'react'
-import { ActivityIndicator, StyleSheet, Text } from 'react-native'
+import { View, Pressable, ActivityIndicator, StyleSheet, Text } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useNavigation } from '@react-navigation/native'
+import { Feather } from '@expo/vector-icons'
 import { useAuth } from '@/contexts/AuthProvider'
 import { LoginForm } from '@/components/auth/LoginForm'
 
-export const LoginScreen: React.FC = () => {
+export const EmailLoginScreen: React.FC = () => {
   const { isAuthenticated, loading } = useAuth()
+  const navigation = useNavigation()
 
   // 認証情報を確認中
   if (loading) {
@@ -17,7 +20,6 @@ export const LoginScreen: React.FC = () => {
   }
 
   // 認証済みの場合はリダイレクト中のUIを表示
-  // App.tsxのAppNavigatorが認証状態に応じてMainStackに自動的に切り替えます
   if (isAuthenticated) {
     return (
       <SafeAreaView style={styles.loadingContainer} edges={['top', 'left', 'right', 'bottom']}>
@@ -29,11 +31,19 @@ export const LoginScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
+      <View style={styles.header}>
+        <Pressable
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="戻る"
+        >
+          <Feather name="arrow-left" size={24} color="#111827" />
+        </Pressable>
+      </View>
       <LoginForm
         onSuccess={() => {
-          // ログイン成功時は、App.tsxのAppNavigatorが認証状態を検知して
-          // 自動的にMainStackに切り替えます
-          // この時点でisAuthenticatedがtrueになるため、上記のリダイレクトUIが表示されます
+          // App.tsxのAppNavigatorが認証状態を検知してMainStackに自動切り替え
         }}
       />
     </SafeAreaView>
@@ -44,6 +54,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#EFF6FF',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  backButton: {
+    padding: 8,
   },
   loadingContainer: {
     flex: 1,

@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react'
-import { ScrollView, StyleSheet, RefreshControl } from 'react-native'
+import { View, Text, Pressable, ScrollView, StyleSheet, RefreshControl } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/contexts/AuthProvider'
 import { useUserQuery } from '@apps/shared/hooks/queries/user'
@@ -14,8 +14,9 @@ import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
  * メールアドレス・ログイン連携・カレンダー連携の設定を管理
  */
 export const SettingsScreen: React.FC = () => {
-  const { supabase } = useAuth()
+  const { supabase, signOut } = useAuth()
   const [refreshing, setRefreshing] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const {
     profile,
@@ -24,6 +25,22 @@ export const SettingsScreen: React.FC = () => {
   } = useUserQuery(supabase, {
     enableRealtime: false,
   })
+
+  const handleLogout = useCallback(async () => {
+    setIsLoggingOut(true)
+    try {
+      const { error } = await signOut()
+      if (error) {
+        console.error('ログアウトエラー:', error)
+        alert('ログアウトに失敗しました。もう一度お試しください。')
+      }
+    } catch (err) {
+      console.error('ログアウト処理エラー:', err)
+      alert('ログアウトに失敗しました。もう一度お試しください。')
+    } finally {
+      setIsLoggingOut(false)
+    }
+  }, [signOut])
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true)
@@ -73,6 +90,22 @@ export const SettingsScreen: React.FC = () => {
 
         {/* ログイン連携セクション */}
         <IdentityLinkSettings />
+
+        {/* ログアウトセクション */}
+        <View style={styles.logoutSection}>
+          <Pressable
+            style={[styles.logoutButton, isLoggingOut && styles.logoutButtonDisabled]}
+            onPress={handleLogout}
+            disabled={isLoggingOut}
+            accessibilityRole="button"
+            accessibilityLabel="ログアウト"
+            accessibilityHint="アカウントからログアウトします"
+          >
+            <Text style={styles.logoutButtonText}>
+              {isLoggingOut ? 'ログアウト中...' : 'ログアウト'}
+            </Text>
+          </Pressable>
+        </View>
       </ScrollView>
     </SafeAreaView>
   )
@@ -89,5 +122,25 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     gap: 16,
+    paddingBottom: 32,
+  },
+  logoutSection: {
+    marginTop: 8,
+  },
+  logoutButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#DC2626',
+    alignItems: 'center',
+  },
+  logoutButtonDisabled: {
+    backgroundColor: '#F87171',
+    opacity: 0.6,
+  },
+  logoutButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 })

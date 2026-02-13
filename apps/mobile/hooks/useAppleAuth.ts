@@ -119,7 +119,12 @@ export const useAppleAuth = (): UseAppleAuthReturn => {
       const err = e as AppleAuthError
 
       // ユーザーがキャンセルした場合
-      if (err.code === 'ERR_REQUEST_CANCELED') {
+      // ERR_REQUEST_CANCELED: 明示的なキャンセル
+      // ERR_REQUEST_UNKNOWN + "authorization attempt failed": ダイアログを閉じた場合
+      if (
+        err.code === 'ERR_REQUEST_CANCELED' ||
+        (err.code === 'ERR_REQUEST_UNKNOWN' && err.message?.toLowerCase().includes('authorization attempt failed'))
+      ) {
         setError('認証がキャンセルされました')
         return { success: false, error: new Error('認証がキャンセルされました') }
       }

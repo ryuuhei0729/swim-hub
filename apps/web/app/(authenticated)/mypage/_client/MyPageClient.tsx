@@ -194,9 +194,19 @@ export default function MyPageClient({
     <div className="space-y-4 sm:space-y-6">
       {/* ヘッダー */}
       <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
-          マイページ
-        </h1>
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+            マイページ
+          </h1>
+          <Link
+            href="/settings"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+            aria-label="設定画面を開く"
+          >
+            <Cog6ToothIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+            <span>設定</span>
+          </Link>
+        </div>
         <p className="text-sm sm:text-base text-gray-600">
           プロフィールとベストタイムを管理します
         </p>
@@ -245,22 +255,6 @@ export default function MyPageClient({
           <BestTimesTable bestTimes={bestTimes} />
         </div>
 
-        {/* 設定ページへのリンク */}
-        <Link
-          href="/settings"
-          className="flex items-center justify-between bg-white rounded-lg shadow p-4 sm:p-6 hover:bg-gray-50 transition-colors group"
-        >
-          <div className="flex items-center gap-3">
-            <Cog6ToothIcon className="h-5 w-5 text-gray-400 group-hover:text-gray-600" />
-            <div>
-              <span className="text-sm sm:text-base font-medium text-gray-900">設定</span>
-              <p className="text-xs sm:text-sm text-gray-500">メールアドレス・ログイン連携・カレンダー連携</p>
-            </div>
-          </div>
-          <svg className="h-5 w-5 text-gray-400 group-hover:text-gray-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-          </svg>
-        </Link>
       </div>
 
       {/* プロフィール編集モーダル */}
