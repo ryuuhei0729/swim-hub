@@ -1,4 +1,6 @@
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
+import withBundleAnalyzer from '@next/bundle-analyzer'
+
+const analyzer = withBundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
 })
 
@@ -8,15 +10,15 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
-  
+
   // 環境変数
   env: {
     NEXT_PUBLIC_ENVIRONMENT: process.env.NEXT_PUBLIC_ENVIRONMENT || 'development',
   },
-  
+
   // 外部パッケージ設定
   serverExternalPackages: ['@supabase/supabase-js'],
-  
+
   // 画像設定
   images: {
     // Cloudflare Workers環境では画像最適化が利用できないため無効化
@@ -58,4 +60,4 @@ const nextConfig = {
   },
 }
 
-module.exports = withBundleAnalyzer(nextConfig)
+export default analyzer(nextConfig)

@@ -1,5 +1,27 @@
 import React, { Suspense } from 'react'
+import type { Metadata } from 'next'
+import { createAuthenticatedServerClient } from '@/lib/supabase-server-auth'
 import RecordDataLoader from './_server/RecordDataLoader'
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ teamId: string; competitionId: string }>
+}): Promise<Metadata> {
+  const { competitionId } = await params
+  const supabase = await createAuthenticatedServerClient()
+  const { data: competition } = await supabase
+    .from('competitions')
+    .select('name')
+    .eq('id', competitionId)
+    .single<{ name: string }>()
+
+  return {
+    title: competition?.name
+      ? `${competition.name} - 記録入力 | SwimHub`
+      : '記録入力 | SwimHub',
+  }
+}
 
 interface RecordPageProps {
   params: Promise<{ teamId: string; competitionId: string }>

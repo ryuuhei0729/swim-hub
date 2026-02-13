@@ -1,12 +1,21 @@
 import React from "react";
 import "./globals.css";
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Noto_Sans_JP } from 'next/font/google'
 import { AuthProvider } from '../contexts'
 import QueryProvider from '../providers/QueryProvider'
 import 'react-device-frameset/styles/marvel-devices.min.css'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+})
+
+const notoSansJP = Noto_Sans_JP({
+  subsets: ['latin'],
+  variable: '--font-noto-sans-jp',
+  weight: ['400', '500', '700'],
+})
 
 export const metadata: Metadata = {
   title: 'SwimHub - 水泳選手のための記録管理システム',
@@ -36,7 +45,7 @@ export default function RootLayout({
     // レイアウトの条件分岐は各ルートグループの layout.tsx で処理
     return (
         <html lang="ja" className="h-full">
-            <body className={inter.className}>
+            <body className={`${inter.variable} ${notoSansJP.variable} font-sans`}>
                 <AuthProvider>
                     <QueryProvider>
                         {children}
