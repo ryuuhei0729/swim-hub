@@ -7,15 +7,34 @@ import type { AuthStackParamList } from '@/navigation/types'
 
 interface LoginFormProps {
   onSuccess?: () => void
+  /** ナビゲーション外で使用する場合に指定。指定時はuseNavigationを呼ばない */
+  onResetPassword?: () => void
 }
 
-export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
+/**
+ * ナビゲーションコンテキスト内で使用するLoginForm（useNavigationを使用）
+ */
+const LoginFormWithNavigation: React.FC<Pick<LoginFormProps, 'onSuccess'>> = ({ onSuccess }) => {
+  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>()
+  return (
+    <LoginFormContent
+      onSuccess={onSuccess}
+      onResetPassword={() => navigation.navigate('ResetPassword')}
+    />
+  )
+}
+
+interface LoginFormContentProps {
+  onSuccess?: () => void
+  onResetPassword: (() => void) | null
+}
+
+const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetPassword }) => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>()
   const { signIn } = useAuth()
 
   type AuthError = {
@@ -173,14 +192,16 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
             )}
           </Pressable>
 
-          <Pressable
-            style={styles.linkContainer}
-            onPress={() => navigation.navigate('ResetPassword')}
-            accessibilityRole="button"
-            accessibilityLabel="パスワードを忘れた方はこちら"
-          >
-            <Text style={styles.linkText}>パスワードをお忘れの方はこちら</Text>
-          </Pressable>
+          {onResetPassword && (
+            <Pressable
+              style={styles.linkContainer}
+              onPress={onResetPassword}
+              accessibilityRole="button"
+              accessibilityLabel="パスワードを忘れた方はこちら"
+            >
+              <Text style={styles.linkText}>パスワードをお忘れの方はこちら</Text>
+            </Pressable>
+          )}
         </View>
       </View>
     </View>
@@ -279,3 +300,20 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 })
+
+/**
+ * ログインフォーム
+ * - onResetPassword未指定: ナビゲーション内で使用（useNavigationでResetPasswordに遷移）
+ * - onResetPassword指定: ナビゲーション外で使用（AuthGuardなど）
+ */
+export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onResetPassword }) => {
+  if (onResetPassword !== undefined) {
+    return (
+      <LoginFormContent
+        onSuccess={onSuccess}
+        onResetPassword={onResetPassword}
+      />
+    )
+  }
+  return <LoginFormWithNavigation onSuccess={onSuccess} />
+}
