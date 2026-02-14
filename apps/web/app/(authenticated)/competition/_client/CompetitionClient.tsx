@@ -530,6 +530,7 @@ export default function CompetitionClient({
                     setFilterStyle('')
                     setIncludeRelay(true)
                     setFilterPoolType('')
+                    setFilterFiscalYear('')
                     setCurrentPage(1)
                   })
                 }}
