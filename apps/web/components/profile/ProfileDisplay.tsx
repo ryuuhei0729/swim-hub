@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { PlusIcon, UserPlusIcon, UsersIcon } from '@heroicons/react/24/outline'
 import { formatDate } from '@apps/shared/utils/date'
-import { Avatar } from '@/components/ui'
+import Avatar from '@/components/ui/Avatar'
 import type { TeamMembershipWithUser } from '@apps/shared/types'
 
 interface UserProfile {
@@ -23,7 +23,9 @@ interface ProfileDisplayProps {
   onJoinTeam?: () => void
 }
 
-export default function ProfileDisplay({ profile, teams = [], onCreateTeam, onJoinTeam }: ProfileDisplayProps) {
+const EMPTY_TEAMS: TeamMembershipWithUser[] = []
+
+export default function ProfileDisplay({ profile, teams = EMPTY_TEAMS, onCreateTeam, onJoinTeam }: ProfileDisplayProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -36,7 +38,7 @@ export default function ProfileDisplay({ profile, teams = [], onCreateTeam, onJo
     }
 
     if (isMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('mousedown', handleClickOutside, { passive: true })
     }
 
     return () => {

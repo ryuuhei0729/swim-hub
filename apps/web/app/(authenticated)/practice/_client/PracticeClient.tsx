@@ -1,11 +1,17 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useTransition } from 'react'
+import dynamic from 'next/dynamic'
 import { CalendarDaysIcon, PencilIcon, TrashIcon, ShareIcon } from '@heroicons/react/24/outline'
-import { Button, Pagination } from '@/components/ui'
-import PracticeLogForm from '@/components/forms/PracticeLogForm'
+import Button from '@/components/ui/Button'
+import Pagination from '@/components/ui/Pagination'
+const PracticeLogForm = dynamic(() => import('@/components/forms/PracticeLogForm'), { ssr: false })
 import PracticeTimeModal from '../_components/PracticeTimeModal'
-import { ShareCardModal } from '@/components/share'
+
+const ShareCardModal = dynamic(
+  () => import('@/components/share/ShareCardModal').then(mod => ({ default: mod.ShareCardModal })),
+  { ssr: false }
+)
 import type { PracticeShareData, PracticeMenuItem } from '@/components/share'
 import { format, isAfter, startOfDay } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -26,10 +32,8 @@ import type {
   PracticeWithLogs,
   Style
 } from '@apps/shared/types'
-import {
-  usePracticeFilterStore,
-  usePracticeRecordStore
-} from '@/stores'
+import { usePracticeFilterStore } from '@/stores/practice/practiceStore'
+import { usePracticeRecordStore } from '@/stores/form/practiceRecordStore'
 import type {
   PracticeLogWithFormattedData
 } from '@/stores/form/practiceRecordStore'
@@ -55,6 +59,7 @@ export default function PracticeClient({
   const pageSize = 20
   const [showShareModal, setShowShareModal] = useState(false)
   const [shareData, setShareData] = useState<PracticeShareData | null>(null)
+  const [, startTransition] = useTransition()
 
   // Zustandストア
   const {
@@ -86,11 +91,13 @@ export default function PracticeClient({
     setLoading,
   } = usePracticeRecordStore()
 
-  // サーバー側から取得したデータをストアに設定
-  React.useEffect(() => {
+  // サーバー側から取得したデータをストアに設定（初回のみ）
+  const initializedRef = React.useRef(false)
+  if (!initializedRef.current) {
     setStyles(styles)
     setTags(tags)
-  }, [styles, tags, setStyles, setTags])
+    initializedRef.current = true
+  }
 
   // 練習記録を取得（リアルタイム更新用）
   const {
@@ -110,35 +117,44 @@ export default function PracticeClient({
   const updatePracticeLogMutation = useUpdatePracticeLogMutation(supabase)
   const deletePracticeLogMutation = useDeletePracticeLogMutation(supabase)
 
+  // React Query mutation状態から派生
+  const isAnyMutating = createPracticeMutation.isPending
+    || updatePracticeMutation.isPending
+    || deletePracticeMutation.isPending
+    || createPracticeLogMutation.isPending
+    || updatePracticeLogMutation.isPending
+    || deletePracticeLogMutation.isPending
+
   // サーバー側で取得した初期データとリアルタイム更新されたデータを統合
   // React Queryのキャッシュを使用
   const displayPractices = practices
 
   // practice_logsを平坦化し、タグデータを整形
-  const practiceLogs: PracticeLogWithFormattedData[] = displayPractices.flatMap(practice => 
-    (practice.practice_logs || []).map((log: PracticeLogWithTags): PracticeLogWithFormattedData => {
-      // タグデータを整形（practice_log_tags -> tags に変換）
-      const tags: PracticeTag[] = log.practice_log_tags.map((plt) => plt.practice_tags)
+  const practiceLogs = useMemo<PracticeLogWithFormattedData[]>(() =>
+    displayPractices.flatMap(practice =>
+      (practice.practice_logs || []).map((log: PracticeLogWithTags): PracticeLogWithFormattedData => {
+        // タグデータを整形（practice_log_tags -> tags に変換）
+        const tags: PracticeTag[] = log.practice_log_tags.map((plt) => plt.practice_tags)
 
-      return {
-        ...log,
-        tags, // 整形したタグを追加
-        practice: {
-          id: practice.id,
-          date: practice.date,
-          place: practice.place,
-          note: practice.note
-        },
-        practiceId: practice.id
-      }
-    })
-  )
+        return {
+          ...log,
+          tags, // 整形したタグを追加
+          practice: {
+            id: practice.id,
+            date: practice.date,
+            place: practice.place,
+            note: practice.note
+          },
+          practiceId: practice.id
+        }
+      })
+    ), [displayPractices])
 
   // 今日の日付（時刻を0時0分0秒にリセット）
   const today = useMemo(() => startOfDay(new Date()), [])
 
   // タグフィルタリングロジック + 日付フィルタリング（今日以前のみ）
-  const filteredPracticeLogs = practiceLogs.filter((log) => {
+  const filteredPracticeLogs = useMemo(() => practiceLogs.filter((log) => {
     // 日付フィルタリング：今日より未来の日付は除外
     if (log.practice?.date) {
       const practiceDate = startOfDay(new Date(log.practice.date))
@@ -146,13 +162,13 @@ export default function PracticeClient({
         return false
       }
     }
-    
+
     // タグフィルタリング
     if (selectedTagIds.length === 0) return true
-    
+
     const logTagIds = (log.tags || []).map((tag) => tag.id)
     return selectedTagIds.some(tagId => logTagIds.includes(tagId))
-  })
+  }), [practiceLogs, selectedTagIds, today])
   
   // 日付の降順でソート
   const sortedPracticeLogs = useMemo(() => {
@@ -172,10 +188,13 @@ export default function PracticeClient({
 
   const totalPages = Math.ceil(sortedPracticeLogs.length / pageSize)
 
-  // フィルタ変更時にページをリセット
-  React.useEffect(() => {
-    setCurrentPage(1)
-  }, [selectedTagIds])
+  // タグフィルター変更ハンドラー（useTransitionでUI応答性を維持 + ページリセット）
+  const handleTagFilterChange = (newTagIds: string[]) => {
+    startTransition(() => {
+      setSelectedTags(newTagIds)
+      setCurrentPage(1)
+    })
+  }
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
@@ -470,7 +489,7 @@ export default function PracticeClient({
     }
   }
 
-  if (loading || isLoading || createPracticeMutation.isPending || updatePracticeMutation.isPending || deletePracticeMutation.isPending || createPracticeLogMutation.isPending || updatePracticeLogMutation.isPending || deletePracticeLogMutation.isPending) {
+  if (loading || isLoading || isAnyMutating) {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-lg shadow p-6">
@@ -543,9 +562,9 @@ export default function PracticeClient({
                   key={tag.id}
                   onClick={() => {
                     if (selectedTagIds.includes(tag.id)) {
-                      setSelectedTags(selectedTagIds.filter(id => id !== tag.id))
+                      handleTagFilterChange(selectedTagIds.filter(id => id !== tag.id))
                     } else {
-                      setSelectedTags([...selectedTagIds, tag.id])
+                      handleTagFilterChange([...selectedTagIds, tag.id])
                     }
                   }}
                   className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
@@ -562,7 +581,7 @@ export default function PracticeClient({
               ))}
               {selectedTagIds.length > 0 && (
                 <button
-                  onClick={() => setSelectedTags([])}
+                  onClick={() => handleTagFilterChange([])}
                   className="px-3 py-1 rounded-full text-sm font-medium text-gray-500 bg-gray-100 hover:bg-gray-200"
                 >
                   クリア

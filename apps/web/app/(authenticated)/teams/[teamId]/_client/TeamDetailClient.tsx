@@ -1,20 +1,21 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts'
-import { 
-  TeamTabs,
-  TeamMemberManagement,
-  TeamPractices,
-  TeamCompetitions
-} from '@/components/team'
-import MyMonthlyAttendance from '@/components/team/MyMonthlyAttendance'
+import TeamTabs from '@/components/team/TeamTabs'
 import MemberDetailModal from '@/components/team/MemberDetailModal'
+
+// タブコンテンツは一度に1つしか表示されないため遅延読み込み
+const TeamMemberManagement = dynamic(() => import('@/components/team/TeamMemberManagement'))
+const TeamPractices = dynamic(() => import('@/components/team/TeamPractices'))
+const TeamCompetitions = dynamic(() => import('@/components/team/TeamCompetitions'))
+const MyMonthlyAttendance = dynamic(() => import('@/components/team/MyMonthlyAttendance'))
 import type { MemberDetail } from '@/components/team/MemberDetailModal'
 import type { TeamTabType } from '@/components/team/TeamTabs'
 import { TeamMembership, TeamWithMembers } from '@swim-hub/shared/types'
-import { useTeamDetailStore } from '@/stores'
+import { useTeamDetailStore } from '@/stores/form/teamDetailStore'
 import { ClipboardDocumentIcon, CheckIcon } from '@heroicons/react/24/outline'
 
 interface TeamDetailClientProps {

@@ -4,7 +4,8 @@
 
 import type { PracticeImageData } from '@/components/forms/PracticeBasicForm'
 import type { CompetitionImageData } from '@/components/forms/CompetitionBasicForm'
-import { useCompetitionFormStore, usePracticeFormStore } from '@/stores'
+import { useCompetitionFormStore } from '@/stores/competition/competitionStore'
+import { usePracticeFormStore } from '@/stores/practice/practiceStore'
 import type {
   EditingData,
   EntryFormData,
@@ -257,47 +258,54 @@ export function useDashboardHandlers({
           .eq('practice_log_id', practiceLogId)
         
         if (menu.tags && menu.tags.length > 0) {
-          for (const tag of menu.tags) {
-            const insertData: PracticeLogTagInsert = {
-              practice_log_id: practiceLogId,
-              practice_tag_id: tag.id
-            }
-            // Supabaseの型推論が正しく機能しないため、型アサーションを使用
-            const queryBuilder = supabase.from('practice_log_tags') as unknown as {
-              insert: (values: PracticeLogTagInsert) => Promise<{ error: { message: string } | null }>
-            }
-            const { error } = await queryBuilder.insert(insertData)
-            
+          // タグを並列insert
+          const queryBuilder = supabase.from('practice_log_tags') as unknown as {
+            insert: (values: PracticeLogTagInsert) => Promise<{ error: { message: string } | null }>
+          }
+          const tagResults = await Promise.all(
+            menu.tags.map(tag => {
+              const insertData: PracticeLogTagInsert = {
+                practice_log_id: practiceLogId,
+                practice_tag_id: tag.id
+              }
+              return queryBuilder.insert(insertData)
+            })
+          )
+          for (const { error } of tagResults) {
             if (error) {
               console.error('練習ログタグの挿入に失敗しました:', error)
               throw new Error(`練習ログタグの挿入に失敗しました: ${error.message}`)
             }
           }
         }
-        
+
         const { data: existingTimes } = await supabase
           .from('practice_times')
           .select('id')
           .eq('practice_log_id', practiceLogId)
-        
+
         if (existingTimes && existingTimes.length > 0) {
-          for (const time of existingTimes as Array<{ id: string }>) {
-            await deletePracticeTime(time.id)
-          }
+          // 時間を並列delete
+          await Promise.all(
+            (existingTimes as Array<{ id: string }>).map(time => deletePracticeTime(time.id))
+          )
         }
-        
+
         if (menu.times && menu.times.length > 0) {
-          for (const timeEntry of menu.times) {
-            if (timeEntry.time > 0) {
-              await createPracticeTime({
-                user_id: user.id,
-                practice_log_id: practiceLogId,
-                set_number: timeEntry.setNumber,
-                rep_number: timeEntry.repNumber,
-                time: timeEntry.time
-              } as import('@swim-hub/shared/types').PracticeTimeInsert)
-            }
-          }
+          // 時間を並列create
+          await Promise.all(
+            menu.times
+              .filter(timeEntry => timeEntry.time > 0)
+              .map(timeEntry =>
+                createPracticeTime({
+                  user_id: user.id,
+                  practice_log_id: practiceLogId,
+                  set_number: timeEntry.setNumber,
+                  rep_number: timeEntry.repNumber,
+                  time: timeEntry.time
+                } as import('@swim-hub/shared/types').PracticeTimeInsert)
+              )
+          )
         }
       } else {
         // ストアから直接最新の値を取得（useCallbackのクロージャー問題を回避）
@@ -322,36 +330,42 @@ export function useDashboardHandlers({
           const createdLog = await createPracticeLog(logInput)
           
           if (menu.tags && menu.tags.length > 0 && createdLog) {
-            for (const tag of menu.tags) {
-              const insertData: PracticeLogTagInsert = {
-                practice_log_id: createdLog.id,
-                practice_tag_id: tag.id
-              }
-              // Supabaseの型推論が正しく機能しないため、型アサーションを使用
-              const queryBuilder = supabase.from('practice_log_tags') as unknown as {
-                insert: (values: PracticeLogTagInsert) => Promise<{ error: { message: string } | null }>
-              }
-              const { error } = await queryBuilder.insert(insertData)
-              
+            // タグを並列insert
+            const queryBuilder = supabase.from('practice_log_tags') as unknown as {
+              insert: (values: PracticeLogTagInsert) => Promise<{ error: { message: string } | null }>
+            }
+            const tagResults = await Promise.all(
+              menu.tags.map(tag => {
+                const insertData: PracticeLogTagInsert = {
+                  practice_log_id: createdLog.id,
+                  practice_tag_id: tag.id
+                }
+                return queryBuilder.insert(insertData)
+              })
+            )
+            for (const { error } of tagResults) {
               if (error) {
                 console.error('練習ログタグの挿入に失敗しました:', error)
                 throw new Error(`練習ログタグの挿入に失敗しました: ${error.message}`)
               }
             }
           }
-          
+
           if (menu.times && menu.times.length > 0 && createdLog) {
-            for (const timeEntry of menu.times) {
-              if (timeEntry.time > 0) {
-                await createPracticeTime({
-                  user_id: user.id,
-                  practice_log_id: createdLog.id,
-                  set_number: timeEntry.setNumber,
-                  rep_number: timeEntry.repNumber,
-                  time: timeEntry.time
-                })
-              }
-            }
+            // 時間を並列create
+            await Promise.all(
+              menu.times
+                .filter(timeEntry => timeEntry.time > 0)
+                .map(timeEntry =>
+                  createPracticeTime({
+                    user_id: user.id,
+                    practice_log_id: createdLog.id,
+                    set_number: timeEntry.setNumber,
+                    rep_number: timeEntry.repNumber,
+                    time: timeEntry.time
+                  })
+                )
+            )
           }
         }
       }

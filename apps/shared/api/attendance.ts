@@ -28,12 +28,14 @@ export class AttendanceAPI {
   async getAttendanceByPractice(practiceId: string): Promise<TeamAttendanceWithDetails[]> {
     await requireAuth(this.supabase)
 
-    // practiceに紐づくteam_idを取得
-    const { data: practiceData } = await this.supabase
+    // まずteam_idを取得してメンバーシップを確認
+    const { data: practiceData, error: practiceError } = await this.supabase
       .from('practices')
       .select('team_id')
       .eq('id', practiceId)
       .single()
+
+    if (practiceError) throw practiceError
 
     if (!practiceData || !practiceData.team_id) {
       throw new Error('チーム練習ではありません')
@@ -41,6 +43,7 @@ export class AttendanceAPI {
 
     await requireTeamMembership(this.supabase, practiceData.team_id)
 
+    // メンバーシップ確認後に出欠データを取得
     const { data, error } = await this.supabase
       .from('team_attendance')
       .select(`
@@ -66,12 +69,14 @@ export class AttendanceAPI {
   async getAttendanceByCompetition(competitionId: string): Promise<TeamAttendanceWithDetails[]> {
     await requireAuth(this.supabase)
 
-    // competitionに紐づくteam_idを取得
-    const { data: competitionData } = await this.supabase
+    // まずteam_idを取得してメンバーシップを確認
+    const { data: competitionData, error: competitionError } = await this.supabase
       .from('competitions')
       .select('team_id')
       .eq('id', competitionId)
       .single()
+
+    if (competitionError) throw competitionError
 
     if (!competitionData || !competitionData.team_id) {
       throw new Error('チーム大会ではありません')
@@ -79,6 +84,7 @@ export class AttendanceAPI {
 
     await requireTeamMembership(this.supabase, competitionData.team_id)
 
+    // メンバーシップ確認後に出欠データを取得
     const { data, error } = await this.supabase
       .from('team_attendance')
       .select(`

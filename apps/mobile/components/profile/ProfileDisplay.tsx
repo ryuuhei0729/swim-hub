@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
-import { View, Text, Image, StyleSheet, Pressable } from 'react-native'
+import { View, Text, StyleSheet, Pressable } from 'react-native'
+import { Image } from 'expo-image'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { format } from 'date-fns'
@@ -43,7 +44,7 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({ profile, teams =
         <Image
           source={{ uri: profile.profile_image_path }}
           style={styles.avatarImage}
-          resizeMode="cover"
+          contentFit="cover"
         />
       )
     }

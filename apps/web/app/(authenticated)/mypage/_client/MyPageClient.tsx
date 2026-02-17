@@ -4,14 +4,17 @@ import React, { useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts'
 import { useUserQuery, userKeys } from '@apps/shared/hooks'
-import { TeamCoreAPI } from '@apps/shared/api/teams'
+import { useTeamsQuery } from '@apps/shared/hooks/queries/teams'
+import { teamKeys } from '@apps/shared/hooks/queries/keys'
 import { useQueryClient } from '@tanstack/react-query'
 import { TrophyIcon, DocumentArrowUpIcon, Cog6ToothIcon } from '@heroicons/react/24/outline'
 import BestTimesTable from '@/components/profile/BestTimesTable'
 import ProfileDisplay from '@/components/profile/ProfileDisplay'
 import ProfileEditModal from '@/components/profile/ProfileEditModal'
-import TeamCreateModal from '@/components/team/TeamCreateModal'
-import TeamJoinModal from '@/components/team/TeamJoinModal'
+import dynamic from 'next/dynamic'
+
+const TeamCreateModal = dynamic(() => import('@/components/team/TeamCreateModal'))
+const TeamJoinModal = dynamic(() => import('@/components/team/TeamJoinModal'))
 import type { UserUpdate } from '@apps/shared/types'
 
 interface BestTime {
@@ -70,37 +73,12 @@ export default function MyPageClient({
     initialProfile: initialProfile as import('@swim-hub/shared/types').UserProfile | null,
   })
   
-  // チーム一覧を直接取得（useTeamsQueryが空配列を返す問題の回避）
-  const [teams, setTeams] = React.useState<import('@swim-hub/shared/types').TeamMembershipWithUser[]>([])
-
-  React.useEffect(() => {
-    if (!user || !supabase) {
-      setTeams([])
-      return
-    }
-    
-    const loadTeams = async () => {
-      try {
-        const coreApi = new TeamCoreAPI(supabase)
-        const loadedTeams = await coreApi.getMyTeams()
-        setTeams(loadedTeams)
-      } catch (error) {
-        console.error('MyPageClient - getMyTeams error:', error)
-        setTeams([])
-      }
-    }
-    
-    loadTeams()
-  }, [user, supabase])
-  const [bestTimes, setBestTimes] = useState<BestTime[]>(initialBestTimes)
+  // チーム一覧を取得（React Queryで管理）
+  const { teams = [] } = useTeamsQuery(supabase)
+  const [bestTimes] = useState<BestTime[]>(initialBestTimes)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isCreateTeamModalOpen, setIsCreateTeamModalOpen] = useState(false)
   const [isJoinTeamModalOpen, setIsJoinTeamModalOpen] = useState(false)
-
-  // サーバー側から取得した初期データを設定
-  React.useEffect(() => {
-    setBestTimes(initialBestTimes)
-  }, [initialBestTimes])
 
   // queryProfileをUserProfile型に変換
   const profile: UserProfile | null = queryProfile ? {
@@ -167,16 +145,9 @@ export default function MyPageClient({
   }, [user, supabase, queryClient])
 
   // チーム一覧を再取得する関数
-  const reloadTeams = useCallback(async () => {
-    if (!user || !supabase) return
-    try {
-      const coreApi = new TeamCoreAPI(supabase)
-      const loadedTeams = await coreApi.getMyTeams()
-      setTeams(loadedTeams)
-    } catch (error) {
-      console.error('チーム一覧の再取得エラー:', error)
-    }
-  }, [user, supabase])
+  const reloadTeams = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: teamKeys.list() })
+  }, [queryClient])
 
   // チーム作成成功時のハンドラー
   const handleCreateTeamSuccess = useCallback((_teamId: string) => {

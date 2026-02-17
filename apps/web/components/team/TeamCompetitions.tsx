@@ -15,11 +15,11 @@ import {
 } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { useCompetitionFormStore } from '@/stores'
+import { useCompetitionFormStore } from '@/stores/competition/competitionStore'
 import type { CompetitionImageData } from '@/components/forms/CompetitionBasicForm'
 import TeamCompetitionEntryModal from './TeamCompetitionEntryModal'
 import TeamCompetitionRecordsModal from './TeamCompetitionRecordsModal'
-import { Pagination } from '@/components/ui'
+import Pagination from '@/components/ui/Pagination'
 
 const CompetitionBasicForm = dynamic(
   () => import('@/components/forms/CompetitionBasicForm'),

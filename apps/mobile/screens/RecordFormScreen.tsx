@@ -12,6 +12,7 @@ import {
   useReplaceSplitTimesMutation,
 } from '@apps/shared/hooks/queries/records'
 import { useRecordFormStore } from '@/stores/recordStore'
+import { useShallow } from 'zustand/react/shallow'
 import { StyleAPI } from '@apps/shared/api/styles'
 import { formatTime } from '@/utils/formatters'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
@@ -67,7 +68,31 @@ export const RecordFormScreen: React.FC = () => {
     clearErrors,
     initialize,
     reset,
-  } = useRecordFormStore()
+  } = useRecordFormStore(
+    useShallow((state) => ({
+      competitionId: state.competitionId,
+      styleId: state.styleId,
+      time: state.time,
+      reactionTime: state.reactionTime,
+      note: state.note,
+      splitTimes: state.splitTimes,
+      isLoading: state.isLoading,
+      errors: state.errors,
+      setCompetitionId: state.setCompetitionId,
+      setStyleId: state.setStyleId,
+      setTime: state.setTime,
+      setReactionTime: state.setReactionTime,
+      setNote: state.setNote,
+      addSplitTime: state.addSplitTime,
+      removeSplitTime: state.removeSplitTime,
+      updateSplitTime: state.updateSplitTime,
+      setLoading: state.setLoading,
+      setError: state.setError,
+      clearErrors: state.clearErrors,
+      initialize: state.initialize,
+      reset: state.reset,
+    }))
+  )
 
   // 既存データの取得（編集モード時）
   const [loadingRecord, setLoadingRecord] = useState(isEditMode)

@@ -1,5 +1,6 @@
 import React from 'react'
-import { View, Text, Pressable, StyleSheet, Image } from 'react-native'
+import { View, Text, Pressable, StyleSheet } from 'react-native'
+import { Image } from 'expo-image'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -16,7 +17,7 @@ export const WelcomeScreen: React.FC = () => {
           <Image
             source={require('@/assets/icons/app-icon.png')}
             style={styles.logo}
-            resizeMode="contain"
+            contentFit="contain"
           />
           <Text style={styles.appName}>SwimHub</Text>
         </View>

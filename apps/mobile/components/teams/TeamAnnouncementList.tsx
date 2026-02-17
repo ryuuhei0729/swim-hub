@@ -1,5 +1,6 @@
 import React from 'react'
-import { View, Text, FlatList, Pressable, StyleSheet } from 'react-native'
+import { View, Text, Pressable, StyleSheet } from 'react-native'
+import { FlashList } from '@shopify/flash-list'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import type { TeamAnnouncement } from '@swim-hub/shared/types'
@@ -71,7 +72,7 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
 
       {/* お知らせ一覧 */}
       {announcements.length > 0 ? (
-        <FlatList
+        <FlashList
           data={announcements}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => {

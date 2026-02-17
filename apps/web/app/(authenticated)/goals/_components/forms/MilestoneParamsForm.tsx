@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Input } from '@/components/ui'
+import Input from '@/components/ui/Input'
 import type { MilestoneTimeParams, MilestoneRepsTimeParams, MilestoneSetParams } from '@apps/shared/types'
 import { formatTimeBest, parseTimeToSeconds } from '@/utils/formatters'
 import StyleSelector from '../shared/StyleSelector'

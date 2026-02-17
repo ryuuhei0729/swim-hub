@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react'
-import { View, Text, FlatList, StyleSheet, Pressable, RefreshControl } from 'react-native'
+import { View, Text, StyleSheet, Pressable, RefreshControl } from 'react-native'
+import { FlashList } from '@shopify/flash-list'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -146,7 +147,7 @@ export const TeamsScreen: React.FC = () => {
 
       {/* チーム一覧 */}
       {displayTeams.length > 0 ? (
-        <FlatList
+        <FlashList
           data={displayTeams}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
@@ -159,12 +160,6 @@ export const TeamsScreen: React.FC = () => {
               tintColor="#2563EB"
             />
           }
-          // パフォーマンス最適化
-          initialNumToRender={10}
-          maxToRenderPerBatch={10}
-          windowSize={10}
-          removeClippedSubviews={true}
-          updateCellsBatchingPeriod={50}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>チームがありません</Text>

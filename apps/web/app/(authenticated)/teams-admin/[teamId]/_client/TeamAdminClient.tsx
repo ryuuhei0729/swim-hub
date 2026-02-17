@@ -1,20 +1,21 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts'
-import { 
-  TeamAnnouncements,
-  TeamMemberManagement,
-  TeamPractices,
-  TeamCompetitions,
-  TeamSettings,
-  TeamBulkRegister
-} from '@/components/team'
 import TeamAdminTabs from '@/components/team/TeamAdminTabs'
 import type { TeamAdminTabType } from '@/components/team/TeamAdminTabs'
-import { AdminMonthlyAttendance } from '@/components/team'
 import MemberDetailModal from '@/components/team/MemberDetailModal'
+
+// タブコンテンツは一度に1つしか表示されないため遅延読み込み
+const TeamAnnouncements = dynamic(() => import('@/components/team/TeamAnnouncements').then(m => ({ default: m.TeamAnnouncements })))
+const TeamMemberManagement = dynamic(() => import('@/components/team/TeamMemberManagement'))
+const TeamPractices = dynamic(() => import('@/components/team/TeamPractices'))
+const TeamCompetitions = dynamic(() => import('@/components/team/TeamCompetitions'))
+const TeamSettings = dynamic(() => import('@/components/team/TeamSettings'))
+const TeamBulkRegister = dynamic(() => import('@/components/team/TeamBulkRegister'))
+const AdminMonthlyAttendance = dynamic(() => import('@/components/team/AdminMonthlyAttendance'))
 import type { MemberDetail } from '@/components/team/MemberDetailModal'
 import { TeamMembership, TeamWithMembers } from '@swim-hub/shared/types'
 import { useTeamAdminStore } from '@/stores/form/teamAdminStore'

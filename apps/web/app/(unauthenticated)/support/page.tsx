@@ -2,6 +2,8 @@ import React from 'react'
 import Link from 'next/link'
 import { ArrowLeftIcon, QuestionMarkCircleIcon, BookOpenIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
 
+export const dynamic = 'force-static'
+
 export const metadata = {
   title: 'サポート・FAQ | SwimHub',
   description: 'SwimHubのサポート情報とよくある質問',

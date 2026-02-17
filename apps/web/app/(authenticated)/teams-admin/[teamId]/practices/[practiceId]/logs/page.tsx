@@ -1,5 +1,27 @@
 import React, { Suspense } from 'react'
+import type { Metadata } from 'next'
+import { createAuthenticatedServerClient } from '@/lib/supabase-server-auth'
 import PracticeLogDataLoader from './_server/PracticeLogDataLoader'
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ teamId: string; practiceId: string }>
+}): Promise<Metadata> {
+  const { practiceId } = await params
+  const supabase = await createAuthenticatedServerClient()
+  const { data: practice } = await supabase
+    .from('practices')
+    .select('title')
+    .eq('id', practiceId)
+    .single<{ title: string | null }>()
+
+  return {
+    title: practice?.title
+      ? `${practice.title} - 練習記録 | SwimHub`
+      : '練習記録 | SwimHub',
+  }
+}
 
 interface PracticeLogPageProps {
   params: Promise<{ teamId: string; practiceId: string }>

@@ -311,7 +311,8 @@ export const PracticeLogFormScreen: React.FC = () => {
   }
 
   // タイムデータのストア
-  const { getTimes, setCurrentMenuId } = usePracticeTimeStore()
+  const getTimes = usePracticeTimeStore((state) => state.getTimes)
+  const setCurrentMenuId = usePracticeTimeStore((state) => state.setCurrentMenuId)
 
   // タイム入力画面から戻ってきた時の処理
   useEffect(() => {

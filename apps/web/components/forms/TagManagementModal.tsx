@@ -2,7 +2,8 @@
 
 import React, { useState, useMemo } from 'react'
 import { XMarkIcon, TrashIcon } from '@heroicons/react/24/outline'
-import { Button, Input } from '@/components/ui'
+import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
 
 import { PracticeTag } from '@apps/shared/types'
 

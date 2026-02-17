@@ -11,7 +11,7 @@ import { usePracticeTagsQuery } from '@swim-hub/shared/hooks/queries/practices'
 import type { CreatePracticeLogTemplateInput, PracticeLogTemplate } from '@swim-hub/shared/types'
 import type { PracticeTag } from '@swim-hub/shared/types'
 import TagInput from '@/components/forms/TagInput'
-import { Button } from '@/components/ui'
+import Button from '@/components/ui/Button'
 
 interface PracticeLogTemplateCreateModalProps {
   isOpen: boolean

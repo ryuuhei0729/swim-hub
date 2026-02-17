@@ -4,7 +4,7 @@ import React from 'react'
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { LoadingSpinner } from '@/components/ui'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 interface CalendarHeaderProps {
   currentDate: Date

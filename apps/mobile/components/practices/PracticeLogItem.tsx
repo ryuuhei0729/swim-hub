@@ -11,7 +11,7 @@ interface PracticeLogItemProps {
  * 練習ログアイテムコンポーネント
  * 練習ログの1件を表示（種目、距離、セット数、レップ数、タイム、タグ）
  */
-export const PracticeLogItem: React.FC<PracticeLogItemProps> = ({ log }) => {
+export const PracticeLogItem: React.FC<PracticeLogItemProps> = React.memo(({ log }) => {
   // 種目の表示（"Fr" → "自由形" に変換）
   const styleDisplay = getStyleLabel(log.style)
   
@@ -87,7 +87,7 @@ export const PracticeLogItem: React.FC<PracticeLogItemProps> = ({ log }) => {
       )}
     </View>
   )
-}
+})
 
 const styles = StyleSheet.create({
   container: {

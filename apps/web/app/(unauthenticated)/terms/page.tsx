@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { ArrowLeftIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 import { formatDate } from '@apps/shared/utils/date'
 
+export const revalidate = 3600 // 1時間ごとに再生成
+
 export const metadata = {
   title: '利用規約 | SwimHub',
   description: 'SwimHubの利用規約',

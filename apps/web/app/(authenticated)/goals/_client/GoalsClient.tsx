@@ -1,10 +1,10 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState } from 'react'
 import { useAuth } from '@/contexts'
+import type { Goal, Style, GoalWithMilestones, Competition } from '@apps/shared/types'
+import { useGoalsQuery, useGoalDetailQuery } from '@apps/shared/hooks/queries/goals'
 import { GoalAPI } from '@apps/shared/api/goals'
-import { RecordAPI } from '@apps/shared/api/records'
-import type { Goal, Style, GoalWithMilestones } from '@apps/shared/types'
 import GoalList from '../_components/GoalList'
 import GoalDetail from '../_components/GoalDetail'
 import GoalCreateModal from '../_components/GoalCreateModal'
@@ -13,6 +13,7 @@ import { PlusIcon } from '@heroicons/react/24/outline'
 
 interface GoalsClientProps {
   initialGoals: Goal[]
+  initialCompetitions: Competition[]
   styles: Style[]
 }
 
@@ -21,99 +22,60 @@ interface GoalsClientProps {
  */
 export default function GoalsClient({
   initialGoals,
+  initialCompetitions,
   styles
 }: GoalsClientProps) {
   const { supabase } = useAuth()
-  const [goals, setGoals] = useState<(Goal & { competition?: { title: string | null }; style?: { name_jp: string } })[]>(initialGoals as (Goal & { competition?: { title: string | null }; style?: { name_jp: string } })[])
-  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null)
-  const [selectedGoal, setSelectedGoal] = useState<GoalWithMilestones | null>(null)
+  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(
+    initialGoals.length > 0 ? initialGoals[0].id : null
+  )
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingGoal, setEditingGoal] = useState<GoalWithMilestones | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const goalAPI = useMemo(() => new GoalAPI(supabase), [supabase])
-  const recordAPI = useMemo(() => new RecordAPI(supabase), [supabase])
 
-  // 初期目標を選択（1つ以上ある場合）
-  useEffect(() => {
-    if (initialGoals.length > 0 && !selectedGoalId) {
-      setSelectedGoalId(initialGoals[0].id)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // 初回マウント時のみ実行
+  // React Query: 目標一覧
+  const {
+    data: goals = [],
+    error: goalsError,
+    invalidate: invalidateGoals
+  } = useGoalsQuery(supabase, {
+    styles,
+    initialData: initialGoals.length > 0 || initialCompetitions.length > 0
+      ? { goals: initialGoals, competitions: initialCompetitions }
+      : undefined,
+  })
 
-  // 選択された目標の詳細を取得
-  useEffect(() => {
-    if (selectedGoalId) {
-      setIsLoading(true)
-      goalAPI.getGoalWithMilestones(selectedGoalId)
-        .then((goal) => {
-          setSelectedGoal(goal)
-          setIsLoading(false)
-        })
-        .catch((error) => {
-          console.error('目標詳細取得エラー:', error)
-          setSelectedGoal(null)
-          setIsLoading(false)
-        })
-    } else {
-      setSelectedGoal(null)
-    }
-  }, [selectedGoalId, supabase, goalAPI])
-
-  // 目標一覧を再取得
-  const refreshGoals = async () => {
-    try {
-      const [updatedGoals, competitions] = await Promise.all([
-        goalAPI.getGoals(),
-        recordAPI.getCompetitions()
-      ])
-      
-      // goalsにcompetitionとstyle情報を追加
-      const goalsWithDetails = updatedGoals.map(goal => {
-        const competition = competitions.find(c => c.id === goal.competition_id)
-        const style = styles.find(s => s.id === goal.style_id)
-        return {
-          ...goal,
-          competition: competition ? { title: competition.title } : undefined,
-          style: style ? { name_jp: style.name_jp } : undefined
-        }
-      })
-      
-      setGoals(goalsWithDetails)
-    } catch (error) {
-      console.error('目標一覧取得エラー:', error)
-    }
-  }
+  // React Query: 選択中の目標詳細
+  const {
+    data: selectedGoal,
+    isLoading,
+    error: goalError,
+    invalidate: invalidateGoalDetail
+  } = useGoalDetailQuery(supabase, selectedGoalId)
 
   // 目標作成後のコールバック
   const handleGoalCreated = async () => {
-    await refreshGoals()
+    await invalidateGoals()
     setIsCreateModalOpen(false)
   }
 
   // 目標削除後のコールバック
   const handleGoalDeleted = async () => {
-    await refreshGoals()
+    await invalidateGoals()
     if (selectedGoalId) {
       setSelectedGoalId(null)
-      setSelectedGoal(null)
     }
   }
 
   // 目標更新後のコールバック
   const handleGoalUpdated = async () => {
-    await refreshGoals()
-    if (selectedGoalId) {
-      // 選択中の目標も更新
-      const updatedGoal = await goalAPI.getGoalWithMilestones(selectedGoalId)
-      setSelectedGoal(updatedGoal)
-    }
+    await Promise.all([invalidateGoals(), invalidateGoalDetail()])
   }
 
   // 目標編集ボタンが押されたときのハンドラー
   const handleEditGoal = async (goalId: string) => {
     try {
+      const goalAPI = new GoalAPI(supabase)
       const goal = await goalAPI.getGoalWithMilestones(goalId)
       setEditingGoal(goal)
       setIsEditModalOpen(true)
@@ -125,14 +87,9 @@ export default function GoalsClient({
 
   // 目標編集後のコールバック
   const handleGoalEdited = async () => {
-    await refreshGoals()
+    await Promise.all([invalidateGoals(), invalidateGoalDetail()])
     setIsEditModalOpen(false)
     setEditingGoal(null)
-    if (selectedGoalId) {
-      // 選択中の目標も更新
-      const updatedGoal = await goalAPI.getGoalWithMilestones(selectedGoalId)
-      setSelectedGoal(updatedGoal)
-    }
   }
 
   return (
@@ -159,18 +116,40 @@ export default function GoalsClient({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* 左側: 大会目標リスト */}
           <div className="lg:col-span-1">
-            <GoalList
-              goals={goals}
-              selectedGoalId={selectedGoalId}
-              onSelectGoal={setSelectedGoalId}
-              onDeleteGoal={handleGoalDeleted}
-              onEditGoal={handleEditGoal}
-            />
+            {goalsError ? (
+              <div className="bg-white rounded-lg shadow p-6 text-center">
+                <p className="text-red-600 mb-3">目標一覧の取得に失敗しました</p>
+                <button
+                  onClick={() => invalidateGoals()}
+                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  再読み込み
+                </button>
+              </div>
+            ) : (
+              <GoalList
+                goals={goals}
+                selectedGoalId={selectedGoalId}
+                onSelectGoal={setSelectedGoalId}
+                onDeleteGoal={handleGoalDeleted}
+                onEditGoal={handleEditGoal}
+              />
+            )}
           </div>
 
           {/* 右側: 目標詳細 */}
           <div className="lg:col-span-2">
-            {isLoading ? (
+            {goalError ? (
+              <div className="bg-white rounded-lg shadow p-6 text-center">
+                <p className="text-red-600 mb-3">目標詳細の取得に失敗しました</p>
+                <button
+                  onClick={() => invalidateGoalDetail()}
+                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  再読み込み
+                </button>
+              </div>
+            ) : isLoading ? (
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="animate-pulse">
                   <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>

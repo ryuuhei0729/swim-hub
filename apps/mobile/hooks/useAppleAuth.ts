@@ -4,6 +4,7 @@
  */
 import { useState, useCallback } from 'react'
 import * as AppleAuthentication from 'expo-apple-authentication'
+import * as Crypto from 'expo-crypto'
 import { Platform } from 'react-native'
 import { supabase } from '@/lib/supabase'
 import { localizeSupabaseAuthError } from '@/utils/authErrorLocalizer'
@@ -68,6 +69,13 @@ export const useAppleAuth = (): UseAppleAuthReturn => {
     setLoading(true)
     setError(null)
 
+    // タイムアウト保護: signInAsyncがiPad等でハングした場合にローディングを強制解除
+    const APPLE_AUTH_TIMEOUT_MS = 60000
+    const timeoutId = setTimeout(() => {
+      setLoading(false)
+      setError('認証がタイムアウトしました。もう一度お試しください。')
+    }, APPLE_AUTH_TIMEOUT_MS)
+
     try {
       // Apple認証が利用可能かチェック
       const isAppleAuthAvailable = await AppleAuthentication.isAvailableAsync()
@@ -76,12 +84,21 @@ export const useAppleAuth = (): UseAppleAuthReturn => {
         return { success: false, error: new Error('このデバイスではApple認証を利用できません') }
       }
 
+      // nonce生成（リプレイ攻撃防止・Supabaseトークン検証に必要）
+      const rawNonce = Crypto.getRandomValues(new Uint8Array(32))
+        .reduce((acc, val) => acc + val.toString(16).padStart(2, '0'), '')
+      const hashedNonce = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        rawNonce
+      )
+
       // ネイティブのApple認証UIを表示
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
+        nonce: hashedNonce,
       })
 
       // identityTokenが必要
@@ -96,10 +113,11 @@ export const useAppleAuth = (): UseAppleAuthReturn => {
         ? [fullName.familyName, fullName.givenName].filter(Boolean).join(' ')
         : undefined
 
-      // Supabaseに認証トークンを渡してサインイン
+      // Supabaseに認証トークンを渡してサインイン（rawNonceで検証）
       const { error: signInError } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
         token: credential.identityToken,
+        nonce: rawNonce,
       })
 
       if (signInError) {
@@ -134,6 +152,7 @@ export const useAppleAuth = (): UseAppleAuthReturn => {
       setError(localizedMessage)
       return { success: false, error: err }
     } finally {
+      clearTimeout(timeoutId)
       setLoading(false)
     }
   }, [isAvailable])

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { View, Text, Image, Pressable, StyleSheet, Alert, Platform} from 'react-native'
+import { View, Text, Pressable, StyleSheet, Alert, Platform} from 'react-native'
+import { Image } from 'expo-image'
 import * as ImagePicker from 'expo-image-picker'
 import { Feather } from '@expo/vector-icons'
 import { useAuth } from '@/contexts/AuthProvider'
@@ -269,14 +270,14 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
             <Image
               source={{ uri: selectedImageUri }}
               style={styles.avatarImage}
-              resizeMode="cover"
+              contentFit="cover"
             />
           ) : currentAvatarUrl ? (
             // 既存のアバター画像
             <Image
               source={{ uri: currentAvatarUrl }}
               style={styles.avatarImage}
-              resizeMode="cover"
+              contentFit="cover"
             />
           ) : (
             // プレースホルダー

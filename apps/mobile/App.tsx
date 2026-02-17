@@ -1,4 +1,5 @@
 import React from 'react'
+import { enableScreens } from 'react-native-screens'
 import { NavigationContainer } from '@react-navigation/native'
 import { StatusBar } from 'expo-status-bar'
 import { View, ActivityIndicator, StyleSheet, Text } from 'react-native'
@@ -12,6 +13,8 @@ import { AuthStack } from './navigation/AuthStack'
 import { MainStack } from './navigation/MainStack'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { supabase } from './lib/supabase'
+
+enableScreens()
 
 // グローバル変数でWeb API URLを設定（shared packageから参照される）
 declare global {

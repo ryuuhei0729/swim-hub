@@ -12,5 +12,8 @@ export * from './queries/practices'
 export * from './queries/records'
 export * from './queries/teams'
 export * from './queries/user'
+export * from './queries/goals'
 export * from './queries/practiceLogTemplates'
+export * from './queries/dashboard'
+export * from './queries/notifications'
 

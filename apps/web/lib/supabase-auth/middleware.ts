@@ -193,6 +193,11 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(new URL('/dashboard', request.url))
     }
 
+    // 認証済みユーザーがランディングページにアクセスした場合はダッシュボードにリダイレクト
+    if (pathname === '/' && user) {
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+
     // テンプレート通りの基本的な認証チェック（保護ルート以外の場合）
     if (!user && !isPublicRoute(pathname) && !isStaticAsset(pathname)) {
         const url = request.nextUrl.clone();

@@ -1,10 +1,10 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { usePathname } from 'next/navigation'
+import React, { useState } from 'react'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import Footer from './Footer'
+import ScrollToTop from './ScrollToTop'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -12,7 +12,6 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const pathname = usePathname()
 
   const handleMenuClick = () => {
     setSidebarOpen(!sidebarOpen)
@@ -22,18 +21,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     setSidebarOpen(false)
   }
 
-  // パス変更時にHeaderの下端までスクロール
-  useEffect(() => {
-    // Headerの高さは0
-    const headerHeight = 0
-    window.scrollTo({
-      top: headerHeight,
-      behavior: 'smooth'
-    })
-  }, [pathname])
-
   return (
     <div className="min-h-screen bg-gray-50">
+      <ScrollToTop />
+
       {/* ヘッダー */}
       <Header onMenuClick={handleMenuClick} />
 

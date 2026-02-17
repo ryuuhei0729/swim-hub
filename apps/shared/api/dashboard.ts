@@ -90,21 +90,21 @@ export class DashboardAPI {
     const startDateStr = startDate.toISOString().split('T')[0]
     const endDateStr = endDate.toISOString().split('T')[0]
 
-    // 練習回数
-    const { count: practiceCount } = await this.supabase
-      .from('practices')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .gte('date', startDateStr)
-      .lte('date', endDateStr)
-
-    // 大会数
-    const { count: competitionCount } = await this.supabase
-      .from('competitions')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .gte('date', startDateStr)
-      .lte('date', endDateStr)
+    // 練習回数と大会数を並列取得
+    const [{ count: practiceCount }, { count: competitionCount }] = await Promise.all([
+      this.supabase
+        .from('practices')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gte('date', startDateStr)
+        .lte('date', endDateStr),
+      this.supabase
+        .from('competitions')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gte('date', startDateStr)
+        .lte('date', endDateStr),
+    ])
 
     return {
       practiceCount: practiceCount || 0,

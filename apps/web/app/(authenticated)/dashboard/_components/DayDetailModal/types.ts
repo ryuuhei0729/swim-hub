@@ -1,4 +1,5 @@
-import type { CalendarItem, CalendarItemType } from '@/types'
+import type { CalendarItem } from '@apps/shared/types/ui'
+import type { CalendarItemType } from '@apps/shared/types/common'
 import type { GalleryImage } from '@/components/ui/ImageGallery'
 import type {
   Record,

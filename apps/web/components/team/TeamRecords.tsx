@@ -50,18 +50,9 @@ export default function TeamRecords({ teamId, isAdmin: _isAdmin = false }: TeamR
       try {
         setLoading(true)
         setError(null)
-        
-        // 種目一覧を取得
-        const { data: stylesData, error: stylesError } = await supabase
-          .from('styles')
-          .select('id, name_jp, distance')
-          .order('name_jp')
 
-        if (stylesError) throw stylesError
-        setStyles(stylesData || [])
-
-        // チームIDが設定された記録を取得
-        const query = supabase
+        // チームIDが設定された記録クエリを構築
+        const recordsQuery = supabase
           .from('records')
           .select(`
             id,
@@ -85,12 +76,20 @@ export default function TeamRecords({ teamId, isAdmin: _isAdmin = false }: TeamR
           .limit(50) // 上位50件のみ
 
         if (selectedStyle !== 'all') {
-          query.eq('style_id', selectedStyle)
+          recordsQuery.eq('style_id', selectedStyle)
         }
 
-        const { data: recordsData, error: recordsError } = await query
+        // 種目一覧と記録を並列取得
+        const [stylesResult, recordsResult] = await Promise.all([
+          supabase.from('styles').select('id, name_jp, distance').order('name_jp'),
+          recordsQuery
+        ])
 
-        if (recordsError) throw recordsError
+        if (stylesResult.error) throw stylesResult.error
+        if (recordsResult.error) throw recordsResult.error
+
+        setStyles(stylesResult.data || [])
+        const recordsData = recordsResult.data
 
         // SupabaseのJOIN結果をTeamRecord型に変換
         const transformedRecords: TeamRecord[] = (recordsData || []).map((record: Record<string, unknown>) => ({

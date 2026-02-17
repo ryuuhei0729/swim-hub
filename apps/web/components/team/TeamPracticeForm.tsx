@@ -4,7 +4,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { format } from 'date-fns'
 import { useAuth } from '@/contexts/AuthProvider'
 import { TeamPracticesAPI } from '@apps/shared/api/teams/practices'
-import { Button, Input, DatePicker } from '@/components/ui'
+import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
+import DatePicker from '@/components/ui/DatePicker'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 
 interface TeamPracticeFormProps {

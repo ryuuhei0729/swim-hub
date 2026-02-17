@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { XMarkIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '@/contexts'
-import { AttendanceAPI } from '@swim-hub/shared'
+import { AttendanceAPI } from '@swim-hub/shared/api/attendance'
 import Link from 'next/link'
 import type { TeamAttendanceWithDetails } from '@apps/shared/types'
 import type { AttendanceModalProps } from '../../types'

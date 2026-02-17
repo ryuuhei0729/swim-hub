@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { cn } from '@/utils'
+import { cn } from '@/utils/cn'
 
 export interface PlaceComboboxProps {
   value: string
@@ -43,7 +43,7 @@ export default function PlaceCombobox({
         setHighlightedIndex(-1)
       }
     }
-    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('mousedown', handleClickOutside, { passive: true })
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 

@@ -1,7 +1,8 @@
 'use client'
 
 import React from 'react'
-import { Button, Input } from '@/components/ui'
+import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { LapTimeDisplay } from '../../LapTimeDisplay'
 import type { RecordSet, SplitTimeInput, SwimStyle } from '../types'

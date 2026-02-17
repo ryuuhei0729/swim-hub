@@ -74,7 +74,8 @@ export const CompetitionBasicFormScreen: React.FC = () => {
   }, [])
 
   // Zustandストア
-  const { setCreatedCompetitionId, setLoading: setStoreLoading } = useCompetitionFormStore()
+  const setCreatedCompetitionId = useCompetitionFormStore((state) => state.setCreatedCompetitionId)
+  const setStoreLoading = useCompetitionFormStore((state) => state.setLoading)
 
   // ミューテーション
   const createMutation = useCreateCompetitionMutation(supabase)

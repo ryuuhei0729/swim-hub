@@ -31,7 +31,6 @@
     "test:web:remote": "E2E_SUPABASE_MODE=remote dotenvx run -f .env.development -- npx playwright test --config e2e/src/config/playwright.config.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.975.0",
     "@dotenvx/dotenvx": "^1.51.1",
     "@heroicons/react": "^2.2.0",
     "@supabase/auth-ui-react": "^0.4.7",
@@ -50,7 +49,6 @@
     "react-device-frameset": "^1.3.4",
     "react-dom": "19.1.0",
     "react-easy-crop": "^5.5.3",
-    "recharts": "^3.5.1",
     "zustand": "^5.0.8"
   },
   "devDependencies": {

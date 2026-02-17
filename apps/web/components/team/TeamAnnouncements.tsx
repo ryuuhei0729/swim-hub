@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { AnnouncementList } from './AnnouncementList'
 import { AnnouncementForm } from './AnnouncementForm'
 import { AnnouncementDetail } from './AnnouncementDetail'
-import type { TeamAnnouncement } from '@/types'
+import type { TeamAnnouncement } from '@apps/shared/types/team'
 
 interface TeamAnnouncementsProps {
   teamId: string

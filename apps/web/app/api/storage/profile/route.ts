@@ -49,9 +49,11 @@ export async function POST(request: NextRequest) {
 
     // R2が有効な場合はR2を使用
     if (isR2Enabled()) {
-      // 既存の画像を削除（新旧両方のプレフィックスを対象）
-      const newPrefixFiles = await listR2Objects(`profile-images/${user.id}/`)
-      const legacyPrefixFiles = await listR2Objects(`profiles/avatars/${user.id}/`)
+      // 既存の画像を削除（新旧両方のプレフィックスを対象・並行取得）
+      const [newPrefixFiles, legacyPrefixFiles] = await Promise.all([
+        listR2Objects(`profile-images/${user.id}/`),
+        listR2Objects(`profiles/avatars/${user.id}/`)
+      ])
       const allExistingFiles = [...newPrefixFiles, ...legacyPrefixFiles]
       if (allExistingFiles.length > 0) {
         await deleteMultipleFromR2(allExistingFiles)
@@ -115,9 +117,11 @@ export async function DELETE() {
 
     // R2が有効な場合はR2を使用
     if (isR2Enabled()) {
-      // 新旧両方のプレフィックスからファイルを削除
-      const newPrefixFiles = await listR2Objects(`profile-images/${user.id}/`)
-      const legacyPrefixFiles = await listR2Objects(`profiles/avatars/${user.id}/`)
+      // 新旧両方のプレフィックスからファイルを削除（並行取得）
+      const [newPrefixFiles, legacyPrefixFiles] = await Promise.all([
+        listR2Objects(`profile-images/${user.id}/`),
+        listR2Objects(`profiles/avatars/${user.id}/`)
+      ])
       const allExistingFiles = [...newPrefixFiles, ...legacyPrefixFiles]
       if (allExistingFiles.length > 0) {
         await deleteMultipleFromR2(allExistingFiles)

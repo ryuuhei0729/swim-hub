@@ -3,6 +3,7 @@
 // Server Components用のSupabaseクライアント（@supabase/ssr使用）
 // =============================================================================
 
+import { cache } from 'react'
 import { createServerClient } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database, UserProfile } from '@swim-hub/shared/types'
@@ -11,10 +12,11 @@ import { cookies } from 'next/headers'
 /**
  * 認証情報を含むサーバー側Supabaseクライアントを作成
  * Server Componentsで使用
- * 
+ * React.cache()により同一リクエスト内で自動デデュプリケーション
+ *
  * @returns 認証情報が設定されたSupabaseクライアント
  */
-export async function createAuthenticatedServerClient(): Promise<SupabaseClient<Database>> {
+export const createAuthenticatedServerClient = cache(async (): Promise<SupabaseClient<Database>> => {
   const cookieStore = await cookies()
 
   // 環境変数の検証
@@ -57,14 +59,15 @@ export async function createAuthenticatedServerClient(): Promise<SupabaseClient<
       },
     }
   )
-}
+})
 
 /**
  * サーバー側で認証済みユーザー情報を取得
- * 
+ * React.cache()により同一リクエスト内で自動デデュプリケーション
+ *
  * @returns ユーザー情報、認証されていない場合はnull
  */
-export async function getServerUser() {
+export const getServerUser = cache(async () => {
   const supabase = await createAuthenticatedServerClient()
   const { data: { user }, error } = await supabase.auth.getUser()
 
@@ -73,7 +76,7 @@ export async function getServerUser() {
   }
 
   return user
-}
+})
 
 /**
  * サーバー側でユーザープロフィールを取得

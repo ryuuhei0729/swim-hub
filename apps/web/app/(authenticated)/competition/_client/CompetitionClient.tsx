@@ -1,10 +1,19 @@
 'use client'
 
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useTransition } from 'react'
+import dynamic from 'next/dynamic'
 import { TrophyIcon, PencilIcon, TrashIcon, ShareIcon } from '@heroicons/react/24/outline'
-import { Button, BestTimeBadge, Pagination } from '@/components/ui'
-import RecordLogForm, { type RecordLogFormData } from '@/components/forms/RecordLogForm'
-import { ShareCardModal } from '@/components/share'
+import Button from '@/components/ui/Button'
+import BestTimeBadge from '@/components/ui/BestTimeBadge'
+import Pagination from '@/components/ui/Pagination'
+import type { RecordLogFormData } from '@/components/forms/record-log/types'
+
+const RecordLogForm = dynamic(() => import('@/components/forms/RecordLogForm'), { ssr: false })
+
+const ShareCardModal = dynamic(
+  () => import('@/components/share/ShareCardModal').then(mod => ({ default: mod.ShareCardModal })),
+  { ssr: false }
+)
 import type { CompetitionShareData } from '@/components/share'
 import { format, isAfter, startOfDay } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -17,31 +26,28 @@ import {
   useDeleteRecordMutation,
   useReplaceSplitTimesMutation,
 } from '@apps/shared/hooks/queries/records'
-import type { Record, Competition, Style, RecordWithDetails } from '@apps/shared/types'
-import { 
-  useCompetitionFilterStore, 
-  useCompetitionRecordStore 
-} from '@/stores'
+import type { Record, Competition, Style } from '@apps/shared/types'
+import { useCompetitionFilterStore } from '@/stores/competition/competitionStore'
+import { useCompetitionRecordStore } from '@/stores/form/competitionRecordStore'
 
 interface CompetitionClientProps {
-  // サーバー側で取得したデータ
-  initialRecords: RecordWithDetails[]
   styles: Style[]
 }
 
 
 /**
  * 大会記録ページのインタラクティブ部分を担当するClient Component
+ * 記録データはHydrationBoundaryでReact Queryキャッシュに注入済み
  */
 export default function CompetitionClient({
-  initialRecords,
   styles
 }: CompetitionClientProps) {
   const { supabase } = useAuth()
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 20
   const [showShareModal, setShowShareModal] = useState(false)
-  
+  const [_isPending, startTransition] = useTransition()
+
   // Zustandストア
   const {
     filterStyle,
@@ -53,10 +59,35 @@ export default function CompetitionClient({
     setFilterPoolType,
     setFilterFiscalYear,
   } = useCompetitionFilterStore()
+
+  // フィルター変更ハンドラー（useTransitionでUI応答性を維持 + ページリセット）
+  const handleFilterStyleChange = (value: string) => {
+    startTransition(() => {
+      setFilterStyle(value)
+      setCurrentPage(1)
+    })
+  }
+  const handleIncludeRelayChange = (value: boolean) => {
+    startTransition(() => {
+      setIncludeRelay(value)
+      setCurrentPage(1)
+    })
+  }
+  const handleFilterPoolTypeChange = (value: string) => {
+    startTransition(() => {
+      setFilterPoolType(value)
+      setCurrentPage(1)
+    })
+  }
+  const handleFilterFiscalYearChange = (value: string) => {
+    startTransition(() => {
+      setFilterFiscalYear(value)
+      setCurrentPage(1)
+    })
+  }
   
   const {
     isFormOpen,
-    isLoading,
     editingData,
     selectedRecord,
     showDetailModal,
@@ -65,23 +96,22 @@ export default function CompetitionClient({
     openDetailModal,
     closeDetailModal,
     setStyles,
-    setLoading,
   } = useCompetitionRecordStore()
 
-  // サーバー側から取得したデータをストアに設定
-  React.useEffect(() => {
+  // サーバー側から取得したデータをストアに設定（初回のみ）
+  const initializedRef = React.useRef(false)
+  if (!initializedRef.current) {
     setStyles(styles)
-  }, [styles, setStyles])
+    initializedRef.current = true
+  }
 
-  // 大会記録を取得（リアルタイム更新用）
+  // 大会記録を取得（HydrationBoundaryで注入済みキャッシュから取得 + リアルタイム更新）
   const {
     records = [],
     isLoading: loading,
     error,
     refetch: _refetch
-  } = useRecordsQuery(supabase, {
-    initialRecords,
-  })
+  } = useRecordsQuery(supabase, {})
 
   // ミューテーションフック
   const updateRecordMutation = useUpdateRecordMutation(supabase)
@@ -93,7 +123,7 @@ export default function CompetitionClient({
   const displayRecords = records
   
   // 今日の日付（時刻を0時0分0秒にリセット）
-  const today = useMemo(() => startOfDay(new Date()), [])
+  const today = startOfDay(new Date())
   
   // 出場したことのある種目IDを抽出（ユニーク）
   const participatedStyleIds = useMemo(() => {
@@ -204,11 +234,6 @@ export default function CompetitionClient({
 
   const totalPages = Math.ceil(sortedRecords.length / pageSize)
 
-  // フィルタ変更時にページをリセット
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [filterStyle, includeRelay, filterPoolType, filterFiscalYear])
-
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
     // ページトップにスクロール
@@ -223,21 +248,20 @@ export default function CompetitionClient({
     openDetailModal(record)
   }
 
+  // React Query mutation状態から派生（手動のsetLoadingは不要）
+  const isAnyMutating = updateRecordMutation.isPending || deleteRecordMutation.isPending || replaceSplitTimesMutation.isPending
+
   const handleDeleteRecord = async (recordId: string) => {
     if (confirm('この大会記録を削除しますか？')) {
-      setLoading(true)
       try {
         await deleteRecordMutation.mutateAsync(recordId)
       } catch (error) {
         console.error('削除エラー:', error)
-      } finally {
-        setLoading(false)
       }
     }
   }
 
   const handleRecordSubmit = async (dataList: RecordLogFormData[]) => {
-    setLoading(true)
     try {
       // /competitionページは編集のみなので、常にeditingDataからcompetitionIdを取得
       let competitionId: string | null = null
@@ -293,12 +317,10 @@ export default function CompetitionClient({
       closeForm()
     } catch (error) {
       console.error('大会記録の保存に失敗しました:', error)
-    } finally {
-      setLoading(false)
     }
   }
 
-  if (loading || isLoading || updateRecordMutation.isPending || deleteRecordMutation.isPending || replaceSplitTimesMutation.isPending) {
+  if (loading || isAnyMutating) {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-lg shadow p-6">
@@ -393,7 +415,7 @@ export default function CompetitionClient({
             </label>
             <select
               value={filterFiscalYear}
-              onChange={(e) => setFilterFiscalYear(e.target.value)}
+              onChange={(e) => handleFilterFiscalYearChange(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">すべての期間</option>
@@ -412,7 +434,7 @@ export default function CompetitionClient({
             </label>
             <select
               value={filterStyle}
-              onChange={(e) => setFilterStyle(e.target.value)}
+              onChange={(e) => handleFilterStyleChange(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">すべての種目</option>
@@ -431,7 +453,7 @@ export default function CompetitionClient({
             </label>
             <select
               value={filterPoolType}
-              onChange={(e) => setFilterPoolType(e.target.value)}
+              onChange={(e) => handleFilterPoolTypeChange(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">すべて</option>
@@ -450,7 +472,7 @@ export default function CompetitionClient({
                 type="checkbox"
                 id="includeRelay"
                 checked={includeRelay}
-                onChange={(e) => setIncludeRelay(e.target.checked)}
+                onChange={(e) => handleIncludeRelayChange(e.target.checked)}
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
               <label htmlFor="includeRelay" className="ml-2 text-sm text-gray-700">
@@ -467,10 +489,13 @@ export default function CompetitionClient({
             <Button
               variant="outline"
               onClick={() => {
-                setFilterStyle('')
-                setIncludeRelay(true)
-                setFilterPoolType('')
-                setFilterFiscalYear('')
+                startTransition(() => {
+                  setFilterStyle('')
+                  setIncludeRelay(true)
+                  setFilterPoolType('')
+                  setFilterFiscalYear('')
+                  setCurrentPage(1)
+                })
               }}
               className="w-full text-sm"
             >
@@ -501,9 +526,13 @@ export default function CompetitionClient({
               <Button
                 variant="outline"
                 onClick={() => {
-                  setFilterStyle('')
-                  setIncludeRelay(true)
-                  setFilterPoolType('')
+                  startTransition(() => {
+                    setFilterStyle('')
+                    setIncludeRelay(true)
+                    setFilterPoolType('')
+                    setFilterFiscalYear('')
+                    setCurrentPage(1)
+                  })
                 }}
                 className="text-sm"
               >
@@ -600,11 +629,11 @@ export default function CompetitionClient({
                             e.stopPropagation()
                             handleDeleteRecord(record.id)
                           }}
-                          disabled={isLoading}
+                          disabled={isAnyMutating}
                           className="flex items-center space-x-1 text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <TrashIcon className="h-4 w-4" />
-                          <span>{isLoading ? '削除中...' : '削除'}</span>
+                          <span>{deleteRecordMutation.isPending ? '削除中...' : '削除'}</span>
                         </Button>
                       </div>
                     </td>
@@ -658,7 +687,7 @@ export default function CompetitionClient({
               videoUrl: editingData.video_url ?? undefined
             }
           : null}
-        isLoading={isLoading}
+        isLoading={isAnyMutating}
         styles={styles.map(style => ({
           id: style.id.toString(),
           nameJp: style.name_jp,

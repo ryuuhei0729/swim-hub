@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts'
 import { TeamMembersAPI } from '@apps/shared/api/teams/members'
 import { TeamMembershipWithUser } from '@apps/shared/types'
-import { Avatar } from '@/components/ui'
+import Avatar from '@/components/ui/Avatar'
 import {
   UserPlusIcon,
   UserMinusIcon,

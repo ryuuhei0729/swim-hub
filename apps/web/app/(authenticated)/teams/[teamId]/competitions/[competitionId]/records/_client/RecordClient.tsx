@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthProvider'
-import { Button } from '@/components/ui'
+import Button from '@/components/ui/Button'
 import { ArrowLeftIcon, PlusIcon, TrashIcon, CalendarDaysIcon, MapPinIcon, UserGroupIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { Competition, Style } from '@apps/shared/types'
 import { format } from 'date-fns'

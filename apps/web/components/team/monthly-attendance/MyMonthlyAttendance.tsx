@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { useAuth } from '@/contexts'
-import { AttendanceAPI } from '@swim-hub/shared'
+import { AttendanceAPI } from '@swim-hub/shared/api/attendance'
 import { TeamAttendancesAPI } from '@apps/shared/api/teams/attendances'
 import { TeamEvent } from '@swim-hub/shared/types'
 import { MonthList } from './components/MonthList'

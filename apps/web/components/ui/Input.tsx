@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useCallback, useEffect } from 'react'
-import { cn } from '@/utils'
+import { cn } from '@/utils/cn'
 import { CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline'
 
 export type ValidationTrigger = 'blur' | 'change'
