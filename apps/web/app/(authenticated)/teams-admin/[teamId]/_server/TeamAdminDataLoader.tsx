@@ -28,18 +28,18 @@ async function getTeamAdminData(
   const coreAPI = new TeamCoreAPI(supabase)
   
   try {
-    // チーム情報を取得（メンバー情報も含む）
-    const teamData = await coreAPI.getTeam(teamId)
-    
-    // 現在のユーザーのメンバーシップ情報を取得（管理者権限チェック）
-    const { data: membershipData, error: membershipError } = await supabase
-      .from('team_memberships')
-      .select('*')
-      .eq('team_id', teamId)
-      .eq('user_id', userId)
-      .eq('role', 'admin')
-      .eq('is_active', true)
-      .single()
+    // チーム情報とメンバーシップ情報を並行取得
+    const [teamData, { data: membershipData, error: membershipError }] = await Promise.all([
+      coreAPI.getTeam(teamId),
+      supabase
+        .from('team_memberships')
+        .select('*')
+        .eq('team_id', teamId)
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .eq('is_active', true)
+        .single()
+    ])
 
     // 管理者権限がない場合はnullを返す
     if (membershipError || !membershipData) {

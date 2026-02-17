@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
-import { Button, Input } from '@/components/ui'
+import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
 import { useAuth } from '@/contexts'
 import { GoalAPI } from '@apps/shared/api/goals'
 import { format } from 'date-fns'

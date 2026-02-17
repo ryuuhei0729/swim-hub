@@ -1,24 +1,41 @@
 import React, { useState } from 'react'
 import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from 'react-native'
+import { useNavigation } from '@react-navigation/native'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useAuth } from '@/contexts/AuthProvider'
-import { useGoogleAuth } from '@/hooks/useGoogleAuth'
-import { useAppleAuth } from '@/hooks/useAppleAuth'
-import { GoogleLoginButton } from './GoogleLoginButton'
-import { AppleLoginButton } from './AppleLoginButton'
+import type { AuthStackParamList } from '@/navigation/types'
 
 interface LoginFormProps {
   onSuccess?: () => void
+  /** ナビゲーション外で使用する場合に指定。指定時はuseNavigationを呼ばない */
+  onResetPassword?: () => void
 }
 
-export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
+/**
+ * ナビゲーションコンテキスト内で使用するLoginForm（useNavigationを使用）
+ */
+const LoginFormWithNavigation: React.FC<Pick<LoginFormProps, 'onSuccess'>> = ({ onSuccess }) => {
+  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>()
+  return (
+    <LoginFormContent
+      onSuccess={onSuccess}
+      onResetPassword={() => navigation.navigate('ResetPassword')}
+    />
+  )
+}
+
+interface LoginFormContentProps {
+  onSuccess?: () => void
+  onResetPassword: (() => void) | null
+}
+
+const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetPassword }) => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const { signIn } = useAuth()
-  const { signInWithGoogle, loading: googleLoading, error: googleError, clearError: clearGoogleError } = useGoogleAuth()
-  const { signInWithApple, loading: appleLoading, error: appleError, clearError: clearAppleError, isAvailable: isAppleAvailable } = useAppleAuth()
 
   type AuthError = {
     status?: number
@@ -41,7 +58,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
     // エラーメッセージの日本語化と補足ヒント
     if (typeof errMsg === 'string') {
       const msg = errMsg.toLowerCase()
-      
+
       // ログイン認証エラーの処理（OWASP準拠）
       if (msg.includes('invalid') && (msg.includes('credentials') || msg.includes('email'))) {
         return 'メールアドレスまたはパスワードが正しくありません。入力内容を確認してから再度お試しください。'
@@ -52,7 +69,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
       if (msg.includes('too many requests')) {
         return 'ログイン試行回数が上限に達しました。しばらく時間をおいてから再度お試しください。'
       }
-      
+
       // 共通エラーの処理
       if (msg.includes('captcha')) {
         return 'Captcha認証が必要です。Captchaを完了してから再度お試しください。'
@@ -64,7 +81,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
         return 'ネットワークエラーが発生しました。インターネット接続を確認してから再度お試しください。'
       }
     }
-    
+
     // デフォルトのエラーメッセージ
     return __DEV__
       ? `エラーが発生しました: ${errMsg}${statusText}`
@@ -76,19 +93,19 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
       setError('メールアドレスを入力してください。')
       return false
     }
-    
+
     // メールアドレス形式の簡易チェック
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
       setError('有効なメールアドレスを入力してください。')
       return false
     }
-    
+
     if (!password) {
       setError('パスワードを入力してください。')
       return false
     }
-    
+
     return true
   }
 
@@ -114,36 +131,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
     }
   }
 
-  const handleGoogleLogin = async () => {
-    if (googleLoading) {
-      return
-    }
-    setError(null)
-    clearGoogleError()
-    const result = await signInWithGoogle()
-    if (result.success) {
-      onSuccess?.()
-    }
-  }
-
-  const handleAppleLogin = async () => {
-    if (appleLoading) {
-      return
-    }
-    setError(null)
-    clearAppleError()
-    const result = await signInWithApple()
-    if (result.success) {
-      onSuccess?.()
-    }
-  }
-
   return (
     <View style={styles.container}>
       <View style={styles.formContainer}>
         <View style={styles.header}>
-          <Text style={styles.title}>ログイン</Text>
-          <Text style={styles.subtitle}>SwimHubへようこそ</Text>
+          <Text style={styles.title}>メールでログイン</Text>
         </View>
 
         {error && (
@@ -189,6 +181,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleSubmit}
             disabled={loading}
+            accessibilityRole="button"
+            accessibilityLabel="ログイン"
+            accessibilityState={{ disabled: loading }}
           >
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
@@ -197,52 +192,16 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
             )}
           </Pressable>
 
-          {/* 区切り線 */}
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>または</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Appleログインボタン（iOSのみ） */}
-          {isAppleAvailable && (
-            <AppleLoginButton
-              onPress={handleAppleLogin}
-              loading={appleLoading}
-              disabled={loading || googleLoading || appleLoading}
-            />
+          {onResetPassword && (
+            <Pressable
+              style={styles.linkContainer}
+              onPress={onResetPassword}
+              accessibilityRole="button"
+              accessibilityLabel="パスワードを忘れた方はこちら"
+            >
+              <Text style={styles.linkText}>パスワードをお忘れの方はこちら</Text>
+            </Pressable>
           )}
-
-          {/* Appleログインエラー表示 */}
-          {appleError && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{appleError}</Text>
-            </View>
-          )}
-
-          {/* Googleログインボタン */}
-          <GoogleLoginButton
-            onPress={handleGoogleLogin}
-            loading={googleLoading}
-            disabled={loading || googleLoading || appleLoading}
-          />
-
-          {/* Googleログインエラー表示 */}
-          {googleError && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{googleError}</Text>
-            </View>
-          )}
-
-          <Pressable
-            style={styles.linkContainer}
-            onPress={() => {
-              // Phase 3でナビゲーションを実装予定
-              // navigation.navigate('ResetPassword')
-            }}
-          >
-            <Text style={styles.linkText}>パスワードを忘れた方はこちら</Text>
-          </Pressable>
         </View>
       </View>
     </View>
@@ -281,10 +240,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#111827',
     marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#6B7280',
   },
   errorContainer: {
     backgroundColor: '#FEF2F2',
@@ -344,19 +299,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 16,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#D1D5DB',
-  },
-  dividerText: {
-    marginHorizontal: 12,
-    fontSize: 14,
-    color: '#6B7280',
-  },
 })
+
+/**
+ * ログインフォーム
+ * - onResetPassword未指定: ナビゲーション内で使用（useNavigationでResetPasswordに遷移）
+ * - onResetPassword指定: ナビゲーション外で使用（AuthGuardなど）
+ */
+export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onResetPassword }) => {
+  if (onResetPassword !== undefined) {
+    return (
+      <LoginFormContent
+        onSuccess={onSuccess}
+        onResetPassword={onResetPassword}
+      />
+    )
+  }
+  return <LoginFormWithNavigation onSuccess={onSuccess} />
+}

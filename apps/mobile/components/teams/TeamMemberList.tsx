@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { View, Text, FlatList, StyleSheet, Pressable, Alert, Platform } from 'react-native'
+import { View, Text, StyleSheet, Pressable, Alert, Platform } from 'react-native'
+import { FlashList } from '@shopify/flash-list'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { useAuth } from '@/contexts/AuthProvider'
@@ -158,7 +159,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
 
   return (
     <View style={styles.container}>
-      <FlatList
+      <FlashList
         data={members}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => {

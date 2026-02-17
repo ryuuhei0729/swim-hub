@@ -1,5 +1,6 @@
 import React, { useMemo, useCallback, useState } from 'react'
-import { View, Text, FlatList, StyleSheet, Pressable, RefreshControl, ScrollView } from 'react-native'
+import { View, Text, StyleSheet, Pressable, RefreshControl, ScrollView } from 'react-native'
+import { FlashList } from '@shopify/flash-list'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -11,6 +12,7 @@ import { PracticeItem } from '@/components/practices'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ErrorView } from '@/components/layout/ErrorView'
 import { usePracticeFilterStore } from '@/stores/practiceFilterStore'
+import { useShallow } from 'zustand/react/shallow'
 import type { MainStackParamList } from '@/navigation/types'
 import type { PracticeWithLogs, PracticeTag } from '@swim-hub/shared/types'
 
@@ -30,7 +32,14 @@ export const PracticesScreen: React.FC = () => {
     showTagFilter,
     setSelectedTags,
     toggleTagFilter,
-  } = usePracticeFilterStore()
+  } = usePracticeFilterStore(
+    useShallow((state) => ({
+      selectedTagIds: state.selectedTagIds,
+      showTagFilter: state.showTagFilter,
+      setSelectedTags: state.setSelectedTags,
+      toggleTagFilter: state.toggleTagFilter,
+    }))
+  )
 
   // デフォルトの日付範囲（過去1年間）- 初期化時に一度だけ計算
   const [defaultStartDate] = useState(() => {
@@ -240,7 +249,7 @@ export const PracticesScreen: React.FC = () => {
         </Pressable>
       </View>
 
-      <FlatList
+      <FlashList
         data={filteredPractices}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
@@ -255,12 +264,6 @@ export const PracticesScreen: React.FC = () => {
         }
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
-        // パフォーマンス最適化（1画面に8個表示するため、初期レンダリング数を調整）
-        initialNumToRender={8}
-        maxToRenderPerBatch={8}
-        windowSize={8}
-        removeClippedSubviews={true}
-        updateCellsBatchingPeriod={50}
         ListFooterComponent={
           isFetchingNextPage ? (
             <View style={styles.footerLoader}>

@@ -1,16 +1,16 @@
 import React, { useState, useCallback } from 'react'
 import { View, Text, ScrollView, StyleSheet, Pressable, RefreshControl } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useNavigation } from '@react-navigation/native'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { Feather } from '@expo/vector-icons'
 import { useAuth } from '@/contexts/AuthProvider'
 import { useUserQuery } from '@apps/shared/hooks/queries/user'
 import { useBestTimesQuery } from '@/hooks/useBestTimesQuery'
 import { ProfileDisplay, ProfileEditModal, BestTimesTable } from '@/components/profile'
-import { GoogleCalendarSyncSettings } from '@/components/settings/GoogleCalendarSyncSettings'
-import { IOSCalendarSyncSettings } from '@/components/settings/IOSCalendarSyncSettings'
-import { EmailChangeSettings } from '@/components/settings/EmailChangeSettings'
-import { IdentityLinkSettings } from '@/components/settings/IdentityLinkSettings'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ErrorView } from '@/components/layout/ErrorView'
+import type { MainStackParamList } from '@/navigation/types'
 import type { UserProfile } from '@swim-hub/shared/types'
 
 /**
@@ -18,10 +18,10 @@ import type { UserProfile } from '@swim-hub/shared/types'
  * プロフィール表示・編集、ベストタイム表
  */
 export const MyPageScreen: React.FC = () => {
-  const { supabase, user, signOut } = useAuth()
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>()
+  const { supabase, user } = useAuth()
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
-  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   // プロフィールとチーム情報取得
   const {
@@ -111,23 +111,6 @@ export const MyPageScreen: React.FC = () => {
     [user, supabase, refetchProfile]
   )
 
-  // ログアウト処理
-  const handleLogout = useCallback(async () => {
-    setIsLoggingOut(true)
-    try {
-      const { error } = await signOut()
-      if (error) {
-        console.error('ログアウトエラー:', error)
-        alert('ログアウトに失敗しました。もう一度お試しください。')
-      }
-    } catch (err) {
-      console.error('ログアウト処理エラー:', err)
-      alert('ログアウトに失敗しました。もう一度お試しください。')
-    } finally {
-      setIsLoggingOut(false)
-    }
-  }, [signOut])
-
   // エラー状態
   if (isError && error) {
     return (
@@ -180,7 +163,17 @@ export const MyPageScreen: React.FC = () => {
       >
         {/* ヘッダー */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>マイページ</Text>
+          <View style={styles.headerRow}>
+            <Text style={styles.headerTitle}>マイページ</Text>
+            <Pressable
+              onPress={() => navigation.navigate('Settings')}
+              style={styles.settingsIconButton}
+              accessibilityRole="button"
+              accessibilityLabel="設定画面を開く"
+            >
+              <Feather name="settings" size={22} color="#6B7280" />
+            </Pressable>
+          </View>
           <Text style={styles.headerSubtitle}>プロフィールとベストタイムを管理します</Text>
         </View>
 
@@ -212,43 +205,6 @@ export const MyPageScreen: React.FC = () => {
           ) : (
             <BestTimesTable bestTimes={bestTimes} />
           )}
-        </View>
-
-        {/* Googleカレンダー連携セクション */}
-        <GoogleCalendarSyncSettings
-          profile={profile}
-          onUpdate={refetchProfile}
-        />
-
-        {/* iOSカレンダー連携セクション */}
-        <IOSCalendarSyncSettings
-          profile={profile}
-          onUpdate={refetchProfile}
-        />
-
-        {/* メールアドレス変更セクション */}
-        <EmailChangeSettings />
-
-        {/* ログイン連携セクション */}
-        <IdentityLinkSettings />
-
-        {/* ログアウトセクション */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>アカウント</Text>
-          </View>
-          <Pressable
-            style={[styles.logoutButton, isLoggingOut && styles.logoutButtonDisabled]}
-            onPress={handleLogout}
-            disabled={isLoggingOut}
-            accessibilityRole="button"
-            accessibilityLabel="ログアウト"
-            accessibilityHint="アカウントからログアウトします"
-          >
-            <Text style={styles.logoutButtonText}>
-              {isLoggingOut ? 'ログアウト中...' : 'ログアウト'}
-            </Text>
-          </Pressable>
         </View>
 
       </ScrollView>
@@ -283,6 +239,15 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 8,
     marginBottom: 8,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  settingsIconButton: {
+    padding: 6,
+    borderRadius: 8,
   },
   headerTitle: {
     fontSize: 24,
@@ -355,21 +320,5 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 14,
     color: '#DC2626',
-  },
-  logoutButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: '#DC2626',
-    alignItems: 'center',
-  },
-  logoutButtonDisabled: {
-    backgroundColor: '#F87171',
-    opacity: 0.6,
-  },
-  logoutButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
   },
 })

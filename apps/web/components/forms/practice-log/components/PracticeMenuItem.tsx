@@ -1,7 +1,8 @@
 'use client'
 
 import React from 'react'
-import { Button, Input } from '@/components/ui'
+import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
 import { TrashIcon, ClockIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
 import TagInput from '../../TagInput'
 import type { PracticeMenu, Tag } from '../types'

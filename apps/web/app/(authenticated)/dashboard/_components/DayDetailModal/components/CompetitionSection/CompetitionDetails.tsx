@@ -1,15 +1,20 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { PencilIcon, TrashIcon, ShareIcon } from '@heroicons/react/24/outline'
 import { TrophyIcon } from '@heroicons/react/24/solid'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { ShareCardModal } from '@/components/share'
+
+const ShareCardModal = dynamic(
+  () => import('@/components/share/ShareCardModal').then(mod => ({ default: mod.ShareCardModal })),
+  { ssr: false }
+)
 import type { CompetitionShareData } from '@/components/share'
 import { formatTimeBest } from '@/utils/formatters'
 import { useAuth } from '@/contexts'
-import { BestTimeBadge } from '@/components/ui'
+import BestTimeBadge from '@/components/ui/BestTimeBadge'
 import ImageGallery, { GalleryImage } from '@/components/ui/ImageGallery'
 import type { CalendarItem, Record as RecordType, SplitTime, PoolType } from '@apps/shared/types'
 import { AttendanceButton } from '../AttendanceSection'
@@ -75,12 +80,30 @@ export function CompetitionDetails({
       try {
         setLoading(true)
 
-        // 大会の画像パスを直接取得
-        const { data: competitionData } = await supabase
-          .from('competitions')
-          .select('image_paths')
-          .eq('id', competitionId)
-          .single()
+        // 大会画像パスとレコードを並行取得
+        let recordQuery = supabase
+          .from('records')
+          .select(`
+              *,
+              style:styles(*),
+              competition:competitions(*),
+              split_times(*)
+            `)
+          .eq('competition_id', competitionId)
+
+        // チーム大会の場合は自分の記録だけを表示
+        if (isTeamCompetition && user?.id) {
+          recordQuery = recordQuery.eq('user_id', user.id)
+        }
+
+        const [{ data: competitionData }, { data, error }] = await Promise.all([
+          supabase
+            .from('competitions')
+            .select('image_paths')
+            .eq('id', competitionId)
+            .single(),
+          recordQuery
+        ])
 
         const competition = competitionData as { image_paths?: string[] | null } | null
         const imagePaths = competition?.image_paths || []
@@ -97,24 +120,6 @@ export function CompetitionDetails({
           }
         })
         setCompetitionImages(images)
-
-        // recordsを取得
-        let recordQuery = supabase
-          .from('records')
-          .select(`
-              *,
-              style:styles(*),
-              competition:competitions(*),
-              split_times(*)
-            `)
-          .eq('competition_id', competitionId)
-
-        // チーム大会の場合は自分の記録だけを表示
-        if (isTeamCompetition && user?.id) {
-          recordQuery = recordQuery.eq('user_id', user.id)
-        }
-
-        const { data, error } = await recordQuery
 
         if (error) throw error
 

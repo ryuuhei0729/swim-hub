@@ -3,7 +3,7 @@
 import React from 'react'
 import { CalendarProvider } from '../_providers/CalendarProvider'
 import CalendarView from './CalendarView'
-import { CalendarProps } from '@/types'
+import type { CalendarProps } from '@apps/shared/types/ui'
 import type { CalendarItem, MonthlySummary } from '@apps/shared/types/ui'
 
 interface CalendarContainerProps extends Omit<CalendarProps, 'currentDate' | 'onCurrentDateChange'> {

@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts'
 import CalendarContainer from '../_components/CalendarContainer'
 import TeamAnnouncementsSection from '../_components/TeamAnnouncementsSection'
@@ -36,11 +37,10 @@ import type {
   CalendarItem,
   MonthlySummary
 } from '@apps/shared/types/ui'
-import {
-  usePracticeFormStore,
-  useCompetitionFormStore,
-  useUIStore
-} from '@/stores'
+import { notificationKeys } from '@apps/shared/hooks/queries/keys'
+import { usePracticeFormStore } from '@/stores/practice/practiceStore'
+import { useCompetitionFormStore } from '@/stores/competition/competitionStore'
+import { useUIStore } from '@/stores/ui/uiStore'
 import { FormModals } from './FormModals'
 import { useDashboardHandlers } from '../_hooks/useDashboardHandlers'
 import { useCalendarHandlers } from '../_hooks/useCalendarHandlers'
@@ -65,10 +65,10 @@ export default function DashboardClient({
   tags
 }: DashboardClientProps) {
   const { user, supabase } = useAuth()
-  const [notificationsRefreshKey, setNotificationsRefreshKey] = useState(0)
+  const queryClient = useQueryClient()
   const [expiredGoal, setExpiredGoal] = useState<GoalWithMilestones | null>(null)
   const [expiredMilestone, setExpiredMilestone] = useState<Milestone | null>(null)
-  const [hasCheckedExpired, setHasCheckedExpired] = useState(false)
+  const hasCheckedExpiredRef = useRef(false)
   
   // Zustandストア
   const {
@@ -113,16 +113,19 @@ export default function DashboardClient({
     setStyles: setCompetitionStyles,
   } = useCompetitionFormStore()
 
-  // サーバー側から取得したデータをストアに設定
-  React.useEffect(() => {
+  // サーバー側から取得したデータをストアに設定（初回のみ）
+  const initializedRef = React.useRef(false)
+  if (!initializedRef.current) {
     setAvailableTags(tags)
     setCompetitionStyles(styles)
-  }, [tags, styles, setAvailableTags, setCompetitionStyles])
+    initializedRef.current = true
+  }
 
-  // 期限切れ目標・マイルストーンチェック（ログイン時）
+  // 期限切れ目標・マイルストーンチェック（ログイン時・1回のみ）
   // 目標を優先してチェックし、目標がなければマイルストーンをチェック
   useEffect(() => {
-    if (!user || hasCheckedExpired) return
+    if (!user || hasCheckedExpiredRef.current) return
+    hasCheckedExpiredRef.current = true
 
     const checkExpired = async () => {
       try {
@@ -132,7 +135,6 @@ export default function DashboardClient({
         const expiredGoals = await goalAPI.getExpiredGoals()
         if (expiredGoals && expiredGoals.length > 0) {
           setExpiredGoal(expiredGoals[0])
-          setHasCheckedExpired(true)
           return
         }
 
@@ -141,16 +143,13 @@ export default function DashboardClient({
         if (expiredMilestones && expiredMilestones.length > 0) {
           setExpiredMilestone(expiredMilestones[0])
         }
-
-        setHasCheckedExpired(true)
       } catch (error) {
         console.error('期限切れチェックエラー:', error)
-        setHasCheckedExpired(true)
       }
     }
 
     checkExpired()
-  }, [user, supabase, hasCheckedExpired])
+  }, [user, supabase])
 
   // カレンダーイベントハンドラーは useCalendarHandlers カスタムフックから取得
 
@@ -264,19 +263,17 @@ export default function DashboardClient({
   // エントリー完了時に通知を再読み込み
   const handleEntrySubmit = async (entriesData: Parameters<typeof originalHandleEntrySubmit>[0]) => {
     await originalHandleEntrySubmit(entriesData)
-    // 通知を再読み込み
-    setNotificationsRefreshKey(prev => prev + 1)
+    queryClient.invalidateQueries({ queryKey: notificationKeys.all })
   }
 
   // エントリー削除時に通知を再読み込み
   const handleDeleteItem = async (
-    itemId: string, 
+    itemId: string,
     itemType?: 'practice' | 'team_practice' | 'practice_log' | 'competition' | 'team_competition' | 'entry' | 'record'
   ) => {
     await originalHandleDeleteItem(itemId, itemType)
-    // エントリー削除の場合、通知を再読み込み
     if (itemType === 'entry') {
-      setNotificationsRefreshKey(prev => prev + 1)
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all })
     }
   }
 
@@ -310,10 +307,9 @@ export default function DashboardClient({
     <div className="min-h-screen bg-gray-50">
       <div className="w-full">
         {/* チームのお知らせセクション */}
-        <TeamAnnouncementsSection 
-          teams={teams} 
+        <TeamAnnouncementsSection
+          teams={teams}
           openEntryLogForm={openEntryLogForm}
-          refreshKey={notificationsRefreshKey}
         />
         
         {/* カレンダーコンポーネント */}

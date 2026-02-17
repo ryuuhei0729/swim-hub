@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useMemo } from 'react'
-import { Button, Input } from '@/components/ui'
+import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { formatTimeBest } from '@/utils/formatters'
 import { LapTimeDisplay } from '../../LapTimeDisplay'

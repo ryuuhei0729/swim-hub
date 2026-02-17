@@ -55,7 +55,8 @@ export const EntryLogFormScreen: React.FC = () => {
   const [pickingEntryIndex, setPickingEntryIndex] = useState<number | null>(null)
 
   // Zustandストア
-  const { setCreatedEntries, setLoading: setStoreLoading } = useCompetitionFormStore()
+  const setCreatedEntries = useCompetitionFormStore((state) => state.setCreatedEntries)
+  const setStoreLoading = useCompetitionFormStore((state) => state.setLoading)
 
   // 二重送信防止用のref
   const isSubmittingRef = useRef(false)

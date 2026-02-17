@@ -8,8 +8,10 @@ import { useAuth } from '@/contexts'
 import { useTeamsQuery } from '@apps/shared/hooks/queries/teams'
 import { teamKeys } from '@apps/shared/hooks/queries/keys'
 import { useQueryClient } from '@tanstack/react-query'
-import TeamCreateModal from '@/components/team/TeamCreateModal'
-import TeamJoinModal from '@/components/team/TeamJoinModal'
+import dynamic from 'next/dynamic'
+
+const TeamCreateModal = dynamic(() => import('@/components/team/TeamCreateModal'))
+const TeamJoinModal = dynamic(() => import('@/components/team/TeamJoinModal'))
 
 interface PendingTeamWithInviteCode {
   membership: TeamMembershipWithUser

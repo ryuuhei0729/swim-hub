@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, useCallback, useId } from 'react'
 import { format, parseISO, isValid, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, getDay, isToday } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon, XMarkIcon } from '@heroicons/react/24/outline'
-import { cn } from '@/utils'
+import { cn } from '@/utils/cn'
 
 interface DatePickerProps {
   /** 選択された日付 (yyyy-MM-dd形式の文字列またはDate) */
@@ -144,7 +144,7 @@ export default function DatePicker({
     }
 
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('mousedown', handleClickOutside, { passive: true })
     }
 
     return () => {

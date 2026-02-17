@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react'
 import { parseISO, isValid } from 'date-fns'
-import { Button, ConfirmDialog } from '@/components/ui'
+import Button from '@/components/ui/Button'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { XMarkIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { useRecordForm, useUnsavedChangesWarning } from './hooks'
 import { RecordBasicInfo, RecordSetItem } from './components'

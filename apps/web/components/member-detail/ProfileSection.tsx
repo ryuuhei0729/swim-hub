@@ -1,7 +1,7 @@
 import React from 'react'
 import { format, parseISO } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { Avatar } from '@/components/ui'
+import Avatar from '@/components/ui/Avatar'
 import { StarIcon } from '@heroicons/react/24/outline'
 import type { MemberDetail } from '@/types/member-detail'
 

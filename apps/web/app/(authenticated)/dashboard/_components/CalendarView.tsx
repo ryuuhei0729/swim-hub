@@ -8,7 +8,8 @@ import { useCalendar } from '../_providers/CalendarProvider'
 import DayDetailModal from './DayDetailModal'
 import CalendarHeader from './CalendarHeader'
 import CalendarGrid from './CalendarGrid'
-import { CalendarItem, CalendarItemType, CalendarProps } from '@/types'
+import type { CalendarItem, CalendarProps } from '@apps/shared/types/ui'
+import type { CalendarItemType } from '@apps/shared/types/common'
 
 const _WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
 

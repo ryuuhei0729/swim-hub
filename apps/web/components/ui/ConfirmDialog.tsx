@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from 'react'
 import { ExclamationTriangleIcon, InformationCircleIcon, XMarkIcon } from '@heroicons/react/24/outline'
-import { cn } from '@/utils'
+import { cn } from '@/utils/cn'
 
 interface ConfirmDialogProps {
   isOpen: boolean

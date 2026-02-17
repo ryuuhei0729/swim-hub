@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { TeamAttendanceWithDetails } from '@swim-hub/shared'
+import type { TeamAttendanceWithDetails } from '@swim-hub/shared/types/attendance'
 import { TeamMember } from '@swim-hub/shared/utils/team'
 import { useAttendanceGrouping } from '@swim-hub/shared/hooks/useAttendanceGrouping'
 

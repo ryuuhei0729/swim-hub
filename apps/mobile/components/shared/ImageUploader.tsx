@@ -2,13 +2,13 @@ import React, { useState, useRef, useEffect } from 'react'
 import {
   View,
   Text,
-  Image,
   Pressable,
   StyleSheet,
   Alert,
   Platform,
   ScrollView,
 } from 'react-native'
+import { Image } from 'expo-image'
 import * as ImagePicker from 'expo-image-picker'
 import { Feather } from '@expo/vector-icons'
 
@@ -283,7 +283,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           .filter((img) => !deletedIds.includes(img.id))
           .map((img) => (
             <View key={img.id} style={styles.imageWrapper}>
-              <Image source={{ uri: img.url }} style={styles.image} resizeMode="cover" />
+              <Image source={{ uri: img.url }} style={styles.image} contentFit="cover" />
               {!disabled && (
                 <Pressable
                   style={styles.removeButton}
@@ -298,7 +298,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         {/* 新規画像 */}
         {newFiles.map((file, index) => (
           <View key={`new-${index}`} style={styles.imageWrapper}>
-            <Image source={{ uri: file.uri }} style={styles.image} resizeMode="cover" />
+            <Image source={{ uri: file.uri }} style={styles.image} contentFit="cover" />
             <View style={styles.newBadge}>
               <Text style={styles.newBadgeText}>新規</Text>
             </View>

@@ -198,18 +198,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // セッションが正しく作成されたことを確認
-    const { data: { session: verifiedSession } } = await supabase.auth.getSession()
-    if (!verifiedSession) {
-      console.error('OAuthコールバックエラー: セッションの検証に失敗しました')
-      const errorResponse = NextResponse.redirect(
-        requestUrl.origin + '/login?error=session_verification_failed'
-      )
-      setCookiesOnResponse(errorResponse)
-      return errorResponse
-    }
-
     // リダイレクト（Cookieを設定）
+    // exchangeCodeForSession() で既にセッション検証済みのため、追加の getSession() は不要
     // redirectToは既に検証済みなので安全に結合
     // カレンダー連携成功時は、リダイレクト先にパラメータを追加
     const finalRedirectTo = isCalendarConnect

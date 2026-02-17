@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Input } from '@/components/ui'
+import Input from '@/components/ui/Input'
 import type { MilestoneParams } from '@apps/shared/types'
 import { isMilestoneTimeParams, isMilestoneRepsTimeParams, isMilestoneSetParams } from '@apps/shared/types/goals'
 import { TimeParamsForm, RepsTimeParamsForm, SetParamsForm } from './MilestoneParamsForm'

@@ -12,7 +12,7 @@ interface SplitTimeItemProps {
  * スプリットタイムアイテムコンポーネント
  * スプリットタイムの1件を表示
  */
-export const SplitTimeItem: React.FC<SplitTimeItemProps> = ({ splitTime, index: _index }) => {
+export const SplitTimeItem: React.FC<SplitTimeItemProps> = React.memo(({ splitTime, index: _index }) => {
   const formattedTime = formatTime(splitTime.split_time)
 
   return (
@@ -27,7 +27,7 @@ export const SplitTimeItem: React.FC<SplitTimeItemProps> = ({ splitTime, index: 
       </View>
     </View>
   )
-}
+})
 
 const styles = StyleSheet.create({
   container: {

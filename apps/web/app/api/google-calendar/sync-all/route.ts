@@ -38,32 +38,48 @@ export async function POST(request: NextRequest) {
     let competitionSuccessCount = 0
     let competitionErrorCount = 0
 
-    // 練習記録の一括同期
-    if (profileData.google_calendar_sync_practices) {
-      const { data: practices, error: practicesError } = await supabase
-        .from('practices')
-        .select('*')
-        .eq('user_id', user.id)
-        .is('google_event_id', null)
+    // 練習・大会データを並行取得
+    const [practicesResult, competitionsResult] = await Promise.all([
+      profileData.google_calendar_sync_practices
+        ? supabase.from('practices').select('*').eq('user_id', user.id).is('google_event_id', null)
+        : Promise.resolve({ data: null, error: null }),
+      profileData.google_calendar_sync_competitions
+        ? supabase.from('competitions').select('*').eq('user_id', user.id).is('google_event_id', null)
+        : Promise.resolve({ data: null, error: null })
+    ])
 
-      if (!practicesError && practices) {
-        for (const practice of practices as Practice[]) {
-          try {
-            // チーム名を取得（team_idがある場合）
-            let teamName: string | null = null
-            if (practice.team_id) {
-              const { data: team } = await supabase
-                .from('teams')
-                .select('name')
-                .eq('id', practice.team_id)
-                .single()
-              teamName = (team as { name: string } | null)?.name || null
-            }
+    const practices = (!practicesResult.error && practicesResult.data) ? practicesResult.data as Practice[] : []
+    const competitions = (!competitionsResult.error && competitionsResult.data) ? competitionsResult.data as Competition[] : []
 
-            // Google Calendarイベントに変換
+    // チーム名を事前に一括取得（N+1クエリ回避）
+    const allTeamIds = [...new Set([
+      ...practices.filter(p => p.team_id).map(p => p.team_id!),
+      ...competitions.filter(c => c.team_id).map(c => c.team_id!)
+    ])]
+
+    const teamNameMap = new Map<string, string>()
+    if (allTeamIds.length > 0) {
+      const { data: teams } = await supabase
+        .from('teams')
+        .select('id, name')
+        .in('id', allTeamIds)
+      if (teams) {
+        for (const team of teams as Array<{ id: string; name: string }>) {
+          teamNameMap.set(team.id, team.name)
+        }
+      }
+    }
+
+    // 練習記録の一括同期（バッチ並列化）
+    if (practices.length > 0) {
+      const BATCH_SIZE = 5
+      for (let i = 0; i < practices.length; i += BATCH_SIZE) {
+        const batch = practices.slice(i, i + BATCH_SIZE)
+        const results = await Promise.allSettled(
+          batch.map(async (practice) => {
+            const teamName = practice.team_id ? teamNameMap.get(practice.team_id) ?? null : null
             const event = practiceToCalendarEvent(practice, teamName)
 
-            // Google Calendar APIを呼び出し
             const response = await fetchGoogleCalendarWithTokenRefresh(
               calendarApiUrl,
               { method: 'POST', body: JSON.stringify(event) },
@@ -73,8 +89,6 @@ export async function POST(request: NextRequest) {
 
             if (response.ok) {
               const result = await response.json() as { id: string }
-
-              // google_event_idを保存
               const { error: updateError } = await (
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 supabase.from('practices') as any
@@ -84,48 +98,34 @@ export async function POST(request: NextRequest) {
 
               if (updateError) {
                 console.error(`Practice更新エラー (${practice.id}):`, updateError)
-                practiceErrorCount++
-              } else {
-                practiceSuccessCount++
+                throw updateError
               }
             } else {
               console.error(`Practice同期エラー (${practice.id}):`, await response.text())
-              practiceErrorCount++
+              throw new Error(`Practice sync failed: ${practice.id}`)
             }
-          } catch (error) {
-            console.error(`Practice同期エラー (${practice.id}):`, error)
+          })
+        )
+        for (const result of results) {
+          if (result.status === 'fulfilled') {
+            practiceSuccessCount++
+          } else {
             practiceErrorCount++
           }
         }
       }
     }
 
-    // 大会記録の一括同期
-    if (profileData.google_calendar_sync_competitions) {
-      const { data: competitions, error: competitionsError } = await supabase
-        .from('competitions')
-        .select('*')
-        .eq('user_id', user.id)
-        .is('google_event_id', null)
-
-      if (!competitionsError && competitions) {
-        for (const competition of competitions as Competition[]) {
-          try {
-            // チーム名を取得（team_idがある場合）
-            let teamName: string | null = null
-            if (competition.team_id) {
-              const { data: team } = await supabase
-                .from('teams')
-                .select('name')
-                .eq('id', competition.team_id)
-                .single()
-              teamName = (team as { name: string } | null)?.name || null
-            }
-
-            // Google Calendarイベントに変換
+    // 大会記録の一括同期（バッチ並列化）
+    if (competitions.length > 0) {
+      const BATCH_SIZE = 5
+      for (let i = 0; i < competitions.length; i += BATCH_SIZE) {
+        const batch = competitions.slice(i, i + BATCH_SIZE)
+        const results = await Promise.allSettled(
+          batch.map(async (competition) => {
+            const teamName = competition.team_id ? teamNameMap.get(competition.team_id) ?? null : null
             const event = competitionToCalendarEvent(competition, teamName)
 
-            // Google Calendar APIを呼び出し
             const response = await fetchGoogleCalendarWithTokenRefresh(
               calendarApiUrl,
               { method: 'POST', body: JSON.stringify(event) },
@@ -135,8 +135,6 @@ export async function POST(request: NextRequest) {
 
             if (response.ok) {
               const result = await response.json() as { id: string }
-
-              // google_event_idを保存
               const { error: updateError } = await (
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 supabase.from('competitions') as any
@@ -146,16 +144,18 @@ export async function POST(request: NextRequest) {
 
               if (updateError) {
                 console.error(`Competition更新エラー (${competition.id}):`, updateError)
-                competitionErrorCount++
-              } else {
-                competitionSuccessCount++
+                throw updateError
               }
             } else {
               console.error(`Competition同期エラー (${competition.id}):`, await response.text())
-              competitionErrorCount++
+              throw new Error(`Competition sync failed: ${competition.id}`)
             }
-          } catch (error) {
-            console.error(`Competition同期エラー (${competition.id}):`, error)
+          })
+        )
+        for (const result of results) {
+          if (result.status === 'fulfilled') {
+            competitionSuccessCount++
+          } else {
             competitionErrorCount++
           }
         }

@@ -1,7 +1,8 @@
 'use client'
 
 import React from 'react'
-import { Input, DatePicker } from '@/components/ui'
+import Input from '@/components/ui/Input'
+import DatePicker from '@/components/ui/DatePicker'
 import type { RecordFormData } from '../types'
 import { POOL_TYPES } from '../types'
 

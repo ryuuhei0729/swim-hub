@@ -12,6 +12,7 @@ import { CompetitionBasicFormScreen } from '@/screens/CompetitionBasicFormScreen
 import { EntryLogFormScreen } from '@/screens/EntryLogFormScreen'
 import { RecordLogFormScreen } from '@/screens/RecordLogFormScreen'
 import { TeamDetailScreen } from '@/screens/TeamDetailScreen'
+import { SettingsScreen } from '@/screens/SettingsScreen'
 
 const Stack = createNativeStackNavigator<MainStackParamList>()
 
@@ -181,6 +182,22 @@ export const MainStack: React.FC = () => {
         options={{
           headerShown: true,
           title: 'チーム詳細',
+          headerBackTitle: '戻る',
+          headerStyle: {
+            backgroundColor: '#FFFFFF',
+          },
+          headerTintColor: '#111827',
+          headerTitleStyle: {
+            fontWeight: '600',
+          },
+        }}
+      />
+      <Stack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{
+          headerShown: true,
+          title: '設定',
           headerBackTitle: '戻る',
           headerStyle: {
             backgroundColor: '#FFFFFF',

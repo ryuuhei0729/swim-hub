@@ -13,24 +13,24 @@ export class TeamAttendancesAPI {
     const userId = await requireAuth(this.supabase)
     await requireTeamMembership(this.supabase, teamId, userId)
 
-    // 練習の出欠を取得（practice.team_id でフィルタ）
-    const { data: practiceAttendance, error: pErr } = await this.supabase
-      .from('team_attendance')
-      .select('*, user:users(*), practice:practices!inner(*), competition:competitions(*)')
-      .eq('practice.team_id', teamId)
-    if (pErr) throw pErr
-
-    // 大会の出欠を取得（competition.team_id でフィルタ）
-    const { data: competitionAttendance, error: cErr } = await this.supabase
-      .from('team_attendance')
-      .select('*, user:users(*), practice:practices(*), competition:competitions!inner(*)')
-      .eq('competition.team_id', teamId)
-    if (cErr) throw cErr
+    // 練習と大会の出欠を並列取得
+    const [practiceResult, competitionResult] = await Promise.all([
+      this.supabase
+        .from('team_attendance')
+        .select('*, user:users(*), practice:practices!inner(*), competition:competitions(*)')
+        .eq('practice.team_id', teamId),
+      this.supabase
+        .from('team_attendance')
+        .select('*, user:users(*), practice:practices(*), competition:competitions!inner(*)')
+        .eq('competition.team_id', teamId),
+    ])
+    if (practiceResult.error) throw practiceResult.error
+    if (competitionResult.error) throw competitionResult.error
 
     // マージして返す
     return [
-      ...((practiceAttendance ?? []) as TeamAttendanceWithDetails[]),
-      ...((competitionAttendance ?? []) as TeamAttendanceWithDetails[])
+      ...((practiceResult.data ?? []) as TeamAttendanceWithDetails[]),
+      ...((competitionResult.data ?? []) as TeamAttendanceWithDetails[])
     ]
   }
 

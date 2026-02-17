@@ -1,11 +1,16 @@
 'use client'
 
 import React, { useState, useEffect, lazy, Suspense } from 'react'
+import dynamic from 'next/dynamic'
 import { PencilIcon, TrashIcon, ShareIcon, UsersIcon } from '@heroicons/react/24/outline'
 import { BoltIcon } from '@heroicons/react/24/solid'
 import { format, parseISO, isValid } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { ShareCardModal } from '@/components/share'
+
+const ShareCardModal = dynamic(
+  () => import('@/components/share/ShareCardModal').then(mod => ({ default: mod.ShareCardModal })),
+  { ssr: false }
+)
 import type { PracticeShareData, PracticeMenuItem } from '@/components/share'
 import { formatTime, formatTimeAverage } from '@/utils/formatters'
 import { useAuth } from '@/contexts'
@@ -174,7 +179,7 @@ export function PracticeDetails({
     }
 
     loadPractice()
-  }, [practiceId, supabase, practiceLogUpdateKey])
+  }, [practiceId, supabase, practiceLogUpdateKey, isTeamPractice, user])
 
   if (loading) {
     return (

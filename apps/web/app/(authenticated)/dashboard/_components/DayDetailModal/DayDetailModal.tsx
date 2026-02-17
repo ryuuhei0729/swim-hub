@@ -7,13 +7,13 @@ import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { useAuth } from '@/contexts'
 import {
-  DayDetailModalProps,
-  CalendarItem,
+  type DayDetailModalProps,
+  type CalendarItem,
   isPracticeMetadata,
   isCompetitionMetadata,
   isRecordMetadata,
   isTeamInfo
-} from '@/types'
+} from '@apps/shared/types/ui'
 import type { PracticeLog } from '@apps/shared/types'
 import {
   PracticeDetails,
@@ -83,25 +83,35 @@ export default function DayDetailModal({
 
   // エントリー編集ハンドラー
   const handleEditEntry = async (item: CalendarItem, competitionId: string) => {
-    const { data: { user } } = await supabase.auth.getUser()
+    // getUser()とcompetitionステータスチェックを並行実行
+    let user: { id: string } | null = null
+    let competitionStatusResult: { data: { entry_status?: string } | null; error: unknown } = { data: null, error: null }
+
+    try {
+      const [authResult, statusResult] = await Promise.all([
+        supabase.auth.getUser(),
+        item.metadata?.team_id
+          ? supabase.from('competitions').select('entry_status').eq('id', competitionId).single()
+          : Promise.resolve({ data: null, error: null })
+      ])
+      user = authResult.data.user
+      competitionStatusResult = statusResult
+    } catch (error) {
+      console.error('データ取得中にエラーが発生しました:', error)
+      window.alert('データの取得に失敗しました。時間をおいて再度お試しください。')
+      return
+    }
+
     if (!user) return
 
     // チームcompetitionの場合、entry_statusをチェック
-    if (item.metadata?.team_id) {
-      const { data: competitionData, error: competitionError } = await supabase
-        .from('competitions')
-        .select('entry_status')
-        .eq('id', competitionId)
-        .single()
-
-      if (!competitionError && competitionData) {
-        const status = competitionData.entry_status || 'before'
-        if (status !== 'open') {
-          const statusLabel = status === 'before' ? '受付前' : '受付終了'
-          window.alert(`エントリーは${statusLabel}のため、エントリー登録はできません。記録入力に進みます。`)
-          onAddRecord?.({ competitionId })
-          return
-        }
+    if (item.metadata?.team_id && !competitionStatusResult.error && competitionStatusResult.data) {
+      const status = competitionStatusResult.data.entry_status || 'before'
+      if (status !== 'open') {
+        const statusLabel = status === 'before' ? '受付前' : '受付終了'
+        window.alert(`エントリーは${statusLabel}のため、エントリー登録はできません。記録入力に進みます。`)
+        onAddRecord?.({ competitionId })
+        return
       }
     }
 

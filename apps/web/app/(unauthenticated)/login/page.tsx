@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { AuthForm, AuthUI } from '@/components/auth'
 import { useAuth } from '@/contexts'
 import { FullScreenLoading } from '@/components/ui/LoadingSpinner'
-import { getSafeRedirectUrl } from '@/utils'
+import { getSafeRedirectUrl } from '@/utils/redirect'
 
 export default function LoginPage() {
   return (

@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { Button, ConfirmDialog } from '@/components/ui'
+import Button from '@/components/ui/Button'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { formatTime, formatTimeAverage } from '@apps/shared/utils/time'
 import { useQuickTimeInput } from '@/components/forms/shared/TimeInput/hooks'

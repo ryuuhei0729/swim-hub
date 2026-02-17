@@ -1,7 +1,9 @@
 'use client'
 
 import React from 'react'
-import { Button, Input, DatePicker } from '@/components/ui'
+import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
+import DatePicker from '@/components/ui/DatePicker'
 import { format } from 'date-fns'
 import type { Style, Competition } from '@apps/shared/types'
 import { POOL_TYPES } from '../constants'

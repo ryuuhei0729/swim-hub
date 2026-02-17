@@ -1,7 +1,8 @@
 'use client'
 
 import React from 'react'
-import { Button, DatePicker } from '@/components/ui'
+import Button from '@/components/ui/Button'
+import DatePicker from '@/components/ui/DatePicker'
 import { parseISO, isValid, format } from 'date-fns'
 
 interface DeadlineInputProps {

@@ -5,7 +5,7 @@ import {
   useDeleteTeamAnnouncementMutation,
 } from '@apps/shared/hooks/queries/announcements'
 import { useAuth } from '@/contexts'
-import type { TeamAnnouncement } from '@/types'
+import type { TeamAnnouncement } from '@apps/shared/types/team'
 import { formatDateTime } from '@apps/shared/utils/date'
 
 interface AnnouncementDetailProps {

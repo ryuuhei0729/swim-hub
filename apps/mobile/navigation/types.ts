@@ -7,8 +7,11 @@ import type { NavigatorScreenParams } from '@react-navigation/native'
 
 // 認証スタックのパラメータ型
 export type AuthStackParamList = {
-  Login: undefined
-  SignUp: undefined
+  Welcome: undefined
+  GetStarted: undefined
+  LoginMethod: undefined
+  EmailLogin: undefined
+  EmailSignup: undefined
   ResetPassword: undefined
 }
 
@@ -77,6 +80,7 @@ export type MainStackParamList = {
   TeamDetail: {
     teamId: string
   }
+  Settings: undefined
 }
 
 // ルートナビゲーターのパラメータ型（認証状態に応じて切り替え）

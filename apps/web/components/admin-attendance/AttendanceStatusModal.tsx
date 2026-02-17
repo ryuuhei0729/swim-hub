@@ -1,7 +1,7 @@
 import React from 'react'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale/ja'
-import { BaseModal } from '@/components/ui'
+import BaseModal from '@/components/ui/BaseModal'
 import { TeamEvent, TeamAttendanceWithDetails } from '@swim-hub/shared/types'
 import { TeamMember } from '@swim-hub/shared/utils/team'
 import { AttendanceGroupingDisplay } from './AttendanceGroupingDisplay'

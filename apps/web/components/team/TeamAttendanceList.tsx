@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAuth } from '@/contexts'
-import { AttendanceAPI, TeamAttendanceWithDetails } from '@swim-hub/shared'
+import { AttendanceAPI } from '@swim-hub/shared/api/attendance'
+import type { TeamAttendanceWithDetails } from '@swim-hub/shared/types/attendance'
 import { AttendanceStatus } from '@swim-hub/shared/types'
 
 export interface TeamAttendanceListProps {
@@ -32,18 +33,20 @@ export default function TeamAttendanceList({
       setError(null)
 
       if (practiceId) {
-        const data = await attendanceAPI.getAttendanceByPractice(practiceId)
+        // 出欠データと提出可否を並列取得
+        const [data, canSubmitStatus] = await Promise.all([
+          attendanceAPI.getAttendanceByPractice(practiceId),
+          attendanceAPI.canSubmitAttendance(practiceId, null)
+        ])
         setAttendances(data)
-        
-        // 出欠提出可能かチェック
-        const canSubmitStatus = await attendanceAPI.canSubmitAttendance(practiceId, null)
         setCanSubmit(canSubmitStatus)
       } else if (competitionId) {
-        const data = await attendanceAPI.getAttendanceByCompetition(competitionId)
+        // 出欠データと提出可否を並列取得
+        const [data, canSubmitStatus] = await Promise.all([
+          attendanceAPI.getAttendanceByCompetition(competitionId),
+          attendanceAPI.canSubmitAttendance(null, competitionId)
+        ])
         setAttendances(data)
-        
-        // 出欠提出可能かチェック
-        const canSubmitStatus = await attendanceAPI.canSubmitAttendance(null, competitionId)
         setCanSubmit(canSubmitStatus)
       }
     } catch (err) {

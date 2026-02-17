@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
-import { Button } from '@/components/ui'
+import Button from '@/components/ui/Button'
 import { useAuth } from '@/contexts'
 import { useUserProfileQuery } from '@apps/shared/hooks/queries/user'
 import type { GoalWithMilestones, Style } from '@apps/shared/types'

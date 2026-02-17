@@ -25,7 +25,8 @@ export const PracticeTimeFormScreen: React.FC = () => {
   const route = useRoute<PracticeTimeFormScreenRouteProp>()
   const navigation = useNavigation<PracticeTimeFormScreenNavigationProp>()
   const { setCount, repCount, initialTimes = [] } = route.params
-  const { setTimes: saveTimes, currentMenuId } = usePracticeTimeStore()
+  const saveTimes = usePracticeTimeStore((state) => state.setTimes)
+  const currentMenuId = usePracticeTimeStore((state) => state.currentMenuId)
 
   // クイック入力フック
   const { parseInput, resetContext } = useQuickTimeInput()

@@ -6,7 +6,7 @@ import {
   useCreateTeamAnnouncementMutation,
   useUpdateTeamAnnouncementMutation,
 } from '@apps/shared/hooks/queries/announcements'
-import type { TeamAnnouncement } from '@/types'
+import type { TeamAnnouncement } from '@apps/shared/types/team'
 
 interface AnnouncementFormProps {
   isOpen: boolean

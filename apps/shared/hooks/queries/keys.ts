@@ -84,6 +84,25 @@ export const userKeys = {
 } as const
 
 /**
+ * ダッシュボード統計のクエリキー
+ */
+export const dashboardKeys = {
+  all: ['dashboard'] as const,
+  stats: (userId: string, month: string) => [...dashboardKeys.all, 'stats', userId, month] as const,
+} as const
+
+/**
+ * 通知（出欠未回答・エントリー未提出）のクエリキー
+ */
+export const notificationKeys = {
+  all: ['notifications'] as const,
+  unanswered: (userId: string, teamIds: string[]) =>
+    [...notificationKeys.all, 'unanswered', userId, ...[...teamIds].sort()] as const,
+  unsubmitted: (userId: string, teamIds: string[]) =>
+    [...notificationKeys.all, 'unsubmitted', userId, ...[...teamIds].sort()] as const,
+} as const
+
+/**
  * 練習ログテンプレートのクエリキー
  */
 export const practiceLogTemplateKeys = {

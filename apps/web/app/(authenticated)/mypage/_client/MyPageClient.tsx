@@ -4,18 +4,18 @@ import React, { useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts'
 import { useUserQuery, userKeys } from '@apps/shared/hooks'
-import { TeamCoreAPI } from '@apps/shared/api/teams'
+import { useTeamsQuery } from '@apps/shared/hooks/queries/teams'
+import { teamKeys } from '@apps/shared/hooks/queries/keys'
 import { useQueryClient } from '@tanstack/react-query'
-import { TrophyIcon, DocumentArrowUpIcon } from '@heroicons/react/24/outline'
+import { TrophyIcon, DocumentArrowUpIcon, Cog6ToothIcon } from '@heroicons/react/24/outline'
 import BestTimesTable from '@/components/profile/BestTimesTable'
 import ProfileDisplay from '@/components/profile/ProfileDisplay'
 import ProfileEditModal from '@/components/profile/ProfileEditModal'
-import GoogleCalendarSyncSettings from '@/components/settings/GoogleCalendarSyncSettings'
-import EmailChangeSettings from '@/components/settings/EmailChangeSettings'
-import IdentityLinkSettings from '@/components/settings/IdentityLinkSettings'
-import TeamCreateModal from '@/components/team/TeamCreateModal'
-import TeamJoinModal from '@/components/team/TeamJoinModal'
-import type { UserUpdate, UserProfile as DatabaseUserProfile } from '@apps/shared/types'
+import dynamic from 'next/dynamic'
+
+const TeamCreateModal = dynamic(() => import('@/components/team/TeamCreateModal'))
+const TeamJoinModal = dynamic(() => import('@/components/team/TeamJoinModal'))
+import type { UserUpdate } from '@apps/shared/types'
 
 interface BestTime {
   id: string
@@ -73,37 +73,12 @@ export default function MyPageClient({
     initialProfile: initialProfile as import('@swim-hub/shared/types').UserProfile | null,
   })
   
-  // チーム一覧を直接取得（useTeamsQueryが空配列を返す問題の回避）
-  const [teams, setTeams] = React.useState<import('@swim-hub/shared/types').TeamMembershipWithUser[]>([])
-
-  React.useEffect(() => {
-    if (!user || !supabase) {
-      setTeams([])
-      return
-    }
-    
-    const loadTeams = async () => {
-      try {
-        const coreApi = new TeamCoreAPI(supabase)
-        const loadedTeams = await coreApi.getMyTeams()
-        setTeams(loadedTeams)
-      } catch (error) {
-        console.error('MyPageClient - getMyTeams error:', error)
-        setTeams([])
-      }
-    }
-    
-    loadTeams()
-  }, [user, supabase])
-  const [bestTimes, setBestTimes] = useState<BestTime[]>(initialBestTimes)
+  // チーム一覧を取得（React Queryで管理）
+  const { teams = [] } = useTeamsQuery(supabase)
+  const [bestTimes] = useState<BestTime[]>(initialBestTimes)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isCreateTeamModalOpen, setIsCreateTeamModalOpen] = useState(false)
   const [isJoinTeamModalOpen, setIsJoinTeamModalOpen] = useState(false)
-
-  // サーバー側から取得した初期データを設定
-  React.useEffect(() => {
-    setBestTimes(initialBestTimes)
-  }, [initialBestTimes])
 
   // queryProfileをUserProfile型に変換
   const profile: UserProfile | null = queryProfile ? {
@@ -115,9 +90,6 @@ export default function MyPageClient({
     avatar_url: queryProfile.profile_image_path,
     profile_image_path: queryProfile.profile_image_path,
   } : null
-
-  // データベースのUserProfile（Google Calendar設定を含む）
-  const dbProfile: DatabaseUserProfile | null = queryProfile
 
   const handleProfileUpdate = useCallback(async (updatedProfile: Partial<UserProfile>) => {
     if (!user) return
@@ -172,25 +144,10 @@ export default function MyPageClient({
     }
   }, [user, supabase, queryClient])
 
-  const handleGoogleCalendarUpdate = useCallback(() => {
-    // プロフィールを再取得
-    if (user) {
-      queryClient.invalidateQueries({ queryKey: userKeys.profile(user.id) })
-      queryClient.invalidateQueries({ queryKey: userKeys.currentProfile() })
-    }
-  }, [user, queryClient])
-
   // チーム一覧を再取得する関数
-  const reloadTeams = useCallback(async () => {
-    if (!user || !supabase) return
-    try {
-      const coreApi = new TeamCoreAPI(supabase)
-      const loadedTeams = await coreApi.getMyTeams()
-      setTeams(loadedTeams)
-    } catch (error) {
-      console.error('チーム一覧の再取得エラー:', error)
-    }
-  }, [user, supabase])
+  const reloadTeams = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: teamKeys.list() })
+  }, [queryClient])
 
   // チーム作成成功時のハンドラー
   const handleCreateTeamSuccess = useCallback((_teamId: string) => {
@@ -208,9 +165,19 @@ export default function MyPageClient({
     <div className="space-y-4 sm:space-y-6">
       {/* ヘッダー */}
       <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
-          マイページ
-        </h1>
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+            マイページ
+          </h1>
+          <Link
+            href="/settings"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+            aria-label="設定画面を開く"
+          >
+            <Cog6ToothIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+            <span>設定</span>
+          </Link>
+        </div>
         <p className="text-sm sm:text-base text-gray-600">
           プロフィールとベストタイムを管理します
         </p>
@@ -259,17 +226,6 @@ export default function MyPageClient({
           <BestTimesTable bestTimes={bestTimes} />
         </div>
 
-        {/* Googleカレンダー連携設定 */}
-        <GoogleCalendarSyncSettings
-          profile={dbProfile}
-          onUpdate={handleGoogleCalendarUpdate}
-        />
-
-        {/* メールアドレス変更 */}
-        <EmailChangeSettings />
-
-        {/* ログイン連携 */}
-        <IdentityLinkSettings />
       </div>
 
       {/* プロフィール編集モーダル */}

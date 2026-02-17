@@ -4,7 +4,8 @@ import React from 'react'
 import { PlusIcon } from '@heroicons/react/24/outline'
 import { format, isSameMonth, isToday, getDay } from 'date-fns'
 import { isHoliday } from '@apps/shared/utils/holiday'
-import { CalendarItem, CalendarItemType } from '@/types'
+import type { CalendarItem } from '@apps/shared/types/ui'
+import type { CalendarItemType } from '@apps/shared/types/common'
 
 interface CalendarGridProps {
   calendarDays: Date[]

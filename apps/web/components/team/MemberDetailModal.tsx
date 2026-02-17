@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthProvider'
-import { BaseModal } from '@/components/ui'
+import BaseModal from '@/components/ui/BaseModal'
 import { TrophyIcon } from '@heroicons/react/24/outline'
 import { useMemberDetail } from '@/hooks/useMemberDetail'
 import { useBestTimes } from '@/hooks/useBestTimes'

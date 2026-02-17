@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
-import { View, Text, FlatList, TextInput, StyleSheet, Pressable, RefreshControl } from 'react-native'
+import { View, Text, TextInput, StyleSheet, Pressable, RefreshControl } from 'react-native'
+import { FlashList } from '@shopify/flash-list'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -7,6 +8,7 @@ import { format, subYears } from 'date-fns'
 import { useAuth } from '@/contexts/AuthProvider'
 import { useRecordsQuery } from '@apps/shared/hooks/queries/records'
 import { useRecordFilterStore } from '@/stores/recordStore'
+import { useShallow } from 'zustand/react/shallow'
 import { RecordItem } from '@/components/records'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ErrorView } from '@/components/layout/ErrorView'
@@ -37,7 +39,15 @@ export const RecordsScreen: React.FC = () => {
     filterPoolType,
     sortBy,
     sortOrder,
-  } = useRecordFilterStore()
+  } = useRecordFilterStore(
+    useShallow((state) => ({
+      filterStyleId: state.filterStyleId,
+      filterFiscalYear: state.filterFiscalYear,
+      filterPoolType: state.filterPoolType,
+      sortBy: state.sortBy,
+      sortOrder: state.sortOrder,
+    }))
+  )
 
   // デフォルトの日付範囲（過去1年間）
   const defaultStartDate = useMemo(() => {
@@ -255,7 +265,7 @@ export const RecordsScreen: React.FC = () => {
         </Pressable>
       </View>
 
-      <FlatList
+      <FlashList
         data={allRecords}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
@@ -270,12 +280,6 @@ export const RecordsScreen: React.FC = () => {
         }
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
-        // パフォーマンス最適化
-        initialNumToRender={10}
-        maxToRenderPerBatch={10}
-        windowSize={10}
-        removeClippedSubviews={true}
-        updateCellsBatchingPeriod={50}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>大会記録がありません</Text>
