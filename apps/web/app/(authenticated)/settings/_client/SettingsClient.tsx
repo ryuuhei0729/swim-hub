@@ -9,6 +9,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import GoogleCalendarSyncSettings from '@/components/settings/GoogleCalendarSyncSettings'
 import EmailChangeSettings from '@/components/settings/EmailChangeSettings'
 import IdentityLinkSettings from '@/components/settings/IdentityLinkSettings'
+import AccountDeleteSettings from '@/components/settings/AccountDeleteSettings'
 
 export default function SettingsClient() {
   const { user, supabase } = useAuth()
@@ -56,6 +57,9 @@ export default function SettingsClient() {
 
       {/* ログイン連携 */}
       <IdentityLinkSettings />
+
+      {/* アカウント削除 */}
+      <AccountDeleteSettings />
     </div>
   )
 }
