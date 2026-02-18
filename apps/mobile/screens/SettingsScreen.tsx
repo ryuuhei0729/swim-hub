@@ -7,6 +7,7 @@ import { GoogleCalendarSyncSettings } from '@/components/settings/GoogleCalendar
 import { IOSCalendarSyncSettings } from '@/components/settings/IOSCalendarSyncSettings'
 import { EmailChangeSettings } from '@/components/settings/EmailChangeSettings'
 import { IdentityLinkSettings } from '@/components/settings/IdentityLinkSettings'
+import { AccountDeleteSettings } from '@/components/settings/AccountDeleteSettings'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 
 /**
@@ -90,6 +91,9 @@ export const SettingsScreen: React.FC = () => {
 
         {/* ログイン連携セクション */}
         <IdentityLinkSettings />
+
+        {/* アカウント削除セクション */}
+        <AccountDeleteSettings />
 
         {/* ログアウトセクション */}
         <View style={styles.logoutSection}>

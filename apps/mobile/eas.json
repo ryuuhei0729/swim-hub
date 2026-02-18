@@ -8,7 +8,8 @@
       "autoIncrement": true,
       "ios": {
         "simulator": false,
-        "buildConfiguration": "Release"
+        "buildConfiguration": "Release",
+        "image": "sdk-54"
       },
       "android": {
         "buildType": "app-bundle"
