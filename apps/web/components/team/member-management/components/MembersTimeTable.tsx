@@ -233,7 +233,8 @@ export const MembersTimeTable: React.FC<MembersTimeTableProps> = ({
                   return distances.map((distance) => {
                     const bestTime = getBestTimeForMember(member.id, style, distance)
                     const createdAt = bestTime ? parseISO(bestTime.created_at) : null
-                    const isNew = createdAt ? differenceInDays(new Date(), createdAt) <= 30 : false
+                    // 一括登録（competition なし）は New 表示対象外
+                    const isNew = bestTime?.competition && createdAt ? differenceInDays(new Date(), createdAt) <= 30 : false
                     return (
                       <td
                         key={`${member.id}-${style}-${distance}`}

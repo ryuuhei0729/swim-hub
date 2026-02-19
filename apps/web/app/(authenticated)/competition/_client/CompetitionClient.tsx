@@ -375,36 +375,6 @@ export default function CompetitionClient({
         </div>
       </div>
 
-      {/* 統計情報 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <TrophyIcon className="h-6 w-6 text-yellow-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">総大会記録数</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {displayRecords.length}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <TrophyIcon className="h-6 w-6 text-blue-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">表示中の記録数</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {sortedRecords.length}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* フィルタリングセクション */}
       <div className="bg-white rounded-lg shadow p-6">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -791,10 +761,21 @@ export default function CompetitionClient({
                         {selectedRecord.split_times && selectedRecord.split_times.length > 0 && (
                           <div className="mt-3">
                             <LapTimeDisplay
-                              splitTimes={selectedRecord.split_times.map(st => ({
-                                distance: st.distance,
-                                splitTime: st.split_time
-                              }))}
+                              splitTimes={(() => {
+                                const baseSplits = selectedRecord.split_times.map(st => ({
+                                  distance: st.distance,
+                                  splitTime: st.split_time
+                                }))
+                                const raceDistance = selectedRecord.style?.distance
+                                const recordTime = selectedRecord.time
+                                if (raceDistance && recordTime && recordTime > 0) {
+                                  const hasGoalSplit = baseSplits.some(st => st.distance === raceDistance)
+                                  if (!hasGoalSplit) {
+                                    return [...baseSplits, { distance: raceDistance, splitTime: recordTime }]
+                                  }
+                                }
+                                return baseSplits
+                              })()}
                               raceDistance={selectedRecord.style?.distance}
                             />
                           </div>
