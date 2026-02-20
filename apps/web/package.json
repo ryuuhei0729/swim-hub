@@ -54,7 +54,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260127.0",
     "@eslint/eslintrc": "^3",
-    "@next/bundle-analyzer": "^15.5.9",
+    "@next/bundle-analyzer": "^16.1.6",
     "@opennextjs/cloudflare": "^1.15.1",
     "@playwright/test": "^1.56.1",
     "@tailwindcss/aspect-ratio": "^0.4.2",
