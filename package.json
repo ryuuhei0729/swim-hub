@@ -65,6 +65,7 @@
     "@types/node": "^25",
     "dotenv": "^17.2.3",
     "enhanced-resolve": "^5.18.4",
+    "minimatch": "^10.2.1",
     "supabase": "^2.71.1",
     "tapable": "^2.3.0",
     "turbo": "^2.6.0",
@@ -78,7 +79,8 @@
     "react-dom": "19.1.0",
     "@aws-sdk/client-cloudfront": "^3.750.0",
     "@aws-sdk/client-sts": "^3.750.0",
-    "fast-xml-parser": "^5.3.4"
+    "fast-xml-parser": "^5.3.4",
+    "minimatch": "^10.2.1"
   },
   "engines": {
     "node": "20.x",

@@ -597,23 +597,6 @@ export default function PracticeClient({
         )}
       </div>
 
-      {/* 統計情報 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        <div className="bg-white rounded-lg shadow p-5 sm:p-6">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <CalendarDaysIcon className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
-            </div>
-            <div className="ml-3 sm:ml-4">
-              <p className="text-xs sm:text-sm font-medium text-gray-600">総練習日数</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900">
-                {displayPractices.length}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* 練習記録一覧（表形式） */}
       <div className="bg-white rounded-lg shadow">
         {practiceLogs.length === 0 ? (

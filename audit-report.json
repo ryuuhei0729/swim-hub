@@ -1,634 +1,173 @@
 {
   "auditReportVersion": 2,
   "vulnerabilities": {
-    "@aws-sdk/client-cloudfront": {
-      "name": "@aws-sdk/client-cloudfront",
-      "severity": "low",
-      "isDirect": false,
-      "via": [
-        "@aws-sdk/client-sts",
-        "@aws-sdk/credential-provider-node",
-        "@smithy/config-resolver",
-        "@smithy/util-defaults-mode-node"
-      ],
-      "effects": [
-        "@opennextjs/aws"
-      ],
-      "range": "3.363.0 - 3.721.0",
-      "nodes": [
-        "node_modules/@aws-sdk/client-cloudfront"
-      ],
-      "fixAvailable": {
-        "name": "@opennextjs/cloudflare",
-        "version": "0.2.1",
-        "isSemVerMajor": true
-      }
-    },
-    "@aws-sdk/client-dynamodb": {
-      "name": "@aws-sdk/client-dynamodb",
-      "severity": "high",
-      "isDirect": false,
-      "via": [
-        "@aws-sdk/core",
-        "@aws-sdk/credential-provider-node",
-        "@aws-sdk/dynamodb-codec",
-        "@aws-sdk/middleware-user-agent",
-        "@aws-sdk/util-user-agent-node"
-      ],
-      "effects": [],
-      "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/client-dynamodb"
-      ],
-      "fixAvailable": true
-    },
-    "@aws-sdk/client-lambda": {
-      "name": "@aws-sdk/client-lambda",
-      "severity": "high",
-      "isDirect": false,
-      "via": [
-        "@aws-sdk/core",
-        "@aws-sdk/credential-provider-node",
-        "@aws-sdk/middleware-user-agent",
-        "@aws-sdk/util-user-agent-node"
-      ],
-      "effects": [],
-      "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/client-lambda"
-      ],
-      "fixAvailable": true
-    },
-    "@aws-sdk/client-s3": {
-      "name": "@aws-sdk/client-s3",
-      "severity": "high",
+    "@eslint/eslintrc": {
+      "name": "@eslint/eslintrc",
+      "severity": "moderate",
       "isDirect": true,
       "via": [
-        "@aws-sdk/core",
-        "@aws-sdk/credential-provider-node",
-        "@aws-sdk/middleware-flexible-checksums",
-        "@aws-sdk/middleware-sdk-s3",
-        "@aws-sdk/middleware-user-agent",
-        "@aws-sdk/signature-v4-multi-region",
-        "@aws-sdk/util-user-agent-node"
-      ],
-      "effects": [],
-      "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/client-s3"
-      ],
-      "fixAvailable": {
-        "name": "@aws-sdk/client-s3",
-        "version": "3.893.0",
-        "isSemVerMajor": true
-      }
-    },
-    "@aws-sdk/client-sqs": {
-      "name": "@aws-sdk/client-sqs",
-      "severity": "high",
-      "isDirect": false,
-      "via": [
-        "@aws-sdk/core",
-        "@aws-sdk/credential-provider-node",
-        "@aws-sdk/middleware-user-agent",
-        "@aws-sdk/util-user-agent-node"
-      ],
-      "effects": [],
-      "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/client-sqs"
-      ],
-      "fixAvailable": true
-    },
-    "@aws-sdk/client-sso": {
-      "name": "@aws-sdk/client-sso",
-      "severity": "high",
-      "isDirect": false,
-      "via": [
-        "@aws-sdk/core",
-        "@aws-sdk/middleware-user-agent",
-        "@aws-sdk/util-user-agent-node",
-        "@smithy/config-resolver",
-        "@smithy/util-defaults-mode-node"
+        "ajv"
       ],
       "effects": [
-        "@aws-sdk/credential-provider-sso"
-      ],
-      "range": "3.363.0 - 3.721.0 || >=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/client-cloudfront/node_modules/@aws-sdk/client-sso",
-        "node_modules/@aws-sdk/client-sso",
-        "node_modules/@aws-sdk/client-sts/node_modules/@aws-sdk/client-sso"
-      ],
-      "fixAvailable": {
-        "name": "@opennextjs/cloudflare",
-        "version": "0.2.1",
-        "isSemVerMajor": true
-      }
-    },
-    "@aws-sdk/client-sts": {
-      "name": "@aws-sdk/client-sts",
-      "severity": "low",
-      "isDirect": false,
-      "via": [
-        "@aws-sdk/credential-provider-node",
-        "@smithy/config-resolver",
-        "@smithy/util-defaults-mode-node"
-      ],
-      "effects": [
-        "@aws-sdk/client-cloudfront"
-      ],
-      "range": "3.363.0 - 3.721.0",
-      "nodes": [
-        "node_modules/@aws-sdk/client-sts"
-      ],
-      "fixAvailable": {
-        "name": "@opennextjs/cloudflare",
-        "version": "0.2.1",
-        "isSemVerMajor": true
-      }
-    },
-    "@aws-sdk/core": {
-      "name": "@aws-sdk/core",
-      "severity": "high",
-      "isDirect": false,
-      "via": [
-        "@aws-sdk/xml-builder"
-      ],
-      "effects": [
-        "@aws-sdk/client-dynamodb",
-        "@aws-sdk/client-lambda",
-        "@aws-sdk/client-s3",
-        "@aws-sdk/client-sqs",
-        "@aws-sdk/client-sso",
-        "@aws-sdk/credential-provider-env",
-        "@aws-sdk/credential-provider-http",
-        "@aws-sdk/credential-provider-ini",
-        "@aws-sdk/credential-provider-login",
-        "@aws-sdk/credential-provider-process",
-        "@aws-sdk/credential-provider-sso",
-        "@aws-sdk/credential-provider-web-identity",
-        "@aws-sdk/dynamodb-codec",
-        "@aws-sdk/middleware-flexible-checksums",
-        "@aws-sdk/middleware-sdk-s3",
-        "@aws-sdk/middleware-user-agent",
-        "@aws-sdk/nested-clients",
-        "@aws-sdk/token-providers"
-      ],
-      "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/core",
-        "node_modules/@aws-sdk/signature-v4-multi-region/node_modules/@aws-sdk/core"
-      ],
-      "fixAvailable": {
-        "name": "@aws-sdk/client-s3",
-        "version": "3.893.0",
-        "isSemVerMajor": true
-      }
-    },
-    "@aws-sdk/credential-provider-env": {
-      "name": "@aws-sdk/credential-provider-env",
-      "severity": "high",
-      "isDirect": false,
-      "via": [
-        "@aws-sdk/core"
-      ],
-      "effects": [],
-      "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/credential-provider-env"
-      ],
-      "fixAvailable": true
-    },
-    "@aws-sdk/credential-provider-http": {
-      "name": "@aws-sdk/credential-provider-http",
-      "severity": "high",
-      "isDirect": false,
-      "via": [
-        "@aws-sdk/core"
-      ],
-      "effects": [],
-      "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/credential-provider-http"
-      ],
-      "fixAvailable": true
-    },
-    "@aws-sdk/credential-provider-ini": {
-      "name": "@aws-sdk/credential-provider-ini",
-      "severity": "high",
-      "isDirect": false,
-      "via": [
-        "@aws-sdk/core",
-        "@aws-sdk/credential-provider-env",
-        "@aws-sdk/credential-provider-http",
-        "@aws-sdk/credential-provider-login",
-        "@aws-sdk/credential-provider-process",
-        "@aws-sdk/credential-provider-sso",
-        "@aws-sdk/credential-provider-sso",
-        "@aws-sdk/credential-provider-web-identity",
-        "@aws-sdk/nested-clients"
-      ],
-      "effects": [
-        "@aws-sdk/credential-provider-node"
-      ],
-      "range": "3.388.0 - 3.501.0 || >=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/client-cloudfront/node_modules/@aws-sdk/credential-provider-ini",
-        "node_modules/@aws-sdk/client-sts/node_modules/@aws-sdk/credential-provider-ini",
-        "node_modules/@aws-sdk/credential-provider-ini"
-      ],
-      "fixAvailable": {
-        "name": "@opennextjs/cloudflare",
-        "version": "0.2.1",
-        "isSemVerMajor": true
-      }
-    },
-    "@aws-sdk/credential-provider-login": {
-      "name": "@aws-sdk/credential-provider-login",
-      "severity": "high",
-      "isDirect": false,
-      "via": [
-        "@aws-sdk/core",
-        "@aws-sdk/nested-clients"
-      ],
-      "effects": [
-        "@aws-sdk/credential-provider-ini"
+        "eslint"
       ],
       "range": "*",
       "nodes": [
-        "node_modules/@aws-sdk/credential-provider-login"
+        "node_modules/@eslint/eslintrc"
       ],
       "fixAvailable": {
-        "name": "@opennextjs/cloudflare",
-        "version": "0.2.1",
+        "name": "eslint",
+        "version": "4.1.1",
         "isSemVerMajor": true
       }
     },
-    "@aws-sdk/credential-provider-node": {
-      "name": "@aws-sdk/credential-provider-node",
-      "severity": "high",
+    "ajv": {
+      "name": "ajv",
+      "severity": "moderate",
       "isDirect": false,
       "via": [
-        "@aws-sdk/credential-provider-env",
-        "@aws-sdk/credential-provider-http",
-        "@aws-sdk/credential-provider-ini",
-        "@aws-sdk/credential-provider-ini",
-        "@aws-sdk/credential-provider-process",
-        "@aws-sdk/credential-provider-sso",
-        "@aws-sdk/credential-provider-sso",
-        "@aws-sdk/credential-provider-web-identity"
+        {
+          "source": 1113214,
+          "name": "ajv",
+          "dependency": "ajv",
+          "title": "ajv has ReDoS when using `$data` option",
+          "url": "https://github.com/advisories/GHSA-2g4f-4pwh-qvx6",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-400"
+          ],
+          "cvss": {
+            "score": 0,
+            "vectorString": null
+          },
+          "range": "<8.18.0"
+        }
       ],
       "effects": [
-        "@aws-sdk/client-cloudfront",
-        "@aws-sdk/client-sts"
+        "@eslint/eslintrc",
+        "eslint"
       ],
-      "range": "3.388.0 - 3.501.0 || >=3.894.0",
+      "range": "<8.18.0",
       "nodes": [
-        "node_modules/@aws-sdk/client-cloudfront/node_modules/@aws-sdk/credential-provider-node",
-        "node_modules/@aws-sdk/client-sts/node_modules/@aws-sdk/credential-provider-node",
-        "node_modules/@aws-sdk/credential-provider-node"
+        "node_modules/ajv"
       ],
       "fixAvailable": {
-        "name": "@opennextjs/cloudflare",
-        "version": "0.2.1",
+        "name": "eslint",
+        "version": "4.1.1",
         "isSemVerMajor": true
       }
     },
-    "@aws-sdk/credential-provider-process": {
-      "name": "@aws-sdk/credential-provider-process",
-      "severity": "high",
+    "esbuild": {
+      "name": "esbuild",
+      "severity": "moderate",
       "isDirect": false,
       "via": [
-        "@aws-sdk/core"
-      ],
-      "effects": [],
-      "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/credential-provider-process"
-      ],
-      "fixAvailable": true
-    },
-    "@aws-sdk/credential-provider-sso": {
-      "name": "@aws-sdk/credential-provider-sso",
-      "severity": "high",
-      "isDirect": false,
-      "via": [
-        "@aws-sdk/client-sso",
-        "@aws-sdk/client-sso",
-        "@aws-sdk/core",
-        "@aws-sdk/token-providers",
-        "@aws-sdk/token-providers"
+        {
+          "source": 1102341,
+          "name": "esbuild",
+          "dependency": "esbuild",
+          "title": "esbuild enables any website to send any requests to the development server and read the response",
+          "url": "https://github.com/advisories/GHSA-67mh-4wv8-2f99",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-346"
+          ],
+          "cvss": {
+            "score": 5.3,
+            "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:N/A:N"
+          },
+          "range": "<=0.24.2"
+        }
       ],
       "effects": [
-        "@aws-sdk/credential-provider-ini",
-        "@aws-sdk/credential-provider-node"
+        "vite"
       ],
-      "range": "3.363.0 - 3.721.0 || >=3.894.0",
+      "range": "<=0.24.2",
       "nodes": [
-        "node_modules/@aws-sdk/client-cloudfront/node_modules/@aws-sdk/credential-provider-sso",
-        "node_modules/@aws-sdk/client-sts/node_modules/@aws-sdk/credential-provider-sso",
-        "node_modules/@aws-sdk/credential-provider-sso"
+        "node_modules/vite/node_modules/esbuild"
       ],
       "fixAvailable": {
-        "name": "@opennextjs/cloudflare",
-        "version": "0.2.1",
+        "name": "vitest",
+        "version": "4.0.18",
         "isSemVerMajor": true
       }
     },
-    "@aws-sdk/credential-provider-web-identity": {
-      "name": "@aws-sdk/credential-provider-web-identity",
-      "severity": "high",
-      "isDirect": false,
-      "via": [
-        "@aws-sdk/core",
-        "@aws-sdk/nested-clients"
-      ],
-      "effects": [],
-      "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/credential-provider-web-identity"
-      ],
-      "fixAvailable": true
-    },
-    "@aws-sdk/dynamodb-codec": {
-      "name": "@aws-sdk/dynamodb-codec",
-      "severity": "high",
-      "isDirect": false,
-      "via": [
-        "@aws-sdk/core"
-      ],
-      "effects": [
-        "@aws-sdk/client-dynamodb"
-      ],
-      "range": "*",
-      "nodes": [
-        "node_modules/@aws-sdk/dynamodb-codec"
-      ],
-      "fixAvailable": true
-    },
-    "@aws-sdk/middleware-flexible-checksums": {
-      "name": "@aws-sdk/middleware-flexible-checksums",
-      "severity": "high",
-      "isDirect": false,
-      "via": [
-        "@aws-sdk/core"
-      ],
-      "effects": [],
-      "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/middleware-flexible-checksums"
-      ],
-      "fixAvailable": true
-    },
-    "@aws-sdk/middleware-sdk-s3": {
-      "name": "@aws-sdk/middleware-sdk-s3",
-      "severity": "high",
-      "isDirect": false,
-      "via": [
-        "@aws-sdk/core"
-      ],
-      "effects": [
-        "@aws-sdk/signature-v4-multi-region"
-      ],
-      "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/middleware-sdk-s3",
-        "node_modules/@aws-sdk/signature-v4-multi-region/node_modules/@aws-sdk/middleware-sdk-s3"
-      ],
-      "fixAvailable": true
-    },
-    "@aws-sdk/middleware-user-agent": {
-      "name": "@aws-sdk/middleware-user-agent",
-      "severity": "high",
-      "isDirect": false,
-      "via": [
-        "@aws-sdk/core"
-      ],
-      "effects": [
-        "@aws-sdk/util-user-agent-node"
-      ],
-      "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/middleware-user-agent"
-      ],
-      "fixAvailable": true
-    },
-    "@aws-sdk/nested-clients": {
-      "name": "@aws-sdk/nested-clients",
-      "severity": "high",
-      "isDirect": false,
-      "via": [
-        "@aws-sdk/core",
-        "@aws-sdk/middleware-user-agent",
-        "@aws-sdk/util-user-agent-node"
-      ],
-      "effects": [],
-      "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/nested-clients"
-      ],
-      "fixAvailable": true
-    },
-    "@aws-sdk/signature-v4-multi-region": {
-      "name": "@aws-sdk/signature-v4-multi-region",
-      "severity": "high",
-      "isDirect": false,
-      "via": [
-        "@aws-sdk/middleware-sdk-s3"
-      ],
-      "effects": [],
-      "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/signature-v4-multi-region"
-      ],
-      "fixAvailable": true
-    },
-    "@aws-sdk/token-providers": {
-      "name": "@aws-sdk/token-providers",
-      "severity": "high",
-      "isDirect": false,
-      "via": [
-        "@aws-sdk/core",
-        "@aws-sdk/nested-clients",
-        "@smithy/config-resolver",
-        "@smithy/util-defaults-mode-node"
-      ],
-      "effects": [
-        "@aws-sdk/credential-provider-sso"
-      ],
-      "range": "3.388.0 - 3.501.0 || >=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/client-cloudfront/node_modules/@aws-sdk/token-providers",
-        "node_modules/@aws-sdk/client-sts/node_modules/@aws-sdk/token-providers",
-        "node_modules/@aws-sdk/token-providers"
-      ],
-      "fixAvailable": {
-        "name": "@opennextjs/cloudflare",
-        "version": "0.2.1",
-        "isSemVerMajor": true
-      }
-    },
-    "@aws-sdk/util-user-agent-node": {
-      "name": "@aws-sdk/util-user-agent-node",
-      "severity": "high",
-      "isDirect": false,
-      "via": [
-        "@aws-sdk/middleware-user-agent"
-      ],
-      "effects": [],
-      "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/util-user-agent-node"
-      ],
-      "fixAvailable": true
-    },
-    "@aws-sdk/xml-builder": {
-      "name": "@aws-sdk/xml-builder",
-      "severity": "high",
-      "isDirect": false,
-      "via": [
-        "fast-xml-parser"
-      ],
-      "effects": [
-        "@aws-sdk/core"
-      ],
-      "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/signature-v4-multi-region/node_modules/@aws-sdk/xml-builder",
-        "node_modules/@aws-sdk/xml-builder"
-      ],
-      "fixAvailable": {
-        "name": "@aws-sdk/client-s3",
-        "version": "3.893.0",
-        "isSemVerMajor": true
-      }
-    },
-    "@opennextjs/aws": {
-      "name": "@opennextjs/aws",
-      "severity": "low",
-      "isDirect": false,
-      "via": [
-        "@aws-sdk/client-cloudfront"
-      ],
-      "effects": [
-        "@opennextjs/cloudflare"
-      ],
-      "range": ">=3.4.0",
-      "nodes": [
-        "node_modules/@opennextjs/aws"
-      ],
-      "fixAvailable": {
-        "name": "@opennextjs/cloudflare",
-        "version": "0.2.1",
-        "isSemVerMajor": true
-      }
-    },
-    "@opennextjs/cloudflare": {
-      "name": "@opennextjs/cloudflare",
-      "severity": "low",
+    "eslint": {
+      "name": "eslint",
+      "severity": "moderate",
       "isDirect": true,
       "via": [
-        "@opennextjs/aws"
+        "@eslint/eslintrc",
+        "ajv"
       ],
       "effects": [],
-      "range": ">=0.3.0",
+      "range": ">=4.2.0",
       "nodes": [
-        "node_modules/@opennextjs/cloudflare"
+        "node_modules/eslint"
       ],
       "fixAvailable": {
-        "name": "@opennextjs/cloudflare",
-        "version": "0.2.1",
+        "name": "eslint",
+        "version": "4.1.1",
         "isSemVerMajor": true
       }
     },
-    "@smithy/config-resolver": {
-      "name": "@smithy/config-resolver",
-      "severity": "low",
+    "vite": {
+      "name": "vite",
+      "severity": "moderate",
       "isDirect": false,
       "via": [
-        {
-          "source": 1111987,
-          "name": "@smithy/config-resolver",
-          "dependency": "@smithy/config-resolver",
-          "title": "AWS SDK for JavaScript v3 adopted defense in depth enhancement for region parameter value",
-          "url": "https://github.com/advisories/GHSA-6475-r3vj-m8vf",
-          "severity": "low",
-          "cwe": [
-            "CWE-20"
-          ],
-          "cvss": {
-            "score": 3.7,
-            "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:N/A:N"
-          },
-          "range": "<4.4.0"
-        }
+        "esbuild"
       ],
       "effects": [
-        "@aws-sdk/client-cloudfront",
-        "@aws-sdk/client-sso",
-        "@aws-sdk/client-sts",
-        "@aws-sdk/token-providers",
-        "@smithy/util-defaults-mode-node"
+        "vite-node",
+        "vitest"
       ],
-      "range": "<4.4.0",
+      "range": "0.11.0 - 6.1.6",
       "nodes": [
-        "node_modules/@aws-sdk/client-cloudfront/node_modules/@smithy/config-resolver",
-        "node_modules/@aws-sdk/client-sts/node_modules/@smithy/config-resolver"
+        "node_modules/vite"
       ],
       "fixAvailable": {
-        "name": "@opennextjs/cloudflare",
-        "version": "0.2.1",
+        "name": "vitest",
+        "version": "4.0.18",
         "isSemVerMajor": true
       }
     },
-    "@smithy/util-defaults-mode-node": {
-      "name": "@smithy/util-defaults-mode-node",
-      "severity": "low",
+    "vite-node": {
+      "name": "vite-node",
+      "severity": "moderate",
       "isDirect": false,
       "via": [
-        "@smithy/config-resolver"
-      ],
-      "effects": [],
-      "range": "<=3.0.34",
-      "nodes": [
-        "node_modules/@aws-sdk/client-cloudfront/node_modules/@smithy/util-defaults-mode-node",
-        "node_modules/@aws-sdk/client-sts/node_modules/@smithy/util-defaults-mode-node"
-      ],
-      "fixAvailable": true
-    },
-    "fast-xml-parser": {
-      "name": "fast-xml-parser",
-      "severity": "high",
-      "isDirect": false,
-      "via": [
-        {
-          "source": 1112708,
-          "name": "fast-xml-parser",
-          "dependency": "fast-xml-parser",
-          "title": "fast-xml-parser has RangeError DoS Numeric Entities Bug",
-          "url": "https://github.com/advisories/GHSA-37qj-frw5-hhjh",
-          "severity": "high",
-          "cwe": [
-            "CWE-248"
-          ],
-          "cvss": {
-            "score": 7.5,
-            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
-          },
-          "range": ">=4.3.6 <=5.3.3"
-        }
+        "vite"
       ],
       "effects": [
-        "@aws-sdk/xml-builder"
+        "vitest"
       ],
-      "range": "4.3.6 - 5.3.3",
+      "range": "<=2.2.0-beta.2",
       "nodes": [
-        "node_modules/fast-xml-parser"
+        "node_modules/vite-node"
       ],
       "fixAvailable": {
-        "name": "@aws-sdk/client-s3",
-        "version": "3.893.0",
+        "name": "vitest",
+        "version": "4.0.18",
+        "isSemVerMajor": true
+      }
+    },
+    "vitest": {
+      "name": "vitest",
+      "severity": "moderate",
+      "isDirect": true,
+      "via": [
+        "vite",
+        "vite-node"
+      ],
+      "effects": [],
+      "range": "0.0.1 - 0.0.12 || 0.0.29 - 0.0.122 || 0.3.3 - 2.2.0-beta.2",
+      "nodes": [
+        "node_modules/vitest"
+      ],
+      "fixAvailable": {
+        "name": "vitest",
+        "version": "4.0.18",
         "isSemVerMajor": true
       }
     }
@@ -636,19 +175,19 @@
   "metadata": {
     "vulnerabilities": {
       "info": 0,
-      "low": 6,
-      "moderate": 0,
-      "high": 24,
+      "low": 0,
+      "moderate": 7,
+      "high": 0,
       "critical": 0,
-      "total": 30
+      "total": 7
     },
     "dependencies": {
-      "prod": 1040,
-      "dev": 849,
-      "optional": 214,
+      "prod": 895,
+      "dev": 838,
+      "optional": 200,
       "peer": 0,
       "peerOptional": 0,
-      "total": 1936
+      "total": 1769
     }
   }
 }

@@ -832,10 +832,21 @@ export default function RecordClient({
                         {/* Lap-Time表示 */}
                         {mr.splitTimes.length > 0 && (
                           <LapTimeDisplay
-                            splitTimes={mr.splitTimes.map(st => ({
-                              distance: st.distance,
-                              splitTime: st.splitTime
-                            }))}
+                            splitTimes={(() => {
+                              const baseSplits = mr.splitTimes.map(st => ({
+                                distance: st.distance,
+                                splitTime: st.splitTime
+                              }))
+                              const raceDistance = styles.find(s => s.id === entry.styleId)?.distance
+                              const recordTime = mr.time
+                              if (raceDistance && recordTime && recordTime > 0) {
+                                const hasGoalSplit = baseSplits.some(st => st.distance === raceDistance)
+                                if (!hasGoalSplit) {
+                                  return [...baseSplits, { distance: raceDistance, splitTime: recordTime }]
+                                }
+                              }
+                              return baseSplits
+                            })()}
                             raceDistance={styles.find(s => s.id === entry.styleId)?.distance}
                           />
                         )}

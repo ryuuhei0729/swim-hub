@@ -152,3 +152,8 @@ next-env.d.ts
 # Apple Sign In Secret (秘密鍵を含むためgit管理外)
 *.p8
 AuthKey_*.p8
+
+# User registration (個人情報・パスワードを含むためgit管理外)
+scripts/users.csv
+scripts/register-users.sql
+scripts/register-users-with-records.sql
