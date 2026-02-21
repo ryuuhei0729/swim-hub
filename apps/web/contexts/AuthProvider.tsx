@@ -139,24 +139,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [supabaseClient])
 
-  // ログアウト
-  const signOut = useCallback(async () => {
-    if (!supabaseClient) {
-      return { error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
-    }
-    try {
-      const { error } = await supabaseClient.auth.signOut()
-      
-      if (error) {
-        return { error: error as import('@supabase/supabase-js').AuthError }
-      }
-      
-      // React Queryのキャッシュをクリア（セキュリティとデータ整合性のため）
-      const queryClient = getQueryClient()
-      queryClient.clear()
-      
-      // Zustandストアを全てリセット（セキュリティとデータ整合性のため）
-      if (typeof window !== 'undefined') {
+  // クライアント側の全キャッシュ・ストアをクリア（冪等）
+  const clearAllClientState = useCallback(async () => {
+    // React Queryのキャッシュをクリア
+    const queryClient = getQueryClient()
+    queryClient.clear()
+
+    // Zustandストアを全てリセット
+    if (typeof window !== 'undefined') {
+      try {
         const {
           useProfileStore,
           useTeamStore,
@@ -173,7 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           useTeamAdminStore,
           useModalStore,
         } = await import('@/stores')
-        
+
         useProfileStore.getState().reset()
         useTeamStore.getState().reset()
         useUIStore.getState().reset()
@@ -188,23 +179,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         useTeamDetailStore.getState().reset()
         useTeamAdminStore.getState().reset()
         useModalStore.getState().reset()
+      } catch (error) {
+        console.warn('ストアのリセットに失敗:', error)
       }
-      
-      // localStorageをクリア（念のため、将来的な使用に備えて）
-      if (typeof window !== 'undefined') {
-        try {
-          window.localStorage.clear()
-        } catch (error) {
-          console.warn('localStorageのクリアに失敗:', error)
-        }
+
+      // localStorage・sessionStorageをクリア
+      try {
+        window.localStorage.clear()
+        window.sessionStorage.clear()
+      } catch (error) {
+        console.warn('ストレージのクリアに失敗:', error)
       }
-      
+    }
+  }, [])
+
+  // ログアウト
+  const signOut = useCallback(async () => {
+    if (!supabaseClient) {
+      return { error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
+    }
+    try {
+      // キャッシュクリアを先に実行（signOut成功後のナビゲーションに備える）
+      await clearAllClientState()
+
+      const { error } = await supabaseClient.auth.signOut()
+
+      if (error) {
+        return { error: error as import('@supabase/supabase-js').AuthError }
+      }
+
       return { error: null }
     } catch (error) {
       console.error('Sign out error:', error)
       return { error: error as import('@supabase/supabase-js').AuthError }
     }
-  }, [supabaseClient])
+  }, [supabaseClient, clearAllClientState])
 
   // パスワードリセット
   const resetPassword = useCallback(async (email: string) => {
@@ -304,39 +313,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // ログイン/ログアウト時にページをリフレッシュ
         if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-          // ログアウト時は全てのキャッシュをクリア（セキュリティとデータ整合性のため）
+          // ログアウト時は全てのキャッシュをクリア（外部要因によるサインアウトにも対応）
           if (event === 'SIGNED_OUT') {
-            const queryClient = getQueryClient()
-            queryClient.clear()
-            
-            // Zustandストアを全てリセット
-            if (typeof window !== 'undefined') {
-              import('@/stores').then((stores) => {
-                stores.useProfileStore.getState().reset()
-                stores.useTeamStore.getState().reset()
-                stores.useUIStore.getState().reset()
-                stores.usePracticeFormStore.getState().reset()
-                stores.usePracticeRecordStore.getState().reset()
-                stores.useCompetitionFormStore.getState().reset()
-                stores.useCompetitionRecordStore.getState().reset()
-                stores.useCompetitionFilterStore.getState().reset()
-                stores.usePracticeFilterStore.getState().reset()
-                stores.useCommonFormStore.getState().reset()
-                stores.useAttendanceTabStore.getState().reset()
-                stores.useTeamDetailStore.getState().reset()
-                stores.useTeamAdminStore.getState().reset()
-                stores.useModalStore.getState().reset()
-              }).catch((error) => {
-                console.warn('ストアのリセットに失敗:', error)
-              })
-              
-              // localStorageをクリア
-              try {
-                window.localStorage.clear()
-              } catch (error) {
-                console.warn('localStorageのクリアに失敗:', error)
-              }
-            }
+            await clearAllClientState()
           }
           
           const currentPath = window.location.pathname
@@ -410,7 +389,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         clearTimeout(retryTimer)
       }
     }
-  }, [router, supabaseClient])
+  }, [router, supabaseClient, clearAllClientState])
 
   const value: AuthContextType = {
     ...authState,

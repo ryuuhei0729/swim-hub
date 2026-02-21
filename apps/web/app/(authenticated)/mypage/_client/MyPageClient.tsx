@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts'
-import { useUserQuery, userKeys } from '@apps/shared/hooks'
+import { useUserQuery, userKeys, useBestTimesQuery } from '@apps/shared/hooks'
 import { useTeamsQuery } from '@apps/shared/hooks/queries/teams'
 import { teamKeys } from '@apps/shared/hooks/queries/keys'
 import { useQueryClient } from '@tanstack/react-query'
@@ -75,7 +75,10 @@ export default function MyPageClient({
   
   // チーム一覧を取得（React Queryで管理）
   const { teams = [] } = useTeamsQuery(supabase)
-  const [bestTimes] = useState<BestTime[]>(initialBestTimes)
+  // ベストタイム取得（React Queryでユーザーごとにキャッシュ管理）
+  const { data: bestTimes = initialBestTimes } = useBestTimesQuery(supabase, {
+    userId: user?.id,
+  })
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isCreateTeamModalOpen, setIsCreateTeamModalOpen] = useState(false)
   const [isJoinTeamModalOpen, setIsJoinTeamModalOpen] = useState(false)

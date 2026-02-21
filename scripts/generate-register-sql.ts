@@ -65,7 +65,8 @@ function generateSql(users: UserRow[]): string {
         `  (gen_random_uuid(), '${instanceId}', '${safeEmail}', ` +
         `crypt('${safePassword}', gen_salt('bf')), ` +
         `now(), now(), now(), ` +
-        `'${meta}'::jsonb, 'authenticated', 'authenticated')`
+        `'${meta}'::jsonb, '{"provider":"email","providers":["email"]}'::jsonb, 'authenticated', 'authenticated', ` +
+        `'', '', '', '', '', '', '', '')`
       )
     })
     .join(',\n')
@@ -74,13 +75,34 @@ function generateSql(users: UserRow[]): string {
 -- 登録ユーザー数: ${users.length}
 -- 実行方法: Supabase ダッシュボード > SQL Editor に貼り付けて実行
 
+-- ① auth.users にユーザーを登録
 INSERT INTO auth.users (
   id, instance_id, email, encrypted_password,
   email_confirmed_at, created_at, updated_at,
-  raw_user_meta_data, role, aud
+  raw_user_meta_data, raw_app_meta_data, role, aud,
+  confirmation_token, recovery_token, email_change_token_new,
+  email_change_token_current, reauthentication_token, phone_change_token,
+  email_change, phone_change
 ) VALUES
 ${values}
 ON CONFLICT (email) DO NOTHING;
+
+-- ② auth.identities を登録（メール/パスワードログインに必須）
+INSERT INTO auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+SELECT
+  gen_random_uuid(),
+  u.id,
+  u.id::text,
+  jsonb_build_object('sub', u.id::text, 'email', u.email, 'email_verified', false, 'phone_verified', false),
+  'email',
+  now(),
+  now(),
+  now()
+FROM auth.users u
+WHERE u.email IN (${users.map(({ email }) => `'${escapeSql(email)}'`).join(', ')})
+  AND NOT EXISTS (
+    SELECT 1 FROM auth.identities i WHERE i.user_id = u.id
+  );
 `
 }
 
