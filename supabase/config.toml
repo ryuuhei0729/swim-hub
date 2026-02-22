@@ -329,6 +329,10 @@ enabled = false
 # Obtain from https://clerk.com/setup/supabase
 # domain = "example.clerk.accounts.dev"
 
+# Edge Functions
+[functions.scan-timesheet]
+verify_jwt = true
+
 [analytics]
 enabled = true
 port = 54327
