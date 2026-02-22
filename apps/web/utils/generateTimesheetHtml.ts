@@ -120,20 +120,30 @@ function generateTimesheetHtml(): string {
     height: 18px;
   }
   .col-name {
-    width: 80px;
+    width: 100px;
     background: #f5f5f5;
     font-weight: 600;
   }
   .col-style {
-    width: 34px;
+    width: 50px;
     background: #f5f5f5;
     font-weight: 600;
   }
   td.cell {
     background: #fff url("${segUri}") center center no-repeat;
-    background-size: calc(100% - 10px) calc(100% - 10px);
+    background-size: calc(100% - 8px) calc(100% - 8px);
     height: 32px;
     padding: 4;
+    position: relative;
+  }
+  td.cell::after {
+    content: ',';
+    position: absolute;
+    right: 2px;
+    bottom: 0px;
+    font-size: 20px;
+    color: #000;
+    line-height: 1;
   }
   td.cell-spacer {
     background: #fafafa;
