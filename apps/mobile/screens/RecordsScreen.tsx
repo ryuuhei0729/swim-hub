@@ -4,7 +4,7 @@ import { FlashList } from '@shopify/flash-list'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { format } from 'date-fns'
+import { format, parseISO, isValid } from 'date-fns'
 import { Feather } from '@expo/vector-icons'
 import { useAuth } from '@/contexts/AuthProvider'
 import { useRecordsQuery } from '@apps/shared/hooks/queries/records'
@@ -144,7 +144,10 @@ export const RecordsScreen: React.FC = () => {
     allRecords.forEach((record) => {
       const dateStr = record.competition?.date
       if (dateStr) {
-        years.add(getFiscalYear(new Date(dateStr)))
+        const parsed = parseISO(dateStr)
+        if (isValid(parsed)) {
+          years.add(getFiscalYear(parsed))
+        }
       }
     })
     return Array.from(years).sort((a, b) => b - a)

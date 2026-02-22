@@ -273,6 +273,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                     keyboardType="number-pad"
                     maxLength={4}
                     editable={!isUpdating}
+                    accessibilityLabel="生年"
                   />
                   <Text style={styles.birthdaySuffix}>年</Text>
                 </View>
@@ -291,6 +292,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                     keyboardType="number-pad"
                     maxLength={2}
                     editable={!isUpdating}
+                    accessibilityLabel="生月"
                   />
                   <Text style={styles.birthdaySuffix}>月</Text>
                 </View>
@@ -308,6 +310,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                     keyboardType="number-pad"
                     maxLength={2}
                     editable={!isUpdating}
+                    accessibilityLabel="生日"
                   />
                   <Text style={styles.birthdaySuffix}>日</Text>
                 </View>

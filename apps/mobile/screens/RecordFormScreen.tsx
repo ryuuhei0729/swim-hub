@@ -850,7 +850,7 @@ export const RecordFormScreen: React.FC = () => {
                     ]}
                     onPress={() => {
                       setCompetitionId(comp.id)
-                      if (errors.competitionId) clearErrors()
+                      if (errors.competitionId) setError('competitionId', undefined)
                       setShowCompetitionPicker(false)
                     }}
                   >
@@ -917,7 +917,7 @@ export const RecordFormScreen: React.FC = () => {
                     ]}
                     onPress={() => {
                       setStyleId(style.id)
-                      if (errors.styleId) clearErrors()
+                      if (errors.styleId) setError('styleId', undefined)
                       setShowStylePicker(false)
                     }}
                   >
