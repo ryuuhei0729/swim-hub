@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthProvider'
 import Button from '@/components/ui/Button'
-import { ArrowLeftIcon, PlusIcon, TrashIcon, ClockIcon, CalendarDaysIcon, MapPinIcon, UserGroupIcon, XMarkIcon, CheckIcon, ChevronDownIcon, CameraIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, PlusIcon, TrashIcon, ClockIcon, CalendarDaysIcon, MapPinIcon, UserGroupIcon, XMarkIcon, CheckIcon, ChevronDownIcon, SparklesIcon, PrinterIcon } from '@heroicons/react/24/outline'
 import TagInput from '@/components/forms/TagInput'
 import type { TeamTimeEntry } from '@/components/team/TeamTimeInputModal'
 import { PracticeTag, Practice } from '@apps/shared/types'
@@ -23,6 +23,7 @@ const OcrScanModal = dynamic(
 )
 
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
+import { openTimesheetPrintWindow } from '@/utils/generateTimesheetHtml'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 
@@ -442,16 +443,24 @@ export default function PracticeLogClient({
           </div>
         </div>
 
-        {/* 画像スキャンボタン */}
-        <div className="flex justify-end">
+        {/* 記録表印刷 & 画像スキャンボタン */}
+        <div className="flex justify-end gap-2">
           <Button
             type="button"
             variant="outline"
+            onClick={() => openTimesheetPrintWindow()}
+          >
+            <PrinterIcon className="h-4 w-4 mr-2" />
+            記録表を印刷
+          </Button>
+          <Button
+            type="button"
             onClick={() => setShowOcrModal(true)}
             data-testid="team-practice-log-ocr-scan-button"
+            className="bg-linear-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white border-0 shadow-md hover:shadow-lg transition-all"
           >
-            <CameraIcon className="h-4 w-4 mr-2" />
-            画像から練習記録を読み取る
+            <SparklesIcon className="h-4 w-4 mr-2" />
+            AIで画像から読み取る
           </Button>
         </div>
 
