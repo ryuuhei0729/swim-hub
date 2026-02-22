@@ -132,7 +132,7 @@ function generateTimesheetHtml(): string {
   td.cell {
     background: #fff url("${segUri}") center center no-repeat;
     background-size: calc(100% - 8px) calc(100% - 8px);
-    height: 32px;
+    height: 30px;
     padding: 4;
     position: relative;
   }
@@ -183,6 +183,20 @@ function generateTimesheetHtml(): string {
   .print-btn-bar button:hover { background: #e0e7ff; }
   body { padding-top: 52px; }
   @media print { body { padding-top: 0; } }
+  .footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 12px;
+    color: #aaa;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .footer img {
+    width: 16px;
+    height: 16px;
+  }
 </style>
 </head>
 <body>
@@ -202,6 +216,11 @@ function generateTimesheetHtml(): string {
     </div>
   </div>
   ${table}
+  <div class="footer">
+    <img src="/icon.png" alt="SwimHub" />
+    <span>SwimHub</span>
+    <img src="/icon.png" alt="SwimHub" />
+  </div>
 </div>
 </body>
 </html>`
