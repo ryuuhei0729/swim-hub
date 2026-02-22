@@ -566,7 +566,7 @@ export const EntryLogFormScreen: React.FC = () => {
                 種目 <Text style={styles.required}>*</Text>
               </Text>
               <Pressable
-                ref={(ref) => { if (ref) styleButtonRefs.current.set(index, ref) }}
+                ref={(ref) => { if (ref) { styleButtonRefs.current.set(index, ref) } else { styleButtonRefs.current.delete(index) } }}
                 style={[styles.pickerButton, errors[`style-${index}`] && styles.pickerButtonError]}
                 onPress={() => openStylePicker(index)}
                 disabled={loading}

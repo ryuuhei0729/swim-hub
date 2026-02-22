@@ -277,7 +277,7 @@ export default function RecordSetItem({
         {/* Lap-Time表示 */}
         <LapTimeDisplay
           splitTimes={sortedSplitTimes.map(({ split }) => ({
-            distance: split.distance,
+            distance: typeof split.distance === 'number' ? split.distance : split.distance === '' ? '' : Number(split.distance) || '',
             splitTime: split.splitTime,
           }))}
           raceDistance={currentStyle?.distance}

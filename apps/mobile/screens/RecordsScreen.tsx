@@ -179,16 +179,12 @@ export const RecordsScreen: React.FC = () => {
     // 年度フィルター
     if (filterFiscalYear) {
       const fy = parseInt(filterFiscalYear)
-      const fyNext = fy + 1
-      const fiscalYearStart = new Date(`${fy}-04-01T00:00:00.000Z`).getTime()
-      const fiscalYearEnd = new Date(`${fyNext}-03-31T23:59:59.999Z`).getTime()
       filtered = filtered.filter((record) => {
         const recordDateStr = record.competition?.date || record.created_at
         if (!recordDateStr) return false
-        const recordDate = new Date(recordDateStr)
-        if (isNaN(recordDate.getTime())) return false
-        const recordTimestamp = recordDate.getTime()
-        return recordTimestamp >= fiscalYearStart && recordTimestamp <= fiscalYearEnd
+        const parsed = parseISO(recordDateStr)
+        if (!isValid(parsed)) return false
+        return getFiscalYear(parsed) === fy
       })
     }
 
@@ -200,8 +196,8 @@ export const RecordsScreen: React.FC = () => {
     // ソート
     filtered.sort((a, b) => {
       if (sortBy === 'date') {
-        const dateA = new Date(a.competition?.date || a.created_at).getTime()
-        const dateB = new Date(b.competition?.date || b.created_at).getTime()
+        const dateA = parseISO(a.competition?.date || a.created_at).getTime()
+        const dateB = parseISO(b.competition?.date || b.created_at).getTime()
         return sortOrder === 'asc' ? dateA - dateB : dateB - dateA
       } else {
         return sortOrder === 'asc' ? a.time - b.time : b.time - a.time
