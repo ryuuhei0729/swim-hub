@@ -255,7 +255,7 @@ export const useRecordLogForm = ({
                 ? st.distance
                 : st.distance === ''
                   ? null
-                  : parseInt(String(st.distance)) || null
+                  : parseFloat(String(st.distance)) || null
             )
             .filter((d): d is number => d !== null)
         )
@@ -310,7 +310,8 @@ export const useRecordLogForm = ({
           if (i !== splitIndex) return st
           if (field === 'distance') {
             if (value === '') return { ...st, distance: '' }
-            const numValue = parseInt(value)
+            if (value.endsWith('.')) return { ...st, distance: value }
+            const numValue = parseFloat(value)
             return { ...st, distance: isNaN(numValue) ? value : numValue }
           }
           const parsedTime = value.trim() === '' ? 0 : parseTimeToSeconds(value)
@@ -385,7 +386,7 @@ export const useRecordLogForm = ({
                 ? st.distance
                 : st.distance === ''
                   ? NaN
-                  : parseInt(String(st.distance))
+                  : parseFloat(String(st.distance))
             if (!isNaN(distance) && distance > 0 && st.splitTime > 0) {
               return { distance, splitTime: st.splitTime }
             }

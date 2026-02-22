@@ -347,10 +347,15 @@ export const RecordFormScreen: React.FC = () => {
 
       // スプリットタイムを保存（編集時は空配列でも置き換え）
       if (savedRecord) {
-        const splitTimeInserts = splitTimes.map((st) => ({
-          distance: st.distance,
-          split_time: st.splitTime,
-        }))
+        const splitTimeInserts = splitTimes
+          .filter((st) => {
+            const d = typeof st.distance === 'number' ? st.distance : parseFloat(String(st.distance))
+            return !isNaN(d) && d > 0
+          })
+          .map((st) => ({
+            distance: typeof st.distance === 'number' ? st.distance : parseFloat(String(st.distance)),
+            split_time: st.splitTime,
+          }))
         await replaceSplitTimesMutation.mutateAsync({
           recordId: savedRecord.id,
           splitTimes: splitTimeInserts,
@@ -456,7 +461,7 @@ export const RecordFormScreen: React.FC = () => {
     if (!selectedStyle?.distance) return
 
     const raceDistance = selectedStyle.distance
-    const existingDistances = new Set(splitTimes.map((st) => st.distance))
+    const existingDistances = new Set(splitTimes.map((st) => typeof st.distance === 'number' ? st.distance : parseFloat(String(st.distance)) || 0))
     const newSplits: Array<{ distance: number; splitTime: number }> = []
 
     for (let distance = 25; distance <= raceDistance; distance += 25) {
@@ -477,11 +482,13 @@ export const RecordFormScreen: React.FC = () => {
     return splitTimes
       .map((st, index) => ({ st, index }))
       .sort((a, b) => {
+        const distA = typeof a.st.distance === 'number' ? a.st.distance : parseFloat(String(a.st.distance)) || 0
+        const distB = typeof b.st.distance === 'number' ? b.st.distance : parseFloat(String(b.st.distance)) || 0
         // distance=0 は末尾に
-        if (a.st.distance === 0 && b.st.distance === 0) return a.index - b.index
-        if (a.st.distance === 0) return 1
-        if (b.st.distance === 0) return -1
-        return a.st.distance - b.st.distance
+        if (distA === 0 && distB === 0) return a.index - b.index
+        if (distA === 0) return 1
+        if (distB === 0) return -1
+        return distA - distB
       })
   }, [splitTimes])
 
@@ -696,20 +703,24 @@ export const RecordFormScreen: React.FC = () => {
               <View key={originalIndex} style={styles.splitTimeRow}>
                 <TextInput
                   style={[styles.input, styles.splitTimeDistance]}
-                  value={st.distance > 0 ? st.distance.toString() : ''}
+                  value={typeof st.distance === 'string' ? st.distance : (st.distance > 0 ? st.distance.toString() : '')}
                   onChangeText={(text) => {
                     if (text === '') {
                       updateSplitTime(originalIndex, { distance: 0 })
-                    } else {
-                      const distance = parseInt(text, 10)
-                      if (!isNaN(distance)) {
-                        updateSplitTime(originalIndex, { distance })
+                    } else if (/^\d+(\.\d*)?$/.test(text)) {
+                      if (text.endsWith('.')) {
+                        updateSplitTime(originalIndex, { distance: text })
+                      } else {
+                        const distance = parseFloat(text)
+                        if (!isNaN(distance)) {
+                          updateSplitTime(originalIndex, { distance })
+                        }
                       }
                     }
                   }}
                   placeholder="距離 (m)"
                   placeholderTextColor="#9CA3AF"
-                  keyboardType="number-pad"
+                  keyboardType="decimal-pad"
                   editable={!storeLoading}
                 />
                 <Text style={styles.splitTimeUnit}>m:</Text>

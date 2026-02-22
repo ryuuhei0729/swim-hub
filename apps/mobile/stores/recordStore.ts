@@ -10,7 +10,7 @@ import { create } from 'zustand'
 // -----------------------------------------------------------------------------
 
 export interface SplitTimeForm {
-  distance: number
+  distance: number | string
   splitTime: number // 秒数
   id?: string // 編集時のみ（既存のSplitTimeのID）
 }

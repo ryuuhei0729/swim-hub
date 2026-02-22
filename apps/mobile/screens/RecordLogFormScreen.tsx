@@ -288,7 +288,7 @@ export const RecordLogFormScreen: React.FC = () => {
     const raceDistance = selectedStyle.distance
     const existingDistances = new Set(
       formData.splitTimes
-        .map((st) => (typeof st.distance === 'number' ? st.distance : parseInt(String(st.distance), 10)))
+        .map((st) => (typeof st.distance === 'number' ? st.distance : parseFloat(String(st.distance))))
         .filter((d) => !isNaN(d) && d > 0)
     )
 
@@ -310,8 +310,8 @@ export const RecordLogFormScreen: React.FC = () => {
     return splitTimes
       .map((st, idx) => ({ st, idx }))
       .sort((a, b) => {
-        const distA = typeof a.st.distance === 'number' ? a.st.distance : parseInt(String(a.st.distance), 10) || 0
-        const distB = typeof b.st.distance === 'number' ? b.st.distance : parseInt(String(b.st.distance), 10) || 0
+        const distA = typeof a.st.distance === 'number' ? a.st.distance : parseFloat(String(a.st.distance)) || 0
+        const distB = typeof b.st.distance === 'number' ? b.st.distance : parseFloat(String(b.st.distance)) || 0
         if (distA === 0 && distB === 0) return a.idx - b.idx
         if (distA === 0) return 1
         if (distB === 0) return -1
@@ -338,7 +338,8 @@ export const RecordLogFormScreen: React.FC = () => {
     const updatedSplitTimes = formData.splitTimes.map((st, i) => {
       if (i !== splitIndex) return st
       if (field === 'distance') {
-        const numValue = parseInt(value)
+        if (value.endsWith('.')) return { ...st, distance: value }
+        const numValue = parseFloat(value)
         return { ...st, distance: isNaN(numValue) ? value : numValue }
       }
       const parsedTime = value.trim() === '' ? 0 : parseTimeToSeconds(value)
@@ -448,7 +449,7 @@ export const RecordLogFormScreen: React.FC = () => {
                   ? st.distance
                   : st.distance === ''
                     ? NaN
-                    : parseInt(String(st.distance))
+                    : parseFloat(String(st.distance))
               if (!isNaN(distance) && distance > 0 && st.splitTime > 0) {
                 return {
                   distance,
@@ -497,7 +498,7 @@ export const RecordLogFormScreen: React.FC = () => {
                     ? st.distance
                     : st.distance === ''
                       ? NaN
-                      : parseInt(String(st.distance))
+                      : parseFloat(String(st.distance))
                 if (!isNaN(distance) && distance > 0 && st.splitTime > 0) {
                   return {
                     distance,
@@ -700,11 +701,13 @@ export const RecordLogFormScreen: React.FC = () => {
                     <TextInput
                       style={[styles.input, styles.splitTimeDistance]}
                       value={typeof splitTime.distance === 'number' && splitTime.distance > 0 ? String(splitTime.distance) : (typeof splitTime.distance === 'string' ? splitTime.distance : '')}
-                      onChangeText={(text) =>
-                        handleSplitTimeChange(index, splitIndex, 'distance', text)
-                      }
+                      onChangeText={(text) => {
+                        if (text === '' || /^\d+(\.\d*)?$/.test(text)) {
+                          handleSplitTimeChange(index, splitIndex, 'distance', text)
+                        }
+                      }}
                       placeholder="距離 (m)"
-                      keyboardType="number-pad"
+                      keyboardType="decimal-pad"
                       editable={!loading}
                     />
                     <Text style={styles.splitTimeSeparator}>m:</Text>
