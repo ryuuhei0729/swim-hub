@@ -69,7 +69,7 @@ export const PracticesScreen: React.FC = () => {
     data,
     error,
     isLoading,
-    isRefetching,
+    isRefetching: _isRefetching,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,

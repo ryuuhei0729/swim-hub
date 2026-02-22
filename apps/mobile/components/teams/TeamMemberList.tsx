@@ -61,7 +61,7 @@ interface TeamMemberListProps {
  */
 export const TeamMemberList: React.FC<TeamMemberListProps> = ({
   members,
-  teamId,
+  teamId: _teamId,
   isLoading,
   isError,
   error,
