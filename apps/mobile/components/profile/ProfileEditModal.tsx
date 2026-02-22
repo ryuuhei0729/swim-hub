@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { View, Text, Modal, Pressable, TextInput, StyleSheet, ScrollView } from 'react-native'
+import { format, isValid } from 'date-fns'
 import { AvatarUpload } from './AvatarUpload'
 import { useAuth } from '@/contexts/AuthProvider'
 import type { UserProfile } from '@swim-hub/shared/types'
@@ -75,9 +76,12 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
     const m = Number(monthText)
     const d = Number(dayText)
     if (y && m && d) {
-      const monthStr = String(m).padStart(2, '0')
-      const dayStr = String(d).padStart(2, '0')
-      setFormData((prev) => ({ ...prev, birthday: `${y}-${monthStr}-${dayStr}` }))
+      const date = new Date(y, m - 1, d)
+      if (isValid(date) && date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d) {
+        setFormData((prev) => ({ ...prev, birthday: format(date, 'yyyy-MM-dd') }))
+      } else {
+        setFormData((prev) => ({ ...prev, birthday: '' }))
+      }
     } else {
       setFormData((prev) => ({ ...prev, birthday: '' }))
     }

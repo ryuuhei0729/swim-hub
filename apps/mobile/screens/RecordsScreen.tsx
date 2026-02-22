@@ -89,6 +89,9 @@ export const RecordsScreen: React.FC = () => {
     fetchStyles()
   }, [supabase])
 
+  // endDate をメモ化して不要な再フェッチを防止
+  const endDate = useMemo(() => format(new Date(), 'yyyy-MM-dd'), [])
+
   // 大会記録データ取得（全期間、種目はサーバーサイドフィルター）
   const {
     records = [],
@@ -98,7 +101,7 @@ export const RecordsScreen: React.FC = () => {
     refetch,
   } = useRecordsQuery(supabase, {
     startDate: '2000-01-01',
-    endDate: format(new Date(), 'yyyy-MM-dd'),
+    endDate,
     styleId: filterStyleId || undefined,
     page,
     pageSize: 20,

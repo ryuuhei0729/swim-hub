@@ -183,8 +183,9 @@ const TeamCard: React.FC<TeamCardProps> = ({
 const AnnouncementItem: React.FC<{ announcement: TeamAnnouncement }> = ({
   announcement,
 }) => {
-  const updatedAt = isValid(new Date(announcement.updated_at))
-    ? format(parseISO(announcement.updated_at), 'M月d日 HH:mm', { locale: ja })
+  const parsedUpdatedAt = parseISO(announcement.updated_at)
+  const updatedAt = isValid(parsedUpdatedAt)
+    ? format(parsedUpdatedAt, 'M月d日 HH:mm', { locale: ja })
     : '-'
 
   return (

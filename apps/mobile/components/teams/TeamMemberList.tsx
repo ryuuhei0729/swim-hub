@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { View, Text, StyleSheet, Pressable, Alert, Platform, ScrollView, ActivityIndicator } from 'react-native'
-import { format } from 'date-fns'
+import { format, parseISO, isValid } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { Feather } from '@expo/vector-icons'
 import { useAuth } from '@/contexts/AuthProvider'
@@ -15,10 +15,10 @@ import { formatTime } from '@/utils/formatters'
 
 // ベストタイム型定義
 interface MemberBestTime {
-  style_name: string
+  styleName: string
   time: number
-  pool_type: number // 0: 短水路, 1: 長水路
-  is_relaying: boolean
+  poolType: number // 0: 短水路, 1: 長水路
+  isRelaying: boolean
 }
 
 // 種目リスト（WEBと同様）
@@ -133,10 +133,10 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
             if (seen.has(key)) return // 既にベストが登録済み（timeでソートされているので最初が最速）
             seen.add(key)
             bestTimes.push({
-              style_name: style.name_jp,
+              styleName: style.name_jp,
               time: record.time,
-              pool_type: record.pool_type,
-              is_relaying: record.is_relaying,
+              poolType: record.pool_type,
+              isRelaying: record.is_relaying,
             })
           })
 
@@ -168,7 +168,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
     const dbStyleName = `${distance}m${styleName}`
 
     const candidates = times.filter(
-      (bt) => bt.style_name === dbStyleName && !bt.is_relaying
+      (bt) => bt.styleName === dbStyleName && !bt.isRelaying
     )
     if (candidates.length === 0) return null
     return candidates.reduce((best, current) =>
@@ -312,7 +312,10 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
         const isCurrentUser = item.user_id === currentUserId
         const roleText = item.role === 'admin' ? '管理者' : 'メンバー'
         const memberTypeText = getMemberTypeText(item.member_type)
-        const joinedDate = format(new Date(item.joined_at), 'yyyy年M月d日', { locale: ja })
+        const parsedJoinedAt = item.joined_at ? parseISO(item.joined_at) : null
+        const joinedDate = parsedJoinedAt && isValid(parsedJoinedAt)
+          ? format(parsedJoinedAt, 'yyyy年M月d日', { locale: ja })
+          : '—'
         const isProcessing = processingMemberId === item.id
         const canManage = isCurrentUserAdmin && !isCurrentUser
 
@@ -350,6 +353,8 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
                         handleRoleChange(item, item.role === 'admin' ? 'user' : 'admin')
                       }
                       disabled={isProcessing}
+                      accessibilityRole="button"
+                      accessibilityLabel={`役割変更: ${user?.name ?? '名前未設定'}: ${roleText}`}
                     >
                       <Text style={[styles.badgeText, item.role === 'admin' && styles.adminBadgeText]}>
                         {roleText}
@@ -375,6 +380,8 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
                   style={[styles.deleteButton, isProcessing && styles.deleteButtonDisabled]}
                   onPress={() => handleRemoveMember(item)}
                   disabled={isProcessing}
+                  accessibilityRole="button"
+                  accessibilityLabel={`メンバー削除: ${user?.name ?? '名前未設定'}`}
                 >
                   <Feather name="trash-2" size={16} color="#DC2626" />
                 </Pressable>
@@ -412,7 +419,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
                               <Text style={styles.distanceText}>{distance}m</Text>
                               <Text style={[styles.timeText, bestTime ? styles.timeTextValue : styles.timeTextEmpty]}>
                                 {bestTime
-                                  ? `${formatTime(bestTime.time)}${bestTime.pool_type === 1 ? ' L' : ''}`
+                                  ? `${formatTime(bestTime.time)}${bestTime.poolType === 1 ? ' L' : ''}`
                                   : '—'}
                               </Text>
                             </View>

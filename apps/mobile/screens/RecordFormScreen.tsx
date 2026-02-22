@@ -496,7 +496,7 @@ export const RecordFormScreen: React.FC = () => {
   const handleTimeBlur = () => {
     const text = timeDisplayValue.trim()
     if (text === '') {
-      clearErrors()
+      setError('time', undefined)
       setTime(null)
       return
     }
@@ -506,7 +506,7 @@ export const RecordFormScreen: React.FC = () => {
       setError('time', 'タイムの形式が正しくありません（例: 1:23.45 または 31-2）')
       setTime(null)
     } else {
-      clearErrors()
+      setError('time', undefined)
       setTime(parsed)
       setTimeDisplayValue(formatSecondsToDisplay(parsed))
     }
