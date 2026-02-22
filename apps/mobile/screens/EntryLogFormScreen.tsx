@@ -638,7 +638,7 @@ export const EntryLogFormScreen: React.FC = () => {
       <Modal
         visible={showStylePicker}
         transparent
-        animationType="fade"
+        animationType="none"
         onRequestClose={() => setShowStylePicker(false)}
       >
         <Pressable

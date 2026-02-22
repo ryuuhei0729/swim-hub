@@ -821,7 +821,7 @@ export const RecordFormScreen: React.FC = () => {
       <Modal
         visible={showCompetitionPicker}
         transparent
-        animationType="fade"
+        animationType="none"
         onRequestClose={() => setShowCompetitionPicker(false)}
       >
         <Pressable
@@ -888,7 +888,7 @@ export const RecordFormScreen: React.FC = () => {
       <Modal
         visible={showStylePicker}
         transparent
-        animationType="fade"
+        animationType="none"
         onRequestClose={() => setShowStylePicker(false)}
       >
         <Pressable

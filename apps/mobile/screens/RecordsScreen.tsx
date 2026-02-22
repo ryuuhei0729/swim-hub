@@ -425,7 +425,7 @@ export const RecordsScreen: React.FC = () => {
       <Modal
         visible={pickerModal !== null}
         transparent
-        animationType="fade"
+        animationType="none"
         onRequestClose={() => setPickerModal(null)}
       >
         <Pressable style={styles.dropdownOverlay} onPress={() => setPickerModal(null)}>
