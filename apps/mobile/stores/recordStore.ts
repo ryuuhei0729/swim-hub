@@ -10,7 +10,7 @@ import { create } from 'zustand'
 // -----------------------------------------------------------------------------
 
 export interface SplitTimeForm {
-  distance: number
+  distance: number | string
   splitTime: number // 秒数
   id?: string // 編集時のみ（既存のSplitTimeのID）
 }
@@ -40,6 +40,7 @@ interface RecordFilterState {
   filterStyleId: number | null
   filterFiscalYear: string
   filterPoolType: number | null // 0: 短水路, 1: 長水路
+  includeRelay: boolean
 
   // ソート設定
   sortBy: 'date' | 'time'
@@ -71,6 +72,7 @@ interface RecordFilterActions {
   setFilterStyleId: (styleId: number | null) => void
   setFilterFiscalYear: (fiscalYear: string) => void
   setFilterPoolType: (poolType: number | null) => void
+  setIncludeRelay: (includeRelay: boolean) => void
 
   // ソート操作
   setSortBy: (sortBy: 'date' | 'time') => void
@@ -103,6 +105,7 @@ const initialFilterState: RecordFilterState = {
   filterStyleId: null,
   filterFiscalYear: '',
   filterPoolType: null,
+  includeRelay: true,
   sortBy: 'date',
   sortOrder: 'desc',
 }
@@ -184,6 +187,7 @@ export const useRecordStore = create<RecordState & RecordActions>()((set) => ({
   setFilterStyleId: (styleId) => set({ filterStyleId: styleId }),
   setFilterFiscalYear: (fiscalYear) => set({ filterFiscalYear: fiscalYear }),
   setFilterPoolType: (poolType) => set({ filterPoolType: poolType }),
+  setIncludeRelay: (includeRelay) => set({ includeRelay }),
   setSortBy: (sortBy) => set({ sortBy }),
   setSortOrder: (sortOrder) => set({ sortOrder }),
 

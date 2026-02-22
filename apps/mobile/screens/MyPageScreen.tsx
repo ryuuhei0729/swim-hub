@@ -12,6 +12,7 @@ import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ErrorView } from '@/components/layout/ErrorView'
 import type { MainStackParamList } from '@/navigation/types'
 import type { UserProfile } from '@swim-hub/shared/types'
+import { useRefreshOnFocus } from '@/hooks/useRefreshOnFocus'
 
 /**
  * マイページ画面
@@ -51,6 +52,12 @@ export const MyPageScreen: React.FC = () => {
   const error = profileErrorObj
   const bestTimesErrorMessage =
     bestTimesErrorObj instanceof Error ? bestTimesErrorObj.message : undefined
+
+  // タブ遷移時にデータ再取得
+  useRefreshOnFocus(useCallback(() => {
+    refetchProfile()
+    refetchBestTimes()
+  }, [refetchProfile, refetchBestTimes]))
 
   // プルリフレッシュ処理
   const handleRefresh = useCallback(async () => {
@@ -161,22 +168,6 @@ export const MyPageScreen: React.FC = () => {
           />
         }
       >
-        {/* ヘッダー */}
-        <View style={styles.header}>
-          <View style={styles.headerRow}>
-            <Text style={styles.headerTitle}>マイページ</Text>
-            <Pressable
-              onPress={() => navigation.navigate('Settings')}
-              style={styles.settingsIconButton}
-              accessibilityRole="button"
-              accessibilityLabel="設定画面を開く"
-            >
-              <Feather name="settings" size={22} color="#6B7280" />
-            </Pressable>
-          </View>
-          <Text style={styles.headerSubtitle}>プロフィールとベストタイムを管理します</Text>
-        </View>
-
         {/* プロフィールセクション */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -207,6 +198,17 @@ export const MyPageScreen: React.FC = () => {
           )}
         </View>
 
+        {/* 設定 */}
+        <Pressable
+          style={styles.settingsButton}
+          onPress={() => navigation.navigate('Settings')}
+          accessibilityRole="button"
+          accessibilityLabel="設定画面を開く"
+        >
+          <Feather name="settings" size={18} color="#6B7280" />
+          <Text style={styles.settingsButtonText}>設定</Text>
+        </Pressable>
+
       </ScrollView>
 
       {/* プロフィール編集モーダル */}
@@ -231,38 +233,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    paddingVertical: 16,
     gap: 16,
-  },
-  header: {
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  settingsIconButton: {
-    padding: 6,
-    borderRadius: 8,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
   },
   section: {
     backgroundColor: '#FFFFFF',
-    padding: 20,
-    borderRadius: 8,
+    paddingVertical: 16,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -278,6 +254,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
     paddingBottom: 12,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
@@ -312,6 +289,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: '#374151',
+  },
+  settingsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  settingsButtonText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#6B7280',
   },
   errorContainer: {
     padding: 20,

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, Switch, Modal, ActivityIndicator } from 'react-native'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, Switch, Modal, ActivityIndicator, Keyboard, Dimensions } from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useQueryClient } from '@tanstack/react-query'
@@ -44,7 +44,8 @@ interface RecordFormData {
 export const RecordLogFormScreen: React.FC = () => {
   const route = useRoute<RecordLogFormScreenRouteProp>()
   const navigation = useNavigation<RecordLogFormScreenNavigationProp>()
-  const { competitionId, recordId, entryDataList = [], date: _date } = route.params
+  const { competitionId, recordId, date: _date } = route.params
+  const entryDataList = useMemo(() => route.params.entryDataList ?? [], [route.params.entryDataList])
   const { supabase } = useAuth()
   const queryClient = useQueryClient()
 
@@ -60,6 +61,8 @@ export const RecordLogFormScreen: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [showStylePicker, setShowStylePicker] = useState(false)
   const [pickingFormIndex, setPickingFormIndex] = useState<number | null>(null)
+  const styleButtonRefs = useRef<Map<number, View>>(new Map())
+  const [dropdownLayout, setDropdownLayout] = useState({ top: 0, left: 0, width: 0 })
 
   // 二重送信防止用のref
   const isSubmittingRef = useRef(false)
@@ -261,19 +264,59 @@ export const RecordLogFormScreen: React.FC = () => {
     })
   }
 
-  // スプリットタイム追加
+  // スプリットタイム追加（空の1行）
   const handleAddSplitTime = (index: number) => {
     const formData = formDataList[index]
     updateFormData(index, {
       splitTimes: [
         ...formData.splitTimes,
         {
-          distance: 50,
+          distance: 0,
           splitTime: 0,
           splitTimeDisplayValue: '',
         },
       ],
     })
+  }
+
+  // スプリットタイムを25mごとに追加
+  const handleAddSplitTimesEvery25m = (index: number) => {
+    const formData = formDataList[index]
+    const selectedStyle = swimStyles.find((s) => String(s.id) === formData.styleId)
+    if (!selectedStyle?.distance) return
+
+    const raceDistance = selectedStyle.distance
+    const existingDistances = new Set(
+      formData.splitTimes
+        .map((st) => (typeof st.distance === 'number' ? st.distance : parseFloat(String(st.distance))))
+        .filter((d) => !isNaN(d) && d > 0)
+    )
+
+    const newSplits: SplitTimeData[] = []
+    for (let distance = 25; distance <= raceDistance; distance += 25) {
+      if (!existingDistances.has(distance)) {
+        newSplits.push({ distance, splitTime: 0, splitTimeDisplayValue: '' })
+      }
+    }
+
+    if (newSplits.length === 0) return
+    updateFormData(index, {
+      splitTimes: [...formData.splitTimes, ...newSplits],
+    })
+  }
+
+  // スプリットタイムを距離でソートしてインデックスマッピングを返す
+  const getSortedSplitIndices = (splitTimes: SplitTimeData[]) => {
+    return splitTimes
+      .map((st, idx) => ({ st, idx }))
+      .sort((a, b) => {
+        const distA = typeof a.st.distance === 'number' ? a.st.distance : parseFloat(String(a.st.distance)) || 0
+        const distB = typeof b.st.distance === 'number' ? b.st.distance : parseFloat(String(b.st.distance)) || 0
+        if (distA === 0 && distB === 0) return a.idx - b.idx
+        if (distA === 0) return 1
+        if (distB === 0) return -1
+        return distA - distB
+      })
   }
 
   // スプリットタイム削除
@@ -295,7 +338,8 @@ export const RecordLogFormScreen: React.FC = () => {
     const updatedSplitTimes = formData.splitTimes.map((st, i) => {
       if (i !== splitIndex) return st
       if (field === 'distance') {
-        const numValue = parseInt(value)
+        if (value.endsWith('.')) return { ...st, distance: value }
+        const numValue = parseFloat(value)
         return { ...st, distance: isNaN(numValue) ? value : numValue }
       }
       const parsedTime = value.trim() === '' ? 0 : parseTimeToSeconds(value)
@@ -308,6 +352,26 @@ export const RecordLogFormScreen: React.FC = () => {
 
     updateFormData(index, { splitTimes: updatedSplitTimes })
   }
+
+  // ドロップダウンを開く
+  const screenHeight = Dimensions.get('window').height
+  const DROPDOWN_MAX_HEIGHT = 260
+
+  const openStylePicker = useCallback((index: number) => {
+    Keyboard.dismiss()
+    const buttonRef = styleButtonRefs.current.get(index)
+    buttonRef?.measureInWindow((x, y, width, height) => {
+      const top = y + height + 4
+      const fitsBelow = top + DROPDOWN_MAX_HEIGHT < screenHeight - 40
+      setDropdownLayout({
+        top: fitsBelow ? top : y - DROPDOWN_MAX_HEIGHT - 4,
+        left: x,
+        width,
+      })
+      setPickingFormIndex(index)
+      setShowStylePicker(true)
+    })
+  }, [screenHeight])
 
   // バリデーション
   const validate = (): boolean => {
@@ -385,7 +449,7 @@ export const RecordLogFormScreen: React.FC = () => {
                   ? st.distance
                   : st.distance === ''
                     ? NaN
-                    : parseInt(String(st.distance))
+                    : parseFloat(String(st.distance))
               if (!isNaN(distance) && distance > 0 && st.splitTime > 0) {
                 return {
                   distance,
@@ -434,7 +498,7 @@ export const RecordLogFormScreen: React.FC = () => {
                     ? st.distance
                     : st.distance === ''
                       ? NaN
-                      : parseInt(String(st.distance))
+                      : parseFloat(String(st.distance))
                 if (!isNaN(distance) && distance > 0 && st.splitTime > 0) {
                   return {
                     distance,
@@ -511,11 +575,9 @@ export const RecordLogFormScreen: React.FC = () => {
                     種目 <Text style={styles.required}>*</Text>
                   </Text>
                   <Pressable
+                    ref={(ref) => { if (ref) styleButtonRefs.current.set(index, ref) }}
                     style={[styles.pickerButton, errors[`style-${index}`] && styles.pickerButtonError]}
-                    onPress={() => {
-                      setPickingFormIndex(index)
-                      setShowStylePicker(true)
-                    }}
+                    onPress={() => openStylePicker(index)}
                     disabled={loading}
                   >
                     <Text
@@ -612,25 +674,40 @@ export const RecordLogFormScreen: React.FC = () => {
               <View style={styles.field}>
                 <View style={styles.splitTimeHeader}>
                   <Text style={styles.label}>スプリットタイム</Text>
-                  <Pressable
-                    style={styles.addButton}
-                    onPress={() => handleAddSplitTime(index)}
-                    disabled={loading}
-                  >
-                    <Feather name="plus" size={16} color="#2563EB" />
-                    <Text style={styles.addButtonText}>スプリットを追加</Text>
-                  </Pressable>
+                  <View style={styles.splitTimeButtons}>
+                    <Pressable
+                      style={[
+                        styles.addButton,
+                        styles.addButton25m,
+                        (!formData.styleId || !swimStyles.find((s) => String(s.id) === formData.styleId)?.distance || loading) && styles.addButtonDisabled,
+                      ]}
+                      onPress={() => handleAddSplitTimesEvery25m(index)}
+                      disabled={!formData.styleId || !swimStyles.find((s) => String(s.id) === formData.styleId)?.distance || loading}
+                    >
+                      <Text style={styles.addButton25mText}>追加(25mごと)</Text>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.addButton, loading && styles.addButtonDisabled]}
+                      onPress={() => handleAddSplitTime(index)}
+                      disabled={loading}
+                    >
+                      <Feather name="plus" size={16} color="#2563EB" />
+                      <Text style={styles.addButtonText}>追加</Text>
+                    </Pressable>
+                  </View>
                 </View>
-                {formData.splitTimes.map((splitTime, splitIndex) => (
+                {getSortedSplitIndices(formData.splitTimes).map(({ st: splitTime, idx: splitIndex }) => (
                   <View key={splitIndex} style={styles.splitTimeRow}>
                     <TextInput
                       style={[styles.input, styles.splitTimeDistance]}
-                      value={String(splitTime.distance)}
-                      onChangeText={(text) =>
-                        handleSplitTimeChange(index, splitIndex, 'distance', text)
-                      }
+                      value={typeof splitTime.distance === 'number' && splitTime.distance > 0 ? String(splitTime.distance) : (typeof splitTime.distance === 'string' ? splitTime.distance : '')}
+                      onChangeText={(text) => {
+                        if (text === '' || /^\d+(\.\d*)?$/.test(text)) {
+                          handleSplitTimeChange(index, splitIndex, 'distance', text)
+                        }
+                      }}
                       placeholder="距離 (m)"
-                      keyboardType="number-pad"
+                      keyboardType="decimal-pad"
                       editable={!loading}
                     />
                     <Text style={styles.splitTimeSeparator}>m:</Text>
@@ -659,28 +736,28 @@ export const RecordLogFormScreen: React.FC = () => {
         })}
       </ScrollView>
 
-      {/* 種目選択モーダル */}
+      {/* 種目選択ドロップダウン */}
       <Modal
         visible={showStylePicker}
         transparent
-        animationType="slide"
+        animationType="none"
         onRequestClose={() => setShowStylePicker(false)}
       >
         <Pressable
-          style={styles.modalOverlay}
+          style={styles.dropdownOverlay}
           onPress={() => setShowStylePicker(false)}
         >
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>種目を選択</Text>
-              <Pressable
-                style={styles.modalCloseButton}
-                onPress={() => setShowStylePicker(false)}
-              >
-                <Feather name="x" size={24} color="#6B7280" />
-              </Pressable>
-            </View>
-            <ScrollView style={styles.modalBody}>
+          <View
+            style={[
+              styles.dropdownContainer,
+              { top: dropdownLayout.top, left: dropdownLayout.left, width: dropdownLayout.width },
+            ]}
+          >
+            <ScrollView
+              style={styles.dropdownScroll}
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled
+            >
               {swimStyles.map((style) => {
                 const formData = pickingFormIndex !== null ? formDataList[pickingFormIndex] : null
                 const isSelected = formData?.styleId === String(style.id)
@@ -688,8 +765,8 @@ export const RecordLogFormScreen: React.FC = () => {
                   <Pressable
                     key={style.id}
                     style={[
-                      styles.modalOption,
-                      isSelected && styles.modalOptionSelected,
+                      styles.dropdownOption,
+                      isSelected && styles.dropdownOptionSelected,
                     ]}
                     onPress={() => {
                       if (pickingFormIndex !== null) {
@@ -701,20 +778,20 @@ export const RecordLogFormScreen: React.FC = () => {
                   >
                     <Text
                       style={[
-                        styles.modalOptionText,
-                        isSelected && styles.modalOptionTextSelected,
+                        styles.dropdownOptionText,
+                        isSelected && styles.dropdownOptionTextSelected,
                       ]}
                     >
                       {style.name_jp}
                     </Text>
                     {isSelected && (
-                      <Feather name="check" size={20} color="#2563EB" />
+                      <Feather name="check" size={16} color="#2563EB" />
                     )}
                   </Pressable>
                 )
               })}
             </ScrollView>
-          </Pressable>
+          </View>
         </Pressable>
       </Modal>
 
@@ -803,53 +880,42 @@ const styles = StyleSheet.create({
   pickerButtonPlaceholder: {
     color: '#9CA3AF',
   },
-  modalOverlay: {
+  dropdownOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
   },
-  modalContent: {
+  dropdownContainer: {
+    position: 'absolute',
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    maxHeight: 260,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
   },
-  modalHeader: {
+  dropdownScroll: {
+    maxHeight: 260,
+  },
+  dropdownOption: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#E5E7EB',
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  modalCloseButton: {
-    padding: 4,
-  },
-  modalBody: {
-    maxHeight: 400,
-  },
-  modalOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  modalOptionSelected: {
+  dropdownOptionSelected: {
     backgroundColor: '#EFF6FF',
   },
-  modalOptionText: {
-    fontSize: 16,
+  dropdownOptionText: {
+    fontSize: 15,
     color: '#111827',
   },
-  modalOptionTextSelected: {
+  dropdownOptionTextSelected: {
     color: '#2563EB',
     fontWeight: '600',
   },
@@ -886,6 +952,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  splitTimeButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -896,6 +966,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#2563EB',
     backgroundColor: '#FFFFFF',
+  },
+  addButton25m: {
+    borderColor: '#2563EB',
+    backgroundColor: '#2563EB',
+  },
+  addButton25mText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  addButtonDisabled: {
+    opacity: 0.4,
   },
   addButtonText: {
     fontSize: 14,
