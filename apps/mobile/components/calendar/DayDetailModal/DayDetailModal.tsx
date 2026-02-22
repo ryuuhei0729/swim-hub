@@ -373,7 +373,9 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           }}
                           onAddRecord={() => {
                             if (onAddRecord) {
-                              onAddRecord(date)
+                              const firstRecord = records[0]
+                              const dateParam = firstRecord?.date || format(date, 'yyyy-MM-dd')
+                              onAddRecord(competitionId, dateParam)
                               onClose()
                             }
                           }}

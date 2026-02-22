@@ -516,6 +516,168 @@ export const CompetitionBasicFormScreen: React.FC = () => {
     }
   }
 
+  // 続けて記録を入力（過去の大会：EntryFormをスキップしてRecordLogFormへ遷移）
+  const handleContinueToRecord = async () => {
+    // 二重送信防止
+    if (isSubmittingRef.current) return
+
+    if (!validate()) {
+      return
+    }
+
+    if (!user) {
+      Alert.alert('エラー', '認証が必要です', [{ text: 'OK' }])
+      return
+    }
+
+    isSubmittingRef.current = true
+    setLoading(true)
+    setStoreLoading(true)
+    setErrors({})
+
+    try {
+      if (competitionId) {
+        // 編集モード
+        let newImagePaths: string[] = []
+        if (newImageFiles.length > 0) {
+          const uploadResults = await uploadImages(
+            supabase,
+            user.id,
+            competitionId,
+            newImageFiles.map((f) => ({
+              base64: f.base64,
+              fileExtension: f.fileExtension,
+            })),
+            'competition-images'
+          )
+          newImagePaths = uploadResults.map((r) => r.path)
+        }
+
+        const currentPaths = existingImages
+          .filter((img) => !deletedImageIds.includes(img.id))
+          .map((img) => img.id)
+        const updatedImagePaths = [...currentPaths, ...newImagePaths]
+
+        const formData = {
+          date,
+          end_date: endDate && endDate.trim() !== '' ? endDate : null,
+          title: title && title.trim() !== '' ? title.trim() : null,
+          place: place && place.trim() !== '' ? place.trim() : null,
+          pool_type: poolType,
+          note: note && note.trim() !== '' ? note.trim() : null,
+          image_paths: updatedImagePaths.length > 0 ? updatedImagePaths : [],
+        }
+
+        const updatedCompetition = await updateMutation.mutateAsync({
+          id: competitionId,
+          updates: formData,
+        })
+
+        if (deletedImageIds.length > 0) {
+          await deleteImages(supabase, deletedImageIds, 'competition-images')
+        }
+
+        if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_competitions) {
+          try {
+            await syncCompetition(updatedCompetition, 'update')
+          } catch (syncError) {
+            console.warn('カレンダー同期エラー:', syncError)
+            Alert.alert(
+              'カレンダー同期に失敗',
+              '大会情報は保存されましたが、カレンダーへの同期に失敗しました。',
+              [{ text: 'OK' }]
+            )
+          }
+        }
+
+        queryClient.invalidateQueries({ queryKey: ['calendar'] })
+        navigation.navigate('RecordLogForm', {
+          competitionId,
+          entryDataList: [],
+          date,
+        })
+      } else {
+        // 新規作成モード
+        const formData = {
+          date,
+          end_date: endDate && endDate.trim() !== '' ? endDate : null,
+          title: title && title.trim() !== '' ? title.trim() : null,
+          place: place && place.trim() !== '' ? place.trim() : null,
+          pool_type: poolType,
+          note: note && note.trim() !== '' ? note.trim() : null,
+        }
+
+        const newCompetition = await createMutation.mutateAsync(formData)
+
+        if (newImageFiles.length > 0) {
+          const uploadResults = await uploadImages(
+            supabase,
+            user.id,
+            newCompetition.id,
+            newImageFiles.map((f) => ({
+              base64: f.base64,
+              fileExtension: f.fileExtension,
+            })),
+            'competition-images'
+          )
+          const imagePaths = uploadResults.map((r) => r.path)
+
+          try {
+            await updateMutation.mutateAsync({
+              id: newCompetition.id,
+              updates: { image_paths: imagePaths },
+            })
+          } catch (updateError) {
+            await deleteImages(supabase, imagePaths, 'competition-images')
+            throw updateError
+          }
+        }
+
+        if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_competitions) {
+          try {
+            await syncCompetition(newCompetition, 'create')
+          } catch (syncError) {
+            console.warn('カレンダー同期エラー:', syncError)
+            Alert.alert(
+              'カレンダー同期に失敗',
+              '大会情報は保存されましたが、カレンダーへの同期に失敗しました。',
+              [{ text: 'OK' }]
+            )
+          }
+        }
+
+        setCreatedCompetitionId(newCompetition.id)
+        queryClient.invalidateQueries({ queryKey: ['calendar'] })
+
+        navigation.navigate('RecordLogForm', {
+          competitionId: newCompetition.id,
+          entryDataList: [],
+          date,
+        })
+      }
+    } catch (error) {
+      console.error('保存エラー:', error)
+      Alert.alert(
+        'エラー',
+        error instanceof Error ? error.message : '保存に失敗しました',
+        [{ text: 'OK' }]
+      )
+    } finally {
+      isSubmittingRef.current = false
+      setLoading(false)
+      setStoreLoading(false)
+    }
+  }
+
+  // 日付が今日以前かどうかを判定
+  const isDateTodayOrPast = () => {
+    const selectedDateValue = new Date(date)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    selectedDateValue.setHours(0, 0, 0, 0)
+    return selectedDateValue <= today
+  }
+
   // キャンセル処理
   const handleCancel = () => {
     navigation.goBack()
@@ -667,18 +829,32 @@ export const CompetitionBasicFormScreen: React.FC = () => {
           </Pressable>
         </View>
 
-        {/* 続けてエントリーを作成ボタン */}
-        <Pressable
-          style={[styles.continueButton, loading && styles.buttonDisabled]}
-          onPress={handleContinueToEntry}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator size="small" color="#2563EB" />
-          ) : (
-            <Text style={styles.continueButtonText}>続けてエントリーを作成</Text>
-          )}
-        </Pressable>
+        {/* 新規作成時: 日付が今日以前なら記録入力へ直接遷移、未来ならエントリーを作成 */}
+        {!competitionId && isDateTodayOrPast() ? (
+          <Pressable
+            style={[styles.continueButton, loading && styles.buttonDisabled]}
+            onPress={handleContinueToRecord}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#2563EB" />
+            ) : (
+              <Text style={styles.continueButtonText}>続けて記録を入力</Text>
+            )}
+          </Pressable>
+        ) : (
+          <Pressable
+            style={[styles.continueButton, loading && styles.buttonDisabled]}
+            onPress={handleContinueToEntry}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#2563EB" />
+            ) : (
+              <Text style={styles.continueButtonText}>続けてエントリーを作成</Text>
+            )}
+          </Pressable>
+        )}
       </View>
     </View>
   )

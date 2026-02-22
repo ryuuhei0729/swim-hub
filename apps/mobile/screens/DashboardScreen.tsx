@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react'
-import { ScrollView, StyleSheet, RefreshControl, Alert, Platform } from 'react-native'
+import { View, ScrollView, StyleSheet, RefreshControl, Alert, Platform } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -11,12 +11,15 @@ import { CalendarView } from '@/components/calendar'
 import { DayDetailModal } from '@/components/calendar'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ErrorView } from '@/components/layout/ErrorView'
+import { useTeamsQuery } from '@apps/shared/hooks/queries/teams'
 import { useDeletePracticeMutation, usePracticesQuery } from '@apps/shared/hooks/queries/practices'
 import { useDeleteRecordMutation, useDeleteCompetitionMutation } from '@apps/shared/hooks/queries/records'
 import { PracticeAPI } from '@apps/shared/api/practices'
 import { useIOSCalendarSync } from '@/hooks/useIOSCalendarSync'
 import type { MainStackParamList } from '@/navigation/types'
+import { TeamAnnouncementsSection } from '@/components/dashboard/TeamAnnouncementsSection'
 import type { CalendarItem } from '@apps/shared/types/ui'
+import { useRefreshOnFocus } from '@/hooks/useRefreshOnFocus'
 
 type DashboardScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>
 
@@ -37,6 +40,11 @@ export const DashboardScreen: React.FC = () => {
 
   // iOSカレンダー同期フック
   const { syncPractice, syncCompetition } = useIOSCalendarSync()
+
+  // チーム一覧取得（お知らせ表示用）
+  const { teams = [] } = useTeamsQuery(supabase, {
+    enableRealtime: false,
+  })
 
   // 練習データ取得（削除時のiOSカレンダー同期用）
   const { data: practices = [] } = usePracticesQuery(supabase, {
@@ -63,6 +71,9 @@ export const DashboardScreen: React.FC = () => {
     const dateKey = formatDate(selectedDate, 'yyyy-MM-dd')
     return entries.filter((item) => item.date === dateKey)
   }, [selectedDate, entries])
+
+  // タブ遷移時にデータ再取得
+  useRefreshOnFocus(refetch)
 
   // プルリフレッシュ処理
   const handleRefresh = useCallback(async () => {
@@ -124,7 +135,7 @@ export const DashboardScreen: React.FC = () => {
   const handleAddRecord = (dateOrCompetitionId: Date | string, dateParam?: string) => {
     // EntryDetailから呼ばれた場合（competitionIdとdateが渡される）
     if (typeof dateOrCompetitionId === 'string' && dateParam) {
-      navigation.navigate('RecordForm', {
+      navigation.navigate('RecordLogForm', {
         competitionId: dateOrCompetitionId,
         date: dateParam,
       })
@@ -334,12 +345,16 @@ export const DashboardScreen: React.FC = () => {
     }
   }
 
-  // 大会記録を追加（エントリー入力フォームへ遷移）
+  // 大会記録を追加（過去の大会は直接RecordLogFormへ、それ以外はEntryFormへ）
   const handleAddEntry = (competitionId: string, date: string) => {
-    navigation.navigate('EntryForm', {
-      competitionId,
-      date,
-    })
+    const competitionDate = new Date(date)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    if (competitionDate < today) {
+      navigation.navigate('RecordLogForm', { competitionId, date })
+    } else {
+      navigation.navigate('EntryForm', { competitionId, date })
+    }
   }
 
   // エントリー削除
@@ -435,6 +450,18 @@ export const DashboardScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <View style={styles.calendarContainer}>
+        <CalendarView
+          currentDate={currentDate}
+          entries={entries}
+          isLoading={isLoading}
+          onDateClick={handleDateClick}
+          onPrevMonth={handlePrevMonth}
+          onNextMonth={handleNextMonth}
+          onTodayClick={handleTodayClick}
+          onMonthYearSelect={handleMonthYearSelect}
+        />
+      </View>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -447,16 +474,7 @@ export const DashboardScreen: React.FC = () => {
           />
         }
       >
-        <CalendarView
-          currentDate={currentDate}
-          entries={entries}
-          isLoading={isLoading}
-          onDateClick={handleDateClick}
-          onPrevMonth={handlePrevMonth}
-          onNextMonth={handleNextMonth}
-          onTodayClick={handleTodayClick}
-          onMonthYearSelect={handleMonthYearSelect}
-        />
+        <TeamAnnouncementsSection teams={teams} />
       </ScrollView>
 
       {/* 日付詳細モーダル */}
@@ -495,11 +513,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#EFF6FF',
   },
+  calendarContainer: {},
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingVertical: 16,
-    paddingHorizontal: 0,
+    paddingBottom: 16,
   },
 })

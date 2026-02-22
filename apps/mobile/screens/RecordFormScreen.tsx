@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, ActivityIndicator } from 'react-native'
+import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, ActivityIndicator, Modal, Keyboard, Dimensions } from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useQueryClient } from '@tanstack/react-query'
+import { Feather } from '@expo/vector-icons'
 import { useAuth } from '@/contexts/AuthProvider'
 import {
   useCreateRecordMutation,
@@ -14,7 +15,6 @@ import {
 import { useRecordFormStore } from '@/stores/recordStore'
 import { useShallow } from 'zustand/react/shallow'
 import { StyleAPI } from '@apps/shared/api/styles'
-import { formatTime } from '@/utils/formatters'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ImageUploader, ImageFile, ExistingImage } from '@/components/shared/ImageUploader'
 import {
@@ -60,6 +60,7 @@ export const RecordFormScreen: React.FC = () => {
     setTime,
     setReactionTime,
     setNote,
+    setSplitTimes,
     addSplitTime,
     removeSplitTime,
     updateSplitTime,
@@ -83,6 +84,7 @@ export const RecordFormScreen: React.FC = () => {
       setTime: state.setTime,
       setReactionTime: state.setReactionTime,
       setNote: state.setNote,
+      setSplitTimes: state.setSplitTimes,
       addSplitTime: state.addSplitTime,
       removeSplitTime: state.removeSplitTime,
       updateSplitTime: state.updateSplitTime,
@@ -100,10 +102,29 @@ export const RecordFormScreen: React.FC = () => {
   const [loadingStyles, setLoadingStyles] = useState(true)
   const [competitions, setCompetitions] = useState<Competition[]>([])
 
+  // ドロップダウンピッカーの状態
+  const [showStylePicker, setShowStylePicker] = useState(false)
+  const [showCompetitionPicker, setShowCompetitionPicker] = useState(false)
+  const competitionButtonRef = useRef<View>(null)
+  const styleButtonRef = useRef<View>(null)
+  const [dropdownLayout, setDropdownLayout] = useState({ top: 0, left: 0, width: 0 })
+
+  // タイム表示用の状態（入力中は文字列、blur時にパース）
+  const [timeDisplayValue, setTimeDisplayValue] = useState('')
+  const [splitTimeDisplayValues, setSplitTimeDisplayValues] = useState<Record<number, string>>({})
+
   // 画像の状態管理
   const [newImageFiles, setNewImageFiles] = useState<ImageFile[]>([])
   const [deletedImageIds, setDeletedImageIds] = useState<string[]>([])
   const [existingImages, setExistingImages] = useState<ExistingImage[]>([])
+
+  // 秒数を表示用文字列に変換
+  const formatSecondsToDisplay = (seconds: number): string => {
+    if (!seconds || seconds <= 0) return ''
+    const minutes = Math.floor(seconds / 60)
+    const remainder = (seconds % 60).toFixed(2).padStart(5, '0')
+    return minutes > 0 ? `${minutes}:${remainder}` : remainder
+  }
 
   // 画像変更のハンドラー
   const handleImagesChange = useCallback((newFiles: ImageFile[], deletedIds: string[]) => {
@@ -207,6 +228,20 @@ export const RecordFormScreen: React.FC = () => {
     const record = records.find((r) => r.id === recordId)
     if (record) {
       initialize(record)
+      // 編集時にタイム表示値を初期化
+      if (record.time && record.time > 0) {
+        setTimeDisplayValue(formatSecondsToDisplay(record.time))
+      }
+      // スプリットタイム表示値を初期化
+      if (record.split_times) {
+        const displayValues: Record<number, string> = {}
+        record.split_times.forEach((st: { split_time: number }, idx: number) => {
+          if (st.split_time > 0) {
+            displayValues[idx] = formatSecondsToDisplay(st.split_time)
+          }
+        })
+        setSplitTimeDisplayValues(displayValues)
+      }
       hasInitializedForEdit.current = true
       setLoadingRecord(false)
     } else if (!loadingRecords) {
@@ -410,32 +445,104 @@ export const RecordFormScreen: React.FC = () => {
     navigation.goBack()
   }
 
-  // スプリットタイムを追加
+  // スプリットタイムを追加（空の1行）
   const handleAddSplitTime = () => {
-    addSplitTime({ distance: 50, splitTime: 0 })
+    addSplitTime({ distance: 0, splitTime: 0 })
   }
 
-  // タイム入力の処理（文字列から秒数に変換）
-  const handleTimeChange = (text: string) => {
-    // 入力が空の場合はエラーをクリア
-    if (text.trim() === '') {
+  // スプリットタイムを25mごとに追加
+  const handleAddSplitTimesEvery25m = () => {
+    const selectedStyle = styleList.find((s) => s.id === styleId)
+    if (!selectedStyle?.distance) return
+
+    const raceDistance = selectedStyle.distance
+    const existingDistances = new Set(splitTimes.map((st) => st.distance))
+    const newSplits: Array<{ distance: number; splitTime: number }> = []
+
+    for (let distance = 25; distance <= raceDistance; distance += 25) {
+      if (!existingDistances.has(distance)) {
+        newSplits.push({ distance, splitTime: 0 })
+      }
+    }
+
+    if (newSplits.length === 0) return
+
+    // 既存のスプリットタイムに新しいものを追加
+    const updatedSplitTimes = [...splitTimes, ...newSplits]
+    setSplitTimes(updatedSplitTimes)
+  }
+
+  // スプリットタイムを距離でソートして表示用のインデックスマッピングを作成
+  const sortedSplitIndices = useMemo(() => {
+    return splitTimes
+      .map((st, index) => ({ st, index }))
+      .sort((a, b) => {
+        // distance=0 は末尾に
+        if (a.st.distance === 0 && b.st.distance === 0) return a.index - b.index
+        if (a.st.distance === 0) return 1
+        if (b.st.distance === 0) return -1
+        return a.st.distance - b.st.distance
+      })
+  }, [splitTimes])
+
+  // 選択中の種目の距離
+  const selectedStyleDistance = useMemo(() => {
+    if (styleId === null || styleId === undefined) return null
+    const style = styleList.find((s) => s.id === styleId)
+    return style?.distance ?? null
+  }, [styleId, styleList])
+
+  // タイム入力の処理（blur時に文字列から秒数に変換）
+  const handleTimeBlur = () => {
+    const text = timeDisplayValue.trim()
+    if (text === '') {
       clearErrors()
       setTime(null)
       return
     }
 
-    // クイック入力形式をサポート（例: 31-2 → 31.20秒）
     const { time: parsed } = parseMainTime(text)
     if (parsed <= 0) {
-      // 不正な形式の場合、エラーメッセージを表示
       setError('time', 'タイムの形式が正しくありません（例: 1:23.45 または 31-2）')
       setTime(null)
     } else {
-      // 正常にパースできた場合、エラーをクリア
       clearErrors()
       setTime(parsed)
+      setTimeDisplayValue(formatSecondsToDisplay(parsed))
     }
   }
+
+  // ドロップダウンを開く（ボタン位置を計測して表示）
+  const screenHeight = Dimensions.get('window').height
+  const DROPDOWN_MAX_HEIGHT = 260
+
+  const openCompetitionPicker = useCallback(() => {
+    Keyboard.dismiss()
+    competitionButtonRef.current?.measureInWindow((x, y, width, height) => {
+      const top = y + height + 4
+      const fitsBelow = top + DROPDOWN_MAX_HEIGHT < screenHeight - 40
+      setDropdownLayout({
+        top: fitsBelow ? top : y - DROPDOWN_MAX_HEIGHT - 4,
+        left: x,
+        width,
+      })
+      setShowCompetitionPicker(true)
+    })
+  }, [screenHeight])
+
+  const openStylePicker = useCallback(() => {
+    Keyboard.dismiss()
+    styleButtonRef.current?.measureInWindow((x, y, width, height) => {
+      const top = y + height + 4
+      const fitsBelow = top + DROPDOWN_MAX_HEIGHT < screenHeight - 40
+      setDropdownLayout({
+        top: fitsBelow ? top : y - DROPDOWN_MAX_HEIGHT - 4,
+        left: x,
+        width,
+      })
+      setShowStylePicker(true)
+    })
+  }, [screenHeight])
 
   // 反応時間入力の処理
   const handleReactionTimeChange = (text: string) => {
@@ -447,6 +554,21 @@ export const RecordFormScreen: React.FC = () => {
     }
   }
 
+  // 大会選択の表示名を取得
+  const selectedCompetitionName = useMemo(() => {
+    const id = routeCompetitionId || storeCompetitionId
+    if (!id) return null
+    const comp = competitions.find((c) => c.id === id)
+    return comp ? (comp.title || comp.id) : null
+  }, [routeCompetitionId, storeCompetitionId, competitions])
+
+  // 種目選択の表示名を取得
+  const selectedStyleName = useMemo(() => {
+    if (styleId === null || styleId === undefined) return null
+    const style = styleList.find((s) => s.id === styleId)
+    return style ? `${style.name_jp}` : null
+  }, [styleId, styleList])
+
   // ローディング状態
   if (loadingRecord || loadingStyles) {
     return (
@@ -457,209 +579,367 @@ export const RecordFormScreen: React.FC = () => {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.form}>
-        {/* 大会選択 */}
-        <View style={styles.field}>
-          <Text style={styles.label}>
-            大会ID <Text style={styles.required}>*</Text>
-          </Text>
-          <TextInput
-            style={[styles.input, errors.competitionId && styles.inputError]}
-            value={routeCompetitionId || storeCompetitionId || ''}
-            onChangeText={(text) => {
-              setCompetitionId(text.trim() !== '' ? text.trim() : null)
-              if (errors.competitionId) {
-                clearErrors()
-              }
-            }}
-            placeholder="大会IDを入力"
-            placeholderTextColor="#9CA3AF"
-            editable={!routeCompetitionId && !storeLoading}
-          />
-          {errors.competitionId && <Text style={styles.errorText}>{errors.competitionId}</Text>}
-          {competitions.length > 0 && (
-            <Text style={styles.hintText}>
-              利用可能な大会: {competitions.slice(0, 3).map((c) => c.title || c.id).join(', ')}
-              {competitions.length > 3 && ` ...他${competitions.length - 3}件`}
+    <>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <View style={styles.form}>
+          {/* 大会選択 */}
+          <View style={styles.field}>
+            <Text style={styles.label}>
+              大会 <Text style={styles.required}>*</Text>
             </Text>
-          )}
-        </View>
-
-        {/* 種目選択 */}
-        <View style={styles.field}>
-          <Text style={styles.label}>
-            種目ID <Text style={styles.required}>*</Text>
-          </Text>
-          <TextInput
-            style={[styles.input, errors.styleId && styles.inputError]}
-            value={styleId !== null ? styleId.toString() : ''}
-            onChangeText={(text) => {
-              const id = parseInt(text, 10)
-              if (!isNaN(id)) {
-                setStyleId(id)
-              } else if (text === '') {
-                setStyleId(null)
-              }
-              if (errors.styleId) {
-                clearErrors()
-              }
-            }}
-            placeholder="種目IDを入力（例: 1, 2, 3...）"
-            placeholderTextColor="#9CA3AF"
-            keyboardType="number-pad"
-            editable={!storeLoading}
-          />
-          {errors.styleId && <Text style={styles.errorText}>{errors.styleId}</Text>}
-          {styleList.length > 0 && (
-            <Text style={styles.hintText}>
-              利用可能な種目: {styleList.slice(0, 5).map((s) => `${s.name_jp}${s.distance}m`).join(', ')}
-              {styleList.length > 5 && ` ...他${styleList.length - 5}件`}
-            </Text>
-          )}
-        </View>
-
-        {/* タイム入力 */}
-        <View style={styles.field}>
-          <Text style={styles.label}>
-            タイム <Text style={styles.required}>*</Text>
-          </Text>
-          <TextInput
-            style={[styles.input, errors.time && styles.inputError]}
-            value={time !== null ? formatTime(time) : ''}
-            onChangeText={handleTimeChange}
-            placeholder="例: 1:23.45 または 31-2"
-            placeholderTextColor="#9CA3AF"
-            editable={!storeLoading}
-          />
-          {errors.time && <Text style={styles.errorText}>{errors.time}</Text>}
-        </View>
-
-        {/* 反応時間入力 */}
-        <View style={styles.field}>
-          <Text style={styles.label}>反応時間（秒）</Text>
-          <TextInput
-            style={[styles.input, errors.reactionTime && styles.inputError]}
-            value={reactionTime !== null ? reactionTime.toString() : ''}
-            onChangeText={handleReactionTimeChange}
-            placeholder="0.40〜1.00"
-            placeholderTextColor="#9CA3AF"
-            keyboardType="decimal-pad"
-            editable={!storeLoading}
-          />
-          {errors.reactionTime && <Text style={styles.errorText}>{errors.reactionTime}</Text>}
-        </View>
-
-        {/* スプリットタイム入力 */}
-        <View style={styles.field}>
-          <View style={styles.splitTimeHeader}>
-            <Text style={styles.label}>スプリットタイム</Text>
             <Pressable
-              style={styles.addButton}
-              onPress={handleAddSplitTime}
+              ref={competitionButtonRef}
+              style={[styles.pickerButton, errors.competitionId && styles.inputError]}
+              onPress={openCompetitionPicker}
+              disabled={!!routeCompetitionId || storeLoading}
+            >
+              <Text
+                style={[
+                  styles.pickerButtonText,
+                  !selectedCompetitionName && styles.pickerButtonPlaceholder,
+                ]}
+              >
+                {selectedCompetitionName || '大会を選択'}
+              </Text>
+              {!routeCompetitionId && (
+                <Feather name="chevron-down" size={20} color="#6B7280" />
+              )}
+            </Pressable>
+            {errors.competitionId && <Text style={styles.errorText}>{errors.competitionId}</Text>}
+          </View>
+
+          {/* 種目選択 */}
+          <View style={styles.field}>
+            <Text style={styles.label}>
+              種目 <Text style={styles.required}>*</Text>
+            </Text>
+            <Pressable
+              ref={styleButtonRef}
+              style={[styles.pickerButton, errors.styleId && styles.inputError]}
+              onPress={openStylePicker}
               disabled={storeLoading}
             >
-              <Text style={styles.addButtonText}>+ 追加</Text>
+              <Text
+                style={[
+                  styles.pickerButtonText,
+                  !selectedStyleName && styles.pickerButtonPlaceholder,
+                ]}
+              >
+                {selectedStyleName || '種目を選択'}
+              </Text>
+              <Feather name="chevron-down" size={20} color="#6B7280" />
+            </Pressable>
+            {errors.styleId && <Text style={styles.errorText}>{errors.styleId}</Text>}
+          </View>
+
+          {/* タイム入力 */}
+          <View style={styles.field}>
+            <Text style={styles.label}>
+              タイム <Text style={styles.required}>*</Text>
+            </Text>
+            <TextInput
+              style={[styles.input, errors.time && styles.inputError]}
+              value={timeDisplayValue}
+              onChangeText={setTimeDisplayValue}
+              onBlur={handleTimeBlur}
+              placeholder="例: 1:23.45 または 31-2"
+              placeholderTextColor="#9CA3AF"
+              editable={!storeLoading}
+            />
+            {errors.time && <Text style={styles.errorText}>{errors.time}</Text>}
+          </View>
+
+          {/* 反応時間入力 */}
+          <View style={styles.field}>
+            <Text style={styles.label}>反応時間（秒）</Text>
+            <TextInput
+              style={[styles.input, errors.reactionTime && styles.inputError]}
+              value={reactionTime !== null ? reactionTime.toString() : ''}
+              onChangeText={handleReactionTimeChange}
+              placeholder="0.40〜1.00"
+              placeholderTextColor="#9CA3AF"
+              keyboardType="decimal-pad"
+              editable={!storeLoading}
+            />
+            {errors.reactionTime && <Text style={styles.errorText}>{errors.reactionTime}</Text>}
+          </View>
+
+          {/* スプリットタイム入力 */}
+          <View style={styles.field}>
+            <View style={styles.splitTimeHeader}>
+              <Text style={styles.label}>スプリットタイム</Text>
+              <View style={styles.splitTimeButtons}>
+                <Pressable
+                  style={[
+                    styles.addButton,
+                    styles.addButton25m,
+                    (!selectedStyleDistance || storeLoading) && styles.addButtonDisabled,
+                  ]}
+                  onPress={handleAddSplitTimesEvery25m}
+                  disabled={!selectedStyleDistance || storeLoading}
+                >
+                  <Text style={[
+                    styles.addButtonText,
+                    (!selectedStyleDistance || storeLoading) && styles.addButtonTextDisabled,
+                  ]}>追加(25mごと)</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.addButton, storeLoading && styles.addButtonDisabled]}
+                  onPress={handleAddSplitTime}
+                  disabled={storeLoading}
+                >
+                  <Text style={styles.addButtonText}>+ 追加</Text>
+                </Pressable>
+              </View>
+            </View>
+            {sortedSplitIndices.map(({ st, index: originalIndex }) => (
+              <View key={originalIndex} style={styles.splitTimeRow}>
+                <TextInput
+                  style={[styles.input, styles.splitTimeDistance]}
+                  value={st.distance > 0 ? st.distance.toString() : ''}
+                  onChangeText={(text) => {
+                    if (text === '') {
+                      updateSplitTime(originalIndex, { distance: 0 })
+                    } else {
+                      const distance = parseInt(text, 10)
+                      if (!isNaN(distance)) {
+                        updateSplitTime(originalIndex, { distance })
+                      }
+                    }
+                  }}
+                  placeholder="距離 (m)"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="number-pad"
+                  editable={!storeLoading}
+                />
+                <Text style={styles.splitTimeUnit}>m:</Text>
+                <TextInput
+                  style={[styles.input, styles.splitTimeTime]}
+                  value={splitTimeDisplayValues[originalIndex] ?? (st.splitTime > 0 ? formatSecondsToDisplay(st.splitTime) : '')}
+                  onChangeText={(text) => {
+                    setSplitTimeDisplayValues((prev) => ({ ...prev, [originalIndex]: text }))
+                  }}
+                  onBlur={() => {
+                    const text = (splitTimeDisplayValues[originalIndex] ?? '').trim()
+                    if (text === '') {
+                      updateSplitTime(originalIndex, { splitTime: 0 })
+                      setSplitTimeDisplayValues((prev) => {
+                        const next = { ...prev }
+                        delete next[originalIndex]
+                        return next
+                      })
+                      return
+                    }
+                    const { time: parsed } = parseSplitTime(text)
+                    if (parsed > 0) {
+                      updateSplitTime(originalIndex, { splitTime: parsed })
+                      setSplitTimeDisplayValues((prev) => ({
+                        ...prev,
+                        [originalIndex]: formatSecondsToDisplay(parsed),
+                      }))
+                    }
+                  }}
+                  placeholder="例: 1:23.45 または 31-2"
+                  placeholderTextColor="#9CA3AF"
+                  editable={!storeLoading}
+                />
+                <Pressable
+                  style={styles.removeButton}
+                  onPress={() => {
+                    removeSplitTime(originalIndex)
+                    // スプリットタイム表示値のインデックスを再マッピング
+                    setSplitTimeDisplayValues((prev) => {
+                      const next: Record<number, string> = {}
+                      Object.entries(prev).forEach(([k, v]) => {
+                        const key = parseInt(k, 10)
+                        if (key < originalIndex) next[key] = v
+                        else if (key > originalIndex) next[key - 1] = v
+                      })
+                      return next
+                    })
+                  }}
+                  disabled={storeLoading}
+                >
+                  <Feather name="trash-2" size={16} color="#FFFFFF" />
+                </Pressable>
+              </View>
+            ))}
+          </View>
+
+          {/* メモ入力 */}
+          <View style={styles.field}>
+            <Text style={styles.label}>メモ</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              value={note || ''}
+              onChangeText={(text) => setNote(text.trim() !== '' ? text : null)}
+              placeholder="メモ（任意）"
+              placeholderTextColor="#9CA3AF"
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              editable={!storeLoading}
+            />
+          </View>
+
+          {/* 画像 */}
+          <View style={styles.field}>
+            <ImageUploader
+              existingImages={existingImages}
+              onImagesChange={handleImagesChange}
+              maxImages={3}
+              disabled={storeLoading}
+              label="画像"
+            />
+          </View>
+
+          {/* ボタン */}
+          <View style={styles.buttonContainer}>
+            <Pressable
+              style={[styles.button, styles.cancelButton]}
+              onPress={handleCancel}
+              disabled={storeLoading}
+            >
+              <Text style={styles.cancelButtonText}>キャンセル</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.button, styles.saveButton, storeLoading && styles.buttonDisabled]}
+              onPress={handleSave}
+              disabled={storeLoading}
+            >
+              {storeLoading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.saveButtonText}>保存</Text>
+              )}
             </Pressable>
           </View>
-          {splitTimes.map((st, index) => (
-            <View key={index} style={styles.splitTimeRow}>
-              <TextInput
-                style={[styles.input, styles.splitTimeDistance]}
-                value={st.distance.toString()}
-                onChangeText={(text) => {
-                  const distance = parseInt(text, 10)
-                  if (!isNaN(distance)) {
-                    updateSplitTime(index, { distance })
-                  }
-                }}
-                placeholder="距離 (m)"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="number-pad"
-                editable={!storeLoading}
-              />
-              <TextInput
-                style={[styles.input, styles.splitTimeTime]}
-                value={formatTime(st.splitTime)}
-                onChangeText={(text) => {
-                  // 入力が空の場合は0に設定
-                  if (text.trim() === '') {
-                    updateSplitTime(index, { splitTime: 0 })
-                    return
-                  }
-
-                  // クイック入力形式をサポート（例: 31-2 → 31.20秒）
-                  const { time: parsed } = parseSplitTime(text)
-                  if (parsed > 0) {
-                    updateSplitTime(index, { splitTime: parsed })
-                  }
-                  // 不正な形式の場合は何もしない（既存の値を維持）
-                }}
-                placeholder="例: 31-2"
-                placeholderTextColor="#9CA3AF"
-                editable={!storeLoading}
-              />
-              <Pressable
-                style={styles.removeButton}
-                onPress={() => removeSplitTime(index)}
-                disabled={storeLoading}
-              >
-                <Text style={styles.removeButtonText}>削除</Text>
-              </Pressable>
-            </View>
-          ))}
         </View>
+      </ScrollView>
 
-        {/* メモ入力 */}
-        <View style={styles.field}>
-          <Text style={styles.label}>メモ</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            value={note || ''}
-            onChangeText={(text) => setNote(text.trim() !== '' ? text : null)}
-            placeholder="メモ（任意）"
-            placeholderTextColor="#9CA3AF"
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-            editable={!storeLoading}
-          />
-        </View>
-
-        {/* 画像 */}
-        <View style={styles.field}>
-          <ImageUploader
-            existingImages={existingImages}
-            onImagesChange={handleImagesChange}
-            maxImages={3}
-            disabled={storeLoading}
-            label="画像"
-          />
-        </View>
-
-        {/* ボタン */}
-        <View style={styles.buttonContainer}>
-          <Pressable
-            style={[styles.button, styles.cancelButton]}
-            onPress={handleCancel}
-            disabled={storeLoading}
+      {/* 大会選択ドロップダウン */}
+      <Modal
+        visible={showCompetitionPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCompetitionPicker(false)}
+      >
+        <Pressable
+          style={styles.dropdownOverlay}
+          onPress={() => setShowCompetitionPicker(false)}
+        >
+          <View
+            style={[
+              styles.dropdownContainer,
+              { top: dropdownLayout.top, left: dropdownLayout.left, width: dropdownLayout.width },
+            ]}
           >
-            <Text style={styles.cancelButtonText}>キャンセル</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.button, styles.saveButton, storeLoading && styles.buttonDisabled]}
-            onPress={handleSave}
-            disabled={storeLoading}
+            <ScrollView
+              style={styles.dropdownScroll}
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled
+            >
+              {competitions.map((comp) => {
+                const isSelected = (routeCompetitionId || storeCompetitionId) === comp.id
+                return (
+                  <Pressable
+                    key={comp.id}
+                    style={[
+                      styles.dropdownOption,
+                      isSelected && styles.dropdownOptionSelected,
+                    ]}
+                    onPress={() => {
+                      setCompetitionId(comp.id)
+                      if (errors.competitionId) clearErrors()
+                      setShowCompetitionPicker(false)
+                    }}
+                  >
+                    <View style={styles.dropdownOptionContent}>
+                      <Text
+                        style={[
+                          styles.dropdownOptionText,
+                          isSelected && styles.dropdownOptionTextSelected,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {comp.title || comp.id}
+                      </Text>
+                      {comp.date && (
+                        <Text style={styles.dropdownOptionSubText}>{comp.date}</Text>
+                      )}
+                    </View>
+                    {isSelected && (
+                      <Feather name="check" size={16} color="#2563EB" />
+                    )}
+                  </Pressable>
+                )
+              })}
+              {competitions.length === 0 && (
+                <View style={styles.dropdownEmpty}>
+                  <Text style={styles.dropdownEmptyText}>大会がありません</Text>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* 種目選択ドロップダウン */}
+      <Modal
+        visible={showStylePicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowStylePicker(false)}
+      >
+        <Pressable
+          style={styles.dropdownOverlay}
+          onPress={() => setShowStylePicker(false)}
+        >
+          <View
+            style={[
+              styles.dropdownContainer,
+              { top: dropdownLayout.top, left: dropdownLayout.left, width: dropdownLayout.width },
+            ]}
           >
-            {storeLoading ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={styles.saveButtonText}>保存</Text>
-            )}
-          </Pressable>
-        </View>
-      </View>
-    </ScrollView>
+            <ScrollView
+              style={styles.dropdownScroll}
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled
+            >
+              {styleList.map((style) => {
+                const isSelected = styleId === style.id
+                return (
+                  <Pressable
+                    key={style.id}
+                    style={[
+                      styles.dropdownOption,
+                      isSelected && styles.dropdownOptionSelected,
+                    ]}
+                    onPress={() => {
+                      setStyleId(style.id)
+                      if (errors.styleId) clearErrors()
+                      setShowStylePicker(false)
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.dropdownOptionText,
+                        isSelected && styles.dropdownOptionTextSelected,
+                      ]}
+                    >
+                      {style.name_jp}
+                    </Text>
+                    {isSelected && (
+                      <Feather name="check" size={16} color="#2563EB" />
+                    )}
+                  </Pressable>
+                )
+              })}
+            </ScrollView>
+          </View>
+        </Pressable>
+      </Modal>
+    </>
   )
 }
 
@@ -707,10 +987,79 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     marginTop: 4,
   },
-  hintText: {
+  pickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  pickerButtonText: {
+    fontSize: 16,
+    color: '#111827',
+  },
+  pickerButtonPlaceholder: {
+    color: '#9CA3AF',
+  },
+  dropdownOverlay: {
+    flex: 1,
+  },
+  dropdownContainer: {
+    position: 'absolute',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    maxHeight: 260,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  dropdownScroll: {
+    maxHeight: 260,
+  },
+  dropdownOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E7EB',
+  },
+  dropdownOptionSelected: {
+    backgroundColor: '#EFF6FF',
+  },
+  dropdownOptionContent: {
+    flex: 1,
+    marginRight: 8,
+  },
+  dropdownOptionText: {
+    fontSize: 15,
+    color: '#111827',
+  },
+  dropdownOptionTextSelected: {
+    color: '#2563EB',
+    fontWeight: '600',
+  },
+  dropdownOptionSubText: {
     fontSize: 12,
     color: '#6B7280',
-    marginTop: 4,
+    marginTop: 2,
+  },
+  dropdownEmpty: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  dropdownEmptyText: {
+    fontSize: 14,
+    color: '#6B7280',
   },
   splitTimeHeader: {
     flexDirection: 'row',
@@ -718,32 +1067,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+  splitTimeButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   addButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     backgroundColor: '#10B981',
     borderRadius: 6,
   },
+  addButton25m: {
+    backgroundColor: '#2563EB',
+  },
+  addButtonDisabled: {
+    opacity: 0.4,
+  },
   addButtonText: {
     fontSize: 12,
     fontWeight: '600',
     color: '#FFFFFF',
   },
+  addButtonTextDisabled: {
+    color: '#FFFFFF',
+  },
   splitTimeRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
     alignItems: 'center',
     marginTop: 8,
   },
   splitTimeDistance: {
     flex: 1,
   },
+  splitTimeUnit: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
   splitTimeTime: {
     flex: 2,
   },
   removeButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    padding: 8,
     backgroundColor: '#DC2626',
     borderRadius: 6,
   },

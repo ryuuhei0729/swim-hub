@@ -11,6 +11,7 @@ import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ErrorView } from '@/components/layout/ErrorView'
 import type { MainStackParamList } from '@/navigation/types'
 import type { TeamMembershipWithUser } from '@swim-hub/shared/types'
+import { useRefreshOnFocus } from '@/hooks/useRefreshOnFocus'
 
 type TeamsScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>
 
@@ -54,6 +55,9 @@ export const TeamsScreen: React.FC = () => {
       pendingTeams: pending,
     }
   }, [teams])
+
+  // タブ遷移時にデータ再取得
+  useRefreshOnFocus(refetch)
 
   // プルリフレッシュ処理
   const handleRefresh = useCallback(async () => {
