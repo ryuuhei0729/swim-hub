@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthProvider'
 import BaseModal from '@/components/ui/BaseModal'
 import Button from '@/components/ui/Button'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
-import { formatTimeShort, formatTimeAverage } from '@apps/shared/utils/time'
+import { formatTimeShort, formatTimeAverage, parseTime } from '@apps/shared/utils/time'
 import { autoAssignMembers } from '@/utils/memberMatch'
 import { transformScanResultToMenus, type GeminiScanResult } from '@/utils/ocrTransform'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
@@ -58,6 +58,30 @@ type ModalStep = 'upload' | 'analyzing' | 'results'
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png']
 
+function isGeminiScanResult(obj: unknown): obj is GeminiScanResult {
+  if (typeof obj !== 'object' || obj === null) return false
+  const o = obj as Record<string, unknown>
+
+  // menu validation
+  if (typeof o.menu !== 'object' || o.menu === null) return false
+  const menu = o.menu as Record<string, unknown>
+  if (typeof menu.distance !== 'number') return false
+  if (typeof menu.repCount !== 'number') return false
+  if (typeof menu.setCount !== 'number') return false
+
+  // swimmers validation
+  if (!Array.isArray(o.swimmers)) return false
+  for (const s of o.swimmers) {
+    if (typeof s !== 'object' || s === null) return false
+    const swimmer = s as Record<string, unknown>
+    if (typeof swimmer.no !== 'number') return false
+    if (typeof swimmer.name !== 'string') return false
+    if (!Array.isArray(swimmer.times)) return false
+  }
+
+  return true
+}
+
 export default function OcrScanModal({
   isOpen,
   onClose,
@@ -101,6 +125,7 @@ export default function OcrScanModal({
     setMemberAssignments({})
     setEditedTimes({})
     setEditingCell(null)
+    setEditingValue('')
   }, [imagePreview])
 
   const handleClose = useCallback(() => {
@@ -195,11 +220,15 @@ export default function OcrScanModal({
         throw new Error(data.error)
       }
 
-      const result = data as GeminiScanResult
-      setScanResult(result)
+      if (!isGeminiScanResult(data)) {
+        console.error('Invalid scan response shape:', data)
+        throw new Error('解析結果の形式が不正です。再度お試しください')
+      }
+
+      setScanResult(data)
 
       // 自動メンバーマッチング
-      const assignments = autoAssignMembers(result.swimmers, members)
+      const assignments = autoAssignMembers(data.swimmers, members)
       setMemberAssignments(assignments)
 
       setStep('results')
@@ -225,7 +254,7 @@ export default function OcrScanModal({
   // タイム編集
   const handleTimeEditStart = useCallback((key: string, currentValue: number | null) => {
     setEditingCell(key)
-    setEditingValue(currentValue !== null ? String(currentValue) : '')
+    setEditingValue(currentValue !== null ? formatTimeShort(currentValue) : '')
   }, [])
 
   const handleTimeEditConfirm = useCallback(() => {
@@ -234,8 +263,8 @@ export default function OcrScanModal({
     if (value === '') {
       setEditedTimes((prev) => ({ ...prev, [editingCell]: null }))
     } else {
-      const parsed = parseFloat(value)
-      if (!isNaN(parsed) && parsed > 0) {
+      const parsed = parseTime(value)
+      if (parsed > 0) {
         setEditedTimes((prev) => ({ ...prev, [editingCell]: parsed }))
       }
     }

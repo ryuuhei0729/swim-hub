@@ -13,6 +13,8 @@ interface ConfirmDialogProps {
   confirmLabel?: string
   cancelLabel?: string
   variant?: 'danger' | 'warning' | 'info'
+  onTertiary?: () => void
+  tertiaryLabel?: string
 }
 
 export default function ConfirmDialog({
@@ -23,7 +25,9 @@ export default function ConfirmDialog({
   message,
   confirmLabel = '確認',
   cancelLabel = 'キャンセル',
-  variant = 'warning'
+  variant = 'warning',
+  onTertiary,
+  tertiaryLabel
 }: ConfirmDialogProps) {
   const confirmButtonRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -156,6 +160,15 @@ export default function ConfirmDialog({
             >
               {cancelLabel}
             </button>
+            {onTertiary && tertiaryLabel && (
+              <button
+                type="button"
+                onClick={onTertiary}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+              >
+                {tertiaryLabel}
+              </button>
+            )}
             <button
               ref={confirmButtonRef}
               type="button"
