@@ -296,27 +296,27 @@ Authorization: Bearer <supabase_access_token>
 
 ### Phase 1: バックエンド（Supabase Edge Function + Gemini API）
 
-- [ ] **1.1** Supabase Edge Functions のセットアップ
+- [x] **1.1** Supabase Edge Functions のセットアップ
   - `supabase/functions/scan-timesheet/index.ts` を作成
   - Deno runtime の初期設定
   - `supabase functions serve` でローカル動作確認
 
-- [ ] **1.2** Gemini API 連携
+- [x] **1.2** Gemini API 連携
   - Gemini 2.5 Flash の API キーを取得
   - Edge Function から Gemini Vision API を呼び出す処理を実装
   - base64画像 → Gemini に送信 → JSON レスポンス受信
 
-- [ ] **1.3** プロンプト設計・チューニング
+- [x] **1.3** プロンプト設計・チューニング
   - 構造化 JSON 出力用プロンプトを作成
   - 手書きタイム表のサンプル画像（3〜5枚）でテスト
   - 3桁数字 → 秒.コンマ秒変換の精度検証
   - エッジケース対応（読み取れない文字、斜め撮影など）
 
-- [ ] **1.4** Edge Function の認証・バリデーション
+- [x] **1.4** Edge Function の認証・バリデーション
   - Supabase Auth トークン検証
   - 画像サイズ/形式バリデーション（JPEG, PNG, 5MB以下）
 
-- [ ] **1.5** Edge Function のデプロイ
+- [x] **1.5** Edge Function のデプロイ
   - `supabase secrets set GEMINI_API_KEY=xxx`
   - `supabase functions deploy scan-timesheet`
   - 本番環境での動作確認
@@ -325,18 +325,18 @@ Authorization: Bearer <supabase_access_token>
 
 ### Phase 2: Web UI（OcrScanModal）
 
-- [ ] **2.1** `OcrScanModal.tsx` の作成
+- [x] **2.1** `OcrScanModal.tsx` の作成
   - BaseModal ベースのモーダルコンポーネント
   - 画像ドラッグ&ドロップ / ファイル選択UI
   - 画像プレビュー
   - ファイルバリデーション（形式、サイズ）
 
-- [ ] **2.2** Edge Function 呼び出し
+- [x] **2.2** Edge Function 呼び出し
   - base64 エンコード → Edge Function に POST
   - ローディング UI
   - エラーハンドリング
 
-- [ ] **2.3** 結果確認テーブル + メンバー割り当てUI
+- [x] **2.3** 結果確認テーブル + メンバー割り当てUI
   - メニュー情報表示（距離、サークル、セット説明）
   - 選手×タイムのテーブル表示
   - 各行にチームメンバー選択プルダウン
@@ -349,17 +349,17 @@ Authorization: Bearer <supabase_access_token>
 
 ### Phase 3: フォーム反映 + 保存
 
-- [ ] **3.1** PracticeLogClient にボタン追加
+- [x] **3.1** PracticeLogClient にボタン追加
   - 「画像から練習記録を読み取る」ボタン
   - OcrScanModal の開閉制御
 
-- [ ] **3.2** OCR結果 → PracticeMenu 変換ロジック
+- [x] **3.2** OCR結果 → PracticeMenu 変換ロジック
   - swimmers[] → menus[] への変換
   - 同種目の選手を1メニューにグルーピング
   - チームメンバー名マッチング（name → user_id）
   - times[] → TeamTimeEntry[] への変換
 
-- [ ] **3.3** フォーム反映
+- [x] **3.3** フォーム反映
   - 既存メニューがある場合の追加/上書き確認
   - メニュー反映後、ユーザーが手動で確認・修正可能
   - 保存は既存の `replace_practice_logs` RPC をそのまま利用
@@ -385,13 +385,10 @@ Authorization: Bearer <supabase_access_token>
 ### 実装順序の目安
 
 ```
-Phase 1 (Edge Function)    ████████░░  3-4日
-Phase 2 (OcrScanModal)     ██████░░░░  2-3日
-Phase 3 (フォーム反映)      ██████░░░░  2-3日
-Phase 4 (テスト・改善)      ████░░░░░░  1-2日
+Phase 1 (Edge Function)    ██████████  完了
+Phase 2 (OcrScanModal)     ██████████  完了
+Phase 3 (フォーム反映)      ██████████  完了
+Phase 4 (テスト・改善)      ░░░░░░░░░░  未着手
 ```
 
-**合計: 約 8〜12日**
-
-まずは Phase 1 で Edge Function + Gemini API の疎通を確認し、
-実際の手書き画像での解析精度を検証するのが最優先。
+**Remaining work**: Phase 4（Edge Function テスト、E2Eテスト、実ユーザー画像でのプロンプト改善）が未着手。見積もり 1〜2日。

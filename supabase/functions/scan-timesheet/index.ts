@@ -141,7 +141,12 @@ Deno.serve(async (req) => {
     }
 
     // Parse request body
-    const body: ScanRequest = await req.json()
+    let body: ScanRequest
+    try {
+      body = await req.json()
+    } catch {
+      return errorResponse('画像形式はJPEGまたはPNGのみ対応しています', 'IMAGE_ERROR', 400)
+    }
 
     // Validate mimeType
     if (!body.mimeType || !['image/jpeg', 'image/png'].includes(body.mimeType)) {
@@ -175,8 +180,12 @@ Deno.serve(async (req) => {
         try {
           geminiResponse = await callGeminiApi(apiKey, body.image, body.mimeType)
         } catch (retryErr) {
-          console.error('Gemini API timeout on retry:', retryErr)
-          return errorResponse('AI解析がタイムアウトしました。再試行してください', 'API_ERROR', 504)
+          const isTimeout = retryErr instanceof DOMException && retryErr.name === 'AbortError'
+          console.error(`Gemini API ${isTimeout ? 'timeout' : 'error'} on retry:`, retryErr)
+          if (isTimeout) {
+            return errorResponse('AI解析がタイムアウトしました。再試行してください', 'API_ERROR', 504)
+          }
+          return errorResponse('AI解析サービスでエラーが発生しました。再試行してください', 'API_ERROR', 502)
         }
       } else {
         throw err
@@ -190,8 +199,12 @@ Deno.serve(async (req) => {
       try {
         geminiResponse = await callGeminiApi(apiKey, body.image, body.mimeType)
       } catch (retryErr) {
-        console.error('Gemini API error on retry:', retryErr)
-        return errorResponse('AI解析がタイムアウトしました。再試行してください', 'API_ERROR', 504)
+        const isTimeout = retryErr instanceof DOMException && retryErr.name === 'AbortError'
+        console.error(`Gemini API ${isTimeout ? 'timeout' : 'error'} on retry:`, retryErr)
+        if (isTimeout) {
+          return errorResponse('AI解析がタイムアウトしました。再試行してください', 'API_ERROR', 504)
+        }
+        return errorResponse('AI解析サービスでエラーが発生しました。再試行してください', 'API_ERROR', 502)
       }
     }
 
