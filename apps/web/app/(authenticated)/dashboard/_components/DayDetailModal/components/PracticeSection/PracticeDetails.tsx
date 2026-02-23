@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState, useEffect, lazy, Suspense } from 'react'
+import React, { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
-import { PencilIcon, TrashIcon, ShareIcon, UsersIcon } from '@heroicons/react/24/outline'
+import { PencilIcon, TrashIcon, ShareIcon } from '@heroicons/react/24/outline'
 import { BoltIcon } from '@heroicons/react/24/solid'
 import { format, parseISO, isValid } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -25,7 +25,6 @@ import type {
 import { AttendanceButton } from '../AttendanceSection'
 import type { PracticeDetailsProps, FormattedPracticeLog } from '../../types'
 
-const TeamPracticeDetailModal = lazy(() => import('@/components/team/TeamPracticeDetailModal'))
 
 // 種目の選択肢
 const SWIM_STYLES = [
@@ -79,7 +78,7 @@ export function PracticeDetails({
   const [error, setError] = useState<Error | null>(null)
   const [showShareModal, setShowShareModal] = useState(false)
   const [sharePracticeData, setSharePracticeData] = useState<PracticeShareData | null>(null)
-  const [showTeamDetailModal, setShowTeamDetailModal] = useState(false)
+
 
   useEffect(() => {
     const loadPractice = async () => {
@@ -563,22 +562,6 @@ export function PracticeDetails({
         )}
       </div>
 
-      {/* チーム全体の記録を見るボタン */}
-      {isTeamPractice && (
-        <div className="mt-3">
-          <button
-            onClick={() => setShowTeamDetailModal(true)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg border border-emerald-200 transition-colors text-sm font-medium"
-            tabIndex={0}
-            role="button"
-            aria-label="チーム全体の練習記録を見る"
-          >
-            <UsersIcon className="h-5 w-5" />
-            チーム全体の記録を見る
-          </button>
-        </div>
-      )}
-
       {/* シェアカードモーダル */}
       {showShareModal && sharePracticeData && (
         <ShareCardModal
@@ -590,17 +573,6 @@ export function PracticeDetails({
           type="practice"
           data={sharePracticeData}
         />
-      )}
-
-      {/* チーム練習詳細モーダル */}
-      {showTeamDetailModal && (
-        <Suspense fallback={null}>
-          <TeamPracticeDetailModal
-            isOpen={showTeamDetailModal}
-            onClose={() => setShowTeamDetailModal(false)}
-            practiceId={practiceId}
-          />
-        </Suspense>
       )}
 
     </div>
