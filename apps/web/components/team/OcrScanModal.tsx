@@ -8,6 +8,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { formatTimeShort, formatTimeAverage } from '@apps/shared/utils/time'
 import { autoAssignMembers } from '@/utils/memberMatch'
 import { transformScanResultToMenus, type GeminiScanResult } from '@/utils/ocrTransform'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { CameraIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 
 interface TeamMember {
@@ -87,6 +88,7 @@ export default function OcrScanModal({
   const [editedTimes, setEditedTimes] = useState<Record<string, number | null>>({})
   const [editingCell, setEditingCell] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState('')
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
 
   // リセット
   const resetModal = useCallback(() => {
@@ -265,18 +267,32 @@ export default function OcrScanModal({
     [editedTimes, scanResult]
   )
 
-  // フォーム反映
-  const handleApply = useCallback(() => {
-    if (!scanResult) return
-    const menus = transformScanResultToMenus(scanResult, memberAssignments, members, editedTimes)
-    onApply(menus)
-    handleClose()
-  }, [scanResult, memberAssignments, members, editedTimes, onApply, handleClose])
-
   // 全員アサイン済みか
   const allAssigned = scanResult
     ? scanResult.swimmers.every((s) => memberAssignments[s.no])
     : false
+
+  // フォーム反映
+  const handleApply = useCallback(() => {
+    if (!scanResult) return
+    // 未割り当てがある場合は確認ダイアログを表示
+    if (!allAssigned) {
+      setShowDiscardConfirm(true)
+      return
+    }
+    const menus = transformScanResultToMenus(scanResult, memberAssignments, members, editedTimes)
+    onApply(menus)
+    handleClose()
+  }, [scanResult, memberAssignments, members, editedTimes, onApply, handleClose, allAssigned])
+
+  // 未割り当て破棄を確認してフォーム反映
+  const handleConfirmDiscard = useCallback(() => {
+    if (!scanResult) return
+    setShowDiscardConfirm(false)
+    const menus = transformScanResultToMenus(scanResult, memberAssignments, members, editedTimes)
+    onApply(menus)
+    handleClose()
+  }, [scanResult, memberAssignments, members, editedTimes, onApply, handleClose])
 
   // 選択済みのuser_id一覧 (重複防止)
   const assignedUserIds = new Set(Object.values(memberAssignments))
@@ -548,7 +564,7 @@ export default function OcrScanModal({
             </Button>
             {!allAssigned && (
               <span className="text-sm text-yellow-600">
-                全選手にメンバーを割り当ててください
+                未割り当ての記録は破棄されます
               </span>
             )}
           </div>
@@ -559,7 +575,7 @@ export default function OcrScanModal({
             <Button
               type="button"
               onClick={handleApply}
-              disabled={!allAssigned}
+              disabled={!scanResult?.swimmers.some((s) => memberAssignments[s.no])}
               className="bg-blue-600 hover:bg-blue-700"
             >
               フォームに反映
@@ -586,6 +602,22 @@ export default function OcrScanModal({
       {step === 'upload' && renderUploadStep()}
       {step === 'analyzing' && renderAnalyzingStep()}
       {step === 'results' && renderResultsStep()}
+
+      {/* 未割り当て破棄確認ダイアログ */}
+      <ConfirmDialog
+        isOpen={showDiscardConfirm}
+        onConfirm={handleConfirmDiscard}
+        onCancel={() => setShowDiscardConfirm(false)}
+        title="未割り当ての記録があります"
+        message={`メンバーが割り当てられていない${
+          scanResult
+            ? scanResult.swimmers.filter((s) => !memberAssignments[s.no]).length
+            : 0
+        }件の記録は破棄されます。よろしいですか？`}
+        confirmLabel="破棄して反映"
+        cancelLabel="戻る"
+        variant="warning"
+      />
     </BaseModal>
   )
 }

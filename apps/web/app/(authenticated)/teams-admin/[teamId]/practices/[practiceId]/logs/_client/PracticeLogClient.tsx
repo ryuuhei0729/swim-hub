@@ -457,7 +457,7 @@ export default function PracticeLogClient({
         </div>
 
         {/* 記録表印刷 & 画像スキャンボタン */}
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 -mt-2 mb-4">
           <Button
             type="button"
             variant="outline"
