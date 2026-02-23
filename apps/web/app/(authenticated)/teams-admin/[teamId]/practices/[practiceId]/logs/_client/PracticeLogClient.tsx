@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthProvider'
 import Button from '@/components/ui/Button'
-import { ArrowLeftIcon, PlusIcon, TrashIcon, ClockIcon, CalendarDaysIcon, MapPinIcon, UserGroupIcon, XMarkIcon, CheckIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, PlusIcon, TrashIcon, ClockIcon, CalendarDaysIcon, MapPinIcon, UserGroupIcon, XMarkIcon, CheckIcon, ChevronDownIcon, SparklesIcon, PrinterIcon } from '@heroicons/react/24/outline'
 import TagInput from '@/components/forms/TagInput'
 import type { TeamTimeEntry } from '@/components/team/TeamTimeInputModal'
 import { PracticeTag, Practice } from '@apps/shared/types'
@@ -15,6 +15,15 @@ const TeamTimeInputModal = dynamic(
   () => import('@/components/team/TeamTimeInputModal'),
   { ssr: false }
 )
+
+// OcrScanModalを動的インポート
+const OcrScanModal = dynamic(
+  () => import('@/components/team/OcrScanModal'),
+  { ssr: false }
+)
+
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
+import { openTimesheetPrintWindow } from '@/utils/generateTimesheetHtml'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 
@@ -115,6 +124,9 @@ export default function PracticeLogClient({
   
   const [availableTags, setAvailableTags] = useState<Tag[]>(initialTags)
   const [saving, setSaving] = useState(false)
+  const [showOcrModal, setShowOcrModal] = useState(false)
+  const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false)
+  const [pendingOcrMenus, setPendingOcrMenus] = useState<PracticeMenu[] | null>(null)
   const [showUserSelectModal, setShowUserSelectModal] = useState(false)
   const [currentMenuIdForUserSelect, setCurrentMenuIdForUserSelect] = useState<string | null>(null)
   const [tempSelectedUserIds, setTempSelectedUserIds] = useState<string[]>([])
@@ -373,6 +385,33 @@ export default function PracticeLogClient({
     router.push(`/teams/${teamId}?tab=practices`)
   }
 
+  // OCR結果をフォームに反映
+  const handleOcrApply = (ocrMenus: PracticeMenu[]) => {
+    // 既存メニューが1件でデフォルト値のままの場合は上書き
+    let isDefault = false
+    if (menus.length === 1) {
+      const m = menus[0]
+      isDefault = m.style === 'Fr' &&
+        m.swimCategory === 'Swim' &&
+        m.distance === 100 &&
+        m.reps === 4 &&
+        m.sets === 1 &&
+        m.circleMin === 1 &&
+        m.circleSec === 30 &&
+        m.note === '' &&
+        m.tags.length === 0 &&
+        m.times.length === 0
+    }
+    if (isDefault) {
+      setMenus(ocrMenus)
+    } else {
+      // 既存メニューがある場合は確認ダイアログ
+      setPendingOcrMenus(ocrMenus)
+      setShowOverwriteConfirm(true)
+    }
+    setShowOcrModal(false)
+  }
+
   // メンバーをフォーマット（TeamTimeInputModal用）
   const teamMembersForModal = members.map(m => ({
     id: m.id,
@@ -415,6 +454,27 @@ export default function PracticeLogClient({
               )}
             </div>
           </div>
+        </div>
+
+        {/* 記録表印刷 & 画像スキャンボタン */}
+        <div className="flex justify-end gap-2 -mt-2 mb-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => openTimesheetPrintWindow()}
+          >
+            <PrinterIcon className="h-4 w-4 mr-2" />
+            記録表を印刷
+          </Button>
+          <Button
+            type="button"
+            onClick={() => setShowOcrModal(true)}
+            data-testid="team-practice-log-ocr-scan-button"
+            className="bg-linear-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white border-0 shadow-md hover:shadow-lg transition-all"
+          >
+            <SparklesIcon className="h-4 w-4 mr-2" />
+            AIで画像から読み取る
+          </Button>
         </div>
 
         {/* フォーム */}
@@ -888,6 +948,42 @@ export default function PracticeLogClient({
           </div>
         </div>
       )}
+
+      {/* OCRスキャンモーダル */}
+      {showOcrModal && (
+        <OcrScanModal
+          isOpen={showOcrModal}
+          onClose={() => setShowOcrModal(false)}
+          onApply={handleOcrApply}
+          members={members}
+          presentUserIds={presentUserIds}
+        />
+      )}
+
+      {/* OCR上書き確認ダイアログ */}
+      <ConfirmDialog
+        isOpen={showOverwriteConfirm}
+        onConfirm={() => {
+          if (pendingOcrMenus) setMenus(pendingOcrMenus)
+          setShowOverwriteConfirm(false)
+          setPendingOcrMenus(null)
+        }}
+        onCancel={() => {
+          setShowOverwriteConfirm(false)
+          setPendingOcrMenus(null)
+        }}
+        onTertiary={() => {
+          if (pendingOcrMenus) setMenus(prev => [...prev, ...pendingOcrMenus])
+          setShowOverwriteConfirm(false)
+          setPendingOcrMenus(null)
+        }}
+        title="既存メニューの処理"
+        message="既に入力済みのメニューがあります。上書きしますか？「追加」を押すと既存メニューの後に追加されます。"
+        confirmLabel="上書き"
+        cancelLabel="キャンセル"
+        tertiaryLabel="追加"
+        variant="info"
+      />
     </div>
   )
 }
