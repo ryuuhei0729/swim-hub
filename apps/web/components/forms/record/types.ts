@@ -3,7 +3,7 @@
  */
 
 export interface SplitTimeInput {
-  distance: number | ''
+  distance: number | string
   splitTime: number
   splitTimeDisplayValue?: string
   /** UI安定化用のキー（サーバー送信時には除去） */

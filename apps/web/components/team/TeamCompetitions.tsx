@@ -376,14 +376,17 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
       <div className="space-y-4">
         {competitions.map((competition) => {
           const hasRecords = competition.records && competition.records.length > 0
+          const canViewRecords = isAdmin && hasRecords
           return (
-          <button
+          <div
             key={competition.id}
-            onClick={() => hasRecords ? handleOpenRecords(competition) : undefined}
-            aria-label={hasRecords ? `${competition.title || '大会'}の記録を閲覧` : undefined}
-            disabled={!hasRecords}
+            onClick={() => canViewRecords ? handleOpenRecords(competition) : undefined}
+            onKeyDown={(e) => { if (canViewRecords && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); handleOpenRecords(competition); } }}
+            aria-label={canViewRecords ? `${competition.title || '大会'}の記録を閲覧` : undefined}
+            tabIndex={canViewRecords ? 0 : undefined}
+            role={canViewRecords ? 'button' : undefined}
             className={`w-full text-left border border-gray-200 rounded-lg p-4 transition-colors duration-200 ${
-              hasRecords ? 'cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500' : 'cursor-default'
+              canViewRecords ? 'cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500' : 'cursor-default'
             }`}
           >
             <div className="flex items-start justify-between">
@@ -425,29 +428,29 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
                   <p className="text-sm text-gray-600 mb-2 mt-2">{competition.note}</p>
                 )}
                 
-                {/* 記録情報 */}
-                {competition.records && competition.records.length > 0 ? (
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className="text-sm text-green-600 font-medium">
-                      📊 登録記録: {competition.records.length}件
-                    </span>
-                    <span className="text-xs text-gray-500 flex items-center">
-                      <EyeIcon className="h-3 w-3 mr-1" />
-                      タップで詳細
-                    </span>
-                  </div>
-                ) : (
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className="text-sm text-gray-500">
-                      📊 登録記録なし
-                    </span>
-                    {isAdmin && (
+                {/* 記録情報（管理者のみ表示） */}
+                {isAdmin && (
+                  competition.records && competition.records.length > 0 ? (
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-sm text-green-600 font-medium">
+                        📊 登録記録: {competition.records.length}件
+                      </span>
+                      <span className="text-xs text-gray-500 flex items-center">
+                        <EyeIcon className="h-3 w-3 mr-1" />
+                        タップで詳細
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-sm text-gray-500">
+                        📊 登録記録なし
+                      </span>
                       <span className="text-xs text-blue-600 flex items-center">
                         <PlusIcon className="h-3 w-3 mr-1" />
                         追加可能
                       </span>
-                    )}
-                  </div>
+                    </div>
+                  )
                 )}
                 
                 {/* エントリー情報 */}
@@ -497,7 +500,7 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
                 </div>
               </div>
             </div>
-          </button>
+          </div>
           )
         })}
         
@@ -559,8 +562,8 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
         />
       )}
 
-      {/* 記録一覧モーダル */}
-      {showRecordsModal && selectedCompetitionForRecords && (
+      {/* 記録一覧モーダル（管理者のみ） */}
+      {isAdmin && showRecordsModal && selectedCompetitionForRecords && (
         <TeamCompetitionRecordsModal
           isOpen={showRecordsModal}
           onClose={() => {

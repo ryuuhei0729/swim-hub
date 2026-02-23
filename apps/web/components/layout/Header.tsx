@@ -27,8 +27,11 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const userMenuRef = useRef<HTMLDivElement>(null)
 
   const handleLogout = async () => {
-    await signOut()
-    router.push('/login')
+    const { error } = await signOut()
+    if (error) {
+      console.error('ログアウトエラー:', error)
+    }
+    router.replace('/login')
     setIsUserMenuOpen(false)
   }
 

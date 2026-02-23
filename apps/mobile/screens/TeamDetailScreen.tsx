@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { View, Text, StyleSheet, Pressable, Alert, Platform, Linking } from 'react-native'
 import * as Clipboard from 'expo-clipboard'
 import { Feather } from '@expo/vector-icons'
@@ -40,6 +40,12 @@ export const TeamDetailScreen: React.FC = () => {
     teamId,
     enableRealtime: false, // モバイルでは一旦無効化
   })
+
+  // 現在のユーザーが管理者かどうかを判定
+  const isCurrentUserAdmin = useMemo(() => {
+    if (!user || !members) return false
+    return members.some((m) => m.user_id === user.id && m.role === 'admin')
+  }, [user, members])
 
   const WEB_APP_URL = 'https://www.swim-hub.app/dashboard'
 
@@ -132,11 +138,12 @@ export const TeamDetailScreen: React.FC = () => {
         return (
           <TeamMemberList
             members={members || []}
+            teamId={teamId}
             isLoading={isLoading}
             isError={isError}
             error={error || null}
             currentUserId={user?.id || ''}
-            isCurrentUserAdmin={false}
+            isCurrentUserAdmin={isCurrentUserAdmin}
             onRetry={() => refetch()}
             onMemberChange={() => refetch()}
           />

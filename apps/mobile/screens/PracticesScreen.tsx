@@ -15,6 +15,7 @@ import { usePracticeFilterStore } from '@/stores/practiceFilterStore'
 import { useShallow } from 'zustand/react/shallow'
 import type { MainStackParamList } from '@/navigation/types'
 import type { PracticeWithLogs, PracticeTag } from '@swim-hub/shared/types'
+import { useRefreshOnFocus } from '@/hooks/useRefreshOnFocus'
 
 type PracticesScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>
 
@@ -42,6 +43,8 @@ export const PracticesScreen: React.FC = () => {
   )
 
   // デフォルトの日付範囲（過去1年間）- 初期化時に一度だけ計算
+  const [isUserRefreshing, setIsUserRefreshing] = useState(false)
+
   const [defaultStartDate] = useState(() => {
     const date = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
     return date.toISOString().split('T')[0]
@@ -66,7 +69,7 @@ export const PracticesScreen: React.FC = () => {
     data,
     error,
     isLoading,
-    isRefetching,
+    isRefetching: _isRefetching,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -115,9 +118,17 @@ export const PracticesScreen: React.FC = () => {
     setSelectedTags([])
   }, [setSelectedTags])
 
+  // タブ遷移時にデータ再取得
+  useRefreshOnFocus(refetch)
+
   // プルリフレッシュ処理
   const handleRefresh = useCallback(async () => {
-    await refetch()
+    setIsUserRefreshing(true)
+    try {
+      await refetch()
+    } finally {
+      setIsUserRefreshing(false)
+    }
   }, [refetch])
 
   // 次のページを読み込む
@@ -256,7 +267,7 @@ export const PracticesScreen: React.FC = () => {
         contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl
-            refreshing={isRefetching && !isFetchingNextPage}
+            refreshing={isUserRefreshing}
             onRefresh={handleRefresh}
             colors={['#2563EB']}
             tintColor="#2563EB"

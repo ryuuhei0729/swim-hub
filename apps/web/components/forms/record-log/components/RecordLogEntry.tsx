@@ -137,13 +137,13 @@ export default function RecordLogEntry({
           ? a.distance
           : a.distance === ''
             ? 0
-            : parseInt(String(a.distance)) || 0
+            : parseFloat(String(a.distance)) || 0
       const distB =
         typeof b.distance === 'number'
           ? b.distance
           : b.distance === ''
             ? 0
-            : parseInt(String(b.distance)) || 0
+            : parseFloat(String(b.distance)) || 0
       return distA - distB
     })
     .map((st) => {
@@ -159,7 +159,7 @@ export default function RecordLogEntry({
           ? st.distance
           : st.distance === ''
             ? NaN
-            : parseInt(String(st.distance))
+            : parseFloat(String(st.distance))
       if (!isNaN(distance) && distance > 0 && st.splitTime > 0) {
         return { distance, splitTime: st.splitTime }
       }
@@ -301,12 +301,11 @@ export default function RecordLogEntry({
               >
                 <Input
                   type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
+                  inputMode="decimal"
                   value={st.distance === 0 || st.distance === '' ? '' : String(st.distance)}
                   onChange={(e) => {
                     const value = e.target.value
-                    if (value === '' || /^\d+$/.test(value)) {
+                    if (value === '' || /^\d+(\.\d*)?$/.test(value)) {
                       onSplitTimeChange(originalIndex, 'distance', value)
                     }
                   }}
