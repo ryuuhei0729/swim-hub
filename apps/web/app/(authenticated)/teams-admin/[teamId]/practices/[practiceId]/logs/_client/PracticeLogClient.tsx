@@ -961,7 +961,7 @@ export default function PracticeLogClient({
           setPendingOcrMenus(null)
         }}
         title="既存メニューの処理"
-        message="既に入力済みのメニューがあります。上書きしますか？「キャンセル」を押すと既存メニューの後に追加されます。"
+        message="既に入力済みのメニューがあります。上書きしますか？「追加」を押すと既存メニューの後に追加されます。"
         confirmLabel="上書き"
         cancelLabel="追加"
         variant="info"

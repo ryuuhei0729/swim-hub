@@ -160,6 +160,7 @@ Deno.serve(async (req) => {
 
     // Retry once on failure
     if (!geminiResponse.ok) {
+      await geminiResponse.body?.cancel()
       await new Promise((resolve) => setTimeout(resolve, 1000))
       geminiResponse = await callGeminiApi(apiKey, body.image, body.mimeType)
     }

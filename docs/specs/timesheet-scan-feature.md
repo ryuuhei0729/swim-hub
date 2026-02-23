@@ -151,7 +151,7 @@ Authorization: Bearer <supabase_access_token>
 
 ## 出力形式
 以下のJSON形式で出力してください。JSON以外のテキストは含めないでください。
-{metadata: {...}, swimmers: [...]}
+{menu: {...}, swimmers: [...]}
 ```
 
 ---

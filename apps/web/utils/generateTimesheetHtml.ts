@@ -133,7 +133,6 @@ function generateTimesheetHtml(): string {
     background: #fff url("${segUri}") center center no-repeat;
     background-size: calc(100% - 8px) calc(100% - 8px);
     height: 30px;
-    padding: 4;
     position: relative;
   }
   td.cell::after {

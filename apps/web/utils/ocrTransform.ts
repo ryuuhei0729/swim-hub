@@ -79,7 +79,8 @@ export function transformScanResultToMenus(
     styleGroups.get(style)!.push(swimmer)
   }
 
-  const { repCount, setCount } = scanResult.menu
+  const repCount = scanResult.menu.repCount || 1
+  const setCount = scanResult.menu.setCount || 1
 
   // 各グループを PracticeMenu に変換
   return Array.from(styleGroups.entries()).map(([style, swimmers], index) => {
@@ -122,8 +123,8 @@ export function transformScanResultToMenus(
       style,
       swimCategory: 'Swim' as const,
       distance: scanResult.menu.distance || 50,
-      reps: repCount || 1,
-      sets: setCount || 1,
+      reps: repCount,
+      sets: setCount,
       circleMin: scanResult.menu.circle
         ? Math.floor(scanResult.menu.circle / 60)
         : ('' as const),

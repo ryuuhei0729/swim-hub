@@ -80,6 +80,7 @@ export default function OcrScanModal({
 
   // リセット
   const resetModal = useCallback(() => {
+    if (imagePreview) URL.revokeObjectURL(imagePreview)
     setStep('upload')
     setImageFile(null)
     setImagePreview(null)
@@ -88,7 +89,7 @@ export default function OcrScanModal({
     setMemberAssignments({})
     setEditedTimes({})
     setEditingCell(null)
-  }, [])
+  }, [imagePreview])
 
   const handleClose = useCallback(() => {
     resetModal()
@@ -113,10 +114,11 @@ export default function OcrScanModal({
       setError(validationError)
       return
     }
+    if (imagePreview) URL.revokeObjectURL(imagePreview)
     setError(null)
     setImageFile(file)
     setImagePreview(URL.createObjectURL(file))
-  }, [])
+  }, [imagePreview])
 
   const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -306,6 +308,7 @@ export default function OcrScanModal({
           <button
             type="button"
             onClick={() => {
+              if (imagePreview) URL.revokeObjectURL(imagePreview)
               setImageFile(null)
               setImagePreview(null)
               setError(null)
