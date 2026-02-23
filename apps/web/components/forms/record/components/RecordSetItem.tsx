@@ -47,7 +47,7 @@ export default function RecordSetItem({
       return Number.isFinite(value) ? value : 0
     }
     if (typeof value === 'string') {
-      const parsed = parseInt(value, 10)
+      const parsed = parseFloat(value)
       return Number.isFinite(parsed) ? parsed : 0
     }
     return 0
@@ -216,11 +216,15 @@ export default function RecordSetItem({
                 const value = e.target.value
                 if (value === '') {
                   onUpdateSplitTime(originalIndex, { distance: '' })
-                } else {
-                  const parsed = parseInt(value, 10)
-                  onUpdateSplitTime(originalIndex, {
-                    distance: Number.isFinite(parsed) ? parsed : '',
-                  })
+                } else if (/^\d+(\.\d*)?$/.test(value)) {
+                  if (value.endsWith('.')) {
+                    onUpdateSplitTime(originalIndex, { distance: value })
+                  } else {
+                    const parsed = parseFloat(value)
+                    onUpdateSplitTime(originalIndex, {
+                      distance: Number.isFinite(parsed) ? parsed : '',
+                    })
+                  }
                 }
               }}
               className="w-24"
@@ -273,7 +277,7 @@ export default function RecordSetItem({
         {/* Lap-Time表示 */}
         <LapTimeDisplay
           splitTimes={sortedSplitTimes.map(({ split }) => ({
-            distance: split.distance,
+            distance: typeof split.distance === 'number' ? split.distance : split.distance === '' ? '' : Number(split.distance) || '',
             splitTime: split.splitTime,
           }))}
           raceDistance={currentStyle?.distance}

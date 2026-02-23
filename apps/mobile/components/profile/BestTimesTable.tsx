@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native'
+import { View, Text, StyleSheet, Pressable } from 'react-native'
 import { differenceInDays, parseISO } from 'date-fns'
 import { formatTime } from '@/utils/formatters'
 import type { BestTime } from '@/hooks/useBestTimesQuery'
@@ -15,6 +15,15 @@ const DISTANCES = [50, 100, 200, 400, 800]
 
 // 静的種目リスト
 const STYLES = ['自由形', '平泳ぎ', '背泳ぎ', 'バタフライ', '個人メドレー']
+
+// テーブルヘッダー用の短縮名
+const STYLE_SHORT_LABELS: Record<string, string> = {
+  自由形: 'Fr',
+  平泳ぎ: 'Br',
+  背泳ぎ: 'Ba',
+  バタフライ: 'Fly',
+  個人メドレー: 'IM',
+}
 
 // 種目ごとの色
 const styleColors: Record<string, { bg: string; text: string }> = {
@@ -169,12 +178,12 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
           <View style={[styles.checkbox, includeRelaying && styles.checkboxChecked]}>
             {includeRelaying && <Text style={styles.checkboxMark}>✓</Text>}
           </View>
-          <Text style={styles.checkboxLabel}>引き継ぎタイムも含めて表示</Text>
+          <Text style={styles.checkboxLabel}>引き継ぎタイム含</Text>
         </Pressable>
       </View>
 
       {/* テーブル */}
-      <ScrollView horizontal style={styles.tableContainer}>
+      <View style={styles.tableContainer}>
         <View style={styles.table}>
           {/* ヘッダー */}
           <View style={styles.tableHeader}>
@@ -196,7 +205,7 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
                     { color: styleColors[style]?.text || '#111827' },
                   ]}
                 >
-                  {style}
+                  {STYLE_SHORT_LABELS[style] || style}
                 </Text>
               </View>
             ))}
@@ -264,7 +273,7 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
             </View>
           ))}
         </View>
-      </ScrollView>
+      </View>
 
       {/* 注釈 */}
       <View style={styles.annotation}>
@@ -297,6 +306,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexWrap: 'wrap',
     gap: 12,
+    paddingHorizontal: 16,
   },
   tabs: {
     flexDirection: 'row',
@@ -306,15 +316,15 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   tab: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
     backgroundColor: '#FFFFFF',
   },
   tabActive: {
     backgroundColor: '#2563EB',
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '500',
     color: '#6B7280',
   },
@@ -325,14 +335,14 @@ const styles = StyleSheet.create({
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   checkbox: {
-    width: 20,
-    height: 20,
+    width: 16,
+    height: 16,
     borderWidth: 2,
     borderColor: '#D1D5DB',
-    borderRadius: 4,
+    borderRadius: 3,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
@@ -343,21 +353,21 @@ const styles = StyleSheet.create({
   },
   checkboxMark: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: 'bold',
   },
   checkboxLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#374151',
   },
   tableContainer: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
     borderColor: '#D1D5DB',
   },
   table: {
-    minWidth: '100%',
+    width: '100%',
   },
   tableHeader: {
     flexDirection: 'row',
@@ -365,22 +375,22 @@ const styles = StyleSheet.create({
     borderBottomColor: '#D1D5DB',
   },
   headerCell: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 2,
     justifyContent: 'center',
     alignItems: 'center',
     borderRightWidth: 1,
     borderRightColor: '#D1D5DB',
   },
   distanceCell: {
-    width: 60,
+    width: 40,
     backgroundColor: '#F9FAFB',
   },
   styleCell: {
-    width: 100,
+    flex: 1,
   },
   headerText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: '#111827',
   },
@@ -390,16 +400,16 @@ const styles = StyleSheet.create({
     borderBottomColor: '#D1D5DB',
   },
   cell: {
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 2,
     justifyContent: 'center',
     alignItems: 'center',
     borderRightWidth: 1,
     borderRightColor: '#D1D5DB',
-    minHeight: 60,
+    minHeight: 30,
   },
   distanceText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: '#374151',
   },
@@ -409,35 +419,36 @@ const styles = StyleSheet.create({
   },
   newBadge: {
     position: 'absolute',
-    top: -8,
-    right: -16,
+    top: -10,
+    right: -10,
     backgroundColor: '#DC2626',
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    borderRadius: 8,
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+    borderRadius: 6,
   },
   newBadgeText: {
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: '600',
     color: '#FFFFFF',
   },
   timeText: {
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '600',
   },
   timeTextNew: {
     color: '#DC2626',
   },
   timeSuffix: {
-    fontSize: 10,
-    marginLeft: 2,
+    fontSize: 8,
+    marginLeft: 1,
   },
   emptyCellText: {
-    fontSize: 14,
+    fontSize: 11,
     color: '#D1D5DB',
   },
   annotation: {
     alignItems: 'flex-end',
+    paddingHorizontal: 16,
   },
   annotationText: {
     fontSize: 12,

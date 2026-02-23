@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, Modal, ActivityIndicator } from 'react-native'
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, Modal, ActivityIndicator, Keyboard, Dimensions } from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Feather } from '@expo/vector-icons'
@@ -9,6 +9,7 @@ import { EntryAPI } from '@apps/shared/api/entries'
 import { StyleAPI } from '@apps/shared/api/styles'
 import { useCompetitionFormStore, type EntryInfo } from '@/stores/competitionFormStore'
 import { formatTime } from '@/utils/formatters'
+import { parseTime } from '@apps/shared/utils/time'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import type { MainStackParamList } from '@/navigation/types'
 import type { Style } from '@apps/shared/types'
@@ -53,6 +54,8 @@ export const EntryLogFormScreen: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [showStylePicker, setShowStylePicker] = useState(false)
   const [pickingEntryIndex, setPickingEntryIndex] = useState<number | null>(null)
+  const styleButtonRefs = useRef<Map<number, View>>(new Map())
+  const [dropdownLayout, setDropdownLayout] = useState({ top: 0, left: 0, width: 0 })
 
   // Zustandストア
   const setCreatedEntries = useCompetitionFormStore((state) => state.setCreatedEntries)
@@ -172,69 +175,15 @@ export const EntryLogFormScreen: React.FC = () => {
     }
   }, [entryId, swimStyles, loadingStyles, entries])
 
-  // タイム文字列を秒数に変換
+  // タイム文字列を秒数に変換（共有パーサー使用：-でも:でも.でも区切り対応）
   const parseTimeString = (timeString: string): number => {
-    if (!timeString || timeString.trim() === '') return 0
-
-    const trimmed = timeString.trim()
-    if (!trimmed) return 0
-
-    // "1:30.50" 形式
-    if (trimmed.includes(':')) {
-      const parts = trimmed.split(':')
-      // コロンが2つ以上ある場合は不正な形式（例: "1:2:3"）
-      if (parts.length !== 2) {
-        return 0
-      }
-      
-      const [minutesStr, secondsStr] = parts
-      const minutes = parseInt(minutesStr)
-      const seconds = parseFloat(secondsStr)
-
-      if (!Number.isFinite(minutes) || !Number.isFinite(seconds) || 
-          Number.isNaN(minutes) || Number.isNaN(seconds) ||
-          minutes < 0 || seconds < 0) {
-        return 0
-      }
-
-      return minutes * 60 + seconds
-    }
-
-    // "30.50" 形式
-    const parsed = parseFloat(trimmed)
-    if (!Number.isFinite(parsed) || Number.isNaN(parsed) || parsed < 0) {
-      return 0
-    }
-    return parsed
+    return parseTime(timeString)
   }
-  
+
   // タイム文字列が有効かどうかを検証
   const isValidTimeString = (timeString: string): boolean => {
     if (!timeString || timeString.trim() === '') return true // 空は有効（任意入力）
-    
-    const trimmed = timeString.trim()
-    if (!trimmed) return true
-    
-    // "1:30.50" 形式
-    if (trimmed.includes(':')) {
-      const parts = trimmed.split(':')
-      // コロンが2つ以上ある場合は不正な形式
-      if (parts.length !== 2) {
-        return false
-      }
-      
-      const [minutesStr, secondsStr] = parts
-      const minutes = parseInt(minutesStr)
-      const seconds = parseFloat(secondsStr)
-
-      return Number.isFinite(minutes) && Number.isFinite(seconds) && 
-             !Number.isNaN(minutes) && !Number.isNaN(seconds) &&
-             minutes >= 0 && seconds >= 0
-    }
-
-    // "30.50" 形式
-    const parsed = parseFloat(trimmed)
-    return Number.isFinite(parsed) && !Number.isNaN(parsed) && parsed >= 0
+    return parseTime(timeString) > 0
   }
 
   // バリデーション
@@ -323,6 +272,26 @@ export const EntryLogFormScreen: React.FC = () => {
       })
     )
   }
+
+  // ドロップダウンを開く
+  const screenHeight = Dimensions.get('window').height
+  const DROPDOWN_MAX_HEIGHT = 260
+
+  const openStylePicker = useCallback((index: number) => {
+    Keyboard.dismiss()
+    const buttonRef = styleButtonRefs.current.get(index)
+    buttonRef?.measureInWindow((x, y, width, height) => {
+      const top = y + height + 4
+      const fitsBelow = top + DROPDOWN_MAX_HEIGHT < screenHeight - 40
+      setDropdownLayout({
+        top: fitsBelow ? top : y - DROPDOWN_MAX_HEIGHT - 4,
+        left: x,
+        width,
+      })
+      setPickingEntryIndex(index)
+      setShowStylePicker(true)
+    })
+  }, [screenHeight])
 
   // UUID形式をチェックするヘルパー関数
   const isValidUUID = (id: string): boolean => {
@@ -597,11 +566,9 @@ export const EntryLogFormScreen: React.FC = () => {
                 種目 <Text style={styles.required}>*</Text>
               </Text>
               <Pressable
+                ref={(ref) => { if (ref) { styleButtonRefs.current.set(index, ref) } else { styleButtonRefs.current.delete(index) } }}
                 style={[styles.pickerButton, errors[`style-${index}`] && styles.pickerButtonError]}
-                onPress={() => {
-                  setPickingEntryIndex(index)
-                  setShowStylePicker(true)
-                }}
+                onPress={() => openStylePicker(index)}
                 disabled={loading}
               >
                 <Text
@@ -634,7 +601,7 @@ export const EntryLogFormScreen: React.FC = () => {
                 onChangeText={(text) =>
                   updateEntry(entry.id, { entryTimeDisplayValue: text })
                 }
-                placeholder="例: 2:05.00 または 125.00"
+                placeholder="例: 2:05.00 または 2-05-00"
                 placeholderTextColor="#9CA3AF"
                 keyboardType="default"
                 editable={!loading}
@@ -667,28 +634,28 @@ export const EntryLogFormScreen: React.FC = () => {
         ))}
       </ScrollView>
 
-      {/* 種目選択モーダル */}
+      {/* 種目選択ドロップダウン */}
       <Modal
         visible={showStylePicker}
         transparent
-        animationType="slide"
+        animationType="none"
         onRequestClose={() => setShowStylePicker(false)}
       >
         <Pressable
-          style={styles.modalOverlay}
+          style={styles.dropdownOverlay}
           onPress={() => setShowStylePicker(false)}
         >
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>種目を選択</Text>
-              <Pressable
-                style={styles.modalCloseButton}
-                onPress={() => setShowStylePicker(false)}
-              >
-                <Feather name="x" size={24} color="#6B7280" />
-              </Pressable>
-            </View>
-            <ScrollView style={styles.modalBody}>
+          <View
+            style={[
+              styles.dropdownContainer,
+              { top: dropdownLayout.top, left: dropdownLayout.left, width: dropdownLayout.width },
+            ]}
+          >
+            <ScrollView
+              style={styles.dropdownScroll}
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled
+            >
               {swimStyles.map((style) => {
                 const entry = entries[pickingEntryIndex ?? 0]
                 const isSelected = entry?.styleId === String(style.id)
@@ -696,8 +663,8 @@ export const EntryLogFormScreen: React.FC = () => {
                   <Pressable
                     key={style.id}
                     style={[
-                      styles.modalOption,
-                      isSelected && styles.modalOptionSelected,
+                      styles.dropdownOption,
+                      isSelected && styles.dropdownOptionSelected,
                     ]}
                     onPress={() => {
                       if (pickingEntryIndex !== null) {
@@ -711,20 +678,20 @@ export const EntryLogFormScreen: React.FC = () => {
                   >
                     <Text
                       style={[
-                        styles.modalOptionText,
-                        isSelected && styles.modalOptionTextSelected,
+                        styles.dropdownOptionText,
+                        isSelected && styles.dropdownOptionTextSelected,
                       ]}
                     >
                       {style.name_jp}
                     </Text>
                     {isSelected && (
-                      <Feather name="check" size={20} color="#2563EB" />
+                      <Feather name="check" size={16} color="#2563EB" />
                     )}
                   </Pressable>
                 )
               })}
             </ScrollView>
-          </Pressable>
+          </View>
         </Pressable>
       </Modal>
 
@@ -870,53 +837,42 @@ const styles = StyleSheet.create({
   pickerButtonPlaceholder: {
     color: '#9CA3AF',
   },
-  modalOverlay: {
+  dropdownOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
   },
-  modalContent: {
+  dropdownContainer: {
+    position: 'absolute',
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    maxHeight: 260,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
   },
-  modalHeader: {
+  dropdownScroll: {
+    maxHeight: 260,
+  },
+  dropdownOption: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#E5E7EB',
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  modalCloseButton: {
-    padding: 4,
-  },
-  modalBody: {
-    maxHeight: 400,
-  },
-  modalOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  modalOptionSelected: {
+  dropdownOptionSelected: {
     backgroundColor: '#EFF6FF',
   },
-  modalOptionText: {
-    fontSize: 16,
+  dropdownOptionText: {
+    fontSize: 15,
     color: '#111827',
   },
-  modalOptionTextSelected: {
+  dropdownOptionTextSelected: {
     color: '#2563EB',
     fontWeight: '600',
   },

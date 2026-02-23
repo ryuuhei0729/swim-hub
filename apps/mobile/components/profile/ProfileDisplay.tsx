@@ -119,6 +119,7 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({ profile, teams =
 const styles = StyleSheet.create({
   container: {
     gap: 16,
+    paddingHorizontal: 16,
   },
   profileRow: {
     flexDirection: 'row',
@@ -159,9 +160,11 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   detailsRow: {
+    flexDirection: 'row',
     gap: 16,
   },
   detailItem: {
+    flex: 1,
     gap: 4,
   },
   detailLabel: {
@@ -177,7 +180,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginTop: 4,
   },
   teamBadge: {
     paddingHorizontal: 12,

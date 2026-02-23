@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react'
 import { View, Text, Modal, Pressable, ScrollView, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
-import { format } from 'date-fns'
+import { format, isValid } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import type { CalendarItem } from '@apps/shared/types/ui'
 import { styles } from './styles'
@@ -373,7 +373,9 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           }}
                           onAddRecord={() => {
                             if (onAddRecord) {
-                              onAddRecord(date)
+                              const firstRecord = records[0]
+                              const dateParam = firstRecord?.date || (isValid(date) ? format(date, 'yyyy-MM-dd') : '')
+                              onAddRecord(competitionId, dateParam)
                               onClose()
                             }
                           }}

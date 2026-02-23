@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { View, Text, Modal, Pressable, TextInput, StyleSheet, ScrollView } from 'react-native'
-import { Picker } from '@react-native-picker/picker'
+import { format, isValid } from 'date-fns'
 import { AvatarUpload } from './AvatarUpload'
 import { useAuth } from '@/contexts/AuthProvider'
 import type { UserProfile } from '@swim-hub/shared/types'
@@ -37,62 +37,16 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
     fileExtension: string
   } | null>(null)
 
-  // 年・月・日の状態管理
-  const currentDateRef = useRef(new Date())
-  const currentDate = currentDateRef.current
-  const [selectedYear, setSelectedYear] = useState<number>(currentDate.getFullYear())
-  const [selectedMonth, setSelectedMonth] = useState<number>(currentDate.getMonth() + 1)
-  const [selectedDay, setSelectedDay] = useState<number>(currentDate.getDate())
-
-  // 日付変換ユーティリティ関数
-  const parseBirthday = useCallback((birthdayStr: string): { year: number; month: number; day: number } => {
-    if (!birthdayStr) {
-      const now = new Date()
-      return {
-        year: now.getFullYear(),
-        month: now.getMonth() + 1,
-        day: now.getDate(),
-      }
-    }
-    const [year, month, day] = birthdayStr.split('-').map(Number)
-    return {
-      year: year || currentDate.getFullYear(),
-      month: month || currentDate.getMonth() + 1,
-      day: day || currentDate.getDate(),
-    }
-  }, [currentDate])
-
-  const formatBirthday = (year: number, month: number, day: number): string => {
-    const monthStr = month.toString().padStart(2, '0')
-    const dayStr = day.toString().padStart(2, '0')
-    return `${year}-${monthStr}-${dayStr}`
-  }
-
-  const getDaysInMonth = (year: number, month: number): number => {
-    return new Date(year, month, 0).getDate()
-  }
-
-  // 年の選択肢（1900年〜現在の年）
-  const years = useMemo(() => {
-    const currentYear = currentDate.getFullYear()
-    return Array.from({ length: currentYear - 1899 }, (_, i) => currentYear - i)
-  }, [currentDate])
-
-  // 月の選択肢（1-12月）
-  const months = useMemo(() => {
-    return Array.from({ length: 12 }, (_, i) => i + 1)
-  }, [])
-
-  // 日の選択肢（選択された年月に応じて動的に生成）
-  const days = useMemo(() => {
-    const daysInMonth = getDaysInMonth(selectedYear, selectedMonth)
-    return Array.from({ length: daysInMonth }, (_, i) => i + 1)
-  }, [selectedYear, selectedMonth])
+  // 年・月・日の状態管理（テキスト入力）
+  const [yearText, setYearText] = useState('')
+  const [monthText, setMonthText] = useState('')
+  const [dayText, setDayText] = useState('')
+  const monthRef = useRef<TextInput>(null)
+  const dayRef = useRef<TextInput>(null)
 
   // プロフィールが変更されたときにフォームデータを更新
   useEffect(() => {
     if (profile) {
-      // タイムゾーン問題を回避: birthdayを日付のみの値として扱い、ISO文字列の最初の10文字（YYYY-MM-DD）を抽出
       const birthdayStr = profile.birthday && profile.birthday.length >= 10
         ? profile.birthday.substring(0, 10)
         : ''
@@ -102,36 +56,36 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         bio: profile.bio || '',
       })
 
-      // 誕生日から年・月・日を抽出
       if (birthdayStr) {
-        const { year, month, day } = parseBirthday(birthdayStr)
-        setSelectedYear(year)
-        setSelectedMonth(month)
-        setSelectedDay(day)
+        const [y, m, d] = birthdayStr.split('-')
+        setYearText(y || '')
+        setMonthText(m ? String(Number(m)) : '')
+        setDayText(d ? String(Number(d)) : '')
       } else {
-        // 誕生日がない場合は現在の日付を設定
-        setSelectedYear(currentDate.getFullYear())
-        setSelectedMonth(currentDate.getMonth() + 1)
-        setSelectedDay(currentDate.getDate())
+        setYearText('')
+        setMonthText('')
+        setDayText('')
       }
     }
     setError(null)
-  }, [profile, visible, currentDate, parseBirthday])
+  }, [profile, visible])
 
-  // 年・月・日の変更時にformData.birthdayを更新
+  // 年・月・日テキストからformData.birthdayを更新
   useEffect(() => {
-    const birthdayStr = formatBirthday(selectedYear, selectedMonth, selectedDay)
-    setFormData((prev) => ({ ...prev, birthday: birthdayStr }))
-    setError(null)
-  }, [selectedYear, selectedMonth, selectedDay])
-
-  // 月や年が変更されたときに、日が無効な値にならないように調整
-  useEffect(() => {
-    const daysInMonth = getDaysInMonth(selectedYear, selectedMonth)
-    if (selectedDay > daysInMonth) {
-      setSelectedDay(daysInMonth)
+    const y = Number(yearText)
+    const m = Number(monthText)
+    const d = Number(dayText)
+    if (y && m && d) {
+      const date = new Date(y, m - 1, d)
+      if (isValid(date) && date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d) {
+        setFormData((prev) => ({ ...prev, birthday: format(date, 'yyyy-MM-dd') }))
+      } else {
+        setFormData((prev) => ({ ...prev, birthday: '' }))
+      }
+    } else {
+      setFormData((prev) => ({ ...prev, birthday: '' }))
     }
-  }, [selectedYear, selectedMonth, selectedDay])
+  }, [yearText, monthText, dayText])
 
   const handleClose = () => {
     if (isUpdating) return
@@ -304,45 +258,61 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
             {/* 生年月日 */}
             <View style={styles.formGroup}>
               <Text style={styles.label}>生年月日</Text>
-              <View style={styles.pickerContainer}>
-                <View style={[styles.pickerWrapper, styles.pickerWrapperYear, styles.pickerWrapperWithBorder]}>
-                  <Picker
-                    selectedValue={selectedYear}
-                    onValueChange={(value) => setSelectedYear(value)}
-                    enabled={!isUpdating}
-                    style={styles.picker}
-                    itemStyle={styles.pickerItem}
-                  >
-                    {years.map((year) => (
-                      <Picker.Item key={year} label={`${year}年`} value={year} />
-                    ))}
-                  </Picker>
+              <View style={styles.birthdayRow}>
+                <View style={styles.birthdayField}>
+                  <TextInput
+                    style={styles.birthdayInput}
+                    value={yearText}
+                    onChangeText={(text) => {
+                      const num = text.replace(/[^0-9]/g, '').slice(0, 4)
+                      setYearText(num)
+                      if (num.length === 4) monthRef.current?.focus()
+                    }}
+                    placeholder="1996"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="number-pad"
+                    maxLength={4}
+                    editable={!isUpdating}
+                    accessibilityLabel="生年"
+                  />
+                  <Text style={styles.birthdaySuffix}>年</Text>
                 </View>
-                <View style={[styles.pickerWrapper, styles.pickerWrapperWithBorder]}>
-                  <Picker
-                    selectedValue={selectedMonth}
-                    onValueChange={(value) => setSelectedMonth(value)}
-                    enabled={!isUpdating}
-                    style={styles.picker}
-                    itemStyle={styles.pickerItem}
-                  >
-                    {months.map((month) => (
-                      <Picker.Item key={month} label={`${month}月`} value={month} />
-                    ))}
-                  </Picker>
+                <View style={styles.birthdayField}>
+                  <TextInput
+                    ref={monthRef}
+                    style={styles.birthdayInput}
+                    value={monthText}
+                    onChangeText={(text) => {
+                      const num = text.replace(/[^0-9]/g, '').slice(0, 2)
+                      setMonthText(num)
+                      if (num.length === 2 || (num.length === 1 && Number(num) > 1)) dayRef.current?.focus()
+                    }}
+                    placeholder="2"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    editable={!isUpdating}
+                    accessibilityLabel="生月"
+                  />
+                  <Text style={styles.birthdaySuffix}>月</Text>
                 </View>
-                <View style={styles.pickerWrapper}>
-                  <Picker
-                    selectedValue={selectedDay}
-                    onValueChange={(value) => setSelectedDay(value)}
-                    enabled={!isUpdating}
-                    style={styles.picker}
-                    itemStyle={styles.pickerItem}
-                  >
-                    {days.map((day) => (
-                      <Picker.Item key={day} label={`${day}日`} value={day} />
-                    ))}
-                  </Picker>
+                <View style={styles.birthdayField}>
+                  <TextInput
+                    ref={dayRef}
+                    style={styles.birthdayInput}
+                    value={dayText}
+                    onChangeText={(text) => {
+                      const num = text.replace(/[^0-9]/g, '').slice(0, 2)
+                      setDayText(num)
+                    }}
+                    placeholder="22"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    editable={!isUpdating}
+                    accessibilityLabel="生日"
+                  />
+                  <Text style={styles.birthdaySuffix}>日</Text>
                 </View>
               </View>
             </View>
@@ -479,32 +449,31 @@ const styles = StyleSheet.create({
     color: '#111827',
     backgroundColor: '#FFFFFF',
   },
-  pickerContainer: {
+  birthdayRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  birthdayField: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  birthdayInput: {
+    flex: 1,
     borderWidth: 1,
     borderColor: '#D1D5DB',
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    overflow: 'hidden',
-    height: 200,
-  },
-  pickerWrapper: {
-    flex: 1,
-  },
-  pickerWrapperYear: {
-    flex: 1.4,
-  },
-  pickerWrapperWithBorder: {
-    borderRightWidth: 1,
-    borderRightColor: '#E5E7EB',
-  },
-  picker: {
-    width: '100%',
-    height: 200,
-  },
-  pickerItem: {
-    fontSize: 14,
+    padding: 12,
+    fontSize: 16,
     color: '#111827',
+    backgroundColor: '#FFFFFF',
+    textAlign: 'center',
+  },
+  birthdaySuffix: {
+    fontSize: 14,
+    color: '#374151',
   },
   textArea: {
     minHeight: 120,
