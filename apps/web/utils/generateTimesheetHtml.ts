@@ -43,6 +43,7 @@ function generateTimesheetHtml(): string {
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<base href="${window.location.origin}/">
 <title>チーム記録表</title>
 <style>
   @page {

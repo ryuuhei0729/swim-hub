@@ -78,7 +78,7 @@ function errorResponse(error: string, code: ErrorResponse['code'], status: numbe
 }
 
 async function callGeminiApi(apiKey: string, image: string, mimeType: string): Promise<Response> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
   const payload = {
     contents: [{
@@ -100,11 +100,20 @@ async function callGeminiApi(apiKey: string, image: string, mimeType: string): P
     },
   }
 
-  return await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  })
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 55000)
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    })
+    return response
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 Deno.serve(async (req) => {
@@ -156,13 +165,34 @@ Deno.serve(async (req) => {
       return errorResponse('Gemini APIキーが設定されていません', 'API_ERROR', 500)
     }
 
-    let geminiResponse = await callGeminiApi(apiKey, body.image, body.mimeType)
+    let geminiResponse: Response
+    try {
+      geminiResponse = await callGeminiApi(apiKey, body.image, body.mimeType)
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        // Timeout on first attempt — retry after delay
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+        try {
+          geminiResponse = await callGeminiApi(apiKey, body.image, body.mimeType)
+        } catch (retryErr) {
+          console.error('Gemini API timeout on retry:', retryErr)
+          return errorResponse('AI解析がタイムアウトしました。再試行してください', 'API_ERROR', 504)
+        }
+      } else {
+        throw err
+      }
+    }
 
-    // Retry once on failure
+    // Retry once on non-ok response
     if (!geminiResponse.ok) {
       await geminiResponse.body?.cancel()
       await new Promise((resolve) => setTimeout(resolve, 1000))
-      geminiResponse = await callGeminiApi(apiKey, body.image, body.mimeType)
+      try {
+        geminiResponse = await callGeminiApi(apiKey, body.image, body.mimeType)
+      } catch (retryErr) {
+        console.error('Gemini API error on retry:', retryErr)
+        return errorResponse('AI解析がタイムアウトしました。再試行してください', 'API_ERROR', 504)
+      }
     }
 
     if (!geminiResponse.ok) {

@@ -387,9 +387,22 @@ export default function PracticeLogClient({
 
   // OCR結果をフォームに反映
   const handleOcrApply = (ocrMenus: PracticeMenu[]) => {
-    // 既存メニューが空（デフォルト1件でタイムなし）の場合は上書き
-    const isDefaultEmpty = menus.length === 1 && menus[0].times.length === 0 && !menus[0].note
-    if (isDefaultEmpty) {
+    // 既存メニューが1件でデフォルト値のままの場合は上書き
+    let isDefault = false
+    if (menus.length === 1) {
+      const m = menus[0]
+      isDefault = m.style === 'Fr' &&
+        m.swimCategory === 'Swim' &&
+        m.distance === 100 &&
+        m.reps === 4 &&
+        m.sets === 1 &&
+        m.circleMin === 1 &&
+        m.circleSec === 30 &&
+        m.note === '' &&
+        m.tags.length === 0 &&
+        m.times.length === 0
+    }
+    if (isDefault) {
       setMenus(ocrMenus)
     } else {
       // 既存メニューがある場合は確認ダイアログ

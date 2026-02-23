@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useCallback, useRef } from 'react'
+import React, { useState, useCallback, useRef, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthProvider'
 import BaseModal from '@/components/ui/BaseModal'
 import Button from '@/components/ui/Button'
@@ -65,6 +65,16 @@ export default function OcrScanModal({
 }: OcrScanModalProps) {
   const { supabase } = useAuth()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const cancelledRef = useRef<boolean>(false)
+  const abortControllerRef = useRef<AbortController | null>(null)
+
+  // アンマウント時に進行中の解析をキャンセル
+  useEffect(() => {
+    return () => {
+      cancelledRef.current = true
+      abortControllerRef.current?.abort()
+    }
+  }, [])
 
   const [step, setStep] = useState<ModalStep>('upload')
   const [imageFile, setImageFile] = useState<File | null>(null)
@@ -142,6 +152,10 @@ export default function OcrScanModal({
   const handleAnalyze = useCallback(async () => {
     if (!imageFile || !supabase) return
 
+    cancelledRef.current = false
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+
     setStep('analyzing')
     setError(null)
 
@@ -159,12 +173,17 @@ export default function OcrScanModal({
         reader.readAsDataURL(imageFile)
       })
 
+      if (cancelledRef.current) return
+
       const { data, error: fnError } = await supabase.functions.invoke('scan-timesheet', {
         body: {
           image: base64,
           mimeType: imageFile.type,
         },
+        signal: controller.signal,
       })
+
+      if (cancelledRef.current) return
 
       if (fnError) {
         throw new Error(fnError.message || 'サーバーエラーが発生しました')
@@ -183,6 +202,7 @@ export default function OcrScanModal({
 
       setStep('results')
     } catch (err) {
+      if (cancelledRef.current) return
       setError(err instanceof Error ? err.message : '解析中にエラーが発生しました')
       setStep('upload')
     }
@@ -309,6 +329,7 @@ export default function OcrScanModal({
             type="button"
             onClick={() => {
               if (imagePreview) URL.revokeObjectURL(imagePreview)
+              if (fileInputRef.current) fileInputRef.current.value = ''
               setImageFile(null)
               setImagePreview(null)
               setError(null)
@@ -354,6 +375,8 @@ export default function OcrScanModal({
           type="button"
           variant="secondary"
           onClick={() => {
+            cancelledRef.current = true
+            abortControllerRef.current?.abort()
             setStep('upload')
             setError(null)
           }}

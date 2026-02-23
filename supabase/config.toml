@@ -331,7 +331,7 @@ enabled = false
 
 # Edge Functions
 [functions.scan-timesheet]
-verify_jwt = true
+verify_jwt = false
 
 [analytics]
 enabled = true
