@@ -6,7 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts'
-import { 
+import {
   HomeIcon,
   ChartBarIcon,
   TrophyIcon,
@@ -15,7 +15,8 @@ import {
   UsersIcon,
   UserIcon,
   ShieldCheckIcon,
-  FlagIcon
+  FlagIcon,
+  ArrowTopRightOnSquareIcon
 } from '@heroicons/react/24/outline'
 
 interface SidebarProps {
@@ -171,7 +172,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       {/* サイドバー */}
       <div className={`
-        fixed top-16 bottom-0 left-0 z-50 w-72 bg-white shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:fixed lg:w-64
+        fixed top-16 bottom-0 left-0 z-50 w-72 bg-white shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:fixed lg:w-64 flex flex-col
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         {/* モバイル用ヘッダー */}
@@ -301,6 +302,34 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
         </nav>
 
+        {/* 関連サービス */}
+        <div className="mt-auto border-t border-gray-200 px-3 py-4">
+          <p className="px-3 mb-2 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+            関連サービス
+          </p>
+          <div className="space-y-1">
+            <a
+              href="https://timer.swim-hub.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center px-3 py-2 text-sm rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+            >
+              <Image src="/timer-icon.png" alt="SwimHub Timer" width={48} height={48} className="mr-3 w-10 h-10 shrink-0" />
+              <span className="flex-1 truncate">SwimHub Timer</span>
+              <ArrowTopRightOnSquareIcon className="h-3 w-3 text-gray-300 group-hover:text-gray-400 shrink-0" />
+            </a>
+            <a
+              href="https://scanner.swim-hub.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center px-3 py-2 text-sm rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+            >
+              <Image src="/scanner-icon.png" alt="SwimHub Scanner" width={48} height={48} className="mr-3 w-10 h-10 shrink-0" />
+              <span className="flex-1 truncate">SwimHub Scanner</span>
+              <ArrowTopRightOnSquareIcon className="h-3 w-3 text-gray-300 group-hover:text-gray-400 shrink-0" />
+            </a>
+          </div>
+        </div>
       </div>
     </>
   )

@@ -1,6 +1,7 @@
 import React from 'react'
 import Link from 'next/link'
-import { ArrowLeftIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
+import { DocumentTextIcon } from '@heroicons/react/24/outline'
+import { BackButton } from '@/components/ui/BackButton'
 import { formatDate } from '@apps/shared/utils/date'
 
 export const revalidate = 3600 // 1時間ごとに再生成
@@ -16,13 +17,7 @@ export default function TermsPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* ヘッダー */}
         <div className="mb-8">
-          <Link
-            href="/"
-            className="inline-flex items-center text-sm text-gray-600 hover:text-blue-600 transition-colors mb-6"
-          >
-            <ArrowLeftIcon className="w-4 h-4 mr-2" />
-            ホームに戻る
-          </Link>
+          <BackButton />
           <div className="flex items-center mb-4">
             <DocumentTextIcon className="w-8 h-8 text-blue-600 mr-3" />
             <h1 className="text-3xl font-bold text-gray-900">利用規約</h1>

@@ -1,6 +1,7 @@
 import React from 'react'
 import Link from 'next/link'
-import { ArrowLeftIcon, QuestionMarkCircleIcon, BookOpenIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
+import { QuestionMarkCircleIcon, BookOpenIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
+import { BackButton } from '@/components/ui/BackButton'
 
 export const dynamic = 'force-static'
 
@@ -90,13 +91,7 @@ export default function SupportPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* ヘッダー */}
         <div className="mb-8">
-          <Link
-            href="/"
-            className="inline-flex items-center text-sm text-gray-600 hover:text-blue-600 transition-colors mb-6"
-          >
-            <ArrowLeftIcon className="w-4 h-4 mr-2" />
-            ホームに戻る
-          </Link>
+          <BackButton />
           <div className="flex items-center mb-4">
             <QuestionMarkCircleIcon className="w-8 h-8 text-blue-600 mr-3" />
             <h1 className="text-3xl font-bold text-gray-900">サポート・FAQ</h1>
