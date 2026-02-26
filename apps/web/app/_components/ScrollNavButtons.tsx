@@ -7,7 +7,6 @@ const navItems = [
   { id: 'about', label: 'SwimHubとは？' },
   { id: 'features', label: 'イチオシ機能' },
   { id: 'usecases', label: '利用パターン' },
-  { id: 'announcements', label: 'お知らせ' },
 ]
 
 function handleScrollTo(id: string) {

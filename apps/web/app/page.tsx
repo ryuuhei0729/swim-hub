@@ -16,7 +16,6 @@ import {
   QuestionMarkCircleIcon,
   ClockIcon,
   ExclamationCircleIcon,
-  BellIcon
 } from '@heroicons/react/24/outline'
 import ScrollNavButtons from './_components/ScrollNavButtons'
 import DeviceMockup from './_components/DeviceMockup'
@@ -92,24 +91,6 @@ const useCases = [
   }
 ]
 
-// お知らせ（将来的にはSupabaseから取得）
-const announcements = [
-  {
-    date: '2025.01.15',
-    title: 'SwimHub v1.0 リリース',
-    description: '水泳記録管理システム SwimHub の正式版をリリースしました。'
-  },
-  {
-    date: '2025.01.10',
-    title: 'チーム機能を追加',
-    description: 'チーム作成・メンバー管理・出欠管理機能を追加しました。'
-  },
-  {
-    date: '2025.01.05',
-    title: 'モバイルアプリ開発中',
-    description: 'iOS/Android向けアプリを開発中です。リリースまでしばらくお待ちください。'
-  }
-]
 
 export default function Home() {
   return (
@@ -402,35 +383,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* お知らせセクション */}
-        <section id="announcements" className="py-16 sm:py-20 bg-white scroll-mt-[100px]">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-12">
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
-                お知らせ・更新情報
-              </h2>
-            </div>
-
-            <div className="space-y-4">
-              {announcements.map((announcement, index) => (
-                <div
-                  key={index}
-                  className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <BellIcon className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-1">
-                      <span className="text-sm text-gray-500">{announcement.date}</span>
-                      <span className="font-semibold text-gray-900">{announcement.title}</span>
-                    </div>
-                    <p className="text-sm text-gray-600">{announcement.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* CTAセクション */}
         <section className="py-16 sm:py-20 bg-blue-600">
           <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
@@ -488,6 +440,72 @@ export default function Home() {
               >
                 ログイン
               </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* SwimHub ファミリーセクション */}
+        <section className="py-16 sm:py-20 bg-gray-50">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                SwimHub サービス一覧
+              </h2>
+              <p className="text-lg text-gray-600">
+                水泳をもっと便利にするツール群
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* SwimHub Timer */}
+              <a
+                href="https://timer.swim-hub.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-white rounded-2xl p-8 hover:shadow-lg transition-all duration-300 group border border-gray-200"
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <Image src="/timer-icon.png" alt="SwimHub Timer" width={128} height={128} className="w-12 h-12 shrink-0 object-contain" />
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                      SwimHub Timer
+                    </h3>
+                    <p className="text-sm font-semibold text-blue-600">動画にタイムをオーバーレイ</p>
+                  </div>
+                </div>
+                <p className="text-gray-600 text-sm leading-relaxed mb-4">
+                  水泳の動画にストップウォッチを重ねて表示。スタート信号の自動検出やスプリットタイム記録に対応しています。
+                </p>
+                <span className="inline-flex items-center text-sm font-semibold text-blue-600 group-hover:underline">
+                  試してみる
+                  <ArrowRightIcon className="ml-1 h-4 w-4" />
+                </span>
+              </a>
+
+              {/* SwimHub Scanner */}
+              <a
+                href="https://scanner.swim-hub.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-white rounded-2xl p-8 hover:shadow-lg transition-all duration-300 group border border-gray-200"
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <Image src="/scanner-icon.png" alt="SwimHub Scanner" width={128} height={128} className="w-12 h-12 shrink-0 object-contain" />
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 group-hover:text-green-600 transition-colors">
+                      SwimHub Scanner
+                    </h3>
+                    <p className="text-sm font-semibold text-green-600">手書きの記録表をAIで解析</p>
+                  </div>
+                </div>
+                <p className="text-gray-600 text-sm leading-relaxed mb-4">
+                  手書きの練習記録をAIで読み取り、画像・CSV・Excelに変換。手入力の手間を大幅に削減できます。
+                </p>
+                <span className="inline-flex items-center text-sm font-semibold text-green-600 group-hover:underline">
+                  試してみる
+                  <ArrowRightIcon className="ml-1 h-4 w-4" />
+                </span>
+              </a>
             </div>
           </div>
         </section>
