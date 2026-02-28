@@ -4,9 +4,10 @@ import { useState, useCallback } from 'react'
 import Link from 'next/link'
 
 const navItems = [
-  { id: 'about', label: 'SwimHubとは？' },
-  { id: 'features', label: 'イチオシ機能' },
-  { id: 'usecases', label: '利用パターン' },
+  { id: 'practice', label: '練習記録' },
+  { id: 'competition', label: '大会記録' },
+  { id: 'goals', label: '目標管理' },
+  { id: 'pricing', label: '料金' },
 ]
 
 function handleScrollTo(id: string) {
@@ -48,6 +49,12 @@ export default function ScrollNavButtons() {
             {item.label}
           </button>
         ))}
+        <Link
+          href="/blog"
+          className="px-4 py-2 text-base text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+        >
+          ブログ
+        </Link>
         <div className="mx-2 h-6 w-px bg-gray-300" />
         <Link
           href="/signup"
@@ -93,6 +100,13 @@ export default function ScrollNavButtons() {
                 {item.label}
               </button>
             ))}
+            <Link
+              href="/blog"
+              className="px-6 py-3 text-left text-base text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+              onClick={() => setMenuOpen(false)}
+            >
+              ブログ
+            </Link>
             <div className="mx-4 my-2 h-px bg-gray-200" />
             <div className="flex flex-col gap-2 px-4 py-2">
               <Link

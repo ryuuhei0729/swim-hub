@@ -35,6 +35,12 @@ export default function StaticFooter() {
             <Link href="/privacy" className="hover:text-white text-gray-400 font-bold transition-colors">
               プライバシーポリシー
             </Link>
+            <Link href="/blog" className="hover:text-white text-gray-400 font-bold transition-colors">
+              ブログ
+            </Link>
+            <Link href="/about" className="hover:text-white text-gray-400 font-bold transition-colors">
+              SwimHubについて
+            </Link>
           </div>
           <div className="text-xs text-gray-500">
             © 2025 SwimHub. All rights reserved.

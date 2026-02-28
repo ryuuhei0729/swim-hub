@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@plugin "@tailwindcss/forms";
 
 @theme {
   --font-sans: var(--font-inter), var(--font-noto-sans-jp), ui-sans-serif, system-ui, sans-serif;
@@ -33,25 +35,25 @@
     }
   }
 
-  /* フォントサイズとライン高の統一 */
-  h1 {
+  /* フォントサイズとライン高の統一（prose 内では typography プラグインに任せる） */
+  :where(h1):not(:where(.prose *)) {
     @apply text-2xl font-bold text-gray-900 leading-tight;
   }
-  
-  h2 {
+
+  :where(h2):not(:where(.prose *)) {
     @apply text-xl font-semibold text-gray-900 leading-tight;
   }
-  
-  h3 {
+
+  :where(h3):not(:where(.prose *)) {
     @apply text-lg font-semibold text-gray-900 leading-tight;
   }
-  
-  h4 {
+
+  :where(h4):not(:where(.prose *)) {
     @apply text-base font-semibold text-gray-900 leading-tight;
   }
 
-  /* リンクのデフォルトスタイル */
-  a {
+  /* リンクのデフォルトスタイル（prose 内では typography プラグインに任せる） */
+  :where(a):not(:where(.prose *)) {
     @apply text-blue-600 hover:text-blue-800 transition-colors duration-200;
   }
 }

@@ -7,6 +7,8 @@ import {
   DocumentTextIcon,
   QuestionMarkCircleIcon,
   EnvelopeIcon,
+  NewspaperIcon,
+  InformationCircleIcon,
   ArrowTopRightOnSquareIcon,
 } from '@heroicons/react/24/outline'
 import { formatDate } from '@apps/shared/utils/date'
@@ -58,6 +60,16 @@ export default function Footer() {
       name: 'お問い合わせ',
       href: '/contact',
       icon: EnvelopeIcon
+    },
+    {
+      name: 'ブログ',
+      href: '/blog',
+      icon: NewspaperIcon
+    },
+    {
+      name: 'SwimHubについて',
+      href: '/about',
+      icon: InformationCircleIcon
     }
   ]
 
