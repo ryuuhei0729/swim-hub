@@ -159,6 +159,8 @@ export async function updateSession(request: NextRequest) {
         '/privacy',
         '/terms',
         '/support',
+        '/about',
+        '/blog',
         '/api',
         '/_next'
     ]

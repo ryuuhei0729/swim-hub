@@ -202,28 +202,19 @@ export default function PracticeClient({
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  // セットごとの平均タイムを計算する関数
-  const calculateSetAverages = (times: PracticeTime[], repCount: number, setCount: number) => {
-    if (!times || times.length === 0 || repCount === 0 || setCount === 0) {
-      return []
+  // 全体の平均タイムを計算する関数
+  const calculateOverallAverage = (times: PracticeTime[]): number | null => {
+    if (!times || times.length === 0) {
+      return null
     }
 
-    const averages: number[] = []
-    const expectedTimesPerSet = repCount
-
-    for (let setIndex = 0; setIndex < setCount; setIndex++) {
-      const startIndex = setIndex * expectedTimesPerSet
-      const endIndex = Math.min(startIndex + expectedTimesPerSet, times.length)
-      const setTimes = times.slice(startIndex, endIndex)
-
-      if (setTimes.length > 0) {
-        const sum = setTimes.reduce((acc: number, time) => acc + (time.time || 0), 0)
-        const average = sum / setTimes.length
-        averages.push(average)
-      }
+    const validTimes = times.filter((t) => t.time > 0)
+    if (validTimes.length === 0) {
+      return null
     }
 
-    return averages
+    const sum = validTimes.reduce((acc, t) => acc + t.time, 0)
+    return sum / validTimes.length
   }
 
   // タイムをフォーマットする関数
@@ -700,12 +691,11 @@ export default function PracticeClient({
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         {log.practice_times && log.practice_times.length > 0 ? (
-                          <div className="text-sm">
-                            {calculateSetAverages(log.practice_times, log.rep_count, log.set_count).map((avgTime: number, setIndex: number) => (
-                              <div key={setIndex} className="text-gray-900">
-                                {formatTime(avgTime)}
-                              </div>
-                            ))}
+                          <div className="text-sm text-gray-900">
+                            {(() => {
+                              const avg = calculateOverallAverage(log.practice_times)
+                              return avg !== null ? formatTime(avg) : '-'
+                            })()}
                           </div>
                         ) : (
                           <span className="text-gray-400">-</span>
@@ -817,12 +807,11 @@ export default function PracticeClient({
                           {log.practice_times && log.practice_times.length > 0 && (
                             <div className="mt-2">
                               <div className="text-xs text-gray-500 mb-1">平均タイム:</div>
-                              <div className="text-sm">
-                                {calculateSetAverages(log.practice_times, log.rep_count, log.set_count).map((avgTime: number, setIndex: number) => (
-                                  <span key={setIndex} className="text-gray-900 mr-2">
-                                    {formatTime(avgTime)}
-                                  </span>
-                                ))}
+                              <div className="text-sm text-gray-900">
+                                {(() => {
+                                  const avg = calculateOverallAverage(log.practice_times)
+                                  return avg !== null ? formatTime(avg) : '-'
+                                })()}
                               </div>
                             </div>
                           )}

@@ -96,6 +96,7 @@ temp/
 /supabase/.temp
 /supabase/.env
 /supabase/supabase/
+/supabase/seed.sql
 
 # SSL certificates for local HTTPS development
 apps/web/localhost*.pem

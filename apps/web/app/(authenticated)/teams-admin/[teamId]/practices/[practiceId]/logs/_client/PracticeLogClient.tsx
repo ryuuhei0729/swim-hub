@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthProvider'
@@ -248,9 +248,7 @@ export default function PracticeLogClient({
 
   const isEditMode = existingLogs.length > 0
 
-  const getCurrentMenu = () => {
-    return menus.find(menu => menu.id === currentMenuId)
-  }
+
 
   const addMenu = () => {
     const newMenu: PracticeMenu = {
@@ -412,12 +410,23 @@ export default function PracticeLogClient({
     setShowOcrModal(false)
   }
 
-  // メンバーをフォーマット（TeamTimeInputModal用）
-  const teamMembersForModal = members.map(m => ({
-    id: m.id,
-    user_id: m.user_id,
-    users: m.users
-  }))
+  // メンバーをフォーマット（TeamTimeInputModal用） - useMemoで参照を安定させる
+  const teamMembersForModal = useMemo(() =>
+    members.map(m => ({
+      id: m.id,
+      user_id: m.user_id,
+      users: m.users
+    })),
+    [members]
+  )
+
+  // モーダルに渡すpropsをメモ化（参照が毎回変わるとuseEffectがtimesをリセットしてしまう）
+  const currentMenu = useMemo(() => menus.find(menu => menu.id === currentMenuId), [menus, currentMenuId])
+  const modalTeamMembers = useMemo(() =>
+    teamMembersForModal.filter(m => currentMenu?.targetUserIds.includes(m.user_id)),
+    [teamMembersForModal, currentMenu?.targetUserIds]
+  )
+  const modalInitialTimes = useMemo(() => currentMenu?.times || [], [currentMenu?.times])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -811,13 +820,11 @@ export default function PracticeLogClient({
             setCurrentMenuId(null)
           }}
           onSubmit={(times: TeamTimeEntry[]) => handleTimeSave(currentMenuId, times)}
-          setCount={getCurrentMenu()?.sets || 1}
-          repCount={getCurrentMenu()?.reps || 1}
-          teamMembers={teamMembersForModal.filter(m => 
-            getCurrentMenu()?.targetUserIds.includes(m.user_id)
-          )}
+          setCount={currentMenu?.sets || 1}
+          repCount={currentMenu?.reps || 1}
+          teamMembers={modalTeamMembers}
           menuNumber={menus.findIndex(m => m.id === currentMenuId) + 1}
-          initialTimes={getCurrentMenu()?.times || []}
+          initialTimes={modalInitialTimes}
         />
       )}
 

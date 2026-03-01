@@ -54,6 +54,9 @@
     "supabase:stop": "npx supabase stop --workdir supabase",
     "supabase:reset": "npx supabase db reset --workdir supabase",
     "supabase:status": "npx supabase status --workdir supabase",
+    "db:dump-prod": "bash supabase/scripts/dump-prod.sh",
+    "db:reset": "bash supabase/scripts/reset-local.sh",
+    "db:reset:no-seed": "bash supabase/scripts/reset-local.sh --no-seed",
     "android": "cd apps/mobile && expo run:android"
   },
   "devDependencies": {
