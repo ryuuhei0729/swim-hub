@@ -14,10 +14,13 @@ interface MemberGroupSorterProps {
   ) => void
 }
 
+const GENDER_CATEGORY = '性別'
+
 /**
  * グループ表示コンポーネント（WEB版 MemberGroupSorter 準拠）
  * カテゴリボタンをタップするとメンバーをグループ別に並び替え、
  * グループヘッダーのインデックスを親に通知する
+ * デフォルトで性別によるグルーピングが有効
  */
 export const TeamMemberGroupFilter: React.FC<MemberGroupSorterProps> = ({
   teamId,
@@ -27,8 +30,8 @@ export const TeamMemberGroupFilter: React.FC<MemberGroupSorterProps> = ({
 }) => {
   const [groups, setGroups] = useState<TeamGroup[]>([])
   const [memberships, setMemberships] = useState<TeamGroupMembership[]>([])
-  const [activeCategory, setActiveCategory] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [activeCategory, setActiveCategory] = useState<string | null>(GENDER_CATEGORY)
+  const [_loading, setLoading] = useState(true)
 
   // グループとメンバーシップを取得
   useEffect(() => {
@@ -64,7 +67,7 @@ export const TeamMemberGroupFilter: React.FC<MemberGroupSorterProps> = ({
     return map
   }, [groups])
 
-  const categories = useMemo(() => [...groupsByCategory.keys()].sort(), [groupsByCategory])
+  const categories = useMemo(() => [GENDER_CATEGORY, ...groupsByCategory.keys()].filter((v, i, a) => a.indexOf(v) === i), [groupsByCategory])
 
   // user_id → groupId Set のマップ
   const userGroupMap = useMemo(() => {
@@ -88,6 +91,27 @@ export const TeamMemberGroupFilter: React.FC<MemberGroupSorterProps> = ({
     if (!activeCategory) {
       // グルーピングなし → メンバーそのまま、ヘッダーなし
       onGroupedMembersChange(members, new Map())
+      return
+    }
+
+    // 性別カテゴリの場合はユーザープロファイルのgenderで分類
+    if (activeCategory === GENDER_CATEGORY) {
+      const flat: TeamMembershipWithUser[] = []
+      const headers = new Map<number, string>()
+
+      const maleMembers = members.filter((m) => m.users.gender === 0)
+      const femaleMembers = members.filter((m) => m.users.gender === 1)
+
+      if (maleMembers.length > 0) {
+        headers.set(flat.length, '男性')
+        flat.push(...maleMembers)
+      }
+      if (femaleMembers.length > 0) {
+        headers.set(flat.length, '女性')
+        flat.push(...femaleMembers)
+      }
+
+      onGroupedMembersChange(flat, headers)
       return
     }
 
@@ -116,7 +140,7 @@ export const TeamMemberGroupFilter: React.FC<MemberGroupSorterProps> = ({
     onGroupedMembersChange(flat, headers)
   }, [members, activeCategory, groupsByCategory, userGroupMap, onGroupedMembersChange])
 
-  if (loading || categories.length === 0) return null
+  if (categories.length === 0) return null
 
   return (
     <View style={styles.container}>

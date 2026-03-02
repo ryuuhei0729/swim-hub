@@ -12,6 +12,7 @@ export interface TeamMember {
   users: {
     id: string
     name: string
+    gender?: number
     birthday?: string
     bio?: string
     profile_image_path?: string | null
@@ -43,6 +44,7 @@ export const useMembers = (teamId: string, supabase: SupabaseClient) => {
           users!team_memberships_user_id_fkey (
             id,
             name,
+            gender,
             birthday,
             bio,
             profile_image_path

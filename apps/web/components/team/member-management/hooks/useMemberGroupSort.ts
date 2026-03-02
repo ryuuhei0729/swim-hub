@@ -9,15 +9,18 @@ export interface MemberGroup {
   members: TeamMember[]
 }
 
+const GENDER_CATEGORY = '性別'
+
 /**
  * メンバー一覧のグループ別表示機能
  *
  * カテゴリを選択すると、そのカテゴリ内のグループごとにメンバーを分類して表示する
+ * デフォルトで性別によるグルーピングが有効
  */
 export const useMemberGroupSort = (teamId: string, supabase: SupabaseClient) => {
   const [groups, setGroups] = useState<TeamGroup[]>([])
   const [memberships, setMemberships] = useState<TeamGroupMembership[]>([])
-  const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const [activeCategory, setActiveCategory] = useState<string | null>(GENDER_CATEGORY)
 
   // グループとメンバーシップを取得
   useEffect(() => {
@@ -37,13 +40,13 @@ export const useMemberGroupSort = (teamId: string, supabase: SupabaseClient) => 
     load()
   }, [teamId, supabase])
 
-  // カテゴリ一覧
+  // カテゴリ一覧（性別は常に先頭に表示）
   const categories = useMemo(() => {
     const cats = new Set<string>()
     for (const group of groups) {
       if (group.category) cats.add(group.category)
     }
-    return [...cats].sort()
+    return [GENDER_CATEGORY, ...[...cats].sort()].filter((v, i, a) => a.indexOf(v) === i)
   }, [groups])
 
   // カテゴリ別グループ
@@ -76,6 +79,18 @@ export const useMemberGroupSort = (teamId: string, supabase: SupabaseClient) => 
   const groupMembers = useCallback(
     (members: TeamMember[]): MemberGroup[] | null => {
       if (!activeCategory) return null
+
+      // 性別カテゴリの場合はユーザープロファイルのgenderで分類
+      if (activeCategory === GENDER_CATEGORY) {
+        const result: MemberGroup[] = []
+        const maleMembers = members.filter((m) => m.users?.gender === 0)
+        const femaleMembers = members.filter((m) => m.users?.gender === 1)
+
+        if (maleMembers.length > 0) result.push({ groupName: '男性', members: maleMembers })
+        if (femaleMembers.length > 0) result.push({ groupName: '女性', members: femaleMembers })
+
+        return result
+      }
 
       const categoryGroups = groupsByCategory.get(activeCategory) || []
       const result: MemberGroup[] = []

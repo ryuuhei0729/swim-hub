@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { View, Text, Modal, Pressable, ScrollView, ActivityIndicator, StyleSheet, type LayoutRectangle } from 'react-native'
+import { View, Text, Modal, Pressable, ScrollView, ActivityIndicator, StyleSheet } from 'react-native'
 import { GestureHandlerRootView, GestureDetector, Gesture } from 'react-native-gesture-handler'
 import Animated, { useSharedValue, useAnimatedStyle, runOnJS } from 'react-native-reanimated'
 import type { SupabaseClient } from '@supabase/supabase-js'

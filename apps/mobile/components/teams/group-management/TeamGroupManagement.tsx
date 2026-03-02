@@ -28,7 +28,7 @@ interface TeamMemberForSelection {
 
 export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
   teamId,
-  members,
+  members: _members,
   isCurrentUserAdmin,
 }) => {
   const { supabase } = useAuth()
