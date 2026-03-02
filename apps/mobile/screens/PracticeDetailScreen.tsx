@@ -20,7 +20,7 @@ type PracticeDetailScreenNavigationProp = NativeStackNavigationProp<MainStackPar
 
 /**
  * 練習記録詳細画面
- * 特定日の練習記録を詳細表示（基本情報、練習ログ、タイム、タグ）
+ * Web版と統一されたデザイン
  */
 export const PracticeDetailScreen: React.FC = () => {
   const route = useRoute<PracticeDetailScreenRouteProp>()
@@ -28,29 +28,23 @@ export const PracticeDetailScreen: React.FC = () => {
   const { practiceId } = route.params
   const { supabase } = useAuth()
 
-  // 削除ミューテーション
   const deleteMutation = useDeletePracticeMutation(supabase)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // 編集画面への遷移
   const handleEdit = () => {
     navigation.navigate('PracticeForm', { practiceId })
   }
 
-  // 削除処理
   const handleDelete = () => {
     if (Platform.OS === 'web') {
-      // Web版ではwindow.confirmを使用
       const confirmed = window.confirm(
         'この練習記録を削除しますか？\nこの操作は取り消せません。'
       )
       if (!confirmed) {
         return
       }
-      // 削除実行
       executeDelete()
     } else {
-      // ネイティブ版ではAlert.alertを使用
       Alert.alert(
         '削除確認',
         'この練習記録を削除しますか？\nこの操作は取り消せません。',
@@ -70,12 +64,10 @@ export const PracticeDetailScreen: React.FC = () => {
     }
   }
 
-  // 削除実行処理
   const executeDelete = async () => {
     setIsDeleting(true)
     try {
       await deleteMutation.mutateAsync(practiceId)
-      // 削除成功: 一覧画面に戻る
       navigation.goBack()
     } catch (error) {
       console.error('削除エラー:', error)
@@ -93,7 +85,6 @@ export const PracticeDetailScreen: React.FC = () => {
     }
   }
 
-  // 練習記録データ取得（IDで直接取得）
   const {
     data: practice,
     isLoading,
@@ -103,7 +94,6 @@ export const PracticeDetailScreen: React.FC = () => {
     enableRealtime: true,
   })
 
-  // エラー状態
   if (error) {
     const errorMessage = error instanceof Error ? error.message : '練習記録の取得に失敗しました'
     return (
@@ -117,7 +107,6 @@ export const PracticeDetailScreen: React.FC = () => {
     )
   }
 
-  // ローディング状態
   if (isLoading && !practice) {
     return (
       <View style={styles.container}>
@@ -126,7 +115,6 @@ export const PracticeDetailScreen: React.FC = () => {
     )
   }
 
-  // 練習記録が見つからない場合
   if (!practice) {
     return (
       <View style={styles.container}>
@@ -139,38 +127,38 @@ export const PracticeDetailScreen: React.FC = () => {
     )
   }
 
-  // 日付をフォーマット
   const formattedDate = format(new Date(practice.date), 'yyyy年M月d日(E)', { locale: ja })
-  
-  // タイトル（nullの場合は「練習」）
   const title = practice.title || '練習'
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* 基本情報 */}
-      <View style={styles.section}>
+      {/* ヘッダーカード */}
+      <View style={styles.headerCard}>
         <Text style={styles.date}>{formattedDate}</Text>
         <Text style={styles.title}>{title}</Text>
-        
-        {practice.place && (
-          <View style={styles.infoRow}>
-            <Feather name="map-pin" size={14} color="#6B7280" />
-            <Text style={styles.infoLabel}>場所:</Text>
-            <Text style={styles.infoValue}>{practice.place}</Text>
-          </View>
-        )}
-        
+
+        {/* メタ情報 */}
+        <View style={styles.metaContainer}>
+          {practice.place && (
+            <View style={styles.metaItem}>
+              <Feather name="map-pin" size={14} color="#6B7280" />
+              <Text style={styles.metaText}>{practice.place}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* メモ */}
         {practice.note && (
-          <View style={styles.noteContainer}>
+          <View style={styles.noteCard}>
             <Text style={styles.noteLabel}>メモ</Text>
-            <Text style={styles.note}>{practice.note}</Text>
+            <Text style={styles.noteText}>{practice.note}</Text>
           </View>
         )}
       </View>
 
       {/* 練習ログ一覧 */}
       {practice.practice_logs && practice.practice_logs.length > 0 ? (
-        <View style={styles.section}>
+        <View style={styles.logsSection}>
           <Text style={styles.sectionTitle}>練習ログ</Text>
           {practice.practice_logs.map((log) => (
             <PracticeLogItem key={log.id} log={log} />
@@ -189,6 +177,7 @@ export const PracticeDetailScreen: React.FC = () => {
           onPress={handleEdit}
           disabled={isDeleting}
         >
+          <Feather name="edit-2" size={16} color="#FFFFFF" />
           <Text style={styles.editButtonText}>編集</Text>
         </Pressable>
         <Pressable
@@ -196,6 +185,7 @@ export const PracticeDetailScreen: React.FC = () => {
           onPress={handleDelete}
           disabled={isDeleting}
         >
+          <Feather name="trash-2" size={16} color="#DC2626" />
           <Text style={styles.deleteButtonText}>
             {isDeleting ? '削除中...' : '削除'}
           </Text>
@@ -208,71 +198,83 @@ export const PracticeDetailScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#F3F4F6',
   },
   content: {
-    paddingVertical: 16,
+    paddingBottom: 32,
   },
-  section: {
-    marginBottom: 24,
+
+  // ヘッダーカード
+  headerCard: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
   date: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 8,
-    paddingHorizontal: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 16,
-    paddingHorizontal: 16,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    paddingHorizontal: 16,
-    gap: 4,
-  },
-  infoLabel: {
     fontSize: 14,
-    color: '#6B7280',
-    marginRight: 4,
-  },
-  infoValue: {
-    fontSize: 14,
-    color: '#111827',
     fontWeight: '500',
-  },
-  noteContainer: {
-    marginTop: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    marginHorizontal: 16,
-  },
-  noteLabel: {
-    fontSize: 12,
-    fontWeight: '600',
     color: '#6B7280',
     marginBottom: 4,
   },
-  note: {
-    fontSize: 14,
-    color: '#374151',
-    lineHeight: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+  title: {
+    fontSize: 22,
+    fontWeight: '700',
     color: '#111827',
     marginBottom: 12,
-    paddingHorizontal: 16,
   },
+
+  // メタ情報
+  metaContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  metaText: {
+    fontSize: 14,
+    color: '#374151',
+  },
+
+  // メモ
+  noteCard: {
+    marginTop: 16,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  noteLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  noteText: {
+    fontSize: 14,
+    color: '#475569',
+    lineHeight: 20,
+  },
+
+  // ログセクション
+  logsSection: {
+    marginTop: 20,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+    paddingHorizontal: 20,
+  },
+
+  // 空状態
   emptySection: {
     padding: 40,
     alignItems: 'center',
@@ -281,31 +283,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6B7280',
   },
+
+  // アクションボタン
   actionContainer: {
     paddingHorizontal: 16,
-    paddingVertical: 16,
-    gap: 12,
+    paddingTop: 24,
+    gap: 10,
   },
   actionButton: {
+    flexDirection: 'row',
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
   },
   editButton: {
     backgroundColor: '#2563EB',
   },
   editButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: '#FFFFFF',
   },
   deleteButton: {
-    backgroundColor: '#DC2626',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
   },
   deleteButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#DC2626',
   },
 })

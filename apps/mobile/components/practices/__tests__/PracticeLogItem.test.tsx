@@ -56,30 +56,40 @@ describe('PracticeLogItem', () => {
     ],
   }
 
-  it('練習ログデータが正しく表示される', () => {
+  it('練習内容カードが正しく表示される', () => {
     render(<PracticeLogItem log={mockLog} />)
-    
+
+    // 練習内容ラベル
+    expect(screen.getByText('練習内容')).toBeTruthy()
     // 種目が表示される
     expect(screen.getByText('freestyle')).toBeTruthy()
-    // 距離が表示される
-    expect(screen.getByText('100m')).toBeTruthy()
-    // セット数×レップ数が表示される
-    expect(screen.getByText('2×4')).toBeTruthy()
   })
 
-  it('タイム一覧が表示される', () => {
+  it('タイムテーブルが表示される', () => {
     render(<PracticeLogItem log={mockLog} />)
-    
-    // タイムラベルが表示される
-    expect(screen.getByText('タイム:')).toBeTruthy()
-    // タイム値が表示される（フォーマットされた形式）
-    expect(screen.getByText('1:00.50')).toBeTruthy() // formatTime(60.5)
-    expect(screen.getByText('1:01.00')).toBeTruthy() // formatTime(61.0)
+
+    // タイムヘッダーが表示される
+    expect(screen.getByText('タイム')).toBeTruthy()
+    // セットヘッダーが表示される
+    expect(screen.getByText('1セット目')).toBeTruthy()
+    // 本数ラベルが表示される
+    expect(screen.getByText('1本目')).toBeTruthy()
+    // タイム値が表示される
+    expect(screen.getByText('1:00.50')).toBeTruthy()
+    expect(screen.getByText('1:01.00')).toBeTruthy()
+  })
+
+  it('セット平均と全体統計が表示される', () => {
+    render(<PracticeLogItem log={mockLog} />)
+
+    expect(screen.getByText('セット平均')).toBeTruthy()
+    expect(screen.getByText('全体平均')).toBeTruthy()
+    expect(screen.getByText('全体最速')).toBeTruthy()
   })
 
   it('タグが表示される', () => {
     render(<PracticeLogItem log={mockLog} />)
-    
+
     expect(screen.getByText('テストタグ')).toBeTruthy()
   })
 
@@ -88,15 +98,15 @@ describe('PracticeLogItem', () => {
       ...mockLog,
       practice_log_tags: [],
     }
-    
+
     render(<PracticeLogItem log={logWithoutTags} />)
-    
+
     expect(screen.queryByText('テストタグ')).toBeNull()
   })
 
   it('メモが表示される', () => {
     render(<PracticeLogItem log={mockLog} />)
-    
+
     expect(screen.getByText('テストメモ')).toBeTruthy()
   })
 
@@ -105,9 +115,9 @@ describe('PracticeLogItem', () => {
       ...mockLog,
       note: null,
     }
-    
+
     render(<PracticeLogItem log={logWithoutNote} />)
-    
+
     expect(screen.queryByText('テストメモ')).toBeNull()
   })
 
@@ -116,10 +126,9 @@ describe('PracticeLogItem', () => {
       ...mockLog,
       practice_times: [],
     }
-    
+
     render(<PracticeLogItem log={logWithoutTimes} />)
-    
-    expect(screen.queryByText('タイム:')).toBeNull()
+
+    expect(screen.queryByText('タイム')).toBeNull()
   })
 })
-

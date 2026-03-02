@@ -1,11 +1,308 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { View, Text, Pressable } from 'react-native'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
+import { View, Text, Pressable, StyleSheet } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { useAuth } from '@/contexts/AuthProvider'
 import { formatTime } from '@/utils/formatters'
 import type { CalendarItem } from '@apps/shared/types/ui'
 import { styles } from '../styles'
 import type { RecordDetailProps, RecordData } from '../types'
+
+/**
+ * 個別記録カードコンポーネント（タブ付きスプリットタイム表示）
+ */
+const RecordCard: React.FC<{
+  record: RecordData
+  splits: Array<{ distance: number; split_time: number }>
+  records: CalendarItem[]
+  place?: string
+  poolType?: number
+  competitionId: string
+  supabase: ReturnType<typeof useAuth>['supabase']
+  onEditRecord?: (item: CalendarItem) => void
+  onDeleteRecord?: (recordId: string) => void
+  onClose?: () => void
+}> = ({ record, splits, records, place, poolType, competitionId, supabase, onEditRecord, onDeleteRecord, onClose }) => {
+  const [splitTab, setSplitTab] = useState<'race' | 'all'>('race')
+
+  // ゴールタイムを含む表示用スプリットデータ
+  const displaySplitTimes = useMemo(() => {
+    const sorted = [...splits].sort((a, b) => a.distance - b.distance)
+    const base = sorted.map((st, i) => ({
+      distance: st.distance,
+      split_time: st.split_time,
+      id: `split-${i}`,
+    }))
+    const raceDistance = record.styleDistance
+    if (raceDistance && record.time > 0) {
+      const hasGoal = base.some((st) => st.distance === raceDistance)
+      if (!hasGoal) {
+        base.push({ distance: raceDistance, split_time: record.time, id: 'goal' })
+      }
+    }
+    return base
+  }, [splits, record.styleDistance, record.time])
+
+  // 距離別Lap用: 25m刻みのみフィルタ
+  const raceSplitTimes = useMemo(() => {
+    return displaySplitTimes.filter((st) => st.distance % 25 === 0 && st.split_time > 0)
+  }, [displaySplitTimes])
+
+  // 距離別Lapのカラム間隔を決定
+  const lapIntervals = useMemo(() => {
+    const raceDistance = record.styleDistance
+    if (!raceDistance) return []
+    const intervals: number[] = []
+    if (raceDistance >= 25 && raceDistance !== 25) intervals.push(25)
+    if (raceDistance >= 50 && raceDistance !== 50) intervals.push(50)
+    return intervals
+  }, [record.styleDistance])
+
+  // データが1つもないintervalは列ごと非表示
+  const visibleLapIntervals = useMemo(() => {
+    return lapIntervals.filter(interval =>
+      raceSplitTimes.some(st => {
+        if (st.distance % interval !== 0) return false
+        const prevDistance = st.distance - interval
+        if (prevDistance === 0) return true
+        const prevSplit = raceSplitTimes.find(s => s.distance === prevDistance)
+        return prevSplit != null && prevSplit.split_time > 0
+      })
+    )
+  }, [lapIntervals, raceSplitTimes])
+
+  // 距離別Lapの各行のラップタイム計算
+  const raceLapData = useMemo(() => {
+    return raceSplitTimes.map((st) => {
+      const lapTimes: Record<number, number | null> = {}
+      for (const interval of lapIntervals) {
+        if (st.distance % interval === 0) {
+          const prevDistance = st.distance - interval
+          if (prevDistance === 0) {
+            lapTimes[interval] = st.split_time
+          } else {
+            const prevSplit = raceSplitTimes.find((s) => s.distance === prevDistance)
+            lapTimes[interval] = prevSplit && prevSplit.split_time > 0
+              ? st.split_time - prevSplit.split_time
+              : null
+          }
+        } else {
+          lapTimes[interval] = null
+        }
+      }
+      return { ...st, lapTimes }
+    })
+  }, [raceSplitTimes, lapIntervals])
+
+  // All Lap計算（各区間のラップ）
+  const allLapTimes = useMemo(() => {
+    if (displaySplitTimes.length === 0) return []
+    const laps: { fromDistance: number; toDistance: number; lapTime: number }[] = []
+    if (displaySplitTimes[0].distance > 0) {
+      laps.push({
+        fromDistance: 0,
+        toDistance: displaySplitTimes[0].distance,
+        lapTime: displaySplitTimes[0].split_time,
+      })
+    }
+    for (let i = 1; i < displaySplitTimes.length; i++) {
+      const prev = displaySplitTimes[i - 1]
+      const curr = displaySplitTimes[i]
+      if (prev.split_time > 0 && curr.split_time > 0) {
+        laps.push({
+          fromDistance: prev.distance,
+          toDistance: curr.distance,
+          lapTime: curr.split_time - prev.split_time,
+        })
+      }
+    }
+    return laps
+  }, [displaySplitTimes])
+
+  return (
+    <View style={styles.recordCard}>
+      {/* 記録内容カード */}
+      <View style={styles.recordContentCard}>
+        {/* 編集・削除ボタン（右上） */}
+        <View style={styles.recordCardActions}>
+          <View style={styles.recordCardActionsRow}>
+            {onEditRecord && (
+              <Pressable
+                style={styles.recordCardActionButton}
+                onPress={async () => {
+                  try {
+                    const { data: fullRecord } = await supabase
+                      .from('records')
+                      .select(`
+                        *,
+                        style:styles(*),
+                        competition:competitions(*),
+                        split_times(*)
+                      `)
+                      .eq('id', record.id)
+                      .single()
+
+                    if (fullRecord) {
+                      const calendarItem: CalendarItem = {
+                        id: fullRecord.id,
+                        type: 'record',
+                        date: records[0]?.date || fullRecord.competition?.date || '',
+                        title: fullRecord.style?.name_jp || record.styleName,
+                        place: place || fullRecord.competition?.place || undefined,
+                        note: fullRecord.note || undefined,
+                        metadata: {
+                          record: {
+                            time: fullRecord.time,
+                            is_relaying: fullRecord.is_relaying || false,
+                            reaction_time: fullRecord.reaction_time ?? null,
+                            style: {
+                              id: fullRecord.style?.id?.toString() || record.styleId.toString(),
+                              name_jp: fullRecord.style?.name_jp || record.styleName,
+                              distance: fullRecord.style?.distance || record.styleDistance,
+                            },
+                            competition_id: fullRecord.competition_id || competitionId,
+                            split_times: fullRecord.split_times || [],
+                          },
+                          competition: fullRecord.competition || records[0]?.metadata?.competition,
+                          style: fullRecord.style || {
+                            id: record.styleId,
+                            name_jp: record.styleName,
+                            distance: record.styleDistance,
+                          },
+                          pool_type: fullRecord.competition?.pool_type ?? poolType ?? 0,
+                        },
+                      }
+                      onEditRecord(calendarItem)
+                      onClose?.()
+                    }
+                  } catch (error) {
+                    console.error('記録編集データ取得エラー:', error)
+                  }
+                }}
+              >
+                <Feather name="edit" size={18} color="#2563EB" />
+              </Pressable>
+            )}
+            {onDeleteRecord && (
+              <Pressable
+                style={styles.recordCardActionButton}
+                onPress={() => onDeleteRecord(record.id)}
+              >
+                <Feather name="trash-2" size={18} color="#EF4444" />
+              </Pressable>
+            )}
+          </View>
+        </View>
+
+        {/* 種目とタイム */}
+        <View style={styles.recordInfoGrid}>
+          <View style={styles.recordInfoRow}>
+            <Text style={styles.recordInfoLabel}>種目</Text>
+            <Text style={styles.recordStyleValue}>
+              {record.styleName}
+              {record.isRelaying && <Text style={styles.recordRelayBadge}> R</Text>}
+            </Text>
+          </View>
+          <View style={styles.recordInfoRow}>
+            <Text style={styles.recordInfoLabel}>タイム</Text>
+            <View style={styles.recordTimeContainer}>
+              <Text style={styles.recordTimeValue}>{formatTime(record.time)}</Text>
+              {record.reactionTime != null && typeof record.reactionTime === 'number' && (
+                <Text style={styles.recordReactionTimeInline}>
+                  (RT {record.reactionTime.toFixed(2)})
+                </Text>
+              )}
+            </View>
+          </View>
+        </View>
+      </View>
+
+      {/* スプリットタイム（タブ付き） */}
+      {displaySplitTimes.length > 0 && (
+        <View style={splitStyles.splitSection}>
+          {/* タブ */}
+          <View style={splitStyles.tabRow}>
+            <Pressable
+              style={[splitStyles.tab, splitTab === 'race' && splitStyles.tabActive]}
+              onPress={() => setSplitTab('race')}
+            >
+              <Text style={[splitStyles.tabText, splitTab === 'race' && splitStyles.tabTextActive]}>
+                距離別 Lap
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[splitStyles.tab, splitTab === 'all' && splitStyles.tabActive]}
+              onPress={() => setSplitTab('all')}
+            >
+              <Text style={[splitStyles.tabText, splitTab === 'all' && splitStyles.tabTextActive]}>
+                All Lap
+              </Text>
+            </Pressable>
+          </View>
+
+          {splitTab === 'race' ? (
+            <>
+              <View style={splitStyles.splitHeaderRow}>
+                <Text style={[splitStyles.splitHeaderCell, splitStyles.splitDistanceCol]}>距離</Text>
+                <Text style={[splitStyles.splitHeaderCell, splitStyles.splitTimeCol]}>Split</Text>
+                {visibleLapIntervals.map((interval) => (
+                  <Text key={interval} style={[splitStyles.splitHeaderCell, splitStyles.splitLapCol]}>
+                    {interval}m Lap
+                  </Text>
+                ))}
+              </View>
+              {raceLapData.map((st, index) => (
+                <View
+                  key={st.id || index}
+                  style={[splitStyles.splitRow, index % 2 === 0 && splitStyles.splitRowEven]}
+                >
+                  <Text style={[splitStyles.splitCell, splitStyles.splitDistanceCol, splitStyles.splitDistanceText]}>
+                    {st.distance}m
+                  </Text>
+                  <Text style={[splitStyles.splitCell, splitStyles.splitTimeCol, splitStyles.splitTimeText]}>
+                    {formatTime(st.split_time)}
+                  </Text>
+                  {visibleLapIntervals.map((interval) => (
+                    <Text key={interval} style={[splitStyles.splitCell, splitStyles.splitLapCol, splitStyles.splitLapText]}>
+                      {st.lapTimes[interval] != null ? formatTime(st.lapTimes[interval]!) : '-'}
+                    </Text>
+                  ))}
+                </View>
+              ))}
+            </>
+          ) : (
+            <>
+              <View style={splitStyles.splitHeaderRow}>
+                <Text style={[splitStyles.splitHeaderCell, splitStyles.splitDistanceCol]}>区間</Text>
+                <Text style={[splitStyles.splitHeaderCell, { flex: 2 }]}>Lap Time</Text>
+              </View>
+              {allLapTimes.map((lap, index) => (
+                <View
+                  key={index}
+                  style={[splitStyles.splitRow, index % 2 === 0 && splitStyles.splitRowEven]}
+                >
+                  <Text style={[splitStyles.splitCell, splitStyles.splitDistanceCol, splitStyles.splitDistanceText]}>
+                    {lap.fromDistance}m → {lap.toDistance}m
+                  </Text>
+                  <Text style={[splitStyles.splitCell, { flex: 2 }, splitStyles.splitTimeText]}>
+                    {formatTime(lap.lapTime)}
+                  </Text>
+                </View>
+              ))}
+            </>
+          )}
+        </View>
+      )}
+
+      {/* メモ */}
+      {record.note && (
+        <View style={styles.recordNoteContainer}>
+          <Text style={styles.recordNoteLabel}>メモ</Text>
+          <Text style={styles.recordNoteText}>{record.note}</Text>
+        </View>
+      )}
+    </View>
+  )
+}
 
 /**
  * 記録詳細表示コンポーネント（大会ごとにグループ化）
@@ -246,135 +543,21 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
             )}
           </View>
         ) : (
-          actualRecords.map((record) => {
-            const splits = splitTimesMap.get(record.id) || []
-
-            return (
-              <View key={record.id} style={styles.recordCard}>
-                {/* 記録内容カード */}
-                <View style={styles.recordContentCard}>
-                  {/* 編集・削除ボタン（右上） */}
-                  <View style={styles.recordCardActions}>
-                    <View style={styles.recordCardActionsRow}>
-                      {onEditRecord && (
-                        <Pressable
-                          style={styles.recordCardActionButton}
-                          onPress={async () => {
-                            try {
-                              const { data: fullRecord } = await supabase
-                                .from('records')
-                                .select(`
-                                  *,
-                                  style:styles(*),
-                                  competition:competitions(*),
-                                  split_times(*)
-                                `)
-                                .eq('id', record.id)
-                                .single()
-
-                              if (fullRecord) {
-                                const calendarItem: CalendarItem = {
-                                  id: fullRecord.id,
-                                  type: 'record',
-                                  date: records[0]?.date || fullRecord.competition?.date || '',
-                                  title: fullRecord.style?.name_jp || record.styleName,
-                                  place: place || fullRecord.competition?.place || undefined,
-                                  note: fullRecord.note || undefined,
-                                  metadata: {
-                                    record: {
-                                      time: fullRecord.time,
-                                      is_relaying: fullRecord.is_relaying || false,
-                                      reaction_time: fullRecord.reaction_time ?? null,
-                                      style: {
-                                        id: fullRecord.style?.id?.toString() || record.styleId.toString(),
-                                        name_jp: fullRecord.style?.name_jp || record.styleName,
-                                        distance: fullRecord.style?.distance || record.styleDistance,
-                                      },
-                                      competition_id: fullRecord.competition_id || _competitionId,
-                                      split_times: fullRecord.split_times || [],
-                                    },
-                                    competition: fullRecord.competition || records[0]?.metadata?.competition,
-                                    style: fullRecord.style || {
-                                      id: record.styleId,
-                                      name_jp: record.styleName,
-                                      distance: record.styleDistance,
-                                    },
-                                    pool_type: fullRecord.competition?.pool_type ?? poolType ?? 0,
-                                  },
-                                }
-                                onEditRecord(calendarItem)
-                                onClose?.()
-                              }
-                            } catch (error) {
-                              console.error('記録編集データ取得エラー:', error)
-                            }
-                          }}
-                        >
-                          <Feather name="edit" size={18} color="#2563EB" />
-                        </Pressable>
-                      )}
-                      {onDeleteRecord && (
-                        <Pressable
-                          style={styles.recordCardActionButton}
-                          onPress={() => onDeleteRecord(record.id)}
-                        >
-                          <Feather name="trash-2" size={18} color="#EF4444" />
-                        </Pressable>
-                      )}
-                    </View>
-                  </View>
-
-                  {/* 種目とタイム */}
-                  <View style={styles.recordInfoGrid}>
-                    <View style={styles.recordInfoRow}>
-                      <Text style={styles.recordInfoLabel}>種目</Text>
-                      <Text style={styles.recordStyleValue}>
-                        {record.styleName}
-                        {record.isRelaying && <Text style={styles.recordRelayBadge}> R</Text>}
-                      </Text>
-                    </View>
-                    <View style={styles.recordInfoRow}>
-                      <Text style={styles.recordInfoLabel}>タイム</Text>
-                      <View style={styles.recordTimeContainer}>
-                        <Text style={styles.recordTimeValue}>{formatTime(record.time)}</Text>
-                        {record.reactionTime != null && typeof record.reactionTime === 'number' && (
-                          <Text style={styles.recordReactionTimeInline}>
-                            (RT {record.reactionTime.toFixed(2)})
-                          </Text>
-                        )}
-                      </View>
-                    </View>
-                  </View>
-                </View>
-
-                {/* スプリットタイム */}
-                {splits.length > 0 && (
-                  <View style={styles.splitTimesContainer}>
-                    <View style={styles.splitTimesHeader}>
-                      <View style={styles.splitTimesHeaderBar} />
-                      <Text style={styles.splitTimesHeaderText}>スプリットタイム</Text>
-                    </View>
-                    <View style={styles.splitTimesList}>
-                      {splits.map((split, index) => (
-                        <View key={index} style={styles.splitTimeItem}>
-                          <Text style={styles.splitTimeDistance}>{split.distance}m</Text>
-                          <Text style={styles.splitTimeValue}>{formatTime(split.split_time)}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                )}
-
-                {/* メモ */}
-                {record.note && (
-                  <View style={styles.recordNoteContainer}>
-                    <Text style={styles.recordNoteLabel}>メモ</Text>
-                    <Text style={styles.recordNoteText}>{record.note}</Text>
-                  </View>
-                )}
-              </View>
-            )
-          })
+          actualRecords.map((record) => (
+            <RecordCard
+              key={record.id}
+              record={record}
+              splits={splitTimesMap.get(record.id) || []}
+              records={records}
+              place={place}
+              poolType={poolType}
+              competitionId={_competitionId}
+              supabase={supabase}
+              onEditRecord={onEditRecord}
+              onDeleteRecord={onDeleteRecord}
+              onClose={onClose}
+            />
+          ))
         )}
 
         {/* 大会記録を追加ボタン */}
@@ -394,3 +577,83 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
     </View>
   )
 }
+
+const splitStyles = StyleSheet.create({
+  splitSection: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    overflow: 'hidden',
+    marginTop: 8,
+  },
+  tabRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  tabActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#2563EB',
+  },
+  tabText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  tabTextActive: {
+    color: '#2563EB',
+    fontWeight: '600',
+  },
+  splitHeaderRow: {
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  splitHeaderCell: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  splitRow: {
+    flexDirection: 'row',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E7EB',
+  },
+  splitRowEven: {
+    backgroundColor: '#FFFFFF',
+  },
+  splitCell: {
+    fontSize: 13,
+  },
+  splitDistanceCol: {
+    flex: 1,
+  },
+  splitTimeCol: {
+    flex: 1.5,
+  },
+  splitLapCol: {
+    flex: 1.5,
+  },
+  splitDistanceText: {
+    fontWeight: '600',
+    color: '#111827',
+  },
+  splitTimeText: {
+    color: '#1E40AF',
+    fontWeight: '600',
+  },
+  splitLapText: {
+    color: '#111827',
+  },
+})
