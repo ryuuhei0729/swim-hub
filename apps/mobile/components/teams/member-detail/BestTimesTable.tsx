@@ -1,22 +1,15 @@
 import React, { useState, useMemo } from 'react'
 import { View, Text, StyleSheet, Pressable } from 'react-native'
+import { Feather } from '@expo/vector-icons'
 import { differenceInDays, parseISO } from 'date-fns'
 import { formatTime } from '@/utils/formatters'
-import type { BestTime } from '@/hooks/useBestTimesQuery'
-
-interface BestTimesTableProps {
-  bestTimes: BestTime[]
-}
+import type { BestTime } from '@apps/shared/types/ui'
 
 type TabType = 'all' | 'short' | 'long'
 
-// 静的距離リスト（50m, 100m, 200m, 400m, 800m）
 const DISTANCES = [50, 100, 200, 400, 800]
-
-// 静的種目リスト
 const STYLES = ['自由形', '平泳ぎ', '背泳ぎ', 'バタフライ', '個人メドレー']
 
-// テーブルヘッダー用の短縮名
 const STYLE_SHORT_LABELS: Record<string, string> = {
   自由形: 'Fr',
   平泳ぎ: 'Br',
@@ -25,7 +18,6 @@ const STYLE_SHORT_LABELS: Record<string, string> = {
   個人メドレー: 'IM',
 }
 
-// 種目ごとの色
 const styleColors: Record<string, { bg: string; text: string }> = {
   自由形: { bg: '#FEF3C7', text: '#92400E' },
   平泳ぎ: { bg: '#D1FAE5', text: '#065F46' },
@@ -34,42 +26,37 @@ const styleColors: Record<string, { bg: string; text: string }> = {
   個人メドレー: { bg: '#FCE7F3', text: '#9F1239' },
 }
 
-/**
- * ベストタイム表コンポーネント
- */
+function isInvalidCombination(style: string, distance: number): boolean {
+  if (style === '個人メドレー' && (distance === 50 || distance === 800)) return true
+  if ((style === '平泳ぎ' || style === '背泳ぎ' || style === 'バタフライ') && (distance === 400 || distance === 800)) return true
+  return false
+}
+
+const BORDER_COLOR = '#D1D5DB'
+
+interface BestTimesTableProps {
+  bestTimes: BestTime[]
+}
+
 export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => {
   const [activeTab, setActiveTab] = useState<TabType>('all')
-  const [includeRelaying, setIncludeRelaying] = useState<boolean>(false)
+  const [includeRelaying, setIncludeRelaying] = useState(false)
 
-  // タブごとにフィルタリングされたベストタイムを取得
   const filteredBestTimes = useMemo(() => {
     if (activeTab === 'short') {
-      return bestTimes.filter((bt) => bt.pool_type === 0)
+      return bestTimes.filter(bt => bt.pool_type === 0)
     } else if (activeTab === 'long') {
-      return bestTimes.filter((bt) => bt.pool_type === 1)
-    } else {
-      return bestTimes
+      return bestTimes.filter(bt => bt.pool_type === 1)
     }
+    return bestTimes
   }, [bestTimes, activeTab])
 
-  const isInvalidCombination = (style: string, distance: number): boolean => {
-    // ありえない種目/距離の組み合わせ
-    if (style === '個人メドレー' && (distance === 50 || distance === 800)) return true
-    if (
-      (style === '平泳ぎ' || style === '背泳ぎ' || style === 'バタフライ') &&
-      (distance === 400 || distance === 800)
-    )
-      return true
-    return false
-  }
-
   const getBestTime = (style: string, distance: number): BestTime | null => {
-    // データベースの種目名形式（例：50m自由形）で検索
     const dbStyleName = `${distance}m${style}`
 
     const extractCandidates = (times: BestTime[], allowRelaying: boolean): BestTime[] => {
       const candidates: BestTime[] = []
-      times.forEach((bt) => {
+      times.forEach(bt => {
         if (!bt.is_relaying) {
           candidates.push(bt)
           if (allowRelaying && bt.relayingTime) {
@@ -90,34 +77,30 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
     }
 
     if (activeTab === 'all') {
-      // ALLタブ: 短水路と長水路の速い方を選択
       const candidates: BestTime[] = []
 
-      // 短水路のタイムを取得
-      const shortCourseTimes = bestTimes.filter(
-        (bt) => bt.style.name_jp === dbStyleName && bt.pool_type === 0
+      const shortCourseTimes = bestTimes.filter(bt =>
+        bt.style.name_jp === dbStyleName && bt.pool_type === 0
       )
       candidates.push(...extractCandidates(shortCourseTimes, includeRelaying))
 
-      // 長水路のタイムを取得
-      const longCourseTimes = bestTimes.filter(
-        (bt) => bt.style.name_jp === dbStyleName && bt.pool_type === 1
+      const longCourseTimes = bestTimes.filter(bt =>
+        bt.style.name_jp === dbStyleName && bt.pool_type === 1
       )
       candidates.push(...extractCandidates(longCourseTimes, includeRelaying))
 
       if (candidates.length === 0) return null
-
-      // 最速のタイムを選択
-      return candidates.reduce((best, current) => (current.time < best.time ? current : best))
+      return candidates.reduce((best, current) =>
+        current.time < best.time ? current : best
+      )
     } else {
-      // 短水路/長水路タブ: フィルタリング済みのデータから取得
-      const matchingTimes = filteredBestTimes.filter((bt) => bt.style.name_jp === dbStyleName)
+      const matchingTimes = filteredBestTimes.filter(bt => bt.style.name_jp === dbStyleName)
       const candidates = extractCandidates(matchingTimes, includeRelaying)
 
       if (candidates.length === 0) return null
-
-      // 最速のタイムを選択
-      return candidates.reduce((best, current) => (current.time < best.time ? current : best))
+      return candidates.reduce((best, current) =>
+        current.time < best.time ? current : best
+      )
     }
   }
 
@@ -125,27 +108,24 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
     const timeStr = formatTime(bestTime.time)
     const suffixes: string[] = []
 
-    // ALLタブの場合、長水路ならLを追加
     if (activeTab === 'all' && bestTime.pool_type === 1) {
       suffixes.push('L')
     }
-
-    // 引き継ぎありのタイムの場合、Rを追加
     if (bestTime.is_relaying) {
       suffixes.push('R')
     }
 
-    return {
-      main: timeStr,
-      suffix: suffixes.join(''),
-    }
+    return { main: timeStr, suffix: suffixes.join('') }
   }
 
   if (bestTimes.length === 0) {
     return (
       <View style={styles.emptyContainer}>
+        <Feather name="award" size={40} color="#9CA3AF" />
         <Text style={styles.emptyText}>記録がありません</Text>
-        <Text style={styles.emptySubtext}>まだ記録を登録していません</Text>
+        <Text style={styles.emptySubText}>
+          このメンバーはまだ記録を登録していません
+        </Text>
       </View>
     )
   }
@@ -155,11 +135,11 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
       {/* タブとチェックボックス */}
       <View style={styles.controls}>
         <View style={styles.tabs}>
-          {[
+          {([
             { id: 'all' as TabType, label: 'ALL' },
             { id: 'short' as TabType, label: '短水路' },
             { id: 'long' as TabType, label: '長水路' },
-          ].map((tab) => (
+          ]).map(tab => (
             <Pressable
               key={tab.id}
               style={[styles.tab, activeTab === tab.id && styles.tabActive]}
@@ -190,37 +170,32 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
             <View style={[styles.headerCell, styles.distanceCell]}>
               <Text style={styles.headerText}>距離</Text>
             </View>
-            {STYLES.map((style) => (
+            {STYLES.map(style => (
               <View
                 key={style}
                 style={[
                   styles.headerCell,
                   styles.styleCell,
-                  { backgroundColor: styleColors[style]?.bg || '#F3F4F6' },
+                  { backgroundColor: styleColors[style].bg },
                 ]}
               >
-                <Text
-                  style={[
-                    styles.headerText,
-                    { color: styleColors[style]?.text || '#111827' },
-                  ]}
-                >
-                  {STYLE_SHORT_LABELS[style] || style}
+                <Text style={[styles.headerText, { color: styleColors[style].text }]}>
+                  {STYLE_SHORT_LABELS[style]}
                 </Text>
               </View>
             ))}
           </View>
 
           {/* ボディ */}
-          {DISTANCES.map((distance) => (
+          {DISTANCES.map(distance => (
             <View key={distance} style={styles.tableRow}>
               <View style={[styles.cell, styles.distanceCell]}>
                 <Text style={styles.distanceText}>{distance}m</Text>
               </View>
-              {STYLES.map((style) => {
+              {STYLES.map(style => {
                 const bestTime = getBestTime(style, distance)
                 const isInvalid = isInvalidCombination(style, distance)
-                const styleColor = styleColors[style] || { bg: '#F3F4F6', text: '#111827' }
+                const color = styleColors[style]
 
                 return (
                   <View
@@ -228,17 +203,16 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
                     style={[
                       styles.cell,
                       styles.styleCell,
-                      {
-                        backgroundColor: isInvalid ? '#E5E7EB' : styleColor.bg,
-                      },
+                      { backgroundColor: isInvalid ? '#E5E7EB' : color.bg },
                     ]}
                   >
                     {bestTime ? (
                       <View style={styles.timeContainer}>
                         {(() => {
                           const createdAt = parseISO(bestTime.created_at)
-                          // 一括登録（competition なし）は New 表示対象外
-                          const isNew = bestTime.competition ? differenceInDays(new Date(), createdAt) <= 30 : false
+                          const isNew = bestTime.competition
+                            ? differenceInDays(new Date(), createdAt) <= 30
+                            : false
                           const display = getTimeDisplay(bestTime)
 
                           return (
@@ -251,14 +225,14 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
                               <Text
                                 style={[
                                   styles.timeText,
-                                  { color: styleColor.text },
+                                  { color: color.text },
                                   isNew && styles.timeTextNew,
                                 ]}
                               >
                                 {display.main}
-                                {display.suffix && (
+                                {display.suffix ? (
                                   <Text style={styles.timeSuffix}>{display.suffix}</Text>
-                                )}
+                                ) : null}
                               </Text>
                             </>
                           )
@@ -287,26 +261,12 @@ const styles = StyleSheet.create({
   container: {
     gap: 12,
   },
-  emptyContainer: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#6B7280',
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#9CA3AF',
-  },
   controls: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     flexWrap: 'wrap',
     gap: 12,
-    paddingHorizontal: 16,
   },
   tabs: {
     flexDirection: 'row',
@@ -364,7 +324,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: BORDER_COLOR,
   },
   table: {
     width: '100%',
@@ -372,7 +332,7 @@ const styles = StyleSheet.create({
   tableHeader: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#D1D5DB',
+    borderBottomColor: BORDER_COLOR,
   },
   headerCell: {
     paddingVertical: 6,
@@ -380,7 +340,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRightWidth: 1,
-    borderRightColor: '#D1D5DB',
+    borderRightColor: BORDER_COLOR,
   },
   distanceCell: {
     width: 40,
@@ -397,7 +357,7 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#D1D5DB',
+    borderBottomColor: BORDER_COLOR,
   },
   cell: {
     paddingVertical: 4,
@@ -405,7 +365,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRightWidth: 1,
-    borderRightColor: '#D1D5DB',
+    borderRightColor: BORDER_COLOR,
     minHeight: 30,
   },
   distanceText: {
@@ -448,10 +408,22 @@ const styles = StyleSheet.create({
   },
   annotation: {
     alignItems: 'flex-end',
-    paddingHorizontal: 16,
   },
   annotationText: {
     fontSize: 12,
     color: '#DC2626',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    gap: 8,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  emptySubText: {
+    fontSize: 12,
+    color: '#9CA3AF',
   },
 })

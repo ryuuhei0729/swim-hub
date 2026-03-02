@@ -4,26 +4,30 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { TeamGroupsAPI } from '@apps/shared/api/teams/groups'
 import type { TeamGroup, TeamGroupMembership, TeamMembershipWithUser } from '@swim-hub/shared/types'
 
-interface TeamMemberGroupFilterProps {
+interface MemberGroupSorterProps {
   teamId: string
   supabase: SupabaseClient
   members: TeamMembershipWithUser[]
-  onFilteredMembersChange: (filtered: TeamMembershipWithUser[]) => void
+  onGroupedMembersChange: (
+    sorted: TeamMembershipWithUser[],
+    groupHeaders: Map<number, string>,
+  ) => void
 }
 
 /**
- * モバイル用グループフィルターコンポーネント
- * 横スクロール可能なピルボタンでカテゴリ別にフィルタリング
+ * グループ表示コンポーネント（WEB版 MemberGroupSorter 準拠）
+ * カテゴリボタンをタップするとメンバーをグループ別に並び替え、
+ * グループヘッダーのインデックスを親に通知する
  */
-export const TeamMemberGroupFilter: React.FC<TeamMemberGroupFilterProps> = ({
+export const TeamMemberGroupFilter: React.FC<MemberGroupSorterProps> = ({
   teamId,
   supabase,
   members,
-  onFilteredMembersChange,
+  onGroupedMembersChange,
 }) => {
   const [groups, setGroups] = useState<TeamGroup[]>([])
   const [memberships, setMemberships] = useState<TeamGroupMembership[]>([])
-  const [selectedFilters, setSelectedFilters] = useState<Map<string, Set<string>>>(new Map())
+  const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   // グループとメンバーシップを取得
@@ -39,7 +43,7 @@ export const TeamMemberGroupFilter: React.FC<TeamMemberGroupFilterProps> = ({
         setGroups(groupsData)
         setMemberships(membershipsData)
       } catch (err) {
-        console.error('グループフィルター情報の取得に失敗:', err)
+        console.error('グループ情報の取得に失敗:', err)
       } finally {
         setLoading(false)
       }
@@ -62,7 +66,7 @@ export const TeamMemberGroupFilter: React.FC<TeamMemberGroupFilterProps> = ({
 
   const categories = useMemo(() => [...groupsByCategory.keys()].sort(), [groupsByCategory])
 
-  // user_id → groupId[] のマップ
+  // user_id → groupId Set のマップ
   const userGroupMap = useMemo(() => {
     const map = new Map<string, Set<string>>()
     for (const m of memberships) {
@@ -74,127 +78,98 @@ export const TeamMemberGroupFilter: React.FC<TeamMemberGroupFilterProps> = ({
     return map
   }, [memberships])
 
-  const hasActiveFilters = selectedFilters.size > 0
-
-  // フィルター切り替え
-  const toggleFilter = useCallback((category: string, groupId: string) => {
-    setSelectedFilters((prev) => {
-      const next = new Map(prev)
-      const catSet = new Set(next.get(category) || [])
-      if (catSet.has(groupId)) {
-        catSet.delete(groupId)
-      } else {
-        catSet.add(groupId)
-      }
-      if (catSet.size === 0) {
-        next.delete(category)
-      } else {
-        next.set(category, catSet)
-      }
-      return next
-    })
+  // カテゴリトグル
+  const toggleCategory = useCallback((category: string) => {
+    setActiveCategory((prev) => (prev === category ? null : category))
   }, [])
 
-  const clearFilters = useCallback(() => {
-    setSelectedFilters(new Map())
-  }, [])
-
-  // フィルタリング結果を親に通知
+  // グルーピング結果を親に通知
   useEffect(() => {
-    if (!hasActiveFilters) {
-      onFilteredMembersChange(members)
+    if (!activeCategory) {
+      // グルーピングなし → メンバーそのまま、ヘッダーなし
+      onGroupedMembersChange(members, new Map())
       return
     }
-    const filtered = members.filter((member) => {
-      const memberGroupIds = userGroupMap.get(member.user_id) || new Set()
-      for (const [, selectedGroupIds] of selectedFilters) {
-        let matchesCategory = false
-        for (const groupId of selectedGroupIds) {
-          if (memberGroupIds.has(groupId)) {
-            matchesCategory = true
-            break
-          }
-        }
-        if (!matchesCategory) return false
-      }
-      return true
-    })
-    onFilteredMembersChange(filtered)
-  }, [members, selectedFilters, hasActiveFilters, userGroupMap, onFilteredMembersChange])
+
+    const categoryGroups = groupsByCategory.get(activeCategory) || []
+    const flat: TeamMembershipWithUser[] = []
+    const headers = new Map<number, string>()
+    const assigned = new Set<string>()
+
+    for (const group of categoryGroups) {
+      const groupMembers = members.filter((m) => {
+        const memberGroups = userGroupMap.get(m.user_id)
+        return memberGroups?.has(group.id)
+      })
+      headers.set(flat.length, group.name)
+      flat.push(...groupMembers)
+      groupMembers.forEach((m) => assigned.add(m.user_id))
+    }
+
+    // 未所属メンバー
+    const unassigned = members.filter((m) => !assigned.has(m.user_id))
+    if (unassigned.length > 0) {
+      headers.set(flat.length, '未所属')
+      flat.push(...unassigned)
+    }
+
+    onGroupedMembersChange(flat, headers)
+  }, [members, activeCategory, groupsByCategory, userGroupMap, onGroupedMembersChange])
 
   if (loading || categories.length === 0) return null
 
   return (
     <View style={styles.container}>
-      {categories.map((category) => {
-        const catGroups = groupsByCategory.get(category) || []
-        const selectedIds = selectedFilters.get(category) || new Set()
-
-        return (
-          <View key={category} style={styles.categoryRow}>
-            <Text style={styles.categoryLabel}>{category}:</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.pillsContainer}
+      <Text style={styles.label}>グループ表示:</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.pillsContainer}
+      >
+        {categories.map((category) => {
+          const isActive = activeCategory === category
+          return (
+            <Pressable
+              key={category}
+              onPress={() => toggleCategory(category)}
+              style={[styles.pill, isActive && styles.pillActive]}
             >
-              {catGroups.map((group) => {
-                const isSelected = selectedIds.has(group.id)
-                return (
-                  <Pressable
-                    key={group.id}
-                    onPress={() => toggleFilter(category, group.id)}
-                    style={[styles.pill, isSelected && styles.pillSelected]}
-                  >
-                    <Text style={[styles.pillText, isSelected && styles.pillTextSelected]}>
-                      {group.name}
-                    </Text>
-                  </Pressable>
-                )
-              })}
-            </ScrollView>
-          </View>
-        )
-      })}
-      {hasActiveFilters && (
-        <Pressable onPress={clearFilters} style={styles.clearButton}>
-          <Text style={styles.clearText}>フィルターをクリア</Text>
-        </Pressable>
-      )}
+              <Text style={[styles.pillText, isActive && styles.pillTextActive]}>
+                {category}
+              </Text>
+            </Pressable>
+          )
+        })}
+      </ScrollView>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    gap: 6,
-  },
-  categoryRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginBottom: 12,
   },
-  categoryLabel: {
+  label: {
     fontSize: 12,
     fontWeight: '500',
     color: '#6B7280',
-    minWidth: 40,
   },
   pillsContainer: {
     flexDirection: 'row',
     gap: 6,
   },
   pill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#D1D5DB',
     backgroundColor: '#FFFFFF',
   },
-  pillSelected: {
+  pillActive: {
     backgroundColor: '#DBEAFE',
     borderColor: '#93C5FD',
   },
@@ -202,16 +177,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#4B5563',
   },
-  pillTextSelected: {
+  pillTextActive: {
     color: '#1D4ED8',
     fontWeight: '600',
-  },
-  clearButton: {
-    alignSelf: 'flex-start',
-    paddingVertical: 2,
-  },
-  clearText: {
-    fontSize: 11,
-    color: '#6B7280',
   },
 })
