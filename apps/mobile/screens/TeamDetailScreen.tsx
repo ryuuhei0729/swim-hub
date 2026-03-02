@@ -148,13 +148,14 @@ export const TeamDetailScreen: React.FC = () => {
             onMemberChange={() => refetch()}
           />
         )
+      case 'groups':
       case 'practices':
       case 'competitions':
         return (
           <View style={styles.webGuideContainer}>
             <Feather name="monitor" size={48} color="#9CA3AF" />
             <Text style={styles.webGuideTitle}>
-              {activeTab === 'practices' ? '練習管理' : '大会管理'}
+              {activeTab === 'groups' ? 'グループ管理' : activeTab === 'practices' ? '練習管理' : '大会管理'}
             </Text>
             <Text style={styles.webGuideText}>
               チーム管理機能に関してはWEB版をご利用ください。

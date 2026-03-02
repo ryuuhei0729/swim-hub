@@ -16,6 +16,7 @@ const TeamCompetitions = dynamic(() => import('@/components/team/TeamCompetition
 const TeamSettings = dynamic(() => import('@/components/team/TeamSettings'))
 const TeamBulkRegister = dynamic(() => import('@/components/team/TeamBulkRegister'))
 const AdminMonthlyAttendance = dynamic(() => import('@/components/team/AdminMonthlyAttendance'))
+const TeamGroupManagement = dynamic(() => import('@/components/team/group-management/TeamGroupManagement'))
 import type { MemberDetail } from '@/components/team/MemberDetailModal'
 import { TeamMembership, TeamWithMembers } from '@swim-hub/shared/types'
 import { useTeamAdminStore } from '@/stores/form/teamAdminStore'
@@ -73,7 +74,7 @@ export default function TeamAdminClient({
   // URLパラメータからタブを取得
   useEffect(() => {
     const tabParam = searchParams.get('tab') || initialTab
-    if (tabParam && ['announcements', 'members', 'practices', 'competitions', 'attendance', 'bulk-register', 'settings'].includes(tabParam)) {
+    if (tabParam && ['announcements', 'members', 'groups', 'practices', 'competitions', 'attendance', 'bulk-register', 'settings'].includes(tabParam)) {
       setActiveTab(tabParam as TeamAdminTabType)
     }
   }, [searchParams, initialTab, setActiveTab])
@@ -173,6 +174,8 @@ export default function TeamAdminClient({
             onMemberClick={handleMemberClick}
           />
         )
+      case 'groups':
+        return <TeamGroupManagement teamId={teamId} />
       case 'practices':
         return <TeamPractices teamId={teamId} isAdmin={true} />
       case 'competitions':

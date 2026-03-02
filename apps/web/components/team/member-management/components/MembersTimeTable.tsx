@@ -16,6 +16,7 @@ interface MembersTimeTableProps {
   sortDistance: number | null
   sortOrder: 'asc' | 'desc'
   isLoading: boolean
+  groupHeaders?: Map<number, string>
   onSort: (style: string, distance: number) => void
   onMemberClick: (member: TeamMember) => void
   getBestTimeForMember: (memberId: string, style: string, distance: number) => BestTime | null
@@ -87,6 +88,9 @@ const getTimeDisplay = (bestTime: BestTime, _includeRelaying: boolean) => {
 /**
  * メンバーのベストタイム一覧テーブル
  */
+// テーブルの全カラム数を計算
+const TOTAL_COLUMNS = 1 + STYLES.reduce((sum, style) => sum + getDistancesForStyle(style).length, 0)
+
 export const MembersTimeTable: React.FC<MembersTimeTableProps> = ({
   members,
   currentUserId,
@@ -95,6 +99,7 @@ export const MembersTimeTable: React.FC<MembersTimeTableProps> = ({
   sortDistance,
   sortOrder,
   isLoading,
+  groupHeaders,
   onSort,
   onMemberClick,
   getBestTimeForMember
@@ -127,7 +132,7 @@ export const MembersTimeTable: React.FC<MembersTimeTableProps> = ({
         <thead className="sticky top-0 z-10">
           {/* 1行目：種目名 */}
           <tr>
-            <th rowSpan={2} className="px-3 py-2 text-left text-xs font-semibold text-gray-700 border-r border-gray-300 min-w-[120px] w-[120px] bg-gray-50">
+            <th rowSpan={2} className="px-1.5 py-1.5 text-left text-[11px] font-semibold text-gray-700 border-r border-gray-300 min-w-[76px] w-[76px] max-w-[76px] bg-gray-50">
               メンバー
             </th>
             {STYLES.map((style) => {
@@ -136,7 +141,7 @@ export const MembersTimeTable: React.FC<MembersTimeTableProps> = ({
                 <th
                   key={style}
                   colSpan={distances.length}
-                  className={`px-2 py-2 text-center text-xs font-semibold text-gray-800 border-r border-gray-300 last:border-r-0 ${styleHeaderBgClass[style]}`}
+                  className={`px-1 py-1.5 text-center text-[11px] font-semibold text-gray-800 border-r border-gray-300 last:border-r-0 ${styleHeaderBgClass[style]}`}
                 >
                   {style}
                 </th>
@@ -163,7 +168,7 @@ export const MembersTimeTable: React.FC<MembersTimeTableProps> = ({
                           onSort(style, distance)
                         }
                       }}
-                      className={`w-full px-2 py-2 text-center text-xs font-semibold text-gray-700 cursor-pointer hover:bg-opacity-80 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset ${isSorted ? 'ring-2 ring-blue-500 ring-inset' : ''}`}
+                      className={`w-full px-1 py-1 text-center text-[11px] font-semibold text-gray-700 cursor-pointer hover:bg-opacity-80 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset ${isSorted ? 'ring-2 ring-blue-500 ring-inset' : ''}`}
                       title="クリックでソート"
                       aria-label={`${style} ${distance}m でソート${isSorted ? (sortOrder === 'asc' ? '（昇順）' : '（降順）') : ''}`}
                     >
@@ -184,9 +189,20 @@ export const MembersTimeTable: React.FC<MembersTimeTableProps> = ({
         </thead>
         <tbody className="bg-white">
           {members.map((member, memberIdx) => {
+            const groupName = groupHeaders?.get(memberIdx)
             return (
+              <React.Fragment key={member.id}>
+              {groupName !== undefined && (
+                <tr>
+                  <td
+                    colSpan={TOTAL_COLUMNS}
+                    className="px-3 py-2 bg-gray-100 text-xs font-semibold text-gray-700 border-t border-gray-300"
+                  >
+                    {groupName}
+                  </td>
+                </tr>
+              )}
               <tr
-                key={member.id}
                 onClick={() => onMemberClick(member)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
@@ -205,26 +221,19 @@ export const MembersTimeTable: React.FC<MembersTimeTableProps> = ({
                 data-testid={`team-member-row-${member.id}`}
               >
                 {/* メンバー名セル */}
-                <td className={`px-3 py-3 border-r border-gray-300 bg-gray-50 min-w-[120px] w-[120px] ${memberIdx > 0 ? 'border-t border-gray-300' : ''}`}>
-                  <div className="flex items-center space-x-2">
-                    <Avatar
-                      avatarUrl={member.users?.profile_image_path || null}
-                      userName={member.users?.name || 'Unknown User'}
-                      size="sm"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-1">
-                        <p className="text-xs font-medium text-gray-900 truncate">
-                          {member.users?.name || 'Unknown User'}
-                        </p>
-                        {member.role === 'admin' && (
-                          <StarIcon className="h-3 w-3 text-yellow-500 shrink-0" />
-                        )}
-                      </div>
-                      {member.user_id === currentUserId && (
-                        <span className="text-[10px] text-blue-600">あなた</span>
+                <td className={`px-1.5 py-2 border-r border-gray-300 bg-gray-50 min-w-[76px] w-[76px] max-w-[76px] ${memberIdx > 0 ? 'border-t border-gray-300' : ''}`}>
+                  <div className="min-w-0">
+                    <div className="flex items-center space-x-0.5">
+                      <p className="text-[11px] font-medium text-gray-900 truncate">
+                        {member.users?.name || 'Unknown User'}
+                      </p>
+                      {member.role === 'admin' && (
+                        <StarIcon className="h-2.5 w-2.5 text-yellow-500 shrink-0" />
                       )}
                     </div>
+                    {member.user_id === currentUserId && (
+                      <span className="text-[9px] text-blue-600">あなた</span>
+                    )}
                   </div>
                 </td>
                 {/* 各種目×距離のセル */}
@@ -238,21 +247,18 @@ export const MembersTimeTable: React.FC<MembersTimeTableProps> = ({
                     return (
                       <td
                         key={`${member.id}-${style}-${distance}`}
-                        className={`px-2 py-2 text-center text-xs border-r border-gray-300 last:border-r-0 min-w-[80px] ${memberIdx > 0 ? 'border-t border-gray-300' : ''} ${isInvalidCombination(style, distance) ? 'bg-gray-200' : styleCellBgClass[style]}`}
+                        className={`px-1 py-2 text-center text-[11px] border-r border-gray-300 last:border-r-0 min-w-[62px] ${memberIdx > 0 ? 'border-t border-gray-300' : ''} ${isInvalidCombination(style, distance) ? 'bg-gray-200' : styleCellBgClass[style]}`}
                       >
                         {bestTime ? (
-                          <div className={`group relative inline-block pt-1 ${isNew ? 'pr-5' : ''}`}>
-                            {isNew && (
-                              <span className="absolute -top-0.5 -right-2.5 text-[9px] bg-red-500 text-white px-1 py-0.5 rounded-full shadow">New</span>
-                            )}
-                            <span className={`font-semibold text-xs ${isNew ? 'text-red-600' : 'text-gray-900'}`}>
+                          <div className="group relative inline-block">
+                            <span className={`font-semibold text-[11px] ${isNew ? 'text-red-600' : 'text-gray-900'}`}>
                               {(() => {
                                 const display = getTimeDisplay(bestTime, includeRelaying)
                                 return (
                                   <>
                                     {display.main}
                                     {display.suffix && (
-                                      <span className="text-[10px] ml-0.5">{display.suffix}</span>
+                                      <span className="text-[9px] ml-0.5">{display.suffix}</span>
                                     )}
                                   </>
                                 )
@@ -281,6 +287,7 @@ export const MembersTimeTable: React.FC<MembersTimeTableProps> = ({
                   })
                 })}
               </tr>
+              </React.Fragment>
             )
           })}
         </tbody>

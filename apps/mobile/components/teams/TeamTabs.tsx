@@ -2,7 +2,7 @@ import React from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 
-export type TeamTabType = 'members' | 'practices' | 'competitions' | 'attendance'
+export type TeamTabType = 'members' | 'groups' | 'practices' | 'competitions' | 'attendance'
 
 export interface TeamTabsProps {
   activeTab: TeamTabType
@@ -15,6 +15,11 @@ const tabs: { id: TeamTabType; name: string; icon: keyof typeof Feather.glyphMap
     id: 'members',
     name: 'メンバー',
     icon: 'users',
+  },
+  {
+    id: 'groups',
+    name: 'グループ',
+    icon: 'layers',
   },
   {
     id: 'practices',

@@ -12,6 +12,7 @@ import type { TeamMembershipWithUser } from '@swim-hub/shared/types'
 import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
 import { ErrorView } from '@/components/layout/ErrorView'
 import { formatTime } from '@/utils/formatters'
+import { TeamMemberGroupFilter } from './TeamMemberGroupFilter'
 
 // ベストタイム型定義
 interface MemberBestTime {
@@ -61,7 +62,7 @@ interface TeamMemberListProps {
  */
 export const TeamMemberList: React.FC<TeamMemberListProps> = ({
   members,
-  teamId: _teamId,
+  teamId,
   isLoading,
   isError,
   error,
@@ -74,6 +75,9 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
   const updateRoleMutation = useUpdateMemberRoleMutation(supabase)
   const removeMemberMutation = useRemoveMemberMutation(supabase)
   const [processingMemberId, setProcessingMemberId] = useState<string | null>(null)
+
+  // グループフィルター
+  const [filteredMembers, setFilteredMembers] = useState<TeamMembershipWithUser[]>(members)
 
   // ベストタイムデータ
   const [bestTimesMap, setBestTimesMap] = useState<Map<string, MemberBestTime[]>>(new Map())
@@ -274,17 +278,6 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
     )
   }
 
-  // メンバータイプの表示テキスト
-  const getMemberTypeText = (memberType: string | null): string => {
-    switch (memberType) {
-      case 'swimmer': return '選手'
-      case 'coach': return 'コーチ'
-      case 'director': return '監督'
-      case 'manager': return 'マネージャー'
-      default: return ''
-    }
-  }
-
   const adminCount = members.filter((m) => m.role === 'admin').length
   const userCount = members.filter((m) => m.role === 'user').length
 
@@ -306,12 +299,19 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
         </View>
       </View>
 
+      {/* グループフィルター */}
+      <TeamMemberGroupFilter
+        teamId={teamId}
+        supabase={supabase}
+        members={members}
+        onFilteredMembersChange={setFilteredMembers}
+      />
+
       {/* メンバーカード一覧 */}
-      {members.map((item) => {
+      {filteredMembers.map((item) => {
         const user = item.users
         const isCurrentUser = item.user_id === currentUserId
         const roleText = item.role === 'admin' ? '管理者' : 'メンバー'
-        const memberTypeText = getMemberTypeText(item.member_type)
         const parsedJoinedAt = item.joined_at ? parseISO(item.joined_at) : null
         const joinedDate = parsedJoinedAt && isValid(parsedJoinedAt)
           ? format(parsedJoinedAt, 'yyyy年M月d日', { locale: ja })
@@ -365,11 +365,6 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
                       <Text style={[styles.badgeText, item.role === 'admin' && styles.adminBadgeText]}>
                         {roleText}
                       </Text>
-                    </View>
-                  )}
-                  {memberTypeText !== '' && (
-                    <View style={styles.badge}>
-                      <Text style={styles.badgeText}>{memberTypeText}</Text>
                     </View>
                   )}
                   <Text style={styles.joinedDate}>参加: {joinedDate}</Text>

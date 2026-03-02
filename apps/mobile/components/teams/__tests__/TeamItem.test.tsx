@@ -78,17 +78,6 @@ describe('TeamItem', () => {
     expect(screen.queryByText('テストチームの説明')).toBeNull()
   })
 
-  it('member_typeが表示される', () => {
-    const membershipWithType = createMockTeamMembershipWithUser({
-      ...mockMembership,
-      member_type: 'swimmer',
-    })
-    
-    render(<TeamItem membership={membershipWithType} />)
-    
-    expect(screen.getByText('選手')).toBeTruthy()
-  })
-
   it('onPressが提供された場合、タップでコールバックが呼ばれる', () => {
     const onPress = vi.fn()
     render(<TeamItem membership={mockMembership} onPress={onPress} />)

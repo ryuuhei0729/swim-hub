@@ -32,7 +32,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       <Sidebar isOpen={sidebarOpen} onClose={handleSidebarClose} />
 
       {/* メインコンテンツエリア */}
-      <div className="pt-16 lg:pl-64">
+      <div className="pt-16 lg:pl-64 overflow-x-hidden">
         <main className="min-h-screen">
           <div className="max-w-7xl mx-auto py-4 sm:py-6 px-0 sm:px-4 lg:px-8">
             {children}
