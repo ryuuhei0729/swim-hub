@@ -28,8 +28,6 @@ export interface TeamMembership {
   team_id: string
   user_id: string
   role: 'admin' | 'user'
-  member_type: 'swimmer' | 'coach' | 'director' | 'manager' | null
-  group_name: string | null
   status: 'pending' | 'approved' | 'rejected'
   is_active: boolean
   joined_at: string
@@ -40,6 +38,32 @@ export interface TeamMembership {
 
 export type TeamMembershipInsert = Omit<TeamMembership, 'id' | 'created_at' | 'updated_at'>
 export type TeamMembershipUpdate = Partial<Omit<TeamMembershipInsert, 'team_id' | 'user_id'>>
+
+// チームグループ
+export interface TeamGroup {
+  id: string
+  team_id: string
+  category: string | null
+  name: string
+  created_by: string
+  created_at: string
+  updated_at: string
+}
+
+export type TeamGroupInsert = Omit<TeamGroup, 'id' | 'created_at' | 'updated_at'>
+export type TeamGroupUpdate = Partial<Omit<TeamGroupInsert, 'team_id' | 'created_by'>>
+
+// チームグループメンバーシップ（グループ↔ユーザーの多対多）
+export interface TeamGroupMembership {
+  id: string
+  team_group_id: string
+  user_id: string
+  assigned_by: string
+  assigned_at: string
+  created_at: string
+}
+
+export type TeamGroupMembershipInsert = Omit<TeamGroupMembership, 'id' | 'created_at'>
 
 // チームお知らせ
 export interface TeamAnnouncement {

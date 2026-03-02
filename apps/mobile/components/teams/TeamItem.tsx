@@ -65,14 +65,6 @@ const TeamItemComponent: React.FC<TeamItemProps> = ({ membership, onPress }) => 
 
         <View style={styles.footer}>
           <Text style={styles.role}>{role}</Text>
-          {membership.member_type && (
-            <Text style={styles.memberType}>
-              {membership.member_type === 'swimmer' ? '選手' :
-               membership.member_type === 'coach' ? 'コーチ' :
-               membership.member_type === 'director' ? '監督' :
-               membership.member_type === 'manager' ? 'マネージャー' : ''}
-            </Text>
-          )}
         </View>
       </View>
     </Pressable>
@@ -149,14 +141,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 12,
   },
-  memberType: {
-    fontSize: 12,
-    color: '#2563EB',
-    backgroundColor: '#DBEAFE',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
 })
 
 // メモ化して再レンダリングを最適化
@@ -166,7 +150,6 @@ export const TeamItem = React.memo(TeamItemComponent, (prevProps, nextProps) => 
     prevProps.membership.id === nextProps.membership.id &&
     prevProps.membership.status === nextProps.membership.status &&
     prevProps.membership.role === nextProps.membership.role &&
-    prevProps.membership.member_type === nextProps.membership.member_type &&
     prevProps.membership.teams?.id === nextProps.membership.teams?.id &&
     prevProps.membership.teams?.name === nextProps.membership.teams?.name &&
     prevProps.membership.teams?.description === nextProps.membership.teams?.description

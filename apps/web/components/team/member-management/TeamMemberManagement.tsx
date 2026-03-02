@@ -3,8 +3,8 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthProvider'
 import { useMemberBestTimes } from '../shared/hooks/useMemberBestTimes'
-import { useMembers, usePendingMembers, useMembershipActions, useMemberSort } from './hooks'
-import { PendingMembersSection, MemberStatsHeader, MembersTimeTable } from './components'
+import { useMembers, usePendingMembers, useMembershipActions, useMemberSort, useMemberGroupSort } from './hooks'
+import { PendingMembersSection, MemberStatsHeader, MembersTimeTable, MemberGroupSorter } from './components'
 import type { TeamMember } from './hooks/useMembers'
 
 export interface TeamMemberManagementProps {
@@ -43,6 +43,14 @@ export default function TeamMemberManagement({
   // 承認/却下アクション
   const { handleApprove, handleReject } = useMembershipActions(teamId, onMembershipChange)
 
+  // グループ別表示
+  const {
+    categories,
+    activeCategory,
+    toggleCategory,
+    groupMembers,
+  } = useMemberGroupSort(teamId, supabase)
+
   // ベストタイム管理
   const {
     loading: loadingBestTimes,
@@ -63,8 +71,9 @@ export default function TeamMemberManagement({
     sortDistance,
     sortOrder,
     sortedMembers,
+    groupHeaders,
     handleSort
-  } = useMemberSort(members, getBestTimeForMemberWithRelaying)
+  } = useMemberSort(members, getBestTimeForMemberWithRelaying, groupMembers)
 
   // 初期データ読み込み
   useEffect(() => {
@@ -134,6 +143,13 @@ export default function TeamMemberManagement({
         onToggleRelaying={setIncludeRelaying}
       />
 
+      {/* グループ別表示 */}
+      <MemberGroupSorter
+        categories={categories}
+        activeCategory={activeCategory}
+        onToggle={toggleCategory}
+      />
+
       {/* 承認待ちセクション（管理者のみ） */}
       {isCurrentUserAdmin && (
         <PendingMembersSection
@@ -172,6 +188,7 @@ export default function TeamMemberManagement({
         sortDistance={sortDistance}
         sortOrder={sortOrder}
         isLoading={loadingBestTimes}
+        groupHeaders={groupHeaders}
         onSort={handleSort}
         onMemberClick={onMemberClick}
         getBestTimeForMember={getBestTimeForMemberWithRelaying}

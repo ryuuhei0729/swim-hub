@@ -98,6 +98,26 @@ export const TeamDetailScreen: React.FC = () => {
     }
   }
 
+  // 承認待ち状態
+  if (isError && error?.message === 'PENDING_APPROVAL') {
+    return (
+      <View style={styles.container}>
+        <View style={styles.pendingContainer}>
+          <Feather name="clock" size={48} color="#F59E0B" />
+          <Text style={styles.pendingTitle}>承認待ち</Text>
+          <Text style={styles.pendingMessage}>
+            チームへの参加リクエストは管理者の承認待ちです。{'\n'}
+            承認されるまでしばらくお待ちください。
+          </Text>
+          <Pressable style={styles.pendingRetryButton} onPress={() => refetch()}>
+            <Feather name="refresh-cw" size={16} color="#FFFFFF" />
+            <Text style={styles.pendingRetryText}>状態を更新</Text>
+          </Pressable>
+        </View>
+      </View>
+    )
+  }
+
   // エラー状態
   if (isError && error) {
     return (
@@ -148,13 +168,14 @@ export const TeamDetailScreen: React.FC = () => {
             onMemberChange={() => refetch()}
           />
         )
+      case 'groups':
       case 'practices':
       case 'competitions':
         return (
           <View style={styles.webGuideContainer}>
             <Feather name="monitor" size={48} color="#9CA3AF" />
             <Text style={styles.webGuideTitle}>
-              {activeTab === 'practices' ? '練習管理' : '大会管理'}
+              {activeTab === 'groups' ? 'グループ管理' : activeTab === 'practices' ? '練習管理' : '大会管理'}
             </Text>
             <Text style={styles.webGuideText}>
               チーム管理機能に関してはWEB版をご利用ください。
@@ -177,27 +198,23 @@ export const TeamDetailScreen: React.FC = () => {
     <View style={styles.container}>
       {/* チーム情報（固定） */}
       <View style={styles.teamInfo}>
-        <Text style={styles.teamName}>{currentTeam.name}</Text>
-        {currentTeam.description && (
-          <Text style={styles.teamDescription}>{currentTeam.description}</Text>
-        )}
-        {currentTeam.invite_code && (
-          <View style={styles.inviteCodeContainer}>
+        <View style={styles.teamInfoRow}>
+          <Text style={styles.teamName} numberOfLines={1}>{currentTeam.name}</Text>
+          {currentTeam.invite_code && (
             <View style={styles.inviteCodeContent}>
-              <Text style={styles.inviteCodeLabel}>招待コード:</Text>
               <Text style={styles.inviteCode}>{currentTeam.invite_code}</Text>
               <Pressable style={styles.copyButton} onPress={handleCopyInviteCode}>
                 <Feather
                   name={isCopied ? 'check' : 'clipboard'}
-                  size={16}
-                  color={isCopied ? '#10B981' : '#374151'}
+                  size={14}
+                  color={isCopied ? '#10B981' : '#9CA3AF'}
                 />
-                <Text style={[styles.copyButtonText, isCopied && styles.copyButtonTextSuccess]}>
-                  コピー
-                </Text>
               </Pressable>
             </View>
-          </View>
+          )}
+        </View>
+        {currentTeam.description && (
+          <Text style={styles.teamDescription}>{currentTeam.description}</Text>
         )}
       </View>
 
@@ -217,69 +234,53 @@ const styles = StyleSheet.create({
   },
   teamInfo: {
     backgroundColor: '#FFFFFF',
-    padding: 20,
-    margin: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginHorizontal: 12,
+    marginTop: 8,
+    marginBottom: 4,
     borderRadius: 8,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
+    elevation: 1,
+  },
+  teamInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
   },
   teamName: {
-    fontSize: 24,
+    fontSize: 17,
     fontWeight: 'bold',
     color: '#111827',
-    marginBottom: 8,
+    flexShrink: 1,
   },
   teamDescription: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#6B7280',
-    marginBottom: 12,
-    lineHeight: 20,
-  },
-  inviteCodeContainer: {
-    marginTop: 8,
-    padding: 12,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
+    marginTop: 2,
+    lineHeight: 16,
   },
   inviteCodeContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  inviteCodeLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+    gap: 4,
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
   inviteCode: {
-    flex: 1,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#2563EB',
+    color: '#6B7280',
     fontFamily: 'monospace',
   },
   copyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    padding: 4,
-    borderRadius: 4,
-  },
-  copyButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-  },
-  copyButtonTextSuccess: {
-    color: '#10B981',
+    padding: 2,
   },
   tabContent: {
     flex: 1,
@@ -326,6 +327,40 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9CA3AF',
     marginTop: 12,
+  },
+  pendingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  pendingTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#92400E',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  pendingMessage: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  pendingRetryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#F59E0B',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  pendingRetryText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   errorContainer: {
     flex: 1,

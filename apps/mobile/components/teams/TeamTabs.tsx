@@ -2,7 +2,7 @@ import React from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 
-export type TeamTabType = 'members' | 'practices' | 'competitions' | 'attendance'
+export type TeamTabType = 'members' | 'groups' | 'practices' | 'competitions' | 'attendance'
 
 export interface TeamTabsProps {
   activeTab: TeamTabType
@@ -15,6 +15,11 @@ const tabs: { id: TeamTabType; name: string; icon: keyof typeof Feather.glyphMap
     id: 'members',
     name: 'メンバー',
     icon: 'users',
+  },
+  {
+    id: 'groups',
+    name: 'グループ',
+    icon: 'layers',
   },
   {
     id: 'practices',
@@ -55,7 +60,7 @@ export const TeamTabs: React.FC<TeamTabsProps> = ({ activeTab, onTabChange }) =>
             >
               <Feather
                 name={tab.icon}
-                size={16}
+                size={14}
                 color={isActive ? '#2563EB' : '#6B7280'}
               />
               <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
@@ -74,15 +79,14 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
-    margin: 16,
+    marginHorizontal: 12,
+    marginTop: 4,
+    marginBottom: 4,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
+    elevation: 1,
   },
   tabList: {
     flexDirection: 'row',
@@ -94,16 +98,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    gap: 3,
     position: 'relative',
   },
   tabActive: {
     backgroundColor: '#EFF6FF',
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '500',
     color: '#6B7280',
   },

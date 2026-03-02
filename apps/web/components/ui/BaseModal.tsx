@@ -31,7 +31,7 @@ export default function BaseModal({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center p-0 sm:p-4">
+      <div className="flex min-h-screen items-center justify-center px-2 sm:p-4">
         {/* オーバーレイ */}
         <div 
           className="fixed inset-0 bg-black/40 transition-opacity"

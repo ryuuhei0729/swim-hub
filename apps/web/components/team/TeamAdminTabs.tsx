@@ -1,17 +1,18 @@
 'use client'
 
 import React from 'react'
-import { 
-  MegaphoneIcon, 
-  UsersIcon, 
-  ClockIcon, 
-  TrophyIcon, 
+import {
+  MegaphoneIcon,
+  UsersIcon,
+  ClockIcon,
+  TrophyIcon,
   CogIcon,
   ClipboardDocumentCheckIcon,
-  DocumentArrowUpIcon
+  DocumentArrowUpIcon,
+  TagIcon
 } from '@heroicons/react/24/outline'
 
-export type TeamAdminTabType = 'announcements' | 'members' | 'practices' | 'competitions' | 'attendance' | 'bulk-register' | 'settings'
+export type TeamAdminTabType = 'announcements' | 'members' | 'groups' | 'practices' | 'competitions' | 'attendance' | 'bulk-register' | 'settings'
 
 export interface TeamAdminTab {
   id: TeamAdminTabType
@@ -42,6 +43,11 @@ const adminTabs: TeamAdminTab[] = [
     icon: UsersIcon
   },
   {
+    id: 'groups',
+    name: 'グループ',
+    icon: TagIcon
+  },
+  {
     id: 'practices',
     name: '練習',
     icon: ClockIcon
@@ -67,7 +73,7 @@ export default function TeamAdminTabs({ activeTab, onTabChange, pendingCount = 0
   return (
     <div className="bg-white rounded-lg shadow">
       {/* タブナビゲーション */}
-      <div className="border-b border-gray-200 overflow-x-auto">
+      <div className="border-b border-gray-200 overflow-x-auto scrollbar-hide">
         <nav className="flex space-x-2 sm:space-x-4 md:space-x-8 px-2 sm:px-6" aria-label="Tabs">
           {adminTabs.map((tab) => {
             const Icon = tab.icon

@@ -269,8 +269,6 @@ export const createMockTeamMembershipWithUser = (overrides = {}) => ({
   team_id: 'team-1',
   user_id: 'test-user-id',
   role: 'admin' as const,
-  member_type: null,
-  group_name: null,
   status: 'approved' as const,
   is_active: true,
   joined_at: '2025-01-01T00:00:00Z',

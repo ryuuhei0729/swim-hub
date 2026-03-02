@@ -52,7 +52,7 @@ export default function TeamTabs({ activeTab, onTabChange }: TeamTabsProps) {
   return (
     <div className="bg-white rounded-lg shadow">
       {/* タブナビゲーション */}
-      <div className="border-b border-gray-200 overflow-x-auto">
+      <div className="border-b border-gray-200 overflow-x-auto scrollbar-hide">
         <nav className="flex space-x-2 sm:space-x-4 md:space-x-8 px-2 sm:px-6" aria-label="Tabs">
           {visibleTabs.map((tab) => {
             const Icon = tab.icon

@@ -38,6 +38,18 @@ export async function requireTeamMembership(
     throw new Error(`チームメンバーシップの確認中にエラーが発生しました: ${error.message}`)
   }
   if (!membership) {
+    // is_active=true のメンバーシップがない場合、承認待ちかどうかを確認
+    const { data: pendingMembership } = await supabase
+      .from('team_memberships')
+      .select('id, status')
+      .eq('team_id', teamId)
+      .eq('user_id', uid)
+      .eq('status', 'pending')
+      .single()
+
+    if (pendingMembership) {
+      throw new Error('PENDING_APPROVAL')
+    }
     throw new Error('チームへのアクセス権限がありません')
   }
 }

@@ -31,6 +31,7 @@ export const TabNavigator: React.FC = () => {
           borderTopWidth: 1,
           paddingTop: 8,
           paddingBottom: Math.max(insets.bottom, 4),
+          paddingHorizontal: 12,
           height: 56 + Math.max(insets.bottom, 4),
         },
         tabBarLabelStyle: {

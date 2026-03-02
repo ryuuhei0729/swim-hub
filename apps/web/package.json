@@ -31,6 +31,7 @@
     "test:web:remote": "E2E_SUPABASE_MODE=remote dotenvx run -f .env.development -- npx playwright test --config e2e/src/config/playwright.config.ts"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
     "@dotenvx/dotenvx": "^1.51.1",
     "@heroicons/react": "^2.2.0",
     "@supabase/auth-ui-react": "^0.4.7",

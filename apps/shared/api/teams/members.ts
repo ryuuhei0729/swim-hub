@@ -88,8 +88,6 @@ export class TeamMembersAPI {
       team_id: team.id,
       user_id: userId,
       role: 'user',
-      member_type: null,
-      group_name: null,
       status: 'pending',
       is_active: false,
       joined_at: new Date().toISOString(),

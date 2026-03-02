@@ -33,7 +33,7 @@ describe('TeamAttendancesAPI', () => {
     })
 
     it('チームメンバーでない場合はエラーとなる', async () => {
-      supabaseMock.queueTable('team_memberships', [{ data: null }])
+      supabaseMock.queueTable('team_memberships', [{ data: null }, { data: null }])
 
       await expect(api.listByTeam('team-1')).rejects.toThrow('チームへのアクセス権限がありません')
     })
@@ -143,7 +143,7 @@ describe('TeamAttendancesAPI', () => {
 
     it('メンバーでない場合はエラーとなる', async () => {
       supabaseMock.queueTable('practices', [{ data: { team_id: 'team-1' } }])
-      supabaseMock.queueTable('team_memberships', [{ data: null }])
+      supabaseMock.queueTable('team_memberships', [{ data: null }, { data: null }])
 
       await expect(
         api.upsert({
@@ -225,7 +225,7 @@ describe('TeamAttendancesAPI', () => {
     it('メンバーでない場合はエラーとなる', async () => {
       supabaseMock.queueTable('team_attendance', [{ data: { practice_id: 'practice-1' } }])
       supabaseMock.queueTable('practices', [{ data: { team_id: 'team-1' } }])
-      supabaseMock.queueTable('team_memberships', [{ data: null }])
+      supabaseMock.queueTable('team_memberships', [{ data: null }, { data: null }])
 
       await expect(api.update('attendance-1', { status: 'present' as const })).rejects.toThrow(
         'チームへのアクセス権限がありません'

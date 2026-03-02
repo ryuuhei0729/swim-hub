@@ -1,0 +1,1 @@
+export { MemberDetailModal } from './MemberDetailModal'

@@ -251,8 +251,8 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
                               <Text
                                 style={[
                                   styles.timeText,
-                                  isNew && styles.timeTextNew,
                                   { color: styleColor.text },
+                                  isNew && styles.timeTextNew,
                                 ]}
                               >
                                 {display.main}
