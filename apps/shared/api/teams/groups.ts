@@ -113,6 +113,15 @@ export class TeamGroupsAPI {
    * グループのメンバー一覧取得（user情報付き）
    */
   async listGroupMembers(groupId: string): Promise<(TeamGroupMembership & { users: { id: string; name: string; profile_image_path: string | null } })[]> {
+    const { data: target, error: fetchError } = await this.supabase
+      .from('team_groups')
+      .select('team_id')
+      .eq('id', groupId)
+      .single()
+    if (fetchError) throw fetchError
+    if (!target) throw new Error('グループが見つかりません')
+    await requireTeamMembership(this.supabase, target.team_id)
+
     const { data, error } = await this.supabase
       .from('team_group_memberships')
       .select('*, users:users!team_group_memberships_user_id_fkey(id, name, profile_image_path)')
@@ -143,6 +152,15 @@ export class TeamGroupsAPI {
    */
   async setGroupMembers(groupId: string, userIds: string[]): Promise<void> {
     const userId = await requireAuth(this.supabase)
+
+    const { data: target, error: fetchError } = await this.supabase
+      .from('team_groups')
+      .select('team_id')
+      .eq('id', groupId)
+      .single()
+    if (fetchError) throw fetchError
+    if (!target) throw new Error('グループが見つかりません')
+    await requireTeamAdmin(this.supabase, target.team_id, userId)
 
     // 既存メンバーを全削除
     const { error: delError } = await this.supabase

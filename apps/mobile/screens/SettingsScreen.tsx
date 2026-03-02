@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react'
-import { View, Text, Pressable, ScrollView, StyleSheet, RefreshControl } from 'react-native'
+import { View, Text, Pressable, ScrollView, StyleSheet, RefreshControl, Alert } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/contexts/AuthProvider'
 import { useUserQuery } from '@apps/shared/hooks/queries/user'
@@ -27,21 +27,32 @@ export const SettingsScreen: React.FC = () => {
     enableRealtime: false,
   })
 
-  const handleLogout = useCallback(async () => {
+  const executeLogout = useCallback(async () => {
     setIsLoggingOut(true)
     try {
       const { error } = await signOut()
       if (error) {
         console.error('ログアウトエラー:', error)
-        alert('ログアウトに失敗しました。もう一度お試しください。')
+        Alert.alert('エラー', 'ログアウトに失敗しました。もう一度お試しください。')
       }
     } catch (err) {
       console.error('ログアウト処理エラー:', err)
-      alert('ログアウトに失敗しました。もう一度お試しください。')
+      Alert.alert('エラー', 'ログアウトに失敗しました。もう一度お試しください。')
     } finally {
       setIsLoggingOut(false)
     }
   }, [signOut])
+
+  const handleLogout = useCallback(() => {
+    Alert.alert(
+      'ログアウト',
+      'ログアウトしてもよろしいですか？',
+      [
+        { text: 'キャンセル', style: 'cancel' },
+        { text: 'ログアウト', style: 'destructive', onPress: executeLogout },
+      ]
+    )
+  }, [executeLogout])
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true)

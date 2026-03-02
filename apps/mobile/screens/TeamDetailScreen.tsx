@@ -98,6 +98,26 @@ export const TeamDetailScreen: React.FC = () => {
     }
   }
 
+  // 承認待ち状態
+  if (isError && error?.message === 'PENDING_APPROVAL') {
+    return (
+      <View style={styles.container}>
+        <View style={styles.pendingContainer}>
+          <Feather name="clock" size={48} color="#F59E0B" />
+          <Text style={styles.pendingTitle}>承認待ち</Text>
+          <Text style={styles.pendingMessage}>
+            チームへの参加リクエストは管理者の承認待ちです。{'\n'}
+            承認されるまでしばらくお待ちください。
+          </Text>
+          <Pressable style={styles.pendingRetryButton} onPress={() => refetch()}>
+            <Feather name="refresh-cw" size={16} color="#FFFFFF" />
+            <Text style={styles.pendingRetryText}>状態を更新</Text>
+          </Pressable>
+        </View>
+      </View>
+    )
+  }
+
   // エラー状態
   if (isError && error) {
     return (
@@ -307,6 +327,40 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9CA3AF',
     marginTop: 12,
+  },
+  pendingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  pendingTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#92400E',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  pendingMessage: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  pendingRetryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#F59E0B',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  pendingRetryText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   errorContainer: {
     flex: 1,
