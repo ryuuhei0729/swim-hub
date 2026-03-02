@@ -86,7 +86,7 @@ describe('TeamAnnouncementsAPI', () => {
     })
 
     it('チームメンバーでない場合はエラーとなる', async () => {
-      supabaseMock.queueTable('team_memberships', [{ data: null }])
+      supabaseMock.queueTable('team_memberships', [{ data: null }, { data: null }])
 
       await expect(api.list('team-1')).rejects.toThrow('チームへのアクセス権限がありません')
     })
