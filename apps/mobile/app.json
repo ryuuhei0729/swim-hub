@@ -2,7 +2,7 @@
   "expo": {
     "name": "SwimHub",
     "slug": "swim-hub-mobile",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "description": "水泳選手の練習記録・大会記録を管理するアプリ",
     "scheme": "swimhub",
     "orientation": "portrait",

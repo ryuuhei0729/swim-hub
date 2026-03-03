@@ -29,6 +29,7 @@ export const RecordDetailScreen: React.FC = () => {
 
   const deleteMutation = useDeleteRecordMutation(supabase)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [splitTab, setSplitTab] = useState<'race' | 'all'>('race')
 
   const handleEdit = () => {
     if (record?.competition_id && record?.competition?.date) {
@@ -95,46 +96,17 @@ export const RecordDetailScreen: React.FC = () => {
     return records.find((r) => r.id === recordId)
   }, [records, recordId])
 
-  if (isError && error) {
-    return (
-      <View style={styles.container}>
-        <ErrorView message={error.message || '大会記録の取得に失敗しました'} onRetry={() => refetch()} fullScreen />
-      </View>
-    )
-  }
-
-  if (isLoading && !record) {
-    return (
-      <View style={styles.container}>
-        <LoadingSpinner fullScreen message="大会記録を読み込み中..." />
-      </View>
-    )
-  }
-
-  if (!record) {
-    return (
-      <View style={styles.container}>
-        <ErrorView message="大会記録が見つかりませんでした" onRetry={() => refetch()} fullScreen />
-      </View>
-    )
-  }
-
-  const competitionName = record.competition?.title || '大会'
-  const recordDate = record.competition?.date || record.created_at
-  const formattedDate = format(new Date(recordDate), 'yyyy年M月d日(E)', { locale: ja })
-  const styleName = record.style?.name || record.style?.name_jp || '不明'
-  const formattedTime = formatTime(record.time)
-  const poolType = record.competition?.pool_type === 0 ? '短水路(25m)' : '長水路(50m)'
-
-  const [splitTab, setSplitTab] = useState<'race' | 'all'>('race')
-
   // スプリットタイムを距離順にソート
-  const sortedSplitTimes = [...(record.split_times || [])].sort(
-    (a, b) => a.distance - b.distance
-  )
+  const sortedSplitTimes = useMemo(() => {
+    if (!record) return []
+    return [...(record.split_times || [])].sort(
+      (a, b) => a.distance - b.distance
+    )
+  }, [record])
 
   // ゴールタイムを含む表示用スプリットデータ
   const displaySplitTimes = useMemo(() => {
+    if (!record) return []
     const base = sortedSplitTimes.map((st) => ({
       distance: st.distance,
       split_time: st.split_time,
@@ -148,7 +120,7 @@ export const RecordDetailScreen: React.FC = () => {
       }
     }
     return base
-  }, [sortedSplitTimes, record.style?.distance, record.time])
+  }, [sortedSplitTimes, record])
 
   // 距離別Lap用: 25m刻みのみフィルタ
   const raceSplitTimes = useMemo(() => {
@@ -157,13 +129,13 @@ export const RecordDetailScreen: React.FC = () => {
 
   // 距離別Lapのカラム間隔を決定
   const lapIntervals = useMemo(() => {
-    const raceDistance = record.style?.distance
+    const raceDistance = record?.style?.distance
     if (!raceDistance) return []
     const intervals: number[] = []
     if (raceDistance >= 25 && raceDistance !== 25) intervals.push(25)
     if (raceDistance >= 50 && raceDistance !== 50) intervals.push(50)
     return intervals
-  }, [record.style?.distance])
+  }, [record?.style?.distance])
 
   // データが1つもないintervalは列ごと非表示にする
   const visibleLapIntervals = useMemo(() => {
@@ -225,6 +197,37 @@ export const RecordDetailScreen: React.FC = () => {
     }
     return laps
   }, [displaySplitTimes])
+
+  if (isError && error) {
+    return (
+      <View style={styles.container}>
+        <ErrorView message={error.message || '大会記録の取得に失敗しました'} onRetry={() => refetch()} fullScreen />
+      </View>
+    )
+  }
+
+  if (isLoading && !record) {
+    return (
+      <View style={styles.container}>
+        <LoadingSpinner fullScreen message="大会記録を読み込み中..." />
+      </View>
+    )
+  }
+
+  if (!record) {
+    return (
+      <View style={styles.container}>
+        <ErrorView message="大会記録が見つかりませんでした" onRetry={() => refetch()} fullScreen />
+      </View>
+    )
+  }
+
+  const competitionName = record.competition?.title || '大会'
+  const recordDate = record.competition?.date || record.created_at
+  const formattedDate = format(new Date(recordDate), 'yyyy年M月d日(E)', { locale: ja })
+  const styleName = record.style?.name || record.style?.name_jp || '不明'
+  const formattedTime = formatTime(record.time)
+  const poolType = record.competition?.pool_type === 0 ? '短水路(25m)' : '長水路(50m)'
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
