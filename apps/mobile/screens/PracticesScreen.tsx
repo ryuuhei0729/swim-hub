@@ -152,11 +152,6 @@ export const PracticesScreen: React.FC = () => {
     [navigation]
   )
 
-  // 作成画面への遷移
-  const handleCreate = useCallback(() => {
-    navigation.navigate('PracticeForm', {})
-  }, [navigation])
-
   // エラー状態
   if (error) {
     return (
@@ -246,18 +241,6 @@ export const PracticesScreen: React.FC = () => {
             )}
           </View>
         )}
-      </View>
-
-      {/* 作成ボタン */}
-      <View style={styles.fabContainer}>
-        <Pressable
-          style={styles.fab}
-          onPress={handleCreate}
-          accessibilityLabel="練習記録を作成"
-          accessibilityRole="button"
-        >
-          <Text style={styles.fabText}>+</Text>
-        </Pressable>
       </View>
 
       <FlashList
@@ -385,33 +368,5 @@ const styles = StyleSheet.create({
   footerLoader: {
     paddingVertical: 20,
     alignItems: 'center',
-  },
-  fabContainer: {
-    position: 'absolute',
-    bottom: 20,
-    right: 16,
-    zIndex: 1000,
-  },
-  fab: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#2563EB',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  fabText: {
-    fontSize: 28,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    lineHeight: 32,
   },
 })

@@ -117,17 +117,21 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
     const hasPracticeLogWithTimes = entries.some(
       entry => entry.type === 'practice_log' && practiceLogsWithTimes.has(entry.id)
     )
+    const hasRecords = entries.some(entry => entry.type === 'record')
 
     if (entries.length === 0) return 300
     if (entries.length === 1) {
+      if (hasRecords) return 600
       if (!hasPracticeLog) return 400
       if (hasPracticeLogWithTimes) return 600
       return 350
     }
     if (entries.length === 2) {
+      if (hasRecords) return 700
       if (hasPracticeLogWithTimes) return 600
       return hasPracticeLog ? 600 : 375
     }
+    if (hasRecords) return 750
     if (hasPracticeLogWithTimes) return 700
     return 500
   }, [entries, practiceLogsWithTimes])
@@ -215,30 +219,29 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
               {/* エントリーがない場合 */}
               {entries.length === 0 ? (
                 <View style={styles.emptyContainer}>
-                  <Text style={styles.emptyTextMain}>この日の記録はありません</Text>
                   <View style={styles.addButtonContainer}>
-                    {onAddPractice && (
-                      <Pressable
-                        style={[styles.addButton, styles.addPracticeButton]}
-                        onPress={() => {
-                          onAddPractice(date)
-                          onClose()
-                        }}
-                      >
-                        <Feather name="activity" size={18} color="#FFFFFF" style={styles.addButtonIcon} />
-                        <Text style={styles.addButtonText}>練習を追加</Text>
-                      </Pressable>
-                    )}
                     {onAddRecord && (
                       <Pressable
-                        style={[styles.addButton, styles.addRecordButton]}
+                        style={[styles.addButton, styles.addRecordCardButton]}
                         onPress={() => {
                           onAddRecord(date)
                           onClose()
                         }}
                       >
-                        <Feather name="droplet" size={18} color="#FFFFFF" style={styles.addButtonIcon} />
-                        <Text style={styles.addButtonText}>大会記録を追加</Text>
+                        <Feather name="droplet" size={28} color="#3B82F6" style={styles.addButtonCardIcon} />
+                        <Text style={styles.addButtonCardText}>大会記録を追加</Text>
+                      </Pressable>
+                    )}
+                    {onAddPractice && (
+                      <Pressable
+                        style={[styles.addButton, styles.addPracticeCardButton]}
+                        onPress={() => {
+                          onAddPractice(date)
+                          onClose()
+                        }}
+                      >
+                        <Feather name="activity" size={28} color="#10B981" style={styles.addButtonCardIcon} />
+                        <Text style={styles.addButtonCardText}>練習予定を追加</Text>
                       </Pressable>
                     )}
                   </View>

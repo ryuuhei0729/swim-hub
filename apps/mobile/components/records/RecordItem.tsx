@@ -1,6 +1,5 @@
 import React, { useMemo, useCallback } from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
-import { Feather } from '@expo/vector-icons'
 import { format, parseISO } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { toZonedTime } from 'date-fns-tz'
@@ -29,19 +28,14 @@ const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress }) => 
     try {
       const parsed = typeof recordDate === 'string' ? parseISO(recordDate) : new Date(recordDate)
       const zoned = toZonedTime(parsed, Intl.DateTimeFormat().resolvedOptions().timeZone)
-      return format(zoned, 'yyyy年M月d日(E)', { locale: ja })
+      return format(zoned, 'yyyy/MM/dd', { locale: ja })
     } catch {
       return '日付不明'
     }
   }, [recordDate])
   
-  // 種目名
-  const styleName = useMemo(() => record.style?.name_jp || '不明', [record.style?.name_jp])
-  const styleDistance = useMemo(() => record.style?.distance || 0, [record.style?.distance])
-  const styleDisplay = useMemo(
-    () => `${styleName} ${styleDistance}m`,
-    [styleName, styleDistance]
-  )
+  // 種目名（短縮表記: nameカラムを使用）
+  const styleDisplay = useMemo(() => record.style?.name || '不明', [record.style?.name])
   
   // タイムをフォーマット
   const formattedTime = useMemo(() => formatTime(record.time), [record.time])
@@ -65,28 +59,27 @@ const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress }) => 
       onPress={handlePress}
     >
       <View style={styles.content}>
-        <View style={styles.header}>
+        {/* 1行目: 日付 + 大会名 */}
+        <View style={styles.row}>
           <Text style={styles.date}>{formattedDate}</Text>
-          <Text style={styles.poolType}>{poolType}</Text>
+          <Text style={styles.competitionName} numberOfLines={1}>
+            {competitionName}
+          </Text>
         </View>
-        
-        <Text style={styles.competitionName} numberOfLines={1}>
-          {competitionName}
-        </Text>
-        
-        <View style={styles.recordInfo}>
-          <Text style={styles.style}>{styleDisplay}</Text>
-          <Text style={styles.time}>{formattedTime}</Text>
-        </View>
-        
-        {record.competition?.place && (
-          <View style={styles.placeContainer}>
-            <Feather name="map-pin" size={14} color="#6B7280" />
-            <Text style={styles.place} numberOfLines={1}>
-              {record.competition.place}
-            </Text>
+
+        {/* 2行目: 場所(左) + 水路・種目・タイム(右) */}
+        <View style={styles.rowSpaceBetween}>
+          {record.competition?.place ? (
+            <Text style={styles.place} numberOfLines={1}>📍{record.competition.place}</Text>
+          ) : (
+            <View />
+          )}
+          <View style={styles.row}>
+            <Text style={styles.poolType}>{poolType}</Text>
+            <Text style={styles.style}>{styleDisplay}</Text>
+            <Text style={styles.time}>{formattedTime}</Text>
           </View>
-        )}
+        </View>
       </View>
     </Pressable>
   )
@@ -97,7 +90,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     marginHorizontal: 16,
-    marginVertical: 6,
+    marginVertical: 3,
     padding: 16,
     shadowColor: '#000',
     shadowOffset: {
@@ -114,16 +107,30 @@ const styles = StyleSheet.create({
   content: {
     gap: 8,
   },
-  header: {
+  row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    gap: 8,
+  },
+  rowSpaceBetween: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   date: {
     fontSize: 14,
+    color: '#6B7280',
+  },
+  competitionName: {
+    fontSize: 16,
     fontWeight: '600',
     color: '#111827',
+    flexShrink: 1,
+  },
+  place: {
+    fontSize: 13,
+    color: '#6B7280',
+    flexShrink: 1,
   },
   poolType: {
     fontSize: 12,
@@ -133,36 +140,15 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 12,
   },
-  competitionName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginTop: 4,
-  },
-  recordInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-  },
   style: {
-    fontSize: 14,
-    color: '#6B7280',
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2563EB',
   },
   time: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#2563EB',
-  },
-  placeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
-  },
-  place: {
-    fontSize: 14,
-    color: '#6B7280',
   },
 })
 

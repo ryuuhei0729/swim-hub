@@ -32,10 +32,27 @@ export const SWIM_STYLES = [
 ] as const
 
 /**
- * 泳法スタイルを日本語ラベルに変換
- * @param styleValue - DB保存値（"Fr", "Ba", "Br", "Fly", "IM"）
- * @returns 日本語名（自由形、背泳ぎ等）
+ * タイム平均フォーマット関数
+ * 秒数を「分:秒.小数」形式に変換（平均値用）
  */
+export const formatTimeAverage = (seconds: number): string => {
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = (seconds % 60).toFixed(2)
+  return minutes > 0 ? `${minutes}:${remainingSeconds.padStart(5, '0')}` : remainingSeconds
+}
+
+/**
+ * 色の明度に基づいてテキスト色を決定
+ */
+export const getTextColorForBackground = (backgroundColor: string): string => {
+  const hex = backgroundColor.replace('#', '')
+  const r = parseInt(hex.substr(0, 2), 16)
+  const g = parseInt(hex.substr(2, 2), 16)
+  const b = parseInt(hex.substr(4, 2), 16)
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000
+  return brightness > 128 ? '#000000' : '#FFFFFF'
+}
+
 export const getStyleLabel = (styleValue: string | null | undefined): string => {
   if (!styleValue) return '不明'
   const style = SWIM_STYLES.find(s => s.value === styleValue)

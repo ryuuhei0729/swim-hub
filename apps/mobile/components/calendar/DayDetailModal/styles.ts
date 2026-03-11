@@ -52,42 +52,48 @@ export const styles = StyleSheet.create({
   },
   bodyContent: {
     paddingBottom: 20,
+    flexGrow: 1,
   },
   emptyContainer: {
-    padding: 40,
-    alignItems: 'center',
+    padding: 16,
+    paddingTop: 16,
+    flex: 1,
   },
   emptyTextMain: {
     fontSize: 16,
     color: '#6B7280',
     marginBottom: 24,
+    textAlign: 'center',
   },
   addButtonContainer: {
-    width: '100%',
+    flex: 1,
+    flexDirection: 'row',
     gap: 12,
   },
   addButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    flex: 1,
+    paddingHorizontal: 16,
     borderRadius: 8,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
   },
-  addPracticeButton: {
-    backgroundColor: '#10B981',
+  addRecordCardButton: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
   },
-  addRecordButton: {
-    backgroundColor: '#2563EB',
+  addPracticeCardButton: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
   },
-  addButtonIcon: {
-    marginRight: 0,
+  addButtonCardIcon: {
+    marginBottom: 8,
   },
-  addButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+  addButtonCardText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
   },
   entriesContainer: {
     padding: 16,

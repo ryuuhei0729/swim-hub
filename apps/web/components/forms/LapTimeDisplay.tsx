@@ -45,6 +45,13 @@ export function LapTimeDisplay({ splitTimes, raceDistance }: LapTimeDisplayProps
     return getLapIntervalsForRace(raceDistance)
   }, [raceDistance])
 
+  // データが1つもないintervalは列ごと非表示にする
+  const visibleLapIntervals = useMemo(() => {
+    return lapIntervals.filter(interval =>
+      raceLapTimesTable.some(row => row.lapTimes[interval] != null)
+    )
+  }, [lapIntervals, raceLapTimesTable])
+
   const tabs: Tab[] = [
     { id: 'race', label: '距離別 Lap' },
     { id: 'all', label: 'All Lap' }
@@ -107,7 +114,7 @@ export function LapTimeDisplay({ splitTimes, raceDistance }: LapTimeDisplayProps
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                         Split Time
                       </th>
-                      {lapIntervals.map((interval) => (
+                      {visibleLapIntervals.map((interval) => (
                         <th
                           key={interval}
                           className="px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider"
@@ -126,7 +133,7 @@ export function LapTimeDisplay({ splitTimes, raceDistance }: LapTimeDisplayProps
                         <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
                           {row.splitTime !== null ? formatTimeBest(row.splitTime) : '-'}
                         </td>
-                        {lapIntervals.map((interval) => (
+                        {visibleLapIntervals.map((interval) => (
                           <td
                             key={interval}
                             className="px-3 py-2 whitespace-nowrap text-sm text-gray-900"

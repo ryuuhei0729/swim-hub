@@ -86,7 +86,22 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">6. 免責事項</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">6. 有料プラン（サブスクリプション）</h2>
+            <p className="text-gray-700 leading-relaxed mb-3">
+              当サービスでは、追加機能を利用できる有料プラン（以下「プレミアムプラン」）を提供しています。
+            </p>
+            <ul className="list-disc list-inside space-y-2 text-gray-700 ml-4">
+              <li>プレミアムプランの料金は、月額プラン（¥500/月）および年額プラン（¥5,000/年）です。料金は変更される場合があり、変更時は事前に通知いたします。</li>
+              <li>サブスクリプションは、現在の期間が終了する少なくとも24時間前にキャンセルしない限り、同じ条件で自動的に更新されます。</li>
+              <li>初回登録時には7日間の無料トライアル期間が設けられます。トライアル期間中にキャンセルしない場合、トライアル終了後に自動的に課金が開始されます。</li>
+              <li>Web経由でのお支払いにはStripeを使用し、モバイルアプリでのお支払いにはApple App Store / Google Playのアプリ内課金（RevenueCat経由）を使用します。</li>
+              <li>解約はいつでも可能です。Web経由の場合はStripeカスタマーポータルから、モバイルの場合は各ストアのサブスクリプション管理画面から行えます。解約後も、現在の課金期間が終了するまでプレミアム機能をご利用いただけます。</li>
+              <li>返金については、各決済プラットフォーム（Stripe、Apple App Store、Google Play）のポリシーに準じます。</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">7. 免責事項</h2>
             <p className="text-gray-700 leading-relaxed mb-3">
               当サービスは、以下の事項について一切の責任を負いません：
             </p>
@@ -99,7 +114,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">7. サービスの変更・終了</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">8. サービスの変更・終了</h2>
             <p className="text-gray-700 leading-relaxed">
               当サービスは、ユーザーへの事前通知なく、サービスの内容を変更し、または提供を終了することができるものとします。
               当サービスがサービスを終了する場合、可能な限り事前に通知いたします。
@@ -107,7 +122,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">8. 規約の変更</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">9. 規約の変更</h2>
             <p className="text-gray-700 leading-relaxed">
               当サービスは、必要に応じて、本規約を変更することができるものとします。
               変更後の規約は、当サービス上に掲載した時点で効力を生じるものとします。
@@ -116,7 +131,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">9. 準拠法・管轄裁判所</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">10. 準拠法・管轄裁判所</h2>
             <p className="text-gray-700 leading-relaxed">
               本規約の解釈にあたっては、日本法を準拠法とします。
               本規約に起因しまたは関連する一切の紛争については、当サービス提供者の所在地を管轄する裁判所を専属的合意管轄とします。
@@ -124,7 +139,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">10. お問い合わせ</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">11. お問い合わせ</h2>
             <p className="text-gray-700 leading-relaxed">
               本規約に関するご質問やご意見がございましたら、
               <Link href="/contact" className="text-blue-600 hover:text-blue-800 underline">
