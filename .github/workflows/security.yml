@@ -8,59 +8,65 @@ on:
   schedule:
     - cron: '0 2 * * 1' # Weekly on Monday at 2 AM
 
+permissions:
+  contents: read
+
 jobs:
   security-audit:
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 10
+
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
-      
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
     - name: Setup Node.js and Install dependencies
       uses: ./.github/actions/setup-node
       with:
         node-version: '20.x'
-      
-    - name: Run pnpm audit (high severity)
-      run: pnpm audit --audit-level high --json > audit-report.json
-      continue-on-error: false
 
-    - name: Summarize audit results
-      if: always()
+    - name: Run pnpm audit
+      run: pnpm audit --json > audit-report.json || true
+
+    - name: Check for high/critical vulnerabilities
       run: |
         if [ ! -f audit-report.json ]; then
           echo '監査レポートが生成されませんでした。' >> "$GITHUB_STEP_SUMMARY"
           exit 0
         fi
-        echo '### npm audit summary' >> "$GITHUB_STEP_SUMMARY"
-        finding_count=$(jq '.vulnerabilities | to_entries | map(select(.value.count > 0)) | length' audit-report.json)
-        if [ "$finding_count" -eq 0 ]; then
-          echo '- 脆弱性は検出されませんでした。' >> "$GITHUB_STEP_SUMMARY"
-        else
-          jq -r '.vulnerabilities | to_entries | select(.value.count > 0) | "- " + .key + ": 件数 " + (.value.count|tostring)' audit-report.json >> "$GITHUB_STEP_SUMMARY"
+        echo '### pnpm audit summary' >> "$GITHUB_STEP_SUMMARY"
+        # pnpm audit JSON: advisories オブジェクトから high/critical を抽出
+        high_critical=$(jq '[.advisories // {} | to_entries[] | select(.value.severity == "high" or .value.severity == "critical")] | length' audit-report.json)
+        total=$(jq '[.advisories // {} | to_entries[]] | length' audit-report.json)
+        echo "- 検出された脆弱性: ${total} 件 (high/critical: ${high_critical} 件)" >> "$GITHUB_STEP_SUMMARY"
+        if [ "$high_critical" -gt 0 ]; then
+          jq -r '.advisories // {} | to_entries[] | select(.value.severity == "high" or .value.severity == "critical") | "- \(.value.module_name): \(.value.severity) - \(.value.title)"' audit-report.json >> "$GITHUB_STEP_SUMMARY"
+          echo "❌ high/critical の脆弱性が ${high_critical} 件見つかりました"
+          exit 1
         fi
-      continue-on-error: true
+        echo '✅ high/critical の脆弱性はありません' >> "$GITHUB_STEP_SUMMARY"
 
     - name: アーティファクトとして監査結果を保存
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
-        name: npm-audit-report
+        name: pnpm-audit-report
         path: audit-report.json
         if-no-files-found: ignore
 
   trivy-scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       security-events: write
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # master
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -81,18 +87,16 @@ jobs:
           fi
 
       - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@dd677812177e0c29f9c970a6c58d8607ae1bfefd # v4
         if: always() && steps.check-sarif-fs.outputs.exists == 'true'
         with:
           sarif_file: 'trivy-results.sarif'
 
       - name: Run Trivy filesystem scan (summary)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # master
         with:
           scan-type: 'fs'
           scan-ref: '.'
           format: 'table'
           severity: 'CRITICAL,HIGH'
           exit-code: '0'
-
-

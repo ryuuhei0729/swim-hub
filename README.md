@@ -55,7 +55,7 @@
 | Infrastructure | Cloudflare Workers (web), Supabase (DB), Cloudflare R2 (Storage) |
 | Database | PostgreSQL (Supabase) |
 | Monitoring | Supabase Logs, Cloudflare Analytics |
-| Environment setup | Supabase CLI, npm scripts |
+| Environment setup | Supabase CLI, pnpm scripts |
 | CI/CD | GitHub Actions, CodeRabbit Review |
 | Design | Figma（UIモック）, Lucidchart（フロー図） |
 | test | Playwright, Vitest |

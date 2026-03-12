@@ -29,7 +29,7 @@ function getLocalSupabaseEnv(): SupabaseEnv | null {
     // __dirnameは apps/web/e2e/src/config なので、
     // リポジトリルート（supabase/ がある場所）に到達するには ../../../../.. が必要
     const result = execSync(
-      'npx supabase status --workdir supabase -o json',
+      'pnpm exec supabase status --workdir supabase -o json',
       {
         cwd: path.resolve(__dirname, '../../../../..'),
         encoding: 'utf8',

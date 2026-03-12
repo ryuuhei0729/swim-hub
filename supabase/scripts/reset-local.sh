@@ -51,7 +51,7 @@ echo "1/4 supabase db reset（Supabase内部初期化）..."
 echo ""
 
 cd "$PROJECT_DIR"
-npx supabase db reset --workdir supabase || true
+pnpm exec supabase db reset --workdir supabase || true
 
 # DBが使えるようになるまで待機
 echo ""
@@ -64,7 +64,7 @@ for i in $(seq 1 15); do
   if [ "$i" -eq 15 ]; then
     echo "エラー: DBに接続できません"
     echo "Supabaseが起動しているか確認してください:"
-    echo "  npx supabase start --workdir supabase"
+    echo "  pnpm exec supabase start --workdir supabase"
     exit 1
   fi
   sleep 2

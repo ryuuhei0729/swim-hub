@@ -185,7 +185,7 @@ Supabase Dashboard > Authentication > Providers で以下を設定：
 
 #### モバイル
 ```bash
-npx expo install expo-apple-authentication
+pnpm exec expo install expo-apple-authentication
 ```
 
 #### Web

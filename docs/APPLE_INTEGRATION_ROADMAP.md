@@ -98,7 +98,7 @@ const handleAppleAuth = async () => {
 
 ```bash
 cd apps/mobile
-npx expo install expo-apple-authentication
+pnpm exec expo install expo-apple-authentication
 ```
 
 #### app.json / app.config.js 設定
@@ -186,7 +186,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 
 ```bash
 cd apps/mobile
-npx expo install expo-calendar
+pnpm exec expo install expo-calendar
 ```
 
 #### app.json 権限設定

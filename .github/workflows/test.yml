@@ -5,9 +5,17 @@ on:
   schedule:
     - cron: '0 21 * * *' # 毎日06:00 JST に実行
 
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   regression-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     strategy:
       fail-fast: false
@@ -16,7 +24,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
     - name: Setup Node.js and Install dependencies
       uses: ./.github/actions/setup-node
@@ -33,7 +41,7 @@ jobs:
       run: pnpm --filter @swim-hub/web test
 
     - name: Install Playwright browsers
-      run: npx playwright install --with-deps
+      run: pnpm exec playwright install --with-deps
 
     - name: Run E2E tests
       run: pnpm --filter @swim-hub/web test:e2e
@@ -46,7 +54,7 @@ jobs:
 
     - name: Upload coverage to Codecov
       if: ${{ matrix.node-version == '20.x' }}
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
       with:
         files: ./apps/shared/coverage/lcov.info,./apps/web/coverage/lcov.info
         flags: nightly

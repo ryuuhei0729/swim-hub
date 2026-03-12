@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+permissions:
+  contents: read
+
 concurrency:
   # PRとpushで同じグループ名を使用することで重複実行を防ぐ
   # PRの場合はheadブランチ、pushの場合はrefを使用
@@ -19,8 +22,9 @@ env:
 jobs:
   setup:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
     - name: Setup Node.js and Install dependencies
       uses: ./.github/actions/setup-node
@@ -28,7 +32,7 @@ jobs:
         node-version: ${{ env.NODE_VERSION }}
 
     - name: Upload node_modules artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: node-modules
         path: |
@@ -40,12 +44,13 @@ jobs:
   lint:
     needs: setup
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
     - name: Download node_modules artifact
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       with:
         name: node-modules
         path: .
@@ -63,12 +68,13 @@ jobs:
   type-check:
     needs: setup
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
     - name: Download node_modules artifact
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       with:
         name: node-modules
         path: .
@@ -84,6 +90,7 @@ jobs:
   unit-tests:
     needs: [lint, type-check]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     strategy:
       fail-fast: false
@@ -91,10 +98,10 @@ jobs:
         node-version: [ 20.x, 22.x ]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
     - name: Download node_modules artifact
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       with:
         name: node-modules
         path: .
@@ -126,10 +133,10 @@ jobs:
         shard: [1, 2]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
     - name: Restore Playwright browsers cache
-      uses: actions/cache@v4
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       with:
         path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
         key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -137,7 +144,7 @@ jobs:
           playwright-${{ runner.os }}-
 
     - name: Restore Next.js build cache
-      uses: actions/cache@v4
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       with:
         path: |
           apps/web/.next/cache
@@ -147,7 +154,7 @@ jobs:
           nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
 
     - name: Download node_modules artifact
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       with:
         name: node-modules
         path: .
@@ -158,13 +165,13 @@ jobs:
         node-version: ${{ env.NODE_VERSION }}
 
     - name: Install Playwright browsers
-      run: npx playwright install --with-deps
+      run: pnpm exec playwright install --with-deps
 
     - name: Configure Supabase for CI environment
       run: |
         # CI環境用の設定を準備
         echo "🔧 CI環境用のSupabase設定を準備中..."
-        
+
         # CI環境でGoogle OAuthを無効化（JWT署名鍵はデフォルトを使用）
         echo "🔒 Google OAuthを無効化中..."
         # [auth.external.google]セクションのenabled = trueをfalseに変更
@@ -179,7 +186,7 @@ jobs:
         SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: "dummy-secret"
 
     - name: Start Supabase stack
-      run: npx supabase start --workdir supabase
+      run: pnpm exec supabase start --workdir supabase
       timeout-minutes: 5
       env:
         SUPABASE_DB_PASSWORD: postgres
@@ -204,21 +211,21 @@ jobs:
         # データベースを直接リセット（コンテナ再起動なし）
         # これにより、コンテナ再起動時のJWT署名鍵読み込み問題を回避
         echo "🔄 データベースをリセット中..."
-        
+
         DB_CONTAINER=$(docker ps --filter "name=supabase_db" --format "{{.Names}}" | head -n 1)
         if [ -z "$DB_CONTAINER" ]; then
           echo "❌ データベースコンテナが見つかりません"
           exit 1
         fi
-        
+
         echo "📦 データベースコンテナ: $DB_CONTAINER"
-        
+
         # データベースをリセット（すべてのスキーマを削除）
         docker exec "$DB_CONTAINER" psql -U postgres -d postgres -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO postgres; GRANT ALL ON SCHEMA public TO public;" || {
           echo "⚠️ データベースリセットに失敗しました"
           exit 1
         }
-        
+
         echo "✅ データベースのリセットが完了しました"
       env:
         SUPABASE_DB_PASSWORD: postgres
@@ -243,20 +250,20 @@ jobs:
     - name: Refresh PostgREST schema cache
       run: |
         echo "📡 PostgRESTスキーマキャッシュをリフレッシュ中..."
-        
+
         # デバッグ: すべてのSupabaseコンテナを確認
         echo "🔍 実行中のSupabaseコンテナ一覧:"
         docker ps --format "{{.Names}}" | grep -E "supabase|postgres" || echo "コンテナが見つかりません"
-        
+
         # 最も確実な方法: PostgRESTコンテナを再起動してスキーマキャッシュを強制的にリフレッシュ
         # supabase_restで始まるコンテナを検索（PostgRESTコンテナ）
         PGRST_CONTAINER=$(docker ps --filter "name=supabase_rest" --format "{{.Names}}" | head -n 1)
-        
+
         # もし見つからない場合、restを含むコンテナを検索
         if [ -z "$PGRST_CONTAINER" ]; then
           PGRST_CONTAINER=$(docker ps --format "{{.Names}}" | grep -i "rest" | head -n 1)
         fi
-        
+
         if [ -n "$PGRST_CONTAINER" ]; then
           echo "🔄 PostgRESTコンテナを再起動: $PGRST_CONTAINER"
           docker restart "$PGRST_CONTAINER"
@@ -274,7 +281,7 @@ jobs:
             echo "⚠️ コンテナが見つかりません。スキップします。"
           fi
         fi
-        
+
         # PostgRESTが応答するまで待機（最大30秒）
         echo "📡 PostgREST接続確認..."
         for i in {1..30}; do
@@ -302,19 +309,20 @@ jobs:
 
     - name: Stop Supabase stack
       if: always()
-      run: npx supabase stop --workdir supabase
+      run: pnpm exec supabase stop --workdir supabase
 
   build:
     needs: [unit-tests, e2e-tests]
     # e2e-testsがスキップされた場合でも実行
     if: always() && needs.unit-tests.result == 'success' && (needs.e2e-tests.result == 'success' || needs.e2e-tests.result == 'skipped')
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
     - name: Download node_modules artifact
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       with:
         name: node-modules
         path: .
@@ -329,10 +337,10 @@ jobs:
       run: |
         if [ "${{ github.ref }}" = "refs/heads/main" ]; then
           echo "=== Building with .env.production ==="
-          npx @dotenvx/dotenvx run -f .env.production -- npx opennextjs-cloudflare build
+          pnpm exec dotenvx run -f .env.production -- pnpm exec opennextjs-cloudflare build
         else
           echo "=== Building with .env.development ==="
-          npx @dotenvx/dotenvx run -f .env.development -- npx opennextjs-cloudflare build
+          pnpm exec dotenvx run -f .env.development -- pnpm exec opennextjs-cloudflare build
         fi
       env:
         DOTENV_PRIVATE_KEY_PRODUCTION: ${{ secrets.DOTENV_PRIVATE_KEY_PRODUCTION }}
@@ -345,7 +353,7 @@ jobs:
         ls -la .open-next || echo ".open-next directory not found"
 
     - name: Upload build output artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: build-output
         path: |
@@ -359,19 +367,23 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: needs.build.result == 'success' && github.ref == 'refs/heads/main' && github.event_name == 'push'
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
     - name: Download node_modules artifact
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       with:
         name: node-modules
         path: .
 
     - name: Download build output artifact
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       with:
         name: build-output
         path: apps/web
@@ -404,19 +416,23 @@ jobs:
   deploy-preview:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: needs.build.result == 'success' && github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    concurrency:
+      group: deploy-preview
+      cancel-in-progress: false
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
     - name: Download node_modules artifact
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       with:
         name: node-modules
         path: .
 
     - name: Download build output artifact
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       with:
         name: build-output
         path: apps/web
@@ -431,7 +447,7 @@ jobs:
       run: |
         # 暗号化された.env.developmentをリネームしてOpenNextが読まないようにする
         mv .env.development .env.development.skip || true
-        npx wrangler deploy --env preview
+        pnpm exec wrangler deploy --env preview
       env:
         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
