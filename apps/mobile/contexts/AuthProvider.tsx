@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@swim-hub/shared/types'
-import type { AuthState, AuthContextType } from '@swim-hub/shared/types/auth'
+import type { AuthState, AuthContextType, SubscriptionInfo } from '@swim-hub/shared/types/auth'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getQueryClient } from '@/providers/QueryProvider'
 
@@ -11,8 +11,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
     session: null,
-    loading: true
+    loading: true,
+    subscription: null
   })
+
+  // サブスクリプション情報を取得
+  const fetchSubscription = useCallback(async (userId: string): Promise<SubscriptionInfo | null> => {
+    if (!supabase) return null
+    try {
+      const { data, error } = await supabase
+        .from('user_subscriptions')
+        .select('plan, status, cancel_at_period_end, premium_expires_at, trial_end')
+        .eq('user_id', userId)
+        .single() as { data: { plan: string; status: string | null; cancel_at_period_end: boolean | null; premium_expires_at: string | null; trial_end: string | null } | null; error: unknown }
+      if (error || !data) return { plan: 'free', status: null, cancelAtPeriodEnd: false, premiumExpiresAt: null, trialEnd: null }
+      return {
+        plan: data.plan as 'free' | 'premium',
+        status: data.status as SubscriptionInfo['status'],
+        cancelAtPeriodEnd: data.cancel_at_period_end ?? false,
+        premiumExpiresAt: data.premium_expires_at ?? null,
+        trialEnd: data.trial_end ?? null,
+      }
+    } catch {
+      return { plan: 'free', status: null, cancelAtPeriodEnd: false, premiumExpiresAt: null, trialEnd: null }
+    }
+  }, [])
+
+  // サブスクリプション情報を再取得（外部から呼び出し可能）
+  const refreshSubscription = useCallback(async () => {
+    if (!authState.user) return
+    const subscription = await fetchSubscription(authState.user.id)
+    setAuthState(prev => ({ ...prev, subscription }))
+  }, [authState.user, fetchSubscription])
 
   // ログイン
   const signIn = useCallback(async (email: string, password: string) => {
@@ -219,7 +249,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setAuthState({
         user: null,
         session: null,
-        loading: false
+        loading: false,
+        subscription: null
       })
       return
     }
@@ -245,13 +276,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         clearTimeout(timeoutId)
-        
+
+        let subInfo: SubscriptionInfo | null = null
+        if (session?.user) {
+          subInfo = await fetchSubscription(session.user.id)
+        }
+
         setAuthState({
           user: session?.user ?? null,
           session,
-          loading: false
+          loading: false,
+          subscription: subInfo
         })
-        
+
         // ログアウト時は全てのキャッシュをクリア（セキュリティとデータ整合性のため）
         if (event === 'SIGNED_OUT') {
           const queryClient = getQueryClient()
@@ -284,13 +321,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     )
 
     // 初期セッションを明示的に取得（onAuthStateChangeが呼ばれない場合のフォールバック）
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (isMounted) {
         clearTimeout(timeoutId)
+        let subInfo: SubscriptionInfo | null = null
+        if (session?.user) {
+          subInfo = await fetchSubscription(session.user.id)
+        }
         setAuthState({
           user: session?.user ?? null,
           session,
-          loading: false
+          loading: false,
+          subscription: subInfo
         })
       }
     }).catch((error) => {
@@ -300,7 +342,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setAuthState({
           user: null,
           session: null,
-          loading: false
+          loading: false,
+          subscription: null
         })
       }
     })
@@ -311,7 +354,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       clearTimeout(timeoutId)
       subscription.unsubscribe()
     }
-  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchSubscription])
 
   // supabaseがnullの場合のフォールバック（実際には使用されない）
   const value: AuthContextType = {
@@ -324,6 +368,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resetPassword,
     updatePassword,
     updateProfile,
+    refreshSubscription,
     isAuthenticated: !!authState.user
   }
 
