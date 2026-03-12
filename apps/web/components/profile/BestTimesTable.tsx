@@ -9,7 +9,7 @@ import { Tabs } from '../ui/Tabs'
 export interface BestTime {
   id: string
   time: number
-  created_at: string
+  created_at: string | null
   pool_type: number // 0: 短水路, 1: 長水路
   is_relaying: boolean
   note?: string // 備考（一括登録時に使用）
@@ -18,17 +18,17 @@ export interface BestTime {
     distance: number
   }
   competition?: {
-    title: string
+    title: string | null
     date: string
   }
   // 引き継ぎありのタイム（オプショナル）
   relayingTime?: {
     id: string
     time: number
-    created_at: string
+    created_at: string | null
     note?: string
     competition?: {
-      title: string
+      title: string | null
       date: string
     }
   }
@@ -294,14 +294,14 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
                       <div className={`group relative inline-block pt-1 sm:pt-2 ${(() => {
                         // 一括登録（competition なし）は New 表示対象外
                         if (!bestTime.competition) return ''
-                        const createdAt = parseISO(bestTime.created_at)
+                        const createdAt = bestTime.created_at ? parseISO(bestTime.created_at) : new Date(0)
                         const isNew = differenceInDays(new Date(), createdAt) <= 30
                         return isNew ? 'pr-4 sm:pr-6' : ''
                       })()}`}>
                         {(() => {
                           // 一括登録（competition なし）は New 表示対象外
                           if (!bestTime.competition) return null
-                          const createdAt = parseISO(bestTime.created_at)
+                          const createdAt = bestTime.created_at ? parseISO(bestTime.created_at) : new Date(0)
                           const isNew = differenceInDays(new Date(), createdAt) <= 30
                           return isNew ? (
                             <span className="absolute -top-0.5 sm:-top-1 -right-2 sm:-right-3 text-[8px] sm:text-[10px] md:text-xs bg-red-500 text-white px-1 sm:px-1.5 py-0.5 rounded-full shadow">New</span>
@@ -311,7 +311,7 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
                         <span className={`font-semibold text-xs sm:text-base md:text-lg ${(() => {
                           // 一括登録（competition なし）は New 表示対象外
                           if (!bestTime.competition) return 'text-gray-900'
-                          const createdAt = parseISO(bestTime.created_at)
+                          const createdAt = bestTime.created_at ? parseISO(bestTime.created_at) : new Date(0)
                           return differenceInDays(new Date(), createdAt) <= 30 ? 'text-red-600' : 'text-gray-900'
                         })()}`}>
                           {(() => {

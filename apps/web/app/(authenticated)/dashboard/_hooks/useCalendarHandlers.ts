@@ -87,31 +87,25 @@ export function useCalendarHandlers({
     const dateObj = parseDateString(item.date)
 
     if (item.type === 'practice' || item.type === 'team_practice') {
-      // 練習編集時は画像情報を取得（practice_imagesテーブルから）
+      // 練習編集時は画像情報を取得（practices.image_pathsから）
       let itemWithImages = item
       if (item.id) {
         try {
-          type PracticeImageRow = {
-            id: string
-            thumbnail_path: string
-            original_path: string
-            file_name: string
-            display_order: number
-          }
-          const { data: practiceImagesData } = await supabase
-            .from('practice_images')
-            .select('id, thumbnail_path, original_path, file_name, display_order')
-            .eq('practice_id', item.id)
-            .order('display_order', { ascending: true })
+          const { data: practiceData } = await supabase
+            .from('practices')
+            .select('image_paths')
+            .eq('id', item.id)
+            .single()
 
-          const practiceImages = (practiceImagesData || []) as PracticeImageRow[]
+          const practice = practiceData as { image_paths?: string[] | null } | null
+          const imagePaths = (Array.isArray(practice?.image_paths) ? practice.image_paths : []) as string[]
 
-          if (practiceImages.length > 0) {
-            const formattedImages = practiceImages.map((img) => ({
-              id: img.id,
-              thumbnailUrl: supabase.storage.from('practice-images').getPublicUrl(img.thumbnail_path).data.publicUrl,
-              originalUrl: supabase.storage.from('practice-images').getPublicUrl(img.original_path).data.publicUrl,
-              fileName: img.file_name
+          if (imagePaths.length > 0) {
+            const formattedImages = imagePaths.map((path, index) => ({
+              id: path,
+              thumbnailUrl: supabase.storage.from('practice-images').getPublicUrl(path).data.publicUrl,
+              originalUrl: supabase.storage.from('practice-images').getPublicUrl(path).data.publicUrl,
+              fileName: path.split('/').pop() || `image-${index}`
             }))
 
             // itemに画像情報を追加
@@ -204,8 +198,8 @@ export function useCalendarHandlers({
       let itemWithImages = item
       if (item.id) {
         try {
-          const { data: competitionData } = await (supabase
-            .from('competitions') as ReturnType<typeof supabase.from>)
+          const { data: competitionData } = await supabase
+            .from('competitions')
             .select('image_paths')
             .eq('id', item.id)
             .single()

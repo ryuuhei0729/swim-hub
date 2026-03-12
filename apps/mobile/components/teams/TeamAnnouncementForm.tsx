@@ -40,7 +40,7 @@ export const TeamAnnouncementForm: React.FC<TeamAnnouncementFormProps> = ({
     if (editData) {
       setTitle(editData.title)
       setContent(editData.content)
-      setIsPublished(editData.is_published)
+      setIsPublished(editData.is_published ?? true)
     } else {
       setTitle('')
       setContent('')

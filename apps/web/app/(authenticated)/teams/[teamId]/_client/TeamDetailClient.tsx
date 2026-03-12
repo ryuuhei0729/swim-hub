@@ -162,7 +162,7 @@ export default function TeamDetailClient({
                   />
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(displayTeam.invite_code)
+                      navigator.clipboard.writeText(displayTeam.invite_code || '')
                       setIsCopied(true)
                       setTimeout(() => setIsCopied(false), 2000)
                     }}

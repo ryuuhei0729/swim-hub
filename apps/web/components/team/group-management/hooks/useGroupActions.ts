@@ -19,8 +19,9 @@ export const useGroupActions = (teamId: string, supabase: SupabaseClient, onSucc
       const result = await api.create({
         team_id: teamId,
         category,
+        description: null,
         name,
-        created_by: '', // APIが上書きする
+        created_by: null, // APIが上書きする
       })
       onSuccess?.()
       return result
@@ -48,8 +49,9 @@ export const useGroupActions = (teamId: string, supabase: SupabaseClient, onSucc
           await api.create({
             team_id: teamId,
             category,
+            description: null,
             name,
-            created_by: '',
+            created_by: null,
           })
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : '作成に失敗'

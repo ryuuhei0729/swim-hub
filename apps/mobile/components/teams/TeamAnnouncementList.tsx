@@ -89,7 +89,7 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
                     </Text>
                     <View style={styles.announcementMeta}>
                       <Text style={styles.announcementDate}>
-                        {formatDate(item.created_at)}
+                        {item.created_at ? formatDate(item.created_at) : '-'}
                       </Text>
                       {!isPublished && (
                         <View style={styles.draftBadge}>

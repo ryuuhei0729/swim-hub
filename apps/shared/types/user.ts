@@ -19,8 +19,8 @@ export interface UserProfile {
   ios_calendar_enabled: boolean
   ios_calendar_sync_practices: boolean
   ios_calendar_sync_competitions: boolean
-  created_at: string
-  updated_at: string
+  created_at: string | null
+  updated_at: string | null
 }
 
 export type UserInsert = Omit<UserProfile, 'id' | 'created_at' | 'updated_at'>

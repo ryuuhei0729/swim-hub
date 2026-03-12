@@ -32,8 +32,8 @@ export async function GET() {
     const { data: subscription, error: subError } = await supabase
       .from('user_subscriptions')
       .select('plan, status, cancel_at_period_end, premium_expires_at, trial_end')
-      .eq('user_id', user.id)
-      .single()
+      .eq('id', user.id)
+      .single() as { data: { plan: string; status: string | null; cancel_at_period_end: boolean | null; premium_expires_at: string | null; trial_end: string | null } | null; error: { code?: string; message?: string } | null }
 
     if (subError && subError.code !== 'PGRST116') {
       // PGRST116 = "no rows found" は正常（未登録ユーザー）
@@ -57,7 +57,7 @@ export async function GET() {
       .from('app_daily_usage')
       .select('daily_tokens_used')
       .eq('user_id', user.id)
-      .eq('usage_date', todayJST)
+      .eq('usage_date', todayJST) as { data: { daily_tokens_used: number }[] | null; error: { message?: string } | null }
 
     if (usageError) {
       console.error('使用量取得エラー:', usageError)

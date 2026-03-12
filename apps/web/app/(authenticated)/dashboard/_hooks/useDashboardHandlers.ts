@@ -152,8 +152,8 @@ export function useDashboardHandlers({
 
           // Step 2: 既存のimage_pathsを取得
           // NOTE: Supabaseの型推論が環境によってneverになることがあるため、型アサーションを使用
-          const { data: currentPractice, error: selectError } = await (supabase
-            .from('practices') as ReturnType<typeof supabase.from>)
+          const { data: currentPractice, error: selectError } = await supabase
+            .from('practices')
             .select('image_paths')
             .eq('id', practiceId)
             .single()
@@ -172,9 +172,9 @@ export function useDashboardHandlers({
             ...uploadedPaths
           ]
 
-          const { error: updateError } = await (supabase
-            .from('practices') as ReturnType<typeof supabase.from>)
-            .update({ image_paths: newImagePaths } as Record<string, unknown>)
+          const { error: updateError } = await supabase
+            .from('practices')
+            .update({ image_paths: newImagePaths })
             .eq('id', practiceId)
 
           if (updateError) {
@@ -495,8 +495,8 @@ export function useDashboardHandlers({
 
           // Step 2: 既存のimage_pathsを取得
           // NOTE: Supabaseの型推論が環境によってneverになることがあるため、型アサーションを使用
-          const { data: currentCompetition, error: selectError } = await (supabase
-            .from('competitions') as ReturnType<typeof supabase.from>)
+          const { data: currentCompetition, error: selectError } = await supabase
+            .from('competitions')
             .select('image_paths')
             .eq('id', competitionId)
             .single()
@@ -515,9 +515,9 @@ export function useDashboardHandlers({
             ...uploadedPaths
           ]
 
-          const { error: updateError } = await (supabase
-            .from('competitions') as ReturnType<typeof supabase.from>)
-            .update({ image_paths: newImagePaths } as Record<string, unknown>)
+          const { error: updateError } = await supabase
+            .from('competitions')
+            .update({ image_paths: newImagePaths })
             .eq('id', competitionId)
 
           if (updateError) {

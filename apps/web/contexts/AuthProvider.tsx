@@ -39,7 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('user_subscriptions')
         .select('plan, status, cancel_at_period_end, premium_expires_at, trial_end')
         .eq('id', userId)
-        .single()
+        .single() as { data: { plan: string; status: string | null; cancel_at_period_end: boolean | null; premium_expires_at: string | null; trial_end: string | null } | null; error: unknown }
 
       if (error || !data) {
         return { plan: 'free', status: null, cancelAtPeriodEnd: false, premiumExpiresAt: null, trialEnd: null }
@@ -327,7 +327,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const { error } = await supabaseClient
         .from('users')
-        // @ts-expect-error: Supabaseの型推論がupdateでneverになる既知の問題のため
         .update(updates)
         .eq('id', authState.user.id)
 

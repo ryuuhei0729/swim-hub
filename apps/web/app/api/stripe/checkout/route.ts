@@ -30,8 +30,8 @@ export async function POST(request: NextRequest) {
     const { data: subscription } = await supabase
       .from('user_subscriptions')
       .select('trial_start')
-      .eq('user_id', user.id)
-      .single()
+      .eq('id', user.id)
+      .single() as { data: { trial_start: string | null } | null; error: unknown }
 
     const hasUsedTrial = subscription?.trial_start != null
 
@@ -63,10 +63,10 @@ export async function POST(request: NextRequest) {
       mode: 'subscription',
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
-      trial_period_days: hasUsedTrial ? undefined : 7,
       success_url: `${origin}/settings?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/settings`,
       subscription_data: {
+        trial_period_days: hasUsedTrial ? undefined : 7,
         metadata: {
           supabase_user_id: user.id,
         },
