@@ -32,8 +32,6 @@ export interface TeamMembership {
   is_active: boolean | null
   joined_at: string | null
   left_at: string | null
-  group_name: string | null
-  member_type: string | null
   created_at: string | null
   updated_at: string | null
 }

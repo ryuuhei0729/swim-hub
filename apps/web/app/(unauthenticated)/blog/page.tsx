@@ -56,13 +56,15 @@ export default function BlogPage() {
                 {post.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {post.tags.map((tag) => (
-                      <span
+                      <Link
                         key={tag}
-                        className="inline-flex items-center text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full"
+                        href={`/blog/tag/${encodeURIComponent(tag)}`}
+                        className="inline-flex items-center text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full hover:bg-blue-100 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <TagIcon className="w-3 h-3 mr-1" />
                         {tag}
-                      </span>
+                      </Link>
                     ))}
                   </div>
                 )}

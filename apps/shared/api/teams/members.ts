@@ -91,9 +91,7 @@ export class TeamMembersAPI {
       status: 'pending',
       is_active: false,
       joined_at: new Date().toISOString(),
-      left_at: null,
-      group_name: null,
-      member_type: null
+      left_at: null
     }
 
     const { data: membership, error } = await this.supabase
