@@ -22,7 +22,7 @@ jobs:
         node-version: '20.x'
       
     - name: Run pnpm audit (high severity)
-      run: pnpm audit --severity high --json > audit-report.json
+      run: pnpm audit --audit-level high --json > audit-report.json
       continue-on-error: false
 
     - name: Summarize audit results
