@@ -6,13 +6,28 @@
 import { AuthError, Session, SupabaseClient, User } from '@supabase/supabase-js'
 
 // =============================================================================
-// 1. 認証状態の型定義
+// 1. サブスクリプション型定義
+// =============================================================================
+
+export type SubscriptionStatus = 'trialing' | 'active' | 'canceled' | 'expired' | 'past_due'
+
+export interface SubscriptionInfo {
+  plan: 'free' | 'premium'
+  status: SubscriptionStatus | null
+  cancelAtPeriodEnd: boolean
+  premiumExpiresAt: string | null
+  trialEnd: string | null
+}
+
+// =============================================================================
+// 2. 認証状態の型定義
 // =============================================================================
 
 export interface AuthState {
   user: User | null
   session: Session | null
   loading: boolean
+  subscription: SubscriptionInfo | null
 }
 
 // =============================================================================
@@ -28,5 +43,6 @@ export interface AuthContextType extends AuthState {
   resetPassword: (email: string) => Promise<{ data: null; error: AuthError | null }>
   updatePassword: (newPassword: string) => Promise<{ data: { user: User } | null; error: AuthError | null }>
   updateProfile: (updates: Partial<import('./index').UserProfile>) => Promise<{ error: AuthError | null }>
+  refreshSubscription: () => Promise<void>
   isAuthenticated: boolean
 }

@@ -47,7 +47,8 @@
   "submit": {
     "production": {
       "ios": {
-        "ascAppId": "6756808731"
+        "ascAppId": "6756808731",
+        "appleId": "ryuuhei.hosoi@gmail.com"
       },
       "android": {
         "serviceAccountKeyPath": "./google-service-account-key.json"

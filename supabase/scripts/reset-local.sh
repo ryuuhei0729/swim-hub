@@ -41,7 +41,7 @@ else
   echo "モード: スキーマのみ（seed.sql が見つかりません）"
   echo ""
   echo "seedデータ付きでリセットするには、先に本番データをダンプしてください:"
-  echo "  npm run db:dump-prod"
+  echo "  pnpm run db:dump-prod"
   NO_SEED=true
 fi
 echo ""

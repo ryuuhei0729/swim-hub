@@ -24,25 +24,25 @@ jobs:
         node-version: ${{ matrix.node-version }}
 
     - name: Ensure Rollup native binaries are installed
-      run: npm install --no-save @rollup/rollup-linux-x64-gnu
+      run: pnpm add -D @rollup/rollup-linux-x64-gnu --filter @swim-hub/web || true
 
     - name: Run shared package tests
-      run: npm run test --workspace=apps/shared
+      run: pnpm --filter @swim-hub/shared test
 
     - name: Run web package tests
-      run: npm run test --workspace=apps/web
+      run: pnpm --filter @swim-hub/web test
 
     - name: Install Playwright browsers
       run: npx playwright install --with-deps
 
     - name: Run E2E tests
-      run: npm run test:e2e --workspace=apps/web
+      run: pnpm --filter @swim-hub/web test:e2e
 
     - name: Generate coverage report
       if: ${{ matrix.node-version == '20.x' }}
       run: |
-        npm run test:coverage --workspace=apps/shared
-        npm run test:coverage --workspace=apps/web
+        pnpm --filter @swim-hub/shared test:coverage
+        pnpm --filter @swim-hub/web test:coverage
 
     - name: Upload coverage to Codecov
       if: ${{ matrix.node-version == '20.x' }}

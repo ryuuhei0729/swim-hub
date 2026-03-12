@@ -78,13 +78,17 @@ export function useUserQuery(
               .single()
 
             if (createError) {
-              console.error('Failed to create profile:', createError)
+              if (process.env.NODE_ENV !== "production") {
+                console.error('Failed to create profile:', createError)
+              }
               return null
             }
 
             return newProfile as UserProfile
           } catch (createErr) {
-            console.error('Error creating profile:', createErr)
+            if (process.env.NODE_ENV !== "production") {
+              console.error('Error creating profile:', createErr)
+            }
             return null
           }
         }
@@ -231,13 +235,17 @@ export function useUserProfileQuery(
               .single()
 
             if (createError) {
-              console.error('Failed to create profile:', createError)
+              if (process.env.NODE_ENV !== "production") {
+                console.error('Failed to create profile:', createError)
+              }
               return null
             }
 
             return newProfile as UserProfile
           } catch (createErr) {
-            console.error('Error creating profile:', createErr)
+            if (process.env.NODE_ENV !== "production") {
+              console.error('Error creating profile:', createErr)
+            }
             return null
           }
         }

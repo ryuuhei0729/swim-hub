@@ -7,7 +7,7 @@ import type { Session } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
 import { getQueryClient } from '@/providers/QueryProvider'
-import { AuthState, AuthContextType } from '@swim-hub/shared/types/auth'
+import { AuthState, AuthContextType, SubscriptionInfo } from '@swim-hub/shared/types/auth'
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
@@ -27,8 +27,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
     session: null,
-    loading: true
+    loading: true,
+    subscription: null
   })
+
+  // サブスクリプション情報を取得
+  const fetchSubscription = useCallback(async (userId: string): Promise<SubscriptionInfo | null> => {
+    if (!supabaseClient) return null
+    try {
+      const { data, error } = await supabaseClient
+        .from('user_subscriptions')
+        .select('plan, status, cancel_at_period_end, premium_expires_at, trial_end')
+        .eq('id', userId)
+        .single()
+
+      if (error || !data) {
+        return { plan: 'free', status: null, cancelAtPeriodEnd: false, premiumExpiresAt: null, trialEnd: null }
+      }
+
+      return {
+        plan: data.plan as 'free' | 'premium',
+        status: data.status as SubscriptionInfo['status'],
+        cancelAtPeriodEnd: data.cancel_at_period_end ?? false,
+        premiumExpiresAt: data.premium_expires_at ?? null,
+        trialEnd: data.trial_end ?? null,
+      }
+    } catch {
+      return { plan: 'free', status: null, cancelAtPeriodEnd: false, premiumExpiresAt: null, trialEnd: null }
+    }
+  }, [supabaseClient])
+
+  // サブスクリプション情報を再取得（外部から呼び出し可能）
+  const refreshSubscription = useCallback(async () => {
+    if (!authState.user) return
+    const subscription = await fetchSubscription(authState.user.id)
+    setAuthState(prev => ({ ...prev, subscription }))
+  }, [authState.user, fetchSubscription])
 
 
   // ログイン
@@ -48,7 +82,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       return { data: data ? { user: data.user, session: data.session } : null, error: null }
     } catch (error) {
-      console.error('Sign in error:', error)
+      if (process.env.NODE_ENV !== "production") {
+        console.error('Sign in error:', error)
+      }
       return { data: null, error: error as import('@supabase/supabase-js').AuthError }
     }
   }, [supabaseClient])
@@ -91,7 +127,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       return { data: data ? { user: data.user, session: data.session } : null, error: null }
     } catch (error) {
-      console.error('Sign up error:', error)
+      if (process.env.NODE_ENV !== "production") {
+        console.error('Sign up error:', error)
+      }
       return { data: null, error: error as import('@supabase/supabase-js').AuthError }
     }
   }, [supabaseClient])
@@ -123,7 +161,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       
       if (error) {
-        console.error('OAuth signInWithOAuth error:', error)
+        if (process.env.NODE_ENV !== "production") {
+          console.error('OAuth signInWithOAuth error:', error)
+        }
         return { error: error as import('@supabase/supabase-js').AuthError }
       }
       
@@ -134,7 +174,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       return { error: null }
     } catch (error) {
-      console.error('OAuth sign in error:', error)
+      if (process.env.NODE_ENV !== "production") {
+        console.error('OAuth sign in error:', error)
+      }
       return { error: error as import('@supabase/supabase-js').AuthError }
     }
   }, [supabaseClient])
@@ -180,7 +222,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         useTeamAdminStore.getState().reset()
         useModalStore.getState().reset()
       } catch (error) {
-        console.warn('ストアのリセットに失敗:', error)
+        if (process.env.NODE_ENV !== "production") {
+          console.warn('ストアのリセットに失敗:', error)
+        }
       }
 
       // localStorage・sessionStorageをクリア
@@ -188,7 +232,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         window.localStorage.clear()
         window.sessionStorage.clear()
       } catch (error) {
-        console.warn('ストレージのクリアに失敗:', error)
+        if (process.env.NODE_ENV !== "production") {
+          console.warn('ストレージのクリアに失敗:', error)
+        }
       }
     }
   }, [])
@@ -210,7 +256,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return { error: null }
     } catch (error) {
-      console.error('Sign out error:', error)
+      if (process.env.NODE_ENV !== "production") {
+        console.error('Sign out error:', error)
+      }
       return { error: error as import('@supabase/supabase-js').AuthError }
     }
   }, [supabaseClient, clearAllClientState])
@@ -237,7 +285,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       return { data: null, error: null }
     } catch (error) {
-      console.error('Password reset error:', error)
+      if (process.env.NODE_ENV !== "production") {
+        console.error('Password reset error:', error)
+      }
       return { data: null, error: error as import('@supabase/supabase-js').AuthError }
     }
   }, [supabaseClient])
@@ -258,7 +308,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       return { data: data ? { user: data.user } : null, error: null }
     } catch (error) {
-      console.error('Password update error:', error)
+      if (process.env.NODE_ENV !== "production") {
+        console.error('Password update error:', error)
+      }
       return { data: null, error: error as import('@supabase/supabase-js').AuthError }
     }
   }, [supabaseClient])
@@ -285,7 +337,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return { error: null }
     } catch (error) {
-      console.error('Profile update error:', error)
+      if (process.env.NODE_ENV !== "production") {
+        console.error('Profile update error:', error)
+      }
       return { error: (error as unknown) as import('@supabase/supabase-js').AuthError }
     }
   }, [authState.user, supabaseClient])
@@ -299,18 +353,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let isMounted = true
 
     // 認証状態の変更を監視（初期セッション取得も含む）
-    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(
+    const { data: { subscription: authSubscription } } = supabaseClient.auth.onAuthStateChange(
       async (event: string, session: Session | null) => {
         if (!isMounted) {
           return
         }
-        
+
+        let subInfo: SubscriptionInfo | null = null
+        if (session?.user) {
+          subInfo = await fetchSubscription(session.user.id)
+        }
+
         setAuthState({
           user: session?.user ?? null,
           session,
-          loading: false
+          loading: false,
+          subscription: subInfo
         })
-        
+
         // ログイン/ログアウト時にページをリフレッシュ
         if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
           // ログアウト時は全てのキャッシュをクリア（外部要因によるサインアウトにも対応）
@@ -337,34 +397,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: { session }, error } = await supabaseClient.auth.getSession()
         if (isMounted) {
           if (error) {
-            console.error('初期セッション取得エラー:', error)
+            if (process.env.NODE_ENV !== "production") {
+              console.error('初期セッション取得エラー:', error)
+            }
             setAuthState({
               user: null,
               session: null,
-              loading: false
+              loading: false,
+              subscription: null
             })
           } else if (session) {
             const { data: { user } } = await supabaseClient.auth.getUser()
+            const currentUser = user ?? session.user
+            const subInfo = await fetchSubscription(currentUser.id)
             setAuthState({
-              user: user ?? session.user,
+              user: currentUser,
               session,
-              loading: false
+              loading: false,
+              subscription: subInfo
             })
           } else {
             setAuthState({
               user: null,
               session: null,
-              loading: false
+              loading: false,
+              subscription: null
             })
           }
         }
       } catch (error: unknown) {
-        console.error('初期セッション取得エラー:', error)
+        if (process.env.NODE_ENV !== "production") {
+          console.error('初期セッション取得エラー:', error)
+        }
         if (isMounted) {
           setAuthState({
             user: null,
             session: null,
-            loading: false
+            loading: false,
+            subscription: null
           })
         }
       }
@@ -384,12 +454,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // クリーンアップ関数
     return () => {
       isMounted = false
-      subscription.unsubscribe()
+      authSubscription.unsubscribe()
       if (retryTimer) {
         clearTimeout(retryTimer)
       }
     }
-  }, [router, supabaseClient, clearAllClientState])
+  }, [router, supabaseClient, clearAllClientState, fetchSubscription])
 
   const value: AuthContextType = {
     ...authState,
@@ -401,6 +471,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resetPassword,
     updatePassword,
     updateProfile,
+    refreshSubscription,
     isAuthenticated: !!authState.user
   }
 

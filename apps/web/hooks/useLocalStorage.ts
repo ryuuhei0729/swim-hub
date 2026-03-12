@@ -17,7 +17,9 @@ export function useLocalStorage<T>(key: string, initialValue: T, version = 1) {
       try {
         return JSON.parse(item)
       } catch (error) {
-        console.warn(`Corrupted localStorage key "${versionedKey}", removing:`, error)
+        if (process.env.NODE_ENV !== "production") {
+          console.warn(`Corrupted localStorage key "${versionedKey}", removing:`, error)
+        }
         window.localStorage.removeItem(versionedKey)
       }
     }
@@ -33,7 +35,9 @@ export function useLocalStorage<T>(key: string, initialValue: T, version = 1) {
           window.localStorage.setItem(versionedKey, JSON.stringify(parsed))
           return parsed
         } catch (error) {
-          console.warn(`Corrupted localStorage key "${legacyKey}", removing:`, error)
+          if (process.env.NODE_ENV !== "production") {
+            console.warn(`Corrupted localStorage key "${legacyKey}", removing:`, error)
+          }
           window.localStorage.removeItem(legacyKey)
         }
       }
@@ -60,7 +64,9 @@ export function useLocalStorage<T>(key: string, initialValue: T, version = 1) {
         window.localStorage.setItem(versionedKey, JSON.stringify(storedValue))
       }
     } catch (error) {
-      console.warn(`Error setting localStorage key "${versionedKey}":`, error)
+      if (process.env.NODE_ENV !== "production") {
+        console.warn(`Error setting localStorage key "${versionedKey}":`, error)
+      }
     }
   }, [storedValue, versionedKey])
 
@@ -77,7 +83,9 @@ export function useLocalStorage<T>(key: string, initialValue: T, version = 1) {
         window.localStorage.removeItem(versionedKey)
       }
     } catch (error) {
-      console.warn(`Error removing localStorage key "${versionedKey}":`, error)
+      if (process.env.NODE_ENV !== "production") {
+        console.warn(`Error removing localStorage key "${versionedKey}":`, error)
+      }
     }
   }, [initialValue, versionedKey])
 

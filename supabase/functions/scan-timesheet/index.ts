@@ -140,6 +140,40 @@ Deno.serve(async (req) => {
       return errorResponse('認証に失敗しました', 'AUTH_ERROR', 401)
     }
 
+    // --- トークンチェック ---
+    // user_subscriptions から plan, status を取得
+    const { data: subData } = await supabase
+      .from('user_subscriptions')
+      .select('plan, status')
+      .eq('id', user.id)
+      .single()
+
+    const isPremium = subData?.plan === 'premium' &&
+      (subData?.status === 'active' || subData?.status === 'trialing')
+
+    if (!isPremium) {
+      // 今日の日付 (JST)
+      const now = new Date()
+      const jstOffset = 9 * 60 * 60 * 1000
+      const jstDate = new Date(now.getTime() + jstOffset)
+      const today = jstDate.toISOString().split('T')[0]
+
+      // 全アプリ合計の今日のトークン使用数
+      const { data: usageData } = await supabase
+        .from('app_daily_usage')
+        .select('daily_tokens_used')
+        .eq('user_id', user.id)
+        .eq('usage_date', today)
+
+      const totalTokensUsed = (usageData || []).reduce(
+        (sum: number, row: { daily_tokens_used: number }) => sum + (row.daily_tokens_used || 0), 0
+      )
+
+      if (totalTokensUsed >= 1) {
+        return errorResponse('今日の利用回数に達しました。Premiumにアップグレードすると無制限に利用できます', 'AUTH_ERROR', 429)
+      }
+    }
+
     // Parse request body
     let body: ScanRequest
     try {
@@ -233,6 +267,51 @@ Deno.serve(async (req) => {
     // Basic structure validation
     if (!scanResult.menu || !Array.isArray(scanResult.swimmers)) {
       return errorResponse('解析結果の形式が不正です。再試行してください', 'PARSE_ERROR', 422)
+    }
+
+    // スキャン成功時のトークン消費記録（Free ユーザーのみ）
+    if (!isPremium) {
+      const now = new Date()
+      const jstOffset = 9 * 60 * 60 * 1000
+      const jstDate = new Date(now.getTime() + jstOffset)
+      const today = jstDate.toISOString().split('T')[0]
+
+      // app_daily_usage の daily_tokens_used を +1
+      const { data: existing } = await supabase
+        .from('app_daily_usage')
+        .select('id, daily_tokens_used, usage_count')
+        .eq('user_id', user.id)
+        .eq('app', 'swimhub')
+        .eq('usage_date', today)
+        .single()
+
+      if (existing) {
+        await supabase
+          .from('app_daily_usage')
+          .update({
+            daily_tokens_used: (existing.daily_tokens_used || 0) + 1,
+            usage_count: (existing.usage_count || 0) + 1,
+            last_used_at: new Date().toISOString(),
+          })
+          .eq('id', existing.id)
+      } else {
+        await supabase.from('app_daily_usage').insert({
+          user_id: user.id,
+          app: 'swimhub',
+          usage_date: today,
+          daily_tokens_used: 1,
+          usage_count: 1,
+          last_used_at: new Date().toISOString(),
+        })
+      }
+
+      // token_consumption_log に記録
+      await supabase.from('token_consumption_log').insert({
+        user_id: user.id,
+        app: 'swimhub',
+        token_source: 'daily_free',
+        action_type: 'swimhub_image_analysis',
+      })
     }
 
     return new Response(
