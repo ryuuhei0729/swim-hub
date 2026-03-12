@@ -24,9 +24,14 @@ jobs:
       uses: ./.github/actions/setup-node
       with:
         node-version: '20.x'
-      
+
+    - name: Setup Supabase CLI
+      uses: supabase/setup-cli@v1
+      with:
+        version: latest
+
     - name: Type check migrations
-      run: npx supabase db type-check --workdir supabase
+      run: supabase db type-check --workdir supabase
 
   migration-test:
     needs: type-check
@@ -41,6 +46,11 @@ jobs:
       uses: ./.github/actions/setup-node
       with:
         node-version: '20.x'
+
+    - name: Setup Supabase CLI
+      uses: supabase/setup-cli@v1
+      with:
+        version: latest
 
     - name: Configure Supabase for CI environment
       run: |
@@ -61,7 +71,7 @@ jobs:
         SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: "dummy-secret"
 
     - name: Start Supabase stack
-      run: npx supabase start --workdir supabase
+      run: supabase start --workdir supabase
       timeout-minutes: 5
       env:
         SUPABASE_DB_PASSWORD: postgres
@@ -124,8 +134,8 @@ jobs:
 
     - name: Test Edge Functions
       if: ${{ hashFiles('supabase/functions/**/*.ts') != '' || hashFiles('supabase/functions/**/*.js') != '' }}
-      run: npx supabase functions test --workdir supabase
+      run: supabase functions test --workdir supabase
 
     - name: Stop Supabase stack
       if: always()
-      run: npx supabase stop --workdir supabase
+      run: supabase stop --workdir supabase
