@@ -14,9 +14,9 @@ export interface Team {
   id: string
   name: string
   description: string | null
-  invite_code: string
-  created_at: string
-  updated_at: string
+  invite_code: string | null
+  created_at: string | null
+  updated_at: string | null
 }
 
 export type TeamInsert = Omit<Team, 'id' | 'invite_code' | 'created_at' | 'updated_at'>
@@ -27,13 +27,13 @@ export interface TeamMembership {
   id: string
   team_id: string
   user_id: string
-  role: 'admin' | 'user'
+  role: string
   status: 'pending' | 'approved' | 'rejected'
-  is_active: boolean
-  joined_at: string
+  is_active: boolean | null
+  joined_at: string | null
   left_at: string | null
-  created_at: string
-  updated_at: string
+  created_at: string | null
+  updated_at: string | null
 }
 
 export type TeamMembershipInsert = Omit<TeamMembership, 'id' | 'created_at' | 'updated_at'>
@@ -43,11 +43,12 @@ export type TeamMembershipUpdate = Partial<Omit<TeamMembershipInsert, 'team_id' 
 export interface TeamGroup {
   id: string
   team_id: string
-  category: string | null
+  category?: string | null
+  description: string | null
   name: string
-  created_by: string
-  created_at: string
-  updated_at: string
+  created_by: string | null
+  created_at: string | null
+  updated_at: string | null
 }
 
 export type TeamGroupInsert = Omit<TeamGroup, 'id' | 'created_at' | 'updated_at'>
@@ -71,12 +72,12 @@ export interface TeamAnnouncement {
   team_id: string
   title: string
   content: string
-  created_by: string
-  is_published: boolean
+  created_by: string | null
+  is_published: boolean | null
   start_at: string | null
   end_at: string | null
-  created_at: string
-  updated_at: string
+  created_at: string | null
+  updated_at: string | null
 }
 
 export type TeamAnnouncementInsert = Omit<TeamAnnouncement, 'id' | 'created_at' | 'updated_at'>

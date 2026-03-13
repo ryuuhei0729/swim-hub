@@ -39,7 +39,7 @@ export const useTeamGroups = (teamId: string, supabase: SupabaseClient) => {
   const groupsByCategory = useMemo(() => {
     const map = new Map<string | null, TeamGroupWithCount[]>()
     for (const group of groups) {
-      const key = group.category
+      const key = group.category ?? null
       if (!map.has(key)) {
         map.set(key, [])
       }

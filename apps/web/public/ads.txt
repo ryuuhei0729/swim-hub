@@ -1,0 +1,3 @@
+# Google AdSense
+# pub-XXXXXXXXXXXXXXXX を実際の AdSense パブリッシャーIDに置き換えてください
+google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0

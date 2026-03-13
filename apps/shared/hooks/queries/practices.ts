@@ -298,9 +298,11 @@ export function useCreatePracticeMutation(supabase: SupabaseClient, api?: Practi
         }
       } catch (err) {
         // エラーは無視（メイン処理に影響しない）
-        console.error('Google Calendar同期チェックエラー:', err)
+        if (process.env.NODE_ENV !== "production") {
+          console.error('Google Calendar同期チェックエラー:', err)
+        }
       }
-      
+
       return created
     },
     onSuccess: async () => {
@@ -316,7 +318,9 @@ export function useCreatePracticeMutation(supabase: SupabaseClient, api?: Practi
         }
       } catch (error) {
         // エラーは無視（メイン処理に影響しない）
-        console.error('マイルストーンステータス更新エラー:', error)
+        if (process.env.NODE_ENV !== "production") {
+          console.error('マイルストーンステータス更新エラー:', error)
+        }
       }
     },
   })
@@ -341,7 +345,9 @@ export function useUpdatePracticeMutation(supabase: SupabaseClient, api?: Practi
           .single()
         googleEventId = existing?.google_event_id || null
       } catch (err) {
-        console.error('google_event_id取得エラー:', err)
+        if (process.env.NODE_ENV !== "production") {
+          console.error('google_event_id取得エラー:', err)
+        }
       }
       
       const updated = await practiceApi.updatePractice(id, updates)
@@ -372,9 +378,11 @@ export function useUpdatePracticeMutation(supabase: SupabaseClient, api?: Practi
           }
         }
       } catch (err) {
-        console.error('Google Calendar同期チェックエラー:', err)
+        if (process.env.NODE_ENV !== "production") {
+          console.error('Google Calendar同期チェックエラー:', err)
+        }
       }
-      
+
       return updated
     },
     onSuccess: (updated: Practice, variables: { id: string; updates: PracticeUpdate }) => {
@@ -440,7 +448,9 @@ export function useDeletePracticeMutation(supabase: SupabaseClient, api?: Practi
             }
           }
         } catch (err) {
-          console.error('Google Calendar同期チェックエラー:', err)
+          if (process.env.NODE_ENV !== "production") {
+            console.error('Google Calendar同期チェックエラー:', err)
+          }
         }
       }
     },
@@ -474,7 +484,9 @@ export function useCreatePracticeLogMutation(supabase: SupabaseClient, api?: Pra
           await goalAPI.updateAllMilestoneStatuses(user.id)
         }
       } catch (error) {
-        console.error('マイルストーンステータス更新エラー:', error)
+        if (process.env.NODE_ENV !== "production") {
+          console.error('マイルストーンステータス更新エラー:', error)
+        }
       }
     },
   })
@@ -503,7 +515,9 @@ export function useUpdatePracticeLogMutation(supabase: SupabaseClient, api?: Pra
           await goalAPI.updateAllMilestoneStatuses(user.id)
         }
       } catch (error) {
-        console.error('マイルストーンステータス更新エラー:', error)
+        if (process.env.NODE_ENV !== "production") {
+          console.error('マイルストーンステータス更新エラー:', error)
+        }
       }
     },
   })
@@ -550,7 +564,9 @@ export function useCreatePracticeTimesMutation(supabase: SupabaseClient, api?: P
           await goalAPI.updateAllMilestoneStatuses(user.id)
         }
       } catch (error) {
-        console.error('マイルストーンステータス更新エラー:', error)
+        if (process.env.NODE_ENV !== "production") {
+          console.error('マイルストーンステータス更新エラー:', error)
+        }
       }
     },
   })
@@ -585,7 +601,9 @@ export function useReplacePracticeTimesMutation(supabase: SupabaseClient, api?: 
           await goalAPI.updateAllMilestoneStatuses(user.id)
         }
       } catch (error) {
-        console.error('マイルストーンステータス更新エラー:', error)
+        if (process.env.NODE_ENV !== "production") {
+          console.error('マイルストーンステータス更新エラー:', error)
+        }
       }
     },
   })

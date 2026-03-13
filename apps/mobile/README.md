@@ -7,14 +7,14 @@
 ### 必要な環境
 
 - Node.js 20.x
-- npm 8.0.0以上
-- Expo CLI（グローバルインストール不要、npxで実行）
+- pnpm 9以上
+- Expo CLI（グローバルインストール不要、pnpm execで実行）
 
 ### セットアップ
 
 1. 依存関係のインストール（ルートディレクトリから）
 ```bash
-npm install
+pnpm install
 ```
 
 2. 環境変数の設定
@@ -43,24 +43,24 @@ cp .env.example .env.local
 3. 開発サーバーの起動
 ```bash
 # ルートディレクトリから
-npm run dev:mobile
+pnpm run dev:mobile
 
 # または、apps/mobileディレクトリから
 cd apps/mobile
-npm start
+pnpm start
 ```
 
 ## スクリプト
 
 ### 開発用
 
-- `npm start` - Expo開発サーバーを起動
-- `npm run android` - Androidエミュレータで起動
-- `npm run ios` - iOSシミュレータで起動
-- `npm run web` - Webブラウザで起動
-- `npm run type-check` - TypeScriptの型チェック
-- `npm run lint` - ESLintの実行
-- `npm run clean` - キャッシュをクリア
+- `pnpm start` - Expo開発サーバーを起動
+- `pnpm run android` - Androidエミュレータで起動
+- `pnpm run ios` - iOSシミュレータで起動
+- `pnpm run web` - Webブラウザで起動
+- `pnpm run type-check` - TypeScriptの型チェック
+- `pnpm run lint` - ESLintの実行
+- `pnpm run clean` - キャッシュをクリア
 
 ### プロダクションビルド（EAS Build）
 
@@ -70,7 +70,7 @@ npm start
 
 ```bash
 # グローバルインストール
-npm install --global eas-cli
+pnpm install --global eas-cli
 
 # Expo アカウントでログイン
 eas login
@@ -81,8 +81,8 @@ eas build:configure
 
 #### ビルドコマンド
 
-- `npm run build:mobile:android` - Android向けプロダクションビルド（EAS Build）
-- `npm run build:mobile:ios` - iOS向けプロダクションビルド（EAS Build）
+- `pnpm run build:mobile:android` - Android向けプロダクションビルド（EAS Build）
+- `pnpm run build:mobile:ios` - iOS向けプロダクションビルド（EAS Build）
 
 **CI/CD 環境での認証**:
 CI/CD パイプラインでは、`EXPO_TOKEN` 環境変数を使用して認証してください：

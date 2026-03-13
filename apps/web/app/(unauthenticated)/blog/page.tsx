@@ -37,36 +37,40 @@ export default function BlogPage() {
         ) : (
           <div className="space-y-6">
             {posts.map((post) => (
-              <Link
+              <div
                 key={post.slug}
-                href={`/blog/${post.slug}`}
-                className="block bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow duration-200"
+                className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow duration-200"
               >
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
-                  <h2 className="text-xl font-semibold text-gray-900 hover:text-blue-600 transition-colors">
-                    {post.title}
-                  </h2>
+                  <Link href={`/blog/${post.slug}`}>
+                    <h2 className="text-xl font-semibold text-gray-900 hover:text-blue-600 transition-colors">
+                      {post.title}
+                    </h2>
+                  </Link>
                   <time className="text-sm text-gray-500 whitespace-nowrap shrink-0">
                     {post.date}
                   </time>
                 </div>
-                <p className="text-gray-600 text-sm leading-relaxed mb-3">
-                  {post.description}
-                </p>
+                <Link href={`/blog/${post.slug}`} className="block">
+                  <p className="text-gray-600 text-sm leading-relaxed mb-3">
+                    {post.description}
+                  </p>
+                </Link>
                 {post.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {post.tags.map((tag) => (
-                      <span
+                      <Link
                         key={tag}
-                        className="inline-flex items-center text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full"
+                        href={`/blog/tag/${encodeURIComponent(tag)}`}
+                        className="inline-flex items-center text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full hover:bg-blue-100 transition-colors"
                       >
                         <TagIcon className="w-3 h-3 mr-1" />
                         {tag}
-                      </span>
+                      </Link>
                     ))}
                   </div>
                 )}
-              </Link>
+              </div>
             ))}
           </div>
         )}

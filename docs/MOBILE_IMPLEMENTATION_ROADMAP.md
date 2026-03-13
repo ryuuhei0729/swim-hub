@@ -59,7 +59,7 @@ swim-hub/
 - [x] Expoプロジェクトの初期化（`apps/mobile`）
 - [x] Expo SDK 53+の使用を確認（React 19とReact Native 0.78+をサポート）
 - [x] TypeScript設定
-- [x] モノレポ構成への統合（npm workspaces）
+- [x] モノレポ構成への統合（pnpm workspaces）
 - [x] 開発環境のセットアップ（iOS/Android）
 - [x] ルート`package.json`のスクリプト更新（Flutter → React Native）
 - [x] React 19.2とReact Native 0.78+の互換性確認

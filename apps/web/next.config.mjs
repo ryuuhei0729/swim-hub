@@ -36,6 +36,7 @@ const nextConfig = {
   serverExternalPackages: ['@supabase/supabase-js'],
 
   // バンドル最適化: barrel importを自動的に直接importに変換
+  // Next.js 16 では experimental 内に配置
   experimental: {
     optimizePackageImports: [
       '@heroicons/react/24/outline',
@@ -50,6 +51,8 @@ const nextConfig = {
     unoptimized: true,
     // 最新フォーマットを優先
     formats: ['image/avif', 'image/webp'],
+    // Next.js 16: quality={100} を使用するコンポーネントがあるため明示指定
+    qualities: [100, 75],
     // レスポンシブ画像のサイズ設定
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256],

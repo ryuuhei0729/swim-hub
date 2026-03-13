@@ -2,7 +2,7 @@
  * Supabase Storage → Cloudflare R2 移行スクリプト
  *
  * 使用方法:
- *   npx tsx scripts/migrate-storage-to-r2.ts
+ *   pnpm exec tsx scripts/migrate-storage-to-r2.ts
  *
  * 環境変数が必要:
  *   - SUPABASE_URL

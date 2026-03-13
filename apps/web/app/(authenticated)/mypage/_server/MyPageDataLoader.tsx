@@ -9,7 +9,7 @@ import MyPageClient from '../_client/MyPageClient'
 interface BestTime {
   id: string
   time: number
-  created_at: string
+  created_at: string | null
   pool_type: number // 0: 短水路, 1: 長水路
   is_relaying: boolean
   note?: string // 備考（一括登録時に使用）
@@ -18,17 +18,17 @@ interface BestTime {
     distance: number
   }
   competition?: {
-    title: string
+    title: string | null
     date: string
   }
   // 引き継ぎありのタイム（オプショナル）
   relayingTime?: {
     id: string
     time: number
-    created_at: string
+    created_at: string | null
     note?: string
     competition?: {
-      title: string
+      title: string | null
       date: string
     }
   }
@@ -133,12 +133,12 @@ async function getBestTimes(
   type RecordWithRelations = {
     id: string
     time: number
-    created_at: string
+    created_at: string | null
     pool_type: number
     is_relaying: boolean
     note?: string | null
     styles?: { name_jp: string; distance: number } | null
-    competitions?: { title: string; date: string } | null
+    competitions?: { title: string | null; date: string } | null
   }
 
   // 引き継ぎなしのベストタイム（種目、プール種別ごと）
@@ -147,10 +147,10 @@ async function getBestTimes(
   const relayingBestTimesByStyleAndPool = new Map<string, {
     id: string
     time: number
-    created_at: string
+    created_at: string | null
     note?: string
     competition?: {
-      title: string
+      title: string | null
       date: string
     }
   }>()

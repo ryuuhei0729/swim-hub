@@ -140,16 +140,16 @@
 
 ```bash
 # 全E2Eテスト実行
-npm run test:e2e
+pnpm run test:e2e
 
 # 特定ファイルのみ実行
-npx playwright test e2e/src/tests/auth.spec.ts
+pnpm exec playwright test e2e/src/tests/auth.spec.ts
 
 # UIモードで実行
-npm run test:e2e:ui
+pnpm run test:e2e:ui
 
 # デバッグモード
-npm run test:e2e:debug
+pnpm run test:e2e:debug
 ```
 
 ---

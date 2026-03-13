@@ -1108,7 +1108,7 @@ describe('GoalAPI - マイルストーン状態遷移', () => {
             })
           }
         }
-        return createMockSupabaseClient().from(table)
+        return createMockSupabaseClient().from(table as 'milestones')
       })
 
       // checkMilestoneAchievementのモック（達成済み）

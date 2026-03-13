@@ -501,12 +501,12 @@ Cursorがコードレビューする際は、以下を確認すること：
 
 ```bash
 # テスト実行
-npm test                    # 全テスト実行
-npm run test:watch          # ウォッチモード
-npm run test:coverage       # カバレッジレポート生成
+pnpm test                    # 全テスト実行
+pnpm run test:watch          # ウォッチモード
+pnpm run test:coverage       # カバレッジレポート生成
 
 # 特定のテストのみ実行
-npx vitest run apps/shared/__tests__/api/records.test.ts
+pnpm exec vitest run apps/shared/__tests__/api/records.test.ts
 ```
 
 ---

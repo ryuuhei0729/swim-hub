@@ -7,7 +7,7 @@ import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-s
 import type { TeamMembership, Team } from '@apps/shared/types'
 
 interface TeamMembershipWithTeam extends TeamMembership {
-  team?: Team
+  team?: Partial<Team>
 }
 
 interface TeamAnnouncementsSectionProps {
@@ -53,7 +53,7 @@ export default async function TeamAnnouncementsSection({
       console.error('チーム情報の取得に失敗:', membershipError)
       teams = []
     } else {
-      teams = (memberships || []) as TeamMembershipWithTeam[]
+      teams = (memberships || []) as unknown as TeamMembershipWithTeam[]
     }
   } catch (error) {
     console.error('チームお知らせセクションのエラー:', error)

@@ -47,6 +47,21 @@ export function getPostBySlug(slug: string): BlogPost | null {
   }
 }
 
+export function getAllTags(): string[] {
+  const posts = getAllPosts()
+  const tagSet = new Set<string>()
+  for (const post of posts) {
+    for (const tag of post.tags) {
+      tagSet.add(tag)
+    }
+  }
+  return Array.from(tagSet).sort()
+}
+
+export function getPostsByTag(tag: string): BlogPost[] {
+  return getAllPosts().filter((post) => post.tags.includes(tag))
+}
+
 export function getAllSlugs(): string[] {
   if (!fs.existsSync(BLOG_DIR)) return []
 

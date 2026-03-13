@@ -20,24 +20,26 @@ import type { UserUpdate } from '@apps/shared/types'
 interface BestTime {
   id: string
   time: number
-  created_at: string
+  created_at: string | null
   pool_type: number // 0: 短水路, 1: 長水路
   is_relaying: boolean
+  note?: string
   style: {
     name_jp: string
     distance: number
   }
   competition?: {
-    title: string
+    title: string | null
     date: string
   }
   // 引き継ぎありのタイム（オプショナル）
   relayingTime?: {
     id: string
     time: number
-    created_at: string
+    created_at: string | null
+    note?: string
     competition?: {
-      title: string
+      title: string | null
       date: string
     }
   }

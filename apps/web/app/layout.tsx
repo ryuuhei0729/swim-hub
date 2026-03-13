@@ -42,9 +42,6 @@ export const metadata: Metadata = {
   verification: {
     google: 'RoXStue6q2fniUkpnsNg8QDsTpTXufSKBJKxPGvewlc',
   },
-  other: {
-    'google-adsense-account': 'ca-pub-4640414097368188',
-  },
 }
 
 export default function RootLayout({
@@ -76,6 +73,9 @@ export default function RootLayout({
 
     return (
         <html lang="ja" className="h-full">
+            <head>
+                <link rel="alternate" type="application/rss+xml" title="SwimHub ブログ RSS" href="/blog/feed.xml" />
+            </head>
             <body className={`${inter.variable} ${notoSansJP.variable} font-sans`}>
                 {jsonLd.map((data, i) => (
                     <script

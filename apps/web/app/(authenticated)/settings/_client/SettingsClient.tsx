@@ -10,6 +10,7 @@ import GoogleCalendarSyncSettings from '@/components/settings/GoogleCalendarSync
 import EmailChangeSettings from '@/components/settings/EmailChangeSettings'
 import IdentityLinkSettings from '@/components/settings/IdentityLinkSettings'
 import AccountDeleteSettings from '@/components/settings/AccountDeleteSettings'
+import SubscriptionSettings from '@/components/settings/SubscriptionSettings'
 
 export default function SettingsClient() {
   const { user, supabase } = useAuth()
@@ -45,6 +46,9 @@ export default function SettingsClient() {
           アカウントや連携サービスの設定を管理します
         </p>
       </div>
+
+      {/* サブスクリプション管理 */}
+      <SubscriptionSettings />
 
       {/* Googleカレンダー連携設定 */}
       <GoogleCalendarSyncSettings
