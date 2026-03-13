@@ -1,20 +1,22 @@
 import type { MetadataRoute } from 'next'
 import { getAllSlugs, getAllTags } from '@/lib/blog'
 
+export const dynamic = 'force-static'
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = 'https://swim-hub.app'
 
-  const blogPosts = getAllSlugs().map((slug) => ({
+  const blogPosts: MetadataRoute.Sitemap = getAllSlugs().map((slug) => ({
     url: `${baseUrl}/blog/${encodeURIComponent(slug)}`,
     lastModified: new Date(),
-    changeFrequency: 'monthly' as const,
+    changeFrequency: 'monthly',
     priority: 0.6,
   }))
 
-  const tagPages = getAllTags().map((tag) => ({
+  const tagPages: MetadataRoute.Sitemap = getAllTags().map((tag) => ({
     url: `${baseUrl}/blog/tag/${encodeURIComponent(tag)}`,
     lastModified: new Date(),
-    changeFrequency: 'monthly' as const,
+    changeFrequency: 'monthly',
     priority: 0.4,
   }))
 
