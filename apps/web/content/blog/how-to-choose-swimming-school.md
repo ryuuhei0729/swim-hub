@@ -134,4 +134,4 @@ tags: ["スイミングスクール", "スクール選び", "習い事", "水泳
 
 - [大人から始める水泳の完全ガイド](/blog/adult-swimming-beginners-guide)
 - [水泳の4泳法ガイド｜クロール・背泳ぎ・平泳ぎ・バタフライの特徴と選び方](/blog/four-swimming-strokes-guide)
-- [水泳というスポーツの楽しさの本質について](/blog/水泳というスポーツの楽しさの本質について)
+- [ウォームアップとクールダウンの重要性](/blog/swimming-warmup-cooldown)
