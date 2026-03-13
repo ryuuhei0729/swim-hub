@@ -32,13 +32,8 @@ const nextConfig = {
     NEXT_PUBLIC_ENVIRONMENT: process.env.NEXT_PUBLIC_ENVIRONMENT || 'development',
   },
 
-  // 外部パッケージ設定（Cloudflare Worker バンドルサイズ削減）
-  serverExternalPackages: [
-    '@supabase/supabase-js',
-    'stripe',        // 8 MB - サーバーサイド決済処理のみ
-    'gray-matter',   // 624 KB - ブログ記事パース（サーバーのみ）
-    'marked',        // 460 KB - Markdown→HTML変換（サーバーのみ）
-  ],
+  // NOTE: serverExternalPackages は Cloudflare Workers では使用不可
+  // （ランタイムに node_modules がないため external モジュールを解決できない）
 
   // バンドル最適化: barrel importを自動的に直接importに変換
   // Next.js 16 では experimental 内に配置
