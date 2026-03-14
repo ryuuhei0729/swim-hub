@@ -45,16 +45,17 @@ const DEFAULT_MONTHLY_SUMMARY: MonthlySummary = { practiceCount: 0, recordCount:
 
 export function CalendarProvider({
   children,
-  initialCalendarItems = EMPTY_CALENDAR_ITEMS,
-  initialMonthlySummary = DEFAULT_MONTHLY_SUMMARY,
+  initialCalendarItems,
+  initialMonthlySummary,
   initialDate = new Date(),
   refreshKey,
 }: CalendarProviderProps) {
   const { supabase } = useAuth();
   const [currentDate, setCurrentDateState] = useState(initialDate);
   const api = useMemo(() => new DashboardAPI(supabase), [supabase]);
-  const [calendarItems, setCalendarItems] = useState<CalendarItem[]>(initialCalendarItems);
-  const [monthlySummary, setMonthlySummary] = useState<MonthlySummary>(initialMonthlySummary);
+  const hasInitialDataRef = useRef(initialCalendarItems !== undefined);
+  const [calendarItems, setCalendarItems] = useState<CalendarItem[]>(initialCalendarItems ?? EMPTY_CALENDAR_ITEMS);
+  const [monthlySummary, setMonthlySummary] = useState<MonthlySummary>(initialMonthlySummary ?? DEFAULT_MONTHLY_SUMMARY);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const isLoadingDataRef = useRef(false);
@@ -74,9 +75,9 @@ export function CalendarProvider({
 
   // 初期データが現在の月に対応している場合は使用
   useEffect(() => {
-    if (isInitialDataForCurrentMonth) {
-      setCalendarItems(initialCalendarItems);
-      setMonthlySummary(initialMonthlySummary);
+    if (isInitialDataForCurrentMonth && hasInitialDataRef.current) {
+      setCalendarItems(initialCalendarItems ?? EMPTY_CALENDAR_ITEMS);
+      setMonthlySummary(initialMonthlySummary ?? DEFAULT_MONTHLY_SUMMARY);
       setLoading(false);
       previousMonthRef.current = getCurrentMonthKey(currentDate);
     }
@@ -160,8 +161,7 @@ export function CalendarProvider({
 
   // 初回データ取得（初期データがない場合、または月が異なる場合のみ）
   useEffect(() => {
-    if (!isInitialDataForCurrentMonth) {
-      // 初期データが現在の月に対応していない場合のみ取得
+    if (!isInitialDataForCurrentMonth || !hasInitialDataRef.current) {
       void loadData();
     }
   }, [isInitialDataForCurrentMonth, loadData]);
