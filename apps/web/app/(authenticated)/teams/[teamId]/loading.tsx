@@ -27,6 +27,5 @@ export default function TeamDetailLoading() {
         </div>
       </div>
     </div>
-  )
+  );
 }
-

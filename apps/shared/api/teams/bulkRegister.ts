@@ -2,32 +2,32 @@
 // チームAPI - bulkRegister（一括登録）
 // =============================================================================
 
-import { SupabaseClient } from '@supabase/supabase-js'
-import { CompetitionInsert, PracticeInsert } from '../../types'
-import { requireAuth, requireTeamAdmin } from '../auth-utils'
+import { SupabaseClient } from "@supabase/supabase-js";
+import { CompetitionInsert, PracticeInsert } from "../../types";
+import { requireAuth, requireTeamAdmin } from "../auth-utils";
 
 export interface BulkRegisterInput {
   practices: Array<{
-    date: string
-    title?: string | null
-    place?: string | null
-    note?: string | null
-  }>
+    date: string;
+    title?: string | null;
+    place?: string | null;
+    note?: string | null;
+  }>;
   competitions: Array<{
-    title?: string | null
-    date: string
-    end_date?: string | null // 終了日（複数日開催の場合）
-    place?: string | null
-    pool_type: number
-    note?: string | null
-  }>
+    title?: string | null;
+    date: string;
+    end_date?: string | null; // 終了日（複数日開催の場合）
+    place?: string | null;
+    pool_type: number;
+    note?: string | null;
+  }>;
 }
 
 export interface BulkRegisterResult {
-  success: boolean
-  practicesCreated: number
-  competitionsCreated: number
-  errors: string[]
+  success: boolean;
+  practicesCreated: number;
+  competitionsCreated: number;
+  errors: string[];
 }
 
 export class TeamBulkRegisterAPI {
@@ -37,44 +37,46 @@ export class TeamBulkRegisterAPI {
    * CompetitionとPracticeを一括登録
    */
   async bulkRegister(teamId: string, input: BulkRegisterInput): Promise<BulkRegisterResult> {
-    const userId = await requireAuth(this.supabase)
-    await requireTeamAdmin(this.supabase, teamId)
+    const userId = await requireAuth(this.supabase);
+    await requireTeamAdmin(this.supabase, teamId);
 
-    const errors: string[] = []
-    let practicesCreated = 0
-    let competitionsCreated = 0
+    const errors: string[] = [];
+    let practicesCreated = 0;
+    let competitionsCreated = 0;
 
     // Practiceを一括登録
     if (input.practices.length > 0) {
       try {
-        const practiceInserts: PracticeInsert[] = input.practices.map(practice => ({
+        const practiceInserts: PracticeInsert[] = input.practices.map((practice) => ({
           user_id: userId,
           date: practice.date,
           title: practice.title || null,
           place: practice.place || null,
           note: practice.note || null,
-          team_id: teamId
-        }))
+          team_id: teamId,
+        }));
 
         const { data: practiceData, error: practiceError } = await this.supabase
-          .from('practices')
+          .from("practices")
           .insert(practiceInserts)
-          .select('id')
+          .select("id");
 
         if (practiceError) {
-          errors.push(`練習の登録に失敗しました: ${practiceError.message}`)
+          errors.push(`練習の登録に失敗しました: ${practiceError.message}`);
         } else {
-          practicesCreated = practiceData?.length || 0
+          practicesCreated = practiceData?.length || 0;
         }
       } catch (error) {
-        errors.push(`練習の登録中にエラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'}`)
+        errors.push(
+          `練習の登録中にエラーが発生しました: ${error instanceof Error ? error.message : "不明なエラー"}`,
+        );
       }
     }
 
     // Competitionを一括登録
     if (input.competitions.length > 0) {
       try {
-        const competitionInserts: CompetitionInsert[] = input.competitions.map(competition => ({
+        const competitionInserts: CompetitionInsert[] = input.competitions.map((competition) => ({
           user_id: userId,
           team_id: teamId,
           title: competition.title || null,
@@ -83,21 +85,23 @@ export class TeamBulkRegisterAPI {
           place: competition.place || null,
           pool_type: competition.pool_type,
           note: competition.note || null,
-          entry_status: 'before'
-        }))
+          entry_status: "before",
+        }));
 
         const { data: competitionData, error: competitionError } = await this.supabase
-          .from('competitions')
+          .from("competitions")
           .insert(competitionInserts)
-          .select('id')
+          .select("id");
 
         if (competitionError) {
-          errors.push(`大会の登録に失敗しました: ${competitionError.message}`)
+          errors.push(`大会の登録に失敗しました: ${competitionError.message}`);
         } else {
-          competitionsCreated = competitionData?.length || 0
+          competitionsCreated = competitionData?.length || 0;
         }
       } catch (error) {
-        errors.push(`大会の登録中にエラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'}`)
+        errors.push(
+          `大会の登録中にエラーが発生しました: ${error instanceof Error ? error.message : "不明なエラー"}`,
+        );
       }
     }
 
@@ -105,8 +109,7 @@ export class TeamBulkRegisterAPI {
       success: errors.length === 0,
       practicesCreated,
       competitionsCreated,
-      errors
-    }
+      errors,
+    };
   }
 }
-

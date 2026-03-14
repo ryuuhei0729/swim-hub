@@ -2,7 +2,7 @@
 // チームユーティリティ - Swim Hub共通パッケージ
 // =============================================================================
 
-import { SupabaseClient } from '@supabase/supabase-js'
+import { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * チームメンバーの基本情報
@@ -12,24 +12,27 @@ import { SupabaseClient } from '@supabase/supabase-js'
  */
 export interface TeamMember {
   /** ユーザーID（team_memberships.user_idから取得） */
-  id: string
-  name: string
+  id: string;
+  name: string;
 }
 
 /**
  * Supabaseから取得したメンバーシップデータの型
  */
 interface MemberData {
-  user_id: string
-  users: {
-    id: string
-    name: string
-  } | null | Array<{ id: string; name: string }>
+  user_id: string;
+  users:
+    | {
+        id: string;
+        name: string;
+      }
+    | null
+    | Array<{ id: string; name: string }>;
 }
 
 /**
  * チームメンバー一覧を取得し、正規化して返す
- * 
+ *
  * @param supabase - Supabaseクライアント
  * @param teamId - チームID
  * @returns 正規化されたメンバー一覧（idとnameのみ）
@@ -37,34 +40,35 @@ interface MemberData {
  */
 export async function fetchTeamMembers(
   supabase: SupabaseClient,
-  teamId: string
+  teamId: string,
 ): Promise<TeamMember[]> {
   const { data: membersData, error: membersError } = await supabase
-    .from('team_memberships')
-    .select(`
+    .from("team_memberships")
+    .select(
+      `
       user_id,
       users:users!team_memberships_user_id_fkey (
         id,
         name
       )
-    `)
-    .eq('team_id', teamId)
-    .eq('status', 'approved')
-    .eq('is_active', true)
+    `,
+    )
+    .eq("team_id", teamId)
+    .eq("status", "approved")
+    .eq("is_active", true);
 
-  if (membersError) throw membersError
+  if (membersError) throw membersError;
 
   const members = (membersData || [])
     .map((m: MemberData) => {
       // usersが配列の場合は最初の要素を取得、そうでなければそのまま使用
-      const user = Array.isArray(m.users) ? m.users[0] : m.users
+      const user = Array.isArray(m.users) ? m.users[0] : m.users;
       return {
         id: m.user_id,
-        name: user?.name || 'Unknown User'
-      }
+        name: user?.name || "Unknown User",
+      };
     })
-    .filter((m: TeamMember) => m.name !== 'Unknown User')
+    .filter((m: TeamMember) => m.name !== "Unknown User");
 
-  return members
+  return members;
 }
-

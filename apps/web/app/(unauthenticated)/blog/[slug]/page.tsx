@@ -1,27 +1,33 @@
-import React from 'react'
-import Link from 'next/link'
-import { notFound } from 'next/navigation'
-import { TagIcon, ArrowRightIcon, CalendarIcon, ChevronRightIcon, HomeIcon } from '@heroicons/react/24/outline'
-import { getAllSlugs, getPostBySlug } from '@/lib/blog'
-import { marked } from 'marked'
-import type { Metadata } from 'next'
+import React from "react";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import {
+  TagIcon,
+  ArrowRightIcon,
+  CalendarIcon,
+  ChevronRightIcon,
+  HomeIcon,
+} from "@heroicons/react/24/outline";
+import { getAllSlugs, getPostBySlug } from "@/lib/blog";
+import { marked } from "marked";
+import type { Metadata } from "next";
 
-export const revalidate = 3600
+export const revalidate = 3600;
 
 export function generateStaticParams() {
-  return getAllSlugs().map((slug) => ({ slug }))
+  return getAllSlugs().map((slug) => ({ slug }));
 }
 
 export function generateMetadata({
   params,
 }: {
-  params: Promise<{ slug: string }>
+  params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   return params.then(({ slug }) => {
-    const post = getPostBySlug(slug)
-    if (!post) return { title: '記事が見つかりません | SwimHub' }
+    const post = getPostBySlug(slug);
+    if (!post) return { title: "記事が見つかりません | SwimHub" };
 
-    const url = `https://swim-hub.app/blog/${encodeURIComponent(slug)}`
+    const url = `https://swim-hub.app/blog/${encodeURIComponent(slug)}`;
 
     return {
       title: `${post.title} | SwimHub ブログ`,
@@ -30,69 +36,67 @@ export function generateMetadata({
       openGraph: {
         title: post.title,
         description: post.description,
-        type: 'article',
-        locale: 'ja_JP',
+        type: "article",
+        locale: "ja_JP",
         url,
-        siteName: 'SwimHub',
+        siteName: "SwimHub",
         publishedTime: post.date,
         tags: post.tags,
-        images: [{ url: 'https://swim-hub.app/icon.png', width: 512, height: 512, alt: post.title }],
+        images: [
+          { url: "https://swim-hub.app/icon.png", width: 512, height: 512, alt: post.title },
+        ],
       },
       twitter: {
-        card: 'summary',
+        card: "summary",
         title: post.title,
         description: post.description,
-        images: ['https://swim-hub.app/icon.png'],
+        images: ["https://swim-hub.app/icon.png"],
       },
-    }
-  })
+    };
+  });
 }
 
-export default async function BlogPostPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>
-}) {
-  const { slug } = await params
-  const post = getPostBySlug(slug)
-  if (!post) notFound()
+export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const post = getPostBySlug(slug);
+  if (!post) notFound();
 
-  const contentHtml = await marked(post.content)
+  const contentHtml = await marked(post.content);
 
-  const postUrl = `https://swim-hub.app/blog/${encodeURIComponent(slug)}`
+  const postUrl = `https://swim-hub.app/blog/${encodeURIComponent(slug)}`;
 
   const articleJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Article',
+    "@context": "https://schema.org",
+    "@type": "Article",
     headline: post.title,
     description: post.description,
     datePublished: post.date,
     dateModified: post.date,
     author: {
-      '@type': 'Organization',
-      name: 'SwimHub',
-      url: 'https://swim-hub.app',
+      "@type": "Organization",
+      name: "SwimHub",
+      url: "https://swim-hub.app",
     },
     publisher: {
-      '@type': 'Organization',
-      name: 'SwimHub',
-      logo: { '@type': 'ImageObject', url: 'https://swim-hub.app/favicon.png' },
+      "@type": "Organization",
+      name: "SwimHub",
+      logo: { "@type": "ImageObject", url: "https://swim-hub.app/favicon.png" },
     },
-    mainEntityOfPage: { '@type': 'WebPage', '@id': postUrl },
-    image: 'https://swim-hub.app/icon.png',
-    keywords: post.tags.join(', '),
-    inLanguage: 'ja',
-  }
+    mainEntityOfPage: { "@type": "WebPage", "@id": postUrl },
+    image: "https://swim-hub.app/icon.png",
+    keywords: post.tags.join(", "),
+    inLanguage: "ja",
+  };
 
   const breadcrumbJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'ホーム', item: 'https://swim-hub.app' },
-      { '@type': 'ListItem', position: 2, name: 'ブログ', item: 'https://swim-hub.app/blog' },
-      { '@type': 'ListItem', position: 3, name: post.title, item: postUrl },
+      { "@type": "ListItem", position: 1, name: "ホーム", item: "https://swim-hub.app" },
+      { "@type": "ListItem", position: 2, name: "ブログ", item: "https://swim-hub.app/blog" },
+      { "@type": "ListItem", position: 3, name: post.title, item: postUrl },
     ],
-  }
+  };
 
   return (
     <div className="min-h-screen bg-linear-to-b from-blue-50 to-white">
@@ -159,11 +163,10 @@ export default async function BlogPostPage({
 
         {/* CTA */}
         <div className="mt-10 bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
-          <p className="text-lg font-semibold text-gray-900 mb-2">
-            水泳の記録管理をもっと手軽に
-          </p>
+          <p className="text-lg font-semibold text-gray-900 mb-2">水泳の記録管理をもっと手軽に</p>
           <p className="text-sm text-gray-600 mb-6">
-            SwimHub なら練習記録・大会記録をまとめて管理。成長を可視化して、次の目標につなげましょう。
+            SwimHub
+            なら練習記録・大会記録をまとめて管理。成長を可視化して、次の目標につなげましょう。
           </p>
           <Link
             href="/signup"
@@ -175,5 +178,5 @@ export default async function BlogPostPage({
         </div>
       </div>
     </div>
-  )
+  );
 }

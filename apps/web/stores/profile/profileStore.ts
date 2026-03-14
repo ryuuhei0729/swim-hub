@@ -2,39 +2,39 @@
 // プロフィール管理用Zustandストア
 // =============================================================================
 
-import type { UserProfile } from '@apps/shared/types'
-import { create } from 'zustand'
+import type { UserProfile } from "@apps/shared/types";
+import { create } from "zustand";
 
 interface BestTime {
-  id: string
-  time: number
-  created_at: string
+  id: string;
+  time: number;
+  created_at: string;
   style: {
-    name_jp: string
-    distance: number
-  }
+    name_jp: string;
+    distance: number;
+  };
   competition?: {
-    title: string
-    date: string
-  }
+    title: string;
+    date: string;
+  };
 }
 
 interface ProfileState {
-  profile: UserProfile | null
-  bestTimes: BestTime[]
-  loading: boolean
-  error: string | null
-  isEditModalOpen: boolean
+  profile: UserProfile | null;
+  bestTimes: BestTime[];
+  loading: boolean;
+  error: string | null;
+  isEditModalOpen: boolean;
 }
 
 interface ProfileActions {
-  setProfile: (profile: UserProfile | null) => void
-  setBestTimes: (times: BestTime[]) => void
-  setLoading: (loading: boolean) => void
-  setError: (error: string | null) => void
-  openEditModal: () => void
-  closeEditModal: () => void
-  reset: () => void
+  setProfile: (profile: UserProfile | null) => void;
+  setBestTimes: (times: BestTime[]) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  openEditModal: () => void;
+  closeEditModal: () => void;
+  reset: () => void;
 }
 
 const initialState: ProfileState = {
@@ -43,11 +43,11 @@ const initialState: ProfileState = {
   loading: true,
   error: null,
   isEditModalOpen: false,
-}
+};
 
 export const useProfileStore = create<ProfileState & ProfileActions>()((set) => ({
   ...initialState,
-  
+
   setProfile: (profile) => set({ profile }),
   setBestTimes: (times) => set({ bestTimes: times }),
   setLoading: (loading) => set({ loading }),
@@ -55,5 +55,4 @@ export const useProfileStore = create<ProfileState & ProfileActions>()((set) => 
   openEditModal: () => set({ isEditModalOpen: true }),
   closeEditModal: () => set({ isEditModalOpen: false }),
   reset: () => set(initialState),
-}))
-
+}));

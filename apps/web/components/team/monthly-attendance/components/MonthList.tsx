@@ -1,17 +1,17 @@
-'use client'
+"use client";
 
-import React from 'react'
-import { MonthItem } from '../hooks/useMonthList'
-import { StatusBadge } from './StatusBadge'
+import React from "react";
+import { MonthItem } from "../hooks/useMonthList";
+import { StatusBadge } from "./StatusBadge";
 
 interface MonthListProps {
-  monthList: MonthItem[]
-  onMonthClick: (year: number, month: number) => void
+  monthList: MonthItem[];
+  onMonthClick: (year: number, month: number) => void;
 }
 
 const getMonthLabel = (year: number, month: number) => {
-  return `${year}年${month}月`
-}
+  return `${year}年${month}月`;
+};
 
 export const MonthList = React.memo(({ monthList, onMonthClick }: MonthListProps) => {
   if (monthList.length === 0) {
@@ -19,7 +19,7 @@ export const MonthList = React.memo(({ monthList, onMonthClick }: MonthListProps
       <div className="bg-gray-50 rounded-lg p-6 text-center">
         <p className="text-sm text-gray-600">表示できる月がありません</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -37,7 +37,7 @@ export const MonthList = React.memo(({ monthList, onMonthClick }: MonthListProps
         </button>
       ))}
     </div>
-  )
-})
+  );
+});
 
-MonthList.displayName = 'MonthList'
+MonthList.displayName = "MonthList";

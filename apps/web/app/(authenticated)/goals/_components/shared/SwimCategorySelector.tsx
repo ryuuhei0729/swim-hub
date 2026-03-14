@@ -1,13 +1,13 @@
-'use client'
+"use client";
 
-import React from 'react'
-import { SWIM_CATEGORIES } from '../constants'
+import React from "react";
+import { SWIM_CATEGORIES } from "../constants";
 
 interface SwimCategorySelectorProps {
-  value: 'Swim' | 'Pull' | 'Kick'
-  onChange: (value: 'Swim' | 'Pull' | 'Kick') => void
-  required?: boolean
-  disabled?: boolean
+  value: "Swim" | "Pull" | "Kick";
+  onChange: (value: "Swim" | "Pull" | "Kick") => void;
+  required?: boolean;
+  disabled?: boolean;
 }
 
 /**
@@ -17,12 +17,12 @@ export default function SwimCategorySelector({
   value,
   onChange,
   required = false,
-  disabled = false
+  disabled = false,
 }: SwimCategorySelectorProps) {
   return (
     <select
       value={value}
-      onChange={(e) => onChange(e.target.value as 'Swim' | 'Pull' | 'Kick')}
+      onChange={(e) => onChange(e.target.value as "Swim" | "Pull" | "Kick")}
       className="w-full px-3 py-2 border border-gray-300 rounded-md"
       required={required}
       disabled={disabled}
@@ -33,5 +33,5 @@ export default function SwimCategorySelector({
         </option>
       ))}
     </select>
-  )
+  );
 }

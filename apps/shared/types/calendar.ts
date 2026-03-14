@@ -3,8 +3,8 @@
 // カレンダーイベント型の定義
 // =============================================================================
 
-import type { Competition } from './competition'
-import type { Practice } from './practice'
+import type { Competition } from "./competition";
+import type { Practice } from "./practice";
 
 // =============================================================================
 // 1. イベント型定義
@@ -12,13 +12,13 @@ import type { Practice } from './practice'
 
 // 練習イベント
 export interface PracticeEvent extends Practice {
-  type: 'practice'
+  type: "practice";
 }
 
 // 大会イベント
 export interface CompetitionEvent extends Competition {
-  type: 'competition'
+  type: "competition";
 }
 
 // チームイベント（ユニオン型）
-export type TeamEvent = PracticeEvent | CompetitionEvent
+export type TeamEvent = PracticeEvent | CompetitionEvent;

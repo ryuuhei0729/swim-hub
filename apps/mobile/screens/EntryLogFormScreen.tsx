@@ -1,28 +1,40 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, Modal, ActivityIndicator, Keyboard, Dimensions } from 'react-native'
-import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { Feather } from '@expo/vector-icons'
-import { useQueryClient } from '@tanstack/react-query'
-import { useAuth } from '@/contexts/AuthProvider'
-import { EntryAPI } from '@apps/shared/api/entries'
-import { StyleAPI } from '@apps/shared/api/styles'
-import { useCompetitionFormStore, type EntryInfo } from '@/stores/competitionFormStore'
-import { formatTime } from '@/utils/formatters'
-import { parseTime } from '@apps/shared/utils/time'
-import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
-import type { MainStackParamList } from '@/navigation/types'
-import type { Style } from '@apps/shared/types'
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Alert,
+  Modal,
+  ActivityIndicator,
+  Keyboard,
+  Dimensions,
+} from "react-native";
+import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { Feather } from "@expo/vector-icons";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthProvider";
+import { EntryAPI } from "@apps/shared/api/entries";
+import { StyleAPI } from "@apps/shared/api/styles";
+import { useCompetitionFormStore, type EntryInfo } from "@/stores/competitionFormStore";
+import { formatTime } from "@/utils/formatters";
+import { parseTime } from "@apps/shared/utils/time";
+import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
+import type { MainStackParamList } from "@/navigation/types";
+import type { Style } from "@apps/shared/types";
 
-type EntryFormScreenRouteProp = RouteProp<MainStackParamList, 'EntryForm'>
-type EntryFormScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>
+type EntryFormScreenRouteProp = RouteProp<MainStackParamList, "EntryForm">;
+type EntryFormScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
 interface EntryData {
-  id: string
-  styleId: string
-  entryTime: number // 秒単位
-  entryTimeDisplayValue: string // 入力中の表示用
-  note: string
+  id: string;
+  styleId: string;
+  entryTime: number; // 秒単位
+  entryTimeDisplayValue: string; // 入力中の表示用
+  note: string;
 }
 
 /**
@@ -30,109 +42,112 @@ interface EntryData {
  * 大会にエントリーする種目とエントリータイムを入力
  */
 export const EntryLogFormScreen: React.FC = () => {
-  const route = useRoute<EntryFormScreenRouteProp>()
-  const navigation = useNavigation<EntryFormScreenNavigationProp>()
-  const { competitionId, entryId, date } = route.params
-  const { supabase } = useAuth()
-  const queryClient = useQueryClient()
-  const entryApi = useMemo(() => new EntryAPI(supabase), [supabase])
+  const route = useRoute<EntryFormScreenRouteProp>();
+  const navigation = useNavigation<EntryFormScreenNavigationProp>();
+  const { competitionId, entryId, date } = route.params;
+  const { supabase } = useAuth();
+  const queryClient = useQueryClient();
+  const entryApi = useMemo(() => new EntryAPI(supabase), [supabase]);
 
   // フォーム状態
   const [entries, setEntries] = useState<EntryData[]>([
     {
-      id: '1',
-      styleId: '',
+      id: "1",
+      styleId: "",
       entryTime: 0,
-      entryTimeDisplayValue: '',
-      note: '',
+      entryTimeDisplayValue: "",
+      note: "",
     },
-  ])
-  const [swimStyles, setSwimStyles] = useState<Style[]>([])
-  const [loading, setLoading] = useState(false)
-  const [loadingStyles, setLoadingStyles] = useState(true)
-  const [loadingEntry, setLoadingEntry] = useState(false)
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [showStylePicker, setShowStylePicker] = useState(false)
-  const [pickingEntryIndex, setPickingEntryIndex] = useState<number | null>(null)
-  const styleButtonRefs = useRef<Map<number, View>>(new Map())
-  const [dropdownLayout, setDropdownLayout] = useState({ top: 0, left: 0, width: 0 })
+  ]);
+  const [swimStyles, setSwimStyles] = useState<Style[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loadingStyles, setLoadingStyles] = useState(true);
+  const [loadingEntry, setLoadingEntry] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showStylePicker, setShowStylePicker] = useState(false);
+  const [pickingEntryIndex, setPickingEntryIndex] = useState<number | null>(null);
+  const styleButtonRefs = useRef<Map<number, View>>(new Map());
+  const [dropdownLayout, setDropdownLayout] = useState({ top: 0, left: 0, width: 0 });
 
   // Zustandストア
-  const setCreatedEntries = useCompetitionFormStore((state) => state.setCreatedEntries)
-  const setStoreLoading = useCompetitionFormStore((state) => state.setLoading)
+  const setCreatedEntries = useCompetitionFormStore((state) => state.setCreatedEntries);
+  const setStoreLoading = useCompetitionFormStore((state) => state.setLoading);
 
   // 二重送信防止用のref
-  const isSubmittingRef = useRef(false)
+  const isSubmittingRef = useRef(false);
 
   // 種目一覧を取得
   useEffect(() => {
     const fetchStyles = async () => {
       try {
-        const styleApi = new StyleAPI(supabase)
-        const stylesData = await styleApi.getStyles()
-        setSwimStyles(stylesData)
+        const styleApi = new StyleAPI(supabase);
+        const stylesData = await styleApi.getStyles();
+        setSwimStyles(stylesData);
       } catch (error) {
-        console.error('種目取得エラー:', error)
-        Alert.alert('エラー', '種目の取得に失敗しました')
+        console.error("種目取得エラー:", error);
+        Alert.alert("エラー", "種目の取得に失敗しました");
       } finally {
-        setLoadingStyles(false)
+        setLoadingStyles(false);
       }
-    }
-    fetchStyles()
-  }, [supabase])
+    };
+    fetchStyles();
+  }, [supabase]);
 
   // エントリーデータを取得（編集モードの場合）
   useEffect(() => {
-    if (!entryId || loadingStyles || swimStyles.length === 0) return
+    if (!entryId || loadingStyles || swimStyles.length === 0) return;
 
-    let isMounted = true
+    let isMounted = true;
 
     const fetchEntry = async () => {
       try {
-        setLoadingEntry(true)
-        
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) throw new Error('認証が必要です')
+        setLoadingEntry(true);
+
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) throw new Error("認証が必要です");
 
         // まず、指定されたエントリーを取得してcompetitionIdを取得
-        let competitionIdFromEntry: string
+        let competitionIdFromEntry: string;
         try {
-          const firstEntry = await entryApi.getEntry(entryId)
+          const firstEntry = await entryApi.getEntry(entryId);
           if (!firstEntry || !firstEntry.competition_id) {
-            Alert.alert('エラー', 'エントリーデータが見つかりませんでした')
-            navigation.goBack()
-            return
+            Alert.alert("エラー", "エントリーデータが見つかりませんでした");
+            navigation.goBack();
+            return;
           }
-          competitionIdFromEntry = firstEntry.competition_id
+          competitionIdFromEntry = firstEntry.competition_id;
         } catch (error: unknown) {
-        if (!isMounted) return
-          console.error('エントリー取得エラー詳細:', error)
-          console.error('エントリー取得エラー - entryId:', entryId)
-          const errorMessage = error instanceof Error ? error.message : String(error)
-          const errorCode = error && typeof error === 'object' && 'code' in error ? String(error.code) : undefined
-          if (errorMessage === 'アクセスが拒否されました' || errorCode === 'PGRST116') {
+          if (!isMounted) return;
+          console.error("エントリー取得エラー詳細:", error);
+          console.error("エントリー取得エラー - entryId:", entryId);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          const errorCode =
+            error && typeof error === "object" && "code" in error ? String(error.code) : undefined;
+          if (errorMessage === "アクセスが拒否されました" || errorCode === "PGRST116") {
             // エントリーが見つからない場合
-            Alert.alert('エラー', 'エントリーが見つかりませんでした')
-            navigation.goBack()
-            return
+            Alert.alert("エラー", "エントリーが見つかりませんでした");
+            navigation.goBack();
+            return;
           }
-          throw error
+          throw error;
         }
 
-        if (!isMounted) return
+        if (!isMounted) return;
 
         // この大会のすべてのエントリーを取得（EntryAPIを使用）
-        const allEntries = await entryApi.getEntriesByCompetition(competitionIdFromEntry)
-        
-        // 現在のユーザーのエントリーのみをフィルタリング
-        const userEntries = allEntries.filter(entry => entry.user_id === user.id)
+        const allEntries = await entryApi.getEntriesByCompetition(competitionIdFromEntry);
 
-        if (!isMounted) return
+        // 現在のユーザーのエントリーのみをフィルタリング
+        const userEntries = allEntries.filter((entry) => entry.user_id === user.id);
+
+        if (!isMounted) return;
 
         if (!userEntries || userEntries.length === 0) {
-          Alert.alert('エラー', 'エントリーデータが見つかりませんでした')
-          navigation.goBack()
-          return
+          Alert.alert("エラー", "エントリーデータが見つかりませんでした");
+          navigation.goBack();
+          return;
         }
 
         // すべてのエントリーをフォームに設定
@@ -140,165 +155,169 @@ export const EntryLogFormScreen: React.FC = () => {
           id: entry.id,
           styleId: String(entry.style_id),
           entryTime: entry.entry_time || 0,
-          entryTimeDisplayValue: entry.entry_time ? formatTime(entry.entry_time) : '',
-          note: entry.note || '',
-        }))
-        setEntries(entriesData)
+          entryTimeDisplayValue: entry.entry_time ? formatTime(entry.entry_time) : "",
+          note: entry.note || "",
+        }));
+        setEntries(entriesData);
       } catch (error) {
-        if (!isMounted) return
-        console.error('エントリー取得エラー:', error)
-        Alert.alert('エラー', 'エントリーの取得に失敗しました')
-        navigation.goBack()
+        if (!isMounted) return;
+        console.error("エントリー取得エラー:", error);
+        Alert.alert("エラー", "エントリーの取得に失敗しました");
+        navigation.goBack();
       } finally {
         if (isMounted) {
-          setLoadingEntry(false)
+          setLoadingEntry(false);
         }
       }
-    }
+    };
 
-    fetchEntry()
+    fetchEntry();
 
     return () => {
-      isMounted = false
-    }
-  }, [entryId, swimStyles.length, loadingStyles, supabase, navigation, entryApi])
+      isMounted = false;
+    };
+  }, [entryId, swimStyles.length, loadingStyles, supabase, navigation, entryApi]);
 
   // 新規作成モードの場合、最初のエントリーにデフォルトの種目を設定
   useEffect(() => {
-    if (entryId || loadingStyles || swimStyles.length === 0) return
+    if (entryId || loadingStyles || swimStyles.length === 0) return;
     if (entries.length > 0 && !entries[0].styleId && swimStyles.length > 0) {
       setEntries((prev) =>
         prev.map((entry, index) =>
-          index === 0 ? { ...entry, styleId: String(swimStyles[0].id) } : entry
-        )
-      )
+          index === 0 ? { ...entry, styleId: String(swimStyles[0].id) } : entry,
+        ),
+      );
     }
-  }, [entryId, swimStyles, loadingStyles, entries])
+  }, [entryId, swimStyles, loadingStyles, entries]);
 
   // タイム文字列を秒数に変換（共有パーサー使用：-でも:でも.でも区切り対応）
   const parseTimeString = (timeString: string): number => {
-    return parseTime(timeString)
-  }
+    return parseTime(timeString);
+  };
 
   // タイム文字列が有効かどうかを検証
   const isValidTimeString = (timeString: string): boolean => {
-    if (!timeString || timeString.trim() === '') return true // 空は有効（任意入力）
-    return parseTime(timeString) > 0
-  }
+    if (!timeString || timeString.trim() === "") return true; // 空は有効（任意入力）
+    return parseTime(timeString) > 0;
+  };
 
   // バリデーション
   const validate = (): boolean => {
-    const newErrors: Record<string, string> = {}
+    const newErrors: Record<string, string> = {};
 
     // 少なくとも1つのエントリーが必要
     if (entries.length === 0) {
-      Alert.alert('エラー', '少なくとも1つのエントリーを追加してください')
-      return false
+      Alert.alert("エラー", "少なくとも1つのエントリーを追加してください");
+      return false;
     }
 
     // 種目が選択されているか
     entries.forEach((entry, index) => {
       if (!entry.styleId) {
-        newErrors[`style-${index}`] = '種目を選択してください'
+        newErrors[`style-${index}`] = "種目を選択してください";
       }
-    })
+    });
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   // エントリー追加
   const addEntry = () => {
-    const firstStyle = swimStyles.length > 0 ? swimStyles[0] : null
+    const firstStyle = swimStyles.length > 0 ? swimStyles[0] : null;
     const newEntry: EntryData = {
       id: `entry-${Date.now()}`,
-      styleId: firstStyle?.id ? String(firstStyle.id) : '',
+      styleId: firstStyle?.id ? String(firstStyle.id) : "",
       entryTime: 0,
-      entryTimeDisplayValue: '',
-      note: '',
-    }
-    setEntries((prev) => [...prev, newEntry])
-  }
+      entryTimeDisplayValue: "",
+      note: "",
+    };
+    setEntries((prev) => [...prev, newEntry]);
+  };
 
   // エントリー削除
   const removeEntry = (entryId: string) => {
     if (entries.length > 1) {
-      setEntries((prev) => prev.filter((entry) => entry.id !== entryId))
+      setEntries((prev) => prev.filter((entry) => entry.id !== entryId));
     }
-  }
+  };
 
   // エントリー更新
   const updateEntry = (entryId: string, updates: Partial<EntryData>) => {
     setEntries((prev) =>
       prev.map((entry, index) => {
-        if (entry.id !== entryId) return entry
+        if (entry.id !== entryId) return entry;
 
-        const updated = { ...entry, ...updates }
+        const updated = { ...entry, ...updates };
 
         // エントリータイムが更新された場合、表示値も更新
-        if ('entryTimeDisplayValue' in updates) {
-          const timeDisplayValue = updates.entryTimeDisplayValue || ''
-          
+        if ("entryTimeDisplayValue" in updates) {
+          const timeDisplayValue = updates.entryTimeDisplayValue || "";
+
           // 入力が空でない場合、形式を検証
-          if (timeDisplayValue.trim() !== '') {
+          if (timeDisplayValue.trim() !== "") {
             if (!isValidTimeString(timeDisplayValue)) {
               // 不正な形式の場合、エラーメッセージを設定
               setErrors((prev) => ({
                 ...prev,
-                [`entryTime-${index}`]: 'タイムの形式が正しくありません（例: 1:23.45 または 83.45）',
-              }))
+                [`entryTime-${index}`]:
+                  "タイムの形式が正しくありません（例: 1:23.45 または 83.45）",
+              }));
             } else {
               // 正常な形式の場合、エラーをクリア
               setErrors((prev) => {
-                const newErrors = { ...prev }
-                delete newErrors[`entryTime-${index}`]
-                return newErrors
-              })
+                const newErrors = { ...prev };
+                delete newErrors[`entryTime-${index}`];
+                return newErrors;
+              });
             }
           } else {
             // 入力が空の場合、エラーをクリア
             setErrors((prev) => {
-              const newErrors = { ...prev }
-              delete newErrors[`entryTime-${index}`]
-              return newErrors
-            })
+              const newErrors = { ...prev };
+              delete newErrors[`entryTime-${index}`];
+              return newErrors;
+            });
           }
-          
-          const timeValue = parseTimeString(timeDisplayValue)
-          updated.entryTime = timeValue
+
+          const timeValue = parseTimeString(timeDisplayValue);
+          updated.entryTime = timeValue;
         }
 
-        return updated
-      })
-    )
-  }
+        return updated;
+      }),
+    );
+  };
 
   // ドロップダウンを開く
-  const screenHeight = Dimensions.get('window').height
-  const DROPDOWN_MAX_HEIGHT = 260
+  const screenHeight = Dimensions.get("window").height;
+  const DROPDOWN_MAX_HEIGHT = 260;
 
-  const openStylePicker = useCallback((index: number) => {
-    Keyboard.dismiss()
-    const buttonRef = styleButtonRefs.current.get(index)
-    buttonRef?.measureInWindow((x, y, width, height) => {
-      const top = y + height + 4
-      const fitsBelow = top + DROPDOWN_MAX_HEIGHT < screenHeight - 40
-      setDropdownLayout({
-        top: fitsBelow ? top : y - DROPDOWN_MAX_HEIGHT - 4,
-        left: x,
-        width,
-      })
-      setPickingEntryIndex(index)
-      setShowStylePicker(true)
-    })
-  }, [screenHeight])
+  const openStylePicker = useCallback(
+    (index: number) => {
+      Keyboard.dismiss();
+      const buttonRef = styleButtonRefs.current.get(index);
+      buttonRef?.measureInWindow((x, y, width, height) => {
+        const top = y + height + 4;
+        const fitsBelow = top + DROPDOWN_MAX_HEIGHT < screenHeight - 40;
+        setDropdownLayout({
+          top: fitsBelow ? top : y - DROPDOWN_MAX_HEIGHT - 4,
+          left: x,
+          width,
+        });
+        setPickingEntryIndex(index);
+        setShowStylePicker(true);
+      });
+    },
+    [screenHeight],
+  );
 
   // UUID形式をチェックするヘルパー関数
   const isValidUUID = (id: string): boolean => {
     // UUID形式の正規表現: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    return uuidRegex.test(id)
-  }
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(id);
+  };
 
   // エントリー保存/更新の共通ヘルパー関数
   const saveOrUpdateEntries = async (
@@ -306,103 +325,108 @@ export const EntryLogFormScreen: React.FC = () => {
     supabaseClient: typeof supabase,
     competitionIdParam: string,
     styles: Style[],
-    entryAPIInstance: EntryAPI
+    entryAPIInstance: EntryAPI,
   ): Promise<EntryInfo[]> => {
     // 認証チェック
-    const { data: { user } } = await supabaseClient.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
+    const {
+      data: { user },
+    } = await supabaseClient.auth.getUser();
+    if (!user) throw new Error("認証が必要です");
 
     // 編集モードの場合、既存のエントリーをすべて取得
-    const existingEntriesMap = new Map<string, { id: string; style_id: number }>()
-    const existingEntriesByIdMap = new Map<string, { id: string; style_id: number }>()
+    const existingEntriesMap = new Map<string, { id: string; style_id: number }>();
+    const existingEntriesByIdMap = new Map<string, { id: string; style_id: number }>();
     if (entryId) {
       // 編集モードの場合、この大会のすべての既存エントリーを取得（EntryAPIを使用）
-      const allExistingEntries = await entryAPIInstance.getEntriesByCompetition(competitionIdParam)
-      
+      const allExistingEntries = await entryAPIInstance.getEntriesByCompetition(competitionIdParam);
+
       // 現在のユーザーのエントリーのみをフィルタリング
-      const userExistingEntries = allExistingEntries.filter(entry => entry.user_id === user.id)
+      const userExistingEntries = allExistingEntries.filter((entry) => entry.user_id === user.id);
 
       if (userExistingEntries) {
         userExistingEntries.forEach((entry) => {
-          existingEntriesMap.set(String(entry.style_id), { id: entry.id, style_id: entry.style_id })
-          existingEntriesByIdMap.set(entry.id, { id: entry.id, style_id: entry.style_id })
-        })
+          existingEntriesMap.set(String(entry.style_id), {
+            id: entry.id,
+            style_id: entry.style_id,
+          });
+          existingEntriesByIdMap.set(entry.id, { id: entry.id, style_id: entry.style_id });
+        });
       }
     }
 
-    const createdEntriesList: EntryInfo[] = []
-    const processedEntryIds = new Set<string>()
+    const createdEntriesList: EntryInfo[] = [];
+    const processedEntryIds = new Set<string>();
 
     // フォームに入力されているエントリーを保存/更新
     for (const entryData of entriesToSave) {
-      const styleIdNum = parseInt(entryData.styleId)
-      const existingEntryForStyle = existingEntriesMap.get(entryData.styleId)
+      const styleIdNum = parseInt(entryData.styleId);
+      const existingEntryForStyle = existingEntriesMap.get(entryData.styleId);
 
-      let entry
+      let entry;
       // 既存のエントリーIDがある場合（編集モードで既存エントリーを編集している場合）
       // UUID形式であることを確認（一時的なID '1' や 'entry-...' を除外）
       if (entryData.id && isValidUUID(entryData.id)) {
         // 種目を変更する場合、重複チェック
-        const originalEntry = existingEntriesByIdMap.get(entryData.id)
-        const isStyleChanged = originalEntry && originalEntry.style_id !== styleIdNum
-        
+        const originalEntry = existingEntriesByIdMap.get(entryData.id);
+        const isStyleChanged = originalEntry && originalEntry.style_id !== styleIdNum;
+
         if (isStyleChanged) {
           // 変更後の種目が既に他のエントリーで使用されていないかチェック
-          const existingEntryWithSameStyle = existingEntriesMap.get(String(styleIdNum))
+          const existingEntryWithSameStyle = existingEntriesMap.get(String(styleIdNum));
           if (existingEntryWithSameStyle && existingEntryWithSameStyle.id !== entryData.id) {
-            const styleName = styles.find(s => s.id === styleIdNum)?.name_jp || '不明'
-            throw new Error(`種目「${styleName}」は既にエントリー済みです`)
+            const styleName = styles.find((s) => s.id === styleIdNum)?.name_jp || "不明";
+            throw new Error(`種目「${styleName}」は既にエントリー済みです`);
           }
         }
-        
+
         entry = await entryAPIInstance.updateEntry(entryData.id, {
           style_id: styleIdNum,
           entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
-          note: entryData.note && entryData.note.trim() !== '' ? entryData.note.trim() : null,
-        })
-        processedEntryIds.add(entryData.id)
+          note: entryData.note && entryData.note.trim() !== "" ? entryData.note.trim() : null,
+        });
+        processedEntryIds.add(entryData.id);
       } else if (existingEntryForStyle) {
         // 編集モードで既存エントリーがある場合は更新
         entry = await entryAPIInstance.updateEntry(existingEntryForStyle.id, {
           entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
-          note: entryData.note && entryData.note.trim() !== '' ? entryData.note.trim() : null,
-        })
-        processedEntryIds.add(existingEntryForStyle.id)
+          note: entryData.note && entryData.note.trim() !== "" ? entryData.note.trim() : null,
+        });
+        processedEntryIds.add(existingEntryForStyle.id);
       } else {
         // 新規作成モードまたは編集モードで既存エントリーがない場合
         // 既存エントリーをチェック（同じ種目のエントリーが既に存在する可能性がある）
         const existingEntry = await entryAPIInstance.checkExistingEntry(
           competitionIdParam,
           user.id,
-          styleIdNum
-        )
+          styleIdNum,
+        );
 
         if (existingEntry) {
           // 既存エントリーがある場合は更新
           entry = await entryAPIInstance.updateEntry(existingEntry.id, {
             entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
-            note: entryData.note && entryData.note.trim() !== '' ? entryData.note.trim() : null,
-          })
-          processedEntryIds.add(existingEntry.id)
+            note: entryData.note && entryData.note.trim() !== "" ? entryData.note.trim() : null,
+          });
+          processedEntryIds.add(existingEntry.id);
         } else {
           // 新規作成
           entry = await entryAPIInstance.createPersonalEntry({
             competition_id: competitionIdParam,
             style_id: styleIdNum,
             entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
-            note: entryData.note && entryData.note.trim() !== '' ? entryData.note.trim() : null,
-          })
+            note: entryData.note && entryData.note.trim() !== "" ? entryData.note.trim() : null,
+          });
         }
       }
 
       // 種目情報を取得
-      const style = styles.find((s) => s.id === styleIdNum)
+      const style = styles.find((s) => s.id === styleIdNum);
       if (style && entry) {
         createdEntriesList.push({
           styleId: entry.style_id,
           styleName: style.name_jp,
           entryTime: entry.entry_time ?? undefined,
-        })
+        });
       }
     }
 
@@ -411,118 +435,115 @@ export const EntryLogFormScreen: React.FC = () => {
       for (const existingEntry of existingEntriesMap.values()) {
         if (!processedEntryIds.has(existingEntry.id)) {
           // フォームに存在しない既存エントリーを削除
-          await entryAPIInstance.deleteEntry(existingEntry.id)
+          await entryAPIInstance.deleteEntry(existingEntry.id);
         }
       }
     }
 
     // ストアに保存
-    setCreatedEntries(createdEntriesList)
+    setCreatedEntries(createdEntriesList);
 
     // カレンダーのクエリを無効化してリフレッシュ
-    queryClient.invalidateQueries({ queryKey: ['calendar'] })
+    queryClient.invalidateQueries({ queryKey: ["calendar"] });
 
-    return createdEntriesList
-  }
+    return createdEntriesList;
+  };
 
   // 保存処理（保存してダッシュボードに戻る）
   const handleSave = async () => {
     // 二重送信防止
-    if (isSubmittingRef.current) return
+    if (isSubmittingRef.current) return;
 
     if (!validate()) {
-      return
+      return;
     }
 
-    isSubmittingRef.current = true
-    setLoading(true)
-    setStoreLoading(true)
+    isSubmittingRef.current = true;
+    setLoading(true);
+    setStoreLoading(true);
 
     try {
-      const entryAPI = new EntryAPI(supabase)
-      await saveOrUpdateEntries(
-        entries,
-        supabase,
-        competitionId,
-        swimStyles,
-        entryAPI
-      )
+      const entryAPI = new EntryAPI(supabase);
+      await saveOrUpdateEntries(entries, supabase, competitionId, swimStyles, entryAPI);
 
       // 成功: ダッシュボードに戻る
-      navigation.navigate('MainTabs', { screen: 'Dashboard' })
+      navigation.navigate("MainTabs", { screen: "Dashboard" });
     } catch (error) {
-      console.error('エントリー登録エラー:', error)
+      console.error("エントリー登録エラー:", error);
       Alert.alert(
-        'エラー',
-        error instanceof Error ? error.message : 'エントリー登録に失敗しました',
-        [{ text: 'OK' }]
-      )
+        "エラー",
+        error instanceof Error ? error.message : "エントリー登録に失敗しました",
+        [{ text: "OK" }],
+      );
     } finally {
-      isSubmittingRef.current = false
-      setLoading(false)
-      setStoreLoading(false)
+      isSubmittingRef.current = false;
+      setLoading(false);
+      setStoreLoading(false);
     }
-  }
+  };
 
   // 続けて大会記録を作成（RecordLogFormへ遷移）
   const handleContinueToRecord = async () => {
     // 二重送信防止
-    if (isSubmittingRef.current) return
+    if (isSubmittingRef.current) return;
 
     if (!validate()) {
-      return
+      return;
     }
 
-    isSubmittingRef.current = true
-    setLoading(true)
-    setStoreLoading(true)
+    isSubmittingRef.current = true;
+    setLoading(true);
+    setStoreLoading(true);
 
     try {
-      const entryAPI = new EntryAPI(supabase)
+      const entryAPI = new EntryAPI(supabase);
       const createdEntriesList = await saveOrUpdateEntries(
         entries,
         supabase,
         competitionId,
         swimStyles,
-        entryAPI
-      )
+        entryAPI,
+      );
 
       // 記録入力フォームに遷移
-      navigation.navigate('RecordLogForm', {
+      navigation.navigate("RecordLogForm", {
         competitionId,
         entryDataList: createdEntriesList,
         date,
-      })
+      });
     } catch (error) {
-      console.error('エントリー登録エラー:', error)
+      console.error("エントリー登録エラー:", error);
       Alert.alert(
-        'エラー',
-        error instanceof Error ? error.message : 'エントリー登録に失敗しました',
-        [{ text: 'OK' }]
-      )
+        "エラー",
+        error instanceof Error ? error.message : "エントリー登録に失敗しました",
+        [{ text: "OK" }],
+      );
     } finally {
-      isSubmittingRef.current = false
-      setLoading(false)
-      setStoreLoading(false)
+      isSubmittingRef.current = false;
+      setLoading(false);
+      setStoreLoading(false);
     }
-  }
+  };
 
   // スキップ処理
   const handleSkip = () => {
     // エントリーなしで記録入力フォームに遷移
-    navigation.navigate('RecordLogForm', {
+    navigation.navigate("RecordLogForm", {
       competitionId,
       entryDataList: [],
       date,
-    })
-  }
+    });
+  };
 
   if (loadingStyles || loadingEntry) {
     return (
       <View style={styles.container}>
-        <LoadingSpinner fullScreen message={loadingEntry ? "エントリーを読み込み中..." : "種目を読み込み中..."} />
+        <LoadingSpinner
+          fullScreen
+          message={loadingEntry ? "エントリーを読み込み中..." : "種目を読み込み中..."}
+        />
       </View>
-    )
+    );
   }
 
   return (
@@ -532,11 +553,7 @@ export const EntryLogFormScreen: React.FC = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.label}>エントリー種目</Text>
-            <Pressable
-              style={styles.addButton}
-              onPress={addEntry}
-              disabled={loading}
-            >
+            <Pressable style={styles.addButton} onPress={addEntry} disabled={loading}>
               <Feather name="plus" size={16} color="#2563EB" />
               <Text style={styles.addButtonText}>種目を追加</Text>
             </Pressable>
@@ -566,7 +583,13 @@ export const EntryLogFormScreen: React.FC = () => {
                 種目 <Text style={styles.required}>*</Text>
               </Text>
               <Pressable
-                ref={(ref) => { if (ref) { styleButtonRefs.current.set(index, ref) } else { styleButtonRefs.current.delete(index) } }}
+                ref={(ref) => {
+                  if (ref) {
+                    styleButtonRefs.current.set(index, ref);
+                  } else {
+                    styleButtonRefs.current.delete(index);
+                  }
+                }}
                 style={[styles.pickerButton, errors[`style-${index}`] && styles.pickerButtonError]}
                 onPress={() => openStylePicker(index)}
                 disabled={loading}
@@ -579,8 +602,8 @@ export const EntryLogFormScreen: React.FC = () => {
                 >
                   {entry.styleId
                     ? swimStyles.find((s) => s.id.toString() === entry.styleId)?.name_jp ||
-                      '種目を選択'
-                    : '種目を選択'}
+                      "種目を選択"
+                    : "種目を選択"}
                 </Text>
                 <Feather name="chevron-down" size={20} color="#6B7280" />
               </Pressable>
@@ -593,14 +616,9 @@ export const EntryLogFormScreen: React.FC = () => {
             <View style={styles.section}>
               <Text style={styles.label}>エントリータイム</Text>
               <TextInput
-                style={[
-                  styles.input,
-                  errors[`entryTime-${index}`] && styles.inputError,
-                ]}
+                style={[styles.input, errors[`entryTime-${index}`] && styles.inputError]}
                 value={entry.entryTimeDisplayValue}
-                onChangeText={(text) =>
-                  updateEntry(entry.id, { entryTimeDisplayValue: text })
-                }
+                onChangeText={(text) => updateEntry(entry.id, { entryTimeDisplayValue: text })}
                 placeholder="例: 2:05.00 または 2-05-00"
                 placeholderTextColor="#9CA3AF"
                 keyboardType="default"
@@ -610,9 +628,7 @@ export const EntryLogFormScreen: React.FC = () => {
                 <Text style={styles.errorText}>{errors[`entryTime-${index}`]}</Text>
               )}
               {entry.entryTime > 0 && !errors[`entryTime-${index}`] && (
-                <Text style={styles.timeHint}>
-                  入力値: {formatTime(entry.entryTime)}
-                </Text>
+                <Text style={styles.timeHint}>入力値: {formatTime(entry.entryTime)}</Text>
               )}
             </View>
 
@@ -641,10 +657,7 @@ export const EntryLogFormScreen: React.FC = () => {
         animationType="none"
         onRequestClose={() => setShowStylePicker(false)}
       >
-        <Pressable
-          style={styles.dropdownOverlay}
-          onPress={() => setShowStylePicker(false)}
-        >
+        <Pressable style={styles.dropdownOverlay} onPress={() => setShowStylePicker(false)}>
           <View
             style={[
               styles.dropdownContainer,
@@ -657,23 +670,20 @@ export const EntryLogFormScreen: React.FC = () => {
               nestedScrollEnabled
             >
               {swimStyles.map((style) => {
-                const entry = entries[pickingEntryIndex ?? 0]
-                const isSelected = entry?.styleId === String(style.id)
+                const entry = entries[pickingEntryIndex ?? 0];
+                const isSelected = entry?.styleId === String(style.id);
                 return (
                   <Pressable
                     key={style.id}
-                    style={[
-                      styles.dropdownOption,
-                      isSelected && styles.dropdownOptionSelected,
-                    ]}
+                    style={[styles.dropdownOption, isSelected && styles.dropdownOptionSelected]}
                     onPress={() => {
                       if (pickingEntryIndex !== null) {
                         updateEntry(entries[pickingEntryIndex].id, {
                           styleId: String(style.id),
-                        })
+                        });
                       }
-                      setShowStylePicker(false)
-                      setPickingEntryIndex(null)
+                      setShowStylePicker(false);
+                      setPickingEntryIndex(null);
                     }}
                   >
                     <Text
@@ -684,11 +694,9 @@ export const EntryLogFormScreen: React.FC = () => {
                     >
                       {style.name_jp}
                     </Text>
-                    {isSelected && (
-                      <Feather name="check" size={16} color="#2563EB" />
-                    )}
+                    {isSelected && <Feather name="check" size={16} color="#2563EB" />}
                   </Pressable>
-                )
+                );
               })}
             </ScrollView>
           </View>
@@ -732,13 +740,13 @@ export const EntryLogFormScreen: React.FC = () => {
         </Pressable>
       </View>
     </View>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   scrollView: {
     flex: 1,
@@ -750,104 +758,104 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 0,
   },
   addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#2563EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: "#2563EB",
+    backgroundColor: "#FFFFFF",
   },
   addButtonText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#2563EB',
+    fontWeight: "600",
+    color: "#2563EB",
   },
   entryHeaderSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   entryNumber: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: "600",
+    color: "#374151",
   },
   removeButton: {
     padding: 4,
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: "600",
+    color: "#374151",
     marginBottom: 8,
   },
   required: {
-    color: '#EF4444',
+    color: "#EF4444",
   },
   optional: {
     fontSize: 12,
-    color: '#9CA3AF',
-    fontWeight: '400',
+    color: "#9CA3AF",
+    fontWeight: "400",
   },
   input: {
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: "#D1D5DB",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
-    color: '#111827',
-    backgroundColor: '#FFFFFF',
+    color: "#111827",
+    backgroundColor: "#FFFFFF",
   },
   inputError: {
-    borderColor: '#EF4444',
+    borderColor: "#EF4444",
   },
   textArea: {
     minHeight: 80,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   pickerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: "#D1D5DB",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   pickerButtonError: {
-    borderColor: '#EF4444',
+    borderColor: "#EF4444",
   },
   pickerButtonText: {
     fontSize: 16,
-    color: '#111827',
+    color: "#111827",
   },
   pickerButtonPlaceholder: {
-    color: '#9CA3AF',
+    color: "#9CA3AF",
   },
   dropdownOverlay: {
     flex: 1,
   },
   dropdownContainer: {
-    position: 'absolute',
-    backgroundColor: '#FFFFFF',
+    position: "absolute",
+    backgroundColor: "#FFFFFF",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: "#D1D5DB",
     maxHeight: 260,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -857,84 +865,84 @@ const styles = StyleSheet.create({
     maxHeight: 260,
   },
   dropdownOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: "#E5E7EB",
   },
   dropdownOptionSelected: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: "#EFF6FF",
   },
   dropdownOptionText: {
     fontSize: 15,
-    color: '#111827',
+    color: "#111827",
   },
   dropdownOptionTextSelected: {
-    color: '#2563EB',
-    fontWeight: '600',
+    color: "#2563EB",
+    fontWeight: "600",
   },
   timeHint: {
     fontSize: 12,
-    color: '#6B7280',
+    color: "#6B7280",
     marginTop: 4,
   },
   errorText: {
     fontSize: 12,
-    color: '#EF4444',
+    color: "#EF4444",
     marginTop: 4,
   },
   footer: {
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
+    borderTopColor: "#E5E7EB",
+    backgroundColor: "#F9FAFB",
   },
   buttonContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   button: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   cancelButton: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: "#F3F4F6",
   },
   cancelButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: "600",
+    color: "#374151",
   },
   saveButton: {
-    backgroundColor: '#2563EB',
+    backgroundColor: "#2563EB",
   },
   saveButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
   continueButton: {
     marginTop: 12,
     paddingVertical: 14,
     borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#2563EB',
+    borderColor: "#2563EB",
   },
   continueButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#2563EB',
+    fontWeight: "600",
+    color: "#2563EB",
   },
   buttonDisabled: {
     opacity: 0.6,
   },
-})
+});

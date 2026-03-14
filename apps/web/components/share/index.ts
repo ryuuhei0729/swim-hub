@@ -2,9 +2,9 @@
 // シェアカードコンポーネント エクスポート
 // =============================================================================
 
-export { CompetitionShareCard } from './CompetitionShareCard'
-export { PracticeShareCard } from './PracticeShareCard'
-export { ShareCardModal } from './ShareCardModal'
+export { CompetitionShareCard } from "./CompetitionShareCard";
+export { PracticeShareCard } from "./PracticeShareCard";
+export { ShareCardModal } from "./ShareCardModal";
 
 export type {
   CompetitionShareData,
@@ -13,12 +13,9 @@ export type {
   PracticeTimeItem,
   ShareCardTheme,
   ShareCardSize,
-} from './types'
+} from "./types";
 
-export {
-  INSTAGRAM_STORY_SIZE,
-  INSTAGRAM_POST_SIZE,
-} from './types'
+export { INSTAGRAM_STORY_SIZE, INSTAGRAM_POST_SIZE } from "./types";
 
 export {
   formatTime,
@@ -31,4 +28,4 @@ export {
   downloadImage,
   getStyleNameJp,
   getCategoryNameJp,
-} from './utils'
+} from "./utils";

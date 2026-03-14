@@ -1,5 +1,5 @@
-import React, { Suspense } from 'react'
-import CompetitionDataLoader from './_server/CompetitionDataLoader'
+import React, { Suspense } from "react";
+import CompetitionDataLoader from "./_server/CompetitionDataLoader";
 
 /**
  * 大会記録ページ（Server Component）
@@ -23,5 +23,5 @@ export default async function CompetitionPage() {
     >
       <CompetitionDataLoader />
     </Suspense>
-  )
+  );
 }

@@ -1,78 +1,81 @@
-'use client'
+"use client";
 
-import React, { useMemo, useState } from 'react'
-import { Tabs } from '@/components/ui/Tabs'
-import type { Tab } from '@/components/ui/Tabs'
+import React, { useMemo, useState } from "react";
+import { Tabs } from "@/components/ui/Tabs";
+import type { Tab } from "@/components/ui/Tabs";
 import {
   calculateAllLapTimes,
   calculateRaceLapTimesTable,
   getLapIntervalsForRace,
-  type SplitTime
-} from '@/utils/lapTimeCalculator'
-import { formatTimeBest } from '@/utils/formatters'
+  type SplitTime,
+} from "@/utils/lapTimeCalculator";
+import { formatTimeBest } from "@/utils/formatters";
 
 interface LapTimeDisplayProps {
-  splitTimes: Array<{ distance: number | ''; splitTime: number }>
-  raceDistance?: number // 種目の距離（m）
+  splitTimes: Array<{ distance: number | ""; splitTime: number }>;
+  raceDistance?: number; // 種目の距離（m）
 }
 
 export function LapTimeDisplay({ splitTimes, raceDistance }: LapTimeDisplayProps) {
-  const [activeTab, setActiveTab] = useState<'all' | 'race'>('race')
+  const [activeTab, setActiveTab] = useState<"all" | "race">("race");
 
   // split-timeを有効なものだけフィルタリングしてSplitTime型に変換
   const validSplitTimes: SplitTime[] = useMemo(() => {
     return splitTimes
-      .filter(st => typeof st.distance === 'number' && st.distance > 0 && st.splitTime > 0)
-      .map(st => ({
+      .filter((st) => typeof st.distance === "number" && st.distance > 0 && st.splitTime > 0)
+      .map((st) => ({
         distance: st.distance as number,
-        splitTime: st.splitTime
-      }))
-  }, [splitTimes])
+        splitTime: st.splitTime,
+      }));
+  }, [splitTimes]);
 
   // All Lapの計算
   const allLapTimes = useMemo(() => {
-    return calculateAllLapTimes(validSplitTimes)
-  }, [validSplitTimes])
+    return calculateAllLapTimes(validSplitTimes);
+  }, [validSplitTimes]);
 
   // 種目別Lapの計算
   const raceLapTimesTable = useMemo(() => {
-    if (!raceDistance || validSplitTimes.length === 0) return []
-    return calculateRaceLapTimesTable(validSplitTimes, raceDistance)
-  }, [validSplitTimes, raceDistance])
+    if (!raceDistance || validSplitTimes.length === 0) return [];
+    return calculateRaceLapTimesTable(validSplitTimes, raceDistance);
+  }, [validSplitTimes, raceDistance]);
 
   const lapIntervals = useMemo(() => {
-    if (!raceDistance) return []
-    return getLapIntervalsForRace(raceDistance)
-  }, [raceDistance])
+    if (!raceDistance) return [];
+    return getLapIntervalsForRace(raceDistance);
+  }, [raceDistance]);
 
   // データが1つもないintervalは列ごと非表示にする
   const visibleLapIntervals = useMemo(() => {
-    return lapIntervals.filter(interval =>
-      raceLapTimesTable.some(row => row.lapTimes[interval] != null)
-    )
-  }, [lapIntervals, raceLapTimesTable])
+    return lapIntervals.filter((interval) =>
+      raceLapTimesTable.some((row) => row.lapTimes[interval] != null),
+    );
+  }, [lapIntervals, raceLapTimesTable]);
 
   const tabs: Tab[] = [
-    { id: 'race', label: '距離別 Lap' },
-    { id: 'all', label: 'All Lap' }
-  ]
+    { id: "race", label: "距離別 Lap" },
+    { id: "all", label: "All Lap" },
+  ];
 
   if (validSplitTimes.length === 0) {
     return (
       <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-        <p className="text-sm text-gray-500 text-center">
-          スプリットタイムを入力してください
-        </p>
+        <p className="text-sm text-gray-500 text-center">スプリットタイムを入力してください</p>
       </div>
-    )
+    );
   }
 
   return (
     <div className="mt-4 bg-gray-50 rounded-lg border border-gray-200">
-      <Tabs tabs={tabs} activeTabId={activeTab} onTabChange={(tabId) => setActiveTab(tabId as 'all' | 'race')} className="px-4" />
-      
+      <Tabs
+        tabs={tabs}
+        activeTabId={activeTab}
+        onTabChange={(tabId) => setActiveTab(tabId as "all" | "race")}
+        className="px-4"
+      />
+
       <div className="p-4">
-        {activeTab === 'all' && (
+        {activeTab === "all" && (
           <div className="space-y-2">
             <h4 className="text-sm font-medium text-gray-700 mb-2">全てのラップタイム</h4>
             {allLapTimes.length === 0 ? (
@@ -97,7 +100,7 @@ export function LapTimeDisplay({ splitTimes, raceDistance }: LapTimeDisplayProps
           </div>
         )}
 
-        {activeTab === 'race' && (
+        {activeTab === "race" && (
           <div>
             {!raceDistance ? (
               <p className="text-sm text-gray-500">種目を選択してください</p>
@@ -131,7 +134,7 @@ export function LapTimeDisplay({ splitTimes, raceDistance }: LapTimeDisplayProps
                           {row.distance}m
                         </td>
                         <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
-                          {row.splitTime !== null ? formatTimeBest(row.splitTime) : '-'}
+                          {row.splitTime !== null ? formatTimeBest(row.splitTime) : "-"}
                         </td>
                         {visibleLapIntervals.map((interval) => (
                           <td
@@ -140,7 +143,7 @@ export function LapTimeDisplay({ splitTimes, raceDistance }: LapTimeDisplayProps
                           >
                             {row.lapTimes[interval] !== null && row.lapTimes[interval] !== undefined
                               ? formatTimeBest(row.lapTimes[interval]!)
-                              : '-'}
+                              : "-"}
                           </td>
                         ))}
                       </tr>
@@ -153,6 +156,5 @@ export function LapTimeDisplay({ splitTimes, raceDistance }: LapTimeDisplayProps
         )}
       </div>
     </div>
-  )
+  );
 }
-

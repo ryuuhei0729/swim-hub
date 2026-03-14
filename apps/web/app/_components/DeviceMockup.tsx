@@ -1,65 +1,68 @@
-'use client'
+"use client";
 
-import 'react-device-frameset/styles/marvel-devices.min.css'
-import { useEffect, useState } from 'react'
-import Image from 'next/image'
-import dynamic from 'next/dynamic'
+import "react-device-frameset/styles/marvel-devices.min.css";
+import { useEffect, useState } from "react";
+import Image from "next/image";
+import dynamic from "next/dynamic";
 
 const DeviceFrameset = dynamic(
-  () => import('react-device-frameset').then((m) => m.DeviceFrameset),
-  { ssr: false }
-)
+  () => import("react-device-frameset").then((m) => m.DeviceFrameset),
+  { ssr: false },
+);
 
 const screenshotPaths = {
-  mobile: '/screenshots/dashboard-mobile.png',
-  desktop: '/screenshots/members-desktop.png',
-}
+  mobile: "/screenshots/dashboard-mobile.png",
+  desktop: "/screenshots/members-desktop.png",
+};
 
 export default function DeviceMockup() {
   const [imageErrors, setImageErrors] = useState<{ mobile: boolean; desktop: boolean }>({
     mobile: false,
     desktop: false,
-  })
-  const [windowWidth, setWindowWidth] = useState<number>(0)
+  });
+  const [windowWidth, setWindowWidth] = useState<number>(0);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setWindowWidth(window.innerWidth)
+    if (typeof window !== "undefined") {
+      setWindowWidth(window.innerWidth);
     }
 
     const handleResize = () => {
-      setWindowWidth(window.innerWidth)
-    }
+      setWindowWidth(window.innerWidth);
+    };
 
-    window.addEventListener('resize', handleResize, { passive: true })
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
+    window.addEventListener("resize", handleResize, { passive: true });
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // スマホ端末のスケールを計算
   const mobileScale = (() => {
-    if (windowWidth === 0) return 0.80
-    if (windowWidth >= 1920) return 0.80
-    if (windowWidth <= 768) return 0.40
-    const ratio = (windowWidth - 768) / (1920 - 768)
-    return 0.40 + (ratio * 0.40)
-  })()
+    if (windowWidth === 0) return 0.8;
+    if (windowWidth >= 1920) return 0.8;
+    if (windowWidth <= 768) return 0.4;
+    const ratio = (windowWidth - 768) / (1920 - 768);
+    return 0.4 + ratio * 0.4;
+  })();
 
   // PC端末のスケールを計算
   const desktopScale = (() => {
-    if (windowWidth === 0) return 0.60
-    if (windowWidth >= 1920) return 0.60
-    if (windowWidth <= 1024) return 0.35
-    const ratio = (windowWidth - 1024) / (1920 - 1024)
-    return 0.35 + (ratio * 0.25)
-  })()
+    if (windowWidth === 0) return 0.6;
+    if (windowWidth >= 1920) return 0.6;
+    if (windowWidth <= 1024) return 0.35;
+    const ratio = (windowWidth - 1024) / (1920 - 1024);
+    return 0.35 + ratio * 0.25;
+  })();
 
   return (
-    <div className="relative flex items-end justify-center animate-fade-in order-1 lg:order-2" style={{ animationDelay: '0.1s' }}>
+    <div
+      className="relative flex items-end justify-center animate-fade-in order-1 lg:order-2"
+      style={{ animationDelay: "0.1s" }}
+    >
       {/* スマホモック（iPhone）- スマホサイズでは非表示 */}
       <div
         className="hidden sm:block absolute z-10"
         style={{
-          left: 'calc(50% - 10px)',
+          left: "calc(50% - 10px)",
           transform: `translateX(50%) translateY(5%) scale(${mobileScale})`,
         }}
       >
@@ -81,7 +84,7 @@ export default function DeviceMockup() {
                 quality={100}
                 unoptimized
                 onError={() => {
-                  setImageErrors((prev) => ({ ...prev, mobile: true }))
+                  setImageErrors((prev) => ({ ...prev, mobile: true }));
                 }}
               />
             )}
@@ -112,7 +115,7 @@ export default function DeviceMockup() {
                 quality={100}
                 unoptimized
                 onError={() => {
-                  setImageErrors((prev) => ({ ...prev, desktop: true }))
+                  setImageErrors((prev) => ({ ...prev, desktop: true }));
                 }}
               />
             )}
@@ -120,5 +123,5 @@ export default function DeviceMockup() {
         </DeviceFrameset>
       </div>
     </div>
-  )
+  );
 }

@@ -1,40 +1,40 @@
-'use client'
+"use client";
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { AuthForm } from '@/components/auth'
-import { useAuth } from '@/contexts'
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { AuthForm } from "@/components/auth";
+import { useAuth } from "@/contexts";
 
 export default function SignupPage() {
-  const { isAuthenticated, loading } = useAuth()
-  const router = useRouter()
+  const { isAuthenticated, loading } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
-      router.push('/dashboard')
+      router.push("/dashboard");
     }
-  }, [isAuthenticated, loading, router])
+  }, [isAuthenticated, loading, router]);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
-    )
+    );
   }
 
   if (isAuthenticated) {
-    return null
+    return null;
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-blue-50">
-      <AuthForm 
-        mode="signup" 
+      <AuthForm
+        mode="signup"
         onSuccess={() => {
           // メール認証の案内メッセージは表示しない
         }}
       />
     </div>
-  )
+  );
 }

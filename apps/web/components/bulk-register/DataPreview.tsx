@@ -1,29 +1,30 @@
-'use client'
+"use client";
 
-import React from 'react'
-import { ExclamationTriangleIcon } from '@heroicons/react/24/outline'
-import { format, isValid } from 'date-fns'
-import { ja } from 'date-fns/locale'
-import type { ParsedData } from '@/types/bulk-register'
+import React from "react";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import { format, isValid } from "date-fns";
+import { ja } from "date-fns/locale";
+import type { ParsedData } from "@/types/bulk-register";
 
 interface DataPreviewProps {
-  parsedData: ParsedData
-  loading: boolean
-  onRegister: () => void
+  parsedData: ParsedData;
+  loading: boolean;
+  onRegister: () => void;
 }
 
 export function DataPreview({ parsedData, loading, onRegister }: DataPreviewProps) {
-  const errors = parsedData.type === 'practice' ? parsedData.data.errors : parsedData.data.errors
-  const hasItems = parsedData.type === 'practice'
-    ? parsedData.data.practices.length > 0
-    : parsedData.data.competitions.length > 0
+  const errors = parsedData.type === "practice" ? parsedData.data.errors : parsedData.data.errors;
+  const hasItems =
+    parsedData.type === "practice"
+      ? parsedData.data.practices.length > 0
+      : parsedData.data.competitions.length > 0;
 
   return (
     <div className="mb-6">
       <h3 className="text-lg font-medium text-gray-900 mb-4">
         プレビュー
         <span className="ml-2 text-sm font-normal text-gray-500">
-          ({parsedData.type === 'practice' ? '練習' : '大会'}データ)
+          ({parsedData.type === "practice" ? "練習" : "大会"}データ)
         </span>
       </h3>
 
@@ -44,9 +45,7 @@ export function DataPreview({ parsedData, loading, onRegister }: DataPreviewProp
                     </li>
                   ))}
                   {errors.length > 20 && (
-                    <li className="text-yellow-600">
-                      他 {errors.length - 20}件のエラーがあります
-                    </li>
+                    <li className="text-yellow-600">他 {errors.length - 20}件のエラーがあります</li>
                   )}
                 </ul>
               </div>
@@ -58,7 +57,7 @@ export function DataPreview({ parsedData, loading, onRegister }: DataPreviewProp
       {/* 登録予定データ */}
       <div className="space-y-4">
         {/* 練習データ */}
-        {parsedData.type === 'practice' && parsedData.data.practices.length > 0 && (
+        {parsedData.type === "practice" && parsedData.data.practices.length > 0 && (
           <div>
             <h4 className="text-md font-medium text-gray-800 mb-2">
               練習 ({parsedData.data.practices.length}件)
@@ -86,18 +85,16 @@ export function DataPreview({ parsedData, loading, onRegister }: DataPreviewProp
                     <tr key={index}>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                         {isValid(new Date(practice.date))
-                          ? format(new Date(practice.date), 'yyyy年MM月dd日', { locale: ja })
-                          : '-'}
+                          ? format(new Date(practice.date), "yyyy年MM月dd日", { locale: ja })
+                          : "-"}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {practice.title || '-'}
+                        {practice.title || "-"}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {practice.place || '-'}
+                        {practice.place || "-"}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {practice.note || '-'}
-                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500">{practice.note || "-"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -112,7 +109,7 @@ export function DataPreview({ parsedData, loading, onRegister }: DataPreviewProp
         )}
 
         {/* 大会データ */}
-        {parsedData.type === 'competition' && parsedData.data.competitions.length > 0 && (
+        {parsedData.type === "competition" && parsedData.data.competitions.length > 0 && (
           <div>
             <h4 className="text-md font-medium text-gray-800 mb-2">
               大会 ({parsedData.data.competitions.length}件)
@@ -146,26 +143,28 @@ export function DataPreview({ parsedData, loading, onRegister }: DataPreviewProp
                     <tr key={index}>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                         {isValid(new Date(competition.date))
-                          ? format(new Date(competition.date), 'yyyy年MM月dd日', { locale: ja })
-                          : '-'}
+                          ? format(new Date(competition.date), "yyyy年MM月dd日", { locale: ja })
+                          : "-"}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                         {competition.end_date && isValid(new Date(competition.end_date))
-                          ? format(new Date(competition.end_date), 'yyyy年MM月dd日', { locale: ja })
-                          : '-'}
+                          ? format(new Date(competition.end_date), "yyyy年MM月dd日", { locale: ja })
+                          : "-"}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {competition.title || '-'}
+                        {competition.title || "-"}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {competition.place || '-'}
+                        {competition.place || "-"}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {competition.pool_type === 0 ? '25m' : competition.pool_type === 1 ? '50m' : '-'}
+                        {competition.pool_type === 0
+                          ? "25m"
+                          : competition.pool_type === 1
+                            ? "50m"
+                            : "-"}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {competition.note || '-'}
-                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500">{competition.note || "-"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -189,19 +188,35 @@ export function DataPreview({ parsedData, loading, onRegister }: DataPreviewProp
             >
               {loading ? (
                 <>
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg
+                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
                   </svg>
                   登録中...
                 </>
               ) : (
-                `${parsedData.type === 'practice' ? '練習' : '大会'}を一括登録`
+                `${parsedData.type === "practice" ? "練習" : "大会"}を一括登録`
               )}
             </button>
           </div>
         )}
       </div>
     </div>
-  )
+  );
 }

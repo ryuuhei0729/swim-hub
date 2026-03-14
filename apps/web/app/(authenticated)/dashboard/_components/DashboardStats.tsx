@@ -1,44 +1,40 @@
-'use client'
+"use client";
 
-import React from 'react'
-import { useAuth } from '@/contexts'
-import { useDashboardStatsQuery } from '@apps/shared/hooks/queries/dashboard'
-import {
-  CalendarDaysIcon,
-  ChartBarIcon,
-  TrophyIcon,
-} from '@heroicons/react/24/outline'
+import React from "react";
+import { useAuth } from "@/contexts";
+import { useDashboardStatsQuery } from "@apps/shared/hooks/queries/dashboard";
+import { CalendarDaysIcon, ChartBarIcon, TrophyIcon } from "@heroicons/react/24/outline";
 
 export default function DashboardStats() {
-  const { supabase, user } = useAuth()
-  const { data, isLoading } = useDashboardStatsQuery(supabase, user?.id)
+  const { supabase, user } = useAuth();
+  const { data, isLoading } = useDashboardStatsQuery(supabase, user?.id);
 
-  const practiceCount = data?.practiceCount ?? 0
-  const recordCount = data?.recordCount ?? 0
+  const practiceCount = data?.practiceCount ?? 0;
+  const recordCount = data?.recordCount ?? 0;
 
   const stats = [
     {
-      title: '今月の練習',
+      title: "今月の練習",
       value: practiceCount,
       icon: CalendarDaysIcon,
-      color: 'bg-blue-500',
-      unit: '回'
+      color: "bg-blue-500",
+      unit: "回",
     },
     {
-      title: '大会記録',
+      title: "大会記録",
       value: recordCount,
       icon: TrophyIcon,
-      color: 'bg-green-500',
-      unit: '件'
+      color: "bg-green-500",
+      unit: "件",
     },
     {
-      title: '練習日数',
+      title: "練習日数",
       value: practiceCount,
       icon: ChartBarIcon,
-      color: 'bg-purple-500',
-      unit: '日'
-    }
-  ]
+      color: "bg-purple-500",
+      unit: "日",
+    },
+  ];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -63,5 +59,5 @@ export default function DashboardStats() {
         </div>
       ))}
     </div>
-  )
+  );
 }

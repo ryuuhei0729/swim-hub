@@ -1,2 +1,2 @@
-export { PracticeItem } from './PracticeItem'
-export { PracticeLogItem } from './PracticeLogItem'
+export { PracticeItem } from "./PracticeItem";
+export { PracticeLogItem } from "./PracticeLogItem";

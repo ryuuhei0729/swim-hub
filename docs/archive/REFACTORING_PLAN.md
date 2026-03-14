@@ -23,6 +23,7 @@
 ## 現状分析
 
 ### プロジェクト構造
+
 ```
 swim-hub/
 ├── apps/
@@ -92,22 +93,24 @@ swim-hub/
 
 ## リファクタリング優先度マトリクス
 
-| フェーズ | 対象 | 影響範囲 | 実装難易度 | 優先度 | 推定工数 |
-|---------|------|---------|-----------|--------|---------|
-| 1 | database.ts分割 | 高 | 低 | 🔴 最高 | 4-6時間 |
-| 2 | teamモジュール再組織 | 高 | 中 | 🔴 高 | 8-12時間 |
-| 3 | forms整理 | 高 | 高 | 🟡 中 | 12-16時間 |
-| 4 | パフォーマンス最適化 | 最高 | 中 | 🔴 最高 | 8-10時間 |
-| 5 | 重複コード解消 | 中 | 低 | 🟡 中 | 4-6時間 |
+| フェーズ | 対象                 | 影響範囲 | 実装難易度 | 優先度  | 推定工数  |
+| -------- | -------------------- | -------- | ---------- | ------- | --------- |
+| 1        | database.ts分割      | 高       | 低         | 🔴 最高 | 4-6時間   |
+| 2        | teamモジュール再組織 | 高       | 中         | 🔴 高   | 8-12時間  |
+| 3        | forms整理            | 高       | 高         | 🟡 中   | 12-16時間 |
+| 4        | パフォーマンス最適化 | 最高     | 中         | 🔴 最高 | 8-10時間  |
+| 5        | 重複コード解消       | 中       | 低         | 🟡 中   | 4-6時間   |
 
 ---
 
 ## フェーズ1: database.tsの分割
 
 ### 目標
+
 巨大な型定義ファイル（1,003行）をドメイン別に分割し、保守性と可読性を向上させる。
 
 ### 現在の構造
+
 ```typescript
 // apps/shared/types/database.ts (1,003行)
 export interface UserProfile { ... }
@@ -121,6 +124,7 @@ export interface Goal { ... }
 ```
 
 ### 新しい構造
+
 ```
 apps/shared/types/
 ├── index.ts                    # 統合エクスポート
@@ -139,314 +143,326 @@ apps/shared/types/
 ### 詳細な分割計画
 
 #### 1. `common.ts` - 共通型定義
+
 ```typescript
 // 基本的なenum、共通インターフェース
-export type PoolType = 'long' | 'short'
-export type AttendanceStatusType = 'present' | 'absent' | 'other' | 'unanswered'
-export type CalendarItemType = 'practice' | 'competition'
+export type PoolType = "long" | "short";
+export type AttendanceStatusType = "present" | "absent" | "other" | "unanswered";
+export type CalendarItemType = "practice" | "competition";
 
 export interface Style {
-  id: number
-  name_jp: string
-  name: string
-  style: 'fr' | 'br' | 'ba' | 'fly' | 'im'
-  distance: number
+  id: number;
+  name_jp: string;
+  name: string;
+  style: "fr" | "br" | "ba" | "fly" | "im";
+  distance: number;
 }
 
 export interface TimestampFields {
-  created_at: string
-  updated_at: string
+  created_at: string;
+  updated_at: string;
 }
 
 export interface BaseEntity extends TimestampFields {
-  id: string
+  id: string;
 }
 ```
 
 #### 2. `user.ts` - ユーザー関連型
+
 ```typescript
-import { BaseEntity } from './common'
+import { BaseEntity } from "./common";
 
 export interface UserProfile extends BaseEntity {
-  name: string
-  gender: number
-  birthday: string | null
-  profile_image_path: string | null
-  bio: string | null
-  google_calendar_enabled: boolean
-  google_calendar_sync_practices: boolean
-  google_calendar_sync_competitions: boolean
+  name: string;
+  gender: number;
+  birthday: string | null;
+  profile_image_path: string | null;
+  bio: string | null;
+  google_calendar_enabled: boolean;
+  google_calendar_sync_practices: boolean;
+  google_calendar_sync_competitions: boolean;
 }
 
-export type UserInsert = Omit<UserProfile, 'id' | 'created_at' | 'updated_at'>
-export type UserUpdate = Partial<UserInsert>
+export type UserInsert = Omit<UserProfile, "id" | "created_at" | "updated_at">;
+export type UserUpdate = Partial<UserInsert>;
 
 // Google Calendar関連
 export interface GoogleCalendarSettings {
-  enabled: boolean
-  sync_practices: boolean
-  sync_competitions: boolean
+  enabled: boolean;
+  sync_practices: boolean;
+  sync_competitions: boolean;
 }
 ```
 
 #### 3. `practice.ts` - 練習関連型
+
 ```typescript
-import { BaseEntity, AttendanceStatusType, CalendarItemType } from './common'
-import { Style } from './common'
+import { BaseEntity, AttendanceStatusType, CalendarItemType } from "./common";
+import { Style } from "./common";
 
 export interface Practice extends BaseEntity {
-  user_id: string
-  date: string
-  title: string | null
-  place: string | null
-  note: string | null
-  team_id?: string | null
-  attendance_status?: AttendanceStatusType | null
-  google_event_id?: string | null
+  user_id: string;
+  date: string;
+  title: string | null;
+  place: string | null;
+  note: string | null;
+  team_id?: string | null;
+  attendance_status?: AttendanceStatusType | null;
+  google_event_id?: string | null;
 
   // 拡張プロパティ（CalendarItem互換）
-  item_type?: CalendarItemType
-  item_date?: string
-  tags?: string[]
-  team_practice?: boolean
-  practiceLogs?: PracticeLog[]
-  practice_logs?: PracticeLog[]
+  item_type?: CalendarItemType;
+  item_date?: string;
+  tags?: string[];
+  team_practice?: boolean;
+  practiceLogs?: PracticeLog[];
+  practice_logs?: PracticeLog[];
 }
 
 export interface PracticeLog extends BaseEntity {
-  user_id: string
-  practice_id: string
-  style: string
-  swim_category: 'Swim' | 'Pull' | 'Kick'
-  rep_count: number
-  set_count: number
-  distance: number
-  circle: number | null
-  note: string | null
+  user_id: string;
+  practice_id: string;
+  style: string;
+  swim_category: "Swim" | "Pull" | "Kick";
+  rep_count: number;
+  set_count: number;
+  distance: number;
+  circle: number | null;
+  note: string | null;
 }
 
 export interface PracticeImage extends BaseEntity {
-  practice_id: string
-  user_id: string
-  original_path: string
-  display_path: string
-  display_order: number
+  practice_id: string;
+  user_id: string;
+  original_path: string;
+  display_path: string;
+  display_order: number;
 }
 
 export interface PracticeTag {
-  id: string
-  user_id: string
-  tag_name: string
+  id: string;
+  user_id: string;
+  tag_name: string;
 }
 
-export type PracticeInsert = Omit<Practice, 'id' | 'created_at' | 'updated_at'>
-export type PracticeUpdate = Partial<Omit<PracticeInsert, 'user_id'>>
-export type PracticeLogInsert = Omit<PracticeLog, 'id' | 'created_at' | 'updated_at'>
-export type PracticeLogUpdate = Partial<Omit<PracticeLogInsert, 'practice_id'>>
+export type PracticeInsert = Omit<Practice, "id" | "created_at" | "updated_at">;
+export type PracticeUpdate = Partial<Omit<PracticeInsert, "user_id">>;
+export type PracticeLogInsert = Omit<PracticeLog, "id" | "created_at" | "updated_at">;
+export type PracticeLogUpdate = Partial<Omit<PracticeLogInsert, "practice_id">>;
 ```
 
 #### 4. `record.ts` - 記録関連型
+
 ```typescript
-import { BaseEntity, PoolType } from './common'
+import { BaseEntity, PoolType } from "./common";
 
 export interface Record extends BaseEntity {
-  user_id: string
-  style_id: number
-  time_result: number
-  pool_type: PoolType
-  competition_date: string
-  competition_name: string
-  is_relaying: boolean
-  note: string | null
-  competition_id?: string | null
-  entry_id?: string | null
-  team_id?: string | null
+  user_id: string;
+  style_id: number;
+  time_result: number;
+  pool_type: PoolType;
+  competition_date: string;
+  competition_name: string;
+  is_relaying: boolean;
+  note: string | null;
+  competition_id?: string | null;
+  entry_id?: string | null;
+  team_id?: string | null;
 
   // リレーション
   style?: {
-    id: string
-    name_jp: string
-    distance: number
-  }
+    id: string;
+    name_jp: string;
+    distance: number;
+  };
 }
 
 export interface RecordLog extends BaseEntity {
-  record_id: string
-  user_id: string
-  set_number: number
-  time_result: number
-  reaction_time: number | null
-  note: string | null
-  lap_times: number[]
+  record_id: string;
+  user_id: string;
+  set_number: number;
+  time_result: number;
+  reaction_time: number | null;
+  note: string | null;
+  lap_times: number[];
 }
 
-export type RecordInsert = Omit<Record, 'id' | 'created_at' | 'updated_at'>
-export type RecordUpdate = Partial<Omit<RecordInsert, 'user_id'>>
-export type RecordLogInsert = Omit<RecordLog, 'id' | 'created_at' | 'updated_at'>
-export type RecordLogUpdate = Partial<Omit<RecordLogInsert, 'record_id'>>
+export type RecordInsert = Omit<Record, "id" | "created_at" | "updated_at">;
+export type RecordUpdate = Partial<Omit<RecordInsert, "user_id">>;
+export type RecordLogInsert = Omit<RecordLog, "id" | "created_at" | "updated_at">;
+export type RecordLogUpdate = Partial<Omit<RecordLogInsert, "record_id">>;
 ```
 
 #### 5. `competition.ts` - 大会関連型
+
 ```typescript
-import { BaseEntity, CalendarItemType } from './common'
+import { BaseEntity, CalendarItemType } from "./common";
 
 export interface Competition extends BaseEntity {
-  user_id: string
-  date: string
-  name: string
-  place: string | null
-  note: string | null
-  team_id?: string | null
-  google_event_id?: string | null
+  user_id: string;
+  date: string;
+  name: string;
+  place: string | null;
+  note: string | null;
+  team_id?: string | null;
+  google_event_id?: string | null;
 
   // 拡張プロパティ
-  item_type?: CalendarItemType
-  item_date?: string
-  team_competition?: boolean
+  item_type?: CalendarItemType;
+  item_date?: string;
+  team_competition?: boolean;
 }
 
 export interface CompetitionImage extends BaseEntity {
-  competition_id: string
-  user_id: string
-  original_path: string
-  display_path: string
-  display_order: number
+  competition_id: string;
+  user_id: string;
+  original_path: string;
+  display_path: string;
+  display_order: number;
 }
 
-export type CompetitionInsert = Omit<Competition, 'id' | 'created_at' | 'updated_at'>
-export type CompetitionUpdate = Partial<Omit<CompetitionInsert, 'user_id'>>
+export type CompetitionInsert = Omit<Competition, "id" | "created_at" | "updated_at">;
+export type CompetitionUpdate = Partial<Omit<CompetitionInsert, "user_id">>;
 ```
 
 #### 6. `team.ts` - チーム関連型
+
 ```typescript
-import { BaseEntity } from './common'
+import { BaseEntity } from "./common";
 
 export interface Team extends BaseEntity {
-  name: string
-  description: string | null
-  owner_id: string
-  invitation_code: string
-  code_updated_at: string
+  name: string;
+  description: string | null;
+  owner_id: string;
+  invitation_code: string;
+  code_updated_at: string;
 }
 
 export interface TeamMembership extends BaseEntity {
-  team_id: string
-  user_id: string
-  role: 'owner' | 'admin' | 'member'
-  is_active: boolean
+  team_id: string;
+  user_id: string;
+  role: "owner" | "admin" | "member";
+  is_active: boolean;
 }
 
 export interface TeamAnnouncement extends BaseEntity {
-  team_id: string
-  user_id: string
-  title: string
-  content: string
-  is_pinned: boolean
+  team_id: string;
+  user_id: string;
+  title: string;
+  content: string;
+  is_pinned: boolean;
 }
 
-export type TeamInsert = Omit<Team, 'id' | 'created_at' | 'updated_at'>
-export type TeamUpdate = Partial<Omit<TeamInsert, 'owner_id'>>
+export type TeamInsert = Omit<Team, "id" | "created_at" | "updated_at">;
+export type TeamUpdate = Partial<Omit<TeamInsert, "owner_id">>;
 ```
 
 #### 7. `attendance.ts` - 出欠関連型
+
 ```typescript
-import { BaseEntity, AttendanceStatusType } from './common'
+import { BaseEntity, AttendanceStatusType } from "./common";
 
 export interface TeamAttendance extends BaseEntity {
-  team_id: string
-  user_id: string
-  practice_id: string
-  status: AttendanceStatusType
-  note: string | null
+  team_id: string;
+  user_id: string;
+  practice_id: string;
+  status: AttendanceStatusType;
+  note: string | null;
 }
 
 export interface AttendanceSubmission {
-  practice_id: string
-  status: AttendanceStatusType
-  note?: string | null
+  practice_id: string;
+  status: AttendanceStatusType;
+  note?: string | null;
 }
 
-export type TeamAttendanceInsert = Omit<TeamAttendance, 'id' | 'created_at' | 'updated_at'>
-export type TeamAttendanceUpdate = Partial<Omit<TeamAttendanceInsert, 'team_id' | 'user_id' | 'practice_id'>>
+export type TeamAttendanceInsert = Omit<TeamAttendance, "id" | "created_at" | "updated_at">;
+export type TeamAttendanceUpdate = Partial<
+  Omit<TeamAttendanceInsert, "team_id" | "user_id" | "practice_id">
+>;
 ```
 
 #### 8. `goal.ts` - 目標関連型
+
 ```typescript
-import { BaseEntity } from './common'
+import { BaseEntity } from "./common";
 
 export interface Goal extends BaseEntity {
-  user_id: string
-  style_id: number
-  target_time: number
-  deadline: string | null
-  is_achieved: boolean
-  achieved_at: string | null
-  note: string | null
+  user_id: string;
+  style_id: number;
+  target_time: number;
+  deadline: string | null;
+  is_achieved: boolean;
+  achieved_at: string | null;
+  note: string | null;
 
   // リレーション
   style?: {
-    id: string
-    name_jp: string
-    distance: number
-  }
+    id: string;
+    name_jp: string;
+    distance: number;
+  };
 }
 
-export type GoalInsert = Omit<Goal, 'id' | 'created_at' | 'updated_at'>
-export type GoalUpdate = Partial<Omit<GoalInsert, 'user_id'>>
+export type GoalInsert = Omit<Goal, "id" | "created_at" | "updated_at">;
+export type GoalUpdate = Partial<Omit<GoalInsert, "user_id">>;
 ```
 
 #### 9. `calendar.ts` - カレンダー関連型
+
 ```typescript
-import { CalendarItemType, PoolType, AttendanceStatusType } from './common'
-import { Practice } from './practice'
-import { Competition } from './competition'
-import { Record } from './record'
+import { CalendarItemType, PoolType, AttendanceStatusType } from "./common";
+import { Practice } from "./practice";
+import { Competition } from "./competition";
+import { Record } from "./record";
 
 export interface CalendarItem {
-  id: string
-  item_type: CalendarItemType
-  item_date: string
-  title: string | null
-  place: string | null
-  note: string | null
-  time_result?: number
-  pool_type?: PoolType
-  tags?: string[]
-  competition_name?: string
-  is_relaying?: boolean
-  team_practice?: boolean
-  team_record?: boolean
-  team_id?: string | null
-  attendance_status?: AttendanceStatusType | null
+  id: string;
+  item_type: CalendarItemType;
+  item_date: string;
+  title: string | null;
+  place: string | null;
+  note: string | null;
+  time_result?: number;
+  pool_type?: PoolType;
+  tags?: string[];
+  competition_name?: string;
+  is_relaying?: boolean;
+  team_practice?: boolean;
+  team_record?: boolean;
+  team_id?: string | null;
+  attendance_status?: AttendanceStatusType | null;
   style?: {
-    id: string
-    name_jp: string
-    distance: number
-  }
+    id: string;
+    name_jp: string;
+    distance: number;
+  };
 }
 
 // カレンダー表示用のユニオン型
 export type CalendarEventItem = (Practice | Competition) & {
-  item_type: CalendarItemType
-  item_date: string
-}
+  item_type: CalendarItemType;
+  item_date: string;
+};
 ```
 
 #### 10. `index.ts` - 統合エクスポート
+
 ```typescript
 // 共通型
-export * from './common'
+export * from "./common";
 
 // ドメイン別型
-export * from './user'
-export * from './practice'
-export * from './record'
-export * from './competition'
-export * from './team'
-export * from './attendance'
-export * from './goal'
-export * from './calendar'
-export * from './supabase'
+export * from "./user";
+export * from "./practice";
+export * from "./record";
+export * from "./competition";
+export * from "./team";
+export * from "./attendance";
+export * from "./goal";
+export * from "./calendar";
+export * from "./supabase";
 
 // 後方互換性のための再エクスポート
 // 既存コードが `import { UserProfile } from '@/shared/types/database'` を使用している場合
@@ -456,6 +472,7 @@ export * from './supabase'
 ### 実装手順
 
 #### ステップ1: 新しい型ファイルの作成（影響なし）
+
 1. `apps/shared/types/` 配下に新しいファイルを作成
 2. 既存の `database.ts` から型定義をコピー＆分割
 3. 各ファイルでの依存関係を整理
@@ -464,17 +481,19 @@ export * from './supabase'
 **所要時間**: 2-3時間
 
 #### ステップ2: インポートパスの更新（段階的）
+
 1. まず `apps/shared/` 内のファイルから更新
+
    ```typescript
    // Before
-   import { UserProfile, Practice } from './types/database'
+   import { UserProfile, Practice } from "./types/database";
 
    // After (推奨)
-   import { UserProfile } from './types/user'
-   import { Practice } from './types/practice'
+   import { UserProfile } from "./types/user";
+   import { Practice } from "./types/practice";
 
    // または（移行期間中）
-   import { UserProfile, Practice } from './types'
+   import { UserProfile, Practice } from "./types";
    ```
 
 2. 次に `apps/web/` と `apps/mobile/` を更新
@@ -483,16 +502,18 @@ export * from './supabase'
 **所要時間**: 1-2時間
 
 #### ステップ3: database.tsの削除またはdeprecate
+
 1. すべてのインポートが新しいパスに移行したことを確認
 2. `database.ts` を削除、または deprecation 警告を追加
    ```typescript
    // @deprecated このファイルは非推奨です。代わりに './types' からインポートしてください
-   export * from './index'
+   export * from "./index";
    ```
 
 **所要時間**: 30分
 
 #### ステップ4: ドキュメント更新
+
 1. `docs/TYPE_ORGANIZATION.md` を作成
 2. 各ドメインの型定義の場所を文書化
 3. 新規開発者向けのガイドラインを記載
@@ -500,12 +521,14 @@ export * from './supabase'
 **所要時間**: 30分-1時間
 
 ### テスト戦略
+
 - [ ] 既存のすべてのテストがパスすることを確認
 - [ ] TypeScriptコンパイルエラーがないことを確認
 - [ ] `npm run build` が成功することを確認
 - [ ] 型チェック: `npx tsc --noEmit`
 
 ### ロールバック計画
+
 - `database.ts` は移行完了まで保持
 - Git履歴で簡単に復元可能
 
@@ -514,9 +537,11 @@ export * from './supabase'
 ## フェーズ2: teamモジュールの再組織
 
 ### 目標
+
 9,194行、27コンポーネントの巨大なteamモジュールを機能別にサブモジュール化し、保守性を向上させる。
 
 ### 現在の構造（問題点）
+
 ```
 apps/web/components/team/
 ├── MyMonthlyAttendance.tsx            (1,428行) 🔴
@@ -542,6 +567,7 @@ apps/web/components/team/
 ```
 
 ### 新しい構造（機能別モジュール）
+
 ```
 apps/web/components/team/
 ├── index.ts                          # 公開APIエクスポート
@@ -629,11 +655,13 @@ apps/web/components/team/
 #### 1. MyMonthlyAttendance.tsx (1,428行) の分割計画
 
 **現状の問題点**:
+
 - カレンダーロジック、データ取得、UI表示がすべて混在
 - 再利用不可能なコード
 - テストが困難
 
 **分割後の構造**:
+
 ```typescript
 // attendance/MyMonthlyAttendance.tsx (200-250行に削減)
 'use client'
@@ -689,6 +717,7 @@ export const MyMonthlyAttendance = () => {
 #### 2. TeamMemberManagement.tsx (854行) の分割計画
 
 **分割後の構造**:
+
 ```typescript
 // members/TeamMemberManagement.tsx (150-200行に削減)
 import { MemberList } from './components/MemberList'
@@ -729,6 +758,7 @@ export const TeamMemberManagement = ({ teamId }: Props) => {
 #### 3. MemberDetailModal.tsx (813行) の分割計画
 
 **分割後の構造**:
+
 ```typescript
 // members/MemberDetailModal.tsx (150-200行に削減)
 import { MemberStats } from './components/MemberStats'
@@ -764,6 +794,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose }: Props) => {
 ### 実装手順
 
 #### ステップ1: サブディレクトリの作成と共通コンポーネントの移動
+
 1. `apps/web/components/team/` 配下にサブディレクトリを作成
 2. 既存の小規模コンポーネントを適切なサブディレクトリに移動
 3. 公開API用の `index.ts` を作成
@@ -771,6 +802,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose }: Props) => {
 **所要時間**: 1-2時間
 
 #### ステップ2: attendanceモジュールの分割
+
 1. `AttendanceGroupDisplay` を共通コンポーネントとして抽出
 2. `MyMonthlyAttendance` を分割
 3. `AdminMonthlyAttendance` を分割
@@ -779,6 +811,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose }: Props) => {
 **所要時間**: 3-4時間
 
 #### ステップ3: membersモジュールの分割
+
 1. `TeamMemberManagement` を分割
 2. `MemberDetailModal` を分割
 3. カスタムフックを抽出
@@ -786,25 +819,28 @@ export const MemberDetailModal = ({ member, isOpen, onClose }: Props) => {
 **所要時間**: 3-4時間
 
 #### ステップ4: その他のモジュールの整理
+
 1. competitions, practices, entries, records, announcementsを整理
 2. 各モジュールの `index.ts` を作成
 
 **所要時間**: 2-3時間
 
 #### ステップ5: インポートパスの更新と検証
+
 ```typescript
 // Before
-import { MyMonthlyAttendance } from '@/components/team/MyMonthlyAttendance'
+import { MyMonthlyAttendance } from "@/components/team/MyMonthlyAttendance";
 
 // After
-import { MyMonthlyAttendance } from '@/components/team/attendance'
+import { MyMonthlyAttendance } from "@/components/team/attendance";
 // または
-import { MyMonthlyAttendance } from '@/components/team'
+import { MyMonthlyAttendance } from "@/components/team";
 ```
 
 **所要時間**: 1-2時間
 
 ### テスト戦略
+
 - [ ] 各サブモジュールのユニットテストを追加
 - [ ] 統合テストでチーム機能全体をテスト
 - [ ] E2Eテストでユーザーフローを検証
@@ -814,9 +850,11 @@ import { MyMonthlyAttendance } from '@/components/team'
 ## フェーズ3: formsディレクトリの整理
 
 ### 目標
+
 大規模なformコンポーネント（800行以上）を分割し、再利用可能なサブコンポーネントとロジックを抽出する。
 
 ### 現在の問題点
+
 ```
 apps/web/components/forms/
 ├── RecordForm.tsx              (865行) 🔴 複雑すぎる
@@ -829,6 +867,7 @@ apps/web/components/forms/
 ```
 
 **問題点**:
+
 1. 一つのコンポーネントに複数の責務が混在
    - フォームバリデーション
    - ファイルアップロード
@@ -841,6 +880,7 @@ apps/web/components/forms/
 4. 変更の影響範囲が広い
 
 ### 新しい構造
+
 ```
 apps/web/components/forms/
 ├── index.ts                    # 公開APIエクスポート
@@ -1008,6 +1048,7 @@ export const CompetitionImageUploader = (props: CompetitionImageUploaderProps) =
 ### RecordForm.tsx (865行) の詳細分割計画
 
 **現在の構造（問題点）**:
+
 ```typescript
 // RecordForm.tsx (865行)
 export const RecordForm = () => {
@@ -1041,6 +1082,7 @@ export const RecordForm = () => {
 ```
 
 **分割後の構造（推奨）**:
+
 ```typescript
 // record/RecordForm.tsx (150-200行に削減)
 export const RecordForm = ({ initialData, onSubmit }: Props) => {
@@ -1131,6 +1173,7 @@ export const validateRecordTime = (time: number): ValidationResult => {
 ### 実装手順
 
 #### ステップ1: 共通コンポーネントの作成
+
 1. `forms/shared/` ディレクトリを作成
 2. 汎用 `ImageUploader` を実装（重複解消）
 3. `TimeInput` コンポーネントを抽出
@@ -1139,6 +1182,7 @@ export const validateRecordTime = (time: number): ValidationResult => {
 **所要時間**: 3-4時間
 
 #### ステップ2: RecordFormの分割
+
 1. `RecordFormProvider` を作成（状態管理）
 2. サブコンポーネントを作成
    - `RecordBasicInfo`
@@ -1150,18 +1194,22 @@ export const validateRecordTime = (time: number): ValidationResult => {
 **所要時間**: 4-5時間
 
 #### ステップ3: PracticeLogFormの分割
+
 1. 同様の手法で分割
 2. 共通コンポーネントを活用
 
 **所要時間**: 3-4時間
 
 #### ステップ4: RecordLogFormの分割
+
 **所要時間**: 3-4時間
 
 #### ステップ5: 既存コードの置き換えと検証
+
 **所要時間**: 1-2時間
 
 ### テスト戦略
+
 - [ ] 各サブコンポーネントのユニットテスト
 - [ ] ユーティリティ関数のテスト（ピュア関数なのでテストしやすい）
 - [ ] フォーム全体の統合テスト
@@ -1172,11 +1220,13 @@ export const validateRecordTime = (time: number): ValidationResult => {
 ## フェーズ4: パフォーマンス最適化
 
 ### 目標
+
 全体的なページ読み込み速度を改善し、ユーザー体験を向上させる。
 
 ### 現状の問題分析
 
 #### 潜在的なパフォーマンス問題
+
 1. **ウォーターフォール問題**: データ取得が直列に実行される可能性
 2. **不要な再レンダリング**: 適切なメモ化が欠如
 3. **大きなバンドルサイズ**: コード分割が不十分
@@ -1192,12 +1242,12 @@ export const validateRecordTime = (time: number): ValidationResult => {
 ```typescript
 // ❌ 悪い例: ウォーターフォール
 const Dashboard = () => {
-  const { data: practices } = usePracticesQuery()
-  const { data: records } = useRecordsQuery()
-  const { data: goals } = useGoalsQuery()
+  const { data: practices } = usePracticesQuery();
+  const { data: records } = useRecordsQuery();
+  const { data: goals } = useGoalsQuery();
 
   // 各クエリが順番に実行される
-}
+};
 ```
 
 **解決策**: React Server Componentsで並行データ取得
@@ -1234,6 +1284,7 @@ export default async function DashboardDataLoader() {
 ```
 
 **適用箇所**:
+
 - [ ] ダッシュボードページ
 - [ ] チームページ
 - [ ] マイページ
@@ -1242,24 +1293,26 @@ export default async function DashboardDataLoader() {
 #### 2. React Query の最適化
 
 **設定の見直し**:
+
 ```typescript
 // apps/web/lib/react-query/queryClient.ts
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000,        // 5分（現在の設定を維持）
-      cacheTime: 10 * 60 * 1000,       // 10分
-      refetchOnWindowFocus: false,     // ウィンドウフォーカス時の再取得を無効化
-      refetchOnReconnect: true,        // 再接続時は再取得
-      retry: 1,                        // リトライ回数を削減
+      staleTime: 5 * 60 * 1000, // 5分（現在の設定を維持）
+      cacheTime: 10 * 60 * 1000, // 10分
+      refetchOnWindowFocus: false, // ウィンドウフォーカス時の再取得を無効化
+      refetchOnReconnect: true, // 再接続時は再取得
+      retry: 1, // リトライ回数を削減
       // ✅ 新規追加: プリフェッチの有効化
-      suspense: false,                 // Suspenseは必要な場所でのみ有効化
-    }
-  }
-})
+      suspense: false, // Suspenseは必要な場所でのみ有効化
+    },
+  },
+});
 ```
 
 **プリフェッチの活用**:
+
 ```typescript
 // apps/web/components/navigation/NavLink.tsx
 export const NavLink = ({ href, children }: Props) => {
@@ -1283,6 +1336,7 @@ export const NavLink = ({ href, children }: Props) => {
 #### 3. コンポーネントの最適化
 
 **React.memoの適用**:
+
 ```typescript
 // ❌ 不要な再レンダリングが発生
 export const PracticeCard = ({ practice, onEdit, onDelete }) => {
@@ -1300,35 +1354,38 @@ export const PracticeCard = React.memo(({ practice, onEdit, onDelete }) => {
 ```
 
 **適用対象コンポーネント**:
+
 - [ ] PracticeCard, RecordCard, GoalCard
 - [ ] リスト内の繰り返し要素
 - [ ] 高頻度で再レンダリングされるコンポーネント
 
 **useMemo / useCallbackの適用**:
+
 ```typescript
 // ❌ 毎回新しい関数が生成される
 const handleClick = () => {
-  doSomething(id)
-}
+  doSomething(id);
+};
 
 // ✅ 関数をメモ化
 const handleClick = useCallback(() => {
-  doSomething(id)
-}, [id])
+  doSomething(id);
+}, [id]);
 
 // ❌ 毎回計算が実行される
-const filteredPractices = practices.filter(p => p.team_id === teamId)
+const filteredPractices = practices.filter((p) => p.team_id === teamId);
 
 // ✅ 計算結果をメモ化
 const filteredPractices = useMemo(
-  () => practices.filter(p => p.team_id === teamId),
-  [practices, teamId]
-)
+  () => practices.filter((p) => p.team_id === teamId),
+  [practices, teamId],
+);
 ```
 
 #### 4. バンドルサイズの最適化
 
 **動的インポートの活用**:
+
 ```typescript
 // ❌ すべてのモーダルが初期バンドルに含まれる
 import { RecordFormModal } from '@/components/modals/RecordFormModal'
@@ -1345,6 +1402,7 @@ const PracticeFormModal = dynamic(() => import('@/components/modals/PracticeForm
 ```
 
 **動的インポート適用対象**:
+
 - [ ] モーダルコンポーネント（RecordFormModal, PracticeFormModal等）
 - [ ] チャートライブラリ（RecordProgressChart等）
 - [ ] 画像エディタ（ImageCrop等）
@@ -1352,6 +1410,7 @@ const PracticeFormModal = dynamic(() => import('@/components/modals/PracticeForm
 - [ ] Excelエクスポート機能
 
 **バンドル分析**:
+
 ```bash
 # next.config.jsに追加
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
@@ -1367,6 +1426,7 @@ ANALYZE=true npm run build
 #### 5. 画像の最適化
 
 **Next.js Imageコンポーネントの活用**:
+
 ```typescript
 // ❌ 最適化されていない画像
 <img src={practice.image_url} alt="Practice" />
@@ -1387,33 +1447,36 @@ import Image from 'next/image'
 ```
 
 **画像フォーマットの最適化**:
+
 ```javascript
 // next.config.js
 module.exports = {
   images: {
-    formats: ['image/avif', 'image/webp'], // 最新フォーマットを優先
+    formats: ["image/avif", "image/webp"], // 最新フォーマットを優先
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-  }
-}
+  },
+};
 ```
 
 #### 6. Supabaseクエリの最適化
 
 **select文の最適化**:
+
 ```typescript
 // ❌ すべてのカラムを取得
-const { data } = await supabase.from('practices').select('*')
+const { data } = await supabase.from("practices").select("*");
 
 // ✅ 必要なカラムのみ取得
 const { data } = await supabase
-  .from('practices')
-  .select('id, date, title, place, team_id, practice_logs(id, style, distance)')
-  .order('date', { ascending: false })
-  .limit(20)
+  .from("practices")
+  .select("id, date, title, place, team_id, practice_logs(id, style, distance)")
+  .order("date", { ascending: false })
+  .limit(20);
 ```
 
 **インデックスの確認と追加**:
+
 ```sql
 -- 頻繁にクエリされるカラムにインデックスを追加
 CREATE INDEX IF NOT EXISTS idx_practices_user_date ON practices(user_id, date DESC);
@@ -1423,74 +1486,82 @@ CREATE INDEX IF NOT EXISTS idx_team_attendance_practice ON team_attendance(pract
 ```
 
 **N+1問題の解決**:
+
 ```typescript
 // ❌ N+1問題が発生
-const practices = await supabase.from('practices').select('*')
+const practices = await supabase.from("practices").select("*");
 for (const practice of practices.data) {
-  const logs = await supabase.from('practice_logs').select('*').eq('practice_id', practice.id)
+  const logs = await supabase.from("practice_logs").select("*").eq("practice_id", practice.id);
   // 各practiceに対して個別にクエリが実行される
 }
 
 // ✅ JOINで一度に取得
 const { data } = await supabase
-  .from('practices')
-  .select(`
+  .from("practices")
+  .select(
+    `
     *,
     practice_logs(*)
-  `)
-  .order('date', { ascending: false })
+  `,
+  )
+  .order("date", { ascending: false });
 ```
 
 #### 7. リアルタイムサブスクリプションの最適化
 
 **現在の実装**:
+
 ```typescript
 // apps/shared/hooks/queries/practices.ts
 useEffect(() => {
   const channel = supabase
-    .channel('practices_changes')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'practices' }, () => {
-      queryClient.invalidateQueries(['practices']) // すべてのキャッシュを無効化
+    .channel("practices_changes")
+    .on("postgres_changes", { event: "*", schema: "public", table: "practices" }, () => {
+      queryClient.invalidateQueries(["practices"]); // すべてのキャッシュを無効化
     })
-    .subscribe()
-}, [])
+    .subscribe();
+}, []);
 ```
 
 **最適化案**:
+
 ```typescript
 // ✅ 部分的なキャッシュ更新
 useEffect(() => {
   const channel = supabase
-    .channel('practices_changes')
-    .on('postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'practices' },
+    .channel("practices_changes")
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "practices" },
       (payload) => {
         // 新規データをキャッシュに追加（再取得不要）
-        queryClient.setQueryData(['practices'], (old) => [payload.new, ...old])
-      }
+        queryClient.setQueryData(["practices"], (old) => [payload.new, ...old]);
+      },
     )
-    .on('postgres_changes',
-      { event: 'UPDATE', schema: 'public', table: 'practices' },
+    .on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "practices" },
       (payload) => {
         // 更新されたデータのみキャッシュ更新
-        queryClient.setQueryData(['practices'], (old) =>
-          old.map(p => p.id === payload.new.id ? payload.new : p)
-        )
-      }
+        queryClient.setQueryData(["practices"], (old) =>
+          old.map((p) => (p.id === payload.new.id ? payload.new : p)),
+        );
+      },
     )
-    .on('postgres_changes',
-      { event: 'DELETE', schema: 'public', table: 'practices' },
+    .on(
+      "postgres_changes",
+      { event: "DELETE", schema: "public", table: "practices" },
       (payload) => {
         // 削除されたデータをキャッシュから除去
-        queryClient.setQueryData(['practices'], (old) =>
-          old.filter(p => p.id !== payload.old.id)
-        )
-      }
+        queryClient.setQueryData(["practices"], (old) =>
+          old.filter((p) => p.id !== payload.old.id),
+        );
+      },
     )
-    .subscribe()
+    .subscribe();
 
-  return () => supabase.removeChannel(channel)
-}, [])
+  return () => supabase.removeChannel(channel);
+}, []);
 ```
 
 #### 8. サーバーコンポーネントの活用
@@ -1534,6 +1605,7 @@ export const PracticeList = ({ practices }: { practices: Practice[] }) => {
 ### 実装手順
 
 #### ステップ1: パフォーマンス計測ベースラインの作成
+
 ```bash
 # Lighthouseでパフォーマンス計測
 npm run build
@@ -1549,6 +1621,7 @@ npm run start
 **所要時間**: 1時間
 
 #### ステップ2: データ取得の最適化
+
 1. 主要ページでServer Componentsを活用
 2. Promise.allで並行データ取得
 3. React Query設定の見直し
@@ -1556,6 +1629,7 @@ npm run start
 **所要時間**: 3-4時間
 
 #### ステップ3: コンポーネントの最適化
+
 1. React.memoの適用
 2. useMemo/useCallbackの適用
 3. 仮想化（react-window）の検討（長いリスト）
@@ -1563,12 +1637,14 @@ npm run start
 **所要時間**: 2-3時間
 
 #### ステップ4: バンドルサイズの最適化
+
 1. 動的インポートの適用
 2. バンドル分析と最適化
 
 **所要時間**: 2-3時間
 
 #### ステップ5: 画像とクエリの最適化
+
 1. Next.js Imageへの置き換え
 2. Supabaseクエリの最適化
 3. インデックスの追加
@@ -1576,28 +1652,31 @@ npm run start
 **所要時間**: 2-3時間
 
 #### ステップ6: パフォーマンス再計測と検証
+
 **所要時間**: 1時間
 
 ### 期待される改善効果
 
-| 指標 | 現在（推定） | 目標 | 改善率 |
-|-----|------------|-----|--------|
-| LCP (Largest Contentful Paint) | 3.5s | <2.0s | 43%改善 |
-| FID (First Input Delay) | 150ms | <100ms | 33%改善 |
-| バンドルサイズ（初期） | 800KB | <500KB | 38%削減 |
-| Time to Interactive | 4.5s | <3.0s | 33%改善 |
-| ダッシュボード読み込み | 2.5s | <1.5s | 40%改善 |
+| 指標                           | 現在（推定） | 目標   | 改善率  |
+| ------------------------------ | ------------ | ------ | ------- |
+| LCP (Largest Contentful Paint) | 3.5s         | <2.0s  | 43%改善 |
+| FID (First Input Delay)        | 150ms        | <100ms | 33%改善 |
+| バンドルサイズ（初期）         | 800KB        | <500KB | 38%削減 |
+| Time to Interactive            | 4.5s         | <3.0s  | 33%改善 |
+| ダッシュボード読み込み         | 2.5s         | <1.5s  | 40%改善 |
 
 ---
 
 ## フェーズ5: 重複コードの解消
 
 ### 目標
+
 重複したコードを共通化し、保守性を向上させる。
 
 ### 重複箇所の特定
 
 #### 1. ImageUploaderコンポーネント（優先度：高）
+
 - `PracticeImageUploader.tsx` (271行)
 - `CompetitionImageUploader.tsx` (272行)
 - **重複率**: 90%以上
@@ -1605,6 +1684,7 @@ npm run start
 **解決策**: フェーズ3の汎用ImageUploaderで対応
 
 #### 2. Attendanceコンポーネント（優先度：中）
+
 - `MyMonthlyAttendance.tsx` (1,428行)
 - `AdminMonthlyAttendance.tsx` (711行)
 - **共通部分**: AttendanceGroupingDisplay, カレンダーナビゲーション
@@ -1612,75 +1692,84 @@ npm run start
 **解決策**: フェーズ2のattendanceモジュール分割で対応
 
 #### 3. 時間フォーマット関数（優先度：中）
+
 複数のファイルで同様の時間フォーマット処理が散在:
+
 - `apps/web/utils/formatters.ts`
 - `apps/shared/utils/time.ts`
 - 各フォームコンポーネント内
 
 **解決策**: 共通ユーティリティに集約
+
 ```typescript
 // apps/shared/utils/time.ts（統合版）
 export const formatTime = (seconds: number): string => {
-  const minutes = Math.floor(seconds / 60)
-  const secs = (seconds % 60).toFixed(2)
-  return `${minutes}:${secs.padStart(5, '0')}`
-}
+  const minutes = Math.floor(seconds / 60);
+  const secs = (seconds % 60).toFixed(2);
+  return `${minutes}:${secs.padStart(5, "0")}`;
+};
 
 export const parseTime = (timeString: string): number => {
-  const [minutes, seconds] = timeString.split(':').map(parseFloat)
-  return minutes * 60 + seconds
-}
+  const [minutes, seconds] = timeString.split(":").map(parseFloat);
+  return minutes * 60 + seconds;
+};
 
 export const formatLapTime = (milliseconds: number): string => {
-  const totalSeconds = milliseconds / 1000
-  const minutes = Math.floor(totalSeconds / 60)
-  const seconds = (totalSeconds % 60).toFixed(2)
-  return `${minutes}:${seconds.padStart(5, '0')}`
-}
+  const totalSeconds = milliseconds / 1000;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = (totalSeconds % 60).toFixed(2);
+  return `${minutes}:${seconds.padStart(5, "0")}`;
+};
 ```
 
 #### 4. バリデーション関数（優先度：低）
+
 複数のフォームで類似のバリデーション:
+
 - タイムのバリデーション
 - 日付のバリデーション
 - 入力値の範囲チェック
 
 **解決策**: 共通バリデータライブラリ
+
 ```typescript
 // apps/shared/utils/validators.ts
 export const validators = {
   time: (value: number): ValidationResult => {
-    if (value <= 0) return { valid: false, error: 'タイムは0より大きい必要があります' }
-    if (value > 86400) return { valid: false, error: 'タイムが無効です（24時間以内）' }
-    return { valid: true }
+    if (value <= 0) return { valid: false, error: "タイムは0より大きい必要があります" };
+    if (value > 86400) return { valid: false, error: "タイムが無効です（24時間以内）" };
+    return { valid: true };
   },
 
   date: (value: string): ValidationResult => {
-    const date = new Date(value)
-    if (isNaN(date.getTime())) return { valid: false, error: '無効な日付です' }
-    if (date > new Date()) return { valid: false, error: '未来の日付は指定できません' }
-    return { valid: true }
+    const date = new Date(value);
+    if (isNaN(date.getTime())) return { valid: false, error: "無効な日付です" };
+    if (date > new Date()) return { valid: false, error: "未来の日付は指定できません" };
+    return { valid: true };
   },
 
   distance: (value: number): ValidationResult => {
-    const validDistances = [25, 50, 100, 200, 400, 800, 1500]
+    const validDistances = [25, 50, 100, 200, 400, 800, 1500];
     if (!validDistances.includes(value)) {
-      return { valid: false, error: '無効な距離です' }
+      return { valid: false, error: "無効な距離です" };
     }
-    return { valid: true }
-  }
-}
+    return { valid: true };
+  },
+};
 ```
 
 ### 実装手順
 
 #### ステップ1: 汎用ImageUploaderの実装
+
 **所要時間**: 2-3時間（フェーズ3に含まれる）
 
 #### ステップ2: Attendance共通化
+
 **所要時間**: 2-3時間（フェーズ2に含まれる）
 
 #### ステップ3: ユーティリティ関数の統合
+
 1. 時間フォーマット関数を `apps/shared/utils/time.ts` に集約
 2. 既存コードの置き換え
 3. 古い関数を削除
@@ -1688,6 +1777,7 @@ export const validators = {
 **所要時間**: 2-3時間
 
 #### ステップ4: バリデータの統合
+
 1. 共通バリデータライブラリを作成
 2. 既存のバリデーション処理を置き換え
 
@@ -1699,57 +1789,65 @@ export const validators = {
 
 ### 全体スケジュール（推定）
 
-| フェーズ | 内容 | 所要時間 | 依存関係 | 優先度 |
-|---------|-----|---------|---------|--------|
-| **フェーズ1** | database.ts分割 | 4-6時間 | なし | 🔴 最高 |
-| **フェーズ2** | teamモジュール再組織 | 8-12時間 | フェーズ1完了後 | 🔴 高 |
-| **フェーズ3** | forms整理 | 12-16時間 | フェーズ1完了後 | 🟡 中 |
-| **フェーズ4** | パフォーマンス最適化 | 8-10時間 | 並行実施可能 | 🔴 最高 |
-| **フェーズ5** | 重複コード解消 | 4-6時間 | フェーズ2,3に統合 | 🟡 中 |
-| **テスト** | 総合テストと調整 | 4-6時間 | 全フェーズ完了後 | - |
+| フェーズ      | 内容                 | 所要時間  | 依存関係          | 優先度  |
+| ------------- | -------------------- | --------- | ----------------- | ------- |
+| **フェーズ1** | database.ts分割      | 4-6時間   | なし              | 🔴 最高 |
+| **フェーズ2** | teamモジュール再組織 | 8-12時間  | フェーズ1完了後   | 🔴 高   |
+| **フェーズ3** | forms整理            | 12-16時間 | フェーズ1完了後   | 🟡 中   |
+| **フェーズ4** | パフォーマンス最適化 | 8-10時間  | 並行実施可能      | 🔴 最高 |
+| **フェーズ5** | 重複コード解消       | 4-6時間   | フェーズ2,3に統合 | 🟡 中   |
+| **テスト**    | 総合テストと調整     | 4-6時間   | 全フェーズ完了後  | -       |
 
 **合計推定時間**: 40-56時間（5-7営業日相当）
 
 ### 段階的実装の推奨順序
 
 #### 週1: 基盤整備（フェーズ1 + フェーズ4の一部）
+
 - [ ] database.tsの分割（4-6時間）
 - [ ] パフォーマンス計測ベースライン作成（1時間）
 - [ ] Server Componentsでのデータ取得最適化（3-4時間）
 
 **成果物**:
+
 - 新しい型定義構造
 - ベースラインパフォーマンスレポート
 - 最適化されたダッシュボード
 
 #### 週2: モジュール分割（フェーズ2）
+
 - [ ] teamモジュールのサブディレクトリ作成（1-2時間）
 - [ ] attendanceモジュールの分割（3-4時間）
 - [ ] membersモジュールの分割（3-4時間）
 - [ ] その他モジュールの整理（2-3時間）
 
 **成果物**:
+
 - 整理されたteamモジュール構造
 - 再利用可能なサブコンポーネント
 
 #### 週3: フォーム最適化（フェーズ3 + フェーズ4の一部）
+
 - [ ] 共通フォームコンポーネントの作成（3-4時間）
 - [ ] RecordFormの分割（4-5時間）
 - [ ] PracticeLogFormの分割（3-4時間）
 - [ ] コンポーネントの最適化（React.memo等）（2-3時間）
 
 **成果物**:
+
 - 再利用可能なフォームコンポーネント
 - 分割された大規模フォーム
 - 最適化されたレンダリング
 
 #### 週4: 仕上げとテスト（フェーズ4の残り + 総合テスト）
+
 - [ ] バンドルサイズ最適化（2-3時間）
 - [ ] 画像・クエリ最適化（2-3時間）
 - [ ] パフォーマンス再計測（1時間）
 - [ ] 総合テストと調整（4-6時間）
 
 **成果物**:
+
 - 最適化されたアプリケーション
 - パフォーマンスレポート
 - テストレポート
@@ -1761,12 +1859,14 @@ export const validators = {
 ### 高リスク項目
 
 #### リスク1: 既存機能の破壊
+
 **内容**: リファクタリング中に既存機能が動作しなくなる
 
 **影響度**: 高
 **発生確率**: 中
 
 **対策**:
+
 1. 各フェーズ後に既存テストを実行
 2. E2Eテストで主要フローを検証
 3. ステージング環境でテスト
@@ -1774,24 +1874,28 @@ export const validators = {
 5. Gitブランチ戦略: 各フェーズごとに個別ブランチ
 
 #### リスク2: 型定義の不整合
+
 **内容**: database.ts分割時に型の依存関係でエラー発生
 
 **影響度**: 中
 **発生確率**: 中
 
 **対策**:
+
 1. TypeScriptのstrict modeで早期発見
 2. 分割後も`database.ts`を一時的に保持（後方互換性）
 3. `index.ts`で統合エクスポート
 4. CI/CDで型チェックを自動化
 
 #### リスク3: パフォーマンス改善が不十分
+
 **内容**: 最適化しても目標パフォーマンスに到達しない
 
 **影響度**: 中
 **発生確率**: 低
 
 **対策**:
+
 1. ベースライン計測で現状把握
 2. 小さな改善を積み重ねる
 3. Lighthouseで継続的に計測
@@ -1800,24 +1904,28 @@ export const validators = {
 ### 中リスク項目
 
 #### リスク4: 実装時間の超過
+
 **内容**: 推定時間を大幅に超過
 
 **影響度**: 中
 **発生確率**: 中
 
 **対策**:
+
 1. 優先度の高いフェーズから実施
 2. 週次で進捗確認
 3. 必要に応じて範囲を調整
 4. ペアプログラミングで効率化
 
 #### リスク5: チーム間の調整コスト
+
 **内容**: 複数人で作業する場合の調整コスト
 
 **影響度**: 低
 **発生確率**: 中
 
 **対策**:
+
 1. 明確なモジュール分割で並行作業を可能に
 2. コードレビュープロセスの確立
 3. 定期的なミーティング
@@ -1829,31 +1937,31 @@ export const validators = {
 
 ### コード品質指標
 
-| 指標 | 現在 | 目標 | 測定方法 |
-|-----|-----|-----|---------|
-| 最大ファイルサイズ | 1,428行 | <500行 | `wc -l` |
-| 平均コンポーネントサイズ | 200-300行 | <200行 | `wc -l` |
-| 重複コード率 | 15-20% | <5% | SonarQube/ESLint |
-| TypeScript strictエラー | 0 | 0 | `tsc --noEmit` |
-| テストカバレッジ | ~20% | >60% | Jest/Vitest |
+| 指標                     | 現在      | 目標   | 測定方法         |
+| ------------------------ | --------- | ------ | ---------------- |
+| 最大ファイルサイズ       | 1,428行   | <500行 | `wc -l`          |
+| 平均コンポーネントサイズ | 200-300行 | <200行 | `wc -l`          |
+| 重複コード率             | 15-20%    | <5%    | SonarQube/ESLint |
+| TypeScript strictエラー  | 0         | 0      | `tsc --noEmit`   |
+| テストカバレッジ         | ~20%      | >60%   | Jest/Vitest      |
 
 ### パフォーマンス指標
 
-| 指標 | 現在（推定） | 目標 | 測定方法 |
-|-----|------------|-----|---------|
-| Lighthouse Performance Score | 60-70 | >90 | Lighthouse CI |
-| LCP | 3.5s | <2.0s | Chrome DevTools |
-| FID | 150ms | <100ms | Chrome DevTools |
-| TTI | 4.5s | <3.0s | Chrome DevTools |
-| バンドルサイズ | 800KB | <500KB | webpack-bundle-analyzer |
+| 指標                         | 現在（推定） | 目標   | 測定方法                |
+| ---------------------------- | ------------ | ------ | ----------------------- |
+| Lighthouse Performance Score | 60-70        | >90    | Lighthouse CI           |
+| LCP                          | 3.5s         | <2.0s  | Chrome DevTools         |
+| FID                          | 150ms        | <100ms | Chrome DevTools         |
+| TTI                          | 4.5s         | <3.0s  | Chrome DevTools         |
+| バンドルサイズ               | 800KB        | <500KB | webpack-bundle-analyzer |
 
 ### ビジネス指標
 
-| 指標 | 現在 | 目標 | 測定方法 |
-|-----|-----|-----|---------|
-| ページ読み込み離脱率 | - | 5%削減 | Google Analytics |
-| フォーム完了率 | - | 10%向上 | Google Analytics |
-| ユーザー満足度 | - | 4.5/5.0 | ユーザーアンケート |
+| 指標                 | 現在 | 目標    | 測定方法           |
+| -------------------- | ---- | ------- | ------------------ |
+| ページ読み込み離脱率 | -    | 5%削減  | Google Analytics   |
+| フォーム完了率       | -    | 10%向上 | Google Analytics   |
+| ユーザー満足度       | -    | 4.5/5.0 | ユーザーアンケート |
 
 ---
 
@@ -1862,6 +1970,7 @@ export const validators = {
 ### A. 推奨ツール
 
 #### 開発ツール
+
 - **VS Code Extensions**:
   - ESLint
   - TypeScript Error Lens
@@ -1869,12 +1978,14 @@ export const validators = {
   - Bundle Size（インポートサイズ表示）
 
 #### 分析ツール
+
 - **Lighthouse CI**: 継続的なパフォーマンス計測
 - **webpack-bundle-analyzer**: バンドル分析
 - **React DevTools Profiler**: レンダリング分析
 - **SonarQube**: コード品質分析
 
 #### テストツール
+
 - **Vitest**: ユニットテスト
 - **Playwright**: E2Eテスト
 - **React Testing Library**: コンポーネントテスト
@@ -1882,11 +1993,13 @@ export const validators = {
 ### B. 参考リソース
 
 #### 公式ドキュメント
+
 - [Next.js Performance](https://nextjs.org/docs/app/building-your-application/optimizing)
 - [React Performance Optimization](https://react.dev/learn/render-and-commit)
 - [Supabase Performance Tips](https://supabase.com/docs/guides/performance)
 
 #### ベストプラクティス
+
 - [Clean Code TypeScript](https://github.com/labs42io/clean-code-typescript)
 - [React TypeScript Cheatsheet](https://react-typescript-cheatsheet.netlify.app/)
 - [Monorepo Best Practices](https://monorepo.tools/)
@@ -1894,6 +2007,7 @@ export const validators = {
 ### C. チェックリスト
 
 #### フェーズ1完了チェックリスト
+
 - [ ] 新しい型ファイルが作成されている
 - [ ] すべてのインポートが新しいパスに更新されている
 - [ ] TypeScriptコンパイルエラーがない
@@ -1901,6 +2015,7 @@ export const validators = {
 - [ ] ドキュメントが更新されている
 
 #### フェーズ2完了チェックリスト
+
 - [ ] teamモジュールが機能別に分割されている
 - [ ] 巨大コンポーネントが分割されている
 - [ ] 共通コンポーネントが抽出されている
@@ -1908,6 +2023,7 @@ export const validators = {
 - [ ] テストが追加されている
 
 #### フェーズ3完了チェックリスト
+
 - [ ] 共通フォームコンポーネントが作成されている
 - [ ] 大規模フォームが分割されている
 - [ ] ImageUploaderが統合されている
@@ -1915,6 +2031,7 @@ export const validators = {
 - [ ] テストが追加されている
 
 #### フェーズ4完了チェックリスト
+
 - [ ] パフォーマンスベースラインが計測されている
 - [ ] Server Componentsが活用されている
 - [ ] React.memoが適用されている

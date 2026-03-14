@@ -13,9 +13,7 @@
       ],
       "effects": [],
       "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/client-cloudfront"
-      ],
+      "nodes": ["node_modules/@aws-sdk/client-cloudfront"],
       "fixAvailable": true
     },
     "@aws-sdk/client-dynamodb": {
@@ -31,9 +29,7 @@
       ],
       "effects": [],
       "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/client-dynamodb"
-      ],
+      "nodes": ["node_modules/@aws-sdk/client-dynamodb"],
       "fixAvailable": true
     },
     "@aws-sdk/client-lambda": {
@@ -48,9 +44,7 @@
       ],
       "effects": [],
       "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/client-lambda"
-      ],
+      "nodes": ["node_modules/@aws-sdk/client-lambda"],
       "fixAvailable": true
     },
     "@aws-sdk/client-s3": {
@@ -68,9 +62,7 @@
       ],
       "effects": [],
       "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/client-s3"
-      ],
+      "nodes": ["node_modules/@aws-sdk/client-s3"],
       "fixAvailable": true
     },
     "@aws-sdk/client-sqs": {
@@ -85,36 +77,24 @@
       ],
       "effects": [],
       "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/client-sqs"
-      ],
+      "nodes": ["node_modules/@aws-sdk/client-sqs"],
       "fixAvailable": true
     },
     "@aws-sdk/client-sso": {
       "name": "@aws-sdk/client-sso",
       "severity": "low",
       "isDirect": false,
-      "via": [
-        "@aws-sdk/core",
-        "@aws-sdk/middleware-user-agent",
-        "@aws-sdk/util-user-agent-node"
-      ],
-      "effects": [
-        "@aws-sdk/credential-provider-sso"
-      ],
+      "via": ["@aws-sdk/core", "@aws-sdk/middleware-user-agent", "@aws-sdk/util-user-agent-node"],
+      "effects": ["@aws-sdk/credential-provider-sso"],
       "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/client-sso"
-      ],
+      "nodes": ["node_modules/@aws-sdk/client-sso"],
       "fixAvailable": true
     },
     "@aws-sdk/core": {
       "name": "@aws-sdk/core",
       "severity": "low",
       "isDirect": false,
-      "via": [
-        "@aws-sdk/xml-builder"
-      ],
+      "via": ["@aws-sdk/xml-builder"],
       "effects": [
         "@aws-sdk/client-cloudfront",
         "@aws-sdk/client-dynamodb",
@@ -137,37 +117,27 @@
         "@aws-sdk/token-providers"
       ],
       "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/core"
-      ],
+      "nodes": ["node_modules/@aws-sdk/core"],
       "fixAvailable": true
     },
     "@aws-sdk/credential-provider-env": {
       "name": "@aws-sdk/credential-provider-env",
       "severity": "low",
       "isDirect": false,
-      "via": [
-        "@aws-sdk/core"
-      ],
+      "via": ["@aws-sdk/core"],
       "effects": [],
       "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/credential-provider-env"
-      ],
+      "nodes": ["node_modules/@aws-sdk/credential-provider-env"],
       "fixAvailable": true
     },
     "@aws-sdk/credential-provider-http": {
       "name": "@aws-sdk/credential-provider-http",
       "severity": "low",
       "isDirect": false,
-      "via": [
-        "@aws-sdk/core"
-      ],
+      "via": ["@aws-sdk/core"],
       "effects": [],
       "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/credential-provider-http"
-      ],
+      "nodes": ["node_modules/@aws-sdk/credential-provider-http"],
       "fixAvailable": true
     },
     "@aws-sdk/credential-provider-ini": {
@@ -186,26 +156,17 @@
       ],
       "effects": [],
       "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/credential-provider-ini"
-      ],
+      "nodes": ["node_modules/@aws-sdk/credential-provider-ini"],
       "fixAvailable": true
     },
     "@aws-sdk/credential-provider-login": {
       "name": "@aws-sdk/credential-provider-login",
       "severity": "low",
       "isDirect": false,
-      "via": [
-        "@aws-sdk/core",
-        "@aws-sdk/nested-clients"
-      ],
-      "effects": [
-        "@aws-sdk/credential-provider-ini"
-      ],
+      "via": ["@aws-sdk/core", "@aws-sdk/nested-clients"],
+      "effects": ["@aws-sdk/credential-provider-ini"],
       "range": "*",
-      "nodes": [
-        "node_modules/@aws-sdk/credential-provider-login"
-      ],
+      "nodes": ["node_modules/@aws-sdk/credential-provider-login"],
       "fixAvailable": true
     },
     "@aws-sdk/credential-provider-node": {
@@ -222,193 +183,127 @@
       ],
       "effects": [],
       "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/credential-provider-node"
-      ],
+      "nodes": ["node_modules/@aws-sdk/credential-provider-node"],
       "fixAvailable": true
     },
     "@aws-sdk/credential-provider-process": {
       "name": "@aws-sdk/credential-provider-process",
       "severity": "low",
       "isDirect": false,
-      "via": [
-        "@aws-sdk/core"
-      ],
+      "via": ["@aws-sdk/core"],
       "effects": [],
       "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/credential-provider-process"
-      ],
+      "nodes": ["node_modules/@aws-sdk/credential-provider-process"],
       "fixAvailable": true
     },
     "@aws-sdk/credential-provider-sso": {
       "name": "@aws-sdk/credential-provider-sso",
       "severity": "low",
       "isDirect": false,
-      "via": [
-        "@aws-sdk/client-sso",
-        "@aws-sdk/core",
-        "@aws-sdk/token-providers"
-      ],
+      "via": ["@aws-sdk/client-sso", "@aws-sdk/core", "@aws-sdk/token-providers"],
       "effects": [],
       "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/credential-provider-sso"
-      ],
+      "nodes": ["node_modules/@aws-sdk/credential-provider-sso"],
       "fixAvailable": true
     },
     "@aws-sdk/credential-provider-web-identity": {
       "name": "@aws-sdk/credential-provider-web-identity",
       "severity": "low",
       "isDirect": false,
-      "via": [
-        "@aws-sdk/core",
-        "@aws-sdk/nested-clients"
-      ],
-      "effects": [
-        "@aws-sdk/credential-provider-node"
-      ],
+      "via": ["@aws-sdk/core", "@aws-sdk/nested-clients"],
+      "effects": ["@aws-sdk/credential-provider-node"],
       "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/credential-provider-web-identity"
-      ],
+      "nodes": ["node_modules/@aws-sdk/credential-provider-web-identity"],
       "fixAvailable": true
     },
     "@aws-sdk/dynamodb-codec": {
       "name": "@aws-sdk/dynamodb-codec",
       "severity": "low",
       "isDirect": false,
-      "via": [
-        "@aws-sdk/core"
-      ],
-      "effects": [
-        "@aws-sdk/client-dynamodb"
-      ],
+      "via": ["@aws-sdk/core"],
+      "effects": ["@aws-sdk/client-dynamodb"],
       "range": "*",
-      "nodes": [
-        "node_modules/@aws-sdk/dynamodb-codec"
-      ],
+      "nodes": ["node_modules/@aws-sdk/dynamodb-codec"],
       "fixAvailable": true
     },
     "@aws-sdk/middleware-flexible-checksums": {
       "name": "@aws-sdk/middleware-flexible-checksums",
       "severity": "low",
       "isDirect": false,
-      "via": [
-        "@aws-sdk/core"
-      ],
+      "via": ["@aws-sdk/core"],
       "effects": [],
       "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/middleware-flexible-checksums"
-      ],
+      "nodes": ["node_modules/@aws-sdk/middleware-flexible-checksums"],
       "fixAvailable": true
     },
     "@aws-sdk/middleware-sdk-s3": {
       "name": "@aws-sdk/middleware-sdk-s3",
       "severity": "low",
       "isDirect": false,
-      "via": [
-        "@aws-sdk/core"
-      ],
-      "effects": [
-        "@aws-sdk/signature-v4-multi-region"
-      ],
+      "via": ["@aws-sdk/core"],
+      "effects": ["@aws-sdk/signature-v4-multi-region"],
       "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/middleware-sdk-s3"
-      ],
+      "nodes": ["node_modules/@aws-sdk/middleware-sdk-s3"],
       "fixAvailable": true
     },
     "@aws-sdk/middleware-user-agent": {
       "name": "@aws-sdk/middleware-user-agent",
       "severity": "low",
       "isDirect": false,
-      "via": [
-        "@aws-sdk/core"
-      ],
-      "effects": [
-        "@aws-sdk/util-user-agent-node"
-      ],
+      "via": ["@aws-sdk/core"],
+      "effects": ["@aws-sdk/util-user-agent-node"],
       "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/middleware-user-agent"
-      ],
+      "nodes": ["node_modules/@aws-sdk/middleware-user-agent"],
       "fixAvailable": true
     },
     "@aws-sdk/nested-clients": {
       "name": "@aws-sdk/nested-clients",
       "severity": "low",
       "isDirect": false,
-      "via": [
-        "@aws-sdk/core",
-        "@aws-sdk/middleware-user-agent",
-        "@aws-sdk/util-user-agent-node"
-      ],
+      "via": ["@aws-sdk/core", "@aws-sdk/middleware-user-agent", "@aws-sdk/util-user-agent-node"],
       "effects": [],
       "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/nested-clients"
-      ],
+      "nodes": ["node_modules/@aws-sdk/nested-clients"],
       "fixAvailable": true
     },
     "@aws-sdk/signature-v4-multi-region": {
       "name": "@aws-sdk/signature-v4-multi-region",
       "severity": "low",
       "isDirect": false,
-      "via": [
-        "@aws-sdk/middleware-sdk-s3"
-      ],
+      "via": ["@aws-sdk/middleware-sdk-s3"],
       "effects": [],
       "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/signature-v4-multi-region"
-      ],
+      "nodes": ["node_modules/@aws-sdk/signature-v4-multi-region"],
       "fixAvailable": true
     },
     "@aws-sdk/token-providers": {
       "name": "@aws-sdk/token-providers",
       "severity": "low",
       "isDirect": false,
-      "via": [
-        "@aws-sdk/core",
-        "@aws-sdk/nested-clients"
-      ],
+      "via": ["@aws-sdk/core", "@aws-sdk/nested-clients"],
       "effects": [],
       "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/token-providers"
-      ],
+      "nodes": ["node_modules/@aws-sdk/token-providers"],
       "fixAvailable": true
     },
     "@aws-sdk/util-user-agent-node": {
       "name": "@aws-sdk/util-user-agent-node",
       "severity": "low",
       "isDirect": false,
-      "via": [
-        "@aws-sdk/middleware-user-agent"
-      ],
+      "via": ["@aws-sdk/middleware-user-agent"],
       "effects": [],
       "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/util-user-agent-node"
-      ],
+      "nodes": ["node_modules/@aws-sdk/util-user-agent-node"],
       "fixAvailable": true
     },
     "@aws-sdk/xml-builder": {
       "name": "@aws-sdk/xml-builder",
       "severity": "low",
       "isDirect": false,
-      "via": [
-        "fast-xml-parser"
-      ],
-      "effects": [
-        "@aws-sdk/core"
-      ],
+      "via": ["fast-xml-parser"],
+      "effects": ["@aws-sdk/core"],
       "range": ">=3.894.0",
-      "nodes": [
-        "node_modules/@aws-sdk/xml-builder"
-      ],
+      "nodes": ["node_modules/@aws-sdk/xml-builder"],
       "fixAvailable": true
     },
     "ajv": {
@@ -423,10 +318,7 @@
           "title": "ajv has ReDoS when using `$data` option",
           "url": "https://github.com/advisories/GHSA-2g4f-4pwh-qvx6",
           "severity": "moderate",
-          "cwe": [
-            "CWE-400",
-            "CWE-1333"
-          ],
+          "cwe": ["CWE-400", "CWE-1333"],
           "cvss": {
             "score": 0,
             "vectorString": null
@@ -436,9 +328,7 @@
       ],
       "effects": [],
       "range": "<6.14.0",
-      "nodes": [
-        "node_modules/ajv"
-      ],
+      "nodes": ["node_modules/ajv"],
       "fixAvailable": true
     },
     "esbuild": {
@@ -453,9 +343,7 @@
           "title": "esbuild enables any website to send any requests to the development server and read the response",
           "url": "https://github.com/advisories/GHSA-67mh-4wv8-2f99",
           "severity": "moderate",
-          "cwe": [
-            "CWE-346"
-          ],
+          "cwe": ["CWE-346"],
           "cvss": {
             "score": 5.3,
             "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:N/A:N"
@@ -463,13 +351,9 @@
           "range": "<=0.24.2"
         }
       ],
-      "effects": [
-        "vite"
-      ],
+      "effects": ["vite"],
       "range": "<=0.24.2",
-      "nodes": [
-        "node_modules/vite/node_modules/esbuild"
-      ],
+      "nodes": ["node_modules/vite/node_modules/esbuild"],
       "fixAvailable": {
         "name": "vitest",
         "version": "4.0.18",
@@ -488,9 +372,7 @@
           "title": "fast-xml-parser has stack overflow in XMLBuilder with preserveOrder",
           "url": "https://github.com/advisories/GHSA-fj3w-jwp8-x2g3",
           "severity": "low",
-          "cwe": [
-            "CWE-120"
-          ],
+          "cwe": ["CWE-120"],
           "cvss": {
             "score": 0,
             "vectorString": null
@@ -498,13 +380,9 @@
           "range": "<5.3.8"
         }
       ],
-      "effects": [
-        "@aws-sdk/xml-builder"
-      ],
+      "effects": ["@aws-sdk/xml-builder"],
       "range": "<5.3.8",
-      "nodes": [
-        "node_modules/fast-xml-parser"
-      ],
+      "nodes": ["node_modules/fast-xml-parser"],
       "fixAvailable": true
     },
     "minimatch": {
@@ -519,9 +397,7 @@
           "title": "minimatch has ReDoS: matchOne() combinatorial backtracking via multiple non-adjacent GLOBSTAR segments",
           "url": "https://github.com/advisories/GHSA-7r86-cg39-jmmj",
           "severity": "high",
-          "cwe": [
-            "CWE-407"
-          ],
+          "cwe": ["CWE-407"],
           "cvss": {
             "score": 7.5,
             "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
@@ -535,9 +411,7 @@
           "title": "minimatch ReDoS: nested *() extglobs generate catastrophically backtracking regular expressions",
           "url": "https://github.com/advisories/GHSA-23c5-xmqv-rm74",
           "severity": "high",
-          "cwe": [
-            "CWE-1333"
-          ],
+          "cwe": ["CWE-1333"],
           "cvss": {
             "score": 7.5,
             "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
@@ -547,9 +421,7 @@
       ],
       "effects": [],
       "range": "10.0.0 - 10.2.2",
-      "nodes": [
-        "node_modules/minimatch"
-      ],
+      "nodes": ["node_modules/minimatch"],
       "fixAvailable": true
     },
     "rollup": {
@@ -564,9 +436,7 @@
           "title": "Rollup 4 has Arbitrary File Write via Path Traversal",
           "url": "https://github.com/advisories/GHSA-mw96-cpmx-2vgc",
           "severity": "high",
-          "cwe": [
-            "CWE-22"
-          ],
+          "cwe": ["CWE-22"],
           "cvss": {
             "score": 0,
             "vectorString": null
@@ -576,26 +446,17 @@
       ],
       "effects": [],
       "range": "4.0.0 - 4.58.0",
-      "nodes": [
-        "node_modules/rollup"
-      ],
+      "nodes": ["node_modules/rollup"],
       "fixAvailable": true
     },
     "vite": {
       "name": "vite",
       "severity": "moderate",
       "isDirect": false,
-      "via": [
-        "esbuild"
-      ],
-      "effects": [
-        "vite-node",
-        "vitest"
-      ],
+      "via": ["esbuild"],
+      "effects": ["vite-node", "vitest"],
       "range": "0.11.0 - 6.1.6",
-      "nodes": [
-        "node_modules/vite"
-      ],
+      "nodes": ["node_modules/vite"],
       "fixAvailable": {
         "name": "vitest",
         "version": "4.0.18",
@@ -606,16 +467,10 @@
       "name": "vite-node",
       "severity": "moderate",
       "isDirect": false,
-      "via": [
-        "vite"
-      ],
-      "effects": [
-        "vitest"
-      ],
+      "via": ["vite"],
+      "effects": ["vitest"],
       "range": "<=2.2.0-beta.2",
-      "nodes": [
-        "node_modules/vite-node"
-      ],
+      "nodes": ["node_modules/vite-node"],
       "fixAvailable": {
         "name": "vitest",
         "version": "4.0.18",
@@ -626,15 +481,10 @@
       "name": "vitest",
       "severity": "moderate",
       "isDirect": true,
-      "via": [
-        "vite",
-        "vite-node"
-      ],
+      "via": ["vite", "vite-node"],
       "effects": [],
       "range": "0.0.1 - 0.0.12 || 0.0.29 - 0.0.122 || 0.3.3 - 2.2.0-beta.2",
-      "nodes": [
-        "node_modules/vitest"
-      ],
+      "nodes": ["node_modules/vitest"],
       "fixAvailable": {
         "name": "vitest",
         "version": "4.0.18",

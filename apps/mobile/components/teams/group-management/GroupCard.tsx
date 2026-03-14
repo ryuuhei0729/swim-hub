@@ -1,15 +1,15 @@
-import React from 'react'
-import { View, Text, Pressable, StyleSheet } from 'react-native'
-import { Feather } from '@expo/vector-icons'
-import type { TeamGroupWithCount } from './hooks'
+import React from "react";
+import { View, Text, Pressable, StyleSheet } from "react-native";
+import { Feather } from "@expo/vector-icons";
+import type { TeamGroupWithCount } from "./hooks";
 
 interface GroupCardProps {
-  group: TeamGroupWithCount
-  isAdmin: boolean
-  onPress: (group: TeamGroupWithCount) => void
-  onEdit: (group: TeamGroupWithCount) => void
-  onDelete: (group: TeamGroupWithCount) => void
-  onManageMembers: (group: TeamGroupWithCount) => void
+  group: TeamGroupWithCount;
+  isAdmin: boolean;
+  onPress: (group: TeamGroupWithCount) => void;
+  onEdit: (group: TeamGroupWithCount) => void;
+  onDelete: (group: TeamGroupWithCount) => void;
+  onManageMembers: (group: TeamGroupWithCount) => void;
 }
 
 export const GroupCard: React.FC<GroupCardProps> = ({
@@ -28,7 +28,9 @@ export const GroupCard: React.FC<GroupCardProps> = ({
       accessibilityLabel={`${group.name} のメンバー一覧を表示`}
     >
       <View style={styles.info}>
-        <Text style={styles.name} numberOfLines={1}>{group.name}</Text>
+        <Text style={styles.name} numberOfLines={1}>
+          {group.name}
+        </Text>
         <View style={styles.badge}>
           <Feather name="users" size={12} color="#6B7280" />
           <Text style={styles.badgeText}>{group.member_count}</Text>
@@ -63,49 +65,49 @@ export const GroupCard: React.FC<GroupCardProps> = ({
         </View>
       )}
     </Pressable>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     padding: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: "#E5E7EB",
     borderRadius: 8,
   },
   info: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     minWidth: 0,
   },
   name: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#111827',
+    fontWeight: "500",
+    color: "#111827",
     flexShrink: 1,
   },
   badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 2,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: "#F3F4F6",
     borderRadius: 12,
   },
   badgeText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: "#6B7280",
   },
   actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
     marginLeft: 8,
   },
@@ -113,4 +115,4 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: 6,
   },
-})
+});

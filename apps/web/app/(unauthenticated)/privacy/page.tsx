@@ -1,15 +1,15 @@
-import React from 'react'
-import Link from 'next/link'
-import { ShieldCheckIcon } from '@heroicons/react/24/outline'
-import { BackButton } from '@/components/ui/BackButton'
-import { formatDate } from '@apps/shared/utils/date'
+import React from "react";
+import Link from "next/link";
+import { ShieldCheckIcon } from "@heroicons/react/24/outline";
+import { BackButton } from "@/components/ui/BackButton";
+import { formatDate } from "@apps/shared/utils/date";
 
-export const revalidate = 3600 // 1時間ごとに再生成
+export const revalidate = 3600; // 1時間ごとに再生成
 
 export const metadata = {
-  title: 'プライバシーポリシー | SwimHub',
-  description: 'SwimHubのプライバシーポリシー',
-}
+  title: "プライバシーポリシー | SwimHub",
+  description: "SwimHubのプライバシーポリシー",
+};
 
 export default function PrivacyPage() {
   return (
@@ -22,9 +22,7 @@ export default function PrivacyPage() {
             <ShieldCheckIcon className="w-8 h-8 text-blue-600 mr-3" />
             <h1 className="text-3xl font-bold text-gray-900">プライバシーポリシー</h1>
           </div>
-          <p className="text-sm text-gray-500">
-            最終更新日: {formatDate(new Date(), 'long')}
-          </p>
+          <p className="text-sm text-gray-500">最終更新日: {formatDate(new Date(), "long")}</p>
         </div>
 
         {/* コンテンツ */}
@@ -70,10 +68,32 @@ export default function PrivacyPage() {
             </p>
             <ul className="list-disc list-inside space-y-2 text-gray-700 ml-4">
               <li>
-                <strong>Stripe, Inc.:</strong> Web経由でのサブスクリプション決済処理を委託しています。Stripeは PCI DSS に準拠した決済基盤を提供しており、お客様の決済情報はStripeが安全に管理します。詳細は<a href="https://stripe.com/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">Stripeのプライバシーポリシー</a>をご確認ください。
+                <strong>Stripe, Inc.:</strong>{" "}
+                Web経由でのサブスクリプション決済処理を委託しています。Stripeは PCI DSS
+                に準拠した決済基盤を提供しており、お客様の決済情報はStripeが安全に管理します。詳細は
+                <a
+                  href="https://stripe.com/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 underline"
+                >
+                  Stripeのプライバシーポリシー
+                </a>
+                をご確認ください。
               </li>
               <li>
-                <strong>RevenueCat, Inc.:</strong> モバイルアプリでのサブスクリプション管理を委託しています。Apple App Store / Google Play経由の課金処理はRevenueCatを通じて行われます。詳細は<a href="https://www.revenuecat.com/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">RevenueCatのプライバシーポリシー</a>をご確認ください。
+                <strong>RevenueCat, Inc.:</strong>{" "}
+                モバイルアプリでのサブスクリプション管理を委託しています。Apple App Store / Google
+                Play経由の課金処理はRevenueCatを通じて行われます。詳細は
+                <a
+                  href="https://www.revenuecat.com/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 underline"
+                >
+                  RevenueCatのプライバシーポリシー
+                </a>
+                をご確認ください。
               </li>
             </ul>
             <p className="text-gray-700 leading-relaxed mt-3">
@@ -99,9 +119,7 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-4">7. ユーザーの権利</h2>
-            <p className="text-gray-700 leading-relaxed mb-3">
-              ユーザーは、以下の権利を有します：
-            </p>
+            <p className="text-gray-700 leading-relaxed mb-3">ユーザーは、以下の権利を有します：</p>
             <ul className="list-disc list-inside space-y-2 text-gray-700 ml-4">
               <li>個人情報へのアクセス</li>
               <li>個人情報の修正・削除</li>
@@ -139,7 +157,5 @@ export default function PrivacyPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
-
-

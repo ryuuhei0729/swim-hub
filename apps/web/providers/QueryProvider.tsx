@@ -1,35 +1,35 @@
-'use client'
+"use client";
 
 // =============================================================================
 // QueryProvider - React Queryのプロバイダーコンポーネント
 // =============================================================================
 
-import React from 'react'
-import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
-import { createQueryClient } from '@apps/shared/lib/react-query'
+import React from "react";
+import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
+import { createQueryClient } from "@apps/shared/lib/react-query";
 
-let browserQueryClient: QueryClient | undefined = undefined
+let browserQueryClient: QueryClient | undefined = undefined;
 
 /**
  * QueryClientを取得する関数
  * ブラウザ環境ではシングルトンインスタンスを返す
  */
 export function getQueryClient() {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     // Server: always make a new query client
-    return createQueryClient()
+    return createQueryClient();
   } else {
     // Browser: make a new query client if we don't already have one
     // This is to make sure we only ever have one query client per app
     if (!browserQueryClient) {
-      browserQueryClient = createQueryClient()
+      browserQueryClient = createQueryClient();
     }
-    return browserQueryClient
+    return browserQueryClient;
   }
 }
 
 interface QueryProviderProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 /**
@@ -37,12 +37,7 @@ interface QueryProviderProps {
  * AuthProviderの内側に配置して、認証済みユーザーのみReact Queryを使用可能にする
  */
 export default function QueryProvider({ children }: QueryProviderProps) {
-  const queryClient = getQueryClient()
+  const queryClient = getQueryClient();
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  )
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }
-

@@ -38,5 +38,5 @@ export default function PracticeLogLoading() {
         </div>
       </div>
     </div>
-  )
+  );
 }

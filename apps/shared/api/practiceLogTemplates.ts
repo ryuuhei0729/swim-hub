@@ -2,11 +2,11 @@
 // 練習ログテンプレート API クラス
 // =============================================================================
 
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   PracticeLogTemplate,
   CreatePracticeLogTemplateInput,
-} from '../types/practiceLogTemplate'
+} from "../types/practiceLogTemplate";
 
 export class PracticeLogTemplateAPI {
   constructor(private supabase: SupabaseClient) {}
@@ -21,14 +21,14 @@ export class PracticeLogTemplateAPI {
    */
   async getTemplates(): Promise<PracticeLogTemplate[]> {
     const { data, error } = await this.supabase
-      .from('practice_log_templates')
-      .select('*')
-      .order('is_favorite', { ascending: false })
-      .order('use_count', { ascending: false })
-      .order('created_at', { ascending: false })
+      .from("practice_log_templates")
+      .select("*")
+      .order("is_favorite", { ascending: false })
+      .order("use_count", { ascending: false })
+      .order("created_at", { ascending: false });
 
-    if (error) throw error
-    return data || []
+    if (error) throw error;
+    return data || [];
   }
 
   /**
@@ -36,16 +36,16 @@ export class PracticeLogTemplateAPI {
    */
   async getTemplate(templateId: string): Promise<PracticeLogTemplate | null> {
     const { data, error } = await this.supabase
-      .from('practice_log_templates')
-      .select('*')
-      .eq('id', templateId)
-      .single()
+      .from("practice_log_templates")
+      .select("*")
+      .eq("id", templateId)
+      .single();
 
     if (error) {
-      if (error.code === 'PGRST116') return null
-      throw error
+      if (error.code === "PGRST116") return null;
+      throw error;
     }
-    return data
+    return data;
   }
 
   /**
@@ -53,11 +53,11 @@ export class PracticeLogTemplateAPI {
    */
   async countTemplates(): Promise<number> {
     const { count, error } = await this.supabase
-      .from('practice_log_templates')
-      .select('*', { count: 'exact', head: true })
+      .from("practice_log_templates")
+      .select("*", { count: "exact", head: true });
 
-    if (error) throw error
-    return count || 0
+    if (error) throw error;
+    return count || 0;
   }
 
   // =========================================================================
@@ -67,15 +67,15 @@ export class PracticeLogTemplateAPI {
   /**
    * テンプレートを作成
    */
-  async createTemplate(
-    input: CreatePracticeLogTemplateInput
-  ): Promise<PracticeLogTemplate> {
+  async createTemplate(input: CreatePracticeLogTemplateInput): Promise<PracticeLogTemplate> {
     // 認証ユーザーのIDを取得
-    const { data: { user } } = await this.supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
+    const {
+      data: { user },
+    } = await this.supabase.auth.getUser();
+    if (!user) throw new Error("認証が必要です");
 
     const { data, error } = await this.supabase
-      .from('practice_log_templates')
+      .from("practice_log_templates")
       .insert({
         user_id: user.id,
         name: input.name,
@@ -89,10 +89,10 @@ export class PracticeLogTemplateAPI {
         tag_ids: input.tag_ids || [],
       })
       .select()
-      .single()
+      .single();
 
-    if (error) throw error
-    return data
+    if (error) throw error;
+    return data;
   }
 
   // =========================================================================
@@ -104,10 +104,10 @@ export class PracticeLogTemplateAPI {
    */
   async updateTemplate(
     templateId: string,
-    input: Partial<CreatePracticeLogTemplateInput>
+    input: Partial<CreatePracticeLogTemplateInput>,
   ): Promise<PracticeLogTemplate> {
     const { data, error } = await this.supabase
-      .from('practice_log_templates')
+      .from("practice_log_templates")
       .update({
         ...(input.name !== undefined && { name: input.name }),
         ...(input.style !== undefined && { style: input.style }),
@@ -120,23 +120,23 @@ export class PracticeLogTemplateAPI {
         ...(input.tag_ids !== undefined && { tag_ids: input.tag_ids }),
         updated_at: new Date().toISOString(),
       })
-      .eq('id', templateId)
+      .eq("id", templateId)
       .select()
-      .single()
+      .single();
 
-    if (error) throw error
-    return data
+    if (error) throw error;
+    return data;
   }
 
   /**
    * テンプレートを使用（use_countをインクリメント）
    */
   async useTemplate(templateId: string): Promise<void> {
-    const { error } = await this.supabase.rpc('increment_template_use_count', {
+    const { error } = await this.supabase.rpc("increment_template_use_count", {
       template_id: templateId,
-    })
+    });
 
-    if (error) throw error
+    if (error) throw error;
   }
 
   /**
@@ -145,23 +145,23 @@ export class PracticeLogTemplateAPI {
   async toggleFavorite(templateId: string): Promise<PracticeLogTemplate> {
     // 現在の状態を取得
     const { data: current, error: fetchError } = await this.supabase
-      .from('practice_log_templates')
-      .select('is_favorite')
-      .eq('id', templateId)
-      .single()
+      .from("practice_log_templates")
+      .select("is_favorite")
+      .eq("id", templateId)
+      .single();
 
-    if (fetchError) throw fetchError
+    if (fetchError) throw fetchError;
 
     // 反転して更新
     const { data, error } = await this.supabase
-      .from('practice_log_templates')
+      .from("practice_log_templates")
       .update({ is_favorite: !current?.is_favorite })
-      .eq('id', templateId)
+      .eq("id", templateId)
       .select()
-      .single()
+      .single();
 
-    if (error) throw error
-    return data
+    if (error) throw error;
+    return data;
   }
 
   // =========================================================================
@@ -173,10 +173,10 @@ export class PracticeLogTemplateAPI {
    */
   async deleteTemplate(templateId: string): Promise<void> {
     const { error } = await this.supabase
-      .from('practice_log_templates')
+      .from("practice_log_templates")
       .delete()
-      .eq('id', templateId)
+      .eq("id", templateId);
 
-    if (error) throw error
+    if (error) throw error;
   }
 }

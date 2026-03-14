@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -9,70 +9,70 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-} from 'react-native'
-import { useAuth } from '@/contexts/AuthProvider'
+} from "react-native";
+import { useAuth } from "@/contexts/AuthProvider";
 
-const DUMMY_EMAIL_DOMAIN = '@ryuhei.love'
+const DUMMY_EMAIL_DOMAIN = "@ryuhei.love";
 
 export const EmailChangeSettings: React.FC = () => {
-  const { supabase, user } = useAuth()
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [newEmail, setNewEmail] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  const { supabase, user } = useAuth();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
-  const currentEmail = user?.email || ''
-  const isDummyEmail = currentEmail.endsWith(DUMMY_EMAIL_DOMAIN)
+  const currentEmail = user?.email || "";
+  const isDummyEmail = currentEmail.endsWith(DUMMY_EMAIL_DOMAIN);
 
   const openModal = () => {
-    setNewEmail('')
-    setError(null)
-    setSuccess(false)
-    setIsModalOpen(true)
-  }
+    setNewEmail("");
+    setError(null);
+    setSuccess(false);
+    setIsModalOpen(true);
+  };
 
   const closeModal = () => {
-    setIsModalOpen(false)
-  }
+    setIsModalOpen(false);
+  };
 
   const handleSubmit = async () => {
-    const trimmed = newEmail.trim()
-    if (!trimmed || loading) return
+    const trimmed = newEmail.trim();
+    if (!trimmed || loading) return;
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      setError('有効なメールアドレスを入力してください')
-      return
+      setError("有効なメールアドレスを入力してください");
+      return;
     }
 
     if (trimmed === currentEmail) {
-      setError('現在と同じメールアドレスです')
-      return
+      setError("現在と同じメールアドレスです");
+      return;
     }
 
-    setLoading(true)
-    setError(null)
-    setSuccess(false)
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
 
     try {
       const { error: updateError } = await supabase.auth.updateUser({
         email: trimmed,
-      })
+      });
 
       if (updateError) {
-        setError(updateError.message)
-        return
+        setError(updateError.message);
+        return;
       }
 
-      setSuccess(true)
-      setNewEmail('')
+      setSuccess(true);
+      setNewEmail("");
     } catch (err) {
-      console.error('メールアドレス変更エラー:', err)
-      setError('メールアドレスの変更に失敗しました。再度お試しください。')
+      console.error("メールアドレス変更エラー:", err);
+      setError("メールアドレスの変更に失敗しました。再度お試しください。");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <>
@@ -94,30 +94,23 @@ export const EmailChangeSettings: React.FC = () => {
             style={styles.changeButton}
             onPress={openModal}
             accessibilityRole="button"
-            accessibilityLabel={isDummyEmail ? 'メールアドレスを登録' : 'メールアドレスを変更'}
+            accessibilityLabel={isDummyEmail ? "メールアドレスを登録" : "メールアドレスを変更"}
           >
-            <Text style={styles.changeButtonText}>
-              {isDummyEmail ? '登録する' : '変更する'}
-            </Text>
+            <Text style={styles.changeButtonText}>{isDummyEmail ? "登録する" : "変更する"}</Text>
           </Pressable>
         </View>
       </View>
 
       {/* モーダル */}
-      <Modal
-        visible={isModalOpen}
-        animationType="fade"
-        transparent
-        onRequestClose={closeModal}
-      >
+      <Modal visible={isModalOpen} animationType="fade" transparent onRequestClose={closeModal}>
         <KeyboardAvoidingView
           style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
           <Pressable style={styles.modalBackdrop} onPress={closeModal} />
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
-              {isDummyEmail ? 'メールアドレス登録' : 'メールアドレス変更'}
+              {isDummyEmail ? "メールアドレス登録" : "メールアドレス変更"}
             </Text>
 
             {!isDummyEmail && (
@@ -143,14 +136,14 @@ export const EmailChangeSettings: React.FC = () => {
             {!success ? (
               <>
                 <Text style={styles.label}>
-                  {isDummyEmail ? '登録するメールアドレス' : '新しいメールアドレス'}
+                  {isDummyEmail ? "登録するメールアドレス" : "新しいメールアドレス"}
                 </Text>
                 <TextInput
                   style={styles.input}
                   value={newEmail}
                   onChangeText={(text) => {
-                    setNewEmail(text)
-                    setError(null)
+                    setNewEmail(text);
+                    setError(null);
                   }}
                   placeholder="example@gmail.com"
                   placeholderTextColor="#9CA3AF"
@@ -176,13 +169,13 @@ export const EmailChangeSettings: React.FC = () => {
                     onPress={handleSubmit}
                     disabled={!newEmail.trim() || loading}
                     accessibilityRole="button"
-                    accessibilityLabel={isDummyEmail ? '登録する' : '変更する'}
+                    accessibilityLabel={isDummyEmail ? "登録する" : "変更する"}
                   >
                     {loading ? (
                       <ActivityIndicator size="small" color="#FFFFFF" />
                     ) : (
                       <Text style={styles.submitButtonText}>
-                        {isDummyEmail ? '登録する' : '変更する'}
+                        {isDummyEmail ? "登録する" : "変更する"}
                       </Text>
                     )}
                   </Pressable>
@@ -204,38 +197,38 @@ export const EmailChangeSettings: React.FC = () => {
         </KeyboardAvoidingView>
       </Modal>
     </>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   section: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     padding: 20,
     borderRadius: 8,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: "#E5E7EB",
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: "600",
+    color: "#111827",
   },
   row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   emailInfo: {
     flex: 1,
@@ -243,42 +236,42 @@ const styles = StyleSheet.create({
   },
   emailText: {
     fontSize: 14,
-    color: '#374151',
+    color: "#374151",
   },
   emailTextMuted: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: "#9CA3AF",
   },
   changeButton: {
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    backgroundColor: '#FFFFFF',
+    borderColor: "#D1D5DB",
+    backgroundColor: "#FFFFFF",
   },
   changeButtonText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+    fontWeight: "500",
+    color: "#374151",
   },
   // モーダル
   modalOverlay: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 24,
-    width: '90%',
+    width: "90%",
     maxWidth: 400,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
@@ -286,63 +279,63 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: "600",
+    color: "#111827",
     marginBottom: 16,
   },
   currentEmailLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: "#6B7280",
     marginBottom: 16,
   },
   currentEmailValue: {
-    fontWeight: '500',
-    color: '#374151',
+    fontWeight: "500",
+    color: "#374151",
   },
   errorContainer: {
     marginBottom: 16,
     padding: 12,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: "#FEF2F2",
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: "#FECACA",
     borderRadius: 8,
   },
   errorText: {
     fontSize: 14,
-    color: '#DC2626',
+    color: "#DC2626",
   },
   successContainer: {
     marginBottom: 16,
     padding: 12,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: "#F0FDF4",
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: "#BBF7D0",
     borderRadius: 8,
   },
   successText: {
     fontSize: 14,
-    color: '#16A34A',
+    color: "#16A34A",
   },
   label: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+    fontWeight: "500",
+    color: "#374151",
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: "#D1D5DB",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
-    color: '#111827',
-    backgroundColor: '#FFFFFF',
+    color: "#111827",
+    backgroundColor: "#FFFFFF",
     marginBottom: 16,
   },
   buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "flex-end",
     gap: 12,
   },
   cancelButton: {
@@ -350,21 +343,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    backgroundColor: '#FFFFFF',
+    borderColor: "#D1D5DB",
+    backgroundColor: "#FFFFFF",
   },
   cancelButtonText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+    fontWeight: "500",
+    color: "#374151",
   },
   submitButton: {
-    backgroundColor: '#2563EB',
+    backgroundColor: "#2563EB",
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     minWidth: 80,
   },
   submitButtonDisabled: {
@@ -372,7 +365,7 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
-})
+});

@@ -1,114 +1,123 @@
-'use client'
+"use client";
 
-import React, { useState, useMemo } from 'react'
-import dynamic from 'next/dynamic'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthProvider'
-import Button from '@/components/ui/Button'
-import { ArrowLeftIcon, PlusIcon, TrashIcon, ClockIcon, CalendarDaysIcon, MapPinIcon, UserGroupIcon, XMarkIcon, CheckIcon, ChevronDownIcon, SparklesIcon, PrinterIcon } from '@heroicons/react/24/outline'
-import TagInput from '@/components/forms/TagInput'
-import type { TeamTimeEntry } from '@/components/team/TeamTimeInputModal'
-import { PracticeTag, Practice } from '@apps/shared/types'
+import React, { useState, useMemo } from "react";
+import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthProvider";
+import Button from "@/components/ui/Button";
+import {
+  ArrowLeftIcon,
+  PlusIcon,
+  TrashIcon,
+  ClockIcon,
+  CalendarDaysIcon,
+  MapPinIcon,
+  UserGroupIcon,
+  XMarkIcon,
+  CheckIcon,
+  ChevronDownIcon,
+  SparklesIcon,
+  PrinterIcon,
+} from "@heroicons/react/24/outline";
+import TagInput from "@/components/forms/TagInput";
+import type { TeamTimeEntry } from "@/components/team/TeamTimeInputModal";
+import { PracticeTag, Practice } from "@apps/shared/types";
 
 // TeamTimeInputModalを動的インポート（バンドルサイズ削減）
-const TeamTimeInputModal = dynamic(
-  () => import('@/components/team/TeamTimeInputModal'),
-  { ssr: false }
-)
+const TeamTimeInputModal = dynamic(() => import("@/components/team/TeamTimeInputModal"), {
+  ssr: false,
+});
 
 // OcrScanModalを動的インポート
-const OcrScanModal = dynamic(
-  () => import('@/components/team/OcrScanModal'),
-  { ssr: false }
-)
+const OcrScanModal = dynamic(() => import("@/components/team/OcrScanModal"), { ssr: false });
 
-import ConfirmDialog from '@/components/ui/ConfirmDialog'
-import { openTimesheetPrintWindow } from '@/utils/generateTimesheetHtml'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { openTimesheetPrintWindow } from "@/utils/generateTimesheetHtml";
+import { format } from "date-fns";
+import { ja } from "date-fns/locale";
 
-type Tag = PracticeTag
+type Tag = PracticeTag;
 
 interface TeamMember {
-  id: string
-  user_id: string
-  role: string
+  id: string;
+  user_id: string;
+  role: string;
   users: {
-    id: string
-    name: string
-  }
+    id: string;
+    name: string;
+  };
 }
 
 interface PracticeMenu {
-  id: string
-  style: string
-  swimCategory: 'Swim' | 'Pull' | 'Kick'
-  distance: number | ''
-  reps: number | ''
-  sets: number | ''
-  circleMin: number | ''
-  circleSec: number | ''
-  note: string
-  tags: Tag[]
-  times: TeamTimeEntry[]
-  targetUserIds: string[] // 対象ユーザーのuser_idリスト
+  id: string;
+  style: string;
+  swimCategory: "Swim" | "Pull" | "Kick";
+  distance: number | "";
+  reps: number | "";
+  sets: number | "";
+  circleMin: number | "";
+  circleSec: number | "";
+  note: string;
+  tags: Tag[];
+  times: TeamTimeEntry[];
+  targetUserIds: string[]; // 対象ユーザーのuser_idリスト
 }
 
 interface PracticeWithDetails extends Practice {
   team: {
-    id: string
-    name: string
-  } | null
+    id: string;
+    name: string;
+  } | null;
 }
 
 interface PracticeLogWithDetails {
-  id: string
-  user_id: string
-  style: string
-  swim_category: 'Swim' | 'Pull' | 'Kick'
-  distance: number
-  rep_count: number
-  set_count: number
-  circle: number | null
-  note: string | null
+  id: string;
+  user_id: string;
+  style: string;
+  swim_category: "Swim" | "Pull" | "Kick";
+  distance: number;
+  rep_count: number;
+  set_count: number;
+  circle: number | null;
+  note: string | null;
   practice_log_tags: {
-    practice_tags: PracticeTag
-  }[]
+    practice_tags: PracticeTag;
+  }[];
   practice_times: {
-    id: string
-    user_id: string
-    set_number: number
-    rep_number: number
-    time: number
-  }[]
+    id: string;
+    user_id: string;
+    set_number: number;
+    rep_number: number;
+    time: number;
+  }[];
 }
 
 interface PracticeLogClientProps {
-  teamId: string
-  practiceId: string
-  practice: PracticeWithDetails
-  teamName: string
-  members: TeamMember[]
-  existingLogs: PracticeLogWithDetails[]
-  availableTags: PracticeTag[]
-  presentUserIds: string[] // 出席しているメンバーのuser_idリスト
+  teamId: string;
+  practiceId: string;
+  practice: PracticeWithDetails;
+  teamName: string;
+  members: TeamMember[];
+  existingLogs: PracticeLogWithDetails[];
+  availableTags: PracticeTag[];
+  presentUserIds: string[]; // 出席しているメンバーのuser_idリスト
 }
 
 // 種目の選択肢
 const SWIM_STYLES = [
-  { value: 'Fr', label: '自由形' },
-  { value: 'Ba', label: '背泳ぎ' },
-  { value: 'Br', label: '平泳ぎ' },
-  { value: 'Fly', label: 'バタフライ' },
-  { value: 'IM', label: '個人メドレー' }
-]
+  { value: "Fr", label: "自由形" },
+  { value: "Ba", label: "背泳ぎ" },
+  { value: "Br", label: "平泳ぎ" },
+  { value: "Fly", label: "バタフライ" },
+  { value: "IM", label: "個人メドレー" },
+];
 
 // 泳法カテゴリの選択肢
 const SWIM_CATEGORIES = [
-  { value: 'Swim', label: 'Swim' },
-  { value: 'Pull', label: 'Pull' },
-  { value: 'Kick', label: 'Kick' }
-]
+  { value: "Swim", label: "Swim" },
+  { value: "Pull", label: "Pull" },
+  { value: "Kick", label: "Kick" },
+];
 
 export default function PracticeLogClient({
   teamId,
@@ -117,75 +126,81 @@ export default function PracticeLogClient({
   members,
   existingLogs,
   availableTags: initialTags,
-  presentUserIds
+  presentUserIds,
 }: PracticeLogClientProps) {
-  const router = useRouter()
-  const { supabase } = useAuth()
-  
-  const [availableTags, setAvailableTags] = useState<Tag[]>(initialTags)
-  const [saving, setSaving] = useState(false)
-  const [showOcrModal, setShowOcrModal] = useState(false)
-  const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false)
-  const [pendingOcrMenus, setPendingOcrMenus] = useState<PracticeMenu[] | null>(null)
-  const [showUserSelectModal, setShowUserSelectModal] = useState(false)
-  const [currentMenuIdForUserSelect, setCurrentMenuIdForUserSelect] = useState<string | null>(null)
-  const [tempSelectedUserIds, setTempSelectedUserIds] = useState<string[]>([])
+  const router = useRouter();
+  const { supabase } = useAuth();
+
+  const [availableTags, setAvailableTags] = useState<Tag[]>(initialTags);
+  const [saving, setSaving] = useState(false);
+  const [showOcrModal, setShowOcrModal] = useState(false);
+  const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false);
+  const [pendingOcrMenus, setPendingOcrMenus] = useState<PracticeMenu[] | null>(null);
+  const [showUserSelectModal, setShowUserSelectModal] = useState(false);
+  const [currentMenuIdForUserSelect, setCurrentMenuIdForUserSelect] = useState<string | null>(null);
+  const [tempSelectedUserIds, setTempSelectedUserIds] = useState<string[]>([]);
 
   // 秒数を表示用フォーマットに変換
   const formatTime = (seconds: number) => {
-    if (seconds === 0) return ''
-    const minutes = Math.floor(seconds / 60)
-    const remainingSeconds = seconds % 60
-    return minutes > 0 
-      ? `${minutes}:${remainingSeconds.toFixed(2).padStart(5, '0')}`
-      : `${remainingSeconds.toFixed(2)}`
-  }
+    if (seconds === 0) return "";
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return minutes > 0
+      ? `${minutes}:${remainingSeconds.toFixed(2).padStart(5, "0")}`
+      : `${remainingSeconds.toFixed(2)}`;
+  };
 
   // 既存データからメニューを構築
   const buildMenusFromLogs = (): PracticeMenu[] => {
     if (existingLogs.length === 0) {
       // 新規作成時は出席者をデフォルト選択
-      return [{
-        id: '1',
-        style: 'Fr',
-        swimCategory: 'Swim',
-        distance: 100,
-        reps: 4,
-        sets: 1,
-        circleMin: 1,
-        circleSec: 30,
-        note: '',
-        tags: [],
-        times: [],
-        targetUserIds: presentUserIds.length > 0 ? presentUserIds : members.map(m => m.user_id)
-      }]
+      return [
+        {
+          id: "1",
+          style: "Fr",
+          swimCategory: "Swim",
+          distance: 100,
+          reps: 4,
+          sets: 1,
+          circleMin: 1,
+          circleSec: 30,
+          note: "",
+          tags: [],
+          times: [],
+          targetUserIds: presentUserIds.length > 0 ? presentUserIds : members.map((m) => m.user_id),
+        },
+      ];
     }
 
     // 同じメニュー構成のログをグループ化
-    const menuGroups = new Map<string, {
-      style: string
-      swim_category: 'Swim' | 'Pull' | 'Kick'
-      distance: number
-      rep_count: number
-      set_count: number
-      circle: number | null
-      note: string | null
-      tags: PracticeTag[]
-      times: TeamTimeEntry[]
-      targetUserIds: string[]
-    }>()
+    const menuGroups = new Map<
+      string,
+      {
+        style: string;
+        swim_category: "Swim" | "Pull" | "Kick";
+        distance: number;
+        rep_count: number;
+        set_count: number;
+        circle: number | null;
+        note: string | null;
+        tags: PracticeTag[];
+        times: TeamTimeEntry[];
+        targetUserIds: string[];
+      }
+    >();
 
     for (const log of existingLogs) {
-      const key = `${log.style}-${log.swim_category || 'Swim'}-${log.distance}-${log.rep_count}-${log.set_count}`
-      
+      const key = `${log.style}-${log.swim_category || "Swim"}-${log.distance}-${log.rep_count}-${log.set_count}`;
+
       if (!menuGroups.has(key)) {
-        const tags = log.practice_log_tags
-          ?.map(plt => plt.practice_tags)
-          .filter((tag): tag is PracticeTag => tag != null) || []
-        
+        const tags =
+          log.practice_log_tags
+            ?.map((plt) => plt.practice_tags)
+            .filter((tag): tag is PracticeTag => tag != null) || [];
+
         menuGroups.set(key, {
           style: log.style,
-          swim_category: log.swim_category || 'Swim',
+          swim_category: log.swim_category || "Swim",
           distance: log.distance,
           rep_count: log.rep_count,
           set_count: log.set_count,
@@ -193,35 +208,35 @@ export default function PracticeLogClient({
           note: log.note,
           tags,
           times: [],
-          targetUserIds: []
-        })
+          targetUserIds: [],
+        });
       }
 
       // このログのuser_idを対象ユーザーに追加
-      const group = menuGroups.get(key)!
+      const group = menuGroups.get(key)!;
       if (!group.targetUserIds.includes(log.user_id)) {
-        group.targetUserIds.push(log.user_id)
+        group.targetUserIds.push(log.user_id);
       }
 
       // メンバーのタイムを追加
-      const member = members.find(m => m.user_id === log.user_id)
+      const member = members.find((m) => m.user_id === log.user_id);
       if (member && log.practice_times && log.practice_times.length > 0) {
-        const existingMemberTime = group.times.find(t => t.memberId === member.id)
-        
-        const memberTimes = log.practice_times.map(pt => ({
+        const existingMemberTime = group.times.find((t) => t.memberId === member.id);
+
+        const memberTimes = log.practice_times.map((pt) => ({
           setNumber: pt.set_number,
           repNumber: pt.rep_number,
           time: pt.time,
-          displayValue: formatTime(pt.time)
-        }))
+          displayValue: formatTime(pt.time),
+        }));
 
         if (existingMemberTime) {
-          existingMemberTime.times.push(...memberTimes)
+          existingMemberTime.times.push(...memberTimes);
         } else {
           group.times.push({
             memberId: member.id,
-            times: memberTimes
-          })
+            times: memberTimes,
+          });
         }
       }
     }
@@ -235,89 +250,91 @@ export default function PracticeLogClient({
       sets: group.set_count,
       circleMin: group.circle ? Math.floor(group.circle / 60) : 1,
       circleSec: group.circle ? group.circle % 60 : 30,
-      note: group.note || '',
+      note: group.note || "",
       tags: group.tags,
       times: group.times,
-      targetUserIds: group.targetUserIds
-    }))
-  }
+      targetUserIds: group.targetUserIds,
+    }));
+  };
 
-  const [menus, setMenus] = useState<PracticeMenu[]>(buildMenusFromLogs)
-  const [showTimeModal, setShowTimeModal] = useState(false)
-  const [currentMenuId, setCurrentMenuId] = useState<string | null>(null)
+  const [menus, setMenus] = useState<PracticeMenu[]>(buildMenusFromLogs);
+  const [showTimeModal, setShowTimeModal] = useState(false);
+  const [currentMenuId, setCurrentMenuId] = useState<string | null>(null);
 
-  const isEditMode = existingLogs.length > 0
-
-
+  const isEditMode = existingLogs.length > 0;
 
   const addMenu = () => {
     const newMenu: PracticeMenu = {
       id: Date.now().toString(),
-      style: 'Fr',
-      swimCategory: 'Swim',
+      style: "Fr",
+      swimCategory: "Swim",
       distance: 100,
       reps: 4,
       sets: 1,
       circleMin: 1,
       circleSec: 30,
-      note: '',
+      note: "",
       tags: [],
       times: [],
-      targetUserIds: presentUserIds.length > 0 ? presentUserIds : members.map(m => m.user_id)
-    }
-    setMenus(prev => [...prev, newMenu])
-  }
+      targetUserIds: presentUserIds.length > 0 ? presentUserIds : members.map((m) => m.user_id),
+    };
+    setMenus((prev) => [...prev, newMenu]);
+  };
 
   const removeMenu = (menuId: string) => {
     if (menus.length > 1) {
-      setMenus(prev => prev.filter(menu => menu.id !== menuId))
+      setMenus((prev) => prev.filter((menu) => menu.id !== menuId));
     }
-  }
+  };
 
-  const updateMenu = <K extends keyof PracticeMenu>(menuId: string, field: K, value: PracticeMenu[K]) => {
-    setMenus(prev => prev.map(menu => 
-      menu.id === menuId ? { ...menu, [field]: value } : menu
-    ))
-  }
+  const updateMenu = <K extends keyof PracticeMenu>(
+    menuId: string,
+    field: K,
+    value: PracticeMenu[K],
+  ) => {
+    setMenus((prev) =>
+      prev.map((menu) => (menu.id === menuId ? { ...menu, [field]: value } : menu)),
+    );
+  };
 
   const handleTimeSave = (menuId: string, times: TeamTimeEntry[]) => {
-    updateMenu(menuId, 'times', times)
-  }
+    updateMenu(menuId, "times", times);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
+    e.preventDefault();
+
     // 既に保存処理中の場合は重複実行を防ぐ
     if (saving) {
-      return
+      return;
     }
-    
-    setSaving(true)
+
+    setSaving(true);
 
     try {
       // ログデータを準備
       const logsData: Array<{
-        user_id: string
-        style: string
-        swim_category: 'Swim' | 'Pull' | 'Kick'
-        rep_count: number
-        set_count: number
-        distance: number
-        note: string
+        user_id: string;
+        style: string;
+        swim_category: "Swim" | "Pull" | "Kick";
+        rep_count: number;
+        set_count: number;
+        distance: number;
+        note: string;
         practice_times: Array<{
-          set_number: number
-          rep_number: number
-          time: number
-        }>
-        tag_ids: string[]
-      }> = []
+          set_number: number;
+          rep_number: number;
+          time: number;
+        }>;
+        tag_ids: string[];
+      }> = [];
 
       for (const menu of menus) {
         // 対象ユーザーのみにログを作成
-        const targetMembers = members.filter(m => menu.targetUserIds.includes(m.user_id))
-        
+        const targetMembers = members.filter((m) => menu.targetUserIds.includes(m.user_id));
+
         for (const member of targetMembers) {
-          const memberTimes = menu.times.find(t => t.memberId === member.id)?.times || []
+          const memberTimes = menu.times.find((t) => t.memberId === member.id)?.times || [];
 
           logsData.push({
             user_id: member.user_id,
@@ -326,107 +343,111 @@ export default function PracticeLogClient({
             rep_count: Number(menu.reps) || 1,
             set_count: Number(menu.sets) || 1,
             distance: Number(menu.distance) || 100,
-            note: menu.note || '',
+            note: menu.note || "",
             practice_times: memberTimes.map((timeEntry) => ({
               set_number: timeEntry.setNumber,
               rep_number: timeEntry.repNumber,
-              time: timeEntry.time
+              time: timeEntry.time,
             })),
-            tag_ids: menu.tags.map(tag => tag.id)
-          })
+            tag_ids: menu.tags.map((tag) => tag.id),
+          });
         }
       }
 
       if (logsData.length === 0) {
-        alert('少なくとも1つの記録を入力してください')
-        setSaving(false)
-        return
+        alert("少なくとも1つの記録を入力してください");
+        setSaving(false);
+        return;
       }
 
       // RPC関数を呼び出して原子性のある操作を実行
       // replace_practice_logsは、practice_idに紐づくすべてのログを削除してから新しいログを挿入する
-      const { data: result, error: rpcError } = await supabase
-        .rpc('replace_practice_logs', {
-          p_practice_id: practiceId,
-          p_logs_data: logsData
-        })
+      const { data: result, error: rpcError } = await supabase.rpc("replace_practice_logs", {
+        p_practice_id: practiceId,
+        p_logs_data: logsData,
+      });
 
       if (rpcError) {
-        console.error('練習ログ保存エラー:', rpcError)
-        alert('保存中にエラーが発生しました。もう一度お試しください。')
-        setSaving(false)
-        return
+        console.error("練習ログ保存エラー:", rpcError);
+        alert("保存中にエラーが発生しました。もう一度お試しください。");
+        setSaving(false);
+        return;
       }
 
       // RPC関数の戻り値を確認
-      if (result && typeof result === 'object' && 'success' in result) {
+      if (result && typeof result === "object" && "success" in result) {
         if (!result.success) {
-          const errorMessage = result.error || '保存中にエラーが発生しました。'
-          console.error('練習ログ保存エラー:', errorMessage)
-          alert(`保存中にエラーが発生しました: ${errorMessage}`)
-          setSaving(false)
-          return
+          const errorMessage = result.error || "保存中にエラーが発生しました。";
+          console.error("練習ログ保存エラー:", errorMessage);
+          alert(`保存中にエラーが発生しました: ${errorMessage}`);
+          setSaving(false);
+          return;
         }
       }
 
       // 成功時はリダイレクト
-      router.push(`/teams/${teamId}?tab=practices`)
+      router.push(`/teams/${teamId}?tab=practices`);
     } catch (err) {
-      console.error('チーム練習ログ作成エラー:', err)
-      alert('保存中にエラーが発生しました。もう一度お試しください。')
+      console.error("チーム練習ログ作成エラー:", err);
+      alert("保存中にエラーが発生しました。もう一度お試しください。");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleBack = () => {
-    router.push(`/teams/${teamId}?tab=practices`)
-  }
+    router.push(`/teams/${teamId}?tab=practices`);
+  };
 
   // OCR結果をフォームに反映
   const handleOcrApply = (ocrMenus: PracticeMenu[]) => {
     // 既存メニューが1件でデフォルト値のままの場合は上書き
-    let isDefault = false
+    let isDefault = false;
     if (menus.length === 1) {
-      const m = menus[0]
-      isDefault = m.style === 'Fr' &&
-        m.swimCategory === 'Swim' &&
+      const m = menus[0];
+      isDefault =
+        m.style === "Fr" &&
+        m.swimCategory === "Swim" &&
         m.distance === 100 &&
         m.reps === 4 &&
         m.sets === 1 &&
         m.circleMin === 1 &&
         m.circleSec === 30 &&
-        m.note === '' &&
+        m.note === "" &&
         m.tags.length === 0 &&
-        m.times.length === 0
+        m.times.length === 0;
     }
     if (isDefault) {
-      setMenus(ocrMenus)
+      setMenus(ocrMenus);
     } else {
       // 既存メニューがある場合は確認ダイアログ
-      setPendingOcrMenus(ocrMenus)
-      setShowOverwriteConfirm(true)
+      setPendingOcrMenus(ocrMenus);
+      setShowOverwriteConfirm(true);
     }
-    setShowOcrModal(false)
-  }
+    setShowOcrModal(false);
+  };
 
   // メンバーをフォーマット（TeamTimeInputModal用） - useMemoで参照を安定させる
-  const teamMembersForModal = useMemo(() =>
-    members.map(m => ({
-      id: m.id,
-      user_id: m.user_id,
-      users: m.users
-    })),
-    [members]
-  )
+  const teamMembersForModal = useMemo(
+    () =>
+      members.map((m) => ({
+        id: m.id,
+        user_id: m.user_id,
+        users: m.users,
+      })),
+    [members],
+  );
 
   // モーダルに渡すpropsをメモ化（参照が毎回変わるとuseEffectがtimesをリセットしてしまう）
-  const currentMenu = useMemo(() => menus.find(menu => menu.id === currentMenuId), [menus, currentMenuId])
-  const modalTeamMembers = useMemo(() =>
-    teamMembersForModal.filter(m => currentMenu?.targetUserIds.includes(m.user_id)),
-    [teamMembersForModal, currentMenu?.targetUserIds]
-  )
-  const modalInitialTimes = useMemo(() => currentMenu?.times || [], [currentMenu?.times])
+  const currentMenu = useMemo(
+    () => menus.find((menu) => menu.id === currentMenuId),
+    [menus, currentMenuId],
+  );
+  const modalTeamMembers = useMemo(
+    () => teamMembersForModal.filter((m) => currentMenu?.targetUserIds.includes(m.user_id)),
+    [teamMembersForModal, currentMenu?.targetUserIds],
+  );
+  const modalInitialTimes = useMemo(() => currentMenu?.times || [], [currentMenu?.times]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -440,20 +461,22 @@ export default function PracticeLogClient({
             <ArrowLeftIcon className="h-4 w-4 mr-1" />
             練習一覧に戻る
           </button>
-          
+
           <div className="bg-white rounded-lg shadow p-6">
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              {isEditMode ? 'チーム練習ログを編集' : 'チーム練習ログを追加'}
+              {isEditMode ? "チーム練習ログを編集" : "チーム練習ログを追加"}
             </h1>
-            <p className="text-gray-600 mb-4">
-              練習参加者の記録を代理で一括入力できます
-            </p>
-            
+            <p className="text-gray-600 mb-4">練習参加者の記録を代理で一括入力できます</p>
+
             {/* 練習情報 */}
             <div className="flex flex-wrap gap-4 text-sm text-gray-600 border-t pt-4">
               <div className="flex items-center gap-1">
                 <CalendarDaysIcon className="h-4 w-4" />
-                <span>{format(new Date(practice.date + 'T00:00:00'), 'yyyy年M月d日(EEE)', { locale: ja })}</span>
+                <span>
+                  {format(new Date(practice.date + "T00:00:00"), "yyyy年M月d日(EEE)", {
+                    locale: ja,
+                  })}
+                </span>
               </div>
               {practice.place && (
                 <div className="flex items-center gap-1">
@@ -467,11 +490,7 @@ export default function PracticeLogClient({
 
         {/* 記録表印刷 & 画像スキャンボタン */}
         <div className="flex justify-end gap-2 -mt-2 mb-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => openTimesheetPrintWindow()}
-          >
+          <Button type="button" variant="outline" onClick={() => openTimesheetPrintWindow()}>
             <PrinterIcon className="h-4 w-4 mr-2" />
             記録表を印刷
           </Button>
@@ -489,12 +508,14 @@ export default function PracticeLogClient({
         {/* フォーム */}
         <form onSubmit={handleSubmit} className="space-y-6">
           {menus.map((menu, index) => (
-            <div key={menu.id} className="bg-white rounded-lg shadow p-6" data-testid={`team-practice-log-menu-${index + 1}`}>
+            <div
+              key={menu.id}
+              className="bg-white rounded-lg shadow p-6"
+              data-testid={`team-practice-log-menu-${index + 1}`}
+            >
               {/* メニューヘッダー */}
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  メニュー {index + 1}
-                </h2>
+                <h2 className="text-lg font-semibold text-gray-900">メニュー {index + 1}</h2>
                 {menus.length > 1 && (
                   <button
                     type="button"
@@ -512,49 +533,47 @@ export default function PracticeLogClient({
               <div className="grid grid-cols-2 gap-4 mb-4">
                 {/* 種目① */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    種目①
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">種目①</label>
                   <div className="relative">
                     <select
                       value={menu.style}
-                      onChange={(e) => updateMenu(menu.id, 'style', e.target.value)}
+                      onChange={(e) => updateMenu(menu.id, "style", e.target.value)}
                       className="w-full pl-3 pr-10 py-2 bg-white border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
                       data-testid={`team-practice-log-style-${index + 1}`}
                     >
-                      {SWIM_STYLES.map(style => (
+                      {SWIM_STYLES.map((style) => (
                         <option key={style.value} value={style.value}>
                           {style.label}
                         </option>
                       ))}
                     </select>
-                    <ChevronDownIcon
-                      className="h-4 w-4 absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
-                    />
+                    <ChevronDownIcon className="h-4 w-4 absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
                   </div>
                 </div>
 
                 {/* 種目② */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    種目②
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">種目②</label>
                   <div className="relative">
                     <select
                       value={menu.swimCategory}
-                      onChange={(e) => updateMenu(menu.id, 'swimCategory', e.target.value as 'Swim' | 'Pull' | 'Kick')}
+                      onChange={(e) =>
+                        updateMenu(
+                          menu.id,
+                          "swimCategory",
+                          e.target.value as "Swim" | "Pull" | "Kick",
+                        )
+                      }
                       className="w-full pl-3 pr-10 py-2 bg-white border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
                       data-testid={`team-practice-log-swim-category-${index + 1}`}
                     >
-                      {SWIM_CATEGORIES.map(category => (
+                      {SWIM_CATEGORIES.map((category) => (
                         <option key={category.value} value={category.value}>
                           {category.label}
                         </option>
                       ))}
                     </select>
-                    <ChevronDownIcon
-                      className="h-4 w-4 absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
-                    />
+                    <ChevronDownIcon className="h-4 w-4 absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
                   </div>
                 </div>
               </div>
@@ -563,13 +582,17 @@ export default function PracticeLogClient({
               <div className="grid grid-cols-5 gap-4 mb-4">
                 {/* 距離 */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    距離(m)
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">距離(m)</label>
                   <input
                     type="number"
                     value={menu.distance}
-                    onChange={(e) => updateMenu(menu.id, 'distance', e.target.value === '' ? '' : Number(e.target.value))}
+                    onChange={(e) =>
+                      updateMenu(
+                        menu.id,
+                        "distance",
+                        e.target.value === "" ? "" : Number(e.target.value),
+                      )
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     min="25"
                     step="25"
@@ -579,13 +602,17 @@ export default function PracticeLogClient({
 
                 {/* 本数 */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    本数
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">本数</label>
                   <input
                     type="number"
                     value={menu.reps}
-                    onChange={(e) => updateMenu(menu.id, 'reps', e.target.value === '' ? '' : Number(e.target.value))}
+                    onChange={(e) =>
+                      updateMenu(
+                        menu.id,
+                        "reps",
+                        e.target.value === "" ? "" : Number(e.target.value),
+                      )
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     min="1"
                     data-testid={`team-practice-log-reps-${index + 1}`}
@@ -594,13 +621,17 @@ export default function PracticeLogClient({
 
                 {/* セット数 */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    セット数
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">セット数</label>
                   <input
                     type="number"
                     value={menu.sets}
-                    onChange={(e) => updateMenu(menu.id, 'sets', e.target.value === '' ? '' : Number(e.target.value))}
+                    onChange={(e) =>
+                      updateMenu(
+                        menu.id,
+                        "sets",
+                        e.target.value === "" ? "" : Number(e.target.value),
+                      )
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     min="1"
                     data-testid={`team-practice-log-sets-${index + 1}`}
@@ -615,7 +646,13 @@ export default function PracticeLogClient({
                   <input
                     type="number"
                     value={menu.circleMin}
-                    onChange={(e) => updateMenu(menu.id, 'circleMin', e.target.value === '' ? '' : Number(e.target.value))}
+                    onChange={(e) =>
+                      updateMenu(
+                        menu.id,
+                        "circleMin",
+                        e.target.value === "" ? "" : Number(e.target.value),
+                      )
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     min="0"
                     data-testid={`team-practice-log-circle-min-${index + 1}`}
@@ -630,7 +667,13 @@ export default function PracticeLogClient({
                   <input
                     type="number"
                     value={menu.circleSec}
-                    onChange={(e) => updateMenu(menu.id, 'circleSec', e.target.value === '' ? '' : Number(e.target.value))}
+                    onChange={(e) =>
+                      updateMenu(
+                        menu.id,
+                        "circleSec",
+                        e.target.value === "" ? "" : Number(e.target.value),
+                      )
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     min="0"
                     max="59"
@@ -641,16 +684,14 @@ export default function PracticeLogClient({
 
               {/* 対象ユーザー */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  対象ユーザー
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">対象ユーザー</label>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => {
-                      setCurrentMenuIdForUserSelect(menu.id)
-                      setTempSelectedUserIds(menu.targetUserIds)
-                      setShowUserSelectModal(true)
+                      setCurrentMenuIdForUserSelect(menu.id);
+                      setTempSelectedUserIds(menu.targetUserIds);
+                      setShowUserSelectModal(true);
                     }}
                     className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     data-testid={`team-practice-log-select-users-${index + 1}`}
@@ -658,15 +699,13 @@ export default function PracticeLogClient({
                     <UserGroupIcon className="h-4 w-4 mr-2" />
                     ユーザーを選択
                   </button>
-                  <span className="text-sm text-gray-600">
-                    {menu.targetUserIds.length}名選択中
-                  </span>
+                  <span className="text-sm text-gray-600">{menu.targetUserIds.length}名選択中</span>
                 </div>
                 {/* 選択されたユーザーの表示 */}
                 {menu.targetUserIds.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {menu.targetUserIds.slice(0, 5).map(userId => {
-                      const member = members.find(m => m.user_id === userId)
+                    {menu.targetUserIds.slice(0, 5).map((userId) => {
+                      const member = members.find((m) => m.user_id === userId);
                       return member ? (
                         <span
                           key={userId}
@@ -674,7 +713,7 @@ export default function PracticeLogClient({
                         >
                           {member.users.name}
                         </span>
-                      ) : null
+                      ) : null;
                     })}
                     {menu.targetUserIds.length > 5 && (
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
@@ -687,25 +726,21 @@ export default function PracticeLogClient({
 
               {/* タグ */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  タグ
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">タグ</label>
                 <TagInput
                   selectedTags={menu.tags}
                   availableTags={availableTags}
-                  onTagsChange={(tags) => updateMenu(menu.id, 'tags', tags)}
+                  onTagsChange={(tags) => updateMenu(menu.id, "tags", tags)}
                   onAvailableTagsUpdate={setAvailableTags}
                 />
               </div>
 
               {/* メモ */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  メモ
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">メモ</label>
                 <textarea
                   value={menu.note}
-                  onChange={(e) => updateMenu(menu.id, 'note', e.target.value)}
+                  onChange={(e) => updateMenu(menu.id, "note", e.target.value)}
                   placeholder="メニューの詳細や注意点など"
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -716,15 +751,16 @@ export default function PracticeLogClient({
               {/* タイム入力ボタン */}
               <div className="flex items-center justify-between border-t pt-4">
                 <div className="text-sm text-gray-600">
-                  {menu.sets || 0}セット × {menu.reps || 0}本 = {(Number(menu.sets) || 0) * (Number(menu.reps) || 0)}本のタイム入力
+                  {menu.sets || 0}セット × {menu.reps || 0}本 ={" "}
+                  {(Number(menu.sets) || 0) * (Number(menu.reps) || 0)}本のタイム入力
                   <br />
                   <span className="text-xs text-gray-500">（タイム入力は任意です）</span>
                 </div>
                 <Button
                   type="button"
                   onClick={() => {
-                    setCurrentMenuId(menu.id)
-                    setShowTimeModal(true)
+                    setCurrentMenuId(menu.id);
+                    setShowTimeModal(true);
                   }}
                   className="inline-flex items-center"
                   data-testid={`team-practice-log-time-button-${index + 1}`}
@@ -740,17 +776,18 @@ export default function PracticeLogClient({
                   <h3 className="text-sm font-medium text-gray-700 mb-3">記録されたタイム</h3>
                   <div className="space-y-3">
                     {menu.times.map((memberTime: TeamTimeEntry) => {
-                      const member = members.find(m => m.id === memberTime.memberId)
-                      if (!member || !memberTime.times || memberTime.times.length === 0) return null
-                      
-                      const validTimes = memberTime.times.filter((t) => t.time > 0)
-                      if (validTimes.length === 0) return null
-                      
+                      const member = members.find((m) => m.id === memberTime.memberId);
+                      if (!member || !memberTime.times || memberTime.times.length === 0)
+                        return null;
+
+                      const validTimes = memberTime.times.filter((t) => t.time > 0);
+                      if (validTimes.length === 0) return null;
+
                       return (
                         <div key={memberTime.memberId} className="bg-gray-50 p-3 rounded-lg">
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-sm font-medium text-gray-700">
-                              {member.users?.name || 'Unknown User'}
+                              {member.users?.name || "Unknown User"}
                             </span>
                             <span className="text-xs text-gray-500">
                               {validTimes.length}本記録済み
@@ -769,7 +806,7 @@ export default function PracticeLogClient({
                             ))}
                           </div>
                         </div>
-                      )
+                      );
                     })}
                   </div>
                 </div>
@@ -805,7 +842,7 @@ export default function PracticeLogClient({
               className="bg-blue-600 hover:bg-blue-700"
               data-testid="team-practice-log-submit-button"
             >
-              {saving ? '保存中...' : (isEditMode ? 'チーム練習ログを更新' : 'チーム練習ログを保存')}
+              {saving ? "保存中..." : isEditMode ? "チーム練習ログを更新" : "チーム練習ログを保存"}
             </Button>
           </div>
         </form>
@@ -816,14 +853,14 @@ export default function PracticeLogClient({
         <TeamTimeInputModal
           isOpen={showTimeModal}
           onClose={() => {
-            setShowTimeModal(false)
-            setCurrentMenuId(null)
+            setShowTimeModal(false);
+            setCurrentMenuId(null);
           }}
           onSubmit={(times: TeamTimeEntry[]) => handleTimeSave(currentMenuId, times)}
           setCount={currentMenu?.sets || 1}
           repCount={currentMenu?.reps || 1}
           teamMembers={modalTeamMembers}
-          menuNumber={menus.findIndex(m => m.id === currentMenuId) + 1}
+          menuNumber={menus.findIndex((m) => m.id === currentMenuId) + 1}
           initialTimes={modalInitialTimes}
         />
       )}
@@ -832,16 +869,14 @@ export default function PracticeLogClient({
       {showUserSelectModal && currentMenuIdForUserSelect && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex min-h-screen items-center justify-center p-4">
-            <div 
+            <div
               className="fixed inset-0 bg-black/40 transition-opacity"
               onClick={() => setShowUserSelectModal(false)}
             />
             <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 max-w-lg w-full max-h-[80vh] flex flex-col">
               {/* モーダルヘッダー */}
               <div className="flex items-center justify-between p-4 border-b">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  対象ユーザーを選択
-                </h3>
+                <h3 className="text-lg font-semibold text-gray-900">対象ユーザーを選択</h3>
                 <button
                   type="button"
                   onClick={() => setShowUserSelectModal(false)}
@@ -855,7 +890,7 @@ export default function PracticeLogClient({
               <div className="flex gap-2 p-4 border-b bg-gray-50">
                 <button
                   type="button"
-                  onClick={() => setTempSelectedUserIds(members.map(m => m.user_id))}
+                  onClick={() => setTempSelectedUserIds(members.map((m) => m.user_id))}
                   className="px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 rounded transition-colors"
                 >
                   全員選択
@@ -880,17 +915,17 @@ export default function PracticeLogClient({
               {/* メンバーリスト */}
               <div className="flex-1 overflow-y-auto p-4">
                 <div className="space-y-2">
-                  {members.map(member => {
-                    const isSelected = tempSelectedUserIds.includes(member.user_id)
-                    const isPresent = presentUserIds.includes(member.user_id)
-                    
+                  {members.map((member) => {
+                    const isSelected = tempSelectedUserIds.includes(member.user_id);
+                    const isPresent = presentUserIds.includes(member.user_id);
+
                     return (
                       <label
                         key={member.id}
                         className={`flex items-center p-3 rounded-lg border cursor-pointer transition-colors ${
-                          isSelected 
-                            ? 'border-blue-500 bg-blue-50' 
-                            : 'border-gray-200 hover:bg-gray-50'
+                          isSelected
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-200 hover:bg-gray-50"
                         }`}
                       >
                         <input
@@ -898,9 +933,11 @@ export default function PracticeLogClient({
                           checked={isSelected}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              setTempSelectedUserIds(prev => [...prev, member.user_id])
+                              setTempSelectedUserIds((prev) => [...prev, member.user_id]);
                             } else {
-                              setTempSelectedUserIds(prev => prev.filter(id => id !== member.user_id))
+                              setTempSelectedUserIds((prev) =>
+                                prev.filter((id) => id !== member.user_id),
+                              );
                             }
                           }}
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
@@ -914,22 +951,20 @@ export default function PracticeLogClient({
                             出席
                           </span>
                         )}
-                        {member.role === 'admin' && (
+                        {member.role === "admin" && (
                           <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
                             管理者
                           </span>
                         )}
                       </label>
-                    )
+                    );
                   })}
                 </div>
               </div>
 
               {/* モーダルフッター */}
               <div className="flex items-center justify-between p-4 border-t bg-gray-50">
-                <span className="text-sm text-gray-600">
-                  {tempSelectedUserIds.length}名選択中
-                </span>
+                <span className="text-sm text-gray-600">{tempSelectedUserIds.length}名選択中</span>
                 <div className="flex gap-2">
                   <Button
                     type="button"
@@ -941,9 +976,9 @@ export default function PracticeLogClient({
                   <Button
                     type="button"
                     onClick={() => {
-                      updateMenu(currentMenuIdForUserSelect, 'targetUserIds', tempSelectedUserIds)
-                      setShowUserSelectModal(false)
-                      setCurrentMenuIdForUserSelect(null)
+                      updateMenu(currentMenuIdForUserSelect, "targetUserIds", tempSelectedUserIds);
+                      setShowUserSelectModal(false);
+                      setCurrentMenuIdForUserSelect(null);
                     }}
                     className="bg-blue-600 hover:bg-blue-700"
                   >
@@ -971,18 +1006,18 @@ export default function PracticeLogClient({
       <ConfirmDialog
         isOpen={showOverwriteConfirm}
         onConfirm={() => {
-          if (pendingOcrMenus) setMenus(pendingOcrMenus)
-          setShowOverwriteConfirm(false)
-          setPendingOcrMenus(null)
+          if (pendingOcrMenus) setMenus(pendingOcrMenus);
+          setShowOverwriteConfirm(false);
+          setPendingOcrMenus(null);
         }}
         onCancel={() => {
-          setShowOverwriteConfirm(false)
-          setPendingOcrMenus(null)
+          setShowOverwriteConfirm(false);
+          setPendingOcrMenus(null);
         }}
         onTertiary={() => {
-          if (pendingOcrMenus) setMenus(prev => [...prev, ...pendingOcrMenus])
-          setShowOverwriteConfirm(false)
-          setPendingOcrMenus(null)
+          if (pendingOcrMenus) setMenus((prev) => [...prev, ...pendingOcrMenus]);
+          setShowOverwriteConfirm(false);
+          setPendingOcrMenus(null);
         }}
         title="既存メニューの処理"
         message="既に入力済みのメニューがあります。上書きしますか？「追加」を押すと既存メニューの後に追加されます。"
@@ -992,6 +1027,5 @@ export default function PracticeLogClient({
         variant="info"
       />
     </div>
-  )
+  );
 }
-

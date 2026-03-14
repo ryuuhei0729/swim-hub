@@ -1,45 +1,63 @@
-'use client'
+"use client";
 
-import React, { useState, useRef, useEffect, useCallback, useId } from 'react'
-import { format, parseISO, isValid, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, getDay, isToday } from 'date-fns'
-import { ja } from 'date-fns/locale'
-import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon, XMarkIcon } from '@heroicons/react/24/outline'
-import { cn } from '@/utils/cn'
+import React, { useState, useRef, useEffect, useCallback, useId } from "react";
+import {
+  format,
+  parseISO,
+  isValid,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  isSameMonth,
+  isSameDay,
+  addMonths,
+  subMonths,
+  getDay,
+  isToday,
+} from "date-fns";
+import { ja } from "date-fns/locale";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CalendarIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
+import { cn } from "@/utils/cn";
 
 interface DatePickerProps {
   /** 選択された日付 (yyyy-MM-dd形式の文字列またはDate) */
-  value?: string | Date
+  value?: string | Date;
   /** 日付が変更された時のコールバック */
-  onChange: (date: string) => void
+  onChange: (date: string) => void;
   /** ラベル */
-  label?: string
+  label?: string;
   /** 必須かどうか */
-  required?: boolean
+  required?: boolean;
   /** 無効状態 */
-  disabled?: boolean
+  disabled?: boolean;
   /** エラーメッセージ */
-  error?: string
+  error?: string;
   /** ヘルパーテキスト */
-  helperText?: string
+  helperText?: string;
   /** 最小日付 */
-  minDate?: Date
+  minDate?: Date;
   /** 最大日付 */
-  maxDate?: Date
+  maxDate?: Date;
   /** プレースホルダー */
-  placeholder?: string
+  placeholder?: string;
   /** カスタムクラス */
-  className?: string
+  className?: string;
   /** カレンダーを開いた時のデフォルト表示月（値が未選択の場合に使用） */
-  defaultMonth?: Date
+  defaultMonth?: Date;
   /** カレンダーの展開方向 */
-  popupPosition?: 'top' | 'bottom'
+  popupPosition?: "top" | "bottom";
   /** カレンダーの水平位置 */
-  popupAlign?: 'left' | 'right'
+  popupAlign?: "left" | "right";
   /** テスト用のdata-testid */
-  'data-testid'?: string
+  "data-testid"?: string;
 }
 
-const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
+const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
 
 export default function DatePicker({
   value,
@@ -51,157 +69,153 @@ export default function DatePicker({
   helperText,
   minDate,
   maxDate,
-  placeholder = '日付を選択',
+  placeholder = "日付を選択",
   className,
   defaultMonth,
-  popupPosition = 'bottom',
-  popupAlign = 'left',
-  'data-testid': dataTestId
+  popupPosition = "bottom",
+  popupAlign = "left",
+  "data-testid": dataTestId,
 }: DatePickerProps) {
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState<Date>(() => {
     if (value) {
-      const date = typeof value === 'string' ? parseISO(value) : value
-      return isValid(date) ? startOfMonth(date) : startOfMonth(defaultMonth || new Date())
+      const date = typeof value === "string" ? parseISO(value) : value;
+      return isValid(date) ? startOfMonth(date) : startOfMonth(defaultMonth || new Date());
     }
-    return startOfMonth(defaultMonth || new Date())
-  })
+    return startOfMonth(defaultMonth || new Date());
+  });
 
-  const containerRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLButtonElement>(null)
-  const calendarRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLButtonElement>(null);
+  const calendarRef = useRef<HTMLDivElement>(null);
 
-  const id = useId()
-  const errorId = `${id}-error`
+  const id = useId();
+  const errorId = `${id}-error`;
 
   // 選択中の日付
-  const selectedDate = value
-    ? typeof value === 'string'
-      ? parseISO(value)
-      : value
-    : null
+  const selectedDate = value ? (typeof value === "string" ? parseISO(value) : value) : null;
 
   // カレンダーの日付を生成
   const getDaysInMonth = useCallback(() => {
-    const start = startOfMonth(currentMonth)
-    const end = endOfMonth(currentMonth)
-    const days = eachDayOfInterval({ start, end })
+    const start = startOfMonth(currentMonth);
+    const end = endOfMonth(currentMonth);
+    const days = eachDayOfInterval({ start, end });
 
     // 月初の曜日を取得して、前月の空白を埋める
-    const startDayOfWeek = getDay(start)
-    const leadingEmptyDays = Array(startDayOfWeek).fill(null)
+    const startDayOfWeek = getDay(start);
+    const leadingEmptyDays = Array(startDayOfWeek).fill(null);
 
-    return [...leadingEmptyDays, ...days]
-  }, [currentMonth])
+    return [...leadingEmptyDays, ...days];
+  }, [currentMonth]);
 
   // 日付が選択可能かどうか
-  const isDateDisabled = useCallback((date: Date): boolean => {
-    if (minDate && date < minDate) return true
-    if (maxDate && date > maxDate) return true
-    return false
-  }, [minDate, maxDate])
+  const isDateDisabled = useCallback(
+    (date: Date): boolean => {
+      if (minDate && date < minDate) return true;
+      if (maxDate && date > maxDate) return true;
+      return false;
+    },
+    [minDate, maxDate],
+  );
 
   // 日付選択ハンドラー
   const handleSelectDate = (date: Date) => {
-    if (isDateDisabled(date)) return
-    onChange(format(date, 'yyyy-MM-dd'))
-    setIsOpen(false)
-    inputRef.current?.focus()
-  }
+    if (isDateDisabled(date)) return;
+    onChange(format(date, "yyyy-MM-dd"));
+    setIsOpen(false);
+    inputRef.current?.focus();
+  };
 
   // 前月へ
   const handlePrevMonth = () => {
-    setCurrentMonth(prev => subMonths(prev, 1))
-  }
+    setCurrentMonth((prev) => subMonths(prev, 1));
+  };
 
   // 次月へ
   const handleNextMonth = () => {
-    setCurrentMonth(prev => addMonths(prev, 1))
-  }
+    setCurrentMonth((prev) => addMonths(prev, 1));
+  };
 
   // 今日へ
   const handleToday = () => {
-    const today = new Date()
-    setCurrentMonth(startOfMonth(today))
+    const today = new Date();
+    setCurrentMonth(startOfMonth(today));
     if (!isDateDisabled(today)) {
-      onChange(format(today, 'yyyy-MM-dd'))
-      setIsOpen(false)
+      onChange(format(today, "yyyy-MM-dd"));
+      setIsOpen(false);
     }
-  }
+  };
 
   // クリア
   const handleClear = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    onChange('')
-  }
+    e.stopPropagation();
+    onChange("");
+  };
 
   // 外部クリックで閉じる
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
+        setIsOpen(false);
       }
-    }
+    };
 
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside, { passive: true })
+      document.addEventListener("mousedown", handleClickOutside, { passive: true });
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [isOpen])
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
 
   // キーボードナビゲーション
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isOpen) return
+      if (!isOpen) return;
 
-      if (e.key === 'Escape') {
-        setIsOpen(false)
-        inputRef.current?.focus()
+      if (e.key === "Escape") {
+        setIsOpen(false);
+        inputRef.current?.focus();
       }
-    }
+    };
 
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen])
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen]);
 
   // カレンダーが開いた時に適切な月を表示
   useEffect(() => {
     if (isOpen) {
       if (selectedDate && isValid(selectedDate)) {
         // 選択済みの日付があればその月を表示
-        const newMonth = startOfMonth(selectedDate)
-        setCurrentMonth(prev => {
+        const newMonth = startOfMonth(selectedDate);
+        setCurrentMonth((prev) => {
           if (prev.getTime() === newMonth.getTime()) {
-            return prev
+            return prev;
           }
-          return newMonth
-        })
+          return newMonth;
+        });
       } else if (defaultMonth) {
         // 未選択でdefaultMonthが指定されていればその月を表示
-        const newMonth = startOfMonth(defaultMonth)
-        setCurrentMonth(prev => {
+        const newMonth = startOfMonth(defaultMonth);
+        setCurrentMonth((prev) => {
           if (prev.getTime() === newMonth.getTime()) {
-            return prev
+            return prev;
           }
-          return newMonth
-        })
+          return newMonth;
+        });
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]) // selectedDate, defaultMonthは意図的に除外（isOpenが変わった時だけ実行）
+  }, [isOpen]); // selectedDate, defaultMonthは意図的に除外（isOpenが変わった時だけ実行）
 
-  const days = getDaysInMonth()
+  const days = getDaysInMonth();
 
   return (
-    <div className={cn('relative', className)} ref={containerRef}>
+    <div className={cn("relative", className)} ref={containerRef}>
       {label && (
-        <label
-          htmlFor={id}
-          className="block text-sm font-medium text-gray-700 mb-2"
-        >
+        <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-2">
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
@@ -212,7 +226,7 @@ export default function DatePicker({
         <input
           type="hidden"
           data-testid={dataTestId}
-          value={selectedDate && isValid(selectedDate) ? format(selectedDate, 'yyyy-MM-dd') : ''}
+          value={selectedDate && isValid(selectedDate) ? format(selectedDate, "yyyy-MM-dd") : ""}
           readOnly
         />
       )}
@@ -230,21 +244,21 @@ export default function DatePicker({
         aria-describedby={error ? errorId : undefined}
         data-testid={dataTestId ? `${dataTestId}-button` : undefined}
         className={cn(
-          'flex items-center justify-between w-full h-10 px-3 py-2 text-sm border rounded-md bg-white transition-colors',
-          'focus:outline-none focus:ring-2 focus:border-transparent',
-          error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500',
-          disabled && 'opacity-50 cursor-not-allowed bg-gray-50',
-          !disabled && 'cursor-pointer hover:border-gray-400'
+          "flex items-center justify-between w-full h-10 px-3 py-2 text-sm border rounded-md bg-white transition-colors",
+          "focus:outline-none focus:ring-2 focus:border-transparent",
+          error ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500",
+          disabled && "opacity-50 cursor-not-allowed bg-gray-50",
+          !disabled && "cursor-pointer hover:border-gray-400",
         )}
       >
-        <span className={cn(
-          'flex items-center gap-2 whitespace-nowrap',
-          !selectedDate && 'text-gray-400'
-        )}>
+        <span
+          className={cn(
+            "flex items-center gap-2 whitespace-nowrap",
+            !selectedDate && "text-gray-400",
+          )}
+        >
           <CalendarIcon className="h-5 w-5 text-gray-400 shrink-0" aria-hidden="true" />
-          {selectedDate && isValid(selectedDate)
-            ? format(selectedDate, 'yyyy/MM/dd')
-            : placeholder}
+          {selectedDate && isValid(selectedDate) ? format(selectedDate, "yyyy/MM/dd") : placeholder}
         </span>
 
         {/* クリアボタン */}
@@ -254,9 +268,9 @@ export default function DatePicker({
             tabIndex={0}
             onClick={handleClear}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                handleClear(e as unknown as React.MouseEvent)
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleClear(e as unknown as React.MouseEvent);
               }
             }}
             className="p-1 text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer"
@@ -275,9 +289,7 @@ export default function DatePicker({
       )}
 
       {/* ヘルパーテキスト */}
-      {helperText && !error && (
-        <p className="mt-2 text-sm text-gray-500">{helperText}</p>
-      )}
+      {helperText && !error && <p className="mt-2 text-sm text-gray-500">{helperText}</p>}
 
       {/* カレンダーポップアップ */}
       {isOpen && (
@@ -287,11 +299,11 @@ export default function DatePicker({
           aria-modal="true"
           aria-label="日付選択カレンダー"
           className={cn(
-            'absolute z-50 p-4 bg-white border border-gray-200 rounded-lg shadow-lg animate-in fade-in duration-200 min-w-[280px]',
-            popupPosition === 'top'
-              ? 'bottom-full slide-in-from-bottom-2'
-              : 'mt-1 slide-in-from-top-2',
-            popupAlign === 'left' ? 'left-0' : 'right-0'
+            "absolute z-50 p-4 bg-white border border-gray-200 rounded-lg shadow-lg animate-in fade-in duration-200 min-w-[280px]",
+            popupPosition === "top"
+              ? "bottom-full slide-in-from-bottom-2"
+              : "mt-1 slide-in-from-top-2",
+            popupAlign === "left" ? "left-0" : "right-0",
           )}
         >
           {/* ヘッダー */}
@@ -306,7 +318,7 @@ export default function DatePicker({
             </button>
 
             <span className="text-sm font-semibold text-gray-900">
-              {format(currentMonth, 'yyyy年 M月', { locale: ja })}
+              {format(currentMonth, "yyyy年 M月", { locale: ja })}
             </span>
 
             <button
@@ -325,10 +337,10 @@ export default function DatePicker({
               <div
                 key={day}
                 className={cn(
-                  'text-center text-xs font-medium py-2',
-                  index === 0 && 'text-red-500',
-                  index === 6 && 'text-blue-500',
-                  index !== 0 && index !== 6 && 'text-gray-500'
+                  "text-center text-xs font-medium py-2",
+                  index === 0 && "text-red-500",
+                  index === 6 && "text-blue-500",
+                  index !== 0 && index !== 6 && "text-gray-500",
                 )}
               >
                 {day}
@@ -340,14 +352,14 @@ export default function DatePicker({
           <div className="grid grid-cols-7 gap-1">
             {days.map((day, index) => {
               if (!day) {
-                return <div key={`empty-${index}`} className="h-9" />
+                return <div key={`empty-${index}`} className="h-9" />;
               }
 
-              const isSelected = selectedDate && isSameDay(day, selectedDate)
-              const isCurrentMonth = isSameMonth(day, currentMonth)
-              const isDisabled = isDateDisabled(day)
-              const isTodayDate = isToday(day)
-              const dayOfWeek = getDay(day)
+              const isSelected = selectedDate && isSameDay(day, selectedDate);
+              const isCurrentMonth = isSameMonth(day, currentMonth);
+              const isDisabled = isDateDisabled(day);
+              const isTodayDate = isToday(day);
+              const dayOfWeek = getDay(day);
 
               return (
                 <button
@@ -356,22 +368,22 @@ export default function DatePicker({
                   onClick={() => handleSelectDate(day)}
                   disabled={isDisabled}
                   className={cn(
-                    'h-9 w-9 rounded-md text-sm font-medium transition-colors',
-                    'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1',
-                    isSelected && 'bg-blue-600 text-white hover:bg-blue-700',
-                    !isSelected && isTodayDate && 'bg-blue-100 text-blue-700',
-                    !isSelected && !isTodayDate && isCurrentMonth && 'hover:bg-gray-100',
-                    !isSelected && !isTodayDate && !isCurrentMonth && 'text-gray-300',
-                    !isSelected && dayOfWeek === 0 && isCurrentMonth && 'text-red-500',
-                    !isSelected && dayOfWeek === 6 && isCurrentMonth && 'text-blue-500',
-                    isDisabled && 'opacity-50 cursor-not-allowed hover:bg-transparent'
+                    "h-9 w-9 rounded-md text-sm font-medium transition-colors",
+                    "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1",
+                    isSelected && "bg-blue-600 text-white hover:bg-blue-700",
+                    !isSelected && isTodayDate && "bg-blue-100 text-blue-700",
+                    !isSelected && !isTodayDate && isCurrentMonth && "hover:bg-gray-100",
+                    !isSelected && !isTodayDate && !isCurrentMonth && "text-gray-300",
+                    !isSelected && dayOfWeek === 0 && isCurrentMonth && "text-red-500",
+                    !isSelected && dayOfWeek === 6 && isCurrentMonth && "text-blue-500",
+                    isDisabled && "opacity-50 cursor-not-allowed hover:bg-transparent",
                   )}
-                  aria-label={format(day, 'yyyy年M月d日', { locale: ja })}
+                  aria-label={format(day, "yyyy年M月d日", { locale: ja })}
                   aria-pressed={isSelected || undefined}
                 >
-                  {format(day, 'd')}
+                  {format(day, "d")}
                 </button>
-              )
+              );
             })}
           </div>
 
@@ -395,5 +407,5 @@ export default function DatePicker({
         </div>
       )}
     </div>
-  )
+  );
 }

@@ -1,5 +1,5 @@
-import Link from 'next/link'
-import Image from 'next/image'
+import Link from "next/link";
+import Image from "next/image";
 
 /**
  * 静的フッターコンポーネント
@@ -13,41 +13,46 @@ export default function StaticFooter() {
         <div className="text-center">
           <div className="flex justify-center mb-6">
             <div className="w-20 h-20 flex items-center justify-center">
-              <Image 
-                src="/favicon.png" 
-                alt="SwimHub" 
-                width={80} 
-                height={80} 
-                className="w-full h-full object-contain" 
+              <Image
+                src="/favicon.png"
+                alt="SwimHub"
+                width={80}
+                height={80}
+                className="w-full h-full object-contain"
               />
             </div>
           </div>
-          <h3 className="text-gray-100 text-xl font-semibold mb-2">
-            SwimHub
-          </h3>
-          <p className="text-gray-100 mb-6 text-sm">
-            水泳選手のための記録管理サービス
-          </p>
+          <h3 className="text-gray-100 text-xl font-semibold mb-2">SwimHub</h3>
+          <p className="text-gray-100 mb-6 text-sm">水泳選手のための記録管理サービス</p>
           <div className="flex justify-center gap-6 mb-8 text-sm text-gray-400">
-            <Link href="/terms" className="hover:text-white text-gray-400 font-bold transition-colors">
+            <Link
+              href="/terms"
+              className="hover:text-white text-gray-400 font-bold transition-colors"
+            >
               利用規約
             </Link>
-            <Link href="/privacy" className="hover:text-white text-gray-400 font-bold transition-colors">
+            <Link
+              href="/privacy"
+              className="hover:text-white text-gray-400 font-bold transition-colors"
+            >
               プライバシーポリシー
             </Link>
-            <Link href="/blog" className="hover:text-white text-gray-400 font-bold transition-colors">
+            <Link
+              href="/blog"
+              className="hover:text-white text-gray-400 font-bold transition-colors"
+            >
               ブログ
             </Link>
-            <Link href="/about" className="hover:text-white text-gray-400 font-bold transition-colors">
+            <Link
+              href="/about"
+              className="hover:text-white text-gray-400 font-bold transition-colors"
+            >
               SwimHubについて
             </Link>
           </div>
-          <div className="text-xs text-gray-500">
-            © 2025 SwimHub. All rights reserved.
-          </div>
+          <div className="text-xs text-gray-500">© 2025 SwimHub. All rights reserved.</div>
         </div>
       </div>
     </footer>
-  )
+  );
 }
-

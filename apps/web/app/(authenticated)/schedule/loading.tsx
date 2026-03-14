@@ -11,5 +11,5 @@ export default function ScheduleLoading() {
         </div>
       </div>
     </div>
-  )
+  );
 }

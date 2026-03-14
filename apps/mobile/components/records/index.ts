@@ -1,2 +1,2 @@
-export { RecordItem } from './RecordItem'
-export { SplitTimeItem } from './SplitTimeItem'
+export { RecordItem } from "./RecordItem";
+export { SplitTimeItem } from "./SplitTimeItem";

@@ -1,61 +1,61 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import dynamic from 'next/dynamic'
-import { PencilIcon, TrashIcon, ShareIcon } from '@heroicons/react/24/outline'
-import { BoltIcon } from '@heroicons/react/24/solid'
-import { format, parseISO, isValid } from 'date-fns'
-import { ja } from 'date-fns/locale'
+import React, { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+import { PencilIcon, TrashIcon, ShareIcon } from "@heroicons/react/24/outline";
+import { BoltIcon } from "@heroicons/react/24/solid";
+import { format, parseISO, isValid } from "date-fns";
+import { ja } from "date-fns/locale";
 
 const ShareCardModal = dynamic(
-  () => import('@/components/share/ShareCardModal').then(mod => ({ default: mod.ShareCardModal })),
-  { ssr: false }
-)
-import type { PracticeShareData, PracticeMenuItem } from '@/components/share'
-import { formatTime, formatTimeAverage } from '@/utils/formatters'
-import { useAuth } from '@/contexts'
-import ImageGallery, { GalleryImage } from '@/components/ui/ImageGallery'
+  () =>
+    import("@/components/share/ShareCardModal").then((mod) => ({ default: mod.ShareCardModal })),
+  { ssr: false },
+);
+import type { PracticeShareData, PracticeMenuItem } from "@/components/share";
+import { formatTime, formatTimeAverage } from "@/utils/formatters";
+import { useAuth } from "@/contexts";
+import ImageGallery, { GalleryImage } from "@/components/ui/ImageGallery";
 import type {
   Practice,
   PracticeLogWithTimes,
   PracticeTime,
   PracticeTag,
-  TimeEntry
-} from '@apps/shared/types'
-import { AttendanceButton } from '../AttendanceSection'
-import type { PracticeDetailsProps, FormattedPracticeLog } from '../../types'
-
+  TimeEntry,
+} from "@apps/shared/types";
+import { AttendanceButton } from "../AttendanceSection";
+import type { PracticeDetailsProps, FormattedPracticeLog } from "../../types";
 
 // 種目の選択肢
 const SWIM_STYLES = [
-  { value: 'Fr', label: '自由形' },
-  { value: 'Ba', label: '背泳ぎ' },
-  { value: 'Br', label: '平泳ぎ' },
-  { value: 'Fly', label: 'バタフライ' },
-  { value: 'IM', label: '個人メドレー' }
-]
+  { value: "Fr", label: "自由形" },
+  { value: "Ba", label: "背泳ぎ" },
+  { value: "Br", label: "平泳ぎ" },
+  { value: "Fly", label: "バタフライ" },
+  { value: "IM", label: "個人メドレー" },
+];
 
 // コード値をラベルに変換する関数
 const getStyleLabel = (styleValue: string): string => {
-  const style = SWIM_STYLES.find(s => s.value === styleValue)
-  if (style) return style.label
-  if (SWIM_STYLES.some(s => s.label === styleValue)) return styleValue
-  return styleValue
-}
+  const style = SWIM_STYLES.find((s) => s.value === styleValue);
+  if (style) return style.label;
+  if (SWIM_STYLES.some((s) => s.label === styleValue)) return styleValue;
+  return styleValue;
+};
 
 // 色の明度に基づいてテキスト色を決定する関数
 const getTextColor = (backgroundColor: string) => {
-  const hex = backgroundColor.replace('#', '')
-  const r = parseInt(hex.substr(0, 2), 16)
-  const g = parseInt(hex.substr(2, 2), 16)
-  const b = parseInt(hex.substr(4, 2), 16)
-  const brightness = (r * 299 + g * 587 + b * 114) / 1000
-  return brightness > 128 ? '#000000' : '#FFFFFF'
-}
+  const hex = backgroundColor.replace("#", "");
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness > 128 ? "#000000" : "#FFFFFF";
+};
 
-type PracticeWithFormattedLogs = Omit<Practice, 'practiceLogs' | 'practice_logs'> & {
-  practiceLogs: FormattedPracticeLog[]
-}
+type PracticeWithFormattedLogs = Omit<Practice, "practiceLogs" | "practice_logs"> & {
+  practiceLogs: FormattedPracticeLog[];
+};
 
 export function PracticeDetails({
   practiceId,
@@ -69,24 +69,24 @@ export function PracticeDetails({
   isTeamPractice = false,
   teamId,
   teamName,
-  onShowAttendance
+  onShowAttendance,
 }: PracticeDetailsProps) {
-  const { supabase, user } = useAuth()
-  const [practice, setPractice] = useState<PracticeWithFormattedLogs | null>(null)
-  const [practiceImages, setPracticeImages] = useState<GalleryImage[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
-  const [showShareModal, setShowShareModal] = useState(false)
-  const [sharePracticeData, setSharePracticeData] = useState<PracticeShareData | null>(null)
-
+  const { supabase, user } = useAuth();
+  const [practice, setPractice] = useState<PracticeWithFormattedLogs | null>(null);
+  const [practiceImages, setPracticeImages] = useState<GalleryImage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [sharePracticeData, setSharePracticeData] = useState<PracticeShareData | null>(null);
 
   useEffect(() => {
     const loadPractice = async () => {
       try {
-        setLoading(true)
+        setLoading(true);
         const { data, error } = await supabase
-          .from('practices')
-          .select(`
+          .from("practices")
+          .select(
+            `
             *,
             practice_logs (
               *,
@@ -95,106 +95,112 @@ export function PracticeDetails({
                 practice_tag:practice_tags (*)
               )
             )
-          `)
-          .eq('id', practiceId)
-          .single()
+          `,
+          )
+          .eq("id", practiceId)
+          .single();
 
-        if (error) throw error
-        if (!data) throw new Error('Practice data not found')
+        if (error) throw error;
+        if (!data) throw new Error("Practice data not found");
 
         // データ整形
         type PracticeLogFromDB = {
-          id: string
-          user_id: string
-          practice_id: string
-          style: string
-          swim_category?: 'Swim' | 'Pull' | 'Kick'
-          rep_count: number
-          set_count: number
-          distance: number
-          circle: number | null
-          note: string | null
-          practice_log_tags?: Array<{ practice_tag: PracticeTag }>
-          practice_times?: PracticeTime[]
-          created_at?: string
-          updated_at?: string
-        }
+          id: string;
+          user_id: string;
+          practice_id: string;
+          style: string;
+          swim_category?: "Swim" | "Pull" | "Kick";
+          rep_count: number;
+          set_count: number;
+          distance: number;
+          circle: number | null;
+          note: string | null;
+          practice_log_tags?: Array<{ practice_tag: PracticeTag }>;
+          practice_times?: PracticeTime[];
+          created_at?: string;
+          updated_at?: string;
+        };
         type PracticeFromDB = Practice & {
-          practice_logs?: PracticeLogFromDB[]
-          image_paths?: string[]
-        }
-        const practiceData = data as PracticeFromDB
+          practice_logs?: PracticeLogFromDB[];
+          image_paths?: string[];
+        };
+        const practiceData = data as PracticeFromDB;
         // チーム練習の場合、ダッシュボードでは自分のログのみ表示
-        const filteredLogs = isTeamPractice && user
-          ? (practiceData.practice_logs || []).filter((log: PracticeLogFromDB) => log.user_id === user.id)
-          : (practiceData.practice_logs || [])
+        const filteredLogs =
+          isTeamPractice && user
+            ? (practiceData.practice_logs || []).filter(
+                (log: PracticeLogFromDB) => log.user_id === user.id,
+              )
+            : practiceData.practice_logs || [];
         const formattedPractice: PracticeWithFormattedLogs = {
           ...practiceData,
-          practiceLogs: filteredLogs.map((log: PracticeLogFromDB): FormattedPracticeLog => ({
-            id: log.id,
-            practiceId: log.practice_id,
-            style: log.style,
-            swim_category: log.swim_category,
-            repCount: log.rep_count,
-            setCount: log.set_count,
-            distance: log.distance,
-            circle: log.circle,
-            note: log.note,
-            tags: log.practice_log_tags?.map((plt: { practice_tag: PracticeTag }) => plt.practice_tag).filter((tag): tag is PracticeTag => tag != null) || [],
-            times: log.practice_times?.map((time: PracticeTime) => ({
-              id: time.id,
-              time: time.time,
-              repNumber: time.rep_number,
-              setNumber: time.set_number
-            })) || [],
-            created_at: log.created_at,
-            updated_at: log.updated_at
-          }))
-        }
+          practiceLogs: filteredLogs.map(
+            (log: PracticeLogFromDB): FormattedPracticeLog => ({
+              id: log.id,
+              practiceId: log.practice_id,
+              style: log.style,
+              swim_category: log.swim_category,
+              repCount: log.rep_count,
+              setCount: log.set_count,
+              distance: log.distance,
+              circle: log.circle,
+              note: log.note,
+              tags:
+                log.practice_log_tags
+                  ?.map((plt: { practice_tag: PracticeTag }) => plt.practice_tag)
+                  .filter((tag): tag is PracticeTag => tag != null) || [],
+              times:
+                log.practice_times?.map((time: PracticeTime) => ({
+                  id: time.id,
+                  time: time.time,
+                  repNumber: time.rep_number,
+                  setNumber: time.set_number,
+                })) || [],
+              created_at: log.created_at,
+              updated_at: log.updated_at,
+            }),
+          ),
+        };
 
         // 画像データを変換
-        const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL
-        const imagePaths = practiceData.image_paths || []
+        const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
+        const imagePaths = practiceData.image_paths || [];
         const images: GalleryImage[] = imagePaths.map((path: string, index: number) => {
           const imageUrl = r2PublicUrl
             ? `${r2PublicUrl}/practice-images/${path}`
-            : supabase.storage.from('practice-images').getPublicUrl(path).data.publicUrl
+            : supabase.storage.from("practice-images").getPublicUrl(path).data.publicUrl;
           return {
             id: path,
             thumbnailUrl: imageUrl,
             originalUrl: imageUrl,
-            fileName: path.split('/').pop() || `image-${index + 1}`
-          }
-        })
+            fileName: path.split("/").pop() || `image-${index + 1}`,
+          };
+        });
 
-        setPractice(formattedPractice)
-        setPracticeImages(images)
+        setPractice(formattedPractice);
+        setPracticeImages(images);
       } catch (err) {
-        console.error('練習詳細の取得エラー:', err)
-        setError(err as Error)
+        console.error("練習詳細の取得エラー:", err);
+        setError(err as Error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    loadPractice()
-  }, [practiceId, supabase, practiceLogUpdateKey, isTeamPractice, user])
+    loadPractice();
+  }, [practiceId, supabase, practiceLogUpdateKey, isTeamPractice, user]);
 
   if (loading) {
-    return (
-      <div className="mt-3 text-sm text-gray-500">練習詳細を読み込み中...</div>
-    )
+    return <div className="mt-3 text-sm text-gray-500">練習詳細を読み込み中...</div>;
   }
   if (error) {
-    return (
-      <div className="mt-3 text-sm text-red-600">練習詳細の取得に失敗しました</div>
-    )
+    return <div className="mt-3 text-sm text-red-600">練習詳細の取得に失敗しました</div>;
   }
   if (!practice) {
-    return null
+    return null;
   }
 
-  const practiceLogs = practice.practiceLogs || []
+  const practiceLogs = practice.practiceLogs || [];
 
   return (
     <div className="mt-3">
@@ -202,15 +208,12 @@ export function PracticeDetails({
         {/* Practice全体のヘッダー */}
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <div
-              className="flex items-center gap-2 mb-2"
-              data-testid="practice-log-summary"
-            >
-              <span className={`text-lg font-semibold px-3 py-1 rounded-lg flex items-center gap-2 ${
-                isTeamPractice
-                  ? 'text-emerald-800 bg-emerald-200'
-                  : 'text-green-800 bg-green-200'
-              }`}>
+            <div className="flex items-center gap-2 mb-2" data-testid="practice-log-summary">
+              <span
+                className={`text-lg font-semibold px-3 py-1 rounded-lg flex items-center gap-2 ${
+                  isTeamPractice ? "text-emerald-800 bg-emerald-200" : "text-green-800 bg-green-200"
+                }`}
+              >
                 <BoltIcon className="h-5 w-5" />
                 練習記録
                 {isTeamPractice && teamName && <span className="text-sm">({teamName})</span>}
@@ -278,8 +281,8 @@ export function PracticeDetails({
 
           {/* PracticeLogsがある場合の表示 */}
           {practiceLogs.map((log, index: number) => {
-            const formattedLog = log
-            const allTimes = formattedLog.times || []
+            const formattedLog = log;
+            const allTimes = formattedLog.times || [];
 
             return (
               <div
@@ -290,23 +293,25 @@ export function PracticeDetails({
                 {/* 練習メニューのヘッダー */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
-                    {formattedLog.tags && Array.isArray(formattedLog.tags) && formattedLog.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {formattedLog.tags.map((tag: PracticeTag) => (
-                          <span
-                            key={tag.id}
-                            className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full"
-                            style={{
-                              backgroundColor: tag.color,
-                              color: getTextColor(tag.color)
-                            }}
-                            data-testid={`selected-tag-${tag.id}`}
-                          >
-                            {tag.name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    {formattedLog.tags &&
+                      Array.isArray(formattedLog.tags) &&
+                      formattedLog.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {formattedLog.tags.map((tag: PracticeTag) => (
+                            <span
+                              key={tag.id}
+                              className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full"
+                              style={{
+                                backgroundColor: tag.color,
+                                color: getTextColor(tag.color),
+                              }}
+                              data-testid={`selected-tag-${tag.id}`}
+                            >
+                              {tag.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                   </div>
                 </div>
 
@@ -316,43 +321,48 @@ export function PracticeDetails({
                   <div className="absolute top-3 right-3 flex items-center space-x-2">
                     <button
                       onClick={() => {
-                        const menuItems: PracticeMenuItem[] = practiceLogs.map(log => ({
+                        const menuItems: PracticeMenuItem[] = practiceLogs.map((log) => ({
                           style: log.style,
-                          category: log.swim_category || 'Swim',
+                          category: log.swim_category || "Swim",
                           distance: log.distance,
                           repCount: log.repCount,
                           setCount: log.setCount,
                           circle: log.circle ?? undefined,
-                          times: log.times?.map(t => ({
+                          times: log.times?.map((t) => ({
                             setNumber: t.setNumber,
                             repNumber: t.repNumber,
-                            time: t.time
+                            time: t.time,
                           })),
-                          note: log.note ?? undefined
-                        }))
+                          note: log.note ?? undefined,
+                        }));
 
-                        const totalDistance = practiceLogs.reduce((sum, log) =>
-                          sum + (log.distance * log.repCount * log.setCount), 0)
+                        const totalDistance = practiceLogs.reduce(
+                          (sum, log) => sum + log.distance * log.repCount * log.setCount,
+                          0,
+                        );
 
-                        const totalSets = practiceLogs.reduce((sum, log) =>
-                          sum + (log.setCount || 0), 0)
+                        const totalSets = practiceLogs.reduce(
+                          (sum, log) => sum + (log.setCount || 0),
+                          0,
+                        );
 
-                        const parsedDate = practice.date ? parseISO(practice.date) : null
-                        const formattedDate = parsedDate && isValid(parsedDate)
-                          ? format(parsedDate, 'yyyy年M月d日（E）', { locale: ja })
-                          : ''
+                        const parsedDate = practice.date ? parseISO(practice.date) : null;
+                        const formattedDate =
+                          parsedDate && isValid(parsedDate)
+                            ? format(parsedDate, "yyyy年M月d日（E）", { locale: ja })
+                            : "";
 
                         setSharePracticeData({
                           date: formattedDate,
-                          title: practice.note || '練習',
+                          title: practice.note || "練習",
                           place: place ?? undefined,
                           menuItems,
                           totalDistance,
                           totalSets,
-                          userName: '',
-                          teamName: teamName
-                        })
-                        setShowShareModal(true)
+                          userName: "",
+                          teamName: teamName,
+                        });
+                        setShowShareModal(true);
                       }}
                       className="p-2 text-gray-500 hover:text-cyan-600 rounded-lg hover:bg-cyan-100 transition-colors"
                       title="練習をシェア"
@@ -362,44 +372,51 @@ export function PracticeDetails({
                     </button>
                     <button
                       onClick={() => {
-                        const styleValue = formattedLog.style
-                        const styleCode = SWIM_STYLES.find(s => s.label === styleValue)?.value ||
-                                         SWIM_STYLES.find(s => s.value === styleValue)?.value ||
-                                         styleValue || 'Fr'
+                        const styleValue = formattedLog.style;
+                        const styleCode =
+                          SWIM_STYLES.find((s) => s.label === styleValue)?.value ||
+                          SWIM_STYLES.find((s) => s.value === styleValue)?.value ||
+                          styleValue ||
+                          "Fr";
 
-                        const formData: PracticeLogWithTimes & { tags?: PracticeTag[]; times?: Array<{ memberId: string; times: TimeEntry[] }> } = {
+                        const formData: PracticeLogWithTimes & {
+                          tags?: PracticeTag[];
+                          times?: Array<{ memberId: string; times: TimeEntry[] }>;
+                        } = {
                           id: formattedLog.id,
                           user_id: practice.user_id,
                           practice_id: formattedLog.practiceId,
                           style: styleCode,
-                          swim_category: formattedLog.swim_category || 'Swim',
+                          swim_category: formattedLog.swim_category || "Swim",
                           rep_count: formattedLog.repCount,
                           set_count: formattedLog.setCount,
                           distance: formattedLog.distance,
                           circle: formattedLog.circle,
                           note: formattedLog.note,
                           tags: formattedLog.tags || [],
-                          practice_times: (formattedLog.times || []).map(t => ({
+                          practice_times: (formattedLog.times || []).map((t) => ({
                             id: t.id,
                             user_id: practice.user_id,
                             practice_log_id: formattedLog.id,
                             set_number: t.setNumber,
                             rep_number: t.repNumber,
                             time: t.time,
-                            created_at: formattedLog.created_at || ''
+                            created_at: formattedLog.created_at || "",
                           })),
-                          times: [{
-                            memberId: '',
-                            times: (formattedLog.times || []).map(t => ({
-                              setNumber: t.setNumber,
-                              repNumber: t.repNumber,
-                              time: t.time
-                            }))
-                          }],
-                          created_at: formattedLog.created_at || '',
-                          updated_at: formattedLog.updated_at || ''
-                        }
-                        onEditPracticeLog?.(formData)
+                          times: [
+                            {
+                              memberId: "",
+                              times: (formattedLog.times || []).map((t) => ({
+                                setNumber: t.setNumber,
+                                repNumber: t.repNumber,
+                                time: t.time,
+                              })),
+                            },
+                          ],
+                          created_at: formattedLog.created_at || "",
+                          updated_at: formattedLog.updated_at || "",
+                        };
+                        onEditPracticeLog?.(formData);
                       }}
                       className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
                       title="練習メニューを編集"
@@ -418,23 +435,38 @@ export function PracticeDetails({
                   </div>
                   <div className="text-xs font-medium text-gray-500 mb-1">練習内容</div>
                   <div className="text-sm text-gray-800">
-                    <span className="text-lg font-semibold text-green-700">{formattedLog.distance}</span>m ×{' '}
-                    <span className="text-lg font-semibold text-green-700">{formattedLog.repCount}</span>
+                    <span className="text-lg font-semibold text-green-700">
+                      {formattedLog.distance}
+                    </span>
+                    m ×{" "}
+                    <span className="text-lg font-semibold text-green-700">
+                      {formattedLog.repCount}
+                    </span>
                     {formattedLog.setCount > 1 && (
                       <>
-                        {' × '}
-                        <span className="text-lg font-semibold text-green-700">{formattedLog.setCount}</span>
+                        {" × "}
+                        <span className="text-lg font-semibold text-green-700">
+                          {formattedLog.setCount}
+                        </span>
                       </>
                     )}
-                    {'　　'}
+                    {"　　"}
                     <span className="text-lg font-semibold text-green-700">
-                      {formattedLog.circle ? `${Math.floor(formattedLog.circle / 60)}'${Math.floor(formattedLog.circle % 60).toString().padStart(2, '0')}"` : '-'}
+                      {formattedLog.circle
+                        ? `${Math.floor(formattedLog.circle / 60)}'${Math.floor(
+                            formattedLog.circle % 60,
+                          )
+                            .toString()
+                            .padStart(2, "0")}"`
+                        : "-"}
                     </span>
-                    {'　'}
-                    <span className="text-lg font-semibold text-green-700">{getStyleLabel(formattedLog.style)}</span>
-                    {formattedLog.swim_category && formattedLog.swim_category !== 'Swim' && (
+                    {"　"}
+                    <span className="text-lg font-semibold text-green-700">
+                      {getStyleLabel(formattedLog.style)}
+                    </span>
+                    {formattedLog.swim_category && formattedLog.swim_category !== "Swim" && (
                       <>
-                        {'　'}
+                        {"　"}
                         <span className="text-lg font-semibold text-green-700">
                           {formattedLog.swim_category}
                         </span>
@@ -456,7 +488,10 @@ export function PracticeDetails({
                           <tr className="border-b border-green-300">
                             <th className="text-left py-2 px-2 font-medium text-green-800"></th>
                             {Array.from({ length: formattedLog.setCount }, (_, setIndex) => (
-                              <th key={setIndex + 1} className="text-center py-2 px-2 font-medium text-green-800">
+                              <th
+                                key={setIndex + 1}
+                                className="text-center py-2 px-2 font-medium text-green-800"
+                              >
                                 {setIndex + 1}セット目
                               </th>
                             ))}
@@ -464,44 +499,61 @@ export function PracticeDetails({
                         </thead>
                         <tbody>
                           {Array.from({ length: formattedLog.repCount }, (_, repIndex) => {
-                            const repNumber = repIndex + 1
+                            const repNumber = repIndex + 1;
                             return (
                               <tr key={repNumber} className="border-b border-green-100">
-                                <td className="py-2 px-2 font-medium text-gray-700">{repNumber}本目</td>
+                                <td className="py-2 px-2 font-medium text-gray-700">
+                                  {repNumber}本目
+                                </td>
                                 {Array.from({ length: formattedLog.setCount }, (_, setIndex) => {
-                                  const setNumber = setIndex + 1
-                                  const time = allTimes.find((t) => t.setNumber === setNumber && t.repNumber === repNumber)
-                                  const setTimes = allTimes.filter((t) => t.setNumber === setNumber && t.time > 0)
-                                  const setFastest = setTimes.length > 0 ? Math.min(...setTimes.map((t) => t.time)) : 0
-                                  const isFastest = time && time.time > 0 && time.time === setFastest
+                                  const setNumber = setIndex + 1;
+                                  const time = allTimes.find(
+                                    (t) => t.setNumber === setNumber && t.repNumber === repNumber,
+                                  );
+                                  const setTimes = allTimes.filter(
+                                    (t) => t.setNumber === setNumber && t.time > 0,
+                                  );
+                                  const setFastest =
+                                    setTimes.length > 0
+                                      ? Math.min(...setTimes.map((t) => t.time))
+                                      : 0;
+                                  const isFastest =
+                                    time && time.time > 0 && time.time === setFastest;
 
                                   return (
                                     <td key={setNumber} className="py-2 px-2 text-center">
-                                      <span className={isFastest ? "text-blue-600 font-bold" : "text-gray-800"}>
-                                        {time && time.time > 0 ? formatTime(time.time) : '-'}
+                                      <span
+                                        className={
+                                          isFastest ? "text-blue-600 font-bold" : "text-gray-800"
+                                        }
+                                      >
+                                        {time && time.time > 0 ? formatTime(time.time) : "-"}
                                       </span>
                                     </td>
-                                  )
+                                  );
                                 })}
                               </tr>
-                            )
+                            );
                           })}
                           {/* 平均行 */}
                           <tr className="border-b border-green-100 bg-green-50">
                             <td className="py-2 px-2 font-medium text-green-800">セット平均</td>
                             {Array.from({ length: formattedLog.setCount }, (_, setIndex) => {
-                              const setNumber = setIndex + 1
-                              const setTimes = allTimes.filter((t) => t.setNumber === setNumber && t.time > 0)
-                              const average = setTimes.length > 0
-                                ? setTimes.reduce((sum, t) => sum + t.time, 0) / setTimes.length
-                                : 0
+                              const setNumber = setIndex + 1;
+                              const setTimes = allTimes.filter(
+                                (t) => t.setNumber === setNumber && t.time > 0,
+                              );
+                              const average =
+                                setTimes.length > 0
+                                  ? setTimes.reduce((sum, t) => sum + t.time, 0) / setTimes.length
+                                  : 0;
                               return (
                                 <td key={setNumber} className="py-2 px-2 text-center">
                                   <span className="text-green-800 font-medium">
-                                    {average > 0 ? formatTimeAverage(average) : '-'}
+                                    {average > 0 ? formatTimeAverage(average) : "-"}
                                   </span>
                                 </td>
-                              )
+                              );
                             })}
                           </tr>
                           {/* 全体平均行 */}
@@ -510,11 +562,15 @@ export function PracticeDetails({
                             <td className="py-2 px-2 text-center" colSpan={formattedLog.setCount}>
                               <span className="text-blue-800 font-bold">
                                 {(() => {
-                                  const allValidTimes = allTimes.filter((t) => t.time > 0)
-                                  const overallAverage = allValidTimes.length > 0
-                                    ? allValidTimes.reduce((sum, t) => sum + t.time, 0) / allValidTimes.length
-                                    : 0
-                                  return overallAverage > 0 ? formatTimeAverage(overallAverage) : '-'
+                                  const allValidTimes = allTimes.filter((t) => t.time > 0);
+                                  const overallAverage =
+                                    allValidTimes.length > 0
+                                      ? allValidTimes.reduce((sum, t) => sum + t.time, 0) /
+                                        allValidTimes.length
+                                      : 0;
+                                  return overallAverage > 0
+                                    ? formatTimeAverage(overallAverage)
+                                    : "-";
                                 })()}
                               </span>
                             </td>
@@ -525,11 +581,12 @@ export function PracticeDetails({
                             <td className="py-2 px-2 text-center" colSpan={formattedLog.setCount}>
                               <span className="text-blue-800 font-bold">
                                 {(() => {
-                                  const allValidTimes = allTimes.filter((t) => t.time > 0)
-                                  const overallFastest = allValidTimes.length > 0
-                                    ? Math.min(...allValidTimes.map((t) => t.time))
-                                    : 0
-                                  return overallFastest > 0 ? formatTime(overallFastest) : '-'
+                                  const allValidTimes = allTimes.filter((t) => t.time > 0);
+                                  const overallFastest =
+                                    allValidTimes.length > 0
+                                      ? Math.min(...allValidTimes.map((t) => t.time))
+                                      : 0;
+                                  return overallFastest > 0 ? formatTime(overallFastest) : "-";
                                 })()}
                               </span>
                             </td>
@@ -544,13 +601,11 @@ export function PracticeDetails({
                 {formattedLog.note && (
                   <div className="rounded-lg p-3 mb-1 border border-slate-200">
                     <div className="text-xs font-medium text-gray-500 mb-1">メモ</div>
-                    <div className="text-sm text-gray-700">
-                      {formattedLog.note}
-                    </div>
+                    <div className="text-sm text-gray-700">{formattedLog.note}</div>
                   </div>
                 )}
               </div>
-            )
+            );
           })}
         </div>
 
@@ -567,14 +622,13 @@ export function PracticeDetails({
         <ShareCardModal
           isOpen={showShareModal}
           onClose={() => {
-            setShowShareModal(false)
-            setSharePracticeData(null)
+            setShowShareModal(false);
+            setSharePracticeData(null);
           }}
           type="practice"
           data={sharePracticeData}
         />
       )}
-
     </div>
-  )
+  );
 }

@@ -2,61 +2,97 @@
 // ダッシュボードハンドラー関数用カスタムフック
 // =============================================================================
 
-import type { PracticeImageData } from '@/components/forms/PracticeBasicForm'
-import type { CompetitionImageData } from '@/components/forms/CompetitionBasicForm'
-import { useCompetitionFormStore } from '@/stores/competition/competitionStore'
-import { usePracticeFormStore } from '@/stores/practice/practiceStore'
+import type { PracticeImageData } from "@/components/forms/PracticeBasicForm";
+import type { CompetitionImageData } from "@/components/forms/CompetitionBasicForm";
+import { useCompetitionStore } from "@/stores/competition/competitionStore";
+import { usePracticeStore } from "@/stores/practice/practiceStore";
 import type {
   EditingData,
   EntryFormData,
   EntryWithStyle,
   PracticeMenuFormData,
-  RecordFormDataInternal
-} from '@/stores/types'
-import { processCompetitionImage, processPracticeImage } from '@/utils/imageUtils'
-import { EntryAPI, PracticeAPI, CompetitionAPI } from '@apps/shared/api'
-import type { Style, PracticeLogTagInsert } from '@apps/shared/types'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '@swim-hub/shared/types'
-import { useCallback } from 'react'
-import { getCompetitionId, getPracticeId, getRecordCompetitionId } from '../_utils/dashboardHelpers'
+  RecordFormDataInternal,
+} from "@/stores/types";
+import { processCompetitionImage, processPracticeImage } from "@/utils/imageUtils";
+import { EntryAPI, PracticeAPI, CompetitionAPI } from "@apps/shared/api";
+import type { Style, PracticeLogTagInsert } from "@apps/shared/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@swim-hub/shared/types";
+import { useCallback } from "react";
+import {
+  getCompetitionId,
+  getPracticeId,
+  getRecordCompetitionId,
+} from "../_utils/dashboardHelpers";
 
 interface UseDashboardHandlersProps {
-  supabase: SupabaseClient<Database>
-  user: { id: string } | null
-  styles: Style[]
+  supabase: SupabaseClient<Database>;
+  user: { id: string } | null;
+  styles: Style[];
   // Practice hooks（実際の型に合わせる）
-  createPractice: (practice: Omit<import('@swim-hub/shared/types').PracticeInsert, 'user_id'>) => Promise<import('@swim-hub/shared/types').Practice>
-  updatePractice: (id: string, updates: import('@swim-hub/shared/types').PracticeUpdate) => Promise<import('@swim-hub/shared/types').Practice>
-  createPracticeLog: (log: Omit<import('@swim-hub/shared/types').PracticeLogInsert, 'user_id'>) => Promise<import('@swim-hub/shared/types').PracticeLog>
-  updatePracticeLog: (id: string, updates: import('@swim-hub/shared/types').PracticeLogUpdate) => Promise<import('@swim-hub/shared/types').PracticeLog>
-  createPracticeTime: (time: import('@swim-hub/shared/types').PracticeTimeInsert) => Promise<import('@swim-hub/shared/types').PracticeTime>
-  deletePracticeTime: (id: string) => Promise<void>
-  deletePractice: (id: string) => Promise<void>
+  createPractice: (
+    practice: Omit<import("@swim-hub/shared/types").PracticeInsert, "user_id">,
+  ) => Promise<import("@swim-hub/shared/types").Practice>;
+  updatePractice: (
+    id: string,
+    updates: import("@swim-hub/shared/types").PracticeUpdate,
+  ) => Promise<import("@swim-hub/shared/types").Practice>;
+  createPracticeLog: (
+    log: Omit<import("@swim-hub/shared/types").PracticeLogInsert, "user_id">,
+  ) => Promise<import("@swim-hub/shared/types").PracticeLog>;
+  updatePracticeLog: (
+    id: string,
+    updates: import("@swim-hub/shared/types").PracticeLogUpdate,
+  ) => Promise<import("@swim-hub/shared/types").PracticeLog>;
+  createPracticeTime: (
+    time: import("@swim-hub/shared/types").PracticeTimeInsert,
+  ) => Promise<import("@swim-hub/shared/types").PracticeTime>;
+  deletePracticeTime: (id: string) => Promise<void>;
+  deletePractice: (id: string) => Promise<void>;
   // Record hooks（実際の型に合わせる）
-  createRecord: (record: Omit<import('@swim-hub/shared/types').RecordInsert, 'user_id'>) => Promise<import('@swim-hub/shared/types').Record>
-  updateRecord: (id: string, updates: import('@swim-hub/shared/types').RecordUpdate) => Promise<import('@swim-hub/shared/types').Record>
-  createCompetition: (competition: Omit<import('@swim-hub/shared/types').CompetitionInsert, 'user_id'>) => Promise<import('@swim-hub/shared/types').Competition>
-  updateCompetition: (id: string, updates: import('@swim-hub/shared/types').CompetitionUpdate) => Promise<import('@swim-hub/shared/types').Competition>
-  deleteCompetition: (id: string) => Promise<void>
-  createSplitTimes: (params: { recordId: string; splitTimes: Array<{ distance: number; split_time?: number; splitTime?: number }> }) => Promise<import('@swim-hub/shared/types').SplitTime[]>
-  replaceSplitTimes: (params: { recordId: string; splitTimes: Omit<import('@swim-hub/shared/types').SplitTimeInsert, 'record_id'>[] }) => Promise<import('@swim-hub/shared/types').SplitTime[]>
+  createRecord: (
+    record: Omit<import("@swim-hub/shared/types").RecordInsert, "user_id">,
+  ) => Promise<import("@swim-hub/shared/types").Record>;
+  updateRecord: (
+    id: string,
+    updates: import("@swim-hub/shared/types").RecordUpdate,
+  ) => Promise<import("@swim-hub/shared/types").Record>;
+  createCompetition: (
+    competition: Omit<import("@swim-hub/shared/types").CompetitionInsert, "user_id">,
+  ) => Promise<import("@swim-hub/shared/types").Competition>;
+  updateCompetition: (
+    id: string,
+    updates: import("@swim-hub/shared/types").CompetitionUpdate,
+  ) => Promise<import("@swim-hub/shared/types").Competition>;
+  deleteCompetition: (id: string) => Promise<void>;
+  createSplitTimes: (params: {
+    recordId: string;
+    splitTimes: Array<{ distance: number; split_time?: number; splitTime?: number }>;
+  }) => Promise<import("@swim-hub/shared/types").SplitTime[]>;
+  replaceSplitTimes: (params: {
+    recordId: string;
+    splitTimes: Omit<import("@swim-hub/shared/types").SplitTimeInsert, "record_id">[];
+  }) => Promise<import("@swim-hub/shared/types").SplitTime[]>;
   // Form store actions
-  editingData: EditingData | null
-  createdPracticeId: string | null
-  competitionEditingData: EditingData | null
-  createdCompetitionId: string | null
-  setLoading: (loading: boolean) => void
-  closePracticeBasicForm: () => void
-  closePracticeLogForm: () => void
-  closeCompetitionBasicForm: () => void
-  closeEntryLogForm: () => void
-  closeRecordLogForm: () => void
-  openPracticeLogForm: (practiceId?: string, editData?: EditingData) => void
-  setCreatedEntries: (entries: EntryWithStyle[]) => void
-  openEntryLogForm: (competitionId: string) => void
-  openRecordLogForm: (competitionId: string | undefined, entries?: EntryWithStyle[], editData?: EditingData) => void
-  refreshCalendar: () => void
+  editingData: EditingData | null;
+  createdPracticeId: string | null;
+  competitionEditingData: EditingData | null;
+  createdCompetitionId: string | null;
+  setLoading: (loading: boolean) => void;
+  closePracticeBasicForm: () => void;
+  closePracticeLogForm: () => void;
+  closeCompetitionBasicForm: () => void;
+  closeEntryLogForm: () => void;
+  closeRecordLogForm: () => void;
+  openPracticeLogForm: (practiceId?: string, editData?: EditingData) => void;
+  setCreatedEntries: (entries: EntryWithStyle[]) => void;
+  openEntryLogForm: (competitionId: string) => void;
+  openRecordLogForm: (
+    competitionId: string | undefined,
+    entries?: EntryWithStyle[],
+    editData?: EditingData,
+  ) => void;
+  refreshCalendar: () => void;
 }
 
 /**
@@ -92,761 +128,869 @@ export function useDashboardHandlers({
   closeRecordLogForm,
   openPracticeLogForm,
   setCreatedEntries,
-    openEntryLogForm,
-    openRecordLogForm,
-    refreshCalendar
+  openEntryLogForm,
+  openRecordLogForm,
+  refreshCalendar,
 }: UseDashboardHandlersProps) {
   // 練習予定作成・更新
-  const handlePracticeBasicSubmit = useCallback(async (
-    basicData: { date: string; title: string; place: string; note: string },
-    imageData?: PracticeImageData,
-    continueToNext: boolean = true
-  ) => {
-    setLoading(true)
-    try {
-      // 有効なPracticeInsert/Updateフィールドのみを送信
-      const payload = {
-        date: basicData.date,
-        title: basicData.title || null,
-        place: basicData.place || null,
-        note: basicData.note || null
-      }
+  const handlePracticeBasicSubmit = useCallback(
+    async (
+      basicData: { date: string; title: string; place: string; note: string },
+      imageData?: PracticeImageData,
+      continueToNext: boolean = true,
+    ) => {
+      setLoading(true);
+      try {
+        // 有効なPracticeInsert/Updateフィールドのみを送信
+        const payload = {
+          date: basicData.date,
+          title: basicData.title || null,
+          place: basicData.place || null,
+          note: basicData.note || null,
+        };
 
-      let practiceId: string | undefined
+        let practiceId: string | undefined;
 
-      if (editingData && editingData.id) {
-        await updatePractice(editingData.id, payload)
-        practiceId = editingData.id
-        closePracticeBasicForm()
-      } else {
-        const createdPractice = await createPractice(payload)
-        practiceId = createdPractice?.id
-        closePracticeBasicForm()
-        if (continueToNext) {
-          openPracticeLogForm(createdPractice?.id)
+        if (editingData && editingData.id) {
+          await updatePractice(editingData.id, payload);
+          practiceId = editingData.id;
+          closePracticeBasicForm();
+        } else {
+          const createdPractice = await createPractice(payload);
+          practiceId = createdPractice?.id;
+          closePracticeBasicForm();
+          if (continueToNext) {
+            openPracticeLogForm(createdPractice?.id);
+          }
         }
-      }
 
-      // 画像の処理（安全な順序: アップロード → DB更新 → ストレージ削除）
-      // NOTE: 画像パスはpractices.image_pathsで管理（practice_imagesテーブルは廃止）
-      if (practiceId && imageData) {
-        const practiceAPI = new PracticeAPI(supabase)
-        const uploadedPaths: string[] = []
+        // 画像の処理（安全な順序: アップロード → DB更新 → ストレージ削除）
+        // NOTE: 画像パスはpractices.image_pathsで管理（practice_imagesテーブルは廃止）
+        if (practiceId && imageData) {
+          const practiceAPI = new PracticeAPI(supabase);
+          const uploadedPaths: string[] = [];
 
-        try {
-          // Step 1: 新規画像をアップロード（圧縮版のみ）
-          if (imageData.newFiles.length > 0) {
-            const processedImages = await Promise.all(
-              imageData.newFiles.map(async (fileData) => {
-                const { thumbnail } = await processPracticeImage(fileData.file)
-                return thumbnail
-              })
-            )
+          try {
+            // Step 1: 新規画像をアップロード（圧縮版のみ）
+            if (imageData.newFiles.length > 0) {
+              const processedImages = await Promise.all(
+                imageData.newFiles.map(async (fileData) => {
+                  const { thumbnail } = await processPracticeImage(fileData.file);
+                  return thumbnail;
+                }),
+              );
 
-            // API Route経由でアップロード（R2優先、Supabase Storageフォールバック）
-            for (const file of processedImages) {
-              const path = await practiceAPI.uploadPracticeImage(practiceId, file)
-              uploadedPaths.push(path)
+              // API Route経由でアップロード（R2優先、Supabase Storageフォールバック）
+              for (const file of processedImages) {
+                const path = await practiceAPI.uploadPracticeImage(practiceId, file);
+                uploadedPaths.push(path);
+              }
             }
-          }
 
-          // Step 2: 既存のimage_pathsを取得
-          // NOTE: Supabaseの型推論が環境によってneverになることがあるため、型アサーションを使用
-          const { data: currentPractice, error: selectError } = await supabase
-            .from('practices')
-            .select('image_paths')
-            .eq('id', practiceId)
-            .single()
+            // Step 2: 既存のimage_pathsを取得
+            // NOTE: Supabaseの型推論が環境によってneverになることがあるため、型アサーションを使用
+            const { data: currentPractice, error: selectError } = await supabase
+              .from("practices")
+              .select("image_paths")
+              .eq("id", practiceId)
+              .single();
 
-          if (selectError) {
-            throw new Error(`練習データの取得に失敗しました: ${selectError.message}`)
-          }
+            if (selectError) {
+              throw new Error(`練習データの取得に失敗しました: ${selectError.message}`);
+            }
 
-          const practiceData = currentPractice as { image_paths?: string[] | null } | null
-          const existingPaths: string[] = practiceData?.image_paths || []
+            const practiceData = currentPractice as { image_paths?: string[] | null } | null;
+            const existingPaths: string[] = practiceData?.image_paths || [];
 
-          // Step 3: image_pathsを更新（既存 - 削除 + 新規）
-          // NOTE: DBを先に更新してから、ストレージの画像を削除する（DBとストレージの整合性を保つため）
-          const newImagePaths = [
-            ...existingPaths.filter(p => !imageData.deletedIds.includes(p)),
-            ...uploadedPaths
-          ]
+            // Step 3: image_pathsを更新（既存 - 削除 + 新規）
+            // NOTE: DBを先に更新してから、ストレージの画像を削除する（DBとストレージの整合性を保つため）
+            const newImagePaths = [
+              ...existingPaths.filter((p) => !imageData.deletedIds.includes(p)),
+              ...uploadedPaths,
+            ];
 
-          const { error: updateError } = await supabase
-            .from('practices')
-            .update({ image_paths: newImagePaths })
-            .eq('id', practiceId)
+            const { error: updateError } = await supabase
+              .from("practices")
+              .update({ image_paths: newImagePaths })
+              .eq("id", practiceId);
 
-          if (updateError) {
-            throw new Error(`画像パスの更新に失敗しました: ${updateError.message}`)
-          }
+            if (updateError) {
+              throw new Error(`画像パスの更新に失敗しました: ${updateError.message}`);
+            }
 
-          // Step 4: 削除対象のパスをストレージから削除（DB更新成功後に実行）
-          // NOTE: DB更新後なので、削除失敗してもDBは正しい状態。ストレージに孤立ファイルが残る可能性があるが、
-          // DBに存在しない画像への参照が残るよりは安全
-          if (imageData.deletedIds.length > 0) {
-            const deleteErrors: Array<{ path: string; error: unknown }> = []
-            for (const path of imageData.deletedIds) {
+            // Step 4: 削除対象のパスをストレージから削除（DB更新成功後に実行）
+            // NOTE: DB更新後なので、削除失敗してもDBは正しい状態。ストレージに孤立ファイルが残る可能性があるが、
+            // DBに存在しない画像への参照が残るよりは安全
+            if (imageData.deletedIds.length > 0) {
+              const deleteErrors: Array<{ path: string; error: unknown }> = [];
+              for (const path of imageData.deletedIds) {
+                try {
+                  await practiceAPI.deletePracticeImage(path);
+                } catch (deleteError) {
+                  console.error(`画像 ${path} の削除に失敗:`, deleteError);
+                  deleteErrors.push({ path, error: deleteError });
+                }
+              }
+              // 削除エラーがあった場合は警告をスロー（DBは更新済みなので、呼び出し元で適切に処理可能）
+              if (deleteErrors.length > 0) {
+                console.warn(
+                  `${deleteErrors.length}件の画像削除に失敗しましたが、DB更新は完了しています`,
+                );
+              }
+            }
+          } catch (imageError) {
+            console.error("画像処理エラー:", imageError);
+
+            // ロールバック - アップロードした画像を削除
+            if (uploadedPaths.length > 0) {
               try {
-                await practiceAPI.deletePracticeImage(path)
-              } catch (deleteError) {
-                console.error(`画像 ${path} の削除に失敗:`, deleteError)
-                deleteErrors.push({ path, error: deleteError })
+                for (const path of uploadedPaths) {
+                  await practiceAPI.deletePracticeImage(path);
+                }
+              } catch {
+                // ロールバック失敗は無視（メインのエラーを優先）
               }
             }
-            // 削除エラーがあった場合は警告をスロー（DBは更新済みなので、呼び出し元で適切に処理可能）
-            if (deleteErrors.length > 0) {
-              console.warn(`${deleteErrors.length}件の画像削除に失敗しましたが、DB更新は完了しています`)
-            }
+
+            throw new Error("画像の処理に失敗しました");
           }
-
-        } catch (imageError) {
-          console.error('画像処理エラー:', imageError)
-
-          // ロールバック - アップロードした画像を削除
-          if (uploadedPaths.length > 0) {
-            try {
-              for (const path of uploadedPaths) {
-                await practiceAPI.deletePracticeImage(path)
-              }
-            } catch {
-              // ロールバック失敗は無視（メインのエラーを優先）
-            }
-          }
-
-          throw new Error('画像の処理に失敗しました')
         }
+
+        refreshCalendar();
+      } catch (error) {
+        console.error("練習予定の処理に失敗しました:", error);
+      } finally {
+        setLoading(false);
       }
-      
-      refreshCalendar()
-    } catch (error) {
-      console.error('練習予定の処理に失敗しました:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [editingData, updatePractice, createPractice, closePracticeBasicForm, openPracticeLogForm, refreshCalendar, setLoading, supabase])
+    },
+    [
+      editingData,
+      updatePractice,
+      createPractice,
+      closePracticeBasicForm,
+      openPracticeLogForm,
+      refreshCalendar,
+      setLoading,
+      supabase,
+    ],
+  );
 
   // 練習メニュー作成・更新処理
-  const handlePracticeLogSubmit = useCallback(async (formDataArray: PracticeMenuFormData[]) => {
-    if (!user || !user.id) {
-      throw new Error('認証されたユーザーが必要です')
-    }
-    
-    setLoading(true)
-    try {
-      const menus = Array.isArray(formDataArray) ? formDataArray : []
+  const handlePracticeLogSubmit = useCallback(
+    async (formDataArray: PracticeMenuFormData[]) => {
+      if (!user || !user.id) {
+        throw new Error("認証されたユーザーが必要です");
+      }
 
-      if (editingData) {
-        const menu = menus[0]
-        const logInput = {
-          style: menu.style || 'fr',
-          swim_category: menu.swimCategory || 'Swim',
-          rep_count: Number(menu.reps) || 1,
-          set_count: Number(menu.sets) || 1,
-          distance: Number(menu.distance) || 100,
-          circle: menu.circleTime || null,
-          note: menu.note || ''
-        }
-        
-        if (!editingData.id) throw new Error('Editing data ID is required')
-        const practiceLogId = editingData.id
-        await updatePracticeLog(practiceLogId, logInput)
-        
-        await supabase
-          .from('practice_log_tags')
-          .delete()
-          .eq('practice_log_id', practiceLogId)
-        
-        if (menu.tags && menu.tags.length > 0) {
-          // タグを並列insert
-          const queryBuilder = supabase.from('practice_log_tags') as unknown as {
-            insert: (values: PracticeLogTagInsert) => Promise<{ error: { message: string } | null }>
-          }
-          const tagResults = await Promise.all(
-            menu.tags.map(tag => {
-              const insertData: PracticeLogTagInsert = {
-                practice_log_id: practiceLogId,
-                practice_tag_id: tag.id
-              }
-              return queryBuilder.insert(insertData)
-            })
-          )
-          for (const { error } of tagResults) {
-            if (error) {
-              console.error('練習ログタグの挿入に失敗しました:', error)
-              throw new Error(`練習ログタグの挿入に失敗しました: ${error.message}`)
-            }
-          }
-        }
+      setLoading(true);
+      try {
+        const menus = Array.isArray(formDataArray) ? formDataArray : [];
 
-        const { data: existingTimes } = await supabase
-          .from('practice_times')
-          .select('id')
-          .eq('practice_log_id', practiceLogId)
-
-        if (existingTimes && existingTimes.length > 0) {
-          // 時間を並列delete
-          await Promise.all(
-            (existingTimes as Array<{ id: string }>).map(time => deletePracticeTime(time.id))
-          )
-        }
-
-        if (menu.times && menu.times.length > 0) {
-          // 時間を並列create
-          await Promise.all(
-            menu.times
-              .filter(timeEntry => timeEntry.time > 0)
-              .map(timeEntry =>
-                createPracticeTime({
-                  user_id: user.id,
-                  practice_log_id: practiceLogId,
-                  set_number: timeEntry.setNumber,
-                  rep_number: timeEntry.repNumber,
-                  time: timeEntry.time
-                } as import('@swim-hub/shared/types').PracticeTimeInsert)
-              )
-          )
-        }
-      } else {
-        // ストアから直接最新の値を取得（useCallbackのクロージャー問題を回避）
-        const { createdPracticeId: storePracticeId, editingData: storeEditingData } = usePracticeFormStore.getState()
-        const practiceId = getPracticeId(storePracticeId, storeEditingData) || getPracticeId(createdPracticeId, editingData)
-        if (!practiceId) {
-          throw new Error('Practice ID が見つかりません')
-        }
-
-        for (const menu of menus) {
+        if (editingData) {
+          const menu = menus[0];
           const logInput = {
-            practice_id: practiceId,
-            style: menu.style || 'fr',
-            swim_category: menu.swimCategory || 'Swim',
+            style: menu.style || "fr",
+            swim_category: menu.swimCategory || "Swim",
             rep_count: Number(menu.reps) || 1,
             set_count: Number(menu.sets) || 1,
             distance: Number(menu.distance) || 100,
             circle: menu.circleTime || null,
-            note: menu.note || ''
-          }
-          
-          const createdLog = await createPracticeLog(logInput)
-          
-          if (menu.tags && menu.tags.length > 0 && createdLog) {
+            note: menu.note || "",
+          };
+
+          if (!editingData.id) throw new Error("Editing data ID is required");
+          const practiceLogId = editingData.id;
+          await updatePracticeLog(practiceLogId, logInput);
+
+          await supabase.from("practice_log_tags").delete().eq("practice_log_id", practiceLogId);
+
+          if (menu.tags && menu.tags.length > 0) {
             // タグを並列insert
-            const queryBuilder = supabase.from('practice_log_tags') as unknown as {
-              insert: (values: PracticeLogTagInsert) => Promise<{ error: { message: string } | null }>
-            }
+            const queryBuilder = supabase.from("practice_log_tags") as unknown as {
+              insert: (
+                values: PracticeLogTagInsert,
+              ) => Promise<{ error: { message: string } | null }>;
+            };
             const tagResults = await Promise.all(
-              menu.tags.map(tag => {
+              menu.tags.map((tag) => {
                 const insertData: PracticeLogTagInsert = {
-                  practice_log_id: createdLog.id,
-                  practice_tag_id: tag.id
-                }
-                return queryBuilder.insert(insertData)
-              })
-            )
+                  practice_log_id: practiceLogId,
+                  practice_tag_id: tag.id,
+                };
+                return queryBuilder.insert(insertData);
+              }),
+            );
             for (const { error } of tagResults) {
               if (error) {
-                console.error('練習ログタグの挿入に失敗しました:', error)
-                throw new Error(`練習ログタグの挿入に失敗しました: ${error.message}`)
+                console.error("練習ログタグの挿入に失敗しました:", error);
+                throw new Error(`練習ログタグの挿入に失敗しました: ${error.message}`);
               }
             }
           }
 
-          if (menu.times && menu.times.length > 0 && createdLog) {
+          const { data: existingTimes } = await supabase
+            .from("practice_times")
+            .select("id")
+            .eq("practice_log_id", practiceLogId);
+
+          if (existingTimes && existingTimes.length > 0) {
+            // 時間を並列delete
+            await Promise.all(
+              (existingTimes as Array<{ id: string }>).map((time) => deletePracticeTime(time.id)),
+            );
+          }
+
+          if (menu.times && menu.times.length > 0) {
             // 時間を並列create
             await Promise.all(
               menu.times
-                .filter(timeEntry => timeEntry.time > 0)
-                .map(timeEntry =>
+                .filter((timeEntry) => timeEntry.time > 0)
+                .map((timeEntry) =>
                   createPracticeTime({
                     user_id: user.id,
-                    practice_log_id: createdLog.id,
+                    practice_log_id: practiceLogId,
                     set_number: timeEntry.setNumber,
                     rep_number: timeEntry.repNumber,
-                    time: timeEntry.time
-                  })
-                )
-            )
+                    time: timeEntry.time,
+                  } as import("@swim-hub/shared/types").PracticeTimeInsert),
+                ),
+            );
+          }
+        } else {
+          // ストアから直接最新の値を取得（useCallbackのクロージャー問題を回避）
+          const { createdPracticeId: storePracticeId, editingData: storeEditingData } =
+            usePracticeStore.getState();
+          const practiceId =
+            getPracticeId(storePracticeId, storeEditingData) ||
+            getPracticeId(createdPracticeId, editingData);
+          if (!practiceId) {
+            throw new Error("Practice ID が見つかりません");
+          }
+
+          for (const menu of menus) {
+            const logInput = {
+              practice_id: practiceId,
+              style: menu.style || "fr",
+              swim_category: menu.swimCategory || "Swim",
+              rep_count: Number(menu.reps) || 1,
+              set_count: Number(menu.sets) || 1,
+              distance: Number(menu.distance) || 100,
+              circle: menu.circleTime || null,
+              note: menu.note || "",
+            };
+
+            const createdLog = await createPracticeLog(logInput);
+
+            if (menu.tags && menu.tags.length > 0 && createdLog) {
+              // タグを並列insert
+              const queryBuilder = supabase.from("practice_log_tags") as unknown as {
+                insert: (
+                  values: PracticeLogTagInsert,
+                ) => Promise<{ error: { message: string } | null }>;
+              };
+              const tagResults = await Promise.all(
+                menu.tags.map((tag) => {
+                  const insertData: PracticeLogTagInsert = {
+                    practice_log_id: createdLog.id,
+                    practice_tag_id: tag.id,
+                  };
+                  return queryBuilder.insert(insertData);
+                }),
+              );
+              for (const { error } of tagResults) {
+                if (error) {
+                  console.error("練習ログタグの挿入に失敗しました:", error);
+                  throw new Error(`練習ログタグの挿入に失敗しました: ${error.message}`);
+                }
+              }
+            }
+
+            if (menu.times && menu.times.length > 0 && createdLog) {
+              // 時間を並列create
+              await Promise.all(
+                menu.times
+                  .filter((timeEntry) => timeEntry.time > 0)
+                  .map((timeEntry) =>
+                    createPracticeTime({
+                      user_id: user.id,
+                      practice_log_id: createdLog.id,
+                      set_number: timeEntry.setNumber,
+                      rep_number: timeEntry.repNumber,
+                      time: timeEntry.time,
+                    }),
+                  ),
+              );
+            }
           }
         }
-      }
 
-      closePracticeLogForm()
-      refreshCalendar()
-    } catch (error) {
-      console.error('練習記録の処理に失敗しました:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [editingData, createdPracticeId, supabase, user, updatePracticeLog, createPracticeLog, deletePracticeTime, createPracticeTime, refreshCalendar, setLoading, closePracticeLogForm])
+        closePracticeLogForm();
+        refreshCalendar();
+      } catch (error) {
+        console.error("練習記録の処理に失敗しました:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [
+      editingData,
+      createdPracticeId,
+      supabase,
+      user,
+      updatePracticeLog,
+      createPracticeLog,
+      deletePracticeTime,
+      createPracticeTime,
+      refreshCalendar,
+      setLoading,
+      closePracticeLogForm,
+    ],
+  );
 
   // アイテム削除ハンドラー
-  const handleDeleteItem = useCallback(async (itemId: string, itemType?: 'practice' | 'team_practice' | 'practice_log' | 'competition' | 'team_competition' | 'entry' | 'record') => {
-    if (!itemType) {
-      console.error('アイテムタイプが不明です')
-      return
-    }
-
-    try {
-      if (itemType === 'practice' || itemType === 'team_practice') {
-        // Google Calendar同期を含むミューテーションを使用
-        await deletePractice(itemId)
-      } else if (itemType === 'practice_log') {
-        const { error } = await supabase
-          .from('practice_logs')
-          .delete()
-          .eq('id', itemId)
-        if (error) throw error
-      } else if (itemType === 'entry') {
-        const { error } = await supabase
-          .from('entries')
-          .delete()
-          .eq('id', itemId)
-        if (error) throw error
-      } else if (itemType === 'record') {
-        const { error } = await supabase
-          .from('records')
-          .delete()
-          .eq('id', itemId)
-        if (error) throw error
-      } else if (itemType === 'competition' || itemType === 'team_competition') {
-        // Google Calendar同期を含むミューテーションを使用
-        await deleteCompetition(itemId)
+  const handleDeleteItem = useCallback(
+    async (
+      itemId: string,
+      itemType?:
+        | "practice"
+        | "team_practice"
+        | "practice_log"
+        | "competition"
+        | "team_competition"
+        | "entry"
+        | "record",
+    ) => {
+      if (!itemType) {
+        console.error("アイテムタイプが不明です");
+        return;
       }
 
-      refreshCalendar()
-    } catch (error) {
-      console.error('記録の削除に失敗しました:', error)
-    }
-  }, [supabase, refreshCalendar, deletePractice, deleteCompetition])
+      try {
+        if (itemType === "practice" || itemType === "team_practice") {
+          // Google Calendar同期を含むミューテーションを使用
+          await deletePractice(itemId);
+        } else if (itemType === "practice_log") {
+          const { error } = await supabase.from("practice_logs").delete().eq("id", itemId);
+          if (error) throw error;
+        } else if (itemType === "entry") {
+          const { error } = await supabase.from("entries").delete().eq("id", itemId);
+          if (error) throw error;
+        } else if (itemType === "record") {
+          const { error } = await supabase.from("records").delete().eq("id", itemId);
+          if (error) throw error;
+        } else if (itemType === "competition" || itemType === "team_competition") {
+          // Google Calendar同期を含むミューテーションを使用
+          await deleteCompetition(itemId);
+        }
+
+        refreshCalendar();
+      } catch (error) {
+        console.error("記録の削除に失敗しました:", error);
+      }
+    },
+    [supabase, refreshCalendar, deletePractice, deleteCompetition],
+  );
 
   // 大会情報作成・更新
-  const handleCompetitionBasicSubmit = useCallback(async (
-    basicData: { date: string; endDate: string; title: string; place: string; poolType: number; note: string },
-    imageData?: CompetitionImageData,
-    options?: { continueToNext?: boolean; skipEntry?: boolean }
-  ) => {
-    const { continueToNext = true, skipEntry = false } = options || {}
+  const handleCompetitionBasicSubmit = useCallback(
+    async (
+      basicData: {
+        date: string;
+        endDate: string;
+        title: string;
+        place: string;
+        poolType: number;
+        note: string;
+      },
+      imageData?: CompetitionImageData,
+      options?: { continueToNext?: boolean; skipEntry?: boolean },
+    ) => {
+      const { continueToNext = true, skipEntry = false } = options || {};
 
-    setLoading(true)
-    try {
-      // 終了日は空文字の場合はnullに変換
-      const endDate = basicData.endDate ? basicData.endDate : null
+      setLoading(true);
+      try {
+        // 終了日は空文字の場合はnullに変換
+        const endDate = basicData.endDate ? basicData.endDate : null;
 
-      let competitionId: string | undefined
+        let competitionId: string | undefined;
 
-      if (competitionEditingData && competitionEditingData.id) {
-        await updateCompetition(competitionEditingData.id, {
-          date: basicData.date,
-          end_date: endDate,
-          title: basicData.title || null,
-          place: basicData.place || null,
-          pool_type: basicData.poolType,
-          note: basicData.note || null
-        })
-        competitionId = competitionEditingData.id
-        closeCompetitionBasicForm()
-      } else {
-        const newCompetition = await createCompetition({
-          date: basicData.date,
-          end_date: endDate,
-          title: basicData.title || null,
-          place: basicData.place || null,
-          pool_type: basicData.poolType,
-          note: basicData.note || null
-        })
-        competitionId = newCompetition.id
-        // openEntryLogForm/openRecordLogFormがisBasicFormOpen: falseをセットするので、closeCompetitionBasicFormは不要
-        // closeCompetitionBasicFormを呼ぶとcreatedCompetitionIdがnullにリセットされてしまう
-        if (continueToNext) {
-          if (skipEntry) {
-            // エントリーをスキップして記録入力へ（今日/過去の日付の場合）
-            openRecordLogForm(newCompetition.id, [])
-          } else {
-            // エントリー登録へ（未来の日付の場合）
-            openEntryLogForm(newCompetition.id)
-          }
+        if (competitionEditingData && competitionEditingData.id) {
+          await updateCompetition(competitionEditingData.id, {
+            date: basicData.date,
+            end_date: endDate,
+            title: basicData.title || null,
+            place: basicData.place || null,
+            pool_type: basicData.poolType,
+            note: basicData.note || null,
+          });
+          competitionId = competitionEditingData.id;
+          closeCompetitionBasicForm();
         } else {
-          // 保存して終了（今日/過去の日付で「保存して終了」を選んだ場合）
-          closeCompetitionBasicForm()
-        }
-      }
-
-      // 画像の処理（安全な順序: アップロード → DB更新 → ストレージ削除）
-      // NOTE: 画像パスはcompetitions.image_pathsで管理（competition_imagesテーブルは廃止）
-      if (competitionId && imageData) {
-        const competitionAPI = new CompetitionAPI(supabase)
-        const uploadedPaths: string[] = []
-
-        try {
-          // Step 1: 新規画像をアップロード（圧縮版のみ）
-          if (imageData.newFiles.length > 0) {
-            const processedImages = await Promise.all(
-              imageData.newFiles.map(async (fileData) => {
-                const { thumbnail } = await processCompetitionImage(fileData.file)
-                return thumbnail
-              })
-            )
-
-            for (const file of processedImages) {
-              const path = await competitionAPI.uploadCompetitionImage(competitionId, file)
-              uploadedPaths.push(path)
+          const newCompetition = await createCompetition({
+            date: basicData.date,
+            end_date: endDate,
+            title: basicData.title || null,
+            place: basicData.place || null,
+            pool_type: basicData.poolType,
+            note: basicData.note || null,
+          });
+          competitionId = newCompetition.id;
+          // openEntryLogForm/openRecordLogFormがisBasicFormOpen: falseをセットするので、closeCompetitionBasicFormは不要
+          // closeCompetitionBasicFormを呼ぶとcreatedCompetitionIdがnullにリセットされてしまう
+          if (continueToNext) {
+            if (skipEntry) {
+              // エントリーをスキップして記録入力へ（今日/過去の日付の場合）
+              openRecordLogForm(newCompetition.id, []);
+            } else {
+              // エントリー登録へ（未来の日付の場合）
+              openEntryLogForm(newCompetition.id);
             }
+          } else {
+            // 保存して終了（今日/過去の日付で「保存して終了」を選んだ場合）
+            closeCompetitionBasicForm();
           }
+        }
 
-          // Step 2: 既存のimage_pathsを取得
-          // NOTE: Supabaseの型推論が環境によってneverになることがあるため、型アサーションを使用
-          const { data: currentCompetition, error: selectError } = await supabase
-            .from('competitions')
-            .select('image_paths')
-            .eq('id', competitionId)
-            .single()
+        // 画像の処理（安全な順序: アップロード → DB更新 → ストレージ削除）
+        // NOTE: 画像パスはcompetitions.image_pathsで管理（competition_imagesテーブルは廃止）
+        if (competitionId && imageData) {
+          const competitionAPI = new CompetitionAPI(supabase);
+          const uploadedPaths: string[] = [];
 
-          if (selectError) {
-            throw new Error(`大会データの取得に失敗しました: ${selectError.message}`)
-          }
+          try {
+            // Step 1: 新規画像をアップロード（圧縮版のみ）
+            if (imageData.newFiles.length > 0) {
+              const processedImages = await Promise.all(
+                imageData.newFiles.map(async (fileData) => {
+                  const { thumbnail } = await processCompetitionImage(fileData.file);
+                  return thumbnail;
+                }),
+              );
 
-          const competitionData = currentCompetition as { image_paths?: string[] | null } | null
-          const existingPaths: string[] = competitionData?.image_paths || []
+              for (const file of processedImages) {
+                const path = await competitionAPI.uploadCompetitionImage(competitionId, file);
+                uploadedPaths.push(path);
+              }
+            }
 
-          // Step 3: image_pathsを更新（既存 - 削除 + 新規）
-          // NOTE: DBを先に更新してから、ストレージの画像を削除する（DBとストレージの整合性を保つため）
-          const newImagePaths = [
-            ...existingPaths.filter(p => !imageData.deletedIds.includes(p)),
-            ...uploadedPaths
-          ]
+            // Step 2: 既存のimage_pathsを取得
+            // NOTE: Supabaseの型推論が環境によってneverになることがあるため、型アサーションを使用
+            const { data: currentCompetition, error: selectError } = await supabase
+              .from("competitions")
+              .select("image_paths")
+              .eq("id", competitionId)
+              .single();
 
-          const { error: updateError } = await supabase
-            .from('competitions')
-            .update({ image_paths: newImagePaths })
-            .eq('id', competitionId)
+            if (selectError) {
+              throw new Error(`大会データの取得に失敗しました: ${selectError.message}`);
+            }
 
-          if (updateError) {
-            throw new Error(`画像パスの更新に失敗しました: ${updateError.message}`)
-          }
+            const competitionData = currentCompetition as { image_paths?: string[] | null } | null;
+            const existingPaths: string[] = competitionData?.image_paths || [];
 
-          // Step 4: 削除対象のパスをストレージから削除（DB更新成功後に実行）
-          // NOTE: DB更新後なので、削除失敗してもDBは正しい状態。ストレージに孤立ファイルが残る可能性があるが、
-          // DBに存在しない画像への参照が残るよりは安全
-          if (imageData.deletedIds.length > 0) {
-            const deleteErrors: Array<{ path: string; error: unknown }> = []
-            for (const path of imageData.deletedIds) {
+            // Step 3: image_pathsを更新（既存 - 削除 + 新規）
+            // NOTE: DBを先に更新してから、ストレージの画像を削除する（DBとストレージの整合性を保つため）
+            const newImagePaths = [
+              ...existingPaths.filter((p) => !imageData.deletedIds.includes(p)),
+              ...uploadedPaths,
+            ];
+
+            const { error: updateError } = await supabase
+              .from("competitions")
+              .update({ image_paths: newImagePaths })
+              .eq("id", competitionId);
+
+            if (updateError) {
+              throw new Error(`画像パスの更新に失敗しました: ${updateError.message}`);
+            }
+
+            // Step 4: 削除対象のパスをストレージから削除（DB更新成功後に実行）
+            // NOTE: DB更新後なので、削除失敗してもDBは正しい状態。ストレージに孤立ファイルが残る可能性があるが、
+            // DBに存在しない画像への参照が残るよりは安全
+            if (imageData.deletedIds.length > 0) {
+              const deleteErrors: Array<{ path: string; error: unknown }> = [];
+              for (const path of imageData.deletedIds) {
+                try {
+                  await competitionAPI.deleteCompetitionImage(path);
+                } catch (deleteError) {
+                  console.error(`画像 ${path} の削除に失敗:`, deleteError);
+                  deleteErrors.push({ path, error: deleteError });
+                }
+              }
+              // 削除エラーがあった場合は警告をスロー（DBは更新済みなので、呼び出し元で適切に処理可能）
+              if (deleteErrors.length > 0) {
+                console.warn(
+                  `${deleteErrors.length}件の画像削除に失敗しましたが、DB更新は完了しています`,
+                );
+              }
+            }
+          } catch (imageError) {
+            console.error("画像処理エラー:", imageError);
+
+            // ロールバック - アップロードした画像を削除
+            if (uploadedPaths.length > 0) {
               try {
-                await competitionAPI.deleteCompetitionImage(path)
-              } catch (deleteError) {
-                console.error(`画像 ${path} の削除に失敗:`, deleteError)
-                deleteErrors.push({ path, error: deleteError })
+                for (const path of uploadedPaths) {
+                  await competitionAPI.deleteCompetitionImage(path);
+                }
+              } catch {
+                // ロールバック失敗は無視（メインのエラーを優先）
               }
             }
-            // 削除エラーがあった場合は警告をスロー（DBは更新済みなので、呼び出し元で適切に処理可能）
-            if (deleteErrors.length > 0) {
-              console.warn(`${deleteErrors.length}件の画像削除に失敗しましたが、DB更新は完了しています`)
-            }
+
+            throw new Error("画像の処理に失敗しました");
           }
-
-        } catch (imageError) {
-          console.error('画像処理エラー:', imageError)
-
-          // ロールバック - アップロードした画像を削除
-          if (uploadedPaths.length > 0) {
-            try {
-              for (const path of uploadedPaths) {
-                await competitionAPI.deleteCompetitionImage(path)
-              }
-            } catch {
-              // ロールバック失敗は無視（メインのエラーを優先）
-            }
-          }
-
-          throw new Error('画像の処理に失敗しました')
         }
-      }
 
-      refreshCalendar()
-    } catch (error) {
-      console.error('大会情報の処理に失敗しました:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [competitionEditingData, updateCompetition, createCompetition, closeCompetitionBasicForm, refreshCalendar, openEntryLogForm, openRecordLogForm, setLoading, supabase])
+        refreshCalendar();
+      } catch (error) {
+        console.error("大会情報の処理に失敗しました:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [
+      competitionEditingData,
+      updateCompetition,
+      createCompetition,
+      closeCompetitionBasicForm,
+      refreshCalendar,
+      openEntryLogForm,
+      openRecordLogForm,
+      setLoading,
+      supabase,
+    ],
+  );
 
   // エントリー登録
-  const handleEntrySubmit = useCallback(async (entriesData: EntryFormData[]) => {
-    if (!user || !user.id) {
-      throw new Error('認証されたユーザーが必要です')
-    }
-    
-    setLoading(true)
-    try {
-      // UUID形式のIDかどうかをチェックする関数
-      const isValidUUID = (id: string): boolean => {
-        // UUID形式の正規表現: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-        return uuidRegex.test(id)
+  const handleEntrySubmit = useCallback(
+    async (entriesData: EntryFormData[]) => {
+      if (!user || !user.id) {
+        throw new Error("認証されたユーザーが必要です");
       }
 
-      // ストアから直接最新の値を取得（useCallbackのクロージャー問題を回避）
-      const { createdCompetitionId: storeCompetitionId, editingData: storeEditingData } = useCompetitionFormStore.getState()
-      const competitionId = getCompetitionId(storeCompetitionId, storeEditingData) || getCompetitionId(createdCompetitionId, competitionEditingData)
-      
-      if (!competitionId) {
-        throw new Error('Competition ID が見つかりません')
-      }
+      setLoading(true);
+      try {
+        // UUID形式のIDかどうかをチェックする関数
+        const isValidUUID = (id: string): boolean => {
+          // UUID形式の正規表現: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          return uuidRegex.test(id);
+        };
 
-      const entryAPI = new EntryAPI(supabase)
-      const createdEntriesList: EntryWithStyle[] = []
+        // ストアから直接最新の値を取得（useCallbackのクロージャー問題を回避）
+        const { createdCompetitionId: storeCompetitionId, editingData: storeEditingData } =
+          useCompetitionStore.getState();
+        const competitionId =
+          getCompetitionId(storeCompetitionId, storeEditingData) ||
+          getCompetitionId(createdCompetitionId, competitionEditingData);
 
-      // competitionのteam_idを取得（チームのcompetitionかどうかを判定）
-      const { data: competitionData, error: competitionError } = await supabase
-        .from('competitions')
-        .select('team_id')
-        .eq('id', competitionId)
-        .single()
-      
-      if (competitionError) {
-        throw competitionError
-      }
-      
-      type CompetitionWithTeamId = {
-        team_id: string | null
-      }
-      const competition = competitionData as CompetitionWithTeamId | null
-      const isTeamCompetition = competition?.team_id !== null && competition?.team_id !== undefined
-
-      // 編集モードの場合、既存のエントリーをすべて取得
-      const existingEntriesMap = new Map<string, { id: string; style_id: number }>()
-      const existingEntriesByIdMap = new Map<string, { id: string; style_id: number }>()
-      if (competitionEditingData?.type === 'entry') {
-        // 編集モードの場合、この大会のすべての既存エントリーを取得
-        const { data: allExistingEntries } = await supabase
-          .from('entries')
-          .select('id, style_id')
-          .eq('competition_id', competitionId)
-          .eq('user_id', user.id)
-
-        if (allExistingEntries) {
-          allExistingEntries.forEach((entry: { id: string; style_id: number }) => {
-            existingEntriesMap.set(String(entry.style_id), { id: entry.id, style_id: entry.style_id })
-            existingEntriesByIdMap.set(entry.id, { id: entry.id, style_id: entry.style_id })
-          })
+        if (!competitionId) {
+          throw new Error("Competition ID が見つかりません");
         }
-      }
 
-      const processedEntryIds = new Set<string>()
+        const entryAPI = new EntryAPI(supabase);
+        const createdEntriesList: EntryWithStyle[] = [];
 
-      // フォームに入力されているエントリーを保存/更新
-      for (const entryData of entriesData) {
-        let entry
-        if (entryData.id && competitionEditingData?.type === 'entry' && isValidUUID(entryData.id)) {
-          // 既存のエントリーIDがある場合（編集モードで既存エントリーを編集している場合）
-          // UUID形式であることを確認（一時的なID 'entry-...' を除外）
-          // 種目を変更する場合、重複チェック
-          const originalEntry = existingEntriesByIdMap.get(entryData.id)
-          const styleIdNum = parseInt(entryData.styleId)
-          const isStyleChanged = originalEntry && originalEntry.style_id !== styleIdNum
-          
-          if (isStyleChanged) {
-            // 変更後の種目が既に他のエントリーで使用されていないかチェック
-            const existingEntryWithSameStyle = existingEntriesMap.get(String(styleIdNum))
-            if (existingEntryWithSameStyle && existingEntryWithSameStyle.id !== entryData.id) {
-              const styleName = styles.find(s => s.id === styleIdNum)?.name_jp || '不明'
-              throw new Error(`種目「${styleName}」は既にエントリー済みです`)
-            }
+        // competitionのteam_idを取得（チームのcompetitionかどうかを判定）
+        const { data: competitionData, error: competitionError } = await supabase
+          .from("competitions")
+          .select("team_id")
+          .eq("id", competitionId)
+          .single();
+
+        if (competitionError) {
+          throw competitionError;
+        }
+
+        type CompetitionWithTeamId = {
+          team_id: string | null;
+        };
+        const competition = competitionData as CompetitionWithTeamId | null;
+        const isTeamCompetition =
+          competition?.team_id !== null && competition?.team_id !== undefined;
+
+        // 編集モードの場合、既存のエントリーをすべて取得
+        const existingEntriesMap = new Map<string, { id: string; style_id: number }>();
+        const existingEntriesByIdMap = new Map<string, { id: string; style_id: number }>();
+        if (competitionEditingData?.type === "entry") {
+          // 編集モードの場合、この大会のすべての既存エントリーを取得
+          const { data: allExistingEntries } = await supabase
+            .from("entries")
+            .select("id, style_id")
+            .eq("competition_id", competitionId)
+            .eq("user_id", user.id);
+
+          if (allExistingEntries) {
+            allExistingEntries.forEach((entry: { id: string; style_id: number }) => {
+              existingEntriesMap.set(String(entry.style_id), {
+                id: entry.id,
+                style_id: entry.style_id,
+              });
+              existingEntriesByIdMap.set(entry.id, { id: entry.id, style_id: entry.style_id });
+            });
           }
-          
-          entry = await entryAPI.updateEntry(entryData.id, {
-            style_id: styleIdNum,
-            entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
-            note: entryData.note || null
-          })
-          processedEntryIds.add(entryData.id)
-        } else {
-          const existingEntry = await entryAPI.checkExistingEntry(
-            competitionId,
-            user.id,
-            parseInt(entryData.styleId)
-          )
+        }
 
-          if (existingEntry) {
-            entry = await entryAPI.updateEntry(existingEntry.id, {
+        const processedEntryIds = new Set<string>();
+
+        // フォームに入力されているエントリーを保存/更新
+        for (const entryData of entriesData) {
+          let entry;
+          if (
+            entryData.id &&
+            competitionEditingData?.type === "entry" &&
+            isValidUUID(entryData.id)
+          ) {
+            // 既存のエントリーIDがある場合（編集モードで既存エントリーを編集している場合）
+            // UUID形式であることを確認（一時的なID 'entry-...' を除外）
+            // 種目を変更する場合、重複チェック
+            const originalEntry = existingEntriesByIdMap.get(entryData.id);
+            const styleIdNum = parseInt(entryData.styleId);
+            const isStyleChanged = originalEntry && originalEntry.style_id !== styleIdNum;
+
+            if (isStyleChanged) {
+              // 変更後の種目が既に他のエントリーで使用されていないかチェック
+              const existingEntryWithSameStyle = existingEntriesMap.get(String(styleIdNum));
+              if (existingEntryWithSameStyle && existingEntryWithSameStyle.id !== entryData.id) {
+                const styleName = styles.find((s) => s.id === styleIdNum)?.name_jp || "不明";
+                throw new Error(`種目「${styleName}」は既にエントリー済みです`);
+              }
+            }
+
+            entry = await entryAPI.updateEntry(entryData.id, {
+              style_id: styleIdNum,
               entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
-              note: entryData.note || null
-            })
-            processedEntryIds.add(existingEntry.id)
+              note: entryData.note || null,
+            });
+            processedEntryIds.add(entryData.id);
           } else {
-            // チームのcompetitionの場合はcreateTeamEntryを使用
-            if (isTeamCompetition && competition?.team_id) {
-              entry = await entryAPI.createTeamEntry(
-                competition.team_id,
-                user.id,
-                {
+            const existingEntry = await entryAPI.checkExistingEntry(
+              competitionId,
+              user.id,
+              parseInt(entryData.styleId),
+            );
+
+            if (existingEntry) {
+              entry = await entryAPI.updateEntry(existingEntry.id, {
+                entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
+                note: entryData.note || null,
+              });
+              processedEntryIds.add(existingEntry.id);
+            } else {
+              // チームのcompetitionの場合はcreateTeamEntryを使用
+              if (isTeamCompetition && competition?.team_id) {
+                entry = await entryAPI.createTeamEntry(competition.team_id, user.id, {
                   competition_id: competitionId,
                   style_id: parseInt(entryData.styleId),
                   entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
-                  note: entryData.note || null
-                }
-              )
-          } else {
-            entry = await entryAPI.createPersonalEntry({
-              competition_id: competitionId,
-              style_id: parseInt(entryData.styleId),
-              entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
-              note: entryData.note || null
-            })
+                  note: entryData.note || null,
+                });
+              } else {
+                entry = await entryAPI.createPersonalEntry({
+                  competition_id: competitionId,
+                  style_id: parseInt(entryData.styleId),
+                  entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
+                  note: entryData.note || null,
+                });
+              }
+            }
+          }
+
+          const styleId = parseInt(String(entryData.styleId));
+          const style = styles.find((s) => s.id === styleId);
+          if (!style) {
+            const entryId = entry?.id || "unknown";
+            throw new Error(`Style not found for entry ${entryId}: styleId=${styleId}`);
+          }
+          if (entry) {
+            createdEntriesList.push({
+              id: entry.id,
+              competitionId: entry.competition_id,
+              userId: entry.user_id,
+              styleId: entry.style_id,
+              entryTime: entry.entry_time,
+              note: entry.note,
+              teamId: entry.team_id,
+              styleName: style.name_jp,
+            });
+          }
+        }
+
+        // 編集モードの場合、フォームに存在しない既存エントリーを削除
+        if (competitionEditingData?.type === "entry" && existingEntriesMap.size > 0) {
+          for (const existingEntry of existingEntriesMap.values()) {
+            if (!processedEntryIds.has(existingEntry.id)) {
+              // フォームに存在しない既存エントリーを削除
+              await entryAPI.deleteEntry(existingEntry.id);
             }
           }
         }
-        
-        const styleId = parseInt(String(entryData.styleId))
-        const style = styles.find(s => s.id === styleId)
-        if (!style) {
-          const entryId = entry?.id || 'unknown'
-          throw new Error(`Style not found for entry ${entryId}: styleId=${styleId}`)
-        }
-        if (entry) {
-          createdEntriesList.push({
-            id: entry.id,
-            competitionId: entry.competition_id,
-            userId: entry.user_id,
-            styleId: entry.style_id,
-            entryTime: entry.entry_time,
-            note: entry.note,
-            teamId: entry.team_id,
-            styleName: style.name_jp
-          })
-        }
-      }
 
-      // 編集モードの場合、フォームに存在しない既存エントリーを削除
-      if (competitionEditingData?.type === 'entry' && existingEntriesMap.size > 0) {
-        for (const existingEntry of existingEntriesMap.values()) {
-          if (!processedEntryIds.has(existingEntry.id)) {
-            // フォームに存在しない既存エントリーを削除
-            await entryAPI.deleteEntry(existingEntry.id)
-          }
+        refreshCalendar();
+
+        setCreatedEntries(createdEntriesList);
+        closeEntryLogForm();
+
+        if (competitionEditingData?.type !== "entry" && createdEntriesList.length > 0) {
+          // competitionIdを使う（createdCompetitionIdではなく、getCompetitionIdで取得した値）
+          openRecordLogForm(competitionId || undefined, createdEntriesList);
         }
+      } catch (error) {
+        console.error("エントリーの登録に失敗しました:", error);
+      } finally {
+        setLoading(false);
       }
-
-      refreshCalendar()
-
-      setCreatedEntries(createdEntriesList)
-      closeEntryLogForm()
-      
-      if (competitionEditingData?.type !== 'entry' && createdEntriesList.length > 0) {
-        // competitionIdを使う（createdCompetitionIdではなく、getCompetitionIdで取得した値）
-        openRecordLogForm(competitionId || undefined, createdEntriesList)
-      }
-    } catch (error) {
-      console.error('エントリーの登録に失敗しました:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [createdCompetitionId, competitionEditingData, supabase, user, styles, setCreatedEntries, closeEntryLogForm, refreshCalendar, openRecordLogForm, setLoading])
+    },
+    [
+      createdCompetitionId,
+      competitionEditingData,
+      supabase,
+      user,
+      styles,
+      setCreatedEntries,
+      closeEntryLogForm,
+      refreshCalendar,
+      openRecordLogForm,
+      setLoading,
+    ],
+  );
 
   // エントリーをスキップ
   const handleEntrySkip = useCallback(() => {
     // ストアから直接最新の値を取得（useCallbackのクロージャー問題を回避）
-    const { createdCompetitionId: storeCompetitionId, editingData: storeEditingData } = useCompetitionFormStore.getState()
-    const competitionId = getCompetitionId(storeCompetitionId, storeEditingData) || getCompetitionId(createdCompetitionId, competitionEditingData)
+    const { createdCompetitionId: storeCompetitionId, editingData: storeEditingData } =
+      useCompetitionStore.getState();
+    const competitionId =
+      getCompetitionId(storeCompetitionId, storeEditingData) ||
+      getCompetitionId(createdCompetitionId, competitionEditingData);
     if (!competitionId) {
-      console.error('大会IDが取得できませんでした。エントリーを先に登録してください。')
-      return
+      console.error("大会IDが取得できませんでした。エントリーを先に登録してください。");
+      return;
     }
-    closeEntryLogForm()
-    openRecordLogForm(competitionId, [])
-  }, [createdCompetitionId, competitionEditingData, closeEntryLogForm, openRecordLogForm])
+    closeEntryLogForm();
+    openRecordLogForm(competitionId, []);
+  }, [createdCompetitionId, competitionEditingData, closeEntryLogForm, openRecordLogForm]);
 
   // 記録登録・更新
-  const handleRecordLogSubmit = useCallback(async (formDataList: RecordFormDataInternal[]) => {
-    const dataArray = Array.isArray(formDataList) ? formDataList : [formDataList]
-    setLoading(true)
-    try {
-      // ストアから直接最新の値を取得（useCallbackのクロージャー問題を回避）
-      const { createdCompetitionId: storeCompetitionId, editingData: storeEditingData } = useCompetitionFormStore.getState()
-      const competitionId = getRecordCompetitionId(storeCompetitionId, storeEditingData) || getRecordCompetitionId(createdCompetitionId, competitionEditingData)
+  const handleRecordLogSubmit = useCallback(
+    async (formDataList: RecordFormDataInternal[]) => {
+      const dataArray = Array.isArray(formDataList) ? formDataList : [formDataList];
+      setLoading(true);
+      try {
+        // ストアから直接最新の値を取得（useCallbackのクロージャー問題を回避）
+        const { createdCompetitionId: storeCompetitionId, editingData: storeEditingData } =
+          useCompetitionStore.getState();
+        const competitionId =
+          getRecordCompetitionId(storeCompetitionId, storeEditingData) ||
+          getRecordCompetitionId(createdCompetitionId, competitionEditingData);
 
-      // 編集データもストアから取得（競合を避けるため、引数の値を優先しつつストアの値もフォールバックとして使用）
-      const effectiveEditingData = competitionEditingData || storeEditingData
+        // 編集データもストアから取得（競合を避けるため、引数の値を優先しつつストアの値もフォールバックとして使用）
+        const effectiveEditingData = competitionEditingData || storeEditingData;
 
-      if (effectiveEditingData && effectiveEditingData.id) {
-        const formData = dataArray[0]
-        const updates: import('@swim-hub/shared/types').RecordUpdate = {
-          style_id: parseInt(formData.styleId),
-          time: formData.time,
-          video_url: formData.videoUrl || null,
-          note: formData.note || null,
-          is_relaying: formData.isRelaying || false,
-          reaction_time: formData.reactionTime && formData.reactionTime.trim() !== '' 
-            ? parseFloat(formData.reactionTime) 
-            : null
-        }
-
-        await updateRecord(effectiveEditingData.id, updates)
-
-        if (formData.splitTimes && formData.splitTimes.length > 0) {
-          const splitTimesData = formData.splitTimes.map((st) => ({
-            distance: st.distance,
-            split_time: st.splitTime
-          }))
-          await replaceSplitTimes({
-            recordId: effectiveEditingData.id,
-            splitTimes: splitTimesData as Omit<import('@swim-hub/shared/types').SplitTimeInsert, 'record_id'>[]
-          })
-        }
-      } else {
-        if (!competitionId) {
-          throw new Error('Competition ID が見つかりません')
-        }
-
-        // 大会のプール種別を取得（records.pool_type に保存するため）
-        const { data: competition, error: competitionError } = await supabase
-          .from('competitions')
-          .select('pool_type')
-          .eq('id', competitionId)
-          .single()
-
-        if (competitionError || !competition) {
-          throw competitionError || new Error('大会情報の取得に失敗しました')
-        }
-
-        const competitionPoolType = (competition as { pool_type: 0 | 1 }).pool_type
-
-        for (const formData of dataArray) {
-          const recordForCreate: Omit<import('@swim-hub/shared/types').RecordInsert, 'user_id'> = {
+        if (effectiveEditingData && effectiveEditingData.id) {
+          const formData = dataArray[0];
+          const updates: import("@swim-hub/shared/types").RecordUpdate = {
             style_id: parseInt(formData.styleId),
             time: formData.time,
             video_url: formData.videoUrl || null,
             note: formData.note || null,
             is_relaying: formData.isRelaying || false,
-            competition_id: competitionId,
-            pool_type: competitionPoolType,
-            reaction_time: formData.reactionTime && formData.reactionTime.trim() !== '' 
-              ? parseFloat(formData.reactionTime) 
-              : null
-          }
+            reaction_time:
+              formData.reactionTime && formData.reactionTime.trim() !== ""
+                ? parseFloat(formData.reactionTime)
+                : null,
+          };
 
-          const newRecord = await createRecord(recordForCreate)
+          await updateRecord(effectiveEditingData.id, updates);
 
           if (formData.splitTimes && formData.splitTimes.length > 0) {
             const splitTimesData = formData.splitTimes.map((st) => ({
               distance: st.distance,
-              split_time: st.splitTime
-            }))
-          await createSplitTimes({
-            recordId: newRecord.id,
-            splitTimes: splitTimesData as Array<{ distance: number; split_time?: number; splitTime?: number }>
-          })
+              split_time: st.splitTime,
+            }));
+            await replaceSplitTimes({
+              recordId: effectiveEditingData.id,
+              splitTimes: splitTimesData as Omit<
+                import("@swim-hub/shared/types").SplitTimeInsert,
+                "record_id"
+              >[],
+            });
+          }
+        } else {
+          if (!competitionId) {
+            throw new Error("Competition ID が見つかりません");
+          }
+
+          // 大会のプール種別を取得（records.pool_type に保存するため）
+          const { data: competition, error: competitionError } = await supabase
+            .from("competitions")
+            .select("pool_type")
+            .eq("id", competitionId)
+            .single();
+
+          if (competitionError || !competition) {
+            throw competitionError || new Error("大会情報の取得に失敗しました");
+          }
+
+          const competitionPoolType = (competition as { pool_type: 0 | 1 }).pool_type;
+
+          for (const formData of dataArray) {
+            const recordForCreate: Omit<import("@swim-hub/shared/types").RecordInsert, "user_id"> =
+              {
+                style_id: parseInt(formData.styleId),
+                time: formData.time,
+                video_url: formData.videoUrl || null,
+                note: formData.note || null,
+                is_relaying: formData.isRelaying || false,
+                competition_id: competitionId,
+                pool_type: competitionPoolType,
+                reaction_time:
+                  formData.reactionTime && formData.reactionTime.trim() !== ""
+                    ? parseFloat(formData.reactionTime)
+                    : null,
+              };
+
+            const newRecord = await createRecord(recordForCreate);
+
+            if (formData.splitTimes && formData.splitTimes.length > 0) {
+              const splitTimesData = formData.splitTimes.map((st) => ({
+                distance: st.distance,
+                split_time: st.splitTime,
+              }));
+              await createSplitTimes({
+                recordId: newRecord.id,
+                splitTimes: splitTimesData as Array<{
+                  distance: number;
+                  split_time?: number;
+                  splitTime?: number;
+                }>,
+              });
+            }
           }
         }
-      }
 
-      refreshCalendar()
-    } catch (error) {
-      console.error('記録の処理に失敗しました:', error)
-    } finally {
-      setLoading(false)
-      closeRecordLogForm()
-    }
-  }, [createdCompetitionId, competitionEditingData, supabase, updateRecord, createRecord, replaceSplitTimes, createSplitTimes, refreshCalendar, setLoading, closeRecordLogForm])
+        refreshCalendar();
+      } catch (error) {
+        console.error("記録の処理に失敗しました:", error);
+      } finally {
+        setLoading(false);
+        closeRecordLogForm();
+      }
+    },
+    [
+      createdCompetitionId,
+      competitionEditingData,
+      supabase,
+      updateRecord,
+      createRecord,
+      replaceSplitTimes,
+      createSplitTimes,
+      refreshCalendar,
+      setLoading,
+      closeRecordLogForm,
+    ],
+  );
 
   return {
     handlePracticeBasicSubmit,
@@ -855,7 +999,6 @@ export function useDashboardHandlers({
     handleCompetitionBasicSubmit,
     handleEntrySubmit,
     handleEntrySkip,
-    handleRecordLogSubmit
-  }
+    handleRecordLogSubmit,
+  };
 }
-

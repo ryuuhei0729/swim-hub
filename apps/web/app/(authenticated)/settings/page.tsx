@@ -1,5 +1,5 @@
-import React, { Suspense } from 'react'
-import SettingsClient from './_client/SettingsClient'
+import React, { Suspense } from "react";
+import SettingsClient from "./_client/SettingsClient";
 
 /**
  * 設定ページ（Server Component）
@@ -20,5 +20,5 @@ export default async function SettingsPage() {
     >
       <SettingsClient />
     </Suspense>
-  )
+  );
 }

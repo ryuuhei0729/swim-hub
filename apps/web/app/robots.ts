@@ -1,30 +1,30 @@
-import type { MetadataRoute } from 'next'
+import type { MetadataRoute } from "next";
 
-export const dynamic = 'force-static'
+export const dynamic = "force-static";
 
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
       {
-        userAgent: '*',
-        allow: '/',
+        userAgent: "*",
+        allow: "/",
         disallow: [
-          '/dashboard',
-          '/settings',
-          '/mypage',
-          '/attendance',
-          '/schedule',
-          '/competitions',
-          '/competition',
-          '/members',
-          '/practice',
-          '/goals',
-          '/bulk-besttime',
-          '/teams',
-          '/teams-admin',
+          "/dashboard",
+          "/settings",
+          "/mypage",
+          "/attendance",
+          "/schedule",
+          "/competitions",
+          "/competition",
+          "/members",
+          "/practice",
+          "/goals",
+          "/bulk-besttime",
+          "/teams",
+          "/teams-admin",
         ],
       },
     ],
-    sitemap: 'https://swim-hub.app/sitemap.xml',
-  }
+    sitemap: "https://swim-hub.app/sitemap.xml",
+  };
 }

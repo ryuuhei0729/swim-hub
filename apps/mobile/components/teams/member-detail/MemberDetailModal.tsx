@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,26 +10,26 @@ import {
   Platform,
   ActivityIndicator,
   SafeAreaView,
-} from 'react-native'
-import { Feather } from '@expo/vector-icons'
-import { useAuth } from '@/contexts/AuthProvider'
+} from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { useAuth } from "@/contexts/AuthProvider";
 import {
   useUpdateMemberRoleMutation,
   useRemoveMemberMutation,
-} from '@apps/shared/hooks/queries/teams'
-import { useBestTimesQuery } from '@apps/shared/hooks/queries/records'
-import type { TeamMembershipWithUser } from '@swim-hub/shared/types'
-import { ProfileSection } from './ProfileSection'
-import { AdminControls } from './AdminControls'
-import { BestTimesTable } from './BestTimesTable'
+} from "@apps/shared/hooks/queries/teams";
+import { useBestTimesQuery } from "@apps/shared/hooks/queries/records";
+import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
+import { ProfileSection } from "./ProfileSection";
+import { AdminControls } from "./AdminControls";
+import { BestTimesTable } from "./BestTimesTable";
 
 interface MemberDetailModalProps {
-  isOpen: boolean
-  onClose: () => void
-  member: TeamMembershipWithUser | null
-  currentUserId: string
-  isCurrentUserAdmin: boolean
-  onMembershipChange?: () => void
+  isOpen: boolean;
+  onClose: () => void;
+  member: TeamMembershipWithUser | null;
+  currentUserId: string;
+  isCurrentUserAdmin: boolean;
+  onMembershipChange?: () => void;
 }
 
 export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
@@ -40,11 +40,11 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
   isCurrentUserAdmin,
   onMembershipChange,
 }) => {
-  const { supabase } = useAuth()
-  const updateRoleMutation = useUpdateMemberRoleMutation(supabase)
-  const removeMemberMutation = useRemoveMemberMutation(supabase)
-  const [isRemoving, setIsRemoving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { supabase } = useAuth();
+  const updateRoleMutation = useUpdateMemberRoleMutation(supabase);
+  const removeMemberMutation = useRemoveMemberMutation(supabase);
+  const [isRemoving, setIsRemoving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // ベストタイム取得
   const {
@@ -53,88 +53,91 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
     error: bestTimesError,
   } = useBestTimesQuery(supabase, {
     userId: member?.user_id,
-  })
+  });
 
-  const isCurrentUser = member?.user_id === currentUserId
-  const canManage = isCurrentUserAdmin && !isCurrentUser
+  const isCurrentUser = member?.user_id === currentUserId;
+  const canManage = isCurrentUserAdmin && !isCurrentUser;
 
   // ロール変更
-  const handleRoleChangeClick = useCallback((newRole: 'admin' | 'user') => {
-    if (!member || member.role === newRole) return
+  const handleRoleChangeClick = useCallback(
+    (newRole: "admin" | "user") => {
+      if (!member || member.role === newRole) return;
 
-    const memberName = member.users?.name || 'このメンバー'
-    const roleName = newRole === 'admin' ? '管理者' : 'ユーザー'
-    const message = `${memberName}さんの権限を「${roleName}」に変更しますか？`
+      const memberName = member.users?.name || "このメンバー";
+      const roleName = newRole === "admin" ? "管理者" : "ユーザー";
+      const message = `${memberName}さんの権限を「${roleName}」に変更しますか？`;
 
-    const execute = async () => {
-      try {
-        setError(null)
-        await updateRoleMutation.mutateAsync({
-          teamId: member.team_id,
-          userId: member.user_id,
-          role: newRole,
-        })
-        onMembershipChange?.()
-      } catch (err) {
-        console.error('権限変更エラー:', err)
-        const errorMsg = err instanceof Error ? err.message : '権限の変更に失敗しました'
-        setError(errorMsg)
+      const execute = async () => {
+        try {
+          setError(null);
+          await updateRoleMutation.mutateAsync({
+            teamId: member.team_id,
+            userId: member.user_id,
+            role: newRole,
+          });
+          onMembershipChange?.();
+        } catch (err) {
+          console.error("権限変更エラー:", err);
+          const errorMsg = err instanceof Error ? err.message : "権限の変更に失敗しました";
+          setError(errorMsg);
+        }
+      };
+
+      if (Platform.OS === "web") {
+        if (window.confirm(message)) {
+          execute();
+        }
+      } else {
+        Alert.alert("権限変更の確認", message, [
+          { text: "キャンセル", style: "cancel" },
+          { text: "変更する", onPress: execute },
+        ]);
       }
-    }
-
-    if (Platform.OS === 'web') {
-      if (window.confirm(message)) {
-        execute()
-      }
-    } else {
-      Alert.alert('権限変更の確認', message, [
-        { text: 'キャンセル', style: 'cancel' },
-        { text: '変更する', onPress: execute },
-      ])
-    }
-  }, [member, updateRoleMutation, onMembershipChange])
+    },
+    [member, updateRoleMutation, onMembershipChange],
+  );
 
   // メンバー削除
   const handleRemoveMember = useCallback(() => {
-    if (!member) return
+    if (!member) return;
 
-    const memberName = member.users?.name || 'このメンバー'
-    const message = `${memberName}をチームから削除しますか？\nこの操作は取り消せません。`
+    const memberName = member.users?.name || "このメンバー";
+    const message = `${memberName}をチームから削除しますか？\nこの操作は取り消せません。`;
 
     const execute = async () => {
-      setIsRemoving(true)
+      setIsRemoving(true);
       try {
-        setError(null)
+        setError(null);
         await removeMemberMutation.mutateAsync({
           teamId: member.team_id,
           userId: member.user_id,
-        })
-        onMembershipChange?.()
-        onClose()
+        });
+        onMembershipChange?.();
+        onClose();
       } catch (err) {
-        console.error('メンバー削除エラー:', err)
-        const errorMsg = err instanceof Error ? err.message : 'メンバーの削除に失敗しました'
-        setError(errorMsg)
+        console.error("メンバー削除エラー:", err);
+        const errorMsg = err instanceof Error ? err.message : "メンバーの削除に失敗しました";
+        setError(errorMsg);
       } finally {
-        setIsRemoving(false)
+        setIsRemoving(false);
       }
-    }
+    };
 
-    if (Platform.OS === 'web') {
+    if (Platform.OS === "web") {
       if (window.confirm(message)) {
-        execute()
+        execute();
       }
     } else {
-      Alert.alert('削除確認', message, [
-        { text: 'キャンセル', style: 'cancel' },
-        { text: '削除', style: 'destructive', onPress: execute },
-      ])
+      Alert.alert("削除確認", message, [
+        { text: "キャンセル", style: "cancel" },
+        { text: "削除", style: "destructive", onPress: execute },
+      ]);
     }
-  }, [member, removeMemberMutation, onMembershipChange, onClose])
+  }, [member, removeMemberMutation, onMembershipChange, onClose]);
 
-  if (!member) return null
+  if (!member) return null;
 
-  const displayError = error || (bestTimesError ? bestTimesError.message : null)
+  const displayError = error || (bestTimesError ? bestTimesError.message : null);
 
   return (
     <Modal
@@ -207,27 +210,27 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
         </ScrollView>
       </SafeAreaView>
     </Modal>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: "#E5E7EB",
   },
   headerTitle: {
     fontSize: 17,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: "600",
+    color: "#111827",
   },
   closeButton: {
     padding: 4,
@@ -240,53 +243,53 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   errorContainer: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: "#FEF2F2",
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
   },
   errorText: {
     fontSize: 13,
-    color: '#991B1B',
+    color: "#991B1B",
   },
   divider: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: "#E5E7EB",
     marginVertical: 16,
   },
   bestTimesSection: {
     gap: 12,
   },
   bestTimesHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   bestTimesTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: "600",
+    color: "#111827",
   },
   loadingContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 32,
     gap: 12,
   },
   loadingText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: "#6B7280",
   },
   closeFooterButton: {
-    backgroundColor: '#2563EB',
+    backgroundColor: "#2563EB",
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
-    alignSelf: 'flex-end',
+    alignSelf: "flex-end",
     marginTop: 20,
   },
   closeFooterButtonText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
-})
+});

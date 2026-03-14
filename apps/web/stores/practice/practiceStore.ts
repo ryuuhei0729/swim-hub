@@ -2,9 +2,9 @@
 // 練習用統合Zustandストア (Form + Filter)
 // =============================================================================
 
-import { create } from 'zustand'
-import type { PracticeTag } from '@apps/shared/types'
-import type { EditingData } from '../types'
+import { create } from "zustand";
+import type { PracticeTag } from "@apps/shared/types";
+import type { EditingData } from "../types";
 
 // -----------------------------------------------------------------------------
 // Types
@@ -12,53 +12,54 @@ import type { EditingData } from '../types'
 
 interface PracticeFormState {
   // モーダル状態
-  isBasicFormOpen: boolean
-  isLogFormOpen: boolean
+  isBasicFormOpen: boolean;
+  isLogFormOpen: boolean;
 
   // データ
-  selectedDate: Date | null
-  editingData: EditingData | null
-  createdPracticeId: string | null
-  availableTags: PracticeTag[]
+  selectedDate: Date | null;
+  editingData: EditingData | null;
+  createdPracticeId: string | null;
+  availableTags: PracticeTag[];
 
   // UI状態
-  isLoading: boolean
+  isLoading: boolean;
 }
 
 interface PracticeFilterState {
-  selectedTagIds: string[]
-  showTagFilter: boolean
+  selectedTagIds: string[];
+  showTagFilter: boolean;
 }
 
 interface PracticeFormActions {
   // モーダル操作
-  openBasicForm: (date?: Date, editData?: EditingData) => void
-  openLogForm: (practiceId?: string, editData?: EditingData) => void
-  closeBasicForm: () => void
-  closeLogForm: () => void
-  closeAll: () => void
+  openBasicForm: (date?: Date, editData?: EditingData) => void;
+  openLogForm: (practiceId?: string, editData?: EditingData) => void;
+  closeBasicForm: () => void;
+  closeLogForm: () => void;
+  closeAll: () => void;
 
   // データ操作
-  setSelectedDate: (date: Date | null) => void
-  setEditingData: (data: EditingData | null) => void
-  setCreatedPracticeId: (id: string | null) => void
-  setAvailableTags: (tags: PracticeTag[] | ((prev: PracticeTag[]) => PracticeTag[])) => void
-  setLoading: (loading: boolean) => void
+  setSelectedDate: (date: Date | null) => void;
+  setEditingData: (data: EditingData | null) => void;
+  setCreatedPracticeId: (id: string | null) => void;
+  setAvailableTags: (tags: PracticeTag[] | ((prev: PracticeTag[]) => PracticeTag[])) => void;
+  setLoading: (loading: boolean) => void;
 
   // フォームリセット
-  resetForm: () => void
+  resetForm: () => void;
 }
 
 interface PracticeFilterActions {
-  setSelectedTags: (tagIds: string[]) => void
-  toggleTagFilter: () => void
-  resetFilter: () => void
+  setSelectedTags: (tagIds: string[]) => void;
+  toggleTagFilter: () => void;
+  resetFilter: () => void;
 }
 
-type PracticeState = PracticeFormState & PracticeFilterState
-type PracticeActions = PracticeFormActions & PracticeFilterActions & {
-  reset: () => void
-}
+type PracticeState = PracticeFormState & PracticeFilterState;
+type PracticeActions = PracticeFormActions &
+  PracticeFilterActions & {
+    reset: () => void;
+  };
 
 // -----------------------------------------------------------------------------
 // Initial State
@@ -72,17 +73,17 @@ const initialFormState: PracticeFormState = {
   createdPracticeId: null,
   availableTags: [],
   isLoading: false,
-}
+};
 
 const initialFilterState: PracticeFilterState = {
   selectedTagIds: [],
   showTagFilter: false,
-}
+};
 
 const initialState: PracticeState = {
   ...initialFormState,
   ...initialFilterState,
-}
+};
 
 // -----------------------------------------------------------------------------
 // Store
@@ -101,7 +102,7 @@ export const usePracticeStore = create<PracticeState & PracticeActions>()((set) 
       selectedDate: date || null,
       editingData: editData || null,
       createdPracticeId: null,
-    })
+    });
   },
 
   openLogForm: (practiceId, editData) => {
@@ -110,7 +111,7 @@ export const usePracticeStore = create<PracticeState & PracticeActions>()((set) 
       isLogFormOpen: true,
       editingData: editData || null,
       createdPracticeId: practiceId || null,
-    })
+    });
   },
 
   closeBasicForm: () => {
@@ -119,7 +120,7 @@ export const usePracticeStore = create<PracticeState & PracticeActions>()((set) 
       selectedDate: null,
       editingData: null,
       createdPracticeId: null,
-    })
+    });
   },
 
   closeLogForm: () => {
@@ -128,7 +129,7 @@ export const usePracticeStore = create<PracticeState & PracticeActions>()((set) 
       selectedDate: null,
       editingData: null,
       createdPracticeId: null,
-    })
+    });
   },
 
   closeAll: () => {
@@ -138,7 +139,7 @@ export const usePracticeStore = create<PracticeState & PracticeActions>()((set) 
       selectedDate: null,
       editingData: null,
       createdPracticeId: null,
-    })
+    });
   },
 
   // ---------------------------------------------------------------------------
@@ -149,7 +150,7 @@ export const usePracticeStore = create<PracticeState & PracticeActions>()((set) 
   setCreatedPracticeId: (id) => set({ createdPracticeId: id }),
   setAvailableTags: (tags) =>
     set((state) => ({
-      availableTags: typeof tags === 'function' ? tags(state.availableTags) : tags,
+      availableTags: typeof tags === "function" ? tags(state.availableTags) : tags,
     })),
   setLoading: (loading) => set({ isLoading: loading }),
 
@@ -166,14 +167,4 @@ export const usePracticeStore = create<PracticeState & PracticeActions>()((set) 
   // 全体リセット
   // ---------------------------------------------------------------------------
   reset: () => set(initialState),
-}))
-
-// -----------------------------------------------------------------------------
-// 後方互換性のためのエイリアス (deprecated, will be removed)
-// -----------------------------------------------------------------------------
-
-/** @deprecated usePracticeStore を使用してください */
-export const usePracticeFormStore = usePracticeStore
-
-/** @deprecated usePracticeStore を使用してください */
-export const usePracticeFilterStore = usePracticeStore
+}));

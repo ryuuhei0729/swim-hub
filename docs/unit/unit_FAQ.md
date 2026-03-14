@@ -9,6 +9,7 @@
 このドキュメントは、**単体テストでよく発生するエラーとその解決策**を記載しています。
 
 **対象**：
+
 - テスト実行時のエラー解決
 - よくある問題の対処法
 - 新しいエラー対処の追記
@@ -24,6 +25,7 @@
 #### エラー: `TypeError: Cannot read property 'from' of undefined`
 
 **原因**：
+
 - モッククライアントが正しく初期化されていない
 - `beforeEach`でモックをリセットし忘れている
 
@@ -31,16 +33,16 @@
 
 ```typescript
 // ✅ 正しい実装
-describe('RecordAPI', () => {
-  let mockClient: any
-  let api: RecordAPI
+describe("RecordAPI", () => {
+  let mockClient: any;
+  let api: RecordAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks()
-    mockClient = createMockSupabaseClient() // 必ず初期化
-    api = new RecordAPI(mockClient)
-  })
-})
+    vi.clearAllMocks();
+    mockClient = createMockSupabaseClient(); // 必ず初期化
+    api = new RecordAPI(mockClient);
+  });
+});
 ```
 
 ---
@@ -48,6 +50,7 @@ describe('RecordAPI', () => {
 #### エラー: `mockClient.from is not a function`
 
 **原因**：
+
 - `mockClient.from`が関数として定義されていない
 - モックの設定が不完全
 
@@ -62,7 +65,7 @@ mockClient.from = vi.fn(() => ({
     data: [mockRecord],
     error: null,
   }),
-}))
+}));
 ```
 
 ---
@@ -72,6 +75,7 @@ mockClient.from = vi.fn(() => ({
 #### エラー: `Cannot read property 'eq' of undefined`
 
 **原因**：
+
 - チェーンメソッドが`mockReturnThis()`で自分自身を返していない
 
 **解決策**：
@@ -80,12 +84,13 @@ mockClient.from = vi.fn(() => ({
 // ✅ 正しい実装：チェーンメソッドは自分自身を返す
 mockClient.from = vi.fn(() => ({
   select: vi.fn().mockReturnThis(), // 自分自身を返す
-  eq: vi.fn().mockReturnThis(),     // 自分自身を返す
-  order: vi.fn().mockResolvedValue({ // 最後だけ結果を返す
+  eq: vi.fn().mockReturnThis(), // 自分自身を返す
+  order: vi.fn().mockResolvedValue({
+    // 最後だけ結果を返す
     data: [mockRecord],
     error: null,
   }),
-}))
+}));
 ```
 
 ---
@@ -93,6 +98,7 @@ mockClient.from = vi.fn(() => ({
 #### エラー: `Promise is not resolved`
 
 **原因**：
+
 - `mockResolvedValue()`が正しく設定されていない
 - Promiseチェーンが途切れている
 
@@ -105,14 +111,14 @@ mockClient.from = vi.fn(() => {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
-  }
+  };
 
   // Promiseを実現するためにthenメソッドを追加
   queryMock.then = (resolve: (value: { data: unknown; error: null }) => unknown) =>
-    Promise.resolve({ data: [mockRecord], error: null }).then(resolve)
+    Promise.resolve({ data: [mockRecord], error: null }).then(resolve);
 
-  return queryMock
-})
+  return queryMock;
+});
 ```
 
 ---
@@ -122,6 +128,7 @@ mockClient.from = vi.fn(() => {
 #### エラー: `Property 'id' is missing in type`
 
 **原因**：
+
 - テストデータの型が不完全
 - ファクトリー関数を使用していない
 
@@ -129,20 +136,20 @@ mockClient.from = vi.fn(() => {
 
 ```typescript
 // ✅ 正しい実装：ファクトリー関数を使用
-import { createMockRecord } from '../../__mocks__/supabase'
+import { createMockRecord } from "../../__mocks__/supabase";
 
 const mockRecord = createMockRecord({
-  id: 'record-1',
+  id: "record-1",
   time_seconds: 60.5,
-})
+});
 ```
 
 ```typescript
 // ❌ 悪い例：手動で全てのフィールドを定義
 const mockRecord = {
-  id: 'record-1',
+  id: "record-1",
   // 他の必須フィールドが欠けている可能性がある
-}
+};
 ```
 
 ---
@@ -152,23 +159,24 @@ const mockRecord = {
 #### エラー: `Warning: An update to Component inside a test was not wrapped in act(...)`
 
 **原因**：
+
 - 非同期状態更新が`act`でラップされていない
 
 **解決策**：
 
 ```typescript
 // ✅ 正しい実装：actでラップ
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from "@testing-library/react";
 
-it('状態が更新される', async () => {
-  const { result } = renderHook(() => usePractices(mockClient, { api }))
+it("状態が更新される", async () => {
+  const { result } = renderHook(() => usePractices(mockClient, { api }));
 
   await act(async () => {
-    await result.current.createPractice(newPractice)
-  })
+    await result.current.createPractice(newPractice);
+  });
 
-  expect(result.current.practices).toContainEqual(newPractice)
-})
+  expect(result.current.practices).toContainEqual(newPractice);
+});
 ```
 
 ---
@@ -176,10 +184,12 @@ it('状態が更新される', async () => {
 #### エラー: `useEffect has a missing dependency`
 
 **原因**：
+
 - `useEffect`の依存配列が不完全
 - テスト環境での警告
 
 **解決策**：
+
 - 実装コードの依存配列を確認
 - テストでは警告を無視するか、実装を修正
 
@@ -190,6 +200,7 @@ it('状態が更新される', async () => {
 #### エラー: `Unable to find role="button"`
 
 **原因**：
+
 - セレクタが正しく要素を見つけられない
 - 要素がまだレンダリングされていない
 
@@ -213,21 +224,22 @@ it('ボタンが表示される', async () => {
 #### エラー: `next/navigation` module not found
 
 **原因**：
+
 - Next.js Routerがモックされていない
 
 **解決策**：
 
 ```typescript
 // ✅ 正しい実装：Next.js Routerをモック
-import { vi } from 'vitest'
+import { vi } from "vitest";
 
-vi.mock('next/navigation', () => ({
+vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: vi.fn(),
     replace: vi.fn(),
     prefetch: vi.fn(),
   }),
-}))
+}));
 ```
 
 ---
@@ -239,6 +251,7 @@ vi.mock('next/navigation', () => ({
 #### 問題: テスト間でモックの状態が残る
 
 **原因**：
+
 - `beforeEach`で`vi.clearAllMocks()`を呼んでいない
 - モッククライアントを再作成していない
 
@@ -247,10 +260,10 @@ vi.mock('next/navigation', () => ({
 ```typescript
 // ✅ 正しい実装：各テスト前にリセット
 beforeEach(() => {
-  vi.clearAllMocks() // 全てのモックをリセット
-  mockClient = createMockSupabaseClient() // 新しいモッククライアントを作成
-  api = new RecordAPI(mockClient)
-})
+  vi.clearAllMocks(); // 全てのモックをリセット
+  mockClient = createMockSupabaseClient(); // 新しいモッククライアントを作成
+  api = new RecordAPI(mockClient);
+});
 ```
 
 ---
@@ -260,6 +273,7 @@ beforeEach(() => {
 #### 問題: テーブルクエリの順序が正しくない
 
 **原因**：
+
 - `queueTable`の順序が実際のクエリ順序と一致していない
 
 **解決策**：
@@ -267,9 +281,9 @@ beforeEach(() => {
 ```typescript
 // ✅ 正しい実装：実際のクエリ順序に合わせる
 // API実装を確認して、クエリの順序を把握
-supabaseMock.queueTable('practices', [{ data: { team_id: 'team-1' } }])
-supabaseMock.queueTable('team_memberships', [{ data: { id: 'membership-1' } }])
-supabaseMock.queueTable('team_attendance', [{ data: [attendanceRow] }])
+supabaseMock.queueTable("practices", [{ data: { team_id: "team-1" } }]);
+supabaseMock.queueTable("team_memberships", [{ data: { id: "membership-1" } }]);
+supabaseMock.queueTable("team_attendance", [{ data: [attendanceRow] }]);
 ```
 
 ---
@@ -279,6 +293,7 @@ supabaseMock.queueTable('team_attendance', [{ data: [attendanceRow] }])
 #### 問題: `toHaveBeenCalledWith`が期待通りに動作しない
 
 **原因**：
+
 - モックの引数が正確に一致していない
 - オブジェクトの参照が異なる
 
@@ -286,18 +301,15 @@ supabaseMock.queueTable('team_attendance', [{ data: [attendanceRow] }])
 
 ```typescript
 // ✅ 正しい実装：部分マッチングを使用
-expect(mockApi.getPractices).toHaveBeenCalledWith(
-  '2025-01-01',
-  '2025-01-31'
-)
+expect(mockApi.getPractices).toHaveBeenCalledWith("2025-01-01", "2025-01-31");
 
 // オブジェクトの場合は部分マッチング
 expect(mockApi.createPractice).toHaveBeenCalledWith(
   expect.objectContaining({
-    date: '2025-01-15',
-    place: 'テストプール',
-  })
-)
+    date: "2025-01-15",
+    place: "テストプール",
+  }),
+);
 ```
 
 ---
@@ -309,6 +321,7 @@ expect(mockApi.createPractice).toHaveBeenCalledWith(
 #### 問題: テストが時々失敗する
 
 **原因**：
+
 - 非同期処理の完了を待っていない
 - `waitFor`を使用していない
 
@@ -316,17 +329,17 @@ expect(mockApi.createPractice).toHaveBeenCalledWith(
 
 ```typescript
 // ✅ 正しい実装：waitForで待機
-import { waitFor } from '@testing-library/react'
+import { waitFor } from "@testing-library/react";
 
-it('データが読み込まれる', async () => {
-  const { result } = renderHook(() => usePractices(mockClient, { api }))
+it("データが読み込まれる", async () => {
+  const { result } = renderHook(() => usePractices(mockClient, { api }));
 
   await waitFor(() => {
-    expect(result.current.loading).toBe(false)
-  })
+    expect(result.current.loading).toBe(false);
+  });
 
-  expect(result.current.practices).toHaveLength(1)
-})
+  expect(result.current.practices).toHaveLength(1);
+});
 ```
 
 ---
@@ -336,6 +349,7 @@ it('データが読み込まれる', async () => {
 #### 問題: タイマーが正しく動作しない
 
 **原因**：
+
 - 実タイマーを使用している
 - `vi.useFakeTimers()`を使用していない
 
@@ -343,24 +357,24 @@ it('データが読み込まれる', async () => {
 
 ```typescript
 // ✅ 正しい実装：フェイクタイマーを使用
-import { vi } from 'vitest'
+import { vi } from "vitest";
 
 beforeEach(() => {
-  vi.useFakeTimers()
-})
+  vi.useFakeTimers();
+});
 
 afterEach(() => {
-  vi.useRealTimers()
-})
+  vi.useRealTimers();
+});
 
-it('遅延後にコールバックが呼ばれる', () => {
-  const callback = vi.fn()
-  setTimeout(callback, 1000)
+it("遅延後にコールバックが呼ばれる", () => {
+  const callback = vi.fn();
+  setTimeout(callback, 1000);
 
-  vi.advanceTimersByTime(1000)
+  vi.advanceTimersByTime(1000);
 
-  expect(callback).toHaveBeenCalled()
-})
+  expect(callback).toHaveBeenCalled();
+});
 ```
 
 ---
@@ -372,10 +386,12 @@ it('遅延後にコールバックが呼ばれる', () => {
 #### 問題: カバレッジが目標値に達しない
 
 **原因**：
+
 - テストケースが不足している
 - エッジケースがテストされていない
 
 **解決策**：
+
 - 正常系と異常系の両方をテスト
 - エッジケースを追加
 - ブランチカバレッジを確認
@@ -387,6 +403,7 @@ it('遅延後にコールバックが呼ばれる', () => {
 #### 問題: カバレッジレポートが表示されない
 
 **原因**：
+
 - `vitest.config.ts`の設定が不完全
 - カバレッジプロバイダーが設定されていない
 
@@ -397,11 +414,11 @@ it('遅延後にコールバックが呼ばれる', () => {
 export default defineConfig({
   test: {
     coverage: {
-      provider: 'v8', // または 'istanbul'
-      reporter: ['text', 'json', 'html'],
+      provider: "v8", // または 'istanbul'
+      reporter: ["text", "json", "html"],
     },
   },
-})
+});
 ```
 
 ---
@@ -413,10 +430,12 @@ export default defineConfig({
 #### 問題: テストの実行に時間がかかる
 
 **原因**：
+
 - 実データベースに接続している
 - 不要な非同期処理がある
 
 **解決策**：
+
 - モックを使用して外部依存を排除
 - 不要な`waitFor`を削除
 - テストを並列実行
@@ -430,13 +449,14 @@ export default defineConfig({
 **エラーメッセージ**：  
 **原因**：  
 **解決策**：  
-**関連ファイル**：  
+**関連ファイル**：
 
 ---
 
 ## § 7. トラブルシューティングログ
 
 ### 2025-01-20
+
 - 初版作成
 - よくあるエラーと解決策を記録
 
@@ -444,4 +464,3 @@ export default defineConfig({
 
 **最終更新**: 2025-01-20  
 **管理者**: QA Team
-

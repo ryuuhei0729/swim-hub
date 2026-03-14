@@ -1,13 +1,13 @@
-import { useCallback } from 'react'
-import { parseTimeStrict } from '@apps/shared/utils/time'
-import { validateSwimTime, validateTimeString } from '@apps/shared/utils/validators'
+import { useCallback } from "react";
+import { parseTimeStrict } from "@apps/shared/utils/time";
+import { validateSwimTime, validateTimeString } from "@apps/shared/utils/validators";
 
 /**
  * タイムバリデーションの結果型
  */
 export interface ValidationResult {
-  isValid: boolean
-  error?: string
+  isValid: boolean;
+  error?: string;
 }
 
 /**
@@ -28,8 +28,8 @@ export const useTimeValidation = () => {
    * @returns パースされた秒数、または無効な場合はnull
    */
   const parseTime = useCallback((timeStr: string): number | null => {
-    return parseTimeStrict(timeStr)
-  }, [])
+    return parseTimeStrict(timeStr);
+  }, []);
 
   /**
    * タイム文字列をバリデーションする
@@ -39,39 +39,39 @@ export const useTimeValidation = () => {
    */
   const validateTime = useCallback((timeStr: string): ValidationResult => {
     // 空チェック
-    const stringResult = validateTimeString(timeStr)
+    const stringResult = validateTimeString(timeStr);
     if (!stringResult.valid) {
       return {
         isValid: false,
-        error: stringResult.error
-      }
+        error: stringResult.error,
+      };
     }
 
     // パースしてバリデーション
-    const parsedTime = parseTimeStrict(timeStr)
+    const parsedTime = parseTimeStrict(timeStr);
     if (parsedTime === null) {
       return {
         isValid: false,
-        error: 'タイムの形式が正しくありません（例: 1:23.45 または 23.45）'
-      }
+        error: "タイムの形式が正しくありません（例: 1:23.45 または 23.45）",
+      };
     }
 
     // 競泳タイムとしてのバリデーション（1時間以内）
-    const swimResult = validateSwimTime(parsedTime)
+    const swimResult = validateSwimTime(parsedTime);
     if (!swimResult.valid) {
       return {
         isValid: false,
-        error: swimResult.error
-      }
+        error: swimResult.error,
+      };
     }
 
     return {
-      isValid: true
-    }
-  }, [])
+      isValid: true,
+    };
+  }, []);
 
   return {
     parseTime,
-    validateTime
-  }
-}
+    validateTime,
+  };
+};

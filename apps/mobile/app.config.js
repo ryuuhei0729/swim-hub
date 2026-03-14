@@ -7,18 +7,21 @@
  */
 
 // app.jsonの基本設定を読み込む
-const baseConfig = require('./app.json')
+const baseConfig = require("./app.json");
 
 // 環境変数の確認（デバッグ用）
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
-const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
-const webApiUrl = process.env.EXPO_PUBLIC_WEB_API_URL
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+const webApiUrl = process.env.EXPO_PUBLIC_WEB_API_URL;
 
-if (process.env.NODE_ENV === 'development') {
-  console.log('app.config.js - 環境変数の確認:')
-  console.log('EXPO_PUBLIC_SUPABASE_URL:', supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : '未設定')
-  console.log('EXPO_PUBLIC_SUPABASE_ANON_KEY:', supabaseAnonKey ? '設定済み' : '未設定')
+if (process.env.NODE_ENV === "development") {
+  console.log("app.config.js - 環境変数の確認:");
+  console.log(
+    "EXPO_PUBLIC_SUPABASE_URL:",
+    supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : "未設定",
+  );
+  console.log("EXPO_PUBLIC_SUPABASE_ANON_KEY:", supabaseAnonKey ? "設定済み" : "未設定");
 }
 
 module.exports = {
@@ -29,11 +32,11 @@ module.exports = {
     supabaseUrl: supabaseUrl,
     supabaseAnonKey: supabaseAnonKey,
     googleWebClientId: googleWebClientId,
-    webApiUrl: webApiUrl || 'https://swim-hub.app',
-    environment: process.env.EXPO_PUBLIC_ENVIRONMENT || 'development',
+    webApiUrl: webApiUrl || "https://swim-hub.app",
+    environment: process.env.EXPO_PUBLIC_ENVIRONMENT || "development",
     // EASプロジェクトID
     eas: {
-      projectId: 'fb40c5df-d4ba-4bb6-adea-41d49d34a6be',
+      projectId: "fb40c5df-d4ba-4bb6-adea-41d49d34a6be",
     },
   },
-}
+};

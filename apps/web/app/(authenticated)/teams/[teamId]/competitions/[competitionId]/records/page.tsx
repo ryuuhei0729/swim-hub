@@ -1,30 +1,28 @@
-import React, { Suspense } from 'react'
-import type { Metadata } from 'next'
-import { createAuthenticatedServerClient } from '@/lib/supabase-server-auth'
-import RecordDataLoader from './_server/RecordDataLoader'
+import React, { Suspense } from "react";
+import type { Metadata } from "next";
+import { createAuthenticatedServerClient } from "@/lib/supabase-server-auth";
+import RecordDataLoader from "./_server/RecordDataLoader";
 
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ teamId: string; competitionId: string }>
+  params: Promise<{ teamId: string; competitionId: string }>;
 }): Promise<Metadata> {
-  const { competitionId } = await params
-  const supabase = await createAuthenticatedServerClient()
+  const { competitionId } = await params;
+  const supabase = await createAuthenticatedServerClient();
   const { data: competition } = await supabase
-    .from('competitions')
-    .select('title')
-    .eq('id', competitionId)
-    .single<{ title: string }>()
+    .from("competitions")
+    .select("title")
+    .eq("id", competitionId)
+    .single<{ title: string }>();
 
   return {
-    title: competition?.title
-      ? `${competition.title} - 記録入力 | SwimHub`
-      : '記録入力 | SwimHub',
-  }
+    title: competition?.title ? `${competition.title} - 記録入力 | SwimHub` : "記録入力 | SwimHub",
+  };
 }
 
 interface RecordPageProps {
-  params: Promise<{ teamId: string; competitionId: string }>
+  params: Promise<{ teamId: string; competitionId: string }>;
 }
 
 /**
@@ -32,7 +30,7 @@ interface RecordPageProps {
  * adminがチームメンバーのRecord/split_timeを代理入力する
  */
 export default async function RecordPage({ params }: RecordPageProps) {
-  const { teamId, competitionId } = await params
+  const { teamId, competitionId } = await params;
 
   return (
     <Suspense
@@ -52,6 +50,5 @@ export default async function RecordPage({ params }: RecordPageProps) {
     >
       <RecordDataLoader teamId={teamId} competitionId={competitionId} />
     </Suspense>
-  )
+  );
 }
-

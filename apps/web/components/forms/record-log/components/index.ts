@@ -1,1 +1,1 @@
-export { default as RecordLogEntry } from './RecordLogEntry'
+export { default as RecordLogEntry } from "./RecordLogEntry";

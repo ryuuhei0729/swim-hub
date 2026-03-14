@@ -1,20 +1,20 @@
-'use client'
+"use client";
 
-import React from 'react'
-import ImageUploader from './ImageUploader'
-import { COMPETITION_IMAGE_CONFIG, validateCompetitionImageFile } from '@/utils/imageUtils'
-import type { ImageFile, ExistingImage } from './hooks/useImageUpload'
+import React from "react";
+import ImageUploader from "./ImageUploader";
+import { COMPETITION_IMAGE_CONFIG, validateCompetitionImageFile } from "@/utils/imageUtils";
+import type { ImageFile, ExistingImage } from "./hooks/useImageUpload";
 
 // 後方互換性のため、既存の型をre-export
-export type { ImageFile as CompetitionImageFile, ExistingImage }
+export type { ImageFile as CompetitionImageFile, ExistingImage };
 
 export interface CompetitionImageUploaderProps {
   /** 既存の画像リスト */
-  existingImages?: ExistingImage[]
+  existingImages?: ExistingImage[];
   /** 画像変更時のコールバック */
-  onImagesChange: (newFiles: ImageFile[], deletedIds: string[]) => void
+  onImagesChange: (newFiles: ImageFile[], deletedIds: string[]) => void;
   /** 無効化フラグ */
-  disabled?: boolean
+  disabled?: boolean;
 }
 
 /**
@@ -43,5 +43,5 @@ export default function CompetitionImageUploader({
       maxImages={COMPETITION_IMAGE_CONFIG.MAX_IMAGES}
       validateFile={validateCompetitionImageFile}
     />
-  )
+  );
 }

@@ -2,15 +2,15 @@
 // チーム詳細データローダー（すべてのデータを並行取得）
 // =============================================================================
 
-import React from 'react'
-import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-server-auth'
-import { TeamCoreAPI } from '@apps/shared/api/teams/core'
-import TeamDetailClient from '../_client/TeamDetailClient'
-import type { TeamMembership, TeamWithMembers } from '@apps/shared/types'
+import React from "react";
+import { createAuthenticatedServerClient, getServerUser } from "@/lib/supabase-server-auth";
+import { TeamCoreAPI } from "@apps/shared/api/teams/core";
+import TeamDetailClient from "../_client/TeamDetailClient";
+import type { TeamMembership, TeamWithMembers } from "@apps/shared/types";
 
 interface TeamDetailDataLoaderProps {
-  teamId: string
-  initialTab?: string
+  teamId: string;
+  initialTab?: string;
 }
 
 /**
@@ -19,12 +19,12 @@ interface TeamDetailDataLoaderProps {
 async function getTeamData(
   supabase: Awaited<ReturnType<typeof createAuthenticatedServerClient>>,
   teamId: string,
-  userId: string
+  userId: string,
 ): Promise<{
-  team: TeamWithMembers | null
-  membership: TeamMembership | null
+  team: TeamWithMembers | null;
+  membership: TeamMembership | null;
 }> {
-  const coreAPI = new TeamCoreAPI(supabase)
+  const coreAPI = new TeamCoreAPI(supabase);
 
   try {
     // チーム情報とメンバーシップ情報を並列で取得（パフォーマンス最適化）
@@ -34,29 +34,29 @@ async function getTeamData(
       // 現在のユーザーのメンバーシップ情報を取得（承認済みのみ）
       // 承認待ちのメンバーはこのページにアクセスできない
       supabase
-        .from('team_memberships')
-        .select('*')
-        .eq('team_id', teamId)
-        .eq('user_id', userId)
-        .eq('status', 'approved')
-        .eq('is_active', true)
-        .single()
-    ])
+        .from("team_memberships")
+        .select("*")
+        .eq("team_id", teamId)
+        .eq("user_id", userId)
+        .eq("status", "approved")
+        .eq("is_active", true)
+        .single(),
+    ]);
 
-    const { data: membershipData, error: membershipError } = membershipResult
+    const { data: membershipData, error: membershipError } = membershipResult;
 
     // メンバーシップが見つからない場合はnullを返す（エラーではない）
-    if (membershipError && membershipError.code !== 'PGRST116') {
-      throw membershipError
+    if (membershipError && membershipError.code !== "PGRST116") {
+      throw membershipError;
     }
 
     return {
       team: teamData,
-      membership: membershipData as TeamMembership | null
-    }
+      membership: membershipData as TeamMembership | null,
+    };
   } catch (error) {
-    console.error('チーム情報の取得に失敗:', error)
-    return { team: null, membership: null }
+    console.error("チーム情報の取得に失敗:", error);
+    return { team: null, membership: null };
   }
 }
 
@@ -66,13 +66,10 @@ async function getTeamData(
  */
 export default async function TeamDetailDataLoader({
   teamId,
-  initialTab
+  initialTab,
 }: TeamDetailDataLoaderProps) {
   // 認証情報とSupabaseクライアントを取得
-  const [user, supabase] = await Promise.all([
-    getServerUser(),
-    createAuthenticatedServerClient()
-  ])
+  const [user, supabase] = await Promise.all([getServerUser(), createAuthenticatedServerClient()]);
 
   if (!user) {
     return (
@@ -82,14 +79,14 @@ export default async function TeamDetailDataLoader({
         initialMembership={null}
         initialTab={initialTab}
       />
-    )
+    );
   }
 
   // チーム情報とメンバーシップを取得
   const teamDataResult = await getTeamData(supabase, teamId, user.id).catch((error) => {
-    console.error('チームデータ取得エラー:', error)
-    return { team: null, membership: null }
-  })
+    console.error("チームデータ取得エラー:", error);
+    return { team: null, membership: null };
+  });
 
   return (
     <TeamDetailClient
@@ -98,6 +95,5 @@ export default async function TeamDetailDataLoader({
       initialMembership={teamDataResult.membership}
       initialTab={initialTab}
     />
-  )
+  );
 }
-

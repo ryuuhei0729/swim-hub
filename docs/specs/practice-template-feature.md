@@ -3,18 +3,22 @@
 ## 1. 概要
 
 ### 1.1 背景
+
 週3回以上練習するヘビーユーザーにとって、毎回同じような練習メニューを手入力するのは非効率。よく使う練習メニューをテンプレートとして保存し、ワンタップで呼び出せる機能を提供する。
 
 ### 1.2 目的
+
 - 練習記録の入力時間を50%以上削減
 - ユーザーの継続利用率向上
 - 入力ミスの削減
 
 ### 1.3 対象ユーザー
+
 - 週3回以上練習記録をつける競泳選手
 - 決まったメニューを繰り返すユーザー
 
 ### 1.4 スコープ
+
 - **対象**: Practice_Log（メニュー単位）のテンプレート
 - **対象外**: Practice（日単位）のテンプレートは作成しない
 
@@ -46,38 +50,39 @@ SO THAT 目標達成のための練習をすぐ呼び出せる
 
 ### 3.1 テンプレート管理
 
-| 機能 | 説明 | 優先度 |
-|------|------|--------|
-| テンプレート作成 | 練習ログからテンプレートを作成 | P0 |
-| テンプレート一覧表示 | 保存済みテンプレートの一覧 | P0 |
-| テンプレートから練習ログ作成 | テンプレートを選択してPractice_Logを作成 | P0 |
-| テンプレート削除 | 不要なテンプレートを削除 | P1 |
-| テンプレートのお気に入り | 頻繁に使うものをピン留め | P2 |
+| 機能                         | 説明                                     | 優先度 |
+| ---------------------------- | ---------------------------------------- | ------ |
+| テンプレート作成             | 練習ログからテンプレートを作成           | P0     |
+| テンプレート一覧表示         | 保存済みテンプレートの一覧               | P0     |
+| テンプレートから練習ログ作成 | テンプレートを選択してPractice_Logを作成 | P0     |
+| テンプレート削除             | 不要なテンプレートを削除                 | P1     |
+| テンプレートのお気に入り     | 頻繁に使うものをピン留め                 | P2     |
 
 ### 3.2 テンプレートに保存する項目
 
-| 項目 | 保存対象 | 備考 |
-|------|----------|------|
-| テンプレート名 | ○ | ユーザーが設定（例：「朝練キック」） |
-| 種目（style） | ○ | Fr, Ba, Br, Fly, IM |
-| カテゴリ（swim_category） | ○ | Swim, Pull, Kick |
-| 距離（distance） | ○ | 25, 50, 100, 200... |
-| 本数（rep_count） | ○ | 1〜99 |
-| セット数（set_count） | ○ | 1〜99 |
-| サークル（circle） | ○ | 秒数（任意） |
-| メモ（note） | ○ | 任意 |
-| タグ（tag_ids） | ○ | UUID配列（JSONB） |
+| 項目                      | 保存対象 | 備考                                 |
+| ------------------------- | -------- | ------------------------------------ |
+| テンプレート名            | ○        | ユーザーが設定（例：「朝練キック」） |
+| 種目（style）             | ○        | Fr, Ba, Br, Fly, IM                  |
+| カテゴリ（swim_category） | ○        | Swim, Pull, Kick                     |
+| 距離（distance）          | ○        | 25, 50, 100, 200...                  |
+| 本数（rep_count）         | ○        | 1〜99                                |
+| セット数（set_count）     | ○        | 1〜99                                |
+| サークル（circle）        | ○        | 秒数（任意）                         |
+| メモ（note）              | ○        | 任意                                 |
+| タグ（tag_ids）           | ○        | UUID配列（JSONB）                    |
 
 **保存しないもの:**
+
 - 日付（作成時に指定）
 - タイム（実績なので保存しない）
 - 場所（Practice単位の情報）
 
 ### 3.3 テンプレートの使用上限（将来的に実装）
 
-| プラン | 上限数 |
-|--------|--------|
-| 無料ユーザー | 10個 |
+| プラン             | 上限数 |
+| ------------------ | ------ |
+| 無料ユーザー       | 10個   |
 | プレミアム（将来） | 無制限 |
 
 ### 3.4 マイルストーンとの連携
@@ -139,35 +144,35 @@ CREATE POLICY "Users can manage own templates"
 // apps/shared/types/template.ts
 
 export interface PracticeLogTemplate {
-  id: string
-  user_id: string
-  name: string
-  style: string
-  swim_category: 'Swim' | 'Pull' | 'Kick'
-  distance: number
-  rep_count: number
-  set_count: number
-  circle: number | null
-  note: string | null
-  tag_ids: string[]
-  is_favorite: boolean
-  use_count: number
-  last_used_at: string | null
-  created_at: string
-  updated_at: string
+  id: string;
+  user_id: string;
+  name: string;
+  style: string;
+  swim_category: "Swim" | "Pull" | "Kick";
+  distance: number;
+  rep_count: number;
+  set_count: number;
+  circle: number | null;
+  note: string | null;
+  tag_ids: string[];
+  is_favorite: boolean;
+  use_count: number;
+  last_used_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 // 作成用の入力型
 export interface CreatePracticeLogTemplateInput {
-  name: string
-  style: string
-  swim_category: 'Swim' | 'Pull' | 'Kick'
-  distance: number
-  rep_count: number
-  set_count: number
-  circle?: number
-  note?: string
-  tag_ids?: string[]
+  name: string;
+  style: string;
+  swim_category: "Swim" | "Pull" | "Kick";
+  distance: number;
+  rep_count: number;
+  set_count: number;
+  circle?: number;
+  note?: string;
+  tag_ids?: string[];
 }
 ```
 
@@ -226,11 +231,13 @@ Goal詳細 → マイルストーン作成モーダル
 ```
 
 **変更前（クリック数: 2）**
+
 ```
 「+ 練習メニューを追加」クリック → 選択肢表示 → 選択
 ```
 
 **変更後（クリック数: 1）**
+
 ```
 「📋 テンプレートから」or「✏️ 新規」を直接クリック
 ```
@@ -331,11 +338,8 @@ Goal詳細 → マイルストーン作成モーダル
 ```typescript
 // apps/shared/api/templates.ts
 
-import type { SupabaseClient } from '@supabase/supabase-js'
-import type {
-  PracticeLogTemplate,
-  CreatePracticeLogTemplateInput
-} from '../types/template'
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { PracticeLogTemplate, CreatePracticeLogTemplateInput } from "../types/template";
 
 export class TemplateAPI {
   constructor(private supabase: SupabaseClient) {}
@@ -345,23 +349,21 @@ export class TemplateAPI {
    */
   async getTemplates(): Promise<PracticeLogTemplate[]> {
     const { data, error } = await this.supabase
-      .from('practice_log_templates')
-      .select('*')
-      .order('is_favorite', { ascending: false })
-      .order('use_count', { ascending: false })
+      .from("practice_log_templates")
+      .select("*")
+      .order("is_favorite", { ascending: false })
+      .order("use_count", { ascending: false });
 
-    if (error) throw error
-    return data
+    if (error) throw error;
+    return data;
   }
 
   /**
    * テンプレートを作成
    */
-  async createTemplate(
-    input: CreatePracticeLogTemplateInput
-  ): Promise<PracticeLogTemplate> {
+  async createTemplate(input: CreatePracticeLogTemplateInput): Promise<PracticeLogTemplate> {
     const { data, error } = await this.supabase
-      .from('practice_log_templates')
+      .from("practice_log_templates")
       .insert({
         name: input.name,
         style: input.style,
@@ -374,10 +376,10 @@ export class TemplateAPI {
         tag_ids: input.tag_ids || [],
       })
       .select()
-      .single()
+      .single();
 
-    if (error) throw error
-    return data
+    if (error) throw error;
+    return data;
   }
 
   /**
@@ -385,14 +387,14 @@ export class TemplateAPI {
    */
   async useTemplate(templateId: string): Promise<void> {
     const { error } = await this.supabase
-      .from('practice_log_templates')
+      .from("practice_log_templates")
       .update({
-        use_count: this.supabase.rpc('increment', { row_id: templateId }),
+        use_count: this.supabase.rpc("increment", { row_id: templateId }),
         last_used_at: new Date().toISOString(),
       })
-      .eq('id', templateId)
+      .eq("id", templateId);
 
-    if (error) throw error
+    if (error) throw error;
   }
 
   /**
@@ -400,11 +402,11 @@ export class TemplateAPI {
    */
   async deleteTemplate(templateId: string): Promise<void> {
     const { error } = await this.supabase
-      .from('practice_log_templates')
+      .from("practice_log_templates")
       .delete()
-      .eq('id', templateId)
+      .eq("id", templateId);
 
-    if (error) throw error
+    if (error) throw error;
   }
 
   /**
@@ -412,17 +414,17 @@ export class TemplateAPI {
    */
   async toggleFavorite(templateId: string): Promise<void> {
     const { data: current } = await this.supabase
-      .from('practice_log_templates')
-      .select('is_favorite')
-      .eq('id', templateId)
-      .single()
+      .from("practice_log_templates")
+      .select("is_favorite")
+      .eq("id", templateId)
+      .single();
 
     const { error } = await this.supabase
-      .from('practice_log_templates')
+      .from("practice_log_templates")
       .update({ is_favorite: !current?.is_favorite })
-      .eq('id', templateId)
+      .eq("id", templateId);
 
-    if (error) throw error
+    if (error) throw error;
   }
 }
 ```
@@ -449,18 +451,21 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 ### 7.1 フェーズ分け
 
 #### Phase 1: 基盤構築（1週目）
+
 - [ ] DBマイグレーション作成
 - [ ] 型定義追加
 - [ ] TemplateAPI クラス実装
 - [ ] React Query hooks 実装
 
 #### Phase 2: テンプレート管理UI（2週目）
+
 - [ ] テンプレート管理ページ作成（/settings/templates）
 - [ ] テンプレート一覧コンポーネント
 - [ ] テンプレート削除機能
 - [ ] お気に入り機能
 
 #### Phase 3: 練習作成連携（3週目）
+
 - [ ] テンプレート選択モーダル作成
 - [ ] DayDetailModal への導線追加
 - [ ] 練習履歴から「テンプレートとして保存」機能
@@ -468,6 +473,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 - [ ] 既存の「マイルストーンから作成」ボタンを廃止
 
 #### Phase 4: マイルストーン連携（3週目後半）
+
 - [ ] MilestoneCreateModal に「テンプレートにも追加」チェックボックス追加
 - [ ] マイルストーン作成時のテンプレート自動作成処理
 
@@ -504,11 +510,11 @@ apps/
 
 ## 8. 成功指標（KPI）
 
-| 指標 | 目標値 | 測定方法 |
-|------|--------|----------|
-| テンプレート作成率 | アクティブユーザーの30%以上 | テーブルの作成数 |
-| テンプレート使用率 | 作成者の50%が週1回以上使用 | use_count の増加 |
-| 練習入力時間削減 | 平均50%削減 | ユーザーアンケート |
+| 指標               | 目標値                      | 測定方法           |
+| ------------------ | --------------------------- | ------------------ |
+| テンプレート作成率 | アクティブユーザーの30%以上 | テーブルの作成数   |
+| テンプレート使用率 | 作成者の50%が週1回以上使用  | use_count の増加   |
+| 練習入力時間削減   | 平均50%削減                 | ユーザーアンケート |
 
 ---
 
@@ -522,11 +528,11 @@ apps/
 
 ## 変更履歴
 
-| 日付 | バージョン | 変更内容 | 担当 |
-|------|------------|----------|------|
-| 2026-01-28 | 1.0 | 初版作成 | - |
-| 2026-01-28 | 1.1 | 練習履歴ページからの追加導線を削除 | - |
-| 2026-01-28 | 1.2 | マイルストーン連携を追加 | - |
-| 2026-01-28 | 2.0 | データモデルを簡略化（practice_log_templates 1テーブルのみ） | - |
-| 2026-01-28 | 2.1 | メモ（note）とタグ（tag_ids）を保存対象に追加 | - |
-| 2026-01-28 | 2.2 | UI改善: 「テンプレートから」「新規」ボタンを最初から表示（1クリック削減） | - |
+| 日付       | バージョン | 変更内容                                                                  | 担当 |
+| ---------- | ---------- | ------------------------------------------------------------------------- | ---- |
+| 2026-01-28 | 1.0        | 初版作成                                                                  | -    |
+| 2026-01-28 | 1.1        | 練習履歴ページからの追加導線を削除                                        | -    |
+| 2026-01-28 | 1.2        | マイルストーン連携を追加                                                  | -    |
+| 2026-01-28 | 2.0        | データモデルを簡略化（practice_log_templates 1テーブルのみ）              | -    |
+| 2026-01-28 | 2.1        | メモ（note）とタグ（tag_ids）を保存対象に追加                             | -    |
+| 2026-01-28 | 2.2        | UI改善: 「テンプレートから」「新規」ボタンを最初から表示（1クリック削減） | -    |

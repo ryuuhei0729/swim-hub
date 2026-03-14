@@ -1,13 +1,13 @@
-'use client'
+"use client";
 
-import React from 'react'
+import React from "react";
 
 interface MemberStatsHeaderProps {
-  totalMembers: number
-  adminCount: number
-  userCount: number
-  includeRelaying: boolean
-  onToggleRelaying: (value: boolean) => void
+  totalMembers: number;
+  adminCount: number;
+  userCount: number;
+  includeRelaying: boolean;
+  onToggleRelaying: (value: boolean) => void;
 }
 
 /**
@@ -18,14 +18,12 @@ export const MemberStatsHeader: React.FC<MemberStatsHeaderProps> = ({
   adminCount,
   userCount,
   includeRelaying,
-  onToggleRelaying
+  onToggleRelaying,
 }) => {
   return (
     <div className="mb-6">
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-xl font-semibold text-gray-900">
-          メンバー管理
-        </h2>
+        <h2 className="text-xl font-semibold text-gray-900">メンバー管理</h2>
         <label className="flex items-center space-x-2 text-sm">
           <input
             type="checkbox"
@@ -48,5 +46,5 @@ export const MemberStatsHeader: React.FC<MemberStatsHeaderProps> = ({
         </span>
       </div>
     </div>
-  )
-}
+  );
+};

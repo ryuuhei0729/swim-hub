@@ -36,14 +36,14 @@
 
 ## 料金表 (WIP)
 
-| | 無料アカウント | 有料アカウント |
-|---|---|---|
-| 練習記録 | TBD | TBD |
-| 大会記録 | TBD | TBD |
-| チーム機能 | TBD | TBD |
-| 目標管理 | TBD | TBD |
-| SwimHub Scanner | TBD | TBD |
-| SwimHub Timer | TBD | TBD |
+|                 | 無料アカウント | 有料アカウント |
+| --------------- | -------------- | -------------- |
+| 練習記録        | TBD            | TBD            |
+| 大会記録        | TBD            | TBD            |
+| チーム機能      | TBD            | TBD            |
+| 目標管理        | TBD            | TBD            |
+| SwimHub Scanner | TBD            | TBD            |
+| SwimHub Timer   | TBD            | TBD            |
 
 > SwimHub Timer・SwimHub Scanner の有料会員も共用（統一課金）
 > 詳細は今後詰める

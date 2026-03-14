@@ -1,27 +1,25 @@
-'use client'
+"use client";
 
-import { useEffect } from 'react'
-import { ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { useEffect } from "react";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 
 export default function BulkBestTimeError({
   error,
   reset,
 }: {
-  error: Error & { digest?: string }
-  reset: () => void
+  error: Error & { digest?: string };
+  reset: () => void;
 }) {
   useEffect(() => {
-    console.error('ベストタイム一括入力エラー:', error)
-  }, [error])
+    console.error("ベストタイム一括入力エラー:", error);
+  }, [error]);
 
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center space-x-3 mb-4">
           <ExclamationTriangleIcon className="h-8 w-8 text-red-500" />
-          <h1 className="text-2xl font-bold text-gray-900">
-            エラーが発生しました
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900">エラーが発生しました</h1>
         </div>
         <p className="text-gray-600 mb-4">
           ベストタイム一括入力ページの読み込み中にエラーが発生しました。
@@ -42,6 +40,5 @@ export default function BulkBestTimeError({
         </div>
       </div>
     </div>
-  )
+  );
 }
-

@@ -7,11 +7,13 @@
 ### 1. mkcertのインストール
 
 **macOS (Homebrew):**
+
 ```bash
 brew install mkcert
 ```
 
 **Linux:**
+
 ```bash
 # Ubuntu/Debian
 sudo apt install libnss3-tools
@@ -22,6 +24,7 @@ sudo mv mkcert /usr/local/bin/
 ```
 
 **Windows:**
+
 ```powershell
 # Chocolatey
 choco install mkcert
@@ -45,6 +48,7 @@ mkcert localhost 127.0.0.1 ::1
 ```
 
 これにより、以下のファイルが作成されます：
+
 - `localhost+2.pem` (証明書)
 - `localhost+2-key.pem` (秘密鍵)
 

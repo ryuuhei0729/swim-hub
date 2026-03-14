@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * 後方互換性のためのre-export
@@ -9,4 +9,4 @@ export {
   type CompetitionImageFile,
   type ExistingImage,
   type CompetitionImageUploaderProps,
-} from './shared/ImageUploader/CompetitionImageUploader'
+} from "./shared/ImageUploader/CompetitionImageUploader";

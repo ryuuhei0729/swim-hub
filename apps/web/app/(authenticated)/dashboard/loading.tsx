@@ -30,7 +30,7 @@ export default function DashboardLoading() {
 
           {/* 曜日ヘッダー */}
           <div className="grid grid-cols-7 gap-2 mb-2">
-            {['日', '月', '火', '水', '木', '金', '土'].map((day) => (
+            {["日", "月", "火", "水", "木", "金", "土"].map((day) => (
               <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
                 {day}
               </div>
@@ -59,6 +59,5 @@ export default function DashboardLoading() {
         </div>
       </div>
     </div>
-  )
+  );
 }
-

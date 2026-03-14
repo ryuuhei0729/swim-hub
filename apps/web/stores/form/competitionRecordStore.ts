@@ -2,52 +2,52 @@
 // Competition Page用の大会記録フォームZustandストア
 // =============================================================================
 
-import type { Record, Style } from '@apps/shared/types'
-import { create } from 'zustand'
+import type { Record, Style } from "@apps/shared/types";
+import { create } from "zustand";
 
 // Competition Page専用の型定義
 export type RecordFormEdit = {
-  id?: string
-  recordDate: string
-  place: string
-  competitionName: string
-  poolType: number
-  styleId: number
-  time: number
-  isRelaying: boolean
-  splitTimes: Array<{ distance: number; splitTime: number }>
-  videoUrl?: string
-  note?: string
-}
+  id?: string;
+  recordDate: string;
+  place: string;
+  competitionName: string;
+  poolType: number;
+  styleId: number;
+  time: number;
+  isRelaying: boolean;
+  splitTimes: Array<{ distance: number; splitTime: number }>;
+  videoUrl?: string;
+  note?: string;
+};
 
 interface CompetitionRecordState {
   // フォーム状態
-  isFormOpen: boolean
-  isLoading: boolean
-  editingData: Record | RecordFormEdit | null
-  selectedRecord: Record | null
-  showDetailModal: boolean
-  styles: Style[]
+  isFormOpen: boolean;
+  isLoading: boolean;
+  editingData: Record | RecordFormEdit | null;
+  selectedRecord: Record | null;
+  showDetailModal: boolean;
+  styles: Style[];
 }
 
 interface CompetitionRecordActions {
   // フォーム操作
-  openForm: (data?: Record | RecordFormEdit) => void
-  closeForm: () => void
-  setEditingData: (data: Record | RecordFormEdit | null) => void
-  
+  openForm: (data?: Record | RecordFormEdit) => void;
+  closeForm: () => void;
+  setEditingData: (data: Record | RecordFormEdit | null) => void;
+
   // 詳細モーダル
-  openDetailModal: (record: Record) => void
-  closeDetailModal: () => void
-  
+  openDetailModal: (record: Record) => void;
+  closeDetailModal: () => void;
+
   // マスターデータ
-  setStyles: (styles: Style[]) => void
-  
+  setStyles: (styles: Style[]) => void;
+
   // UI状態
-  setLoading: (loading: boolean) => void
-  
+  setLoading: (loading: boolean) => void;
+
   // リセット
-  reset: () => void
+  reset: () => void;
 }
 
 const initialState: CompetitionRecordState = {
@@ -57,42 +57,47 @@ const initialState: CompetitionRecordState = {
   selectedRecord: null,
   showDetailModal: false,
   styles: [],
-}
+};
 
-export const useCompetitionRecordStore = create<CompetitionRecordState & CompetitionRecordActions>()((set) => ({
+export const useCompetitionRecordStore = create<
+  CompetitionRecordState & CompetitionRecordActions
+>()((set) => ({
   ...initialState,
-  
+
   // フォーム操作
-  openForm: (data) => set((state) => ({
-    isFormOpen: true,
-    editingData: data !== undefined ? data : state.editingData,
-  })),
-  
-  closeForm: () => set({
-    isFormOpen: false,
-    editingData: null,
-  }),
-  
+  openForm: (data) =>
+    set((state) => ({
+      isFormOpen: true,
+      editingData: data !== undefined ? data : state.editingData,
+    })),
+
+  closeForm: () =>
+    set({
+      isFormOpen: false,
+      editingData: null,
+    }),
+
   setEditingData: (data) => set({ editingData: data }),
-  
+
   // 詳細モーダル
-  openDetailModal: (record) => set({
-    selectedRecord: record,
-    showDetailModal: true,
-  }),
-  
-  closeDetailModal: () => set({
-    selectedRecord: null,
-    showDetailModal: false,
-  }),
-  
+  openDetailModal: (record) =>
+    set({
+      selectedRecord: record,
+      showDetailModal: true,
+    }),
+
+  closeDetailModal: () =>
+    set({
+      selectedRecord: null,
+      showDetailModal: false,
+    }),
+
   // マスターデータ
   setStyles: (styles) => set({ styles }),
-  
+
   // UI状態
   setLoading: (loading) => set({ isLoading: loading }),
-  
+
   // リセット
   reset: () => set(initialState),
-}))
-
+}));

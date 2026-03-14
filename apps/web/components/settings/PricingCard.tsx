@@ -1,16 +1,16 @@
-'use client'
+"use client";
 
-import React from 'react'
+import React from "react";
 
 interface PricingCardProps {
-  title: string
-  price: string
-  period: string
-  badge?: string
-  features: string[]
-  onSelect: () => void
-  isLoading: boolean
-  isCurrentPlan: boolean
+  title: string;
+  price: string;
+  period: string;
+  badge?: string;
+  features: string[];
+  onSelect: () => void;
+  isLoading: boolean;
+  isCurrentPlan: boolean;
 }
 
 export default function PricingCard({
@@ -24,13 +24,13 @@ export default function PricingCard({
   isCurrentPlan,
 }: PricingCardProps) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
       if (!isCurrentPlan && !isLoading) {
-        onSelect()
+        onSelect();
       }
     }
-  }
+  };
 
   return (
     <div className="bg-white rounded-lg shadow border border-gray-200 p-5 sm:p-6 flex flex-col">
@@ -70,7 +70,7 @@ export default function PricingCard({
         onClick={onSelect}
         onKeyDown={handleKeyDown}
         disabled={isCurrentPlan || isLoading}
-        aria-label={isCurrentPlan ? '現在のプラン' : `${title}を選択`}
+        aria-label={isCurrentPlan ? "現在のプラン" : `${title}を選択`}
         className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {isLoading ? (
@@ -81,17 +81,28 @@ export default function PricingCard({
               fill="none"
               viewBox="0 0 24 24"
             >
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              />
             </svg>
             処理中...
           </>
         ) : isCurrentPlan ? (
-          '現在のプラン'
+          "現在のプラン"
         ) : (
-          'このプランを選択'
+          "このプランを選択"
         )}
       </button>
     </div>
-  )
+  );
 }

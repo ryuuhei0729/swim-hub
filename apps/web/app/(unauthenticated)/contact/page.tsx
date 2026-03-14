@@ -1,42 +1,44 @@
-'use client'
+"use client";
 
-import React, { useState } from 'react'
-import Link from 'next/link'
-import { ArrowLeftIcon, EnvelopeIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline'
+import React, { useState } from "react";
+import Link from "next/link";
+import { ArrowLeftIcon, EnvelopeIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    subject: '',
-    message: '',
-  })
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
-  }
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-    setSubmitStatus('idle')
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitStatus("idle");
 
     // TODO: 実際の実装では、ここでAPIエンドポイントに送信
     try {
       // シミュレーション: 送信処理
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      setSubmitStatus('success')
-      setFormData({ name: '', email: '', subject: '', message: '' })
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      setSubmitStatus("success");
+      setFormData({ name: "", email: "", subject: "", message: "" });
     } catch {
-      setSubmitStatus('error')
+      setSubmitStatus("error");
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-blue-50">
@@ -159,12 +161,12 @@ export default function ContactPage() {
             </div>
 
             {/* 送信ステータス */}
-            {submitStatus === 'success' && (
+            {submitStatus === "success" && (
               <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-800">
                 お問い合わせを受け付けました。ありがとうございます。
               </div>
             )}
-            {submitStatus === 'error' && (
+            {submitStatus === "error" && (
               <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
                 送信に失敗しました。しばらく時間をおいて再度お試しください。
               </div>
@@ -178,12 +180,16 @@ export default function ContactPage() {
           <ul className="space-y-2 text-sm text-gray-700">
             <li>• お問い合わせへの返信には、数日かかる場合があります</li>
             <li>• 緊急の場合は、アプリ内の通知機能をご利用ください</li>
-            <li>• よくある質問は<Link href="/support" className="text-blue-600 hover:text-blue-800 underline">サポートページ</Link>をご確認ください</li>
+            <li>
+              • よくある質問は
+              <Link href="/support" className="text-blue-600 hover:text-blue-800 underline">
+                サポートページ
+              </Link>
+              をご確認ください
+            </li>
           </ul>
         </div>
       </div>
     </div>
-  )
+  );
 }
-
-

@@ -2,10 +2,10 @@
 // QueryProvider - React Queryのプロバイダーコンポーネント
 // =============================================================================
 
-import React from 'react'
-import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
+import React from "react";
+import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 
-let queryClient: QueryClient | undefined = undefined
+let queryClient: QueryClient | undefined = undefined;
 
 /**
  * モバイル用のQueryClientを作成
@@ -21,27 +21,27 @@ function createMobileQueryClient(): QueryClient {
         refetchOnMount: true,
         refetchOnReconnect: true, // オンライン復帰時に自動再取得
         retry: (failureCount, error: unknown) => {
-          const message = error instanceof Error ? error.message : ''
+          const message = error instanceof Error ? error.message : "";
           const code =
-            typeof error === 'object' && error !== null && 'code' in error
+            typeof error === "object" && error !== null && "code" in error
               ? (error as { code?: string }).code
-              : undefined
+              : undefined;
 
           // ネットワークエラーの場合はリトライしない（オフライン時）
-          if (message.includes('network') || code === 'NETWORK_ERROR') {
-            return false
+          if (message.includes("network") || code === "NETWORK_ERROR") {
+            return false;
           }
           // その他のエラーは最大3回リトライ
-          return failureCount < 3
+          return failureCount < 3;
         },
-        networkMode: 'online', // オフライン時はクエリを実行しない
+        networkMode: "online", // オフライン時はクエリを実行しない
       },
       mutations: {
         retry: 0, // ミューテーションはリトライしない
-        networkMode: 'online', // オフライン時はミューテーションを実行しない
+        networkMode: "online", // オフライン時はミューテーションを実行しない
       },
     },
-  })
+  });
 }
 
 /**
@@ -50,13 +50,13 @@ function createMobileQueryClient(): QueryClient {
  */
 export function getQueryClient() {
   if (!queryClient) {
-    queryClient = createMobileQueryClient()
+    queryClient = createMobileQueryClient();
   }
-  return queryClient
+  return queryClient;
 }
 
 interface QueryProviderProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 /**
@@ -64,11 +64,7 @@ interface QueryProviderProps {
  * AuthProviderの内側に配置して、認証済みユーザーのみReact Queryを使用可能にする
  */
 export default function QueryProvider({ children }: QueryProviderProps) {
-  const queryClient = getQueryClient()
+  const queryClient = getQueryClient();
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  )
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }

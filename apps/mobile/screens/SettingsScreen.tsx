@@ -1,23 +1,23 @@
-import React, { useState, useCallback } from 'react'
-import { View, Text, Pressable, ScrollView, StyleSheet, RefreshControl, Alert } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { useAuth } from '@/contexts/AuthProvider'
-import { useUserQuery } from '@apps/shared/hooks/queries/user'
-import { GoogleCalendarSyncSettings } from '@/components/settings/GoogleCalendarSyncSettings'
-import { IOSCalendarSyncSettings } from '@/components/settings/IOSCalendarSyncSettings'
-import { EmailChangeSettings } from '@/components/settings/EmailChangeSettings'
-import { IdentityLinkSettings } from '@/components/settings/IdentityLinkSettings'
-import { AccountDeleteSettings } from '@/components/settings/AccountDeleteSettings'
-import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
+import React, { useState, useCallback } from "react";
+import { View, Text, Pressable, ScrollView, StyleSheet, RefreshControl, Alert } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "@/contexts/AuthProvider";
+import { useUserQuery } from "@apps/shared/hooks/queries/user";
+import { GoogleCalendarSyncSettings } from "@/components/settings/GoogleCalendarSyncSettings";
+import { IOSCalendarSyncSettings } from "@/components/settings/IOSCalendarSyncSettings";
+import { EmailChangeSettings } from "@/components/settings/EmailChangeSettings";
+import { IdentityLinkSettings } from "@/components/settings/IdentityLinkSettings";
+import { AccountDeleteSettings } from "@/components/settings/AccountDeleteSettings";
+import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 
 /**
  * 設定画面
  * メールアドレス・ログイン連携・カレンダー連携の設定を管理
  */
 export const SettingsScreen: React.FC = () => {
-  const { supabase, signOut } = useAuth()
-  const [refreshing, setRefreshing] = useState(false)
-  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const { supabase, signOut } = useAuth();
+  const [refreshing, setRefreshing] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const {
     profile,
@@ -25,54 +25,50 @@ export const SettingsScreen: React.FC = () => {
     refetch: refetchProfile,
   } = useUserQuery(supabase, {
     enableRealtime: false,
-  })
+  });
 
   const executeLogout = useCallback(async () => {
-    setIsLoggingOut(true)
+    setIsLoggingOut(true);
     try {
-      const { error } = await signOut()
+      const { error } = await signOut();
       if (error) {
-        console.error('ログアウトエラー:', error)
-        Alert.alert('エラー', 'ログアウトに失敗しました。もう一度お試しください。')
+        console.error("ログアウトエラー:", error);
+        Alert.alert("エラー", "ログアウトに失敗しました。もう一度お試しください。");
       }
     } catch (err) {
-      console.error('ログアウト処理エラー:', err)
-      Alert.alert('エラー', 'ログアウトに失敗しました。もう一度お試しください。')
+      console.error("ログアウト処理エラー:", err);
+      Alert.alert("エラー", "ログアウトに失敗しました。もう一度お試しください。");
     } finally {
-      setIsLoggingOut(false)
+      setIsLoggingOut(false);
     }
-  }, [signOut])
+  }, [signOut]);
 
   const handleLogout = useCallback(() => {
-    Alert.alert(
-      'ログアウト',
-      'ログアウトしてもよろしいですか？',
-      [
-        { text: 'キャンセル', style: 'cancel' },
-        { text: 'ログアウト', style: 'destructive', onPress: executeLogout },
-      ]
-    )
-  }, [executeLogout])
+    Alert.alert("ログアウト", "ログアウトしてもよろしいですか？", [
+      { text: "キャンセル", style: "cancel" },
+      { text: "ログアウト", style: "destructive", onPress: executeLogout },
+    ]);
+  }, [executeLogout]);
 
   const handleRefresh = useCallback(async () => {
-    setRefreshing(true)
+    setRefreshing(true);
     try {
-      await refetchProfile()
+      await refetchProfile();
     } finally {
-      setRefreshing(false)
+      setRefreshing(false);
     }
-  }, [refetchProfile])
+  }, [refetchProfile]);
 
   if (isLoading && !profile) {
     return (
-      <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <SafeAreaView style={styles.container} edges={["left", "right"]}>
         <LoadingSpinner fullScreen message="設定を読み込み中..." />
       </SafeAreaView>
-    )
+    );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+    <SafeAreaView style={styles.container} edges={["left", "right"]}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -80,22 +76,16 @@ export const SettingsScreen: React.FC = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            colors={['#2563EB']}
+            colors={["#2563EB"]}
             tintColor="#2563EB"
           />
         }
       >
         {/* Googleカレンダー連携セクション */}
-        <GoogleCalendarSyncSettings
-          profile={profile}
-          onUpdate={refetchProfile}
-        />
+        <GoogleCalendarSyncSettings profile={profile} onUpdate={refetchProfile} />
 
         {/* iOSカレンダー連携セクション */}
-        <IOSCalendarSyncSettings
-          profile={profile}
-          onUpdate={refetchProfile}
-        />
+        <IOSCalendarSyncSettings profile={profile} onUpdate={refetchProfile} />
 
         {/* メールアドレス変更セクション */}
         <EmailChangeSettings />
@@ -117,19 +107,19 @@ export const SettingsScreen: React.FC = () => {
             accessibilityHint="アカウントからログアウトします"
           >
             <Text style={styles.logoutButtonText}>
-              {isLoggingOut ? 'ログアウト中...' : 'ログアウト'}
+              {isLoggingOut ? "ログアウト中..." : "ログアウト"}
             </Text>
           </Pressable>
         </View>
       </ScrollView>
     </SafeAreaView>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: "#EFF6FF",
   },
   scrollView: {
     flex: 1,
@@ -146,16 +136,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#DC2626',
-    alignItems: 'center',
+    backgroundColor: "#DC2626",
+    alignItems: "center",
   },
   logoutButtonDisabled: {
-    backgroundColor: '#F87171',
+    backgroundColor: "#F87171",
     opacity: 0.6,
   },
   logoutButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
-})
+});

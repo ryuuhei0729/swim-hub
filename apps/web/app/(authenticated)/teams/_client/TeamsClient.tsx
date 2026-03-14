@@ -1,109 +1,107 @@
-'use client'
+"use client";
 
-import React, { useState, useMemo, useEffect } from 'react'
-import Link from 'next/link'
-import { UsersIcon, PlusIcon, UserPlusIcon, ClockIcon } from '@heroicons/react/24/outline'
-import { TeamMembershipWithUser } from '@apps/shared/types'
-import { useAuth } from '@/contexts'
-import { useTeamsQuery } from '@apps/shared/hooks/queries/teams'
-import { teamKeys } from '@apps/shared/hooks/queries/keys'
-import { useQueryClient } from '@tanstack/react-query'
-import dynamic from 'next/dynamic'
+import React, { useState, useMemo, useEffect } from "react";
+import Link from "next/link";
+import { UsersIcon, PlusIcon, UserPlusIcon, ClockIcon } from "@heroicons/react/24/outline";
+import { TeamMembershipWithUser } from "@apps/shared/types";
+import { useAuth } from "@/contexts";
+import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
+import { teamKeys } from "@apps/shared/hooks/queries/keys";
+import { useQueryClient } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
 
-const TeamCreateModal = dynamic(() => import('@/components/team/TeamCreateModal'))
-const TeamJoinModal = dynamic(() => import('@/components/team/TeamJoinModal'))
+const TeamCreateModal = dynamic(() => import("@/components/team/TeamCreateModal"));
+const TeamJoinModal = dynamic(() => import("@/components/team/TeamJoinModal"));
 
 interface PendingTeamWithInviteCode {
-  membership: TeamMembershipWithUser
-  inviteCode: string | null
+  membership: TeamMembershipWithUser;
+  inviteCode: string | null;
 }
 
 interface TeamsClientProps {
   // サーバー側で取得したデータ
-  initialTeams: TeamMembershipWithUser[]
+  initialTeams: TeamMembershipWithUser[];
 }
 
 /**
  * チームページのインタラクティブ部分を担当するClient Component
  */
-export default function TeamsClient({
-  initialTeams
-}: TeamsClientProps) {
-  const { supabase } = useAuth()
-  const queryClient = useQueryClient()
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
-  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false)
+export default function TeamsClient({ initialTeams }: TeamsClientProps) {
+  const { supabase } = useAuth();
+  const queryClient = useQueryClient();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
 
   // チーム一覧を取得（リアルタイム更新用）
-  const {
-    teams = [],
-    isLoading: teamsLoading
-  } = useTeamsQuery(supabase, {
+  const { teams = [], isLoading: teamsLoading } = useTeamsQuery(supabase, {
     initialTeams,
-  })
+  });
 
   // 表示用のデータ（React Queryのキャッシュを使用）
   // 承認済みと承認待ちを分ける
   const { approvedTeams, pendingTeams } = useMemo(() => {
-    const approved: TeamMembershipWithUser[] = []
-    const pending: TeamMembershipWithUser[] = []
-    
+    const approved: TeamMembershipWithUser[] = [];
+    const pending: TeamMembershipWithUser[] = [];
+
     teams.forEach((membership) => {
-      if (membership.status === 'approved' && membership.is_active) {
-        approved.push(membership)
-      } else if (membership.status === 'pending') {
-        pending.push(membership)
+      if (membership.status === "approved" && membership.is_active) {
+        approved.push(membership);
+      } else if (membership.status === "pending") {
+        pending.push(membership);
       }
-    })
-    
+    });
+
     return {
       approvedTeams: approved,
-      pendingTeams: pending
-    }
-  }, [teams])
-  
-  const displayTeams = approvedTeams
+      pendingTeams: pending,
+    };
+  }, [teams]);
+
+  const displayTeams = approvedTeams;
 
   // 承認待ちチームの招待コードを取得
-  const [pendingTeamsWithInviteCode, setPendingTeamsWithInviteCode] = useState<PendingTeamWithInviteCode[]>([])
-  const [loadingInviteCodes, setLoadingInviteCodes] = useState(false)
+  const [pendingTeamsWithInviteCode, setPendingTeamsWithInviteCode] = useState<
+    PendingTeamWithInviteCode[]
+  >([]);
+  const [loadingInviteCodes, setLoadingInviteCodes] = useState(false);
 
   useEffect(() => {
     const loadInviteCodes = async () => {
       if (pendingTeams.length === 0) {
-        setPendingTeamsWithInviteCode([])
-        return
+        setPendingTeamsWithInviteCode([]);
+        return;
       }
 
-      setLoadingInviteCodes(true)
+      setLoadingInviteCodes(true);
       try {
         const results = await Promise.all(
           pendingTeams.map(async (membership) => {
             try {
-              const { data, error } = await supabase
-                .rpc('get_invite_code_by_team_id', { p_team_id: membership.team_id })
-              
+              const { data, error } = await supabase.rpc("get_invite_code_by_team_id", {
+                p_team_id: membership.team_id,
+              });
+
               if (error) {
-                return { membership, inviteCode: null }
+                return { membership, inviteCode: null };
               }
-              
-              return { membership, inviteCode: data || null }
+
+              return { membership, inviteCode: data || null };
             } catch {
-              return { membership, inviteCode: null }
+              return { membership, inviteCode: null };
             }
-          })
-        )
-        setPendingTeamsWithInviteCode(results)
+          }),
+        );
+        setPendingTeamsWithInviteCode(results);
       } catch {
         // エラー時は空配列を設定
-        setPendingTeamsWithInviteCode([])
+        setPendingTeamsWithInviteCode([]);
       } finally {
-        setLoadingInviteCodes(false)
+        setLoadingInviteCodes(false);
       }
-    }
+    };
 
-    loadInviteCodes()
-  }, [pendingTeams, supabase])
+    loadInviteCodes();
+  }, [pendingTeams, supabase]);
 
   if (teamsLoading && displayTeams.length === 0) {
     return (
@@ -115,7 +113,7 @@ export default function TeamsClient({
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -123,12 +121,8 @@ export default function TeamsClient({
       {/* ヘッダー */}
       <div className="bg-white rounded-lg shadow p-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            マイチーム
-          </h1>
-          <p className="text-gray-600">
-            参加しているチームの一覧
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">マイチーム</h1>
+          <p className="text-gray-600">参加しているチームの一覧</p>
         </div>
       </div>
 
@@ -173,9 +167,7 @@ export default function TeamsClient({
       {displayTeams.length === 0 && pendingTeams.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-12 text-center">
           <UsersIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-4 text-lg font-medium text-gray-900">
-            参加中のチームがありません
-          </h3>
+          <h3 className="mt-4 text-lg font-medium text-gray-900">参加中のチームがありません</h3>
           <p className="mt-2 text-sm text-gray-500 mb-8">
             チームを作成するか、招待コードでチームに参加してください
           </p>
@@ -207,16 +199,16 @@ export default function TeamsClient({
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <UsersIcon className="h-10 w-10 text-blue-600" />
-                  {membership.role === 'admin' && (
+                  {membership.role === "admin" && (
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                       管理者
                     </span>
                   )}
                 </div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {'teams' in membership ? membership.teams?.name : ''}
+                  {"teams" in membership ? membership.teams?.name : ""}
                 </h3>
-                {'teams' in membership && membership.teams?.description && (
+                {"teams" in membership && membership.teams?.description && (
                   <p className="text-sm text-gray-500 line-clamp-2">
                     {membership.teams.description}
                   </p>
@@ -233,7 +225,7 @@ export default function TeamsClient({
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={(_teamId) => {
           // ページをリロードして最新状態を反映
-          window.location.reload()
+          window.location.reload();
         }}
       />
 
@@ -243,11 +235,10 @@ export default function TeamsClient({
         onClose={() => setIsJoinModalOpen(false)}
         onSuccess={(_teamId) => {
           // チーム一覧のキャッシュを無効化して再取得
-          queryClient.invalidateQueries({ queryKey: teamKeys.list() })
-          setIsJoinModalOpen(false)
+          queryClient.invalidateQueries({ queryKey: teamKeys.list() });
+          setIsJoinModalOpen(false);
         }}
       />
     </div>
-  )
+  );
 }
-

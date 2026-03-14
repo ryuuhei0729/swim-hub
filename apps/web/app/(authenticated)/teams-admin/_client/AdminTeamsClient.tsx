@@ -1,35 +1,29 @@
-'use client'
+"use client";
 
-import React from 'react'
-import Link from 'next/link'
-import { UsersIcon, ShieldCheckIcon } from '@heroicons/react/24/outline'
-import { TeamMembershipWithUser } from '@apps/shared/types'
+import React from "react";
+import Link from "next/link";
+import { UsersIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
+import { TeamMembershipWithUser } from "@apps/shared/types";
 
 interface AdminTeamsClientProps {
   // サーバー側で取得したデータ
-  initialTeams: TeamMembershipWithUser[]
+  initialTeams: TeamMembershipWithUser[];
 }
 
 /**
  * 管理者チーム一覧ページのインタラクティブ部分を担当するClient Component
  */
-export default function AdminTeamsClient({
-  initialTeams
-}: AdminTeamsClientProps) {
+export default function AdminTeamsClient({ initialTeams }: AdminTeamsClientProps) {
   // 表示用のデータ
-  const displayTeams = initialTeams
+  const displayTeams = initialTeams;
 
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
       <div className="bg-white rounded-lg shadow p-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            チーム管理
-          </h1>
-          <p className="text-gray-600">
-            管理者権限を持つチームの一覧
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">チーム管理</h1>
+          <p className="text-gray-600">管理者権限を持つチームの一覧</p>
         </div>
       </div>
 
@@ -60,9 +54,9 @@ export default function AdminTeamsClient({
                   </span>
                 </div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {'teams' in membership ? membership.teams?.name : ''}
+                  {"teams" in membership ? membership.teams?.name : ""}
                 </h3>
-                {'teams' in membership && membership.teams?.description && (
+                {"teams" in membership && membership.teams?.description && (
                   <p className="text-sm text-gray-500 line-clamp-2">
                     {membership.teams.description}
                   </p>
@@ -73,7 +67,5 @@ export default function AdminTeamsClient({
         </div>
       )}
     </div>
-  )
+  );
 }
-
-

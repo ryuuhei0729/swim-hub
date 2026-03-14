@@ -1,1 +1,1 @@
-export { TeamGroupManagement } from './TeamGroupManagement'
+export { TeamGroupManagement } from "./TeamGroupManagement";

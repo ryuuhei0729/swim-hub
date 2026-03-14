@@ -1,2 +1,2 @@
-export { default } from './DayDetailModal'
-export * from './types'
+export { default } from "./DayDetailModal";
+export * from "./types";

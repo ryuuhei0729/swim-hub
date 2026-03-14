@@ -62,18 +62,18 @@ const nextConfig = {
 
 ```ts
 // 現状: export * で全ストアを再エクスポート
-export * from './practice/practiceStore'
-export * from './competition/competitionStore'
-export * from './form/attendanceTabStore'
-export * from './form/commonFormStore'
-export * from './form/competitionRecordStore'
-export * from './form/practiceRecordStore'
-export * from './form/teamDetailStore'
-export * from './form/teamAdminStore'
-export * from './modal/modalStore'
-export * from './profile/profileStore'
-export * from './team/teamStore'
-export * from './ui/uiStore'
+export * from "./practice/practiceStore";
+export * from "./competition/competitionStore";
+export * from "./form/attendanceTabStore";
+export * from "./form/commonFormStore";
+export * from "./form/competitionRecordStore";
+export * from "./form/practiceRecordStore";
+export * from "./form/teamDetailStore";
+export * from "./form/teamAdminStore";
+export * from "./modal/modalStore";
+export * from "./profile/profileStore";
+export * from "./team/teamStore";
+export * from "./ui/uiStore";
 ```
 
 #### 影響
@@ -86,11 +86,11 @@ export * from './ui/uiStore'
 
 ```ts
 // Before
-import { usePracticeFormStore, useCompetitionFormStore } from '@/stores'
+import { usePracticeFormStore, useCompetitionFormStore } from "@/stores";
 
 // After
-import { usePracticeFormStore } from '@/stores/form/practiceRecordStore'
-import { useCompetitionFormStore } from '@/stores/form/competitionRecordStore'
+import { usePracticeFormStore } from "@/stores/form/practiceRecordStore";
+import { useCompetitionFormStore } from "@/stores/form/competitionRecordStore";
 ```
 
 ### 2b. `@/components/team/index.ts` — 27コンポーネント集約 (HIGH)
@@ -103,17 +103,17 @@ import { useCompetitionFormStore } from '@/stores/form/competitionRecordStore'
 
 ```ts
 // TeamAnnouncementsSection.tsx — 1/27しか使わない
-import { TeamAnnouncements } from '@/components/team'
+import { TeamAnnouncements } from "@/components/team";
 ```
 
 #### 修正方針
 
 ```ts
 // Before
-import { TeamAnnouncements } from '@/components/team'
+import { TeamAnnouncements } from "@/components/team";
 
 // After
-import { TeamAnnouncements } from '@/components/team/announcements/TeamAnnouncements'
+import { TeamAnnouncements } from "@/components/team/announcements/TeamAnnouncements";
 ```
 
 ### 2c. `@/components/ui/index.ts` — 15コンポーネント集約 (MODERATE)
@@ -123,9 +123,9 @@ import { TeamAnnouncements } from '@/components/team/announcements/TeamAnnouncem
 ### 2d. `@/utils/index.ts` — `export *` (LOW)
 
 ```ts
-export * from './formatters'
-export * from './validators'
-export * from './redirect'
+export * from "./formatters";
+export * from "./validators";
+export * from "./redirect";
 ```
 
 小さなモジュールだが`export *`パターンは非推奨。
@@ -140,9 +140,15 @@ export * from './redirect'
 
 ```ts
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer
-} from 'recharts'
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 ```
 
 #### 問題
@@ -188,6 +194,7 @@ npm uninstall @aws-sdk/client-s3 --workspace=apps/web
 ### 4a. `ShareCardModal` — 4箇所で静的import (MEDIUM)
 
 **利用箇所:**
+
 - `CompetitionDetails.tsx`
 - `PracticeDetails.tsx`
 - `PracticeClient.tsx`
@@ -199,14 +206,15 @@ npm uninstall @aws-sdk/client-s3 --workspace=apps/web
 
 ```ts
 // Before
-import { ShareCardModal } from '@/components/share'
+import { ShareCardModal } from "@/components/share";
 
 // After
-import dynamic from 'next/dynamic'
+import dynamic from "next/dynamic";
 const ShareCardModal = dynamic(
-  () => import('@/components/share/ShareCardModal').then(mod => ({ default: mod.ShareCardModal })),
-  { ssr: false }
-)
+  () =>
+    import("@/components/share/ShareCardModal").then((mod) => ({ default: mod.ShareCardModal })),
+  { ssr: false },
+);
 ```
 
 ---

@@ -1,45 +1,45 @@
-'use client'
+"use client";
 
-import { useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
-import { ArrowLeftIcon } from '@heroicons/react/24/outline'
-import { PracticeLogTemplateList } from './_components/PracticeLogTemplateList'
-import { PracticeLogTemplateCreateModal } from './_components/PracticeLogTemplateCreateModal'
-import type { PracticeLogTemplate } from '@swim-hub/shared/types'
+import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeftIcon } from "@heroicons/react/24/outline";
+import { PracticeLogTemplateList } from "./_components/PracticeLogTemplateList";
+import { PracticeLogTemplateCreateModal } from "./_components/PracticeLogTemplateCreateModal";
+import type { PracticeLogTemplate } from "@swim-hub/shared/types";
 
 export default function PracticeLogTemplatesPage() {
-  const router = useRouter()
-  const [showModal, setShowModal] = useState(false)
-  const [editData, setEditData] = useState<PracticeLogTemplate | null>(null)
+  const router = useRouter();
+  const [showModal, setShowModal] = useState(false);
+  const [editData, setEditData] = useState<PracticeLogTemplate | null>(null);
 
   const handleBack = useCallback(() => {
-    router.back()
-  }, [router])
+    router.back();
+  }, [router]);
 
   const handleBackKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault()
-        handleBack()
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        handleBack();
       }
     },
-    [handleBack]
-  )
+    [handleBack],
+  );
 
   const handleCreateNew = useCallback(() => {
-    setEditData(null)
-    setShowModal(true)
-  }, [])
+    setEditData(null);
+    setShowModal(true);
+  }, []);
 
   const handleEdit = useCallback((template: PracticeLogTemplate) => {
-    setEditData(template)
-    setShowModal(true)
-  }, [])
+    setEditData(template);
+    setShowModal(true);
+  }, []);
 
   const handleCloseModal = useCallback(() => {
-    setShowModal(false)
-    setEditData(null)
-  }, [])
+    setShowModal(false);
+    setEditData(null);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -71,5 +71,5 @@ export default function PracticeLogTemplatesPage() {
         editData={editData}
       />
     </div>
-  )
+  );
 }

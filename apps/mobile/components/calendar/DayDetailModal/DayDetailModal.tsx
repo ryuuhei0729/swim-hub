@@ -1,72 +1,72 @@
-import React, { useState, useCallback, useMemo } from 'react'
-import { View, Text, Modal, Pressable, ScrollView, StyleSheet } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { Feather } from '@expo/vector-icons'
-import { format, isValid } from 'date-fns'
-import { ja } from 'date-fns/locale'
-import type { CalendarItem } from '@apps/shared/types/ui'
-import { styles } from './styles'
-import { MemoizedPracticeLogDetail, RecordDetail, EntryDetail } from './components'
-import type { DayDetailModalProps } from './types'
+import React, { useState, useCallback, useMemo } from "react";
+import { View, Text, Modal, Pressable, ScrollView, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
+import { format, isValid } from "date-fns";
+import { ja } from "date-fns/locale";
+import type { CalendarItem } from "@apps/shared/types/ui";
+import { styles } from "./styles";
+import { MemoizedPracticeLogDetail, RecordDetail, EntryDetail } from "./components";
+import type { DayDetailModalProps } from "./types";
 
 /**
  * エントリーのタイトルを生成
  */
 const getEntryTitle = (item: CalendarItem): string => {
-  let displayTitle = item.title
+  let displayTitle = item.title;
 
-  if (item.type === 'team_practice') {
-    const teamName = item.metadata?.team?.name || 'チーム'
-    displayTitle = `${teamName} - ${item.title}`
-  } else if (item.type === 'entry' || item.type === 'record') {
-    displayTitle = item.metadata?.competition?.title || item.title || '大会'
+  if (item.type === "team_practice") {
+    const teamName = item.metadata?.team?.name || "チーム";
+    displayTitle = `${teamName} - ${item.title}`;
+  } else if (item.type === "entry" || item.type === "record") {
+    displayTitle = item.metadata?.competition?.title || item.title || "大会";
   }
 
-  return displayTitle
-}
+  return displayTitle;
+};
 
 /**
  * エントリーの種類に応じた色を取得
  */
-const getEntryColor = (type: CalendarItem['type']): string => {
+const getEntryColor = (type: CalendarItem["type"]): string => {
   switch (type) {
-    case 'practice':
-    case 'team_practice':
-    case 'practice_log':
-      return '#10B981' // 緑色
-    case 'competition':
-    case 'team_competition':
-    case 'entry':
-    case 'record':
-      return '#2563EB' // 青色
+    case "practice":
+    case "team_practice":
+    case "practice_log":
+      return "#10B981"; // 緑色
+    case "competition":
+    case "team_competition":
+    case "entry":
+    case "record":
+      return "#2563EB"; // 青色
     default:
-      return '#6B7280' // グレー
+      return "#6B7280"; // グレー
   }
-}
+};
 
 /**
  * エントリーの種類に応じたラベルを取得
  */
-const getEntryTypeLabel = (type: CalendarItem['type']): string => {
+const getEntryTypeLabel = (type: CalendarItem["type"]): string => {
   switch (type) {
-    case 'practice':
-      return '練習'
-    case 'team_practice':
-      return 'チーム練習'
-    case 'practice_log':
-      return '練習ログ'
-    case 'competition':
-      return '大会'
-    case 'team_competition':
-      return 'チーム大会'
-    case 'entry':
-      return 'エントリー'
-    case 'record':
-      return '記録'
+    case "practice":
+      return "練習";
+    case "team_practice":
+      return "チーム練習";
+    case "practice_log":
+      return "練習ログ";
+    case "competition":
+      return "大会";
+    case "team_competition":
+      return "チーム大会";
+    case "entry":
+      return "エントリー";
+    case "record":
+      return "記録";
     default:
-      return 'その他'
+      return "その他";
   }
-}
+};
 
 /**
  * 日付詳細モーダルコンポーネント
@@ -93,119 +93,111 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   onEditCompetition,
   onDeleteCompetition,
 }) => {
-  const formattedDate = format(date, 'M月d日(E)', { locale: ja })
+  const formattedDate = format(date, "M月d日(E)", { locale: ja });
 
   // PracticeLogのPracticeTimeの有無を追跡
-  const [practiceLogsWithTimes, setPracticeLogsWithTimes] = useState<Set<string>>(new Set())
+  const [practiceLogsWithTimes, setPracticeLogsWithTimes] = useState<Set<string>>(new Set());
 
   // PracticeTimeの有無を更新するコールバック
   const handlePracticeTimeLoaded = useCallback((practiceLogId: string, hasTimes: boolean) => {
-    setPracticeLogsWithTimes(prev => {
-      const next = new Set(prev)
+    setPracticeLogsWithTimes((prev) => {
+      const next = new Set(prev);
       if (hasTimes) {
-        next.add(practiceLogId)
+        next.add(practiceLogId);
       } else {
-        next.delete(practiceLogId)
+        next.delete(practiceLogId);
       }
-      return next
-    })
-  }, [])
+      return next;
+    });
+  }, []);
 
   // エントリー数と種類に応じて最小高さを動的に計算
   const minHeight = useMemo(() => {
-    const hasPracticeLog = entries.some(entry => entry.type === 'practice_log')
+    const hasPracticeLog = entries.some((entry) => entry.type === "practice_log");
     const hasPracticeLogWithTimes = entries.some(
-      entry => entry.type === 'practice_log' && practiceLogsWithTimes.has(entry.id)
-    )
-    const hasRecords = entries.some(entry => entry.type === 'record')
+      (entry) => entry.type === "practice_log" && practiceLogsWithTimes.has(entry.id),
+    );
+    const hasRecords = entries.some((entry) => entry.type === "record");
 
-    if (entries.length === 0) return 300
+    if (entries.length === 0) return 300;
     if (entries.length === 1) {
-      if (hasRecords) return 600
-      if (!hasPracticeLog) return 400
-      if (hasPracticeLogWithTimes) return 600
-      return 350
+      if (hasRecords) return 600;
+      if (!hasPracticeLog) return 400;
+      if (hasPracticeLogWithTimes) return 600;
+      return 350;
     }
     if (entries.length === 2) {
-      if (hasRecords) return 700
-      if (hasPracticeLogWithTimes) return 600
-      return hasPracticeLog ? 600 : 375
+      if (hasRecords) return 700;
+      if (hasPracticeLogWithTimes) return 600;
+      return hasPracticeLog ? 600 : 375;
     }
-    if (hasRecords) return 750
-    if (hasPracticeLogWithTimes) return 700
-    return 500
-  }, [entries, practiceLogsWithTimes])
+    if (hasRecords) return 750;
+    if (hasPracticeLogWithTimes) return 700;
+    return 500;
+  }, [entries, practiceLogsWithTimes]);
 
   // 動的なスタイルを生成
-  const modalContentStyle = useMemo(
-    () => [styles.modalContent, { minHeight }],
-    [minHeight]
-  )
+  const modalContentStyle = useMemo(() => [styles.modalContent, { minHeight }], [minHeight]);
 
   // エントリータイプをフィルタリング・グループ化
   const { otherItems, entriesByCompetition, recordsByCompetition } = useMemo(() => {
-    const recordItems = entries.filter(e => e.type === 'record')
-    const entryItems = entries.filter(e => e.type === 'entry')
+    const recordItems = entries.filter((e) => e.type === "record");
+    const entryItems = entries.filter((e) => e.type === "entry");
 
     // 記録を大会IDでグループ化
-    const recordsByComp = new Map<string, CalendarItem[]>()
-    recordItems.forEach(record => {
-      const competitionId = record.metadata?.competition?.id ||
-                         record.metadata?.record?.competition_id ||
-                         record.id
+    const recordsByComp = new Map<string, CalendarItem[]>();
+    recordItems.forEach((record) => {
+      const competitionId =
+        record.metadata?.competition?.id || record.metadata?.record?.competition_id || record.id;
       if (!recordsByComp.has(competitionId)) {
-        recordsByComp.set(competitionId, [])
+        recordsByComp.set(competitionId, []);
       }
-      recordsByComp.get(competitionId)!.push(record)
-    })
+      recordsByComp.get(competitionId)!.push(record);
+    });
 
     // エントリーを大会IDでグループ化
-    const entriesByComp = new Map<string, CalendarItem[]>()
-    entryItems.forEach(entry => {
-      const competitionId = entry.metadata?.competition?.id ||
-                          entry.metadata?.entry?.competition_id
+    const entriesByComp = new Map<string, CalendarItem[]>();
+    entryItems.forEach((entry) => {
+      const competitionId =
+        entry.metadata?.competition?.id || entry.metadata?.entry?.competition_id;
       if (competitionId) {
         if (!entriesByComp.has(competitionId)) {
-          entriesByComp.set(competitionId, [])
+          entriesByComp.set(competitionId, []);
         }
-        entriesByComp.get(competitionId)!.push(entry)
+        entriesByComp.get(competitionId)!.push(entry);
       }
-    })
+    });
 
     // エントリーや記録を持っていないcompetitionタイプのIDを取得
-    const competitionsWithEntriesOrRecords = new Set<string>()
+    const competitionsWithEntriesOrRecords = new Set<string>();
     recordsByComp.forEach((_, competitionId) => {
-      competitionsWithEntriesOrRecords.add(competitionId)
-    })
+      competitionsWithEntriesOrRecords.add(competitionId);
+    });
     entriesByComp.forEach((_, competitionId) => {
-      competitionsWithEntriesOrRecords.add(competitionId)
-    })
+      competitionsWithEntriesOrRecords.add(competitionId);
+    });
 
     // その他のアイテム
-    const others = entries.filter(e => {
-      if (e.type === 'record' || e.type === 'entry') return false
-      if (e.type === 'competition' || e.type === 'team_competition') {
-        return !competitionsWithEntriesOrRecords.has(e.id)
+    const others = entries.filter((e) => {
+      if (e.type === "record" || e.type === "entry") return false;
+      if (e.type === "competition" || e.type === "team_competition") {
+        return !competitionsWithEntriesOrRecords.has(e.id);
       }
-      return true
-    })
+      return true;
+    });
 
     return {
       otherItems: others,
       entriesByCompetition: entriesByComp,
       recordsByCompetition: recordsByComp,
-    }
-  }, [entries])
+    };
+  }, [entries]);
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <SafeAreaView edges={['bottom']} style={styles.safeAreaContainer} pointerEvents="box-none">
+        <SafeAreaView edges={["bottom"]} style={styles.safeAreaContainer} pointerEvents="box-none">
           <View style={modalContentStyle}>
             {/* ヘッダー */}
             <View style={styles.header}>
@@ -224,11 +216,16 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                       <Pressable
                         style={[styles.addButton, styles.addRecordCardButton]}
                         onPress={() => {
-                          onAddRecord(date)
-                          onClose()
+                          onAddRecord(date);
+                          onClose();
                         }}
                       >
-                        <Feather name="droplet" size={28} color="#3B82F6" style={styles.addButtonCardIcon} />
+                        <Feather
+                          name="droplet"
+                          size={28}
+                          color="#3B82F6"
+                          style={styles.addButtonCardIcon}
+                        />
                         <Text style={styles.addButtonCardText}>大会記録を追加</Text>
                       </Pressable>
                     )}
@@ -236,11 +233,16 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                       <Pressable
                         style={[styles.addButton, styles.addPracticeCardButton]}
                         onPress={() => {
-                          onAddPractice(date)
-                          onClose()
+                          onAddPractice(date);
+                          onClose();
                         }}
                       >
-                        <Feather name="activity" size={28} color="#10B981" style={styles.addButtonCardIcon} />
+                        <Feather
+                          name="activity"
+                          size={28}
+                          color="#10B981"
+                          style={styles.addButtonCardIcon}
+                        />
                         <Text style={styles.addButtonCardText}>練習予定を追加</Text>
                       </Pressable>
                     )}
@@ -251,24 +253,26 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                   <View style={styles.entriesContainer}>
                     {/* 記録以外のエントリー */}
                     {otherItems.map((item) => {
-                      const title = getEntryTitle(item)
-                      const color = getEntryColor(item.type)
-                      const typeLabel = getEntryTypeLabel(item.type)
-                      const isPractice = item.type === 'practice' || item.type === 'team_practice'
-                      const isPracticeLog = item.type === 'practice_log'
-                      const practiceId = item.metadata?.practice_id || item.id
+                      const title = getEntryTitle(item);
+                      const color = getEntryColor(item.type);
+                      const typeLabel = getEntryTypeLabel(item.type);
+                      const isPractice = item.type === "practice" || item.type === "team_practice";
+                      const isPracticeLog = item.type === "practice_log";
+                      const practiceId = item.metadata?.practice_id || item.id;
 
-                      const isCompetition = item.type === 'competition' || item.type === 'team_competition'
-                      const competitionId = isCompetition ? item.id : null
-                      const hasEntriesOrRecords = isCompetition && competitionId
-                        ? entries.some(
-                            (e) =>
-                              (e.type === 'entry' || e.type === 'record') &&
-                              (e.metadata?.competition?.id === competitionId ||
-                                e.metadata?.entry?.competition_id === competitionId ||
-                                e.metadata?.record?.competition_id === competitionId)
-                          )
-                        : false
+                      const isCompetition =
+                        item.type === "competition" || item.type === "team_competition";
+                      const competitionId = isCompetition ? item.id : null;
+                      const hasEntriesOrRecords =
+                        isCompetition && competitionId
+                          ? entries.some(
+                              (e) =>
+                                (e.type === "entry" || e.type === "record") &&
+                                (e.metadata?.competition?.id === competitionId ||
+                                  e.metadata?.entry?.competition_id === competitionId ||
+                                  e.metadata?.record?.competition_id === competitionId),
+                            )
+                          : false;
 
                       return (
                         <MemoizedPracticeLogDetail
@@ -297,59 +301,68 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           onDeleteCompetition={onDeleteCompetition}
                           onPracticeTimeLoaded={handlePracticeTimeLoaded}
                         />
-                      )
+                      );
                     })}
 
                     {/* エントリー済み（記録未登録）を大会ごとに表示 */}
-                    {Array.from(entriesByCompetition.entries()).map(([competitionId, entryList]) => {
-                      if (recordsByCompetition.has(competitionId)) return null
+                    {Array.from(entriesByCompetition.entries()).map(
+                      ([competitionId, entryList]) => {
+                        if (recordsByCompetition.has(competitionId)) return null;
 
-                      const firstEntry = entryList[0]
-                      const competitionName = firstEntry.metadata?.competition?.title || firstEntry.title || '大会'
-                      const place = firstEntry.place || firstEntry.metadata?.competition?.place || ''
-                      const poolType = firstEntry.metadata?.competition?.pool_type ?? 0
-                      const note = firstEntry.note || undefined
+                        const firstEntry = entryList[0];
+                        const competitionName =
+                          firstEntry.metadata?.competition?.title || firstEntry.title || "大会";
+                        const place =
+                          firstEntry.place || firstEntry.metadata?.competition?.place || "";
+                        const poolType = firstEntry.metadata?.competition?.pool_type ?? 0;
+                        const note = firstEntry.note || undefined;
 
-                      return (
-                        <EntryDetail
-                          key={`entry-competition-${competitionId}`}
-                          competitionId={competitionId}
-                          competitionName={competitionName}
-                          place={place}
-                          poolType={poolType}
-                          note={note}
-                          entries={entryList}
-                          onEditCompetition={(item) => {
-                            if (onEditCompetition) {
-                              onEditCompetition(item)
-                              onClose()
-                            }
-                          }}
-                          onDeleteCompetition={() => {
-                            if (onDeleteCompetition) {
-                              onDeleteCompetition(competitionId)
-                            }
-                          }}
-                          onEditEntry={onEditEntry}
-                          onDeleteEntry={onDeleteEntry}
-                          onAddRecord={(compId: string, dateParam: string) => {
-                            if (onAddRecord) {
-                              onAddRecord(compId, dateParam)
-                              onClose()
-                            }
-                          }}
-                          onClose={onClose}
-                        />
-                      )
-                    })}
+                        return (
+                          <EntryDetail
+                            key={`entry-competition-${competitionId}`}
+                            competitionId={competitionId}
+                            competitionName={competitionName}
+                            place={place}
+                            poolType={poolType}
+                            note={note}
+                            entries={entryList}
+                            onEditCompetition={(item) => {
+                              if (onEditCompetition) {
+                                onEditCompetition(item);
+                                onClose();
+                              }
+                            }}
+                            onDeleteCompetition={() => {
+                              if (onDeleteCompetition) {
+                                onDeleteCompetition(competitionId);
+                              }
+                            }}
+                            onEditEntry={onEditEntry}
+                            onDeleteEntry={onDeleteEntry}
+                            onAddRecord={(compId: string, dateParam: string) => {
+                              if (onAddRecord) {
+                                onAddRecord(compId, dateParam);
+                                onClose();
+                              }
+                            }}
+                            onClose={onClose}
+                          />
+                        );
+                      },
+                    )}
 
                     {/* 記録を大会ごとに表示 */}
                     {Array.from(recordsByCompetition.entries()).map(([competitionId, records]) => {
-                      const firstRecord = records[0]
-                      const competitionName = firstRecord.metadata?.competition?.title || firstRecord.title || '大会'
-                      const place = firstRecord.place || firstRecord.metadata?.competition?.place || ''
-                      const poolType = firstRecord.metadata?.competition?.pool_type ?? firstRecord.metadata?.pool_type ?? 0
-                      const note = firstRecord.note || undefined
+                      const firstRecord = records[0];
+                      const competitionName =
+                        firstRecord.metadata?.competition?.title || firstRecord.title || "大会";
+                      const place =
+                        firstRecord.place || firstRecord.metadata?.competition?.place || "";
+                      const poolType =
+                        firstRecord.metadata?.competition?.pool_type ??
+                        firstRecord.metadata?.pool_type ??
+                        0;
+                      const note = firstRecord.note || undefined;
 
                       return (
                         <RecordDetail
@@ -361,32 +374,36 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           note={note}
                           records={records}
                           onEditCompetition={() => {
-                            const competitionItem = entries.find(e =>
-                              (e.type === 'competition' || e.type === 'team_competition') && e.id === competitionId
-                            )
+                            const competitionItem = entries.find(
+                              (e) =>
+                                (e.type === "competition" || e.type === "team_competition") &&
+                                e.id === competitionId,
+                            );
                             if (competitionItem && onEditCompetition) {
-                              onEditCompetition(competitionItem)
-                              onClose()
+                              onEditCompetition(competitionItem);
+                              onClose();
                             }
                           }}
                           onDeleteCompetition={() => {
                             if (onDeleteCompetition) {
-                              onDeleteCompetition(competitionId)
+                              onDeleteCompetition(competitionId);
                             }
                           }}
                           onAddRecord={() => {
                             if (onAddRecord) {
-                              const firstRecord = records[0]
-                              const dateParam = firstRecord?.date || (isValid(date) ? format(date, 'yyyy-MM-dd') : '')
-                              onAddRecord(competitionId, dateParam)
-                              onClose()
+                              const firstRecord = records[0];
+                              const dateParam =
+                                firstRecord?.date ||
+                                (isValid(date) ? format(date, "yyyy-MM-dd") : "");
+                              onAddRecord(competitionId, dateParam);
+                              onClose();
                             }
                           }}
                           onEditRecord={onEditRecord}
                           onDeleteRecord={onDeleteRecord}
                           onClose={onClose}
                         />
-                      )
+                      );
                     })}
                   </View>
 
@@ -398,8 +415,8 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                         <Pressable
                           style={styles.addRecordButtonRow}
                           onPress={() => {
-                            onAddPractice(date)
-                            onClose()
+                            onAddPractice(date);
+                            onClose();
                           }}
                         >
                           <Feather name="activity" size={20} color="#F59E0B" />
@@ -410,8 +427,8 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                         <Pressable
                           style={styles.addRecordButtonRow}
                           onPress={() => {
-                            onAddRecord(date)
-                            onClose()
+                            onAddRecord(date);
+                            onClose();
                           }}
                         >
                           <Feather name="droplet" size={20} color="#3B82F6" />
@@ -427,5 +444,5 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
         </SafeAreaView>
       </View>
     </Modal>
-  )
-}
+  );
+};

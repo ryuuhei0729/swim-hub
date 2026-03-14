@@ -11,10 +11,7 @@
 
 ```ts
 // 既存の良いパターン例（DashboardDataLoader等）
-const [user, supabase] = await Promise.all([
-  getServerUser(),
-  createAuthenticatedServerClient()
-])
+const [user, supabase] = await Promise.all([getServerUser(), createAuthenticatedServerClient()]);
 ```
 
 ---
@@ -27,8 +24,8 @@ const [user, supabase] = await Promise.all([
 
 ```ts
 export default async function MetadataLoader({ children }: MetadataLoaderProps) {
-  const user = await getServerUser()                        // 逐次
-  const supabase = await createAuthenticatedServerClient()  // 逐次
+  const user = await getServerUser(); // 逐次
+  const supabase = await createAuthenticatedServerClient(); // 逐次
   // ...
 }
 ```
@@ -37,10 +34,7 @@ export default async function MetadataLoader({ children }: MetadataLoaderProps) 
 
 ```ts
 export default async function MetadataLoader({ children }: MetadataLoaderProps) {
-  const [user, supabase] = await Promise.all([
-    getServerUser(),
-    createAuthenticatedServerClient()
-  ])
+  const [user, supabase] = await Promise.all([getServerUser(), createAuthenticatedServerClient()]);
   // ...
 }
 ```
@@ -57,18 +51,18 @@ export default async function MetadataLoader({ children }: MetadataLoaderProps) 
 
 ```ts
 async function getTeamAdminData(supabase, teamId, userId) {
-  const coreAPI = new TeamCoreAPI(supabase)
+  const coreAPI = new TeamCoreAPI(supabase);
 
-  const teamData = await coreAPI.getTeam(teamId)  // 逐次
+  const teamData = await coreAPI.getTeam(teamId); // 逐次
 
-  const { data: membershipData } = await supabase  // 逐次（独立したクエリ）
-    .from('team_memberships')
-    .select('*')
-    .eq('team_id', teamId)
-    .eq('user_id', userId)
-    .eq('role', 'admin')
-    .eq('is_active', true)
-    .single()
+  const { data: membershipData } = await supabase // 逐次（独立したクエリ）
+    .from("team_memberships")
+    .select("*")
+    .eq("team_id", teamId)
+    .eq("user_id", userId)
+    .eq("role", "admin")
+    .eq("is_active", true)
+    .single();
 }
 ```
 
@@ -76,19 +70,19 @@ async function getTeamAdminData(supabase, teamId, userId) {
 
 ```ts
 async function getTeamAdminData(supabase, teamId, userId) {
-  const coreAPI = new TeamCoreAPI(supabase)
+  const coreAPI = new TeamCoreAPI(supabase);
 
   const [teamData, { data: membershipData }] = await Promise.all([
     coreAPI.getTeam(teamId),
     supabase
-      .from('team_memberships')
-      .select('*')
-      .eq('team_id', teamId)
-      .eq('user_id', userId)
-      .eq('role', 'admin')
-      .eq('is_active', true)
-      .single()
-  ])
+      .from("team_memberships")
+      .select("*")
+      .eq("team_id", teamId)
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .eq("is_active", true)
+      .single(),
+  ]);
 }
 ```
 
@@ -165,8 +159,8 @@ for (let i = 0; i < practices.length; i += BATCH_SIZE) {
 ### 問題コード
 
 ```ts
-const newPrefixFiles = await listR2Objects(`profile-images/${user.id}/`)
-const legacyPrefixFiles = await listR2Objects(`profiles/avatars/${user.id}/`)
+const newPrefixFiles = await listR2Objects(`profile-images/${user.id}/`);
+const legacyPrefixFiles = await listR2Objects(`profiles/avatars/${user.id}/`);
 ```
 
 ### 修正例
@@ -174,8 +168,8 @@ const legacyPrefixFiles = await listR2Objects(`profiles/avatars/${user.id}/`)
 ```ts
 const [newPrefixFiles, legacyPrefixFiles] = await Promise.all([
   listR2Objects(`profile-images/${user.id}/`),
-  listR2Objects(`profiles/avatars/${user.id}/`)
-])
+  listR2Objects(`profiles/avatars/${user.id}/`),
+]);
 ```
 
 > DELETEハンドラにも同じパターンあり。
@@ -193,18 +187,18 @@ useEffect(() => {
   const loadRecords = async () => {
     // 画像パスクエリ
     const { data: competitionData } = await supabase
-      .from('competitions')
-      .select('image_paths')
-      .eq('id', competitionId)
-      .single()
+      .from("competitions")
+      .select("image_paths")
+      .eq("id", competitionId)
+      .single();
 
     // レコードクエリ（上記とは独立）
     const { data } = await supabase
-      .from('records')
+      .from("records")
       .select(`*, style:styles(*), competition:competitions(*), split_times(*)`)
-      .eq('competition_id', competitionId)
-  }
-})
+      .eq("competition_id", competitionId);
+  };
+});
 ```
 
 ### 修正例
@@ -213,18 +207,14 @@ useEffect(() => {
 useEffect(() => {
   const loadRecords = async () => {
     const [{ data: competitionData }, { data }] = await Promise.all([
+      supabase.from("competitions").select("image_paths").eq("id", competitionId).single(),
       supabase
-        .from('competitions')
-        .select('image_paths')
-        .eq('id', competitionId)
-        .single(),
-      supabase
-        .from('records')
+        .from("records")
         .select(`*, style:styles(*), competition:competitions(*), split_times(*)`)
-        .eq('competition_id', competitionId)
-    ])
-  }
-})
+        .eq("competition_id", competitionId),
+    ]);
+  };
+});
 ```
 
 ---
@@ -246,12 +236,12 @@ useEffect(() => {
 ```ts
 // タグを1件ずつ逐次insert
 for (const tag of menu.tags) {
-  const { error } = await queryBuilder.insert(insertData)
+  const { error } = await queryBuilder.insert(insertData);
 }
 
 // 時間を1件ずつ逐次delete
 for (const time of existingTimes) {
-  await deletePracticeTime(time.id)
+  await deletePracticeTime(time.id);
 }
 ```
 
@@ -259,12 +249,8 @@ for (const time of existingTimes) {
 
 ```ts
 // タグを並列insert
-await Promise.all(
-  menu.tags.map(tag => queryBuilder.insert(insertData))
-)
+await Promise.all(menu.tags.map((tag) => queryBuilder.insert(insertData)));
 
 // 時間を並列delete
-await Promise.all(
-  existingTimes.map(time => deletePracticeTime(time.id))
-)
+await Promise.all(existingTimes.map((time) => deletePracticeTime(time.id)));
 ```

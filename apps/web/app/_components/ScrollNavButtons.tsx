@@ -1,40 +1,40 @@
-'use client'
+"use client";
 
-import { useState, useCallback } from 'react'
-import Link from 'next/link'
+import { useState, useCallback } from "react";
+import Link from "next/link";
 
 const navItems = [
-  { id: 'practice', label: '練習記録' },
-  { id: 'competition', label: '大会記録' },
-  { id: 'goals', label: '目標管理' },
-  { id: 'pricing', label: '料金' },
-]
+  { id: "practice", label: "練習記録" },
+  { id: "competition", label: "大会記録" },
+  { id: "goals", label: "目標管理" },
+  { id: "pricing", label: "料金" },
+];
 
 function handleScrollTo(id: string) {
-  const element = document.getElementById(id)
+  const element = document.getElementById(id);
   if (element) {
-    const headerOffset = 100
-    const elementPosition = element.getBoundingClientRect().top
-    const offsetPosition = elementPosition + window.scrollY - headerOffset
+    const headerOffset = 100;
+    const elementPosition = element.getBoundingClientRect().top;
+    const offsetPosition = elementPosition + window.scrollY - headerOffset;
 
     window.scrollTo({
       top: offsetPosition,
-      behavior: 'smooth',
-    })
+      behavior: "smooth",
+    });
   }
 }
 
 export default function ScrollNavButtons() {
-  const [menuOpen, setMenuOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const toggleMenu = useCallback(() => {
-    setMenuOpen((prev) => !prev)
-  }, [])
+    setMenuOpen((prev) => !prev);
+  }, []);
 
   const handleMobileNavClick = useCallback((id: string) => {
-    setMenuOpen(false)
-    handleScrollTo(id)
-  }, [])
+    setMenuOpen(false);
+    handleScrollTo(id);
+  }, []);
 
   return (
     <>
@@ -73,16 +73,26 @@ export default function ScrollNavButtons() {
       {/* モバイルメニューボタン */}
       <button
         className="md:hidden p-2 text-gray-700 hover:text-blue-600"
-        aria-label={menuOpen ? 'メニューを閉じる' : 'メニューを開く'}
+        aria-label={menuOpen ? "メニューを閉じる" : "メニューを開く"}
         onClick={toggleMenu}
       >
         {menuOpen ? (
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         ) : (
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 6h16M4 12h16M4 18h16"
+            />
           </svg>
         )}
       </button>
@@ -128,5 +138,5 @@ export default function ScrollNavButtons() {
         </div>
       )}
     </>
-  )
+  );
 }

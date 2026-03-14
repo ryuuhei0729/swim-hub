@@ -1,35 +1,35 @@
 // @ts-nocheck
-import react from '@vitejs/plugin-react'
-import path from 'path'
-import { defineConfig } from 'vitest/config'
-import { createVitestConfig } from '../../tools/vitest-config/web.js'
+import react from "@vitejs/plugin-react";
+import path from "path";
+import { defineConfig } from "vitest/config";
+import { createVitestConfig } from "../../tools/vitest-config/web.js";
 
 export default defineConfig({
   plugins: [
     react({
       // React 19.2.1のuseIdフックを正しく動作させる
-      jsxRuntime: 'automatic',
+      jsxRuntime: "automatic",
     }),
   ],
   ...createVitestConfig({
-    name: 'web',
-    environment: 'jsdom',
-    setupFiles: ['./vitest.setup.ts'],
-    include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-    exclude: ['node_modules', 'dist', '.next', 'e2e'],
+    name: "web",
+    environment: "jsdom",
+    setupFiles: ["./vitest.setup.ts"],
+    include: ["**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
+    exclude: ["node_modules", "dist", ".next", "e2e"],
     coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html', 'lcov'],
+      provider: "v8",
+      reporter: ["text", "json", "html", "lcov"],
       exclude: [
-        'node_modules/',
-        'dist/',
-        '.next/',
-        'e2e/',
-        '**/*.d.ts',
-        '**/*.config.*',
-        '**/mockData',
-        '**/__mocks__',
-        '**/__tests__/utils',
+        "node_modules/",
+        "dist/",
+        ".next/",
+        "e2e/",
+        "**/*.d.ts",
+        "**/*.config.*",
+        "**/mockData",
+        "**/__mocks__",
+        "**/__tests__/utils",
       ],
       thresholds: {
         lines: 50,
@@ -39,15 +39,14 @@ export default defineConfig({
       },
     },
     alias: {
-      '@': path.resolve(__dirname, './'),
-      '@apps/shared': path.resolve(__dirname, '../shared'),
+      "@": path.resolve(__dirname, "./"),
+      "@apps/shared": path.resolve(__dirname, "../shared"),
     },
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, './'),
-        '@apps/shared': path.resolve(__dirname, '../shared'),
+        "@": path.resolve(__dirname, "./"),
+        "@apps/shared": path.resolve(__dirname, "../shared"),
       },
     },
   }),
-})
-
+});

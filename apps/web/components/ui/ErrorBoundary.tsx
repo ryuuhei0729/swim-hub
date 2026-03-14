@@ -1,13 +1,13 @@
-'use client'
+"use client";
 
-import React from 'react'
-import { ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import React from "react";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 
 interface ErrorBoundaryProps {
-  error: Error & { digest?: string }
-  reset: () => void
-  pageName: string
-  redirectPath: string
+  error: Error & { digest?: string };
+  reset: () => void;
+  pageName: string;
+  redirectPath: string;
 }
 
 /**
@@ -18,7 +18,7 @@ export default function ErrorBoundary({
   error,
   reset,
   pageName,
-  redirectPath
+  redirectPath,
 }: ErrorBoundaryProps) {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -30,23 +30,17 @@ export default function ErrorBoundary({
           </div>
 
           {/* エラーメッセージ */}
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            エラーが発生しました
-          </h2>
-          <p className="text-gray-600 mb-6">
-            {pageName}の読み込み中に問題が発生しました。
-          </p>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">エラーが発生しました</h2>
+          <p className="text-gray-600 mb-6">{pageName}の読み込み中に問題が発生しました。</p>
 
           {/* エラー詳細（開発環境のみ） */}
-          {process.env.NODE_ENV === 'development' && (
+          {process.env.NODE_ENV === "development" && (
             <div className="mb-6 p-4 bg-gray-50 rounded-lg text-left">
               <p className="text-sm font-mono text-red-600 break-all">
-                {error.message || '不明なエラー'}
+                {error.message || "不明なエラー"}
               </p>
               {error.digest && (
-                <p className="text-xs text-gray-500 mt-2">
-                  Error ID: {error.digest}
-                </p>
+                <p className="text-xs text-gray-500 mt-2">Error ID: {error.digest}</p>
               )}
             </div>
           )}
@@ -60,7 +54,7 @@ export default function ErrorBoundary({
               再試行
             </button>
             <button
-              onClick={() => window.location.href = redirectPath}
+              onClick={() => (window.location.href = redirectPath)}
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
             >
               ページを再読み込み
@@ -76,6 +70,5 @@ export default function ErrorBoundary({
         </div>
       </div>
     </div>
-  )
+  );
 }
-

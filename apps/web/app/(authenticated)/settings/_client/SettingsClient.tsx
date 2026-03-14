@@ -1,30 +1,30 @@
-'use client'
+"use client";
 
-import React from 'react'
-import Link from 'next/link'
-import { ArrowLeftIcon } from '@heroicons/react/24/outline'
-import { useAuth } from '@/contexts'
-import { useUserQuery, userKeys } from '@apps/shared/hooks'
-import { useQueryClient } from '@tanstack/react-query'
-import GoogleCalendarSyncSettings from '@/components/settings/GoogleCalendarSyncSettings'
-import EmailChangeSettings from '@/components/settings/EmailChangeSettings'
-import IdentityLinkSettings from '@/components/settings/IdentityLinkSettings'
-import AccountDeleteSettings from '@/components/settings/AccountDeleteSettings'
-import SubscriptionSettings from '@/components/settings/SubscriptionSettings'
+import React from "react";
+import Link from "next/link";
+import { ArrowLeftIcon } from "@heroicons/react/24/outline";
+import { useAuth } from "@/contexts";
+import { useUserQuery, userKeys } from "@apps/shared/hooks";
+import { useQueryClient } from "@tanstack/react-query";
+import GoogleCalendarSyncSettings from "@/components/settings/GoogleCalendarSyncSettings";
+import EmailChangeSettings from "@/components/settings/EmailChangeSettings";
+import IdentityLinkSettings from "@/components/settings/IdentityLinkSettings";
+import AccountDeleteSettings from "@/components/settings/AccountDeleteSettings";
+import SubscriptionSettings from "@/components/settings/SubscriptionSettings";
 
 export default function SettingsClient() {
-  const { user, supabase } = useAuth()
-  const queryClient = useQueryClient()
+  const { user, supabase } = useAuth();
+  const queryClient = useQueryClient();
   const { profile } = useUserQuery(supabase, {
     userId: user?.id,
-  })
+  });
 
   const handleGoogleCalendarUpdate = () => {
     if (user) {
-      queryClient.invalidateQueries({ queryKey: userKeys.profile(user.id) })
-      queryClient.invalidateQueries({ queryKey: userKeys.currentProfile() })
+      queryClient.invalidateQueries({ queryKey: userKeys.profile(user.id) });
+      queryClient.invalidateQueries({ queryKey: userKeys.currentProfile() });
     }
-  }
+  };
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -38,9 +38,7 @@ export default function SettingsClient() {
           >
             <ArrowLeftIcon className="h-5 w-5" />
           </Link>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-            設定
-          </h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">設定</h1>
         </div>
         <p className="text-sm sm:text-base text-gray-600 ml-10">
           アカウントや連携サービスの設定を管理します
@@ -51,10 +49,7 @@ export default function SettingsClient() {
       <SubscriptionSettings />
 
       {/* Googleカレンダー連携設定 */}
-      <GoogleCalendarSyncSettings
-        profile={profile}
-        onUpdate={handleGoogleCalendarUpdate}
-      />
+      <GoogleCalendarSyncSettings profile={profile} onUpdate={handleGoogleCalendarUpdate} />
 
       {/* メールアドレス変更 */}
       <EmailChangeSettings />
@@ -65,5 +60,5 @@ export default function SettingsClient() {
       {/* アカウント削除 */}
       <AccountDeleteSettings />
     </div>
-  )
+  );
 }

@@ -1,28 +1,28 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect, useCallback, useRef } from 'react'
-import Button from '@/components/ui/Button'
-import ConfirmDialog from '@/components/ui/ConfirmDialog'
-import { XMarkIcon } from '@heroicons/react/24/outline'
-import { formatTime, formatTimeAverage } from '@apps/shared/utils/time'
-import { useQuickTimeInput } from '@/components/forms/shared/TimeInput/hooks'
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import Button from "@/components/ui/Button";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { XMarkIcon } from "@heroicons/react/24/outline";
+import { formatTime, formatTimeAverage } from "@apps/shared/utils/time";
+import { useQuickTimeInput } from "@/components/forms/shared/TimeInput/hooks";
 
 interface TimeEntry {
-  id: string
-  setNumber: number
-  repNumber: number
-  time: number // 秒単位
-  displayValue?: string // 表示用の値
+  id: string;
+  setNumber: number;
+  repNumber: number;
+  time: number; // 秒単位
+  displayValue?: string; // 表示用の値
 }
 
 interface TimeInputModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSubmit: (times: TimeEntry[]) => void
-  setCount: number
-  repCount: number
-  initialTimes?: TimeEntry[]
-  menuNumber?: number // メニュー番号を追加
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (times: TimeEntry[]) => void;
+  setCount: number;
+  repCount: number;
+  initialTimes?: TimeEntry[];
+  menuNumber?: number; // メニュー番号を追加
 }
 
 export default function TimeInputModal({
@@ -32,218 +32,224 @@ export default function TimeInputModal({
   setCount,
   repCount,
   initialTimes = [],
-  menuNumber
+  menuNumber,
 }: TimeInputModalProps) {
-  const [times, setTimes] = useState<TimeEntry[]>([])
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
-  const [isSubmitted, setIsSubmitted] = useState(false)
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
-  const [confirmContext, setConfirmContext] = useState<'close' | 'back'>('close')
-  const isInitializedRef = useRef(false)
-  const ignorePopStateRef = useRef(false)
-  const { parseInput, resetContext } = useQuickTimeInput()
+  const [times, setTimes] = useState<TimeEntry[]>([]);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [confirmContext, setConfirmContext] = useState<"close" | "back">("close");
+  const isInitializedRef = useRef(false);
+  const ignorePopStateRef = useRef(false);
+  const { parseInput, resetContext } = useQuickTimeInput();
 
   // 全てのセット・レップの組み合わせを生成する関数
   const generateTimeCombinations = useCallback((): TimeEntry[] => {
-    const allCombinations: TimeEntry[] = []
+    const allCombinations: TimeEntry[] = [];
     for (let set = 1; set <= setCount; set++) {
       for (let rep = 1; rep <= repCount; rep++) {
-        const uniqueId = `${set}-${rep}-${Date.now()}-${Math.random()}`
-        
+        const uniqueId = `${set}-${rep}-${Date.now()}-${Math.random()}`;
+
         // 既存のタイムデータから該当するものを検索
-        const existingTime = initialTimes?.find(t => 
-          t.setNumber === set && t.repNumber === rep
-        )
-        
+        const existingTime = initialTimes?.find((t) => t.setNumber === set && t.repNumber === rep);
+
         allCombinations.push({
           id: uniqueId,
           setNumber: set,
           repNumber: rep,
           time: existingTime?.time || 0,
-          displayValue: existingTime && existingTime.time > 0 ? formatTime(existingTime.time) : ''
-        })
+          displayValue: existingTime && existingTime.time > 0 ? formatTime(existingTime.time) : "",
+        });
       }
     }
-    return allCombinations
-  }, [setCount, repCount, initialTimes])
+    return allCombinations;
+  }, [setCount, repCount, initialTimes]);
 
   // 依存する値が変更されたときに組み合わせを再生成
   useEffect(() => {
     if (isOpen) {
-      setTimes(generateTimeCombinations())
-      isInitializedRef.current = false
+      setTimes(generateTimeCombinations());
+      isInitializedRef.current = false;
       // 初期化後に少し待ってからフラグを立てる（初回設定で未保存扱いにならないようにする）
       setTimeout(() => {
-        isInitializedRef.current = true
-      }, 100)
+        isInitializedRef.current = true;
+      }, 100);
     }
-  }, [setCount, repCount, initialTimes, isOpen, generateTimeCombinations])
+  }, [setCount, repCount, initialTimes, isOpen, generateTimeCombinations]);
 
   // モーダルが閉じた時にリセット
   useEffect(() => {
     if (!isOpen) {
-      setHasUnsavedChanges(false)
-      setIsSubmitted(false)
-      setShowConfirmDialog(false)
-      isInitializedRef.current = false
+      setHasUnsavedChanges(false);
+      setIsSubmitted(false);
+      setShowConfirmDialog(false);
+      isInitializedRef.current = false;
     }
-  }, [isOpen])
+  }, [isOpen]);
 
   // モーダルオープン時にコンテキストをリセット
   useEffect(() => {
     if (isOpen) {
-      resetContext()
+      resetContext();
     }
-  }, [isOpen, resetContext])
+  }, [isOpen, resetContext]);
 
   // ブラウザバックでの離脱を防ぐ
   useEffect(() => {
-    if (!isOpen || !hasUnsavedChanges || isSubmitted) return
+    if (!isOpen || !hasUnsavedChanges || isSubmitted) return;
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault()
-      e.returnValue = ''
-    }
+      e.preventDefault();
+      e.returnValue = "";
+    };
 
     const handlePopState = () => {
       if (ignorePopStateRef.current) {
-        ignorePopStateRef.current = false
-        return
+        ignorePopStateRef.current = false;
+        return;
       }
       if (hasUnsavedChanges && !isSubmitted) {
-        window.history.pushState(null, '', window.location.href)
-        setConfirmContext('back')
-        setShowConfirmDialog(true)
+        window.history.pushState(null, "", window.location.href);
+        setConfirmContext("back");
+        setShowConfirmDialog(true);
       }
-    }
+    };
 
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    window.history.pushState(null, '', window.location.href)
-    window.addEventListener('popstate', handlePopState)
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.history.pushState(null, "", window.location.href);
+    window.addEventListener("popstate", handlePopState);
 
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload)
-      window.removeEventListener('popstate', handlePopState)
-    }
-  }, [isOpen, hasUnsavedChanges, isSubmitted])
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [isOpen, hasUnsavedChanges, isSubmitted]);
 
   const handleClose = useCallback(() => {
     if (hasUnsavedChanges && !isSubmitted) {
-      setConfirmContext('close')
-      setShowConfirmDialog(true)
-      return
+      setConfirmContext("close");
+      setShowConfirmDialog(true);
+      return;
     }
-    onClose()
-  }, [hasUnsavedChanges, isSubmitted, onClose])
+    onClose();
+  }, [hasUnsavedChanges, isSubmitted, onClose]);
 
   const handleConfirmClose = useCallback(() => {
-    if (confirmContext === 'back') {
-      ignorePopStateRef.current = true
-      window.history.back()
+    if (confirmContext === "back") {
+      ignorePopStateRef.current = true;
+      window.history.back();
     }
-    setShowConfirmDialog(false)
-    onClose()
-  }, [confirmContext, onClose])
+    setShowConfirmDialog(false);
+    onClose();
+  }, [confirmContext, onClose]);
 
   const handleCancelClose = useCallback(() => {
-    setShowConfirmDialog(false)
-  }, [])
+    setShowConfirmDialog(false);
+  }, []);
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   // 入力中は displayValue のみ更新（パースしない）
   const handleTimeChange = (id: string, value: string) => {
-    setTimes(prev => prev.map(t =>
-      t.id === id ? {
-        ...t,
-        displayValue: value
-      } : t
-    ))
+    setTimes((prev) =>
+      prev.map((t) =>
+        t.id === id
+          ? {
+              ...t,
+              displayValue: value,
+            }
+          : t,
+      ),
+    );
     // 初期化完了後の変更のみ追跡
     if (isInitializedRef.current) {
-      setHasUnsavedChanges(true)
+      setHasUnsavedChanges(true);
     }
-  }
+  };
 
   // 入力確定時にパース（Enter または フォーカスアウト）
   const handleTimeConfirm = (id: string, value: string) => {
     if (!value.trim()) {
       // 空入力の場合はクリア
-      setTimes(prev => prev.map(t =>
-        t.id === id ? { ...t, displayValue: '', time: 0 } : t
-      ))
-      return
+      setTimes((prev) => prev.map((t) => (t.id === id ? { ...t, displayValue: "", time: 0 } : t)));
+      return;
     }
-    const { time, displayValue } = parseInput(value)
-    setTimes(prev => prev.map(t =>
-      t.id === id ? {
-        ...t,
-        displayValue: displayValue || value,
-        time
-      } : t
-    ))
-  }
+    const { time, displayValue } = parseInput(value);
+    setTimes((prev) =>
+      prev.map((t) =>
+        t.id === id
+          ? {
+              ...t,
+              displayValue: displayValue || value,
+              time,
+            }
+          : t,
+      ),
+    );
+  };
 
   // Enterキーでパース＋次のフィールドへ移動
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, currentIndex: number, id: string, value: string) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      handleTimeConfirm(id, value)
-      const inputs = document.querySelectorAll<HTMLInputElement>('[data-time-input]')
-      const nextInput = inputs[currentIndex + 1]
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    currentIndex: number,
+    id: string,
+    value: string,
+  ) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleTimeConfirm(id, value);
+      const inputs = document.querySelectorAll<HTMLInputElement>("[data-time-input]");
+      const nextInput = inputs[currentIndex + 1];
       if (nextInput) {
-        nextInput.focus()
+        nextInput.focus();
       }
     }
-  }
+  };
 
   const handleSubmit = () => {
-    setIsSubmitted(true)
-    setHasUnsavedChanges(false)
-    onSubmit(times)
-    onClose()
-  }
+    setIsSubmitted(true);
+    setHasUnsavedChanges(false);
+    onSubmit(times);
+    onClose();
+  };
 
   const getTimesBySet = (setNumber: number) => {
-    return times.filter(t => t.setNumber === setNumber)
-  }
+    return times.filter((t) => t.setNumber === setNumber);
+  };
 
   const _getSetTotal = (setNumber: number) => {
-    const setTimes = getTimesBySet(setNumber)
-    return setTimes.reduce((sum, t) => sum + t.time, 0)
-  }
+    const setTimes = getTimesBySet(setNumber);
+    return setTimes.reduce((sum, t) => sum + t.time, 0);
+  };
 
   const getSetAverage = (setNumber: number) => {
-    const setTimes = getTimesBySet(setNumber)
-    const validTimes = setTimes.filter(t => t.time > 0)
-    if (validTimes.length === 0) return 0
-    return validTimes.reduce((sum, t) => sum + t.time, 0) / validTimes.length
-  }
+    const setTimes = getTimesBySet(setNumber);
+    const validTimes = setTimes.filter((t) => t.time > 0);
+    if (validTimes.length === 0) return 0;
+    return validTimes.reduce((sum, t) => sum + t.time, 0) / validTimes.length;
+  };
 
   const _getOverallTotal = () => {
-    return times.reduce((sum, t) => sum + t.time, 0)
-  }
+    return times.reduce((sum, t) => sum + t.time, 0);
+  };
 
   const getOverallAverage = () => {
-    const validTimes = times.filter(t => t.time > 0)
-    if (validTimes.length === 0) return 0
-    return validTimes.reduce((sum, t) => sum + t.time, 0) / validTimes.length
-  }
+    const validTimes = times.filter((t) => t.time > 0);
+    if (validTimes.length === 0) return 0;
+    return validTimes.reduce((sum, t) => sum + t.time, 0) / validTimes.length;
+  };
 
   return (
     <div className="fixed inset-0 z-80 overflow-y-auto" data-testid="time-input-modal">
       <div className="flex min-h-screen items-center justify-center px-4 sm:px-0 py-4">
-        <div
-          className="fixed inset-0 bg-black/40 transition-opacity"
-          onClick={handleClose}
-        ></div>
+        <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose}></div>
 
         <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-4xl">
           {/* ヘッダー */}
           <div className="bg-white px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h3 className="text-lg leading-6 font-medium text-gray-900">
-                {menuNumber ? `メニュー${menuNumber}のタイム入力` : 'タイム入力'}
+                {menuNumber ? `メニュー${menuNumber}のタイム入力` : "タイム入力"}
               </h3>
               <button
                 type="button"
@@ -263,48 +269,53 @@ export default function TimeInputModal({
           <div className="bg-white px-6 py-4 max-h-96 overflow-y-auto">
             <div className="space-y-6">
               {Array.from({ length: setCount }, (_, setIndex) => {
-                const setNumber = setIndex + 1
-                const setTimes = getTimesBySet(setNumber)
-                const setAverage = getSetAverage(setNumber)
-                const validTimesCount = setTimes.filter(t => t.time > 0).length
-                
+                const setNumber = setIndex + 1;
+                const setTimes = getTimesBySet(setNumber);
+                const setAverage = getSetAverage(setNumber);
+                const validTimesCount = setTimes.filter((t) => t.time > 0).length;
+
                 return (
                   <div key={setNumber} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-md font-semibold text-gray-900">
-                        セット {setNumber}
-                      </h4>
+                      <h4 className="text-md font-semibold text-gray-900">セット {setNumber}</h4>
                       <div className="text-sm text-gray-600">
-                        平均: {setAverage > 0 ? formatTimeAverage(setAverage) : '未入力'} 
+                        平均: {setAverage > 0 ? formatTimeAverage(setAverage) : "未入力"}
                         {validTimesCount > 0 && ` (${validTimesCount}本)`}
                       </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                       {setTimes.map((timeEntry, repIndex) => {
-                        const globalIndex = setIndex * repCount + repIndex
+                        const globalIndex = setIndex * repCount + repIndex;
                         return (
-                        <div key={timeEntry.id} className="space-y-1">
-                          <label className="block text-xs font-medium text-gray-700">
-                            {timeEntry.repNumber}本目
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="例: 31-2"
-                            value={timeEntry.displayValue || ''}
-                            onChange={(e) => handleTimeChange(timeEntry.id, e.target.value)}
-                            onBlur={(e) => handleTimeConfirm(timeEntry.id, e.target.value)}
-                            onKeyDown={(e) => handleKeyDown(e, globalIndex, timeEntry.id, timeEntry.displayValue || '')}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            data-testid={`time-input-${timeEntry.setNumber}-${timeEntry.repNumber}`}
-                            data-time-input
-                          />
-                        </div>
-                        )
+                          <div key={timeEntry.id} className="space-y-1">
+                            <label className="block text-xs font-medium text-gray-700">
+                              {timeEntry.repNumber}本目
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="例: 31-2"
+                              value={timeEntry.displayValue || ""}
+                              onChange={(e) => handleTimeChange(timeEntry.id, e.target.value)}
+                              onBlur={(e) => handleTimeConfirm(timeEntry.id, e.target.value)}
+                              onKeyDown={(e) =>
+                                handleKeyDown(
+                                  e,
+                                  globalIndex,
+                                  timeEntry.id,
+                                  timeEntry.displayValue || "",
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              data-testid={`time-input-${timeEntry.setNumber}-${timeEntry.repNumber}`}
+                              data-time-input
+                            />
+                          </div>
+                        );
                       })}
                     </div>
                   </div>
-                )
+                );
               })}
             </div>
           </div>
@@ -314,7 +325,7 @@ export default function TimeInputModal({
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-700">全体平均:</span>
               <span className="text-lg font-bold text-blue-600">
-                {getOverallAverage() > 0 ? formatTimeAverage(getOverallAverage()) : '未入力'}
+                {getOverallAverage() > 0 ? formatTimeAverage(getOverallAverage()) : "未入力"}
               </span>
             </div>
           </div>
@@ -346,13 +357,15 @@ export default function TimeInputModal({
         onConfirm={handleConfirmClose}
         onCancel={handleCancelClose}
         title="入力内容が保存されていません"
-        message={confirmContext === 'back'
-          ? '入力内容が保存されていません。このまま戻りますか？'
-          : '入力内容が保存されていません。このまま閉じますか？'}
-        confirmLabel={confirmContext === 'back' ? '戻る' : '閉じる'}
+        message={
+          confirmContext === "back"
+            ? "入力内容が保存されていません。このまま戻りますか？"
+            : "入力内容が保存されていません。このまま閉じますか？"
+        }
+        confirmLabel={confirmContext === "back" ? "戻る" : "閉じる"}
         cancelLabel="編集を続ける"
         variant="warning"
       />
     </div>
-  )
+  );
 }

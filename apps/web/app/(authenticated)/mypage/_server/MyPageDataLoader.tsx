@@ -2,49 +2,49 @@
 // マイページデータローダー（すべてのデータを並行取得）
 // =============================================================================
 
-import React from 'react'
-import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-server-auth'
-import MyPageClient from '../_client/MyPageClient'
+import React from "react";
+import { createAuthenticatedServerClient, getServerUser } from "@/lib/supabase-server-auth";
+import MyPageClient from "../_client/MyPageClient";
 
 interface BestTime {
-  id: string
-  time: number
-  created_at: string | null
-  pool_type: number // 0: 短水路, 1: 長水路
-  is_relaying: boolean
-  note?: string // 備考（一括登録時に使用）
+  id: string;
+  time: number;
+  created_at: string | null;
+  pool_type: number; // 0: 短水路, 1: 長水路
+  is_relaying: boolean;
+  note?: string; // 備考（一括登録時に使用）
   style: {
-    name_jp: string
-    distance: number
-  }
+    name_jp: string;
+    distance: number;
+  };
   competition?: {
-    title: string | null
-    date: string
-  }
+    title: string | null;
+    date: string;
+  };
   // 引き継ぎありのタイム（オプショナル）
   relayingTime?: {
-    id: string
-    time: number
-    created_at: string | null
-    note?: string
+    id: string;
+    time: number;
+    created_at: string | null;
+    note?: string;
     competition?: {
-      title: string | null
-      date: string
-    }
-  }
+      title: string | null;
+      date: string;
+    };
+  };
 }
 
 interface UserProfileData {
-  id: string
-  name: string
-  gender?: number
-  birthday?: string | null
-  bio?: string | null
-  avatar_url?: string | null
-  profile_image_path?: string | null
-  google_calendar_enabled?: boolean
-  google_calendar_sync_practices?: boolean
-  google_calendar_sync_competitions?: boolean
+  id: string;
+  name: string;
+  gender?: number;
+  birthday?: string | null;
+  bio?: string | null;
+  avatar_url?: string | null;
+  profile_image_path?: string | null;
+  google_calendar_enabled?: boolean;
+  google_calendar_sync_practices?: boolean;
+  google_calendar_sync_competitions?: boolean;
 }
 
 /**
@@ -52,33 +52,35 @@ interface UserProfileData {
  */
 async function getProfile(
   supabase: Awaited<ReturnType<typeof createAuthenticatedServerClient>>,
-  userId: string
+  userId: string,
 ): Promise<UserProfileData | null> {
   const { data, error } = await supabase
-    .from('users')
-    .select('id, name, gender, birthday, bio, profile_image_path, google_calendar_enabled, google_calendar_sync_practices, google_calendar_sync_competitions')
-    .eq('id', userId)
-    .single()
+    .from("users")
+    .select(
+      "id, name, gender, birthday, bio, profile_image_path, google_calendar_enabled, google_calendar_sync_practices, google_calendar_sync_competitions",
+    )
+    .eq("id", userId)
+    .single();
 
   if (error) {
-    console.error('プロフィール取得エラー:', error)
-    return null
+    console.error("プロフィール取得エラー:", error);
+    return null;
   }
 
-  if (!data) return null
+  if (!data) return null;
 
   // Supabaseから取得したデータの型（null/undefinedを許容）
   const userData = data as {
-    id: string
-    name: string
-    gender?: number | null
-    birthday?: string | null
-    bio?: string | null
-    profile_image_path?: string | null
-    google_calendar_enabled?: boolean | null
-    google_calendar_sync_practices?: boolean | null
-    google_calendar_sync_competitions?: boolean | null
-  }
+    id: string;
+    name: string;
+    gender?: number | null;
+    birthday?: string | null;
+    bio?: string | null;
+    profile_image_path?: string | null;
+    google_calendar_enabled?: boolean | null;
+    google_calendar_sync_practices?: boolean | null;
+    google_calendar_sync_competitions?: boolean | null;
+  };
 
   // UserProfileDataに合わせて変換（null/undefinedを適切に処理）
   return {
@@ -91,8 +93,8 @@ async function getProfile(
     profile_image_path: userData.profile_image_path ?? undefined,
     google_calendar_enabled: userData.google_calendar_enabled ?? undefined,
     google_calendar_sync_practices: userData.google_calendar_sync_practices ?? undefined,
-    google_calendar_sync_competitions: userData.google_calendar_sync_competitions ?? undefined
-  }
+    google_calendar_sync_competitions: userData.google_calendar_sync_competitions ?? undefined,
+  };
 }
 
 /**
@@ -100,11 +102,12 @@ async function getProfile(
  */
 async function getBestTimes(
   supabase: Awaited<ReturnType<typeof createAuthenticatedServerClient>>,
-  userId: string
+  userId: string,
 ): Promise<BestTime[]> {
   const { data, error } = await supabase
-    .from('records')
-    .select(`
+    .from("records")
+    .select(
+      `
       id,
       time,
       created_at,
@@ -119,68 +122,78 @@ async function getBestTimes(
         title,
         date
       )
-    `)
-    .eq('user_id', userId)
-    .order('time', { ascending: true })
+    `,
+    )
+    .eq("user_id", userId)
+    .order("time", { ascending: true });
 
   if (error) {
-    console.error('ベストタイム取得エラー:', error)
-    return []
+    console.error("ベストタイム取得エラー:", error);
+    return [];
   }
 
   // 種目ごと、プール種別ごとのベストタイムを取得
   // キー: `${styleName}_${poolType}`
   type RecordWithRelations = {
-    id: string
-    time: number
-    created_at: string | null
-    pool_type: number
-    is_relaying: boolean
-    note?: string | null
-    styles?: { name_jp: string; distance: number } | null
-    competitions?: { title: string | null; date: string } | null
-  }
+    id: string;
+    time: number;
+    created_at: string | null;
+    pool_type: number;
+    is_relaying: boolean;
+    note?: string | null;
+    styles?: { name_jp: string; distance: number } | null;
+    competitions?: { title: string | null; date: string } | null;
+  };
 
   // 引き継ぎなしのベストタイム（種目、プール種別ごと）
-  const bestTimesByStyleAndPool = new Map<string, BestTime>()
+  const bestTimesByStyleAndPool = new Map<string, BestTime>();
   // 引き継ぎありのベストタイム（種目、プール種別ごと）
-  const relayingBestTimesByStyleAndPool = new Map<string, {
-    id: string
-    time: number
-    created_at: string | null
-    note?: string
-    competition?: {
-      title: string | null
-      date: string
+  const relayingBestTimesByStyleAndPool = new Map<
+    string,
+    {
+      id: string;
+      time: number;
+      created_at: string | null;
+      note?: string;
+      competition?: {
+        title: string | null;
+        date: string;
+      };
     }
-  }>()
+  >();
 
   if (data && Array.isArray(data)) {
-    const records = data as RecordWithRelations[]
+    const records = data as RecordWithRelations[];
     records.forEach((record) => {
-      const styleKey = record.styles?.name_jp || 'Unknown'
-      const poolType = record.pool_type ?? 0
-      const key = `${styleKey}_${poolType}`
+      const styleKey = record.styles?.name_jp || "Unknown";
+      const poolType = record.pool_type ?? 0;
+      const key = `${styleKey}_${poolType}`;
 
       if (record.is_relaying) {
         // 引き継ぎありのタイム
-        if (!relayingBestTimesByStyleAndPool.has(key) ||
-            record.time < relayingBestTimesByStyleAndPool.get(key)!.time) {
+        if (
+          !relayingBestTimesByStyleAndPool.has(key) ||
+          record.time < relayingBestTimesByStyleAndPool.get(key)!.time
+        ) {
           relayingBestTimesByStyleAndPool.set(key, {
             id: record.id,
             time: record.time,
             created_at: record.created_at,
             note: record.note || undefined,
-            competition: record.competitions ? {
-              title: record.competitions.title,
-              date: record.competitions.date
-            } : undefined
-          })
+            competition: record.competitions
+              ? {
+                  title: record.competitions.title,
+                  date: record.competitions.date,
+                }
+              : undefined,
+          });
         }
       } else {
         // 引き継ぎなしのタイム
-        if (!bestTimesByStyleAndPool.has(key) ||
-            record.time < bestTimesByStyleAndPool.get(key)!.time) {
+        if (
+          !bestTimesByStyleAndPool.has(key) ||
+          record.time < bestTimesByStyleAndPool.get(key)!.time
+        ) {
           bestTimesByStyleAndPool.set(key, {
             id: record.id,
             time: record.time,
@@ -189,41 +202,43 @@ async function getBestTimes(
             is_relaying: false,
             note: record.note || undefined,
             style: {
-              name_jp: record.styles?.name_jp || 'Unknown',
-              distance: record.styles?.distance || 0
+              name_jp: record.styles?.name_jp || "Unknown",
+              distance: record.styles?.distance || 0,
             },
-            competition: record.competitions ? {
-              title: record.competitions.title,
-              date: record.competitions.date
-            } : undefined
-          })
+            competition: record.competitions
+              ? {
+                  title: record.competitions.title,
+                  date: record.competitions.date,
+                }
+              : undefined,
+          });
         }
       }
-    })
+    });
   }
 
   // 引き継ぎなしのタイムに、引き継ぎありのタイムを紐付ける
-  const result: BestTime[] = []
+  const result: BestTime[] = [];
   bestTimesByStyleAndPool.forEach((bestTime, key) => {
-    const relayingTime = relayingBestTimesByStyleAndPool.get(key)
+    const relayingTime = relayingBestTimesByStyleAndPool.get(key);
     result.push({
       ...bestTime,
-      relayingTime: relayingTime
-    })
-  })
+      relayingTime: relayingTime,
+    });
+  });
 
   // 引き継ぎなしがなく、引き継ぎありのみの場合も追加
   relayingBestTimesByStyleAndPool.forEach((relayingTime, key) => {
     if (!bestTimesByStyleAndPool.has(key)) {
       // キーから種目名とプール種別を取得
-      const [styleName, poolTypeStr] = key.split('_')
-      const poolType = parseInt(poolTypeStr, 10)
-      
+      const [styleName, poolTypeStr] = key.split("_");
+      const poolType = parseInt(poolTypeStr, 10);
+
       // 種目情報を取得（最初のレコードから）
-      const record = data?.find((r: RecordWithRelations) => 
-        (r.styles?.name_jp || 'Unknown') === styleName && 
-        (r.pool_type ?? 0) === poolType
-      ) as RecordWithRelations | undefined
+      const record = data?.find(
+        (r: RecordWithRelations) =>
+          (r.styles?.name_jp || "Unknown") === styleName && (r.pool_type ?? 0) === poolType,
+      ) as RecordWithRelations | undefined;
 
       if (record) {
         result.push({
@@ -234,16 +249,16 @@ async function getBestTimes(
           is_relaying: true,
           note: relayingTime.note,
           style: {
-            name_jp: record.styles?.name_jp || 'Unknown',
-            distance: record.styles?.distance || 0
+            name_jp: record.styles?.name_jp || "Unknown",
+            distance: record.styles?.distance || 0,
           },
-          competition: relayingTime.competition
-        })
+          competition: relayingTime.competition,
+        });
       }
     }
-  })
+  });
 
-  return result
+  return result;
 }
 
 /**
@@ -252,39 +267,25 @@ async function getBestTimes(
  */
 export default async function MyPageDataLoader() {
   // 認証情報とSupabaseクライアントを取得
-  const [user, supabase] = await Promise.all([
-    getServerUser(),
-    createAuthenticatedServerClient()
-  ])
+  const [user, supabase] = await Promise.all([getServerUser(), createAuthenticatedServerClient()]);
 
   if (!user) {
-    return (
-      <MyPageClient
-        initialProfile={null}
-        initialBestTimes={[]}
-      />
-    )
+    return <MyPageClient initialProfile={null} initialBestTimes={[]} />;
   }
 
   // すべてのデータ取得を並行実行（真の並列取得）
   const [profileResult, bestTimesResult] = await Promise.all([
     // プロフィール取得
     getProfile(supabase, user.id).catch((error) => {
-      console.error('プロフィール取得エラー:', error)
-      return null
+      console.error("プロフィール取得エラー:", error);
+      return null;
     }),
     // ベストタイム取得
     getBestTimes(supabase, user.id).catch((error) => {
-      console.error('ベストタイム取得エラー:', error)
-      return [] as BestTime[]
-    })
-  ])
+      console.error("ベストタイム取得エラー:", error);
+      return [] as BestTime[];
+    }),
+  ]);
 
-  return (
-    <MyPageClient
-      initialProfile={profileResult}
-      initialBestTimes={bestTimesResult}
-    />
-  )
+  return <MyPageClient initialProfile={profileResult} initialBestTimes={bestTimesResult} />;
 }
-

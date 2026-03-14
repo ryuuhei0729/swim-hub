@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import { ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline'
-import type { AttendanceButtonProps } from '../../types'
+import { ClipboardDocumentCheckIcon } from "@heroicons/react/24/outline";
+import type { AttendanceButtonProps } from "../../types";
 
 export function AttendanceButton({ onClick }: AttendanceButtonProps) {
   return (
@@ -13,5 +13,5 @@ export function AttendanceButton({ onClick }: AttendanceButtonProps) {
       <ClipboardDocumentCheckIcon className="h-4 w-4" />
       <span>出欠状況</span>
     </button>
-  )
+  );
 }

@@ -1,48 +1,54 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react'
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, Platform, ActivityIndicator } from 'react-native'
-import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { useQueryClient } from '@tanstack/react-query'
-import { useAuth } from '@/contexts/AuthProvider'
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Alert,
+  Platform,
+  ActivityIndicator,
+} from "react-native";
+import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthProvider";
 import {
   useCreatePracticeMutation,
   useUpdatePracticeMutation,
   usePracticesQuery,
-} from '@apps/shared/hooks/queries/practices'
-import { useUserQuery } from '@apps/shared/hooks/queries/user'
-import { practiceKeys } from '@apps/shared/hooks/queries/keys'
-import { usePracticeFormStore } from '@/stores/practiceFormStore'
-import { useShallow } from 'zustand/react/shallow'
-import { useIOSCalendarSync } from '@/hooks/useIOSCalendarSync'
-import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
-import { ImageUploader, ImageFile, ExistingImage } from '@/components/shared/ImageUploader'
-import {
-  uploadImages,
-  deleteImages,
-  getExistingImagesFromPaths,
-} from '@/utils/imageUpload'
-import type { MainStackParamList } from '@/navigation/types'
+} from "@apps/shared/hooks/queries/practices";
+import { useUserQuery } from "@apps/shared/hooks/queries/user";
+import { practiceKeys } from "@apps/shared/hooks/queries/keys";
+import { usePracticeFormStore } from "@/stores/practiceFormStore";
+import { useShallow } from "zustand/react/shallow";
+import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
+import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
+import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
+import { uploadImages, deleteImages, getExistingImagesFromPaths } from "@/utils/imageUpload";
+import type { MainStackParamList } from "@/navigation/types";
 
-type PracticeFormScreenRouteProp = RouteProp<MainStackParamList, 'PracticeForm'>
-type PracticeFormScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>
+type PracticeFormScreenRouteProp = RouteProp<MainStackParamList, "PracticeForm">;
+type PracticeFormScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
 /**
  * 練習記録作成・編集画面
  * 練習記録の基本情報（日付、タイトル、場所、メモ）を入力・編集
  */
 export const PracticeFormScreen: React.FC = () => {
-  const route = useRoute<PracticeFormScreenRouteProp>()
-  const navigation = useNavigation<PracticeFormScreenNavigationProp>()
-  const { practiceId, date: initialDateParam } = route.params || {}
-  const { supabase, user } = useAuth()
-  const queryClient = useQueryClient()
-  const isEditMode = !!practiceId
+  const route = useRoute<PracticeFormScreenRouteProp>();
+  const navigation = useNavigation<PracticeFormScreenNavigationProp>();
+  const { practiceId, date: initialDateParam } = route.params || {};
+  const { supabase, user } = useAuth();
+  const queryClient = useQueryClient();
+  const isEditMode = !!practiceId;
 
   // ユーザープロフィール取得（iOSカレンダー設定確認用）
-  const { profile } = useUserQuery(supabase, { enableRealtime: false })
+  const { profile } = useUserQuery(supabase, { enableRealtime: false });
 
   // iOSカレンダー同期フック
-  const { syncPractice } = useIOSCalendarSync()
+  const { syncPractice } = useIOSCalendarSync();
 
   // Zustandストア
   const {
@@ -78,131 +84,128 @@ export const PracticeFormScreen: React.FC = () => {
       clearErrors: state.clearErrors,
       initialize: state.initialize,
       reset: state.reset,
-    }))
-  )
+    })),
+  );
 
   // 既存データの取得（編集モード時）
-  const [loadingPractice, setLoadingPractice] = useState(isEditMode)
-  const initializedRef = useRef(false)
+  const [loadingPractice, setLoadingPractice] = useState(isEditMode);
+  const initializedRef = useRef(false);
 
   // 二重送信防止用のref
-  const isSubmittingRef = useRef(false)
+  const isSubmittingRef = useRef(false);
 
   // 画像の状態管理
-  const [newImageFiles, setNewImageFiles] = useState<ImageFile[]>([])
-  const [deletedImageIds, setDeletedImageIds] = useState<string[]>([])
-  const [existingImages, setExistingImages] = useState<ExistingImage[]>([])
+  const [newImageFiles, setNewImageFiles] = useState<ImageFile[]>([]);
+  const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
+  const [existingImages, setExistingImages] = useState<ExistingImage[]>([]);
 
   // 画像変更のハンドラー
   const handleImagesChange = useCallback((newFiles: ImageFile[], deletedIds: string[]) => {
-    setNewImageFiles(newFiles)
-    setDeletedImageIds(deletedIds)
-  }, [])
+    setNewImageFiles(newFiles);
+    setDeletedImageIds(deletedIds);
+  }, []);
 
   // 編集モード時は、usePracticesQueryでデータを取得してから該当のものを検索
-  const {
-    data: practices = [],
-    isLoading: loadingPractices,
-  } = usePracticesQuery(supabase, {
+  const { data: practices = [], isLoading: loadingPractices } = usePracticesQuery(supabase, {
     page: 1,
     pageSize: 1000, // 十分な件数を取得
     enableRealtime: false, // 編集画面ではリアルタイム更新は不要
-  })
+  });
 
   useEffect(() => {
-    if (initializedRef.current) return
+    if (initializedRef.current) return;
 
     if (isEditMode && practiceId) {
       // 編集モード: 既存データを取得
-      setLoadingPractice(true)
-      const practice = practices.find((p) => p.id === practiceId)
+      setLoadingPractice(true);
+      const practice = practices.find((p) => p.id === practiceId);
       if (practice) {
-        initialize(practice)
+        initialize(practice);
         // 既存画像を読み込み
         const images = getExistingImagesFromPaths(
           supabase,
           practice.image_paths,
-          'practice-images'
-        )
-        setExistingImages(images)
-        initializedRef.current = true
-        setLoadingPractice(false)
+          "practice-images",
+        );
+        setExistingImages(images);
+        initializedRef.current = true;
+        setLoadingPractice(false);
       } else if (!loadingPractices) {
         // データが見つからない場合
-        setLoadingPractice(false)
+        setLoadingPractice(false);
       }
     } else {
       // 作成モード: 空のフォームで初期化
-      initialize()
-      initializedRef.current = true
+      initialize();
+      initializedRef.current = true;
       if (initialDateParam) {
-        setDate(initialDateParam)
+        setDate(initialDateParam);
       }
-      setLoadingPractice(false)
+      setLoadingPractice(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEditMode, practiceId, loadingPractices, initialDateParam, practices, supabase])
+  }, [isEditMode, practiceId, loadingPractices, initialDateParam, practices, supabase]);
 
   // ミューテーション
-  const createMutation = useCreatePracticeMutation(supabase)
-  const updateMutation = useUpdatePracticeMutation(supabase)
+  const createMutation = useCreatePracticeMutation(supabase);
+  const updateMutation = useUpdatePracticeMutation(supabase);
 
   // バリデーション
   const validate = (): boolean => {
-    clearErrors()
-    let isValid = true
+    clearErrors();
+    let isValid = true;
 
     // 日付のバリデーション
-    if (!date || date.trim() === '') {
-      setError('date', '日付を入力してください')
-      isValid = false
+    if (!date || date.trim() === "") {
+      setError("date", "日付を入力してください");
+      isValid = false;
     } else {
       // YYYY-MM-DD形式のチェック
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
       if (!dateRegex.test(date)) {
-        setError('date', '日付はYYYY-MM-DD形式で入力してください')
-        isValid = false
+        setError("date", "日付はYYYY-MM-DD形式で入力してください");
+        isValid = false;
       } else {
         // 有効な日付かチェック
-        const dateObj = new Date(date)
-        const [year, month, day] = date.split('-').map(Number)
+        const dateObj = new Date(date);
+        const [year, month, day] = date.split("-").map(Number);
         if (
           isNaN(dateObj.getTime()) ||
           dateObj.getFullYear() !== year ||
           dateObj.getMonth() + 1 !== month ||
           dateObj.getDate() !== day
         ) {
-          setError('date', '有効な日付を入力してください')
-          isValid = false
+          setError("date", "有効な日付を入力してください");
+          isValid = false;
         }
       }
     }
 
-    return isValid
-  }
+    return isValid;
+  };
 
   // 保存処理（ダッシュボードに戻る）
   const handleSave = async () => {
     // 二重送信防止
-    if (isSubmittingRef.current) return
+    if (isSubmittingRef.current) return;
 
     if (!validate()) {
-      return
+      return;
     }
 
     if (!user) {
-      Alert.alert('エラー', '認証が必要です', [{ text: 'OK' }])
-      return
+      Alert.alert("エラー", "認証が必要です", [{ text: "OK" }]);
+      return;
     }
 
-    isSubmittingRef.current = true
-    setLoading(true)
-    clearErrors()
+    isSubmittingRef.current = true;
+    setLoading(true);
+    clearErrors();
 
     try {
       if (isEditMode && practiceId) {
         // 新規画像をアップロード
-        let newImagePaths: string[] = []
+        let newImagePaths: string[] = [];
         if (newImageFiles.length > 0) {
           const uploadResults = await uploadImages(
             supabase,
@@ -212,70 +215,74 @@ export const PracticeFormScreen: React.FC = () => {
               base64: f.base64,
               fileExtension: f.fileExtension,
             })),
-            'practice-images'
-          )
-          newImagePaths = uploadResults.map((r) => r.path)
+            "practice-images",
+          );
+          newImagePaths = uploadResults.map((r) => r.path);
         }
 
         // 既存画像パスから削除されたものを除外し、新規画像パスを追加
         const currentPaths = existingImages
           .filter((img) => !deletedImageIds.includes(img.id))
-          .map((img) => img.id) // idがパス
-        const updatedImagePaths = [...currentPaths, ...newImagePaths]
+          .map((img) => img.id); // idがパス
+        const updatedImagePaths = [...currentPaths, ...newImagePaths];
 
         const formData = {
           date,
-          title: title && title.trim() !== '' ? title.trim() : null,
-          place: place && place.trim() !== '' ? place.trim() : null,
-          note: note && note.trim() !== '' ? note.trim() : null,
+          title: title && title.trim() !== "" ? title.trim() : null,
+          place: place && place.trim() !== "" ? place.trim() : null,
+          note: note && note.trim() !== "" ? note.trim() : null,
           image_paths: updatedImagePaths.length > 0 ? updatedImagePaths : [],
-        }
+        };
 
         // 更新
         await updateMutation.mutateAsync({
           id: practiceId,
           updates: formData,
-        })
+        });
 
         // DB更新成功後に削除対象画像をストレージから削除
         if (deletedImageIds.length > 0) {
-          await deleteImages(supabase, deletedImageIds, 'practice-images')
+          await deleteImages(supabase, deletedImageIds, "practice-images");
         }
 
         // iOSカレンダー同期（iOS端末かつ連携が有効な場合）
         // カレンダー同期エラーはDB保存成功後なので、別途通知してエラーを握りつぶす
-        if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_practices) {
-          const practiceForSync = practices.find((p) => p.id === practiceId)
+        if (
+          Platform.OS === "ios" &&
+          profile?.ios_calendar_enabled &&
+          profile?.ios_calendar_sync_practices
+        ) {
+          const practiceForSync = practices.find((p) => p.id === practiceId);
           if (practiceForSync) {
             try {
-              await syncPractice({ ...practiceForSync, ...formData }, 'update')
+              await syncPractice({ ...practiceForSync, ...formData }, "update");
             } catch (syncError) {
-              console.warn('カレンダー同期エラー:', syncError)
+              console.warn("カレンダー同期エラー:", syncError);
               Alert.alert(
-                'カレンダー同期に失敗',
-                '練習記録は保存されましたが、カレンダーへの同期に失敗しました。',
-                [{ text: 'OK' }]
-              )
+                "カレンダー同期に失敗",
+                "練習記録は保存されましたが、カレンダーへの同期に失敗しました。",
+                [{ text: "OK" }],
+              );
             }
           }
         }
 
         // カレンダーと練習一覧のクエリを無効化してリフレッシュ
-        queryClient.invalidateQueries({ queryKey: ['calendar'] })
-        queryClient.invalidateQueries({ queryKey: practiceKeys.lists() })
+        queryClient.invalidateQueries({ queryKey: ["calendar"] });
+        queryClient.invalidateQueries({ queryKey: practiceKeys.lists() });
         // 成功: 前の画面に戻る
-        reset()
-        navigation.goBack()
+        reset();
+        navigation.goBack();
       } else {
         // 作成
         const formData = {
           date,
-          title: title && title.trim() !== '' ? title.trim() : null,
-          place: place && place.trim() !== '' ? place.trim() : null,
-          note: note && note.trim() !== '' ? note.trim() : null,
-        }
+          title: title && title.trim() !== "" ? title.trim() : null,
+          place: place && place.trim() !== "" ? place.trim() : null,
+          note: note && note.trim() !== "" ? note.trim() : null,
+        };
 
-        const createdPractice = await createMutation.mutateAsync(formData)
+        const createdPractice = await createMutation.mutateAsync(formData);
 
         // 新規画像をアップロード
         if (newImageFiles.length > 0) {
@@ -287,74 +294,76 @@ export const PracticeFormScreen: React.FC = () => {
               base64: f.base64,
               fileExtension: f.fileExtension,
             })),
-            'practice-images'
-          )
-          const imagePaths = uploadResults.map((r) => r.path)
+            "practice-images",
+          );
+          const imagePaths = uploadResults.map((r) => r.path);
 
           // 練習記録を画像パスで更新
           await updateMutation.mutateAsync({
             id: createdPractice.id,
             updates: { image_paths: imagePaths },
-          })
+          });
         }
 
         // iOSカレンダー同期（iOS端末かつ連携が有効な場合）
         // カレンダー同期エラーはDB保存成功後なので、別途通知してエラーを握りつぶす
-        if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_practices) {
+        if (
+          Platform.OS === "ios" &&
+          profile?.ios_calendar_enabled &&
+          profile?.ios_calendar_sync_practices
+        ) {
           try {
-            await syncPractice(createdPractice, 'create')
+            await syncPractice(createdPractice, "create");
           } catch (syncError) {
-            console.warn('カレンダー同期エラー:', syncError)
+            console.warn("カレンダー同期エラー:", syncError);
             Alert.alert(
-              'カレンダー同期に失敗',
-              '練習記録は保存されましたが、カレンダーへの同期に失敗しました。',
-              [{ text: 'OK' }]
-            )
+              "カレンダー同期に失敗",
+              "練習記録は保存されましたが、カレンダーへの同期に失敗しました。",
+              [{ text: "OK" }],
+            );
           }
         }
 
         // カレンダーと練習一覧のクエリを無効化してリフレッシュ
-        queryClient.invalidateQueries({ queryKey: ['calendar'] })
-        queryClient.invalidateQueries({ queryKey: practiceKeys.lists() })
+        queryClient.invalidateQueries({ queryKey: ["calendar"] });
+        queryClient.invalidateQueries({ queryKey: practiceKeys.lists() });
         // 成功: 前の画面に戻る（練習タブから来た場合は練習タブに戻る）
-        reset()
-        navigation.goBack()
+        reset();
+        navigation.goBack();
       }
     } catch (error) {
-      console.error('保存エラー:', error)
-      Alert.alert(
-        'エラー',
-        error instanceof Error ? error.message : '保存に失敗しました',
-        [{ text: 'OK' }]
-      )
+      console.error("保存エラー:", error);
+      Alert.alert("エラー", error instanceof Error ? error.message : "保存に失敗しました", [
+        { text: "OK" },
+      ]);
     } finally {
-      isSubmittingRef.current = false
-      setLoading(false)
+      isSubmittingRef.current = false;
+      setLoading(false);
     }
-  }
+  };
 
   // 続けて練習ログを作成（PracticeLogFormScreenへ遷移）
   const handleContinueToLog = async () => {
     // 二重送信防止
-    if (isSubmittingRef.current) return
+    if (isSubmittingRef.current) return;
 
     if (!validate()) {
-      return
+      return;
     }
 
     if (!user) {
-      Alert.alert('エラー', '認証が必要です', [{ text: 'OK' }])
-      return
+      Alert.alert("エラー", "認証が必要です", [{ text: "OK" }]);
+      return;
     }
 
-    isSubmittingRef.current = true
-    setLoading(true)
-    clearErrors()
+    isSubmittingRef.current = true;
+    setLoading(true);
+    clearErrors();
 
     try {
       if (isEditMode && practiceId) {
         // 新規画像をアップロード
-        let newImagePaths: string[] = []
+        let newImagePaths: string[] = [];
         if (newImageFiles.length > 0) {
           const uploadResults = await uploadImages(
             supabase,
@@ -364,71 +373,75 @@ export const PracticeFormScreen: React.FC = () => {
               base64: f.base64,
               fileExtension: f.fileExtension,
             })),
-            'practice-images'
-          )
-          newImagePaths = uploadResults.map((r) => r.path)
+            "practice-images",
+          );
+          newImagePaths = uploadResults.map((r) => r.path);
         }
 
         // 既存画像パスから削除されたものを除外し、新規画像パスを追加
         const currentPaths = existingImages
           .filter((img) => !deletedImageIds.includes(img.id))
-          .map((img) => img.id)
-        const updatedImagePaths = [...currentPaths, ...newImagePaths]
+          .map((img) => img.id);
+        const updatedImagePaths = [...currentPaths, ...newImagePaths];
 
         const formData = {
           date,
-          title: title && title.trim() !== '' ? title.trim() : null,
-          place: place && place.trim() !== '' ? place.trim() : null,
-          note: note && note.trim() !== '' ? note.trim() : null,
+          title: title && title.trim() !== "" ? title.trim() : null,
+          place: place && place.trim() !== "" ? place.trim() : null,
+          note: note && note.trim() !== "" ? note.trim() : null,
           image_paths: updatedImagePaths.length > 0 ? updatedImagePaths : [],
-        }
+        };
 
         // 編集モード: 練習を更新
         await updateMutation.mutateAsync({
           id: practiceId,
           updates: formData,
-        })
+        });
 
         // DB更新成功後に削除対象画像をストレージから削除
         if (deletedImageIds.length > 0) {
-          await deleteImages(supabase, deletedImageIds, 'practice-images')
+          await deleteImages(supabase, deletedImageIds, "practice-images");
         }
 
         // iOSカレンダー同期（iOS端末かつ連携が有効な場合）
         // カレンダー同期エラーはDB保存成功後なので、別途通知してエラーを握りつぶす
-        if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_practices) {
-          const practiceForSync = practices.find((p) => p.id === practiceId)
+        if (
+          Platform.OS === "ios" &&
+          profile?.ios_calendar_enabled &&
+          profile?.ios_calendar_sync_practices
+        ) {
+          const practiceForSync = practices.find((p) => p.id === practiceId);
           if (practiceForSync) {
             try {
-              await syncPractice({ ...practiceForSync, ...formData }, 'update')
+              await syncPractice({ ...practiceForSync, ...formData }, "update");
             } catch (syncError) {
-              console.warn('カレンダー同期エラー:', syncError)
+              console.warn("カレンダー同期エラー:", syncError);
               Alert.alert(
-                'カレンダー同期に失敗',
-                '練習記録は保存されましたが、カレンダーへの同期に失敗しました。',
-                [{ text: 'OK' }]
-              )
+                "カレンダー同期に失敗",
+                "練習記録は保存されましたが、カレンダーへの同期に失敗しました。",
+                [{ text: "OK" }],
+              );
             }
           }
         }
 
-        queryClient.invalidateQueries({ queryKey: ['calendar'] })
-        queryClient.invalidateQueries({ queryKey: practiceKeys.lists() })
-        reset()
-        navigation.navigate('PracticeLogForm', {
+        queryClient.invalidateQueries({ queryKey: ["calendar"] });
+        queryClient.invalidateQueries({ queryKey: practiceKeys.lists() });
+        reset();
+        navigation.navigate("PracticeLogForm", {
           practiceId: practiceId,
-          returnTo: 'dashboard',
-        })
+          returnTo: "dashboard",
+        });
       } else {
         // 作成
         const formData = {
           date,
-          title: title && title.trim() !== '' ? title.trim() : null,
-          place: place && place.trim() !== '' ? place.trim() : null,
-          note: note && note.trim() !== '' ? note.trim() : null,
-        }
+          title: title && title.trim() !== "" ? title.trim() : null,
+          place: place && place.trim() !== "" ? place.trim() : null,
+          note: note && note.trim() !== "" ? note.trim() : null,
+        };
 
-        const createdPractice = await createMutation.mutateAsync(formData)
+        const createdPractice = await createMutation.mutateAsync(formData);
 
         // 新規画像をアップロード
         if (newImageFiles.length > 0) {
@@ -440,60 +453,62 @@ export const PracticeFormScreen: React.FC = () => {
               base64: f.base64,
               fileExtension: f.fileExtension,
             })),
-            'practice-images'
-          )
-          const imagePaths = uploadResults.map((r) => r.path)
+            "practice-images",
+          );
+          const imagePaths = uploadResults.map((r) => r.path);
 
           // 練習記録を画像パスで更新
           await updateMutation.mutateAsync({
             id: createdPractice.id,
             updates: { image_paths: imagePaths },
-          })
+          });
         }
 
         // iOSカレンダー同期（iOS端末かつ連携が有効な場合）
         // カレンダー同期エラーはDB保存成功後なので、別途通知してエラーを握りつぶす
-        if (Platform.OS === 'ios' && profile?.ios_calendar_enabled && profile?.ios_calendar_sync_practices) {
+        if (
+          Platform.OS === "ios" &&
+          profile?.ios_calendar_enabled &&
+          profile?.ios_calendar_sync_practices
+        ) {
           try {
-            await syncPractice(createdPractice, 'create')
+            await syncPractice(createdPractice, "create");
           } catch (syncError) {
-            console.warn('カレンダー同期エラー:', syncError)
+            console.warn("カレンダー同期エラー:", syncError);
             Alert.alert(
-              'カレンダー同期に失敗',
-              '練習記録は保存されましたが、カレンダーへの同期に失敗しました。',
-              [{ text: 'OK' }]
-            )
+              "カレンダー同期に失敗",
+              "練習記録は保存されましたが、カレンダーへの同期に失敗しました。",
+              [{ text: "OK" }],
+            );
           }
         }
 
         // カレンダーと練習一覧のクエリを無効化してリフレッシュ
-        queryClient.invalidateQueries({ queryKey: ['calendar'] })
-        queryClient.invalidateQueries({ queryKey: practiceKeys.lists() })
+        queryClient.invalidateQueries({ queryKey: ["calendar"] });
+        queryClient.invalidateQueries({ queryKey: practiceKeys.lists() });
         // 成功: PracticeLogFormScreenへ遷移
-        reset()
-        navigation.navigate('PracticeLogForm', {
+        reset();
+        navigation.navigate("PracticeLogForm", {
           practiceId: createdPractice.id,
-          returnTo: 'dashboard',
-        })
+          returnTo: "dashboard",
+        });
       }
     } catch (error) {
-      console.error('保存エラー:', error)
-      Alert.alert(
-        'エラー',
-        error instanceof Error ? error.message : '保存に失敗しました',
-        [{ text: 'OK' }]
-      )
+      console.error("保存エラー:", error);
+      Alert.alert("エラー", error instanceof Error ? error.message : "保存に失敗しました", [
+        { text: "OK" },
+      ]);
     } finally {
-      isSubmittingRef.current = false
-      setLoading(false)
+      isSubmittingRef.current = false;
+      setLoading(false);
     }
-  }
+  };
 
   // キャンセル処理
   const handleCancel = () => {
-    reset()
-    navigation.goBack()
-  }
+    reset();
+    navigation.goBack();
+  };
 
   // ローディング状態
   if (loadingPractice) {
@@ -501,7 +516,7 @@ export const PracticeFormScreen: React.FC = () => {
       <View style={styles.container}>
         <LoadingSpinner fullScreen message="練習記録を読み込み中..." />
       </View>
-    )
+    );
   }
 
   return (
@@ -516,9 +531,9 @@ export const PracticeFormScreen: React.FC = () => {
             style={[styles.input, errors.date && styles.inputError]}
             value={date}
             onChangeText={(text) => {
-              setDate(text)
+              setDate(text);
               if (errors.date) {
-                clearErrors()
+                clearErrors();
               }
             }}
             placeholder="YYYY-MM-DD"
@@ -533,7 +548,7 @@ export const PracticeFormScreen: React.FC = () => {
           <Text style={styles.label}>タイトル</Text>
           <TextInput
             style={styles.input}
-            value={title || ''}
+            value={title || ""}
             onChangeText={setTitle}
             placeholder="練習タイトル（任意）"
             placeholderTextColor="#9CA3AF"
@@ -546,7 +561,7 @@ export const PracticeFormScreen: React.FC = () => {
           <Text style={styles.label}>場所</Text>
           <TextInput
             style={styles.input}
-            value={place || ''}
+            value={place || ""}
             onChangeText={setPlace}
             placeholder="練習場所（任意）"
             placeholderTextColor="#9CA3AF"
@@ -559,7 +574,7 @@ export const PracticeFormScreen: React.FC = () => {
           <Text style={styles.label}>メモ</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
-            value={note || ''}
+            value={note || ""}
             onChangeText={setNote}
             placeholder="メモ（任意）"
             placeholderTextColor="#9CA3AF"
@@ -617,13 +632,13 @@ export const PracticeFormScreen: React.FC = () => {
         </Pressable>
       </View>
     </ScrollView>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: "#EFF6FF",
   },
   content: {
     padding: 16,
@@ -636,24 +651,24 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: "600",
+    color: "#374151",
   },
   required: {
-    color: '#DC2626',
+    color: "#DC2626",
   },
   input: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: "#D1D5DB",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#111827',
+    color: "#111827",
   },
   inputError: {
-    borderColor: '#DC2626',
+    borderColor: "#DC2626",
   },
   textArea: {
     minHeight: 100,
@@ -661,11 +676,11 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 12,
-    color: '#DC2626',
+    color: "#DC2626",
     marginTop: 4,
   },
   buttonContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
     marginTop: 8,
   },
@@ -673,41 +688,41 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   cancelButton: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: "#F3F4F6",
   },
   cancelButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: "600",
+    color: "#374151",
   },
   saveButton: {
-    backgroundColor: '#2563EB',
+    backgroundColor: "#2563EB",
   },
   saveButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
   continueButton: {
     marginTop: 12,
     paddingVertical: 14,
     borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#2563EB',
+    borderColor: "#2563EB",
   },
   continueButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#2563EB',
+    fontWeight: "600",
+    color: "#2563EB",
   },
   buttonDisabled: {
     opacity: 0.6,
   },
-})
+});

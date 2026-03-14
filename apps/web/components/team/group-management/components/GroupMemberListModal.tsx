@@ -1,19 +1,19 @@
-'use client'
+"use client";
 
-import React, { useEffect, useState, useCallback } from 'react'
-import { useAuth } from '@/contexts'
-import BaseModal from '@/components/ui/BaseModal'
-import Avatar from '@/components/ui/Avatar'
-import { UsersIcon } from '@heroicons/react/24/outline'
-import type { TeamGroupWithCount } from '../hooks/useTeamGroups'
-import type { MemberDetail } from '@/types/member-detail'
+import React, { useEffect, useState, useCallback } from "react";
+import { useAuth } from "@/contexts";
+import BaseModal from "@/components/ui/BaseModal";
+import Avatar from "@/components/ui/Avatar";
+import { UsersIcon } from "@heroicons/react/24/outline";
+import type { TeamGroupWithCount } from "../hooks/useTeamGroups";
+import type { MemberDetail } from "@/types/member-detail";
 
 interface GroupMemberListModalProps {
-  isOpen: boolean
-  onClose: () => void
-  group: TeamGroupWithCount | null
-  teamId: string
-  onMemberClick: (member: MemberDetail) => void
+  isOpen: boolean;
+  onClose: () => void;
+  group: TeamGroupWithCount | null;
+  teamId: string;
+  onMemberClick: (member: MemberDetail) => void;
 }
 
 export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
@@ -23,31 +23,32 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
   teamId,
   onMemberClick,
 }) => {
-  const { supabase } = useAuth()
-  const [members, setMembers] = useState<MemberDetail[]>([])
-  const [loading, setLoading] = useState(false)
+  const { supabase } = useAuth();
+  const [members, setMembers] = useState<MemberDetail[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const loadMembers = useCallback(async () => {
-    if (!group) return
-    setLoading(true)
+    if (!group) return;
+    setLoading(true);
     try {
       // グループに所属するuser_idを取得
       const { data: groupMemberships, error: gmError } = await supabase
-        .from('team_group_memberships')
-        .select('user_id')
-        .eq('team_group_id', group.id)
-      if (gmError) throw gmError
+        .from("team_group_memberships")
+        .select("user_id")
+        .eq("team_group_id", group.id);
+      if (gmError) throw gmError;
 
-      const userIds = (groupMemberships ?? []).map((m) => m.user_id)
+      const userIds = (groupMemberships ?? []).map((m) => m.user_id);
       if (userIds.length === 0) {
-        setMembers([])
-        return
+        setMembers([]);
+        return;
       }
 
       // team_membershipsからMemberDetail情報を取得
       const { data, error: tmError } = await supabase
-        .from('team_memberships')
-        .select(`
+        .from("team_memberships")
+        .select(
+          `
           id,
           user_id,
           role,
@@ -60,29 +61,30 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
             bio,
             profile_image_path
           )
-        `)
-        .eq('team_id', teamId)
-        .eq('status', 'approved')
-        .eq('is_active', true)
-        .in('user_id', userIds)
-        .order('role', { ascending: true })
+        `,
+        )
+        .eq("team_id", teamId)
+        .eq("status", "approved")
+        .eq("is_active", true)
+        .in("user_id", userIds)
+        .order("role", { ascending: true });
 
-      if (tmError) throw tmError
-      setMembers((data ?? []) as unknown as MemberDetail[])
+      if (tmError) throw tmError;
+      setMembers((data ?? []) as unknown as MemberDetail[]);
     } catch (err) {
-      console.error('グループメンバー取得エラー:', err)
+      console.error("グループメンバー取得エラー:", err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [group, teamId, supabase])
+  }, [group, teamId, supabase]);
 
   useEffect(() => {
     if (isOpen && group) {
-      loadMembers()
+      loadMembers();
     }
-  }, [isOpen, group, loadMembers])
+  }, [isOpen, group, loadMembers]);
 
-  if (!group) return null
+  if (!group) return null;
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} title={`${group.name}`} size="md">
@@ -118,19 +120,19 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
                 type="button"
                 onClick={() => onMemberClick(member)}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left"
-                aria-label={`${member.users?.name || '名前未設定'} の詳細を表示`}
+                aria-label={`${member.users?.name || "名前未設定"} の詳細を表示`}
               >
                 <Avatar
                   avatarUrl={member.users?.profile_image_path ?? null}
-                  userName={member.users?.name || '?'}
+                  userName={member.users?.name || "?"}
                   size="sm"
                 />
                 <div className="flex-1 min-w-0">
                   <span className="text-sm font-medium text-gray-900 truncate block">
-                    {member.users?.name || '名前未設定'}
+                    {member.users?.name || "名前未設定"}
                   </span>
                 </div>
-                {member.role === 'admin' && (
+                {member.role === "admin" && (
                   <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full shrink-0">
                     管理者
                   </span>
@@ -141,5 +143,5 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
         )}
       </div>
     </BaseModal>
-  )
-}
+  );
+};

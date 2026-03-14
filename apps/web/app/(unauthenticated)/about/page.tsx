@@ -1,5 +1,5 @@
-import React from 'react'
-import Link from 'next/link'
+import React from "react";
+import Link from "next/link";
 import {
   BuildingOfficeIcon,
   UserCircleIcon,
@@ -11,16 +11,16 @@ import {
   SparklesIcon,
   LightBulbIcon,
   CheckBadgeIcon,
-} from '@heroicons/react/24/outline'
-import { BackButton } from '@/components/ui/BackButton'
+} from "@heroicons/react/24/outline";
+import { BackButton } from "@/components/ui/BackButton";
 
-export const revalidate = 3600
+export const revalidate = 3600;
 
 export const metadata = {
-  title: '運営者情報・サービス概要 | SwimHub',
+  title: "運営者情報・サービス概要 | SwimHub",
   description:
-    'SwimHubの運営者情報・サービス概要・開発ストーリーについてご紹介します。水泳選手・コーチ・チーム管理者のための記録管理サービスSwimHubの詳細をご覧ください。',
-}
+    "SwimHubの運営者情報・サービス概要・開発ストーリーについてご紹介します。水泳選手・コーチ・チーム管理者のための記録管理サービスSwimHubの詳細をご覧ください。",
+};
 
 export default function AboutPage() {
   return (
@@ -111,8 +111,8 @@ export default function AboutPage() {
               </p>
               <p>
                 現在も、ユーザーの皆さまからのフィードバックをもとに機能の追加・改善を続けています。
-                「水泳を頑張るすべての人が、自分の成長を実感できるように」——この想いは、
-                SwimHub を立ち上げた日から変わっていません。技術の力で水泳というスポーツを
+                「水泳を頑張るすべての人が、自分の成長を実感できるように」——この想いは、 SwimHub
+                を立ち上げた日から変わっていません。技術の力で水泳というスポーツを
                 もっと楽しく、もっと充実したものにしていきたいと考えています。
               </p>
             </div>
@@ -229,22 +229,19 @@ export default function AboutPage() {
             <h2 className="text-xl font-semibold text-gray-900 mb-4">他サービスとの違い</h2>
             <div className="space-y-4 text-gray-700 leading-relaxed">
               <div className="bg-gray-50 rounded-lg p-5">
-                <h3 className="font-medium text-gray-900 mb-2">
-                  汎用フィットネスアプリとの違い
-                </h3>
+                <h3 className="font-medium text-gray-900 mb-2">汎用フィットネスアプリとの違い</h3>
                 <p>
                   一般的なフィットネスアプリは、ランニング・ウォーキング・ジムトレーニングなど
                   多種多様なスポーツに対応していますが、水泳の記録管理に関しては機能が限定的です。
                   例えば、種目ごとのベストタイム管理や短水路・長水路の区別、大会記録の管理などは
-                  汎用アプリではサポートされていないことがほとんどです。SwimHub は水泳専用に設計されているため、
+                  汎用アプリではサポートされていないことがほとんどです。SwimHub
+                  は水泳専用に設計されているため、
                   競泳選手が本当に必要とする機能を過不足なく提供できます。
                 </p>
               </div>
 
               <div className="bg-gray-50 rounded-lg p-5">
-                <h3 className="font-medium text-gray-900 mb-2">
-                  スプレッドシート管理との違い
-                </h3>
+                <h3 className="font-medium text-gray-900 mb-2">スプレッドシート管理との違い</h3>
                 <p>
                   Excel や Google スプレッドシートでの管理は柔軟性がありますが、
                   データの入力に手間がかかり、ベストタイムの自動判定や成長グラフの生成はできません。
@@ -255,9 +252,7 @@ export default function AboutPage() {
               </div>
 
               <div className="bg-gray-50 rounded-lg p-5">
-                <h3 className="font-medium text-gray-900 mb-2">
-                  紙のノート・手書き管理との違い
-                </h3>
+                <h3 className="font-medium text-gray-900 mb-2">紙のノート・手書き管理との違い</h3>
                 <p>
                   練習ノートに手書きで記録する方法は今でも多くの選手が実践していますが、
                   過去の記録を検索したり、タイムの推移をグラフで確認したりすることが困難です。
@@ -268,9 +263,7 @@ export default function AboutPage() {
               </div>
 
               <div className="bg-gray-50 rounded-lg p-5">
-                <h3 className="font-medium text-gray-900 mb-2">
-                  水泳経験者が開発している強み
-                </h3>
+                <h3 className="font-medium text-gray-900 mb-2">水泳経験者が開発している強み</h3>
                 <p>
                   SwimHub は、実際に長年水泳に取り組んできた運営者が開発しています。
                   そのため、選手やコーチが「あったら嬉しい」と感じる機能を的確に実装できます。
@@ -399,8 +392,8 @@ export default function AboutPage() {
 
               <h3 className="font-medium text-gray-900 pt-2">SwimHub に込めた想い</h3>
               <p className="text-gray-700 leading-relaxed">
-                私は「水泳の知識」と「技術力」の両方を持ち合わせていることが、
-                SwimHub の最大の強みだと考えています。水泳の現場を知らないエンジニアが作るツールでは、
+                私は「水泳の知識」と「技術力」の両方を持ち合わせていることが、 SwimHub
+                の最大の強みだと考えています。水泳の現場を知らないエンジニアが作るツールでは、
                 選手やコーチの本当のニーズに応えることは難しい。逆に、水泳の知識だけでは
                 使いやすいアプリケーションを作ることはできません。
                 この2つの専門性を掛け合わせることで、他にはない価値を提供できると信じています。
@@ -413,8 +406,8 @@ export default function AboutPage() {
                 <Link href="/contact" className="text-blue-600 hover:text-blue-800 underline">
                   お問い合わせ
                 </Link>
-                からお気軽にご連絡ください。水泳を愛するすべての方にとって、
-                SwimHub が日々の練習や大会を「もっと楽しく、もっと充実したもの」にする
+                からお気軽にご連絡ください。水泳を愛するすべての方にとって、 SwimHub
+                が日々の練習や大会を「もっと楽しく、もっと充実したもの」にする
                 お手伝いができれば幸いです。
               </p>
             </div>
@@ -425,8 +418,8 @@ export default function AboutPage() {
             <h2 className="text-xl font-semibold text-gray-900 mb-4">関連サービス</h2>
             <p className="text-gray-700 leading-relaxed mb-4">
               SwimHub では、メインの記録管理サービスに加えて、
-              水泳に役立つ以下の関連サービスも提供しています。
-              いずれも SwimHub と連携して使うことで、より充実した水泳ライフをサポートします。
+              水泳に役立つ以下の関連サービスも提供しています。 いずれも SwimHub
+              と連携して使うことで、より充実した水泳ライフをサポートします。
             </p>
             <div className="space-y-4">
               <div className="border border-gray-200 rounded-lg p-5">
@@ -437,7 +430,8 @@ export default function AboutPage() {
                   音声やバイブレーションで通知を受けることができます。
                   プールサイドでの使用を想定した大きな文字表示と、
                   水しぶきがかかっても操作しやすいシンプルなインターフェースが特徴です。
-                  オフライン環境でも動作するため、Wi-Fi のないプール施設でも問題なくご利用いただけます。
+                  オフライン環境でも動作するため、Wi-Fi
+                  のないプール施設でも問題なくご利用いただけます。
                 </p>
               </div>
               <div className="border border-gray-200 rounded-lg p-5">
@@ -477,5 +471,5 @@ export default function AboutPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

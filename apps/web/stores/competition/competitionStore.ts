@@ -2,9 +2,9 @@
 // 大会用統合Zustandストア (Form + Filter)
 // =============================================================================
 
-import { create } from 'zustand'
-import type { Style } from '@apps/shared/types'
-import type { EditingData, EntryWithStyle } from '../types'
+import { create } from "zustand";
+import type { Style } from "@apps/shared/types";
+import type { EditingData, EntryWithStyle } from "../types";
 
 // -----------------------------------------------------------------------------
 // Types
@@ -12,62 +12,67 @@ import type { EditingData, EntryWithStyle } from '../types'
 
 interface CompetitionFormState {
   // モーダル状態（3段階）
-  isBasicFormOpen: boolean
-  isEntryFormOpen: boolean
-  isRecordFormOpen: boolean
+  isBasicFormOpen: boolean;
+  isEntryFormOpen: boolean;
+  isRecordFormOpen: boolean;
 
   // データ
-  selectedDate: Date | null
-  editingData: EditingData | null
-  createdCompetitionId: string | null
-  createdEntries: EntryWithStyle[]
-  styles: Style[]
+  selectedDate: Date | null;
+  editingData: EditingData | null;
+  createdCompetitionId: string | null;
+  createdEntries: EntryWithStyle[];
+  styles: Style[];
 
   // UI状態
-  isLoading: boolean
+  isLoading: boolean;
 }
 
 interface CompetitionFilterState {
-  filterStyle: string
-  includeRelay: boolean
-  filterPoolType: string
-  filterFiscalYear: string
+  filterStyle: string;
+  includeRelay: boolean;
+  filterPoolType: string;
+  filterFiscalYear: string;
 }
 
 interface CompetitionFormActions {
   // モーダル操作
-  openBasicForm: (date?: Date, editData?: EditingData) => void
-  openEntryForm: (competitionId?: string, editData?: EditingData) => void
-  openRecordForm: (competitionId?: string, entryData?: EntryWithStyle[], editData?: EditingData) => void
-  closeBasicForm: () => void
-  closeEntryForm: () => void
-  closeRecordForm: () => void
-  closeAll: () => void
+  openBasicForm: (date?: Date, editData?: EditingData) => void;
+  openEntryForm: (competitionId?: string, editData?: EditingData) => void;
+  openRecordForm: (
+    competitionId?: string,
+    entryData?: EntryWithStyle[],
+    editData?: EditingData,
+  ) => void;
+  closeBasicForm: () => void;
+  closeEntryForm: () => void;
+  closeRecordForm: () => void;
+  closeAll: () => void;
 
   // データ操作
-  setSelectedDate: (date: Date | null) => void
-  setEditingData: (data: EditingData | null) => void
-  setCreatedCompetitionId: (id: string | null) => void
-  setCreatedEntries: (entries: EntryWithStyle[]) => void
-  setStyles: (styles: Style[]) => void
-  setLoading: (loading: boolean) => void
+  setSelectedDate: (date: Date | null) => void;
+  setEditingData: (data: EditingData | null) => void;
+  setCreatedCompetitionId: (id: string | null) => void;
+  setCreatedEntries: (entries: EntryWithStyle[]) => void;
+  setStyles: (styles: Style[]) => void;
+  setLoading: (loading: boolean) => void;
 
   // フォームリセット
-  resetForm: () => void
+  resetForm: () => void;
 }
 
 interface CompetitionFilterActions {
-  setFilterStyle: (style: string) => void
-  setIncludeRelay: (include: boolean) => void
-  setFilterPoolType: (poolType: string) => void
-  setFilterFiscalYear: (year: string) => void
-  resetFilter: () => void
+  setFilterStyle: (style: string) => void;
+  setIncludeRelay: (include: boolean) => void;
+  setFilterPoolType: (poolType: string) => void;
+  setFilterFiscalYear: (year: string) => void;
+  resetFilter: () => void;
 }
 
-type CompetitionState = CompetitionFormState & CompetitionFilterState
-type CompetitionActions = CompetitionFormActions & CompetitionFilterActions & {
-  reset: () => void
-}
+type CompetitionState = CompetitionFormState & CompetitionFilterState;
+type CompetitionActions = CompetitionFormActions &
+  CompetitionFilterActions & {
+    reset: () => void;
+  };
 
 // -----------------------------------------------------------------------------
 // Initial State
@@ -83,19 +88,19 @@ const initialFormState: CompetitionFormState = {
   createdEntries: [],
   styles: [],
   isLoading: false,
-}
+};
 
 const initialFilterState: CompetitionFilterState = {
-  filterStyle: '',
+  filterStyle: "",
   includeRelay: true,
-  filterPoolType: '',
-  filterFiscalYear: '',
-}
+  filterPoolType: "",
+  filterFiscalYear: "",
+};
 
 const initialState: CompetitionState = {
   ...initialFormState,
   ...initialFilterState,
-}
+};
 
 // -----------------------------------------------------------------------------
 // Store
@@ -199,14 +204,4 @@ export const useCompetitionStore = create<CompetitionState & CompetitionActions>
   // 全体リセット
   // ---------------------------------------------------------------------------
   reset: () => set(initialState),
-}))
-
-// -----------------------------------------------------------------------------
-// 後方互換性のためのエイリアス (deprecated, will be removed)
-// -----------------------------------------------------------------------------
-
-/** @deprecated useCompetitionStore を使用してください */
-export const useCompetitionFormStore = useCompetitionStore
-
-/** @deprecated useCompetitionStore を使用してください */
-export const useCompetitionFilterStore = useCompetitionStore
+}));

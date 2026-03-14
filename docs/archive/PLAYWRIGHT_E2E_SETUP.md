@@ -66,15 +66,18 @@ flowchart LR
 ## ローカル環境構築手順
 
 1. 依存パッケージのインストール
+
    ```bash
    npm install
    ```
 
-2. Supabase ローカルの起動  
+2. Supabase ローカルの起動
+
    ```bash
    npm run supabase:start
    ```
-   - 初回起動時は `supabase/.env` が生成されるので、以下のキーを `apps/web/.env.local` に追記する  
+
+   - 初回起動時は `supabase/.env` が生成されるので、以下のキーを `apps/web/.env.local` に追記する
      ```bash
      NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
      NEXT_PUBLIC_SUPABASE_ANON_KEY=<supabase/.env 内の anon key>
@@ -83,6 +86,7 @@ flowchart LR
    - シードデータをリセットしたい場合は `npm run supabase:reset` を利用
 
 3. Next.js 開発サーバーの起動
+
    ```bash
    npm run dev:web
    ```
@@ -112,13 +116,10 @@ npm run test:e2e:ui
 
 ## トラブルシューティング
 
-| 症状 | 対応策 |
-| --- | --- |
-| Supabase への接続が 404/503 | `npm run supabase:start` が起動済みか、`config.toml` のポートが競合していないか確認 |
-| Playwright がログインに失敗する | テストユーザーの重複が疑われる場合は `apps/web/e2e/scripts/reset-test-data.js` で初期化、または Supabase Studio から該当ユーザーを削除 |
-| Next.js 起動前にテストが始まり失敗する | `playwright.config.ts` の `webServer.timeout` を延長、あるいは `command` を `npm run dev:web` に合わせてバックグラウンド起動 |
-| ブラウザバイナリが見つからない | `npx playwright install --with-deps` を再実行し、依存ライブラリを揃える |
-| CI で環境変数が読み込めない | Supabase のキーを CI シークレットに登録し、`NEXT_PUBLIC_SUPABASE_URL` などを設定してからテストを実行 |
-
-
-
+| 症状                                   | 対応策                                                                                                                                 |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Supabase への接続が 404/503            | `npm run supabase:start` が起動済みか、`config.toml` のポートが競合していないか確認                                                    |
+| Playwright がログインに失敗する        | テストユーザーの重複が疑われる場合は `apps/web/e2e/scripts/reset-test-data.js` で初期化、または Supabase Studio から該当ユーザーを削除 |
+| Next.js 起動前にテストが始まり失敗する | `playwright.config.ts` の `webServer.timeout` を延長、あるいは `command` を `npm run dev:web` に合わせてバックグラウンド起動           |
+| ブラウザバイナリが見つからない         | `npx playwright install --with-deps` を再実行し、依存ライブラリを揃える                                                                |
+| CI で環境変数が読み込めない            | Supabase のキーを CI シークレットに登録し、`NEXT_PUBLIC_SUPABASE_URL` などを設定してからテストを実行                                   |

@@ -14,8 +14,8 @@
  * const competition = normalizeRelation(record.competitions) // Competition | null
  */
 export function normalizeRelation<T>(value: T | T[] | null | undefined): T | null {
-  if (value === null || value === undefined) return null
-  return Array.isArray(value) ? value[0] ?? null : value
+  if (value === null || value === undefined) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
 /**
@@ -28,6 +28,6 @@ export function normalizeRelation<T>(value: T | T[] | null | undefined): T | nul
  * const milestones = normalizeRelationArray(goal.milestones) // Milestone[]
  */
 export function normalizeRelationArray<T>(value: T | T[] | null | undefined): T[] {
-  if (value === null || value === undefined) return []
-  return Array.isArray(value) ? value : [value]
+  if (value === null || value === undefined) return [];
+  return Array.isArray(value) ? value : [value];
 }

@@ -1,5 +1,5 @@
-import { Suspense } from 'react'
-import GoalDataLoader from './_server/GoalDataLoader'
+import { Suspense } from "react";
+import GoalDataLoader from "./_server/GoalDataLoader";
 
 /**
  * 目標管理ページ（Server Component）
@@ -23,5 +23,5 @@ export default async function GoalsPage() {
         <GoalDataLoader />
       </Suspense>
     </div>
-  )
+  );
 }

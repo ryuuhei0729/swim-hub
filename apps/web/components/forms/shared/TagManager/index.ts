@@ -8,7 +8,7 @@ export {
   getRandomColor,
   normalizeColor,
   isValidColor,
-} from './hooks/useTagManager'
+} from "./hooks/useTagManager";
 
 // 既存のコンポーネントへの参照
 // TagInputとTagManagementModalは既存の場所から使用

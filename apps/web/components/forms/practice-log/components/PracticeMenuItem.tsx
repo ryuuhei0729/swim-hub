@@ -1,25 +1,25 @@
-'use client'
+"use client";
 
-import React from 'react'
-import Button from '@/components/ui/Button'
-import Input from '@/components/ui/Input'
-import { TrashIcon, ClockIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
-import TagInput from '../../TagInput'
-import type { PracticeMenu, Tag } from '../types'
-import { SWIM_STYLES, SWIM_CATEGORIES } from '../types'
-import { formatTime, formatTimeAverage } from '@/utils/formatters'
+import React from "react";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import { TrashIcon, ClockIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
+import TagInput from "../../TagInput";
+import type { PracticeMenu, Tag } from "../types";
+import { SWIM_STYLES, SWIM_CATEGORIES } from "../types";
+import { formatTime, formatTimeAverage } from "@/utils/formatters";
 
 interface PracticeMenuItemProps {
-  menu: PracticeMenu
-  menuIndex: number
-  canRemove: boolean
-  availableTags: Tag[]
-  isLoading: boolean
-  onRemove: () => void
-  onUpdate: (field: keyof PracticeMenu, value: string | number | '' | Tag[]) => void
-  onTagsChange: (tags: Tag[]) => void
-  onAvailableTagsUpdate: (tags: Tag[]) => void
-  onOpenTimeModal: () => void
+  menu: PracticeMenu;
+  menuIndex: number;
+  canRemove: boolean;
+  availableTags: Tag[];
+  isLoading: boolean;
+  onRemove: () => void;
+  onUpdate: (field: keyof PracticeMenu, value: string | number | "" | Tag[]) => void;
+  onTagsChange: (tags: Tag[]) => void;
+  onAvailableTagsUpdate: (tags: Tag[]) => void;
+  onOpenTimeModal: () => void;
 }
 
 /**
@@ -82,7 +82,7 @@ export default function PracticeMenuItem({
             <div className="relative">
               <select
                 value={menu.style}
-                onChange={(e) => onUpdate('style', e.target.value)}
+                onChange={(e) => onUpdate("style", e.target.value)}
                 className="w-full pl-3 pr-10 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
                 required
                 data-testid="practice-style"
@@ -104,7 +104,7 @@ export default function PracticeMenuItem({
               <select
                 value={menu.swimCategory}
                 onChange={(e) =>
-                  onUpdate('swimCategory', e.target.value as 'Swim' | 'Pull' | 'Kick')
+                  onUpdate("swimCategory", e.target.value as "Swim" | "Pull" | "Kick")
                 }
                 className="w-full pl-3 pr-10 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
                 data-testid="practice-swim-category"
@@ -129,7 +129,7 @@ export default function PracticeMenuItem({
             <Input
               type="number"
               value={menu.distance}
-              onChange={(e) => onUpdate('distance', e.target.value)}
+              onChange={(e) => onUpdate("distance", e.target.value)}
               placeholder="100"
               min="1"
               required
@@ -144,7 +144,7 @@ export default function PracticeMenuItem({
             <Input
               type="number"
               value={menu.reps}
-              onChange={(e) => onUpdate('reps', e.target.value)}
+              onChange={(e) => onUpdate("reps", e.target.value)}
               placeholder="4"
               min="1"
               required
@@ -159,7 +159,7 @@ export default function PracticeMenuItem({
             <Input
               type="number"
               value={menu.sets}
-              onChange={(e) => onUpdate('sets', e.target.value)}
+              onChange={(e) => onUpdate("sets", e.target.value)}
               placeholder="1"
               min="1"
               required
@@ -168,13 +168,11 @@ export default function PracticeMenuItem({
           </div>
 
           <div className="hidden sm:block">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              サークル(分)
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">サークル(分)</label>
             <Input
               type="number"
               value={menu.circleMin}
-              onChange={(e) => onUpdate('circleMin', e.target.value)}
+              onChange={(e) => onUpdate("circleMin", e.target.value)}
               placeholder="1"
               min="0"
               data-testid="practice-circle-min-pc"
@@ -182,13 +180,11 @@ export default function PracticeMenuItem({
           </div>
 
           <div className="hidden sm:block">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              サークル(秒)
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">サークル(秒)</label>
             <Input
               type="number"
               value={menu.circleSec}
-              onChange={(e) => onUpdate('circleSec', e.target.value)}
+              onChange={(e) => onUpdate("circleSec", e.target.value)}
               placeholder="30"
               min="0"
               max="59"
@@ -200,13 +196,11 @@ export default function PracticeMenuItem({
         {/* 4行目：サークル（モバイルのみ） */}
         <div className="grid grid-cols-2 gap-2 sm:hidden">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              サークル(分)
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">サークル(分)</label>
             <Input
               type="number"
               value={menu.circleMin}
-              onChange={(e) => onUpdate('circleMin', e.target.value)}
+              onChange={(e) => onUpdate("circleMin", e.target.value)}
               placeholder="1"
               min="0"
               data-testid="practice-circle-min"
@@ -214,13 +208,11 @@ export default function PracticeMenuItem({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              サークル(秒)
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">サークル(秒)</label>
             <Input
               type="number"
               value={menu.circleSec}
-              onChange={(e) => onUpdate('circleSec', e.target.value)}
+              onChange={(e) => onUpdate("circleSec", e.target.value)}
               placeholder="30"
               min="0"
               max="59"
@@ -231,9 +223,7 @@ export default function PracticeMenuItem({
 
         {/* タイム入力ボタン */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            練習タイム
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">練習タイム</label>
           <Button
             type="button"
             onClick={onOpenTimeModal}
@@ -244,21 +234,19 @@ export default function PracticeMenuItem({
             <ClockIcon className="h-5 w-5" />
             {menu.times && menu.times.length > 0
               ? `タイムを編集 (${menu.times.length}件登録済み)`
-              : 'タイムを入力'}
+              : "タイムを入力"}
           </Button>
         </div>
 
         {/* 既存タイム表示 */}
-        {menu.times && menu.times.length > 0 && (
-          <PracticeTimesDisplay menu={menu} />
-        )}
+        {menu.times && menu.times.length > 0 && <PracticeTimesDisplay menu={menu} />}
 
         {/* メモ */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">メモ</label>
           <textarea
             value={menu.note}
-            onChange={(e) => onUpdate('note', e.target.value)}
+            onChange={(e) => onUpdate("note", e.target.value)}
             rows={2}
             className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="このメニューに関するメモ"
@@ -267,7 +255,7 @@ export default function PracticeMenuItem({
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 /**
@@ -286,10 +274,7 @@ function PracticeTimesDisplay({ menu }: { menu: PracticeMenu }) {
             <tr className="border-b border-gray-200">
               <th className="text-left py-2 px-2 font-medium text-gray-800"></th>
               {Array.from({ length: Number(menu.sets) || 1 }, (_, setIndex) => (
-                <th
-                  key={setIndex + 1}
-                  className="text-center py-2 px-2 font-medium text-gray-800"
-                >
+                <th key={setIndex + 1} className="text-center py-2 px-2 font-medium text-gray-800">
                   {setIndex + 1}セット目
                 </th>
               ))}
@@ -297,56 +282,50 @@ function PracticeTimesDisplay({ menu }: { menu: PracticeMenu }) {
           </thead>
           <tbody>
             {Array.from({ length: Number(menu.reps) || 1 }, (_, repIndex) => {
-              const repNumber = repIndex + 1
+              const repNumber = repIndex + 1;
               return (
                 <tr key={repNumber} className="border-b border-gray-100">
                   <td className="py-2 px-2 font-medium text-gray-700">{repNumber}本目</td>
                   {Array.from({ length: Number(menu.sets) || 1 }, (_, setIndex) => {
-                    const setNumber = setIndex + 1
+                    const setNumber = setIndex + 1;
                     const time = menu.times.find(
-                      (t) => t.setNumber === setNumber && t.repNumber === repNumber
-                    )
+                      (t) => t.setNumber === setNumber && t.repNumber === repNumber,
+                    );
                     const setTimes = menu.times.filter(
-                      (t) => t.setNumber === setNumber && t.time > 0
-                    )
+                      (t) => t.setNumber === setNumber && t.time > 0,
+                    );
                     const setFastest =
-                      setTimes.length > 0 ? Math.min(...setTimes.map((t) => t.time)) : 0
-                    const isFastest = time && time.time > 0 && time.time === setFastest
+                      setTimes.length > 0 ? Math.min(...setTimes.map((t) => t.time)) : 0;
+                    const isFastest = time && time.time > 0 && time.time === setFastest;
 
                     return (
                       <td key={setNumber} className="py-2 px-2 text-center">
-                        <span
-                          className={
-                            isFastest ? 'text-blue-600 font-bold' : 'text-gray-800'
-                          }
-                        >
-                          {time && time.time > 0 ? formatTime(time.time) : '-'}
+                        <span className={isFastest ? "text-blue-600 font-bold" : "text-gray-800"}>
+                          {time && time.time > 0 ? formatTime(time.time) : "-"}
                         </span>
                       </td>
-                    )
+                    );
                   })}
                 </tr>
-              )
+              );
             })}
             {/* 平均行 */}
             <tr className="border-b border-gray-100 bg-gray-100">
               <td className="py-2 px-2 font-medium text-gray-800">平均</td>
               {Array.from({ length: Number(menu.sets) || 1 }, (_, setIndex) => {
-                const setNumber = setIndex + 1
-                const setTimes = menu.times.filter(
-                  (t) => t.setNumber === setNumber && t.time > 0
-                )
+                const setNumber = setIndex + 1;
+                const setTimes = menu.times.filter((t) => t.setNumber === setNumber && t.time > 0);
                 const average =
                   setTimes.length > 0
                     ? setTimes.reduce((sum: number, t) => sum + t.time, 0) / setTimes.length
-                    : 0
+                    : 0;
                 return (
                   <td key={setNumber} className="py-2 px-2 text-center">
                     <span className="text-gray-800 font-medium">
-                      {average > 0 ? formatTimeAverage(average) : '-'}
+                      {average > 0 ? formatTimeAverage(average) : "-"}
                     </span>
                   </td>
-                )
+                );
               })}
             </tr>
             {/* 全体平均行 */}
@@ -357,19 +336,16 @@ function PracticeTimesDisplay({ menu }: { menu: PracticeMenu }) {
               >
                 全体平均
               </td>
-              <td
-                className="py-2 px-2 text-center"
-                colSpan={Number(menu.sets) || 1}
-              >
+              <td className="py-2 px-2 text-center" colSpan={Number(menu.sets) || 1}>
                 <span className="text-blue-800 font-bold">
                   {(() => {
-                    const allValidTimes = menu.times.filter((t) => t.time > 0)
+                    const allValidTimes = menu.times.filter((t) => t.time > 0);
                     const overallAverage =
                       allValidTimes.length > 0
                         ? allValidTimes.reduce((sum: number, t) => sum + t.time, 0) /
                           allValidTimes.length
-                        : 0
-                    return overallAverage > 0 ? formatTimeAverage(overallAverage) : '-'
+                        : 0;
+                    return overallAverage > 0 ? formatTimeAverage(overallAverage) : "-";
                   })()}
                 </span>
               </td>
@@ -382,18 +358,13 @@ function PracticeTimesDisplay({ menu }: { menu: PracticeMenu }) {
               >
                 全体最速
               </td>
-              <td
-                className="py-2 px-2 text-center"
-                colSpan={Number(menu.sets) || 1}
-              >
+              <td className="py-2 px-2 text-center" colSpan={Number(menu.sets) || 1}>
                 <span className="text-blue-800 font-bold">
                   {(() => {
-                    const allValidTimes = menu.times.filter((t) => t.time > 0)
+                    const allValidTimes = menu.times.filter((t) => t.time > 0);
                     const overallFastest =
-                      allValidTimes.length > 0
-                        ? Math.min(...allValidTimes.map((t) => t.time))
-                        : 0
-                    return overallFastest > 0 ? formatTime(overallFastest) : '-'
+                      allValidTimes.length > 0 ? Math.min(...allValidTimes.map((t) => t.time)) : 0;
+                    return overallFastest > 0 ? formatTime(overallFastest) : "-";
                   })()}
                 </span>
               </td>
@@ -402,5 +373,5 @@ function PracticeTimesDisplay({ menu }: { menu: PracticeMenu }) {
         </table>
       </div>
     </div>
-  )
+  );
 }

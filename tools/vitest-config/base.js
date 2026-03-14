@@ -1,23 +1,23 @@
-import path from 'path'
-import { defineConfig } from 'vitest/config'
+import path from "path";
+import { defineConfig } from "vitest/config";
 
 export const createVitestConfig = (options = {}) => {
   const {
-    name = 'default',
-    environment = 'jsdom',
+    name = "default",
+    environment = "jsdom",
     setupFiles = [],
-    include = ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-    exclude = ['node_modules', 'dist'],
+    include = ["**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
+    exclude = ["node_modules", "dist"],
     coverage = {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
+      provider: "v8",
+      reporter: ["text", "json", "html"],
       exclude: [
-        'node_modules/',
-        'dist/',
-        '**/*.d.ts',
-        '**/*.config.*',
-        '**/mockData',
-        '**/__mocks__',
+        "node_modules/",
+        "dist/",
+        "**/*.d.ts",
+        "**/*.config.*",
+        "**/mockData",
+        "**/__mocks__",
       ],
       thresholds: {
         lines: 50,
@@ -27,7 +27,7 @@ export const createVitestConfig = (options = {}) => {
       },
     },
     alias = {},
-  } = options
+  } = options;
 
   return defineConfig({
     test: {
@@ -43,7 +43,7 @@ export const createVitestConfig = (options = {}) => {
       alias,
     },
     esbuild: {
-      target: 'node18',
+      target: "node18",
     },
-  })
-}
+  });
+};

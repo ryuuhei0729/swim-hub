@@ -3,24 +3,24 @@
 // =============================================================================
 
 // 新しいドメイン別型定義（推奨）
-export * from './common'
-export * from './user'
-export * from './practice'
-export * from './record'
-export * from './competition'
-export * from './team'
-export * from './attendance'
-export * from './calendar'
-export * from './supabase-schema'
+export * from "./common";
+export * from "./user";
+export * from "./practice";
+export * from "./record";
+export * from "./competition";
+export * from "./team";
+export * from "./attendance";
+export * from "./calendar";
+export * from "./supabase-schema";
 
 // UI・フォーム型
-export * from './ui'
+export * from "./ui";
 
 // 認証関連型
-export * from './auth'
+export * from "./auth";
 
 // 目標管理型
-export * from './goals'
+export * from "./goals";
 
 // 練習ログテンプレート型
-export * from './practiceLogTemplate'
+export * from "./practiceLogTemplate";

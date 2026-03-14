@@ -1,12 +1,17 @@
-import React, { useState, useEffect, useCallback } from 'react'
-import { View, Text, Pressable } from 'react-native'
-import { Feather } from '@expo/vector-icons'
-import { useAuth } from '@/contexts/AuthProvider'
-import { formatTime, formatCircleTime, getStyleLabel } from '@/utils/formatters'
-import type { PracticeTime, PracticeTag } from '@apps/shared/types'
-import { styles } from '../styles'
-import { MemoizedTimeTable } from './TimeTable'
-import type { PracticeLogDetailProps, PracticeLogData, PracticeLogDetailData, PracticeLogFromDB } from '../types'
+import React, { useState, useEffect, useCallback } from "react";
+import { View, Text, Pressable } from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { useAuth } from "@/contexts/AuthProvider";
+import { formatTime, formatCircleTime, getStyleLabel } from "@/utils/formatters";
+import type { PracticeTime, PracticeTag } from "@apps/shared/types";
+import { styles } from "../styles";
+import { MemoizedTimeTable } from "./TimeTable";
+import type {
+  PracticeLogDetailProps,
+  PracticeLogData,
+  PracticeLogDetailData,
+  PracticeLogFromDB,
+} from "../types";
 
 /**
  * Practice_Logの詳細表示コンポーネント
@@ -36,25 +41,26 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
   onDeleteCompetition,
   onPracticeTimeLoaded,
 }) => {
-  const { supabase } = useAuth()
-  const [expanded, setExpanded] = useState(false)
+  const { supabase } = useAuth();
+  const [expanded, setExpanded] = useState(false);
   const [recordDetail, setRecordDetail] = useState<{
-    time: number
-    note: string
-    reactionTime: number | null
-  } | null>(null)
-  const [loadingRecordDetail, setLoadingRecordDetail] = useState(false)
-  const [practiceLogs, setPracticeLogs] = useState<PracticeLogData[]>([])
-  const [loading, setLoading] = useState(false)
+    time: number;
+    note: string;
+    reactionTime: number | null;
+  } | null>(null);
+  const [loadingRecordDetail, setLoadingRecordDetail] = useState(false);
+  const [practiceLogs, setPracticeLogs] = useState<PracticeLogData[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const loadPracticeLogs = useCallback(async () => {
-    if (!isPractice || !practiceId) return
+    if (!isPractice || !practiceId) return;
 
     try {
-      setLoading(true)
+      setLoading(true);
       const { data, error } = await supabase
-        .from('practices')
-        .select(`
+        .from("practices")
+        .select(
+          `
           *,
           practice_logs (
             *,
@@ -68,59 +74,65 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
               )
             )
           )
-        `)
-        .eq('id', practiceId)
-        .single()
+        `,
+        )
+        .eq("id", practiceId)
+        .single();
 
-      if (error) throw error
-      if (!data) return
+      if (error) throw error;
+      if (!data) return;
 
-      const formattedLogs = (data.practice_logs || []).map((log: PracticeLogFromDB & { practice_log_tags?: Array<{ practice_tags: PracticeTag }> }) => ({
-        id: log.id,
-        practiceId: log.practice_id,
-        style: log.style,
-        repCount: log.rep_count,
-        setCount: log.set_count,
-        distance: log.distance,
-        circle: log.circle,
-        note: log.note,
-        times: (log.practice_times || []).map((time: PracticeTime) => ({
-          id: time.id,
-          time: time.time,
-          repNumber: time.rep_number,
-          setNumber: time.set_number,
-        })),
-        tags: (log.practice_log_tags || [])
-          .map((plt) => plt.practice_tags)
-          .filter(Boolean) as PracticeTag[],
-      }))
+      const formattedLogs = (data.practice_logs || []).map(
+        (
+          log: PracticeLogFromDB & { practice_log_tags?: Array<{ practice_tags: PracticeTag }> },
+        ) => ({
+          id: log.id,
+          practiceId: log.practice_id,
+          style: log.style,
+          repCount: log.rep_count,
+          setCount: log.set_count,
+          distance: log.distance,
+          circle: log.circle,
+          note: log.note,
+          times: (log.practice_times || []).map((time: PracticeTime) => ({
+            id: time.id,
+            time: time.time,
+            repNumber: time.rep_number,
+            setNumber: time.set_number,
+          })),
+          tags: (log.practice_log_tags || [])
+            .map((plt) => plt.practice_tags)
+            .filter(Boolean) as PracticeTag[],
+        }),
+      );
 
-      setPracticeLogs(formattedLogs)
+      setPracticeLogs(formattedLogs);
     } catch (error) {
-      console.error('練習ログの取得エラー:', error)
+      console.error("練習ログの取得エラー:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [isPractice, practiceId, supabase])
+  }, [isPractice, practiceId, supabase]);
 
   useEffect(() => {
     if (expanded && isPractice && practiceId) {
-      loadPracticeLogs()
+      loadPracticeLogs();
     }
-  }, [expanded, isPractice, practiceId, loadPracticeLogs])
+  }, [expanded, isPractice, practiceId, loadPracticeLogs]);
 
   // Practice_Logの場合は直接タイム情報を表示
-  const [practiceLogDetail, setPracticeLogDetail] = useState<PracticeLogDetailData | null>(null)
-  const [loadingLogDetail, setLoadingLogDetail] = useState(false)
+  const [practiceLogDetail, setPracticeLogDetail] = useState<PracticeLogDetailData | null>(null);
+  const [loadingLogDetail, setLoadingLogDetail] = useState(false);
 
   const loadPracticeLogDetail = useCallback(async () => {
-    if (!isPracticeLog || !item.id) return
+    if (!isPracticeLog || !item.id) return;
 
     try {
-      setLoadingLogDetail(true)
+      setLoadingLogDetail(true);
       const { data, error } = await supabase
-        .from('practice_logs')
-        .select(`
+        .from("practice_logs")
+        .select(
+          `
           *,
           practice_times (*),
           practice_log_tags (
@@ -131,35 +143,36 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
               color
             )
           )
-        `)
-        .eq('id', item.id)
-        .single()
+        `,
+        )
+        .eq("id", item.id)
+        .single();
 
-      if (error) throw error
-      if (!data) return
+      if (error) throw error;
+      if (!data) return;
 
       const log = data as {
-        id: string
-        style: string
-        rep_count: number
-        set_count: number
-        distance: number
-        circle: number | null
-        note: string | null
-        practice_times?: PracticeTime[]
-        practice_log_tags?: Array<{ practice_tags: PracticeTag }>
-      }
+        id: string;
+        style: string;
+        rep_count: number;
+        set_count: number;
+        distance: number;
+        circle: number | null;
+        note: string | null;
+        practice_times?: PracticeTime[];
+        practice_log_tags?: Array<{ practice_tags: PracticeTag }>;
+      };
 
       const times = (log.practice_times || []).map((time: PracticeTime) => ({
         id: time.id,
         time: time.time,
         repNumber: time.rep_number,
         setNumber: time.set_number,
-      }))
+      }));
 
       const tags = (log.practice_log_tags || [])
         .map((plt) => plt.practice_tags)
-        .filter(Boolean) as PracticeTag[]
+        .filter(Boolean) as PracticeTag[];
 
       setPracticeLogDetail({
         id: log.id,
@@ -171,79 +184,79 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
         note: log.note,
         times,
         tags,
-      })
+      });
 
       // PracticeTimeの有無を親に通知
       if (onPracticeTimeLoaded) {
-        onPracticeTimeLoaded(item.id, times.length > 0)
+        onPracticeTimeLoaded(item.id, times.length > 0);
       }
     } catch (error) {
-      console.error('練習ログ詳細の取得エラー:', error)
+      console.error("練習ログ詳細の取得エラー:", error);
     } finally {
-      setLoadingLogDetail(false)
+      setLoadingLogDetail(false);
     }
-  }, [isPracticeLog, item.id, supabase, onPracticeTimeLoaded])
+  }, [isPracticeLog, item.id, supabase, onPracticeTimeLoaded]);
 
   useEffect(() => {
     if (isPracticeLog && item.id) {
-      loadPracticeLogDetail()
+      loadPracticeLogDetail();
     }
-  }, [isPracticeLog, item.id, loadPracticeLogDetail])
+  }, [isPracticeLog, item.id, loadPracticeLogDetail]);
 
   // 記録詳細を取得（record表示用）
   useEffect(() => {
-    if (item.type !== 'record') return
+    if (item.type !== "record") return;
 
-    let isMounted = true
+    let isMounted = true;
     const loadRecordDetail = async () => {
       try {
-        setLoadingRecordDetail(true)
+        setLoadingRecordDetail(true);
         const competitionId =
-          item.metadata?.competition?.id ||
-          item.metadata?.record?.competition_id ||
-          item.id
-        if (!competitionId) return
+          item.metadata?.competition?.id || item.metadata?.record?.competition_id || item.id;
+        if (!competitionId) return;
 
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) return;
 
         const { data, error } = await supabase
-          .from('records')
-          .select('id, time, note, reaction_time')
-          .eq('competition_id', competitionId)
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
+          .from("records")
+          .select("id, time, note, reaction_time")
+          .eq("competition_id", competitionId)
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
           .limit(1)
-          .single()
+          .single();
 
-        if (!isMounted) return
+        if (!isMounted) return;
         if (error) {
-          console.error('記録詳細取得エラー:', error)
-          return
+          console.error("記録詳細取得エラー:", error);
+          return;
         }
-        if (!data) return
+        if (!data) return;
 
         setRecordDetail({
           time: data.time,
-          note: data.note || '',
+          note: data.note || "",
           reactionTime: data.reaction_time ?? null,
-        })
+        });
       } catch (error) {
-        if (!isMounted) return
-        console.error('記録詳細取得エラー:', error)
+        if (!isMounted) return;
+        console.error("記録詳細取得エラー:", error);
       } finally {
         if (isMounted) {
-          setLoadingRecordDetail(false)
+          setLoadingRecordDetail(false);
         }
       }
-    }
+    };
 
-    loadRecordDetail()
+    loadRecordDetail();
 
     return () => {
-      isMounted = false
-    }
-  }, [item, supabase])
+      isMounted = false;
+    };
+  }, [item, supabase]);
 
   if (isPracticeLog) {
     return (
@@ -258,9 +271,9 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                 <Pressable
                   style={styles.actionButton}
                   onPress={(e) => {
-                    e.stopPropagation()
-                    onEditPracticeLog(item)
-                    onClose()
+                    e.stopPropagation();
+                    onEditPracticeLog(item);
+                    onClose();
                   }}
                 >
                   <Feather name="edit" size={18} color="#2563EB" />
@@ -270,8 +283,8 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                 <Pressable
                   style={styles.actionButton}
                   onPress={(e) => {
-                    e.stopPropagation()
-                    onDeletePracticeLog(item.id)
+                    e.stopPropagation();
+                    onDeletePracticeLog(item.id);
                   }}
                 >
                   <Feather name="trash-2" size={16} color="#EF4444" />
@@ -299,20 +312,22 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
               <View style={styles.practiceContentContainer}>
                 <Text style={styles.practiceContentLabel}>練習内容</Text>
                 <Text style={styles.practiceContentText}>
-                  <Text style={styles.practiceContentValue}>{practiceLogDetail.distance}</Text>m ×{' '}
+                  <Text style={styles.practiceContentValue}>{practiceLogDetail.distance}</Text>m ×{" "}
                   <Text style={styles.practiceContentValue}>{practiceLogDetail.repCount}</Text>
                   {practiceLogDetail.setCount > 1 && (
                     <>
-                      {' × '}
+                      {" × "}
                       <Text style={styles.practiceContentValue}>{practiceLogDetail.setCount}</Text>
                     </>
                   )}
-                  {'　　'}
+                  {"　　"}
                   <Text style={styles.practiceContentValue}>
                     {formatCircleTime(practiceLogDetail.circle)}
                   </Text>
-                  {'　'}
-                  <Text style={styles.practiceContentValue}>{getStyleLabel(practiceLogDetail.style)}</Text>
+                  {"　"}
+                  <Text style={styles.practiceContentValue}>
+                    {getStyleLabel(practiceLogDetail.style)}
+                  </Text>
                 </Text>
               </View>
 
@@ -324,7 +339,11 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                     <Text style={styles.timeHeaderText}>タイム</Text>
                   </View>
                   <View style={styles.timeTableContainer}>
-                    <MemoizedTimeTable times={practiceLogDetail.times} repCount={practiceLogDetail.repCount} setCount={practiceLogDetail.setCount} />
+                    <MemoizedTimeTable
+                      times={practiceLogDetail.times}
+                      repCount={practiceLogDetail.repCount}
+                      setCount={practiceLogDetail.setCount}
+                    />
                   </View>
                 </View>
               )}
@@ -348,7 +367,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
           )}
         </View>
       </View>
-    )
+    );
   }
 
   // Practiceの場合は展開可能
@@ -358,10 +377,10 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
         style={styles.entryContentWrapper}
         onPress={() => {
           if (isPractice) {
-            setExpanded(!expanded)
+            setExpanded(!expanded);
           } else {
-            onEntryPress?.(item)
-            onClose()
+            onEntryPress?.(item);
+            onClose();
           }
         }}
       >
@@ -375,9 +394,9 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                 <Pressable
                   style={styles.actionButton}
                   onPress={(e) => {
-                    e.stopPropagation()
-                    onEditPractice(item)
-                    onClose()
+                    e.stopPropagation();
+                    onEditPractice(item);
+                    onClose();
                   }}
                 >
                   <Feather name="edit" size={18} color="#2563EB" />
@@ -387,91 +406,97 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                 <Pressable
                   style={styles.actionButton}
                   onPress={(e) => {
-                    e.stopPropagation()
-                    onDeletePractice(item.id)
+                    e.stopPropagation();
+                    onDeletePractice(item.id);
                   }}
                 >
                   <Feather name="trash-2" size={20} color="#EF4444" />
                 </Pressable>
               )}
-              {item.type === 'record' && onEditRecord && (
+              {item.type === "record" && onEditRecord && (
                 <Pressable
                   style={styles.actionButton}
                   onPress={(e) => {
-                    e.stopPropagation()
-                    onEditRecord(item)
-                    onClose()
+                    e.stopPropagation();
+                    onEditRecord(item);
+                    onClose();
                   }}
                 >
                   <Feather name="edit" size={18} color="#2563EB" />
                 </Pressable>
               )}
-              {item.type === 'record' && onDeleteRecord && (
+              {item.type === "record" && onDeleteRecord && (
                 <Pressable
                   style={styles.actionButton}
                   onPress={(e) => {
-                    e.stopPropagation()
-                    onDeleteRecord(item.id)
+                    e.stopPropagation();
+                    onDeleteRecord(item.id);
                   }}
                 >
                   <Feather name="trash-2" size={20} color="#EF4444" />
                 </Pressable>
               )}
-              {item.type === 'entry' && onEditEntry && (
+              {item.type === "entry" && onEditEntry && (
                 <Pressable
                   style={styles.actionButton}
                   onPress={(e) => {
-                    e.stopPropagation()
-                    onEditEntry(item)
-                    onClose()
+                    e.stopPropagation();
+                    onEditEntry(item);
+                    onClose();
                   }}
                 >
                   <Feather name="edit" size={18} color="#2563EB" />
                 </Pressable>
               )}
-              {item.type === 'entry' && onDeleteEntry && (
+              {item.type === "entry" && onDeleteEntry && (
                 <Pressable
                   style={styles.actionButton}
                   onPress={(e) => {
-                    e.stopPropagation()
-                    onDeleteEntry(item.id)
+                    e.stopPropagation();
+                    onDeleteEntry(item.id);
                   }}
                 >
                   <Feather name="trash-2" size={20} color="#EF4444" />
                 </Pressable>
               )}
-              {(item.type === 'competition' || item.type === 'team_competition') && onEditCompetition && (
-                <Pressable
-                  style={styles.actionButton}
-                  onPress={(e) => {
-                    e.stopPropagation()
-                    onEditCompetition(item)
-                    onClose()
-                  }}
-                >
-                  <Feather name="edit" size={18} color="#2563EB" />
-                </Pressable>
-              )}
-              {(item.type === 'competition' || item.type === 'team_competition') && onDeleteCompetition && (
-                <Pressable
-                  style={styles.actionButton}
-                  onPress={(e) => {
-                    e.stopPropagation()
-                    onDeleteCompetition(item.id)
-                  }}
-                >
-                  <Feather name="trash-2" size={20} color="#EF4444" />
-                </Pressable>
-              )}
+              {(item.type === "competition" || item.type === "team_competition") &&
+                onEditCompetition && (
+                  <Pressable
+                    style={styles.actionButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      onEditCompetition(item);
+                      onClose();
+                    }}
+                  >
+                    <Feather name="edit" size={18} color="#2563EB" />
+                  </Pressable>
+                )}
+              {(item.type === "competition" || item.type === "team_competition") &&
+                onDeleteCompetition && (
+                  <Pressable
+                    style={styles.actionButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      onDeleteCompetition(item.id);
+                    }}
+                  >
+                    <Feather name="trash-2" size={20} color="#EF4444" />
+                  </Pressable>
+                )}
               {isPractice && (
                 <Pressable
                   style={styles.actionButton}
                   onPress={(e) => {
-                    e.stopPropagation()
-                    setExpanded(!expanded)
+                    e.stopPropagation();
+                    setExpanded(!expanded);
                   }}
                 >
-                  <Feather name={expanded ? 'chevron-up' : 'chevron-down'} size={20} color="#6B7280" />
+                  <Feather
+                    name={expanded ? "chevron-up" : "chevron-down"}
+                    size={20}
+                    color="#6B7280"
+                  />
                 </Pressable>
               )}
             </View>
@@ -479,7 +504,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
           <Text style={styles.entryTitle} numberOfLines={2}>
             {title}
           </Text>
-          {item.type === 'record' && (
+          {item.type === "record" && (
             <View style={styles.recordDetailContainer}>
               {loadingRecordDetail ? (
                 <Text style={styles.loadingText}>記録を読み込み中...</Text>
@@ -524,9 +549,9 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
             <Pressable
               style={styles.addLogButton}
               onPress={(e) => {
-                e.stopPropagation()
-                onAddPracticeLog(practiceId)
-                onClose()
+                e.stopPropagation();
+                onAddPracticeLog(practiceId);
+                onClose();
               }}
             >
               <Feather name="plus" size={14} color="#374151" style={styles.addLogButtonIcon} />
@@ -534,18 +559,18 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
             </Pressable>
           )}
           {/* 大会記録追加ボタン */}
-          {(item.type === 'competition' || item.type === 'team_competition') &&
+          {(item.type === "competition" || item.type === "team_competition") &&
             !hasEntriesOrRecords &&
             onAddEntry && (
               <Pressable
                 style={styles.addLogButton}
                 onPress={(e) => {
-                  e.stopPropagation()
-                  const competitionId = item.id
-                  const dateParam = item.date
+                  e.stopPropagation();
+                  const competitionId = item.id;
+                  const dateParam = item.date;
                   if (competitionId && dateParam && onAddEntry) {
-                    onAddEntry(competitionId, dateParam)
-                    onClose()
+                    onAddEntry(competitionId, dateParam);
+                    onClose();
                   }
                 }}
               >
@@ -581,19 +606,17 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                 <View style={styles.practiceContentContainer}>
                   <Text style={styles.practiceContentLabel}>練習内容</Text>
                   <Text style={styles.practiceContentText}>
-                    <Text style={styles.practiceContentValue}>{log.distance}</Text>m ×{' '}
+                    <Text style={styles.practiceContentValue}>{log.distance}</Text>m ×{" "}
                     <Text style={styles.practiceContentValue}>{log.repCount}</Text>
                     {log.setCount > 1 && (
                       <>
-                        {' × '}
+                        {" × "}
                         <Text style={styles.practiceContentValue}>{log.setCount}</Text>
                       </>
                     )}
-                    {'　　'}
-                    <Text style={styles.practiceContentValue}>
-                      {formatCircleTime(log.circle)}
-                    </Text>
-                    {'　'}
+                    {"　　"}
+                    <Text style={styles.practiceContentValue}>{formatCircleTime(log.circle)}</Text>
+                    {"　"}
                     <Text style={styles.practiceContentValue}>{getStyleLabel(log.style)}</Text>
                   </Text>
                 </View>
@@ -606,7 +629,11 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                       <Text style={styles.timeHeaderText}>タイム</Text>
                     </View>
                     <View style={styles.timeTableContainer}>
-                      <MemoizedTimeTable times={log.times} repCount={log.repCount} setCount={log.setCount} />
+                      <MemoizedTimeTable
+                        times={log.times}
+                        repCount={log.repCount}
+                        setCount={log.setCount}
+                      />
                     </View>
                   </View>
                 )}
@@ -623,8 +650,8 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
         </View>
       )}
     </View>
-  )
-}
+  );
+};
 
 // PracticeLogDetailをメモ化して不要な再レンダリングを防ぐ
-export const MemoizedPracticeLogDetail = React.memo(PracticeLogDetail)
+export const MemoizedPracticeLogDetail = React.memo(PracticeLogDetail);

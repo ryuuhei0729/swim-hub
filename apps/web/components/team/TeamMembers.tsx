@@ -1,126 +1,115 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect, useMemo, useCallback, memo } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts'
-import { TeamMembersAPI } from '@apps/shared/api/teams/members'
-import { TeamMembershipWithUser } from '@apps/shared/types'
-import Avatar from '@/components/ui/Avatar'
-import {
-  UserPlusIcon,
-  UserMinusIcon,
-  StarIcon
-} from '@heroicons/react/24/outline'
-import { formatDate } from '@apps/shared/utils/date'
+import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts";
+import { TeamMembersAPI } from "@apps/shared/api/teams/members";
+import { TeamMembershipWithUser } from "@apps/shared/types";
+import Avatar from "@/components/ui/Avatar";
+import { UserPlusIcon, UserMinusIcon, StarIcon } from "@heroicons/react/24/outline";
+import { formatDate } from "@apps/shared/utils/date";
 
 export interface TeamMembersProps {
-  teamId: string
-  isAdmin?: boolean
+  teamId: string;
+  isAdmin?: boolean;
 }
 
 /**
  * メンバーアイテムコンポーネント（React.memoで再レンダリング最適化）
  */
 interface MemberItemProps {
-  member: TeamMembershipWithUser
-  isAdmin: boolean
+  member: TeamMembershipWithUser;
+  isAdmin: boolean;
 }
 
 const MemberItem = memo(function MemberItem({ member, isAdmin }: MemberItemProps) {
   return (
-    <div
-      className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200"
-    >
+    <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200">
       <div className="flex items-center space-x-3">
         <div className="shrink-0">
           <Avatar
             avatarUrl={member.users?.profile_image_path || null}
-            userName={member.users?.name || 'Unknown User'}
+            userName={member.users?.name || "Unknown User"}
             size="md"
           />
         </div>
         <div>
           <div className="flex items-center space-x-2">
             <p className="text-sm font-medium text-gray-900">
-              {member.users?.name || 'Unknown User'}
+              {member.users?.name || "Unknown User"}
             </p>
-            {member.role === 'admin' && (
+            {member.role === "admin" && (
               <StarIcon className="h-4 w-4 text-yellow-500" title="管理者" />
             )}
           </div>
-          <p className="text-sm text-gray-500">
-            参加日: {formatDate(member.joined_at, 'numeric')}
-          </p>
+          <p className="text-sm text-gray-500">参加日: {formatDate(member.joined_at, "numeric")}</p>
         </div>
       </div>
 
-      {isAdmin && member.role === 'user' && (
-        <button
-          className="text-red-600 hover:text-red-800 p-2"
-          title="メンバーを削除"
-        >
+      {isAdmin && member.role === "user" && (
+        <button className="text-red-600 hover:text-red-800 p-2" title="メンバーを削除">
           <UserMinusIcon className="h-5 w-5" />
         </button>
       )}
     </div>
-  )
-})
+  );
+});
 
 export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProps) {
-  const router = useRouter()
-  const [members, setMembers] = useState<TeamMembershipWithUser[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [showInviteModal, setShowInviteModal] = useState(false)
-  const [inviteCode, setInviteCode] = useState('')
-  
-  const { supabase } = useAuth()
-  const api = useMemo(() => new TeamMembersAPI(supabase), [supabase])
+  const router = useRouter();
+  const [members, setMembers] = useState<TeamMembershipWithUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteCode, setInviteCode] = useState("");
+
+  const { supabase } = useAuth();
+  const api = useMemo(() => new TeamMembersAPI(supabase), [supabase]);
 
   // メンバー一覧を取得
   useEffect(() => {
     const loadMembers = async () => {
       try {
-        setLoading(true)
-        setError(null)
-        
-        const membersData = await api.list(teamId)
-        setMembers(membersData)
-      } catch (err) {
-        console.error('メンバー情報の取得に失敗:', err)
-        setError('メンバー情報の取得に失敗しました')
-      } finally {
-        setLoading(false)
-      }
-    }
+        setLoading(true);
+        setError(null);
 
-    loadMembers()
-  }, [teamId, api])
+        const membersData = await api.list(teamId);
+        setMembers(membersData);
+      } catch (err) {
+        console.error("メンバー情報の取得に失敗:", err);
+        setError("メンバー情報の取得に失敗しました");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadMembers();
+  }, [teamId, api]);
 
   // 招待コードを取得
   const loadInviteCode = useCallback(async () => {
     try {
       const { data, error } = await supabase
-        .from('teams')
-        .select('invite_code')
-        .eq('id', teamId)
-        .single<{ invite_code: string }>()
+        .from("teams")
+        .select("invite_code")
+        .eq("id", teamId)
+        .single<{ invite_code: string }>();
 
-      if (error) throw error
-      setInviteCode(data?.invite_code || '')
+      if (error) throw error;
+      setInviteCode(data?.invite_code || "");
     } catch (err) {
-      console.error('招待コードの取得に失敗:', err)
+      console.error("招待コードの取得に失敗:", err);
     }
-  }, [supabase, teamId])
+  }, [supabase, teamId]);
 
   const handleInviteClick = useCallback(() => {
-    loadInviteCode()
-    setShowInviteModal(true)
-  }, [loadInviteCode])
+    loadInviteCode();
+    setShowInviteModal(true);
+  }, [loadInviteCode]);
 
   const handleCopyInviteCode = useCallback(() => {
-    navigator.clipboard.writeText(inviteCode)
-  }, [inviteCode])
+    navigator.clipboard.writeText(inviteCode);
+  }, [inviteCode]);
 
   if (loading) {
     return (
@@ -140,7 +129,7 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -156,16 +145,14 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
           </button>
         </div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
       {/* ヘッダー */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">
-          メンバー ({members.length}人)
-        </h2>
+        <h2 className="text-xl font-semibold text-gray-900">メンバー ({members.length}人)</h2>
         {isAdmin && (
           <button
             onClick={handleInviteClick}
@@ -180,21 +167,12 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
       {/* メンバー一覧 */}
       <div className="space-y-4">
         {members.map((member) => (
-          <MemberItem
-            key={member.id}
-            member={member}
-            isAdmin={isAdmin}
-          />
+          <MemberItem key={member.id} member={member} isAdmin={isAdmin} />
         ))}
-        
+
         {members.length === 0 && (
           <div className="text-center py-8">
-            <Avatar
-              avatarUrl={null}
-              userName="?"
-              size="lg"
-              className="mx-auto mb-4 opacity-50"
-            />
+            <Avatar avatarUrl={null} userName="?" size="lg" className="mx-auto mb-4 opacity-50" />
             <p className="text-gray-600">メンバーがいません</p>
           </div>
         )}
@@ -204,20 +182,18 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
       {showInviteModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div 
-              className="fixed inset-0 bg-black/40 transition-opacity" 
+            <div
+              className="fixed inset-0 bg-black/40 transition-opacity"
               onClick={() => setShowInviteModal(false)}
             />
-            
+
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  チームに招待
-                </h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">チームに招待</h3>
                 <p className="text-sm text-gray-600 mb-4">
                   この招待コードを共有してメンバーを招待できます
                 </p>
-                
+
                 <div className="bg-gray-50 p-4 rounded-lg mb-4">
                   <p className="text-sm text-gray-600 mb-2">招待コード:</p>
                   <p className="text-lg font-mono font-bold text-gray-900 break-all">
@@ -225,7 +201,7 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
                   </p>
                 </div>
               </div>
-              
+
               <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                 <button
                   onClick={handleCopyInviteCode}
@@ -245,5 +221,5 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
         </div>
       )}
     </div>
-  )
+  );
 }

@@ -1,2 +1,2 @@
-export { default } from './MyMonthlyAttendance'
-export type { MyMonthlyAttendanceProps } from './MyMonthlyAttendance'
+export { default } from "./MyMonthlyAttendance";
+export type { MyMonthlyAttendanceProps } from "./MyMonthlyAttendance";

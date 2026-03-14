@@ -1,30 +1,30 @@
-import React, { useState, useMemo, useCallback } from 'react'
-import { View, Text, StyleSheet, Pressable, RefreshControl } from 'react-native'
-import { FlashList } from '@shopify/flash-list'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { useAuth } from '@/contexts/AuthProvider'
-import { useTeamsQuery } from '@apps/shared/hooks/queries/teams'
-import { TeamItem, TeamCreateModal, TeamJoinModal } from '@/components/teams'
-import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
-import { ErrorView } from '@/components/layout/ErrorView'
-import type { MainStackParamList } from '@/navigation/types'
-import type { TeamMembershipWithUser } from '@swim-hub/shared/types'
-import { useRefreshOnFocus } from '@/hooks/useRefreshOnFocus'
+import React, { useState, useMemo, useCallback } from "react";
+import { View, Text, StyleSheet, Pressable, RefreshControl } from "react-native";
+import { FlashList } from "@shopify/flash-list";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useAuth } from "@/contexts/AuthProvider";
+import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
+import { TeamItem, TeamCreateModal, TeamJoinModal } from "@/components/teams";
+import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
+import { ErrorView } from "@/components/layout/ErrorView";
+import type { MainStackParamList } from "@/navigation/types";
+import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
+import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
 
-type TeamsScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>
+type TeamsScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
 /**
  * チーム一覧画面
  * 所属チームの一覧を表示し、チーム作成・参加機能を提供
  */
 export const TeamsScreen: React.FC = () => {
-  const navigation = useNavigation<TeamsScreenNavigationProp>()
-  const { supabase } = useAuth()
-  const [refreshing, setRefreshing] = useState(false)
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
-  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false)
+  const navigation = useNavigation<TeamsScreenNavigationProp>();
+  const { supabase } = useAuth();
+  const [refreshing, setRefreshing] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
 
   // チーム一覧取得
   const {
@@ -35,104 +35,100 @@ export const TeamsScreen: React.FC = () => {
     refetch,
   } = useTeamsQuery(supabase, {
     enableRealtime: false, // モバイルでは一旦無効化
-  })
+  });
 
   // 承認済みチームと承認待ちチームを分ける
   const { approvedTeams, pendingTeams } = useMemo(() => {
-    const approved: TeamMembershipWithUser[] = []
-    const pending: TeamMembershipWithUser[] = []
+    const approved: TeamMembershipWithUser[] = [];
+    const pending: TeamMembershipWithUser[] = [];
 
     teams.forEach((membership) => {
-      if (membership.status === 'approved' && membership.is_active) {
-        approved.push(membership)
-      } else if (membership.status === 'pending') {
-        pending.push(membership)
+      if (membership.status === "approved" && membership.is_active) {
+        approved.push(membership);
+      } else if (membership.status === "pending") {
+        pending.push(membership);
       }
-    })
+    });
 
     return {
       approvedTeams: approved,
       pendingTeams: pending,
-    }
-  }, [teams])
+    };
+  }, [teams]);
 
   // タブ遷移時にデータ再取得
-  useRefreshOnFocus(refetch)
+  useRefreshOnFocus(refetch);
 
   // プルリフレッシュ処理
   const handleRefresh = useCallback(async () => {
-    setRefreshing(true)
+    setRefreshing(true);
     try {
-      await refetch()
+      await refetch();
     } finally {
-      setRefreshing(false)
+      setRefreshing(false);
     }
-  }, [refetch])
+  }, [refetch]);
 
   // チームタップ処理
   const handleTeamPress = useCallback(
     (membership: TeamMembershipWithUser) => {
-      navigation.navigate('TeamDetail', { teamId: membership.team_id })
+      navigation.navigate("TeamDetail", { teamId: membership.team_id });
     },
-    [navigation]
-  )
+    [navigation],
+  );
 
   // アイテムをレンダリング（メモ化）
   const renderItem = useCallback(
     ({ item }: { item: TeamMembershipWithUser }) => {
-      return <TeamItem membership={item} onPress={handleTeamPress} />
+      return <TeamItem membership={item} onPress={handleTeamPress} />;
     },
-    [handleTeamPress]
-  )
+    [handleTeamPress],
+  );
 
   // チーム作成成功時の処理
   const handleCreateSuccess = useCallback(
     (teamId: string) => {
-      setIsCreateModalOpen(false)
+      setIsCreateModalOpen(false);
       // チーム詳細画面へ遷移
-      navigation.navigate('TeamDetail', { teamId })
+      navigation.navigate("TeamDetail", { teamId });
     },
-    [navigation]
-  )
+    [navigation],
+  );
 
   // チーム参加成功時の処理
   const handleJoinSuccess = useCallback(
     (teamId: string) => {
-      setIsJoinModalOpen(false)
+      setIsJoinModalOpen(false);
       // チーム詳細画面へ遷移
-      navigation.navigate('TeamDetail', { teamId })
+      navigation.navigate("TeamDetail", { teamId });
     },
-    [navigation]
-  )
+    [navigation],
+  );
 
   // エラー状態
   if (isError && error) {
-    const errorMessage = error instanceof Error ? error.message : 'チーム一覧の取得に失敗しました'
+    const errorMessage = error instanceof Error ? error.message : "チーム一覧の取得に失敗しました";
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-        <ErrorView
-          message={errorMessage}
-          onRetry={() => refetch()}
-          fullScreen
-        />
+      <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+        <ErrorView message={errorMessage} onRetry={() => refetch()} fullScreen />
       </SafeAreaView>
-    )
+    );
   }
 
   // ローディング状態
   if (isLoading && teams.length === 0) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
         <LoadingSpinner fullScreen message="チーム一覧を読み込み中..." />
       </SafeAreaView>
-    )
+    );
   }
 
   // 表示用データ（承認済み + 承認待ち）
-  const displayTeams = [...approvedTeams, ...pendingTeams]
+  const displayTeams = [...approvedTeams, ...pendingTeams];
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
       {/* アクションボタン */}
       <View style={styles.actionBar}>
         <Pressable
@@ -160,7 +156,7 @@ export const TeamsScreen: React.FC = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              colors={['#2563EB']}
+              colors={["#2563EB"]}
               tintColor="#2563EB"
             />
           }
@@ -173,9 +169,7 @@ export const TeamsScreen: React.FC = () => {
       ) : (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>チームがありません</Text>
-          <Text style={styles.emptySubtext}>
-            チームを作成するか、招待コードで参加してください
-          </Text>
+          <Text style={styles.emptySubtext}>チームを作成するか、招待コードで参加してください</Text>
         </View>
       )}
 
@@ -193,63 +187,63 @@ export const TeamsScreen: React.FC = () => {
         onSuccess={handleJoinSuccess}
       />
     </SafeAreaView>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: "#EFF6FF",
   },
   actionBar: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: "#E5E7EB",
   },
   actionButton: {
     flex: 1,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   createButton: {
-    backgroundColor: '#2563EB',
+    backgroundColor: "#2563EB",
   },
   createButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
   joinButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: "#10B981",
   },
   joinButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
   listContent: {
     paddingVertical: 8,
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 40,
   },
   emptyText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#6B7280',
+    fontWeight: "600",
+    color: "#6B7280",
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#9CA3AF',
-    textAlign: 'center',
+    color: "#9CA3AF",
+    textAlign: "center",
   },
-})
+});

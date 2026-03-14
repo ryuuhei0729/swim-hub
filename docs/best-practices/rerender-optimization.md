@@ -15,10 +15,10 @@
 // 問題: useEffectで初期stateを設定（余分なレンダリングが発生）
 useEffect(() => {
   if (initialGoals.length > 0 && !selectedGoalId) {
-    setSelectedGoalId(initialGoals[0].id)
+    setSelectedGoalId(initialGoals[0].id);
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [])
+}, []);
 ```
 
 #### 修正例
@@ -26,8 +26,8 @@ useEffect(() => {
 ```ts
 // useStateの初期値として直接計算
 const [selectedGoalId, setSelectedGoalId] = useState<string | null>(
-  initialGoals.length > 0 ? initialGoals[0].id : null
-)
+  initialGoals.length > 0 ? initialGoals[0].id : null,
+);
 ```
 
 ### 1b. DashboardClient / CompetitionClient — propsをZustandに同期
@@ -37,17 +37,17 @@ const [selectedGoalId, setSelectedGoalId] = useState<string | null>(
 ```ts
 // 問題: useEffectでpropsをstoreに同期 → 余分なレンダリング
 React.useEffect(() => {
-  setAvailableTags(tags)
-  setCompetitionStyles(styles)
-}, [tags, styles, setAvailableTags, setCompetitionStyles])
+  setAvailableTags(tags);
+  setCompetitionStyles(styles);
+}, [tags, styles, setAvailableTags, setCompetitionStyles]);
 ```
 
 **ファイル:** `apps/web/app/(authenticated)/competition/_client/CompetitionClient.tsx`
 
 ```ts
 React.useEffect(() => {
-  setStyles(styles)
-}, [styles, setStyles])
+  setStyles(styles);
+}, [styles, setStyles]);
 ```
 
 #### 改善案
@@ -59,13 +59,13 @@ React.useEffect(() => {
 const useCommonFormStore = create<CommonFormState>((set) => ({
   // ...
   initialize: (tags, styles) => set({ availableTags: tags, competitionStyles: styles }),
-}))
+}));
 
 // コンポーネントでrefベースの1回限り初期化
-const initialized = useRef(false)
+const initialized = useRef(false);
 if (!initialized.current) {
-  initialize(tags, styles)
-  initialized.current = true
+  initialize(tags, styles);
+  initialized.current = true;
 }
 ```
 
@@ -78,12 +78,12 @@ if (!initialized.current) {
 ```ts
 useEffect(() => {
   if (params.target_time > 0) {
-    setTimeDisplayValue(formatTimeBest(params.target_time))
-    setTimeError('')
+    setTimeDisplayValue(formatTimeBest(params.target_time));
+    setTimeError("");
   } else {
-    setTimeDisplayValue('')
+    setTimeDisplayValue("");
   }
-}, [params.target_time])
+}, [params.target_time]);
 ```
 
 #### 評価
@@ -91,9 +91,7 @@ useEffect(() => {
 controlled componentパターンとして許容範囲だが、レンダリング中に派生値を計算する方が理想的:
 
 ```ts
-const timeDisplayValue = params.target_time > 0
-  ? formatTimeBest(params.target_time)
-  : ''
+const timeDisplayValue = params.target_time > 0 ? formatTimeBest(params.target_time) : "";
 ```
 
 ただし、ユーザーが入力中の「編集中状態」を保持する必要がある場合はuseEffectでの同期が必要。
@@ -108,7 +106,7 @@ const timeDisplayValue = params.target_time > 0
 **ファイル:** `apps/web/app/(authenticated)/practice/_client/PracticeClient.tsx`
 
 ```ts
-const today = useMemo(() => startOfDay(new Date()), [])
+const today = useMemo(() => startOfDay(new Date()), []);
 ```
 
 #### 問題
@@ -120,7 +118,7 @@ const today = useMemo(() => startOfDay(new Date()), [])
 
 ```ts
 // メモ化せず直接計算
-const today = startOfDay(new Date())
+const today = startOfDay(new Date());
 ```
 
 ### 2b. ランディングページのscale計算
@@ -129,12 +127,12 @@ const today = startOfDay(new Date())
 
 ```ts
 const mobileScale = useMemo(() => {
-  if (windowWidth === 0) return 0.80
-  if (windowWidth >= 1920) return 0.80
-  if (windowWidth <= 768) return 0.40
-  const ratio = (windowWidth - 768) / (1920 - 768)
-  return 0.40 + (ratio * 0.40)
-}, [windowWidth])
+  if (windowWidth === 0) return 0.8;
+  if (windowWidth >= 1920) return 0.8;
+  if (windowWidth <= 768) return 0.4;
+  const ratio = (windowWidth - 768) / (1920 - 768);
+  return 0.4 + ratio * 0.4;
+}, [windowWidth]);
 ```
 
 #### 評価
@@ -152,9 +150,9 @@ const mobileScale = useMemo(() => {
 ```ts
 export function CalendarProvider({
   children,
-  initialCalendarItems = [],        // 毎レンダリングで新しい配列参照
-  initialMonthlySummary = { practiceCount: 0, recordCount: 0 },  // 同上
-})
+  initialCalendarItems = [], // 毎レンダリングで新しい配列参照
+  initialMonthlySummary = { practiceCount: 0, recordCount: 0 }, // 同上
+});
 ```
 
 #### 問題
@@ -164,14 +162,14 @@ export function CalendarProvider({
 #### 修正例
 
 ```ts
-const EMPTY_ITEMS: CalendarItem[] = []
-const DEFAULT_SUMMARY: MonthlySummary = { practiceCount: 0, recordCount: 0 }
+const EMPTY_ITEMS: CalendarItem[] = [];
+const DEFAULT_SUMMARY: MonthlySummary = { practiceCount: 0, recordCount: 0 };
 
 export function CalendarProvider({
   children,
   initialCalendarItems = EMPTY_ITEMS,
   initialMonthlySummary = DEFAULT_SUMMARY,
-})
+});
 ```
 
 ### 同様のパターンがある他のファイル
@@ -190,9 +188,9 @@ export function CalendarProvider({
 プロジェクト全体で`useTransition`が一切使われていない。全てのローディング状態は手動の`useState`:
 
 ```ts
-const [loading, setLoading] = useState(false)
-const [isLoading, setIsLoading] = useState(false)
-const [syncing, setSyncing] = useState(false)
+const [loading, setLoading] = useState(false);
+const [isLoading, setIsLoading] = useState(false);
+const [syncing, setSyncing] = useState(false);
 ```
 
 20箇所以上でこのパターンが存在。
@@ -229,9 +227,10 @@ if (loading || isLoading || createPracticeMutation.isPending || updatePracticeMu
 React Queryのmutation stateを使えば手動のloading stateは不要:
 
 ```ts
-const isAnyMutating = createPracticeMutation.isPending
-  || updatePracticeMutation.isPending
-  || deletePracticeMutation.isPending
+const isAnyMutating =
+  createPracticeMutation.isPending ||
+  updatePracticeMutation.isPending ||
+  deletePracticeMutation.isPending;
 ```
 
 ---
@@ -242,13 +241,13 @@ const isAnyMutating = createPracticeMutation.isPending
 
 以下のファイルでReact Queryを使わず直接Supabaseを呼んでいる:
 
-| ファイル | 内容 |
-|---------|------|
-| `MyPageClient.tsx` | `coreApi.getMyTeams()` — コメントに「useTeamsQueryが空配列を返す問題の回避」とあり |
-| `GoogleCalendarSyncSettings.tsx` | 設定更新の`supabase.from().update()` |
-| `TeamsClient.tsx` | `supabase.rpc('get_invite_code_by_team_id')` |
-| `PracticeClient.tsx` | `supabase.rpc('replace_practice_log_tags')` |
-| `AvatarUpload.tsx` | `fetch('/api/storage/profile')` |
+| ファイル                         | 内容                                                                               |
+| -------------------------------- | ---------------------------------------------------------------------------------- |
+| `MyPageClient.tsx`               | `coreApi.getMyTeams()` — コメントに「useTeamsQueryが空配列を返す問題の回避」とあり |
+| `GoogleCalendarSyncSettings.tsx` | 設定更新の`supabase.from().update()`                                               |
+| `TeamsClient.tsx`                | `supabase.rpc('get_invite_code_by_team_id')`                                       |
+| `PracticeClient.tsx`             | `supabase.rpc('replace_practice_log_tags')`                                        |
+| `AvatarUpload.tsx`               | `fetch('/api/storage/profile')`                                                    |
 
 #### 評価
 
@@ -262,9 +261,9 @@ const isAnyMutating = createPracticeMutation.isPending
 ```ts
 export function useLocalStorage<T>(key: string, initialValue: T) {
   const getInitialValue = (): T => {
-    const item = window.localStorage.getItem(key)
-    return item ? JSON.parse(item) : initialValue
-  }
+    const item = window.localStorage.getItem(key);
+    return item ? JSON.parse(item) : initialValue;
+  };
   // ...
 }
 ```
@@ -278,18 +277,18 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
 
 ```ts
 export function useLocalStorage<T>(key: string, initialValue: T, version = 1) {
-  const versionedKey = `${key}_v${version}`
+  const versionedKey = `${key}_v${version}`;
   const getInitialValue = (): T => {
-    const item = window.localStorage.getItem(versionedKey)
+    const item = window.localStorage.getItem(versionedKey);
     if (item) {
       try {
-        return JSON.parse(item)
+        return JSON.parse(item);
       } catch {
-        window.localStorage.removeItem(versionedKey)
+        window.localStorage.removeItem(versionedKey);
       }
     }
-    return initialValue
-  }
+    return initialValue;
+  };
   // ...
 }
 ```

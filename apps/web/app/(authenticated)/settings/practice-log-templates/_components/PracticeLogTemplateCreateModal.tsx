@@ -1,27 +1,27 @@
-'use client'
+"use client";
 
-import { useState, useCallback, useEffect } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
-import { XMarkIcon } from '@heroicons/react/24/outline'
+import { useState, useCallback, useEffect } from "react";
+import { createBrowserClient } from "@supabase/ssr";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 import {
   useCreatePracticeLogTemplateMutation,
   useUpdatePracticeLogTemplateMutation,
-} from '@swim-hub/shared/hooks'
-import { usePracticeTagsQuery } from '@swim-hub/shared/hooks/queries/practices'
-import type { CreatePracticeLogTemplateInput, PracticeLogTemplate } from '@swim-hub/shared/types'
-import type { PracticeTag } from '@swim-hub/shared/types'
-import TagInput from '@/components/forms/TagInput'
-import Button from '@/components/ui/Button'
+} from "@swim-hub/shared/hooks";
+import { usePracticeTagsQuery } from "@swim-hub/shared/hooks/queries/practices";
+import type { CreatePracticeLogTemplateInput, PracticeLogTemplate } from "@swim-hub/shared/types";
+import type { PracticeTag } from "@swim-hub/shared/types";
+import TagInput from "@/components/forms/TagInput";
+import Button from "@/components/ui/Button";
 
 interface PracticeLogTemplateCreateModalProps {
-  isOpen: boolean
-  onClose: () => void
-  editData?: PracticeLogTemplate | null
+  isOpen: boolean;
+  onClose: () => void;
+  editData?: PracticeLogTemplate | null;
 }
 
-const STYLES = ['Fr', 'Ba', 'Br', 'Fly', 'IM']
-const SWIM_CATEGORIES: Array<'Swim' | 'Pull' | 'Kick'> = ['Swim', 'Pull', 'Kick']
-const DISTANCES = [25, 50, 100, 200, 400, 800, 1500]
+const STYLES = ["Fr", "Ba", "Br", "Fly", "IM"];
+const SWIM_CATEGORIES: Array<"Swim" | "Pull" | "Kick"> = ["Swim", "Pull", "Kick"];
+const DISTANCES = [25, 50, 100, 200, 400, 800, 1500];
 
 export function PracticeLogTemplateCreateModal({
   isOpen,
@@ -30,45 +30,45 @@ export function PracticeLogTemplateCreateModal({
 }: PracticeLogTemplateCreateModalProps) {
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
 
-  const createMutation = useCreatePracticeLogTemplateMutation(supabase)
-  const updateMutation = useUpdatePracticeLogTemplateMutation(supabase)
-  const { data: tagsData } = usePracticeTagsQuery(supabase)
+  const createMutation = useCreatePracticeLogTemplateMutation(supabase);
+  const updateMutation = useUpdatePracticeLogTemplateMutation(supabase);
+  const { data: tagsData } = usePracticeTagsQuery(supabase);
 
-  const isEditMode = !!editData
+  const isEditMode = !!editData;
 
   const [formData, setFormData] = useState<CreatePracticeLogTemplateInput>({
-    name: '',
-    style: 'Fr',
-    swim_category: 'Swim',
+    name: "",
+    style: "Fr",
+    swim_category: "Swim",
     distance: 50,
     rep_count: 1,
     set_count: 1,
     circle: 90,
-    note: '',
+    note: "",
     tag_ids: [],
-  })
+  });
 
-  const [circleMinutes, setCircleMinutes] = useState(1)
-  const [circleSeconds, setCircleSeconds] = useState(30)
-  const [availableTags, setAvailableTags] = useState<PracticeTag[]>([])
-  const [selectedTags, setSelectedTags] = useState<PracticeTag[]>([])
+  const [circleMinutes, setCircleMinutes] = useState(1);
+  const [circleSeconds, setCircleSeconds] = useState(30);
+  const [availableTags, setAvailableTags] = useState<PracticeTag[]>([]);
+  const [selectedTags, setSelectedTags] = useState<PracticeTag[]>([]);
 
   // タグデータを設定
   useEffect(() => {
     if (tagsData) {
-      setAvailableTags(tagsData)
+      setAvailableTags(tagsData);
     }
-  }, [tagsData])
+  }, [tagsData]);
 
   // 編集モード時にフォームにデータを設定
   useEffect(() => {
     if (isOpen && editData) {
-      const circleTime = editData.circle || 90
-      const min = Math.floor(circleTime / 60)
-      const sec = circleTime % 60
+      const circleTime = editData.circle || 90;
+      const min = Math.floor(circleTime / 60);
+      const sec = circleTime % 60;
 
       setFormData({
         name: editData.name,
@@ -78,60 +78,60 @@ export function PracticeLogTemplateCreateModal({
         rep_count: editData.rep_count,
         set_count: editData.set_count,
         circle: circleTime,
-        note: editData.note || '',
+        note: editData.note || "",
         tag_ids: editData.tag_ids || [],
-      })
-      setCircleMinutes(min)
-      setCircleSeconds(sec)
+      });
+      setCircleMinutes(min);
+      setCircleSeconds(sec);
 
       // 既存のタグを選択状態に
       if (editData.tag_ids && tagsData) {
-        const selected = tagsData.filter((tag) => editData.tag_ids.includes(tag.id))
-        setSelectedTags(selected)
+        const selected = tagsData.filter((tag) => editData.tag_ids.includes(tag.id));
+        setSelectedTags(selected);
       }
     } else if (isOpen && !editData) {
       // 新規作成時はフォームをリセット
       setFormData({
-        name: '',
-        style: 'Fr',
-        swim_category: 'Swim',
+        name: "",
+        style: "Fr",
+        swim_category: "Swim",
         distance: 50,
         rep_count: 1,
         set_count: 1,
         circle: 90,
-        note: '',
+        note: "",
         tag_ids: [],
-      })
-      setCircleMinutes(1)
-      setCircleSeconds(30)
-      setSelectedTags([])
+      });
+      setCircleMinutes(1);
+      setCircleSeconds(30);
+      setSelectedTags([]);
     }
-  }, [isOpen, editData, tagsData])
+  }, [isOpen, editData, tagsData]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
-      e.preventDefault()
+      e.preventDefault();
 
-      const circleInSeconds = circleMinutes * 60 + circleSeconds
+      const circleInSeconds = circleMinutes * 60 + circleSeconds;
       const input: CreatePracticeLogTemplateInput = {
         ...formData,
         circle: circleInSeconds,
         note: formData.note || null,
         tag_ids: selectedTags.map((tag) => tag.id),
-      }
+      };
 
       try {
         if (isEditMode && editData) {
           await updateMutation.mutateAsync({
             templateId: editData.id,
             input,
-          })
+          });
         } else {
-          await createMutation.mutateAsync(input)
+          await createMutation.mutateAsync(input);
         }
-        onClose()
+        onClose();
       } catch (error) {
-        console.error('テンプレート保存エラー:', error)
+        console.error("テンプレート保存エラー:", error);
       }
     },
     [
@@ -144,29 +144,29 @@ export function PracticeLogTemplateCreateModal({
       createMutation,
       updateMutation,
       onClose,
-    ]
-  )
+    ],
+  );
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose()
+      if (e.key === "Escape") {
+        onClose();
       }
     },
-    [onClose]
-  )
+    [onClose],
+  );
 
   const handleTagsChange = useCallback((tags: PracticeTag[]) => {
-    setSelectedTags(tags)
-  }, [])
+    setSelectedTags(tags);
+  }, []);
 
   const handleAvailableTagsUpdate = useCallback((tags: PracticeTag[]) => {
-    setAvailableTags(tags)
-  }, [])
+    setAvailableTags(tags);
+  }, []);
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
-  const isPending = createMutation.isPending || updateMutation.isPending
+  const isPending = createMutation.isPending || updateMutation.isPending;
 
   return (
     <div
@@ -188,8 +188,11 @@ export function PracticeLogTemplateCreateModal({
         <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
           {/* ヘッダー */}
           <div className="flex items-center justify-between p-3 sm:p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
-            <h2 id="template-modal-title" className="text-base sm:text-lg font-semibold text-gray-900">
-              {isEditMode ? 'テンプレートを編集' : '新しいテンプレートを作成'}
+            <h2
+              id="template-modal-title"
+              className="text-base sm:text-lg font-semibold text-gray-900"
+            >
+              {isEditMode ? "テンプレートを編集" : "新しいテンプレートを作成"}
             </h2>
             <button
               type="button"
@@ -258,7 +261,7 @@ export function PracticeLogTemplateCreateModal({
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      swim_category: e.target.value as 'Swim' | 'Pull' | 'Kick',
+                      swim_category: e.target.value as "Swim" | "Pull" | "Kick",
                     })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -284,9 +287,7 @@ export function PracticeLogTemplateCreateModal({
                 <select
                   id="template-distance"
                   value={formData.distance}
-                  onChange={(e) =>
-                    setFormData({ ...formData, distance: Number(e.target.value) })
-                  }
+                  onChange={(e) => setFormData({ ...formData, distance: Number(e.target.value) })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   {DISTANCES.map((d) => (
@@ -393,7 +394,7 @@ export function PracticeLogTemplateCreateModal({
               </label>
               <textarea
                 id="template-note"
-                value={formData.note || ''}
+                value={formData.note || ""}
                 onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                 placeholder="メモを入力..."
                 rows={2}
@@ -403,29 +404,22 @@ export function PracticeLogTemplateCreateModal({
 
             {/* ボタン */}
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 mt-6">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-              >
+              <Button type="button" variant="outline" onClick={onClose}>
                 キャンセル
               </Button>
-              <Button
-                type="submit"
-                disabled={!formData.name || isPending}
-              >
+              <Button type="submit" disabled={!formData.name || isPending}>
                 {isPending
                   ? isEditMode
-                    ? '更新中...'
-                    : '作成中...'
+                    ? "更新中..."
+                    : "作成中..."
                   : isEditMode
-                    ? '更新'
-                    : '作成'}
+                    ? "更新"
+                    : "作成"}
               </Button>
             </div>
           </form>
         </div>
       </div>
     </div>
-  )
+  );
 }

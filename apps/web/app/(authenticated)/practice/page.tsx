@@ -1,5 +1,5 @@
-import React, { Suspense } from 'react'
-import PracticeDataLoader from './_server/PracticeDataLoader'
+import React, { Suspense } from "react";
+import PracticeDataLoader from "./_server/PracticeDataLoader";
 
 /**
  * 練習記録ページ（Server Component）
@@ -23,5 +23,5 @@ export default async function PracticePage() {
     >
       <PracticeDataLoader />
     </Suspense>
-  )
+  );
 }

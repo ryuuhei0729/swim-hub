@@ -1,5 +1,5 @@
-import React, { Suspense } from 'react'
-import MyPageDataLoader from './_server/MyPageDataLoader'
+import React, { Suspense } from "react";
+import MyPageDataLoader from "./_server/MyPageDataLoader";
 
 /**
  * マイページ（Server Component）
@@ -23,5 +23,5 @@ export default async function MyPage() {
     >
       <MyPageDataLoader />
     </Suspense>
-  )
+  );
 }

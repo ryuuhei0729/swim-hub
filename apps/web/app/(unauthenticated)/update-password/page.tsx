@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import { UpdatePasswordForm, AuthGuard } from '@/components/auth'
+import { UpdatePasswordForm, AuthGuard } from "@/components/auth";
 
 export default function UpdatePasswordPage() {
   return (
@@ -9,5 +9,5 @@ export default function UpdatePasswordPage() {
         <UpdatePasswordForm />
       </div>
     </AuthGuard>
-  )
+  );
 }

@@ -1,88 +1,86 @@
-'use client'
+"use client";
 
-import React, { useState, useCallback, useEffect } from 'react'
-import Image from 'next/image'
-import { XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
-import { PhotoIcon } from '@heroicons/react/24/solid'
+import React, { useState, useCallback, useEffect } from "react";
+import Image from "next/image";
+import { XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import { PhotoIcon } from "@heroicons/react/24/solid";
 
 export interface GalleryImage {
-  id: string
-  thumbnailUrl: string
-  originalUrl: string
-  fileName?: string
+  id: string;
+  thumbnailUrl: string;
+  originalUrl: string;
+  fileName?: string;
 }
 
 interface ImageGalleryProps {
-  images: GalleryImage[]
-  className?: string
+  images: GalleryImage[];
+  className?: string;
 }
 
-export default function ImageGallery({ images, className = '' }: ImageGalleryProps) {
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+export default function ImageGallery({ images, className = "" }: ImageGalleryProps) {
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // キーボードナビゲーション
   useEffect(() => {
-    if (selectedIndex === null) return
+    if (selectedIndex === null) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       switch (e.key) {
-        case 'Escape':
-          setSelectedIndex(null)
-          break
-        case 'ArrowLeft':
-          e.preventDefault()
-          setSelectedIndex(prev => 
-            prev !== null && prev > 0 ? prev - 1 : images.length - 1
-          )
-          break
-        case 'ArrowRight':
-          e.preventDefault()
-          setSelectedIndex(prev => 
-            prev !== null && prev < images.length - 1 ? prev + 1 : 0
-          )
-          break
+        case "Escape":
+          setSelectedIndex(null);
+          break;
+        case "ArrowLeft":
+          e.preventDefault();
+          setSelectedIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : images.length - 1));
+          break;
+        case "ArrowRight":
+          e.preventDefault();
+          setSelectedIndex((prev) => (prev !== null && prev < images.length - 1 ? prev + 1 : 0));
+          break;
       }
-    }
+    };
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedIndex, images.length])
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedIndex, images.length]);
 
   const handleThumbnailClick = useCallback((index: number) => {
-    setSelectedIndex(index)
-    setIsLoading(true)
-  }, [])
+    setSelectedIndex(index);
+    setIsLoading(true);
+  }, []);
 
   const handleClose = useCallback(() => {
-    setSelectedIndex(null)
-  }, [])
+    setSelectedIndex(null);
+  }, []);
 
-  const handlePrevious = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    setSelectedIndex(prev => 
-      prev !== null && prev > 0 ? prev - 1 : images.length - 1
-    )
-    setIsLoading(true)
-  }, [images.length])
+  const handlePrevious = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setSelectedIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : images.length - 1));
+      setIsLoading(true);
+    },
+    [images.length],
+  );
 
-  const handleNext = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    setSelectedIndex(prev => 
-      prev !== null && prev < images.length - 1 ? prev + 1 : 0
-    )
-    setIsLoading(true)
-  }, [images.length])
+  const handleNext = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setSelectedIndex((prev) => (prev !== null && prev < images.length - 1 ? prev + 1 : 0));
+      setIsLoading(true);
+    },
+    [images.length],
+  );
 
   const handleImageLoad = useCallback(() => {
-    setIsLoading(false)
-  }, [])
+    setIsLoading(false);
+  }, []);
 
   if (images.length === 0) {
-    return null
+    return null;
   }
 
-  const selectedImage = selectedIndex !== null ? images[selectedIndex] : null
+  const selectedImage = selectedIndex !== null ? images[selectedIndex] : null;
 
   return (
     <>
@@ -114,7 +112,7 @@ export default function ImageGallery({ images, className = '' }: ImageGalleryPro
 
       {/* 拡大表示モーダル */}
       {selectedImage && (
-        <div 
+        <div
           className="fixed inset-0 z-100 bg-black/90 flex items-center justify-center"
           onClick={handleClose}
         >
@@ -158,10 +156,7 @@ export default function ImageGallery({ images, className = '' }: ImageGalleryPro
           )}
 
           {/* 画像 */}
-          <div 
-            className="relative w-[90vw] h-[90vh]"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="relative w-[90vw] h-[90vh]" onClick={(e) => e.stopPropagation()}>
             {/* ローディング */}
             {isLoading && (
               <div className="absolute inset-0 flex items-center justify-center">
@@ -170,10 +165,10 @@ export default function ImageGallery({ images, className = '' }: ImageGalleryPro
             )}
             <Image
               src={selectedImage.originalUrl}
-              alt={selectedImage.fileName || '拡大画像'}
+              alt={selectedImage.fileName || "拡大画像"}
               fill
               className={`object-contain transition-opacity duration-200 ${
-                isLoading ? 'opacity-0' : 'opacity-100'
+                isLoading ? "opacity-0" : "opacity-100"
               }`}
               onLoad={handleImageLoad}
               loading="lazy"
@@ -189,5 +184,5 @@ export default function ImageGallery({ images, className = '' }: ImageGalleryPro
         </div>
       )}
     </>
-  )
+  );
 }

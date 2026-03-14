@@ -11,6 +11,7 @@
 ### ステップ1: 共有ユーティリティの抽出（完了）
 
 **作成したファイル:**
+
 ```
 apps/web/components/team/shared/hooks/
 ├── useMemberBestTimes.ts      # ベストタイム管理（220行）
@@ -19,6 +20,7 @@ apps/web/components/team/shared/hooks/
 ```
 
 **責務:**
+
 - `useMemberBestTimes`:
   - 個別/複数メンバーのベストタイム取得
   - 引き継ぎタイムの処理
@@ -35,6 +37,7 @@ apps/web/components/team/shared/hooks/
 **元のファイル:** 854行 → **リファクタリング後:** 約180行（79%削減）
 
 **新しいディレクトリ構造:**
+
 ```
 apps/web/components/team/member-management/
 ├── TeamMemberManagement.tsx    # メインコンポーネント（180行）
@@ -53,6 +56,7 @@ apps/web/components/team/member-management/
 ```
 
 **リファクタリングの成果:**
+
 1. ✅ メインコンポーネントが軽量化（180行）
 2. ✅ 全てのビジネスロジックがカスタムフックに分離
 3. ✅ UIコンポーネントが独立し再利用可能
@@ -60,11 +64,13 @@ apps/web/components/team/member-management/
 5. ✅ 既存のインポートパスは維持（後方互換性）
 
 **後方互換性:**
+
 ```typescript
 // apps/web/components/team/TeamMemberManagement.tsx
-export { TeamMemberManagement as default } from './member-management'
-export type { TeamMemberManagementProps, TeamMember } from './member-management'
+export { TeamMemberManagement as default } from "./member-management";
+export type { TeamMemberManagementProps, TeamMember } from "./member-management";
 ```
+
 既存のコードは変更不要で動作します。
 
 ---
@@ -77,6 +83,7 @@ export type { TeamMemberManagementProps, TeamMember } from './member-management'
 **目標:** 150行のメインモーダル + サブコンポーネント + カスタムフック
 
 **推奨構造:**
+
 ```
 team/member-detail/
 ├── MemberDetailModal.tsx           # メイン（150行予定）
@@ -92,6 +99,7 @@ team/member-detail/
 ```
 
 **抽出すべきロジック:**
+
 - Lines 138-262: ベストタイム取得（→ 共有フック `useMemberBestTimes` を使用）
 - Lines 263-310: 役割変更処理（→ `useMemberRoleChange`）
 - Lines 312-345: メンバー削除処理（→ `useMemberRemoval`）
@@ -109,6 +117,7 @@ team/member-detail/
 **目標:** 120-150行のメインコンポーネント + サブコンポーネント + カスタムフック
 
 **推奨構造:**
+
 ```
 team/admin-attendance/
 ├── AdminMonthlyAttendance.tsx      # メイン（120行予定）
@@ -123,6 +132,7 @@ team/admin-attendance/
 ```
 
 **抽出すべきロジック:**
+
 - Lines 150-203: イベント取得（→ `useFutureEvents`）
 - Lines 222-270: 個別イベント保存（→ `useAttendanceEventSave`）
 - Lines 392-431: 一括更新（→ `useBulkAttendanceUpdate`）
@@ -141,6 +151,7 @@ team/admin-attendance/
 **目標:** 100行のメインコンポーネント + サブコンポーネント + カスタムフック
 
 **推奨構造:**
+
 ```
 team/bulk-register/
 ├── TeamBulkRegister.tsx            # メイン（100行予定）
@@ -156,6 +167,7 @@ team/bulk-register/
 ```
 
 **抽出すべきロジック:**
+
 - Lines 95-169: ファイル処理（→ `useFileUpload`）
 - Lines 171-231: 一括登録（→ `useBulkRegistration`）
 - Lines 264-332: テンプレートDLセクション（→ `TemplateDownloadSection`）
@@ -173,6 +185,7 @@ team/bulk-register/
 **目標:** 90行のメインコンポーネント + サブコンポーネント + カスタムフック
 
 **推奨構造:**
+
 ```
 team/entry-section/
 ├── TeamEntrySection.tsx            # メイン（90行予定）
@@ -188,6 +201,7 @@ team/entry-section/
 ```
 
 **抽出すべきロジック:**
+
 - Lines 185-225: タイムパース（→ 共有フック `useTimeValidation` を使用）
 - Lines 121-183: フォーム状態管理（→ `useEntryForm`）
 - Lines 227-351: エントリー操作（→ `useEntryManagement`）
@@ -202,6 +216,7 @@ team/entry-section/
 ### ステップ7: ルートレベルの整理
 
 **作業内容:**
+
 1. ✅ TeamMemberManagement.tsx を再エクスポート形式に変更（完了）
 2. ⏳ 他のコンポーネントも同様に再エクスポート
 3. ⏳ `AttendanceGroupingDisplay` を共有ディレクトリに移動
@@ -213,14 +228,14 @@ team/entry-section/
 
 ## 📊 進捗サマリー
 
-| コンポーネント | 元の行数 | 目標行数 | 削減率 | ステータス |
-|--------------|---------|---------|--------|-----------|
-| TeamMemberManagement | 854行 | ~180行 | 79% | ✅ 完了 |
-| MemberDetailModal | 813行 | ~150行 | 82% | ⏳ 未着手 |
-| AdminMonthlyAttendance | 711行 | ~120行 | 83% | ⏳ 未着手 |
-| TeamBulkRegister | 582行 | ~100行 | 83% | ⏳ 未着手 |
-| TeamEntrySection | 559行 | ~90行 | 84% | ⏳ 未着手 |
-| **合計** | **3,519行** | **~640行** | **82%** | **20%完了** |
+| コンポーネント         | 元の行数    | 目標行数   | 削減率  | ステータス  |
+| ---------------------- | ----------- | ---------- | ------- | ----------- |
+| TeamMemberManagement   | 854行       | ~180行     | 79%     | ✅ 完了     |
+| MemberDetailModal      | 813行       | ~150行     | 82%     | ⏳ 未着手   |
+| AdminMonthlyAttendance | 711行       | ~120行     | 83%     | ⏳ 未着手   |
+| TeamBulkRegister       | 582行       | ~100行     | 83%     | ⏳ 未着手   |
+| TeamEntrySection       | 559行       | ~90行      | 84%     | ⏳ 未着手   |
+| **合計**               | **3,519行** | **~640行** | **82%** | **20%完了** |
 
 ---
 
@@ -286,13 +301,14 @@ component-name/
 
 ```typescript
 // ルートレベルで再エクスポート
-export { ComponentName as default } from './component-name'
-export type { Props, Types } from './component-name'
+export { ComponentName as default } from "./component-name";
+export type { Props, Types } from "./component-name";
 ```
 
 既存のインポートは変更不要:
+
 ```typescript
-import TeamMemberManagement from '@/components/team/TeamMemberManagement'
+import TeamMemberManagement from "@/components/team/TeamMemberManagement";
 ```
 
 ---
@@ -317,12 +333,14 @@ import TeamMemberManagement from '@/components/team/TeamMemberManagement'
 ### 成功例: TeamMemberManagement
 
 **Before:**
+
 - 854行の巨大ファイル
 - 全てのロジックが混在
 - テスト困難
 - 保守性低い
 
 **After:**
+
 - メイン180行 + サブコンポーネント + フック
 - 明確な責務分離
 - 各パーツが独立しテスト可能

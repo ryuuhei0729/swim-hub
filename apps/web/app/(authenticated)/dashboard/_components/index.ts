@@ -1,3 +1,2 @@
-export { default as DashboardStats } from './DashboardStats'
-export { default as DayDetailModal } from './DayDetailModal'
-
+export { default as DashboardStats } from "./DashboardStats";
+export { default as DayDetailModal } from "./DayDetailModal";

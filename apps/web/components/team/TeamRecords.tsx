@@ -1,60 +1,57 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts'
-import {
-  TrophyIcon,
-  StarIcon,
-  UserIcon
-} from '@heroicons/react/24/outline'
-import { formatTimeBest } from '@apps/shared/utils/time'
-import { formatDate } from '@apps/shared/utils/date'
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts";
+import { TrophyIcon, StarIcon, UserIcon } from "@heroicons/react/24/outline";
+import { formatTimeBest } from "@apps/shared/utils/time";
+import { formatDate } from "@apps/shared/utils/date";
 
 export interface TeamRecord {
-  id: string
-  user_id: string
-  time: number
-  created_at: string
+  id: string;
+  user_id: string;
+  time: number;
+  created_at: string;
   users?: {
-    name: string
-  }
+    name: string;
+  };
   styles?: {
-    name_jp: string
-    distance: number
-  }
+    name_jp: string;
+    distance: number;
+  };
   competitions?: {
-    title: string
-    date: string
-  }
+    title: string;
+    date: string;
+  };
 }
 
 export interface TeamRecordsProps {
-  teamId: string
-  isAdmin?: boolean
+  teamId: string;
+  isAdmin?: boolean;
 }
 
 export default function TeamRecords({ teamId, isAdmin: _isAdmin = false }: TeamRecordsProps) {
-  const router = useRouter()
-  const [records, setRecords] = useState<TeamRecord[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [selectedStyle, setSelectedStyle] = useState<string>('all')
-  const [styles, setStyles] = useState<{id: string, name_jp: string, distance: number}[]>([])
-  
-  const { supabase } = useAuth()
+  const router = useRouter();
+  const [records, setRecords] = useState<TeamRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedStyle, setSelectedStyle] = useState<string>("all");
+  const [styles, setStyles] = useState<{ id: string; name_jp: string; distance: number }[]>([]);
+
+  const { supabase } = useAuth();
 
   // チームの記録を取得
   useEffect(() => {
     const loadTeamRecords = async () => {
       try {
-        setLoading(true)
-        setError(null)
+        setLoading(true);
+        setError(null);
 
         // チームIDが設定された記録クエリを構築
         const recordsQuery = supabase
-          .from('records')
-          .select(`
+          .from("records")
+          .select(
+            `
             id,
             user_id,
             time,
@@ -70,72 +67,79 @@ export default function TeamRecords({ teamId, isAdmin: _isAdmin = false }: TeamR
               title,
               date
             )
-          `)
-          .eq('team_id', teamId)
-          .order('time', { ascending: true })
-          .limit(50) // 上位50件のみ
+          `,
+          )
+          .eq("team_id", teamId)
+          .order("time", { ascending: true })
+          .limit(50); // 上位50件のみ
 
-        if (selectedStyle !== 'all') {
-          recordsQuery.eq('style_id', selectedStyle)
+        if (selectedStyle !== "all") {
+          recordsQuery.eq("style_id", selectedStyle);
         }
 
         // 種目一覧と記録を並列取得
         const [stylesResult, recordsResult] = await Promise.all([
-          supabase.from('styles').select('id, name_jp, distance').order('name_jp'),
-          recordsQuery
-        ])
+          supabase.from("styles").select("id, name_jp, distance").order("name_jp"),
+          recordsQuery,
+        ]);
 
-        if (stylesResult.error) throw stylesResult.error
-        if (recordsResult.error) throw recordsResult.error
+        if (stylesResult.error) throw stylesResult.error;
+        if (recordsResult.error) throw recordsResult.error;
 
-        setStyles(stylesResult.data || [])
-        const recordsData = recordsResult.data
+        setStyles(stylesResult.data || []);
+        const recordsData = recordsResult.data;
 
         // SupabaseのJOIN結果をTeamRecord型に変換
-        const transformedRecords: TeamRecord[] = (recordsData || []).map((record: Record<string, unknown>) => ({
-          id: String(record.id ?? ''),
-          user_id: String(record.user_id ?? ''),
-          time: typeof record.time === 'number'
-            ? record.time
-            : typeof record.time === 'string' && Number.isFinite(Number(record.time))
-              ? Number(record.time)
-              : 0,
-          created_at: String(record.created_at ?? ''),
-          users: Array.isArray(record.users) && record.users.length > 0 
-            ? (record.users[0] as TeamRecord['users'])
-            : (record.users as TeamRecord['users'] | undefined),
-          styles: Array.isArray(record.styles) && record.styles.length > 0
-            ? (record.styles[0] as TeamRecord['styles'])
-            : (record.styles as TeamRecord['styles'] | undefined),
-          competitions: Array.isArray(record.competitions) && record.competitions.length > 0
-            ? (record.competitions[0] as TeamRecord['competitions'])
-            : (record.competitions as TeamRecord['competitions'] | undefined),
-        }))
+        const transformedRecords: TeamRecord[] = (recordsData || []).map(
+          (record: Record<string, unknown>) => ({
+            id: String(record.id ?? ""),
+            user_id: String(record.user_id ?? ""),
+            time:
+              typeof record.time === "number"
+                ? record.time
+                : typeof record.time === "string" && Number.isFinite(Number(record.time))
+                  ? Number(record.time)
+                  : 0,
+            created_at: String(record.created_at ?? ""),
+            users:
+              Array.isArray(record.users) && record.users.length > 0
+                ? (record.users[0] as TeamRecord["users"])
+                : (record.users as TeamRecord["users"] | undefined),
+            styles:
+              Array.isArray(record.styles) && record.styles.length > 0
+                ? (record.styles[0] as TeamRecord["styles"])
+                : (record.styles as TeamRecord["styles"] | undefined),
+            competitions:
+              Array.isArray(record.competitions) && record.competitions.length > 0
+                ? (record.competitions[0] as TeamRecord["competitions"])
+                : (record.competitions as TeamRecord["competitions"] | undefined),
+          }),
+        );
 
-        setRecords(transformedRecords)
+        setRecords(transformedRecords);
       } catch (err) {
-        console.error('チーム記録情報の取得に失敗:', err)
-        setError('チーム記録情報の取得に失敗しました')
+        console.error("チーム記録情報の取得に失敗:", err);
+        setError("チーム記録情報の取得に失敗しました");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    loadTeamRecords()
-  }, [teamId, selectedStyle, supabase])
+    loadTeamRecords();
+  }, [teamId, selectedStyle, supabase]);
 
   const getRankIcon = (index: number) => {
     switch (index) {
       case 0:
-        return <TrophyIcon className="h-6 w-6 text-yellow-500" />
+        return <TrophyIcon className="h-6 w-6 text-yellow-500" />;
       case 1:
-        return <StarIcon className="h-6 w-6 text-gray-400" />
+        return <StarIcon className="h-6 w-6 text-gray-400" />;
       case 2:
-        return <StarIcon className="h-6 w-6 text-amber-600" />
+        return <StarIcon className="h-6 w-6 text-amber-600" />;
       default:
-        return <span className="text-lg font-bold text-gray-600">#{index + 1}</span>
+        return <span className="text-lg font-bold text-gray-600">#{index + 1}</span>;
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -144,7 +148,10 @@ export default function TeamRecords({ teamId, isAdmin: _isAdmin = false }: TeamR
           <div className="h-6 bg-gray-200 rounded w-32 mb-4"></div>
           <div className="space-y-3">
             {[...Array(5)].map((_, index) => (
-              <div key={index} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg">
+              <div
+                key={index}
+                className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg"
+              >
                 <div className="h-6 w-6 bg-gray-200 rounded"></div>
                 <div className="h-10 w-10 bg-gray-200 rounded-full"></div>
                 <div className="flex-1">
@@ -157,7 +164,7 @@ export default function TeamRecords({ teamId, isAdmin: _isAdmin = false }: TeamR
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -173,17 +180,15 @@ export default function TeamRecords({ teamId, isAdmin: _isAdmin = false }: TeamR
           </button>
         </div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
       {/* ヘッダー */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">
-          チーム記録ランキング
-        </h2>
-        
+        <h2 className="text-xl font-semibold text-gray-900">チーム記録ランキング</h2>
+
         {/* 種目フィルター */}
         <select
           value={selectedStyle}
@@ -202,60 +207,58 @@ export default function TeamRecords({ teamId, isAdmin: _isAdmin = false }: TeamR
       {/* 記録ランキング */}
       <div className="space-y-3">
         {records.map((record, index) => (
-          <div 
+          <div
             key={record.id}
             className="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200"
           >
             {/* 順位 */}
-            <div className="shrink-0 w-8">
-              {getRankIcon(index)}
-            </div>
-            
+            <div className="shrink-0 w-8">{getRankIcon(index)}</div>
+
             {/* ユーザーアイコン */}
             <div className="shrink-0">
               <div className="h-10 w-10 bg-gray-300 rounded-full flex items-center justify-center">
                 <UserIcon className="h-6 w-6 text-gray-600" />
               </div>
             </div>
-            
+
             {/* 記録情報 */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center space-x-2 mb-1">
                 <p className="text-sm font-medium text-gray-900 truncate">
-                  {record.users?.name || 'Unknown User'}
+                  {record.users?.name || "Unknown User"}
                 </p>
               </div>
               <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <span>{record.styles?.name_jp} {record.styles?.distance}m</span>
+                <span>
+                  {record.styles?.name_jp} {record.styles?.distance}m
+                </span>
                 {record.competitions && (
                   <>
                     <span>•</span>
                     <span>{record.competitions.title}</span>
                     <span>•</span>
-                    <span>{formatDate(record.competitions.date, 'numeric')}</span>
+                    <span>{formatDate(record.competitions.date, "numeric")}</span>
                   </>
                 )}
               </div>
             </div>
-            
+
             {/* タイム */}
             <div className="shrink-0 text-right">
-              <p className="text-lg font-bold text-gray-900">
-                {formatTimeBest(record.time)}
-              </p>
+              <p className="text-lg font-bold text-gray-900">{formatTimeBest(record.time)}</p>
             </div>
           </div>
         ))}
-        
+
         {records.length === 0 && (
           <div className="text-center py-8">
             <TrophyIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600">
-              {selectedStyle === 'all' ? '記録がありません' : 'この種目の記録がありません'}
+              {selectedStyle === "all" ? "記録がありません" : "この種目の記録がありません"}
             </p>
           </div>
         )}
       </div>
     </div>
-  )
+  );
 }

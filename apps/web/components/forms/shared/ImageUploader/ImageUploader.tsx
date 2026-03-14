@@ -1,31 +1,31 @@
-'use client'
+"use client";
 
-import React from 'react'
-import { PhotoIcon, XMarkIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline'
+import React from "react";
+import { PhotoIcon, XMarkIcon, ArrowUpTrayIcon } from "@heroicons/react/24/outline";
 import {
   useImageUpload,
   type ImageFile,
   type ExistingImage,
   type ImageValidationResult,
-} from './hooks/useImageUpload'
+} from "./hooks/useImageUpload";
 
 export interface ImageUploaderProps {
   /** 既存の画像リスト */
-  existingImages?: ExistingImage[]
+  existingImages?: ExistingImage[];
   /** 画像変更時のコールバック */
-  onImagesChange: (newFiles: ImageFile[], deletedIds: string[]) => void
+  onImagesChange: (newFiles: ImageFile[], deletedIds: string[]) => void;
   /** 無効化フラグ */
-  disabled?: boolean
+  disabled?: boolean;
   /** 最大画像枚数 */
-  maxImages: number
+  maxImages: number;
   /** ファイルバリデーション関数 */
-  validateFile: (file: File) => Promise<ImageValidationResult>
+  validateFile: (file: File) => Promise<ImageValidationResult>;
   /** ラベルテキスト */
-  label?: string
+  label?: string;
   /** ファイル形式の説明テキスト */
-  formatDescription?: string
+  formatDescription?: string;
   /** 受け入れるファイル形式 */
-  acceptedFormats?: string
+  acceptedFormats?: string;
 }
 
 /**
@@ -49,9 +49,9 @@ export default function ImageUploader({
   disabled = false,
   maxImages,
   validateFile,
-  label = '画像を添付',
-  formatDescription = 'JPEG, PNG, WebP, HEIC（各10MBまで）',
-  acceptedFormats = 'image/jpeg,image/png,image/webp,image/heic,image/heif',
+  label = "画像を添付",
+  formatDescription = "JPEG, PNG, WebP, HEIC（各10MBまで）",
+  acceptedFormats = "image/jpeg,image/png,image/webp,image/heic,image/heif",
 }: ImageUploaderProps) {
   // 表示中の既存画像（削除されていないもの）をカウント
   const {
@@ -74,13 +74,11 @@ export default function ImageUploader({
     currentCount: existingImages.length,
     validateFile,
     onImagesChange,
-  })
+  });
 
   // 表示中の既存画像
-  const visibleExistingImages = existingImages.filter(
-    (img) => !deletedIds.includes(img.id)
-  )
-  const totalImageCount = visibleExistingImages.length + newFiles.length
+  const visibleExistingImages = existingImages.filter((img) => !deletedIds.includes(img.id));
+  const totalImageCount = visibleExistingImages.length + newFiles.length;
 
   return (
     <div className="space-y-3">
@@ -170,10 +168,10 @@ export default function ImageUploader({
             transition-colors duration-200 w-full
             ${
               isDragging
-                ? 'border-green-500 bg-green-50'
-                : 'border-gray-300 hover:border-green-400 hover:bg-green-50/50'
+                ? "border-green-500 bg-green-50"
+                : "border-gray-300 hover:border-green-400 hover:bg-green-50/50"
             }
-            ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+            ${disabled ? "opacity-50 cursor-not-allowed" : ""}
           `}
           aria-label="画像をアップロード"
         >
@@ -210,5 +208,5 @@ export default function ImageUploader({
         </p>
       )}
     </div>
-  )
+  );
 }

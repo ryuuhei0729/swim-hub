@@ -1,16 +1,10 @@
-import { AuthGuard } from '@/components/auth'
-import DashboardLayout from '@/components/layout/DashboardLayout'
+import { AuthGuard } from "@/components/auth";
+import DashboardLayout from "@/components/layout/DashboardLayout";
 
-export default function DashboardGroupLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function DashboardGroupLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthGuard>
-      <DashboardLayout>
-        {children}
-      </DashboardLayout>
+      <DashboardLayout>{children}</DashboardLayout>
     </AuthGuard>
-  )
+  );
 }

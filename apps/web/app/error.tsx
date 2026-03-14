@@ -1,19 +1,19 @@
-'use client'
+"use client";
 
-import { useEffect } from 'react'
-import Link from 'next/link'
-import { ExclamationTriangleIcon, ArrowPathIcon, HomeIcon } from '@heroicons/react/24/outline'
+import { useEffect } from "react";
+import Link from "next/link";
+import { ExclamationTriangleIcon, ArrowPathIcon, HomeIcon } from "@heroicons/react/24/outline";
 
 interface ErrorProps {
-  error: Error & { digest?: string }
-  reset: () => void
+  error: Error & { digest?: string };
+  reset: () => void;
 }
 
 export default function AppError({ error, reset }: ErrorProps) {
   useEffect(() => {
     // エラーをログに記録
-    console.error('Application Error:', error)
-  }, [error])
+    console.error("Application Error:", error);
+  }, [error]);
 
   return (
     <div className="min-h-screen bg-red-50 flex items-center justify-center px-4 sm:px-6 lg:px-8">
@@ -27,24 +27,22 @@ export default function AppError({ error, reset }: ErrorProps) {
 
         {/* エラーメッセージ */}
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
-            エラーが発生しました
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">エラーが発生しました</h1>
           <p className="text-gray-600 mb-6 leading-relaxed">
             申し訳ありませんが、予期しないエラーが発生しました。
             <br />
             ページを再読み込みするか、しばらく時間をおいてから再度お試しください。
           </p>
-          
+
           {/* 開発環境でのエラー詳細 */}
-          {process.env.NODE_ENV === 'development' && (
+          {process.env.NODE_ENV === "development" && (
             <details className="mt-4 p-4 bg-gray-100 rounded-lg text-left">
               <summary className="cursor-pointer text-sm font-medium text-gray-700 mb-2">
                 エラー詳細 (開発モード)
               </summary>
               <pre className="text-xs text-gray-600 whitespace-pre-wrap overflow-auto">
                 {error.message}
-                {error.stack && '\n\nStack trace:\n' + error.stack}
+                {error.stack && "\n\nStack trace:\n" + error.stack}
               </pre>
             </details>
           )}
@@ -52,18 +50,12 @@ export default function AppError({ error, reset }: ErrorProps) {
 
         {/* アクションボタン */}
         <div className="space-y-4">
-          <button
-            onClick={reset}
-            className="btn-primary btn-lg w-full group"
-          >
+          <button onClick={reset} className="btn-primary btn-lg w-full group">
             <ArrowPathIcon className="w-5 h-5 mr-2" />
             再試行
           </button>
-          
-          <Link
-            href="/dashboard"
-            className="btn-outline btn-lg w-full group"
-          >
+
+          <Link href="/dashboard" className="btn-outline btn-lg w-full group">
             <HomeIcon className="w-5 h-5 mr-2" />
             ダッシュボードに戻る
           </Link>
@@ -87,5 +79,5 @@ export default function AppError({ error, reset }: ErrorProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

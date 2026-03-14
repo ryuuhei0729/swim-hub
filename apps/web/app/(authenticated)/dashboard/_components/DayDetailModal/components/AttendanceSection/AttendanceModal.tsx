@@ -1,65 +1,63 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { XMarkIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline'
-import { useAuth } from '@/contexts'
-import { AttendanceAPI } from '@swim-hub/shared/api/attendance'
-import Link from 'next/link'
-import type { TeamAttendanceWithDetails } from '@apps/shared/types'
-import type { AttendanceModalProps } from '../../types'
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { XMarkIcon, ClipboardDocumentCheckIcon } from "@heroicons/react/24/outline";
+import { useAuth } from "@/contexts";
+import { AttendanceAPI } from "@swim-hub/shared/api/attendance";
+import Link from "next/link";
+import type { TeamAttendanceWithDetails } from "@apps/shared/types";
+import type { AttendanceModalProps } from "../../types";
 
 export function AttendanceModal({
   isOpen,
   onClose,
   eventId,
   eventType,
-  teamId
+  teamId,
 }: AttendanceModalProps) {
-  const { supabase } = useAuth()
-  const [attendances, setAttendances] = useState<TeamAttendanceWithDetails[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase])
+  const { supabase } = useAuth();
+  const [attendances, setAttendances] = useState<TeamAttendanceWithDetails[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase]);
 
   const loadAttendances = useCallback(async () => {
     try {
-      setLoading(true)
-      setError(null)
-      const data = eventType === 'practice'
-        ? await attendanceAPI.getAttendanceByPractice(eventId)
-        : await attendanceAPI.getAttendanceByCompetition(eventId)
-      setAttendances(data)
+      setLoading(true);
+      setError(null);
+      const data =
+        eventType === "practice"
+          ? await attendanceAPI.getAttendanceByPractice(eventId)
+          : await attendanceAPI.getAttendanceByCompetition(eventId);
+      setAttendances(data);
     } catch (err) {
-      console.error('出欠情報の取得に失敗:', err)
-      setError('出欠情報の取得に失敗しました')
+      console.error("出欠情報の取得に失敗:", err);
+      setError("出欠情報の取得に失敗しました");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [eventType, eventId, attendanceAPI])
+  }, [eventType, eventId, attendanceAPI]);
 
   useEffect(() => {
     if (isOpen) {
-      loadAttendances()
+      loadAttendances();
     }
-  }, [isOpen, eventId, eventType, loadAttendances])
+  }, [isOpen, eventId, eventType, loadAttendances]);
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   const stats = {
-    present: attendances.filter(a => a.status === 'present').length,
-    absent: attendances.filter(a => a.status === 'absent').length,
-    other: attendances.filter(a => a.status === 'other').length,
-    pending: attendances.filter(a => !a.status).length,
-    total: attendances.length
-  }
+    present: attendances.filter((a) => a.status === "present").length,
+    absent: attendances.filter((a) => a.status === "absent").length,
+    other: attendances.filter((a) => a.status === "other").length,
+    pending: attendances.filter((a) => !a.status).length,
+    total: attendances.length,
+  };
 
   return (
     <div className="fixed inset-0 z-60 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div
-          className="fixed inset-0 bg-black/40 transition-opacity"
-          onClick={onClose}
-        />
+        <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={onClose} />
 
         <div className="relative bg-white rounded-lg shadow-2xl border-2 border-blue-300 w-full max-w-2xl">
           {/* ヘッダー */}
@@ -67,9 +65,7 @@ export function AttendanceModal({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <ClipboardDocumentCheckIcon className="h-6 w-6 text-blue-600" />
-                <h3 className="text-lg leading-6 font-medium text-gray-900">
-                  出欠状況
-                </h3>
+                <h3 className="text-lg leading-6 font-medium text-gray-900">出欠状況</h3>
               </div>
               <button
                 onClick={onClose}
@@ -125,29 +121,35 @@ export function AttendanceModal({
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">名前</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ステータス</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">備考</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          名前
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          ステータス
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          備考
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {attendances.map((attendance) => (
                         <tr key={attendance.id}>
                           <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                            {attendance.user?.name || '不明'}
+                            {attendance.user?.name || "不明"}
                           </td>
                           <td className="px-4 py-3 text-sm">
-                            {attendance.status === 'present' && (
+                            {attendance.status === "present" && (
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                 出席
                               </span>
                             )}
-                            {attendance.status === 'absent' && (
+                            {attendance.status === "absent" && (
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                                 欠席
                               </span>
                             )}
-                            {attendance.status === 'other' && (
+                            {attendance.status === "other" && (
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                                 その他
                               </span>
@@ -159,7 +161,7 @@ export function AttendanceModal({
                             )}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-600">
-                            {attendance.note || '-'}
+                            {attendance.note || "-"}
                           </td>
                         </tr>
                       ))}
@@ -190,5 +192,5 @@ export function AttendanceModal({
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -1,150 +1,152 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { format } from 'date-fns'
-import { useAuth } from '@/contexts/AuthProvider'
-import { TeamPracticesAPI } from '@apps/shared/api/teams/practices'
-import Button from '@/components/ui/Button'
-import Input from '@/components/ui/Input'
-import DatePicker from '@/components/ui/DatePicker'
-import { XMarkIcon } from '@heroicons/react/24/outline'
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { format } from "date-fns";
+import { useAuth } from "@/contexts/AuthProvider";
+import { TeamPracticesAPI } from "@apps/shared/api/teams/practices";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import DatePicker from "@/components/ui/DatePicker";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 
 interface TeamPracticeFormProps {
-  isOpen: boolean
-  onClose: () => void
-  teamId: string
-  onSuccess: () => void
+  isOpen: boolean;
+  onClose: () => void;
+  teamId: string;
+  onSuccess: () => void;
 }
 
-export default function TeamPracticeForm({ 
-  isOpen, 
-  onClose, 
-  teamId, 
-  onSuccess 
+export default function TeamPracticeForm({
+  isOpen,
+  onClose,
+  teamId,
+  onSuccess,
 }: TeamPracticeFormProps) {
-  const { supabase } = useAuth()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { supabase } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    date: format(new Date(), 'yyyy-MM-dd'), // ローカル日付のYYYY-MM-DD形式
-    title: '',
-    place: '',
-    note: ''
-  })
+    date: format(new Date(), "yyyy-MM-dd"), // ローカル日付のYYYY-MM-DD形式
+    title: "",
+    place: "",
+    note: "",
+  });
 
   // フォーカストラップ用のref
-  const modalRef = useRef<HTMLDivElement>(null)
-  const _firstFocusableRef = useRef<HTMLButtonElement>(null)
-  const _lastFocusableRef = useRef<HTMLButtonElement>(null)
+  const modalRef = useRef<HTMLDivElement>(null);
+  const _firstFocusableRef = useRef<HTMLButtonElement>(null);
+  const _lastFocusableRef = useRef<HTMLButtonElement>(null);
 
   const handleClose = useCallback(() => {
     setFormData({
-      date: format(new Date(), 'yyyy-MM-dd'),
-      title: '',
-      place: '',
-      note: ''
-    })
-    setError(null)
-    onClose()
-  }, [onClose])
+      date: format(new Date(), "yyyy-MM-dd"),
+      title: "",
+      place: "",
+      note: "",
+    });
+    setError(null);
+    onClose();
+  }, [onClose]);
 
   // フォーカストラップ機能
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        handleClose()
-        return
+      if (e.key === "Escape") {
+        handleClose();
+        return;
       }
 
-      if (e.key === 'Tab') {
+      if (e.key === "Tab") {
         const focusableElements = modalRef.current?.querySelectorAll(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        )
-        
-        if (!focusableElements || focusableElements.length === 0) return
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        );
 
-        const firstElement = focusableElements[0] as HTMLElement
-        const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement
+        if (!focusableElements || focusableElements.length === 0) return;
+
+        const firstElement = focusableElements[0] as HTMLElement;
+        const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
 
         if (e.shiftKey) {
           // Shift + Tab
           if (document.activeElement === firstElement) {
-            e.preventDefault()
-            lastElement.focus()
+            e.preventDefault();
+            lastElement.focus();
           }
         } else {
           // Tab
           if (document.activeElement === lastElement) {
-            e.preventDefault()
-            firstElement.focus()
+            e.preventDefault();
+            firstElement.focus();
           }
         }
       }
-    }
+    };
 
     // モーダルが開いた時に最初のフォーカス可能要素にフォーカス
     const firstFocusable = modalRef.current?.querySelector(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    ) as HTMLElement
-    
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    ) as HTMLElement;
+
     if (firstFocusable) {
-      firstFocusable.focus()
+      firstFocusable.focus();
     }
 
-    document.addEventListener('keydown', handleKeyDown)
-    
+    document.addEventListener("keydown", handleKeyDown);
+
     return () => {
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [isOpen, handleClose])
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, handleClose]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
+    e.preventDefault();
+
     if (!formData.date) {
-      setError('日付は必須です')
-      return
+      setError("日付は必須です");
+      return;
     }
 
     try {
-      setLoading(true)
-      setError(null)
-      
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('認証が必要です')
+      setLoading(true);
+      setError(null);
 
-      const practicesAPI = new TeamPracticesAPI(supabase)
-      const practiceInput: import('@swim-hub/shared/types').PracticeInsert = {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("認証が必要です");
+
+      const practicesAPI = new TeamPracticesAPI(supabase);
+      const practiceInput: import("@swim-hub/shared/types").PracticeInsert = {
         user_id: user.id,
         date: formData.date,
         title: formData.title || null,
         place: formData.place || null,
         note: formData.note || null,
-        team_id: teamId
-      }
-      await practicesAPI.create(practiceInput)
-      
-      onSuccess()
-      onClose()
-      
+        team_id: teamId,
+      };
+      await practicesAPI.create(practiceInput);
+
+      onSuccess();
+      onClose();
+
       // フォームをリセット
       setFormData({
-        date: format(new Date(), 'yyyy-MM-dd'),
-        title: '',
-        place: '',
-        note: ''
-      })
+        date: format(new Date(), "yyyy-MM-dd"),
+        title: "",
+        place: "",
+        note: "",
+      });
     } catch (err) {
-      console.error('チーム練習記録作成エラー:', err)
-      setError(err instanceof Error ? err.message : 'チーム練習記録の作成に失敗しました')
+      console.error("チーム練習記録作成エラー:", err);
+      setError(err instanceof Error ? err.message : "チーム練習記録の作成に失敗しました");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-60 overflow-y-auto" data-testid="team-practice-modal">
@@ -166,7 +168,10 @@ export default function TeamPracticeForm({
           {/* ヘッダー */}
           <div className="bg-white px-3 py-3 sm:px-6 sm:py-4 border-b border-gray-200 shrink-0">
             <div className="flex items-center justify-between">
-              <h3 id="modal-title" className="text-base sm:text-lg leading-6 font-medium text-gray-900">
+              <h3
+                id="modal-title"
+                className="text-base sm:text-lg leading-6 font-medium text-gray-900"
+              >
                 練習記録を追加
               </h3>
               <button
@@ -180,84 +185,98 @@ export default function TeamPracticeForm({
                 <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
-            <p className="mt-2 text-xs sm:text-sm text-gray-600">
-              チームの練習記録を作成します
-            </p>
+            <p className="mt-2 text-xs sm:text-sm text-gray-600">チームの練習記録を作成します</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden" data-testid="team-practice-form">
+          <form
+            onSubmit={handleSubmit}
+            className="flex flex-col flex-1 overflow-hidden"
+            data-testid="team-practice-form"
+          >
             <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
-            {/* エラー表示 */}
-            {error && (
-              <div className="rounded-md bg-red-50 p-4" role="alert" aria-live="polite" data-testid="team-practice-error">
-                <div className="flex">
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-red-800">
-                      エラーが発生しました
-                    </h3>
-                    <div className="mt-2 text-sm text-red-700">
-                      <p id="practice-date-error">{error}</p>
+              {/* エラー表示 */}
+              {error && (
+                <div
+                  className="rounded-md bg-red-50 p-4"
+                  role="alert"
+                  aria-live="polite"
+                  data-testid="team-practice-error"
+                >
+                  <div className="flex">
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-red-800">エラーが発生しました</h3>
+                      <div className="mt-2 text-sm text-red-700">
+                        <p id="practice-date-error">{error}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
+              )}
+
+              {/* 練習日 */}
+              <div>
+                <DatePicker
+                  label="練習日"
+                  value={formData.date}
+                  onChange={(date) => setFormData({ ...formData, date })}
+                  required
+                />
               </div>
-            )}
 
-            {/* 練習日 */}
-            <div>
-              <DatePicker
-                label="練習日"
-                value={formData.date}
-                onChange={(date) => setFormData({ ...formData, date })}
-                required
-              />
-            </div>
+              {/* 練習タイトル */}
+              <div>
+                <label
+                  htmlFor="practice-title"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  練習タイトル
+                </label>
+                <Input
+                  id="practice-title"
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="例: 基礎練習、スプリント練習（空欄の場合は「チーム練習」と表示）"
+                  data-testid="team-practice-title"
+                />
+              </div>
 
-            {/* 練習タイトル */}
-            <div>
-              <label htmlFor="practice-title" className="block text-sm font-medium text-gray-700 mb-2">
-                練習タイトル
-              </label>
-              <Input
-                id="practice-title"
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="例: 基礎練習、スプリント練習（空欄の場合は「チーム練習」と表示）"
-                data-testid="team-practice-title"
-              />
-            </div>
+              {/* 練習場所 */}
+              <div>
+                <label
+                  htmlFor="practice-place"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  練習場所
+                </label>
+                <Input
+                  id="practice-place"
+                  type="text"
+                  value={formData.place}
+                  onChange={(e) => setFormData({ ...formData, place: e.target.value })}
+                  placeholder="例: 市営プール、学校プール"
+                  data-testid="team-practice-place"
+                />
+              </div>
 
-            {/* 練習場所 */}
-            <div>
-              <label htmlFor="practice-place" className="block text-sm font-medium text-gray-700 mb-2">
-                練習場所
-              </label>
-              <Input
-                id="practice-place"
-                type="text"
-                value={formData.place}
-                onChange={(e) => setFormData({ ...formData, place: e.target.value })}
-                placeholder="例: 市営プール、学校プール"
-                data-testid="team-practice-place"
-              />
-            </div>
-
-            {/* メモ */}
-            <div>
-              <label htmlFor="practice-note" className="block text-sm font-medium text-gray-700 mb-2">
-                メモ
-              </label>
-              <textarea
-                id="practice-note"
-                value={formData.note}
-                onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="練習内容や感想など"
-                data-testid="team-practice-note"
-              />
-            </div>
+              {/* メモ */}
+              <div>
+                <label
+                  htmlFor="practice-note"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  メモ
+                </label>
+                <textarea
+                  id="practice-note"
+                  value={formData.note}
+                  onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="練習内容や感想など"
+                  data-testid="team-practice-note"
+                />
+              </div>
             </div>
 
             {/* フッター（固定） */}
@@ -277,12 +296,12 @@ export default function TeamPracticeForm({
                 className="bg-blue-600 hover:bg-blue-700"
                 data-testid="team-practice-submit-button"
               >
-                {loading ? '作成中...' : '作成'}
+                {loading ? "作成中..." : "作成"}
               </Button>
             </div>
           </form>
         </div>
       </div>
     </div>
-  )
+  );
 }

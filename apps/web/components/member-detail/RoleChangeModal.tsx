@@ -1,13 +1,13 @@
-import React from 'react'
-import BaseModal from '@/components/ui/BaseModal'
-import type { MemberDetail } from '@/types/member-detail'
+import React from "react";
+import BaseModal from "@/components/ui/BaseModal";
+import type { MemberDetail } from "@/types/member-detail";
 
 interface RoleChangeModalProps {
-  isOpen: boolean
-  member: MemberDetail | null
-  pendingRole: 'admin' | 'user' | null
-  onConfirm: () => void
-  onCancel: () => void
+  isOpen: boolean;
+  member: MemberDetail | null;
+  pendingRole: "admin" | "user" | null;
+  onConfirm: () => void;
+  onCancel: () => void;
 }
 
 export function RoleChangeModal({
@@ -15,19 +15,14 @@ export function RoleChangeModal({
   member,
   pendingRole,
   onConfirm,
-  onCancel
+  onCancel,
 }: RoleChangeModalProps) {
   return (
-    <BaseModal
-      isOpen={isOpen}
-      onClose={onCancel}
-      title="権限変更の確認"
-      size="sm"
-    >
+    <BaseModal isOpen={isOpen} onClose={onCancel} title="権限変更の確認" size="sm">
       <div className="p-4">
         <p className="text-gray-700 mb-6">
-          {member?.users?.name}さんの権限を
-          「{pendingRole === 'admin' ? '管理者' : 'ユーザー'}」に変更しますか？
+          {member?.users?.name}さんの権限を 「{pendingRole === "admin" ? "管理者" : "ユーザー"}
+          」に変更しますか？
         </p>
         <div className="flex justify-end space-x-3">
           <button
@@ -45,5 +40,5 @@ export function RoleChangeModal({
         </div>
       </div>
     </BaseModal>
-  )
+  );
 }

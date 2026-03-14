@@ -1,13 +1,13 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect, useMemo } from 'react'
-import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
-import { formatTimeBest } from '@/utils/formatters'
-import { useAuth } from '@/contexts'
-import { EntryAPI } from '@swim-hub/shared/api/entries'
-import { useRouter } from 'next/navigation'
-import ImageGallery, { GalleryImage } from '@/components/ui/ImageGallery'
-import type { CompetitionWithEntryProps, CompetitionEntryDisplay } from '../../types'
+import React, { useState, useEffect, useMemo } from "react";
+import { PencilIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { formatTimeBest } from "@/utils/formatters";
+import { useAuth } from "@/contexts";
+import { EntryAPI } from "@swim-hub/shared/api/entries";
+import { useRouter } from "next/navigation";
+import ImageGallery, { GalleryImage } from "@/components/ui/ImageGallery";
+import type { CompetitionWithEntryProps, CompetitionEntryDisplay } from "../../types";
 
 export function CompetitionWithEntry({
   entryId: _entryId,
@@ -25,12 +25,12 @@ export function CompetitionWithEntry({
   onDeleteCompetition,
   onEditEntry,
   onDeleteEntry,
-  onClose
+  onClose,
 }: CompetitionWithEntryProps) {
-  const router = useRouter()
-  const { supabase } = useAuth()
-  const entryApi = useMemo(() => new EntryAPI(supabase), [supabase])
-  const [competitionImages, setCompetitionImages] = useState<GalleryImage[]>([])
+  const router = useRouter();
+  const { supabase } = useAuth();
+  const entryApi = useMemo(() => new EntryAPI(supabase), [supabase]);
+  const [competitionImages, setCompetitionImages] = useState<GalleryImage[]>([]);
   const [entries, setEntries] = useState<CompetitionEntryDisplay[]>(() => {
     if (styleId && styleName) {
       return [
@@ -39,72 +39,74 @@ export function CompetitionWithEntry({
           styleId,
           styleName,
           entryTime,
-          note
-        }
-      ]
+          note,
+        },
+      ];
     }
-    return []
-  })
-  const [loading, setLoading] = useState(true)
-  const [authError, setAuthError] = useState<string | null>(null)
-  const [entryStatus, setEntryStatus] = useState<'before' | 'open' | 'closed' | null>(null)
+    return [];
+  });
+  const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [entryStatus, setEntryStatus] = useState<"before" | "open" | "closed" | null>(null);
 
   useEffect(() => {
     const fetchEntryData = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser()
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) {
-          setLoading(false)
-          setAuthError('認証が必要です。ログインしてください。')
-          router.replace('/login')
-          return
+          setLoading(false);
+          setAuthError("認証が必要です。ログインしてください。");
+          router.replace("/login");
+          return;
         }
 
         // competitionのentry_statusとimage_pathsを取得
         const { data: competitionData, error: competitionError } = await supabase
-          .from('competitions')
-          .select('entry_status, image_paths')
-          .eq('id', competitionId)
-          .single()
+          .from("competitions")
+          .select("entry_status, image_paths")
+          .eq("id", competitionId)
+          .single();
 
         if (!competitionError && competitionData) {
-          setEntryStatus(competitionData.entry_status || 'before')
+          setEntryStatus(competitionData.entry_status || "before");
 
           // 画像データを変換
-          const imagePaths = (competitionData as { image_paths?: string[] }).image_paths || []
-          const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL
+          const imagePaths = (competitionData as { image_paths?: string[] }).image_paths || [];
+          const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
           const images: GalleryImage[] = imagePaths.map((path: string, index: number) => {
             const imageUrl = r2PublicUrl
               ? `${r2PublicUrl}/competition-images/${path}`
-              : supabase.storage.from('competition-images').getPublicUrl(path).data.publicUrl
+              : supabase.storage.from("competition-images").getPublicUrl(path).data.publicUrl;
             return {
               id: path,
               thumbnailUrl: imageUrl,
               originalUrl: imageUrl,
-              fileName: path.split('/').pop() || `image-${index + 1}`
-            }
-          })
-          setCompetitionImages(images)
+              fileName: path.split("/").pop() || `image-${index + 1}`,
+            };
+          });
+          setCompetitionImages(images);
         }
 
         // EntryAPIを使用してエントリーを取得
-        const allEntries = await entryApi.getEntriesByCompetition(competitionId)
+        const allEntries = await entryApi.getEntriesByCompetition(competitionId);
 
         // 現在のユーザーのエントリーのみをフィルタリング
-        const userEntries = allEntries.filter(entry => entry.user_id === user.id)
+        const userEntries = allEntries.filter((entry) => entry.user_id === user.id);
 
         if (userEntries && userEntries.length > 0) {
           const mapped = userEntries.map((entry) => {
-            const style = entry.style
+            const style = entry.style;
             return {
               id: entry.id,
               styleId: entry.style_id,
-              styleName: style?.name_jp || '',
+              styleName: style?.name_jp || "",
               entryTime: entry.entry_time,
-              note: entry.note
-            } as CompetitionEntryDisplay
-          })
-          setEntries(mapped)
+              note: entry.note,
+            } as CompetitionEntryDisplay;
+          });
+          setEntries(mapped);
         } else if (entries.length === 0 && styleId && styleName) {
           setEntries([
             {
@@ -112,44 +114,44 @@ export function CompetitionWithEntry({
               styleId,
               styleName,
               entryTime,
-              note
-            }
-          ])
+              note,
+            },
+          ]);
         }
       } catch (err) {
-        console.error('エントリーデータの取得エラー:', err)
-        setCompetitionImages([])
+        console.error("エントリーデータの取得エラー:", err);
+        setCompetitionImages([]);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchEntryData()
+    fetchEntryData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [competitionId, entryApi, deletedEntryIds?.length])
+  }, [competitionId, entryApi, deletedEntryIds?.length]);
 
   const entryInfoList = entries.map((entry) => ({
     styleId: entry.styleId,
     styleName: entry.styleName,
-    entryTime: entry.entryTime ?? undefined
-  }))
+    entryTime: entry.entryTime ?? undefined,
+  }));
 
   const handleAddRecordClick = () => {
-    if (!onAddRecord) return
+    if (!onAddRecord) return;
 
     if (entryInfoList.length > 0) {
       onAddRecord({
         competitionId,
-        entryDataList: entryInfoList
-      })
-      onClose?.()
+        entryDataList: entryInfoList,
+      });
+      onClose?.();
     } else {
-      onAddRecord({ competitionId })
+      onAddRecord({ competitionId });
     }
-  }
+  };
 
   const handleEditEntryClick = async () => {
-    if (!onEditEntry) return
+    if (!onEditEntry) return;
 
     // チームcompetitionの場合、entry_statusをチェック
     if (isTeamCompetition) {
@@ -157,50 +159,54 @@ export function CompetitionWithEntry({
       if (entryStatus === null) {
         try {
           const { data: competitionData, error: competitionError } = await supabase
-            .from('competitions')
-            .select('entry_status')
-            .eq('id', competitionId)
-            .single()
+            .from("competitions")
+            .select("entry_status")
+            .eq("id", competitionId)
+            .single();
 
           if (!competitionError && competitionData) {
-            const status = competitionData.entry_status || 'before'
-            setEntryStatus(status)
+            const status = competitionData.entry_status || "before";
+            setEntryStatus(status);
 
             // entry_statusが'open'でない場合はalertを表示してrecord入力モーダルに遷移
-            if (status !== 'open') {
-              const statusLabel = status === 'before' ? '受付前' : '受付終了'
-              window.alert(`エントリーは${statusLabel}のため、エントリー登録はできません。記録入力に進みます。`)
+            if (status !== "open") {
+              const statusLabel = status === "before" ? "受付前" : "受付終了";
+              window.alert(
+                `エントリーは${statusLabel}のため、エントリー登録はできません。記録入力に進みます。`,
+              );
 
               // record入力モーダルに遷移
               if (onAddRecord) {
-                handleAddRecordClick()
+                handleAddRecordClick();
               }
-              return
+              return;
             }
           }
         } catch (err) {
-          console.error('エントリーステータスの取得エラー:', err)
+          console.error("エントリーステータスの取得エラー:", err);
         }
-      } else if (entryStatus !== 'open') {
+      } else if (entryStatus !== "open") {
         // entry_statusが'open'でない場合はalertを表示してrecord入力モーダルに遷移
-        const statusLabel = entryStatus === 'before' ? '受付前' : '受付終了'
-        window.alert(`エントリーは${statusLabel}のため、エントリー登録はできません。記録入力に進みます。`)
+        const statusLabel = entryStatus === "before" ? "受付前" : "受付終了";
+        window.alert(
+          `エントリーは${statusLabel}のため、エントリー登録はできません。記録入力に進みます。`,
+        );
 
         // record入力モーダルに遷移
         if (onAddRecord) {
-          handleAddRecordClick()
+          handleAddRecordClick();
         }
-        return
+        return;
       }
     }
 
     if (entries.length === 0) {
-      onEditEntry()
-      return
+      onEditEntry();
+      return;
     }
 
-    onEditEntry()
-  }
+    onEditEntry();
+  };
 
   return (
     <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
@@ -208,7 +214,9 @@ export function CompetitionWithEntry({
       <div className="bg-blue-50 px-4 py-3 border-b border-blue-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h5 className="font-semibold text-gray-900" data-testid="competition-title-display">{competitionName || '大会'}</h5>
+            <h5 className="font-semibold text-gray-900" data-testid="competition-title-display">
+              {competitionName || "大会"}
+            </h5>
             {isTeamCompetition && (
               <span className="text-xs bg-violet-100 text-violet-700 px-2 py-1 rounded-full">
                 チーム
@@ -239,7 +247,9 @@ export function CompetitionWithEntry({
           </div>
         </div>
         {place && (
-          <p className="text-sm text-gray-600 mt-1" data-testid="competition-place-display">📍 {place}</p>
+          <p className="text-sm text-gray-600 mt-1" data-testid="competition-place-display">
+            📍 {place}
+          </p>
         )}
         {authError && (
           <p className="text-sm text-red-600 mt-2 bg-red-50 border border-red-200 rounded px-3 py-2">
@@ -250,11 +260,16 @@ export function CompetitionWithEntry({
 
       {/* エントリー情報ボックス */}
       <div className="p-4">
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-3" data-testid="entry-section">
+        <div
+          className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-3"
+          data-testid="entry-section"
+        >
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <span className="text-lg">📝</span>
-              <h6 className="text-sm font-semibold text-orange-900">エントリー済み（記録未登録）</h6>
+              <h6 className="text-sm font-semibold text-orange-900">
+                エントリー済み（記録未登録）
+              </h6>
             </div>
             <div className="flex items-center gap-1">
               {onEditEntry && (
@@ -289,7 +304,9 @@ export function CompetitionWithEntry({
                       </div>
                       {entry.entryTime && entry.entryTime > 0 && (
                         <div className="flex items-baseline gap-2">
-                          <span className="font-semibold text-orange-900 min-w-[72px]">エントリータイム:</span>
+                          <span className="font-semibold text-orange-900 min-w-[72px]">
+                            エントリータイム:
+                          </span>
                           <span className="text-gray-900 font-mono font-semibold">
                             {formatTimeBest(entry.entryTime)}
                           </span>
@@ -333,7 +350,14 @@ export function CompetitionWithEntry({
           disabled={loading}
           className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-sm font-medium"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+            stroke="currentColor"
+            className="w-5 h-5"
+          >
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
           <span>大会記録を追加</span>
@@ -347,5 +371,5 @@ export function CompetitionWithEntry({
         )}
       </div>
     </div>
-  )
+  );
 }

@@ -1,20 +1,20 @@
-'use client'
+"use client";
 
-import { useCallback } from 'react'
-import { useRouter } from 'next/navigation'
-import { createBrowserClient } from '@supabase/ssr'
-import { XMarkIcon, Cog6ToothIcon } from '@heroicons/react/24/outline'
-import { StarIcon } from '@heroicons/react/24/solid'
+import { useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { createBrowserClient } from "@supabase/ssr";
+import { XMarkIcon, Cog6ToothIcon } from "@heroicons/react/24/outline";
+import { StarIcon } from "@heroicons/react/24/solid";
 import {
   usePracticeLogTemplatesQuery,
   useUsePracticeLogTemplateMutation,
-} from '@swim-hub/shared/hooks'
-import type { PracticeLogTemplate } from '@swim-hub/shared/types'
+} from "@swim-hub/shared/hooks";
+import type { PracticeLogTemplate } from "@swim-hub/shared/types";
 
 interface PracticeLogTemplateSelectModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSelect: (template: PracticeLogTemplate) => void
+  isOpen: boolean;
+  onClose: () => void;
+  onSelect: (template: PracticeLogTemplate) => void;
 }
 
 export function PracticeLogTemplateSelectModal({
@@ -22,60 +22,60 @@ export function PracticeLogTemplateSelectModal({
   onClose,
   onSelect,
 }: PracticeLogTemplateSelectModalProps) {
-  const router = useRouter()
+  const router = useRouter();
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
 
-  const { data: templates, isLoading } = usePracticeLogTemplatesQuery(supabase)
-  const useMutation = useUsePracticeLogTemplateMutation(supabase)
+  const { data: templates, isLoading } = usePracticeLogTemplatesQuery(supabase);
+  const useMutation = useUsePracticeLogTemplateMutation(supabase);
 
   const formatCircle = (seconds: number | null): string => {
-    if (!seconds) return ''
-    const min = Math.floor(seconds / 60)
-    const sec = seconds % 60
-    return `${min}'${sec.toString().padStart(2, '0')}"`
-  }
+    if (!seconds) return "";
+    const min = Math.floor(seconds / 60);
+    const sec = seconds % 60;
+    return `${min}'${sec.toString().padStart(2, "0")}"`;
+  };
 
   const handleSelect = useCallback(
     (template: PracticeLogTemplate) => {
       // use_countを更新
-      useMutation.mutate(template.id)
-      onSelect(template)
-      onClose()
+      useMutation.mutate(template.id);
+      onSelect(template);
+      onClose();
     },
-    [useMutation, onSelect, onClose]
-  )
+    [useMutation, onSelect, onClose],
+  );
 
   const handleManageClick = useCallback(() => {
-    onClose()
-    router.push('/settings/practice-log-templates')
-  }, [router, onClose])
+    onClose();
+    router.push("/settings/practice-log-templates");
+  }, [router, onClose]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose()
+      if (e.key === "Escape") {
+        onClose();
       }
     },
-    [onClose]
-  )
+    [onClose],
+  );
 
   const handleTemplateKeyDown = useCallback(
     (e: React.KeyboardEvent, template: PracticeLogTemplate) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault()
-        handleSelect(template)
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        handleSelect(template);
       }
     },
-    [handleSelect]
-  )
+    [handleSelect],
+  );
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
-  const favoriteTemplates = templates?.filter((t) => t.is_favorite) || []
-  const otherTemplates = templates?.filter((t) => !t.is_favorite) || []
+  const favoriteTemplates = templates?.filter((t) => t.is_favorite) || [];
+  const otherTemplates = templates?.filter((t) => !t.is_favorite) || [];
 
   return (
     <div
@@ -97,7 +97,10 @@ export function PracticeLogTemplateSelectModal({
         <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
           {/* ヘッダー */}
           <div className="flex items-center justify-between p-3 sm:p-6 border-b border-gray-200 shrink-0">
-            <h3 id="select-template-title" className="text-base sm:text-lg font-semibold text-gray-900">
+            <h3
+              id="select-template-title"
+              className="text-base sm:text-lg font-semibold text-gray-900"
+            >
               テンプレートを選択
             </h3>
             <button
@@ -191,7 +194,7 @@ export function PracticeLogTemplateSelectModal({
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 // テンプレート項目コンポーネント
@@ -201,10 +204,10 @@ function TemplateItem({
   onKeyDown,
   formatCircle,
 }: {
-  template: PracticeLogTemplate
-  onSelect: (template: PracticeLogTemplate) => void
-  onKeyDown: (e: React.KeyboardEvent, template: PracticeLogTemplate) => void
-  formatCircle: (seconds: number | null) => string
+  template: PracticeLogTemplate;
+  onSelect: (template: PracticeLogTemplate) => void;
+  onKeyDown: (e: React.KeyboardEvent, template: PracticeLogTemplate) => void;
+  formatCircle: (seconds: number | null) => string;
 }) {
   return (
     <div
@@ -220,14 +223,12 @@ function TemplateItem({
         <span className="text-gray-400 text-sm">&gt;</span>
       </div>
       <div className="text-sm text-gray-600 mt-1">
-        {template.distance}m × {template.rep_count}本 × {template.set_count}セット{' '}
-        {template.style} {template.swim_category}
+        {template.distance}m × {template.rep_count}本 × {template.set_count}セット {template.style}{" "}
+        {template.swim_category}
         {template.circle && (
-          <span className="ml-2 text-gray-500">
-            サークル {formatCircle(template.circle)}
-          </span>
+          <span className="ml-2 text-gray-500">サークル {formatCircle(template.circle)}</span>
         )}
       </div>
     </div>
-  )
+  );
 }

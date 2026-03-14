@@ -1,33 +1,42 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { DndContext, DragOverlay, type DragStartEvent, type DragEndEvent, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { useAuth } from '@/contexts'
-import BaseModal from '@/components/ui/BaseModal'
-import Avatar from '@/components/ui/Avatar'
-import { TeamGroupsAPI } from '@apps/shared/api/teams/groups'
-import { DraggableMemberCard } from './DraggableMemberCard'
-import { DroppableGroupZone } from './DroppableGroupZone'
-import type { TeamGroupWithCount } from '../hooks/useTeamGroups'
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import {
+  DndContext,
+  DragOverlay,
+  type DragStartEvent,
+  type DragEndEvent,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { useAuth } from "@/contexts";
+import BaseModal from "@/components/ui/BaseModal";
+import Avatar from "@/components/ui/Avatar";
+import { TeamGroupsAPI } from "@apps/shared/api/teams/groups";
+import { DraggableMemberCard } from "./DraggableMemberCard";
+import { DroppableGroupZone } from "./DroppableGroupZone";
+import type { TeamGroupWithCount } from "../hooks/useTeamGroups";
 
 interface TeamMemberForSelection {
-  id: string
-  user_id: string
+  id: string;
+  user_id: string;
   users: {
-    id: string
-    name: string
-    profile_image_path?: string | null
-  }
+    id: string;
+    name: string;
+    profile_image_path?: string | null;
+  };
 }
 
 interface BulkAssignModalProps {
-  isOpen: boolean
-  onClose: () => void
-  category: string
-  groups: TeamGroupWithCount[]
-  teamMembers: TeamMemberForSelection[]
-  teamId: string
-  onSaved: () => void
+  isOpen: boolean;
+  onClose: () => void;
+  category: string;
+  groups: TeamGroupWithCount[];
+  teamMembers: TeamMemberForSelection[];
+  teamId: string;
+  onSaved: () => void;
 }
 
 export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
@@ -39,125 +48,123 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
   teamId,
   onSaved,
 }) => {
-  const { supabase } = useAuth()
+  const { supabase } = useAuth();
 
   // userId → groupId | null (null=未割り当て)
-  const [assignments, setAssignments] = useState<Map<string, string | null>>(new Map())
-  const [loading, setLoading] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [activeId, setActiveId] = useState<string | null>(null)
+  const [assignments, setAssignments] = useState<Map<string, string | null>>(new Map());
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
-  const groupIds = useMemo(() => new Set(groups.map((g) => g.id)), [groups])
+  const groupIds = useMemo(() => new Set(groups.map((g) => g.id)), [groups]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
-  )
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+  );
 
   // 現在の割り当てを読み込み
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) return;
     const load = async () => {
-      setLoading(true)
+      setLoading(true);
       try {
-        const api = new TeamGroupsAPI(supabase)
-        const allMemberships = await api.listAllMemberships(teamId)
-        const map = new Map<string, string | null>()
+        const api = new TeamGroupsAPI(supabase);
+        const allMemberships = await api.listAllMemberships(teamId);
+        const map = new Map<string, string | null>();
         // 全メンバーをまず未割り当てとして初期化
-        teamMembers.forEach((m) => map.set(m.user_id, null))
+        teamMembers.forEach((m) => map.set(m.user_id, null));
         // このカテゴリのグループに属する割り当てだけ反映
         allMemberships.forEach((m) => {
           if (groupIds.has(m.team_group_id)) {
-            map.set(m.user_id, m.team_group_id)
+            map.set(m.user_id, m.team_group_id);
           }
-        })
-        setAssignments(map)
+        });
+        setAssignments(map);
       } catch (err) {
-        console.error('割り当て情報の取得に失敗:', err)
+        console.error("割り当て情報の取得に失敗:", err);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    load()
-  }, [isOpen, teamId, supabase, teamMembers, groupIds])
+    };
+    load();
+  }, [isOpen, teamId, supabase, teamMembers, groupIds]);
 
   // 未割り当てメンバー
   const unassignedMembers = useMemo(() => {
-    return teamMembers.filter((m) => !assignments.get(m.user_id))
-  }, [teamMembers, assignments])
+    return teamMembers.filter((m) => !assignments.get(m.user_id));
+  }, [teamMembers, assignments]);
 
   // グループごとのメンバー
   const membersByGroup = useMemo(() => {
-    const map = new Map<string, TeamMemberForSelection[]>()
-    groups.forEach((g) => map.set(g.id, []))
+    const map = new Map<string, TeamMemberForSelection[]>();
+    groups.forEach((g) => map.set(g.id, []));
     teamMembers.forEach((m) => {
-      const gId = assignments.get(m.user_id)
+      const gId = assignments.get(m.user_id);
       if (gId && map.has(gId)) {
-        map.get(gId)!.push(m)
+        map.get(gId)!.push(m);
       }
-    })
-    return map
-  }, [teamMembers, groups, assignments])
+    });
+    return map;
+  }, [teamMembers, groups, assignments]);
 
   // ドラッグ中のメンバー情報
   const activeMember = useMemo(() => {
-    if (!activeId) return null
-    return teamMembers.find((m) => m.user_id === activeId) ?? null
-  }, [activeId, teamMembers])
+    if (!activeId) return null;
+    return teamMembers.find((m) => m.user_id === activeId) ?? null;
+  }, [activeId, teamMembers]);
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
-    setActiveId(event.active.id as string)
-  }, [])
+    setActiveId(event.active.id as string);
+  }, []);
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    setActiveId(null)
-    const { active, over } = event
-    if (!over) return
-    const userId = active.id as string
-    const targetId = over.id as string
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      setActiveId(null);
+      const { active, over } = event;
+      if (!over) return;
+      const userId = active.id as string;
+      const targetId = over.id as string;
 
-    setAssignments((prev) => {
-      const next = new Map(prev)
-      if (targetId === 'unassigned') {
-        next.set(userId, null)
-      } else if (groupIds.has(targetId)) {
-        next.set(userId, targetId)
-      }
-      return next
-    })
-  }, [groupIds])
+      setAssignments((prev) => {
+        const next = new Map(prev);
+        if (targetId === "unassigned") {
+          next.set(userId, null);
+        } else if (groupIds.has(targetId)) {
+          next.set(userId, targetId);
+        }
+        return next;
+      });
+    },
+    [groupIds],
+  );
 
   const handleDragCancel = useCallback(() => {
-    setActiveId(null)
-  }, [])
+    setActiveId(null);
+  }, []);
 
   // 保存
   const handleSave = useCallback(async () => {
-    setSaving(true)
+    setSaving(true);
     try {
-      const api = new TeamGroupsAPI(supabase)
+      const api = new TeamGroupsAPI(supabase);
       // グループごとに割り当てを保存
       for (const group of groups) {
-        const members = membersByGroup.get(group.id) || []
-        const userIds = members.map((m) => m.user_id)
-        await api.setGroupMembers(group.id, userIds)
+        const members = membersByGroup.get(group.id) || [];
+        const userIds = members.map((m) => m.user_id);
+        await api.setGroupMembers(group.id, userIds);
       }
-      onSaved()
-      onClose()
+      onSaved();
+      onClose();
     } catch (err) {
-      console.error('保存に失敗:', err)
+      console.error("保存に失敗:", err);
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }, [supabase, groups, membersByGroup, onSaved, onClose])
+  }, [supabase, groups, membersByGroup, onSaved, onClose]);
 
   return (
-    <BaseModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={`${category} — 一括振り分け`}
-      size="xl"
-    >
+    <BaseModal isOpen={isOpen} onClose={onClose} title={`${category} — 一括振り分け`} size="xl">
       {loading ? (
         <div className="py-12">
           <div className="animate-pulse space-y-3">
@@ -194,7 +201,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
             {/* 右: グループ一覧 */}
             <div className="flex-1 space-y-2 sm:space-y-3 overflow-y-auto max-h-[50vh] sm:max-h-[60vh]">
               {groups.map((group) => {
-                const members = membersByGroup.get(group.id) || []
+                const members = membersByGroup.get(group.id) || [];
                 return (
                   <DroppableGroupZone
                     key={group.id}
@@ -211,7 +218,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
                       />
                     ))}
                   </DroppableGroupZone>
-                )
+                );
               })}
             </div>
           </div>
@@ -252,10 +259,10 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
             disabled={saving}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {saving ? '保存中...' : '保存'}
+            {saving ? "保存中..." : "保存"}
           </button>
         </div>
       )}
     </BaseModal>
-  )
-}
+  );
+};

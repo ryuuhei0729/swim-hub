@@ -13,6 +13,7 @@
 ### セットアップ
 
 1. 依存関係のインストール（ルートディレクトリから）
+
 ```bash
 pnpm install
 ```
@@ -27,6 +28,7 @@ pnpm install
 - `.env.local` - 個人固有の設定（git管理されない、手動で作成）
 
 **初回セットアップ**:
+
 ```bash
 # .env.exampleをコピーして.env.localを作成
 cd apps/mobile
@@ -35,12 +37,14 @@ cp .env.example .env.local
 
 `.env.local`ファイルを編集して、必要に応じて個人固有の設定を追加してください。
 
-**注意**: 
+**注意**:
+
 - `.env.local`ファイルは`apps/mobile`ディレクトリのルート（`package.json`と同じ階層）に配置してください
 - Expoは自動的に環境に応じて適切な`.env`ファイルを読み込みます（開発時は`.env.development`、本番ビルド時は`.env.production`）
 - `.env.local`は他の環境変数ファイルより優先されます
 
 3. 開発サーバーの起動
+
 ```bash
 # ルートディレクトリから
 pnpm run dev:mobile

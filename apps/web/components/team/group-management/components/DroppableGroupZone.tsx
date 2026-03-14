@@ -1,13 +1,13 @@
-'use client'
+"use client";
 
-import React, { type ReactNode } from 'react'
-import { useDroppable } from '@dnd-kit/core'
+import React, { type ReactNode } from "react";
+import { useDroppable } from "@dnd-kit/core";
 
 interface DroppableGroupZoneProps {
-  groupId: string
-  groupName: string
-  children: ReactNode
-  memberCount: number
+  groupId: string;
+  groupName: string;
+  children: ReactNode;
+  memberCount: number;
 }
 
 export const DroppableGroupZone: React.FC<DroppableGroupZoneProps> = ({
@@ -16,15 +16,13 @@ export const DroppableGroupZone: React.FC<DroppableGroupZoneProps> = ({
   children,
   memberCount,
 }) => {
-  const { isOver, setNodeRef } = useDroppable({ id: groupId })
+  const { isOver, setNodeRef } = useDroppable({ id: groupId });
 
   return (
     <div
       ref={setNodeRef}
       className={`rounded-lg border-2 border-dashed transition-colors ${
-        isOver
-          ? 'border-blue-400 bg-blue-50'
-          : 'border-gray-200 bg-gray-50/50'
+        isOver ? "border-blue-400 bg-blue-50" : "border-gray-200 bg-gray-50/50"
       }`}
     >
       <div className="flex items-center justify-between px-2 py-1.5 sm:px-3 sm:py-2">
@@ -35,5 +33,5 @@ export const DroppableGroupZone: React.FC<DroppableGroupZoneProps> = ({
         {children}
       </div>
     </div>
-  )
-}
+  );
+};

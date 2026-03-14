@@ -15,6 +15,5 @@ export default function BulkBestTimeLoading() {
         </div>
       </div>
     </div>
-  )
+  );
 }
-
