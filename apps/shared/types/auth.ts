@@ -3,10 +3,29 @@
 // Web/Mobile共通で使用する認証関連の型定義
 // =============================================================================
 
-import { AuthError, Session, SupabaseClient, User } from "@supabase/supabase-js";
+import type { AuthError, Session, SupabaseClient, User } from "@supabase/supabase-js";
 
 // =============================================================================
-// 1. サブスクリプション型定義
+// 1. 3アプリ共通の認証ベース型 (AuthState / AuthActions / AuthContextValue)
+// =============================================================================
+
+/** 3アプリ共通の認証状態 */
+export type BaseAuthState = {
+  user: User | null;
+  session: Session | null;
+  loading: boolean;
+};
+
+/** 3アプリ共通の認証アクション */
+export type BaseAuthActions = {
+  signOut: () => Promise<void>;
+};
+
+/** 3アプリ共通の認証コンテキスト値 */
+export type BaseAuthContextValue = BaseAuthState & BaseAuthActions;
+
+// =============================================================================
+// 2. サブスクリプション型定義 (swim-hub 固有)
 // =============================================================================
 
 export type SubscriptionStatus = "trialing" | "active" | "canceled" | "expired" | "past_due";
@@ -20,18 +39,15 @@ export interface SubscriptionInfo {
 }
 
 // =============================================================================
-// 2. 認証状態の型定義
+// 3. swim-hub 固有の認証状態 (BaseAuthState を拡張)
 // =============================================================================
 
-export interface AuthState {
-  user: User | null;
-  session: Session | null;
-  loading: boolean;
+export interface AuthState extends BaseAuthState {
   subscription: SubscriptionInfo | null;
 }
 
 // =============================================================================
-// 2. 認証コンテキストの型定義
+// 4. swim-hub 固有の認証コンテキスト (AuthState + アプリ固有アクション)
 // =============================================================================
 
 export interface AuthContextType extends AuthState {

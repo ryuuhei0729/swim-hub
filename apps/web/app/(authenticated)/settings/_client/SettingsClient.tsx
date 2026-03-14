@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/contexts";
@@ -13,7 +13,36 @@ import AccountDeleteSettings from "@/components/settings/AccountDeleteSettings";
 import SubscriptionSettings from "@/components/settings/SubscriptionSettings";
 
 export default function SettingsClient() {
-  const { user, supabase } = useAuth();
+  const { user, supabase, refreshSubscription } = useAuth();
+
+  // Checkout 完了後にセッションを検証し、subscription を更新
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const sessionId = url.searchParams.get("session_id");
+    if (sessionId) {
+      // URL から session_id を即座に除去（ブラウザ履歴を汚さない）
+      url.searchParams.delete("session_id");
+      window.history.replaceState({}, "", url.pathname);
+
+      // Stripe Session を検証して DB を直接更新（Webhook フォールバック）
+      const verifySession = async () => {
+        try {
+          const res = await fetch("/api/stripe/verify-session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionId }),
+          });
+          if (res.ok) {
+            // DB 更新成功 — AuthProvider の subscription を最新化
+            await refreshSubscription();
+          }
+        } catch {
+          // 検証失敗してもクラッシュしない — 次回の Webhook で補完される
+        }
+      };
+      verifySession();
+    }
+  }, [refreshSubscription]);
   const queryClient = useQueryClient();
   const { profile } = useUserQuery(supabase, {
     userId: user?.id,

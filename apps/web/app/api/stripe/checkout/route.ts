@@ -23,12 +23,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "priceId は必須です" }, { status: 400 });
     }
 
-    // 3. user_subscriptions テーブルから trial_start を確認
+    // 許可された Price ID のホワイトリスト検証
+    const allowedPriceIds = [
+      process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID,
+      process.env.NEXT_PUBLIC_STRIPE_YEARLY_PRICE_ID,
+    ].filter(Boolean);
+
+    if (allowedPriceIds.length > 0 && !allowedPriceIds.includes(priceId)) {
+      return NextResponse.json({ error: "無効な priceId です" }, { status: 400 });
+    }
+
+    // 3. user_subscriptions テーブルから現在のプラン・trial_start を確認
     const { data: subscription } = (await supabase
       .from("user_subscriptions")
-      .select("trial_start")
+      .select("plan, status, trial_start")
       .eq("id", user.id)
-      .single()) as { data: { trial_start: string | null } | null; error: unknown };
+      .single()) as {
+      data: { plan: string; status: string | null; trial_start: string | null } | null;
+      error: unknown;
+    };
+
+    // 既にアクティブなサブスクリプションがある場合は重複購入を防止
+    const activeStatuses = ["active", "trialing"];
+    if (
+      subscription?.plan === "premium" &&
+      subscription?.status &&
+      activeStatuses.includes(subscription.status)
+    ) {
+      return NextResponse.json(
+        { error: "すでにプレミアムプランに加入しています" },
+        { status: 409 },
+      );
+    }
 
     const hasUsedTrial = subscription?.trial_start != null;
 

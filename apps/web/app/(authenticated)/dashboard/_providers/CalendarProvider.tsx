@@ -67,12 +67,10 @@ export function CalendarProvider({
   }, []);
 
   // 初期データの月をチェックして、現在の月と同じ場合のみ使用
+  // 注意: データが空でも初期データとして有効（その月にイベントがないだけ）
   const isInitialDataForCurrentMonth = useMemo(() => {
-    if (initialCalendarItems.length === 0) {
-      return false;
-    }
     return isSameMonth(initialDate, currentDate);
-  }, [initialCalendarItems.length, initialDate, currentDate]);
+  }, [initialDate, currentDate]);
 
   // 初期データが現在の月に対応している場合は使用
   useEffect(() => {
@@ -111,21 +109,8 @@ export function CalendarProvider({
         setLoading(true);
         setError(null);
 
-        // ユーザー認証チェック
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) {
-          // 認証されていない場合、全ての状態を初期値にリセット
-          setCalendarItems([]);
-          setMonthlySummary({ practiceCount: 0, recordCount: 0 });
-          setError(null);
-          setLoading(false);
-          isLoadingDataRef.current = false;
-          return;
-        }
-
         // 月の開始日と終了日を計算
+        // 注意: AuthGuard内で使用されるため、ユーザー認証チェックは不要
         const monthStart = startOfMonth(targetDate);
         const monthEnd = endOfMonth(targetDate);
         const startDate = format(monthStart, "yyyy-MM-dd");
@@ -150,7 +135,7 @@ export function CalendarProvider({
         isLoadingDataRef.current = false;
       }
     },
-    [currentDate, api, supabase, getCurrentMonthKey],
+    [currentDate, api, getCurrentMonthKey],
   );
 
   // 月変更を検知してデータ再取得（楽観的更新）

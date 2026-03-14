@@ -466,6 +466,12 @@ export default function AboutPage() {
                 </Link>
                 <span className="text-gray-500 text-sm ml-2">— サービスのご利用条件について</span>
               </li>
+              <li>
+                <Link href="/tokushoho" className="text-blue-600 hover:text-blue-800 underline">
+                  特定商取引法に基づく表記
+                </Link>
+                <span className="text-gray-500 text-sm ml-2">— 販売事業者情報・返品ポリシー等</span>
+              </li>
             </ul>
           </section>
         </div>
