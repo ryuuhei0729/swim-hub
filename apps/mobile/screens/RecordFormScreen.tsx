@@ -24,7 +24,7 @@ import {
   useRecordsQuery,
   useReplaceSplitTimesMutation,
 } from "@apps/shared/hooks/queries/records";
-import { useRecordFormStore } from "@/stores/recordStore";
+import { useRecordStore } from "@/stores/recordStore";
 import { useShallow } from "zustand/react/shallow";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
@@ -77,7 +77,7 @@ export const RecordFormScreen: React.FC = () => {
     clearErrors,
     initialize,
     reset,
-  } = useRecordFormStore(
+  } = useRecordStore(
     useShallow((state) => ({
       competitionId: state.competitionId,
       styleId: state.styleId,

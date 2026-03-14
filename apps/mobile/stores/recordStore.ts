@@ -199,13 +199,3 @@ export const useRecordStore = create<RecordState & RecordActions>()((set) => ({
   // ---------------------------------------------------------------------------
   reset: () => set(initialState),
 }));
-
-// -----------------------------------------------------------------------------
-// 後方互換性のためのエイリアス (deprecated, will be removed)
-// -----------------------------------------------------------------------------
-
-/** @deprecated useRecordStore を使用してください */
-export const useRecordFormStore = useRecordStore;
-
-/** @deprecated useRecordStore を使用してください */
-export const useRecordFilterStore = useRecordStore;

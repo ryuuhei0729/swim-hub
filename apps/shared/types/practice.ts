@@ -69,28 +69,6 @@ export interface PracticeLog {
 export type PracticeLogInsert = Omit<PracticeLog, "id" | "created_at" | "updated_at">;
 export type PracticeLogUpdate = Partial<Omit<PracticeLogInsert, "practice_id">>;
 
-/**
- * 練習画像
- * @deprecated practice_imagesテーブルは廃止予定。practices.image_pathsを使用してください。
- */
-export interface PracticeImage {
-  id: string;
-  practice_id: string;
-  user_id: string;
-  original_path: string;
-  thumbnail_path: string;
-  file_name: string;
-  file_size: number;
-  display_order: number;
-  created_at: string;
-  updated_at: string;
-}
-
-/** @deprecated */
-export type PracticeImageInsert = Omit<PracticeImage, "id" | "created_at" | "updated_at">;
-/** @deprecated */
-export type PracticeImageUpdate = Partial<Omit<PracticeImageInsert, "practice_id" | "user_id">>;
-
 // 練習タイム
 export interface PracticeTime {
   id: string;

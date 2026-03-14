@@ -6,7 +6,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useUserQuery } from "@apps/shared/hooks/queries/user";
-import { useBestTimesQuery } from "@/hooks/useBestTimesQuery";
+import { useBestTimesQuery } from "@apps/shared/hooks/queries/records";
 import { ProfileDisplay, ProfileEditModal, BestTimesTable } from "@/components/profile";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";

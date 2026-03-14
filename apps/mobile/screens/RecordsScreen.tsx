@@ -17,7 +17,7 @@ import { format, parseISO, isValid } from "date-fns";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useRecordsQuery } from "@apps/shared/hooks/queries/records";
-import { useRecordFilterStore } from "@/stores/recordStore";
+import { useRecordStore } from "@/stores/recordStore";
 import { useShallow } from "zustand/react/shallow";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { RecordItem } from "@/components/records";
@@ -68,7 +68,7 @@ export const RecordsScreen: React.FC = () => {
     setFilterPoolType,
     setIncludeRelay,
     resetFilter,
-  } = useRecordFilterStore(
+  } = useRecordStore(
     useShallow((state) => ({
       filterStyleId: state.filterStyleId,
       filterFiscalYear: state.filterFiscalYear,

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { differenceInDays, parseISO } from "date-fns";
 import { formatTime } from "@/utils/formatters";
-import type { BestTime } from "@/hooks/useBestTimesQuery";
+import type { BestTime } from "@apps/shared/types/ui";
 
 interface BestTimesTableProps {
   bestTimes: BestTime[];

@@ -3,16 +3,16 @@
 // =============================================================================
 
 import { beforeEach, describe, expect, it } from "vitest";
-import { useRecordFilterStore } from "../recordStore";
+import { useRecordStore } from "../recordStore";
 
 describe("recordFilterStore", () => {
   beforeEach(() => {
     // 各テスト前にストアをリセット
-    useRecordFilterStore.getState().reset();
+    useRecordStore.getState().reset();
   });
 
   it("初期状態が正しい", () => {
-    const state = useRecordFilterStore.getState();
+    const state = useRecordStore.getState();
 
     expect(state.filterStyleId).toBeNull();
     expect(state.filterFiscalYear).toBe("");
@@ -22,56 +22,56 @@ describe("recordFilterStore", () => {
   });
 
   it("setFilterStyleIdで種目IDを設定できる", () => {
-    const { setFilterStyleId } = useRecordFilterStore.getState();
+    const { setFilterStyleId } = useRecordStore.getState();
 
     setFilterStyleId(1);
-    expect(useRecordFilterStore.getState().filterStyleId).toBe(1);
+    expect(useRecordStore.getState().filterStyleId).toBe(1);
 
     setFilterStyleId(null);
-    expect(useRecordFilterStore.getState().filterStyleId).toBeNull();
+    expect(useRecordStore.getState().filterStyleId).toBeNull();
   });
 
   it("setFilterFiscalYearで年度を設定できる", () => {
-    const { setFilterFiscalYear } = useRecordFilterStore.getState();
+    const { setFilterFiscalYear } = useRecordStore.getState();
 
     setFilterFiscalYear("2024");
-    expect(useRecordFilterStore.getState().filterFiscalYear).toBe("2024");
+    expect(useRecordStore.getState().filterFiscalYear).toBe("2024");
 
     setFilterFiscalYear("");
-    expect(useRecordFilterStore.getState().filterFiscalYear).toBe("");
+    expect(useRecordStore.getState().filterFiscalYear).toBe("");
   });
 
   it("setFilterPoolTypeでプールタイプを設定できる", () => {
-    const { setFilterPoolType } = useRecordFilterStore.getState();
+    const { setFilterPoolType } = useRecordStore.getState();
 
     setFilterPoolType(0);
-    expect(useRecordFilterStore.getState().filterPoolType).toBe(0);
+    expect(useRecordStore.getState().filterPoolType).toBe(0);
 
     setFilterPoolType(1);
-    expect(useRecordFilterStore.getState().filterPoolType).toBe(1);
+    expect(useRecordStore.getState().filterPoolType).toBe(1);
 
     setFilterPoolType(null);
-    expect(useRecordFilterStore.getState().filterPoolType).toBeNull();
+    expect(useRecordStore.getState().filterPoolType).toBeNull();
   });
 
   it("setSortByでソート基準を設定できる", () => {
-    const { setSortBy } = useRecordFilterStore.getState();
+    const { setSortBy } = useRecordStore.getState();
 
     setSortBy("date");
-    expect(useRecordFilterStore.getState().sortBy).toBe("date");
+    expect(useRecordStore.getState().sortBy).toBe("date");
 
     setSortBy("time");
-    expect(useRecordFilterStore.getState().sortBy).toBe("time");
+    expect(useRecordStore.getState().sortBy).toBe("time");
   });
 
   it("setSortOrderでソート順を設定できる", () => {
-    const { setSortOrder } = useRecordFilterStore.getState();
+    const { setSortOrder } = useRecordStore.getState();
 
     setSortOrder("asc");
-    expect(useRecordFilterStore.getState().sortOrder).toBe("asc");
+    expect(useRecordStore.getState().sortOrder).toBe("asc");
 
     setSortOrder("desc");
-    expect(useRecordFilterStore.getState().sortOrder).toBe("desc");
+    expect(useRecordStore.getState().sortOrder).toBe("desc");
   });
 
   it("resetでストアをリセットできる", () => {
@@ -82,7 +82,7 @@ describe("recordFilterStore", () => {
       setSortBy,
       setSortOrder,
       reset,
-    } = useRecordFilterStore.getState();
+    } = useRecordStore.getState();
 
     setFilterStyleId(1);
     setFilterFiscalYear("2024");
@@ -92,7 +92,7 @@ describe("recordFilterStore", () => {
 
     reset();
 
-    const state = useRecordFilterStore.getState();
+    const state = useRecordStore.getState();
     expect(state.filterStyleId).toBeNull();
     expect(state.filterFiscalYear).toBe("");
     expect(state.filterPoolType).toBeNull();

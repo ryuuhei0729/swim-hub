@@ -175,6 +175,7 @@ export async function updateSession(request: NextRequest) {
     ".woff2",
     ".ttf",
     ".eot",
+    ".xml",
   ];
 
   // 静的アセットかどうかをチェックするヘルパー関数
