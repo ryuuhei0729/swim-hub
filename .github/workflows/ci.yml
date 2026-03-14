@@ -311,6 +311,7 @@ jobs:
         E2E_SUPABASE_MODE: local
         E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
         E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+        RESEND_API_KEY: "re_dummy"
 
     - name: Stop Supabase stack
       if: always()
