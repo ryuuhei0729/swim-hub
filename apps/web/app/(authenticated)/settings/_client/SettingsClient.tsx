@@ -2,6 +2,7 @@
 
 import React, { useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/contexts";
 import { useUserQuery, userKeys } from "@apps/shared/hooks";
@@ -13,7 +14,13 @@ import AccountDeleteSettings from "@/components/settings/AccountDeleteSettings";
 import SubscriptionSettings from "@/components/settings/SubscriptionSettings";
 
 export default function SettingsClient() {
+  const router = useRouter();
   const { user, supabase, refreshSubscription } = useAuth();
+
+  // マウント時に subscription を最新化（null からの遅延ロード対策）
+  useEffect(() => {
+    refreshSubscription();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Checkout 完了後にセッションを検証し、subscription を更新
   useEffect(() => {
@@ -33,8 +40,9 @@ export default function SettingsClient() {
             body: JSON.stringify({ sessionId }),
           });
           if (res.ok) {
-            // DB 更新成功 — AuthProvider の subscription を最新化
+            // DB 更新成功 — AuthProvider の subscription を最新化してページをリフレッシュ
             await refreshSubscription();
+            router.refresh();
           }
         } catch {
           // 検証失敗してもクラッシュしない — 次回の Webhook で補完される
@@ -42,7 +50,7 @@ export default function SettingsClient() {
       };
       verifySession();
     }
-  }, [refreshSubscription]);
+  }, [refreshSubscription]); // eslint-disable-line react-hooks/exhaustive-deps
   const queryClient = useQueryClient();
   const { profile } = useUserQuery(supabase, {
     userId: user?.id,
