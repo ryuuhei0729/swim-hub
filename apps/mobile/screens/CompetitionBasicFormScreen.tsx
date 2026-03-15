@@ -26,7 +26,10 @@ import { useCompetitionFormStore } from "@/stores/competitionFormStore";
 import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
+import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { uploadImages, deleteImages, getExistingImagesFromPaths } from "@/utils/imageUpload";
+import { checkIsPremium } from "@swim-hub/shared/utils/premium";
+import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
 import type { MainStackParamList } from "@/navigation/types";
 
 type CompetitionFormScreenRouteProp = RouteProp<MainStackParamList, "CompetitionForm">;
@@ -45,7 +48,8 @@ export const CompetitionBasicFormScreen: React.FC = () => {
   const route = useRoute<CompetitionFormScreenRouteProp>();
   const navigation = useNavigation<CompetitionFormScreenNavigationProp>();
   const { competitionId, date: initialDateParam } = route.params;
-  const { supabase, user } = useAuth();
+  const { supabase, user, subscription } = useAuth();
+  const isPremium = checkIsPremium(subscription);
   const queryClient = useQueryClient();
 
   // ユーザープロフィール取得（iOSカレンダー設定確認用）
@@ -564,13 +568,17 @@ export const CompetitionBasicFormScreen: React.FC = () => {
 
         {/* 画像 */}
         <View style={styles.section}>
-          <ImageUploader
-            existingImages={existingImages}
-            onImagesChange={handleImagesChange}
-            maxImages={3}
-            disabled={loading}
-            label="画像"
-          />
+          {isPremium ? (
+            <ImageUploader
+              existingImages={existingImages}
+              onImagesChange={handleImagesChange}
+              maxImages={3}
+              disabled={loading}
+              label="画像"
+            />
+          ) : (
+            <PremiumBadge message={PREMIUM_MESSAGES.image_upload} />
+          )}
         </View>
       </ScrollView>
 

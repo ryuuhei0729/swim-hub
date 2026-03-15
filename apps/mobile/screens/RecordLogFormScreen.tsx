@@ -26,6 +26,9 @@ import {
 import { StyleAPI } from "@apps/shared/api/styles";
 import { formatTime } from "@/utils/formatters";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
+import { PremiumBadge } from "@/components/shared/PremiumBadge";
+import { checkIsPremium } from "@swim-hub/shared/utils/premium";
+import { PREMIUM_MESSAGES, FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import type { MainStackParamList } from "@/navigation/types";
 import type { Style, PoolType, RecordInsert } from "@apps/shared/types";
 import { useQuickTimeInput } from "@/hooks/useQuickTimeInput";
@@ -62,7 +65,8 @@ export const RecordLogFormScreen: React.FC = () => {
     () => route.params.entryDataList ?? [],
     [route.params.entryDataList],
   );
-  const { supabase } = useAuth();
+  const { supabase, subscription } = useAuth();
+  const isPremium = checkIsPremium(subscription);
   const queryClient = useQueryClient();
 
   // クイック入力フック
@@ -284,8 +288,15 @@ export const RecordLogFormScreen: React.FC = () => {
     });
   };
 
+  // スプリットタイムの追加可否判定
+  const isSplitTimeLimitReached = (formIndex: number): boolean => {
+    if (isPremium) return false;
+    return formDataList[formIndex]?.splitTimes.length >= FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD;
+  };
+
   // スプリットタイム追加（空の1行）
   const handleAddSplitTime = (index: number) => {
+    if (isSplitTimeLimitReached(index)) return;
     const formData = formDataList[index];
     updateFormData(index, {
       splitTimes: [
@@ -314,7 +325,7 @@ export const RecordLogFormScreen: React.FC = () => {
         .filter((d) => !isNaN(d) && d > 0),
     );
 
-    const newSplits: SplitTimeData[] = [];
+    let newSplits: SplitTimeData[] = [];
     for (let distance = 25; distance <= raceDistance; distance += 25) {
       if (!existingDistances.has(distance)) {
         newSplits.push({ distance, splitTime: 0, splitTimeDisplayValue: "" });
@@ -322,6 +333,14 @@ export const RecordLogFormScreen: React.FC = () => {
     }
 
     if (newSplits.length === 0) return;
+
+    // Free ユーザーの場合、追加後の合計が制限を超えないようにカット
+    if (!isPremium) {
+      const remaining = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - formData.splitTimes.length;
+      if (remaining <= 0) return;
+      newSplits = newSplits.slice(0, remaining);
+    }
+
     updateFormData(index, {
       splitTimes: [...formData.splitTimes, ...newSplits],
     });
@@ -723,22 +742,24 @@ export const RecordLogFormScreen: React.FC = () => {
                         styles.addButton25m,
                         (!formData.styleId ||
                           !swimStyles.find((s) => String(s.id) === formData.styleId)?.distance ||
-                          loading) &&
+                          loading ||
+                          isSplitTimeLimitReached(index)) &&
                           styles.addButtonDisabled,
                       ]}
                       onPress={() => handleAddSplitTimesEvery25m(index)}
                       disabled={
                         !formData.styleId ||
                         !swimStyles.find((s) => String(s.id) === formData.styleId)?.distance ||
-                        loading
+                        loading ||
+                        isSplitTimeLimitReached(index)
                       }
                     >
                       <Text style={styles.addButton25mText}>追加(25mごと)</Text>
                     </Pressable>
                     <Pressable
-                      style={[styles.addButton, loading && styles.addButtonDisabled]}
+                      style={[styles.addButton, (loading || isSplitTimeLimitReached(index)) && styles.addButtonDisabled]}
                       onPress={() => handleAddSplitTime(index)}
-                      disabled={loading}
+                      disabled={loading || isSplitTimeLimitReached(index)}
                     >
                       <Feather name="plus" size={16} color="#2563EB" />
                       <Text style={styles.addButtonText}>追加</Text>
@@ -786,6 +807,11 @@ export const RecordLogFormScreen: React.FC = () => {
                       </Pressable>
                     </View>
                   ),
+                )}
+                {isSplitTimeLimitReached(index) && (
+                  <View style={{ marginTop: 8 }}>
+                    <PremiumBadge message={PREMIUM_MESSAGES.split_time_limit} compact />
+                  </View>
                 )}
               </View>
             </View>

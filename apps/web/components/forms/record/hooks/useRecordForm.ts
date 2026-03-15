@@ -12,12 +12,15 @@ import type {
   SwimStyle,
 } from "../types";
 import { generateUUID } from "../utils/timeParser";
+import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
+import { validateSplitTimeLimit } from "@swim-hub/shared/utils/validators";
 
 interface UseRecordFormOptions {
   isOpen: boolean;
   initialDate?: Date;
   editData?: EditData;
   styles?: SwimStyle[];
+  isPremium?: boolean;
 }
 
 interface UseRecordFormReturn {
@@ -35,6 +38,10 @@ interface UseRecordFormReturn {
   updateSplitTime: (recordId: string, splitIndex: number, updates: Partial<SplitTimeInput>) => void;
   removeSplitTime: (recordId: string, splitIndex: number) => void;
   sanitizeFormData: () => RecordFormData;
+  /** Free ユーザーの場合、split-time が制限に達しているかどうか */
+  isSplitTimeLimitReached: (recordId: string) => boolean;
+  /** split-time 制限のバリデーションエラーメッセージ（制限に達している場合） */
+  splitTimeLimitError: string | null;
 }
 
 /**
@@ -45,6 +52,7 @@ export const useRecordForm = ({
   initialDate,
   editData,
   styles = [],
+  isPremium = false,
 }: UseRecordFormOptions): UseRecordFormReturn => {
   const [formData, setFormData] = useState<RecordFormData>(() =>
     createInitialFormData(initialDate, styles),
@@ -52,6 +60,7 @@ export const useRecordForm = ({
   const [isInitialized, setIsInitialized] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [splitTimeLimitError, setSplitTimeLimitError] = useState<string | null>(null);
   const isInitialChangeRef = useRef(true);
 
   // モーダルが閉じた時にリセット
@@ -230,16 +239,36 @@ export const useRecordForm = ({
     [styles],
   );
 
-  const addSplitTime = useCallback((recordId: string) => {
-    const newSplitTime: SplitTimeInput = {
-      distance: "",
-      splitTime: 0,
-      uiKey: generateUUID(),
-    };
+  const isSplitTimeLimitReached = useCallback(
+    (recordId: string): boolean => {
+      if (isPremium) return false;
+      const record = formData.records.find((r) => r.id === recordId);
+      if (!record) return false;
+      return record.splitTimes.length >= FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD;
+    },
+    [isPremium, formData.records],
+  );
 
+  const addSplitTime = useCallback((recordId: string) => {
     setFormData((prev) => {
       const record = prev.records.find((r) => r.id === recordId);
       if (!record) return prev;
+
+      // Free ユーザーの場合、制限チェック
+      if (!isPremium) {
+        const validation = validateSplitTimeLimit(record.splitTimes.length + 1, false);
+        if (!validation.valid) {
+          setSplitTimeLimitError(validation.error || null);
+          return prev;
+        }
+        setSplitTimeLimitError(null);
+      }
+
+      const newSplitTime: SplitTimeInput = {
+        distance: "",
+        splitTime: 0,
+        uiKey: generateUUID(),
+      };
 
       return {
         ...prev,
@@ -248,7 +277,7 @@ export const useRecordForm = ({
         ),
       };
     });
-  }, []);
+  }, [isPremium]);
 
   const addSplitTimesEvery25m = useCallback(
     (recordId: string) => {
@@ -266,7 +295,7 @@ export const useRecordForm = ({
             .filter((d): d is number => d !== null),
         );
 
-        const newSplitTimes: SplitTimeInput[] = [];
+        let newSplitTimes: SplitTimeInput[] = [];
         for (let distance = 25; distance <= raceDistance; distance += 25) {
           if (!existingDistances.has(distance)) {
             newSplitTimes.push({
@@ -279,6 +308,25 @@ export const useRecordForm = ({
 
         if (newSplitTimes.length === 0) return prev;
 
+        // Free ユーザーの場合、制限内に収まるよう切り詰める
+        if (!isPremium) {
+          const maxNew = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - record.splitTimes.length;
+          if (maxNew <= 0) {
+            setSplitTimeLimitError(
+              `Freeプランでは${FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD}個まで登録できます。Premiumにアップグレードすると無制限に`,
+            );
+            return prev;
+          }
+          if (newSplitTimes.length > maxNew) {
+            newSplitTimes = newSplitTimes.slice(0, maxNew);
+            setSplitTimeLimitError(
+              `Freeプランでは${FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD}個まで登録できます。Premiumにアップグレードすると無制限に`,
+            );
+          } else {
+            setSplitTimeLimitError(null);
+          }
+        }
+
         return {
           ...prev,
           records: prev.records.map((r) =>
@@ -287,7 +335,7 @@ export const useRecordForm = ({
         };
       });
     },
-    [styles],
+    [styles, isPremium],
   );
 
   const updateSplitTime = useCallback(
@@ -392,6 +440,8 @@ export const useRecordForm = ({
     updateSplitTime,
     removeSplitTime,
     sanitizeFormData,
+    isSplitTimeLimitReached,
+    splitTimeLimitError,
   };
 };
 

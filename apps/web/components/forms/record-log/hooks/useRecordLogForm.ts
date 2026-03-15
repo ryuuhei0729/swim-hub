@@ -11,12 +11,14 @@ import type {
   StyleOption,
 } from "../types";
 import { formatSecondsToDisplay, parseTimeToSeconds } from "../utils/formatters";
+import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 
 interface UseRecordLogFormOptions {
   isOpen: boolean;
   editData?: RecordLogEditData | null;
   entryDataList?: EntryInfo[];
   styles?: StyleOption[];
+  isPremium?: boolean;
 }
 
 interface UseRecordLogFormReturn {
@@ -42,6 +44,7 @@ interface UseRecordLogFormReturn {
     value: string,
   ) => void;
   prepareSubmitData: () => { hasStyleError: boolean; submitList: RecordLogFormData[] };
+  isSplitTimeLimitReached: (entryIndex: number) => boolean;
 }
 
 function createDefaultState(styleId: string): RecordLogFormState {
@@ -65,6 +68,7 @@ export const useRecordLogForm = ({
   editData,
   entryDataList = [],
   styles = [],
+  isPremium = false,
 }: UseRecordLogFormOptions): UseRecordLogFormReturn => {
   const [formDataList, setFormDataList] = useState<RecordLogFormState[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -221,20 +225,25 @@ export const useRecordLogForm = ({
 
   const handleAddSplitTime = useCallback(
     (entryIndex: number) => {
-      updateFormData(entryIndex, (prev) => ({
-        ...prev,
-        splitTimes: [
-          ...prev.splitTimes,
-          {
-            distance: 0,
-            splitTime: 0,
-            splitTimeDisplayValue: "",
-            uiKey: `split-${Date.now()}`,
-          },
-        ],
-      }));
+      updateFormData(entryIndex, (prev) => {
+        if (!isPremium && prev.splitTimes.length >= FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD) {
+          return prev;
+        }
+        return {
+          ...prev,
+          splitTimes: [
+            ...prev.splitTimes,
+            {
+              distance: 0,
+              splitTime: 0,
+              splitTimeDisplayValue: "",
+              uiKey: `split-${Date.now()}`,
+            },
+          ],
+        };
+      });
     },
-    [updateFormData],
+    [updateFormData, isPremium],
   );
 
   const handleAddSplitTimesEvery25m = useCallback(
@@ -258,7 +267,7 @@ export const useRecordLogForm = ({
             .filter((d): d is number => d !== null),
         );
 
-        const newSplitTimes: SplitTimeDraft[] = [];
+        let newSplitTimes: SplitTimeDraft[] = [];
         for (let distance = 25; distance <= raceDistance; distance += 25) {
           if (!existingDistances.has(distance)) {
             newSplitTimes.push({
@@ -272,13 +281,22 @@ export const useRecordLogForm = ({
 
         if (newSplitTimes.length === 0) return prev;
 
+        // Free ユーザーの場合、制限内に収まるよう切り詰める
+        if (!isPremium) {
+          const maxNew = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - prev.splitTimes.length;
+          if (maxNew <= 0) return prev;
+          if (newSplitTimes.length > maxNew) {
+            newSplitTimes = newSplitTimes.slice(0, maxNew);
+          }
+        }
+
         return {
           ...prev,
           splitTimes: [...prev.splitTimes, ...newSplitTimes],
         };
       });
     },
-    [updateFormData, entryDataList, styles],
+    [updateFormData, entryDataList, styles, isPremium],
   );
 
   const handleRemoveSplitTime = useCallback(
@@ -402,6 +420,16 @@ export const useRecordLogForm = ({
     return { hasStyleError, submitList };
   }, [formDataList, entryDataList, styles]);
 
+  const isSplitTimeLimitReached = useCallback(
+    (entryIndex: number): boolean => {
+      if (isPremium) return false;
+      const entry = formDataList[entryIndex];
+      if (!entry) return false;
+      return entry.splitTimes.length >= FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD;
+    },
+    [isPremium, formDataList],
+  );
+
   return {
     formDataList,
     hasUnsavedChanges,
@@ -420,6 +448,7 @@ export const useRecordLogForm = ({
     handleRemoveSplitTime,
     handleSplitTimeChange,
     prepareSubmitData,
+    isSplitTimeLimitReached,
   };
 };
 

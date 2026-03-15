@@ -20,6 +20,7 @@ import type { RecordLogFormProps, StyleOption } from "./types";
 import type { EntryInfo } from "@apps/shared/types/ui";
 import { useBestTimes } from "@/hooks/useBestTimes";
 import { useAuth } from "@/contexts";
+import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 
 const EMPTY_STYLES: StyleOption[] = [];
 const EMPTY_ENTRY_DATA_LIST: EntryInfo[] = [];
@@ -42,7 +43,8 @@ export default function RecordLogForm({
   styles = EMPTY_STYLES,
   entryDataList = EMPTY_ENTRY_DATA_LIST,
 }: RecordLogFormProps) {
-  const { supabase, user } = useAuth();
+  const { supabase, user, subscription } = useAuth();
+  const isPremium = checkIsPremium(subscription);
   const { bestTimes, loadBestTimes } = useBestTimes(supabase);
 
   // ベストタイムを取得
@@ -70,11 +72,13 @@ export default function RecordLogForm({
     handleRemoveSplitTime,
     handleSplitTimeChange,
     prepareSubmitData,
+    isSplitTimeLimitReached,
   } = useRecordLogForm({
     isOpen,
     editData,
     entryDataList,
     styles,
+    isPremium,
   });
 
   // ブラウザバックや閉じるボタンでの離脱を防ぐ
@@ -265,6 +269,8 @@ export default function RecordLogForm({
                     onSplitTimeChange={(splitIndex, field, value) =>
                       handleSplitTimeChange(index, splitIndex, field, value)
                     }
+                    isSplitTimeLimitReached={isSplitTimeLimitReached(index)}
+                    isPremium={isPremium}
                   />
                 );
               })}

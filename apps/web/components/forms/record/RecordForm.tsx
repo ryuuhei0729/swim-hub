@@ -8,6 +8,9 @@ import { XMarkIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { useRecordForm, useUnsavedChangesWarning } from "./hooks";
 import { RecordBasicInfo, RecordSetItem } from "./components";
 import type { RecordFormProps, RecordFormData } from "./types";
+import { useAuth } from "@/contexts";
+import { checkIsPremium } from "@swim-hub/shared/utils/premium";
+import { validateSplitTimeLimit } from "@swim-hub/shared/utils/validators";
 
 /**
  * 大会記録入力フォーム
@@ -27,6 +30,9 @@ export default function RecordForm({
   isLoading = false,
   styles = [],
 }: RecordFormProps) {
+  const { subscription } = useAuth();
+  const isPremium = checkIsPremium(subscription);
+
   const {
     formData,
     setFormData,
@@ -42,7 +48,9 @@ export default function RecordForm({
     updateSplitTime,
     removeSplitTime,
     sanitizeFormData,
-  } = useRecordForm({ isOpen, initialDate, editData, styles });
+    isSplitTimeLimitReached,
+    splitTimeLimitError,
+  } = useRecordForm({ isOpen, initialDate, editData, styles, isPremium });
 
   // ブラウザ離脱警告
   useUnsavedChangesWarning({ isOpen, hasUnsavedChanges, isSubmitted });
@@ -95,6 +103,16 @@ export default function RecordForm({
       return;
     }
     setRecordDateError(undefined);
+
+    // Split-time 件数バリデーション（送信前）
+    if (!isPremium) {
+      for (const record of sanitized.records) {
+        const validation = validateSplitTimeLimit(record.splitTimes.length, isPremium);
+        if (!validation.valid) {
+          return;
+        }
+      }
+    }
 
     setIsSubmitted(true);
     try {
@@ -175,6 +193,9 @@ export default function RecordForm({
                       updateSplitTime(record.id, splitIndex, updates)
                     }
                     onRemoveSplitTime={(splitIndex) => removeSplitTime(record.id, splitIndex)}
+                    isSplitTimeLimitReached={isSplitTimeLimitReached(record.id)}
+                    splitTimeLimitError={splitTimeLimitError}
+                    isPremium={isPremium}
                   />
                 ))}
               </div>

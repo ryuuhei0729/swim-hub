@@ -29,7 +29,10 @@ import { useShallow } from "zustand/react/shallow";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
+import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { uploadImages, deleteImages, getExistingImagesFromPaths } from "@/utils/imageUpload";
+import { checkIsPremium } from "@swim-hub/shared/utils/premium";
+import { PREMIUM_MESSAGES, FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import type { MainStackParamList } from "@/navigation/types";
 import type { Style, PoolType, Competition } from "@apps/shared/types";
 import { useQuickTimeInput } from "@/hooks/useQuickTimeInput";
@@ -45,9 +48,10 @@ export const RecordFormScreen: React.FC = () => {
   const route = useRoute<RecordFormScreenRouteProp>();
   const navigation = useNavigation<RecordFormScreenNavigationProp>();
   const { recordId, competitionId: routeCompetitionId } = route.params || {};
-  const { supabase, user } = useAuth();
+  const { supabase, user, subscription } = useAuth();
   const queryClient = useQueryClient();
   const isEditMode = !!recordId;
+  const isPremium = checkIsPremium(subscription);
 
   // クイック入力フック（メインタイム用、スプリットタイム用）
   const { parseInput: parseMainTime } = useQuickTimeInput();
@@ -456,8 +460,12 @@ export const RecordFormScreen: React.FC = () => {
     navigation.goBack();
   };
 
+  // スプリットタイムの追加可否（Free: 3個まで）
+  const splitTimeLimitReached = !isPremium && splitTimes.length >= FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD;
+
   // スプリットタイムを追加（空の1行）
   const handleAddSplitTime = () => {
+    if (splitTimeLimitReached) return;
     addSplitTime({ distance: 0, splitTime: 0 });
   };
 
@@ -482,8 +490,16 @@ export const RecordFormScreen: React.FC = () => {
 
     if (newSplits.length === 0) return;
 
+    // Free ユーザーの場合、追加後の合計が制限を超えないようにカット
+    let splitsToAdd = newSplits;
+    if (!isPremium) {
+      const remaining = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - splitTimes.length;
+      if (remaining <= 0) return;
+      splitsToAdd = newSplits.slice(0, remaining);
+    }
+
     // 既存のスプリットタイムに新しいものを追加
-    const updatedSplitTimes = [...splitTimes, ...newSplits];
+    const updatedSplitTimes = [...splitTimes, ...splitsToAdd];
     setSplitTimes(updatedSplitTimes);
   };
 
@@ -694,24 +710,24 @@ export const RecordFormScreen: React.FC = () => {
                   style={[
                     styles.addButton,
                     styles.addButton25m,
-                    (!selectedStyleDistance || storeLoading) && styles.addButtonDisabled,
+                    (!selectedStyleDistance || storeLoading || splitTimeLimitReached) && styles.addButtonDisabled,
                   ]}
                   onPress={handleAddSplitTimesEvery25m}
-                  disabled={!selectedStyleDistance || storeLoading}
+                  disabled={!selectedStyleDistance || storeLoading || splitTimeLimitReached}
                 >
                   <Text
                     style={[
                       styles.addButtonText,
-                      (!selectedStyleDistance || storeLoading) && styles.addButtonTextDisabled,
+                      (!selectedStyleDistance || storeLoading || splitTimeLimitReached) && styles.addButtonTextDisabled,
                     ]}
                   >
                     追加(25mごと)
                   </Text>
                 </Pressable>
                 <Pressable
-                  style={[styles.addButton, storeLoading && styles.addButtonDisabled]}
+                  style={[styles.addButton, (storeLoading || splitTimeLimitReached) && styles.addButtonDisabled]}
                   onPress={handleAddSplitTime}
-                  disabled={storeLoading}
+                  disabled={storeLoading || splitTimeLimitReached}
                 >
                   <Text style={styles.addButtonText}>+ 追加</Text>
                 </Pressable>
@@ -802,6 +818,11 @@ export const RecordFormScreen: React.FC = () => {
                 </Pressable>
               </View>
             ))}
+            {splitTimeLimitReached && (
+              <View style={{ marginTop: 8 }}>
+                <PremiumBadge message={PREMIUM_MESSAGES.split_time_limit} compact />
+              </View>
+            )}
           </View>
 
           {/* メモ入力 */}
@@ -822,13 +843,17 @@ export const RecordFormScreen: React.FC = () => {
 
           {/* 画像 */}
           <View style={styles.field}>
-            <ImageUploader
-              existingImages={existingImages}
-              onImagesChange={handleImagesChange}
-              maxImages={3}
-              disabled={storeLoading}
-              label="画像"
-            />
+            {isPremium ? (
+              <ImageUploader
+                existingImages={existingImages}
+                onImagesChange={handleImagesChange}
+                maxImages={3}
+                disabled={storeLoading}
+                label="画像"
+              />
+            ) : (
+              <PremiumBadge message={PREMIUM_MESSAGES.image_upload} />
+            )}
           </View>
 
           {/* ボタン */}
