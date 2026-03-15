@@ -12,6 +12,15 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
+// useAuth をモック（AuthProvider なしで RecordForm をテストするため）
+vi.mock("@/contexts", () => ({
+  useAuth: vi.fn(() => ({
+    subscription: null,
+    user: null,
+    supabase: {},
+  })),
+}));
+
 // ユーティリティ関数をモック
 vi.mock("@/utils/formatters", () => ({
   formatTime: vi.fn((time: number) => {

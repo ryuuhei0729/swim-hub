@@ -191,7 +191,10 @@ describe("useRecordForm", () => {
 
   describe("addSplitTimesEvery25m", () => {
     it("25m刻みでsplit-timeを追加する", () => {
-      const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: mockStyles }));
+      // isPremium: true にして Free 制限を外す
+      const { result } = renderHook(() =>
+        useRecordForm({ isOpen: true, styles: mockStyles, isPremium: true }),
+      );
 
       const recordId = result.current.formData.records[0].id;
 
@@ -206,7 +209,10 @@ describe("useRecordForm", () => {
     });
 
     it("すでに存在する距離はスキップする", () => {
-      const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: mockStyles }));
+      // isPremium: true にして Free 制限を外す
+      const { result } = renderHook(() =>
+        useRecordForm({ isOpen: true, styles: mockStyles, isPremium: true }),
+      );
 
       const recordId = result.current.formData.records[0].id;
 
