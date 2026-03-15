@@ -10,6 +10,15 @@ import FormStepper from "@/components/ui/FormStepper";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase";
 import { CompetitionAPI } from "@apps/shared/api";
+import { format } from "date-fns";
+import CompetitionImageUploader, {
+  CompetitionImageFile,
+  ExistingImage,
+} from "./CompetitionImageUploader";
+import { useAuth } from "@/contexts";
+import { checkIsPremium } from "@swim-hub/shared/utils/premium";
+import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
+import PremiumBadge from "@/components/ui/PremiumBadge";
 
 // 大会記録フォームのステップ定義
 const COMPETITION_STEPS = [
@@ -17,11 +26,6 @@ const COMPETITION_STEPS = [
   { id: "entry", label: "エントリー", description: "種目・タイム" },
   { id: "record", label: "記録入力", description: "結果・スプリット" },
 ];
-import { format } from "date-fns";
-import CompetitionImageUploader, {
-  CompetitionImageFile,
-  ExistingImage,
-} from "./CompetitionImageUploader";
 
 interface CompetitionBasicFormData {
   date: string;
@@ -81,6 +85,9 @@ export default function CompetitionBasicForm({
   isLoading = false,
   teamMode = false,
 }: CompetitionBasicFormProps) {
+  const { subscription } = useAuth();
+  const isPremium = checkIsPremium(subscription);
+
   const [formData, setFormData] = useState<CompetitionBasicFormData>({
     date: format(selectedDate, "yyyy-MM-dd"),
     endDate: "",
@@ -463,11 +470,15 @@ export default function CompetitionBasicForm({
 
               {/* 画像添付 */}
               <div>
-                <CompetitionImageUploader
-                  existingImages={editData?.images}
-                  onImagesChange={handleImagesChange}
-                  disabled={isLoading}
-                />
+                {isPremium ? (
+                  <CompetitionImageUploader
+                    existingImages={editData?.images}
+                    onImagesChange={handleImagesChange}
+                    disabled={isLoading}
+                  />
+                ) : (
+                  <PremiumBadge message={PREMIUM_MESSAGES.image_upload} />
+                )}
               </div>
             </form>
           </div>

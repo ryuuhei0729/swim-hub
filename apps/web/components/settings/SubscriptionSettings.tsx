@@ -27,7 +27,7 @@ function getTrialDaysRemaining(trialEnd: string | null | undefined): number | nu
 }
 
 export default function SubscriptionSettings() {
-  const { subscription } = useAuth();
+  const { subscription, loading } = useAuth();
   const [loadingPlan, setLoadingPlan] = useState<"monthly" | "yearly" | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -97,6 +97,21 @@ export default function SubscriptionSettings() {
   };
 
   const trialDaysRemaining = getTrialDaysRemaining(trialEnd);
+
+  // subscription がまだロード中の場合はスケルトンを表示
+  if (loading || subscription === null) {
+    return (
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 pb-2 mb-4 border-b border-gray-200">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">サブスクリプション</h2>
+        </div>
+        <div className="animate-pulse space-y-3">
+          <div className="h-5 bg-gray-200 rounded w-48" />
+          <div className="h-4 bg-gray-100 rounded w-64" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-lg shadow p-4 sm:p-6">

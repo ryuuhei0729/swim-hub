@@ -26,7 +26,10 @@ import { useShallow } from "zustand/react/shallow";
 import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
+import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { uploadImages, deleteImages, getExistingImagesFromPaths } from "@/utils/imageUpload";
+import { checkIsPremium } from "@swim-hub/shared/utils/premium";
+import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
 import type { MainStackParamList } from "@/navigation/types";
 
 type PracticeFormScreenRouteProp = RouteProp<MainStackParamList, "PracticeForm">;
@@ -40,7 +43,8 @@ export const PracticeFormScreen: React.FC = () => {
   const route = useRoute<PracticeFormScreenRouteProp>();
   const navigation = useNavigation<PracticeFormScreenNavigationProp>();
   const { practiceId, date: initialDateParam } = route.params || {};
-  const { supabase, user } = useAuth();
+  const { supabase, user, subscription } = useAuth();
+  const isPremium = checkIsPremium(subscription);
   const queryClient = useQueryClient();
   const isEditMode = !!practiceId;
 
@@ -587,13 +591,17 @@ export const PracticeFormScreen: React.FC = () => {
 
         {/* 画像 */}
         <View style={styles.field}>
-          <ImageUploader
-            existingImages={existingImages}
-            onImagesChange={handleImagesChange}
-            maxImages={3}
-            disabled={storeLoading}
-            label="画像"
-          />
+          {isPremium ? (
+            <ImageUploader
+              existingImages={existingImages}
+              onImagesChange={handleImagesChange}
+              maxImages={3}
+              disabled={storeLoading}
+              label="画像"
+            />
+          ) : (
+            <PremiumBadge message={PREMIUM_MESSAGES.image_upload} />
+          )}
         </View>
 
         {/* ボタン */}

@@ -68,7 +68,7 @@
     "dotenv": "^17.2.3",
     "enhanced-resolve": "^5.18.4",
     "jsonwebtoken": "^9.0.3",
-    "minimatch": "^10.2.1",
+    "minimatch": "^10.2.4",
     "prettier": "^3.8.1",
     "supabase": "^2.71.1",
     "tapable": "^2.3.0",

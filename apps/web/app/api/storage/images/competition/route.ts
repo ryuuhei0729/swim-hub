@@ -9,6 +9,9 @@ import { createAuthenticatedServerClient, getServerUser } from "@/lib/supabase-s
 import { isR2Enabled, uploadToR2, deleteFromR2 } from "@/lib/r2";
 import { NextRequest, NextResponse } from "next/server";
 import nodePath from "path";
+import { checkIsPremium } from "@swim-hub/shared/utils/premium";
+import { PREMIUM_ERROR_CODE, PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
+import type { PremiumRequiredError } from "@swim-hub/shared/constants/premium";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -25,6 +28,33 @@ export async function POST(request: NextRequest) {
     const user = await getServerUser();
     if (!user) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
+    }
+
+    // Premium チェック: 画像アップロードは Premium 会員限定
+    const supabaseForSub = await createAuthenticatedServerClient();
+    const { data: subscriptionData } = await supabaseForSub
+      .from("user_subscriptions")
+      .select("plan, status, cancel_at_period_end, premium_expires_at, trial_end")
+      .eq("id", user.id)
+      .single();
+
+    const subscription = subscriptionData
+      ? {
+          plan: subscriptionData.plan as "free" | "premium",
+          status: subscriptionData.status as import("@swim-hub/shared/types/auth").SubscriptionStatus | null,
+          cancelAtPeriodEnd: subscriptionData.cancel_at_period_end ?? false,
+          premiumExpiresAt: subscriptionData.premium_expires_at ?? null,
+          trialEnd: subscriptionData.trial_end ?? null,
+        }
+      : null;
+
+    if (!checkIsPremium(subscription)) {
+      const errorResponse: PremiumRequiredError = {
+        error: PREMIUM_ERROR_CODE,
+        message: PREMIUM_MESSAGES.image_upload,
+        feature: "image_upload",
+      };
+      return NextResponse.json(errorResponse, { status: 403 });
     }
 
     const formData = await request.formData();

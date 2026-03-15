@@ -3,7 +3,7 @@
 import React from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { TrashIcon, ClockIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
+import { TrashIcon, ClockIcon } from "@heroicons/react/24/outline";
 import TagInput from "../../TagInput";
 import type { PracticeMenu, Tag } from "../types";
 import { SWIM_STYLES, SWIM_CATEGORIES } from "../types";
@@ -79,44 +79,38 @@ export default function PracticeMenuItem({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               種目① <span className="text-red-500">*</span>
             </label>
-            <div className="relative">
-              <select
-                value={menu.style}
-                onChange={(e) => onUpdate("style", e.target.value)}
-                className="w-full pl-3 pr-10 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
-                required
-                data-testid="practice-style"
-              >
-                {SWIM_STYLES.map((style) => (
-                  <option key={style.value} value={style.value}>
-                    {style.label}
-                  </option>
-                ))}
-              </select>
-              <ChevronDownIcon className="h-4 w-4 absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-            </div>
+            <select
+              value={menu.style}
+              onChange={(e) => onUpdate("style", e.target.value)}
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+              data-testid="practice-style"
+            >
+              {SWIM_STYLES.map((style) => (
+                <option key={style.value} value={style.value}>
+                  {style.label}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               種目② <span className="text-red-500">*</span>
             </label>
-            <div className="relative">
-              <select
-                value={menu.swimCategory}
-                onChange={(e) =>
-                  onUpdate("swimCategory", e.target.value as "Swim" | "Pull" | "Kick")
-                }
-                className="w-full pl-3 pr-10 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
-                data-testid="practice-swim-category"
-              >
-                {SWIM_CATEGORIES.map((category) => (
-                  <option key={category.value} value={category.value}>
-                    {category.label}
-                  </option>
-                ))}
-              </select>
-              <ChevronDownIcon className="h-4 w-4 absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-            </div>
+            <select
+              value={menu.swimCategory}
+              onChange={(e) =>
+                onUpdate("swimCategory", e.target.value as "Swim" | "Pull" | "Kick")
+              }
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              data-testid="practice-swim-category"
+            >
+              {SWIM_CATEGORIES.map((category) => (
+                <option key={category.value} value={category.value}>
+                  {category.label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

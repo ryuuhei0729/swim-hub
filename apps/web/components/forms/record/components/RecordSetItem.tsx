@@ -7,6 +7,8 @@ import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { LapTimeDisplay } from "../../LapTimeDisplay";
 import type { RecordSet, SplitTimeInput, SwimStyle } from "../types";
 import { parseTimeString, formatTimeDisplay } from "../utils/timeParser";
+import PremiumBadge from "@/components/ui/PremiumBadge";
+import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
 
 interface RecordSetItemProps {
   record: RecordSet;
@@ -19,6 +21,12 @@ interface RecordSetItemProps {
   onAddSplitTimesEvery25m: () => void;
   onUpdateSplitTime: (splitIndex: number, updates: Partial<SplitTimeInput>) => void;
   onRemoveSplitTime: (splitIndex: number) => void;
+  /** Free ユーザーの場合、split-time の制限に達しているか */
+  isSplitTimeLimitReached?: boolean;
+  /** split-time 制限エラーメッセージ */
+  splitTimeLimitError?: string | null;
+  /** Premium ユーザーかどうか */
+  isPremium?: boolean;
 }
 
 /**
@@ -35,6 +43,9 @@ export default function RecordSetItem({
   onAddSplitTimesEvery25m,
   onUpdateSplitTime,
   onRemoveSplitTime,
+  isSplitTimeLimitReached = false,
+  splitTimeLimitError = null,
+  isPremium = false,
 }: RecordSetItemProps) {
   const styleId = `record-${record.id}-style`;
   const timeId = `record-${record.id}-time`;
@@ -177,7 +188,7 @@ export default function RecordSetItem({
               onClick={onAddSplitTimesEvery25m}
               className="text-sm"
               variant="outline"
-              disabled={!currentStyle?.distance}
+              disabled={!currentStyle?.distance || isSplitTimeLimitReached}
               data-testid={`record-split-add-25m-button-${recordIndex + 1}`}
             >
               <PlusIcon className="h-3 w-3 mr-1" />
@@ -188,6 +199,7 @@ export default function RecordSetItem({
               onClick={onAddSplitTime}
               className="text-sm"
               variant="outline"
+              disabled={isSplitTimeLimitReached}
               data-testid={`record-split-add-button-${recordIndex + 1}`}
             >
               <PlusIcon className="h-3 w-3 mr-1" />
@@ -277,6 +289,13 @@ export default function RecordSetItem({
           }))}
           raceDistance={currentStyle?.distance}
         />
+
+        {/* Premium 制限メッセージ */}
+        {!isPremium && isSplitTimeLimitReached && (
+          <div className="mt-2">
+            <PremiumBadge message={splitTimeLimitError || PREMIUM_MESSAGES.split_time_limit} />
+          </div>
+        )}
       </div>
 
       {/* 動画URL・メモ */}

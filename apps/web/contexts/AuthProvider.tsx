@@ -68,7 +68,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           premiumExpiresAt: data.premium_expires_at ?? null,
           trialEnd: data.trial_end ?? null,
         };
-      } catch {
+      } catch (err) {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("fetchSubscription: exception", err);
+        }
         return {
           plan: "free",
           status: null,
@@ -444,17 +447,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      let subInfo: SubscriptionInfo | null = null;
-      if (session?.user) {
-        subInfo = await fetchSubscription(session.user.id);
-      }
-
-      setAuthState({
+      // まず認証状態を即座に更新（loading: false にする）
+      // サブスクリプションは後から非同期で取得
+      setAuthState((prev) => ({
         user: session?.user ?? null,
         session,
         loading: false,
-        subscription: subInfo,
-      });
+        subscription: prev.subscription,
+      }));
+
+      // サブスクリプション情報を非同期で取得して更新
+      if (session?.user) {
+        try {
+          const subInfo = await fetchSubscription(session.user.id);
+          if (isMounted) {
+            setAuthState((prev) => ({ ...prev, subscription: subInfo }));
+          }
+        } catch {
+          // サブスクリプション取得失敗は認証をブロックしない
+        }
+      }
 
       // ログイン/ログアウト時にページをリフレッシュ
       if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
@@ -498,13 +510,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               data: { user },
             } = await supabaseClient.auth.getUser();
             const currentUser = user ?? session.user;
-            const subInfo = await fetchSubscription(currentUser.id);
-            setAuthState({
+            // まず認証状態を即座に更新（loading: false にする）
+            setAuthState((prev) => ({
               user: currentUser,
               session,
               loading: false,
-              subscription: subInfo,
-            });
+              subscription: prev.subscription,
+            }));
+            // サブスクリプションは非同期で後から取得
+            try {
+              const subInfo = await fetchSubscription(currentUser.id);
+              if (isMounted) {
+                setAuthState((prev) => ({ ...prev, subscription: subInfo }));
+              }
+            } catch {
+              // サブスクリプション取得失敗は認証をブロックしない
+            }
           } else {
             setAuthState({
               user: null,
@@ -540,6 +561,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }, 100);
 
+    // タイムアウト: 10秒経っても loading が解消しない場合のフォールバック
+    // Stripe リダイレクト後等でセッション取得がハングするケースを防ぐ
+    const authTimeoutTimer = setTimeout(() => {
+      if (isMounted) {
+        setAuthState((prev) => {
+          if (prev.loading) {
+            if (process.env.NODE_ENV !== "production") {
+              console.warn("認証タイムアウト: 10秒以内にセッションを取得できませんでした");
+            }
+            return { ...prev, loading: false };
+          }
+          return prev;
+        });
+      }
+    }, 10_000);
+
     // クリーンアップ関数
     return () => {
       isMounted = false;
@@ -547,6 +584,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (retryTimer) {
         clearTimeout(retryTimer);
       }
+      clearTimeout(authTimeoutTimer);
     };
   }, [router, supabaseClient, clearAllClientState, fetchSubscription]);
 

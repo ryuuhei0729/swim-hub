@@ -9,6 +9,8 @@ import { LapTimeDisplay } from "../../LapTimeDisplay";
 import type { EntryInfo } from "@apps/shared/types/ui";
 import type { RecordLogFormState, StyleOption } from "../types";
 import type { BestTime } from "@/types/member-detail";
+import PremiumBadge from "@/components/ui/PremiumBadge";
+import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
 
 interface RecordLogEntryProps {
   formData: RecordLogFormState;
@@ -30,6 +32,8 @@ interface RecordLogEntryProps {
   onAddSplitTimesEvery25m: () => void;
   onRemoveSplitTime: (splitIndex: number) => void;
   onSplitTimeChange: (splitIndex: number, field: "distance" | "splitTime", value: string) => void;
+  isSplitTimeLimitReached?: boolean;
+  isPremium?: boolean;
 }
 
 /**
@@ -53,6 +57,8 @@ export default function RecordLogEntry({
   onAddSplitTimesEvery25m,
   onRemoveSplitTime,
   onSplitTimeChange,
+  isSplitTimeLimitReached = false,
+  isPremium = false,
 }: RecordLogEntryProps) {
   const sectionIndex = index + 1;
   const styleOptions = styles.map((style) => ({
@@ -274,7 +280,7 @@ export default function RecordLogEntry({
               onClick={onAddSplitTimesEvery25m}
               variant="outline"
               className="text-[10px] px-2 py-1 h-7"
-              disabled={isLoading || !raceDistance}
+              disabled={isLoading || !raceDistance || isSplitTimeLimitReached}
               data-testid={`record-split-add-25m-button-${sectionIndex}`}
             >
               <PlusIcon className="h-3 w-3 mr-0.5" />
@@ -285,7 +291,7 @@ export default function RecordLogEntry({
               onClick={onAddSplitTime}
               variant="outline"
               className="text-[10px] px-2 py-1 h-7"
-              disabled={isLoading}
+              disabled={isLoading || isSplitTimeLimitReached}
               data-testid={`record-split-add-button-${sectionIndex}`}
             >
               <PlusIcon className="h-3 w-3 mr-0.5" />
@@ -338,6 +344,13 @@ export default function RecordLogEntry({
 
         {/* Lap-Time表示 */}
         <LapTimeDisplay splitTimes={validSplitTimes} raceDistance={raceDistance} />
+
+        {/* Premium 制限メッセージ */}
+        {!isPremium && isSplitTimeLimitReached && (
+          <div className="mt-2">
+            <PremiumBadge message={PREMIUM_MESSAGES.split_time_limit} />
+          </div>
+        )}
       </div>
 
       {/* ビデオURL */}
