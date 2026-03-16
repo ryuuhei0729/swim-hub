@@ -79,8 +79,9 @@ jobs:
         SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: "dummy-secret"
 
     - name: Start Supabase stack
-      run: supabase start --workdir supabase
-      timeout-minutes: 5
+      # edge-runtime を除外して起動安定性を向上（functions test は Deno で直接実行）
+      run: supabase start --workdir supabase --exclude edge-runtime
+      timeout-minutes: 8
       env:
         SUPABASE_DB_PASSWORD: postgres
         # CI環境ではGoogle OAuthは不要なため、ダミー値を設定して警告を抑制
