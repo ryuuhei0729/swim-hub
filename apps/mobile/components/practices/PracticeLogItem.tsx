@@ -7,6 +7,7 @@ import {
   getStyleLabel,
   getTextColorForBackground,
 } from "@/utils/formatters";
+import { VideoPlayer } from "@/components/shared/VideoPlayer";
 import type { PracticeLogWithTags } from "@swim-hub/shared/types";
 
 interface PracticeLogItemProps {
@@ -117,6 +118,13 @@ export const PracticeLogItem: React.FC<PracticeLogItemProps> = React.memo(({ log
         <View style={styles.memoCard}>
           <Text style={styles.memoLabel}>メモ</Text>
           <Text style={styles.memoText}>{log.note}</Text>
+        </View>
+      )}
+
+      {/* 動画 */}
+      {log.video_path && (
+        <View style={styles.videoContainer}>
+          <VideoPlayer videoPath={log.video_path} thumbnailPath={log.video_thumbnail_path} />
         </View>
       )}
 
@@ -299,6 +307,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#475569",
     lineHeight: 18,
+  },
+
+  // 動画
+  videoContainer: {
+    marginBottom: 12,
+    borderRadius: 8,
+    overflow: "hidden",
   },
 
   // タイムセクション

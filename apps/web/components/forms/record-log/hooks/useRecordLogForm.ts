@@ -31,7 +31,7 @@ interface UseRecordLogFormReturn {
   handleTimeChange: (index: number, value: string) => void;
   handleToggleRelaying: (index: number, checked: boolean) => void;
   handleNoteChange: (index: number, value: string) => void;
-  handleVideoChange: (index: number, value: string) => void;
+  handleVideoPathChange: (index: number, videoPath: string, thumbnailPath: string) => void;
   handleReactionTimeChange: (index: number, value: string) => void;
   handleStyleChange: (index: number, value: string) => void;
   handleAddSplitTime: (entryIndex: number) => void;
@@ -55,7 +55,8 @@ function createDefaultState(styleId: string): RecordLogFormState {
     isRelaying: false,
     splitTimes: [],
     note: "",
-    videoUrl: "",
+    videoPath: null,
+    videoThumbnailPath: null,
     reactionTime: "",
   };
 }
@@ -110,7 +111,8 @@ export const useRecordLogForm = ({
           isRelaying: editData.isRelaying || false,
           splitTimes,
           note: editData.note || "",
-          videoUrl: editData.videoUrl || "",
+          videoPath: editData.videoPath ?? null,
+          videoThumbnailPath: null,
           reactionTime: editData.reactionTime?.toString() || "",
         },
       ]);
@@ -202,9 +204,9 @@ export const useRecordLogForm = ({
     [updateFormData],
   );
 
-  const handleVideoChange = useCallback(
-    (index: number, value: string) => {
-      updateFormData(index, (prev) => ({ ...prev, videoUrl: value }));
+  const handleVideoPathChange = useCallback(
+    (index: number, videoPath: string, thumbnailPath: string) => {
+      updateFormData(index, (prev) => ({ ...prev, videoPath, videoThumbnailPath: thumbnailPath }));
     },
     [updateFormData],
   );
@@ -440,7 +442,7 @@ export const useRecordLogForm = ({
     handleTimeChange,
     handleToggleRelaying,
     handleNoteChange,
-    handleVideoChange,
+    handleVideoPathChange,
     handleReactionTimeChange,
     handleStyleChange,
     handleAddSplitTime,

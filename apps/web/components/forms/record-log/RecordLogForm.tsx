@@ -64,7 +64,7 @@ export default function RecordLogForm({
     handleTimeChange,
     handleToggleRelaying,
     handleNoteChange,
-    handleVideoChange,
+    handleVideoPathChange,
     handleReactionTimeChange,
     handleStyleChange,
     handleAddSplitTime,
@@ -260,7 +260,11 @@ export default function RecordLogForm({
                     onTimeChange={(value) => handleTimeChange(index, value)}
                     onToggleRelaying={(checked) => handleToggleRelaying(index, checked)}
                     onNoteChange={(value) => handleNoteChange(index, value)}
-                    onVideoChange={(value) => handleVideoChange(index, value)}
+                    onVideoPathChange={(vPath, tPath) => handleVideoPathChange(index, vPath, tPath)}
+                    onVideoDelete={() => handleVideoPathChange(index, "", "")}
+                    recordId={editData?.id}
+                    videoPath={formData.videoPath}
+                    videoThumbnailPath={formData.videoThumbnailPath}
                     onReactionTimeChange={(value) => handleReactionTimeChange(index, value)}
                     onStyleChange={(value) => handleStyleChange(index, value)}
                     onAddSplitTime={() => handleAddSplitTime(index)}

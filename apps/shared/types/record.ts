@@ -19,7 +19,8 @@ export interface RecordBase {
   competition_id: string | null;
   style_id: number;
   time: number;
-  video_url: string | null;
+  video_path?: string | null;
+  video_thumbnail_path?: string | null;
   note: string | null;
   is_relaying: boolean;
   reaction_time: number | null; // 反応時間（リアクションタイム）を秒単位で記録。範囲は0.40~1.00秒程度。

@@ -16,7 +16,7 @@ export type RecordFormEdit = {
   time: number;
   isRelaying: boolean;
   splitTimes: Array<{ distance: number; splitTime: number }>;
-  videoUrl?: string;
+  videoPath?: string;
   note?: string;
 };
 

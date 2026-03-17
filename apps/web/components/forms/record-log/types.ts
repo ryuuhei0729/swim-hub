@@ -26,7 +26,8 @@ export interface RecordLogFormState {
   isRelaying: boolean;
   splitTimes: SplitTimeDraft[];
   note: string;
-  videoUrl?: string;
+  videoPath?: string | null;
+  videoThumbnailPath?: string | null;
   reactionTime: string;
 }
 
@@ -38,7 +39,8 @@ export interface RecordLogFormData {
   isRelaying: boolean;
   splitTimes: Array<{ distance: number; splitTime: number }>;
   note: string;
-  videoUrl?: string;
+  videoPath?: string | null;
+  videoThumbnailPath?: string | null;
   reactionTime: string;
 }
 
@@ -49,7 +51,7 @@ export interface RecordLogEditData {
   isRelaying?: boolean;
   splitTimes?: SplitTimeRow[];
   note?: string;
-  videoUrl?: string;
+  videoPath?: string | null;
   reactionTime?: number | null;
 }
 

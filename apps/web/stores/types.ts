@@ -29,7 +29,7 @@ export type EditingData =
       styleId?: number;
       time?: number;
       isRelaying?: boolean;
-      videoUrl?: string | null;
+      videoPath?: string | null;
       reactionTime?: number | null;
       splitTimes?: Array<{ distance: number; splitTime: number }>;
       // 練習ログ編集用のプロパティ
@@ -74,7 +74,7 @@ export interface EntryFormData {
 export interface RecordFormDataInput {
   styleId: string;
   time: number;
-  videoUrl?: string | null;
+  videoPath?: string | null;
   note?: string | null;
   isRelaying: boolean;
   reactionTime?: string; // 反応時間（秒単位、0.40~1.00程度）
@@ -88,7 +88,7 @@ export interface RecordFormDataInput {
 export interface RecordFormDataInternal {
   styleId: string;
   time: number;
-  videoUrl?: string | null;
+  videoPath?: string | null;
   note?: string | null;
   isRelaying: boolean;
   reactionTime?: string; // 反応時間（秒単位、0.40~1.00程度）

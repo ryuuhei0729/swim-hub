@@ -115,6 +115,8 @@ export const usePracticeLogForm = ({
           note: editData.note || "",
           tags,
           times: editData.times?.flatMap((item) => item.times) || [],
+          videoPath: editData.video_path ?? null,
+          videoThumbnailPath: editData.video_thumbnail_path ?? null,
         },
       ];
     } else {

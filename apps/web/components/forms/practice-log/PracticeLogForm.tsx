@@ -29,6 +29,11 @@ const PRACTICE_STEPS = [
 
 // TimeInputModalを動的インポート（バンドルサイズ削減）
 const TimeInputModal = dynamic(() => import("../TimeInputModal"), { ssr: false });
+const VideoUploader = dynamic(() => import("@/components/video/VideoUploader"), { ssr: false });
+
+// DB の UUID かどうか判定
+const isDbUuid = (id: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
 /**
  * 練習記録入力フォーム
@@ -333,19 +338,49 @@ export default function PracticeLogForm({
                 </div>
 
                 {menus.map((menu, index) => (
-                  <PracticeMenuItem
-                    key={menu.id}
-                    menu={menu}
-                    menuIndex={index}
-                    canRemove={menus.length > 1}
-                    availableTags={availableTags}
-                    isLoading={isLoading}
-                    onRemove={() => removeMenu(menu.id)}
-                    onUpdate={(field, value) => updateMenu(menu.id, field, value)}
-                    onTagsChange={(tags) => handleTagsChange(menu.id, tags)}
-                    onAvailableTagsUpdate={setAvailableTags}
-                    onOpenTimeModal={() => openTimeModal(menu.id)}
-                  />
+                  <div key={menu.id} className="space-y-3">
+                    <PracticeMenuItem
+                      menu={menu}
+                      menuIndex={index}
+                      canRemove={menus.length > 1}
+                      availableTags={availableTags}
+                      isLoading={isLoading}
+                      onRemove={() => removeMenu(menu.id)}
+                      onUpdate={(field, value) => updateMenu(menu.id, field, value)}
+                      onTagsChange={(tags) => handleTagsChange(menu.id, tags)}
+                      onAvailableTagsUpdate={setAvailableTags}
+                      onOpenTimeModal={() => openTimeModal(menu.id)}
+                    />
+                    {/* 動画アップロード（編集時のみ、1メニュー1動画） */}
+                    <div className="px-1">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">動画</label>
+                      <VideoUploader
+                        type="practice-log"
+                        id={isDbUuid(menu.id) ? menu.id : undefined}
+                        existingVideoPath={menu.videoPath ?? undefined}
+                        existingThumbnailPath={menu.videoThumbnailPath ?? undefined}
+                        isPremium={isPremium}
+                        onUploadComplete={(videoPath, thumbnailPath) =>
+                          setMenus((prev) =>
+                            prev.map((m) =>
+                              m.id === menu.id
+                                ? { ...m, videoPath, videoThumbnailPath: thumbnailPath }
+                                : m,
+                            ),
+                          )
+                        }
+                        onDelete={() =>
+                          setMenus((prev) =>
+                            prev.map((m) =>
+                              m.id === menu.id
+                                ? { ...m, videoPath: null, videoThumbnailPath: null }
+                                : m,
+                            ),
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
                 ))}
 
                 {/* Practice time 制限メッセージ */}

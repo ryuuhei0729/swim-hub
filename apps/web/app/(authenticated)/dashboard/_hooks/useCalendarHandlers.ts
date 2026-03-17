@@ -30,7 +30,7 @@ export interface RecordForEdit {
   time_result?: number;
   is_relaying?: boolean;
   note?: string | null;
-  video_url?: string | null;
+  video_path?: string | null;
   reaction_time?: number | null;
   split_times?: RecordSplitTime[];
   competition_id?: string | null;
@@ -451,7 +451,7 @@ export function useCalendarHandlers({
         time: record.time ?? record.time_result,
         isRelaying: record.is_relaying,
         note: record.note ?? undefined,
-        videoUrl: record.video_url ?? undefined,
+        videoPath: record.video_path ?? undefined,
         reactionTime: record.reaction_time ?? undefined,
         splitTimes: convertedSplitTimes,
         competitionId: record.competition_id ?? undefined,

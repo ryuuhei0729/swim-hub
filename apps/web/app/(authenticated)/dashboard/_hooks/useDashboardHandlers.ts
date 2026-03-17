@@ -893,7 +893,7 @@ export function useDashboardHandlers({
           const updates: import("@swim-hub/shared/types").RecordUpdate = {
             style_id: parseInt(formData.styleId),
             time: formData.time,
-            video_url: formData.videoUrl || null,
+            video_path: formData.videoPath || null,
             note: formData.note || null,
             is_relaying: formData.isRelaying || false,
             reaction_time:
@@ -940,7 +940,7 @@ export function useDashboardHandlers({
               {
                 style_id: parseInt(formData.styleId),
                 time: formData.time,
-                video_url: formData.videoUrl || null,
+                video_path: formData.videoPath || null,
                 note: formData.note || null,
                 is_relaying: formData.isRelaying || false,
                 competition_id: competitionId,

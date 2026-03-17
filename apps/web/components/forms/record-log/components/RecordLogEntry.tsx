@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
+import dynamic from "next/dynamic";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
@@ -11,6 +12,11 @@ import type { RecordLogFormState, StyleOption } from "../types";
 import type { BestTime } from "@/types/member-detail";
 import PremiumBadge from "@/components/ui/PremiumBadge";
 import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
+
+const VideoUploader = dynamic(() => import("@/components/video/VideoUploader"), { ssr: false });
+
+const isDbUuid = (id: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
 interface RecordLogEntryProps {
   formData: RecordLogFormState;
@@ -25,7 +31,11 @@ interface RecordLogEntryProps {
   onTimeChange: (value: string) => void;
   onToggleRelaying: (checked: boolean) => void;
   onNoteChange: (value: string) => void;
-  onVideoChange: (value: string) => void;
+  onVideoPathChange: (videoPath: string, thumbnailPath: string) => void;
+  onVideoDelete: () => void;
+  recordId?: string;
+  videoPath?: string | null;
+  videoThumbnailPath?: string | null;
   onReactionTimeChange: (value: string) => void;
   onStyleChange: (value: string) => void;
   onAddSplitTime: () => void;
@@ -50,7 +60,11 @@ export default function RecordLogEntry({
   onTimeChange,
   onToggleRelaying,
   onNoteChange,
-  onVideoChange,
+  onVideoPathChange,
+  onVideoDelete,
+  recordId,
+  videoPath,
+  videoThumbnailPath,
   onReactionTimeChange,
   onStyleChange,
   onAddSplitTime,
@@ -353,16 +367,17 @@ export default function RecordLogEntry({
         )}
       </div>
 
-      {/* ビデオURL */}
+      {/* 動画 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">ビデオURL</label>
-        <Input
-          type="url"
-          value={formData.videoUrl}
-          onChange={(e) => onVideoChange(e.target.value)}
-          placeholder="https://..."
-          className="w-full"
-          data-testid={`record-video-${sectionIndex}`}
+        <label className="block text-sm font-medium text-gray-700 mb-1">動画</label>
+        <VideoUploader
+          type="record"
+          id={recordId && isDbUuid(recordId) ? recordId : undefined}
+          existingVideoPath={videoPath ?? undefined}
+          existingThumbnailPath={videoThumbnailPath ?? undefined}
+          isPremium={isPremium ?? false}
+          onUploadComplete={(vPath, tPath) => onVideoPathChange(vPath, tPath)}
+          onDelete={onVideoDelete}
         />
       </div>
 

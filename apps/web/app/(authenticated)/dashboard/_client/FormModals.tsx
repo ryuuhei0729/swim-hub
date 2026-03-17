@@ -612,7 +612,7 @@ export function FormModals({
                 createdAt?: string;
               }>;
               note?: string;
-              videoUrl?: string | null;
+              videoPath?: string | null;
               reactionTime?: number | null;
             };
 
@@ -631,7 +631,7 @@ export function FormModals({
               isRelaying: data.isRelaying,
               splitTimes: splitTimes,
               note: data.note,
-              videoUrl: data.videoUrl === null ? undefined : data.videoUrl,
+              videoPath: data.videoPath === null ? undefined : data.videoPath,
               reactionTime: data.reactionTime,
             };
           })()}

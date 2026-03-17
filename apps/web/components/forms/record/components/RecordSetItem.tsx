@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import dynamic from "next/dynamic";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
@@ -9,6 +10,12 @@ import type { RecordSet, SplitTimeInput, SwimStyle } from "../types";
 import { parseTimeString, formatTimeDisplay } from "../utils/timeParser";
 import PremiumBadge from "@/components/ui/PremiumBadge";
 import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
+
+const VideoUploader = dynamic(() => import("@/components/video/VideoUploader"), { ssr: false });
+
+// DB の UUID かどうか判定（フォーム内部の一時IDと区別する）
+const isDbUuid = (id: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
 interface RecordSetItemProps {
   record: RecordSet;
@@ -298,16 +305,20 @@ export default function RecordSetItem({
         )}
       </div>
 
-      {/* 動画URL・メモ */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
+      {/* 動画・メモ */}
+      <div className="space-y-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">動画URL</label>
-          <Input
-            type="url"
-            value={record.videoUrl || ""}
-            onChange={(e) => onUpdate({ videoUrl: e.target.value })}
-            placeholder="https://..."
-            data-testid={`record-video-${recordIndex + 1}`}
+          <label className="block text-sm font-medium text-gray-700 mb-2">動画</label>
+          <VideoUploader
+            type="record"
+            id={isDbUuid(record.id) ? record.id : undefined}
+            existingVideoPath={record.videoPath ?? undefined}
+            existingThumbnailPath={record.videoThumbnailPath ?? undefined}
+            isPremium={isPremium ?? false}
+            onUploadComplete={(videoPath, thumbnailPath) =>
+              onUpdate({ videoPath, videoThumbnailPath: thumbnailPath })
+            }
+            onDelete={() => onUpdate({ videoPath: null, videoThumbnailPath: null })}
           />
         </div>
         <div>

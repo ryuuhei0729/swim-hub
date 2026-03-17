@@ -109,6 +109,9 @@
   "author": "開発チーム",
   "license": "MIT",
   "dependencies": {
+    "expo-video": "~3.0.16",
+    "expo-video-thumbnails": "~10.0.8",
+    "react": "19.2.3",
     "stripe": "^20.4.1"
   }
 }

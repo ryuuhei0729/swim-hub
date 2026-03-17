@@ -132,6 +132,8 @@ export interface RecordData {
   note: string | null;
   styleId: number;
   styleDistance: number;
+  videoPath: string | null;
+  videoThumbnailPath: string | null;
 }
 
 // エントリーデータの型

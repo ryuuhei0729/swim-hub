@@ -113,7 +113,8 @@ export const useRecordForm = ({
               uiKey: generateUUID(),
             })) || [],
           note: record.note || "",
-          videoUrl: record.videoUrl || "",
+          videoPath: record.videoPath ?? null,
+          videoThumbnailPath: null,
           reactionTime: record.reactionTime?.toString() || "",
         }));
 
@@ -152,7 +153,8 @@ export const useRecordForm = ({
                 uiKey: generateUUID(),
               })) || [],
             note: editData.note || "",
-            videoUrl: editData.videoUrl || "",
+            videoPath: editData.videoPath ?? null,
+            videoThumbnailPath: null,
             reactionTime: editData.reactionTime?.toString() || "",
           },
         ],
@@ -178,7 +180,7 @@ export const useRecordForm = ({
       isRelaying: false,
       splitTimes: [],
       note: "",
-      videoUrl: "",
+      videoPath: null,
       reactionTime: "",
     };
 
@@ -467,7 +469,7 @@ function createInitialFormData(initialDate?: Date, styles?: SwimStyle[]): Record
         isRelaying: false,
         splitTimes: [],
         note: "",
-        videoUrl: "",
+        videoPath: null,
         reactionTime: "",
       },
     ],

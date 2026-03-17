@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthProvider";
 import { formatTime } from "@/utils/formatters";
+import { VideoPlayer } from "@/components/shared/VideoPlayer";
 import type { CalendarItem } from "@apps/shared/types/ui";
 import { styles } from "../styles";
 import type { RecordDetailProps, RecordData } from "../types";
@@ -228,8 +229,8 @@ const RecordCard: React.FC<{
         </View>
       </View>
 
-      {/* スプリットタイム（タブ付き） */}
-      {displaySplitTimes.length > 0 && (
+      {/* スプリットタイム（タブ付き） — DBにsplitが存在する場合のみ表示 */}
+      {splits.length > 0 && (
         <View style={splitStyles.splitSection}>
           {/* タブ */}
           <View style={splitStyles.tabRow}>
@@ -337,6 +338,13 @@ const RecordCard: React.FC<{
         </View>
       )}
 
+      {/* 動画 */}
+      {record.videoPath && (
+        <View style={localStyles.videoContainer}>
+          <VideoPlayer videoPath={record.videoPath} thumbnailPath={record.videoThumbnailPath} />
+        </View>
+      )}
+
       {/* メモ */}
       {record.note && (
         <View style={styles.recordNoteContainer}>
@@ -347,6 +355,14 @@ const RecordCard: React.FC<{
     </View>
   );
 };
+
+const localStyles = StyleSheet.create({
+  videoContainer: {
+    marginTop: 8,
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+});
 
 /**
  * 記録詳細表示コンポーネント（大会ごとにグループ化）
@@ -394,6 +410,8 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
             is_relaying,
             note,
             style_id,
+            video_path,
+            video_thumbnail_path,
             style:styles(id, name_jp, distance)
           `,
           )
@@ -416,6 +434,8 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
           is_relaying: boolean;
           note: string | null;
           style_id: number;
+          video_path: string | null;
+          video_thumbnail_path: string | null;
           style:
             | {
                 id: number;
@@ -441,6 +461,8 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
             note: record.note,
             styleId: record.style_id,
             styleDistance: style?.distance || 0,
+            videoPath: record.video_path ?? null,
+            videoThumbnailPath: record.video_thumbnail_path ?? null,
           };
         });
 

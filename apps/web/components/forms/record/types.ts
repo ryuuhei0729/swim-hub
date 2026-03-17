@@ -18,7 +18,8 @@ export interface RecordSet {
   isRelaying: boolean;
   splitTimes: SplitTimeInput[];
   note: string;
-  videoUrl?: string;
+  videoPath?: string | null;
+  videoThumbnailPath?: string | null;
   reactionTime: string;
 }
 
@@ -50,7 +51,7 @@ export type EditRecord = {
   isRelaying?: boolean;
   splitTimes?: EditSplitTime[];
   note?: string;
-  videoUrl?: string;
+  videoPath?: string | null;
   reactionTime?: number | null;
 };
 
@@ -67,7 +68,7 @@ export type EditData = {
   time?: number;
   isRelaying?: boolean;
   splitTimes?: EditSplitTime[];
-  videoUrl?: string;
+  videoPath?: string | null;
   reactionTime?: number | null;
 };
 

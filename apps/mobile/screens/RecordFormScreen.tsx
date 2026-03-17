@@ -29,6 +29,7 @@ import { useShallow } from "zustand/react/shallow";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
+import { VideoUploader } from "@/components/shared/VideoUploader";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { uploadImages, deleteImages, getExistingImagesFromPaths } from "@/utils/imageUpload";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
@@ -129,6 +130,10 @@ export const RecordFormScreen: React.FC = () => {
   const [newImageFiles, setNewImageFiles] = useState<ImageFile[]>([]);
   const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<ExistingImage[]>([]);
+
+  // 動画の状態管理
+  const [existingVideoPath, setExistingVideoPath] = useState<string | null>(null);
+  const [existingThumbnailPath, setExistingThumbnailPath] = useState<string | null>(null);
 
   // 秒数を表示用文字列に変換
   const formatSecondsToDisplay = (seconds: number): string => {
@@ -240,6 +245,9 @@ export const RecordFormScreen: React.FC = () => {
     const record = records.find((r) => r.id === recordId);
     if (record) {
       initialize(record);
+      // 動画パスを初期化
+      setExistingVideoPath(record.video_path ?? null);
+      setExistingThumbnailPath(record.video_thumbnail_path ?? null);
       // 編集時にタイム表示値を初期化
       if (record.time && record.time > 0) {
         setTimeDisplayValue(formatSecondsToDisplay(record.time));
@@ -341,7 +349,6 @@ export const RecordFormScreen: React.FC = () => {
         reaction_time: reactionTime,
         note: note && note.trim() !== "" ? note.trim() : null,
         is_relaying: false, // デフォルトは個人種目
-        video_url: null,
         pool_type: poolType,
       };
 
@@ -357,8 +364,11 @@ export const RecordFormScreen: React.FC = () => {
         savedRecord = await createMutation.mutateAsync(recordData);
       }
 
-      // スプリットタイムを保存（編集時は空配列でも置き換え）
+      // スプリットタイムを保存（編集時は空配列でも置き換え、種目距離と同じsplitは除外）
       if (savedRecord) {
+        const selectedStyle = styleList.find((s) => s.id === Number(styleId));
+        const raceDistance = selectedStyle?.distance;
+
         const splitTimeInserts = splitTimes
           .filter((st) => {
             const d =
@@ -369,7 +379,9 @@ export const RecordFormScreen: React.FC = () => {
             distance:
               typeof st.distance === "number" ? st.distance : parseFloat(String(st.distance)),
             split_time: st.splitTime,
-          }));
+          }))
+          .filter((st) => !(raceDistance && st.distance === raceDistance));
+
         await replaceSplitTimesMutation.mutateAsync({
           recordId: savedRecord.id,
           splitTimes: splitTimeInserts,
@@ -856,6 +868,26 @@ export const RecordFormScreen: React.FC = () => {
             )}
           </View>
 
+          {/* 動画 */}
+          <View style={styles.field}>
+            <Text style={styles.label}>動画</Text>
+            <VideoUploader
+              type="record"
+              id={recordId}
+              existingVideoPath={existingVideoPath}
+              existingThumbnailPath={existingThumbnailPath}
+              isPremium={isPremium}
+              onUploadComplete={(vPath, tPath) => {
+                setExistingVideoPath(vPath);
+                setExistingThumbnailPath(tPath);
+              }}
+              onDelete={() => {
+                setExistingVideoPath(null);
+                setExistingThumbnailPath(null);
+              }}
+            />
+          </View>
+
           {/* ボタン */}
           <View style={styles.buttonContainer}>
             <Pressable
@@ -1006,6 +1038,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#374151",
+  },
+  hintText: {
+    fontSize: 13,
+    color: "#9CA3AF",
   },
   required: {
     color: "#DC2626",

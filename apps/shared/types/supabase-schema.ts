@@ -498,6 +498,8 @@ export type Database = {
           swim_category: Database["public"]["Enums"]["swim_category_enum"];
           updated_at: string | null;
           user_id: string;
+          video_path: string | null;
+          video_thumbnail_path: string | null;
         };
         Insert: {
           circle?: number | null;
@@ -512,6 +514,8 @@ export type Database = {
           swim_category?: Database["public"]["Enums"]["swim_category_enum"];
           updated_at?: string | null;
           user_id: string;
+          video_path?: string | null;
+          video_thumbnail_path?: string | null;
         };
         Update: {
           circle?: number | null;
@@ -526,6 +530,8 @@ export type Database = {
           swim_category?: Database["public"]["Enums"]["swim_category_enum"];
           updated_at?: string | null;
           user_id?: string;
+          video_path?: string | null;
+          video_thumbnail_path?: string | null;
         };
         Relationships: [
           {
@@ -714,7 +720,8 @@ export type Database = {
           time: number;
           updated_at: string | null;
           user_id: string;
-          video_url: string | null;
+          video_path: string | null;
+          video_thumbnail_path: string | null;
         };
         Insert: {
           competition_id?: string | null;
@@ -729,7 +736,8 @@ export type Database = {
           time: number;
           updated_at?: string | null;
           user_id: string;
-          video_url?: string | null;
+          video_path?: string | null;
+          video_thumbnail_path?: string | null;
         };
         Update: {
           competition_id?: string | null;
@@ -744,7 +752,8 @@ export type Database = {
           time?: number;
           updated_at?: string | null;
           user_id?: string;
-          video_url?: string | null;
+          video_path?: string | null;
+          video_thumbnail_path?: string | null;
         };
         Relationships: [
           {

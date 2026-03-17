@@ -12,6 +12,7 @@ const ShareCardModal = dynamic(
     import("@/components/share/ShareCardModal").then((mod) => ({ default: mod.ShareCardModal })),
   { ssr: false },
 );
+const VideoPlayer = dynamic(() => import("@/components/video/VideoPlayer"), { ssr: false });
 import type { CompetitionShareData } from "@/components/share";
 import { formatTimeBest } from "@/utils/formatters";
 import { useAuth } from "@/contexts";
@@ -128,7 +129,8 @@ export function CompetitionDetails({
           competition_id: string | null;
           style_id: number;
           time: number;
-          video_url: string | null;
+          video_path: string | null;
+          video_thumbnail_path: string | null;
           note: string | null;
           is_relaying: boolean;
           reaction_time?: number | null;
@@ -164,7 +166,8 @@ export function CompetitionDetails({
               record: {
                 time: record.time,
                 is_relaying: record.is_relaying,
-                video_url: record.video_url || undefined,
+                video_path: record.video_path || undefined,
+                video_thumbnail_path: record.video_thumbnail_path || undefined,
                 reaction_time: record.reaction_time ?? null,
                 style: record.style
                   ? {
@@ -308,7 +311,8 @@ export function CompetitionDetails({
                   id,
                   style_id,
                   time,
-                  video_url,
+                  video_path,
+                  video_thumbnail_path,
                   note,
                   is_relaying,
                   reaction_time,
@@ -325,7 +329,8 @@ export function CompetitionDetails({
                   time: number;
                   is_relaying: boolean;
                   note: string | null;
-                  video_url: string | null;
+                  video_path: string | null;
+                  video_thumbnail_path: string | null;
                   reaction_time?: number | null;
                   competition_id: string;
                   split_times: SplitTime[];
@@ -338,7 +343,8 @@ export function CompetitionDetails({
                     competition_id: recordData.competition_id,
                     style_id: recordData.style_id,
                     time: recordData.time,
-                    video_url: recordData.video_url,
+                    video_path: recordData.video_path,
+                    video_thumbnail_path: recordData.video_thumbnail_path,
                     note: recordData.note,
                     is_relaying: recordData.is_relaying,
                     reaction_time: recordData.reaction_time ?? null,
@@ -477,6 +483,16 @@ export function CompetitionDetails({
                     }
                     recordTime={record.metadata?.record?.time}
                   />
+
+                  {/* 動画 */}
+                  {record.metadata?.record?.video_path && (
+                    <div className="mt-3">
+                      <VideoPlayer
+                        videoPath={record.metadata.record.video_path}
+                        thumbnailPath={record.metadata.record.video_thumbnail_path}
+                      />
+                    </div>
+                  )}
 
                   {/* メモ */}
                   {record.note && (

@@ -31,6 +31,11 @@ const TeamTimeInputModal = dynamic(() => import("@/components/team/TeamTimeInput
 // OcrScanModalを動的インポート
 const OcrScanModal = dynamic(() => import("@/components/team/OcrScanModal"), { ssr: false });
 
+// TeamVideoUploaderを動的インポート
+const TeamVideoUploader = dynamic(() => import("@/components/video/TeamVideoUploader"), {
+  ssr: false,
+});
+
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { openTimesheetPrintWindow } from "@/utils/generateTimesheetHtml";
 import { format } from "date-fns";
@@ -61,6 +66,8 @@ interface PracticeMenu {
   tags: Tag[];
   times: TeamTimeEntry[];
   targetUserIds: string[]; // 対象ユーザーのuser_idリスト
+  videoFiles?: Record<string, File | null>; // memberId → File のマップ
+  videoThumbnails?: Record<string, Blob | null>; // memberId → Blob のマップ
 }
 
 interface PracticeWithDetails extends Practice {
@@ -139,6 +146,10 @@ export default function PracticeLogClient({
   const [showUserSelectModal, setShowUserSelectModal] = useState(false);
   const [currentMenuIdForUserSelect, setCurrentMenuIdForUserSelect] = useState<string | null>(null);
   const [tempSelectedUserIds, setTempSelectedUserIds] = useState<string[]>([]);
+  const [videoUploadModal, setVideoUploadModal] = useState<{
+    menuId: string;
+    memberId: string;
+  } | null>(null);
 
   // 秒数を表示用フォーマットに変換
   const formatTime = (seconds: number) => {
@@ -301,6 +312,25 @@ export default function PracticeLogClient({
     updateMenu(menuId, "times", times);
   };
 
+  const handleVideoReady = (menuId: string, memberId: string, file: File, thumbnail: Blob) => {
+    setMenus((prev) =>
+      prev.map((menu) => {
+        if (menu.id !== menuId) return menu;
+        return {
+          ...menu,
+          videoFiles: { ...(menu.videoFiles ?? {}), [memberId]: file },
+          videoThumbnails: { ...(menu.videoThumbnails ?? {}), [memberId]: thumbnail },
+        };
+      }),
+    );
+    setVideoUploadModal(null);
+  };
+
+  const getMemberName = (memberId: string): string => {
+    const member = members.find((m) => m.user_id === memberId);
+    return member?.users.name ?? memberId;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -382,6 +412,73 @@ export default function PracticeLogClient({
           alert(`保存中にエラーが発生しました: ${errorMessage}`);
           setSaving(false);
           return;
+        }
+      }
+
+      // 保存成功後に動画をアップロード
+      // RPC の戻り値から保存されたログID一覧を取得（構造によってはスキップ）
+      if (
+        result &&
+        typeof result === "object" &&
+        "log_ids" in result &&
+        Array.isArray((result as { log_ids: unknown[] }).log_ids)
+      ) {
+        const logIds = (result as { log_ids: string[] }).log_ids;
+        for (let i = 0; i < menus.length; i++) {
+          const menu = menus[i];
+          if (!menu.videoFiles) continue;
+          for (const [memberId, videoFile] of Object.entries(menu.videoFiles)) {
+            if (!videoFile) continue;
+            const thumbnail = menu.videoThumbnails?.[memberId];
+            const logId = logIds[i];
+            if (!logId) continue;
+            try {
+              const uploadUrlRes = await fetch("/api/storage/videos/upload-url", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ type: "practice-log", id: logId, contentType: "video/mp4" }),
+              });
+              if (!uploadUrlRes.ok) continue;
+              const { videoUploadUrl, thumbnailUploadUrl, videoPath: vPath, thumbnailPath: tPath } =
+                await uploadUrlRes.json() as {
+                  videoUploadUrl: string;
+                  thumbnailUploadUrl: string;
+                  videoPath: string;
+                  thumbnailPath: string;
+                };
+              await fetch(videoUploadUrl, { method: "PUT", body: videoFile });
+              if (thumbnail) {
+                await fetch(thumbnailUploadUrl, { method: "PUT", body: thumbnail });
+              }
+              const confirmFormData = new FormData();
+              confirmFormData.append("type", "practice-log");
+              confirmFormData.append("id", logId);
+              confirmFormData.append("videoPath", vPath);
+              confirmFormData.append("thumbnailPath", tPath);
+              if (thumbnail) {
+                confirmFormData.append(
+                  "thumbnailBlob",
+                  new File([thumbnail], "thumbnail.webp", { type: "image/webp" }),
+                );
+              }
+              await fetch("/api/storage/videos/confirm", { method: "POST", body: confirmFormData });
+              // team-assign APIでターゲットユーザーに移動
+              await fetch("/api/storage/videos/team-assign", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  type: "practice-log",
+                  sourceId: logId,
+                  targetUserId: memberId,
+                  teamId,
+                  tempVideoPath: vPath,
+                  tempThumbnailPath: tPath,
+                }),
+              });
+            } catch (videoErr) {
+              console.error("動画アップロードエラー:", videoErr);
+            }
+          }
         }
       }
 
@@ -724,6 +821,32 @@ export default function PracticeLogClient({
                 )}
               </div>
 
+              {/* 動画アップロード（対象ユーザーごと） */}
+              {menu.targetUserIds.length > 0 && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">動画</label>
+                  <div className="flex flex-wrap gap-2">
+                    {menu.targetUserIds.map((userId) => {
+                      const hasVideo = !!(menu.videoFiles?.[userId]);
+                      return (
+                        <button
+                          key={userId}
+                          type="button"
+                          onClick={() => setVideoUploadModal({ menuId: menu.id, memberId: userId })}
+                          className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
+                            hasVideo
+                              ? "border-green-500 bg-green-50 text-green-700"
+                              : "border-gray-300 bg-white text-gray-600 hover:border-blue-400"
+                          }`}
+                        >
+                          {getMemberName(userId)}: {hasVideo ? "動画あり" : "動画を選択"}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* タグ */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">タグ</label>
@@ -999,6 +1122,18 @@ export default function PracticeLogClient({
           onApply={handleOcrApply}
           members={members}
           presentUserIds={presentUserIds}
+        />
+      )}
+
+      {/* 動画アップロードモーダル */}
+      {videoUploadModal && (
+        <TeamVideoUploader
+          targetUserId={videoUploadModal.memberId}
+          targetUserName={getMemberName(videoUploadModal.memberId)}
+          onVideoReady={(file, thumbnail) =>
+            handleVideoReady(videoUploadModal.menuId, videoUploadModal.memberId, file, thumbnail)
+          }
+          onCancel={() => setVideoUploadModal(null)}
         />
       )}
 

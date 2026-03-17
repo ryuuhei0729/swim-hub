@@ -290,7 +290,7 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
       const recordInput = {
         style_id: parseInt(formData.styleId),
         time: formData.time,
-        video_url: formData.videoUrl || null,
+        video_path: formData.videoPath || null,
         note: formData.note || null,
         is_relaying: formData.isRelaying || false,
         competition_id: competitionId || null,
@@ -656,7 +656,7 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
                   splitTime: st.split_time,
                 })),
                 note: editingData.note ?? undefined,
-                videoUrl: editingData.video_url ?? undefined,
+                videoPath: editingData.video_path ?? undefined,
               }
             : null
         }

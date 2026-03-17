@@ -27,6 +27,7 @@ import { StyleAPI } from "@apps/shared/api/styles";
 import { formatTime } from "@/utils/formatters";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
+import { VideoUploader } from "@/components/shared/VideoUploader";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { PREMIUM_MESSAGES, FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import type { MainStackParamList } from "@/navigation/types";
@@ -49,7 +50,6 @@ interface RecordFormData {
   isRelaying: boolean;
   splitTimes: SplitTimeData[];
   note: string;
-  videoUrl: string;
   reactionTime: string;
 }
 
@@ -71,6 +71,10 @@ export const RecordLogFormScreen: React.FC = () => {
 
   // クイック入力フック
   const { parseInput } = useQuickTimeInput();
+
+  // 動画の状態管理
+  const [existingVideoPath, setExistingVideoPath] = useState<string | null>(null);
+  const [existingThumbnailPath, setExistingThumbnailPath] = useState<string | null>(null);
 
   // フォーム状態（複数エントリー対応）
   const [formDataList, setFormDataList] = useState<RecordFormData[]>([]);
@@ -166,6 +170,10 @@ export const RecordLogFormScreen: React.FC = () => {
           }),
         );
 
+        // 動画パスを初期化
+        setExistingVideoPath(record.video_path ?? null);
+        setExistingThumbnailPath(record.video_thumbnail_path ?? null);
+
         const formData = {
           styleId: String(record.style_id),
           time: record.time,
@@ -173,7 +181,6 @@ export const RecordLogFormScreen: React.FC = () => {
           isRelaying: record.is_relaying || false,
           splitTimes,
           note: record.note || "",
-          videoUrl: record.video_url || "",
           reactionTime: record.reaction_time ? String(record.reaction_time) : "",
         };
         setFormDataList([formData]);
@@ -209,7 +216,6 @@ export const RecordLogFormScreen: React.FC = () => {
           isRelaying: false,
           splitTimes: [],
           note: "",
-          videoUrl: "",
           reactionTime: "",
         })),
       );
@@ -224,7 +230,6 @@ export const RecordLogFormScreen: React.FC = () => {
           isRelaying: false,
           splitTimes: [],
           note: "",
-          videoUrl: "",
           reactionTime: "",
         },
       ]);
@@ -485,14 +490,16 @@ export const RecordLogFormScreen: React.FC = () => {
               : null,
           note: formData.note && formData.note.trim() !== "" ? formData.note.trim() : null,
           is_relaying: formData.isRelaying,
-          video_url:
-            formData.videoUrl && formData.videoUrl.trim() !== "" ? formData.videoUrl.trim() : null,
         };
 
         await updateMutation.mutateAsync({ id: recordId, updates });
 
         // スプリットタイムを保存
         if (formData.splitTimes.length > 0) {
+          // 種目の距離を取得（ゴールタイム=split_timeは途中経過ではないので除外）
+          const selectedStyle = swimStyles.find((s) => String(s.id) === formData.styleId);
+          const raceDistance = selectedStyle?.distance;
+
           const validSplitTimes = formData.splitTimes
             .map((st) => {
               const distance =
@@ -509,7 +516,8 @@ export const RecordLogFormScreen: React.FC = () => {
               }
               return null;
             })
-            .filter((st): st is { distance: number; split_time: number } => st !== null);
+            .filter((st): st is { distance: number; split_time: number } => st !== null)
+            .filter((st) => !(raceDistance && st.distance === raceDistance));
 
           if (validSplitTimes.length > 0) {
             await replaceSplitTimesMutation.mutateAsync({
@@ -533,18 +541,17 @@ export const RecordLogFormScreen: React.FC = () => {
                 : null,
             note: formData.note && formData.note.trim() !== "" ? formData.note.trim() : null,
             is_relaying: formData.isRelaying,
-            video_url:
-              formData.videoUrl && formData.videoUrl.trim() !== ""
-                ? formData.videoUrl.trim()
-                : null,
             pool_type: poolType,
           };
 
           // 記録を作成
           const savedRecord = await createMutation.mutateAsync(recordData);
 
-          // スプリットタイムを保存
+          // スプリットタイムを保存（種目距離と同じsplitは除外）
           if (savedRecord && formData.splitTimes.length > 0) {
+            const selectedStyle = swimStyles.find((s) => String(s.id) === formData.styleId);
+            const raceDistance = selectedStyle?.distance;
+
             const validSplitTimes = formData.splitTimes
               .map((st) => {
                 const distance =
@@ -561,7 +568,8 @@ export const RecordLogFormScreen: React.FC = () => {
                 }
                 return null;
               })
-              .filter((st): st is { distance: number; split_time: number } => st !== null);
+              .filter((st): st is { distance: number; split_time: number } => st !== null)
+              .filter((st) => !(raceDistance && st.distance === raceDistance));
 
             if (validSplitTimes.length > 0) {
               await replaceSplitTimesMutation.mutateAsync({
@@ -717,17 +725,23 @@ export const RecordLogFormScreen: React.FC = () => {
                 />
               </View>
 
-              {/* 動画URL */}
+              {/* 動画 */}
               <View style={styles.field}>
-                <Text style={styles.label}>動画URL</Text>
-                <TextInput
-                  style={styles.input}
-                  value={formData.videoUrl}
-                  onChangeText={(text) => updateFormData(index, { videoUrl: text })}
-                  placeholder="https://www.youtube.com/watch?v=xxx"
-                  keyboardType="url"
-                  autoCapitalize="none"
-                  editable={!loading}
+                <Text style={styles.label}>動画</Text>
+                <VideoUploader
+                  type="record"
+                  id={recordId}
+                  existingVideoPath={existingVideoPath}
+                  existingThumbnailPath={existingThumbnailPath}
+                  isPremium={isPremium}
+                  onUploadComplete={(vPath, tPath) => {
+                    setExistingVideoPath(vPath);
+                    setExistingThumbnailPath(tPath);
+                  }}
+                  onDelete={() => {
+                    setExistingVideoPath(null);
+                    setExistingThumbnailPath(null);
+                  }}
                 />
               </View>
 
@@ -930,6 +944,10 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#374151",
     marginBottom: 8,
+  },
+  hintText: {
+    fontSize: 13,
+    color: "#9CA3AF",
   },
   required: {
     color: "#EF4444",
