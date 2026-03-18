@@ -117,9 +117,9 @@ export default function TeamsClient({ initialTeams }: TeamsClientProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-6">
       {/* ヘッダー */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="hidden lg:block bg-white rounded-lg shadow p-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">マイチーム</h1>
           <p className="text-gray-600">参加しているチームの一覧</p>
@@ -128,8 +128,8 @@ export default function TeamsClient({ initialTeams }: TeamsClientProps) {
 
       {/* 承認待ちチームセクション */}
       {pendingTeams.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="bg-white rounded-lg shadow p-3 sm:p-6">
+          <h2 className="text-sm sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-4">
             承認待ち ({pendingTeams.length}件)
           </h2>
           <div className="space-y-4">
@@ -165,25 +165,25 @@ export default function TeamsClient({ initialTeams }: TeamsClientProps) {
 
       {/* 参加中のチーム一覧 */}
       {displayTeams.length === 0 && pendingTeams.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
-          <UsersIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-4 text-lg font-medium text-gray-900">参加中のチームがありません</h3>
-          <p className="mt-2 text-sm text-gray-500 mb-8">
+        <div className="bg-white rounded-lg shadow p-6 sm:p-12 text-center">
+          <UsersIcon className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
+          <h3 className="mt-3 sm:mt-4 text-sm sm:text-lg font-medium text-gray-900">参加中のチームがありません</h3>
+          <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-gray-500 mb-4 sm:mb-8">
             チームを作成するか、招待コードでチームに参加してください
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-row gap-2 sm:gap-4 justify-center">
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+              className="inline-flex items-center justify-center px-3 sm:px-6 py-2 sm:py-3 border border-transparent text-xs sm:text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
             >
-              <PlusIcon className="h-5 w-5 mr-2" />
+              <PlusIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
               チームを作成
             </button>
             <button
               onClick={() => setIsJoinModalOpen(true)}
-              className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+              className="inline-flex items-center justify-center px-3 sm:px-6 py-2 sm:py-3 border border-gray-300 text-xs sm:text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
             >
-              <UserPlusIcon className="h-5 w-5 mr-2" />
+              <UserPlusIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
               チームに参加
             </button>
           </div>

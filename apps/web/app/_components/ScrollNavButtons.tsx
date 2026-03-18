@@ -13,7 +13,7 @@ const navItems = [
 function handleScrollTo(id: string) {
   const element = document.getElementById(id);
   if (element) {
-    const headerOffset = 100;
+    const headerOffset = window.innerWidth >= 640 ? 100 : 80;
     const elementPosition = element.getBoundingClientRect().top;
     const offsetPosition = elementPosition + window.scrollY - headerOffset;
 
@@ -99,41 +99,24 @@ export default function ScrollNavButtons() {
 
       {/* モバイルメニュー */}
       {menuOpen && (
-        <div className="absolute top-full left-0 right-0 bg-white shadow-lg border-t border-gray-100 md:hidden">
-          <div className="flex flex-col py-2">
+        <div className="absolute top-full right-0 w-40 bg-white shadow-lg rounded-bl-lg border border-gray-100 md:hidden">
+          <div className="flex flex-col py-1">
             {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => handleMobileNavClick(item.id)}
-                className="px-6 py-3 text-left text-base text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                className="px-4 py-2 text-right text-xs text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-colors"
               >
                 {item.label}
               </button>
             ))}
             <Link
               href="/blog"
-              className="px-6 py-3 text-left text-base text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+              className="px-4 py-2 text-right text-xs text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-colors"
               onClick={() => setMenuOpen(false)}
             >
               ブログ
             </Link>
-            <div className="mx-4 my-2 h-px bg-gray-200" />
-            <div className="flex flex-col gap-2 px-4 py-2">
-              <Link
-                href="/signup"
-                className="px-5 py-2.5 text-center text-base font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
-                onClick={() => setMenuOpen(false)}
-              >
-                無料登録
-              </Link>
-              <Link
-                href="/login"
-                className="px-5 py-2.5 text-center text-base font-semibold text-blue-600 border border-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                onClick={() => setMenuOpen(false)}
-              >
-                ログイン
-              </Link>
-            </div>
           </div>
         </div>
       )}

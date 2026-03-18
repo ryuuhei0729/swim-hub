@@ -74,7 +74,7 @@ const baseNavigation: NavigationItem[] = [
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, supabase } = useAuth();
+  const { user, supabase, signOut } = useAuth();
   const [singleTeamId, setSingleTeamId] = useState<string | null>(null);
   const [adminTeamIds, setAdminTeamIds] = useState<string[]>([]);
   const [singleAdminTeamId, setSingleAdminTeamId] = useState<string | null>(null);
@@ -173,12 +173,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* サイドバー */}
       <div
         className={`
-        fixed top-16 bottom-0 left-0 z-50 w-72 bg-white shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:fixed lg:w-64 flex flex-col
-        ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+        fixed top-16 bottom-auto lg:bottom-0 right-0 lg:right-auto lg:left-0 z-50 w-44 bg-white shadow-xl rounded-bl-xl lg:rounded-none transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:fixed lg:w-64 flex flex-col
+        ${isOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"}
       `}
       >
-        {/* モバイル用ヘッダー */}
-        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 lg:hidden">
+        {/* モバイル用ヘッダー（デスクトップのみ表示） */}
+        <div className="hidden lg:flex items-center justify-between h-16 px-4 border-b border-gray-200">
           <div className="flex items-center">
             <div className="w-8 h-8 flex items-center justify-center mr-1">
               <Image
@@ -191,14 +191,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             </div>
             <span className="text-lg font-semibold text-gray-900">メニュー</span>
           </div>
-          <button
-            type="button"
-            className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors duration-200"
-            onClick={onClose}
-          >
-            <span className="sr-only">サイドバーを閉じる</span>
-            <XMarkIcon className="h-6 w-6" aria-hidden="true" />
-          </button>
         </div>
 
         {/* ナビゲーション */}
@@ -230,7 +222,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <Link
                     href={href}
                     className={`
-                      group flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 relative
+                      group flex items-center px-3 py-2 lg:py-3 text-xs lg:text-sm font-medium rounded-lg transition-all duration-200 relative
                       ${
                         isActive
                           ? "bg-blue-50 text-blue-700 shadow-sm border-l-4 border-blue-500"
@@ -242,7 +234,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   >
                     <item.icon
                       className={`
-                        mr-3 h-5 w-5 shrink-0 transition-colors duration-200
+                        hidden lg:block mr-3 h-5 w-5 shrink-0 transition-colors duration-200
                         ${isActive ? "text-blue-600" : "text-gray-400 group-hover:text-gray-600"}
                       `}
                       aria-hidden="true"
@@ -262,7 +254,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         </div>
                       </div>
                       {item.description && (
-                        <p className="text-xs text-gray-500 mt-1 truncate">{item.description}</p>
+                        <p className="hidden lg:block text-xs text-gray-500 mt-1 truncate">{item.description}</p>
                       )}
                     </div>
                   </Link>
@@ -276,7 +268,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <Link
                   href={singleAdminTeamId ? `/teams-admin/${singleAdminTeamId}` : "/teams-admin"}
                   className={`
-                    group flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 relative
+                    group flex items-center px-3 py-2 lg:py-3 text-xs lg:text-sm font-medium rounded-lg transition-all duration-200 relative
                     ${
                       pathname.startsWith("/teams-admin")
                         ? "bg-purple-50 text-purple-700 shadow-sm border-l-4 border-purple-500"
@@ -292,7 +284,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 >
                   <ShieldCheckIcon
                     className={`
-                      mr-3 h-5 w-5 shrink-0 transition-colors duration-200
+                      hidden lg:block mr-3 h-5 w-5 shrink-0 transition-colors duration-200
                       ${pathname.startsWith("/teams-admin") ? "text-purple-600" : "text-purple-500 group-hover:text-purple-600"}
                     `}
                     aria-hidden="true"
@@ -304,16 +296,40 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         <ChevronRightIcon className="h-4 w-4 text-purple-300 group-hover:text-purple-400 transition-colors duration-200" />
                       )}
                     </div>
-                    <p className="text-xs text-purple-600 mt-1 truncate font-medium">管理者専用</p>
+                    <p className="hidden lg:block text-xs text-purple-600 mt-1 truncate font-medium">管理者専用</p>
                   </div>
                 </Link>
               </div>
             )}
+
+            {/* スマホ用：設定・ログアウト */}
+            <div className="lg:hidden mt-2 pt-2 border-t border-gray-200 space-y-1">
+              <Link
+                href="/settings"
+                className={`
+                  flex items-center px-3 py-2 text-xs font-medium rounded-lg transition-all duration-200
+                  ${pathname === "/settings" ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"}
+                `}
+                onClick={onClose}
+              >
+                設定
+              </Link>
+              <button
+                onClick={async () => {
+                  onClose();
+                  await signOut();
+                  router.replace("/login");
+                }}
+                className="flex items-center w-full px-3 py-2 text-xs font-medium rounded-lg text-red-600 hover:bg-red-50 transition-all duration-200"
+              >
+                ログアウト
+              </button>
+            </div>
           </div>
         </nav>
 
-        {/* 関連サービス */}
-        <div className="mt-auto border-t border-gray-200 px-3 py-4">
+        {/* 関連サービス（デスクトップのみ） */}
+        <div className="hidden lg:block mt-auto border-t border-gray-200 px-3 py-4">
           <p className="px-3 mb-2 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
             関連サービス
           </p>

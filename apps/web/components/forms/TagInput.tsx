@@ -115,8 +115,12 @@ export default function TagInput({
       requestAnimationFrame(() => {
         inputRef.current?.focus();
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("タグ作成エラー:", error);
+      const pgError = error as { code?: string };
+      if (pgError.code === "23505") {
+        alert("同じ名前のタグが既に存在します");
+      }
     }
   };
 
@@ -231,7 +235,7 @@ export default function TagInput({
     <>
       <div className="relative" ref={dropdownRef}>
         {/* タグ入力エリア */}
-        <div className="min-h-[40px] border border-gray-300 rounded-md p-2 hover:border-gray-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 transition-all bg-white">
+        <div className="min-h-[32px] sm:min-h-[40px] border border-gray-300 rounded-md p-0.5 sm:p-2 hover:border-gray-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 transition-all bg-white">
           <div className="flex flex-wrap gap-1 items-center">
             {/* 選択済みタグ */}
             {selectedTags.map((tag, index) => (

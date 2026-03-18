@@ -57,11 +57,12 @@ export default function Header({ onMenuClick }: HeaderProps) {
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 fixed top-0 left-0 right-0 z-40">
       <div className="flex items-center justify-between px-2 py-2 sm:px-4 sm:py-3 lg:pl-4 lg:pr-8">
-        {/* 左側：メニューボタンとロゴ */}
+        {/* 左側：ロゴ（+ デスクトップ用メニューボタン） */}
         <div className="flex items-center">
+          {/* デスクトップ用メニューボタン（lg以上では非表示だが、lg未満のタブレットで使う） */}
           <button
             type="button"
-            className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 transition-colors duration-200 lg:hidden"
+            className="hidden sm:inline-flex lg:hidden items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 transition-colors duration-200"
             onClick={onMenuClick}
           >
             <span className="sr-only">メニューを開く</span>
@@ -69,7 +70,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
           </button>
 
           {/* ロゴ・タイトル */}
-          <div className="flex items-center ml-4 lg:ml-4">
+          <div className="flex items-center ml-2 sm:ml-4 lg:ml-4">
             <Link
               href="/dashboard"
               className="flex items-center hover:opacity-80 transition-opacity"
@@ -90,10 +91,20 @@ export default function Header({ onMenuClick }: HeaderProps) {
           </div>
         </div>
 
-        {/* 右側：ユーザー情報 */}
+        {/* 右側：スマホはハンバーガー（メニュー統合）、デスクトップはプロフィール */}
         <div className="flex items-center space-x-2">
-          {/* ユーザー情報ドロップダウン */}
-          <div className="relative" ref={userMenuRef}>
+          {/* スマホ用：ハンバーガーメニューボタン（右側） */}
+          <button
+            type="button"
+            className="sm:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 transition-colors duration-200"
+            onClick={onMenuClick}
+          >
+            <span className="sr-only">メニューを開く</span>
+            <Bars3Icon className="h-6 w-6" aria-hidden="true" />
+          </button>
+
+          {/* デスクトップ用：ユーザー情報ドロップダウン */}
+          <div className="hidden sm:block relative" ref={userMenuRef}>
             <button
               type="button"
               className="flex items-center space-x-2 p-2 text-sm rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors duration-200"
