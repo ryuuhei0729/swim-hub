@@ -26,9 +26,8 @@ describe("TagManagementModal", () => {
     const props = baseProps();
     render(<TagManagementModal {...props} />);
 
-    // 3桁HEXは6桁に正規化されて表示される
-    const normalizedColorButton = screen.getByTitle("#aabbcc");
-    expect(normalizedColorButton).toBeInTheDocument();
+    // プリセットカラーが表示される
+    expect(screen.getByTitle("#93c5fd")).toBeInTheDocument();
 
     // プレビューにタグ名が表示される
     expect(screen.getByText("ストローク")).toBeInTheDocument();
