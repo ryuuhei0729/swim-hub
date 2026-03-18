@@ -10,7 +10,6 @@ import {
   HomeIcon,
   ChartBarIcon,
   TrophyIcon,
-  XMarkIcon,
   ChevronRightIcon,
   UsersIcon,
   UserIcon,
