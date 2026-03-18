@@ -29,7 +29,7 @@ export default function SettingsClient() {
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* ヘッダー */}
-      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+      <div className="hidden lg:block bg-white rounded-lg shadow p-4 sm:p-6">
         <div className="flex items-center gap-3 mb-2">
           <Link
             href="/mypage"

@@ -94,10 +94,10 @@ export default function GoalsClient({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-3 sm:p-6">
       <div className="max-w-7xl mx-auto">
         {/* ヘッダー */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="hidden lg:flex mb-6 items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">目標管理</h1>
             <p className="text-gray-600 mt-1">大会目標を設定し、マイルストーンで進捗を管理します</p>
@@ -110,14 +110,24 @@ export default function GoalsClient({
             新規目標作成
           </button>
         </div>
+        {/* モバイル用: 新規目標作成ボタンのみ */}
+        <div className="flex lg:hidden mb-4 justify-end">
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+          >
+            <PlusIcon className="w-4 h-4" />
+            新規目標作成
+          </button>
+        </div>
 
         {/* メインコンテンツ: リスト+詳細レイアウト */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
           {/* 左側: 大会目標リスト */}
           <div className="lg:col-span-1">
             {goalsError ? (
-              <div className="bg-white rounded-lg shadow p-6 text-center">
-                <p className="text-red-600 mb-3">目標一覧の取得に失敗しました</p>
+              <div className="bg-white rounded-lg shadow p-4 sm:p-6 text-center">
+                <p className="text-red-600 mb-3 text-sm sm:text-base">目標一覧の取得に失敗しました</p>
                 <button
                   onClick={() => invalidateGoals()}
                   className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -139,8 +149,8 @@ export default function GoalsClient({
           {/* 右側: 目標詳細 */}
           <div className="lg:col-span-2">
             {goalError ? (
-              <div className="bg-white rounded-lg shadow p-6 text-center">
-                <p className="text-red-600 mb-3">目標詳細の取得に失敗しました</p>
+              <div className="bg-white rounded-lg shadow p-4 sm:p-6 text-center">
+                <p className="text-red-600 mb-3 text-sm sm:text-base">目標詳細の取得に失敗しました</p>
                 <button
                   onClick={() => invalidateGoalDetail()}
                   className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -164,8 +174,8 @@ export default function GoalsClient({
                 onDelete={handleGoalDeleted}
               />
             ) : (
-              <div className="bg-white rounded-lg shadow p-12 text-center">
-                <p className="text-gray-500 text-lg">左側のリストから目標を選択してください</p>
+              <div className="bg-white rounded-lg shadow p-6 sm:p-12 text-center">
+                <p className="text-gray-500 text-xs sm:text-lg">左側のリストから目標を選択してください</p>
               </div>
             )}
           </div>

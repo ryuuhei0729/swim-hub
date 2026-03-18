@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { XMarkIcon, TrashIcon } from "@heroicons/react/24/outline";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -72,20 +72,11 @@ export default function TagManagementModal({
   const [selectedColor, setSelectedColor] = useState(() => normalizeColor(tag.color));
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // カラーオプション（プリセット + カスタムカラー）
-  const colorOptions = useMemo(() => {
-    const normalizedTagColor = normalizeColor(tag.color);
-    const options = [...PRESET_COLORS];
-
-    // タグのカラーがプリセットにない場合、追加
-    if (!PRESET_COLORS.includes(normalizedTagColor) && isValidColor(tag.color)) {
-      options.unshift(normalizedTagColor);
-    }
-
-    return options;
-  }, [tag.color]);
+  // カラーオプション（プリセットのみ）
+  const colorOptions = PRESET_COLORS;
 
   if (!isOpen) return null;
 
@@ -104,10 +95,17 @@ export default function TagManagementModal({
 
     try {
       setIsUpdating(true);
+      setErrorMessage(null);
       await onUpdateTag(tag.id, tagName.trim(), normalizedColor);
       onClose();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("タグ更新エラー:", error);
+      const pgError = error as { code?: string };
+      if (pgError.code === "23505") {
+        setErrorMessage("同じ名前のタグが既に存在します");
+      } else {
+        setErrorMessage("タグの更新に失敗しました");
+      }
     } finally {
       setIsUpdating(false);
     }
@@ -150,11 +148,17 @@ export default function TagManagementModal({
               <Input
                 type="text"
                 value={tagName}
-                onChange={(e) => setTagName(e.target.value)}
+                onChange={(e) => {
+                  setTagName(e.target.value);
+                  setErrorMessage(null);
+                }}
                 placeholder="タグ名を入力"
                 className="w-full"
                 data-testid="tag-name-input"
               />
+              {errorMessage && (
+                <p className="text-sm text-red-600 mt-1">{errorMessage}</p>
+              )}
             </div>
 
             {/* 色選択 */}

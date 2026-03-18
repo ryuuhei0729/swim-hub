@@ -46,6 +46,15 @@ const DISTANCES = [50, 100, 200, 400, 800];
 // 静的種目リスト
 const STYLES = ["自由形", "平泳ぎ", "背泳ぎ", "バタフライ", "個人メドレー"];
 
+// スマホ用の短縮種目名
+const STYLES_SHORT: Record<string, string> = {
+  自由形: "Fr",
+  平泳ぎ: "Br",
+  背泳ぎ: "Ba",
+  バタフライ: "Fly",
+  個人メドレー: "IM",
+};
+
 export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
   const [activeTab, setActiveTab] = useState<TabType>("all");
   const [includeRelaying, setIncludeRelaying] = useState<boolean>(false);
@@ -261,19 +270,20 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
         </label>
       </div>
 
-      <div className="overflow-x-auto bg-white rounded-xl shadow border border-gray-300">
-        <table className="min-w-full table-fixed border-separate border-spacing-0">
+      <div className="bg-white rounded-none sm:rounded-xl shadow border-y sm:border border-gray-300 -mx-4 sm:mx-0">
+        <table className="w-full table-fixed border-separate border-spacing-0">
           <thead className="sticky top-0 z-10">
             <tr>
-              <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-left text-[10px] sm:text-xs md:text-sm font-semibold text-gray-700 border-r border-gray-300 min-w-[40px] sm:min-w-[64px] w-[48px] sm:w-[72px] h-[32px] sm:h-[44px] tracking-wide">
+              <th className="px-0.5 sm:px-3 py-0.5 sm:py-2 text-left text-[9px] sm:text-xs md:text-sm font-semibold text-gray-700 border-r border-gray-300 w-[32px] sm:w-[72px] h-[24px] sm:h-[44px]">
                 距離
               </th>
               {STYLES.map((style) => (
                 <th
                   key={style}
-                  className={`px-1.5 sm:px-3 py-1 sm:py-2 text-center text-[10px] sm:text-xs md:text-sm font-semibold text-gray-800 border-r border-gray-300 last:border-r-0 min-w-[64px] sm:min-w-[110px] h-[32px] sm:h-[44px] ${styleHeaderBgClass[style]}`}
+                  className={`px-0.5 sm:px-3 py-0.5 sm:py-2 text-center text-[9px] sm:text-xs md:text-sm font-semibold text-gray-800 border-r border-gray-300 last:border-r-0 h-[24px] sm:h-[44px] ${styleHeaderBgClass[style]}`}
                 >
-                  {style}
+                  <span className="sm:hidden">{STYLES_SHORT[style]}</span>
+                  <span className="hidden sm:inline">{style}</span>
                 </th>
               ))}
             </tr>
@@ -282,7 +292,7 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
             {DISTANCES.map((distance, rowIdx) => (
               <tr key={distance}>
                 <td
-                  className={`px-1.5 sm:px-3 py-1.5 sm:py-3 text-[10px] sm:text-xs md:text-sm font-semibold text-gray-600 border-r border-gray-300 bg-gray-50 min-w-[40px] sm:min-w-[64px] w-[48px] sm:w-[72px] h-[48px] sm:h-[64px] ${rowIdx > 0 ? "border-t border-gray-300" : ""}`}
+                  className={`px-0.5 sm:px-3 py-1 sm:py-3 text-[9px] sm:text-xs md:text-sm font-semibold text-gray-600 border-r border-gray-300 bg-gray-50 w-[32px] sm:w-[72px] h-[36px] sm:h-[64px] ${rowIdx > 0 ? "border-t border-gray-300" : ""}`}
                 >
                   {distance}m
                 </td>
@@ -291,7 +301,7 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
                   return (
                     <td
                       key={style}
-                      className={`px-1.5 sm:px-3 py-1.5 sm:py-3 text-center text-[10px] sm:text-xs md:text-sm text-gray-900 border-r border-gray-300 last:border-r-0 min-w-[64px] sm:min-w-[110px] h-[48px] sm:h-[64px] ${rowIdx > 0 ? "border-t border-gray-300" : ""} ${isInvalidCombination(style, distance) ? "bg-gray-200" : styleCellBgClass[style]}`}
+                      className={`px-0.5 sm:px-3 py-1 sm:py-3 text-center text-[9px] sm:text-xs md:text-sm text-gray-900 border-r border-gray-300 last:border-r-0 h-[36px] sm:h-[64px] ${rowIdx > 0 ? "border-t border-gray-300" : ""} ${isInvalidCombination(style, distance) ? "bg-gray-200" : styleCellBgClass[style]}`}
                     >
                       {bestTime ? (
                         <div

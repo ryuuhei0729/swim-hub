@@ -244,7 +244,7 @@ export default function DatePicker({
         aria-describedby={error ? errorId : undefined}
         data-testid={dataTestId ? `${dataTestId}-button` : undefined}
         className={cn(
-          "flex items-center justify-between w-full h-10 px-3 py-2 text-sm border rounded-md bg-white transition-colors",
+          "flex items-center justify-between w-full h-8 sm:h-10 px-2 sm:px-3 py-1 sm:py-2 text-sm border rounded-md bg-white transition-colors",
           "focus:outline-none focus:ring-2 focus:border-transparent",
           error ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500",
           disabled && "opacity-50 cursor-not-allowed bg-gray-50",

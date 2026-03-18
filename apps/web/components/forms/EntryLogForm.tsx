@@ -422,9 +422,9 @@ export default function EntryLogForm({
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 sm:space-y-6">
               {/* エントリー一覧 */}
-              <div className="space-y-4">
+              <div className="space-y-2 sm:space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-md font-medium text-gray-900">エントリー種目</h4>
                   <Button
@@ -464,13 +464,15 @@ export default function EntryLogForm({
                     <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
                       {/* 種目選択 */}
                       <div className="flex items-start gap-2 sm:flex-1">
-                        <label className="text-sm font-medium text-gray-700 whitespace-nowrap shrink-0 h-10 flex items-center">
-                          エントリー種目 <span className="text-red-500">*</span>
+                        <label className="text-[10px] sm:text-sm font-medium text-gray-700 whitespace-nowrap shrink-0 h-8 sm:h-10 flex items-center">
+                          <span className="sm:hidden">種目</span>
+                          <span className="hidden sm:inline">エントリー種目</span>
+                          {" "}<span className="text-red-500">*</span>
                         </label>
                         <select
                           value={entry.styleId}
                           onChange={(e) => updateEntry(entry.id, { styleId: e.target.value })}
-                          className="flex-1 min-w-0 px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="flex-1 min-w-0 h-8 sm:h-10 px-2 sm:px-3 py-1 sm:py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           required
                           disabled={isLoading}
                           data-testid={`entry-style-${index + 1}`}
@@ -486,8 +488,9 @@ export default function EntryLogForm({
 
                       {/* エントリータイム */}
                       <div className="flex items-start gap-2 sm:flex-1">
-                        <label className="text-sm font-medium text-gray-700 whitespace-nowrap shrink-0 h-10 flex items-center">
-                          エントリータイム
+                        <label className="text-[10px] sm:text-sm font-medium text-gray-700 whitespace-nowrap shrink-0 h-8 sm:h-10 flex items-center">
+                          <span className="sm:hidden">エントリー</span>
+                          <span className="hidden sm:inline">エントリータイム</span>
                         </label>
                         <div className="flex-1 min-w-0">
                           <Input
@@ -535,7 +538,7 @@ export default function EntryLogForm({
 
                     {/* メモ */}
                     <div className="flex items-center gap-2 w-full">
-                      <label className="text-sm font-medium text-gray-700 whitespace-nowrap shrink-0">
+                      <label className="text-[10px] sm:text-sm font-medium text-gray-700 whitespace-nowrap shrink-0">
                         メモ
                       </label>
                       <input
@@ -545,7 +548,7 @@ export default function EntryLogForm({
                         placeholder="特記事項など"
                         disabled={isLoading}
                         data-testid={`entry-note-${index + 1}`}
-                        className="flex-1 min-w-0 h-10 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex-1 min-w-0 h-8 sm:h-10 rounded-md border border-gray-300 bg-white px-2 sm:px-3 py-1 sm:py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50"
                       />
                     </div>
                   </div>

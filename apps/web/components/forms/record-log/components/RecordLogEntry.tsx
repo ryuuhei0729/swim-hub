@@ -64,6 +64,20 @@ export default function RecordLogEntry({
   const currentStyle = styles.find((s) => s.id.toString() === currentStyleId);
   const raceDistance = currentStyle?.distance;
 
+  // リレー種目として選択可能かどうか（nameJpから泳法を判定）
+  const canRelay = (() => {
+    if (!currentStyle) return false;
+    const { nameJp, distance } = currentStyle;
+    const name = nameJp.toLowerCase();
+    const isFr = name.includes("自由形") || name.includes("fr");
+    const isBr = name.includes("平泳ぎ") || name.includes("br");
+    const isFly = name.includes("バタフライ") || name.includes("fly");
+    if (isFr && [25, 50, 100, 200].includes(distance)) return true;
+    if (isBr && [25, 50, 100].includes(distance)) return true;
+    if (isFly && [25, 50, 100].includes(distance)) return true;
+    return false;
+  })();
+
   // 現在の種目・プールタイプ・リレーフラグに基づいてベストタイムを取得（優先順位付き）
   // リレーOFFの場合: 1. 同じ水路・非リレー → 2. 同じ水路・リレー → 3. 異なる水路・非リレー → 4. 異なる水路・リレー
   // リレーONの場合: 1. 同じ水路・リレー → 2. 同じ水路・非リレー → 3. 異なる水路・リレー → 4. 異なる水路・非リレー
@@ -165,7 +179,7 @@ export default function RecordLogEntry({
 
   return (
     <div
-      className="rounded-xl border border-gray-200 bg-gray-50/60 p-4 sm:p-6 space-y-4"
+      className="rounded-xl border border-gray-200 bg-gray-50/60 p-3 sm:p-6 space-y-2 sm:space-y-4"
       data-testid={`record-entry-section-${sectionIndex}`}
     >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -193,11 +207,11 @@ export default function RecordLogEntry({
         <label className="block text-sm font-medium text-gray-700 mb-1">
           種目 <span className="text-red-500">*</span>
         </label>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3">
           <select
             value={entryInfo ? String(entryInfo.styleId) : formData.styleId}
             onChange={(e) => onStyleChange(e.target.value)}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className="min-w-0 flex-1 max-w-[70%] sm:max-w-none h-8 sm:h-10 px-1.5 sm:px-3 py-1 sm:py-2 text-xs sm:text-base border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
             required
             disabled={!!entryInfo}
             data-testid={`record-style-${sectionIndex}`}
@@ -209,22 +223,24 @@ export default function RecordLogEntry({
               </option>
             ))}
           </select>
-          <div className="flex items-center shrink-0">
-            <input
-              type="checkbox"
-              id={`isRelaying-${sectionIndex}`}
-              checked={formData.isRelaying}
-              onChange={(e) => onToggleRelaying(e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              data-testid={`record-relay-${sectionIndex}`}
-            />
-            <label
-              htmlFor={`isRelaying-${sectionIndex}`}
-              className="ml-2 text-sm text-gray-700 whitespace-nowrap"
-            >
-              リレー種目
-            </label>
-          </div>
+          {canRelay && (
+            <div className="flex items-center shrink-0">
+              <input
+                type="checkbox"
+                id={`isRelaying-${sectionIndex}`}
+                checked={formData.isRelaying}
+                onChange={(e) => onToggleRelaying(e.target.checked)}
+                className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                data-testid={`record-relay-${sectionIndex}`}
+              />
+              <label
+                htmlFor={`isRelaying-${sectionIndex}`}
+                className="ml-1 sm:ml-2 text-[10px] sm:text-sm text-gray-700 whitespace-nowrap"
+              >
+                リレー
+              </label>
+            </div>
+          )}
         </div>
       </div>
 
@@ -265,30 +281,32 @@ export default function RecordLogEntry({
       {/* スプリットタイム */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="block text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">
-            スプリットタイム
+          <label className="block text-[10px] sm:text-sm font-medium text-gray-700 whitespace-nowrap">
+            <span className="sm:hidden">スプリット</span>
+            <span className="hidden sm:inline">スプリットタイム</span>
           </label>
           <div className="flex gap-1">
             <Button
               type="button"
               onClick={onAddSplitTimesEvery25m}
               variant="outline"
-              className="text-[10px] px-2 py-1 h-7"
+              className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 sm:py-1 h-6 sm:h-7"
               disabled={isLoading || !raceDistance}
               data-testid={`record-split-add-25m-button-${sectionIndex}`}
             >
-              <PlusIcon className="h-3 w-3 mr-0.5" />
-              追加(25mごと)
+              <PlusIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5" />
+              <span className="sm:hidden">25mごと</span>
+              <span className="hidden sm:inline">追加(25mごと)</span>
             </Button>
             <Button
               type="button"
               onClick={onAddSplitTime}
               variant="outline"
-              className="text-[10px] px-2 py-1 h-7"
+              className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 sm:py-1 h-6 sm:h-7"
               disabled={isLoading}
               data-testid={`record-split-add-button-${sectionIndex}`}
             >
-              <PlusIcon className="h-3 w-3 mr-0.5" />
+              <PlusIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5" />
               追加
             </Button>
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { CompetitionShareCard } from "./CompetitionShareCard";
 import { PracticeShareCard } from "./PracticeShareCard";
 import type { CompetitionShareData, PracticeShareData } from "./types";
@@ -82,6 +82,41 @@ export function ShareCardModal({ isOpen, onClose, type, data }: ShareCardModalPr
     }
   }, [type, handleDownload]);
 
+  // プレビュー領域に合わせてカードを動的スケーリング
+  const previewRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.8);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const updateScale = () => {
+      const preview = previewRef.current;
+      const inner = innerRef.current;
+      if (!preview || !inner) return;
+
+      // カード本来のサイズを取得（scale=1 に一時復元して測定）
+      inner.style.transform = "scale(1)";
+      const cardWidth = inner.scrollWidth;
+      const cardHeight = inner.scrollHeight;
+      inner.style.transform = "";
+
+      // プレビュー領域の利用可能サイズ
+      const availWidth = preview.clientWidth - 32; // padding分
+      const availHeight = preview.clientHeight;
+
+      if (cardWidth > 0 && cardHeight > 0) {
+        const s = Math.min(availWidth / cardWidth, availHeight / cardHeight, 1);
+        setScale(Math.max(s, 0.3)); // 最小 0.3
+      }
+    };
+
+    // DOM描画後に計測
+    requestAnimationFrame(() => requestAnimationFrame(updateScale));
+    window.addEventListener("resize", updateScale);
+    return () => window.removeEventListener("resize", updateScale);
+  }, [isOpen, data]);
+
   if (!isOpen) return null;
 
   return (
@@ -101,9 +136,9 @@ export function ShareCardModal({ isOpen, onClose, type, data }: ShareCardModalPr
       />
 
       {/* モーダルコンテンツ */}
-      <div className="relative z-10 bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden">
+      <div className="relative z-10 bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* ヘッダー */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-800">
+        <div className="flex items-center justify-between p-4 border-b border-gray-800 shrink-0">
           <h3 className="text-lg font-semibold text-white">
             {type === "competition" ? "記録をシェア" : "練習メニューをシェア"}
           </h3>
@@ -128,9 +163,12 @@ export function ShareCardModal({ isOpen, onClose, type, data }: ShareCardModalPr
           </button>
         </div>
 
-        {/* プレビュー */}
-        <div className="p-4 flex justify-center overflow-y-auto max-h-[60vh]">
-          <div className="transform scale-[0.8] origin-top">
+        {/* プレビュー — カードを画面内に収まるよう動的スケーリング */}
+        <div ref={previewRef} className="flex-1 min-h-0 flex items-start justify-center overflow-hidden p-4">
+          <div
+            ref={innerRef}
+            style={{ transform: `scale(${scale})`, transformOrigin: "top center" }}
+          >
             {type === "competition" ? (
               <CompetitionShareCard ref={cardRef} data={data as CompetitionShareData} />
             ) : (
