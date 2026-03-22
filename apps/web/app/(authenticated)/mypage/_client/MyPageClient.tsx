@@ -179,7 +179,7 @@ export default function MyPageClient({ initialProfile, initialBestTimes }: MyPag
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* ヘッダー */}
-      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+      <div className="hidden lg:block bg-white rounded-lg shadow p-4 sm:p-6">
         <div className="flex items-center justify-between mb-2">
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">マイページ</h1>
           <Link
@@ -197,11 +197,11 @@ export default function MyPageClient({ initialProfile, initialBestTimes }: MyPag
       <div className="space-y-4 sm:space-y-6">
         {/* プロフィール表示 */}
         <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 pb-2 mb-4 border-b border-gray-200">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">プロフィール</h2>
+          <div className="flex flex-row items-center justify-between pb-2 mb-4 border-b border-gray-200">
+            <h2 className="text-base sm:text-xl font-semibold text-gray-900">プロフィール</h2>
             <button
               onClick={() => setIsEditModalOpen(true)}
-              className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-xs sm:text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 self-start sm:self-auto"
+              className="inline-flex items-center justify-center px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md shadow-sm text-xs sm:text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               編集
             </button>
@@ -218,16 +218,16 @@ export default function MyPageClient({ initialProfile, initialBestTimes }: MyPag
 
         {/* ベストタイム表 */}
         <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-4">
-            <div className="flex items-center space-x-2">
-              <TrophyIcon className="h-5 w-5 text-yellow-500" />
-              <h2 className="text-xl sm:text-2xl font-semibold text-gray-900">Best Time</h2>
+          <div className="flex flex-row items-center justify-between mb-4">
+            <div className="flex items-center space-x-1.5 sm:space-x-2">
+              <TrophyIcon className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+              <h2 className="text-base sm:text-2xl font-semibold text-gray-900">Best Time</h2>
             </div>
             <Link
               href="/bulk-besttime"
-              className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-xs sm:text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors self-start sm:self-auto"
+              className="inline-flex items-center justify-center px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md shadow-sm text-xs sm:text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
             >
-              <DocumentArrowUpIcon className="h-4 w-4 mr-1.5" />
+              <DocumentArrowUpIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />
               一括入力
             </Link>
           </div>

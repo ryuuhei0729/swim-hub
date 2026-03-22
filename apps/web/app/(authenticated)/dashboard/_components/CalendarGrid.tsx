@@ -34,7 +34,7 @@ export default function CalendarGrid({
   };
 
   return (
-    <div className="p-3 sm:p-6">
+    <div className="p-0 sm:p-6">
       {/* 曜日ヘッダー */}
       <div className="grid grid-cols-7 gap-0 sm:gap-1 mb-2">
         {WEEKDAYS.map((day) => (

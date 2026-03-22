@@ -369,7 +369,7 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="hidden lg:block bg-white rounded-lg shadow p-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">大会記録</h1>
@@ -379,17 +379,17 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
       </div>
 
       {/* フィルタリングセクション */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="bg-white rounded-lg shadow p-2 sm:p-6">
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 sm:gap-4">
           {/* 期間フィルタ */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">期間</label>
+            <label className="block text-[10px] sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">期間</label>
             <select
               value={filterFiscalYear}
               onChange={(e) => handleFilterFiscalYearChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-0.5 sm:px-3 py-0.5 sm:py-2 text-xs sm:text-base border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 truncate"
             >
-              <option value="">すべての期間</option>
+              <option value="">全期間</option>
               {participatedFiscalYears.map((year) => (
                 <option key={year} value={year.toString()}>
                   {year}年度
@@ -400,13 +400,13 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
 
           {/* 種目フィルタ */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">種目</label>
+            <label className="block text-[10px] sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">種目</label>
             <select
               value={filterStyle}
               onChange={(e) => handleFilterStyleChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-0.5 sm:px-3 py-0.5 sm:py-2 text-xs sm:text-base border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 truncate"
             >
-              <option value="">すべての種目</option>
+              <option value="">全種目</option>
               {participatedStyles.map((style: Style) => (
                 <option key={style.id} value={style.id}>
                   {style.name_jp}
@@ -417,11 +417,11 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
 
           {/* プール種別フィルタ */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">プール種別</label>
+            <label className="block text-[10px] sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">プール種別</label>
             <select
               value={filterPoolType}
               onChange={(e) => handleFilterPoolTypeChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-0.5 sm:px-3 py-0.5 sm:py-2 text-xs sm:text-base border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 truncate"
             >
               <option value="">すべて</option>
               <option value="short">短水路(25m)</option>
@@ -431,24 +431,24 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
 
           {/* リレーフィルタ */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">引き継ぎ記録</label>
-            <div className="flex items-center h-10">
+            <label className="block text-[10px] sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">引き継ぎ</label>
+            <div className="flex items-center h-6 sm:h-10">
               <input
                 type="checkbox"
                 id="includeRelay"
                 checked={includeRelay}
                 onChange={(e) => handleIncludeRelayChange(e.target.checked)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
-              <label htmlFor="includeRelay" className="ml-2 text-sm text-gray-700">
-                引き継ぎ記録を含める
+              <label htmlFor="includeRelay" className="ml-1 sm:ml-2 text-[9px] sm:text-sm text-gray-700">
+                含める
               </label>
             </div>
           </div>
 
           {/* クリアボタン */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">クリア</label>
+            <label className="block text-[10px] sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">クリア</label>
             <Button
               variant="outline"
               onClick={() => {

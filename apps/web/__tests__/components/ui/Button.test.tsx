@@ -13,7 +13,7 @@ describe("Button", () => {
     it("デフォルトプロパティでボタンが表示される", () => {
       render(<Button>デフォルト</Button>);
       const button = screen.getByRole("button");
-      expect(button).toHaveClass("bg-blue-600", "text-white", "h-10", "px-4");
+      expect(button).toHaveClass("bg-blue-600", "text-white", "h-8", "sm:h-10", "px-3", "sm:px-4");
     });
   });
 
@@ -59,7 +59,7 @@ describe("Button", () => {
     it("中サイズが表示される", () => {
       render(<Button size="md">中</Button>);
       const button = screen.getByRole("button");
-      expect(button).toHaveClass("h-10", "px-4", "py-2");
+      expect(button).toHaveClass("h-8", "sm:h-10", "px-3", "sm:px-4", "py-1", "sm:py-2");
     });
 
     it("大サイズが表示される", () => {

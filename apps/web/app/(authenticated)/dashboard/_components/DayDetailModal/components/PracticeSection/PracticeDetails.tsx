@@ -211,11 +211,11 @@ export function PracticeDetails({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2" data-testid="practice-log-summary">
               <span
-                className={`text-lg font-semibold px-3 py-1 rounded-lg flex items-center gap-2 ${
+                className={`text-sm sm:text-lg font-semibold px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg flex items-center gap-1 sm:gap-2 ${
                   isTeamPractice ? "text-emerald-800 bg-emerald-200" : "text-green-800 bg-green-200"
                 }`}
               >
-                <BoltIcon className="h-5 w-5" />
+                <BoltIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                 練習記録
                 {isTeamPractice && teamName && <span className="text-sm">({teamName})</span>}
               </span>
@@ -317,9 +317,9 @@ export function PracticeDetails({
                 </div>
 
                 {/* 練習内容 */}
-                <div className="bg-white rounded-lg p-3 mb-3 border border-green-300 relative">
+                <div className="bg-white rounded-lg p-2 sm:p-3 mb-2 sm:mb-3 border border-green-300 relative">
                   {/* シェア・編集・削除ボタン（右上） */}
-                  <div className="absolute top-3 right-3 flex items-center space-x-2">
+                  <div className="absolute top-1 right-1 sm:top-3 sm:right-3 flex items-center space-x-0.5 sm:space-x-2">
                     <button
                       onClick={() => {
                         const menuItems: PracticeMenuItem[] = practiceLogs.map((log) => ({
@@ -365,11 +365,11 @@ export function PracticeDetails({
                         });
                         setShowShareModal(true);
                       }}
-                      className="p-2 text-gray-500 hover:text-cyan-600 rounded-lg hover:bg-cyan-100 transition-colors"
+                      className="p-1 sm:p-2 text-gray-500 hover:text-cyan-600 rounded-lg hover:bg-cyan-100 transition-colors"
                       title="練習をシェア"
                       data-testid="share-practice-log-button"
                     >
-                      <ShareIcon className="h-4 w-4" />
+                      <ShareIcon className="h-3 w-3 sm:h-4 sm:w-4" />
                     </button>
                     <button
                       onClick={() => {
@@ -419,40 +419,40 @@ export function PracticeDetails({
                         };
                         onEditPracticeLog?.(formData);
                       }}
-                      className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                      className="p-1 sm:p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
                       title="練習メニューを編集"
                       data-testid="edit-practice-log-button"
                     >
-                      <PencilIcon className="h-4 w-4" />
+                      <PencilIcon className="h-3 w-3 sm:h-4 sm:w-4" />
                     </button>
                     <button
                       onClick={() => onDeletePracticeLog?.(formattedLog.id)}
-                      className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                      className="p-1 sm:p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-red-100 transition-colors"
                       title="練習メニューを削除"
                       data-testid="delete-practice-log-button"
                     >
-                      <TrashIcon className="h-4 w-4" />
+                      <TrashIcon className="h-3 w-3 sm:h-4 sm:w-4" />
                     </button>
                   </div>
-                  <div className="text-xs font-medium text-gray-500 mb-1">練習内容</div>
-                  <div className="text-sm text-gray-800">
-                    <span className="text-lg font-semibold text-green-700">
+                  <div className="text-[10px] sm:text-xs font-medium text-gray-500 mb-0.5 sm:mb-1">練習内容</div>
+                  <div className="text-xs sm:text-sm text-gray-800">
+                    <span className="text-sm sm:text-lg font-semibold text-green-700">
                       {formattedLog.distance}
                     </span>
                     m ×{" "}
-                    <span className="text-lg font-semibold text-green-700">
+                    <span className="text-sm sm:text-lg font-semibold text-green-700">
                       {formattedLog.repCount}
                     </span>
                     {formattedLog.setCount > 1 && (
                       <>
                         {" × "}
-                        <span className="text-lg font-semibold text-green-700">
+                        <span className="text-sm sm:text-lg font-semibold text-green-700">
                           {formattedLog.setCount}
                         </span>
                       </>
                     )}
-                    {"　　"}
-                    <span className="text-lg font-semibold text-green-700">
+                    {"　"}
+                    <span className="text-sm sm:text-lg font-semibold text-green-700">
                       {formattedLog.circle
                         ? `${Math.floor(formattedLog.circle / 60)}'${Math.floor(
                             formattedLog.circle % 60,
@@ -461,14 +461,14 @@ export function PracticeDetails({
                             .padStart(2, "0")}"`
                         : "-"}
                     </span>
-                    {"　"}
-                    <span className="text-lg font-semibold text-green-700">
+                    {" "}
+                    <span className="text-sm sm:text-lg font-semibold text-green-700">
                       {getStyleLabel(formattedLog.style)}
                     </span>
                     {formattedLog.swim_category && formattedLog.swim_category !== "Swim" && (
                       <>
-                        {"　"}
-                        <span className="text-lg font-semibold text-green-700">
+                        {" "}
+                        <span className="text-sm sm:text-lg font-semibold text-green-700">
                           {formattedLog.swim_category}
                         </span>
                       </>
@@ -479,19 +479,19 @@ export function PracticeDetails({
                 {/* タイム表示 */}
                 {allTimes.length > 0 && (
                   <div className="mt-3">
-                    <div className="flex items-center gap-2 mb-3">
+                    <div className="flex items-center gap-2 mb-1.5 sm:mb-3">
                       <div className="w-1 h-4 bg-green-500 rounded-full"></div>
-                      <p className="text-sm font-medium text-green-700">タイム</p>
+                      <p className="text-xs sm:text-sm font-medium text-green-700">タイム</p>
                     </div>
-                    <div className="bg-white rounded-lg p-3 border border-green-300 overflow-x-auto">
-                      <table className="w-full text-sm">
+                    <div className="bg-white rounded-lg p-1.5 sm:p-3 border border-green-300 overflow-x-auto">
+                      <table className="w-full text-[10px] sm:text-sm">
                         <thead>
                           <tr className="border-b border-green-300">
-                            <th className="text-left py-2 px-2 font-medium text-green-800"></th>
+                            <th className="text-left py-1 sm:py-2 px-1 sm:px-2 font-medium text-green-800"></th>
                             {Array.from({ length: formattedLog.setCount }, (_, setIndex) => (
                               <th
                                 key={setIndex + 1}
-                                className="text-center py-2 px-2 font-medium text-green-800"
+                                className="text-center py-1 sm:py-2 px-1 sm:px-2 font-medium text-green-800 whitespace-nowrap"
                               >
                                 {setIndex + 1}セット目
                               </th>
@@ -503,7 +503,7 @@ export function PracticeDetails({
                             const repNumber = repIndex + 1;
                             return (
                               <tr key={repNumber} className="border-b border-green-100">
-                                <td className="py-2 px-2 font-medium text-gray-700">
+                                <td className="py-1 sm:py-2 px-1 sm:px-2 font-medium text-gray-700 whitespace-nowrap">
                                   {repNumber}本目
                                 </td>
                                 {Array.from({ length: formattedLog.setCount }, (_, setIndex) => {
@@ -522,7 +522,7 @@ export function PracticeDetails({
                                     time && time.time > 0 && time.time === setFastest;
 
                                   return (
-                                    <td key={setNumber} className="py-2 px-2 text-center">
+                                    <td key={setNumber} className="py-1 sm:py-2 px-1 sm:px-2 text-center">
                                       <span
                                         className={
                                           isFastest ? "text-blue-600 font-bold" : "text-gray-800"
@@ -538,7 +538,7 @@ export function PracticeDetails({
                           })}
                           {/* 平均行 */}
                           <tr className="border-b border-green-100 bg-green-50">
-                            <td className="py-2 px-2 font-medium text-green-800">セット平均</td>
+                            <td className="py-1 sm:py-2 px-1 sm:px-2 font-medium text-green-800 whitespace-nowrap">セット平均</td>
                             {Array.from({ length: formattedLog.setCount }, (_, setIndex) => {
                               const setNumber = setIndex + 1;
                               const setTimes = allTimes.filter(
@@ -549,7 +549,7 @@ export function PracticeDetails({
                                   ? setTimes.reduce((sum, t) => sum + t.time, 0) / setTimes.length
                                   : 0;
                               return (
-                                <td key={setNumber} className="py-2 px-2 text-center">
+                                <td key={setNumber} className="py-1 sm:py-2 px-1 sm:px-2 text-center">
                                   <span className="text-green-800 font-medium">
                                     {average > 0 ? formatTimeAverage(average) : "-"}
                                   </span>
@@ -559,8 +559,8 @@ export function PracticeDetails({
                           </tr>
                           {/* 全体平均行 */}
                           <tr className="border-t-2 border-green-300 bg-blue-50">
-                            <td className="py-2 px-2 font-medium text-blue-800">全体平均</td>
-                            <td className="py-2 px-2 text-center" colSpan={formattedLog.setCount}>
+                            <td className="py-1 sm:py-2 px-1 sm:px-2 font-medium text-blue-800 whitespace-nowrap">全体平均</td>
+                            <td className="py-1 sm:py-2 px-1 sm:px-2 text-center" colSpan={formattedLog.setCount}>
                               <span className="text-blue-800 font-bold">
                                 {(() => {
                                   const allValidTimes = allTimes.filter((t) => t.time > 0);
@@ -578,8 +578,8 @@ export function PracticeDetails({
                           </tr>
                           {/* 全体最速行 */}
                           <tr className="bg-blue-50">
-                            <td className="py-2 px-2 font-medium text-blue-800">全体最速</td>
-                            <td className="py-2 px-2 text-center" colSpan={formattedLog.setCount}>
+                            <td className="py-1 sm:py-2 px-1 sm:px-2 font-medium text-blue-800 whitespace-nowrap">全体最速</td>
+                            <td className="py-1 sm:py-2 px-1 sm:px-2 text-center" colSpan={formattedLog.setCount}>
                               <span className="text-blue-800 font-bold">
                                 {(() => {
                                   const allValidTimes = allTimes.filter((t) => t.time > 0);

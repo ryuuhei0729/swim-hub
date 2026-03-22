@@ -79,8 +79,8 @@ export default function GoalList({
 
   if (goals.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <p className="text-gray-500 text-center py-8">
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <p className="text-gray-500 text-center py-4 sm:py-8 text-xs sm:text-base">
           目標がありません
           <br />
           右上のボタンから新規作成してください

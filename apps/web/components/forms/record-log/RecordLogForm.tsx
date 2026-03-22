@@ -233,7 +233,7 @@ export default function RecordLogForm({
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-            <div className="flex-1 overflow-y-auto px-4 pb-6 sm:px-6 sm:pb-6 space-y-6">
+            <div className="flex-1 overflow-y-auto px-4 pb-6 sm:px-6 sm:pb-6 space-y-3 sm:space-y-6">
               {formError && (
                 <div
                   className="rounded-md bg-red-50 border border-red-200 p-4"

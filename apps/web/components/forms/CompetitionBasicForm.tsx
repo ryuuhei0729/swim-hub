@@ -374,7 +374,7 @@ export default function CompetitionBasicForm({
             )}
 
             {/* フォーム */}
-            <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+            <form onSubmit={(e) => e.preventDefault()} className="space-y-2 sm:space-y-4">
               {/* バリデーションエラー */}
               {validationError && (
                 <div
@@ -399,21 +399,21 @@ export default function CompetitionBasicForm({
                   data-testid="competition-date"
                 />
                 <DatePicker
-                  label="終了日(複数日の場合)"
+                  label="終了日(任意)"
                   value={formData.endDate}
                   onChange={(date) => {
                     setFormData({ ...formData, endDate: date });
                     setValidationError(null);
                   }}
                   minDate={formData.date ? new Date(formData.date) : undefined}
-                  placeholder="終了日を選択"
+                  placeholder=""
                   popupAlign="right"
                   data-testid="competition-end-date"
                 />
               </div>
 
               {/* 大会名・場所・プール種別 */}
-              <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-4 items-center">
+              <div className="grid grid-cols-[auto_1fr] gap-x-2 sm:gap-x-4 gap-y-1.5 sm:gap-y-4 items-center">
                 {/* 大会名 */}
                 <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
                   大会名
@@ -422,7 +422,7 @@ export default function CompetitionBasicForm({
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="例: 全国大会, 対抗戦, タイムトライアル"
+                  placeholder="全国大会, 対抗戦"
                   data-testid="competition-title"
                 />
 
@@ -432,7 +432,7 @@ export default function CompetitionBasicForm({
                   value={formData.place}
                   onChange={(value) => setFormData({ ...formData, place: value })}
                   suggestions={placeSuggestions}
-                  placeholder="例: 東京アクアティクスセンター"
+                  placeholder="TAC"
                   data-testid="competition-place"
                 />
 
@@ -443,7 +443,7 @@ export default function CompetitionBasicForm({
                 <select
                   value={formData.poolType}
                   onChange={(e) => setFormData({ ...formData, poolType: parseInt(e.target.value) })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full h-8 sm:h-10 px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                   data-testid="competition-pool-type"
                 >
@@ -536,7 +536,7 @@ export default function CompetitionBasicForm({
                   onClick={handleSubmitAndClose}
                   variant="outline"
                   disabled={isLoading}
-                  className="mt-3 w-full sm:mt-0 sm:w-auto"
+                  className="mt-1.5 sm:mt-0 w-full sm:w-auto"
                   data-testid="competition-close-button"
                 >
                   {isLoading ? "保存中..." : "保存して終了"}
@@ -548,7 +548,7 @@ export default function CompetitionBasicForm({
               variant="outline"
               onClick={handleClose}
               disabled={isLoading}
-              className="mt-3 w-full sm:mt-0 sm:w-auto"
+              className="mt-1.5 sm:mt-0 w-full sm:w-auto"
             >
               キャンセル
             </Button>

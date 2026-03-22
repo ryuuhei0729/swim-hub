@@ -1,7 +1,5 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 type ContactData = {
   name: string;
   email: string;
@@ -9,11 +7,19 @@ type ContactData = {
   message: string;
 };
 
+function getResendClient() {
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error("RESEND_API_KEY is not set");
+  }
+  return new Resend(process.env.RESEND_API_KEY);
+}
+
 /**
  * 問い合わせ通知メールを送信
  */
 export async function sendContactNotification(data: ContactData) {
   const { name, email, subject, message } = data;
+  const resend = getResendClient();
 
   await resend.emails.send({
     from: "SwimHub <noreply@swim-hub.app>",

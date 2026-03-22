@@ -213,7 +213,7 @@ export default function DayDetailModal({
                 <div className="flex gap-3">
                   <button
                     onClick={() => onAddItem?.(date, "record")}
-                    className="flex-1 flex flex-col items-center justify-center px-4 py-12 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-blue-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    className="flex-1 flex flex-col items-center justify-center px-4 py-12 border border-gray-300 rounded-md shadow-sm text-xs sm:text-sm font-medium text-gray-700 bg-white hover:bg-blue-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300 whitespace-nowrap"
                     data-testid="add-record-button"
                   >
                     <TrophyIcon className="h-8 w-8 text-blue-500 mb-2" />
@@ -221,7 +221,7 @@ export default function DayDetailModal({
                   </button>
                   <button
                     onClick={() => onAddItem?.(date, "practice")}
-                    className="flex-1 flex flex-col items-center justify-center px-4 py-12 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="flex-1 flex flex-col items-center justify-center px-4 py-12 border border-gray-300 rounded-md shadow-sm text-xs sm:text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500 whitespace-nowrap"
                     data-testid="add-practice-button"
                   >
                     <ClipboardDocumentListIcon className="h-8 w-8 text-green-500 mb-2" />

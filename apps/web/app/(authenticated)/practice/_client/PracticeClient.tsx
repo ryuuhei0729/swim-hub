@@ -524,7 +524,7 @@ export default function PracticeClient({ initialPractices, styles, tags }: Pract
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* ヘッダー */}
-      <div className="bg-white rounded-lg shadow p-5 sm:p-6">
+      <div className="hidden lg:block bg-white rounded-lg shadow p-5 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">練習記録</h1>

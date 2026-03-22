@@ -336,9 +336,9 @@ export default function PracticeBasicForm({
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-2 sm:space-y-6">
               {/* グリッドレイアウト: 練習日・タイトル・場所 */}
-              <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-4 items-center">
+              <div className="grid grid-cols-[auto_1fr] gap-x-2 sm:gap-x-4 gap-y-1.5 sm:gap-y-4 items-center">
                 {/* 練習日 */}
                 <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
                   練習日 <span className="text-red-500">*</span>

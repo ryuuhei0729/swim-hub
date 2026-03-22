@@ -24,7 +24,7 @@ export default function StaticFooter() {
           </div>
           <h3 className="text-gray-100 text-xl font-semibold mb-2">SwimHub</h3>
           <p className="text-gray-100 mb-6 text-sm">水泳選手のための記録管理サービス</p>
-          <div className="flex justify-center gap-6 mb-8 text-sm text-gray-400">
+          <div className="flex justify-center gap-3 sm:gap-6 mb-8 text-[10px] sm:text-sm text-gray-400 whitespace-nowrap">
             <Link
               href="/terms"
               className="hover:text-white text-gray-400 font-bold transition-colors"

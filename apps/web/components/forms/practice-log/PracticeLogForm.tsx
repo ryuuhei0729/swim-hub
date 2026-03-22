@@ -309,9 +309,9 @@ export default function PracticeLogForm({
           </div>
 
           <form onSubmit={handleFormSubmit} className="flex flex-col flex-1 overflow-hidden">
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 sm:space-y-6">
               {/* メニューセクション */}
-              <div className="space-y-4">
+              <div className="space-y-2 sm:space-y-4">
                 <div className="flex items-center justify-end">
                   <div className="flex gap-2">
                     <Button
@@ -322,7 +322,8 @@ export default function PracticeLogForm({
                       disabled={isLoading}
                     >
                       <ClipboardDocumentListIcon className="h-5 w-5" />
-                      テンプレートから作成
+                      <span className="sm:hidden">テンプレート</span>
+                      <span className="hidden sm:inline">テンプレートから作成</span>
                     </Button>
                     <Button
                       type="button"

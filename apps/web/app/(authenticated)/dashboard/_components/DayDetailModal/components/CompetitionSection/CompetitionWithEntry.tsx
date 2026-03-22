@@ -259,16 +259,17 @@ export function CompetitionWithEntry({
       </div>
 
       {/* エントリー情報ボックス */}
-      <div className="p-4">
+      <div className="p-2 sm:p-4">
         <div
-          className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-3"
+          className="bg-orange-50 border border-orange-200 rounded-lg p-2 sm:p-4 mb-2 sm:mb-3"
           data-testid="entry-section"
         >
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">📝</span>
-              <h6 className="text-sm font-semibold text-orange-900">
-                エントリー済み（記録未登録）
+          <div className="flex items-center justify-between mb-1.5 sm:mb-3">
+            <div className="flex items-center gap-1 sm:gap-2">
+              <span className="text-sm sm:text-lg">📝</span>
+              <h6 className="text-xs sm:text-sm font-semibold text-orange-900">
+                <span className="sm:hidden">エントリー済</span>
+                <span className="hidden sm:inline">エントリー済み（記録未登録）</span>
               </h6>
             </div>
             <div className="flex items-center gap-1">
@@ -284,7 +285,7 @@ export function CompetitionWithEntry({
               )}
             </div>
           </div>
-          <div className="space-y-3 text-sm">
+          <div className="space-y-1.5 sm:space-y-3 text-xs sm:text-sm">
             {loading ? (
               <p className="text-gray-500">読み込み中...</p>
             ) : entries.length === 0 ? (
@@ -293,19 +294,20 @@ export function CompetitionWithEntry({
               entries.map((entry) => (
                 <div
                   key={entry.id}
-                  className="flex flex-col gap-1 rounded-md border border-orange-200 bg-white/70 px-3 py-2 shadow-sm"
+                  className="flex flex-col gap-0.5 sm:gap-1 rounded-md border border-orange-200 bg-white/70 px-2 sm:px-3 py-1.5 sm:py-2 shadow-sm"
                   data-testid={`entry-summary-${entry.id}`}
                 >
-                  <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start justify-between gap-1 sm:gap-2">
                     <div>
-                      <div className="flex items-baseline gap-2">
-                        <span className="font-semibold text-orange-900 min-w-[72px]">種目:</span>
+                      <div className="flex items-baseline gap-1 sm:gap-2">
+                        <span className="font-semibold text-orange-900 min-w-[40px] sm:min-w-[72px]">種目:</span>
                         <span className="text-gray-900 font-medium">{entry.styleName}</span>
                       </div>
                       {entry.entryTime && entry.entryTime > 0 && (
-                        <div className="flex items-baseline gap-2">
-                          <span className="font-semibold text-orange-900 min-w-[72px]">
-                            エントリータイム:
+                        <div className="flex items-baseline gap-1 sm:gap-2">
+                          <span className="font-semibold text-orange-900 min-w-[40px] sm:min-w-[72px]">
+                            <span className="sm:hidden">エントリー:</span>
+                            <span className="hidden sm:inline">エントリータイム:</span>
                           </span>
                           <span className="text-gray-900 font-mono font-semibold">
                             {formatTimeBest(entry.entryTime)}
@@ -313,8 +315,8 @@ export function CompetitionWithEntry({
                         </div>
                       )}
                       {entry.note && entry.note.trim().length > 0 && (
-                        <div className="flex items-baseline gap-2">
-                          <span className="font-semibold text-orange-900 min-w-[72px]">メモ:</span>
+                        <div className="flex items-baseline gap-1 sm:gap-2">
+                          <span className="font-semibold text-orange-900 min-w-[40px] sm:min-w-[72px]">メモ:</span>
                           <span className="text-gray-700">{entry.note}</span>
                         </div>
                       )}
@@ -348,7 +350,7 @@ export function CompetitionWithEntry({
         <button
           onClick={handleAddRecordClick}
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-sm font-medium"
+          className="w-full flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-sm font-medium text-xs sm:text-base"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

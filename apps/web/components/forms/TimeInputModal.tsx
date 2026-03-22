@@ -246,9 +246,9 @@ export default function TimeInputModal({
 
         <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-4xl">
           {/* ヘッダー */}
-          <div className="bg-white px-6 py-4 border-b border-gray-200">
+          <div className="bg-white px-3 sm:px-6 py-2 sm:py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
+              <h3 className="text-sm sm:text-lg leading-6 font-medium text-gray-900">
                 {menuNumber ? `メニュー${menuNumber}のタイム入力` : "タイム入力"}
               </h3>
               <button
@@ -257,17 +257,17 @@ export default function TimeInputModal({
                 onClick={handleClose}
                 aria-label="タイム入力を閉じる"
               >
-                <XMarkIcon className="h-6 w-6" />
+                <XMarkIcon className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-[10px] sm:text-sm text-gray-600 mt-0.5 sm:mt-1">
               {setCount}セット × {repCount}本のタイムを入力してください
             </p>
           </div>
 
           {/* タイム入力フォーム */}
-          <div className="bg-white px-6 py-4 max-h-96 overflow-y-auto">
-            <div className="space-y-6">
+          <div className="bg-white px-2 sm:px-6 py-2 sm:py-4 max-h-96 overflow-y-auto">
+            <div className="space-y-3 sm:space-y-6">
               {Array.from({ length: setCount }, (_, setIndex) => {
                 const setNumber = setIndex + 1;
                 const setTimes = getTimesBySet(setNumber);
@@ -275,26 +275,26 @@ export default function TimeInputModal({
                 const validTimesCount = setTimes.filter((t) => t.time > 0).length;
 
                 return (
-                  <div key={setNumber} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-md font-semibold text-gray-900">セット {setNumber}</h4>
-                      <div className="text-sm text-gray-600">
+                  <div key={setNumber} className="border border-gray-200 rounded-lg p-2 sm:p-4">
+                    <div className="flex items-center justify-between mb-1.5 sm:mb-4">
+                      <h4 className="text-xs sm:text-md font-semibold text-gray-900">セット {setNumber}</h4>
+                      <div className="text-[10px] sm:text-sm text-gray-600">
                         平均: {setAverage > 0 ? formatTimeAverage(setAverage) : "未入力"}
                         {validTimesCount > 0 && ` (${validTimesCount}本)`}
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5 sm:gap-3">
                       {setTimes.map((timeEntry, repIndex) => {
                         const globalIndex = setIndex * repCount + repIndex;
                         return (
-                          <div key={timeEntry.id} className="space-y-1">
-                            <label className="block text-xs font-medium text-gray-700">
+                          <div key={timeEntry.id}>
+                            <label className="block text-[10px] sm:text-xs font-medium text-gray-700 mb-0.5">
                               {timeEntry.repNumber}本目
                             </label>
                             <input
                               type="text"
-                              placeholder="例: 31-2"
+                              placeholder="31-2"
                               value={timeEntry.displayValue || ""}
                               onChange={(e) => handleTimeChange(timeEntry.id, e.target.value)}
                               onBlur={(e) => handleTimeConfirm(timeEntry.id, e.target.value)}
@@ -306,7 +306,7 @@ export default function TimeInputModal({
                                   timeEntry.displayValue || "",
                                 )
                               }
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full px-1.5 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                               data-testid={`time-input-${timeEntry.setNumber}-${timeEntry.repNumber}`}
                               data-time-input
                             />
@@ -321,17 +321,17 @@ export default function TimeInputModal({
           </div>
 
           {/* 平均値表示 */}
-          <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
+          <div className="bg-gray-50 px-3 sm:px-6 py-2 sm:py-3 border-t border-gray-200">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700">全体平均:</span>
-              <span className="text-lg font-bold text-blue-600">
+              <span className="text-xs sm:text-sm font-medium text-gray-700">全体平均:</span>
+              <span className="text-sm sm:text-lg font-bold text-blue-600">
                 {getOverallAverage() > 0 ? formatTimeAverage(getOverallAverage()) : "未入力"}
               </span>
             </div>
           </div>
 
           {/* フッター */}
-          <div className="bg-gray-50 px-6 py-3 flex flex-col sm:flex-row-reverse gap-2 sm:gap-3">
+          <div className="bg-gray-50 px-3 sm:px-6 py-2 sm:py-3 flex flex-col sm:flex-row-reverse gap-1.5 sm:gap-3">
             <Button
               onClick={handleSubmit}
               className="w-full sm:w-auto"

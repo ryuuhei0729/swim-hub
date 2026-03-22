@@ -42,7 +42,7 @@ export default function Footer() {
 
   const footerLinks = [
     {
-      name: "プライバシーポリシー",
+      name: "プライバシー",
       href: "/privacy",
       icon: ShieldCheckIcon,
     },
@@ -111,14 +111,14 @@ export default function Footer() {
             <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
               サポート・情報
             </h4>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-2 gap-1 sm:gap-2">
               {footerLinks.map((link) => (
                 <Link
                   key={link.name}
                   href={link.href}
-                  className="flex items-center text-sm text-gray-600 hover:text-blue-600 transition-colors duration-200"
+                  className="flex items-center text-[10px] sm:text-sm text-gray-600 hover:text-blue-600 transition-colors duration-200 whitespace-nowrap"
                 >
-                  <link.icon className="h-4 w-4 mr-2" />
+                  <link.icon className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 shrink-0" />
                   {link.name}
                 </Link>
               ))}
@@ -143,7 +143,7 @@ export default function Footer() {
                     alt={service.name}
                     width={128}
                     height={128}
-                    className="w-32 h-32 shrink-0 object-contain"
+                    className="w-16 h-16 sm:w-32 sm:h-32 shrink-0 object-contain"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -168,7 +168,7 @@ export default function Footer() {
                     alt={service.name}
                     width={128}
                     height={128}
-                    className="w-32 h-32 shrink-0 object-contain opacity-60 group-hover:opacity-100 transition-opacity"
+                    className="w-16 h-16 sm:w-32 sm:h-32 shrink-0 object-contain opacity-60 group-hover:opacity-100 transition-opacity"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1">
