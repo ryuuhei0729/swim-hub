@@ -441,7 +441,7 @@ export function createStripeWebhookHandler(appName: string) {
       const event: Stripe.Event = JSON.parse(body);
 
       const stripe = new Stripe(stripeSecretKey, {
-        apiVersion: "2024-12-18.acacia",
+        apiVersion: "2025-02-24.acacia",
       });
 
       const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
