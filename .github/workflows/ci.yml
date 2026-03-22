@@ -317,6 +317,7 @@ jobs:
     - name: Stop Supabase stack
       if: always()
       run: supabase stop --workdir supabase
+      continue-on-error: true
 
   build:
     needs: [unit-tests, e2e-tests]
