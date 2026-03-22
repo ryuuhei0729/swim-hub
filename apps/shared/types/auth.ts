@@ -25,13 +25,14 @@ export type BaseAuthActions = {
 export type BaseAuthContextValue = BaseAuthState & BaseAuthActions;
 
 // =============================================================================
-// 2. サブスクリプション型定義 (swim-hub 固有)
+// 2. サブスクリプション型定義 (3アプリ共通)
 // =============================================================================
 
+export type UserPlan = "guest" | "free" | "premium";
 export type SubscriptionStatus = "trialing" | "active" | "canceled" | "expired" | "past_due";
 
 export interface SubscriptionInfo {
-  plan: "free" | "premium";
+  plan: UserPlan;
   status: SubscriptionStatus | null;
   cancelAtPeriodEnd: boolean;
   premiumExpiresAt: string | null;

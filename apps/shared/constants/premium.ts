@@ -10,6 +10,9 @@ export const FREE_PLAN_LIMITS = {
   /** 1 PracticeLog あたりの practice_times 最大数 */
   PRACTICE_TIMES_PER_LOG: 18,
 
+  /** 1日あたりのAIトークン使用上限 */
+  DAILY_TOKEN_LIMIT: 1,
+
   /** 画像アップロード可否 */
   IMAGE_UPLOAD_ENABLED: false,
 

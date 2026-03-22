@@ -52,7 +52,7 @@ export function canUploadImage(isPremium: boolean): boolean {
  */
 export function canAddSplitTimes(count: number, isPremium: boolean): boolean {
   if (isPremium) return true;
-  return count <= FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD;
+  return count < FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD;
 }
 
 /**
@@ -60,5 +60,5 @@ export function canAddSplitTimes(count: number, isPremium: boolean): boolean {
  */
 export function canAddPracticeTimes(count: number, isPremium: boolean): boolean {
   if (isPremium) return true;
-  return count <= FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG;
+  return count < FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG;
 }

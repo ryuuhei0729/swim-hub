@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-auth/server";
+import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 
 /**
  * 今日の日付を JST (Asia/Tokyo) で YYYY-MM-DD 形式で返す
@@ -82,15 +83,22 @@ export async function GET() {
     );
 
     // 4. レスポンス
-    return NextResponse.json({
-      plan,
-      status,
-      cancelAtPeriodEnd,
-      premiumExpiresAt,
-      trialEnd,
-      tokensUsedToday,
-      tokensRemaining: plan === "premium" ? null : 1 - tokensUsedToday,
-    });
+    return NextResponse.json(
+      {
+        plan,
+        status,
+        cancelAtPeriodEnd,
+        premiumExpiresAt,
+        trialEnd,
+        tokensUsedToday,
+        tokensRemaining: plan === "premium" ? null : FREE_PLAN_LIMITS.DAILY_TOKEN_LIMIT - tokensUsedToday,
+      },
+      {
+        headers: {
+          "Cache-Control": "private, max-age=60",
+        },
+      },
+    );
   } catch (error) {
     console.error("サブスクリプションステータスエラー:", error);
     return NextResponse.json({ error: "予期しないエラーが発生しました" }, { status: 500 });

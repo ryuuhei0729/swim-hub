@@ -34,8 +34,8 @@ export async function POST(request: NextRequest) {
       expand: ["subscription"],
     });
 
-    // 4. セッションの検証
-    if (session.payment_status !== "paid" && session.status !== "complete") {
+    // 4. セッションの検証（status === "complete" を必須とし、expired 等を排除）
+    if (session.status !== "complete") {
       return NextResponse.json({ error: "支払いが完了していません" }, { status: 400 });
     }
 
@@ -48,9 +48,17 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "サブスクリプションが見つかりません" }, { status: 400 });
       }
       const sub = await stripe.subscriptions.retrieve(subId);
+      // Session 所有者の検証: subscription の metadata に含まれる supabase_user_id と認証ユーザーが一致するか確認
+      if (sub.metadata?.supabase_user_id !== user.id) {
+        return NextResponse.json({ error: "不正なセッションです" }, { status: 403 });
+      }
       return await updateSubscription(supabase, user.id, sub);
     }
 
+    // Session 所有者の検証
+    if (subscription.metadata?.supabase_user_id !== user.id) {
+      return NextResponse.json({ error: "不正なセッションです" }, { status: 403 });
+    }
     return await updateSubscription(supabase, user.id, subscription);
   } catch (error) {
     console.error("Stripe Session 検証エラー:", error);

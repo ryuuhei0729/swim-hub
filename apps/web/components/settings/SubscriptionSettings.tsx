@@ -41,6 +41,7 @@ export default function SubscriptionSettings() {
   const isPremium = plan === "premium";
   const isTrialing = status === "trialing";
   const isActive = status === "active";
+  const isPastDue = status === "past_due";
 
   const handleCheckout = useCallback(async (priceId: string, interval: "monthly" | "yearly") => {
     setLoadingPlan(interval);
@@ -119,6 +120,26 @@ export default function SubscriptionSettings() {
         <h2 className="text-lg sm:text-xl font-semibold text-gray-900">サブスクリプション</h2>
       </div>
 
+      {/* 支払い失敗バナー */}
+      {isPastDue && (
+        <div className="rounded-md bg-red-50 border border-red-200 p-4 mb-4">
+          <p className="text-sm text-red-800 font-medium">
+            お支払いが失敗しました
+          </p>
+          <p className="text-sm text-red-700 mt-1">
+            お支払い方法を更新してください。更新しない場合、プレミアム機能が停止します。
+          </p>
+          <button
+            type="button"
+            onClick={handleManagePlan}
+            disabled={portalLoading}
+            className="mt-2 inline-block text-sm text-red-700 underline hover:text-red-900"
+          >
+            お支払い方法を更新する →
+          </button>
+        </div>
+      )}
+
       {/* 現在のプラン表示 */}
       <div className="mb-4">
         {isTrialing ? (
@@ -133,6 +154,18 @@ export default function SubscriptionSettings() {
               <p className="text-sm text-gray-500">
                 トライアル残り {trialDaysRemaining} 日（{formatDate(trialEnd)} まで）
               </p>
+            )}
+          </div>
+        ) : isPastDue ? (
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-sm font-medium text-gray-700">現在のプラン:</span>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                Premium（支払い未完了）
+              </span>
+            </div>
+            {premiumExpiresAt && (
+              <p className="text-sm text-gray-500">有効期限: {formatDate(premiumExpiresAt)}</p>
             )}
           </div>
         ) : isPremium && isActive ? (
@@ -194,8 +227,8 @@ export default function SubscriptionSettings() {
         </div>
       )}
 
-      {/* Premium / Trialing ユーザー: 管理ボタン */}
-      {(isPremium || isTrialing) && (
+      {/* Premium / Trialing / PastDue ユーザー: 管理ボタン */}
+      {(isPremium || isTrialing || isPastDue) && (
         <button
           type="button"
           onClick={handleManagePlan}

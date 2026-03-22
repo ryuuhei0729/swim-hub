@@ -9,7 +9,6 @@ import {
   TagIcon,
   TrophyIcon,
   UserGroupIcon,
-  CurrencyYenIcon,
 } from "@heroicons/react/24/outline";
 import ScrollNavButtons from "./_components/ScrollNavButtons";
 import DeviceMockup from "./_components/DeviceMockup";
@@ -348,57 +347,87 @@ export default function Home() {
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">
               料金表
             </h2>
-            <p className="text-lg text-gray-600">詳細は今後詰めます</p>
+            <p className="text-lg text-gray-600">
+              シンプルな2プラン。まずは無料で始められます。
+            </p>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[320px]">
-                <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50">
-                    <th className="text-left py-4 px-4 sm:px-6 text-sm font-semibold text-gray-900"></th>
-                    <th className="text-center py-4 px-4 sm:px-6 text-sm font-semibold text-gray-900">
-                      無料アカウント
-                    </th>
-                    <th className="text-center py-4 px-4 sm:px-6 text-sm font-semibold text-gray-900">
-                      有料アカウント
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {[
-                    { name: "練習記録", free: "TBD", paid: "TBD" },
-                    { name: "大会記録", free: "TBD", paid: "TBD" },
-                    { name: "チーム機能", free: "TBD", paid: "TBD" },
-                    { name: "目標管理", free: "TBD", paid: "TBD" },
-                    { name: "SwimHub Scanner", free: "TBD", paid: "TBD" },
-                    { name: "SwimHub Timer", free: "TBD", paid: "TBD" },
-                  ].map((row) => (
-                    <tr key={row.name} className="hover:bg-gray-50/50">
-                      <td className="py-4 px-4 sm:px-6 text-sm font-medium text-gray-900">
-                        {row.name}
-                      </td>
-                      <td className="py-4 px-4 sm:px-6 text-center">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                          準備中
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 sm:px-6 text-center">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                          準備中
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+            {/* Free プラン */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 flex flex-col">
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Free</h3>
+              <div className="mb-4">
+                <span className="text-4xl font-bold text-gray-900">¥0</span>
+                <span className="text-sm text-gray-500">/月</span>
+              </div>
+              <ul className="space-y-3 mb-6 flex-1">
+                {[
+                  "Split-time: 最大3個/記録",
+                  "PracticeTime: 最大18個/練習ログ",
+                  "画像・動画アップロード: 不可",
+                ].map((feature) => (
+                  <li key={feature} className="flex items-start gap-2 text-sm text-gray-700">
+                    <svg className="h-5 w-5 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/signup"
+                className="w-full inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+              >
+                無料で始める
+              </Link>
             </div>
-            <div className="border-t border-gray-200 bg-gray-50 px-4 sm:px-6 py-4">
-              <p className="text-sm text-gray-600 flex items-center gap-2">
-                <CurrencyYenIcon className="w-4 h-4 shrink-0" />
-                SwimHub Timer・SwimHub Scanner の有料会員も共用（統一課金）。詳細は今後詰めます。
+
+            {/* Premium プラン */}
+            <div className="bg-white rounded-2xl border-2 border-blue-600 p-6 sm:p-8 flex flex-col relative">
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center px-3 py-0.5 rounded-full text-xs font-semibold bg-blue-600 text-white">
+                7日間無料トライアル
+              </span>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Premium</h3>
+              <div className="mb-1">
+                <span className="text-4xl font-bold text-gray-900">¥500</span>
+                <span className="text-sm text-gray-500">/月</span>
+              </div>
+              <p className="text-sm text-gray-500 mb-4">
+                年払い: ¥5,000/年（2ヶ月分お得）
               </p>
+              <ul className="space-y-3 mb-6 flex-1">
+                {[
+                  "全機能無制限",
+                  "Split-time: 無制限",
+                  "PracticeTime: 無制限",
+                  "画像・動画アップロード: 可",
+                  "7日間の無料トライアル",
+                ].map((feature) => (
+                  <li key={feature} className="flex items-start gap-2 text-sm text-gray-700">
+                    <svg className="h-5 w-5 text-blue-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/signup"
+                className="w-full inline-flex items-center justify-center px-4 py-2.5 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+              >
+                無料トライアルを始める
+              </Link>
             </div>
+          </div>
+
+          <div className="text-center">
+            <Link
+              href="/pricing"
+              className="inline-flex items-center text-sm font-semibold text-blue-600 hover:underline"
+            >
+              料金プランの詳細を見る
+              <ArrowRightIcon className="ml-1 h-4 w-4" />
+            </Link>
           </div>
         </div>
       </section>
