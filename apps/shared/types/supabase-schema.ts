@@ -1183,6 +1183,7 @@ export type Database = {
           provider: string | null;
           provider_subscription_id: string | null;
           status: string | null;
+          stripe_customer_id: string | null;
           trial_end: string | null;
           trial_start: string | null;
           updated_at: string;
@@ -1197,6 +1198,7 @@ export type Database = {
           provider?: string | null;
           provider_subscription_id?: string | null;
           status?: string | null;
+          stripe_customer_id?: string | null;
           trial_end?: string | null;
           trial_start?: string | null;
           updated_at?: string;
@@ -1211,6 +1213,7 @@ export type Database = {
           provider?: string | null;
           provider_subscription_id?: string | null;
           status?: string | null;
+          stripe_customer_id?: string | null;
           trial_end?: string | null;
           trial_start?: string | null;
           updated_at?: string;

@@ -29,7 +29,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoPath, thumbnailPa
   const handleExitFullscreen = useCallback(() => {
     // フルスクリーン終了 → 停止してサムネイル状態に戻す
     player.pause();
-    player.currentTime = 0;
+    player.seekBy(-player.currentTime);
     setIsPlaying(false);
   }, [player]);
 

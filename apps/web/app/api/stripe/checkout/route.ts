@@ -37,14 +37,11 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. user_subscriptions テーブルから現在のプラン・trial_start・stripe_customer_id を確認
-    const { data: subscription } = (await supabase
+    const { data: subscription } = await supabase
       .from("user_subscriptions")
       .select("plan, status, trial_start, stripe_customer_id")
       .eq("id", user.id)
-      .single()) as {
-      data: { plan: string; status: string | null; trial_start: string | null; stripe_customer_id: string | null } | null;
-      error: unknown;
-    };
+      .single();
 
     // 既にアクティブなサブスクリプションがある場合は重複購入を防止
     const activeStatuses = ["active", "trialing"];
