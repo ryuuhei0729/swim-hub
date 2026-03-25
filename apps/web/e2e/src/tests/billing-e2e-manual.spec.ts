@@ -123,13 +123,8 @@ async function openDateModal(page: Page) {
   await page.waitForLoadState("domcontentloaded");
   // カレンダーの1日（月初）をクリック
   const dayCell = page.locator('[data-testid="calendar"] [data-testid="calendar-day"]').first();
-  await dayCell.or(page.locator("text=1").first()).waitFor({ timeout: 15000 });
-  if (await dayCell.isVisible()) {
-    await dayCell.click();
-  } else {
-    // data-testidがない場合は日付セル（最初の過去日付）を探す
-    await page.locator("text=1").first().click();
-  }
+  await dayCell.waitFor({ timeout: 15000 });
+  await dayCell.click();
   await page.waitForTimeout(TIMEOUTS.MODAL_ANIMATION);
 }
 
@@ -543,6 +538,8 @@ test.describe("Free プランの機能制限", () => {
 // Stripe 購入フロー & Premium テスト (No.13〜18, 8〜12)
 // ========================================
 test.describe("Stripe 購入フロー", () => {
+  // Stripe テストは STRIPE_SECRET_KEY が必要（CI では未設定のためスキップ）
+  test.skip(!process.env.STRIPE_SECRET_KEY, "STRIPE_SECRET_KEY が設定されていないためスキップ");
   test.describe.configure({ mode: "serial", timeout: 90000 });
 
   let purchaseUser: { email: string; password: string };
@@ -882,6 +879,7 @@ test.describe("Stripe 購入フロー", () => {
 // ========================================
 test.describe("プラン管理", () => {
   test("No.19: 「プランを管理」から Stripe Portal に遷移できる", async ({ browser }) => {
+    test.skip(!process.env.STRIPE_SECRET_KEY, "STRIPE_SECRET_KEY が設定されていないためスキップ");
     const { page, context } = await newCleanPage(browser);
     // Stripe Customer ID が必要なので、実際に Stripe 購入した No.13 のユーザーが理想的
     // ここでは DB 直接設定の Premium ユーザーで Portal API の動作を確認
@@ -958,7 +956,7 @@ test.describe("プラン管理", () => {
     await page.waitForLoadState("networkidle");
 
     // 「無料トライアル中」バッジ
-    const trialBadge = page.locator("text=無料トライアル中, text=トライアル中");
+    const trialBadge = page.getByText("無料トライアル中").or(page.getByText("トライアル中"));
     const hasTrialBadge = await trialBadge.first().waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false);
 
     // 「トライアル残り X 日」の表示
@@ -1065,12 +1063,12 @@ test.describe("Pricing ページ", () => {
     }
 
     // スプリットタイム制限
-    const splitFree = page.getByText("最大3個").or(page.getByText("3個"));
-    const hasSplitFree = await splitFree.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
+    const splitFree = page.getByText(/最大3個/);
+    const hasSplitFree = await splitFree.first().waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     // 練習タイム制限
-    const practiceFree = page.getByText("最大18個").or(page.getByText("18個"));
-    const hasPracticeFree = await practiceFree.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
+    const practiceFree = page.getByText(/最大18個/);
+    const hasPracticeFree = await practiceFree.first().waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     // 無制限表示
     const unlimited = page.getByText("無制限");
