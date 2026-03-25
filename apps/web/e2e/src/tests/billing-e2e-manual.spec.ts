@@ -120,9 +120,10 @@ async function loginUser(page: Page, email: string, password: string) {
 /** カレンダーの過去日付をクリックして、日付モーダルを開く */
 async function openDateModal(page: Page) {
   await page.goto("/dashboard", { timeout: 30000 });
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("domcontentloaded");
   // カレンダーの1日（月初）をクリック
   const dayCell = page.locator('[data-testid="calendar"] [data-testid="calendar-day"]').first();
+  await dayCell.or(page.locator("text=1").first()).waitFor({ timeout: 15000 });
   if (await dayCell.isVisible()) {
     await dayCell.click();
   } else {
@@ -330,10 +331,8 @@ test.describe("Free プランの機能制限", () => {
   test("No.3: 練習タイムが18個まで登録できる", async ({ browser }) => {
     const { page, context } = await newCleanPage(browser);
     await loginUser(page, freeUser.email, freeUser.password);
-    await page.goto("/dashboard");
-    await page.waitForLoadState("networkidle");
 
-    // カレンダーの日付をクリック
+    // カレンダーの日付をクリック（openDateModal内で/dashboardに遷移する）
     await openDateModal(page);
 
     // 「練習予定を追加」or「練習記録」ボタンをクリック
@@ -1223,9 +1222,8 @@ test.describe("Premium プランの機能確認", () => {
   test("No.9: Premium: 練習タイムが無制限に登録できる", async ({ browser }) => {
     const { page, context } = await newCleanPage(browser);
     await loginUser(page, premiumUser.email, premiumUser.password);
-    await page.goto("/dashboard");
-    await page.waitForLoadState("networkidle");
 
+    // カレンダーの日付をクリック（openDateModal内で/dashboardに遷移する）
     await openDateModal(page);
 
     // 「練習予定を追加」or「練習記録」ボタンをクリック
