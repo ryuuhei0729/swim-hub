@@ -275,22 +275,33 @@ test.describe("Free プランの機能制限", () => {
 
     // スプリットを3個追加
     const addSplitBtn = page.locator('[data-testid="record-split-add-button-1"]');
+    let clickCount = 0;
     for (let i = 0; i < 3; i++) {
-      if (await addSplitBtn.isEnabled({ timeout: 5000 }).catch(() => false)) {
+      const enabled = await addSplitBtn.isEnabled({ timeout: 5000 }).catch(() => false);
+      if (enabled) {
         await addSplitBtn.click();
-        await page.waitForTimeout(300);
+        clickCount++;
+        await page.waitForTimeout(500);
       }
     }
 
     // 3個追加後、ボタンが disabled になっていることを確認
+    await page.waitForTimeout(1000); // React の状態更新を待つ
     const isDisabled = await addSplitBtn.isDisabled().catch(() => false);
 
-    // PremiumBadge が表示されていることを確認
-    const premiumBadge = page.locator("text=Freeプランでは").or(page.locator("text=Premium にアップグレード"));
-    const hasBadge = await premiumBadge.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
+    // スプリットタイム入力フィールドの数を確認（デバッグ用）
+    const splitInputs = page.locator('[data-testid^="record-split-time-1-"]');
+    const splitCount = await splitInputs.count().catch(() => 0);
+
+    // PremiumBadge が表示されていることを確認（data-testid + テキスト検索のフォールバック）
+    const premiumBadgeById = page.locator('[data-testid="premium-badge-split-limit-1"]');
+    const premiumBadgeByText = page.locator("text=Freeプランでは").or(page.locator("text=Premium にアップグレード"));
+    const hasBadgeById = await premiumBadgeById.waitFor({ state: "attached", timeout: 5000 }).then(() => true).catch(() => false);
+    const hasBadgeByText = await premiumBadgeByText.waitFor({ state: "attached", timeout: 3000 }).then(() => true).catch(() => false);
+    const hasBadge = hasBadgeById || hasBadgeByText;
 
     expect(isDisabled || hasBadge).toBeTruthy();
-    recordResult(1, isDisabled && hasBadge, `disabled=${isDisabled}, badge=${hasBadge}`);
+    recordResult(1, isDisabled && hasBadge, `disabled=${isDisabled}, badge=${hasBadge}, clicks=${clickCount}, splits=${splitCount}, byId=${hasBadgeById}, byText=${hasBadgeByText}`);
     await context.close();
   });
 

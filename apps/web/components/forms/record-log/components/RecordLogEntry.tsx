@@ -379,7 +379,7 @@ export default function RecordLogEntry({
 
         {/* Premium 制限メッセージ */}
         {!isPremium && isSplitTimeLimitReached && (
-          <div className="mt-2">
+          <div className="mt-2" data-testid={`premium-badge-split-limit-${sectionIndex}`}>
             <PremiumBadge message={PREMIUM_MESSAGES.split_time_limit} />
           </div>
         )}

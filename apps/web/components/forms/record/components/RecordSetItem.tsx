@@ -299,7 +299,7 @@ export default function RecordSetItem({
 
         {/* Premium 制限メッセージ */}
         {!isPremium && isSplitTimeLimitReached && (
-          <div className="mt-2">
+          <div className="mt-2" data-testid={`premium-badge-split-limit-${recordIndex + 1}`}>
             <PremiumBadge message={splitTimeLimitError || PREMIUM_MESSAGES.split_time_limit} />
           </div>
         )}
