@@ -79,7 +79,14 @@ async function updateSubscription(
   userId: string,
   subscription: { id: string; status: string; current_period_start: number; current_period_end: number; cancel_at_period_end: boolean; trial_start: number | null; trial_end: number | null },
 ) {
-  const status = subscription.status === "trialing" ? "trialing" : "active";
+  const validStatuses = ["active", "trialing"] as const;
+  if (!validStatuses.includes(subscription.status as typeof validStatuses[number])) {
+    return NextResponse.json(
+      { error: `サブスクリプションが有効ではありません (status: ${subscription.status})` },
+      { status: 400 },
+    );
+  }
+  const status = subscription.status as "active" | "trialing";
 
   const { error } = await supabase
     .from("user_subscriptions")

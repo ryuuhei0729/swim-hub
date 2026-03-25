@@ -1,8 +1,38 @@
 import { chromium, type FullConfig } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
-import * as fs from "node:fs";
-import * as path from "node:path";
 import { EnvConfig } from "./config";
+
+/**
+ * テストユーザーの user_subscriptions を Premium（active）に設定する
+ * E2Eテストは Premium 前提で実行するため、全機能が利用可能な状態にする
+ */
+async function ensurePremiumSubscription(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+) {
+  try {
+    const now = new Date();
+    const premiumExpires = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+
+    await supabase.from("user_subscriptions").upsert(
+      {
+        id: userId,
+        plan: "premium",
+        status: "active",
+        provider: "stripe",
+        provider_subscription_id: `sub_e2e_test_${userId.slice(0, 8)}`,
+        premium_expires_at: premiumExpires.toISOString(),
+        current_period_start: now.toISOString(),
+        cancel_at_period_end: false,
+        stripe_customer_id: `cus_e2e_test_${userId.slice(0, 8)}`,
+      },
+      { onConflict: "id" },
+    );
+    console.log("✅ テストユーザーを Premium プランに設定しました");
+  } catch (error) {
+    console.warn("⚠️  Premium 設定で警告:", (error as Error).message);
+  }
+}
 
 /**
  * グローバルセットアップ
@@ -115,6 +145,9 @@ async function globalSetup(config: FullConfig) {
             } catch {
               // プロフィール作成エラーは無視（既に存在する場合など）
             }
+
+            // user_subscriptions を Premium に設定（E2Eテストは Premium 前提で実行）
+            await ensurePremiumSubscription(supabase, newUser.user.id);
           }
         } else {
           console.log(`✅ テストユーザーは既に存在します: ${testEnv.credentials.email}`);
@@ -156,6 +189,9 @@ async function globalSetup(config: FullConfig) {
               // 既に存在するなどのエラーは無視
             }
           }
+
+          // user_subscriptions を Premium に設定（E2Eテストは Premium 前提で実行）
+          await ensurePremiumSubscription(supabase, existingUser.id);
         }
       }
     } catch (error) {
@@ -204,86 +240,9 @@ async function globalSetup(config: FullConfig) {
       }
     }
 
-    // ログイン状態を保存（storageState）
-    if (testEnv) {
-      try {
-        console.log("🔐 ログイン状態を保存中...");
-        // baseURLを設定してコンテキストを作成（相対パスを使用するため）
-        const context = await browser.newContext({ baseURL });
-        const loginPage = await context.newPage();
-
-        // コンソールエラーを監視（Supabaseエラーを検出）
-        const consoleErrors: string[] = [];
-        loginPage.on("console", (msg) => {
-          if (msg.type() === "error") {
-            const text = msg.text();
-            consoleErrors.push(text);
-            // Database errorを検出した場合は警告を出力
-            if (text.includes("Database error") || text.includes("status: 500")) {
-              console.warn("⚠️  ブラウザコンソールエラー:", text);
-            }
-          }
-        });
-
-        // ページエラーを監視
-        loginPage.on("pageerror", (error) => {
-          console.warn("⚠️  ページエラー:", error.message);
-        });
-
-        // ログインページに移動
-        await loginPage.goto("/login", { waitUntil: "domcontentloaded", timeout: 15000 });
-
-        // ログインフォームが表示されるまで待つ
-        await loginPage.waitForSelector('[data-testid="email-input"]', { timeout: 10000 });
-
-        // メールアドレスとパスワードを入力
-        await loginPage.fill('[data-testid="email-input"]', testEnv.credentials.email);
-        await loginPage.fill('[data-testid="password-input"]', testEnv.credentials.password);
-
-        // ログインボタンをクリック
-        await loginPage.click('[data-testid="login-button"]');
-
-        // ダッシュボードにリダイレクトされるまで待つ
-        await loginPage.waitForURL("**/dashboard", { timeout: 15000 });
-
-        // ログイン成功を確認（ダッシュボードに遷移しているか）
-        const currentUrl = loginPage.url();
-        if (!currentUrl.includes("/dashboard")) {
-          throw new Error(`ログイン後のリダイレクトが失敗しました。現在のURL: ${currentUrl}`);
-        }
-
-        // ダッシュボードページの読み込み完了を待つ
-        await loginPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {
-          // networkidleがタイムアウトしても続行（Supabaseのリアルタイム接続のため）
-        });
-        await loginPage.waitForTimeout(2000); // 追加の待機時間
-
-        // storageStateを保存
-        const authDir = path.resolve(__dirname, "../../playwright/.auth");
-        const authFile = path.join(authDir, "user.json");
-
-        // ディレクトリが存在しない場合は作成
-        if (!fs.existsSync(authDir)) {
-          fs.mkdirSync(authDir, { recursive: true });
-        }
-
-        await context.storageState({ path: authFile });
-        console.log(`✅ ログイン状態を保存しました: ${authFile}`);
-
-        // コンソールエラーがあった場合は警告
-        if (consoleErrors.length > 0) {
-          console.warn(
-            `⚠️  ログイン中に ${consoleErrors.length} 個のコンソールエラーが検出されましたが、ログイン状態は保存されました`,
-          );
-        }
-
-        await context.close();
-      } catch (error) {
-        console.warn("⚠️  ログイン状態の保存に失敗しました:", (error as Error).message);
-        console.warn("⚠️  各テストで個別にログイン処理が実行されます");
-        // エラーが発生してもテストは続行（各テストで個別にログイン）
-      }
-    }
+    // storageState によるログイン状態の保存は廃止（Web Locks デッドロック回避のため）
+    // 各テストで supabaseLogin() による REST API ログイン + localStorage 注入を使用する
+    console.log("ℹ️  storageState は使用しません（各テストで supabaseLogin() を使用）");
   } catch (error) {
     console.error("❌ グローバルセットアップでエラーが発生:", error);
     throw error;

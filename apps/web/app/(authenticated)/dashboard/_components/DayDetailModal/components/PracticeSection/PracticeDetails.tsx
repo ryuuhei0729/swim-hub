@@ -81,6 +81,11 @@ export function PracticeDetails({
   const [sharePracticeData, setSharePracticeData] = useState<PracticeShareData | null>(null);
 
   useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+      setError(new Error("読み込みがタイムアウトしました"));
+    }, 15000);
+
     const loadPractice = async () => {
       try {
         setLoading(true);
@@ -180,7 +185,9 @@ export function PracticeDetails({
 
         setPractice(formattedPractice);
         setPracticeImages(images);
+        clearTimeout(timeoutId);
       } catch (err) {
+        clearTimeout(timeoutId);
         console.error("練習詳細の取得エラー:", err);
         setError(err as Error);
       } finally {
@@ -189,6 +196,10 @@ export function PracticeDetails({
     };
 
     loadPractice();
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
   }, [practiceId, supabase, practiceLogUpdateKey, isTeamPractice, userId]);
 
   if (loading) {

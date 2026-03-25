@@ -53,7 +53,7 @@ export default function Home() {
           <div className="grid gap-8 md:gap-12 lg:grid-cols-2 items-center">
             {/* 左側: テキストコンテンツ */}
             <div className="space-y-4 sm:space-y-6 animate-fade-in text-center lg:text-left order-2 lg:order-1">
-              <div className="inline-flex items-center gap-2 bg-white/10 text-blue-100 px-3 py-1 rounded-full text-md font-semibold tracking-wide">
+              <div className="inline-flex items-center gap-2 bg-white/10 text-blue-100 px-3 py-1 rounded-full text-base font-semibold tracking-wide">
                 <SparklesIcon className="w-6 h-8" />
                 スマホでらくらくチーム管理
               </div>
@@ -64,7 +64,7 @@ export default function Home() {
                 <span className="block text-blue-100">これひとつで。</span>
               </h1>
 
-              <p className="text-md sm:text-xl md:text-xl text-blue-50 leading-relaxed max-w-2xl mx-auto lg:mx-0">
+              <p className="text-base sm:text-xl md:text-xl text-blue-50 leading-relaxed max-w-2xl mx-auto lg:mx-0">
                 練習記録・大会記録・チームの出欠、エントリー収集までまとめて管理。スマホでもブラウザでもすぐに始められます。
               </p>
 
@@ -82,7 +82,7 @@ export default function Home() {
                   </svg>
                   <div className="text-left">
                     <div className="text-[15px] leading-none opacity-80">Coming Soon</div>
-                    <div className="text-xl sm:text-md font-semibold">App Store</div>
+                    <div className="text-xl sm:text-base font-semibold">App Store</div>
                   </div>
                 </button>
                 <button
@@ -98,7 +98,7 @@ export default function Home() {
                   </svg>
                   <div className="text-left">
                     <div className="text-[15px] leading-none opacity-80">Coming Soon</div>
-                    <div className="text-xl sm:text-md font-semibold">Google Play</div>
+                    <div className="text-xl sm:text-base font-semibold">Google Play</div>
                   </div>
                 </button>
               </div>

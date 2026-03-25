@@ -78,6 +78,10 @@ export function CompetitionDetails({
   const [shareRecordData, setShareRecordData] = useState<CompetitionShareData | null>(null);
 
   useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+    }, 15000);
+
     const loadRecords = async () => {
       try {
         setLoading(true);
@@ -191,7 +195,9 @@ export function CompetitionDetails({
         );
 
         setActualRecords(formattedRecords);
+        clearTimeout(timeoutId);
       } catch (err) {
+        clearTimeout(timeoutId);
         console.error("記録の取得エラー:", err);
         setActualRecords([]);
         setCompetitionImages([]);
@@ -201,6 +207,10 @@ export function CompetitionDetails({
     };
 
     loadRecords();
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
   }, [competitionId, supabase, isTeamCompetition, user?.id]);
 
   const _getPoolTypeText = (poolType: number) => {

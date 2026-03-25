@@ -449,11 +449,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // まず認証状態を即座に更新（loading: false にする）
       // サブスクリプションは後から非同期で取得
+      const requestedUserId = session?.user?.id ?? null;
       setAuthState((prev) => ({
         user: session?.user ?? null,
         session,
         loading: false,
-        subscription: prev.subscription,
+        subscription: prev.user?.id === requestedUserId ? prev.subscription : null,
       }));
 
       // サブスクリプション情報を非同期で取得して更新
@@ -461,7 +462,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           const subInfo = await fetchSubscription(session.user.id);
           if (isMounted) {
-            setAuthState((prev) => ({ ...prev, subscription: subInfo }));
+            setAuthState((prev) =>
+              prev.user?.id === requestedUserId ? { ...prev, subscription: subInfo } : prev,
+            );
           }
         } catch {
           // サブスクリプション取得失敗は認証をブロックしない
@@ -486,8 +489,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     // 初期セッションを明示的に取得（onAuthStateChangeが呼ばれない場合のフォールバック）
-    // getSession()はローカルキャッシュ（JWT）を返すため、メール変更等の反映が遅れる
-    // getUser()でサーバーから最新のユーザー情報を取得する
+    // getSession()はローカルキャッシュ（JWT）を返す — ネットワーク不要で高速
+    // 注意: getUser()はサーバーへのネットワーク呼び出しが発生するが、
+    // Middlewareが既にgetUser()でトークンリフレッシュ済みのため不要
     const fetchInitialSession = async () => {
       try {
         const {
@@ -506,22 +510,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               subscription: null,
             });
           } else if (session) {
-            const {
-              data: { user },
-            } = await supabaseClient.auth.getUser();
-            const currentUser = user ?? session.user;
-            // まず認証状態を即座に更新（loading: false にする）
+            // getSession()のJWTからユーザー情報を取得（ネットワーク不要）
+            // Middlewareが既にgetUser()でトークンリフレッシュ済みのため、
+            // ここでは追加のgetUser()呼び出しは不要
+            const requestedUserId = session.user.id;
             setAuthState((prev) => ({
-              user: currentUser,
+              user: session.user,
               session,
               loading: false,
-              subscription: prev.subscription,
+              subscription: prev.user?.id === requestedUserId ? prev.subscription : null,
             }));
             // サブスクリプションは非同期で後から取得
             try {
-              const subInfo = await fetchSubscription(currentUser.id);
+              const subInfo = await fetchSubscription(session.user.id);
               if (isMounted) {
-                setAuthState((prev) => ({ ...prev, subscription: subInfo }));
+                setAuthState((prev) =>
+                  prev.user?.id === requestedUserId ? { ...prev, subscription: subInfo } : prev,
+                );
               }
             } catch {
               // サブスクリプション取得失敗は認証をブロックしない

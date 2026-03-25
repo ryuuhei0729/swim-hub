@@ -58,6 +58,42 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "対象ユーザーはチームメンバーではありません" }, { status: 403 });
     }
 
+    // sourceId の所有権確認
+    if (type === "record") {
+      const { data: record } = await supabase
+        .from("records")
+        .select("id")
+        .eq("id", sourceId)
+        .eq("user_id", targetUserId)
+        .maybeSingle();
+
+      if (!record) {
+        return NextResponse.json({ error: "指定された記録が見つからないか、対象ユーザーに属していません" }, { status: 403 });
+      }
+    } else {
+      // practice-log: practice_logs の practice_id が teamId に属する practice か確認
+      const { data: practiceLog } = await supabase
+        .from("practice_logs")
+        .select("id, practice_id")
+        .eq("id", sourceId)
+        .maybeSingle();
+
+      if (!practiceLog) {
+        return NextResponse.json({ error: "指定された練習ログが見つかりません" }, { status: 403 });
+      }
+
+      const { data: practice } = await supabase
+        .from("practices")
+        .select("id")
+        .eq("id", practiceLog.practice_id)
+        .eq("team_id", teamId)
+        .maybeSingle();
+
+      if (!practice) {
+        return NextResponse.json({ error: "練習ログが指定されたチームに属していません" }, { status: 403 });
+      }
+    }
+
     // 最終パス生成
     const prefix = type === "record" ? "records" : "practice-logs";
     const finalVideoPath = `videos/${targetUserId}/${prefix}/${sourceId}.mp4`;

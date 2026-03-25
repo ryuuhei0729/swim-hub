@@ -100,7 +100,8 @@ export default function SubscriptionSettings() {
   const trialDaysRemaining = getTrialDaysRemaining(trialEnd);
 
   // subscription がまだロード中の場合はスケルトンを表示
-  if (loading || subscription === null) {
+  // loading が false で subscription が null の場合は、user_subscriptions にレコードがない（Free プラン）
+  if (loading) {
     return (
       <div className="bg-white rounded-lg shadow p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 pb-2 mb-4 border-b border-gray-200">

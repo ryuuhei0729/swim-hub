@@ -488,6 +488,7 @@ export default function CompetitionBasicForm({
             {/* 編集モード */}
             {editData && (
               <Button
+                type="button"
                 onClick={handleUpdate}
                 disabled={isLoading}
                 className="w-full sm:w-auto"
@@ -500,6 +501,7 @@ export default function CompetitionBasicForm({
             {/* 新規作成 - チームモード: 保存ボタンのみ */}
             {!editData && teamMode && (
               <Button
+                type="button"
                 onClick={handleSubmitAndClose}
                 disabled={isLoading}
                 className="w-full sm:w-auto"
@@ -512,6 +514,7 @@ export default function CompetitionBasicForm({
             {/* 新規作成 - 未来の日付（チームモード以外） */}
             {!editData && !teamMode && !isDateTodayOrPast() && (
               <Button
+                type="button"
                 onClick={handleSubmitToEntry}
                 disabled={isLoading}
                 className="w-full sm:w-auto"
@@ -525,6 +528,7 @@ export default function CompetitionBasicForm({
             {!editData && !teamMode && isDateTodayOrPast() && (
               <>
                 <Button
+                  type="button"
                   onClick={handleSubmitToRecord}
                   disabled={isLoading}
                   className="w-full sm:w-auto"
@@ -533,6 +537,7 @@ export default function CompetitionBasicForm({
                   {isLoading ? "保存中..." : "次へ（記録入力）"}
                 </Button>
                 <Button
+                  type="button"
                   onClick={handleSubmitAndClose}
                   variant="outline"
                   disabled={isLoading}
@@ -545,6 +550,7 @@ export default function CompetitionBasicForm({
             )}
 
             <Button
+              type="button"
               variant="outline"
               onClick={handleClose}
               disabled={isLoading}

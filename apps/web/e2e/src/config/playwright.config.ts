@@ -138,15 +138,9 @@ export default defineConfig({
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
-        // ログイン状態の再利用（storageState）
-        // global-setup.tsで保存されたログイン状態を読み込む
-        // ファイルが存在しない場合は、各テストで個別にログイン処理が実行される
-        storageState: (() => {
-          const authFile = path.resolve(__dirname, "../../playwright/.auth/user.json");
-          const fs = require("fs");
-          // ファイルが存在する場合のみ設定（存在しない場合はundefinedで各テストでログイン）
-          return fs.existsSync(authFile) ? authFile : undefined;
-        })(),
+        // storageState は使用しない（Web Locks デッドロック回避のため）
+        // 各テストで supabaseLogin() によるセッション注入を使用する
+        storageState: undefined,
       },
       // auth.spec.ts以外のテストファイルに適用
       testIgnore: /.*auth\.spec\.ts/,

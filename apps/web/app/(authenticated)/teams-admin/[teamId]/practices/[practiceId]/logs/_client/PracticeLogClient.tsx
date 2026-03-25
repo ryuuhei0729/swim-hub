@@ -424,13 +424,25 @@ export default function PracticeLogClient({
         Array.isArray((result as { log_ids: unknown[] }).log_ids)
       ) {
         const logIds = (result as { log_ids: string[] }).log_ids;
+        // logsData と同じ menus → targetMembers の順序で flat index → logId のマップを構築
+        const logIdMap = new Map<string, string>();
+        let flatIdx = 0;
+        for (let mi = 0; mi < menus.length; mi++) {
+          const targetMembers = members.filter((m) => menus[mi].targetUserIds.includes(m.user_id));
+          for (const member of targetMembers) {
+            if (logIds[flatIdx]) {
+              logIdMap.set(`${mi}_${member.user_id}`, logIds[flatIdx]);
+            }
+            flatIdx++;
+          }
+        }
         for (let i = 0; i < menus.length; i++) {
           const menu = menus[i];
           if (!menu.videoFiles) continue;
           for (const [memberId, videoFile] of Object.entries(menu.videoFiles)) {
             if (!videoFile) continue;
             const thumbnail = menu.videoThumbnails?.[memberId];
-            const logId = logIds[i];
+            const logId = logIdMap.get(`${i}_${memberId}`);
             if (!logId) continue;
             try {
               const uploadUrlRes = await fetch("/api/storage/videos/upload-url", {

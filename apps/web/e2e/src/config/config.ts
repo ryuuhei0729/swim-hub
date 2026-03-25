@@ -5,13 +5,19 @@
 import * as dotenv from "dotenv";
 import path from "node:path";
 
-// .envファイルを読み込む（相対パスで解決）
-// process.cwd()はapps/webディレクトリなので、直接.env.local/.envを参照
-const envLocalPath = path.resolve(process.cwd(), ".env.local");
-const envPath = path.resolve(process.cwd(), ".env");
+// .envファイルを読み込む
+// process.cwd() が swim-hub/ ルート or apps/web/ のどちらでも動くように両方探す
+const cwd = process.cwd();
+const candidates = [
+  cwd,                                // swim-hub/ から実行した場合
+  path.resolve(cwd, "apps/web"),      // swim-hub/ → apps/web
+  path.resolve(__dirname, "../../../.."), // config.ts → apps/web
+];
 
-dotenv.config({ path: envLocalPath });
-dotenv.config({ path: envPath });
+for (const dir of candidates) {
+  dotenv.config({ path: path.resolve(dir, ".env.local") });
+  dotenv.config({ path: path.resolve(dir, ".env") });
+}
 
 /**
  * タイムアウト値（ミリ秒）

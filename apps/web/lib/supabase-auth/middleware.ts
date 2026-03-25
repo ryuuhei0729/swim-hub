@@ -157,6 +157,7 @@ export async function updateSession(request: NextRequest) {
     "/about",
     "/tokushoho",
     "/blog",
+    "/pricing",
     "/api",
     "/_next",
   ];
