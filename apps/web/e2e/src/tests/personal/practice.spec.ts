@@ -28,9 +28,10 @@ try {
 /** Supabase サービスロールクライアントを作成するヘルパー */
 function createAdminClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321";
-  const serviceKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU";
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY environment variable is not set. Please set it before running E2E tests.");
+  }
   return createClient(supabaseUrl, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
@@ -267,8 +268,8 @@ test.describe("個人練習記録のテスト", () => {
       .first();
     // シードした場所 OR 編集後の場所のいずれかにマッチすれば OK
     const hasExpectedPlace =
-      await modal.locator("text=○○プール").first().isVisible({ timeout: 5000 }).catch(() => false) ||
-      await modal.locator("text=△△プール").first().isVisible({ timeout: 5000 }).catch(() => false);
+      await modal.locator("text=○○プール").first().waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false) ||
+      await modal.locator("text=△△プール").first().waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false);
     expect(hasExpectedPlace).toBeTruthy();
   });
 
@@ -301,7 +302,7 @@ test.describe("個人練習記録のテスト", () => {
 
     // ステップ3: 練習記録の「編集」ボタンをクリック
     const editPracticeButton = page.locator('[data-testid="edit-practice-button"]');
-    const hasEditPracticeButton = await editPracticeButton.first().isVisible({ timeout: 10000 }).catch(() => false);
+    const hasEditPracticeButton = await editPracticeButton.first().waitFor({ state: "visible", timeout: 10000 }).then(() => true).catch(() => false);
     if (!hasEditPracticeButton) {
       console.log("練習記録の編集ボタンが表示されないため、テストをスキップします");
       const modal = page.locator('[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"]');
@@ -454,7 +455,7 @@ test.describe("個人練習記録のテスト", () => {
 
     // ステップ2: 練習ログの「編集」ボタンをクリック
     const editLogButton = page.locator('[data-testid="edit-practice-log-button"]');
-    const hasEditButton = await editLogButton.first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasEditButton = await editLogButton.first().waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false);
     if (!hasEditButton) {
       console.log("練習ログの編集ボタンが表示されないため、テストをスキップします");
       // モーダルは表示されていることを確認
@@ -584,7 +585,7 @@ test.describe("個人練習記録のテスト", () => {
 
     // 練習ログの編集ボタンをクリック
     const editLogButton = page.locator('[data-testid="edit-practice-log-button"]');
-    const hasEditButton005 = await editLogButton.first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasEditButton005 = await editLogButton.first().waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false);
     if (!hasEditButton005) {
       console.log("練習ログの編集ボタンが表示されないため、テストをスキップします");
       const modal = page.locator('[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"]');
@@ -715,8 +716,7 @@ test.describe("個人練習記録のテスト", () => {
 
     const tagModalAfterUpdate = page.locator('[data-testid="tag-management-modal"]');
     const isModalStillVisible = await tagModalAfterUpdate
-      .isVisible({ timeout: 1000 })
-      .catch(() => false);
+      .waitFor({ state: "visible", timeout: 1000 }).then(() => true).catch(() => false);
 
     if (isModalStillVisible) {
       const cancelButton = page.locator('[data-testid="tag-cancel-button"]');

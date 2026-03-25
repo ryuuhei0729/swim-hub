@@ -436,6 +436,7 @@ export default function PracticeLogClient({
             flatIdx++;
           }
         }
+        const videoUploadErrors: string[] = [];
         for (let i = 0; i < menus.length; i++) {
           const menu = menus[i];
           if (!menu.videoFiles) continue;
@@ -450,7 +451,11 @@ export default function PracticeLogClient({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ type: "practice-log", id: logId, contentType: "video/mp4" }),
               });
-              if (!uploadUrlRes.ok) continue;
+              if (!uploadUrlRes.ok) {
+                const memberName = members.find((m) => m.user_id === memberId)?.users?.name ?? memberId;
+                videoUploadErrors.push(`${memberName}: アップロードURL取得に失敗しました (${uploadUrlRes.status})`);
+                continue;
+              }
               const { videoUploadUrl, thumbnailUploadUrl, videoPath: vPath, thumbnailPath: tPath } =
                 await uploadUrlRes.json() as {
                   videoUploadUrl: string;
@@ -458,9 +463,19 @@ export default function PracticeLogClient({
                   videoPath: string;
                   thumbnailPath: string;
                 };
-              await fetch(videoUploadUrl, { method: "PUT", body: videoFile });
+              const putRes = await fetch(videoUploadUrl, { method: "PUT", body: videoFile });
+              if (!putRes.ok) {
+                const memberName = members.find((m) => m.user_id === memberId)?.users?.name ?? memberId;
+                videoUploadErrors.push(`${memberName}: 動画のアップロードに失敗しました (${putRes.status})`);
+                continue;
+              }
               if (thumbnail) {
-                await fetch(thumbnailUploadUrl, { method: "PUT", body: thumbnail });
+                const thumbRes = await fetch(thumbnailUploadUrl, { method: "PUT", body: thumbnail });
+                if (!thumbRes.ok) {
+                  const memberName = members.find((m) => m.user_id === memberId)?.users?.name ?? memberId;
+                  videoUploadErrors.push(`${memberName}: サムネイルのアップロードに失敗しました (${thumbRes.status})`);
+                  continue;
+                }
               }
               const confirmFormData = new FormData();
               confirmFormData.append("type", "practice-log");
@@ -473,9 +488,14 @@ export default function PracticeLogClient({
                   new File([thumbnail], "thumbnail.webp", { type: "image/webp" }),
                 );
               }
-              await fetch("/api/storage/videos/confirm", { method: "POST", body: confirmFormData });
+              const confirmRes = await fetch("/api/storage/videos/confirm", { method: "POST", body: confirmFormData });
+              if (!confirmRes.ok) {
+                const memberName = members.find((m) => m.user_id === memberId)?.users?.name ?? memberId;
+                videoUploadErrors.push(`${memberName}: 動画の確認処理に失敗しました (${confirmRes.status})`);
+                continue;
+              }
               // team-assign APIでターゲットユーザーに移動
-              await fetch("/api/storage/videos/team-assign", {
+              const assignRes = await fetch("/api/storage/videos/team-assign", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -487,10 +507,19 @@ export default function PracticeLogClient({
                   tempThumbnailPath: tPath,
                 }),
               });
+              if (!assignRes.ok) {
+                const memberName = members.find((m) => m.user_id === memberId)?.users?.name ?? memberId;
+                videoUploadErrors.push(`${memberName}: チーム割り当てに失敗しました (${assignRes.status})`);
+              }
             } catch (videoErr) {
               console.error("動画アップロードエラー:", videoErr);
+              const memberName = members.find((m) => m.user_id === memberId)?.users?.name ?? memberId;
+              videoUploadErrors.push(`${memberName}: 動画アップロード中にエラーが発生しました`);
             }
           }
+        }
+        if (videoUploadErrors.length > 0) {
+          alert(`一部の動画アップロードに失敗しました:\n${videoUploadErrors.join("\n")}`);
         }
       }
 

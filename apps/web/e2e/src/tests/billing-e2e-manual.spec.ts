@@ -139,9 +139,9 @@ async function openCompetitionModal(page: Page) {
   // 「大会記録を追加」ボタンをクリック（空の日付）or「大会記録」ボタン（データがある日付）
   const emptyBtn = page.getByText("大会記録を追加");
   const addRecordBtn = page.locator('[data-testid="add-record-button"]');
-  if (await emptyBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+  if (await emptyBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
     await emptyBtn.click();
-  } else if (await addRecordBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+  } else if (await addRecordBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
     await addRecordBtn.click();
   } else {
     await page.getByText("大会記録").first().click();
@@ -165,9 +165,9 @@ async function createCompetitionAndOpenRecordForm(page: Page) {
   // 過去日付: competition-record-button, 未来日付: competition-next-button
   const recordBtn = page.locator('[data-testid="competition-record-button"]');
   const nextBtn = page.locator('[data-testid="competition-next-button"]');
-  if (await recordBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+  if (await recordBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
     await recordBtn.click();
-  } else if (await nextBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+  } else if (await nextBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
     await nextBtn.click();
   } else {
     await page.getByRole("button", { name: /次へ|記録入力/ }).click();
@@ -183,7 +183,7 @@ async function createCompetitionAndOpenRecordForm(page: Page) {
 
   // ステップ2（エントリー）をスキップしてステップ3（記録入力）へ
   const skipBtn = page.locator('[data-testid="entry-skip-button"]');
-  if (await skipBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+  if (await skipBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
     await skipBtn.click();
     await page.waitForTimeout(TIMEOUTS.MODAL_ANIMATION);
   }
@@ -192,7 +192,7 @@ async function createCompetitionAndOpenRecordForm(page: Page) {
   const addRecordBtn = page.locator(
     '[data-testid="record-add-button"], [data-testid="add-record-button"]',
   );
-  if (await addRecordBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+  if (await addRecordBtn.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
     await addRecordBtn.click();
     await page.waitForTimeout(TIMEOUTS.MODAL_ANIMATION);
   }
@@ -228,13 +228,13 @@ test.describe("Free プランの機能制限", () => {
     // 記録入力フォーム（RecordLogForm）が表示されるか、大会基本情報フォームのままか確認
     // 記録入力フォームが開かない場合は、直接スプリット制限UIをテスト
     const splitAddBtn = page.locator('[data-testid="record-split-add-button-1"]');
-    const isSplitFormVisible = await splitAddBtn.isVisible({ timeout: 5000 }).catch(() => false);
+    const isSplitFormVisible = await splitAddBtn.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false);
 
     if (!isSplitFormVisible) {
       // 大会基本情報フォームからの代替テスト：
       // 「保存して終了」で大会を作成し、ダッシュボードから記録を追加
       const closeBtn = page.locator('[data-testid="competition-close-button"]');
-      if (await closeBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await closeBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
         await closeBtn.click();
         await page.waitForTimeout(TIMEOUTS.SPA_RENDERING);
       }
@@ -245,7 +245,7 @@ test.describe("Free プランの機能制限", () => {
 
       // カレンダーの最初の日付セルをクリック
       const dayCell = page.locator('[data-testid="calendar"] [data-testid="calendar-day"]').first();
-      if (await dayCell.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await dayCell.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
         await dayCell.click();
       } else {
         await page.locator("text=1").first().click();
@@ -254,7 +254,7 @@ test.describe("Free プランの機能制限", () => {
 
       // 作成した大会（E2Eテスト大会）の記録追加ボタンを探す
       const recordAddBtn = page.locator('[data-testid="add-record-button"]');
-      if (await recordAddBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await recordAddBtn.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
         await recordAddBtn.click();
         await page.waitForTimeout(TIMEOUTS.MODAL_ANIMATION);
       }
@@ -262,13 +262,13 @@ test.describe("Free プランの機能制限", () => {
 
     // 種目を選択
     const styleSelect = page.locator('[data-testid="record-style-1"]');
-    if (await styleSelect.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await styleSelect.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
       await styleSelect.selectOption({ index: 1 });
     }
 
     // タイムを入力
     const timeInput = page.locator('[data-testid="record-time-1"]');
-    if (await timeInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await timeInput.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
       await timeInput.fill("1:00.00");
     }
 
@@ -286,7 +286,7 @@ test.describe("Free プランの機能制限", () => {
 
     // PremiumBadge が表示されていることを確認
     const premiumBadge = page.locator("text=Freeプランでは").or(page.locator("text=Premium にアップグレード"));
-    const hasBadge = await premiumBadge.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasBadge = await premiumBadge.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     expect(isDisabled || hasBadge).toBeTruthy();
     testResults[1] = {
@@ -305,13 +305,13 @@ test.describe("Free プランの機能制限", () => {
 
     // 既存の大会記録があればクリック
     const recordLink = page.locator("a[href*='/competition/']").first();
-    if (await recordLink.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await recordLink.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
       await recordLink.click();
       await page.waitForLoadState("networkidle");
 
       // 編集ボタンをクリック
       const editBtn = page.locator('[data-testid="edit-record-button"]');
-      if (await editBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await editBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
         await editBtn.click();
         await page.waitForTimeout(TIMEOUTS.MODAL_ANIMATION);
 
@@ -339,22 +339,22 @@ test.describe("Free プランの機能制限", () => {
     // 空の日付: "練習予定を追加"、データがある日付: "練習記録" (data-testid="add-practice-button")
     const emptyPracticeBtn = page.getByText("練習予定を追加");
     const addPracticeBtn = page.locator('[data-testid="add-practice-button"]');
-    if (await emptyPracticeBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await emptyPracticeBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
       await emptyPracticeBtn.click();
-    } else if (await addPracticeBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    } else if (await addPracticeBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
       await addPracticeBtn.click();
     }
     await page.waitForTimeout(TIMEOUTS.MODAL_ANIMATION);
 
     // タイトル入力
     const titleInput = page.locator('[data-testid="practice-title"]');
-    if (await titleInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await titleInput.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
       await titleInput.fill("E2Eテスト練習");
     }
 
     // 保存して次へ
     const saveBtn = page.locator('[data-testid="save-practice-continue-button"]');
-    if (await saveBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await saveBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
       await saveBtn.click();
     } else {
       await page.getByRole("button", { name: /保存/ }).first().click();
@@ -363,7 +363,7 @@ test.describe("Free プランの機能制限", () => {
 
     // メニューを追加
     const addMenuBtn = page.locator('[data-testid="add-menu-button"]');
-    if (await addMenuBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await addMenuBtn.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
       await addMenuBtn.click();
       await page.waitForTimeout(TIMEOUTS.MODAL_ANIMATION);
     }
@@ -397,9 +397,9 @@ test.describe("Free プランの機能制限", () => {
     // 「大会記録を追加」ボタンをクリック
     const addCompBtn = page.getByText("大会記録を追加");
     const addRecordBtn = page.locator('[data-testid="add-record-button"]');
-    if (await addCompBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await addCompBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
       await addCompBtn.click();
-    } else if (await addRecordBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    } else if (await addRecordBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
       await addRecordBtn.click();
     }
     await page.waitForTimeout(TIMEOUTS.MODAL_ANIMATION);
@@ -408,8 +408,8 @@ test.describe("Free プランの機能制限", () => {
     const premiumMsg = page.getByText("画像の添付は Premium 会員限定です");
     const upgradeLink = page.getByText("Premium にアップグレード");
 
-    const hasMsg = await premiumMsg.isVisible({ timeout: 5000 }).catch(() => false);
-    const hasLink = await upgradeLink.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasMsg = await premiumMsg.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false);
+    const hasLink = await upgradeLink.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     expect(hasMsg || hasLink).toBeTruthy();
     testResults[4] = { status: hasMsg || hasLink ? "OK" : "NG", note: `msg=${hasMsg}, link=${hasLink}` };
@@ -430,16 +430,16 @@ test.describe("Free プランの機能制限", () => {
 
     const addCompBtn = page.getByText("大会記録を追加");
     const addRecordBtn = page.locator('[data-testid="add-record-button"]');
-    if (await addCompBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await addCompBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
       await addCompBtn.click();
-    } else if (await addRecordBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    } else if (await addRecordBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
       await addRecordBtn.click();
     }
     await page.waitForTimeout(TIMEOUTS.MODAL_ANIMATION);
 
     // 動画アップロード制限 - Premium にアップグレードリンクの存在確認
     const upgradeLink = page.getByText("Premium にアップグレード");
-    const hasLink = await upgradeLink.isVisible({ timeout: 5000 }).catch(() => false);
+    const hasLink = await upgradeLink.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false);
 
     testResults[5] = { status: hasLink ? "OK" : "NG", note: `upgradeLink=${hasLink}` };
     await context.close();
@@ -459,16 +459,16 @@ test.describe("Free プランの機能制限", () => {
 
     const addCompBtn = page.getByText("大会記録を追加");
     const addRecordBtn = page.locator('[data-testid="add-record-button"]');
-    if (await addCompBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await addCompBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
       await addCompBtn.click();
-    } else if (await addRecordBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    } else if (await addRecordBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
       await addRecordBtn.click();
     }
     await page.waitForTimeout(TIMEOUTS.MODAL_ANIMATION);
 
     // 「Premium にアップグレード」リンクをクリック
     const upgradeLink = page.getByText("Premium にアップグレード").first();
-    if (await upgradeLink.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await upgradeLink.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
       await upgradeLink.click();
       await page.waitForTimeout(TIMEOUTS.REDIRECT);
 
@@ -493,8 +493,7 @@ test.describe("Free プランの機能制限", () => {
       .getByText("このプランを選択")
       .or(page.getByText("現在のプラン:"))
       .first()
-      .isVisible({ timeout: 10000 })
-      .catch(() => false);
+      .waitFor({ state: "visible", timeout: 10000 }).then(() => true).catch(() => false);
 
     // サブスクリプションデータがロードされない場合はリロードして再試行
     if (!subscriptionLoaded) {
@@ -510,23 +509,23 @@ test.describe("Free プランの機能制限", () => {
 
     // 「現在のプラン: Free」バッジ
     const freeBadge = page.getByText("Free").first();
-    const hasFree = await freeBadge.isVisible({ timeout: 5000 }).catch(() => false);
+    const hasFree = await freeBadge.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false);
 
     // 月額プラン ¥500/月
     const monthlyCard = page.getByText("¥500").or(page.getByText("500"));
-    const hasMonthly = await monthlyCard.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasMonthly = await monthlyCard.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     // 年額プラン ¥5,000/年
     const yearlyCard = page.getByText("¥5,000").or(page.getByText("5,000").or(page.getByText("5000")));
-    const hasYearly = await yearlyCard.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasYearly = await yearlyCard.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     // 「2ヶ月分お得」バッジ
     const discountBadge = page.getByText("2ヶ月分お得");
-    const hasDiscount = await discountBadge.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasDiscount = await discountBadge.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     // 「このプランを選択」ボタン
     const selectBtn = page.getByText("このプランを選択");
-    const hasSelectBtn = await selectBtn.first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSelectBtn = await selectBtn.first().waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     expect(hasFree).toBeTruthy();
     expect(hasMonthly).toBeTruthy();
@@ -562,7 +561,7 @@ test.describe("Stripe 購入フロー", () => {
 
     // 月額の「このプランを選択」ボタンをクリック
     const monthlyBtn = page.getByText("このプランを選択").first();
-    if (await monthlyBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await monthlyBtn.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
       await monthlyBtn.click();
       await page.waitForTimeout(TIMEOUTS.LONG);
 
@@ -574,31 +573,31 @@ test.describe("Stripe 購入フロー", () => {
         // Stripe テストカード入力
         // メールアドレス入力
         const emailField = page.locator('input[name="email"], #email');
-        if (await emailField.isVisible({ timeout: 5000 }).catch(() => false)) {
+        if (await emailField.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
           await emailField.fill(purchaseUser.email);
         }
 
         // カード番号入力
         const cardField = page.locator('input[name="cardNumber"], #cardNumber');
-        if (await cardField.isVisible({ timeout: 5000 }).catch(() => false)) {
+        if (await cardField.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
           await cardField.fill("4242424242424242");
         }
 
         // 有効期限
         const expiryField = page.locator('input[name="cardExpiry"], #cardExpiry');
-        if (await expiryField.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await expiryField.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
           await expiryField.fill("1230");
         }
 
         // CVC
         const cvcField = page.locator('input[name="cardCvc"], #cardCvc');
-        if (await cvcField.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await cvcField.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
           await cvcField.fill("123");
         }
 
         // カード所有者名
         const nameField = page.locator('input[name="billingName"], #billingName');
-        if (await nameField.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await nameField.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
           await nameField.fill("Test User");
         }
 
@@ -631,7 +630,7 @@ test.describe("Stripe 購入フロー", () => {
     await page.waitForLoadState("networkidle");
 
     const monthlyBtn = page.getByText("このプランを選択").first();
-    if (await monthlyBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await monthlyBtn.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
       await monthlyBtn.click();
       await page.waitForTimeout(TIMEOUTS.LONG);
 
@@ -639,7 +638,7 @@ test.describe("Stripe 購入フロー", () => {
       if (url.includes("checkout.stripe.com")) {
         // Stripe 画面の「← 戻る」リンク（business-link）をクリック
         const backLink = page.locator('[data-testid="business-link"], a[href*="cancel"], a:has-text("戻る"), a:has-text("Back")');
-        if (await backLink.first().isVisible({ timeout: 5000 }).catch(() => false)) {
+        if (await backLink.first().waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
           await backLink.first().click();
         } else {
           await page.goBack();
@@ -667,7 +666,7 @@ test.describe("Stripe 購入フロー", () => {
 
     // 年額の「このプランを選択」ボタンをクリック（2番目のカード = last）
     const yearlyBtn = page.getByText("このプランを選択").last();
-    if (await yearlyBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await yearlyBtn.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
       await yearlyBtn.click();
       await page.waitForTimeout(TIMEOUTS.LONG);
 
@@ -677,31 +676,31 @@ test.describe("Stripe 購入フロー", () => {
       if (isStripe) {
         // Stripe 画面で年額 ¥5,000 の金額が表示されていることを確認
         const yearlyAmount = page.locator("text=¥5,000, text=5,000, text=5000");
-        const hasYearlyAmount = await yearlyAmount.first().isVisible({ timeout: 5000 }).catch(() => false);
+        const hasYearlyAmount = await yearlyAmount.first().waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false);
 
         // テストカード情報入力
         const emailField = page.locator('input[name="email"], #email');
-        if (await emailField.isVisible({ timeout: 5000 }).catch(() => false)) {
+        if (await emailField.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
           await emailField.fill(yearlyUser.email);
         }
 
         const cardField = page.locator('input[name="cardNumber"], #cardNumber');
-        if (await cardField.isVisible({ timeout: 5000 }).catch(() => false)) {
+        if (await cardField.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
           await cardField.fill("4242424242424242");
         }
 
         const expiryField = page.locator('input[name="cardExpiry"], #cardExpiry');
-        if (await expiryField.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await expiryField.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
           await expiryField.fill("1230");
         }
 
         const cvcField = page.locator('input[name="cardCvc"], #cardCvc');
-        if (await cvcField.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await cvcField.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
           await cvcField.fill("123");
         }
 
         const nameField = page.locator('input[name="billingName"], #billingName');
-        if (await nameField.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await nameField.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
           await nameField.fill("Test User Yearly");
         }
 
@@ -736,11 +735,11 @@ test.describe("Stripe 購入フロー", () => {
 
     // PricingCard（「このプランを選択」ボタン付きカード）が表示されないことを確認
     const selectPlanBtn = page.getByText("このプランを選択");
-    const hasSelectBtn = await selectPlanBtn.first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSelectBtn = await selectPlanBtn.first().waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     // 「プランを管理」ボタンのみ表示されることを確認
     const manageBtn = page.getByText("プランを管理");
-    const hasManage = await manageBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasManage = await manageBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     // API 直接呼び出しテスト: POST /api/stripe/checkout で 409 が返ること
     const apiResponse = await page.request.post("/api/stripe/checkout", {
@@ -763,34 +762,34 @@ test.describe("Stripe 購入フロー", () => {
     await page.waitForLoadState("networkidle");
 
     const monthlyBtn = page.getByText("このプランを選択").first();
-    if (await monthlyBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await monthlyBtn.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
       await monthlyBtn.click();
       await page.waitForTimeout(TIMEOUTS.LONG);
 
       if (page.url().includes("checkout.stripe.com")) {
         // 失敗カード入力
         const emailField = page.locator('input[name="email"], #email');
-        if (await emailField.isVisible({ timeout: 5000 }).catch(() => false)) {
+        if (await emailField.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
           await emailField.fill(failUser.email);
         }
 
         const cardField = page.locator('input[name="cardNumber"], #cardNumber');
-        if (await cardField.isVisible({ timeout: 5000 }).catch(() => false)) {
+        if (await cardField.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
           await cardField.fill("4000000000000002"); // 常に拒否されるカード
         }
 
         const expiryField = page.locator('input[name="cardExpiry"], #cardExpiry');
-        if (await expiryField.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await expiryField.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
           await expiryField.fill("1230");
         }
 
         const cvcField = page.locator('input[name="cardCvc"], #cardCvc');
-        if (await cvcField.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await cvcField.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
           await cvcField.fill("123");
         }
 
         const nameField = page.locator('input[name="billingName"], #billingName');
-        if (await nameField.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await nameField.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
           await nameField.fill("Test User");
         }
 
@@ -800,7 +799,7 @@ test.describe("Stripe 購入フロー", () => {
 
         // エラーメッセージが表示されることを確認
         const errorMsg = page.locator(".StripeError, [class*='error'], [role='alert']");
-        const hasError = await errorMsg.isVisible({ timeout: 10000 }).catch(() => false);
+        const hasError = await errorMsg.waitFor({ state: "visible", timeout: 10000 }).then(() => true).catch(() => false);
 
         // ページがまだStripeにいることを確認（決済未完了）
         const stillOnStripe = page.url().includes("checkout.stripe.com");
@@ -821,34 +820,34 @@ test.describe("Stripe 購入フロー", () => {
     await page.waitForLoadState("networkidle");
 
     const monthlyBtn = page.getByText("このプランを選択").first();
-    if (await monthlyBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await monthlyBtn.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
       await monthlyBtn.click();
       await page.waitForTimeout(TIMEOUTS.LONG);
 
       if (page.url().includes("checkout.stripe.com")) {
         // 3DS 認証が必要なテストカードを入力
         const emailField = page.locator('input[name="email"], #email');
-        if (await emailField.isVisible({ timeout: 5000 }).catch(() => false)) {
+        if (await emailField.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
           await emailField.fill(threeDSUser.email);
         }
 
         const cardField = page.locator('input[name="cardNumber"], #cardNumber');
-        if (await cardField.isVisible({ timeout: 5000 }).catch(() => false)) {
+        if (await cardField.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
           await cardField.fill("4000002500003155"); // 3DS required card
         }
 
         const expiryField = page.locator('input[name="cardExpiry"], #cardExpiry');
-        if (await expiryField.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await expiryField.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
           await expiryField.fill("1230");
         }
 
         const cvcField = page.locator('input[name="cardCvc"], #cardCvc');
-        if (await cvcField.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await cvcField.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
           await cvcField.fill("123");
         }
 
         const nameField = page.locator('input[name="billingName"], #billingName');
-        if (await nameField.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await nameField.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
           await nameField.fill("Test 3DS User");
         }
 
@@ -907,7 +906,7 @@ test.describe("プラン管理", () => {
     await page.waitForLoadState("networkidle");
 
     const manageBtn = page.getByText("プランを管理");
-    if (await manageBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await manageBtn.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
       // ボタンクリック時に新しいタブ/同一タブで遷移するかを検出
       const [response] = await Promise.all([
         page.waitForResponse("**/api/stripe/portal", { timeout: 10000 }).catch(() => null),
@@ -962,11 +961,11 @@ test.describe("プラン管理", () => {
     const cancelBadge = page.locator(
       "text=解約予定, text=期間終了時に Free に戻ります, text=キャンセル予定",
     );
-    const hasCancelBadge = await cancelBadge.first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasCancelBadge = await cancelBadge.first().waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false);
 
     // Premium 機能がまだ使えること（premium_expires_at まで）
     const premiumBadge = page.getByText("Premium");
-    const hasPremium = await premiumBadge.first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasPremium = await premiumBadge.first().waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     testResults[20] = {
       status: hasCancelBadge || hasPremium ? "OK" : "NG",
@@ -987,15 +986,15 @@ test.describe("プラン管理", () => {
 
     // 「無料トライアル中」バッジ
     const trialBadge = page.locator("text=無料トライアル中, text=トライアル中");
-    const hasTrialBadge = await trialBadge.first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTrialBadge = await trialBadge.first().waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false);
 
     // 「トライアル残り X 日」の表示
     const trialDays = page.locator("text=/トライアル残り.*日/");
-    const hasTrialDays = await trialDays.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasTrialDays = await trialDays.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     // 「プランを管理」ボタン
     const manageBtn = page.getByText("プランを管理");
-    const hasManage = await manageBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasManage = await manageBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     testResults[21] = {
       status: hasTrialBadge ? "OK" : "NG",
@@ -1015,19 +1014,19 @@ test.describe("プラン管理", () => {
 
     // 赤色バナー「お支払いが失敗しました」
     const failBanner = page.locator("text=お支払いが失敗しました");
-    const hasFailBanner = await failBanner.isVisible({ timeout: 5000 }).catch(() => false);
+    const hasFailBanner = await failBanner.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false);
 
     // 「お支払い方法を更新してください」メッセージ
     const updateMsg = page.locator("text=お支払い方法を更新");
-    const hasUpdateMsg = await updateMsg.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasUpdateMsg = await updateMsg.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     // 「お支払い方法を更新する →」リンク
     const updateLink = page.locator("text=お支払い方法を更新する");
-    const hasUpdateLink = await updateLink.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasUpdateLink = await updateLink.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     // 「Premium（支払い未完了）」赤バッジ
     const pastDueBadge = page.locator("text=支払い未完了");
-    const hasPastDueBadge = await pastDueBadge.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasPastDueBadge = await pastDueBadge.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     testResults[22] = {
       status: hasFailBanner || hasPastDueBadge ? "OK" : "NG",
@@ -1051,31 +1050,31 @@ test.describe("Pricing ページ", () => {
 
     // 「料金プラン」ヒーロー
     const heroTitle = page.getByText("料金プラン");
-    const hasHero = await heroTitle.isVisible({ timeout: 5000 }).catch(() => false);
+    const hasHero = await heroTitle.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false);
 
     // Free プラン
     const freePlan = page.getByText("¥0").or(page.getByText("Free"));
-    const hasFree = await freePlan.first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasFree = await freePlan.first().waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     // Premium プラン ¥500/月
     const premiumPlan = page.getByText("¥500").or(page.getByText("Premium"));
-    const hasPremium = await premiumPlan.first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasPremium = await premiumPlan.first().waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     // 7日間無料トライアル
     const trialBadge = page.getByText("7日間").or(page.getByText("無料トライアル"));
-    const hasTrial = await trialBadge.first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasTrial = await trialBadge.first().waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     // 機能比較テーブル
     const comparisonTable = page.getByText("機能比較");
-    const hasComparison = await comparisonTable.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasComparison = await comparisonTable.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     // よくある質問
     const faqSection = page.getByText("よくある質問");
-    const hasFaq = await faqSection.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasFaq = await faqSection.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     // CTAセクション
     const ctaSection = page.getByText("今すぐ無料で始めよう").or(page.getByText("無料で始め"));
-    const hasCta = await ctaSection.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasCta = await ctaSection.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     expect(hasHero).toBeTruthy();
     expect(hasFree).toBeTruthy();
@@ -1097,21 +1096,21 @@ test.describe("Pricing ページ", () => {
 
     // 機能比較テーブルまでスクロール
     const comparisonSection = page.getByText("機能比較");
-    if (await comparisonSection.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await comparisonSection.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
       await comparisonSection.scrollIntoViewIfNeeded();
     }
 
     // スプリットタイム制限
     const splitFree = page.getByText("最大3個").or(page.getByText("3個"));
-    const hasSplitFree = await splitFree.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSplitFree = await splitFree.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     // 練習タイム制限
     const practiceFree = page.getByText("最大18個").or(page.getByText("18個"));
-    const hasPracticeFree = await practiceFree.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasPracticeFree = await practiceFree.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     // 無制限表示
     const unlimited = page.getByText("無制限");
-    const hasUnlimited = await unlimited.first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasUnlimited = await unlimited.first().waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     testResults[24] = {
       status: hasSplitFree && hasPracticeFree && hasUnlimited ? "OK" : "NG",
@@ -1129,13 +1128,13 @@ test.describe("Pricing ページ", () => {
 
     // FAQセクションまでスクロール
     const faqSection = page.getByText("よくある質問");
-    if (await faqSection.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await faqSection.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
       await faqSection.scrollIntoViewIfNeeded();
     }
 
     // Scanner/Timer の統一課金FAQ
     const scannerTimerFaq = page.getByText("SwimHub Scanner").or(page.getByText("SwimHub Timer"));
-    const hasFaq = await scannerTimerFaq.first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasFaq = await scannerTimerFaq.first().waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false);
 
     // FAQ項目をクリックして回答を表示
     if (!hasFaq) {
@@ -1152,7 +1151,7 @@ test.describe("Pricing ページ", () => {
     const unifiedBilling = page.getByText("統一課金").or(
       page.getByText("SwimHub Scanner・SwimHub Timer の有料機能も")
     );
-    const hasUnified = await unifiedBilling.isVisible({ timeout: 5000 }).catch(() => false);
+    const hasUnified = await unifiedBilling.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false);
 
     testResults[25] = {
       status: hasUnified || hasFaq ? "OK" : "NG",
@@ -1184,13 +1183,13 @@ test.describe("Premium プランの機能確認", () => {
 
     // 種目を選択
     const styleSelect = page.locator('[data-testid="record-style-1"]');
-    if (await styleSelect.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await styleSelect.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
       await styleSelect.selectOption({ index: 1 });
     }
 
     // タイムを入力
     const timeInput = page.locator('[data-testid="record-time-1"]');
-    if (await timeInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await timeInput.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
       await timeInput.fill("1:00.00");
     }
 
@@ -1210,7 +1209,7 @@ test.describe("Premium プランの機能確認", () => {
 
     // PremiumBadge が表示されていないこと
     const premiumBadge = page.locator("text=Freeプランでは");
-    const hasBadge = await premiumBadge.isVisible({ timeout: 2000 }).catch(() => false);
+    const hasBadge = await premiumBadge.waitFor({ state: "visible", timeout: 2000 }).then(() => true).catch(() => false);
 
     testResults[8] = {
       status: addedCount >= 4 && !hasBadge ? "OK" : "NG",
@@ -1230,22 +1229,22 @@ test.describe("Premium プランの機能確認", () => {
     // 空の日付: "練習予定を追加"、データがある日付: "練習記録" (data-testid="add-practice-button")
     const emptyPracticeBtn = page.getByText("練習予定を追加");
     const addPracticeBtn = page.locator('[data-testid="add-practice-button"]');
-    if (await emptyPracticeBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await emptyPracticeBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
       await emptyPracticeBtn.click();
-    } else if (await addPracticeBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    } else if (await addPracticeBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
       await addPracticeBtn.click();
     }
     await page.waitForTimeout(TIMEOUTS.MODAL_ANIMATION);
 
     // タイトル入力
     const titleInput = page.locator('[data-testid="practice-title"]');
-    if (await titleInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await titleInput.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
       await titleInput.fill("Premium練習テスト");
     }
 
     // 保存して次へ
     const saveBtn = page.locator('[data-testid="save-practice-continue-button"]');
-    if (await saveBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await saveBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
       await saveBtn.click();
     } else {
       await page.getByRole("button", { name: /保存/ }).first().click();
@@ -1254,7 +1253,7 @@ test.describe("Premium プランの機能確認", () => {
 
     // PremiumBadge が表示されていないこと（18個制限メッセージが出ない）
     const premiumText = page.locator("text=Freeプランでは18個まで");
-    const hasBadge = await premiumText.isVisible({ timeout: 2000 }).catch(() => false);
+    const hasBadge = await premiumText.waitFor({ state: "visible", timeout: 2000 }).then(() => true).catch(() => false);
 
     testResults[9] = {
       status: !hasBadge ? "OK" : "NG",
@@ -1270,13 +1269,13 @@ test.describe("Premium プランの機能確認", () => {
 
     // 画像アップロード制限メッセージが表示されない（Premiumなので）
     const restrictionMsg = page.getByText("画像の添付は Premium 会員限定です");
-    const hasRestriction = await restrictionMsg.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasRestriction = await restrictionMsg.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     // 画像アップロードエリアが表示されている、またはドラッグ&ドロップ可能
     const uploadArea = page.locator(
       'input[type="file"][accept*="image"], [data-testid*="image-upload"], [data-testid*="file-upload"], text=ドラッグ&ドロップ, text=ファイルを選択',
     );
-    const hasUpload = await uploadArea.first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasUpload = await uploadArea.first().waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     testResults[10] = {
       status: !hasRestriction ? "OK" : "NG",
@@ -1292,13 +1291,13 @@ test.describe("Premium プランの機能確認", () => {
 
     // 動画アップロード制限が表示されないこと
     const restrictionMsg = page.getByText("Premium にアップグレード");
-    const hasRestriction = await restrictionMsg.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasRestriction = await restrictionMsg.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     // 動画アップロードエリアの確認
     const videoUpload = page.locator(
       'input[type="file"][accept*="video"], [data-testid*="video-upload"], text=動画を追加',
     );
-    const hasVideoUpload = await videoUpload.first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasVideoUpload = await videoUpload.first().waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     testResults[11] = {
       status: !hasRestriction ? "OK" : "NG",
@@ -1315,19 +1314,19 @@ test.describe("Premium プランの機能確認", () => {
 
     // 「Premium」バッジ
     const premiumBadge = page.getByText("Premium");
-    const hasPremium = await premiumBadge.first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasPremium = await premiumBadge.first().waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false);
 
     // 「次回更新日」の表示
     const renewalDate = page.locator("text=/次回更新日/");
-    const hasRenewal = await renewalDate.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasRenewal = await renewalDate.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     // 「プランを管理」ボタン
     const manageBtn = page.getByText("プランを管理");
-    const hasManage = await manageBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasManage = await manageBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     // PricingCard が非表示
     const selectPlanBtn = page.getByText("このプランを選択");
-    const hasSelectBtn = await selectPlanBtn.first().isVisible({ timeout: 2000 }).catch(() => false);
+    const hasSelectBtn = await selectPlanBtn.first().waitFor({ state: "visible", timeout: 2000 }).then(() => true).catch(() => false);
 
     expect(hasPremium).toBeTruthy();
 

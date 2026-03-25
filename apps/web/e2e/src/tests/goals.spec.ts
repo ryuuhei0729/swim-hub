@@ -27,9 +27,10 @@ try {
 /** Supabase サービスロールクライアントを作成するヘルパー */
 function createAdminClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321";
-  const serviceKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU";
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY environment variable is not set. Please set it before running E2E tests.");
+  }
   return createClient(supabaseUrl, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
@@ -304,8 +305,7 @@ test.describe("目標管理のテスト", () => {
     // ステップ4: ダイアログが開くのを待つ（API呼び出しがあるため長めに待機）
     const dialogVisible = await page
       .locator('[role="dialog"]')
-      .isVisible({ timeout: 15000 })
-      .catch(() => false);
+      .waitFor({ state: "visible", timeout: 15000 }).then(() => true).catch(() => false);
 
     if (!dialogVisible) {
       console.log("編集ダイアログが開かないため、テストをスキップします");

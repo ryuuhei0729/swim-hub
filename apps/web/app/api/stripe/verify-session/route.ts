@@ -88,7 +88,7 @@ async function updateSubscription(
   }
   const status = subscription.status as "active" | "trialing";
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("user_subscriptions")
     .update({
       plan: "premium",
@@ -102,11 +102,18 @@ async function updateSubscription(
       trial_end: unixToISO(subscription.trial_end),
       updated_at: new Date().toISOString(),
     })
-    .eq("id", userId);
+    .eq("id", userId)
+    .select("id")
+    .single();
 
   if (error) {
     console.error("Supabase update error:", error);
     return NextResponse.json({ error: "サブスクリプションの更新に失敗しました" }, { status: 500 });
+  }
+
+  if (!data) {
+    console.error("No subscription row found for user:", userId);
+    return NextResponse.json({ error: "サブスクリプションのレコードが見つかりません" }, { status: 404 });
   }
 
   return NextResponse.json({

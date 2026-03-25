@@ -77,7 +77,10 @@ export default function ProfileEditModal({
       onClose();
     } catch (err) {
       console.error("プロフィール更新エラー:", err);
-      setError(err instanceof Error ? err.message : "プロフィールの更新に失敗しました");
+      if (err instanceof Error) {
+        console.error("詳細:", err.message);
+      }
+      setError("プロフィールの更新に失敗しました");
     } finally {
       setIsUpdating(false);
     }

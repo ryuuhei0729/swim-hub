@@ -147,8 +147,7 @@ test.describe("メンバー管理のテスト", () => {
     // ステップ2: メンバー管理コンポーネントが表示されることを確認
     const hasTeamMemberManagement = await page
       .locator('[data-testid="team-member-management"]')
-      .isVisible({ timeout: 15000 })
-      .catch(() => false);
+      .waitFor({ state: "visible", timeout: 15000 }).then(() => true).catch(() => false);
 
     if (!hasTeamMemberManagement) {
       console.log(
@@ -191,8 +190,7 @@ test.describe("メンバー管理のテスト", () => {
     // ステップ2: メンバー管理コンポーネントが表示されるのを待つ
     const hasTeamMemberManagement = await page
       .locator('[data-testid="team-member-management"]')
-      .isVisible({ timeout: 15000 })
-      .catch(() => false);
+      .waitFor({ state: "visible", timeout: 15000 }).then(() => true).catch(() => false);
 
     if (!hasTeamMemberManagement) {
       console.log(
@@ -262,8 +260,7 @@ test.describe("メンバー管理のテスト", () => {
     // ステップ2: メンバー管理コンポーネントが表示されるのを待つ
     const hasTeamMemberManagement = await page
       .locator('[data-testid="team-member-management"]')
-      .isVisible({ timeout: 15000 })
-      .catch(() => false);
+      .waitFor({ state: "visible", timeout: 15000 }).then(() => true).catch(() => false);
 
     if (!hasTeamMemberManagement) {
       console.log(
@@ -374,8 +371,7 @@ test.describe("メンバー管理のテスト", () => {
     // ステップ2: メンバー管理コンポーネントが表示されるのを待つ
     const hasTeamMemberManagement = await page
       .locator('[data-testid="team-member-management"]')
-      .isVisible({ timeout: 15000 })
-      .catch(() => false);
+      .waitFor({ state: "visible", timeout: 15000 }).then(() => true).catch(() => false);
 
     if (!hasTeamMemberManagement) {
       console.log(

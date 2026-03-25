@@ -38,10 +38,10 @@ test.describe("個人大会記録のテスト", () => {
   // テスト開始前に e2e-test ユーザーの大会データをクリーンアップし、テストデータをシード
   test.beforeAll(async () => {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321";
-    const serviceKey =
-      process.env.SUPABASE_SERVICE_ROLE_KEY ||
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU";
-    if (!serviceKey) return;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!serviceKey) {
+      throw new Error("SUPABASE_SERVICE_ROLE_KEY environment variable is not set. Please set it before running E2E tests.");
+    }
 
     const supabase = createClient(supabaseUrl, serviceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
@@ -206,8 +206,8 @@ test.describe("個人大会記録のテスト", () => {
         '[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"]',
       );
       const hasExpectedTitle =
-        await modal.locator("text=○○水泳大会").first().isVisible({ timeout: 5000 }).catch(() => false) ||
-        await modal.locator("text=△△水泳大会").first().isVisible({ timeout: 5000 }).catch(() => false);
+        await modal.locator("text=○○水泳大会").first().waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false) ||
+        await modal.locator("text=△△水泳大会").first().waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false);
       if (!hasExpectedTitle) {
         console.log("大会記録がモーダル内に表示されないため、テストをスキップします");
         // モーダル自体は表示されていることを確認
@@ -218,7 +218,7 @@ test.describe("個人大会記録のテスト", () => {
 
     // ステップ5: レコード情報が表示されていることを確認
     const recordTimeDisplay = page.locator('[data-testid="record-time-display"]').first();
-    const hasRecord = await recordTimeDisplay.isVisible({ timeout: 5000 }).catch(() => false);
+    const hasRecord = await recordTimeDisplay.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false);
     if (hasRecord) {
       await expect(recordTimeDisplay).toContainText("2:00");
     }
@@ -253,7 +253,7 @@ test.describe("個人大会記録のテスト", () => {
 
     // ステップ3: 大会記録の「編集」ボタンをクリック
     const editButton = page.locator('[data-testid="edit-competition-button"]').first();
-    const hasEditButton = await editButton.isVisible({ timeout: 10000 }).catch(() => false);
+    const hasEditButton = await editButton.waitFor({ state: "visible", timeout: 10000 }).then(() => true).catch(() => false);
     if (!hasEditButton) {
       console.log("大会記録の編集ボタンが表示されないため、テストをスキップします");
       const modal = page.locator('[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"]');
@@ -350,7 +350,7 @@ test.describe("個人大会記録のテスト", () => {
 
     // ステップ3: 記録の「編集」ボタンをクリック
     const editRecordButton = page.locator('[data-testid="edit-record-button"]').first();
-    const hasEditRecordButton = await editRecordButton.isVisible({ timeout: 10000 }).catch(() => false);
+    const hasEditRecordButton = await editRecordButton.waitFor({ state: "visible", timeout: 10000 }).then(() => true).catch(() => false);
     if (!hasEditRecordButton) {
       console.log("記録の編集ボタンが表示されないため、テストをスキップします");
       // モーダルは表示されていることを確認
@@ -442,7 +442,7 @@ test.describe("個人大会記録のテスト", () => {
         '[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"], [data-testid="record-detail-modal"]',
       )
       .first();
-    const modalVisible = await modal.isVisible({ timeout: 3000 }).catch(() => false);
+    const modalVisible = await modal.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     if (!modalVisible) {
       const todayCellRetry = page.locator(
@@ -485,8 +485,7 @@ test.describe("個人大会記録のテスト", () => {
     // ステップ3: 記録の削除ボタンを探す
     const deleteRecordButton = page.locator('[data-testid="delete-record-button"]').first();
     const hasDeleteButton = await deleteRecordButton
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
+      .waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false);
 
     if (!hasDeleteButton) {
       console.log("削除するレコードが見つかりません。テストをスキップします。");
@@ -498,7 +497,7 @@ test.describe("個人大会記録のテスト", () => {
 
     // 削除確認ダイアログが表示された場合は確認ボタンをクリック
     const confirmDialog = page.locator("role=dialog");
-    if (await confirmDialog.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await confirmDialog.waitFor({ state: "visible", timeout: 2000 }).then(() => true).catch(() => false)) {
       const confirmButton = confirmDialog.locator('button:has-text("削除")').first();
       if (await confirmButton.isVisible().catch(() => false)) {
         await confirmButton.click();
@@ -510,7 +509,7 @@ test.describe("個人大会記録のテスト", () => {
 
     // ステップ6: 大会タイトルが引き続き表示されていることを確認
     const competitionTitle = page.locator('[data-testid="competition-title-display"]').first();
-    const isTitleVisible = await competitionTitle.isVisible({ timeout: 5000 }).catch(() => false);
+    const isTitleVisible = await competitionTitle.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false);
     expect(isTitleVisible).toBe(true);
   });
 
@@ -534,15 +533,14 @@ test.describe("個人大会記録のテスト", () => {
     // エントリー編集ボタンが存在するか確認（今日の日付では存在しない可能性が高い）
     const editEntryButton = page.locator('[data-testid="edit-entry-button"]').first();
     const hasEditEntryButton = await editEntryButton
-      .isVisible({ timeout: 2000 })
-      .catch(() => false);
+      .waitFor({ state: "visible", timeout: 2000 }).then(() => true).catch(() => false);
 
     if (!hasEditEntryButton) {
       console.log(
         "今日の日付ではエントリー編集は利用できません（レコードフローが使用されます）。テストをスキップします。",
       );
       const recordDisplay = page.locator('[data-testid="record-time-display"]').first();
-      const hasRecord = await recordDisplay.isVisible({ timeout: 2000 }).catch(() => false);
+      const hasRecord = await recordDisplay.waitFor({ state: "visible", timeout: 2000 }).then(() => true).catch(() => false);
       if (hasRecord) {
         console.log("レコードが正常に表示されています。");
       }
@@ -616,14 +614,14 @@ test.describe("個人大会記録のテスト", () => {
     );
 
     const firstEntrySummary = page.locator('[data-testid^="entry-summary-"]').first();
-    const hasEntrySummary = await firstEntrySummary.isVisible({ timeout: 2000 }).catch(() => false);
+    const hasEntrySummary = await firstEntrySummary.waitFor({ state: "visible", timeout: 2000 }).then(() => true).catch(() => false);
 
     if (!hasEntrySummary) {
       console.log(
         "今日の日付ではエントリー削除は利用できません。テストをスキップします。",
       );
       const recordDisplay = page.locator('[data-testid="record-time-display"]').first();
-      const hasRecord = await recordDisplay.isVisible({ timeout: 2000 }).catch(() => false);
+      const hasRecord = await recordDisplay.waitFor({ state: "visible", timeout: 2000 }).then(() => true).catch(() => false);
       if (hasRecord) {
         console.log("レコードが正常に表示されています。");
       }
@@ -680,8 +678,7 @@ test.describe("個人大会記録のテスト", () => {
       .locator('[data-testid="delete-competition-button"]')
       .first();
     const hasDeleteButton = await deleteCompetitionButton
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
+      .waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false);
 
     if (!hasDeleteButton) {
       console.log("削除する大会が見つかりません。テストをスキップします。");
@@ -691,13 +688,13 @@ test.describe("個人大会記録のテスト", () => {
     await deleteCompetitionButton.click();
 
     const confirmButton = page.locator('[data-testid="confirm-delete-button"]');
-    const dialogVisible = await confirmButton.isVisible({ timeout: 3000 }).catch(() => false);
+    const dialogVisible = await confirmButton.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     if (dialogVisible) {
       await confirmButton.click();
     } else {
       const confirmDialog = page.locator("role=dialog");
-      if (await confirmDialog.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await confirmDialog.waitFor({ state: "visible", timeout: 2000 }).then(() => true).catch(() => false)) {
         const dialogConfirmButton = confirmDialog.locator('button:has-text("削除")').first();
         if (await dialogConfirmButton.isVisible().catch(() => false)) {
           await dialogConfirmButton.click();

@@ -307,8 +307,7 @@ test.describe("スケジュール管理のテスト", () => {
       // 練習一覧が表示されていることを確認（表示されない場合はURL確認でスキップ）
       const practicesHeader = page.locator("text=チーム練習記録");
       const isHeaderVisible = await practicesHeader
-        .isVisible({ timeout: 15000 })
-        .catch(() => false);
+        .waitFor({ state: "visible", timeout: 15000 }).then(() => true).catch(() => false);
       if (!isHeaderVisible) {
         console.log("チーム練習記録ヘッダーも表示されないため、チーム詳細ページの存在のみ確認");
         expect(page.url()).toContain("/teams/");
@@ -365,8 +364,7 @@ test.describe("スケジュール管理のテスト", () => {
       // 大会一覧が表示されていることを確認（表示されない場合はURL確認でスキップ）
       const competitionsHeader = page.locator("text=チーム大会");
       const isHeaderVisible = await competitionsHeader
-        .isVisible({ timeout: 15000 })
-        .catch(() => false);
+        .waitFor({ state: "visible", timeout: 15000 }).then(() => true).catch(() => false);
       if (!isHeaderVisible) {
         console.log("チーム大会ヘッダーも表示されないため、チーム詳細ページの存在のみ確認");
         expect(page.url()).toContain("/teams/");
@@ -416,8 +414,7 @@ test.describe("スケジュール管理のテスト", () => {
     // まずチーム練習記録ヘッダーが表示されるか確認
     const practicesHeader = page.locator("text=チーム練習記録");
     const isPracticesHeaderVisible = await practicesHeader
-      .isVisible({ timeout: 15000 })
-      .catch(() => false);
+      .waitFor({ state: "visible", timeout: 15000 }).then(() => true).catch(() => false);
 
     if (!isPracticesHeaderVisible) {
       console.log("チーム練習記録の読み込みが完了しないため、テストをスキップします");
