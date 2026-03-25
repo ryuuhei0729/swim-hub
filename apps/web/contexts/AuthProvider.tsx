@@ -447,13 +447,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      // まず認証状態を即座に更新（loading: false にする）
-      // サブスクリプションは後から非同期で取得
+      // 認証状態を更新（ユーザーがいる場合はサブスク取得まで loading を維持）
       const requestedUserId = session?.user?.id ?? null;
       setAuthState((prev) => ({
         user: session?.user ?? null,
         session,
-        loading: false,
+        loading: !!session?.user,
         subscription: prev.user?.id === requestedUserId ? prev.subscription : null,
       }));
 
@@ -463,11 +462,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const subInfo = await fetchSubscription(session.user.id);
           if (isMounted) {
             setAuthState((prev) =>
-              prev.user?.id === requestedUserId ? { ...prev, subscription: subInfo } : prev,
+              prev.user?.id === requestedUserId ? { ...prev, subscription: subInfo, loading: false } : prev,
             );
           }
         } catch {
           // サブスクリプション取得失敗は認証をブロックしない
+          if (isMounted) {
+            setAuthState((prev) => ({ ...prev, loading: false }));
+          }
         }
       }
 
@@ -517,7 +519,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setAuthState((prev) => ({
               user: session.user,
               session,
-              loading: false,
+              loading: true,
               subscription: prev.user?.id === requestedUserId ? prev.subscription : null,
             }));
             // サブスクリプションは非同期で後から取得
@@ -525,11 +527,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               const subInfo = await fetchSubscription(session.user.id);
               if (isMounted) {
                 setAuthState((prev) =>
-                  prev.user?.id === requestedUserId ? { ...prev, subscription: subInfo } : prev,
+                  prev.user?.id === requestedUserId ? { ...prev, subscription: subInfo, loading: false } : prev,
                 );
               }
             } catch {
               // サブスクリプション取得失敗は認証をブロックしない
+              if (isMounted) {
+                setAuthState((prev) => ({ ...prev, loading: false }));
+              }
             }
           } else {
             setAuthState({

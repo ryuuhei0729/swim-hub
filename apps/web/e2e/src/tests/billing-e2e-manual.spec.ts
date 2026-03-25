@@ -203,6 +203,12 @@ async function createCompetitionAndOpenRecordForm(page: Page) {
 // ========================================
 const testResults: Record<number, { status: "OK" | "NG"; note: string }> = {};
 
+/** テスト結果を記録し、NG の場合はテストを失敗させるヘルパー */
+function recordResult(no: number, passed: boolean, note: string) {
+  testResults[no] = { status: passed ? "OK" : "NG", note };
+  expect(passed, note).toBeTruthy();
+}
+
 // ========================================
 // Free プランの機能制限テスト (No.1〜7)
 // ========================================
@@ -289,10 +295,7 @@ test.describe("Free プランの機能制限", () => {
     const hasBadge = await premiumBadge.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     expect(isDisabled || hasBadge).toBeTruthy();
-    testResults[1] = {
-      status: isDisabled && hasBadge ? "OK" : "NG",
-      note: `disabled=${isDisabled}, badge=${hasBadge}`,
-    };
+    recordResult(1, isDisabled && hasBadge, `disabled=${isDisabled}, badge=${hasBadge}`);
     await context.close();
   });
 
@@ -318,12 +321,12 @@ test.describe("Free プランの機能制限", () => {
         // スプリット追加ボタンが disabled か確認
         const addSplitBtn = page.locator('[data-testid="record-split-add-button-1"]');
         const isDisabled = await addSplitBtn.isDisabled().catch(() => false);
-        testResults[2] = { status: isDisabled ? "OK" : "NG", note: `disabled=${isDisabled}` };
+        recordResult(2, isDisabled, `disabled=${isDisabled}`);
       } else {
-        testResults[2] = { status: "NG", note: "編集ボタンが見つからない" };
+        recordResult(2, false, "編集ボタンが見つからない");
       }
     } else {
-      testResults[2] = { status: "NG", note: "No.1で記録が作成されていない（前提条件未達）" };
+      recordResult(2, false, "No.1で記録が作成されていない（前提条件未達）");
     }
     await context.close();
   });
@@ -412,7 +415,7 @@ test.describe("Free プランの機能制限", () => {
     const hasLink = await upgradeLink.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
     expect(hasMsg || hasLink).toBeTruthy();
-    testResults[4] = { status: hasMsg || hasLink ? "OK" : "NG", note: `msg=${hasMsg}, link=${hasLink}` };
+    recordResult(4, hasMsg || hasLink, `msg=${hasMsg}, link=${hasLink}`);
     await context.close();
   });
 
@@ -441,7 +444,7 @@ test.describe("Free プランの機能制限", () => {
     const upgradeLink = page.getByText("Premium にアップグレード");
     const hasLink = await upgradeLink.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false);
 
-    testResults[5] = { status: hasLink ? "OK" : "NG", note: `upgradeLink=${hasLink}` };
+    recordResult(5, hasLink, `upgradeLink=${hasLink}`);
     await context.close();
   });
 
@@ -474,9 +477,9 @@ test.describe("Free プランの機能制限", () => {
 
       const url = page.url();
       const isSettingsPage = url.includes("/settings");
-      testResults[6] = { status: isSettingsPage ? "OK" : "NG", note: `url=${url}` };
+      recordResult(6, isSettingsPage, `url=${url}`);
     } else {
-      testResults[6] = { status: "NG", note: "アップグレードリンクが見つからない" };
+      recordResult(6, false, "アップグレードリンクが見つからない");
     }
     await context.close();
   });
@@ -531,10 +534,7 @@ test.describe("Free プランの機能制限", () => {
     expect(hasMonthly).toBeTruthy();
     expect(hasYearly).toBeTruthy();
 
-    testResults[7] = {
-      status: hasFree && hasMonthly && hasYearly ? "OK" : "NG",
-      note: `free=${hasFree}, monthly=${hasMonthly}, yearly=${hasYearly}, discount=${hasDiscount}, selectBtn=${hasSelectBtn}`,
-    };
+    recordResult(7, hasFree && hasMonthly && hasYearly, `free=${hasFree}, monthly=${hasMonthly}, yearly=${hasYearly}, discount=${hasDiscount}, selectBtn=${hasSelectBtn}`);
     await context.close();
   });
 });
@@ -610,15 +610,12 @@ test.describe("Stripe 購入フロー", () => {
 
         const finalUrl = page.url();
         const redirectedToSettings = finalUrl.includes("/settings");
-        testResults[13] = {
-          status: redirectedToSettings ? "OK" : "NG",
-          note: `stripe=${isStripe}, redirected=${redirectedToSettings}`,
-        };
+        recordResult(13, redirectedToSettings, `stripe=${isStripe}, redirected=${redirectedToSettings}`);
       } else {
-        testResults[13] = { status: "NG", note: `Stripeに遷移しなかった: ${url}` };
+        recordResult(13, false, `Stripeに遷移しなかった: ${url}`);
       }
     } else {
-      testResults[13] = { status: "NG", note: "月額プラン選択ボタンが見つからない" };
+      recordResult(13, false, "月額プラン選択ボタンが見つからない");
     }
     await context.close();
   });
@@ -650,9 +647,9 @@ test.describe("Stripe 購入フロー", () => {
 
         const finalUrl = page.url();
         const isSettings = finalUrl.includes("/settings");
-        testResults[15] = { status: isSettings ? "OK" : "NG", note: `戻り先=${finalUrl}` };
+        recordResult(15, isSettings, `戻り先=${finalUrl}`);
       } else {
-        testResults[15] = { status: "NG", note: "Stripe未遷移" };
+        recordResult(15, false, "Stripe未遷移");
       }
     }
     await context.close();
@@ -711,15 +708,12 @@ test.describe("Stripe 購入フロー", () => {
 
         const finalUrl = page.url();
         const redirectedToSettings = finalUrl.includes("/settings");
-        testResults[14] = {
-          status: redirectedToSettings ? "OK" : "NG",
-          note: `stripe=${isStripe}, yearlyAmount=${hasYearlyAmount}, redirected=${redirectedToSettings}`,
-        };
+        recordResult(14, redirectedToSettings, `stripe=${isStripe}, yearlyAmount=${hasYearlyAmount}, redirected=${redirectedToSettings}`);
       } else {
-        testResults[14] = { status: "NG", note: `Stripeに遷移しなかった: ${url}` };
+        recordResult(14, false, `Stripeに遷移しなかった: ${url}`);
       }
     } else {
-      testResults[14] = { status: "NG", note: "年額プラン選択ボタンが見つからない" };
+      recordResult(14, false, "年額プラン選択ボタンが見つからない");
     }
     await context.close();
   });
@@ -748,10 +742,7 @@ test.describe("Stripe 購入フロー", () => {
     const apiStatus = apiResponse.status();
     const is409 = apiStatus === 409;
 
-    testResults[16] = {
-      status: !hasSelectBtn && hasManage ? "OK" : "NG",
-      note: `noPricingCard=${!hasSelectBtn}, manage=${hasManage}, api409=${is409}(status=${apiStatus})`,
-    };
+    recordResult(16, !hasSelectBtn && hasManage, `noPricingCard=${!hasSelectBtn}, manage=${hasManage}, api409=${is409}(status=${apiStatus})`);
     await context.close();
   });
 
@@ -804,10 +795,7 @@ test.describe("Stripe 購入フロー", () => {
         // ページがまだStripeにいることを確認（決済未完了）
         const stillOnStripe = page.url().includes("checkout.stripe.com");
 
-        testResults[17] = {
-          status: stillOnStripe ? "OK" : "NG",
-          note: `error=${hasError}, stillOnStripe=${stillOnStripe}`,
-        };
+        recordResult(17, stillOnStripe, `error=${hasError}, stillOnStripe=${stillOnStripe}`);
       }
     }
     await context.close();
@@ -880,12 +868,9 @@ test.describe("Stripe 購入フロー", () => {
         const finalUrl = page.url();
         const redirectedToSettings = finalUrl.includes("/settings");
 
-        testResults[18] = {
-          status: threeDSCompleted && redirectedToSettings ? "OK" : "NG",
-          note: `3dsCompleted=${threeDSCompleted}, redirected=${redirectedToSettings}`,
-        };
+        recordResult(18, threeDSCompleted && redirectedToSettings, `3dsCompleted=${threeDSCompleted}, redirected=${redirectedToSettings}`);
       } else {
-        testResults[18] = { status: "NG", note: "Stripe未遷移" };
+        recordResult(18, false, "Stripe未遷移");
       }
     }
     await context.close();
@@ -918,29 +903,20 @@ test.describe("プラン管理", () => {
         const portalUrl = data?.url;
 
         if (portalUrl && portalUrl.includes("billing.stripe.com")) {
-          testResults[19] = {
-            status: "OK",
-            note: `Portal URL 取得成功: ${portalUrl.substring(0, 50)}...`,
-          };
+          recordResult(19, true, `Portal URL 取得成功: ${portalUrl.substring(0, 50)}...`);
         } else {
           // API は成功したがURLが想定と異なる（テスト環境ではStripe Customer未設定の場合）
-          testResults[19] = {
-            status: "NG",
-            note: `Portal URL 不正 or 取得不可（テスト環境ではStripe Customer が存在しない可能性）: status=${response.status()}`,
-          };
+          recordResult(19, false, `Portal URL 不正 or 取得不可（テスト環境ではStripe Customer が存在しない可能性）: status=${response.status()}`);
         }
       } else {
         // Portal API が呼ばれなかった場合、ページ遷移をチェック
         await page.waitForTimeout(5000);
         const currentUrl = page.url();
         const isPortal = currentUrl.includes("billing.stripe.com");
-        testResults[19] = {
-          status: isPortal ? "OK" : "NG",
-          note: `直接遷移チェック: url=${currentUrl}`,
-        };
+        recordResult(19, isPortal, `直接遷移チェック: url=${currentUrl}`);
       }
     } else {
-      testResults[19] = { status: "NG", note: "「プランを管理」ボタンが表示されない" };
+      recordResult(19, false, "「プランを管理」ボタンが表示されない");
     }
     await context.close();
   });
@@ -967,10 +943,7 @@ test.describe("プラン管理", () => {
     const premiumBadge = page.getByText("Premium");
     const hasPremium = await premiumBadge.first().waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
-    testResults[20] = {
-      status: hasCancelBadge || hasPremium ? "OK" : "NG",
-      note: `cancelBadge=${hasCancelBadge}, premiumStillActive=${hasPremium}`,
-    };
+    recordResult(20, hasCancelBadge || hasPremium, `cancelBadge=${hasCancelBadge}, premiumStillActive=${hasPremium}`);
     await context.close();
   });
 
@@ -996,10 +969,7 @@ test.describe("プラン管理", () => {
     const manageBtn = page.getByText("プランを管理");
     const hasManage = await manageBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
-    testResults[21] = {
-      status: hasTrialBadge ? "OK" : "NG",
-      note: `trialBadge=${hasTrialBadge}, trialDays=${hasTrialDays}, manage=${hasManage}`,
-    };
+    recordResult(21, hasTrialBadge, `trialBadge=${hasTrialBadge}, trialDays=${hasTrialDays}, manage=${hasManage}`);
     await context.close();
   });
 
@@ -1028,10 +998,7 @@ test.describe("プラン管理", () => {
     const pastDueBadge = page.locator("text=支払い未完了");
     const hasPastDueBadge = await pastDueBadge.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
-    testResults[22] = {
-      status: hasFailBanner || hasPastDueBadge ? "OK" : "NG",
-      note: `failBanner=${hasFailBanner}, updateMsg=${hasUpdateMsg}, updateLink=${hasUpdateLink}, pastDueBadge=${hasPastDueBadge}`,
-    };
+    recordResult(22, hasFailBanner || hasPastDueBadge, `failBanner=${hasFailBanner}, updateMsg=${hasUpdateMsg}, updateLink=${hasUpdateLink}, pastDueBadge=${hasPastDueBadge}`);
     await context.close();
   });
 });
@@ -1080,10 +1047,7 @@ test.describe("Pricing ページ", () => {
     expect(hasFree).toBeTruthy();
     expect(hasPremium).toBeTruthy();
 
-    testResults[23] = {
-      status: hasHero && hasFree && hasPremium ? "OK" : "NG",
-      note: `hero=${hasHero}, free=${hasFree}, premium=${hasPremium}, trial=${hasTrial}, comparison=${hasComparison}, faq=${hasFaq}, cta=${hasCta}`,
-    };
+    recordResult(23, hasHero && hasFree && hasPremium, `hero=${hasHero}, free=${hasFree}, premium=${hasPremium}, trial=${hasTrial}, comparison=${hasComparison}, faq=${hasFaq}, cta=${hasCta}`);
     await context.close();
   });
 
@@ -1112,10 +1076,7 @@ test.describe("Pricing ページ", () => {
     const unlimited = page.getByText("無制限");
     const hasUnlimited = await unlimited.first().waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
-    testResults[24] = {
-      status: hasSplitFree && hasPracticeFree && hasUnlimited ? "OK" : "NG",
-      note: `split3=${hasSplitFree}, practice18=${hasPracticeFree}, unlimited=${hasUnlimited}`,
-    };
+    recordResult(24, hasSplitFree && hasPracticeFree && hasUnlimited, `split3=${hasSplitFree}, practice18=${hasPracticeFree}, unlimited=${hasUnlimited}`);
     await context.close();
   });
 
@@ -1153,10 +1114,7 @@ test.describe("Pricing ページ", () => {
     );
     const hasUnified = await unifiedBilling.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false);
 
-    testResults[25] = {
-      status: hasUnified || hasFaq ? "OK" : "NG",
-      note: `faq=${hasFaq}, unified=${hasUnified}`,
-    };
+    recordResult(25, hasUnified || hasFaq, `faq=${hasFaq}, unified=${hasUnified}`);
     await context.close();
   });
 });
@@ -1211,10 +1169,7 @@ test.describe("Premium プランの機能確認", () => {
     const premiumBadge = page.locator("text=Freeプランでは");
     const hasBadge = await premiumBadge.waitFor({ state: "visible", timeout: 2000 }).then(() => true).catch(() => false);
 
-    testResults[8] = {
-      status: addedCount >= 4 && !hasBadge ? "OK" : "NG",
-      note: `added=${addedCount}, stillEnabled=${isStillEnabled}, noBadge=${!hasBadge}`,
-    };
+    recordResult(8, addedCount >= 4 && !hasBadge, `added=${addedCount}, stillEnabled=${isStillEnabled}, noBadge=${!hasBadge}`);
     await context.close();
   });
 
@@ -1255,10 +1210,7 @@ test.describe("Premium プランの機能確認", () => {
     const premiumText = page.locator("text=Freeプランでは18個まで");
     const hasBadge = await premiumText.waitFor({ state: "visible", timeout: 2000 }).then(() => true).catch(() => false);
 
-    testResults[9] = {
-      status: !hasBadge ? "OK" : "NG",
-      note: `noPremiumBadge=${!hasBadge}（Premiumユーザーは制限メッセージが表示されない）`,
-    };
+    recordResult(9, !hasBadge, `noPremiumBadge=${!hasBadge}（Premiumユーザーは制限メッセージが表示されない）`);
     await context.close();
   });
 
@@ -1277,10 +1229,7 @@ test.describe("Premium プランの機能確認", () => {
     );
     const hasUpload = await uploadArea.first().waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
-    testResults[10] = {
-      status: !hasRestriction ? "OK" : "NG",
-      note: `noRestriction=${!hasRestriction}, uploadArea=${hasUpload}`,
-    };
+    recordResult(10, !hasRestriction, `noRestriction=${!hasRestriction}, uploadArea=${hasUpload}`);
     await context.close();
   });
 
@@ -1299,10 +1248,7 @@ test.describe("Premium プランの機能確認", () => {
     );
     const hasVideoUpload = await videoUpload.first().waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
 
-    testResults[11] = {
-      status: !hasRestriction ? "OK" : "NG",
-      note: `noRestriction=${!hasRestriction}, videoUpload=${hasVideoUpload}`,
-    };
+    recordResult(11, !hasRestriction, `noRestriction=${!hasRestriction}, videoUpload=${hasVideoUpload}`);
     await context.close();
   });
 
@@ -1330,10 +1276,7 @@ test.describe("Premium プランの機能確認", () => {
 
     expect(hasPremium).toBeTruthy();
 
-    testResults[12] = {
-      status: hasPremium && hasManage && !hasSelectBtn ? "OK" : "NG",
-      note: `premium=${hasPremium}, renewal=${hasRenewal}, manage=${hasManage}, noPricingCard=${!hasSelectBtn}`,
-    };
+    recordResult(12, hasPremium && hasManage && !hasSelectBtn, `premium=${hasPremium}, renewal=${hasRenewal}, manage=${hasManage}, noPricingCard=${!hasSelectBtn}`);
     await context.close();
   });
 });

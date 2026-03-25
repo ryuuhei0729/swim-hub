@@ -74,17 +74,22 @@ export function CompetitionDetails({
   const [actualRecords, setActualRecords] = useState<CalendarItem[]>([]);
   const [competitionImages, setCompetitionImages] = useState<GalleryImage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareRecordData, setShareRecordData] = useState<CompetitionShareData | null>(null);
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
+    const timeoutId = window.setTimeout(() => {
       setLoading(false);
+      setLoadError("読み込みがタイムアウトしました。再度お試しください。");
     }, 15000);
 
     const loadRecords = async () => {
       try {
         setLoading(true);
+        setLoadError(null);
+        setActualRecords([]);
+        setCompetitionImages([]);
 
         // 大会画像パスとレコードを並行取得
         let recordQuery = supabase
@@ -294,8 +299,17 @@ export function CompetitionDetails({
             </div>
           )}
 
+          {/* エラー表示 */}
+          {loadError && (
+            <div className="bg-white border-2 border-red-300 rounded-lg p-6 text-center">
+              <div className="text-red-600">
+                <p className="text-sm">{loadError}</p>
+              </div>
+            </div>
+          )}
+
           {/* Recordsがない場合 */}
-          {!loading && actualRecords.length === 0 && (
+          {!loading && !loadError && actualRecords.length === 0 && (
             <div className="bg-white border-2 border-dashed border-blue-300 rounded-lg p-6 text-center">
               <button
                 onClick={() => {

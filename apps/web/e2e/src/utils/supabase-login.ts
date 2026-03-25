@@ -1,5 +1,4 @@
 import type { Page } from "@playwright/test";
-import { EnvConfig } from "../config/config";
 
 /**
  * Supabase REST API でログインし、page.evaluate でブラウザの localStorage にセッションを注入する。
@@ -22,14 +21,10 @@ export async function supabaseLogin(
   let password = options?.password;
 
   if (!email || !password) {
-    try {
-      const testEnv = EnvConfig.getTestEnvironment();
-      email = email || testEnv.credentials.email;
-      password = password || testEnv.credentials.password;
-    } catch {
-      email = email || "e2e-test@swimhub.com";
-      password = password || "E2ETest123!";
-    }
+    // EnvConfig.getTestEnvironment() は baseURL が未設定だと throw するため、
+    // 直接環境変数を読んでフォールバックする
+    email = email || process.env.E2E_EMAIL || process.env.E2E_TEST_EMAIL || "e2e-test@swimhub.com";
+    password = password || process.env.E2E_PASSWORD || process.env.E2E_TEST_PASSWORD || "E2ETest123!";
   }
 
   const navigateTo = options?.navigateTo || "/dashboard";

@@ -49,7 +49,8 @@ test.describe("個人大会記録のテスト", () => {
 
     // e2e-test ユーザーの ID を取得
     const { data: users } = await supabase.auth.admin.listUsers();
-    const testUser = users?.users?.find((u) => u.email === "e2e-test@swimhub.com");
+    const testEmail = (process.env.E2E_EMAIL || process.env.E2E_TEST_EMAIL || "e2e-test@swimhub.com").toLowerCase();
+    const testUser = users?.users?.find((u) => u.email?.toLowerCase() === testEmail);
     if (!testUser) return;
 
     // --- クリーンアップ ---

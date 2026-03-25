@@ -186,7 +186,7 @@ test.describe("目標管理のテスト", () => {
       const goalCountRetry = await goalItems.count();
       console.log(`目標数（リトライ後）: ${goalCountRetry}`);
       // シードデータが作成されていれば1件以上あるはず
-      // ただし、別のテストスイートのユーザーと異なる場合はスキップ
+      expect(goalCountRetry).toBeGreaterThan(0);
     }
   });
 

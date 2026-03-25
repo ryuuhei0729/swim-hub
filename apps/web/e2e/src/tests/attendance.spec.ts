@@ -122,13 +122,14 @@ test.describe("出席管理のテスト", () => {
 
     if (!hasAttendanceButtons) {
       console.log("出席登録可能なイベントがないため、テストをスキップします");
-      // 出欠タブのコンテンツが表示されていることを確認（読み込み中でもOK）
+      // 読み込み完了を待つ
+      await page.waitForSelector('text=読み込み中', { state: 'detached', timeout: 10000 }).catch(() => {});
+      // 出欠タブのコンテンツが表示されていることを確認
       const pageText = await page.textContent("body");
       expect(
         pageText?.includes("直近の出欠") ||
           pageText?.includes("表示できる月がありません") ||
-          pageText?.includes("イベントがありません") ||
-          pageText?.includes("読み込み中"),
+          pageText?.includes("イベントがありません"),
       ).toBeTruthy();
       return;
     }
@@ -243,7 +244,9 @@ test.describe("出席管理のテスト", () => {
       const monthButtons = page.locator('button:has-text("年")');
       const hasMonthButtons = (await monthButtons.count()) > 0;
       const pageText = await page.textContent("body");
-      const hasContent = hasMonthButtons || pageText?.includes("読み込み中") || pageText?.includes("直近の出欠");
+      // 読み込み完了を待つ
+      await page.waitForSelector('text=読み込み中', { state: 'detached', timeout: 10000 }).catch(() => {});
+      const hasContent = hasMonthButtons || pageText?.includes("直近の出欠");
       expect(hasContent).toBeTruthy();
       return;
     }
@@ -299,10 +302,12 @@ test.describe("出席管理のテスト", () => {
       console.log("月ボタンが見つからないため、テストをスキップします");
       // 出席一覧ページが表示されていることを確認
       const pageText = await page.textContent("body");
+      // 読み込み完了を待つ
+      await page.waitForSelector('text=読み込み中', { state: 'detached', timeout: 10000 }).catch(() => {});
+      const refreshedPageText = await page.textContent("body");
       expect(
-        pageText?.includes("直近の出欠") ||
-          pageText?.includes("表示できる月がありません") ||
-          pageText?.includes("読み込み中"),
+        refreshedPageText?.includes("直近の出欠") ||
+          refreshedPageText?.includes("表示できる月がありません"),
       ).toBeTruthy();
       return;
     }

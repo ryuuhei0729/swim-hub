@@ -94,19 +94,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 最終パス生成
+    // 最終パス生成（リクエストの tempVideoPath/tempThumbnailPath を直接使わず、サーバー側でパスを検証・生成）
     const prefix = type === "record" ? "records" : "practice-logs";
+    const expectedTempVideoPath = `videos/${user.id}/${prefix}/${sourceId}.mp4`;
+    const expectedTempThumbnailPath = `thumbnails/${user.id}/${prefix}/${sourceId}.webp`;
+
+    // リクエストのパスがサーバー側で期待するパスと一致するか検証
+    if (tempVideoPath !== expectedTempVideoPath || tempThumbnailPath !== expectedTempThumbnailPath) {
+      return NextResponse.json(
+        { error: "不正なファイルパスです" },
+        { status: 400 },
+      );
+    }
+
     const finalVideoPath = `videos/${targetUserId}/${prefix}/${sourceId}.mp4`;
     const finalThumbnailPath = `thumbnails/${targetUserId}/${prefix}/${sourceId}.webp`;
 
     // R2でコピー
-    await copyVideoInR2(tempVideoPath, finalVideoPath);
-    await copyVideoInR2(tempThumbnailPath, finalThumbnailPath);
+    await copyVideoInR2(expectedTempVideoPath, finalVideoPath);
+    await copyVideoInR2(expectedTempThumbnailPath, finalThumbnailPath);
 
-    // 元ファイルを削除
-    await deleteVideosFromR2([tempVideoPath, tempThumbnailPath]);
-
-    // DB更新
+    // DB更新（コピー成功後に実行）
     if (type === "record") {
       const { error } = await supabase
         .from("records")
@@ -127,6 +135,14 @@ export async function POST(request: NextRequest) {
         console.error("練習ログDB更新エラー:", error);
         return NextResponse.json({ error: "DB更新に失敗しました" }, { status: 500 });
       }
+    }
+
+    // DB更新成功後にのみ元ファイルを削除
+    try {
+      await deleteVideosFromR2([expectedTempVideoPath, expectedTempThumbnailPath]);
+    } catch (deleteError) {
+      // 削除失敗はログのみ（DB更新は成功しているため、temp objectsは残す）
+      console.error("一時ファイル削除エラー（DB更新は成功済み）:", deleteError);
     }
 
     return NextResponse.json({ success: true, finalVideoPath, finalThumbnailPath });

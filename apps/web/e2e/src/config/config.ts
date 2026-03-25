@@ -11,7 +11,7 @@ const cwd = process.cwd();
 const candidates = [
   cwd,                                // swim-hub/ から実行した場合
   path.resolve(cwd, "apps/web"),      // swim-hub/ → apps/web
-  path.resolve(__dirname, "../../../.."), // config.ts → apps/web
+  path.resolve(__dirname, "../../.."), // config.ts → apps/web
 ];
 
 for (const dir of candidates) {

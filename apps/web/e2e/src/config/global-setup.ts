@@ -14,7 +14,7 @@ async function ensurePremiumSubscription(
     const now = new Date();
     const premiumExpires = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
 
-    await supabase.from("user_subscriptions").upsert(
+    const { error } = await supabase.from("user_subscriptions").upsert(
       {
         id: userId,
         plan: "premium",
@@ -28,6 +28,9 @@ async function ensurePremiumSubscription(
       },
       { onConflict: "id" },
     );
+    if (error) {
+      throw error;
+    }
     console.log("✅ テストユーザーを Premium プランに設定しました");
   } catch (error) {
     console.warn("⚠️  Premium 設定で警告:", (error as Error).message);
