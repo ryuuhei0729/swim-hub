@@ -35,7 +35,7 @@ export function useCalendarData(displayDate: Date, _userId?: string) {
       setError(null);
 
       // カレンダーエントリーと月間サマリーを並行取得
-      // 注意: AuthGuard内で使用されるため、ユーザー認証チェックは不要
+      // 注意: 認証済みレイアウト内で使用されるため、ユーザー認証チェックは不要
       const [entries, summary] = await Promise.all([
         api.getCalendarEntries(startDate, endDate),
         api.getMonthlySummary(displayDate.getFullYear(), displayDate.getMonth() + 1),

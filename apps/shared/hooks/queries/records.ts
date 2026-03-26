@@ -321,7 +321,7 @@ export function useCreateCompetitionMutation(
       queryClient.setQueriesData<Competition[]>(
         { queryKey: recordKeys.competitions() },
         (old: Competition[] | undefined) => {
-          if (!old) return [newCompetition];
+          if (!old || !Array.isArray(old)) return [newCompetition];
           return [newCompetition, ...old];
         },
       );

@@ -105,7 +105,7 @@ export function usePracticesQuery(
         queryClient.setQueriesData<PracticeWithLogs[]>(
           { queryKey: practiceKeys.lists() },
           (old: PracticeWithLogs[] | undefined) => {
-            if (!old) return old;
+            if (!old || !Array.isArray(old)) return old;
 
             const index = old.findIndex((p: PracticeWithLogs) => p.id === newPractice.id);
             if (index >= 0) {

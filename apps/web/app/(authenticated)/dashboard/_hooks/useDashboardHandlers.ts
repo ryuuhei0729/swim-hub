@@ -78,7 +78,8 @@ interface UseDashboardHandlersProps {
   createdPracticeId: string | null;
   competitionEditingData: EditingData | null;
   createdCompetitionId: string | null;
-  setLoading: (loading: boolean) => void;
+  setPracticeLoading: (loading: boolean) => void;
+  setCompetitionLoading: (loading: boolean) => void;
   closePracticeBasicForm: () => void;
   closePracticeLogForm: () => void;
   closeCompetitionBasicForm: () => void;
@@ -120,7 +121,8 @@ export function useDashboardHandlers({
   createdPracticeId,
   competitionEditingData,
   createdCompetitionId,
-  setLoading,
+  setPracticeLoading,
+  setCompetitionLoading,
   closePracticeBasicForm,
   closePracticeLogForm,
   closeCompetitionBasicForm,
@@ -139,7 +141,7 @@ export function useDashboardHandlers({
       imageData?: PracticeImageData,
       continueToNext: boolean = true,
     ) => {
-      setLoading(true);
+      setPracticeLoading(true);
       try {
         // 有効なPracticeInsert/Updateフィールドのみを送信
         const payload = {
@@ -260,7 +262,7 @@ export function useDashboardHandlers({
       } catch (error) {
         console.error("練習予定の処理に失敗しました:", error);
       } finally {
-        setLoading(false);
+        setPracticeLoading(false);
       }
     },
     [
@@ -270,7 +272,7 @@ export function useDashboardHandlers({
       closePracticeBasicForm,
       openPracticeLogForm,
       refreshCalendar,
-      setLoading,
+      setPracticeLoading,
       supabase,
     ],
   );
@@ -282,7 +284,7 @@ export function useDashboardHandlers({
         throw new Error("認証されたユーザーが必要です");
       }
 
-      setLoading(true);
+      setPracticeLoading(true);
       try {
         const menus = Array.isArray(formDataArray) ? formDataArray : [];
 
@@ -429,7 +431,7 @@ export function useDashboardHandlers({
       } catch (error) {
         console.error("練習記録の処理に失敗しました:", error);
       } finally {
-        setLoading(false);
+        setPracticeLoading(false);
       }
     },
     [
@@ -442,7 +444,7 @@ export function useDashboardHandlers({
       deletePracticeTime,
       createPracticeTime,
       refreshCalendar,
-      setLoading,
+      setPracticeLoading,
       closePracticeLogForm,
     ],
   );
@@ -507,7 +509,7 @@ export function useDashboardHandlers({
     ) => {
       const { continueToNext = true, skipEntry = false } = options || {};
 
-      setLoading(true);
+      setCompetitionLoading(true);
       try {
         // 終了日は空文字の場合はnullに変換
         const endDate = basicData.endDate ? basicData.endDate : null;
@@ -646,7 +648,7 @@ export function useDashboardHandlers({
       } catch (error) {
         console.error("大会情報の処理に失敗しました:", error);
       } finally {
-        setLoading(false);
+        setCompetitionLoading(false);
       }
     },
     [
@@ -657,7 +659,7 @@ export function useDashboardHandlers({
       refreshCalendar,
       openEntryLogForm,
       openRecordLogForm,
-      setLoading,
+      setCompetitionLoading,
       supabase,
     ],
   );
@@ -669,7 +671,7 @@ export function useDashboardHandlers({
         throw new Error("認証されたユーザーが必要です");
       }
 
-      setLoading(true);
+      setCompetitionLoading(true);
       try {
         // UUID形式のIDかどうかをチェックする関数
         const isValidUUID = (id: string): boolean => {
@@ -839,7 +841,7 @@ export function useDashboardHandlers({
       } catch (error) {
         console.error("エントリーの登録に失敗しました:", error);
       } finally {
-        setLoading(false);
+        setCompetitionLoading(false);
       }
     },
     [
@@ -852,7 +854,7 @@ export function useDashboardHandlers({
       closeEntryLogForm,
       refreshCalendar,
       openRecordLogForm,
-      setLoading,
+      setCompetitionLoading,
     ],
   );
 
@@ -876,7 +878,7 @@ export function useDashboardHandlers({
   const handleRecordLogSubmit = useCallback(
     async (formDataList: RecordFormDataInternal[]) => {
       const dataArray = Array.isArray(formDataList) ? formDataList : [formDataList];
-      setLoading(true);
+      setCompetitionLoading(true);
       try {
         // ストアから直接最新の値を取得（useCallbackのクロージャー問題を回避）
         const { createdCompetitionId: storeCompetitionId, editingData: storeEditingData } =
@@ -974,7 +976,7 @@ export function useDashboardHandlers({
       } catch (error) {
         console.error("記録の処理に失敗しました:", error);
       } finally {
-        setLoading(false);
+        setCompetitionLoading(false);
         closeRecordLogForm();
       }
     },
@@ -987,7 +989,7 @@ export function useDashboardHandlers({
       replaceSplitTimes,
       createSplitTimes,
       refreshCalendar,
-      setLoading,
+      setCompetitionLoading,
       closeRecordLogForm,
     ],
   );

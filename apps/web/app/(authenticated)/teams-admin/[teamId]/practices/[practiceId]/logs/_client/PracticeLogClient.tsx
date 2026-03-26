@@ -20,18 +20,12 @@ import {
   PrinterIcon,
 } from "@heroicons/react/24/outline";
 import TagInput from "@/components/forms/TagInput";
+import TeamTimeInputModal from "@/components/team/TeamTimeInputModal";
 import type { TeamTimeEntry } from "@/components/team/TeamTimeInputModal";
+import OcrScanModal from "@/components/team/OcrScanModal";
 import { PracticeTag, Practice } from "@apps/shared/types";
 
-// TeamTimeInputModalを動的インポート（バンドルサイズ削減）
-const TeamTimeInputModal = dynamic(() => import("@/components/team/TeamTimeInputModal"), {
-  ssr: false,
-});
-
-// OcrScanModalを動的インポート
-const OcrScanModal = dynamic(() => import("@/components/team/OcrScanModal"), { ssr: false });
-
-// TeamVideoUploaderを動的インポート
+// TeamVideoUploaderを動的インポート（重いコンポーネント）
 const TeamVideoUploader = dynamic(() => import("@/components/video/TeamVideoUploader"), {
   ssr: false,
 });

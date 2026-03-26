@@ -120,10 +120,10 @@ async function loginUser(page: Page, email: string, password: string) {
 /** カレンダーの過去日付をクリックして、日付モーダルを開く */
 async function openDateModal(page: Page) {
   await page.goto("/dashboard", { timeout: 30000 });
-  await page.waitForLoadState("domcontentloaded");
+  await page.waitForLoadState("networkidle");
   // カレンダーの1日（月初）をクリック
   const dayCell = page.locator('[data-testid="calendar"] [data-testid="calendar-day"]').first();
-  await dayCell.waitFor({ timeout: 15000 });
+  await dayCell.waitFor({ state: "visible", timeout: 15000 });
   await dayCell.click();
   await page.waitForTimeout(TIMEOUTS.MODAL_ANIMATION);
 }
@@ -149,11 +149,11 @@ async function createCompetitionAndOpenRecordForm(page: Page) {
   await openCompetitionModal(page);
 
   // 大会情報フォームモーダルが表示されるのを待つ
-  await page.locator('[data-testid="competition-form-modal"]').waitFor({ timeout: 10000 });
+  await page.locator('[data-testid="competition-form-modal"]').waitFor({ state: "visible", timeout: 10000 });
 
   // 大会名を入力
   const titleInput = page.locator('[data-testid="competition-title"]');
-  await titleInput.waitFor({ timeout: 5000 });
+  await titleInput.waitFor({ state: "visible", timeout: 5000 });
   await titleInput.fill("E2Eテスト大会");
 
   // 「次へ（記録入力）」ボタンをクリック
@@ -168,26 +168,24 @@ async function createCompetitionAndOpenRecordForm(page: Page) {
     await page.getByRole("button", { name: /次へ|記録入力/ }).click();
   }
 
-  // フォームが保存されて次のステップに遷移するのを待つ
-  // CompetitionBasicForm が消えるか、RecordLogForm が表示されるのを待つ
-  await page
-    .locator('[data-testid="competition-form-modal"]')
-    .waitFor({ state: "hidden", timeout: 10000 })
-    .catch(() => {});
-  await page.waitForTimeout(TIMEOUTS.SPA_RENDERING);
-
-  // ステップ2（エントリー）をスキップしてステップ3（記録入力）へ
+  // 次のステップが表示されるのを直接待つ（固定タイムアウトではなく要素の出現を待機）
+  // 記録入力フォーム or エントリースキップボタン or 記録追加ボタンのいずれかが出現するまで待つ
+  const recordForm = page.locator('[data-testid="record-split-add-button-1"]');
   const skipBtn = page.locator('[data-testid="entry-skip-button"]');
-  if (await skipBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
+  const addRecordBtn = page.locator('[data-testid="record-add-button"], [data-testid="add-record-button"]');
+
+  const nextStep = recordForm.or(skipBtn).or(addRecordBtn);
+  await nextStep.waitFor({ state: "visible", timeout: 20000 });
+
+  // エントリーステップが表示された場合はスキップ
+  if (await skipBtn.isVisible().catch(() => false)) {
     await skipBtn.click();
-    await page.waitForTimeout(TIMEOUTS.MODAL_ANIMATION);
+    // 記録入力フォームまたは記録追加ボタンが表示されるのを待つ
+    await recordForm.or(addRecordBtn).waitFor({ state: "visible", timeout: 10000 });
   }
 
-  // 記録追加ボタン（記録入力画面で種目を追加）
-  const addRecordBtn = page.locator(
-    '[data-testid="record-add-button"], [data-testid="add-record-button"]',
-  );
-  if (await addRecordBtn.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
+  // 記録追加ボタンが表示されていればクリック
+  if (await addRecordBtn.isVisible().catch(() => false)) {
     await addRecordBtn.click();
     await page.waitForTimeout(TIMEOUTS.MODAL_ANIMATION);
   }
@@ -222,44 +220,12 @@ test.describe("Free プランの機能制限", () => {
     const { page, context } = await newCleanPage(browser);
     await loginUser(page, freeUser.email, freeUser.password);
 
-    // 大会を作成してから記録入力フォームを開く
-    // まず大会を作成する
+    // 大会を作成して記録入力フォームを開く
     await createCompetitionAndOpenRecordForm(page);
 
-    // 記録入力フォーム（RecordLogForm）が表示されるか、大会基本情報フォームのままか確認
-    // 記録入力フォームが開かない場合は、直接スプリット制限UIをテスト
+    // 記録入力フォームが開いたことを確認（開かなければ即失敗）
     const splitAddBtn = page.locator('[data-testid="record-split-add-button-1"]');
-    const isSplitFormVisible = await splitAddBtn.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false);
-
-    if (!isSplitFormVisible) {
-      // 大会基本情報フォームからの代替テスト：
-      // 「保存して終了」で大会を作成し、ダッシュボードから記録を追加
-      const closeBtn = page.locator('[data-testid="competition-close-button"]');
-      if (await closeBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
-        await closeBtn.click();
-        await page.waitForTimeout(TIMEOUTS.SPA_RENDERING);
-      }
-
-      // ダッシュボードの日付をクリックして、作成した大会の記録を追加
-      await page.goto("/dashboard", { timeout: 30000 });
-      await page.waitForLoadState("networkidle");
-
-      // カレンダーの最初の日付セルをクリック
-      const dayCell = page.locator('[data-testid="calendar"] [data-testid="calendar-day"]').first();
-      if (await dayCell.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
-        await dayCell.click();
-      } else {
-        await page.locator("text=1").first().click();
-      }
-      await page.waitForTimeout(TIMEOUTS.MODAL_ANIMATION);
-
-      // 作成した大会（E2Eテスト大会）の記録追加ボタンを探す
-      const recordAddBtn = page.locator('[data-testid="add-record-button"]');
-      if (await recordAddBtn.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
-        await recordAddBtn.click();
-        await page.waitForTimeout(TIMEOUTS.MODAL_ANIMATION);
-      }
-    }
+    await splitAddBtn.waitFor({ state: "visible", timeout: 10000 });
 
     // 種目を選択
     const styleSelect = page.locator('[data-testid="record-style-1"]');

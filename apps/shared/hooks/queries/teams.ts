@@ -371,7 +371,7 @@ export function useCreateAnnouncementMutation(
       queryClient.setQueriesData<TeamAnnouncement[]>(
         { queryKey: teamKeys.announcements(newAnnouncement.team_id) },
         (old: TeamAnnouncement[] | undefined) => {
-          if (!old) return [newAnnouncement];
+          if (!old || !Array.isArray(old)) return [newAnnouncement];
           return [newAnnouncement, ...old];
         },
       );
@@ -401,7 +401,7 @@ export function useUpdateAnnouncementMutation(
       queryClient.setQueriesData<TeamAnnouncement[]>(
         { queryKey: teamKeys.announcements("") },
         (old: TeamAnnouncement[] | undefined) => {
-          if (!old) return old;
+          if (!old || !Array.isArray(old)) return old;
           return old.map((a: TeamAnnouncement) => (a.id === updated.id ? updated : a));
         },
       );

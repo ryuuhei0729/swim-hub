@@ -111,7 +111,7 @@ export function CalendarProvider({
         setError(null);
 
         // 月の開始日と終了日を計算
-        // 注意: AuthGuard内で使用されるため、ユーザー認証チェックは不要
+        // 注意: 認証済みレイアウト内で使用されるため、ユーザー認証チェックは不要
         const monthStart = startOfMonth(targetDate);
         const monthEnd = endOfMonth(targetDate);
         const startDate = format(monthStart, "yyyy-MM-dd");

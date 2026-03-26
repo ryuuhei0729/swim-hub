@@ -1,20 +1,13 @@
 "use client";
 
 import React, { useState, useMemo, useTransition } from "react";
-import dynamic from "next/dynamic";
 import { TrophyIcon, PencilIcon, TrashIcon, ShareIcon } from "@heroicons/react/24/outline";
 import Button from "@/components/ui/Button";
 import BestTimeBadge from "@/components/ui/BestTimeBadge";
 import Pagination from "@/components/ui/Pagination";
 import type { RecordLogFormData } from "@/components/forms/record-log/types";
-
-const RecordLogForm = dynamic(() => import("@/components/forms/RecordLogForm"), { ssr: false });
-
-const ShareCardModal = dynamic(
-  () =>
-    import("@/components/share/ShareCardModal").then((mod) => ({ default: mod.ShareCardModal })),
-  { ssr: false },
-);
+import RecordLogForm from "@/components/forms/RecordLogForm";
+import { ShareCardModal } from "@/components/share/ShareCardModal";
 import type { CompetitionShareData } from "@/components/share";
 import { format, isAfter, startOfDay } from "date-fns";
 import { ja } from "date-fns/locale";

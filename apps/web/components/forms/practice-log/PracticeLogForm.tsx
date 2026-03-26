@@ -27,8 +27,8 @@ const PRACTICE_STEPS = [
   { id: "log", label: "練習記録", description: "メニュー・タイム" },
 ];
 
-// TimeInputModalを動的インポート（バンドルサイズ削減）
-const TimeInputModal = dynamic(() => import("../TimeInputModal"), { ssr: false });
+import TimeInputModal from "../TimeInputModal";
+// VideoUploaderは重いコンポーネントのため動的インポートを維持
 const VideoUploader = dynamic(() => import("@/components/video/VideoUploader"), { ssr: false });
 
 // DB の UUID かどうか判定
