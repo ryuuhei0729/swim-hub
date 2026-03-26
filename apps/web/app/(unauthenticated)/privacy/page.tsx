@@ -9,6 +9,7 @@ export const revalidate = 3600; // 1時間ごとに再生成
 export const metadata = {
   title: "プライバシーポリシー | SwimHub",
   description: "SwimHubのプライバシーポリシー",
+  alternates: { canonical: "/privacy" },
 };
 
 export default function PrivacyPage() {

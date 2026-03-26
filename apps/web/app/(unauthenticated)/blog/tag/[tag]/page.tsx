@@ -22,6 +22,7 @@ export async function generateMetadata({ params }: TagPageProps): Promise<Metada
   return {
     title: `「${decodedTag}」の記事一覧 | SwimHub ブログ`,
     description: `「${decodedTag}」タグが付けられた水泳に関する記事の一覧です。`,
+    alternates: { canonical: `/blog/tag/${encodeURIComponent(decodedTag)}` },
   };
 }
 
