@@ -120,7 +120,7 @@ async function loginUser(page: Page, email: string, password: string) {
 /** カレンダーの過去日付をクリックして、日付モーダルを開く */
 async function openDateModal(page: Page) {
   await page.goto("/dashboard", { timeout: 30000 });
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("domcontentloaded");
   // カレンダーの1日（月初）をクリック
   const dayCell = page.locator('[data-testid="calendar"] [data-testid="calendar-day"]').first();
   await dayCell.waitFor({ state: "visible", timeout: 15000 });
@@ -285,7 +285,7 @@ test.describe("Free プランの機能制限", () => {
     const { page, context } = await newCleanPage(browser);
     await loginUser(page, freeUser.email, freeUser.password);
     await page.goto("/competition");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // 既存の大会記録があればクリック
     const recordLink = page.locator("a[href*='/competition/']").first();
@@ -296,7 +296,7 @@ test.describe("Free プランの機能制限", () => {
     }
 
     await recordLink.click();
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     const editBtn = page.locator('[data-testid="edit-record-button"]');
     if (await editBtn.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
@@ -372,7 +372,7 @@ test.describe("Free プランの機能制限", () => {
     // ダッシュボードから新規大会作成モーダル（CompetitionBasicForm）を開く
     // 空の日付（月の後半）をクリックして「大会記録を追加」を表示
     await page.goto("/dashboard", { timeout: 30000 });
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // 月の後半の日付（まだデータがない日付）をクリック
     const laterDay = page.locator("text=15").first();
@@ -407,7 +407,7 @@ test.describe("Free プランの機能制限", () => {
 
     // ダッシュボードから新規大会作成モーダルを開く
     await page.goto("/dashboard", { timeout: 30000 });
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     const laterDay = page.locator("text=16").first();
     await laterDay.click();
@@ -436,7 +436,7 @@ test.describe("Free プランの機能制限", () => {
 
     // ダッシュボードから新規大会作成モーダルを開く
     await page.goto("/dashboard", { timeout: 30000 });
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     const laterDay = page.locator("text=17").first();
     await laterDay.click();
@@ -470,7 +470,7 @@ test.describe("Free プランの機能制限", () => {
     const { page, context } = await newCleanPage(browser);
     await loginUser(page, freeUser.email, freeUser.password);
     await page.goto(URLS.SETTINGS, { timeout: 30000 });
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // サブスクリプションデータの非同期読み込みを待つ
     // 「このプランを選択」ボタンまたは「現在のプラン:」テキストが表示されるまで待機
@@ -483,7 +483,7 @@ test.describe("Free プランの機能制限", () => {
     // サブスクリプションデータがロードされない場合はリロードして再試行
     if (!subscriptionLoaded) {
       await page.reload({ timeout: 30000 });
-      await page.waitForLoadState("networkidle");
+      await page.waitForLoadState("domcontentloaded");
       await page
         .getByText("このプランを選択")
         .or(page.getByText("現在のプラン:"))
@@ -541,7 +541,7 @@ test.describe("Stripe 購入フロー", () => {
     const { page, context } = await newCleanPage(browser);
     await loginUser(page, purchaseUser.email, purchaseUser.password);
     await page.goto(URLS.SETTINGS);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // 月額の「このプランを選択」ボタンをクリック
     const monthlyBtn = page.getByText("このプランを選択").first();
@@ -608,7 +608,7 @@ test.describe("Stripe 購入フロー", () => {
     const { page, context } = await newCleanPage(browser);
     const cancelUser = await createFreeUser(page, "-cancel");
     await page.goto(URLS.SETTINGS);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     const monthlyBtn = page.getByText("このプランを選択").first();
     if (await monthlyBtn.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
@@ -627,7 +627,7 @@ test.describe("Stripe 購入フロー", () => {
 
         // 「認証情報を確認中...」ローディングが完了するのを待つ
         await page.waitForURL("**/settings**", { timeout: 30000 }).catch(() => {});
-        await page.waitForLoadState("networkidle").catch(() => {});
+        await page.waitForLoadState("domcontentloaded").catch(() => {});
 
         const finalUrl = page.url();
         const isSettings = finalUrl.includes("/settings");
@@ -643,7 +643,7 @@ test.describe("Stripe 購入フロー", () => {
     const { page, context } = await newCleanPage(browser);
     const yearlyUser = await createFreeUser(page, "-yearly");
     await page.goto(URLS.SETTINGS);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // 年額の「このプランを選択」ボタンをクリック（2番目のカード = last）
     const yearlyBtn = page.getByText("このプランを選択").last();
@@ -709,7 +709,7 @@ test.describe("Stripe 購入フロー", () => {
 
     // ログインして設定画面に遷移
     await page.goto(URLS.SETTINGS);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // PricingCard（「このプランを選択」ボタン付きカード）が表示されないことを確認
     const selectPlanBtn = page.getByText("このプランを選択");
@@ -734,7 +734,7 @@ test.describe("Stripe 購入フロー", () => {
     const { page, context } = await newCleanPage(browser);
     const failUser = await createFreeUser(page, "-fail");
     await page.goto(URLS.SETTINGS);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     const monthlyBtn = page.getByText("このプランを選択").first();
     if (await monthlyBtn.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
@@ -789,7 +789,7 @@ test.describe("Stripe 購入フロー", () => {
     const { page, context } = await newCleanPage(browser);
     const threeDSUser = await createFreeUser(page, "-3ds");
     await page.goto(URLS.SETTINGS);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     const monthlyBtn = page.getByText("このプランを選択").first();
     if (await monthlyBtn.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
@@ -873,7 +873,7 @@ test.describe("プラン管理", () => {
     const portalUser = await createPremiumUser(page, "-portal", { status: "active" });
 
     await page.goto(URLS.SETTINGS);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     const manageBtn = page.getByText("プランを管理");
     if (await manageBtn.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false)) {
@@ -916,7 +916,7 @@ test.describe("プラン管理", () => {
     });
 
     await page.goto(URLS.SETTINGS);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // 「解約予定」の琥珀色バッジが表示されること
     const cancelBadge = page.locator(
@@ -940,7 +940,7 @@ test.describe("プラン管理", () => {
     });
 
     await page.goto(URLS.SETTINGS);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // 「無料トライアル中」バッジ
     const trialBadge = page.getByText("無料トライアル中").or(page.getByText("トライアル中"));
@@ -965,7 +965,7 @@ test.describe("プラン管理", () => {
     });
 
     await page.goto(URLS.SETTINGS);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // 赤色バナー「お支払いが失敗しました」
     const failBanner = page.locator("text=お支払いが失敗しました");
@@ -998,7 +998,7 @@ test.describe("Pricing ページ", () => {
     const page = await context.newPage();
 
     await page.goto("/pricing");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // 「料金プラン」ヒーロー
     const heroTitle = page.getByText("料金プラン");
@@ -1041,7 +1041,7 @@ test.describe("Pricing ページ", () => {
     const page = await context.newPage();
 
     await page.goto("/pricing");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // 機能比較テーブルまでスクロール
     const comparisonSection = page.getByText("機能比較");
@@ -1070,7 +1070,7 @@ test.describe("Pricing ページ", () => {
     const page = await context.newPage();
 
     await page.goto("/pricing");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // FAQセクションまでスクロール
     const faqSection = page.getByText("よくある質問");
@@ -1241,7 +1241,7 @@ test.describe("Premium プランの機能確認", () => {
     const { page, context } = await newCleanPage(browser);
     await loginUser(page, premiumUser.email, premiumUser.password);
     await page.goto(URLS.SETTINGS);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // 「Premium」バッジ
     const premiumBadge = page.getByText("Premium");
