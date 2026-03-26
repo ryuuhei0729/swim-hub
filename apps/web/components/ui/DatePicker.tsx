@@ -80,10 +80,19 @@ export default function DatePicker({
   const [currentMonth, setCurrentMonth] = useState<Date>(() => {
     if (value) {
       const date = typeof value === "string" ? parseISO(value) : value;
-      return isValid(date) ? startOfMonth(date) : startOfMonth(defaultMonth || new Date());
+      if (isValid(date)) return startOfMonth(date);
     }
-    return startOfMonth(defaultMonth || new Date());
+    if (defaultMonth) return startOfMonth(defaultMonth);
+    // SSR時はエポック起点を仮設定し、useEffectでクライアント側の現在月に更新
+    return startOfMonth(new Date(0));
   });
+
+  // クライアント側でのみ現在月を設定（Hydration Mismatch回避）
+  useEffect(() => {
+    if (!value && !defaultMonth) {
+      setCurrentMonth(startOfMonth(new Date()));
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLButtonElement>(null);

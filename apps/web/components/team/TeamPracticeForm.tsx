@@ -26,7 +26,7 @@ export default function TeamPracticeForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    date: format(new Date(), "yyyy-MM-dd"), // ローカル日付のYYYY-MM-DD形式
+    date: format(new Date(), "yyyy-MM-dd"),
     title: "",
     place: "",
     note: "",

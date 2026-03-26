@@ -28,10 +28,10 @@ export default function TeamCompetitionForm({
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: "",
-    date: format(new Date(), "yyyy-MM-dd"), // ローカル日付のYYYY-MM-DD形式
-    endDate: "", // 終了日（複数日開催の場合）
+    date: format(new Date(), "yyyy-MM-dd"),
+    endDate: "",
     place: "",
-    poolType: 0, // プール種別（0: 短水路, 1: 長水路）
+    poolType: 0,
     note: "",
   });
 
@@ -78,7 +78,7 @@ export default function TeamCompetitionForm({
       // フォームをリセット
       setFormData({
         title: "",
-        date: new Date().toISOString().split("T")[0],
+        date: format(new Date(), "yyyy-MM-dd"),
         endDate: "",
         place: "",
         poolType: 0,

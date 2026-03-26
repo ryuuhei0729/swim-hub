@@ -16,14 +16,10 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
     setIsHydrated(true);
   }, []);
 
-  // 初回レンダリング時（ブラウザ）はミドルウェアが認証済みなのでそのまま表示
-  // クライアントサイドの認証チェック完了を待たずにコンテンツを見せる
-  // ただしSSG（静的ビルド）時はchildrenを評価するとSupabase初期化が失敗するため除外
+  // SSRとクライアント初回レンダーで同じ出力を返す（Hydration Mismatch回避）
+  // useEffect後にisHydrated=trueとなり、認証状態に基づいて再レンダーされる
   if (!isHydrated) {
-    if (typeof window === "undefined") {
-      return <FullScreenLoading message="認証情報を確認中..." />;
-    }
-    return <>{children}</>;
+    return <FullScreenLoading message="認証情報を確認中..." />;
   }
 
   // ハイドレーション後、クライアント認証がまだ完了していない場合
