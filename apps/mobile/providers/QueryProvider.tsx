@@ -3,7 +3,19 @@
 // =============================================================================
 
 import React from "react";
-import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
+import { AppState, Platform } from "react-native";
+import { QueryClientProvider, QueryClient, focusManager } from "@tanstack/react-query";
+
+// React Query公式推奨: AppStateでfocusManagerを連動させる
+// https://tanstack.com/query/latest/docs/framework/react/react-native
+focusManager.setEventListener((handleFocus) => {
+  const subscription = AppState.addEventListener("change", (state) => {
+    if (Platform.OS !== "web") {
+      handleFocus(state === "active");
+    }
+  });
+  return () => subscription.remove();
+});
 
 let queryClient: QueryClient | undefined = undefined;
 
@@ -17,7 +29,7 @@ function createMobileQueryClient(): QueryClient {
       queries: {
         staleTime: 1000 * 60 * 10, // 10分（オフライン対応のため長めに設定）
         gcTime: 1000 * 60 * 60 * 24 * 7, // 7日間（オフライン時のデータ保持）
-        refetchOnWindowFocus: false, // モバイルでは不要
+        refetchOnWindowFocus: true, // AppState連動でバックグラウンド復帰時に再取得
         refetchOnMount: true,
         refetchOnReconnect: true, // オンライン復帰時に自動再取得
         retry: (failureCount, error: unknown) => {

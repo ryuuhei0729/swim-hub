@@ -2,10 +2,10 @@
  * 動画アップロードユーティリティ
  * Web API (R2) 経由で動画・サムネイルをアップロード・取得・削除
  */
-import Constants from "expo-constants";
 import * as VideoThumbnails from "expo-video-thumbnails";
+import { env } from "@/lib/env";
 
-const WEB_API_URL = Constants.expoConfig?.extra?.webApiUrl || "https://swim-hub.app";
+const WEB_API_URL = env.webApiUrl;
 
 export type VideoType = "record" | "practice-log";
 

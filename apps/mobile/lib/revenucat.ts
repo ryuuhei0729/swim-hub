@@ -8,10 +8,9 @@ import Purchases, {
   type PurchasesPackage,
   type CustomerInfo,
 } from "react-native-purchases";
-import Constants from "expo-constants";
+import { env } from "@/lib/env";
 
-const IOS_API_KEY =
-  Constants.expoConfig?.extra?.revenuecatIosApiKey || "appl_PLACEHOLDER_KEY";
+const IOS_API_KEY = env.revenuecatIosApiKey || "appl_PLACEHOLDER_KEY";
 
 const isValidApiKey = IOS_API_KEY !== "appl_PLACEHOLDER_KEY" && IOS_API_KEY.startsWith("appl_");
 

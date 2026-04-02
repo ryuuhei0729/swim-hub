@@ -48,7 +48,7 @@ export const TabNavigator: React.FC = () => {
         name="Dashboard"
         component={DashboardScreen}
         options={{
-          tabBarLabel: "ダッシュボード",
+          tabBarLabel: "ホーム",
           tabBarIcon: ({ color }) => <Feather name="home" size={20} color={color} />,
         }}
       />

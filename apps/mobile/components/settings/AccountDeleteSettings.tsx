@@ -1,9 +1,9 @@
 import React, { useState, useCallback } from "react";
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert } from "react-native";
-import Constants from "expo-constants";
 import { useAuth } from "@/contexts/AuthProvider";
+import { env } from "@/lib/env";
 
-const WEB_API_URL = Constants.expoConfig?.extra?.webApiUrl || "https://swim-hub.app";
+const WEB_API_URL = env.webApiUrl;
 
 /**
  * アカウント削除設定コンポーネント

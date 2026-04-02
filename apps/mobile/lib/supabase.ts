@@ -1,24 +1,16 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AppState } from "react-native";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@swim-hub/shared/types";
-import Constants from "expo-constants";
+import { env } from "@/lib/env";
 
-// 環境変数からSupabase設定を取得
-// app.config.jsのextraフィールドから読み込む（dotenvxで復号化済み）
-const supabaseUrl = Constants.expoConfig?.extra?.supabaseUrl;
-const supabaseAnonKey = Constants.expoConfig?.extra?.supabaseAnonKey;
+const supabaseUrl = env.supabaseUrl;
+const supabaseAnonKey = env.supabaseAnonKey;
 
-// デバッグ用: 環境変数の確認（開発環境のみ）
 if (__DEV__) {
   console.log("Supabase環境変数の確認:");
-  console.log(
-    "supabaseUrl (from Constants.expoConfig.extra):",
-    supabaseUrl ? `${supabaseUrl.substring(0, 50)}...` : "未設定",
-  );
-  console.log(
-    "supabaseAnonKey (from Constants.expoConfig.extra):",
-    supabaseAnonKey ? "設定済み" : "未設定",
-  );
+  console.log("supabaseUrl:", supabaseUrl ? `${supabaseUrl.substring(0, 50)}...` : "未設定");
+  console.log("supabaseAnonKey:", supabaseAnonKey ? "設定済み" : "未設定");
 }
 
 // 環境変数の検証（エラーをthrowせず、nullを返す）
@@ -47,6 +39,18 @@ if (supabaseUrl && supabaseAnonKey) {
       `EXPO_PUBLIC_SUPABASE_URL: ${supabaseUrl ? "set" : "unset"}\n` +
       `EXPO_PUBLIC_SUPABASE_ANON_KEY: ${supabaseAnonKey ? "set" : "unset"}`,
   );
+}
+
+// バックグラウンド復帰時にトークン自動リフレッシュを再開する
+// Supabase公式推奨パターン: https://supabase.com/docs/reference/javascript/auth-startautorefresh
+if (supabase) {
+  AppState.addEventListener("change", (state) => {
+    if (state === "active") {
+      supabase!.auth.startAutoRefresh();
+    } else {
+      supabase!.auth.stopAutoRefresh();
+    }
+  });
 }
 
 export { supabase };

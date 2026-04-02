@@ -44,12 +44,6 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
       <View style={styles.container}>
         <View style={styles.content}>
           <View style={styles.leftSection}>
-            <Pressable style={styles.todayButton} onPress={onTodayClick} disabled={isLoading}>
-              <Text style={styles.todayButtonText}>今日</Text>
-            </Pressable>
-            {isLoading && <LoadingSpinner size="small" />}
-          </View>
-          <View style={styles.rightSection}>
             <Pressable style={styles.navButton} onPress={onPrevMonth} disabled={isLoading}>
               <Text style={styles.navButtonText}>‹</Text>
             </Pressable>
@@ -64,6 +58,12 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             </Pressable>
             <Pressable style={styles.navButton} onPress={onNextMonth} disabled={isLoading}>
               <Text style={styles.navButtonText}>›</Text>
+            </Pressable>
+          </View>
+          <View style={styles.rightSection}>
+            {isLoading && <LoadingSpinner size="small" />}
+            <Pressable style={styles.todayButton} onPress={onTodayClick} disabled={isLoading}>
+              <Text style={styles.todayButtonText}>今日</Text>
             </Pressable>
           </View>
         </View>
@@ -165,19 +165,13 @@ const styles = StyleSheet.create({
   leftSection: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#111827",
+    gap: 4,
+    flex: 1,
   },
   rightSection: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    flex: 1,
-    justifyContent: "center",
+    gap: 8,
   },
   todayButton: {
     paddingHorizontal: 12,

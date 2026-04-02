@@ -1,12 +1,11 @@
 import React from "react";
 import { ActivityIndicator, Linking, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Constants from "expo-constants";
 import { useAuth } from "@/contexts/AuthProvider";
 import { LoginForm } from "@/components/auth/LoginForm";
+import { env } from "@/lib/env";
 
-const WEB_APP_RESET_PASSWORD_URL =
-  Constants.expoConfig?.extra?.WEB_APP_RESET_PASSWORD_URL || "https://swim-hub.app/reset-password";
+const WEB_APP_RESET_PASSWORD_URL = env.webAppResetPasswordUrl;
 
 /**
  * ナビゲーション外で使用するログイン画面（AuthGuard用）
