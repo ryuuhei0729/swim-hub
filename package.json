@@ -88,7 +88,6 @@
       "@supabase/supabase-js": "^2.97.0",
       "undici": ">=7.24.7",
       "node-forge": ">=1.4.0",
-      "@xmldom/xmldom": ">=0.8.12",
       "path-to-regexp": ">=8.4.0",
       "esbuild": ">=0.25.0",
       "picomatch@2": "2.3.2",
