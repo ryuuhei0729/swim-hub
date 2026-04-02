@@ -193,7 +193,6 @@ export const IOSCalendarSyncSettings: React.FC<IOSCalendarSyncSettingsProps> = (
           <View style={[styles.section, styles.borderTop]}>
             <Text style={styles.description}>
               練習や大会を作成・更新すると、自動的にiOSカレンダーに反映されます。
-              カレンダーアプリの「SwimHub」カレンダーで予定を確認できます。
             </Text>
           </View>
 
