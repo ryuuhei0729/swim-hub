@@ -1,5 +1,11 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import {
+  initRevenueCat,
+  loginRevenueCat,
+  logoutRevenueCat,
+  addCustomerInfoListener,
+} from "@/lib/revenucat";
 import type { Database } from "@swim-hub/shared/types";
 import type { AuthState, AuthContextType, SubscriptionInfo } from "@swim-hub/shared/types/auth";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -306,6 +312,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [authState.user],
   );
 
+  // RevenueCat 初期化
+  useEffect(() => {
+    initRevenueCat();
+  }, []);
+
+  // RevenueCat 顧客情報変更リスナー（購入・更新時にサブスクリプション情報を再取得）
+  useEffect(() => {
+    if (!authState.user) return;
+
+    const removeListener = addCustomerInfoListener(async () => {
+      if (authState.user) {
+        const sub = await fetchSubscription(authState.user.id);
+        setAuthState((prev) => ({ ...prev, subscription: sub }));
+      }
+    });
+
+    return removeListener;
+  }, [authState.user, fetchSubscription]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -346,6 +371,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       let subInfo: SubscriptionInfo | null = null;
       if (session?.user) {
+        // RevenueCat にログイン
+        await loginRevenueCat(session.user.id);
         subInfo = await fetchSubscription(session.user.id);
       }
 
@@ -358,6 +385,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // ログアウト時は全てのキャッシュをクリア（セキュリティとデータ整合性のため）
       if (event === "SIGNED_OUT") {
+        // RevenueCat からログアウト
+        await logoutRevenueCat();
+
         const queryClient = getQueryClient();
         queryClient.clear();
 
@@ -398,6 +428,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           clearTimeout(timeoutId);
           let subInfo: SubscriptionInfo | null = null;
           if (session?.user) {
+            await loginRevenueCat(session.user.id);
             subInfo = await fetchSubscription(session.user.id);
           }
           setAuthState({

@@ -15,7 +15,8 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_ENVIRONMENT": "production"
+        "EXPO_PUBLIC_ENVIRONMENT": "production",
+        "EXPO_PUBLIC_REVENUCAT_IOS_API_KEY": "appl_YadgyFdSryuxgGOGiXAaabdkYNl"
       }
     },
     "preview": {
@@ -27,7 +28,8 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_ENVIRONMENT": "development"
+        "EXPO_PUBLIC_ENVIRONMENT": "development",
+        "EXPO_PUBLIC_REVENUCAT_IOS_API_KEY": "appl_YadgyFdSryuxgGOGiXAaabdkYNl"
       }
     },
     "development": {

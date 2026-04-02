@@ -1,7 +1,8 @@
 import React from "react";
-import { View, Text, Pressable, Linking, StyleSheet } from "react-native";
-
-const SUBSCRIPTION_URL = "https://swim-hub.app/settings?tab=subscription";
+import { View, Text, Pressable, StyleSheet } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { MainStackParamList } from "@/navigation/types";
 
 interface PremiumBadgeProps {
   /** 表示メッセージ */
@@ -12,11 +13,13 @@ interface PremiumBadgeProps {
 
 /**
  * Premium 誘導バッジコンポーネント
- * Free ユーザーに Premium 機能の制限を案内し、Web の課金ページへ誘導する
+ * Free ユーザーに Premium 機能の制限を案内し、アプリ内ペイウォール画面へ遷移する
  */
 export const PremiumBadge: React.FC<PremiumBadgeProps> = ({ message, compact = false }) => {
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+
   const handlePress = () => {
-    Linking.openURL(SUBSCRIPTION_URL);
+    navigation.navigate("Paywall");
   };
 
   if (compact) {

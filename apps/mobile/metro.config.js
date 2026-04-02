@@ -2,34 +2,21 @@
 const { getDefaultConfig } = require("expo/metro-config");
 const path = require("path");
 
-/** @type {import('expo/metro-config').MetroConfig} */
-const config = getDefaultConfig(__dirname);
+const projectRoot = __dirname;
+const monorepoRoot = path.resolve(projectRoot, "../..");
 
-// Reactの解決をmobileアプリのnode_modulesに統一
+/** @type {import('expo/metro-config').MetroConfig} */
+const config = getDefaultConfig(projectRoot);
+
+// pnpm monorepo: watch the entire monorepo root
+config.watchFolders = [monorepoRoot];
+
 config.resolver = {
   ...config.resolver,
-  // mobileアプリのnode_modulesを優先的に解決
   nodeModulesPaths: [
-    path.resolve(__dirname, "node_modules"),
-    path.resolve(__dirname, "../../node_modules"),
+    path.resolve(projectRoot, "node_modules"),
+    path.resolve(monorepoRoot, "node_modules"),
   ],
-  // Reactを強制的にmobileアプリのnode_modulesから解決
-  resolveRequest: (context, moduleName, platform) => {
-    // ReactとReact DOMをmobileアプリのnode_modulesから解決
-    if (moduleName === "react" || moduleName === "react-dom") {
-      try {
-        const reactPath = path.resolve(__dirname, "node_modules", moduleName);
-        return {
-          filePath: require.resolve(reactPath),
-          type: "sourceFile",
-        };
-      } catch (e) {
-        // フォールバック: デフォルトの解決を使用
-      }
-    }
-    // デフォルトの解決を使用
-    return context.resolveRequest(context, moduleName, platform);
-  },
 };
 
 module.exports = config;
