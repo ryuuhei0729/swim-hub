@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -102,14 +102,10 @@ export const LoginMethodScreen: React.FC = () => {
             accessibilityRole="button"
             accessibilityLabel="Emailでログイン"
           >
-            {isLoading ? (
-              <ActivityIndicator color="#374151" size="small" />
-            ) : (
-              <View style={styles.emailButtonContent}>
-                <Feather name="mail" size={20} color="#374151" />
-                <Text style={styles.emailButtonText}>Emailでログイン</Text>
-              </View>
-            )}
+            <View style={styles.emailButtonContent}>
+              <Feather name="mail" size={20} color="#374151" />
+              <Text style={styles.emailButtonText}>Emailでログイン</Text>
+            </View>
           </Pressable>
         </View>
       </View>
