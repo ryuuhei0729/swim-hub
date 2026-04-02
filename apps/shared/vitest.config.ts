@@ -3,9 +3,6 @@ import url from "url";
 import { defineConfig } from "vitest/config";
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
-// Root の React に統一して、複数の React インスタンスによる "Invalid hook call" を防ぐ
-const rootReact = path.resolve(__dirname, "../../node_modules/react");
-const rootReactDom = path.resolve(__dirname, "../../node_modules/react-dom");
 
 export default defineConfig({
   test: {
@@ -14,11 +11,6 @@ export default defineConfig({
     environment: "jsdom",
     include: ["**/*.{test,spec}.{js,mjs,cjs,ts,tsx,mts,cts}"],
     exclude: ["node_modules", "dist"],
-    deps: {
-      inline: [
-        "@testing-library/react",
-      ],
-    },
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
@@ -41,8 +33,6 @@ export default defineConfig({
   resolve: {
     alias: {
       "@shared": path.resolve(__dirname, "./"),
-      "react": rootReact,
-      "react-dom": rootReactDom,
     },
   },
   esbuild: {
