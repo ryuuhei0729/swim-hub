@@ -1,9 +1,10 @@
 import React, { useState, useCallback } from "react";
-import { View, Text, Pressable, ScrollView, StyleSheet, RefreshControl, Alert } from "react-native";
+import { View, Text, Pressable, ScrollView, StyleSheet, RefreshControl, Alert, Linking, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAuth } from "@/contexts/AuthProvider";
+import { restorePurchases } from "@/lib/revenucat";
 import { useUserQuery } from "@apps/shared/hooks/queries/user";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { GoogleCalendarSyncSettings } from "@/components/settings/GoogleCalendarSyncSettings";
@@ -20,10 +21,11 @@ import type { MainStackParamList } from "@/navigation/types";
  */
 export const SettingsScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
-  const { supabase, signOut, subscription } = useAuth();
+  const { supabase, signOut, subscription, refreshSubscription } = useAuth();
   const isPremium = checkIsPremium(subscription);
   const [refreshing, setRefreshing] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   const {
     profile,
@@ -55,6 +57,19 @@ export const SettingsScreen: React.FC = () => {
       { text: "ログアウト", style: "destructive", onPress: executeLogout },
     ]);
   }, [executeLogout]);
+
+  const handleRestore = useCallback(async () => {
+    setIsRestoring(true);
+    try {
+      await restorePurchases();
+      await refreshSubscription();
+      Alert.alert("復元完了", "購入情報を復元しました。");
+    } catch {
+      Alert.alert("エラー", "購入情報の復元に失敗しました。");
+    } finally {
+      setIsRestoring(false);
+    }
+  }, [refreshSubscription]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -130,6 +145,31 @@ export const SettingsScreen: React.FC = () => {
                 <Text style={styles.upgradeButtonText}>Premium にアップグレード</Text>
               </Pressable>
             )}
+
+            {/* 購入を復元 */}
+            <Pressable
+              style={styles.restoreButton}
+              onPress={handleRestore}
+              disabled={isRestoring}
+              accessibilityRole="button"
+              accessibilityLabel="購入を復元する"
+            >
+              {isRestoring ? (
+                <ActivityIndicator color="#2563EB" size="small" />
+              ) : (
+                <Text style={styles.restoreButtonText}>購入を復元する</Text>
+              )}
+            </Pressable>
+
+            {/* サブスクリプション管理 */}
+            <Pressable
+              style={styles.manageSubButton}
+              onPress={() => Linking.openURL("https://apps.apple.com/account/subscriptions")}
+              accessibilityRole="link"
+              accessibilityLabel="サブスクリプションを管理"
+            >
+              <Text style={styles.manageSubText}>サブスクリプションを管理</Text>
+            </Pressable>
           </View>
         </View>
 
@@ -147,6 +187,23 @@ export const SettingsScreen: React.FC = () => {
 
         {/* アカウント削除セクション */}
         <AccountDeleteSettings />
+
+        {/* 利用規約・プライバシーポリシー */}
+        <View style={styles.legalLinks}>
+          <Text
+            style={styles.legalLink}
+            onPress={() => Linking.openURL("https://swim-hub.app/terms")}
+          >
+            利用規約
+          </Text>
+          <Text style={styles.legalDivider}> | </Text>
+          <Text
+            style={styles.legalLink}
+            onPress={() => Linking.openURL("https://swim-hub.app/privacy")}
+          >
+            プライバシーポリシー
+          </Text>
+        </View>
 
         {/* ログアウトセクション */}
         <View style={styles.logoutSection}>
@@ -248,6 +305,40 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#FFFFFF",
+  },
+  restoreButton: {
+    alignItems: "center",
+    paddingVertical: 8,
+    marginTop: 4,
+  },
+  restoreButtonText: {
+    color: "#2563EB",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  manageSubButton: {
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  manageSubText: {
+    color: "#6B7280",
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  legalLinks: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  legalLink: {
+    fontSize: 13,
+    color: "#2563EB",
+    fontWeight: "500",
+  },
+  legalDivider: {
+    fontSize: 13,
+    color: "#D1D5DB",
   },
   logoutSection: {
     marginTop: 8,

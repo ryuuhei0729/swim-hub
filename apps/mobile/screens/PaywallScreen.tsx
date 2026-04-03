@@ -11,6 +11,7 @@ import {
   Alert,
   StyleSheet,
   ScrollView,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -277,6 +278,10 @@ export const PaywallScreen: React.FC = () => {
           </Text>
         )}
 
+        <Text style={styles.cancelNote}>
+          サブスクリプションはいつでもキャンセルできます。{"\n"}App Store の設定から管理できます。
+        </Text>
+
         {/* リストアボタン */}
         <TouchableOpacity
           style={styles.restoreButton}
@@ -289,6 +294,23 @@ export const PaywallScreen: React.FC = () => {
             <Text style={styles.restoreButtonText}>購入を復元する</Text>
           )}
         </TouchableOpacity>
+
+        {/* 利用規約・プライバシーポリシー */}
+        <View style={styles.legalLinks}>
+          <Text
+            style={styles.legalLink}
+            onPress={() => Linking.openURL("https://swim-hub.app/terms")}
+          >
+            利用規約
+          </Text>
+          <Text style={styles.legalDivider}> | </Text>
+          <Text
+            style={styles.legalLink}
+            onPress={() => Linking.openURL("https://swim-hub.app/privacy")}
+          >
+            プライバシーポリシー
+          </Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -486,6 +508,29 @@ const styles = StyleSheet.create({
     color: "#2563EB",
     fontSize: 14,
     fontWeight: "600",
+  },
+  cancelNote: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    textAlign: "center",
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  legalLinks: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 8,
+    paddingBottom: 24,
+  },
+  legalLink: {
+    fontSize: 12,
+    color: "#2563EB",
+    fontWeight: "500",
+  },
+  legalDivider: {
+    fontSize: 12,
+    color: "#D1D5DB",
   },
   noPackagesContainer: {
     alignItems: "center",
