@@ -346,7 +346,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    // タイムアウト設定（10秒後にloadingをfalseにする）
+    // セーフティタイムアウト: 15秒以内に INITIAL_SESSION が来なければ loading を解除
+    // ※ user/session はそのまま維持し、null に上書きしない
     const timeoutId = setTimeout(() => {
       if (isMounted) {
         setAuthState((prev) => {
@@ -357,36 +358,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return prev;
         });
       }
-    }, 10000);
+    }, 15000);
 
-    // 認証状態の変更を監視（初期セッション取得も含む）
+    // 認証状態の変更を監視
+    // onAuthStateChange は INITIAL_SESSION イベントでストレージからの復元も通知するため
+    // getSession() の二重呼び出しは不要
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!isMounted) {
-        return;
-      }
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) return;
 
       clearTimeout(timeoutId);
 
-      let subInfo: SubscriptionInfo | null = null;
-      if (session?.user) {
-        // RevenueCat にログイン
-        await loginRevenueCat(session.user.id);
-        subInfo = await fetchSubscription(session.user.id);
-      }
-
-      setAuthState({
+      // まずセッション情報を即座に反映して loading を解除する
+      // RevenueCat/サブスクリプション取得はブロックせず非同期で行う
+      setAuthState((prev) => ({
+        ...prev,
         user: session?.user ?? null,
         session,
         loading: false,
-        subscription: subInfo,
-      });
+        // ログアウト時はサブスクリプション情報もクリア
+        subscription: session?.user ? prev.subscription : null,
+      }));
+
+      if (session?.user) {
+        // RevenueCat ログイン + サブスクリプション取得を非同期で実行
+        // これらが遅くても画面表示はブロックされない
+        (async () => {
+          try {
+            await loginRevenueCat(session.user.id);
+          } catch (err) {
+            console.warn("RevenueCat ログイン失敗:", err);
+          }
+          try {
+            const subInfo = await fetchSubscription(session.user.id);
+            if (isMounted) {
+              setAuthState((prev) => ({ ...prev, subscription: subInfo }));
+            }
+          } catch (err) {
+            console.warn("サブスクリプション取得失敗:", err);
+          }
+        })();
+      }
 
       // ログアウト時は全てのキャッシュをクリア（セキュリティとデータ整合性のため）
       if (event === "SIGNED_OUT") {
         // RevenueCat からログアウト
-        await logoutRevenueCat();
+        logoutRevenueCat().catch((err) => {
+          console.warn("RevenueCat ログアウト失敗:", err);
+        });
 
         const queryClient = getQueryClient();
         queryClient.clear();
@@ -419,38 +439,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
       }
     });
-
-    // 初期セッションを明示的に取得（onAuthStateChangeが呼ばれない場合のフォールバック）
-    supabase.auth
-      .getSession()
-      .then(async ({ data: { session } }) => {
-        if (isMounted) {
-          clearTimeout(timeoutId);
-          let subInfo: SubscriptionInfo | null = null;
-          if (session?.user) {
-            await loginRevenueCat(session.user.id);
-            subInfo = await fetchSubscription(session.user.id);
-          }
-          setAuthState({
-            user: session?.user ?? null,
-            session,
-            loading: false,
-            subscription: subInfo,
-          });
-        }
-      })
-      .catch((error) => {
-        console.error("初期セッション取得エラー:", error);
-        if (isMounted) {
-          clearTimeout(timeoutId);
-          setAuthState({
-            user: null,
-            session: null,
-            loading: false,
-            subscription: null,
-          });
-        }
-      });
 
     // クリーンアップ関数
     return () => {
