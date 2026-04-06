@@ -17,7 +17,8 @@
           "calendarPermission": "練習や大会の予定をカレンダーに同期するために使用します"
         }
       ],
-      "expo-video"
+      "expo-video",
+      "expo-image"
     ],
     "splash": {
       "image": "./assets/splash/splash.png",
@@ -45,7 +46,6 @@
         "backgroundColor": "#ffffff"
       },
       "package": "app.swimhub",
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {

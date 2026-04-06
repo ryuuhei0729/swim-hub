@@ -92,7 +92,9 @@
       "esbuild": ">=0.25.0",
       "picomatch@2": "2.3.2",
       "picomatch@3": "3.0.2",
-      "picomatch@4": "4.0.4"
+      "picomatch@4": "4.0.4",
+      "react": "19.2.4",
+      "react-dom": "19.2.4"
     }
   },
   "engines": {

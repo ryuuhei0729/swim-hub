@@ -5,14 +5,13 @@
  * extra への環境変数マッピングは不要。extra は EAS projectId 等の
  * ビルドメタデータのみを保持する。
  */
-const baseConfig = require("./app.json");
 
-module.exports = {
-  ...baseConfig.expo,
+module.exports = ({ config }) => ({
+  ...config,
   extra: {
-    ...baseConfig.expo.extra,
+    ...config.extra,
     eas: {
       projectId: "fb40c5df-d4ba-4bb6-adea-41d49d34a6be",
     },
   },
-};
+});

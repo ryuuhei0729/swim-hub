@@ -13,16 +13,57 @@ if (__DEV__) {
   console.log("supabaseAnonKey:", supabaseAnonKey ? "設定済み" : "未設定");
 }
 
+/**
+ * AsyncStorage をエラーハンドリング付きでラップ。
+ * 読み込み失敗・パースエラー・タイムアウト時に null を返して
+ * Supabase SDK がハングするのを防ぐ。
+ */
+const safeStorage = {
+  getItem: async (key: string): Promise<string | null> => {
+    try {
+      // 5秒以内に読み込めなければタイムアウト
+      const result = await Promise.race([
+        AsyncStorage.getItem(key),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
+      ]);
+      return result;
+    } catch (err) {
+      console.error(`AsyncStorage.getItem("${key}") 失敗:`, err);
+      // 壊れたデータを削除して次回起動時に問題を回避
+      try {
+        await AsyncStorage.removeItem(key);
+      } catch {
+        // 削除も失敗した場合は無視
+      }
+      return null;
+    }
+  },
+  setItem: async (key: string, value: string): Promise<void> => {
+    try {
+      await AsyncStorage.setItem(key, value);
+    } catch (err) {
+      console.error(`AsyncStorage.setItem("${key}") 失敗:`, err);
+    }
+  },
+  removeItem: async (key: string): Promise<void> => {
+    try {
+      await AsyncStorage.removeItem(key);
+    } catch (err) {
+      console.error(`AsyncStorage.removeItem("${key}") 失敗:`, err);
+    }
+  },
+};
+
 // 環境変数の検証（エラーをthrowせず、nullを返す）
 let supabase: ReturnType<typeof createClient<Database>> | null = null;
 
 if (supabaseUrl && supabaseAnonKey) {
   try {
     // React Native用Supabaseクライアント
-    // AsyncStorageでセッションを永続化（タスクキル後もログイン状態を維持）
+    // safeStorage でセッションを永続化（破損時にもハングしない）
     supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
       auth: {
-        storage: AsyncStorage,
+        storage: safeStorage,
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: false,

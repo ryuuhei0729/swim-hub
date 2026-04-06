@@ -346,28 +346,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    // セーフティタイムアウト: 15秒以内に INITIAL_SESSION が来なければ loading を解除
-    // ※ user/session はそのまま維持し、null に上書きしない
-    const timeoutId = setTimeout(() => {
+    let initialSessionReceived = false;
+
+    // 最終安全弁: 何が起きても10秒後には必ず loading を解除する
+    // これにより白画面で永久に固まることは絶対にない
+    const hardTimeoutId = setTimeout(() => {
       if (isMounted) {
         setAuthState((prev) => {
           if (prev.loading) {
-            console.warn("認証状態の確認がタイムアウトしました");
+            console.error("認証初期化の最終タイムアウト — loading を強制解除");
             return { ...prev, loading: false };
           }
           return prev;
         });
       }
-    }, 15000);
+    }, 10000);
+
+    // セーフティタイムアウト: 5秒以内に INITIAL_SESSION が来なければ
+    // getSession() で直接取得を試みる
+    const timeoutId = setTimeout(async () => {
+      if (!isMounted || initialSessionReceived) return;
+      console.warn("INITIAL_SESSION タイムアウト — getSession() でフォールバック");
+      try {
+        const { data: { session } } = await supabase!.auth.getSession();
+        if (isMounted && !initialSessionReceived) {
+          initialSessionReceived = true;
+          setAuthState((prev) => ({
+            ...prev,
+            user: session?.user ?? null,
+            session,
+            loading: false,
+          }));
+        }
+      } catch (err) {
+        console.error("getSession フォールバック失敗:", err);
+        if (isMounted && !initialSessionReceived) {
+          initialSessionReceived = true;
+          setAuthState((prev) => ({ ...prev, loading: false }));
+        }
+      }
+    }, 5000);
 
     // 認証状態の変更を監視
-    // onAuthStateChange は INITIAL_SESSION イベントでストレージからの復元も通知するため
-    // getSession() の二重呼び出しは不要
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (!isMounted) return;
 
+      initialSessionReceived = true;
       clearTimeout(timeoutId);
 
       // まずセッション情報を即座に反映して loading を解除する
@@ -444,6 +470,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       isMounted = false;
       clearTimeout(timeoutId);
+      clearTimeout(hardTimeoutId);
       subscription.unsubscribe();
     };
   }, [fetchSubscription]);

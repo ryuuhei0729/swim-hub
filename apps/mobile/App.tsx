@@ -46,6 +46,11 @@ const AppNavigator: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
   const { isConnected, isInternetReachable } = useNetwork();
 
+  // デバッグ: レンダリング状態をログ出力
+  if (__DEV__) {
+    console.log("[AppNavigator] render — loading:", loading, "isAuthenticated:", isAuthenticated, "supabase:", !!supabase);
+  }
+
   // Supabaseクライアントが初期化されていない場合はエラー画面を表示
   if (!supabase) {
     return <SupabaseErrorScreen />;
@@ -56,6 +61,7 @@ const AppNavigator: React.FC = () => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2563EB" />
+        <Text style={{ color: "#6B7280", marginTop: 12, fontSize: 13 }}>読み込み中...</Text>
         <StatusBar style="auto" />
       </View>
     );
