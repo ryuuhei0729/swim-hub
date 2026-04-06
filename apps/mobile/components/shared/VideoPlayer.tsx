@@ -79,8 +79,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoPath, thumbnailPa
         ref={videoViewRef}
         style={isPlaying ? styles.video : styles.hiddenVideo}
         player={player}
-        allowsFullscreen
-        allowsPictureInPicture={false}
         contentFit="contain"
         onFullscreenExit={handleExitFullscreen}
       />

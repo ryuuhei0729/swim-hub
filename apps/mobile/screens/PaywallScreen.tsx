@@ -20,6 +20,7 @@ import type { PurchasesPackage } from "react-native-purchases";
 import { getOfferings, purchasePackage, restorePurchases } from "@/lib/revenucat";
 import { useAuth } from "@/contexts/AuthProvider";
 import type { MainStackParamList } from "@/navigation/types";
+import { PlanComparisonTable } from "@/components/shared/PlanComparisonTable";
 
 type BillingPeriod = "monthly" | "annual";
 
@@ -163,18 +164,11 @@ export const PaywallScreen: React.FC = () => {
           </View>
         )}
 
-        {/* 特典一覧 */}
-        <View style={styles.benefitsContainer}>
-          {[
-            "スプリットタイム・練習タイムの登録無制限",
-            "画像・動画のアップロード対応",
-            "広告なしで快適に利用",
-          ].map((benefit, i) => (
-            <View key={i} style={styles.benefitRow}>
-              <Text style={styles.benefitCheck}>✓</Text>
-              <Text style={styles.benefitText}>{benefit}</Text>
-            </View>
-          ))}
+        {/* プラン比較表 */}
+        <View style={styles.comparisonSection}>
+          <PlanComparisonTable
+            currentPlan={(subscription?.plan ?? "free") as "free" | "premium"}
+          />
         </View>
 
         {/* パッケージ取得エラー */}
@@ -382,29 +376,8 @@ const styles = StyleSheet.create({
     color: "#059669",
     fontWeight: "600",
   },
-  benefitsContainer: {
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    padding: 16,
+  comparisonSection: {
     marginBottom: 24,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    gap: 12,
-  },
-  benefitRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  benefitCheck: {
-    fontSize: 16,
-    color: "#059669",
-    fontWeight: "bold",
-  },
-  benefitText: {
-    fontSize: 15,
-    color: "#374151",
-    fontWeight: "500",
   },
   plansContainer: {
     gap: 12,
