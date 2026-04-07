@@ -21,7 +21,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     subscription: null,
   });
 
-  // サブスクリプション情報を取得
+  // サブスクリプション情報を Supabase から直接取得（Web と同じパターン）
+  // API 経由だと Bearer token の有効期限切れで 401 になる問題があったため、
+  // Supabase クライアントを直接使う（token refresh が内蔵されている）
   const fetchSubscription = useCallback(
     async (userId: string): Promise<SubscriptionInfo | null> => {
       if (!supabase) return null;
@@ -40,14 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } | null;
           error: unknown;
         };
-        if (error || !data)
-          return {
-            plan: "free",
-            status: null,
-            cancelAtPeriodEnd: false,
-            premiumExpiresAt: null,
-            trialEnd: null,
-          };
+        if (error || !data) return null;
         return {
           plan: data.plan as "free" | "premium",
           status: data.status as SubscriptionInfo["status"],
@@ -56,13 +51,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           trialEnd: data.trial_end ?? null,
         };
       } catch {
-        return {
-          plan: "free",
-          status: null,
-          cancelAtPeriodEnd: false,
-          premiumExpiresAt: null,
-          trialEnd: null,
-        };
+        return null;
       }
     },
     [],
@@ -70,9 +59,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // サブスクリプション情報を再取得（外部から呼び出し可能）
   const refreshSubscription = useCallback(async () => {
-    if (!authState.user) return;
-    const subscription = await fetchSubscription(authState.user.id);
-    setAuthState((prev) => ({ ...prev, subscription }));
+    if (!authState.user?.id) return;
+    const sub = await fetchSubscription(authState.user.id);
+    if (sub !== null) {
+      setAuthState((prev) => ({ ...prev, subscription: sub }));
+    }
   }, [authState.user, fetchSubscription]);
 
   // ログイン
@@ -186,42 +177,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }
     try {
+      await logoutRevenueCat();
+
       const { error } = await supabase.auth.signOut();
-
       if (error) {
-        return { error: error as import("@supabase/supabase-js").AuthError };
+        await supabase.auth.signOut({ scope: "local" });
       }
+    } catch {
+      try {
+        await supabase.auth.signOut({ scope: "local" });
+      } catch (localError) {
+        console.error("Sign out error:", localError);
+        return { error: localError as import("@supabase/supabase-js").AuthError };
+      }
+    } finally {
+      setAuthState((prev) => ({ ...prev, subscription: null }));
 
-      // React Queryのキャッシュをクリア（セキュリティとデータ整合性のため）
       const queryClient = getQueryClient();
       queryClient.clear();
 
-      // Zustandストアを全てリセット（セキュリティとデータ整合性のため）
-      const [
-        { usePracticeFormStore },
-        { usePracticeFilterStore },
-        { usePracticeTimeStore },
-        { useCompetitionFormStore },
-        { useRecordStore },
-      ] = await Promise.all([
-        import("@/stores/practiceFormStore"),
-        import("@/stores/practiceFilterStore"),
-        import("@/stores/practiceTimeStore"),
-        import("@/stores/competitionFormStore"),
-        import("@/stores/recordStore"),
-      ]);
+      try {
+        const [
+          { usePracticeFormStore },
+          { usePracticeFilterStore },
+          { usePracticeTimeStore },
+          { useCompetitionFormStore },
+          { useRecordStore },
+        ] = await Promise.all([
+          import("@/stores/practiceFormStore"),
+          import("@/stores/practiceFilterStore"),
+          import("@/stores/practiceTimeStore"),
+          import("@/stores/competitionFormStore"),
+          import("@/stores/recordStore"),
+        ]);
 
-      usePracticeFormStore.getState().reset();
-      usePracticeFilterStore.getState().reset();
-      usePracticeTimeStore.getState().reset();
-      useCompetitionFormStore.getState().reset();
-      useRecordStore.getState().reset();
-
-      return { error: null };
-    } catch (error) {
-      console.error("Sign out error:", error);
-      return { error: error as import("@supabase/supabase-js").AuthError };
+        usePracticeFormStore.getState().reset();
+        usePracticeFilterStore.getState().reset();
+        usePracticeTimeStore.getState().reset();
+        useCompetitionFormStore.getState().reset();
+        useRecordStore.getState().reset();
+      } catch {
+        // ストアがまだ読み込まれていない場合は無視
+      }
     }
+    return { error: null };
   }, []);
 
   // パスワードリセット
@@ -324,11 +323,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const removeListener = addCustomerInfoListener(async () => {
       if (authState.user) {
         const sub = await fetchSubscription(authState.user.id);
-        setAuthState((prev) => ({ ...prev, subscription: sub }));
+        if (sub !== null) {
+          setAuthState((prev) => ({ ...prev, subscription: sub }));
+        }
       }
     });
 
     return removeListener;
+  }, [authState.user, fetchSubscription]);
+
+  // user が変わったらサブスクリプションを取得 & RevenueCat にログイン
+  useEffect(() => {
+    if (authState.user) {
+      loginRevenueCat(authState.user.id);
+      fetchSubscription(authState.user.id).then((sub) => {
+        if (sub !== null) {
+          setAuthState((prev) => ({ ...prev, subscription: sub }));
+        }
+      });
+    } else {
+      setAuthState((prev) => ({ ...prev, subscription: null }));
+    }
   }, [authState.user, fetchSubscription]);
 
   useEffect(() => {
@@ -348,22 +363,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     let initialSessionReceived = false;
 
-    // 最終安全弁: 何が起きても10秒後には必ず loading を解除する
-    // これにより白画面で永久に固まることは絶対にない
-    const hardTimeoutId = setTimeout(() => {
-      if (isMounted) {
-        setAuthState((prev) => {
-          if (prev.loading) {
-            console.error("認証初期化の最終タイムアウト — loading を強制解除");
-            return { ...prev, loading: false };
-          }
-          return prev;
-        });
+    const forceResolve = () => {
+      if (isMounted && !initialSessionReceived) {
+        initialSessionReceived = true;
+        console.error("認証初期化タイムアウト — loading を強制解除");
+        setAuthState((prev) => (prev.loading ? { ...prev, loading: false } : prev));
       }
-    }, 10000);
+    };
 
-    // セーフティタイムアウト: 5秒以内に INITIAL_SESSION が来なければ
-    // getSession() で直接取得を試みる
+    // 最終安全弁: 10秒後には必ず loading を解除する
+    const hardTimeoutId = setTimeout(forceResolve, 10000);
+
+    // 5秒以内に INITIAL_SESSION が来なければ getSession() でフォールバック
     const timeoutId = setTimeout(async () => {
       if (!isMounted || initialSessionReceived) return;
       console.warn("INITIAL_SESSION タイムアウト — getSession() でフォールバック");
@@ -371,6 +382,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: { session } } = await supabase!.auth.getSession();
         if (isMounted && !initialSessionReceived) {
           initialSessionReceived = true;
+          clearTimeout(hardTimeoutId);
           setAuthState((prev) => ({
             ...prev,
             user: session?.user ?? null,
@@ -380,14 +392,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (err) {
         console.error("getSession フォールバック失敗:", err);
-        if (isMounted && !initialSessionReceived) {
-          initialSessionReceived = true;
-          setAuthState((prev) => ({ ...prev, loading: false }));
-        }
+        forceResolve();
       }
     }, 5000);
 
-    // 認証状態の変更を監視
+    // 認証状態の変更を監視 — セッション情報のみ反映し、サブスクリプション取得は useEffect に委譲
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
@@ -395,41 +404,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       initialSessionReceived = true;
       clearTimeout(timeoutId);
+      clearTimeout(hardTimeoutId);
 
-      // まずセッション情報を即座に反映して loading を解除する
-      // RevenueCat/サブスクリプション取得はブロックせず非同期で行う
       setAuthState((prev) => ({
         ...prev,
         user: session?.user ?? null,
         session,
         loading: false,
-        // ログアウト時はサブスクリプション情報もクリア
         subscription: session?.user ? prev.subscription : null,
       }));
 
-      if (session?.user) {
-        // RevenueCat ログイン + サブスクリプション取得を非同期で実行
-        // これらが遅くても画面表示はブロックされない
-        (async () => {
-          try {
-            await loginRevenueCat(session.user.id);
-          } catch (err) {
-            console.warn("RevenueCat ログイン失敗:", err);
-          }
-          try {
-            const subInfo = await fetchSubscription(session.user.id);
-            if (isMounted) {
-              setAuthState((prev) => ({ ...prev, subscription: subInfo }));
-            }
-          } catch (err) {
-            console.warn("サブスクリプション取得失敗:", err);
-          }
-        })();
-      }
-
       // ログアウト時は全てのキャッシュをクリア（セキュリティとデータ整合性のため）
       if (event === "SIGNED_OUT") {
-        // RevenueCat からログアウト
         logoutRevenueCat().catch((err) => {
           console.warn("RevenueCat ログアウト失敗:", err);
         });
@@ -437,7 +423,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const queryClient = getQueryClient();
         queryClient.clear();
 
-        // Zustandストアを全てリセット
         Promise.all([
           import("@/stores/practiceFormStore"),
           import("@/stores/practiceFilterStore"),
@@ -473,7 +458,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       clearTimeout(hardTimeoutId);
       subscription.unsubscribe();
     };
-  }, [fetchSubscription]);
+  }, []);
 
   // supabaseがnullの場合のフォールバック（実際には使用されない）
   const value: AuthContextType = {

@@ -133,6 +133,28 @@ export const PaywallScreen: React.FC = () => {
     );
   }
 
+  // すでに Premium
+  const isPremium =
+    subscription?.plan === "premium" &&
+    (subscription?.status === "active" || subscription?.status === "trialing");
+  if (isPremium) {
+    return (
+      <SafeAreaView style={styles.container} edges={["bottom"]}>
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="閉じる"
+        >
+          <Text style={styles.closeButtonText}>✕</Text>
+        </TouchableOpacity>
+        <View style={styles.loadingContainer}>
+          <Text style={{ fontSize: 16, color: "#374151" }}>すでに Premium プランをご利用中です</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
       {/* 閉じるボタン */}

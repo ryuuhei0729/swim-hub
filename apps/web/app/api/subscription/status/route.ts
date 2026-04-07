@@ -1,13 +1,9 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase-auth/server";
+import { NextRequest, NextResponse } from "next/server";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
+import { verifyAuth } from "@/lib/api-helpers";
 
-/**
- * 今日の日付を JST (Asia/Tokyo) で YYYY-MM-DD 形式で返す
- */
 function getTodayJST(): string {
   const now = new Date();
-  // JST = UTC + 9時間
   const jstOffset = 9 * 60 * 60 * 1000;
   const jstDate = new Date(now.getTime() + jstOffset);
   const year = jstDate.getUTCFullYear();
@@ -16,24 +12,18 @@ function getTodayJST(): string {
   return `${year}-${month}-${day}`;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // 1. 認証チェック
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
+    const authResult = await verifyAuth(request);
+    if ("error" in authResult) {
+      return authResult.error;
     }
+    const { auth, supabase } = authResult.result;
 
-    // 2. user_subscriptions から取得
     const { data: subscription, error: subError } = (await supabase
       .from("user_subscriptions")
       .select("plan, status, cancel_at_period_end, premium_expires_at, trial_end")
-      .eq("id", user.id)
+      .eq("id", auth.uid)
       .single()) as {
       data: {
         plan: string;
@@ -46,7 +36,6 @@ export async function GET() {
     };
 
     if (subError && subError.code !== "PGRST116") {
-      // PGRST116 = "no rows found" は正常（未登録ユーザー）
       console.error("サブスクリプション取得エラー:", subError);
       return NextResponse.json(
         { error: "サブスクリプション情報の取得に失敗しました" },
@@ -54,19 +43,31 @@ export async function GET() {
       );
     }
 
-    const plan = (subscription?.plan as "free" | "premium") ?? "free";
-    const status = subscription?.status ?? null;
-    const cancelAtPeriodEnd = subscription?.cancel_at_period_end ?? false;
-    const premiumExpiresAt = subscription?.premium_expires_at ?? null;
-    const trialEnd = subscription?.trial_end ?? null;
+    // 行が存在しない場合は free で作成
+    let sub = subscription;
+    if (!sub && subError?.code === "PGRST116") {
+      const { data: newRow } = await supabase
+        .from("user_subscriptions")
+        .insert({ id: auth.uid })
+        .select("plan, status, cancel_at_period_end, premium_expires_at, trial_end")
+        .single();
+      if (newRow) {
+        sub = newRow as typeof subscription;
+      }
+    }
 
-    // 3. app_daily_usage から今日の全アプリ合計 daily_tokens_used を取得
+    const plan = (sub?.plan as "free" | "premium") ?? "free";
+    const status = sub?.status ?? null;
+    const cancelAtPeriodEnd = sub?.cancel_at_period_end ?? false;
+    const premiumExpiresAt = sub?.premium_expires_at ?? null;
+    const trialEnd = sub?.trial_end ?? null;
+
     const todayJST = getTodayJST();
 
     const { data: usageData, error: usageError } = (await supabase
       .from("app_daily_usage")
       .select("daily_tokens_used")
-      .eq("user_id", user.id)
+      .eq("user_id", auth.uid)
       .eq("usage_date", todayJST)) as {
       data: { daily_tokens_used: number }[] | null;
       error: { message?: string } | null;
@@ -82,7 +83,6 @@ export async function GET() {
       0,
     );
 
-    // 4. レスポンス
     return NextResponse.json(
       {
         plan,
@@ -95,7 +95,7 @@ export async function GET() {
       },
       {
         headers: {
-          "Cache-Control": "private, max-age=60",
+          "Cache-Control": "private, no-store, no-cache, must-revalidate",
         },
       },
     );
