@@ -1,25 +1,23 @@
-import React from 'react'
-import { DocumentArrowUpIcon } from '@heroicons/react/24/outline'
+import React from "react";
+import { DocumentArrowUpIcon } from "@heroicons/react/24/outline";
 
 interface FileUploadProps {
-  selectedFile: File | null
-  loading: boolean
-  onFileSelect: (file: File) => void
+  selectedFile: File | null;
+  loading: boolean;
+  onFileSelect: (file: File) => void;
 }
 
 export function FileUpload({ selectedFile, loading, onFileSelect }: FileUploadProps) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+    const file = e.target.files?.[0];
     if (file) {
-      onFileSelect(file)
+      onFileSelect(file);
     }
-  }
+  };
 
   return (
     <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-      <h3 className="text-lg font-medium text-gray-900 mb-4">
-        ファイルをインポート
-      </h3>
+      <h3 className="text-lg font-medium text-gray-900 mb-4">ファイルをインポート</h3>
       <div className="flex items-center space-x-4">
         <label
           htmlFor="file-upload"
@@ -36,20 +34,12 @@ export function FileUpload({ selectedFile, loading, onFileSelect }: FileUploadPr
           className="hidden"
           disabled={loading}
         />
-        {selectedFile && (
-          <span className="text-sm text-gray-700">
-            {selectedFile.name}
-          </span>
-        )}
+        {selectedFile && <span className="text-sm text-gray-700">{selectedFile.name}</span>}
       </div>
       <p className="mt-2 text-sm text-gray-500">
         上記テンプレートからファイルを作成し、アップロードしてください
       </p>
-      {loading && (
-        <p className="mt-2 text-sm text-gray-600">
-          ファイルを読み込んでいます...
-        </p>
-      )}
+      {loading && <p className="mt-2 text-sm text-gray-600">ファイルを読み込んでいます...</p>}
     </div>
-  )
+  );
 }

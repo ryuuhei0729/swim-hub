@@ -1,1 +1,1 @@
-export { default as TeamGroupManagement } from './TeamGroupManagement'
+export { default as TeamGroupManagement } from "./TeamGroupManagement";

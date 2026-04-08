@@ -2,6 +2,5 @@
 // Supabase Client のモックヘルパー（モバイル版）
 // =============================================================================
 
-
 // sharedパッケージのモックを再エクスポート
-export * from '@apps/shared/__mocks__/supabase'
+export * from "@apps/shared/__mocks__/supabase";

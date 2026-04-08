@@ -2,68 +2,69 @@
 // 練習記録フォーム用Zustandストア（モバイル版）
 // =============================================================================
 
-import { format } from 'date-fns'
-import type { Practice } from '@swim-hub/shared/types'
-import { create } from 'zustand'
+import { format } from "date-fns";
+import type { Practice } from "@swim-hub/shared/types";
+import { create } from "zustand";
 
 interface PracticeFormState {
   // フォームデータ
-  date: string
-  title: string | null
-  place: string | null
-  note: string | null
-  
+  date: string;
+  title: string | null;
+  place: string | null;
+  note: string | null;
+
   // UI状態
-  isLoading: boolean
+  isLoading: boolean;
   errors: {
-    date?: string
-    title?: string
-    place?: string
-    note?: string
-  }
+    date?: string;
+    title?: string;
+    place?: string;
+    note?: string;
+  };
 }
 
 interface PracticeFormActions {
   // データ操作
-  setDate: (date: string) => void
-  setTitle: (title: string | null) => void
-  setPlace: (place: string | null) => void
-  setNote: (note: string | null) => void
-  setLoading: (loading: boolean) => void
-  setError: (field: keyof PracticeFormState['errors'], message?: string) => void
-  clearErrors: () => void
-  
+  setDate: (date: string) => void;
+  setTitle: (title: string | null) => void;
+  setPlace: (place: string | null) => void;
+  setNote: (note: string | null) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (field: keyof PracticeFormState["errors"], message?: string) => void;
+  clearErrors: () => void;
+
   // 初期化
-  initialize: (practice?: Practice) => void
-  reset: () => void
+  initialize: (practice?: Practice) => void;
+  reset: () => void;
 }
 
 const initialState: PracticeFormState = {
-  date: format(new Date(), 'yyyy-MM-dd'), // 今日の日付（ローカルタイム）
+  date: format(new Date(), "yyyy-MM-dd"), // 今日の日付（ローカルタイム）
   title: null,
   place: null,
   note: null,
   isLoading: false,
   errors: {},
-}
+};
 
 export const usePracticeFormStore = create<PracticeFormState & PracticeFormActions>()((set) => ({
   ...initialState,
-  
+
   // データ操作
   setDate: (date) => set({ date }),
   setTitle: (title) => set({ title }),
   setPlace: (place) => set({ place }),
   setNote: (note) => set({ note }),
   setLoading: (loading) => set({ isLoading: loading }),
-  setError: (field, message) => set((state) => ({
-    errors: {
-      ...state.errors,
-      [field]: message,
-    },
-  })),
+  setError: (field, message) =>
+    set((state) => ({
+      errors: {
+        ...state.errors,
+        [field]: message,
+      },
+    })),
   clearErrors: () => set({ errors: {} }),
-  
+
   // 初期化
   initialize: (practice) => {
     if (practice) {
@@ -74,16 +75,16 @@ export const usePracticeFormStore = create<PracticeFormState & PracticeFormActio
         place: practice.place || null,
         note: practice.note || null,
         errors: {},
-      })
+      });
     } else {
       // 作成モード: 空のフォームで初期化
       set({
         ...initialState,
-        date: format(new Date(), 'yyyy-MM-dd'),
-      })
+        date: format(new Date(), "yyyy-MM-dd"),
+      });
     }
   },
-  
+
   // リセット
   reset: () => set(initialState),
-}))
+}));

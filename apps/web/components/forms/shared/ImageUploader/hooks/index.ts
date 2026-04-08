@@ -5,5 +5,5 @@ export {
   type ImageValidationResult,
   type UseImageUploadOptions,
   type UseImageUploadReturn,
-} from './useImageUpload'
-export { default } from './useImageUpload'
+} from "./useImageUpload";
+export { default } from "./useImageUpload";

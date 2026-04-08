@@ -1,20 +1,20 @@
-'use client'
+"use client";
 
-import React from 'react'
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
-import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import React from "react";
+import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import { format } from "date-fns";
+import { ja } from "date-fns/locale";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
 interface CalendarHeaderProps {
-  currentDate: Date
-  isLoading: boolean
-  onPrevMonth: () => void
-  onNextMonth: () => void
-  onTodayClick: () => void
-  onMonthYearSelect: (year: number, month: number) => void
-  showMonthSelector: boolean
-  setShowMonthSelector: (show: boolean) => void
+  currentDate: Date;
+  isLoading: boolean;
+  onPrevMonth: () => void;
+  onNextMonth: () => void;
+  onTodayClick: () => void;
+  onMonthYearSelect: (year: number, month: number) => void;
+  showMonthSelector: boolean;
+  setShowMonthSelector: (show: boolean) => void;
 }
 
 export default function CalendarHeader({
@@ -25,15 +25,13 @@ export default function CalendarHeader({
   onTodayClick,
   onMonthYearSelect: _onMonthYearSelect,
   showMonthSelector: _showMonthSelector,
-  setShowMonthSelector
+  setShowMonthSelector,
 }: CalendarHeaderProps) {
   return (
-    <div className="px-4 sm:px-6 py-4 border-b border-gray-200 bg-white">
+    <div className="px-1 sm:px-6 py-2 sm:py-4 border-b border-gray-200 bg-white">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
         <div className="flex items-center space-x-2">
-          <h2 className="hidden sm:block text-xl font-semibold text-gray-900">
-            カレンダー
-          </h2>
+          <h2 className="hidden sm:block text-xl font-semibold text-gray-900">カレンダー</h2>
           {isLoading && <LoadingSpinner size="sm" />}
         </div>
         <div className="flex items-center justify-center sm:justify-end space-x-1">
@@ -59,9 +57,9 @@ export default function CalendarHeader({
             onClick={() => setShowMonthSelector(true)}
             className="text-base sm:text-lg font-medium text-gray-900 min-w-[100px] sm:min-w-[120px] text-center hover:bg-gray-100 rounded-lg px-3 py-2 transition-colors"
             disabled={isLoading}
-          data-testid="month-year-display"
+            data-testid="month-year-display"
           >
-            {format(currentDate, 'yyyy年M月', { locale: ja })}
+            {format(currentDate, "yyyy年M月", { locale: ja })}
           </button>
           <button
             onClick={onNextMonth}
@@ -75,5 +73,5 @@ export default function CalendarHeader({
         </div>
       </div>
     </div>
-  )
+  );
 }

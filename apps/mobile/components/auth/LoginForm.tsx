@@ -1,135 +1,134 @@
-import React, { useState } from 'react'
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from 'react-native'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { useAuth } from '@/contexts/AuthProvider'
-import type { AuthStackParamList } from '@/navigation/types'
+import React, { useState } from "react";
+import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useAuth } from "@/contexts/AuthProvider";
+import type { AuthStackParamList } from "@/navigation/types";
 
 interface LoginFormProps {
-  onSuccess?: () => void
+  onSuccess?: () => void;
   /** ナビゲーション外で使用する場合に指定。指定時はuseNavigationを呼ばない */
-  onResetPassword?: () => void
+  onResetPassword?: () => void;
 }
 
 /**
  * ナビゲーションコンテキスト内で使用するLoginForm（useNavigationを使用）
  */
-const LoginFormWithNavigation: React.FC<Pick<LoginFormProps, 'onSuccess'>> = ({ onSuccess }) => {
-  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>()
+const LoginFormWithNavigation: React.FC<Pick<LoginFormProps, "onSuccess">> = ({ onSuccess }) => {
+  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
   return (
     <LoginFormContent
       onSuccess={onSuccess}
-      onResetPassword={() => navigation.navigate('ResetPassword')}
+      onResetPassword={() => navigation.navigate("ResetPassword")}
     />
-  )
-}
+  );
+};
 
 interface LoginFormContentProps {
-  onSuccess?: () => void
-  onResetPassword: (() => void) | null
+  onSuccess?: () => void;
+  onResetPassword: (() => void) | null;
 }
 
 const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetPassword }) => {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const { signIn } = useAuth()
+  const { signIn } = useAuth();
 
   type AuthError = {
-    status?: number
-    message?: string
-    error_description?: string
-    error?: string
-  }
+    status?: number;
+    message?: string;
+    error_description?: string;
+    error?: string;
+  };
 
   const formatAuthError = (err: unknown): string => {
-    const errorObj: AuthError =
-      err && typeof err === 'object' ? (err as AuthError) : {}
-    const status = typeof errorObj.status === 'number' ? errorObj.status : undefined
-    const statusText = status ? ` [status: ${status}]` : ''
+    const errorObj: AuthError = err && typeof err === "object" ? (err as AuthError) : {};
+    const status = typeof errorObj.status === "number" ? errorObj.status : undefined;
+    const statusText = status ? ` [status: ${status}]` : "";
     const errMsg =
-      (typeof errorObj.message === 'string' ? errorObj.message : null) ||
-      (typeof errorObj.error_description === 'string' ? errorObj.error_description : null) ||
-      (typeof errorObj.error === 'string' ? errorObj.error : null) ||
-      '不明なエラーが発生しました。'
+      (typeof errorObj.message === "string" ? errorObj.message : null) ||
+      (typeof errorObj.error_description === "string" ? errorObj.error_description : null) ||
+      (typeof errorObj.error === "string" ? errorObj.error : null) ||
+      "不明なエラーが発生しました。";
 
     // エラーメッセージの日本語化と補足ヒント
-    if (typeof errMsg === 'string') {
-      const msg = errMsg.toLowerCase()
+    if (typeof errMsg === "string") {
+      const msg = errMsg.toLowerCase();
 
       // ログイン認証エラーの処理（OWASP準拠）
-      if (msg.includes('invalid') && (msg.includes('credentials') || msg.includes('email'))) {
-        return 'メールアドレスまたはパスワードが正しくありません。入力内容を確認してから再度お試しください。'
+      if (msg.includes("invalid") && (msg.includes("credentials") || msg.includes("email"))) {
+        return "メールアドレスまたはパスワードが正しくありません。入力内容を確認してから再度お試しください。";
       }
-      if (msg.includes('email not confirmed')) {
-        return 'メールアドレスまたはパスワードが正しくありません。入力内容を確認してから再度お試しください。'
+      if (msg.includes("email not confirmed")) {
+        return "メールアドレスまたはパスワードが正しくありません。入力内容を確認してから再度お試しください。";
       }
-      if (msg.includes('too many requests')) {
-        return 'ログイン試行回数が上限に達しました。しばらく時間をおいてから再度お試しください。'
+      if (msg.includes("too many requests")) {
+        return "ログイン試行回数が上限に達しました。しばらく時間をおいてから再度お試しください。";
       }
 
       // 共通エラーの処理
-      if (msg.includes('captcha')) {
-        return 'Captcha認証が必要です。Captchaを完了してから再度お試しください。'
+      if (msg.includes("captcha")) {
+        return "Captcha認証が必要です。Captchaを完了してから再度お試しください。";
       }
-      if (msg.includes('rate limit') || status === 429) {
-        return 'リクエスト制限に達しました。しばらく時間をおいてから再度お試しください。'
+      if (msg.includes("rate limit") || status === 429) {
+        return "リクエスト制限に達しました。しばらく時間をおいてから再度お試しください。";
       }
-      if (msg.includes('network') || msg.includes('connection')) {
-        return 'ネットワークエラーが発生しました。インターネット接続を確認してから再度お試しください。'
+      if (msg.includes("network") || msg.includes("connection")) {
+        return "ネットワークエラーが発生しました。インターネット接続を確認してから再度お試しください。";
       }
     }
 
     // デフォルトのエラーメッセージ
     return __DEV__
       ? `エラーが発生しました: ${errMsg}${statusText}`
-      : 'ログインに失敗しました。入力内容を確認してから再度お試しください。'
-  }
+      : "ログインに失敗しました。入力内容を確認してから再度お試しください。";
+  };
 
   const validateForm = (): boolean => {
     if (!email.trim()) {
-      setError('メールアドレスを入力してください。')
-      return false
+      setError("メールアドレスを入力してください。");
+      return false;
     }
 
     // メールアドレス形式の簡易チェック
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setError('有効なメールアドレスを入力してください。')
-      return false
+      setError("有効なメールアドレスを入力してください。");
+      return false;
     }
 
     if (!password) {
-      setError('パスワードを入力してください。')
-      return false
+      setError("パスワードを入力してください。");
+      return false;
     }
 
-    return true
-  }
+    return true;
+  };
 
   const handleSubmit = async () => {
     if (!validateForm()) {
-      return
+      return;
     }
 
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
 
     try {
-      const { error } = await signIn(email, password)
+      const { error } = await signIn(email, password);
       if (error) {
-        setError(formatAuthError(error))
+        setError(formatAuthError(error));
       } else {
-        onSuccess?.()
+        onSuccess?.();
       }
     } catch {
-      setError('予期しないエラーが発生しました。')
+      setError("予期しないエラーが発生しました。");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <View style={styles.container}>
@@ -205,24 +204,24 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
         </View>
       </View>
     </View>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: "#EFF6FF",
   },
   formContainer: {
-    width: '100%',
+    width: "100%",
     maxWidth: 400,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 24,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -233,24 +232,24 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 24,
-    alignItems: 'center',
+    alignItems: "center",
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#111827',
+    fontWeight: "bold",
+    color: "#111827",
     marginBottom: 8,
   },
   errorContainer: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FECACA",
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
   },
   errorText: {
-    color: '#DC2626',
+    color: "#DC2626",
     fontSize: 14,
     lineHeight: 20,
   },
@@ -262,44 +261,44 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+    fontWeight: "500",
+    color: "#374151",
   },
   input: {
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: "#D1D5DB",
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    color: '#111827',
-    backgroundColor: '#FFFFFF',
+    color: "#111827",
+    backgroundColor: "#FFFFFF",
   },
   button: {
-    backgroundColor: '#2563EB',
+    backgroundColor: "#2563EB",
     borderRadius: 8,
     padding: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 8,
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   linkContainer: {
     marginTop: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   linkText: {
-    color: '#2563EB',
+    color: "#2563EB",
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
-})
+});
 
 /**
  * ログインフォーム
@@ -308,12 +307,7 @@ const styles = StyleSheet.create({
  */
 export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onResetPassword }) => {
   if (onResetPassword !== undefined) {
-    return (
-      <LoginFormContent
-        onSuccess={onSuccess}
-        onResetPassword={onResetPassword}
-      />
-    )
+    return <LoginFormContent onSuccess={onSuccess} onResetPassword={onResetPassword} />;
   }
-  return <LoginFormWithNavigation onSuccess={onSuccess} />
-}
+  return <LoginFormWithNavigation onSuccess={onSuccess} />;
+};

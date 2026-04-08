@@ -1,4 +1,4 @@
-import type { NavigatorScreenParams } from '@react-navigation/native'
+import type { NavigatorScreenParams } from "@react-navigation/native";
 
 /**
  * ナビゲーションの型定義
@@ -7,84 +7,85 @@ import type { NavigatorScreenParams } from '@react-navigation/native'
 
 // 認証スタックのパラメータ型
 export type AuthStackParamList = {
-  Welcome: undefined
-  GetStarted: undefined
-  LoginMethod: undefined
-  EmailLogin: undefined
-  EmailSignup: undefined
-  ResetPassword: undefined
-}
+  Welcome: undefined;
+  GetStarted: undefined;
+  LoginMethod: undefined;
+  EmailLogin: undefined;
+  EmailSignup: undefined;
+  ResetPassword: undefined;
+};
 
 // タブナビゲーターのパラメータ型
 export type TabParamList = {
-  Dashboard: undefined
-  Practices: undefined
-  Competitions: undefined
-  Teams: undefined
-  MyPage: undefined
-}
+  Dashboard: undefined;
+  Practices: undefined;
+  Competitions: undefined;
+  Teams: undefined;
+  MyPage: undefined;
+};
 
 // メインスタックのパラメータ型
 export type MainStackParamList = {
-  MainTabs: NavigatorScreenParams<TabParamList>
+  MainTabs: NavigatorScreenParams<TabParamList>;
   PracticeDetail: {
-    practiceId: string
-  }
+    practiceId: string;
+  };
   PracticeForm: {
-    practiceId?: string
-    date?: string
-  }
+    practiceId?: string;
+    date?: string;
+  };
   PracticeLogForm: {
-    practiceId: string
-    practiceLogId?: string
-    returnTo?: 'dashboard'
-  }
+    practiceId: string;
+    practiceLogId?: string;
+    returnTo?: "dashboard";
+  };
   PracticeTimeForm: {
-    practiceLogId?: string
-    setCount: number
-    repCount: number
+    practiceLogId?: string;
+    setCount: number;
+    repCount: number;
     initialTimes?: Array<{
-      id: string
-      setNumber: number
-      repNumber: number
-      time: number
-    }>
-  }
+      id: string;
+      setNumber: number;
+      repNumber: number;
+      time: number;
+    }>;
+  };
   RecordDetail: {
-    recordId: string
-  }
+    recordId: string;
+  };
   RecordForm: {
-    recordId?: string
-    date?: string
-    competitionId?: string
-  }
+    recordId?: string;
+    date?: string;
+    competitionId?: string;
+  };
   CompetitionForm: {
-    competitionId?: string
-    date: string
-  }
+    competitionId?: string;
+    date: string;
+  };
   EntryForm: {
-    competitionId: string
-    entryId?: string
-    date: string
-  }
+    competitionId: string;
+    entryId?: string;
+    date: string;
+  };
   RecordLogForm: {
-    competitionId: string
-    recordId?: string
+    competitionId: string;
+    recordId?: string;
     entryDataList?: Array<{
-      styleId: number
-      styleName: string
-      entryTime?: number
-    }>
-    date: string
-  }
+      styleId: number;
+      styleName: string;
+      entryTime?: number;
+    }>;
+    date: string;
+  };
   TeamDetail: {
-    teamId: string
-  }
-  Settings: undefined
-}
+    teamId: string;
+  };
+  Settings: undefined;
+  Paywall: undefined;
+};
 
 // ルートナビゲーターのパラメータ型（認証状態に応じて切り替え）
 export type RootStackParamList = {
-  Auth: NavigatorScreenParams<AuthStackParamList>
-  Main: NavigatorScreenParams<MainStackParamList>
-}
+  Auth: NavigatorScreenParams<AuthStackParamList>;
+  Main: NavigatorScreenParams<MainStackParamList>;
+};

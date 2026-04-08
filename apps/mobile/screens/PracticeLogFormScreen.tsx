@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert } from 'react-native'
-import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { useQueryClient } from '@tanstack/react-query'
-import { Feather } from '@expo/vector-icons'
-import { useAuth } from '@/contexts/AuthProvider'
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert } from "react-native";
+import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useQueryClient } from "@tanstack/react-query";
+import { Feather } from "@expo/vector-icons";
+import { useAuth } from "@/contexts/AuthProvider";
 import {
   useCreatePracticeLogMutation,
   useUpdatePracticeLogMutation,
@@ -12,39 +12,40 @@ import {
   useCreatePracticeTagMutation,
   useUpdatePracticeTagMutation,
   useDeletePracticeTagMutation,
-} from '@apps/shared/hooks/queries/practices'
-import { practiceKeys } from '@apps/shared/hooks/queries/keys'
-import { PracticeAPI } from '@apps/shared/api/practices'
-import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
-import { TagChips, TagSelectModal, TagManageModal } from '@/components/shared'
-import type { MainStackParamList } from '@/navigation/types'
-import type { PracticeTag, PracticeTime } from '@apps/shared/types'
-import type { TimeEntry } from '@apps/shared/types/ui'
-import { formatTime, SWIM_STYLES } from '@/utils/formatters'
-import { usePracticeTimeStore } from '@/stores/practiceTimeStore'
+} from "@apps/shared/hooks/queries/practices";
+import { practiceKeys } from "@apps/shared/hooks/queries/keys";
+import { PracticeAPI } from "@apps/shared/api/practices";
+import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
+import { TagChips, TagSelectModal, TagManageModal, VideoUploader } from "@/components/shared";
+import { checkIsPremium } from "@swim-hub/shared/utils/premium";
+import type { MainStackParamList } from "@/navigation/types";
+import type { PracticeTag, PracticeTime } from "@apps/shared/types";
+import type { TimeEntry } from "@apps/shared/types/ui";
+import { formatTime, SWIM_STYLES } from "@/utils/formatters";
+import { usePracticeTimeStore } from "@/stores/practiceTimeStore";
 
-type PracticeLogFormScreenRouteProp = RouteProp<MainStackParamList, 'PracticeLogForm'>
-type PracticeLogFormScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>
+type PracticeLogFormScreenRouteProp = RouteProp<MainStackParamList, "PracticeLogForm">;
+type PracticeLogFormScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
 // 泳法カテゴリの選択肢
 const SWIM_CATEGORIES = [
-  { value: 'Swim', label: 'Swim' },
-  { value: 'Pull', label: 'Pull' },
-  { value: 'Kick', label: 'Kick' },
-]
+  { value: "Swim", label: "Swim" },
+  { value: "Pull", label: "Pull" },
+  { value: "Kick", label: "Kick" },
+];
 
 interface PracticeMenu {
-  id: string
-  style: string
-  swimCategory: 'Swim' | 'Pull' | 'Kick'
-  distance: number | ''
-  reps: number | ''
-  sets: number | ''
-  circleMin: number | ''
-  circleSec: number | ''
-  note: string
-  tags: PracticeTag[]
-  times: Array<TimeEntry & { id?: string }>
+  id: string;
+  style: string;
+  swimCategory: "Swim" | "Pull" | "Kick";
+  distance: number | "";
+  reps: number | "";
+  sets: number | "";
+  circleMin: number | "";
+  circleSec: number | "";
+  note: string;
+  tags: PracticeTag[];
+  times: Array<TimeEntry & { id?: string }>;
 }
 
 /**
@@ -52,61 +53,67 @@ interface PracticeMenu {
  * 練習ログの詳細情報（距離、本数、セット数、サークル、種目、タイム、タグ）を入力・編集
  */
 export const PracticeLogFormScreen: React.FC = () => {
-  const route = useRoute<PracticeLogFormScreenRouteProp>()
-  const navigation = useNavigation<PracticeLogFormScreenNavigationProp>()
-  const { practiceId, practiceLogId, returnTo } = route.params
-  const { supabase } = useAuth()
-  const queryClient = useQueryClient()
-  const isEditMode = practiceLogId !== undefined
+  const route = useRoute<PracticeLogFormScreenRouteProp>();
+  const navigation = useNavigation<PracticeLogFormScreenNavigationProp>();
+  const { practiceId, practiceLogId, returnTo } = route.params;
+  const { supabase, subscription } = useAuth();
+  const queryClient = useQueryClient();
+  const isEditMode = practiceLogId !== undefined;
+  const isPremium = checkIsPremium(subscription);
+
+  // 動画の状態管理
+  const [existingVideoPath, setExistingVideoPath] = useState<string | null>(null);
+  const [existingThumbnailPath, setExistingThumbnailPath] = useState<string | null>(null);
 
   // メニューデータ（複数）
   const [menus, setMenus] = useState<PracticeMenu[]>([
     {
       id: `menu-${Date.now()}`,
-      style: 'Fr',
-      swimCategory: 'Swim',
-      distance: '',
-      reps: '',
-      sets: '',
-      circleMin: '',
-      circleSec: '',
-      note: '',
+      style: "Fr",
+      swimCategory: "Swim",
+      distance: "",
+      reps: "",
+      sets: "",
+      circleMin: "",
+      circleSec: "",
+      note: "",
       tags: [],
       times: [],
     },
-  ])
+  ]);
 
   // タグ関連の状態
-  const [showTagSelectModal, setShowTagSelectModal] = useState(false)
-  const [showTagManageModal, setShowTagManageModal] = useState(false)
-  const [editingTag, setEditingTag] = useState<PracticeTag | null>(null)
-  const [activeMenuIndex, setActiveMenuIndex] = useState(0)
+  const [showTagSelectModal, setShowTagSelectModal] = useState(false);
+  const [showTagManageModal, setShowTagManageModal] = useState(false);
+  const [editingTag, setEditingTag] = useState<PracticeTag | null>(null);
+  const [activeMenuIndex, setActiveMenuIndex] = useState(0);
 
   // タグ取得（React Query）
-  const { data: availableTags = [] } = usePracticeTagsQuery(supabase)
+  const { data: availableTags = [] } = usePracticeTagsQuery(supabase);
 
   // タグミューテーション
-  const createTagMutation = useCreatePracticeTagMutation(supabase)
-  const updateTagMutation = useUpdatePracticeTagMutation(supabase)
-  const deleteTagMutation = useDeletePracticeTagMutation(supabase)
+  const createTagMutation = useCreatePracticeTagMutation(supabase);
+  const updateTagMutation = useUpdatePracticeTagMutation(supabase);
+  const deleteTagMutation = useDeletePracticeTagMutation(supabase);
 
   // 既存データの取得（編集モード時）
-  const [loadingPracticeLog, setLoadingPracticeLog] = useState(isEditMode)
-  const initializedRef = useRef(false)
+  const [loadingPracticeLog, setLoadingPracticeLog] = useState(isEditMode);
+  const initializedRef = useRef(false);
 
   // 既存データの取得（編集モード時）
   useEffect(() => {
-    if (initializedRef.current) return
+    if (initializedRef.current) return;
 
     if (isEditMode && practiceLogId !== undefined) {
       const loadPracticeLog = async () => {
         try {
-          setLoadingPracticeLog(true)
-          
+          setLoadingPracticeLog(true);
+
           // 直接Supabaseからpractice_logを取得
           const { data: practiceLogData, error: logError } = await supabase
-            .from('practice_logs')
-            .select(`
+            .from("practice_logs")
+            .select(
+              `
               *,
               practice_times (*),
               practice_log_tags (
@@ -117,72 +124,81 @@ export const PracticeLogFormScreen: React.FC = () => {
                   color
                 )
               )
-            `)
-            .eq('id', practiceLogId)
-            .single()
+            `,
+            )
+            .eq("id", practiceLogId)
+            .single();
 
-          if (logError) throw logError
+          if (logError) throw logError;
           if (!practiceLogData) {
-            console.error('練習ログが見つかりませんでした')
-            setLoadingPracticeLog(false)
-            return
+            console.error("練習ログが見つかりませんでした");
+            setLoadingPracticeLog(false);
+            return;
           }
 
           // データを整形
-          const circleMin = practiceLogData.circle ? Math.floor(practiceLogData.circle / 60) : ''
-          const circleSec = practiceLogData.circle ? practiceLogData.circle % 60 : ''
+          const circleMin = practiceLogData.circle ? Math.floor(practiceLogData.circle / 60) : "";
+          const circleSec = practiceLogData.circle ? practiceLogData.circle % 60 : "";
 
           // タイムデータを整形
-          const times: Array<TimeEntry & { id?: string }> = (practiceLogData.practice_times || []).map((time: PracticeTime) => ({
+          const times: Array<TimeEntry & { id?: string }> = (
+            practiceLogData.practice_times || []
+          ).map((time: PracticeTime) => ({
             id: time.id,
             setNumber: time.set_number,
             repNumber: time.rep_number,
             time: time.time,
-          }))
+          }));
 
           // タグデータを整形
           const tags: PracticeTag[] =
-            (practiceLogData.practice_log_tags || []).map((plt: { practice_tags: PracticeTag }) => plt.practice_tags).filter(Boolean) || []
+            (practiceLogData.practice_log_tags || [])
+              .map((plt: { practice_tags: PracticeTag }) => plt.practice_tags)
+              .filter(Boolean) || [];
+
+          // 動画パスを初期化
+          setExistingVideoPath(practiceLogData.video_path ?? null);
+          setExistingThumbnailPath(practiceLogData.video_thumbnail_path ?? null);
 
           setMenus([
             {
               id: practiceLogData.id,
               style: practiceLogData.style,
-              swimCategory: practiceLogData.swim_category || 'Swim',
+              swimCategory: practiceLogData.swim_category || "Swim",
               distance: practiceLogData.distance,
               reps: practiceLogData.rep_count,
               sets: practiceLogData.set_count,
               circleMin,
               circleSec,
-              note: practiceLogData.note || '',
+              note: practiceLogData.note || "",
               tags,
               times,
             },
-          ])
-          initializedRef.current = true
-          setLoadingPracticeLog(false)
+          ]);
+          initializedRef.current = true;
+          setLoadingPracticeLog(false);
         } catch (error) {
-          console.error('練習ログ取得エラー:', error)
+          console.error("練習ログ取得エラー:", error);
           Alert.alert(
-            'エラー',
-            error instanceof Error ? error.message : '練習ログの取得に失敗しました',
-            [{ text: 'OK', onPress: () => navigation.goBack() }]
-          )
-          setLoadingPracticeLog(false)
+            "エラー",
+            error instanceof Error ? error.message : "練習ログの取得に失敗しました",
+            [{ text: "OK", onPress: () => navigation.goBack() }],
+          );
+          setLoadingPracticeLog(false);
         }
-      }
+      };
 
-      loadPracticeLog()
+      loadPracticeLog();
     } else {
-      initializedRef.current = true
-      setLoadingPracticeLog(false)
+      initializedRef.current = true;
+      setLoadingPracticeLog(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEditMode, practiceLogId, practiceId])
+  }, [isEditMode, practiceLogId, practiceId]);
 
   // ミューテーション
-  const createMutation = useCreatePracticeLogMutation(supabase)
-  const updateMutation = useUpdatePracticeLogMutation(supabase)
+  const createMutation = useCreatePracticeLogMutation(supabase);
+  const updateMutation = useUpdatePracticeLogMutation(supabase);
 
   // メニュー追加
   const addMenu = () => {
@@ -190,115 +206,129 @@ export const PracticeLogFormScreen: React.FC = () => {
       ...prev,
       {
         id: `menu-${Date.now()}-${Math.random()}`,
-        style: 'Fr',
-        swimCategory: 'Swim',
-        distance: '',
-        reps: '',
-        sets: '',
-        circleMin: '',
-        circleSec: '',
-        note: '',
+        style: "Fr",
+        swimCategory: "Swim",
+        distance: "",
+        reps: "",
+        sets: "",
+        circleMin: "",
+        circleSec: "",
+        note: "",
         tags: [],
         times: [],
       },
-    ])
-  }
+    ]);
+  };
 
   // メニュー削除
   const removeMenu = (id: string) => {
     setMenus((prev) => {
       if (prev.length <= 1) {
-        return prev
+        return prev;
       }
-      return prev.filter((menu) => menu.id !== id)
-    })
-  }
+      return prev.filter((menu) => menu.id !== id);
+    });
+  };
 
   // メニュー更新
-  const updateMenu = (id: string, field: keyof PracticeMenu, value: string | number | '' | PracticeTag[] | Array<TimeEntry & { id?: string }>) => {
-    setMenus((prev) =>
-      prev.map((menu) => (menu.id === id ? { ...menu, [field]: value } : menu))
-    )
-  }
+  const updateMenu = (
+    id: string,
+    field: keyof PracticeMenu,
+    value: string | number | "" | PracticeTag[] | Array<TimeEntry & { id?: string }>,
+  ) => {
+    setMenus((prev) => prev.map((menu) => (menu.id === id ? { ...menu, [field]: value } : menu)));
+  };
 
   // タグ選択モーダルを開く
   const openTagSelectModal = useCallback((menuIndex: number) => {
-    setActiveMenuIndex(menuIndex)
-    setShowTagSelectModal(true)
-  }, [])
+    setActiveMenuIndex(menuIndex);
+    setShowTagSelectModal(true);
+  }, []);
 
   // タグ管理モーダルを開く（新規作成）
   const openTagCreateModal = useCallback(() => {
-    setShowTagSelectModal(false) // まずTagSelectModalを閉じる
+    setShowTagSelectModal(false); // まずTagSelectModalを閉じる
     setTimeout(() => {
-      setEditingTag(null)
-      setShowTagManageModal(true)
-    }, 100)
-  }, [])
+      setEditingTag(null);
+      setShowTagManageModal(true);
+    }, 100);
+  }, []);
 
   // タグ管理モーダルを開く（編集）
   const openTagEditModal = useCallback((tag: PracticeTag) => {
-    setShowTagSelectModal(false) // まずTagSelectModalを閉じる
+    setShowTagSelectModal(false); // まずTagSelectModalを閉じる
     setTimeout(() => {
-      setEditingTag(tag)
-      setShowTagManageModal(true)
-    }, 100)
-  }, [])
+      setEditingTag(tag);
+      setShowTagManageModal(true);
+    }, 100);
+  }, []);
 
   // タグ選択変更
-  const handleTagsChange = useCallback((tags: PracticeTag[]) => {
-    const menu = menus[activeMenuIndex]
-    if (menu) {
-      updateMenu(menu.id, 'tags', tags)
-    }
-  }, [menus, activeMenuIndex])
+  const handleTagsChange = useCallback(
+    (tags: PracticeTag[]) => {
+      const menu = menus[activeMenuIndex];
+      if (menu) {
+        updateMenu(menu.id, "tags", tags);
+      }
+    },
+    [menus, activeMenuIndex],
+  );
 
   // タグ保存（作成/更新）
-  const handleSaveTag = useCallback(async (name: string, color: string) => {
-    try {
-      if (editingTag) {
-        await updateTagMutation.mutateAsync({ id: editingTag.id, name, color })
-      } else {
-        const newTag = await createTagMutation.mutateAsync({ name, color })
-        // 新規作成したタグを選択中のメニューに追加
-        const menu = menus[activeMenuIndex]
-        if (menu) {
-          updateMenu(menu.id, 'tags', [...menu.tags, newTag])
+  const handleSaveTag = useCallback(
+    async (name: string, color: string) => {
+      try {
+        if (editingTag) {
+          await updateTagMutation.mutateAsync({ id: editingTag.id, name, color });
+        } else {
+          const newTag = await createTagMutation.mutateAsync({ name, color });
+          // 新規作成したタグを選択中のメニューに追加
+          const menu = menus[activeMenuIndex];
+          if (menu) {
+            updateMenu(menu.id, "tags", [...menu.tags, newTag]);
+          }
         }
+      } catch (error) {
+        console.error("タグ保存エラー:", error);
+        Alert.alert("エラー", "タグの保存に失敗しました。もう一度お試しください。");
       }
-    } catch (error) {
-      console.error('タグ保存エラー:', error)
-      Alert.alert('エラー', 'タグの保存に失敗しました。もう一度お試しください。')
-    }
-  }, [editingTag, updateTagMutation, createTagMutation, menus, activeMenuIndex])
+    },
+    [editingTag, updateTagMutation, createTagMutation, menus, activeMenuIndex],
+  );
 
   // タグ削除
-  const handleDeleteTag = useCallback(async (id: string) => {
-    try {
-      await deleteTagMutation.mutateAsync(id)
-      // 削除したタグをすべてのメニューから削除
-      setMenus((prev) =>
-        prev.map((menu) => ({
-          ...menu,
-          tags: menu.tags.filter((t) => t.id !== id),
-        }))
-      )
-    } catch (error) {
-      console.error('タグ削除エラー:', error)
-      Alert.alert('エラー', 'タグの削除に失敗しました。もう一度お試しください。')
-    }
-  }, [deleteTagMutation])
+  const handleDeleteTag = useCallback(
+    async (id: string) => {
+      try {
+        await deleteTagMutation.mutateAsync(id);
+        // 削除したタグをすべてのメニューから削除
+        setMenus((prev) =>
+          prev.map((menu) => ({
+            ...menu,
+            tags: menu.tags.filter((t) => t.id !== id),
+          })),
+        );
+      } catch (error) {
+        console.error("タグ削除エラー:", error);
+        Alert.alert("エラー", "タグの削除に失敗しました。もう一度お試しください。");
+      }
+    },
+    [deleteTagMutation],
+  );
 
   // タイム入力画面へ遷移
   const handleTimeInput = (menuId: string) => {
-    const menu = menus.find((m) => m.id === menuId)
-    if (!menu) return
+    const menu = menus.find((m) => m.id === menuId);
+    if (!menu) return;
 
     // 現在編集中のメニューIDを保存
-    setCurrentMenuId(menuId)
+    setCurrentMenuId(menuId);
 
-    navigation.navigate('PracticeTimeForm', {
-      practiceLogId: isEditMode && menuId === practiceLogId && practiceLogId !== undefined ? practiceLogId : undefined,
+    navigation.navigate("PracticeTimeForm", {
+      practiceLogId:
+        isEditMode && menuId === practiceLogId && practiceLogId !== undefined
+          ? practiceLogId
+          : undefined,
       setCount: Number(menu.sets) || 1,
       repCount: Number(menu.reps) || 1,
       initialTimes: menu.times.map((t) => ({
@@ -307,72 +337,72 @@ export const PracticeLogFormScreen: React.FC = () => {
         repNumber: t.repNumber,
         time: t.time,
       })),
-    })
-  }
+    });
+  };
 
   // タイムデータのストア
-  const getTimes = usePracticeTimeStore((state) => state.getTimes)
-  const setCurrentMenuId = usePracticeTimeStore((state) => state.setCurrentMenuId)
+  const getTimes = usePracticeTimeStore((state) => state.getTimes);
+  const setCurrentMenuId = usePracticeTimeStore((state) => state.setCurrentMenuId);
 
   // タイム入力画面から戻ってきた時の処理
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
+    const unsubscribe = navigation.addListener("focus", () => {
       // タイム入力画面から戻ってきた時に、保存されたタイムデータを取得
-      const currentMenuId = usePracticeTimeStore.getState().currentMenuId
+      const currentMenuId = usePracticeTimeStore.getState().currentMenuId;
       if (currentMenuId) {
-        const savedTimes = getTimes(currentMenuId)
+        const savedTimes = getTimes(currentMenuId);
         if (savedTimes.length > 0) {
           // TimeEntryにidを追加
           const timesWithId = savedTimes.map((t) => ({
             ...t,
             id: `${t.setNumber}-${t.repNumber}-${Date.now()}`,
-          }))
-          updateMenu(currentMenuId, 'times', timesWithId)
+          }));
+          updateMenu(currentMenuId, "times", timesWithId);
         }
-        setCurrentMenuId(null)
+        setCurrentMenuId(null);
       }
-    })
+    });
 
-    return unsubscribe
-  }, [navigation, getTimes, setCurrentMenuId])
+    return unsubscribe;
+  }, [navigation, getTimes, setCurrentMenuId]);
 
   // バリデーション
   const validate = (): boolean => {
     for (const menu of menus) {
-      if (!menu.style || menu.style.trim() === '') {
-        Alert.alert('エラー', '種目を選択してください')
-        return false
+      if (!menu.style || menu.style.trim() === "") {
+        Alert.alert("エラー", "種目を選択してください");
+        return false;
       }
       if (!menu.distance || Number(menu.distance) <= 0) {
-        Alert.alert('エラー', '距離を入力してください')
-        return false
+        Alert.alert("エラー", "距離を入力してください");
+        return false;
       }
       if (!menu.reps || Number(menu.reps) <= 0) {
-        Alert.alert('エラー', '本数を入力してください')
-        return false
+        Alert.alert("エラー", "本数を入力してください");
+        return false;
       }
       if (!menu.sets || Number(menu.sets) <= 0) {
-        Alert.alert('エラー', 'セット数を入力してください')
-        return false
+        Alert.alert("エラー", "セット数を入力してください");
+        return false;
       }
     }
-    return true
-  }
+    return true;
+  };
 
   // 保存処理
   const handleSave = async () => {
     if (!validate()) {
-      return
+      return;
     }
 
     try {
-      const api = new PracticeAPI(supabase)
+      const api = new PracticeAPI(supabase);
 
       for (const menu of menus) {
         // サークルタイムを秒に変換
-        const circleMin = Number(menu.circleMin) || 0
-        const circleSec = Number(menu.circleSec) || 0
-        const circleTime = circleMin * 60 + circleSec
+        const circleMin = Number(menu.circleMin) || 0;
+        const circleSec = Number(menu.circleSec) || 0;
+        const circleTime = circleMin * 60 + circleSec;
 
         const logData = {
           practice_id: practiceId,
@@ -382,82 +412,84 @@ export const PracticeLogFormScreen: React.FC = () => {
           rep_count: Number(menu.reps),
           set_count: Number(menu.sets),
           circle: circleTime > 0 ? circleTime : null,
-          note: menu.note && menu.note.trim() !== '' ? menu.note.trim() : null,
-        }
+          note: menu.note && menu.note.trim() !== "" ? menu.note.trim() : null,
+        };
 
         if (isEditMode && menu.id === practiceLogId && practiceLogId !== undefined) {
           // 更新
           await updateMutation.mutateAsync({
             id: practiceLogId,
             updates: logData,
-          })
+          });
 
           // タイムを更新
           await api.replacePracticeTimes(
             practiceLogId,
-            menu.times ? menu.times.map((t) => ({
-              set_number: t.setNumber,
-              rep_number: t.repNumber,
-              time: t.time,
-            })) : []
-          )
+            menu.times
+              ? menu.times.map((t) => ({
+                  set_number: t.setNumber,
+                  rep_number: t.repNumber,
+                  time: t.time,
+                }))
+              : [],
+          );
 
           // タグを更新（replace_practice_log_tags RPC使用）
-          const { error: tagError } = await supabase.rpc('replace_practice_log_tags', {
+          const { error: tagError } = await supabase.rpc("replace_practice_log_tags", {
             p_practice_log_id: practiceLogId,
             p_tag_ids: menu.tags.map((t) => t.id),
-          })
-          if (tagError) throw tagError
+          });
+          if (tagError) throw tagError;
         } else {
           // 作成
-          const createdLog = await createMutation.mutateAsync(logData)
+          const createdLog = await createMutation.mutateAsync(logData);
 
           // タイムを作成
           await api.replacePracticeTimes(
             createdLog.id,
-            menu.times ? menu.times.map((t) => ({
-              set_number: t.setNumber,
-              rep_number: t.repNumber,
-              time: t.time,
-            })) : []
-          )
+            menu.times
+              ? menu.times.map((t) => ({
+                  set_number: t.setNumber,
+                  rep_number: t.repNumber,
+                  time: t.time,
+                }))
+              : [],
+          );
 
           // タグを作成（replace_practice_log_tags RPC使用）
           if (menu.tags.length > 0) {
-            const { error: tagError } = await supabase.rpc('replace_practice_log_tags', {
+            const { error: tagError } = await supabase.rpc("replace_practice_log_tags", {
               p_practice_log_id: createdLog.id,
               p_tag_ids: menu.tags.map((t) => t.id),
-            })
-            if (tagError) throw tagError
+            });
+            if (tagError) throw tagError;
           }
         }
       }
 
       // カレンダーのクエリを無効化してリフレッシュ
       // カレンダーと練習一覧のクエリを無効化してリフレッシュ
-      queryClient.invalidateQueries({ queryKey: ['calendar'] })
-      queryClient.invalidateQueries({ queryKey: practiceKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: ["calendar"] });
+      queryClient.invalidateQueries({ queryKey: practiceKeys.lists() });
 
       // 成功: 遷移元に応じて戻る
-      if (returnTo === 'dashboard') {
-        navigation.navigate('MainTabs', { screen: 'Dashboard' })
+      if (returnTo === "dashboard") {
+        navigation.navigate("MainTabs", { screen: "Dashboard" });
       } else {
-        navigation.goBack()
+        navigation.goBack();
       }
     } catch (error) {
-      console.error('保存エラー:', error)
-      Alert.alert(
-        'エラー',
-        error instanceof Error ? error.message : '保存に失敗しました',
-        [{ text: 'OK' }]
-      )
+      console.error("保存エラー:", error);
+      Alert.alert("エラー", error instanceof Error ? error.message : "保存に失敗しました", [
+        { text: "OK" },
+      ]);
     }
-  }
+  };
 
   // キャンセル処理
   const handleCancel = () => {
-    navigation.goBack()
-  }
+    navigation.goBack();
+  };
 
   // ローディング状態
   if (loadingPracticeLog) {
@@ -465,7 +497,7 @@ export const PracticeLogFormScreen: React.FC = () => {
       <View style={styles.container}>
         <LoadingSpinner fullScreen message="練習ログを読み込み中..." />
       </View>
-    )
+    );
   }
 
   return (
@@ -487,10 +519,7 @@ export const PracticeLogFormScreen: React.FC = () => {
               <View style={styles.menuItemHeader}>
                 <Text style={styles.menuNumber}>メニュー {index + 1}</Text>
                 {menus.length > 1 && (
-                  <Pressable
-                    style={styles.removeButton}
-                    onPress={() => removeMenu(menu.id)}
-                  >
+                  <Pressable style={styles.removeButton} onPress={() => removeMenu(menu.id)}>
                     <Feather name="trash-2" size={18} color="#EF4444" />
                   </Pressable>
                 )}
@@ -503,7 +532,11 @@ export const PracticeLogFormScreen: React.FC = () => {
                   tags={menu.tags}
                   onPress={() => openTagSelectModal(index)}
                   onRemove={(tagId) =>
-                    updateMenu(menu.id, 'tags', menu.tags.filter((t) => t.id !== tagId))
+                    updateMenu(
+                      menu.id,
+                      "tags",
+                      menu.tags.filter((t) => t.id !== tagId),
+                    )
                   }
                 />
               </View>
@@ -521,7 +554,7 @@ export const PracticeLogFormScreen: React.FC = () => {
                         styles.pickerOption,
                         menu.style === style.value && styles.pickerOptionSelected,
                       ]}
-                      onPress={() => updateMenu(menu.id, 'style', style.value)}
+                      onPress={() => updateMenu(menu.id, "style", style.value)}
                     >
                       <Text
                         style={[
@@ -538,7 +571,9 @@ export const PracticeLogFormScreen: React.FC = () => {
 
               {/* 泳法カテゴリ */}
               <View style={styles.field}>
-                <Text style={styles.label}>種目② <Text style={styles.required}>*</Text></Text>
+                <Text style={styles.label}>
+                  種目② <Text style={styles.required}>*</Text>
+                </Text>
                 <View style={styles.pickerContainer}>
                   {SWIM_CATEGORIES.map((category) => (
                     <Pressable
@@ -547,7 +582,13 @@ export const PracticeLogFormScreen: React.FC = () => {
                         styles.pickerOption,
                         menu.swimCategory === category.value && styles.pickerOptionSelected,
                       ]}
-                      onPress={() => updateMenu(menu.id, 'swimCategory', category.value as 'Swim' | 'Pull' | 'Kick')}
+                      onPress={() =>
+                        updateMenu(
+                          menu.id,
+                          "swimCategory",
+                          category.value as "Swim" | "Pull" | "Kick",
+                        )
+                      }
                     >
                       <Text
                         style={[
@@ -572,8 +613,8 @@ export const PracticeLogFormScreen: React.FC = () => {
                     style={styles.input}
                     value={menu.distance.toString()}
                     onChangeText={(text) => {
-                      const num = text === '' ? '' : Number(text)
-                      updateMenu(menu.id, 'distance', num)
+                      const num = text === "" ? "" : Number(text);
+                      updateMenu(menu.id, "distance", num);
                     }}
                     placeholder="100"
                     keyboardType="numeric"
@@ -587,8 +628,8 @@ export const PracticeLogFormScreen: React.FC = () => {
                     style={styles.input}
                     value={menu.reps.toString()}
                     onChangeText={(text) => {
-                      const num = text === '' ? '' : Number(text)
-                      updateMenu(menu.id, 'reps', num)
+                      const num = text === "" ? "" : Number(text);
+                      updateMenu(menu.id, "reps", num);
                     }}
                     placeholder="4"
                     keyboardType="numeric"
@@ -602,8 +643,8 @@ export const PracticeLogFormScreen: React.FC = () => {
                     style={styles.input}
                     value={menu.sets.toString()}
                     onChangeText={(text) => {
-                      const num = text === '' ? '' : Number(text)
-                      updateMenu(menu.id, 'sets', num)
+                      const num = text === "" ? "" : Number(text);
+                      updateMenu(menu.id, "sets", num);
                     }}
                     placeholder="1"
                     keyboardType="numeric"
@@ -619,8 +660,8 @@ export const PracticeLogFormScreen: React.FC = () => {
                     style={styles.input}
                     value={menu.circleMin.toString()}
                     onChangeText={(text) => {
-                      const num = text === '' ? '' : Number(text)
-                      updateMenu(menu.id, 'circleMin', num)
+                      const num = text === "" ? "" : Number(text);
+                      updateMenu(menu.id, "circleMin", num);
                     }}
                     placeholder="1"
                     keyboardType="numeric"
@@ -632,8 +673,8 @@ export const PracticeLogFormScreen: React.FC = () => {
                     style={styles.input}
                     value={menu.circleSec.toString()}
                     onChangeText={(text) => {
-                      const num = text === '' ? '' : Number(text)
-                      updateMenu(menu.id, 'circleSec', num)
+                      const num = text === "" ? "" : Number(text);
+                      updateMenu(menu.id, "circleSec", num);
                     }}
                     placeholder="30"
                     keyboardType="numeric"
@@ -644,15 +685,12 @@ export const PracticeLogFormScreen: React.FC = () => {
               {/* タイム入力ボタン */}
               <View style={styles.field}>
                 <Text style={styles.label}>練習タイム</Text>
-                <Pressable
-                  style={styles.timeButton}
-                  onPress={() => handleTimeInput(menu.id)}
-                >
+                <Pressable style={styles.timeButton} onPress={() => handleTimeInput(menu.id)}>
                   <Feather name="clock" size={16} color="#374151" />
                   <Text style={styles.timeButtonText}>
                     {menu.times && menu.times.length > 0
                       ? `タイムを編集 (${menu.times.length}件登録済み)`
-                      : 'タイムを入力'}
+                      : "タイムを入力"}
                   </Text>
                 </Pressable>
               </View>
@@ -663,28 +701,27 @@ export const PracticeLogFormScreen: React.FC = () => {
                   <Text style={styles.timesLabel}>登録済みタイム</Text>
                   <View style={styles.timesTable}>
                     {Array.from({ length: Number(menu.sets) || 1 }, (_, setIndex) => {
-                      const setNumber = setIndex + 1
+                      const setNumber = setIndex + 1;
                       const setTimes = menu.times.filter(
-                        (t) => t.setNumber === setNumber && t.time > 0
-                      )
+                        (t) => t.setNumber === setNumber && t.time > 0,
+                      );
                       const setAverage =
                         setTimes.length > 0
                           ? setTimes.reduce((sum, t) => sum + t.time, 0) / setTimes.length
-                          : 0
+                          : 0;
                       const setFastest =
-                        setTimes.length > 0 ? Math.min(...setTimes.map((t) => t.time)) : 0
+                        setTimes.length > 0 ? Math.min(...setTimes.map((t) => t.time)) : 0;
 
                       return (
                         <View key={setNumber} style={styles.setRow}>
                           <Text style={styles.setLabel}>{setNumber}セット目</Text>
                           <View style={styles.setTimes}>
                             {Array.from({ length: Number(menu.reps) || 1 }, (_, repIndex) => {
-                              const repNumber = repIndex + 1
+                              const repNumber = repIndex + 1;
                               const time = menu.times.find(
-                                (t) => t.setNumber === setNumber && t.repNumber === repNumber
-                              )
-                              const isFastest =
-                                time && time.time > 0 && time.time === setFastest
+                                (t) => t.setNumber === setNumber && t.repNumber === repNumber,
+                              );
+                              const isFastest = time && time.time > 0 && time.time === setFastest;
 
                               return (
                                 <View key={repNumber} style={styles.timeCell}>
@@ -695,19 +732,17 @@ export const PracticeLogFormScreen: React.FC = () => {
                                       isFastest && styles.timeCellValueFastest,
                                     ]}
                                   >
-                                    {time && time.time > 0 ? formatTime(time.time) : '-'}
+                                    {time && time.time > 0 ? formatTime(time.time) : "-"}
                                   </Text>
                                 </View>
-                              )
+                              );
                             })}
                           </View>
                           {setAverage > 0 && (
-                            <Text style={styles.setAverage}>
-                              平均: {formatTime(setAverage)}
-                            </Text>
+                            <Text style={styles.setAverage}>平均: {formatTime(setAverage)}</Text>
                           )}
                         </View>
-                      )
+                      );
                     })}
                   </View>
                 </View>
@@ -719,12 +754,32 @@ export const PracticeLogFormScreen: React.FC = () => {
                 <TextInput
                   style={[styles.input, styles.textArea]}
                   value={menu.note}
-                  onChangeText={(text) => updateMenu(menu.id, 'note', text)}
+                  onChangeText={(text) => updateMenu(menu.id, "note", text)}
                   placeholder="メモ（任意）"
                   placeholderTextColor="#9CA3AF"
                   multiline
                   numberOfLines={4}
                   textAlignVertical="top"
+                />
+              </View>
+
+              {/* 動画 */}
+              <View style={styles.field}>
+                <Text style={styles.label}>動画</Text>
+                <VideoUploader
+                  type="practice-log"
+                  id={practiceLogId}
+                  existingVideoPath={existingVideoPath}
+                  existingThumbnailPath={existingThumbnailPath}
+                  isPremium={isPremium}
+                  onUploadComplete={(vPath, tPath) => {
+                    setExistingVideoPath(vPath);
+                    setExistingThumbnailPath(tPath);
+                  }}
+                  onDelete={() => {
+                    setExistingVideoPath(null);
+                    setExistingThumbnailPath(null);
+                  }}
                 />
               </View>
             </View>
@@ -733,16 +788,10 @@ export const PracticeLogFormScreen: React.FC = () => {
 
         {/* ボタン */}
         <View style={styles.buttonContainer}>
-          <Pressable
-            style={[styles.button, styles.cancelButton]}
-            onPress={handleCancel}
-          >
+          <Pressable style={[styles.button, styles.cancelButton]} onPress={handleCancel}>
             <Text style={styles.cancelButtonText}>キャンセル</Text>
           </Pressable>
-          <Pressable
-            style={[styles.button, styles.saveButton]}
-            onPress={handleSave}
-          >
+          <Pressable style={[styles.button, styles.saveButton]} onPress={handleSave}>
             <Text style={styles.saveButtonText}>保存</Text>
           </Pressable>
         </View>
@@ -764,22 +813,22 @@ export const PracticeLogFormScreen: React.FC = () => {
       <TagManageModal
         visible={showTagManageModal}
         onClose={() => {
-          setShowTagManageModal(false)
+          setShowTagManageModal(false);
           // タグ管理モーダルを閉じた後、タグ選択モーダルを再度開く
-          setTimeout(() => setShowTagSelectModal(true), 100)
+          setTimeout(() => setShowTagSelectModal(true), 100);
         }}
         tag={editingTag}
         onSave={handleSaveTag}
         onDelete={handleDeleteTag}
       />
     </ScrollView>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: "#EFF6FF",
   },
   content: {
     padding: 16,
@@ -791,51 +840,51 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   menuHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: "600",
+    color: "#111827",
   },
   addButton: {
-    backgroundColor: '#2563EB',
+    backgroundColor: "#2563EB",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   addButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   menuContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 8,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: "#E5E7EB",
   },
   menuItemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   menuNumber: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: "600",
+    color: "#374151",
   },
   removeButton: {
     padding: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   field: {
     gap: 8,
@@ -847,34 +896,38 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: "600",
+    color: "#374151",
+  },
+  hintText: {
+    fontSize: 13,
+    color: "#9CA3AF",
   },
   required: {
-    color: '#DC2626',
+    color: "#DC2626",
   },
   input: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: "#D1D5DB",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#111827',
+    color: "#111827",
   },
   textArea: {
     minHeight: 100,
     paddingTop: 12,
   },
   pickerContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   pickerOption: {
@@ -882,36 +935,36 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    backgroundColor: '#FFFFFF',
+    borderColor: "#D1D5DB",
+    backgroundColor: "#FFFFFF",
   },
   pickerOptionSelected: {
-    backgroundColor: '#2563EB',
-    borderColor: '#2563EB',
+    backgroundColor: "#2563EB",
+    borderColor: "#2563EB",
   },
   pickerOptionText: {
     fontSize: 14,
-    color: '#374151',
+    color: "#374151",
   },
   pickerOptionTextSelected: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: "#FFFFFF",
+    fontWeight: "600",
   },
   timeButton: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: "#F3F4F6",
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: "#D1D5DB",
     borderRadius: 8,
     paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 6,
   },
   timeButtonText: {
     fontSize: 14,
-    color: '#374151',
-    fontWeight: '500',
+    color: "#374151",
+    fontWeight: "500",
   },
   timesContainer: {
     marginTop: 8,
@@ -919,56 +972,56 @@ const styles = StyleSheet.create({
   },
   timesLabel: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#6B7280',
+    fontWeight: "600",
+    color: "#6B7280",
     marginBottom: 8,
   },
   timesTable: {
     gap: 12,
   },
   setRow: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: "#F9FAFB",
     borderRadius: 8,
     padding: 12,
     gap: 8,
   },
   setLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: "600",
+    color: "#111827",
   },
   setTimes: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   timeCell: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 4,
     padding: 8,
     minWidth: 80,
-    alignItems: 'center',
+    alignItems: "center",
   },
   timeCellLabel: {
     fontSize: 10,
-    color: '#6B7280',
+    color: "#6B7280",
     marginBottom: 4,
   },
   timeCellValue: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: "600",
+    color: "#111827",
   },
   timeCellValueFastest: {
-    color: '#2563EB',
+    color: "#2563EB",
   },
   setAverage: {
     fontSize: 12,
-    color: '#6B7280',
+    color: "#6B7280",
     marginTop: 4,
   },
   buttonContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
     marginTop: 8,
   },
@@ -976,23 +1029,23 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   cancelButton: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: "#F3F4F6",
   },
   cancelButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: "600",
+    color: "#374151",
   },
   saveButton: {
-    backgroundColor: '#2563EB',
+    backgroundColor: "#2563EB",
   },
   saveButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
-})
+});

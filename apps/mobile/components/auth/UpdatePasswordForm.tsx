@@ -1,64 +1,64 @@
-import React, { useState } from 'react'
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from 'react-native'
-import { useAuth } from '@/contexts/AuthProvider'
+import React, { useState } from "react";
+import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import { useAuth } from "@/contexts/AuthProvider";
 
 interface UpdatePasswordFormProps {
-  onSuccess?: () => void
+  onSuccess?: () => void;
 }
 
 export const UpdatePasswordForm: React.FC<UpdatePasswordFormProps> = ({ onSuccess }) => {
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [message, setMessage] = useState<string | null>(null)
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
-  const { updatePassword } = useAuth()
+  const { updatePassword } = useAuth();
 
   const validateForm = (): boolean => {
     if (!newPassword) {
-      setError('新しいパスワードを入力してください。')
-      return false
+      setError("新しいパスワードを入力してください。");
+      return false;
     }
-    
+
     if (newPassword.length < 6) {
-      setError('パスワードは6文字以上で入力してください。')
-      return false
+      setError("パスワードは6文字以上で入力してください。");
+      return false;
     }
-    
+
     if (newPassword !== confirmPassword) {
-      setError('パスワードが一致しません。')
-      return false
+      setError("パスワードが一致しません。");
+      return false;
     }
-    
-    return true
-  }
+
+    return true;
+  };
 
   const handleSubmit = async () => {
     if (!validateForm()) {
-      return
+      return;
     }
 
-    setLoading(true)
-    setError(null)
-    setMessage(null)
+    setLoading(true);
+    setError(null);
+    setMessage(null);
 
     try {
-      const { error } = await updatePassword(newPassword)
+      const { error } = await updatePassword(newPassword);
       if (error) {
-        setError('パスワードの更新に失敗しました。')
+        setError("パスワードの更新に失敗しました。");
       } else {
-        setMessage('パスワードを正常に更新しました。')
-        setNewPassword('')
-        setConfirmPassword('')
-        onSuccess?.()
+        setMessage("パスワードを正常に更新しました。");
+        setNewPassword("");
+        setConfirmPassword("");
+        onSuccess?.();
       }
     } catch {
-      setError('予期しないエラーが発生しました。')
+      setError("予期しないエラーが発生しました。");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <View style={styles.container}>
@@ -127,24 +127,24 @@ export const UpdatePasswordForm: React.FC<UpdatePasswordFormProps> = ({ onSucces
         </View>
       </View>
     </View>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: "#EFF6FF",
   },
   formContainer: {
-    width: '100%',
+    width: "100%",
     maxWidth: 400,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 24,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -155,42 +155,42 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 24,
-    alignItems: 'center',
+    alignItems: "center",
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#111827',
+    fontWeight: "bold",
+    color: "#111827",
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
+    color: "#6B7280",
+    textAlign: "center",
   },
   errorContainer: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FECACA",
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
   },
   errorText: {
-    color: '#DC2626',
+    color: "#DC2626",
     fontSize: 14,
     lineHeight: 20,
   },
   messageContainer: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#BBF7D0',
+    backgroundColor: "#F0FDF4",
+    borderColor: "#BBF7D0",
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
   },
   messageText: {
-    color: '#16A34A',
+    color: "#16A34A",
     fontSize: 14,
     lineHeight: 20,
   },
@@ -202,32 +202,32 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+    fontWeight: "500",
+    color: "#374151",
   },
   input: {
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: "#D1D5DB",
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    color: '#111827',
-    backgroundColor: '#FFFFFF',
+    color: "#111827",
+    backgroundColor: "#FFFFFF",
   },
   button: {
-    backgroundColor: '#2563EB',
+    backgroundColor: "#2563EB",
     borderRadius: 8,
     padding: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 8,
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
-})
+});

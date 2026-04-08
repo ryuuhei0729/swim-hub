@@ -61,13 +61,13 @@ apps/web/components/forms/
 
 ### 優先度順
 
-| 対象 | 現在 | 目標 | 削減率 | 優先度 |
-|------|------|------|--------|--------|
-| RecordForm | 865行 | ~150行 | 83% | 🔴 高 |
-| PracticeLogForm | 848行 | ~150行 | 82% | 🔴 高 |
-| RecordLogForm | 804行 | ~150行 | 81% | 🔴 高 |
-| ImageUploader統合 | 543行 | ~200行 | 63% | 🟡 中 |
-| EntryLogForm | 488行 | ~120行 | 75% | 🟡 中 |
+| 対象              | 現在  | 目標   | 削減率 | 優先度 |
+| ----------------- | ----- | ------ | ------ | ------ |
+| RecordForm        | 865行 | ~150行 | 83%    | 🔴 高  |
+| PracticeLogForm   | 848行 | ~150行 | 82%    | 🔴 高  |
+| RecordLogForm     | 804行 | ~150行 | 81%    | 🔴 高  |
+| ImageUploader統合 | 543行 | ~200行 | 63%    | 🟡 中  |
+| EntryLogForm      | 488行 | ~120行 | 75%    | 🟡 中  |
 
 ---
 
@@ -125,27 +125,27 @@ apps/web/components/forms/
 export const useTimeInput = () => {
   // MM:SS.ms 形式のパース
   const parseTime = (timeString: string): number | null => {
-    const match = timeString.match(/^(\d+):(\d{2})\.(\d{2})$/)
-    if (!match) return null
-    const [, min, sec, ms] = match
-    return parseInt(min) * 60 + parseInt(sec) + parseInt(ms) / 100
-  }
+    const match = timeString.match(/^(\d+):(\d{2})\.(\d{2})$/);
+    if (!match) return null;
+    const [, min, sec, ms] = match;
+    return parseInt(min) * 60 + parseInt(sec) + parseInt(ms) / 100;
+  };
 
   // 秒数を MM:SS.ms 形式にフォーマット
   const formatTime = (seconds: number): string => {
-    const min = Math.floor(seconds / 60)
-    const sec = Math.floor(seconds % 60)
-    const ms = Math.round((seconds % 1) * 100)
-    return `${min}:${sec.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`
-  }
+    const min = Math.floor(seconds / 60);
+    const sec = Math.floor(seconds % 60);
+    const ms = Math.round((seconds % 1) * 100);
+    return `${min}:${sec.toString().padStart(2, "0")}.${ms.toString().padStart(2, "0")}`;
+  };
 
   // バリデーション
   const validateTime = (seconds: number): boolean => {
-    return seconds > 0 && seconds < 86400 // 24時間以内
-  }
+    return seconds > 0 && seconds < 86400; // 24時間以内
+  };
 
-  return { parseTime, formatTime, validateTime }
-}
+  return { parseTime, formatTime, validateTime };
+};
 ```
 
 #### 2. 画像アップロードロジック (`useImageUpload.ts`)
@@ -153,32 +153,36 @@ export const useTimeInput = () => {
 ```typescript
 // forms/shared/ImageUploader/hooks/useImageUpload.ts
 interface UseImageUploadOptions {
-  maxImages?: number
-  maxSizeKB?: number
-  onUpload: (files: File[]) => Promise<void>
+  maxImages?: number;
+  maxSizeKB?: number;
+  onUpload: (files: File[]) => Promise<void>;
 }
 
-export const useImageUpload = ({ maxImages = 10, maxSizeKB = 5120, onUpload }: UseImageUploadOptions) => {
-  const [isDragging, setIsDragging] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+export const useImageUpload = ({
+  maxImages = 10,
+  maxSizeKB = 5120,
+  onUpload,
+}: UseImageUploadOptions) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const validateFile = (file: File): string | null => {
     if (file.size > maxSizeKB * 1024) {
-      return `ファイルサイズは${maxSizeKB / 1024}MB以下にしてください`
+      return `ファイルサイズは${maxSizeKB / 1024}MB以下にしてください`;
     }
-    if (!file.type.startsWith('image/')) {
-      return '画像ファイルのみアップロードできます'
+    if (!file.type.startsWith("image/")) {
+      return "画像ファイルのみアップロードできます";
     }
-    return null
-  }
+    return null;
+  };
 
   const handleFiles = async (files: FileList | File[]) => {
     // バリデーション & アップロード処理
-  }
+  };
 
-  return { isDragging, isUploading, error, handleFiles, setIsDragging }
-}
+  return { isDragging, isUploading, error, handleFiles, setIsDragging };
+};
 ```
 
 ### 推定工数
@@ -192,6 +196,7 @@ export const useImageUpload = ({ maxImages = 10, maxSizeKB = 5120, onUpload }: U
 ### 現状分析
 
 RecordForm.tsx (865行) の責務:
+
 - 種目選択
 - 日付・大会名入力
 - タイム入力（複数セット対応）
@@ -276,66 +281,66 @@ const RecordFormContent = ({ onSubmit, onCancel }) => {
 #### useRecordForm.ts (~200行)
 
 ```typescript
-'use client'
+"use client";
 
-import { createContext, useContext, useReducer } from 'react'
-import { useRecordValidation } from './useRecordValidation'
+import { createContext, useContext, useReducer } from "react";
+import { useRecordValidation } from "./useRecordValidation";
 
 interface RecordFormState {
-  styleId: number | null
-  competitionDate: string
-  competitionName: string
-  timeResult: number | null
-  poolType: 'long' | 'short'
-  sets: RecordSet[]
-  lapTimes: number[]
-  isRelaying: boolean
-  note: string
+  styleId: number | null;
+  competitionDate: string;
+  competitionName: string;
+  timeResult: number | null;
+  poolType: "long" | "short";
+  sets: RecordSet[];
+  lapTimes: number[];
+  isRelaying: boolean;
+  note: string;
 }
 
 type RecordFormAction =
-  | { type: 'SET_FIELD'; field: keyof RecordFormState; value: any }
-  | { type: 'ADD_SET' }
-  | { type: 'REMOVE_SET'; index: number }
-  | { type: 'UPDATE_SET'; index: number; data: Partial<RecordSet> }
-  | { type: 'SET_LAP_TIMES'; lapTimes: number[] }
-  | { type: 'RESET' }
+  | { type: "SET_FIELD"; field: keyof RecordFormState; value: any }
+  | { type: "ADD_SET" }
+  | { type: "REMOVE_SET"; index: number }
+  | { type: "UPDATE_SET"; index: number; data: Partial<RecordSet> }
+  | { type: "SET_LAP_TIMES"; lapTimes: number[] }
+  | { type: "RESET" };
 
 const recordFormReducer = (state: RecordFormState, action: RecordFormAction): RecordFormState => {
   switch (action.type) {
-    case 'SET_FIELD':
-      return { ...state, [action.field]: action.value }
-    case 'ADD_SET':
-      return { ...state, sets: [...state.sets, createEmptySet()] }
+    case "SET_FIELD":
+      return { ...state, [action.field]: action.value };
+    case "ADD_SET":
+      return { ...state, sets: [...state.sets, createEmptySet()] };
     // ... 他のアクション
   }
-}
+};
 
 export const useRecordForm = (initialData?: Partial<RecordFormState>) => {
   const [formState, dispatch] = useReducer(recordFormReducer, {
     ...defaultState,
-    ...initialData
-  })
+    ...initialData,
+  });
 
-  const validation = useRecordValidation(formState)
+  const validation = useRecordValidation(formState);
 
   return {
     formState,
     validation,
-    setField: (field, value) => dispatch({ type: 'SET_FIELD', field, value }),
-    addSet: () => dispatch({ type: 'ADD_SET' }),
-    removeSet: (index) => dispatch({ type: 'REMOVE_SET', index }),
-    updateSet: (index, data) => dispatch({ type: 'UPDATE_SET', index, data }),
-    setLapTimes: (lapTimes) => dispatch({ type: 'SET_LAP_TIMES', lapTimes }),
-    reset: () => dispatch({ type: 'RESET' }),
+    setField: (field, value) => dispatch({ type: "SET_FIELD", field, value }),
+    addSet: () => dispatch({ type: "ADD_SET" }),
+    removeSet: (index) => dispatch({ type: "REMOVE_SET", index }),
+    updateSet: (index, data) => dispatch({ type: "UPDATE_SET", index, data }),
+    setLapTimes: (lapTimes) => dispatch({ type: "SET_LAP_TIMES", lapTimes }),
+    reset: () => dispatch({ type: "RESET" }),
     handleSubmit: (onSubmit) => async (e) => {
-      e.preventDefault()
+      e.preventDefault();
       if (validation.isValid) {
-        await onSubmit(formState)
+        await onSubmit(formState);
       }
-    }
-  }
-}
+    },
+  };
+};
 ```
 
 ### 推定工数
@@ -349,6 +354,7 @@ export const useRecordForm = (initialData?: Partial<RecordFormState>) => {
 ### 現状分析
 
 PracticeLogForm.tsx (848行) の責務:
+
 - 練習セット入力（種目、本数、セット数、距離、サークル）
 - 複数セット管理
 - タグ管理
@@ -436,6 +442,7 @@ const PracticeLogFormContent = ({ onSubmit, onCancel }) => {
 ### 現状分析
 
 RecordLogForm.tsx (804行) の責務:
+
 - 記録ログ入力（セット番号、タイム、リアクションタイム）
 - ラップタイム入力
 - 複数セット管理
@@ -568,14 +575,14 @@ export const CompetitionImageUploader = (props: Omit<ImageUploaderProps<Competit
 
 ## 📊 進捗サマリー
 
-| ステップ | 対象 | 現在 | 目標 | 削減率 | ステータス |
-|---------|------|------|------|--------|-----------|
-| 1 | 共通コンポーネント作成 | - | - | - | ⏳ 未着手 |
-| 2 | RecordForm | 865行 | ~150行 | 83% | ⏳ 未着手 |
-| 3 | PracticeLogForm | 848行 | ~150行 | 82% | ⏳ 未着手 |
-| 4 | RecordLogForm | 804行 | ~150行 | 81% | ⏳ 未着手 |
-| 5 | ImageUploader統合 | 543行 | ~200行 | 63% | ⏳ 未着手 |
-| **合計** | - | **3,060行** | **~650行** | **79%** | **0%完了** |
+| ステップ | 対象                   | 現在        | 目標       | 削減率  | ステータス |
+| -------- | ---------------------- | ----------- | ---------- | ------- | ---------- |
+| 1        | 共通コンポーネント作成 | -           | -          | -       | ⏳ 未着手  |
+| 2        | RecordForm             | 865行       | ~150行     | 83%     | ⏳ 未着手  |
+| 3        | PracticeLogForm        | 848行       | ~150行     | 82%     | ⏳ 未着手  |
+| 4        | RecordLogForm          | 804行       | ~150行     | 81%     | ⏳ 未着手  |
+| 5        | ImageUploader統合      | 543行       | ~200行     | 63%     | ⏳ 未着手  |
+| **合計** | -                      | **3,060行** | **~650行** | **79%** | **0%完了** |
 
 ---
 

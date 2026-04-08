@@ -2,89 +2,90 @@
 // 大会記録用統合Zustandストア (Form + Filter) - モバイル版
 // =============================================================================
 
-import type { RecordWithDetails } from '@swim-hub/shared/types'
-import { create } from 'zustand'
+import type { RecordWithDetails } from "@swim-hub/shared/types";
+import { create } from "zustand";
 
 // -----------------------------------------------------------------------------
 // Types
 // -----------------------------------------------------------------------------
 
 export interface SplitTimeForm {
-  distance: number | string
-  splitTime: number // 秒数
-  id?: string // 編集時のみ（既存のSplitTimeのID）
+  distance: number | string;
+  splitTime: number; // 秒数
+  id?: string; // 編集時のみ（既存のSplitTimeのID）
 }
 
 interface RecordFormState {
   // フォームデータ
-  competitionId: string | null
-  styleId: number | null
-  time: number | null // 秒数
-  reactionTime: number | null // 反応時間（秒）
-  note: string | null
-  splitTimes: SplitTimeForm[]
+  competitionId: string | null;
+  styleId: number | null;
+  time: number | null; // 秒数
+  reactionTime: number | null; // 反応時間（秒）
+  note: string | null;
+  splitTimes: SplitTimeForm[];
 
   // UI状態
-  isLoading: boolean
+  isLoading: boolean;
   errors: {
-    competitionId?: string
-    styleId?: string
-    time?: string
-    reactionTime?: string
-    splitTimes?: string
-  }
+    competitionId?: string;
+    styleId?: string;
+    time?: string;
+    reactionTime?: string;
+    splitTimes?: string;
+  };
 }
 
 interface RecordFilterState {
   // フィルター条件
-  filterStyleId: number | null
-  filterFiscalYear: string
-  filterPoolType: number | null // 0: 短水路, 1: 長水路
-  includeRelay: boolean
+  filterStyleId: number | null;
+  filterFiscalYear: string;
+  filterPoolType: number | null; // 0: 短水路, 1: 長水路
+  includeRelay: boolean;
 
   // ソート設定
-  sortBy: 'date' | 'time'
-  sortOrder: 'asc' | 'desc'
+  sortBy: "date" | "time";
+  sortOrder: "asc" | "desc";
 }
 
 interface RecordFormActions {
   // データ操作
-  setCompetitionId: (competitionId: string | null) => void
-  setStyleId: (styleId: number | null) => void
-  setTime: (time: number | null) => void
-  setReactionTime: (reactionTime: number | null) => void
-  setNote: (note: string | null) => void
-  setSplitTimes: (splitTimes: SplitTimeForm[]) => void
-  addSplitTime: (splitTime: SplitTimeForm) => void
-  removeSplitTime: (index: number) => void
-  updateSplitTime: (index: number, splitTime: Partial<SplitTimeForm>) => void
-  setLoading: (loading: boolean) => void
-  setError: (field: keyof RecordFormState['errors'], message?: string) => void
-  clearErrors: () => void
+  setCompetitionId: (competitionId: string | null) => void;
+  setStyleId: (styleId: number | null) => void;
+  setTime: (time: number | null) => void;
+  setReactionTime: (reactionTime: number | null) => void;
+  setNote: (note: string | null) => void;
+  setSplitTimes: (splitTimes: SplitTimeForm[]) => void;
+  addSplitTime: (splitTime: SplitTimeForm) => void;
+  removeSplitTime: (index: number) => void;
+  updateSplitTime: (index: number, splitTime: Partial<SplitTimeForm>) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (field: keyof RecordFormState["errors"], message?: string) => void;
+  clearErrors: () => void;
 
   // 初期化
-  initialize: (record?: RecordWithDetails) => void
-  resetForm: () => void
+  initialize: (record?: RecordWithDetails) => void;
+  resetForm: () => void;
 }
 
 interface RecordFilterActions {
   // フィルター操作
-  setFilterStyleId: (styleId: number | null) => void
-  setFilterFiscalYear: (fiscalYear: string) => void
-  setFilterPoolType: (poolType: number | null) => void
-  setIncludeRelay: (includeRelay: boolean) => void
+  setFilterStyleId: (styleId: number | null) => void;
+  setFilterFiscalYear: (fiscalYear: string) => void;
+  setFilterPoolType: (poolType: number | null) => void;
+  setIncludeRelay: (includeRelay: boolean) => void;
 
   // ソート操作
-  setSortBy: (sortBy: 'date' | 'time') => void
-  setSortOrder: (sortOrder: 'asc' | 'desc') => void
+  setSortBy: (sortBy: "date" | "time") => void;
+  setSortOrder: (sortOrder: "asc" | "desc") => void;
 
-  resetFilter: () => void
+  resetFilter: () => void;
 }
 
-type RecordState = RecordFormState & RecordFilterState
-type RecordActions = RecordFormActions & RecordFilterActions & {
-  reset: () => void
-}
+type RecordState = RecordFormState & RecordFilterState;
+type RecordActions = RecordFormActions &
+  RecordFilterActions & {
+    reset: () => void;
+  };
 
 // -----------------------------------------------------------------------------
 // Initial State
@@ -99,21 +100,21 @@ const initialFormState: RecordFormState = {
   splitTimes: [],
   isLoading: false,
   errors: {},
-}
+};
 
 const initialFilterState: RecordFilterState = {
   filterStyleId: null,
-  filterFiscalYear: '',
+  filterFiscalYear: "",
   filterPoolType: null,
   includeRelay: true,
-  sortBy: 'date',
-  sortOrder: 'desc',
-}
+  sortBy: "date",
+  sortOrder: "desc",
+};
 
 const initialState: RecordState = {
   ...initialFormState,
   ...initialFilterState,
-}
+};
 
 // -----------------------------------------------------------------------------
 // Store
@@ -170,12 +171,12 @@ export const useRecordStore = create<RecordState & RecordActions>()((set) => ({
         })),
         errors: {},
         isLoading: false,
-      })
+      });
     } else {
       // 作成モード: 空のフォームで初期化（initialFormStateにisLoading: falseが含まれる）
       set({
         ...initialFormState,
-      })
+      });
     }
   },
 
@@ -197,14 +198,4 @@ export const useRecordStore = create<RecordState & RecordActions>()((set) => ({
   // 全体リセット
   // ---------------------------------------------------------------------------
   reset: () => set(initialState),
-}))
-
-// -----------------------------------------------------------------------------
-// 後方互換性のためのエイリアス (deprecated, will be removed)
-// -----------------------------------------------------------------------------
-
-/** @deprecated useRecordStore を使用してください */
-export const useRecordFormStore = useRecordStore
-
-/** @deprecated useRecordStore を使用してください */
-export const useRecordFilterStore = useRecordStore
+}));

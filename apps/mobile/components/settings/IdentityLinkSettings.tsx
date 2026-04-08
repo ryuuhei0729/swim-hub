@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,16 +7,16 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
-} from 'react-native'
-import * as WebBrowser from 'expo-web-browser'
-import * as AppleAuthentication from 'expo-apple-authentication'
-import Svg, { Path } from 'react-native-svg'
-import { useAuth } from '@/contexts/AuthProvider'
-import { getRedirectUri, extractTokensFromUrl } from '@/lib/google-auth'
-import { localizeSupabaseAuthError } from '@/utils/authErrorLocalizer'
-import type { UserIdentity } from '@supabase/supabase-js'
+} from "react-native";
+import * as WebBrowser from "expo-web-browser";
+import * as AppleAuthentication from "expo-apple-authentication";
+import Svg, { Path } from "react-native-svg";
+import { useAuth } from "@/contexts/AuthProvider";
+import { getRedirectUri, extractTokensFromUrl } from "@/lib/google-auth";
+import { localizeSupabaseAuthError } from "@/utils/authErrorLocalizer";
+import type { UserIdentity } from "@supabase/supabase-js";
 
-WebBrowser.maybeCompleteAuthSession()
+WebBrowser.maybeCompleteAuthSession();
 
 const GoogleIcon: React.FC = () => (
   <Svg width={20} height={20} viewBox="0 0 24 24">
@@ -37,7 +37,7 @@ const GoogleIcon: React.FC = () => (
       d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
     />
   </Svg>
-)
+);
 
 const AppleIcon: React.FC = () => (
   <Svg width={20} height={20} viewBox="0 0 24 24">
@@ -46,124 +46,122 @@ const AppleIcon: React.FC = () => (
       d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"
     />
   </Svg>
-)
+);
 
 interface ProviderConfig {
-  id: string
-  name: string
-  icon: React.ReactNode
+  id: string;
+  name: string;
+  icon: React.ReactNode;
 }
 
 const PROVIDERS: ProviderConfig[] = [
-  { id: 'google', name: 'Google', icon: <GoogleIcon /> },
-  ...(Platform.OS === 'ios'
-    ? [{ id: 'apple', name: 'Apple', icon: <AppleIcon /> }]
-    : []),
-]
+  { id: "google", name: "Google", icon: <GoogleIcon /> },
+  ...(Platform.OS === "ios" ? [{ id: "apple", name: "Apple", icon: <AppleIcon /> }] : []),
+];
 
 export const IdentityLinkSettings: React.FC = () => {
-  const { supabase } = useAuth()
-  const [identities, setIdentities] = useState<UserIdentity[]>([])
-  const [loading, setLoading] = useState(true)
-  const [actionLoading, setActionLoading] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const { supabase } = useAuth();
+  const [identities, setIdentities] = useState<UserIdentity[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchIdentities = useCallback(async () => {
-    if (!supabase) return
+    if (!supabase) return;
     try {
-      const { data, error: fetchError } = await supabase.auth.getUserIdentities()
+      const { data, error: fetchError } = await supabase.auth.getUserIdentities();
       if (fetchError) {
-        setError(fetchError.message)
-        return
+        setError(fetchError.message);
+        return;
       }
-      setIdentities(data?.identities ?? [])
+      setIdentities(data?.identities ?? []);
     } catch {
-      setError('連携情報の取得に失敗しました')
+      setError("連携情報の取得に失敗しました");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [supabase])
+  }, [supabase]);
 
   useEffect(() => {
-    fetchIdentities()
-  }, [fetchIdentities])
+    fetchIdentities();
+  }, [fetchIdentities]);
 
   const getProviderIdentity = (provider: string): UserIdentity | null => {
-    return identities.find((i) => i.provider === provider) ?? null
-  }
+    return identities.find((i) => i.provider === provider) ?? null;
+  };
 
   const getProviderEmail = (identity: UserIdentity | null): string | null => {
-    if (!identity) return null
-    return (identity.identity_data?.email as string) ?? null
-  }
+    if (!identity) return null;
+    return (identity.identity_data?.email as string) ?? null;
+  };
 
-  const canUnlink = identities.length > 1
+  const canUnlink = identities.length > 1;
 
   const handleLinkGoogle = async () => {
-    if (!supabase) return
-    setActionLoading('google')
-    setError(null)
+    if (!supabase) return;
+    setActionLoading("google");
+    setError(null);
     try {
-      const redirectUri = getRedirectUri()
+      const redirectUri = getRedirectUri();
       const { data, error: linkError } = await supabase.auth.linkIdentity({
-        provider: 'google',
+        provider: "google",
         options: {
           redirectTo: redirectUri,
           skipBrowserRedirect: true,
         },
-      })
+      });
 
       if (linkError) {
-        setError(localizeSupabaseAuthError(linkError))
-        return
+        setError(localizeSupabaseAuthError(linkError));
+        return;
       }
 
       if (!data.url) {
-        setError('OAuth URLの生成に失敗しました')
-        return
+        setError("OAuth URLの生成に失敗しました");
+        return;
       }
 
-      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri)
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
 
-      if (result.type === 'success' && result.url) {
-        const tokens = extractTokensFromUrl(result.url)
+      if (result.type === "success" && result.url) {
+        const tokens = extractTokensFromUrl(result.url);
         if (tokens.error) {
-          setError(tokens.error)
-          return
+          setError(tokens.error);
+          return;
         }
         if (tokens.accessToken && tokens.refreshToken) {
           const { error: sessionError } = await supabase.auth.setSession({
             access_token: tokens.accessToken,
             refresh_token: tokens.refreshToken,
-          })
+          });
           if (sessionError) {
-            setError(localizeSupabaseAuthError(sessionError))
-            return
+            setError(localizeSupabaseAuthError(sessionError));
+            return;
           }
-          await fetchIdentities()
+          await fetchIdentities();
         } else {
-          setError('認証トークンが取得できませんでした')
+          setError("認証トークンが取得できませんでした");
         }
-      } else if (result.type === 'cancel' || result.type === 'dismiss') {
+      } else if (result.type === "cancel" || result.type === "dismiss") {
         // ユーザーがキャンセル：エラー表示不要
       }
     } catch (err) {
-      const rawMessage = err instanceof Error ? err.message : '不明なエラーが発生しました'
-      setError(localizeSupabaseAuthError({ message: rawMessage }))
+      const rawMessage = err instanceof Error ? err.message : "不明なエラーが発生しました";
+      setError(localizeSupabaseAuthError({ message: rawMessage }));
     } finally {
-      setActionLoading(null)
+      setActionLoading(null);
     }
-  }
+  };
 
   const handleLinkApple = async () => {
-    if (!supabase || Platform.OS !== 'ios') return
-    setActionLoading('apple')
-    setError(null)
+    if (!supabase || Platform.OS !== "ios") return;
+    setActionLoading("apple");
+    setError(null);
     try {
-      const isAppleAuthAvailable = await AppleAuthentication.isAvailableAsync()
+      const isAppleAuthAvailable = await AppleAuthentication.isAvailableAsync();
       if (!isAppleAuthAvailable) {
-        setError('このデバイスではApple認証を利用できません')
-        return
+        setError("このデバイスではApple認証を利用できません");
+        return;
       }
 
       const credential = await AppleAuthentication.signInAsync({
@@ -171,80 +169,76 @@ export const IdentityLinkSettings: React.FC = () => {
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
-      })
+      });
 
       if (!credential.identityToken) {
-        setError('Apple認証トークンが取得できませんでした')
-        return
+        setError("Apple認証トークンが取得できませんでした");
+        return;
       }
 
       const { error: linkError } = await supabase.auth.linkIdentity({
-        provider: 'apple',
+        provider: "apple",
         token: credential.identityToken,
-      })
+      });
 
       if (linkError) {
-        setError(localizeSupabaseAuthError(linkError))
-        return
+        setError(localizeSupabaseAuthError(linkError));
+        return;
       }
 
-      await fetchIdentities()
+      await fetchIdentities();
     } catch (e) {
-      const err = e as Error & { code?: string }
-      if (err.code === 'ERR_REQUEST_CANCELED') {
+      const err = e as Error & { code?: string };
+      if (err.code === "ERR_REQUEST_CANCELED") {
         // ユーザーがキャンセル：エラー表示不要
-        return
+        return;
       }
-      const rawMessage = err.message || '不明なエラーが発生しました'
-      setError(localizeSupabaseAuthError({ message: rawMessage }))
+      const rawMessage = err.message || "不明なエラーが発生しました";
+      setError(localizeSupabaseAuthError({ message: rawMessage }));
     } finally {
-      setActionLoading(null)
+      setActionLoading(null);
     }
-  }
+  };
 
   const handleLink = (provider: string) => {
-    if (provider === 'google') {
-      handleLinkGoogle()
-    } else if (provider === 'apple') {
-      handleLinkApple()
+    if (provider === "google") {
+      handleLinkGoogle();
+    } else if (provider === "apple") {
+      handleLinkApple();
     }
-  }
+  };
 
   const handleUnlink = (provider: string) => {
-    if (!canUnlink) return
-    const identity = getProviderIdentity(provider)
-    if (!identity) return
+    if (!canUnlink) return;
+    const identity = getProviderIdentity(provider);
+    if (!identity) return;
 
-    const providerName = PROVIDERS.find((p) => p.id === provider)?.name ?? provider
+    const providerName = PROVIDERS.find((p) => p.id === provider)?.name ?? provider;
 
-    Alert.alert(
-      '連携解除',
-      `${providerName}の連携を解除しますか？`,
-      [
-        { text: 'キャンセル', style: 'cancel' },
-        {
-          text: '解除する',
-          style: 'destructive',
-          onPress: async () => {
-            setActionLoading(provider)
-            setError(null)
-            try {
-              const { error: unlinkError } = await supabase.auth.unlinkIdentity(identity)
-              if (unlinkError) {
-                setError(unlinkError.message)
-                return
-              }
-              await fetchIdentities()
-            } catch {
-              setError('連携解除に失敗しました。再度お試しください。')
-            } finally {
-              setActionLoading(null)
+    Alert.alert("連携解除", `${providerName}の連携を解除しますか？`, [
+      { text: "キャンセル", style: "cancel" },
+      {
+        text: "解除する",
+        style: "destructive",
+        onPress: async () => {
+          setActionLoading(provider);
+          setError(null);
+          try {
+            const { error: unlinkError } = await supabase.auth.unlinkIdentity(identity);
+            if (unlinkError) {
+              setError(unlinkError.message);
+              return;
             }
-          },
+            await fetchIdentities();
+          } catch {
+            setError("連携解除に失敗しました。再度お試しください。");
+          } finally {
+            setActionLoading(null);
+          }
         },
-      ]
-    )
-  }
+      },
+    ]);
+  };
 
   if (loading) {
     return (
@@ -256,7 +250,7 @@ export const IdentityLinkSettings: React.FC = () => {
           <ActivityIndicator size="small" color="#9CA3AF" />
         </View>
       </View>
-    )
+    );
   }
 
   return (
@@ -272,10 +266,10 @@ export const IdentityLinkSettings: React.FC = () => {
       )}
 
       {PROVIDERS.map((provider) => {
-        const identity = getProviderIdentity(provider.id)
-        const isLinked = !!identity
-        const email = getProviderEmail(identity)
-        const isLoading = actionLoading === provider.id
+        const identity = getProviderIdentity(provider.id);
+        const isLinked = !!identity;
+        const email = getProviderEmail(identity);
+        const isLoading = actionLoading === provider.id;
 
         return (
           <View key={provider.id} style={styles.providerRow}>
@@ -284,9 +278,7 @@ export const IdentityLinkSettings: React.FC = () => {
               <View>
                 <Text style={styles.providerName}>{provider.name}</Text>
                 {isLinked ? (
-                  <Text style={styles.statusLinked}>
-                    連携済み{email ? `（${email}）` : ''}
-                  </Text>
+                  <Text style={styles.statusLinked}>連携済み{email ? `（${email}）` : ""}</Text>
                 ) : (
                   <Text style={styles.statusUnlinked}>未連携</Text>
                 )}
@@ -326,7 +318,7 @@ export const IdentityLinkSettings: React.FC = () => {
               </Pressable>
             )}
           </View>
-        )
+        );
       })}
 
       {!canUnlink && identities.length > 0 && (
@@ -335,79 +327,79 @@ export const IdentityLinkSettings: React.FC = () => {
         </Text>
       )}
     </View>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   section: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     padding: 20,
     borderRadius: 8,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: "#E5E7EB",
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: "600",
+    color: "#111827",
   },
   loadingContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 16,
   },
   errorContainer: {
     marginBottom: 12,
     padding: 12,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: "#FEF2F2",
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: "#FECACA",
     borderRadius: 8,
   },
   errorText: {
     fontSize: 14,
-    color: '#DC2626',
+    color: "#DC2626",
   },
   providerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 10,
   },
   providerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     flex: 1,
   },
   providerIcon: {
     width: 24,
-    alignItems: 'center',
+    alignItems: "center",
   },
   providerName: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#111827',
+    fontWeight: "500",
+    color: "#111827",
   },
   statusLinked: {
     fontSize: 12,
-    color: '#16A34A',
+    color: "#16A34A",
     marginTop: 2,
   },
   statusUnlinked: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: "#9CA3AF",
     marginTop: 2,
   },
   actionButton: {
@@ -415,22 +407,22 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    backgroundColor: '#FFFFFF',
+    borderColor: "#D1D5DB",
+    backgroundColor: "#FFFFFF",
     minWidth: 72,
-    alignItems: 'center',
+    alignItems: "center",
   },
   actionButtonDisabled: {
     opacity: 0.5,
   },
   actionButtonText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+    fontWeight: "500",
+    color: "#374151",
   },
   noteText: {
     marginTop: 12,
     fontSize: 12,
-    color: '#9CA3AF',
+    color: "#9CA3AF",
   },
-})
+});

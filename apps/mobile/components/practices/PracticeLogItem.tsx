@@ -1,10 +1,17 @@
-import React, { useMemo } from 'react'
-import { View, Text, StyleSheet, ScrollView } from 'react-native'
-import { formatTime, formatTimeAverage, formatCircleTime, getStyleLabel, getTextColorForBackground } from '@/utils/formatters'
-import type { PracticeLogWithTags } from '@swim-hub/shared/types'
+import React, { useMemo } from "react";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
+import {
+  formatTime,
+  formatTimeAverage,
+  formatCircleTime,
+  getStyleLabel,
+  getTextColorForBackground,
+} from "@/utils/formatters";
+import { VideoPlayer } from "@/components/shared/VideoPlayer";
+import type { PracticeLogWithTags } from "@swim-hub/shared/types";
 
 interface PracticeLogItemProps {
-  log: PracticeLogWithTags
+  log: PracticeLogWithTags;
 }
 
 /**
@@ -12,48 +19,49 @@ interface PracticeLogItemProps {
  * Web版と同じデザイン: エメラルドグリーンカード + タイムテーブル
  */
 export const PracticeLogItem: React.FC<PracticeLogItemProps> = React.memo(({ log }) => {
-  const styleDisplay = getStyleLabel(log.style)
-  const tags = log.practice_log_tags?.map((lt) => lt.practice_tags) || []
+  const styleDisplay = getStyleLabel(log.style);
+  const tags = log.practice_log_tags?.map((lt) => lt.practice_tags) || [];
   const allTimes = useMemo(
-    () => [...(log.practice_times || [])].sort((a, b) =>
-      a.set_number !== b.set_number ? a.set_number - b.set_number : a.rep_number - b.rep_number
-    ),
-    [log.practice_times]
-  )
+    () =>
+      [...(log.practice_times || [])].sort((a, b) =>
+        a.set_number !== b.set_number ? a.set_number - b.set_number : a.rep_number - b.rep_number,
+      ),
+    [log.practice_times],
+  );
 
   // 各セットの最速タイムを計算
   const setFastestMap = useMemo(() => {
-    const map: Record<number, number> = {}
+    const map: Record<number, number> = {};
     for (let s = 1; s <= log.set_count; s++) {
-      const setTimes = allTimes.filter((t) => t.set_number === s && t.time > 0)
+      const setTimes = allTimes.filter((t) => t.set_number === s && t.time > 0);
       if (setTimes.length > 0) {
-        map[s] = Math.min(...setTimes.map((t) => t.time))
+        map[s] = Math.min(...setTimes.map((t) => t.time));
       }
     }
-    return map
-  }, [allTimes, log.set_count])
+    return map;
+  }, [allTimes, log.set_count]);
 
   // 各セットの平均
   const setAverages = useMemo(() => {
-    const map: Record<number, number> = {}
+    const map: Record<number, number> = {};
     for (let s = 1; s <= log.set_count; s++) {
-      const setTimes = allTimes.filter((t) => t.set_number === s && t.time > 0)
+      const setTimes = allTimes.filter((t) => t.set_number === s && t.time > 0);
       if (setTimes.length > 0) {
-        map[s] = setTimes.reduce((sum, t) => sum + t.time, 0) / setTimes.length
+        map[s] = setTimes.reduce((sum, t) => sum + t.time, 0) / setTimes.length;
       }
     }
-    return map
-  }, [allTimes, log.set_count])
+    return map;
+  }, [allTimes, log.set_count]);
 
   // 全体統計
   const overallStats = useMemo(() => {
-    const validTimes = allTimes.filter((t) => t.time > 0)
-    if (validTimes.length === 0) return { average: 0, fastest: 0 }
+    const validTimes = allTimes.filter((t) => t.time > 0);
+    if (validTimes.length === 0) return { average: 0, fastest: 0 };
     return {
       average: validTimes.reduce((sum, t) => sum + t.time, 0) / validTimes.length,
       fastest: Math.min(...validTimes.map((t) => t.time)),
-    }
-  }, [allTimes])
+    };
+  }, [allTimes]);
 
   return (
     <View style={styles.container}>
@@ -62,11 +70,13 @@ export const PracticeLogItem: React.FC<PracticeLogItemProps> = React.memo(({ log
         <View style={styles.tagsContainer}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {tags.map((tag) => (
-              <View
-                key={tag.id}
-                style={[styles.tag, { backgroundColor: tag.color || '#E5E7EB' }]}
-              >
-                <Text style={[styles.tagText, { color: getTextColorForBackground(tag.color || '#E5E7EB') }]}>
+              <View key={tag.id} style={[styles.tag, { backgroundColor: tag.color || "#E5E7EB" }]}>
+                <Text
+                  style={[
+                    styles.tagText,
+                    { color: getTextColorForBackground(tag.color || "#E5E7EB") },
+                  ]}
+                >
                   {tag.name}
                 </Text>
               </View>
@@ -90,13 +100,13 @@ export const PracticeLogItem: React.FC<PracticeLogItemProps> = React.memo(({ log
               <Text style={styles.contentUnit}>セット</Text>
             </>
           )}
-          <Text style={styles.contentSpacer}>{'  '}</Text>
+          <Text style={styles.contentSpacer}>{"  "}</Text>
           <Text style={styles.contentValue}>{formatCircleTime(log.circle)}</Text>
-          <Text style={styles.contentSpacer}>{'  '}</Text>
+          <Text style={styles.contentSpacer}>{"  "}</Text>
           <Text style={styles.contentValue}>{styleDisplay}</Text>
-          {log.swim_category && log.swim_category !== 'Swim' && (
+          {log.swim_category && log.swim_category !== "Swim" && (
             <>
-              <Text style={styles.contentSpacer}>{'  '}</Text>
+              <Text style={styles.contentSpacer}>{"  "}</Text>
               <Text style={styles.contentValue}>{log.swim_category}</Text>
             </>
           )}
@@ -108,6 +118,13 @@ export const PracticeLogItem: React.FC<PracticeLogItemProps> = React.memo(({ log
         <View style={styles.memoCard}>
           <Text style={styles.memoLabel}>メモ</Text>
           <Text style={styles.memoText}>{log.note}</Text>
+        </View>
+      )}
+
+      {/* 動画 */}
+      {log.video_path && (
+        <View style={styles.videoContainer}>
+          <VideoPlayer videoPath={log.video_path} thumbnailPath={log.video_thumbnail_path} />
         </View>
       )}
 
@@ -134,26 +151,29 @@ export const PracticeLogItem: React.FC<PracticeLogItemProps> = React.memo(({ log
 
               {/* タイム行 */}
               {Array.from({ length: log.rep_count }, (_, repIdx) => {
-                const repNumber = repIdx + 1
+                const repNumber = repIdx + 1;
                 return (
                   <View key={repNumber} style={[styles.tableRow, styles.tableBodyRow]}>
                     <View style={[styles.tableCell, styles.tableLabelCell]}>
                       <Text style={styles.tableLabelText}>{repNumber}本目</Text>
                     </View>
                     {Array.from({ length: log.set_count }, (_, setIdx) => {
-                      const setNumber = setIdx + 1
-                      const time = allTimes.find((t) => t.set_number === setNumber && t.rep_number === repNumber)
-                      const isFastest = time && time.time > 0 && time.time === setFastestMap[setNumber]
+                      const setNumber = setIdx + 1;
+                      const time = allTimes.find(
+                        (t) => t.set_number === setNumber && t.rep_number === repNumber,
+                      );
+                      const isFastest =
+                        time && time.time > 0 && time.time === setFastestMap[setNumber];
                       return (
                         <View key={setNumber} style={[styles.tableCell, styles.tableDataCell]}>
                           <Text style={isFastest ? styles.fastestTimeText : styles.timeText}>
-                            {time && time.time > 0 ? formatTime(time.time) : '-'}
+                            {time && time.time > 0 ? formatTime(time.time) : "-"}
                           </Text>
                         </View>
-                      )
+                      );
                     })}
                   </View>
-                )
+                );
               })}
 
               {/* セット平均行 */}
@@ -162,15 +182,18 @@ export const PracticeLogItem: React.FC<PracticeLogItemProps> = React.memo(({ log
                   <Text style={styles.setAverageLabel}>セット平均</Text>
                 </View>
                 {Array.from({ length: log.set_count }, (_, setIdx) => {
-                  const setNumber = setIdx + 1
-                  const avg = setAverages[setNumber]
+                  const setNumber = setIdx + 1;
+                  const avg = setAverages[setNumber];
                   return (
-                    <View key={setNumber} style={[styles.tableCell, styles.tableDataCell, styles.setAverageDataCell]}>
+                    <View
+                      key={setNumber}
+                      style={[styles.tableCell, styles.tableDataCell, styles.setAverageDataCell]}
+                    >
                       <Text style={styles.setAverageText}>
-                        {avg ? formatTimeAverage(avg) : '-'}
+                        {avg ? formatTimeAverage(avg) : "-"}
                       </Text>
                     </View>
-                  )
+                  );
                 })}
               </View>
 
@@ -181,7 +204,7 @@ export const PracticeLogItem: React.FC<PracticeLogItemProps> = React.memo(({ log
                 </View>
                 <View style={[styles.tableCell, styles.overallDataCell, { flex: log.set_count }]}>
                   <Text style={styles.overallValue}>
-                    {overallStats.average > 0 ? formatTimeAverage(overallStats.average) : '-'}
+                    {overallStats.average > 0 ? formatTimeAverage(overallStats.average) : "-"}
                   </Text>
                 </View>
               </View>
@@ -193,7 +216,7 @@ export const PracticeLogItem: React.FC<PracticeLogItemProps> = React.memo(({ log
                 </View>
                 <View style={[styles.tableCell, styles.overallDataCell, { flex: log.set_count }]}>
                   <Text style={styles.overallValue}>
-                    {overallStats.fastest > 0 ? formatTime(overallStats.fastest) : '-'}
+                    {overallStats.fastest > 0 ? formatTime(overallStats.fastest) : "-"}
                   </Text>
                 </View>
               </View>
@@ -202,13 +225,13 @@ export const PracticeLogItem: React.FC<PracticeLogItemProps> = React.memo(({ log
         </View>
       )}
     </View>
-  )
-})
+  );
+});
 
 const styles = StyleSheet.create({
   // コンテナ: エメラルドグリーン背景
   container: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: "#ECFDF5",
     borderRadius: 12,
     marginHorizontal: 16,
     marginVertical: 8,
@@ -217,7 +240,7 @@ const styles = StyleSheet.create({
 
   // タグ
   tagsContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: 12,
   },
   tag: {
@@ -228,62 +251,69 @@ const styles = StyleSheet.create({
   },
   tagText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
   },
 
   // 練習内容カード
   contentCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 8,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#86EFAC',
+    borderColor: "#86EFAC",
     marginBottom: 12,
   },
   contentLabel: {
     fontSize: 11,
-    fontWeight: '500',
-    color: '#6B7280',
+    fontWeight: "500",
+    color: "#6B7280",
     marginBottom: 4,
   },
   contentRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    alignItems: "baseline",
+    flexWrap: "wrap",
   },
   contentValue: {
     fontSize: 17,
-    fontWeight: '600',
-    color: '#15803D',
+    fontWeight: "600",
+    color: "#15803D",
   },
   contentUnit: {
     fontSize: 13,
-    color: '#1F2937',
+    color: "#1F2937",
   },
   contentSpacer: {
     fontSize: 13,
-    color: '#1F2937',
+    color: "#1F2937",
   },
 
   // メモカード
   memoCard: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: "#F8FAFC",
     borderRadius: 8,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
     marginBottom: 12,
   },
   memoLabel: {
     fontSize: 11,
-    fontWeight: '500',
-    color: '#6B7280',
+    fontWeight: "500",
+    color: "#6B7280",
     marginBottom: 4,
   },
   memoText: {
     fontSize: 13,
-    color: '#475569',
+    color: "#475569",
     lineHeight: 18,
+  },
+
+  // 動画
+  videoContainer: {
+    marginBottom: 12,
+    borderRadius: 8,
+    overflow: "hidden",
   },
 
   // タイムセクション
@@ -291,57 +321,57 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   timeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     marginBottom: 10,
   },
   timeAccent: {
     width: 3,
     height: 16,
-    backgroundColor: '#22C55E',
+    backgroundColor: "#22C55E",
     borderRadius: 2,
   },
   timeTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#15803D',
+    fontWeight: "600",
+    color: "#15803D",
   },
 
   // テーブル
   tableScroll: {
     borderRadius: 8,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   table: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#86EFAC',
-    overflow: 'hidden',
-    minWidth: '100%',
+    borderColor: "#86EFAC",
+    overflow: "hidden",
+    minWidth: "100%",
   },
   tableRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
   },
   tableHeaderRow: {
     borderBottomWidth: 1,
-    borderBottomColor: '#86EFAC',
+    borderBottomColor: "#86EFAC",
   },
   tableBodyRow: {
     borderBottomWidth: 1,
-    borderBottomColor: '#D1FAE5',
+    borderBottomColor: "#D1FAE5",
   },
   tableCell: {
     paddingVertical: 8,
     paddingHorizontal: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   tableLabelCell: {
     minWidth: 72,
     flex: 0,
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   tableDataCell: {
     flex: 1,
@@ -349,44 +379,44 @@ const styles = StyleSheet.create({
   },
   tableHeaderText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#166534',
+    fontWeight: "600",
+    color: "#166534",
   },
   tableLabelText: {
     fontSize: 13,
-    fontWeight: '500',
-    color: '#374151',
+    fontWeight: "500",
+    color: "#374151",
   },
   timeText: {
     fontSize: 14,
-    color: '#1F2937',
+    color: "#1F2937",
   },
   fastestTimeText: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#2563EB',
+    fontWeight: "700",
+    color: "#2563EB",
   },
 
   // セット平均行
   setAverageRow: {
     borderBottomWidth: 1,
-    borderBottomColor: '#D1FAE5',
+    borderBottomColor: "#D1FAE5",
   },
   setAverageLabelCell: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: "#F0FDF4",
   },
   setAverageDataCell: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: "#F0FDF4",
   },
   setAverageLabel: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#166534',
+    fontWeight: "600",
+    color: "#166534",
   },
   setAverageText: {
     fontSize: 13,
-    fontWeight: '500',
-    color: '#166534',
+    fontWeight: "500",
+    color: "#166534",
   },
 
   // 全体平均・最速行
@@ -395,26 +425,26 @@ const styles = StyleSheet.create({
   },
   overallRowTop: {
     borderTopWidth: 2,
-    borderTopColor: '#86EFAC',
+    borderTopColor: "#86EFAC",
   },
   overallLabelCell: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: "#EFF6FF",
   },
   overallDataCell: {
-    backgroundColor: '#EFF6FF',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#EFF6FF",
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: 8,
     paddingHorizontal: 8,
   },
   overallLabel: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#1E40AF',
+    fontWeight: "600",
+    color: "#1E40AF",
   },
   overallValue: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#1E40AF',
+    fontWeight: "700",
+    color: "#1E40AF",
   },
-})
+});

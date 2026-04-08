@@ -42,14 +42,14 @@
 
 ### 優先度マトリクス
 
-| 対象 | 影響度 | 実装難易度 | 優先度 |
-|------|--------|-----------|--------|
-| データ取得の並列化 | 高 | 中 | 🔴 最高 |
-| React.memo適用 | 高 | 低 | 🔴 高 |
-| 動的インポート | 中 | 低 | 🟡 中 |
-| バンドル分析・最適化 | 中 | 中 | 🟡 中 |
-| 画像最適化 | 中 | 低 | 🟡 中 |
-| Supabaseクエリ最適化 | 高 | 中 | 🔴 高 |
+| 対象                 | 影響度 | 実装難易度 | 優先度  |
+| -------------------- | ------ | ---------- | ------- |
+| データ取得の並列化   | 高     | 中         | 🔴 最高 |
+| React.memo適用       | 高     | 低         | 🔴 高   |
+| 動的インポート       | 中     | 低         | 🟡 中   |
+| バンドル分析・最適化 | 中     | 中         | 🟡 中   |
+| 画像最適化           | 中     | 低         | 🟡 中   |
+| Supabaseクエリ最適化 | 高     | 中         | 🔴 高   |
 
 ---
 
@@ -63,21 +63,21 @@
 
 #### Core Web Vitals
 
-| 指標 | 説明 | 目標値 |
-|------|------|--------|
-| **LCP** (Largest Contentful Paint) | 最大コンテンツの表示時間 | < 2.5秒 |
-| **FID** (First Input Delay) | 初回入力遅延 | < 100ms |
-| **CLS** (Cumulative Layout Shift) | レイアウトシフト | < 0.1 |
-| **TTI** (Time to Interactive) | インタラクティブになるまでの時間 | < 3.8秒 |
+| 指標                               | 説明                             | 目標値  |
+| ---------------------------------- | -------------------------------- | ------- |
+| **LCP** (Largest Contentful Paint) | 最大コンテンツの表示時間         | < 2.5秒 |
+| **FID** (First Input Delay)        | 初回入力遅延                     | < 100ms |
+| **CLS** (Cumulative Layout Shift)  | レイアウトシフト                 | < 0.1   |
+| **TTI** (Time to Interactive)      | インタラクティブになるまでの時間 | < 3.8秒 |
 
 #### アプリケーション固有
 
-| 指標 | 説明 | 目標値 |
-|------|------|--------|
-| ダッシュボード読み込み | 初期表示までの時間 | < 1.5秒 |
-| チームページ読み込み | 初期表示までの時間 | < 2.0秒 |
-| フォームモーダル表示 | モーダル表示までの時間 | < 300ms |
-| 初期バンドルサイズ | JSバンドルサイズ | < 500KB |
+| 指標                   | 説明                   | 目標値  |
+| ---------------------- | ---------------------- | ------- |
+| ダッシュボード読み込み | 初期表示までの時間     | < 1.5秒 |
+| チームページ読み込み   | 初期表示までの時間     | < 2.0秒 |
+| フォームモーダル表示   | モーダル表示までの時間 | < 300ms |
+| 初期バンドルサイズ     | JSバンドルサイズ       | < 500KB |
 
 ### 計測方法
 
@@ -116,11 +116,11 @@ ANALYZE=true npm run build
 ```typescript
 // ❌ 悪い例: ウォーターフォール
 const Dashboard = () => {
-  const { data: practices } = usePracticesQuery()  // 1回目のリクエスト
-  const { data: records } = useRecordsQuery()      // 2回目のリクエスト（1が完了後）
-  const { data: goals } = useGoalsQuery()          // 3回目のリクエスト（2が完了後）
+  const { data: practices } = usePracticesQuery(); // 1回目のリクエスト
+  const { data: records } = useRecordsQuery(); // 2回目のリクエスト（1が完了後）
+  const { data: goals } = useGoalsQuery(); // 3回目のリクエスト（2が完了後）
   // 合計: 3回の直列リクエスト
-}
+};
 ```
 
 ### 解決策1: Server Componentsでの並列データ取得
@@ -215,12 +215,12 @@ export const NavLink = ({ href, children }: { href: string; children: React.Reac
 
 ### 適用対象ページ
 
-| ページ | 現状 | 最適化後 |
-|--------|------|---------|
+| ページ         | 現状       | 最適化後                |
+| -------------- | ---------- | ----------------------- |
 | ダッシュボード | 直列クエリ | Server Component + 並列 |
-| チーム詳細 | 直列クエリ | Server Component + 並列 |
-| マイページ | 直列クエリ | Server Component + 並列 |
-| 記録一覧 | 直列クエリ | Server Component + 並列 |
+| チーム詳細     | 直列クエリ | Server Component + 並列 |
+| マイページ     | 直列クエリ | Server Component + 並列 |
+| 記録一覧       | 直列クエリ | Server Component + 並列 |
 
 ### 推定工数
 
@@ -259,46 +259,46 @@ export const PracticeCard = React.memo(
 
 ### 適用対象コンポーネント
 
-| コンポーネント | 場所 | 理由 |
-|---------------|------|------|
-| PracticeCard | リスト内 | 多数レンダリング |
-| RecordCard | リスト内 | 多数レンダリング |
-| GoalCard | リスト内 | 多数レンダリング |
-| TeamMemberCard | リスト内 | 多数レンダリング |
-| CalendarDay | カレンダー内 | 42日分レンダリング |
-| AttendanceRow | テーブル内 | 多数レンダリング |
+| コンポーネント | 場所         | 理由               |
+| -------------- | ------------ | ------------------ |
+| PracticeCard   | リスト内     | 多数レンダリング   |
+| RecordCard     | リスト内     | 多数レンダリング   |
+| GoalCard       | リスト内     | 多数レンダリング   |
+| TeamMemberCard | リスト内     | 多数レンダリング   |
+| CalendarDay    | カレンダー内 | 42日分レンダリング |
+| AttendanceRow  | テーブル内   | 多数レンダリング   |
 
 ### useMemo / useCallbackの適用
 
 ```typescript
 // ❌ 毎回新しい配列が生成される
-const filteredPractices = practices.filter(p => p.team_id === teamId)
+const filteredPractices = practices.filter((p) => p.team_id === teamId);
 
 // ✅ useMemoで計算結果をメモ化
 const filteredPractices = useMemo(
-  () => practices.filter(p => p.team_id === teamId),
-  [practices, teamId]
-)
+  () => practices.filter((p) => p.team_id === teamId),
+  [practices, teamId],
+);
 
 // ❌ 毎回新しい関数が生成される
 const handleClick = (id: string) => {
-  doSomething(id)
-}
+  doSomething(id);
+};
 
 // ✅ useCallbackで関数をメモ化
 const handleClick = useCallback((id: string) => {
-  doSomething(id)
-}, [])
+  doSomething(id);
+}, []);
 ```
 
 ### 適用対象フック/計算
 
-| 対象 | 場所 | 種類 |
-|------|------|------|
-| フィルタリング結果 | リストコンポーネント | useMemo |
-| ソート結果 | テーブルコンポーネント | useMemo |
-| イベントハンドラ | カード/行コンポーネント | useCallback |
-| 計算結果（距離合計等） | 統計コンポーネント | useMemo |
+| 対象                   | 場所                    | 種類        |
+| ---------------------- | ----------------------- | ----------- |
+| フィルタリング結果     | リストコンポーネント    | useMemo     |
+| ソート結果             | テーブルコンポーネント  | useMemo     |
+| イベントハンドラ       | カード/行コンポーネント | useCallback |
+| 計算結果（距離合計等） | 統計コンポーネント      | useMemo     |
 
 ### 推定工数
 
@@ -341,26 +341,26 @@ const PracticeFormModal = dynamic(
 
 ### 動的インポート適用対象
 
-| コンポーネント | 理由 | 推定サイズ削減 |
-|---------------|------|---------------|
-| RecordFormModal | 大きなフォーム | ~50KB |
-| PracticeFormModal | 大きなフォーム | ~50KB |
-| PracticeLogFormModal | 大きなフォーム | ~50KB |
-| RecordProgressChart | chart.js依存 | ~100KB |
-| ImageCropModal | 画像処理ライブラリ | ~80KB |
-| TagManagementModal | 低使用頻度 | ~20KB |
+| コンポーネント       | 理由               | 推定サイズ削減 |
+| -------------------- | ------------------ | -------------- |
+| RecordFormModal      | 大きなフォーム     | ~50KB          |
+| PracticeFormModal    | 大きなフォーム     | ~50KB          |
+| PracticeLogFormModal | 大きなフォーム     | ~50KB          |
+| RecordProgressChart  | chart.js依存       | ~100KB         |
+| ImageCropModal       | 画像処理ライブラリ | ~80KB          |
+| TagManagementModal   | 低使用頻度         | ~20KB          |
 
 ### バンドル分析の設定
 
 ```javascript
 // next.config.js
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
-  enabled: process.env.ANALYZE === 'true'
-})
+const withBundleAnalyzer = require("@next/bundle-analyzer")({
+  enabled: process.env.ANALYZE === "true",
+});
 
 module.exports = withBundleAnalyzer({
   // 既存の設定
-})
+});
 ```
 
 ```bash
@@ -407,28 +407,28 @@ import Image from 'next/image'
 // next.config.js
 module.exports = {
   images: {
-    formats: ['image/avif', 'image/webp'], // 最新フォーマットを優先
+    formats: ["image/avif", "image/webp"], // 最新フォーマットを優先
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: '*.supabase.co',
-        pathname: '/storage/v1/object/public/**',
+        protocol: "https",
+        hostname: "*.supabase.co",
+        pathname: "/storage/v1/object/public/**",
       },
     ],
-  }
-}
+  },
+};
 ```
 
 ### 適用対象
 
-| 場所 | 現状 | 対応 |
-|------|------|------|
-| プロフィール画像 | `<img>` | `<Image>` + lazy |
-| 練習画像ギャラリー | `<img>` | `<Image>` + lazy + sizes |
-| 大会画像ギャラリー | `<img>` | `<Image>` + lazy + sizes |
-| チームロゴ | `<img>` | `<Image>` + priority（ヘッダー） |
+| 場所               | 現状    | 対応                             |
+| ------------------ | ------- | -------------------------------- |
+| プロフィール画像   | `<img>` | `<Image>` + lazy                 |
+| 練習画像ギャラリー | `<img>` | `<Image>` + lazy + sizes         |
+| 大会画像ギャラリー | `<img>` | `<Image>` + lazy + sizes         |
+| チームロゴ         | `<img>` | `<Image>` + priority（ヘッダー） |
 
 ### 推定工数
 
@@ -446,37 +446,36 @@ module.exports = {
 
 ```typescript
 // ❌ すべてのカラムを取得
-const { data } = await supabase.from('practices').select('*')
+const { data } = await supabase.from("practices").select("*");
 
 // ✅ 必要なカラムのみ取得
 const { data } = await supabase
-  .from('practices')
-  .select('id, date, title, place, team_id, practice_logs(id, style, distance)')
-  .order('date', { ascending: false })
-  .limit(20)
+  .from("practices")
+  .select("id, date, title, place, team_id, practice_logs(id, style, distance)")
+  .order("date", { ascending: false })
+  .limit(20);
 ```
 
 ### N+1問題の解決
 
 ```typescript
 // ❌ N+1問題が発生
-const practices = await supabase.from('practices').select('*')
+const practices = await supabase.from("practices").select("*");
 for (const practice of practices.data) {
-  const logs = await supabase
-    .from('practice_logs')
-    .select('*')
-    .eq('practice_id', practice.id)
+  const logs = await supabase.from("practice_logs").select("*").eq("practice_id", practice.id);
   // 各practiceに対して個別にクエリが実行される
 }
 
 // ✅ JOINで一度に取得
 const { data } = await supabase
-  .from('practices')
-  .select(`
+  .from("practices")
+  .select(
+    `
     id, date, title, place,
     practice_logs(id, style, distance, rep_count, set_count)
-  `)
-  .order('date', { ascending: false })
+  `,
+  )
+  .order("date", { ascending: false });
 ```
 
 ### インデックスの確認・追加
@@ -506,48 +505,52 @@ CREATE INDEX IF NOT EXISTS idx_goals_user_achieved
 // ❌ すべてのキャッシュを無効化
 useEffect(() => {
   const channel = supabase
-    .channel('practices_changes')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'practices' }, () => {
-      queryClient.invalidateQueries(['practices']) // 全キャッシュ無効化
+    .channel("practices_changes")
+    .on("postgres_changes", { event: "*", schema: "public", table: "practices" }, () => {
+      queryClient.invalidateQueries(["practices"]); // 全キャッシュ無効化
     })
-    .subscribe()
-}, [])
+    .subscribe();
+}, []);
 
 // ✅ 部分的なキャッシュ更新
 useEffect(() => {
   const channel = supabase
-    .channel('practices_changes')
-    .on('postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'practices' },
+    .channel("practices_changes")
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "practices" },
       (payload) => {
         // 新規データをキャッシュに追加（再取得不要）
-        queryClient.setQueryData(['practices'], (old: Practice[]) =>
-          [payload.new as Practice, ...old]
-        )
-      }
+        queryClient.setQueryData(["practices"], (old: Practice[]) => [
+          payload.new as Practice,
+          ...old,
+        ]);
+      },
     )
-    .on('postgres_changes',
-      { event: 'UPDATE', schema: 'public', table: 'practices' },
+    .on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "practices" },
       (payload) => {
         // 更新されたデータのみキャッシュ更新
-        queryClient.setQueryData(['practices'], (old: Practice[]) =>
-          old.map(p => p.id === payload.new.id ? payload.new as Practice : p)
-        )
-      }
+        queryClient.setQueryData(["practices"], (old: Practice[]) =>
+          old.map((p) => (p.id === payload.new.id ? (payload.new as Practice) : p)),
+        );
+      },
     )
-    .on('postgres_changes',
-      { event: 'DELETE', schema: 'public', table: 'practices' },
+    .on(
+      "postgres_changes",
+      { event: "DELETE", schema: "public", table: "practices" },
       (payload) => {
         // 削除されたデータをキャッシュから除去
-        queryClient.setQueryData(['practices'], (old: Practice[]) =>
-          old.filter(p => p.id !== payload.old.id)
-        )
-      }
+        queryClient.setQueryData(["practices"], (old: Practice[]) =>
+          old.filter((p) => p.id !== payload.old.id),
+        );
+      },
     )
-    .subscribe()
+    .subscribe();
 
-  return () => supabase.removeChannel(channel)
-}, [queryClient])
+  return () => supabase.removeChannel(channel);
+}, [queryClient]);
 ```
 
 ### 推定工数
@@ -558,26 +561,26 @@ useEffect(() => {
 
 ## 📊 進捗サマリー
 
-| ステップ | 対象 | 影響度 | ステータス |
-|---------|------|--------|-----------|
-| 1 | パフォーマンス計測 | 基盤 | ✅ 完了 |
-| 2 | データ取得の最適化 | 高 | ✅ 完了 |
-| 3 | コンポーネントの最適化 | 高 | ✅ 完了 |
-| 4 | バンドルサイズの最適化 | 中 | ✅ 完了 |
-| 5 | 画像の最適化 | 中 | ✅ 完了 |
-| 6 | Supabaseクエリの最適化 | 高 | ⏳ 未着手 |
+| ステップ | 対象                   | 影響度 | ステータス |
+| -------- | ---------------------- | ------ | ---------- |
+| 1        | パフォーマンス計測     | 基盤   | ✅ 完了    |
+| 2        | データ取得の最適化     | 高     | ✅ 完了    |
+| 3        | コンポーネントの最適化 | 高     | ✅ 完了    |
+| 4        | バンドルサイズの最適化 | 中     | ✅ 完了    |
+| 5        | 画像の最適化           | 中     | ✅ 完了    |
+| 6        | Supabaseクエリの最適化 | 高     | ⏳ 未着手  |
 
 ---
 
 ## 🎯 期待される改善効果
 
-| 指標 | 現在（推定） | 目標 | 改善率 |
-|-----|------------|-----|--------|
-| LCP | 3.5s | < 2.0s | 43%改善 |
-| FID | 150ms | < 100ms | 33%改善 |
-| TTI | 4.5s | < 3.0s | 33%改善 |
-| バンドルサイズ | 800KB | < 500KB | 38%削減 |
-| ダッシュボード読み込み | 2.5s | < 1.5s | 40%改善 |
+| 指標                   | 現在（推定） | 目標    | 改善率  |
+| ---------------------- | ------------ | ------- | ------- |
+| LCP                    | 3.5s         | < 2.0s  | 43%改善 |
+| FID                    | 150ms        | < 100ms | 33%改善 |
+| TTI                    | 4.5s         | < 3.0s  | 33%改善 |
+| バンドルサイズ         | 800KB        | < 500KB | 38%削減 |
+| ダッシュボード読み込み | 2.5s         | < 1.5s  | 40%改善 |
 
 ---
 

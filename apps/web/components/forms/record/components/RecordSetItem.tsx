@@ -1,24 +1,39 @@
-'use client'
+"use client";
 
-import React from 'react'
-import Button from '@/components/ui/Button'
-import Input from '@/components/ui/Input'
-import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
-import { LapTimeDisplay } from '../../LapTimeDisplay'
-import type { RecordSet, SplitTimeInput, SwimStyle } from '../types'
-import { parseTimeString, formatTimeDisplay } from '../utils/timeParser'
+import React from "react";
+import dynamic from "next/dynamic";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { LapTimeDisplay } from "../../LapTimeDisplay";
+import type { RecordSet, SplitTimeInput, SwimStyle } from "../types";
+import { parseTimeString, formatTimeDisplay } from "../utils/timeParser";
+import PremiumBadge from "@/components/ui/PremiumBadge";
+import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
+
+const VideoUploader = dynamic(() => import("@/components/video/VideoUploader"), { ssr: false });
+
+// DB の UUID かどうか判定（フォーム内部の一時IDと区別する）
+const isDbUuid = (id: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
 interface RecordSetItemProps {
-  record: RecordSet
-  recordIndex: number
-  styles: SwimStyle[]
-  canRemove: boolean
-  onUpdate: (updates: Partial<RecordSet>) => void
-  onRemove: () => void
-  onAddSplitTime: () => void
-  onAddSplitTimesEvery25m: () => void
-  onUpdateSplitTime: (splitIndex: number, updates: Partial<SplitTimeInput>) => void
-  onRemoveSplitTime: (splitIndex: number) => void
+  record: RecordSet;
+  recordIndex: number;
+  styles: SwimStyle[];
+  canRemove: boolean;
+  onUpdate: (updates: Partial<RecordSet>) => void;
+  onRemove: () => void;
+  onAddSplitTime: () => void;
+  onAddSplitTimesEvery25m: () => void;
+  onUpdateSplitTime: (splitIndex: number, updates: Partial<SplitTimeInput>) => void;
+  onRemoveSplitTime: (splitIndex: number) => void;
+  /** Free ユーザーの場合、split-time の制限に達しているか */
+  isSplitTimeLimitReached?: boolean;
+  /** split-time 制限エラーメッセージ */
+  splitTimeLimitError?: string | null;
+  /** Premium ユーザーかどうか */
+  isPremium?: boolean;
 }
 
 /**
@@ -35,40 +50,41 @@ export default function RecordSetItem({
   onAddSplitTimesEvery25m,
   onUpdateSplitTime,
   onRemoveSplitTime,
+  isSplitTimeLimitReached = false,
+  splitTimeLimitError = null,
+  isPremium = false,
 }: RecordSetItemProps) {
-  const styleId = `record-${record.id}-style`
-  const timeId = `record-${record.id}-time`
-  const relayId = `record-${record.id}-relay`
-  const currentStyle = styles.find((s) => s.id === record.styleId)
+  const styleId = `record-${record.id}-style`;
+  const timeId = `record-${record.id}-time`;
+  const relayId = `record-${record.id}-relay`;
+  const currentStyle = styles.find((s) => s.id === record.styleId);
 
   // 安全な数値パース関数
   const safeParseDistance = (value: string | number | undefined): number => {
-    if (typeof value === 'number') {
-      return Number.isFinite(value) ? value : 0
+    if (typeof value === "number") {
+      return Number.isFinite(value) ? value : 0;
     }
-    if (typeof value === 'string') {
-      const parsed = parseFloat(value)
-      return Number.isFinite(parsed) ? parsed : 0
+    if (typeof value === "string") {
+      const parsed = parseFloat(value);
+      return Number.isFinite(parsed) ? parsed : 0;
     }
-    return 0
-  }
+    return 0;
+  };
 
   // スプリットタイムを距離でソート（originalIndexをソート前にキャプチャ）
   const sortedSplitTimes = record.splitTimes
     .map((split, originalIndex) => ({ split, originalIndex }))
     .sort((a, b) => {
-      const distA = safeParseDistance(a.split.distance)
-      const distB = safeParseDistance(b.split.distance)
-      return distA - distB
-    })
+      const distA = safeParseDistance(a.split.distance);
+      const distB = safeParseDistance(b.split.distance);
+      return distA - distB;
+    });
 
   return (
     <div className="border border-gray-200 rounded-lg p-3 sm:p-4 space-y-3 sm:space-y-4 bg-blue-50">
       {/* ヘッダー */}
       <div className="flex items-center justify-between">
-        <h4 className="text-sm sm:text-base font-medium text-gray-700">
-          種目 {recordIndex + 1}
-        </h4>
+        <h4 className="text-sm sm:text-base font-medium text-gray-700">種目 {recordIndex + 1}</h4>
         {canRemove && (
           <button
             type="button"
@@ -85,10 +101,7 @@ export default function RecordSetItem({
       {/* 種目・タイム・リアクションタイム */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-4">
         <div>
-          <label
-            htmlFor={styleId}
-            className="block text-sm font-medium text-gray-700 mb-2"
-          >
+          <label htmlFor={styleId} className="block text-sm font-medium text-gray-700 mb-2">
             種目
           </label>
           <select
@@ -111,10 +124,7 @@ export default function RecordSetItem({
         <div className="md:col-span-2">
           <div className="grid grid-cols-[1fr_auto] gap-2 items-start">
             <div>
-              <label
-                htmlFor={timeId}
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
+              <label htmlFor={timeId} className="block text-sm font-medium text-gray-700 mb-2">
                 タイム
               </label>
               <Input
@@ -125,16 +135,16 @@ export default function RecordSetItem({
                     ? record.timeDisplayValue
                     : record.time > 0
                       ? formatTimeDisplay(record.time)
-                      : ''
+                      : ""
                 }
                 onChange={(e) => onUpdate({ timeDisplayValue: e.target.value })}
                 onBlur={(e) => {
-                  const timeStr = e.target.value
-                  if (timeStr === '') {
-                    onUpdate({ time: 0, timeDisplayValue: undefined })
+                  const timeStr = e.target.value;
+                  if (timeStr === "") {
+                    onUpdate({ time: 0, timeDisplayValue: undefined });
                   } else {
-                    const time = parseTimeString(timeStr)
-                    onUpdate({ time, timeDisplayValue: undefined })
+                    const time = parseTimeString(timeStr);
+                    onUpdate({ time, timeDisplayValue: undefined });
                   }
                 }}
                 placeholder="例: 1:30.50"
@@ -178,16 +188,14 @@ export default function RecordSetItem({
       {/* スプリットタイム */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="block text-sm font-medium text-gray-700">
-            スプリットタイム
-          </label>
+          <label className="block text-sm font-medium text-gray-700">スプリットタイム</label>
           <div className="flex gap-2">
             <Button
               type="button"
               onClick={onAddSplitTimesEvery25m}
               className="text-sm"
               variant="outline"
-              disabled={!currentStyle?.distance}
+              disabled={!currentStyle?.distance || isSplitTimeLimitReached}
               data-testid={`record-split-add-25m-button-${recordIndex + 1}`}
             >
               <PlusIcon className="h-3 w-3 mr-1" />
@@ -198,6 +206,7 @@ export default function RecordSetItem({
               onClick={onAddSplitTime}
               className="text-sm"
               variant="outline"
+              disabled={isSplitTimeLimitReached}
               data-testid={`record-split-add-button-${recordIndex + 1}`}
             >
               <PlusIcon className="h-3 w-3 mr-1" />
@@ -213,17 +222,17 @@ export default function RecordSetItem({
               placeholder="距離 (m)"
               value={split.distance}
               onChange={(e) => {
-                const value = e.target.value
-                if (value === '') {
-                  onUpdateSplitTime(originalIndex, { distance: '' })
+                const value = e.target.value;
+                if (value === "") {
+                  onUpdateSplitTime(originalIndex, { distance: "" });
                 } else if (/^\d+(\.\d*)?$/.test(value)) {
-                  if (value.endsWith('.')) {
-                    onUpdateSplitTime(originalIndex, { distance: value })
+                  if (value.endsWith(".")) {
+                    onUpdateSplitTime(originalIndex, { distance: value });
                   } else {
-                    const parsed = parseFloat(value)
+                    const parsed = parseFloat(value);
                     onUpdateSplitTime(originalIndex, {
-                      distance: Number.isFinite(parsed) ? parsed : '',
-                    })
+                      distance: Number.isFinite(parsed) ? parsed : "",
+                    });
                   }
                 }
               }}
@@ -239,24 +248,24 @@ export default function RecordSetItem({
                   ? split.splitTimeDisplayValue
                   : split.splitTime > 0
                     ? formatTimeDisplay(split.splitTime)
-                    : ''
+                    : ""
               }
               onChange={(e) =>
                 onUpdateSplitTime(originalIndex, { splitTimeDisplayValue: e.target.value })
               }
               onBlur={(e) => {
-                const timeStr = e.target.value
-                if (timeStr === '') {
+                const timeStr = e.target.value;
+                if (timeStr === "") {
                   onUpdateSplitTime(originalIndex, {
                     splitTime: 0,
                     splitTimeDisplayValue: undefined,
-                  })
+                  });
                 } else {
-                  const time = parseTimeString(timeStr)
+                  const time = parseTimeString(timeStr);
                   onUpdateSplitTime(originalIndex, {
                     splitTime: time,
                     splitTimeDisplayValue: undefined,
-                  })
+                  });
                 }
               }}
               className="flex-1"
@@ -277,31 +286,43 @@ export default function RecordSetItem({
         {/* Lap-Time表示 */}
         <LapTimeDisplay
           splitTimes={sortedSplitTimes.map(({ split }) => ({
-            distance: typeof split.distance === 'number' ? split.distance : split.distance === '' ? '' : Number(split.distance) || '',
+            distance:
+              typeof split.distance === "number"
+                ? split.distance
+                : split.distance === ""
+                  ? ""
+                  : Number(split.distance) || "",
             splitTime: split.splitTime,
           }))}
           raceDistance={currentStyle?.distance}
         />
+
+        {/* Premium 制限メッセージ */}
+        {!isPremium && isSplitTimeLimitReached && (
+          <div className="mt-2" data-testid={`premium-badge-split-limit-${recordIndex + 1}`}>
+            <PremiumBadge message={splitTimeLimitError || PREMIUM_MESSAGES.split_time_limit} />
+          </div>
+        )}
       </div>
 
-      {/* 動画URL・メモ */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
+      {/* 動画・メモ */}
+      <div className="space-y-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            動画URL
-          </label>
-          <Input
-            type="url"
-            value={record.videoUrl || ''}
-            onChange={(e) => onUpdate({ videoUrl: e.target.value })}
-            placeholder="https://..."
-            data-testid={`record-video-${recordIndex + 1}`}
+          <label className="block text-sm font-medium text-gray-700 mb-2">動画</label>
+          <VideoUploader
+            type="record"
+            id={isDbUuid(record.id) ? record.id : undefined}
+            existingVideoPath={record.videoPath ?? undefined}
+            existingThumbnailPath={record.videoThumbnailPath ?? undefined}
+            isPremium={isPremium ?? false}
+            onUploadComplete={(videoPath, thumbnailPath) =>
+              onUpdate({ videoPath, videoThumbnailPath: thumbnailPath })
+            }
+            onDelete={() => onUpdate({ videoPath: null, videoThumbnailPath: null })}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            メモ
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">メモ</label>
           <Input
             type="text"
             value={record.note}
@@ -312,5 +333,5 @@ export default function RecordSetItem({
         </div>
       </div>
     </div>
-  )
+  );
 }

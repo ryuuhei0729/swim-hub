@@ -1,9 +1,9 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 const GEMINI_PROMPT = `あなたは水泳のタイム記録表を読み取るアシスタントです。
 手書きの記録表の画像から、以下の情報をJSON形式で抽出してください。
@@ -58,268 +58,304 @@ const GEMINI_PROMPT = `あなたは水泳のタイム記録表を読み取るア
 - swimmers[].no: 選手番号（記録表の行番号）
 - swimmers[].name: 選手名（読み取れない場合は空文字）
 - swimmers[].style: 種目 (Fr/Br/Ba/Fly/IM)、判別できなければ "Fr"
-- swimmers[].times: repCount × setCount の全本分のタイム(秒)の配列。読み取れない場合は null。空欄の列は含めない`
+- swimmers[].times: repCount × setCount の全本分のタイム(秒)の配列。読み取れない場合は null。空欄の列は含めない`;
 
 interface ScanRequest {
-  image: string
-  mimeType: 'image/jpeg' | 'image/png'
+  image: string;
+  mimeType: "image/jpeg" | "image/png";
 }
 
 interface ErrorResponse {
-  error: string
-  code: 'PARSE_ERROR' | 'IMAGE_ERROR' | 'API_ERROR' | 'AUTH_ERROR'
+  error: string;
+  code: "PARSE_ERROR" | "IMAGE_ERROR" | "API_ERROR" | "AUTH_ERROR";
 }
 
-function errorResponse(error: string, code: ErrorResponse['code'], status: number): Response {
-  return new Response(
-    JSON.stringify({ error, code }),
-    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  )
+function errorResponse(error: string, code: ErrorResponse["code"], status: number): Response {
+  return new Response(JSON.stringify({ error, code }), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }
 
 async function callGeminiApi(apiKey: string, image: string, mimeType: string): Promise<Response> {
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
+  const url =
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
   const payload = {
-    contents: [{
-      parts: [
-        {
-          inlineData: {
-            mimeType,
-            data: image,
+    contents: [
+      {
+        parts: [
+          {
+            inlineData: {
+              mimeType,
+              data: image,
+            },
           },
-        },
-        {
-          text: GEMINI_PROMPT,
-        },
-      ],
-    }],
+          {
+            text: GEMINI_PROMPT,
+          },
+        ],
+      },
+    ],
     generationConfig: {
-      responseMimeType: 'application/json',
+      responseMimeType: "application/json",
       temperature: 0.1,
     },
-  }
+  };
 
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), 55000)
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 55000);
 
   try {
     const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify(payload),
       signal: controller.signal,
-    })
-    return response
+    });
+    return response;
   } finally {
-    clearTimeout(timer)
+    clearTimeout(timer);
   }
 }
 
 Deno.serve(async (req) => {
   // CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
     // Auth validation
-    const authHeader = req.headers.get('Authorization')
+    const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return errorResponse('認証が必要です', 'AUTH_ERROR', 401)
+      return errorResponse("認証が必要です", "AUTH_ERROR", 401);
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
-    })
+    });
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
     if (authError || !user) {
-      return errorResponse('認証に失敗しました', 'AUTH_ERROR', 401)
+      return errorResponse("認証に失敗しました", "AUTH_ERROR", 401);
     }
 
     // --- トークンチェック ---
     // user_subscriptions から plan, status を取得
     const { data: subData } = await supabase
-      .from('user_subscriptions')
-      .select('plan, status')
-      .eq('id', user.id)
-      .single()
+      .from("user_subscriptions")
+      .select("plan, status")
+      .eq("id", user.id)
+      .single();
 
-    const isPremium = subData?.plan === 'premium' &&
-      (subData?.status === 'active' || subData?.status === 'trialing')
+    const isPremium =
+      subData?.plan === "premium" &&
+      (subData?.status === "active" || subData?.status === "trialing");
 
     if (!isPremium) {
       // 今日の日付 (JST)
-      const now = new Date()
-      const jstOffset = 9 * 60 * 60 * 1000
-      const jstDate = new Date(now.getTime() + jstOffset)
-      const today = jstDate.toISOString().split('T')[0]
+      const now = new Date();
+      const jstOffset = 9 * 60 * 60 * 1000;
+      const jstDate = new Date(now.getTime() + jstOffset);
+      const today = jstDate.toISOString().split("T")[0];
 
       // 全アプリ合計の今日のトークン使用数
       const { data: usageData } = await supabase
-        .from('app_daily_usage')
-        .select('daily_tokens_used')
-        .eq('user_id', user.id)
-        .eq('usage_date', today)
+        .from("app_daily_usage")
+        .select("daily_tokens_used")
+        .eq("user_id", user.id)
+        .eq("usage_date", today);
 
       const totalTokensUsed = (usageData || []).reduce(
-        (sum: number, row: { daily_tokens_used: number }) => sum + (row.daily_tokens_used || 0), 0
-      )
+        (sum: number, row: { daily_tokens_used: number }) => sum + (row.daily_tokens_used || 0),
+        0,
+      );
 
       if (totalTokensUsed >= 1) {
-        return errorResponse('今日の利用回数に達しました。Premiumにアップグレードすると無制限に利用できます', 'AUTH_ERROR', 429)
+        return errorResponse(
+          "今日の利用回数に達しました。Premiumにアップグレードすると無制限に利用できます",
+          "AUTH_ERROR",
+          429,
+        );
       }
     }
 
     // Parse request body
-    let body: ScanRequest
+    let body: ScanRequest;
     try {
-      body = await req.json()
+      body = await req.json();
     } catch {
-      return errorResponse('画像形式はJPEGまたはPNGのみ対応しています', 'IMAGE_ERROR', 400)
+      return errorResponse("画像形式はJPEGまたはPNGのみ対応しています", "IMAGE_ERROR", 400);
     }
 
     // Validate mimeType
-    if (!body.mimeType || !['image/jpeg', 'image/png'].includes(body.mimeType)) {
-      return errorResponse('画像形式はJPEGまたはPNGのみ対応しています', 'IMAGE_ERROR', 400)
+    if (!body.mimeType || !["image/jpeg", "image/png"].includes(body.mimeType)) {
+      return errorResponse("画像形式はJPEGまたはPNGのみ対応しています", "IMAGE_ERROR", 400);
     }
 
     // Validate image
-    if (!body.image || typeof body.image !== 'string') {
-      return errorResponse('画像データが必要です', 'IMAGE_ERROR', 400)
+    if (!body.image || typeof body.image !== "string") {
+      return errorResponse("画像データが必要です", "IMAGE_ERROR", 400);
     }
 
     // Check base64 size (approximate: base64 is ~4/3 of original)
-    const estimatedSize = body.image.length * 0.75
+    const estimatedSize = body.image.length * 0.75;
     if (estimatedSize > 5 * 1024 * 1024) {
-      return errorResponse('画像サイズは5MB以下にしてください', 'IMAGE_ERROR', 400)
+      return errorResponse("画像サイズは5MB以下にしてください", "IMAGE_ERROR", 400);
     }
 
     // Call Gemini API
-    const apiKey = Deno.env.get('GEMINI_API_KEY')
+    const apiKey = Deno.env.get("GEMINI_API_KEY");
     if (!apiKey) {
-      return errorResponse('Gemini APIキーが設定されていません', 'API_ERROR', 500)
+      return errorResponse("Gemini APIキーが設定されていません", "API_ERROR", 500);
     }
 
-    let geminiResponse: Response
+    let geminiResponse: Response;
     try {
-      geminiResponse = await callGeminiApi(apiKey, body.image, body.mimeType)
+      geminiResponse = await callGeminiApi(apiKey, body.image, body.mimeType);
     } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') {
+      if (err instanceof DOMException && err.name === "AbortError") {
         // Timeout on first attempt — retry after delay
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+        await new Promise((resolve) => setTimeout(resolve, 1000));
         try {
-          geminiResponse = await callGeminiApi(apiKey, body.image, body.mimeType)
+          geminiResponse = await callGeminiApi(apiKey, body.image, body.mimeType);
         } catch (retryErr) {
-          const isTimeout = retryErr instanceof DOMException && retryErr.name === 'AbortError'
-          console.error(`Gemini API ${isTimeout ? 'timeout' : 'error'} on retry:`, retryErr)
+          const isTimeout = retryErr instanceof DOMException && retryErr.name === "AbortError";
+          console.error(`Gemini API ${isTimeout ? "timeout" : "error"} on retry:`, retryErr);
           if (isTimeout) {
-            return errorResponse('AI解析がタイムアウトしました。再試行してください', 'API_ERROR', 504)
+            return errorResponse(
+              "AI解析がタイムアウトしました。再試行してください",
+              "API_ERROR",
+              504,
+            );
           }
-          return errorResponse('AI解析サービスでエラーが発生しました。再試行してください', 'API_ERROR', 502)
+          return errorResponse(
+            "AI解析サービスでエラーが発生しました。再試行してください",
+            "API_ERROR",
+            502,
+          );
         }
       } else {
-        throw err
+        throw err;
       }
     }
 
     // Retry once on non-ok response
     if (!geminiResponse.ok) {
-      await geminiResponse.body?.cancel()
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      await geminiResponse.body?.cancel();
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       try {
-        geminiResponse = await callGeminiApi(apiKey, body.image, body.mimeType)
+        geminiResponse = await callGeminiApi(apiKey, body.image, body.mimeType);
       } catch (retryErr) {
-        const isTimeout = retryErr instanceof DOMException && retryErr.name === 'AbortError'
-        console.error(`Gemini API ${isTimeout ? 'timeout' : 'error'} on retry:`, retryErr)
+        const isTimeout = retryErr instanceof DOMException && retryErr.name === "AbortError";
+        console.error(`Gemini API ${isTimeout ? "timeout" : "error"} on retry:`, retryErr);
         if (isTimeout) {
-          return errorResponse('AI解析がタイムアウトしました。再試行してください', 'API_ERROR', 504)
+          return errorResponse(
+            "AI解析がタイムアウトしました。再試行してください",
+            "API_ERROR",
+            504,
+          );
         }
-        return errorResponse('AI解析サービスでエラーが発生しました。再試行してください', 'API_ERROR', 502)
+        return errorResponse(
+          "AI解析サービスでエラーが発生しました。再試行してください",
+          "API_ERROR",
+          502,
+        );
       }
     }
 
     if (!geminiResponse.ok) {
-      const errorText = await geminiResponse.text()
-      console.error('Gemini API error:', errorText)
-      return errorResponse('AI解析サービスでエラーが発生しました', 'API_ERROR', 502)
+      const errorText = await geminiResponse.text();
+      console.error("Gemini API error:", errorText);
+      return errorResponse("AI解析サービスでエラーが発生しました", "API_ERROR", 502);
     }
 
-    const geminiData = await geminiResponse.json()
+    const geminiData = await geminiResponse.json();
 
     // Extract text from Gemini response
-    const responseText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text
+    const responseText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!responseText) {
-      return errorResponse('画像を解析できませんでした。鮮明な画像で再試行してください', 'PARSE_ERROR', 422)
+      return errorResponse(
+        "画像を解析できませんでした。鮮明な画像で再試行してください",
+        "PARSE_ERROR",
+        422,
+      );
     }
 
     // Parse JSON from response
-    let scanResult
+    let scanResult;
     try {
-      scanResult = JSON.parse(responseText)
+      scanResult = JSON.parse(responseText);
     } catch {
-      return errorResponse('解析結果の読み取りに失敗しました。再試行してください', 'PARSE_ERROR', 422)
+      return errorResponse(
+        "解析結果の読み取りに失敗しました。再試行してください",
+        "PARSE_ERROR",
+        422,
+      );
     }
 
     // Basic structure validation
     if (!scanResult.menu || !Array.isArray(scanResult.swimmers)) {
-      return errorResponse('解析結果の形式が不正です。再試行してください', 'PARSE_ERROR', 422)
+      return errorResponse("解析結果の形式が不正です。再試行してください", "PARSE_ERROR", 422);
     }
 
     // スキャン成功時のトークン消費記録（Free ユーザーのみ）
     if (!isPremium) {
-      const now = new Date()
-      const jstOffset = 9 * 60 * 60 * 1000
-      const jstDate = new Date(now.getTime() + jstOffset)
-      const today = jstDate.toISOString().split('T')[0]
+      const now = new Date();
+      const jstOffset = 9 * 60 * 60 * 1000;
+      const jstDate = new Date(now.getTime() + jstOffset);
+      const today = jstDate.toISOString().split("T")[0];
 
       // app_daily_usage の daily_tokens_used を +1
       const { data: existing } = await supabase
-        .from('app_daily_usage')
-        .select('id, daily_tokens_used, usage_count')
-        .eq('user_id', user.id)
-        .eq('app', 'swimhub')
-        .eq('usage_date', today)
-        .single()
+        .from("app_daily_usage")
+        .select("id, daily_tokens_used, usage_count")
+        .eq("user_id", user.id)
+        .eq("app", "swimhub")
+        .eq("usage_date", today)
+        .single();
 
       if (existing) {
         await supabase
-          .from('app_daily_usage')
+          .from("app_daily_usage")
           .update({
             daily_tokens_used: (existing.daily_tokens_used || 0) + 1,
             usage_count: (existing.usage_count || 0) + 1,
             last_used_at: new Date().toISOString(),
           })
-          .eq('id', existing.id)
+          .eq("id", existing.id);
       } else {
-        await supabase.from('app_daily_usage').insert({
+        await supabase.from("app_daily_usage").insert({
           user_id: user.id,
-          app: 'swimhub',
+          app: "swimhub",
           usage_date: today,
           daily_tokens_used: 1,
           usage_count: 1,
           last_used_at: new Date().toISOString(),
-        })
+        });
       }
 
       // token_consumption_log に記録
-      await supabase.from('token_consumption_log').insert({
+      await supabase.from("token_consumption_log").insert({
         user_id: user.id,
-        app: 'swimhub',
-        token_source: 'daily_free',
-        action_type: 'swimhub_image_analysis',
-      })
+        app: "swimhub",
+        token_source: "daily_free",
+        action_type: "swimhub_image_analysis",
+      });
     }
 
-    return new Response(
-      JSON.stringify(scanResult),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    return new Response(JSON.stringify(scanResult), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (err) {
-    console.error('Unexpected error:', err)
-    return errorResponse('サーバーエラーが発生しました', 'API_ERROR', 500)
+    console.error("Unexpected error:", err);
+    return errorResponse("サーバーエラーが発生しました", "API_ERROR", 500);
   }
-})
+});

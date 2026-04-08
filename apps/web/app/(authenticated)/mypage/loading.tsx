@@ -31,6 +31,5 @@ export default function MyPageLoading() {
         </div>
       </div>
     </div>
-  )
+  );
 }
-

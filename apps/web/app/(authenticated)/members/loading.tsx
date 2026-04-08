@@ -11,5 +11,5 @@ export default function MembersLoading() {
         </div>
       </div>
     </div>
-  )
+  );
 }

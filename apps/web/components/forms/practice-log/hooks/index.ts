@@ -1,1 +1,1 @@
-export { usePracticeLogForm, default } from './usePracticeLogForm'
+export { usePracticeLogForm, default } from "./usePracticeLogForm";

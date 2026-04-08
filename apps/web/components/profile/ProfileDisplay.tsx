@@ -1,64 +1,69 @@
-'use client'
+"use client";
 
-import React, { useState, useRef, useEffect } from 'react'
-import Link from 'next/link'
-import { PlusIcon, UserPlusIcon, UsersIcon } from '@heroicons/react/24/outline'
-import { formatDate } from '@apps/shared/utils/date'
-import Avatar from '@/components/ui/Avatar'
-import type { TeamMembershipWithUser } from '@apps/shared/types'
+import React, { useState, useRef, useEffect } from "react";
+import Link from "next/link";
+import { PlusIcon, UserPlusIcon, UsersIcon } from "@heroicons/react/24/outline";
+import { formatDate } from "@apps/shared/utils/date";
+import Avatar from "@/components/ui/Avatar";
+import type { TeamMembershipWithUser } from "@apps/shared/types";
 
 interface UserProfile {
-  id: string
-  name: string
-  gender?: number
-  birthday?: string | null
-  bio?: string | null
-  profile_image_path?: string | null
+  id: string;
+  name: string;
+  gender?: number;
+  birthday?: string | null;
+  bio?: string | null;
+  profile_image_path?: string | null;
 }
 
 interface ProfileDisplayProps {
-  profile: UserProfile
-  teams?: TeamMembershipWithUser[]
-  onCreateTeam?: () => void
-  onJoinTeam?: () => void
+  profile: UserProfile;
+  teams?: TeamMembershipWithUser[];
+  onCreateTeam?: () => void;
+  onJoinTeam?: () => void;
 }
 
-const EMPTY_TEAMS: TeamMembershipWithUser[] = []
+const EMPTY_TEAMS: TeamMembershipWithUser[] = [];
 
-export default function ProfileDisplay({ profile, teams = EMPTY_TEAMS, onCreateTeam, onJoinTeam }: ProfileDisplayProps) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
+export default function ProfileDisplay({
+  profile,
+  teams = EMPTY_TEAMS,
+  onCreateTeam,
+  onJoinTeam,
+}: ProfileDisplayProps) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   // メニュー外クリックで閉じる
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsMenuOpen(false)
+        setIsMenuOpen(false);
       }
-    }
+    };
 
     if (isMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside, { passive: true })
+      document.addEventListener("mousedown", handleClickOutside, { passive: true });
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [isMenuOpen])
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isMenuOpen]);
   const formatBirthday = (birthday: string | null | undefined) => {
-    if (!birthday) return '未設定'
-    return formatDate(birthday, 'long')
-  }
+    if (!birthday) return "未設定";
+    return formatDate(birthday, "long");
+  };
 
   const formatGender = (gender: number | undefined) => {
-    if (gender === undefined || gender === null) return '未設定'
-    return gender === 0 ? '男性' : '女性'
-  }
+    if (gender === undefined || gender === null) return "未設定";
+    return gender === 0 ? "男性" : "女性";
+  };
 
   // 承認済みかつアクティブなチームのみフィルタリング
   const approvedTeams = teams.filter(
-    (membership) => membership.status === 'approved' && membership.is_active === true
-  )
+    (membership) => membership.status === "approved" && membership.is_active === true,
+  );
 
   return (
     <div className="space-y-3 sm:space-y-6">
@@ -74,20 +79,17 @@ export default function ProfileDisplay({ profile, teams = EMPTY_TEAMS, onCreateT
             />
           </div>
           <div className="hidden sm:block">
-          <Avatar
-            avatarUrl={profile.profile_image_path || null}
-            userName={profile.name}
-            size="xxl"
-          />
+            <Avatar
+              avatarUrl={profile.profile_image_path || null}
+              userName={profile.name}
+              size="xxl"
+            />
           </div>
         </div>
 
         {/* 右カラム: 情報縦並び */}
         <div className="flex-1 min-w-0 mt-1 sm:mt-3">
-          <h3 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">
-            {profile.name}
-          </h3>
-          
+          <h3 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">{profile.name}</h3>
 
           {/* 生年月日・性別と参加チーム（横並び） */}
           <div className="mt-2 sm:mt-4 flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6">
@@ -116,10 +118,11 @@ export default function ProfileDisplay({ profile, teams = EMPTY_TEAMS, onCreateT
               <dd className="mt-1">
                 <div className="flex flex-wrap items-center gap-2">
                   {approvedTeams.map((membership) => {
-                    const teamName = 'teams' in membership && membership.teams?.name
-                      ? membership.teams.name
-                      : 'チーム名不明'
-                    const teamId = membership.team_id
+                    const teamName =
+                      "teams" in membership && membership.teams?.name
+                        ? membership.teams.name
+                        : "チーム名不明";
+                    const teamId = membership.team_id;
 
                     return (
                       <Link
@@ -130,9 +133,9 @@ export default function ProfileDisplay({ profile, teams = EMPTY_TEAMS, onCreateT
                       >
                         {teamName}
                       </Link>
-                    )
+                    );
                   })}
-                  
+
                   {/* チーム追加ボタン */}
                   {(onCreateTeam || onJoinTeam) && (
                     <div className="relative" ref={menuRef}>
@@ -144,7 +147,7 @@ export default function ProfileDisplay({ profile, teams = EMPTY_TEAMS, onCreateT
                         <PlusIcon className="w-3.5 h-3.5 mr-1" />
                         追加
                       </button>
-                      
+
                       {/* ドロップダウンメニュー */}
                       {isMenuOpen && (
                         <div className="absolute left-0 mt-1 w-40 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
@@ -153,8 +156,8 @@ export default function ProfileDisplay({ profile, teams = EMPTY_TEAMS, onCreateT
                               <button
                                 type="button"
                                 onClick={() => {
-                                  setIsMenuOpen(false)
-                                  onCreateTeam()
+                                  setIsMenuOpen(false);
+                                  onCreateTeam();
                                 }}
                                 className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                               >
@@ -166,8 +169,8 @@ export default function ProfileDisplay({ profile, teams = EMPTY_TEAMS, onCreateT
                               <button
                                 type="button"
                                 onClick={() => {
-                                  setIsMenuOpen(false)
-                                  onJoinTeam()
+                                  setIsMenuOpen(false);
+                                  onJoinTeam();
                                 }}
                                 className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                               >
@@ -180,10 +183,12 @@ export default function ProfileDisplay({ profile, teams = EMPTY_TEAMS, onCreateT
                       )}
                     </div>
                   )}
-                  
+
                   {/* チームがない場合のメッセージ */}
                   {approvedTeams.length === 0 && !(onCreateTeam || onJoinTeam) && (
-                    <span className="text-xs sm:text-sm text-gray-500">参加しているチームはありません</span>
+                    <span className="text-xs sm:text-sm text-gray-500">
+                      参加しているチームはありません
+                    </span>
                   )}
                 </div>
               </dd>
@@ -195,12 +200,12 @@ export default function ProfileDisplay({ profile, teams = EMPTY_TEAMS, onCreateT
             <dt className="text-xs sm:text-sm font-medium text-gray-500">自己紹介</dt>
             <dd className="mt-1 text-xs sm:text-sm">
               <div className="bg-gray-50 text-gray-900 p-2 sm:p-4 rounded-lg">
-                {profile.bio || '未設定'}
+                {profile.bio || "未設定"}
               </div>
             </dd>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }

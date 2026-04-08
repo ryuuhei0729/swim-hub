@@ -1,21 +1,21 @@
-import React from 'react'
-import { View, Text, Pressable, StyleSheet } from 'react-native'
-import { Image } from 'expo-image'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import type { AuthStackParamList } from '@/navigation/types'
+import React from "react";
+import { View, Text, Pressable, StyleSheet } from "react-native";
+import { Image } from "expo-image";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { AuthStackParamList } from "@/navigation/types";
 
 export const WelcomeScreen: React.FC = () => {
-  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>()
+  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
       <View style={styles.content}>
         {/* ロゴ */}
         <View style={styles.logoContainer}>
           <Image
-            source={require('@/assets/icons/app-icon.png')}
+            source={require("@/assets/icons/app-icon.png")}
             style={styles.logo}
             contentFit="contain"
           />
@@ -26,11 +26,8 @@ export const WelcomeScreen: React.FC = () => {
       {/* 下部ボタン */}
       <View style={styles.bottomContainer}>
         <Pressable
-          style={({ pressed }) => [
-            styles.primaryButton,
-            pressed && styles.primaryButtonPressed,
-          ]}
-          onPress={() => navigation.navigate('GetStarted')}
+          style={({ pressed }) => [styles.primaryButton, pressed && styles.primaryButtonPressed]}
+          onPress={() => navigation.navigate("GetStarted")}
           accessibilityRole="button"
           accessibilityLabel="さっそく始める"
         >
@@ -42,7 +39,7 @@ export const WelcomeScreen: React.FC = () => {
             styles.secondaryButton,
             pressed && styles.secondaryButtonPressed,
           ]}
-          onPress={() => navigation.navigate('LoginMethod')}
+          onPress={() => navigation.navigate("LoginMethod")}
           accessibilityRole="button"
           accessibilityLabel="ログイン"
         >
@@ -50,21 +47,21 @@ export const WelcomeScreen: React.FC = () => {
         </Pressable>
       </View>
     </SafeAreaView>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: "#EFF6FF",
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   logoContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     gap: 16,
   },
   logo: {
@@ -74,8 +71,8 @@ const styles = StyleSheet.create({
   },
   appName: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: '#111827',
+    fontWeight: "bold",
+    color: "#111827",
   },
   bottomContainer: {
     paddingHorizontal: 24,
@@ -83,35 +80,35 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   primaryButton: {
-    backgroundColor: '#2563EB',
+    backgroundColor: "#2563EB",
     borderRadius: 12,
     paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   primaryButtonPressed: {
-    backgroundColor: '#1D4ED8',
+    backgroundColor: "#1D4ED8",
   },
   primaryButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 17,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   secondaryButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: "#D1D5DB",
   },
   secondaryButtonPressed: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: "#F3F4F6",
   },
   secondaryButtonText: {
-    color: '#374151',
+    color: "#374151",
     fontSize: 17,
-    fontWeight: '600',
+    fontWeight: "600",
   },
-})
+});

@@ -1,10 +1,10 @@
-import React, { useMemo, useCallback } from 'react'
-import { View, Text, Pressable, StyleSheet } from 'react-native'
-import type { TeamMembershipWithUser } from '@swim-hub/shared/types'
+import React, { useMemo, useCallback } from "react";
+import { View, Text, Pressable, StyleSheet } from "react-native";
+import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 
 interface TeamItemProps {
-  membership: TeamMembershipWithUser
-  onPress?: (membership: TeamMembershipWithUser) => void
+  membership: TeamMembershipWithUser;
+  onPress?: (membership: TeamMembershipWithUser) => void;
 }
 
 /**
@@ -12,28 +12,28 @@ interface TeamItemProps {
  * チーム一覧の1件を表示
  */
 const TeamItemComponent: React.FC<TeamItemProps> = ({ membership, onPress }) => {
-  const team = useMemo(() => membership.teams, [membership.teams])
+  const team = useMemo(() => membership.teams, [membership.teams]);
   const role = useMemo(
-    () => (membership.role === 'admin' ? '管理者' : 'メンバー'),
-    [membership.role]
-  )
+    () => (membership.role === "admin" ? "管理者" : "メンバー"),
+    [membership.role],
+  );
   const status = useMemo(
     () =>
-      membership.status === 'pending'
-        ? '承認待ち'
-        : membership.status === 'approved'
-          ? '承認済み'
-          : '拒否',
-    [membership.status]
-  )
+      membership.status === "pending"
+        ? "承認待ち"
+        : membership.status === "approved"
+          ? "承認済み"
+          : "拒否",
+    [membership.status],
+  );
 
   const handlePress = useCallback(() => {
-    onPress?.(membership)
-  }, [onPress, membership])
+    onPress?.(membership);
+  }, [onPress, membership]);
 
   // teamがnullの場合は何も表示しない
   if (!team) {
-    return null
+    return null;
   }
 
   return (
@@ -41,7 +41,7 @@ const TeamItemComponent: React.FC<TeamItemProps> = ({ membership, onPress }) => 
       style={({ pressed }) => [
         styles.container,
         pressed && styles.pressed,
-        membership.status === 'pending' && styles.pendingContainer,
+        membership.status === "pending" && styles.pendingContainer,
       ]}
       onPress={handlePress}
     >
@@ -50,7 +50,7 @@ const TeamItemComponent: React.FC<TeamItemProps> = ({ membership, onPress }) => 
           <Text style={styles.teamName} numberOfLines={1}>
             {team.name}
           </Text>
-          {membership.status === 'pending' && (
+          {membership.status === "pending" && (
             <View style={styles.statusBadge}>
               <Text style={styles.statusText}>{status}</Text>
             </View>
@@ -68,17 +68,17 @@ const TeamItemComponent: React.FC<TeamItemProps> = ({ membership, onPress }) => 
         </View>
       </View>
     </Pressable>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 8,
     marginHorizontal: 16,
     marginVertical: 6,
     padding: 16,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 1,
@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
   },
   pendingContainer: {
     borderLeftWidth: 4,
-    borderLeftColor: '#F59E0B',
+    borderLeftColor: "#F59E0B",
   },
   pressed: {
     opacity: 0.7,
@@ -98,19 +98,19 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 4,
   },
   teamName: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: "600",
+    color: "#111827",
     flex: 1,
   },
   statusBadge: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: "#FEF3C7",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -118,30 +118,30 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 12,
-    fontWeight: '500',
-    color: '#92400E',
+    fontWeight: "500",
+    color: "#92400E",
   },
   description: {
     fontSize: 14,
-    color: '#6B7280',
+    color: "#6B7280",
     marginTop: 4,
     lineHeight: 20,
   },
   footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     marginTop: 8,
   },
   role: {
     fontSize: 12,
-    color: '#6B7280',
-    backgroundColor: '#F3F4F6',
+    color: "#6B7280",
+    backgroundColor: "#F3F4F6",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
-})
+});
 
 // メモ化して再レンダリングを最適化
 export const TeamItem = React.memo(TeamItemComponent, (prevProps, nextProps) => {
@@ -153,5 +153,5 @@ export const TeamItem = React.memo(TeamItemComponent, (prevProps, nextProps) => 
     prevProps.membership.teams?.id === nextProps.membership.teams?.id &&
     prevProps.membership.teams?.name === nextProps.membership.teams?.name &&
     prevProps.membership.teams?.description === nextProps.membership.teams?.description
-  )
-})
+  );
+});

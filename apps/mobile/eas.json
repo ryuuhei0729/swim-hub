@@ -9,13 +9,14 @@
       "ios": {
         "simulator": false,
         "buildConfiguration": "Release",
-        "image": "sdk-54"
+        "image": "sdk-55"
       },
       "android": {
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_ENVIRONMENT": "production"
+        "EXPO_PUBLIC_ENVIRONMENT": "production",
+        "EXPO_PUBLIC_WEB_API_URL": "https://swim-hub.app"
       }
     },
     "preview": {

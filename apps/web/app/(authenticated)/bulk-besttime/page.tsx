@@ -1,17 +1,17 @@
-import { Suspense } from 'react'
-import BulkBestTimeClient from './_client/BulkBestTimeClient'
+import { Suspense } from "react";
+import BulkBestTimeClient from "./_client/BulkBestTimeClient";
 
 export const metadata = {
-  title: 'ベストタイム一括入力 | SwimHub',
-  description: 'Excelファイルを使用してベストタイムを一括で登録できます',
-}
+  title: "ベストタイム一括入力 | SwimHub",
+  description: "Excelファイルを使用してベストタイムを一括で登録できます",
+};
 
 export default function BulkBestTimePage() {
   return (
     <Suspense fallback={<BulkBestTimeLoading />}>
       <BulkBestTimeClient />
     </Suspense>
-  )
+  );
 }
 
 function BulkBestTimeLoading() {
@@ -31,6 +31,5 @@ function BulkBestTimeLoading() {
         </div>
       </div>
     </div>
-  )
+  );
 }
-

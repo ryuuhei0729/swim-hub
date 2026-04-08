@@ -1,14 +1,14 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect, useRef } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { useAuth } from '@/contexts'
-import CalendarContainer from '../_components/CalendarContainer'
-import TeamAnnouncementsSection from '../_components/TeamAnnouncementsSection'
-import ReflectionModal from '@/app/(authenticated)/goals/_components/ReflectionModal'
-import GoalReflectionModal from '@/app/(authenticated)/goals/_components/GoalReflectionModal'
-import { GoalAPI } from '@apps/shared/api/goals'
-import type { Milestone, GoalWithMilestones } from '@apps/shared/types'
+import React, { useState, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts";
+import CalendarContainer from "../_components/CalendarContainer";
+import TeamAnnouncementsSection from "../_components/TeamAnnouncementsSection";
+import ReflectionModal from "@/app/(authenticated)/goals/_components/ReflectionModal";
+import GoalReflectionModal from "@/app/(authenticated)/goals/_components/GoalReflectionModal";
+import { GoalAPI } from "@apps/shared/api/goals";
+import type { Milestone, GoalWithMilestones } from "@apps/shared/types";
 import {
   useCreatePracticeMutation,
   useUpdatePracticeMutation,
@@ -17,7 +17,7 @@ import {
   useUpdatePracticeLogMutation,
   useCreatePracticeTimeMutation,
   useDeletePracticeTimeMutation,
-} from '@apps/shared/hooks/queries/practices'
+} from "@apps/shared/hooks/queries/practices";
 import {
   useCreateRecordMutation,
   useUpdateRecordMutation,
@@ -26,32 +26,24 @@ import {
   useDeleteCompetitionMutation,
   useCreateSplitTimesMutation,
   useReplaceSplitTimesMutation,
-} from '@apps/shared/hooks/queries/records'
-import type {
-  TeamMembership,
-  Team,
-  Style,
-  PracticeTag
-} from '@apps/shared/types'
-import type {
-  CalendarItem,
-  MonthlySummary
-} from '@apps/shared/types/ui'
-import { notificationKeys } from '@apps/shared/hooks/queries/keys'
-import { usePracticeFormStore } from '@/stores/practice/practiceStore'
-import { useCompetitionFormStore } from '@/stores/competition/competitionStore'
-import { useUIStore } from '@/stores/ui/uiStore'
-import { FormModals } from './FormModals'
-import { useDashboardHandlers } from '../_hooks/useDashboardHandlers'
-import { useCalendarHandlers } from '../_hooks/useCalendarHandlers'
+} from "@apps/shared/hooks/queries/records";
+import type { TeamMembership, Team, Style, PracticeTag } from "@apps/shared/types";
+import type { CalendarItem, MonthlySummary } from "@apps/shared/types/ui";
+import { notificationKeys } from "@apps/shared/hooks/queries/keys";
+import { usePracticeStore } from "@/stores/practice/practiceStore";
+import { useCompetitionStore } from "@/stores/competition/competitionStore";
+import { useUIStore } from "@/stores/ui/uiStore";
+import { FormModals } from "./FormModals";
+import { useDashboardHandlers } from "../_hooks/useDashboardHandlers";
+import { useCalendarHandlers } from "../_hooks/useCalendarHandlers";
 
 interface DashboardClientProps {
   // サーバー側で取得したデータ
-  initialCalendarItems: CalendarItem[]
-  initialMonthlySummary: MonthlySummary
-  teams: Array<TeamMembership & { team?: Team }>
-  styles: Style[]
-  tags: PracticeTag[]
+  initialCalendarItems: CalendarItem[];
+  initialMonthlySummary: MonthlySummary;
+  teams: Array<TeamMembership & { team?: Team }>;
+  styles: Style[];
+  tags: PracticeTag[];
 }
 
 /**
@@ -62,19 +54,16 @@ export default function DashboardClient({
   initialMonthlySummary,
   teams,
   styles,
-  tags
+  tags,
 }: DashboardClientProps) {
-  const { user, supabase } = useAuth()
-  const queryClient = useQueryClient()
-  const [expiredGoal, setExpiredGoal] = useState<GoalWithMilestones | null>(null)
-  const [expiredMilestone, setExpiredMilestone] = useState<Milestone | null>(null)
-  const hasCheckedExpiredRef = useRef(false)
-  
+  const { user, supabase } = useAuth();
+  const queryClient = useQueryClient();
+  const [expiredGoal, setExpiredGoal] = useState<GoalWithMilestones | null>(null);
+  const [expiredMilestone, setExpiredMilestone] = useState<Milestone | null>(null);
+  const hasCheckedExpiredRef = useRef(false);
+
   // Zustandストア
-  const {
-    calendarRefreshKey,
-    refreshCalendar,
-  } = useUIStore()
+  const { calendarRefreshKey, refreshCalendar } = useUIStore();
 
   const {
     isBasicFormOpen: _isPracticeBasicFormOpen,
@@ -92,8 +81,8 @@ export default function DashboardClient({
     setEditingData,
     setCreatedPracticeId: _setCreatedPracticeId,
     setAvailableTags,
-    setLoading,
-  } = usePracticeFormStore()
+    setLoading: setPracticeLoading,
+  } = usePracticeStore();
 
   const {
     isBasicFormOpen: _isCompetitionBasicFormOpen,
@@ -111,110 +100,135 @@ export default function DashboardClient({
     setCreatedCompetitionId: _setCreatedCompetitionId,
     setCreatedEntries,
     setStyles: setCompetitionStyles,
-  } = useCompetitionFormStore()
+    setLoading: setCompetitionLoading,
+  } = useCompetitionStore();
 
   // サーバー側から取得したデータをストアに設定（初回のみ）
-  const initializedRef = React.useRef(false)
+  const initializedRef = React.useRef(false);
   if (!initializedRef.current) {
-    setAvailableTags(tags)
-    setCompetitionStyles(styles)
-    initializedRef.current = true
+    setAvailableTags(tags);
+    setCompetitionStyles(styles);
+    initializedRef.current = true;
   }
 
   // 期限切れ目標・マイルストーンチェック（ログイン時・1回のみ）
   // 目標を優先してチェックし、目標がなければマイルストーンをチェック
   useEffect(() => {
-    if (!user || hasCheckedExpiredRef.current) return
-    hasCheckedExpiredRef.current = true
+    if (!user || hasCheckedExpiredRef.current) return;
+    hasCheckedExpiredRef.current = true;
 
     const checkExpired = async () => {
       try {
-        const goalAPI = new GoalAPI(supabase)
+        const goalAPI = new GoalAPI(supabase);
 
         // まず期限切れ目標をチェック（優先）
-        const expiredGoals = await goalAPI.getExpiredGoals()
+        const expiredGoals = await goalAPI.getExpiredGoals();
         if (expiredGoals && expiredGoals.length > 0) {
-          setExpiredGoal(expiredGoals[0])
-          return
+          setExpiredGoal(expiredGoals[0]);
+          return;
         }
 
         // 期限切れ目標がなければマイルストーンをチェック
-        const expiredMilestones = await goalAPI.getExpiredMilestones()
+        const expiredMilestones = await goalAPI.getExpiredMilestones();
         if (expiredMilestones && expiredMilestones.length > 0) {
-          setExpiredMilestone(expiredMilestones[0])
+          setExpiredMilestone(expiredMilestones[0]);
         }
       } catch (error) {
-        console.error('期限切れチェックエラー:', error)
+        console.error("期限切れチェックエラー:", error);
       }
-    }
+    };
 
-    checkExpired()
-  }, [user, supabase])
+    checkExpired();
+  }, [user, supabase]);
 
   // カレンダーイベントハンドラーは useCalendarHandlers カスタムフックから取得
 
   // 練習記録用のミューテーションフック
-  const createPracticeMutation = useCreatePracticeMutation(supabase)
-  const updatePracticeMutation = useUpdatePracticeMutation(supabase)
-  const deletePracticeMutation = useDeletePracticeMutation(supabase)
-  const createPracticeLogMutation = useCreatePracticeLogMutation(supabase)
-  const updatePracticeLogMutation = useUpdatePracticeLogMutation(supabase)
-  const createPracticeTimeMutation = useCreatePracticeTimeMutation(supabase)
-  const deletePracticeTimeMutation = useDeletePracticeTimeMutation(supabase)
+  const createPracticeMutation = useCreatePracticeMutation(supabase);
+  const updatePracticeMutation = useUpdatePracticeMutation(supabase);
+  const deletePracticeMutation = useDeletePracticeMutation(supabase);
+  const createPracticeLogMutation = useCreatePracticeLogMutation(supabase);
+  const updatePracticeLogMutation = useUpdatePracticeLogMutation(supabase);
+  const createPracticeTimeMutation = useCreatePracticeTimeMutation(supabase);
+  const deletePracticeTimeMutation = useDeletePracticeTimeMutation(supabase);
 
   // 大会記録用のミューテーションフック
-  const createRecordMutation = useCreateRecordMutation(supabase)
-  const updateRecordMutation = useUpdateRecordMutation(supabase)
-  const createCompetitionMutation = useCreateCompetitionMutation(supabase)
-  const updateCompetitionMutation = useUpdateCompetitionMutation(supabase)
-  const deleteCompetitionMutation = useDeleteCompetitionMutation(supabase)
-  const createSplitTimesMutation = useCreateSplitTimesMutation(supabase)
-  const replaceSplitTimesMutation = useReplaceSplitTimesMutation(supabase)
+  const createRecordMutation = useCreateRecordMutation(supabase);
+  const updateRecordMutation = useUpdateRecordMutation(supabase);
+  const createCompetitionMutation = useCreateCompetitionMutation(supabase);
+  const updateCompetitionMutation = useUpdateCompetitionMutation(supabase);
+  const deleteCompetitionMutation = useDeleteCompetitionMutation(supabase);
+  const createSplitTimesMutation = useCreateSplitTimesMutation(supabase);
+  const replaceSplitTimesMutation = useReplaceSplitTimesMutation(supabase);
 
   // ラッパー関数（既存のハンドラーとの互換性のため）
-  const createPractice = async (practice: Parameters<typeof createPracticeMutation.mutateAsync>[0]) => {
-    return await createPracticeMutation.mutateAsync(practice)
-  }
-  const updatePractice = async (id: string, updates: Parameters<typeof updatePracticeMutation.mutateAsync>[0]['updates']) => {
-    return await updatePracticeMutation.mutateAsync({ id, updates })
-  }
-  const createPracticeLog = async (log: Parameters<typeof createPracticeLogMutation.mutateAsync>[0]) => {
-    return await createPracticeLogMutation.mutateAsync(log)
-  }
-  const updatePracticeLog = async (id: string, updates: Parameters<typeof updatePracticeLogMutation.mutateAsync>[0]['updates']) => {
-    return await updatePracticeLogMutation.mutateAsync({ id, updates })
-  }
-  const createPracticeTime = async (time: Parameters<typeof createPracticeTimeMutation.mutateAsync>[0]) => {
-    return await createPracticeTimeMutation.mutateAsync(time)
-  }
+  const createPractice = async (
+    practice: Parameters<typeof createPracticeMutation.mutateAsync>[0],
+  ) => {
+    return await createPracticeMutation.mutateAsync(practice);
+  };
+  const updatePractice = async (
+    id: string,
+    updates: Parameters<typeof updatePracticeMutation.mutateAsync>[0]["updates"],
+  ) => {
+    return await updatePracticeMutation.mutateAsync({ id, updates });
+  };
+  const createPracticeLog = async (
+    log: Parameters<typeof createPracticeLogMutation.mutateAsync>[0],
+  ) => {
+    return await createPracticeLogMutation.mutateAsync(log);
+  };
+  const updatePracticeLog = async (
+    id: string,
+    updates: Parameters<typeof updatePracticeLogMutation.mutateAsync>[0]["updates"],
+  ) => {
+    return await updatePracticeLogMutation.mutateAsync({ id, updates });
+  };
+  const createPracticeTime = async (
+    time: Parameters<typeof createPracticeTimeMutation.mutateAsync>[0],
+  ) => {
+    return await createPracticeTimeMutation.mutateAsync(time);
+  };
   const deletePracticeTime = async (id: string) => {
-    return await deletePracticeTimeMutation.mutateAsync(id)
-  }
+    return await deletePracticeTimeMutation.mutateAsync(id);
+  };
   const deletePractice = async (id: string) => {
-    return await deletePracticeMutation.mutateAsync(id)
-  }
+    return await deletePracticeMutation.mutateAsync(id);
+  };
 
   const createRecord = async (record: Parameters<typeof createRecordMutation.mutateAsync>[0]) => {
-    return await createRecordMutation.mutateAsync(record)
-  }
-  const updateRecord = async (id: string, updates: Parameters<typeof updateRecordMutation.mutateAsync>[0]['updates']) => {
-    return await updateRecordMutation.mutateAsync({ id, updates })
-  }
-  const createCompetition = async (competition: Parameters<typeof createCompetitionMutation.mutateAsync>[0]) => {
-    return await createCompetitionMutation.mutateAsync(competition)
-  }
-  const updateCompetition = async (id: string, updates: Parameters<typeof updateCompetitionMutation.mutateAsync>[0]['updates']) => {
-    return await updateCompetitionMutation.mutateAsync({ id, updates })
-  }
+    return await createRecordMutation.mutateAsync(record);
+  };
+  const updateRecord = async (
+    id: string,
+    updates: Parameters<typeof updateRecordMutation.mutateAsync>[0]["updates"],
+  ) => {
+    return await updateRecordMutation.mutateAsync({ id, updates });
+  };
+  const createCompetition = async (
+    competition: Parameters<typeof createCompetitionMutation.mutateAsync>[0],
+  ) => {
+    return await createCompetitionMutation.mutateAsync(competition);
+  };
+  const updateCompetition = async (
+    id: string,
+    updates: Parameters<typeof updateCompetitionMutation.mutateAsync>[0]["updates"],
+  ) => {
+    return await updateCompetitionMutation.mutateAsync({ id, updates });
+  };
   const deleteCompetition = async (id: string) => {
-    return await deleteCompetitionMutation.mutateAsync(id)
-  }
-  const createSplitTimes = async (params: Parameters<typeof createSplitTimesMutation.mutateAsync>[0]) => {
-    return await createSplitTimesMutation.mutateAsync(params)
-  }
-  const replaceSplitTimes = async (params: Parameters<typeof replaceSplitTimesMutation.mutateAsync>[0]) => {
-    return await replaceSplitTimesMutation.mutateAsync(params)
-  }
+    return await deleteCompetitionMutation.mutateAsync(id);
+  };
+  const createSplitTimes = async (
+    params: Parameters<typeof createSplitTimesMutation.mutateAsync>[0],
+  ) => {
+    return await createSplitTimesMutation.mutateAsync(params);
+  };
+  const replaceSplitTimes = async (
+    params: Parameters<typeof replaceSplitTimesMutation.mutateAsync>[0],
+  ) => {
+    return await replaceSplitTimesMutation.mutateAsync(params);
+  };
 
   // ハンドラー関数は useDashboardHandlers カスタムフックから取得
   const {
@@ -224,7 +238,7 @@ export default function DashboardClient({
     handleCompetitionBasicSubmit,
     handleEntrySubmit: originalHandleEntrySubmit,
     handleEntrySkip,
-    handleRecordLogSubmit
+    handleRecordLogSubmit,
   } = useDashboardHandlers({
     supabase,
     user,
@@ -247,7 +261,8 @@ export default function DashboardClient({
     createdPracticeId,
     competitionEditingData,
     createdCompetitionId,
-    setLoading,
+    setPracticeLoading,
+    setCompetitionLoading,
     closePracticeBasicForm,
     closePracticeLogForm,
     closeCompetitionBasicForm,
@@ -257,25 +272,34 @@ export default function DashboardClient({
     setCreatedEntries,
     openEntryLogForm,
     openRecordLogForm,
-    refreshCalendar
-  })
+    refreshCalendar,
+  });
 
   // エントリー完了時に通知を再読み込み
-  const handleEntrySubmit = async (entriesData: Parameters<typeof originalHandleEntrySubmit>[0]) => {
-    await originalHandleEntrySubmit(entriesData)
-    queryClient.invalidateQueries({ queryKey: notificationKeys.all })
-  }
+  const handleEntrySubmit = async (
+    entriesData: Parameters<typeof originalHandleEntrySubmit>[0],
+  ) => {
+    await originalHandleEntrySubmit(entriesData);
+    queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+  };
 
   // エントリー削除時に通知を再読み込み
   const handleDeleteItem = async (
     itemId: string,
-    itemType?: 'practice' | 'team_practice' | 'practice_log' | 'competition' | 'team_competition' | 'entry' | 'record'
+    itemType?:
+      | "practice"
+      | "team_practice"
+      | "practice_log"
+      | "competition"
+      | "team_competition"
+      | "entry"
+      | "record",
   ) => {
-    await originalHandleDeleteItem(itemId, itemType)
-    if (itemType === 'entry') {
-      queryClient.invalidateQueries({ queryKey: notificationKeys.all })
+    await originalHandleDeleteItem(itemId, itemType);
+    if (itemType === "entry") {
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all });
     }
-  }
+  };
 
   // カレンダーイベントハンドラー
   const {
@@ -289,7 +313,7 @@ export default function DashboardClient({
     onDeletePracticeLog,
     onAddRecord,
     onEditRecord,
-    onDeleteRecord
+    onDeleteRecord,
   } = useCalendarHandlers({
     supabase,
     openPracticeBasicForm,
@@ -300,18 +324,15 @@ export default function DashboardClient({
     setSelectedDate,
     setEditingData,
     handleDeleteItem,
-    refreshCalendar
-  })
+    refreshCalendar,
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="w-full">
         {/* チームのお知らせセクション */}
-        <TeamAnnouncementsSection
-          teams={teams}
-          openEntryLogForm={openEntryLogForm}
-        />
-        
+        <TeamAnnouncementsSection teams={teams} openEntryLogForm={openEntryLogForm} />
+
         {/* カレンダーコンポーネント */}
         <CalendarContainer
           refreshKey={calendarRefreshKey}
@@ -349,16 +370,16 @@ export default function DashboardClient({
             goal={expiredGoal}
             onSave={async () => {
               // 保存後、次の期限切れ目標をチェック
-              const goalAPI = new GoalAPI(supabase)
-              const expiredGoals = await goalAPI.getExpiredGoals()
+              const goalAPI = new GoalAPI(supabase);
+              const expiredGoals = await goalAPI.getExpiredGoals();
               if (expiredGoals && expiredGoals.length > 0) {
-                setExpiredGoal(expiredGoals[0])
+                setExpiredGoal(expiredGoals[0]);
               } else {
-                setExpiredGoal(null)
+                setExpiredGoal(null);
                 // 目標がなくなったらマイルストーンをチェック
-                const expiredMilestones = await goalAPI.getExpiredMilestones()
+                const expiredMilestones = await goalAPI.getExpiredMilestones();
                 if (expiredMilestones && expiredMilestones.length > 0) {
-                  setExpiredMilestone(expiredMilestones[0])
+                  setExpiredMilestone(expiredMilestones[0]);
                 }
               }
             }}
@@ -373,18 +394,17 @@ export default function DashboardClient({
             milestone={expiredMilestone}
             onSave={async () => {
               // 保存後、次の期限切れマイルストーンをチェック
-              const goalAPI = new GoalAPI(supabase)
-              const expired = await goalAPI.getExpiredMilestones()
+              const goalAPI = new GoalAPI(supabase);
+              const expired = await goalAPI.getExpiredMilestones();
               if (expired && expired.length > 0) {
-                setExpiredMilestone(expired[0])
+                setExpiredMilestone(expired[0]);
               } else {
-                setExpiredMilestone(null)
+                setExpiredMilestone(null);
               }
             }}
           />
         )}
       </div>
     </div>
-  )
+  );
 }
-

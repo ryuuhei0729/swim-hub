@@ -30,12 +30,12 @@
 
 ### 重複タイプの分類
 
-| タイプ | 説明 | 例 |
-|--------|------|-----|
-| **完全重複** | 90%以上同一コード | ImageUploader |
-| **構造重複** | 同じパターンの異なるデータ型 | Attendanceコンポーネント |
-| **ロジック重複** | 同じ処理が散在 | 時間フォーマット |
-| **バリデーション重複** | 同じ検証ロジック | タイム/日付バリデーション |
+| タイプ                 | 説明                         | 例                        |
+| ---------------------- | ---------------------------- | ------------------------- |
+| **完全重複**           | 90%以上同一コード            | ImageUploader             |
+| **構造重複**           | 同じパターンの異なるデータ型 | Attendanceコンポーネント  |
+| **ロジック重複**       | 同じ処理が散在               | 時間フォーマット          |
+| **バリデーション重複** | 同じ検証ロジック             | タイム/日付バリデーション |
 
 ---
 
@@ -43,12 +43,12 @@
 
 ### 優先度マトリクス
 
-| 対象 | 重複率 | 影響範囲 | 解消難易度 | 優先度 | フェーズ |
-|------|--------|---------|-----------|--------|---------|
-| ImageUploader | 90%+ | 2ファイル | 低 | 🔴 高 | Phase3に統合 |
-| Attendance共通 | 60%+ | 2コンポーネント | 中 | 🔴 高 | Phase2に統合 |
-| 時間フォーマット | 70%+ | 10+ファイル | 低 | 🟡 中 | **Phase5** |
-| バリデーション | 50%+ | 8+ファイル | 低 | 🟡 中 | **Phase5** |
+| 対象             | 重複率 | 影響範囲        | 解消難易度 | 優先度 | フェーズ     |
+| ---------------- | ------ | --------------- | ---------- | ------ | ------------ |
+| ImageUploader    | 90%+   | 2ファイル       | 低         | 🔴 高  | Phase3に統合 |
+| Attendance共通   | 60%+   | 2コンポーネント | 中         | 🔴 高  | Phase2に統合 |
+| 時間フォーマット | 70%+   | 10+ファイル     | 低         | 🟡 中  | **Phase5**   |
+| バリデーション   | 50%+   | 8+ファイル      | 低         | 🟡 中  | **Phase5**   |
 
 ### 詳細な重複箇所
 
@@ -140,11 +140,11 @@ export const CompetitionImageUploader = (props) => (
 
 ### 期待される効果
 
-| 指標 | Before | After | 削減 |
-|------|--------|-------|------|
-| 総行数 | 543行 | ~220行 | 60% |
-| ファイル数 | 2ファイル | 1コア + 2ラッパー | - |
-| 重複コード | 90% | 0% | 100% |
+| 指標       | Before    | After             | 削減 |
+| ---------- | --------- | ----------------- | ---- |
+| 総行数     | 543行     | ~220行            | 60%  |
+| ファイル数 | 2ファイル | 1コア + 2ラッパー | -    |
+| 重複コード | 90%       | 0%                | 100% |
 
 ---
 
@@ -191,23 +191,23 @@ team/attendance/shared/
 
 // RecordForm.tsx 内
 const formatTime = (seconds: number) => {
-  const min = Math.floor(seconds / 60)
-  const sec = Math.floor(seconds % 60)
-  const ms = Math.round((seconds % 1) * 100)
-  return `${min}:${sec.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`
-}
+  const min = Math.floor(seconds / 60);
+  const sec = Math.floor(seconds % 60);
+  const ms = Math.round((seconds % 1) * 100);
+  return `${min}:${sec.toString().padStart(2, "0")}.${ms.toString().padStart(2, "0")}`;
+};
 
 // TeamTimeInputModal.tsx 内
 const formatTimeResult = (time: number) => {
-  const minutes = Math.floor(time / 60)
-  const secs = (time % 60).toFixed(2)
-  return `${minutes}:${secs.padStart(5, '0')}`
-}
+  const minutes = Math.floor(time / 60);
+  const secs = (time % 60).toFixed(2);
+  return `${minutes}:${secs.padStart(5, "0")}`;
+};
 
 // utils/formatters.ts
 export const formatSwimTime = (totalSeconds: number) => {
   // また別の実装...
-}
+};
 ```
 
 ### 解決策: 統合された時間ユーティリティ
@@ -222,14 +222,14 @@ export const formatSwimTime = (totalSeconds: number) => {
  * @example formatTime(65.42) => "1:05.42"
  */
 export const formatTime = (seconds: number): string => {
-  if (seconds < 0 || !Number.isFinite(seconds)) return '-'
+  if (seconds < 0 || !Number.isFinite(seconds)) return "-";
 
-  const min = Math.floor(seconds / 60)
-  const sec = Math.floor(seconds % 60)
-  const ms = Math.round((seconds % 1) * 100)
+  const min = Math.floor(seconds / 60);
+  const sec = Math.floor(seconds % 60);
+  const ms = Math.round((seconds % 1) * 100);
 
-  return `${min}:${sec.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`
-}
+  return `${min}:${sec.toString().padStart(2, "0")}.${ms.toString().padStart(2, "0")}`;
+};
 
 /**
  * 秒数を "SS.ms" 形式にフォーマット（1分未満用）
@@ -238,9 +238,9 @@ export const formatTime = (seconds: number): string => {
  * @example formatShortTime(45.67) => "45.67"
  */
 export const formatShortTime = (seconds: number): string => {
-  if (seconds < 0 || !Number.isFinite(seconds)) return '-'
-  return seconds.toFixed(2)
-}
+  if (seconds < 0 || !Number.isFinite(seconds)) return "-";
+  return seconds.toFixed(2);
+};
 
 /**
  * "MM:SS.ms" または "SS.ms" 形式をパース
@@ -251,21 +251,21 @@ export const formatShortTime = (seconds: number): string => {
  */
 export const parseTime = (timeString: string): number | null => {
   // "MM:SS.ms" 形式
-  const fullMatch = timeString.match(/^(\d+):(\d{2})\.(\d{2})$/)
+  const fullMatch = timeString.match(/^(\d+):(\d{2})\.(\d{2})$/);
   if (fullMatch) {
-    const [, min, sec, ms] = fullMatch
-    return parseInt(min) * 60 + parseInt(sec) + parseInt(ms) / 100
+    const [, min, sec, ms] = fullMatch;
+    return parseInt(min) * 60 + parseInt(sec) + parseInt(ms) / 100;
   }
 
   // "SS.ms" 形式
-  const shortMatch = timeString.match(/^(\d+)\.(\d{2})$/)
+  const shortMatch = timeString.match(/^(\d+)\.(\d{2})$/);
   if (shortMatch) {
-    const [, sec, ms] = shortMatch
-    return parseInt(sec) + parseInt(ms) / 100
+    const [, sec, ms] = shortMatch;
+    return parseInt(sec) + parseInt(ms) / 100;
   }
 
-  return null
-}
+  return null;
+};
 
 /**
  * ラップタイムをフォーマット（ミリ秒入力）
@@ -273,9 +273,9 @@ export const parseTime = (timeString: string): number | null => {
  * @returns フォーマットされた時間文字列
  */
 export const formatLapTime = (milliseconds: number): string => {
-  if (milliseconds < 0 || !Number.isFinite(milliseconds)) return '-'
-  return formatTime(milliseconds / 1000)
-}
+  if (milliseconds < 0 || !Number.isFinite(milliseconds)) return "-";
+  return formatTime(milliseconds / 1000);
+};
 
 /**
  * 時間の差分を計算してフォーマット
@@ -285,10 +285,10 @@ export const formatLapTime = (milliseconds: number): string => {
  * @example formatTimeDiff(65.42, 64.00) => "+1.42"
  */
 export const formatTimeDiff = (time1: number, time2: number): string => {
-  const diff = time1 - time2
-  const sign = diff >= 0 ? '+' : ''
-  return `${sign}${diff.toFixed(2)}`
-}
+  const diff = time1 - time2;
+  const sign = diff >= 0 ? "+" : "";
+  return `${sign}${diff.toFixed(2)}`;
+};
 
 /**
  * ペース計算（100mあたりのタイム）
@@ -297,9 +297,9 @@ export const formatTimeDiff = (time1: number, time2: number): string => {
  * @returns 100mあたりのタイム（秒）
  */
 export const calculatePace = (totalTime: number, distance: number): number => {
-  if (distance <= 0) return 0
-  return (totalTime / distance) * 100
-}
+  if (distance <= 0) return 0;
+  return (totalTime / distance) * 100;
+};
 ```
 
 ### 移行手順
@@ -310,6 +310,7 @@ export const calculatePace = (totalTime: number, distance: number): number => {
    - ユニットテストを作成
 
 2. **既存コードの更新**
+
    ```typescript
    // Before
    const formatTime = (seconds) => { ... } // ローカル定義
@@ -324,15 +325,15 @@ export const calculatePace = (totalTime: number, distance: number): number => {
 
 ### 適用対象ファイル
 
-| ファイル | 対応内容 |
-|---------|---------|
-| `RecordForm.tsx` | ローカル定義 → インポート |
-| `RecordLogForm.tsx` | ローカル定義 → インポート |
-| `PracticeLogForm.tsx` | ローカル定義 → インポート |
+| ファイル                 | 対応内容                  |
+| ------------------------ | ------------------------- |
+| `RecordForm.tsx`         | ローカル定義 → インポート |
+| `RecordLogForm.tsx`      | ローカル定義 → インポート |
+| `PracticeLogForm.tsx`    | ローカル定義 → インポート |
 | `TeamTimeInputModal.tsx` | ローカル定義 → インポート |
-| `TeamEntrySection.tsx` | ローカル定義 → インポート |
-| `utils/formatters.ts` | 重複関数を削除、re-export |
-| `LapTimeDisplay.tsx` | ローカル定義 → インポート |
+| `TeamEntrySection.tsx`   | ローカル定義 → インポート |
+| `utils/formatters.ts`    | 重複関数を削除、re-export |
+| `LapTimeDisplay.tsx`     | ローカル定義 → インポート |
 
 ### 推定工数
 
@@ -353,22 +354,22 @@ export const calculatePace = (totalTime: number, distance: number): number => {
 
 // RecordForm.tsx 内
 const validateTime = (time) => {
-  if (time <= 0) return 'タイムは0より大きい必要があります'
-  if (time > 86400) return 'タイムが無効です'
-  return null
-}
+  if (time <= 0) return "タイムは0より大きい必要があります";
+  if (time > 86400) return "タイムが無効です";
+  return null;
+};
 
 // PracticeLogForm.tsx 内
 const validateDistance = (distance) => {
-  const valid = [25, 50, 100, 200, 400, 800, 1500]
-  if (!valid.includes(distance)) return '無効な距離です'
-  return null
-}
+  const valid = [25, 50, 100, 200, 400, 800, 1500];
+  if (!valid.includes(distance)) return "無効な距離です";
+  return null;
+};
 
 // TeamEntrySection.tsx 内
 const validateEntryTime = (timeStr) => {
   // 別の実装...
-}
+};
 ```
 
 ### 解決策: 統合されたバリデーションライブラリ
@@ -377,142 +378,142 @@ const validateEntryTime = (timeStr) => {
 // apps/shared/utils/validators.ts
 
 export interface ValidationResult {
-  valid: boolean
-  error?: string
+  valid: boolean;
+  error?: string;
 }
 
 // バリデーション成功/失敗のヘルパー
-const success = (): ValidationResult => ({ valid: true })
-const failure = (error: string): ValidationResult => ({ valid: false, error })
+const success = (): ValidationResult => ({ valid: true });
+const failure = (error: string): ValidationResult => ({ valid: false, error });
 
 /**
  * スイムタイムのバリデーション
  */
 export const validateTime = (seconds: number): ValidationResult => {
-  if (typeof seconds !== 'number' || !Number.isFinite(seconds)) {
-    return failure('タイムが無効です')
+  if (typeof seconds !== "number" || !Number.isFinite(seconds)) {
+    return failure("タイムが無効です");
   }
   if (seconds <= 0) {
-    return failure('タイムは0より大きい必要があります')
+    return failure("タイムは0より大きい必要があります");
   }
   if (seconds > 86400) {
-    return failure('タイムは24時間以内である必要があります')
+    return failure("タイムは24時間以内である必要があります");
   }
-  return success()
-}
+  return success();
+};
 
 /**
  * 時間文字列のバリデーション（"MM:SS.ms" または "SS.ms"形式）
  */
 export const validateTimeString = (timeString: string): ValidationResult => {
-  if (!timeString || typeof timeString !== 'string') {
-    return failure('タイムを入力してください')
+  if (!timeString || typeof timeString !== "string") {
+    return failure("タイムを入力してください");
   }
 
-  const fullPattern = /^(\d+):(\d{2})\.(\d{2})$/
-  const shortPattern = /^(\d+)\.(\d{2})$/
+  const fullPattern = /^(\d+):(\d{2})\.(\d{2})$/;
+  const shortPattern = /^(\d+)\.(\d{2})$/;
 
   if (!fullPattern.test(timeString) && !shortPattern.test(timeString)) {
-    return failure('タイムの形式が無効です（例: 1:23.45 または 45.67）')
+    return failure("タイムの形式が無効です（例: 1:23.45 または 45.67）");
   }
 
-  return success()
-}
+  return success();
+};
 
 /**
  * 日付のバリデーション
  */
 export const validateDate = (dateString: string): ValidationResult => {
   if (!dateString) {
-    return failure('日付を入力してください')
+    return failure("日付を入力してください");
   }
 
-  const date = new Date(dateString)
+  const date = new Date(dateString);
   if (isNaN(date.getTime())) {
-    return failure('無効な日付です')
+    return failure("無効な日付です");
   }
 
-  return success()
-}
+  return success();
+};
 
 /**
  * 過去日付のバリデーション（未来日付を禁止）
  */
 export const validatePastDate = (dateString: string): ValidationResult => {
-  const dateResult = validateDate(dateString)
-  if (!dateResult.valid) return dateResult
+  const dateResult = validateDate(dateString);
+  if (!dateResult.valid) return dateResult;
 
-  const date = new Date(dateString)
+  const date = new Date(dateString);
   if (date > new Date()) {
-    return failure('未来の日付は指定できません')
+    return failure("未来の日付は指定できません");
   }
 
-  return success()
-}
+  return success();
+};
 
 /**
  * 距離のバリデーション
  */
 export const validateDistance = (distance: number): ValidationResult => {
-  const validDistances = [25, 50, 100, 200, 400, 800, 1500]
+  const validDistances = [25, 50, 100, 200, 400, 800, 1500];
 
   if (!validDistances.includes(distance)) {
-    return failure(`距離は ${validDistances.join(', ')} mのいずれかである必要があります`)
+    return failure(`距離は ${validDistances.join(", ")} mのいずれかである必要があります`);
   }
 
-  return success()
-}
+  return success();
+};
 
 /**
  * 本数（rep_count）のバリデーション
  */
 export const validateRepCount = (count: number): ValidationResult => {
   if (!Number.isInteger(count) || count < 1) {
-    return failure('本数は1以上の整数である必要があります')
+    return failure("本数は1以上の整数である必要があります");
   }
   if (count > 100) {
-    return failure('本数は100以下である必要があります')
+    return failure("本数は100以下である必要があります");
   }
-  return success()
-}
+  return success();
+};
 
 /**
  * セット数のバリデーション
  */
 export const validateSetCount = (count: number): ValidationResult => {
   if (!Number.isInteger(count) || count < 1) {
-    return failure('セット数は1以上の整数である必要があります')
+    return failure("セット数は1以上の整数である必要があります");
   }
   if (count > 50) {
-    return failure('セット数は50以下である必要があります')
+    return failure("セット数は50以下である必要があります");
   }
-  return success()
-}
+  return success();
+};
 
 /**
  * サークル（秒）のバリデーション
  */
 export const validateCircle = (seconds: number | null): ValidationResult => {
-  if (seconds === null) return success() // オプショナル
+  if (seconds === null) return success(); // オプショナル
 
   if (!Number.isFinite(seconds) || seconds <= 0) {
-    return failure('サークルは0より大きい必要があります')
+    return failure("サークルは0より大きい必要があります");
   }
   if (seconds > 600) {
-    return failure('サークルは10分以内である必要があります')
+    return failure("サークルは10分以内である必要があります");
   }
-  return success()
-}
+  return success();
+};
 
 /**
  * 必須文字列のバリデーション
  */
 export const validateRequired = (value: string, fieldName: string): ValidationResult => {
-  if (!value || value.trim() === '') {
-    return failure(`${fieldName}を入力してください`)
+  if (!value || value.trim() === "") {
+    return failure(`${fieldName}を入力してください`);
   }
-  return success()
-}
+  return success();
+};
 
 /**
  * 最大文字数のバリデーション
@@ -520,35 +521,33 @@ export const validateRequired = (value: string, fieldName: string): ValidationRe
 export const validateMaxLength = (
   value: string,
   maxLength: number,
-  fieldName: string
+  fieldName: string,
 ): ValidationResult => {
   if (value && value.length > maxLength) {
-    return failure(`${fieldName}は${maxLength}文字以内で入力してください`)
+    return failure(`${fieldName}は${maxLength}文字以内で入力してください`);
   }
-  return success()
-}
+  return success();
+};
 
 /**
  * プール種別のバリデーション
  */
 export const validatePoolType = (poolType: string): ValidationResult => {
-  if (poolType !== 'long' && poolType !== 'short') {
-    return failure('プール種別が無効です')
+  if (poolType !== "long" && poolType !== "short") {
+    return failure("プール種別が無効です");
   }
-  return success()
-}
+  return success();
+};
 
 /**
  * 複合バリデーション: 複数のバリデーションを実行
  */
-export const validateAll = (
-  validations: ValidationResult[]
-): ValidationResult => {
+export const validateAll = (validations: ValidationResult[]): ValidationResult => {
   for (const result of validations) {
-    if (!result.valid) return result
+    if (!result.valid) return result;
   }
-  return success()
-}
+  return success();
+};
 ```
 
 ### 移行手順
@@ -559,6 +558,7 @@ export const validateAll = (
    - ユニットテストを作成
 
 2. **既存コードの更新**
+
    ```typescript
    // Before
    const validateTime = (time) => { ... } // ローカル定義
@@ -576,13 +576,13 @@ export const validateAll = (
 
 ### 適用対象ファイル
 
-| ファイル | 対応内容 |
-|---------|---------|
-| `RecordForm.tsx` | ローカルバリデーション → インポート |
-| `RecordLogForm.tsx` | ローカルバリデーション → インポート |
-| `PracticeLogForm.tsx` | ローカルバリデーション → インポート |
-| `EntryLogForm.tsx` | ローカルバリデーション → インポート |
-| `TeamEntrySection.tsx` | ローカルバリデーション → インポート |
+| ファイル                 | 対応内容                            |
+| ------------------------ | ----------------------------------- |
+| `RecordForm.tsx`         | ローカルバリデーション → インポート |
+| `RecordLogForm.tsx`      | ローカルバリデーション → インポート |
+| `PracticeLogForm.tsx`    | ローカルバリデーション → インポート |
+| `EntryLogForm.tsx`       | ローカルバリデーション → インポート |
+| `TeamEntrySection.tsx`   | ローカルバリデーション → インポート |
 | `TeamTimeInputModal.tsx` | ローカルバリデーション → インポート |
 
 ### 推定工数
@@ -593,13 +593,13 @@ export const validateAll = (
 
 ## 📊 進捗サマリー
 
-| ステップ | 対象 | 削減行数 | フェーズ | ステータス |
-|---------|------|---------|---------|-----------|
-| 1 | ImageUploader統合 | ~320行 | Phase3 | ⏳ Phase3で対応 |
-| 2 | Attendance共通化 | ~400行 | Phase2 | ⏳ Phase2で対応 |
-| 3 | 時間フォーマット統合 | ~150行 | **Phase5** | ✅ 完了 |
-| 4 | バリデーション統合 | ~200行 | **Phase5** | ✅ 完了 |
-| **合計** | - | **~1,070行** | - | **Phase5: 100%完了** |
+| ステップ | 対象                 | 削減行数     | フェーズ   | ステータス           |
+| -------- | -------------------- | ------------ | ---------- | -------------------- |
+| 1        | ImageUploader統合    | ~320行       | Phase3     | ⏳ Phase3で対応      |
+| 2        | Attendance共通化     | ~400行       | Phase2     | ⏳ Phase2で対応      |
+| 3        | 時間フォーマット統合 | ~150行       | **Phase5** | ✅ 完了              |
+| 4        | バリデーション統合   | ~200行       | **Phase5** | ✅ 完了              |
+| **合計** | -                    | **~1,070行** | -          | **Phase5: 100%完了** |
 
 ---
 
@@ -694,11 +694,11 @@ export const validateAll = (
 
 ### 定量的効果
 
-| 指標 | Before | After | 改善 |
-|------|--------|-------|------|
-| 重複コード行数 | ~1,070行 | ~0行 | 100%削減 |
-| テスト対象関数 | 散在 | 集約 | テスト効率向上 |
-| バグ修正コスト | 複数箇所 | 1箇所 | 大幅削減 |
+| 指標           | Before   | After | 改善           |
+| -------------- | -------- | ----- | -------------- |
+| 重複コード行数 | ~1,070行 | ~0行  | 100%削減       |
+| テスト対象関数 | 散在     | 集約  | テスト効率向上 |
+| バグ修正コスト | 複数箇所 | 1箇所 | 大幅削減       |
 
 ### 定性的効果
 
@@ -719,6 +719,7 @@ export const validateAll = (
 ### ステップ3: 時間フォーマット関数の統合
 
 **作成・更新ファイル:**
+
 - `apps/shared/utils/time.ts` - 以下の関数を追加:
   - `formatTime()` - 秒数を "M:SS.ms" 形式にフォーマット
   - `formatTimeShort()` - 秒数を短縮形式にフォーマット（0は空文字）
@@ -729,6 +730,7 @@ export const validateAll = (
   - `calculatePace()` - ペース計算
 
 **更新ファイル（インポート置換）:**
+
 - `apps/web/utils/formatters.ts` - 共通ユーティリティからre-export
 - `apps/web/components/forms/TimeInputModal.tsx`
 - `apps/web/components/team/TeamTimeInputModal.tsx`
@@ -740,6 +742,7 @@ export const validateAll = (
 ### ステップ4: バリデーション関数の統合
 
 **作成ファイル:**
+
 - `apps/shared/utils/validators.ts` - 以下の関数を追加:
   - `validateTime()` - スイムタイムのバリデーション
   - `validateTimeString()` - 時間文字列のバリデーション
@@ -758,14 +761,15 @@ export const validateAll = (
   - `validateAll()` - 複合バリデーション
 
 **更新ファイル（インポート置換）:**
+
 - `apps/web/components/team/shared/hooks/useTimeValidation.ts`
 - `apps/web/components/forms/shared/TimeInput/hooks/useTimeInput.ts`
 
 ### 削減効果
 
-| 項目 | 削減行数 |
-|-----|---------|
-| ローカルformatTime定義 | ~80行 |
-| ローカルparseTime定義 | ~70行 |
-| ローカルバリデーション定義 | ~100行 |
-| **合計** | **~250行** |
+| 項目                       | 削減行数   |
+| -------------------------- | ---------- |
+| ローカルformatTime定義     | ~80行      |
+| ローカルparseTime定義      | ~70行      |
+| ローカルバリデーション定義 | ~100行     |
+| **合計**                   | **~250行** |

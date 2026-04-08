@@ -3,7 +3,7 @@
 // Next.js App Router専用の型定義
 // =============================================================================
 
-import { CalendarDay } from '@apps/shared/types/ui'
+import { CalendarDay } from "@apps/shared/types/ui";
 
 // =============================================================================
 // Web専用の追加型定義
@@ -11,7 +11,7 @@ import { CalendarDay } from '@apps/shared/types/ui'
 
 // カレンダーデータ（Web専用）
 export interface CalendarData {
-  year: number
-  month: number
-  days: CalendarDay[]
+  year: number;
+  month: number;
+  days: CalendarDay[];
 }

@@ -1,28 +1,28 @@
-'use client'
+"use client";
 
-import React, { useEffect, useState } from 'react'
-import dynamic from 'next/dynamic'
-import { useSearchParams, useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts'
-import TeamTabs from '@/components/team/TeamTabs'
-import MemberDetailModal from '@/components/team/MemberDetailModal'
+import React, { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useAuth } from "@/contexts";
+import TeamTabs from "@/components/team/TeamTabs";
+import MemberDetailModal from "@/components/team/MemberDetailModal";
 
 // タブコンテンツは一度に1つしか表示されないため遅延読み込み
-const TeamMemberManagement = dynamic(() => import('@/components/team/TeamMemberManagement'))
-const TeamPractices = dynamic(() => import('@/components/team/TeamPractices'))
-const TeamCompetitions = dynamic(() => import('@/components/team/TeamCompetitions'))
-const MyMonthlyAttendance = dynamic(() => import('@/components/team/MyMonthlyAttendance'))
-import type { MemberDetail } from '@/components/team/MemberDetailModal'
-import type { TeamTabType } from '@/components/team/TeamTabs'
-import { TeamMembership, TeamWithMembers } from '@swim-hub/shared/types'
-import { useTeamDetailStore } from '@/stores/form/teamDetailStore'
-import { ClipboardDocumentIcon, CheckIcon } from '@heroicons/react/24/outline'
+const TeamMemberManagement = dynamic(() => import("@/components/team/TeamMemberManagement"));
+const TeamPractices = dynamic(() => import("@/components/team/TeamPractices"));
+const TeamCompetitions = dynamic(() => import("@/components/team/TeamCompetitions"));
+const MyMonthlyAttendance = dynamic(() => import("@/components/team/MyMonthlyAttendance"));
+import type { MemberDetail } from "@/components/team/MemberDetailModal";
+import type { TeamTabType } from "@/components/team/TeamTabs";
+import { TeamMembership, TeamWithMembers } from "@swim-hub/shared/types";
+import { useTeamDetailStore } from "@/stores/form/teamDetailStore";
+import { ClipboardDocumentIcon, CheckIcon } from "@heroicons/react/24/outline";
 
 interface TeamDetailClientProps {
-  teamId: string
-  initialTeam: TeamWithMembers | null
-  initialMembership: TeamMembership | null
-  initialTab?: string
+  teamId: string;
+  initialTeam: TeamWithMembers | null;
+  initialMembership: TeamMembership | null;
+  initialTab?: string;
 }
 
 /**
@@ -32,13 +32,13 @@ export default function TeamDetailClient({
   teamId,
   initialTeam,
   initialMembership,
-  initialTab
+  initialTab,
 }: TeamDetailClientProps) {
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const { user } = useAuth()
-  const [isCopied, setIsCopied] = useState(false)
-  
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const { user } = useAuth();
+  const [isCopied, setIsCopied] = useState(false);
+
   const {
     team,
     loading,
@@ -50,26 +50,26 @@ export default function TeamDetailClient({
     setLoading,
     setActiveTab,
     openMemberModal,
-    closeMemberModal
-  } = useTeamDetailStore()
+    closeMemberModal,
+  } = useTeamDetailStore();
 
   // サーバー側から取得したデータをストアに設定
   useEffect(() => {
-    setTeam(initialTeam)
-    setMembership(initialMembership)
-    setLoading(false)
-  }, [initialTeam, initialMembership, setTeam, setMembership, setLoading])
+    setTeam(initialTeam);
+    setMembership(initialMembership);
+    setLoading(false);
+  }, [initialTeam, initialMembership, setTeam, setMembership, setLoading]);
 
   // URLパラメータからタブを取得
   useEffect(() => {
-    const tabParam = searchParams.get('tab') || initialTab
-    if (tabParam && ['members', 'practices', 'competitions', 'attendance'].includes(tabParam)) {
-      setActiveTab(tabParam as TeamTabType)
+    const tabParam = searchParams.get("tab") || initialTab;
+    if (tabParam && ["members", "practices", "competitions", "attendance"].includes(tabParam)) {
+      setActiveTab(tabParam as TeamTabType);
     }
-  }, [searchParams, initialTab, setActiveTab])
+  }, [searchParams, initialTab, setActiveTab]);
 
   // 表示用のデータ（ストアから取得、なければ初期データを使用）
-  const displayTeam = team || initialTeam
+  const displayTeam = team || initialTeam;
 
   if (loading && !displayTeam) {
     return (
@@ -81,58 +81,56 @@ export default function TeamDetailClient({
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (!displayTeam) {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-lg shadow p-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">
-            チームが見つかりません
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">チームが見つかりません</h1>
           <p className="text-gray-600">
             指定されたチームは存在しないか、アクセス権限がありません。
           </p>
         </div>
       </div>
-    )
+    );
   }
 
   const handleMemberClick = (member: MemberDetail) => {
-    openMemberModal(member)
-  }
+    openMemberModal(member);
+  };
 
   const handleCloseMemberModal = () => {
-    closeMemberModal()
-  }
+    closeMemberModal();
+  };
 
   // アクティブなタブのコンテンツをレンダリング（閲覧専用）
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'members':
+      case "members":
         return (
-          <TeamMemberManagement 
+          <TeamMemberManagement
             teamId={teamId}
-            currentUserId={user?.id || ''}
+            currentUserId={user?.id || ""}
             isCurrentUserAdmin={false}
             onMembershipChange={() => {
               // メンバー情報を再読み込み
-              router.refresh()
+              router.refresh();
             }}
             onMemberClick={handleMemberClick}
           />
-        )
-      case 'practices':
-        return <TeamPractices teamId={teamId} isAdmin={false} />
-      case 'competitions':
-        return <TeamCompetitions teamId={teamId} isAdmin={false} />
-      case 'attendance':
-        return <MyMonthlyAttendance teamId={teamId} />
+        );
+      case "practices":
+        return <TeamPractices teamId={teamId} isAdmin={false} />;
+      case "competitions":
+        return <TeamCompetitions teamId={teamId} isAdmin={false} />;
+      case "attendance":
+        return <MyMonthlyAttendance teamId={teamId} />;
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   return (
     <div>
@@ -144,7 +142,9 @@ export default function TeamDetailClient({
               {displayTeam.name}
             </h1>
             {displayTeam.description && (
-              <p className="text-xs sm:text-sm text-gray-600 wrap-break-word">{displayTeam.description}</p>
+              <p className="text-xs sm:text-sm text-gray-600 wrap-break-word">
+                {displayTeam.description}
+              </p>
             )}
           </div>
           {displayTeam.invite_code && (
@@ -162,9 +162,9 @@ export default function TeamDetailClient({
                   />
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(displayTeam.invite_code || '')
-                      setIsCopied(true)
-                      setTimeout(() => setIsCopied(false), 2000)
+                      navigator.clipboard.writeText(displayTeam.invite_code || "");
+                      setIsCopied(true);
+                      setTimeout(() => setIsCopied(false), 2000);
                     }}
                     className="inline-flex items-center justify-center px-2 py-1 border border-gray-300 rounded-md shadow-sm text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
                     title="コピー"
@@ -184,31 +184,24 @@ export default function TeamDetailClient({
 
       {/* タブナビゲーション */}
       <div className="mt-4">
-        <TeamTabs 
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          isAdmin={false}
-        />
+        <TeamTabs activeTab={activeTab} onTabChange={setActiveTab} isAdmin={false} />
       </div>
 
       {/* タブコンテンツ */}
-      <div className="bg-white rounded-lg shadow">
-        {renderTabContent()}
-      </div>
+      <div className="bg-white rounded-lg shadow">{renderTabContent()}</div>
 
       {/* メンバー詳細モーダル */}
       <MemberDetailModal
         isOpen={isMemberModalOpen}
         onClose={handleCloseMemberModal}
         member={selectedMember}
-        currentUserId={user?.id || ''}
+        currentUserId={user?.id || ""}
         isCurrentUserAdmin={false}
         onMembershipChange={() => {
           // メンバー情報を再読み込み
-          router.refresh()
+          router.refresh();
         }}
       />
     </div>
-  )
+  );
 }
-

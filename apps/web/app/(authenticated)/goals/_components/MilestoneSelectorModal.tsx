@@ -1,17 +1,26 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect, useMemo } from 'react'
-import { format } from 'date-fns'
-import { XMarkIcon } from '@heroicons/react/24/outline'
-import { useAuth } from '@/contexts'
-import { GoalAPI } from '@apps/shared/api/goals'
-import type { Milestone, MilestoneTimeParams, MilestoneRepsTimeParams, MilestoneSetParams } from '@apps/shared/types'
-import { isMilestoneTimeParams, isMilestoneRepsTimeParams, isMilestoneSetParams } from '@apps/shared/types/goals'
+import React, { useState, useEffect, useMemo } from "react";
+import { format } from "date-fns";
+import { XMarkIcon } from "@heroicons/react/24/outline";
+import { useAuth } from "@/contexts";
+import { GoalAPI } from "@apps/shared/api/goals";
+import type {
+  Milestone,
+  MilestoneTimeParams,
+  MilestoneRepsTimeParams,
+  MilestoneSetParams,
+} from "@apps/shared/types";
+import {
+  isMilestoneTimeParams,
+  isMilestoneRepsTimeParams,
+  isMilestoneSetParams,
+} from "@apps/shared/types/goals";
 
 interface MilestoneSelectorModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSelect: (milestone: Milestone) => void
+  isOpen: boolean;
+  onClose: () => void;
+  onSelect: (milestone: Milestone) => void;
 }
 
 /**
@@ -20,75 +29,68 @@ interface MilestoneSelectorModalProps {
 export default function MilestoneSelectorModal({
   isOpen,
   onClose,
-  onSelect
+  onSelect,
 }: MilestoneSelectorModalProps) {
-  const { supabase, user } = useAuth()
-  const [milestones, setMilestones] = useState<Milestone[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const { supabase, user } = useAuth();
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const goalAPI = useMemo(() => new GoalAPI(supabase), [supabase])
+  const goalAPI = useMemo(() => new GoalAPI(supabase), [supabase]);
 
   // アクティブなマイルストーンを取得
   useEffect(() => {
     if (isOpen && user) {
-      setIsLoading(true)
+      setIsLoading(true);
       // アクティブな目標のみ取得
-      goalAPI.getGoals({ status: 'active' })
+      goalAPI
+        .getGoals({ status: "active" })
         .then(async (goals) => {
-          const allMilestones: Milestone[] = []
-          const today = format(new Date(), 'yyyy-MM-dd') // ローカル日付のYYYY-MM-DD形式
+          const allMilestones: Milestone[] = [];
+          const today = format(new Date(), "yyyy-MM-dd"); // ローカル日付のYYYY-MM-DD形式
           for (const goal of goals) {
             const goalMilestones = await goalAPI.getMilestones(goal.id, {
-              status: ['not_started', 'in_progress'], // 未達成・進行中のマイルストーン
-              deadlineAfter: today // 期限切れでないマイルストーンのみ
-            })
-            allMilestones.push(...goalMilestones)
+              status: ["not_started", "in_progress"], // 未達成・進行中のマイルストーン
+              deadlineAfter: today, // 期限切れでないマイルストーンのみ
+            });
+            allMilestones.push(...goalMilestones);
           }
-          setMilestones(allMilestones)
+          setMilestones(allMilestones);
         })
         .catch((error) => {
-          console.error('マイルストーン取得エラー:', error)
-          setMilestones([])
+          console.error("マイルストーン取得エラー:", error);
+          setMilestones([]);
         })
         .finally(() => {
-          setIsLoading(false)
-        })
+          setIsLoading(false);
+        });
     }
-  }, [isOpen, user, supabase, goalAPI])
+  }, [isOpen, user, supabase, goalAPI]);
 
   const formatMilestoneTitle = (milestone: Milestone): string => {
     if (isMilestoneTimeParams(milestone.params)) {
-      const p = milestone.params as MilestoneTimeParams
-      return `${p.distance}m × 1本: ${p.target_time}秒`
+      const p = milestone.params as MilestoneTimeParams;
+      return `${p.distance}m × 1本: ${p.target_time}秒`;
     } else if (isMilestoneRepsTimeParams(milestone.params)) {
-      const p = milestone.params as MilestoneRepsTimeParams
-      return `${p.distance}m × ${p.reps}本 @${p.target_average_time}秒 平均`
+      const p = milestone.params as MilestoneRepsTimeParams;
+      return `${p.distance}m × ${p.reps}本 @${p.target_average_time}秒 平均`;
     } else if (isMilestoneSetParams(milestone.params)) {
-      const p = milestone.params as MilestoneSetParams
-      return `${p.distance}m × ${p.reps}本 × ${p.sets}セット (@${p.circle}秒サークル) 完遂`
+      const p = milestone.params as MilestoneSetParams;
+      return `${p.distance}m × ${p.reps}本 × ${p.sets}セット (@${p.circle}秒サークル) 完遂`;
     }
-    return milestone.title
-  }
+    return milestone.title;
+  };
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-90 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div
-          className="fixed inset-0 bg-black/40 transition-opacity"
-          onClick={onClose}
-        />
+        <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={onClose} />
         <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md">
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                マイルストーンから作成
-              </h3>
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-600"
-              >
+              <h3 className="text-lg font-semibold text-gray-900">マイルストーンから作成</h3>
+              <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
                 <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
@@ -107,15 +109,13 @@ export default function MilestoneSelectorModal({
                   <button
                     key={milestone.id}
                     onClick={() => {
-                      onSelect(milestone)
-                      onClose()
+                      onSelect(milestone);
+                      onClose();
                     }}
                     className="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                   >
                     <p className="font-medium text-gray-900">{milestone.title}</p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {formatMilestoneTitle(milestone)}
-                    </p>
+                    <p className="text-sm text-gray-600 mt-1">{formatMilestoneTitle(milestone)}</p>
                   </button>
                 ))}
               </div>
@@ -124,5 +124,5 @@ export default function MilestoneSelectorModal({
         </div>
       </div>
     </div>
-  )
+  );
 }

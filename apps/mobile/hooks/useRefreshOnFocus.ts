@@ -1,6 +1,6 @@
-import { useCallback, useRef } from 'react'
-import { useFocusEffect } from '@react-navigation/native'
-import { useNetworkStatus } from './useNetworkStatus'
+import { useCallback, useRef } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { useNetworkStatus } from "./useNetworkStatus";
 
 /**
  * タブ遷移時にデータを再取得するフック
@@ -8,18 +8,18 @@ import { useNetworkStatus } from './useNetworkStatus'
  * オフライン時はスキップ
  */
 export function useRefreshOnFocus(refetch: () => void) {
-  const { isConnected } = useNetworkStatus()
-  const isFirstMount = useRef(true)
+  const { isConnected } = useNetworkStatus();
+  const isFirstMount = useRef(true);
 
   useFocusEffect(
     useCallback(() => {
       if (isFirstMount.current) {
-        isFirstMount.current = false
-        return
+        isFirstMount.current = false;
+        return;
       }
       if (isConnected) {
-        refetch()
+        refetch();
       }
-    }, [refetch, isConnected])
-  )
+    }, [refetch, isConnected]),
+  );
 }

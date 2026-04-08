@@ -9,16 +9,16 @@
 
 ## サマリー
 
-| カテゴリ | 重要度 | 評価 |
-|---|---|---|
+| カテゴリ             | 重要度   | 評価            |
+| -------------------- | -------- | --------------- |
 | リストパフォーマンス | CRITICAL | ⚠️ 改善余地あり |
-| アニメーション | HIGH | ✅ 安全 |
-| ナビゲーション | HIGH | ✅ 良好 |
-| UIパターン | HIGH | ✅ 優秀 |
-| ステート管理 | MEDIUM | ⚠️ 改善余地あり |
-| レンダリング | MEDIUM | ✅ 優秀 |
-| モノレポ | MEDIUM | ✅ 完璧 |
-| 設定 | LOW | ✅ 良好 |
+| アニメーション       | HIGH     | ✅ 安全         |
+| ナビゲーション       | HIGH     | ✅ 良好         |
+| UIパターン           | HIGH     | ✅ 優秀         |
+| ステート管理         | MEDIUM   | ⚠️ 改善余地あり |
+| レンダリング         | MEDIUM   | ✅ 優秀         |
+| モノレポ             | MEDIUM   | ✅ 完璧         |
+| 設定                 | LOW      | ✅ 良好         |
 
 ---
 
@@ -31,6 +31,7 @@
 `FlatList`を5箇所で使用しており、`@shopify/flash-list`が未導入。
 
 **該当箇所**:
+
 - `screens/RecordsScreen.tsx` (line 258)
 - `screens/PracticesScreen.tsx` (line 243)
 - `screens/TeamsScreen.tsx` (line 149)
@@ -38,18 +39,19 @@
 - `components/teams/TeamMemberList.tsx` (line 161)
 
 **修正方法**:
+
 ```bash
 pnpm exec expo install @shopify/flash-list
 ```
 
 ```tsx
 // Before
-import { FlatList } from 'react-native'
-<FlatList data={records} renderItem={renderItem} />
+import { FlatList } from "react-native";
+<FlatList data={records} renderItem={renderItem} />;
 
 // After
-import { FlashList } from '@shopify/flash-list'
-<FlashList data={records} renderItem={renderItem} estimatedItemSize={80} />
+import { FlashList } from "@shopify/flash-list";
+<FlashList data={records} renderItem={renderItem} estimatedItemSize={80} />;
 ```
 
 ### リストアイテムのmemo化
@@ -57,11 +59,13 @@ import { FlashList } from '@shopify/flash-list'
 **状態**: 概ね良好（2件未対応）
 
 memo済み:
+
 - `components/records/RecordItem.tsx` - `React.memo()` + カスタム比較関数
 - `components/practices/PracticeItem.tsx` - `React.memo()` + カスタム比較関数
 - `components/teams/TeamItem.tsx` - `React.memo()` + カスタム比較関数
 
 **未対応**:
+
 - `components/records/SplitTimeItem.tsx` (line 15)
 - `components/practices/PracticeLogItem.tsx` (line 14)
 
@@ -107,7 +111,7 @@ memo済み:
 
 ```tsx
 // AuthStack.tsx, MainStack.tsx
-import { createNativeStackNavigator } from '@react-navigation/native-stack'
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 ```
 
 `@react-navigation/native-stack` v7.11.0を正しく使用。
@@ -119,9 +123,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack'
 パッケージ（v4.16.0）はインストール済みだが、`enableScreens()`の明示的呼び出しが見つからない。
 
 **修正方法** (`App.tsx`に追加):
+
 ```tsx
-import { enableScreens } from 'react-native-screens'
-enableScreens()
+import { enableScreens } from "react-native-screens";
+enableScreens();
 ```
 
 ### ボトムタブ
@@ -141,22 +146,24 @@ enableScreens()
 React Native標準の`Image`を使用。`expo-image`はキャッシュ管理、プレースホルダー、トランジション等で優位。
 
 **該当箇所**:
+
 - `screens/WelcomeScreen.tsx` (line 2)
 - `components/profile/AvatarUpload.tsx` (line 2)
 - `components/profile/ProfileDisplay.tsx` (line 2)
 - `components/shared/ImageUploader.tsx` (line 5)
 
 **修正方法**:
+
 ```bash
 pnpm exec expo install expo-image
 ```
 
 ```tsx
 // Before
-import { Image } from 'react-native'
+import { Image } from "react-native";
 
 // After
-import { Image } from 'expo-image'
+import { Image } from "expo-image";
 ```
 
 ### Pressable vs TouchableOpacity
@@ -193,25 +200,27 @@ import { Image } from 'expo-image'
 全ストアでストア全体をデストラクチャリングしており、不要な再レンダリングが発生する可能性がある。
 
 **該当箇所**:
+
 - `screens/RecordFormScreen.tsx` (lines 48-70) - 13以上のフィールドをデストラクチャリング
 - `screens/EntryLogFormScreen.tsx` (line 58)
 - 全ストア使用箇所
 
 **修正方法**:
+
 ```tsx
 // Before（ストア全体を取得 → 任意のフィールド変更で再レンダリング）
-const { styleId, time, note } = useRecordStore()
+const { styleId, time, note } = useRecordStore();
 
 // After（必要なフィールドのみ購読）
-const styleId = useRecordStore(state => state.styleId)
-const time = useRecordStore(state => state.time)
-const note = useRecordStore(state => state.note)
+const styleId = useRecordStore((state) => state.styleId);
+const time = useRecordStore((state) => state.time);
+const note = useRecordStore((state) => state.note);
 
 // または useShallow で複数フィールドを一括取得
-import { useShallow } from 'zustand/react/shallow'
+import { useShallow } from "zustand/react/shallow";
 const { styleId, time, note } = useRecordStore(
-  useShallow(state => ({ styleId: state.styleId, time: state.time, note: state.note }))
-)
+  useShallow((state) => ({ styleId: state.styleId, time: state.time, note: state.note })),
+);
 ```
 
 ### ローディングフォールバック
@@ -244,8 +253,12 @@ const { styleId, time, note } = useRecordStore(
 
 ```tsx
 // 正しいパターン（プロジェクト内で統一）
-{entries.length > 0 && <Component />}
-{announcements.length > 0 ? <List /> : <Empty />}
+{
+  entries.length > 0 && <Component />;
+}
+{
+  announcements.length > 0 ? <List /> : <Empty />;
+}
 ```
 
 ---
@@ -262,12 +275,12 @@ const { styleId, time, note } = useRecordStore(
 
 **状態**: 完璧
 
-| パッケージ | apps/mobile | apps/shared |
-|---|---|---|
-| `@tanstack/react-query` | ^5.90.10 | ^5.90.10 |
-| `@supabase/supabase-js` | ^2.80.0 | ^2.80.0 |
-| `date-fns` | ^4.1.0 | ^4.1.0 |
-| `react` | 19.1.0 | 19.1.0 (peer) |
+| パッケージ              | apps/mobile | apps/shared   |
+| ----------------------- | ----------- | ------------- |
+| `@tanstack/react-query` | ^5.90.10    | ^5.90.10      |
+| `@supabase/supabase-js` | ^2.80.0     | ^2.80.0       |
+| `date-fns`              | ^4.1.0      | ^4.1.0        |
+| `react`                 | 19.1.0      | 19.1.0 (peer) |
 
 ---
 
@@ -291,25 +304,25 @@ const { styleId, time, note } = useRecordStore(
 
 ### HIGH（パフォーマンスに直結）
 
-| # | タスク | 影響範囲 |
-|---|---|---|
-| 1 | `@shopify/flash-list`を導入し、FlatListを置き換え | 5ファイル |
-| 2 | Zustandセレクタパターンに移行 | 全ストア使用箇所 |
-| 3 | `expo-image`を導入し、RN標準Imageを置き換え | 4ファイル |
+| #   | タスク                                            | 影響範囲         |
+| --- | ------------------------------------------------- | ---------------- |
+| 1   | `@shopify/flash-list`を導入し、FlatListを置き換え | 5ファイル        |
+| 2   | Zustandセレクタパターンに移行                     | 全ストア使用箇所 |
+| 3   | `expo-image`を導入し、RN標準Imageを置き換え       | 4ファイル        |
 
 ### MEDIUM
 
-| # | タスク | 影響範囲 |
-|---|---|---|
-| 4 | `SplitTimeItem`と`PracticeLogItem`をReact.memo()でラップ | 2ファイル |
-| 5 | `enableScreens()`をApp.tsxに追加 | 1ファイル |
+| #   | タスク                                                   | 影響範囲  |
+| --- | -------------------------------------------------------- | --------- |
+| 4   | `SplitTimeItem`と`PracticeLogItem`をReact.memo()でラップ | 2ファイル |
+| 5   | `enableScreens()`をApp.tsxに追加                         | 1ファイル |
 
 ### LOW（将来の拡張時に検討）
 
-| # | タスク | 条件 |
-|---|---|---|
-| 6 | `react-native-reanimated`の導入 | カスタムアニメーション追加時 |
-| 7 | ネイティブボトムタブへの移行 | タブ切替のパフォーマンス問題発生時 |
+| #   | タスク                          | 条件                               |
+| --- | ------------------------------- | ---------------------------------- |
+| 6   | `react-native-reanimated`の導入 | カスタムアニメーション追加時       |
+| 7   | ネイティブボトムタブへの移行    | タブ切替のパフォーマンス問題発生時 |
 
 ---
 

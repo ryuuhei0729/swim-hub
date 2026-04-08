@@ -7,5 +7,5 @@ export {
   getRandomColor,
   normalizeColor,
   isValidColor,
-} from './useTagManager'
-export { default } from './useTagManager'
+} from "./useTagManager";
+export { default } from "./useTagManager";

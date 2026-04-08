@@ -19,24 +19,24 @@
 
 ### 現在の問題点
 
-| 問題領域 | 現状 | 問題点 |
-|---------|------|--------|
-| **型定義** | 3箇所に分散 | 重複・保守性低下 |
-| **コンポーネント** | 分類基準不明確 | 可読性・発見性低下 |
-| **フック** | 共通・専用の境界曖昧 | 再利用性低下 |
-| **テスト** | 配置不統一 | テスト実行・管理の複雑化 |
-| **設定** | 重複・分散 | メンテナンスコスト増加 |
+| 問題領域           | 現状                 | 問題点                   |
+| ------------------ | -------------------- | ------------------------ |
+| **型定義**         | 3箇所に分散          | 重複・保守性低下         |
+| **コンポーネント** | 分類基準不明確       | 可読性・発見性低下       |
+| **フック**         | 共通・専用の境界曖昧 | 再利用性低下             |
+| **テスト**         | 配置不統一           | テスト実行・管理の複雑化 |
+| **設定**           | 重複・分散           | メンテナンスコスト増加   |
 
 ### 期待されるメリット
 
-| 項目 | Before | After | 改善率 |
-|------|--------|-------|--------|
-| **型定義の重複** | 3箇所 | 1箇所 | -67% |
-| **コンポーネント分類** | 曖昧 | 明確 | 100%改善 |
-| **フックの分散** | 2箇所 | 1箇所 | -50% |
-| **テスト配置** | 不統一 | 統一 | 100%改善 |
-| **設定重複** | 高 | 低 | -70% |
-| **開発効率** | 中 | 高 | +40% |
+| 項目                   | Before | After | 改善率   |
+| ---------------------- | ------ | ----- | -------- |
+| **型定義の重複**       | 3箇所  | 1箇所 | -67%     |
+| **コンポーネント分類** | 曖昧   | 明確  | 100%改善 |
+| **フックの分散**       | 2箇所  | 1箇所 | -50%     |
+| **テスト配置**         | 不統一 | 統一  | 100%改善 |
+| **設定重複**           | 高     | 低    | -70%     |
+| **開発効率**           | 中     | 高    | +40%     |
 
 ---
 
@@ -96,6 +96,7 @@ swim-hub/
 ```
 
 **問題点**:
+
 - 同じ型が複数箇所で定義されている
 - `apps/web/types/index.ts`が巨大（496行）
 - 型定義の責任範囲が不明確
@@ -107,12 +108,13 @@ swim-hub/
 ```
 ❌ 現在の構造
 ├── components/forms/ - フォーム関連
-├── components/team/ - チーム関連  
+├── components/team/ - チーム関連
 ├── components/members/ - メンバー関連
 └── components/layout/ - レイアウト関連
 ```
 
 **問題点**:
+
 - `components/members/` と `components/team/` の境界が曖昧
 - フォームコンポーネントが機能別に分散していない
 
@@ -128,6 +130,7 @@ swim-hub/
 ```
 
 **問題点**:
+
 - 共通フックとWeb専用フックの境界が不明確
 - `useTeamAnnouncements`がWeb側に残っている
 
@@ -143,6 +146,7 @@ swim-hub/
 ```
 
 **問題点**:
+
 - 単体テストとE2Eテストの配置基準が不明確
 - テストファイルが機能別に分散
 
@@ -160,6 +164,7 @@ swim-hub/
 ```
 
 **問題点**:
+
 - 設定ファイルの責任範囲が不明確
 - 重複する設定項目がある
 
@@ -221,15 +226,18 @@ swim-hub/
 ### 設計原則
 
 #### 1. MECE原則の適用
+
 - **Mutually Exclusive**: 各ディレクトリの責任範囲が重複しない
 - **Collectively Exhaustive**: すべてのファイルが適切な場所に配置される
 
 #### 2. 責任分離の原則
+
 - **共通パッケージ**: 複数のアプリで使用される機能
 - **アプリ専用**: 特定のアプリでのみ使用される機能
 - **設定**: 開発・ビルド・テスト設定の分離
 
 #### 3. スケーラビリティの考慮
+
 - 新しいアプリ（Mobile）の追加に対応
 - 共通パッケージの拡張に対応
 - 開発ツールの追加に対応
@@ -244,11 +252,13 @@ swim-hub/
 **目標**: 型定義の重複削除・責任分離
 
 #### Day 1: 型定義の分析・整理 ✅
+
 - [x] 現在の型定義の重複箇所を特定
 - [x] 共通型とWeb専用型の分類
 - [x] 型定義の責任範囲を明確化
 
 #### Day 2: 型定義の移行・統合 ✅
+
 - [x] 共通型を`packages/shared/types/`に集約
 - [x] Web専用型を`apps/web/types/`に整理
 - [x] 重複型定義の削除
@@ -260,12 +270,14 @@ swim-hub/
 **目標**: 機能別コンポーネント分類・責任分離
 
 #### Day 3-4: コンポーネントの分類・移行 ✅
+
 - [x] 機能別コンポーネントを`features/`配下に集約
 - [x] 汎用コンポーネントを`ui/`配下に集約
 - [x] フォームコンポーネントの機能別分散
 - [x] インデックスファイルの更新
 
 #### Day 5: コンポーネントの整理・最適化 ✅
+
 - [x] 不要なコンポーネントの削除
 - [x] コンポーネントの命名規則統一
 - [x] ドキュメントの更新
@@ -276,6 +288,7 @@ swim-hub/
 **目標**: フックの責任分離・共通化
 
 #### Day 6: フックの移行・整理 ✅
+
 - [x] `useTeamAnnouncements`を`packages/shared/hooks/`に移行
 - [x] Web専用フックのみ`apps/web/hooks/`に残す
 - [x] フックの命名規則統一
@@ -287,6 +300,7 @@ swim-hub/
 **目標**: テストファイルの配置統一
 
 #### Day 7: テストファイルの移行・整理 ✅
+
 - [x] 単体テストを`__tests__/`配下に集約
 - [x] E2Eテストの配置統一
 - [x] テスト設定の統合
@@ -298,6 +312,7 @@ swim-hub/
 **目標**: 設定ファイルの重複削除・統合
 
 #### Day 8: 設定ファイルの統合 ✅
+
 - [x] 共通設定を`tools/`配下に集約
 - [x] 各パッケージで共通設定を継承
 - [x] 重複設定の削除
@@ -312,27 +327,27 @@ swim-hub/
 ```typescript
 // packages/shared/types/database.ts
 export interface UserProfile {
-  id: string
-  name: string
+  id: string;
+  name: string;
   // ... 他のフィールド
 }
 
 // packages/shared/types/api.ts
 export interface ApiResponse<T> {
-  data: T
-  error: string | null
+  data: T;
+  error: string | null;
 }
 
 // packages/shared/types/ui.ts
 export interface ButtonProps {
-  variant: 'primary' | 'secondary'
-  size: 'sm' | 'md' | 'lg'
+  variant: "primary" | "secondary";
+  size: "sm" | "md" | "lg";
 }
 
 // packages/shared/types/index.ts
-export * from './database'
-export * from './api'
-export * from './ui'
+export * from "./database";
+export * from "./api";
+export * from "./ui";
 ```
 
 ### 2. コンポーネント構造の例
@@ -383,6 +398,7 @@ export function useLocalStorage<T>(key: string) {
 ## ✅ チェックリスト
 
 ### Phase 1: 型定義統合
+
 - [ ] 型定義の重複箇所特定
 - [ ] 共通型の集約
 - [ ] Web専用型の整理
@@ -390,6 +406,7 @@ export function useLocalStorage<T>(key: string) {
 - [ ] エクスポートの統合
 
 ### Phase 2: コンポーネント再編
+
 - [ ] 機能別コンポーネントの分類
 - [ ] 汎用コンポーネントの整理
 - [ ] フォームコンポーネントの分散
@@ -397,24 +414,28 @@ export function useLocalStorage<T>(key: string) {
 - [ ] 不要コンポーネントの削除
 
 ### Phase 3: フック整理
+
 - [ ] 共通フックの移行
 - [ ] Web専用フックの整理
 - [ ] フックの命名規則統一
 - [ ] インデックスファイルの更新
 
 ### Phase 4: テスト統一
+
 - [ ] 単体テストの集約
 - [ ] E2Eテストの配置統一
 - [ ] テスト設定の統合
 - [ ] テスト実行スクリプトの更新
 
 ### Phase 5: 設定統合
+
 - [ ] 共通設定の集約
 - [ ] 設定ファイルの継承
 - [ ] 重複設定の削除
 - [ ] 設定ファイルの最適化
 
 ### 最終確認 ✅
+
 - [x] 全機能の動作確認
 - [x] テスト実行
 - [x] ドキュメント更新
@@ -429,6 +450,7 @@ export function useLocalStorage<T>(key: string) {
 **リスク**: 型定義の移行中に型エラーが発生
 
 **対策**:
+
 - 段階的な移行（1ファイルずつ）
 - 型チェックの自動化
 - 移行前後の動作確認
@@ -438,6 +460,7 @@ export function useLocalStorage<T>(key: string) {
 **リスク**: コンポーネントの移行中に依存関係が破綻
 
 **対策**:
+
 - 依存関係の事前分析
 - 段階的な移行
 - インポートパスの一括置換
@@ -447,6 +470,7 @@ export function useLocalStorage<T>(key: string) {
 **リスク**: テストファイルの移行中にテストが失敗
 
 **対策**:
+
 - テスト設定の事前確認
 - 段階的な移行
 - テスト実行の自動化
@@ -456,6 +480,7 @@ export function useLocalStorage<T>(key: string) {
 **リスク**: 設定ファイルの統合中にビルドエラーが発生
 
 **対策**:
+
 - 設定ファイルの事前分析
 - 段階的な統合
 - ビルドテストの自動化
@@ -466,13 +491,13 @@ export function useLocalStorage<T>(key: string) {
 
 ### 定量的指標
 
-| 指標 | 現在 | 目標 | 実際 | 達成率 |
-|------|------|------|------|--------|
-| **型定義の重複** | 3箇所 | 1箇所 | 1箇所 | 100% ✅ |
-| **コンポーネント分類** | 曖昧 | 明確 | 明確 | 100% ✅ |
-| **フックの分散** | 2箇所 | 1箇所 | 1箇所 | 100% ✅ |
-| **テスト配置** | 不統一 | 統一 | 統一 | 100% ✅ |
-| **設定重複** | 高 | 低 | 低 | 100% ✅ |
+| 指標                   | 現在   | 目標  | 実際  | 達成率  |
+| ---------------------- | ------ | ----- | ----- | ------- |
+| **型定義の重複**       | 3箇所  | 1箇所 | 1箇所 | 100% ✅ |
+| **コンポーネント分類** | 曖昧   | 明確  | 明確  | 100% ✅ |
+| **フックの分散**       | 2箇所  | 1箇所 | 1箇所 | 100% ✅ |
+| **テスト配置**         | 不統一 | 統一  | 統一  | 100% ✅ |
+| **設定重複**           | 高     | 低    | 低    | 100% ✅ |
 
 ### 定性的指標
 
@@ -487,19 +512,23 @@ export function useLocalStorage<T>(key: string) {
 ## 📚 参考資料
 
 ### モノレポ設計パターン
+
 - [Nx Monorepo](https://nx.dev/)
 - [Lerna](https://lerna.js.org/)
 - [Turborepo](https://turbo.build/)
 
 ### TypeScript型定義
+
 - [TypeScript Handbook](https://www.typescriptlang.org/docs/)
 - [TypeScript Best Practices](https://typescript-eslint.io/rules/)
 
 ### React コンポーネント設計
+
 - [React Component Patterns](https://reactpatterns.com/)
 - [Atomic Design](https://bradfrost.com/blog/post/atomic-web-design/)
 
 ### テスト設計
+
 - [Testing Library](https://testing-library.com/)
 - [Playwright](https://playwright.dev/)
 - [Vitest](https://vitest.dev/)

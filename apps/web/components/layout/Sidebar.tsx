@@ -1,231 +1,230 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import type { ComponentType, SVGProps } from 'react'
-import Link from 'next/link'
-import Image from 'next/image'
-import { usePathname, useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts'
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/contexts";
 import {
   HomeIcon,
   ChartBarIcon,
   TrophyIcon,
-  XMarkIcon,
   ChevronRightIcon,
   UsersIcon,
   UserIcon,
   ShieldCheckIcon,
   FlagIcon,
-  ArrowTopRightOnSquareIcon
-} from '@heroicons/react/24/outline'
+  ArrowTopRightOnSquareIcon,
+} from "@heroicons/react/24/outline";
 
 interface SidebarProps {
-  isOpen: boolean
-  onClose: () => void
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 interface NavigationItem {
-  name: string
-  href: string
-  icon: ComponentType<SVGProps<SVGSVGElement>>
-  badge?: number
-  description?: string
+  name: string;
+  href: string;
+  icon: React.ElementType;
+  badge?: number;
+  description?: string;
 }
 
 const baseNavigation: NavigationItem[] = [
-  { 
-    name: 'ダッシュボード', 
-    href: '/dashboard', 
-    icon: HomeIcon, 
-    description: 'お知らせとスケジュール',
+  {
+    name: "ダッシュボード",
+    href: "/dashboard",
+    icon: HomeIcon,
+    description: "お知らせとスケジュール",
   },
-  { 
-    name: '練習履歴', 
-    href: '/practice', 
+  {
+    name: "練習履歴",
+    href: "/practice",
     icon: ChartBarIcon,
-    description: '練習内容とタイム記録',
+    description: "練習内容とタイム記録",
   },
-  { 
-    name: '大会履歴', 
-    href: '/competition', 
+  {
+    name: "大会履歴",
+    href: "/competition",
     icon: TrophyIcon,
-    description: '大会結果とタイム記録',
+    description: "大会結果とタイム記録",
   },
-  { 
-    name: '目標管理', 
-    href: '/goals', 
+  {
+    name: "目標管理",
+    href: "/goals",
     icon: FlagIcon,
-    description: '目標設定と達成状況',
+    description: "目標設定と達成状況",
   },
-  { 
-    name: 'マイページ', 
-    href: '/mypage', 
+  {
+    name: "マイページ",
+    href: "/mypage",
     icon: UserIcon,
-    description: 'プロフィールとベストタイム',
+    description: "プロフィールとベストタイム",
   },
-  { 
-    name: 'チーム', 
-    href: '/teams', 
+  {
+    name: "チーム",
+    href: "/teams",
     icon: UsersIcon,
-    description: 'チームの参加・管理',
+    description: "チームの参加・管理",
   },
-]
+];
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const pathname = usePathname()
-  const router = useRouter()
-  const { user, supabase } = useAuth()
-  const [singleTeamId, setSingleTeamId] = useState<string | null>(null)
-  const [adminTeamIds, setAdminTeamIds] = useState<string[]>([])
-  const [singleAdminTeamId, setSingleAdminTeamId] = useState<string | null>(null)
-  
+  const pathname = usePathname();
+  const router = useRouter();
+  const { user, supabase, signOut } = useAuth();
+  const [singleTeamId, setSingleTeamId] = useState<string | null>(null);
+  const [adminTeamIds, setAdminTeamIds] = useState<string[]>([]);
+  const [singleAdminTeamId, setSingleAdminTeamId] = useState<string | null>(null);
+
   // ユーザーのチーム一覧を取得してチーム数をチェック
   useEffect(() => {
-    if (!user || !supabase) return
-    
+    if (!user || !supabase) return;
+
     const loadTeams = async () => {
       try {
         const { data, error } = await supabase
-          .from('team_memberships')
-          .select('team_id, is_active')
-          .eq('user_id', user.id)
-          .eq('is_active', true)
-        
-        if (error) throw error
-        
+          .from("team_memberships")
+          .select("team_id, is_active")
+          .eq("user_id", user.id)
+          .eq("is_active", true);
+
+        if (error) throw error;
+
         // チームが1つだけの場合はIDを保存
         if (data && data.length === 1) {
-          setSingleTeamId(data[0].team_id)
+          setSingleTeamId(data[0].team_id);
         } else {
-          setSingleTeamId(null)
+          setSingleTeamId(null);
         }
       } catch (error) {
-        console.error('チーム情報の取得に失敗:', error)
-        setSingleTeamId(null)
+        console.error("チーム情報の取得に失敗:", error);
+        setSingleTeamId(null);
       }
-    }
-    
+    };
+
     // 管理者権限を持つチーム一覧を取得
     const loadAdminTeams = async () => {
       try {
         const { data, error } = await supabase
-          .from('team_memberships')
-          .select('team_id')
-          .eq('user_id', user.id)
-          .eq('role', 'admin')
-          .eq('is_active', true)
-        
-        if (error) throw error
-        
-        const adminIds = data?.map(m => m.team_id) || []
-        setAdminTeamIds(adminIds)
-        
+          .from("team_memberships")
+          .select("team_id")
+          .eq("user_id", user.id)
+          .eq("role", "admin")
+          .eq("is_active", true);
+
+        if (error) throw error;
+
+        const adminIds = data?.map((m) => m.team_id) || [];
+        setAdminTeamIds(adminIds);
+
         // 管理者権限のチームが1つだけの場合はIDを保存
         if (adminIds.length === 1) {
-          setSingleAdminTeamId(adminIds[0])
+          setSingleAdminTeamId(adminIds[0]);
         } else {
-          setSingleAdminTeamId(null)
+          setSingleAdminTeamId(null);
         }
       } catch (error) {
-        console.error('管理者チーム情報の取得に失敗:', error)
-        setAdminTeamIds([])
-        setSingleAdminTeamId(null)
+        console.error("管理者チーム情報の取得に失敗:", error);
+        setAdminTeamIds([]);
+        setSingleAdminTeamId(null);
       }
-    }
-    
-    loadTeams()
-    loadAdminTeams()
+    };
+
+    loadTeams();
+    loadAdminTeams();
 
     // リアルタイム購読: チームメンバーシップの変更を監視
     const channel = supabase
-      .channel('sidebar-team-memberships')
+      .channel("sidebar-team-memberships")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'team_memberships',
-          filter: `user_id=eq.${user.id}`
+          event: "*",
+          schema: "public",
+          table: "team_memberships",
+          filter: `user_id=eq.${user.id}`,
         },
         () => {
           // チームメンバーシップが変更されたら再取得
-          loadTeams()
-          loadAdminTeams()
-        }
+          loadTeams();
+          loadAdminTeams();
+        },
       )
-      .subscribe()
+      .subscribe();
 
     return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [user, supabase])
+      supabase.removeChannel(channel);
+    };
+  }, [user, supabase]);
 
   return (
     <>
       {/* モバイル用オーバーレイ */}
       {isOpen && (
-        <div 
+        <div
           className="fixed top-16 inset-x-0 bottom-0 z-40 bg-black/40 lg:hidden"
           onClick={onClose}
         />
       )}
 
       {/* サイドバー */}
-      <div className={`
-        fixed top-16 bottom-0 left-0 z-50 w-72 bg-white shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:fixed lg:w-64 flex flex-col
-        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}>
-        {/* モバイル用ヘッダー */}
-        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 lg:hidden">
+      <div
+        className={`
+        fixed top-16 bottom-auto lg:bottom-0 right-0 lg:right-auto lg:left-0 z-50 w-44 bg-white shadow-xl rounded-bl-xl lg:rounded-none transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:fixed lg:w-64 flex flex-col
+        ${isOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"}
+      `}
+      >
+        {/* モバイル用ヘッダー（デスクトップのみ表示） */}
+        <div className="hidden lg:flex items-center justify-between h-16 px-4 border-b border-gray-200">
           <div className="flex items-center">
             <div className="w-8 h-8 flex items-center justify-center mr-1">
-              <Image src="/favicon.png" alt="SwimHub" width={32} height={32} className="w-full h-full object-contain" />
+              <Image
+                src="/favicon.png"
+                alt="SwimHub"
+                width={32}
+                height={32}
+                className="w-full h-full object-contain"
+              />
             </div>
             <span className="text-lg font-semibold text-gray-900">メニュー</span>
           </div>
-          <button
-            type="button"
-            className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors duration-200"
-            onClick={onClose}
-          >
-            <span className="sr-only">サイドバーを閉じる</span>
-            <XMarkIcon className="h-6 w-6" aria-hidden="true" />
-          </button>
         </div>
-
 
         {/* ナビゲーション */}
         <nav className="mt-6 px-3 pb-6">
           <div className="space-y-2">
             {baseNavigation.map((item) => {
               // チームの場合は、チームが1つだけの場合は直接チームページへ
-              const href = (item.name === 'チーム' && singleTeamId) 
-                ? `/teams/${singleTeamId}` 
-                : item.href
-              
+              const href =
+                item.name === "チーム" && singleTeamId ? `/teams/${singleTeamId}` : item.href;
+
               // アクティブ判定
-              let isActive = pathname === item.href
-              
+              let isActive = pathname === item.href;
+
               // チームの場合は特別処理
-              if (item.name === 'チーム') {
+              if (item.name === "チーム") {
                 if (singleTeamId) {
                   // チームが1つの場合: チーム詳細ページ（/teams/[teamId]）にいる時はアクティブ
-                  isActive = pathname.startsWith(`/teams/${singleTeamId}`) && !pathname.startsWith('/teams-admin')
+                  isActive =
+                    pathname.startsWith(`/teams/${singleTeamId}`) &&
+                    !pathname.startsWith("/teams-admin");
                 } else {
                   // チームが0個または2つ以上の場合: /teamsページにいる時はアクティブ
-                  isActive = pathname === '/teams'
+                  isActive = pathname === "/teams";
                 }
               }
-              
+
               return (
                 <div key={item.name} className="group">
                   <Link
                     href={href}
                     className={`
-                      group flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 relative
-                      ${isActive
-                        ? 'bg-blue-50 text-blue-700 shadow-sm border-l-4 border-blue-500'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50 hover:shadow-sm'
+                      group flex items-center px-3 py-2 lg:py-3 text-xs lg:text-sm font-medium rounded-lg transition-all duration-200 relative
+                      ${
+                        isActive
+                          ? "bg-blue-50 text-blue-700 shadow-sm border-l-4 border-blue-500"
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 hover:shadow-sm"
                       }
                     `}
                     onClick={onClose}
@@ -233,8 +232,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   >
                     <item.icon
                       className={`
-                        mr-3 h-5 w-5 shrink-0 transition-colors duration-200
-                        ${isActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'}
+                        hidden lg:block mr-3 h-5 w-5 shrink-0 transition-colors duration-200
+                        ${isActive ? "text-blue-600" : "text-gray-400 group-hover:text-gray-600"}
                       `}
                       aria-hidden="true"
                     />
@@ -244,7 +243,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         <div className="flex items-center space-x-2">
                           {item.badge && (
                             <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full">
-                              {item.badge > 9 ? '9+' : item.badge}
+                              {item.badge > 9 ? "9+" : item.badge}
                             </span>
                           )}
                           {!isActive && (
@@ -253,57 +252,82 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         </div>
                       </div>
                       {item.description && (
-                        <p className="text-xs text-gray-500 mt-1 truncate">
-                          {item.description}
-                        </p>
+                        <p className="hidden lg:block text-xs text-gray-500 mt-1 truncate">{item.description}</p>
                       )}
                     </div>
                   </Link>
                 </div>
-              )
+              );
             })}
-            
+
             {/* チーム管理（管理者専用） */}
             {adminTeamIds.length > 0 && (
               <div className="group">
                 <Link
-                  href={singleAdminTeamId ? `/teams-admin/${singleAdminTeamId}` : '/teams-admin'}
+                  href={singleAdminTeamId ? `/teams-admin/${singleAdminTeamId}` : "/teams-admin"}
                   className={`
-                    group flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 relative
-                    ${pathname.startsWith('/teams-admin')
-                      ? 'bg-purple-50 text-purple-700 shadow-sm border-l-4 border-purple-500'
-                      : 'text-purple-700 bg-purple-50/50 hover:text-purple-800 hover:bg-purple-100 hover:shadow-sm border-l-4 border-purple-300'
+                    group flex items-center px-3 py-2 lg:py-3 text-xs lg:text-sm font-medium rounded-lg transition-all duration-200 relative
+                    ${
+                      pathname.startsWith("/teams-admin")
+                        ? "bg-purple-50 text-purple-700 shadow-sm border-l-4 border-purple-500"
+                        : "text-purple-700 bg-purple-50/50 hover:text-purple-800 hover:bg-purple-100 hover:shadow-sm border-l-4 border-purple-300"
                     }
                   `}
                   onClick={onClose}
-                  onMouseEnter={() => router.prefetch(singleAdminTeamId ? `/teams-admin/${singleAdminTeamId}` : '/teams-admin')}
+                  onMouseEnter={() =>
+                    router.prefetch(
+                      singleAdminTeamId ? `/teams-admin/${singleAdminTeamId}` : "/teams-admin",
+                    )
+                  }
                 >
                   <ShieldCheckIcon
                     className={`
-                      mr-3 h-5 w-5 shrink-0 transition-colors duration-200
-                      ${pathname.startsWith('/teams-admin') ? 'text-purple-600' : 'text-purple-500 group-hover:text-purple-600'}
+                      hidden lg:block mr-3 h-5 w-5 shrink-0 transition-colors duration-200
+                      ${pathname.startsWith("/teams-admin") ? "text-purple-600" : "text-purple-500 group-hover:text-purple-600"}
                     `}
                     aria-hidden="true"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <span className="truncate">チーム管理</span>
-                      {!pathname.startsWith('/teams-admin') && (
+                      {!pathname.startsWith("/teams-admin") && (
                         <ChevronRightIcon className="h-4 w-4 text-purple-300 group-hover:text-purple-400 transition-colors duration-200" />
                       )}
                     </div>
-                    <p className="text-xs text-purple-600 mt-1 truncate font-medium">
-                      管理者専用
-                    </p>
+                    <p className="hidden lg:block text-xs text-purple-600 mt-1 truncate font-medium">管理者専用</p>
                   </div>
                 </Link>
               </div>
             )}
+
+            {/* スマホ用：設定・ログアウト */}
+            <div className="lg:hidden mt-2 pt-2 border-t border-gray-200 space-y-1">
+              <Link
+                href="/settings"
+                className={`
+                  flex items-center px-3 py-2 text-xs font-medium rounded-lg transition-all duration-200
+                  ${pathname === "/settings" ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"}
+                `}
+                onClick={onClose}
+              >
+                設定
+              </Link>
+              <button
+                onClick={async () => {
+                  onClose();
+                  await signOut();
+                  router.replace("/login");
+                }}
+                className="flex items-center w-full px-3 py-2 text-xs font-medium rounded-lg text-red-600 hover:bg-red-50 transition-all duration-200"
+              >
+                ログアウト
+              </button>
+            </div>
           </div>
         </nav>
 
-        {/* 関連サービス */}
-        <div className="mt-auto border-t border-gray-200 px-3 py-4">
+        {/* 関連サービス（デスクトップのみ） */}
+        <div className="hidden lg:block mt-auto border-t border-gray-200 px-3 py-4">
           <p className="px-3 mb-2 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
             関連サービス
           </p>
@@ -314,7 +338,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               rel="noopener noreferrer"
               className="group flex items-center px-3 py-2 text-sm rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors duration-200"
             >
-              <Image src="/timer-icon.png" alt="SwimHub Timer" width={48} height={48} className="mr-3 w-10 h-10 shrink-0" />
+              <Image
+                src="/timer-icon.png"
+                alt="SwimHub Timer"
+                width={48}
+                height={48}
+                className="mr-3 w-10 h-10 shrink-0"
+              />
               <span className="flex-1 truncate">SwimHub Timer</span>
               <ArrowTopRightOnSquareIcon className="h-3 w-3 text-gray-300 group-hover:text-gray-400 shrink-0" />
             </a>
@@ -324,7 +354,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               rel="noopener noreferrer"
               className="group flex items-center px-3 py-2 text-sm rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors duration-200"
             >
-              <Image src="/scanner-icon.png" alt="SwimHub Scanner" width={48} height={48} className="mr-3 w-10 h-10 shrink-0" />
+              <Image
+                src="/scanner-icon.png"
+                alt="SwimHub Scanner"
+                width={48}
+                height={48}
+                className="mr-3 w-10 h-10 shrink-0"
+              />
               <span className="flex-1 truncate">SwimHub Scanner</span>
               <ArrowTopRightOnSquareIcon className="h-3 w-3 text-gray-300 group-hover:text-gray-400 shrink-0" />
             </a>
@@ -332,5 +368,5 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         </div>
       </div>
     </>
-  )
+  );
 }

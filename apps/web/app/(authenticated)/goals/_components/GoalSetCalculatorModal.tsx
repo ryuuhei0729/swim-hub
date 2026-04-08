@@ -1,24 +1,24 @@
-'use client'
+"use client";
 
-import React, { useState, useMemo } from 'react'
-import { XMarkIcon } from '@heroicons/react/24/outline'
-import Button from '@/components/ui/Button'
-import { useAuth } from '@/contexts'
-import { useUserProfileQuery } from '@apps/shared/hooks/queries/user'
-import type { GoalWithMilestones, Style } from '@apps/shared/types'
+import React, { useState, useMemo } from "react";
+import { XMarkIcon } from "@heroicons/react/24/outline";
+import Button from "@/components/ui/Button";
+import { useAuth } from "@/contexts";
+import { useUserProfileQuery } from "@apps/shared/hooks/queries/user";
+import type { GoalWithMilestones, Style } from "@apps/shared/types";
 import {
   calculateGoalSetTargetTime,
   calculateAge,
-  getStyleCoefficient
-} from '@/utils/goalSetCalculator'
-import { formatTimeBest } from '@/utils/formatters'
+  getStyleCoefficient,
+} from "@/utils/goalSetCalculator";
+import { formatTimeBest } from "@/utils/formatters";
 
 interface GoalSetCalculatorModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onConfirm: (targetAverageTime: number, practicePoolType: number) => void
-  goal: GoalWithMilestones
-  style: Style
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: (targetAverageTime: number, practicePoolType: number) => void;
+  goal: GoalWithMilestones;
+  style: Style;
 }
 
 /**
@@ -30,41 +30,41 @@ export default function GoalSetCalculatorModal({
   onClose,
   onConfirm,
   goal,
-  style
+  style,
 }: GoalSetCalculatorModalProps) {
-  const { supabase } = useAuth()
-  const [practicePoolType, setPracticePoolType] = useState<number>(0) // デフォルト: 短水路
-  const { data: profile, isLoading: isProfileLoading } = useUserProfileQuery(supabase)
+  const { supabase } = useAuth();
+  const [practicePoolType, setPracticePoolType] = useState<number>(0); // デフォルト: 短水路
+  const { data: profile, isLoading: isProfileLoading } = useUserProfileQuery(supabase);
 
   // 年齢を計算
   const age = useMemo(() => {
-    if (!profile?.birthday) return null
-    return calculateAge(profile.birthday)
-  }, [profile?.birthday])
+    if (!profile?.birthday) return null;
+    return calculateAge(profile.birthday);
+  }, [profile?.birthday]);
 
   // 逆算結果を計算
   const calculatedTargetTime = useMemo(() => {
-    if (!age) return null
+    if (!age) return null;
 
     // 性別が未設定の場合は計算を中止
     if (profile?.gender === null || profile?.gender === undefined) {
-      return null
+      return null;
     }
 
     // 性別が明示的に0または1の場合のみ計算を続行
     if (profile.gender !== 0 && profile.gender !== 1) {
-      return null
+      return null;
     }
 
-    const Y = goal.target_time // 100m目標タイム
-    const X2 = age // 年齢
-    const X3 = 3 // 主観的達成度（固定値: 3）
+    const Y = goal.target_time; // 100m目標タイム
+    const X2 = age; // 年齢
+    const X3 = 3; // 主観的達成度（固定値: 3）
     // データベース: gender 0=男性, 1=女性
     // 計算式: X4 1=男性, 0=女性
-    const X4 = profile.gender === 0 ? 1 : 0 // 性別（男=1, 女=0）
-    const X5 = practicePoolType // ゴールセット実施水路（長水路=1, 短水路=0）
-    const X6 = goal.competition.pool_type // 競技会の水路（長水路=1, 短水路=0）
-    const X7 = getStyleCoefficient(style.style) // 種目係数（自由形=0, バタフライ=0.00001, 背泳ぎ=1.53, 平泳ぎ=2.34）
+    const X4 = profile.gender === 0 ? 1 : 0; // 性別（男=1, 女=0）
+    const X5 = practicePoolType; // ゴールセット実施水路（長水路=1, 短水路=0）
+    const X6 = goal.competition.pool_type; // 競技会の水路（長水路=1, 短水路=0）
+    const X7 = getStyleCoefficient(style.style); // 種目係数（自由形=0, バタフライ=0.00001, 背泳ぎ=1.53, 平泳ぎ=2.34）
 
     const result = calculateGoalSetTargetTime({
       Y,
@@ -73,33 +73,37 @@ export default function GoalSetCalculatorModal({
       X4,
       X5,
       X6,
-      X7
-    })
+      X7,
+    });
 
     // 現実的な範囲チェック（20秒未満や60秒超は警告）
     if (result < 20 || result > 60) {
-      return { value: result, warning: true }
+      return { value: result, warning: true };
     }
 
-    return { value: result, warning: false }
-  }, [goal.target_time, goal.competition.pool_type, age, profile?.gender, practicePoolType, style.style])
+    return { value: result, warning: false };
+  }, [
+    goal.target_time,
+    goal.competition.pool_type,
+    age,
+    profile?.gender,
+    practicePoolType,
+    style.style,
+  ]);
 
   const handleConfirm = () => {
     if (calculatedTargetTime && calculatedTargetTime.value > 0) {
-      onConfirm(calculatedTargetTime.value, practicePoolType)
-      onClose()
+      onConfirm(calculatedTargetTime.value, practicePoolType);
+      onClose();
     }
-  }
+  };
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div
-          className="fixed inset-0 bg-black/40 transition-opacity"
-          onClick={onClose}
-        />
+        <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={onClose} />
         <div
           role="dialog"
           aria-modal="true"
@@ -107,9 +111,7 @@ export default function GoalSetCalculatorModal({
         >
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                ゴールセット目標タイム計算
-              </h3>
+              <h3 className="text-lg font-semibold text-gray-900">ゴールセット目標タイム計算</h3>
               <button
                 onClick={onClose}
                 aria-label="閉じる"
@@ -122,9 +124,7 @@ export default function GoalSetCalculatorModal({
             <div className="space-y-4">
               {/* 自動取得情報（確認用） */}
               <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">
-                  自動取得情報
-                </h4>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">自動取得情報</h4>
                 <div className="text-sm space-y-1">
                   <div className="flex justify-between">
                     <span className="text-gray-600">目標:</span>
@@ -135,7 +135,7 @@ export default function GoalSetCalculatorModal({
                   <div className="flex justify-between">
                     <span className="text-gray-600">大会水路:</span>
                     <span className="font-medium">
-                      {goal.competition.pool_type === 1 ? '長水路' : '短水路'}
+                      {goal.competition.pool_type === 1 ? "長水路" : "短水路"}
                     </span>
                   </div>
                   {isProfileLoading ? (
@@ -156,7 +156,7 @@ export default function GoalSetCalculatorModal({
                         <div className="flex justify-between">
                           <span className="text-gray-600">性別:</span>
                           <span className="font-medium">
-                            {profile.gender === 1 ? '女子' : '男子'}
+                            {profile.gender === 1 ? "女子" : "男子"}
                           </span>
                         </div>
                       ) : (
@@ -185,12 +185,14 @@ export default function GoalSetCalculatorModal({
               </div>
 
               {/* 計算結果 */}
-              {calculatedTargetTime && age !== null && (profile?.gender === 0 || profile?.gender === 1) ? (
+              {calculatedTargetTime &&
+              age !== null &&
+              (profile?.gender === 0 || profile?.gender === 1) ? (
                 <div
                   className={`rounded-lg p-4 ${
                     calculatedTargetTime.warning
-                      ? 'bg-yellow-50 border-2 border-yellow-300'
-                      : 'bg-blue-50 border-2 border-blue-300'
+                      ? "bg-yellow-50 border-2 border-yellow-300"
+                      : "bg-blue-50 border-2 border-blue-300"
                   }`}
                 >
                   <div className="text-center">
@@ -198,9 +200,7 @@ export default function GoalSetCalculatorModal({
                     <div className="text-2xl font-bold text-gray-900 mb-1">
                       {formatTimeBest(calculatedTargetTime.value)}
                     </div>
-                    <div className="text-xs text-gray-500">
-                      50m平均（50m×6本×3セット）
-                    </div>
+                    <div className="text-xs text-gray-500">50m平均（50m×6本×3セット）</div>
                     {calculatedTargetTime.warning && (
                       <div className="mt-2 text-xs text-yellow-700">
                         ⚠️ 計算結果が現実的でない可能性があります
@@ -249,11 +249,7 @@ export default function GoalSetCalculatorModal({
 
             {/* ボタン */}
             <div className="flex justify-end gap-3 mt-6">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-              >
+              <Button type="button" variant="outline" onClick={onClose}>
                 キャンセル
               </Button>
               <Button
@@ -274,5 +270,5 @@ export default function GoalSetCalculatorModal({
         </div>
       </div>
     </div>
-  )
+  );
 }

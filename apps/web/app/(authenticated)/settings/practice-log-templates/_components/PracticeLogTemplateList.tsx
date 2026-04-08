@@ -1,54 +1,54 @@
-'use client'
+"use client";
 
-import { useCallback } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
-import { PlusIcon } from '@heroicons/react/24/outline'
+import { useCallback } from "react";
+import { createBrowserClient } from "@supabase/ssr";
+import { PlusIcon } from "@heroicons/react/24/outline";
 import {
   usePracticeLogTemplatesQuery,
   usePracticeLogTemplateCountQuery,
   useDeletePracticeLogTemplateMutation,
   useTogglePracticeLogTemplateFavoriteMutation,
-} from '@swim-hub/shared/hooks'
-import { PracticeLogTemplateCard } from './PracticeLogTemplateCard'
-import type { PracticeLogTemplate } from '@swim-hub/shared/types'
+} from "@swim-hub/shared/hooks";
+import { PracticeLogTemplateCard } from "./PracticeLogTemplateCard";
+import type { PracticeLogTemplate } from "@swim-hub/shared/types";
 
-const MAX_TEMPLATES = 10 // 無料ユーザーの上限
+const MAX_TEMPLATES = 10; // 無料ユーザーの上限
 
 interface PracticeLogTemplateListProps {
-  onCreateNew: () => void
-  onEdit: (template: PracticeLogTemplate) => void
+  onCreateNew: () => void;
+  onEdit: (template: PracticeLogTemplate) => void;
 }
 
 export function PracticeLogTemplateList({ onCreateNew, onEdit }: PracticeLogTemplateListProps) {
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
 
-  const { data: templates, isLoading, error } = usePracticeLogTemplatesQuery(supabase)
-  const { data: count } = usePracticeLogTemplateCountQuery(supabase)
-  const deleteMutation = useDeletePracticeLogTemplateMutation(supabase)
-  const toggleFavoriteMutation = useTogglePracticeLogTemplateFavoriteMutation(supabase)
+  const { data: templates, isLoading, error } = usePracticeLogTemplatesQuery(supabase);
+  const { data: count } = usePracticeLogTemplateCountQuery(supabase);
+  const deleteMutation = useDeletePracticeLogTemplateMutation(supabase);
+  const toggleFavoriteMutation = useTogglePracticeLogTemplateFavoriteMutation(supabase);
 
   const handleToggleFavorite = useCallback(
     (templateId: string) => {
-      toggleFavoriteMutation.mutate(templateId)
+      toggleFavoriteMutation.mutate(templateId);
     },
-    [toggleFavoriteMutation]
-  )
+    [toggleFavoriteMutation],
+  );
 
   const handleDelete = useCallback(
     (templateId: string) => {
-      deleteMutation.mutate(templateId)
+      deleteMutation.mutate(templateId);
     },
-    [deleteMutation]
-  )
+    [deleteMutation],
+  );
 
   // お気に入りとそれ以外を分離
-  const favoriteTemplates = templates?.filter((t) => t.is_favorite) || []
-  const otherTemplates = templates?.filter((t) => !t.is_favorite) || []
+  const favoriteTemplates = templates?.filter((t) => t.is_favorite) || [];
+  const otherTemplates = templates?.filter((t) => !t.is_favorite) || [];
 
-  const isAtLimit = (count || 0) >= MAX_TEMPLATES
+  const isAtLimit = (count || 0) >= MAX_TEMPLATES;
 
   if (isLoading) {
     return (
@@ -57,15 +57,13 @@ export function PracticeLogTemplateList({ onCreateNew, onEdit }: PracticeLogTemp
           <div key={i} className="h-24 bg-gray-200 rounded-lg" />
         ))}
       </div>
-    )
+    );
   }
 
   if (error) {
     return (
-      <div className="text-center py-8 text-red-600">
-        テンプレートの読み込みに失敗しました
-      </div>
-    )
+      <div className="text-center py-8 text-red-600">テンプレートの読み込みに失敗しました</div>
+    );
   }
 
   return (
@@ -106,9 +104,7 @@ export function PracticeLogTemplateList({ onCreateNew, onEdit }: PracticeLogTemp
                 onToggleFavorite={handleToggleFavorite}
                 onDelete={handleDelete}
                 onEdit={onEdit}
-                isLoading={
-                  toggleFavoriteMutation.isPending || deleteMutation.isPending
-                }
+                isLoading={toggleFavoriteMutation.isPending || deleteMutation.isPending}
               />
             ))}
           </div>
@@ -119,9 +115,7 @@ export function PracticeLogTemplateList({ onCreateNew, onEdit }: PracticeLogTemp
       {otherTemplates.length > 0 && (
         <section>
           {favoriteTemplates.length > 0 && (
-            <h2 className="text-sm font-medium text-gray-500 mb-3">
-              すべてのテンプレート
-            </h2>
+            <h2 className="text-sm font-medium text-gray-500 mb-3">すべてのテンプレート</h2>
           )}
           <div className="grid gap-3 sm:grid-cols-2">
             {otherTemplates.map((template) => (
@@ -131,9 +125,7 @@ export function PracticeLogTemplateList({ onCreateNew, onEdit }: PracticeLogTemp
                 onToggleFavorite={handleToggleFavorite}
                 onDelete={handleDelete}
                 onEdit={onEdit}
-                isLoading={
-                  toggleFavoriteMutation.isPending || deleteMutation.isPending
-                }
+                isLoading={toggleFavoriteMutation.isPending || deleteMutation.isPending}
               />
             ))}
           </div>
@@ -148,14 +140,14 @@ export function PracticeLogTemplateList({ onCreateNew, onEdit }: PracticeLogTemp
           disabled={isAtLimit}
           className={`w-full py-3 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${
             isAtLimit
-              ? 'border-gray-200 text-gray-400 cursor-not-allowed'
-              : 'border-gray-300 text-gray-600 hover:border-blue-500 hover:text-blue-600'
+              ? "border-gray-200 text-gray-400 cursor-not-allowed"
+              : "border-gray-300 text-gray-600 hover:border-blue-500 hover:text-blue-600"
           }`}
         >
           <PlusIcon className="h-5 w-5" />
-          {isAtLimit ? '上限に達しました' : '新しいテンプレートを作成'}
+          {isAtLimit ? "上限に達しました" : "新しいテンプレートを作成"}
         </button>
       )}
     </div>
-  )
+  );
 }

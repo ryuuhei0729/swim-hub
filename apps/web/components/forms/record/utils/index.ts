@@ -1,1 +1,1 @@
-export { parseTimeString, formatTimeDisplay, generateUUID } from './timeParser'
+export { parseTimeString, formatTimeDisplay, generateUUID } from "./timeParser";

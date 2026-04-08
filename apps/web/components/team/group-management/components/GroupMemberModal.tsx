@@ -1,29 +1,29 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect, useMemo } from 'react'
-import BaseModal from '@/components/ui/BaseModal'
-import Avatar from '@/components/ui/Avatar'
-import type { TeamGroupWithCount } from '../hooks/useTeamGroups'
+import React, { useState, useEffect, useMemo } from "react";
+import BaseModal from "@/components/ui/BaseModal";
+import Avatar from "@/components/ui/Avatar";
+import type { TeamGroupWithCount } from "../hooks/useTeamGroups";
 
 interface TeamMemberForSelection {
-  id: string
-  user_id: string
+  id: string;
+  user_id: string;
   users: {
-    id: string
-    name: string
-    profile_image_path?: string | null
-  }
+    id: string;
+    name: string;
+    profile_image_path?: string | null;
+  };
 }
 
 interface GroupMemberModalProps {
-  isOpen: boolean
-  onClose: () => void
-  group: TeamGroupWithCount | null
-  teamMembers: TeamMemberForSelection[]
-  currentMemberUserIds: string[]
-  onSave: (groupId: string, userIds: string[]) => Promise<boolean>
-  saving: boolean
-  loading: boolean
+  isOpen: boolean;
+  onClose: () => void;
+  group: TeamGroupWithCount | null;
+  teamMembers: TeamMemberForSelection[];
+  currentMemberUserIds: string[];
+  onSave: (groupId: string, userIds: string[]) => Promise<boolean>;
+  saving: boolean;
+  loading: boolean;
 }
 
 export const GroupMemberModal: React.FC<GroupMemberModalProps> = ({
@@ -36,59 +36,54 @@ export const GroupMemberModal: React.FC<GroupMemberModalProps> = ({
   saving,
   loading,
 }) => {
-  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set())
-  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
 
   // 現在の割り当て済みメンバーで初期化
   useEffect(() => {
-    setSelectedUserIds(new Set(currentMemberUserIds))
-    setSearchQuery('')
-  }, [currentMemberUserIds, isOpen])
+    setSelectedUserIds(new Set(currentMemberUserIds));
+    setSearchQuery("");
+  }, [currentMemberUserIds, isOpen]);
 
   // 検索フィルター
   const filteredMembers = useMemo(() => {
-    if (!searchQuery.trim()) return teamMembers
-    const q = searchQuery.toLowerCase()
-    return teamMembers.filter((m) => m.users.name.toLowerCase().includes(q))
-  }, [teamMembers, searchQuery])
+    if (!searchQuery.trim()) return teamMembers;
+    const q = searchQuery.toLowerCase();
+    return teamMembers.filter((m) => m.users.name.toLowerCase().includes(q));
+  }, [teamMembers, searchQuery]);
 
   const handleToggle = (userId: string) => {
     setSelectedUserIds((prev) => {
-      const next = new Set(prev)
+      const next = new Set(prev);
       if (next.has(userId)) {
-        next.delete(userId)
+        next.delete(userId);
       } else {
-        next.add(userId)
+        next.add(userId);
       }
-      return next
-    })
-  }
+      return next;
+    });
+  };
 
   const handleSelectAll = () => {
-    setSelectedUserIds(new Set(teamMembers.map((m) => m.user_id)))
-  }
+    setSelectedUserIds(new Set(teamMembers.map((m) => m.user_id)));
+  };
 
   const handleDeselectAll = () => {
-    setSelectedUserIds(new Set())
-  }
+    setSelectedUserIds(new Set());
+  };
 
   const handleSave = async () => {
-    if (!group) return
-    const success = await onSave(group.id, [...selectedUserIds])
+    if (!group) return;
+    const success = await onSave(group.id, [...selectedUserIds]);
     if (success) {
-      onClose()
+      onClose();
     }
-  }
+  };
 
-  if (!group) return null
+  if (!group) return null;
 
   return (
-    <BaseModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={`${group.name} のメンバー`}
-      size="lg"
-    >
+    <BaseModal isOpen={isOpen} onClose={onClose} title={`${group.name} のメンバー`} size="lg">
       <div className="space-y-4">
         {/* 検索 */}
         <input
@@ -101,7 +96,9 @@ export const GroupMemberModal: React.FC<GroupMemberModalProps> = ({
 
         {/* 一括選択 */}
         <div className="flex items-center justify-between text-xs text-gray-500">
-          <span>{selectedUserIds.size} / {teamMembers.length} 人選択中</span>
+          <span>
+            {selectedUserIds.size} / {teamMembers.length} 人選択中
+          </span>
           <div className="flex gap-2">
             <button
               type="button"
@@ -126,16 +123,16 @@ export const GroupMemberModal: React.FC<GroupMemberModalProps> = ({
             <div className="p-4 text-center text-sm text-gray-500">読み込み中...</div>
           ) : filteredMembers.length === 0 ? (
             <div className="p-4 text-center text-sm text-gray-500">
-              {searchQuery ? '該当するメンバーがいません' : 'メンバーがいません'}
+              {searchQuery ? "該当するメンバーがいません" : "メンバーがいません"}
             </div>
           ) : (
             filteredMembers.map((member) => {
-              const isSelected = selectedUserIds.has(member.user_id)
+              const isSelected = selectedUserIds.has(member.user_id);
               return (
                 <label
                   key={member.user_id}
                   className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 transition-colors ${
-                    isSelected ? 'bg-blue-50' : ''
+                    isSelected ? "bg-blue-50" : ""
                   }`}
                 >
                   <input
@@ -151,7 +148,7 @@ export const GroupMemberModal: React.FC<GroupMemberModalProps> = ({
                   />
                   <span className="text-sm text-gray-900">{member.users.name}</span>
                 </label>
-              )
+              );
             })
           )}
         </div>
@@ -171,10 +168,10 @@ export const GroupMemberModal: React.FC<GroupMemberModalProps> = ({
             disabled={saving}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {saving ? '保存中...' : '保存'}
+            {saving ? "保存中..." : "保存"}
           </button>
         </div>
       </div>
     </BaseModal>
-  )
-}
+  );
+};

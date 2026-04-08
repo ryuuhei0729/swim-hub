@@ -1,467 +1,452 @@
-'use client'
+"use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react'
-import { supabase } from '@/lib/supabase'
-import type { Database } from '@swim-hub/shared/types'
-import type { Session } from '@supabase/supabase-js'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { useRouter } from 'next/navigation'
-import { getQueryClient } from '@/providers/QueryProvider'
-import { AuthState, AuthContextType, SubscriptionInfo } from '@swim-hub/shared/types/auth'
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
+import { supabase } from "@/lib/supabase";
+import type { Database } from "@swim-hub/shared/types";
+import type { Session } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
+import { getQueryClient } from "@/providers/QueryProvider";
+import { AuthContextType } from "@swim-hub/shared/types/auth";
+import { useSubscription } from "@/hooks/useSubscription";
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// 認証状態（subscription を除く）
+type CoreAuthState = {
+  user: import("@supabase/supabase-js").User | null;
+  session: Session | null;
+  loading: boolean;
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const router = useRouter()
+  const router = useRouter();
   // supabase.tsから統一されたBrowser Clientを使用
   // これにより、PKCE code verifierが確実にCookieに保存・読み取りされる
   const supabaseClient = useMemo((): SupabaseClient<Database> | null => {
     // サーバー側（ビルド時）では実行しない
-    if (typeof window === 'undefined') {
-      // サーバー側ではnullを返す（実際には使用されない）
-      return null
+    if (typeof window === "undefined") {
+      return null;
     }
-    // supabase.tsから統一されたBrowser Clientを取得
-    return supabase || null
-  }, [])
-  const [authState, setAuthState] = useState<AuthState>({
+    return supabase || null;
+  }, []);
+
+  const [coreState, setCoreState] = useState<CoreAuthState>({
     user: null,
     session: null,
     loading: true,
-    subscription: null
-  })
+  });
 
-  // サブスクリプション情報を取得
-  const fetchSubscription = useCallback(async (userId: string): Promise<SubscriptionInfo | null> => {
-    if (!supabaseClient) return null
-    try {
-      const { data, error } = await supabaseClient
-        .from('user_subscriptions')
-        .select('plan, status, cancel_at_period_end, premium_expires_at, trial_end')
-        .eq('id', userId)
-        .single() as { data: { plan: string; status: string | null; cancel_at_period_end: boolean | null; premium_expires_at: string | null; trial_end: string | null } | null; error: unknown }
-
-      if (error || !data) {
-        return { plan: 'free', status: null, cancelAtPeriodEnd: false, premiumExpiresAt: null, trialEnd: null }
-      }
-
-      return {
-        plan: data.plan as 'free' | 'premium',
-        status: data.status as SubscriptionInfo['status'],
-        cancelAtPeriodEnd: data.cancel_at_period_end ?? false,
-        premiumExpiresAt: data.premium_expires_at ?? null,
-        trialEnd: data.trial_end ?? null,
-      }
-    } catch {
-      return { plan: 'free', status: null, cancelAtPeriodEnd: false, premiumExpiresAt: null, trialEnd: null }
-    }
-  }, [supabaseClient])
-
-  // サブスクリプション情報を再取得（外部から呼び出し可能）
-  const refreshSubscription = useCallback(async () => {
-    if (!authState.user) return
-    const subscription = await fetchSubscription(authState.user.id)
-    setAuthState(prev => ({ ...prev, subscription }))
-  }, [authState.user, fetchSubscription])
-
+  // subscription は React Query で管理（Server Component からハイドレート済み）
+  const { subscription, refreshSubscription } = useSubscription(coreState.user?.id ?? null);
 
   // ログイン
-  const signIn = useCallback(async (email: string, password: string) => {
-    if (!supabaseClient) {
-      return { data: null, error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
-    }
-    try {
-      const { data, error } = await supabaseClient.auth.signInWithPassword({
-        email,
-        password
-      })
-      
-      if (error) {
-        return { data: null, error: error as import('@supabase/supabase-js').AuthError }
+  const signIn = useCallback(
+    async (email: string, password: string) => {
+      if (!supabaseClient) {
+        return {
+          data: null,
+          error: new Error(
+            "Supabaseクライアントが初期化されていません",
+          ) as import("@supabase/supabase-js").AuthError,
+        };
       }
-      
-      return { data: data ? { user: data.user, session: data.session } : null, error: null }
-    } catch (error) {
-      if (process.env.NODE_ENV !== "production") {
-        console.error('Sign in error:', error)
+      try {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) {
+          return { data: null, error: error as import("@supabase/supabase-js").AuthError };
+        }
+
+        return { data: data ? { user: data.user, session: data.session } : null, error: null };
+      } catch (error) {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Sign in error:", error);
+        }
+        return { data: null, error: error as import("@supabase/supabase-js").AuthError };
       }
-      return { data: null, error: error as import('@supabase/supabase-js').AuthError }
-    }
-  }, [supabaseClient])
+    },
+    [supabaseClient],
+  );
 
   // サインアップ
-  const signUp = useCallback(async (
-    email: string, 
-    password: string, 
-    name?: string,
-    gender?: number,
-    birthday?: string
-  ) => {
-    if (!supabaseClient) {
-      return { data: null, error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
-    }
-    try {
-      // 重要: emailRedirectToは必ずwindow.location.originを直接使用する
-      // 環境変数を使うと、PKCE code verifier Cookieが保存されない
-      if (typeof window === 'undefined') {
-        return { data: null, error: new Error('ブラウザ環境で実行してください') as import('@supabase/supabase-js').AuthError }
+  const signUp = useCallback(
+    async (email: string, password: string, name?: string, gender?: number, birthday?: string) => {
+      if (!supabaseClient) {
+        return {
+          data: null,
+          error: new Error(
+            "Supabaseクライアントが初期化されていません",
+          ) as import("@supabase/supabase-js").AuthError,
+        };
       }
-      
-      const { data, error } = await supabaseClient.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name: name || '',
-            gender: gender ?? 0,
-            birthday: birthday || null
-          },
-          // メール認証後のリダイレクト先を設定
-          emailRedirectTo: `${window.location.origin}/api/auth/callback?redirect_to=/dashboard`
+      try {
+        // 重要: emailRedirectToは必ずwindow.location.originを直接使用する
+        // 環境変数を使うと、PKCE code verifier Cookieが保存されない
+        if (typeof window === "undefined") {
+          return {
+            data: null,
+            error: new Error(
+              "ブラウザ環境で実行してください",
+            ) as import("@supabase/supabase-js").AuthError,
+          };
         }
-      })
-      
-      if (error) {
-        return { data: null, error: error as import('@supabase/supabase-js').AuthError }
+
+        const { data, error } = await supabaseClient.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name: name || "",
+              gender: gender ?? 0,
+              birthday: birthday || null,
+            },
+            emailRedirectTo: `${window.location.origin}/api/auth/callback?redirect_to=/dashboard`,
+          },
+        });
+
+        if (error) {
+          return { data: null, error: error as import("@supabase/supabase-js").AuthError };
+        }
+
+        return { data: data ? { user: data.user, session: data.session } : null, error: null };
+      } catch (error) {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Sign up error:", error);
+        }
+        return { data: null, error: error as import("@supabase/supabase-js").AuthError };
       }
-      
-      return { data: data ? { user: data.user, session: data.session } : null, error: null }
-    } catch (error) {
-      if (process.env.NODE_ENV !== "production") {
-        console.error('Sign up error:', error)
-      }
-      return { data: null, error: error as import('@supabase/supabase-js').AuthError }
-    }
-  }, [supabaseClient])
+    },
+    [supabaseClient],
+  );
 
   // OAuth認証（Google / Apple）
-  // supabase.tsから統一されたBrowser Clientを使用することで、PKCE code verifierが確実にCookieに保存・読み取りされる
-  const signInWithOAuth = useCallback(async (provider: 'google' | 'apple', options?: { redirectTo?: string; scopes?: string; queryParams?: Record<string, string> }) => {
-    if (!supabaseClient) {
-      return { error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
-    }
-    
-    try {
-      // 重要: redirectToは必ずwindow.location.originを直接使用する
-      // 環境変数を使うと、PKCE code verifier Cookieが保存されない
-      if (typeof window === 'undefined') {
-        return { error: new Error('ブラウザ環境で実行してください') as import('@supabase/supabase-js').AuthError }
+  const signInWithOAuth = useCallback(
+    async (
+      provider: "google" | "apple",
+      options?: { redirectTo?: string; scopes?: string; queryParams?: Record<string, string> },
+    ) => {
+      if (!supabaseClient) {
+        return {
+          error: new Error(
+            "Supabaseクライアントが初期化されていません",
+          ) as import("@supabase/supabase-js").AuthError,
+        };
       }
-      // 重要: redirectToはルートパス(/)に設定し、Middlewareで/api/auth/callbackにリダイレクトさせる
-      // これにより、PKCE code verifier Cookieが確実に転送される
-      const redirectTo = options?.redirectTo || `${window.location.origin}/?redirect_to=/dashboard`
-      
-      const { data, error } = await supabaseClient.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo,
-          ...(options?.scopes && { scopes: options.scopes }),
-          ...(options?.queryParams && { queryParams: options.queryParams })
+
+      try {
+        if (typeof window === "undefined") {
+          return {
+            error: new Error(
+              "ブラウザ環境で実行してください",
+            ) as import("@supabase/supabase-js").AuthError,
+          };
         }
-      })
-      
-      if (error) {
+        // 重要: redirectToはルートパス(/)に設定し、Middlewareで/api/auth/callbackにリダイレクトさせる
+        // これにより、PKCE code verifier Cookieが確実に転送される
+        const redirectTo =
+          options?.redirectTo || `${window.location.origin}/?redirect_to=/dashboard`;
+
+        const { data, error } = await supabaseClient.auth.signInWithOAuth({
+          provider,
+          options: {
+            redirectTo,
+            ...(options?.scopes && { scopes: options.scopes }),
+            ...(options?.queryParams && { queryParams: options.queryParams }),
+          },
+        });
+
+        if (error) {
+          if (process.env.NODE_ENV !== "production") {
+            console.error("OAuth signInWithOAuth error:", error);
+          }
+          return { error: error as import("@supabase/supabase-js").AuthError };
+        }
+
+        if (data.url && typeof window !== "undefined") {
+          window.location.href = data.url;
+        }
+
+        return { error: null };
+      } catch (error) {
         if (process.env.NODE_ENV !== "production") {
-          console.error('OAuth signInWithOAuth error:', error)
+          console.error("OAuth sign in error:", error);
         }
-        return { error: error as import('@supabase/supabase-js').AuthError }
+        return { error: error as import("@supabase/supabase-js").AuthError };
       }
-      
-      // OAuthプロバイダーにリダイレクト（data.urlが存在する場合）
-      if (data.url && typeof window !== 'undefined') {
-        window.location.href = data.url
-      }
-      
-      return { error: null }
-    } catch (error) {
-      if (process.env.NODE_ENV !== "production") {
-        console.error('OAuth sign in error:', error)
-      }
-      return { error: error as import('@supabase/supabase-js').AuthError }
-    }
-  }, [supabaseClient])
+    },
+    [supabaseClient],
+  );
 
   // クライアント側の全キャッシュ・ストアをクリア（冪等）
   const clearAllClientState = useCallback(async () => {
-    // React Queryのキャッシュをクリア
-    const queryClient = getQueryClient()
-    queryClient.clear()
+    const queryClient = getQueryClient();
+    queryClient.clear();
 
-    // Zustandストアを全てリセット
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       try {
         const {
           useProfileStore,
           useTeamStore,
           useUIStore,
-          usePracticeFormStore,
+          usePracticeStore,
           usePracticeRecordStore,
-          useCompetitionFormStore,
+          useCompetitionStore,
           useCompetitionRecordStore,
-          useCompetitionFilterStore,
-          usePracticeFilterStore,
           useCommonFormStore,
           useAttendanceTabStore,
           useTeamDetailStore,
           useTeamAdminStore,
           useModalStore,
-        } = await import('@/stores')
+        } = await import("@/stores");
 
-        useProfileStore.getState().reset()
-        useTeamStore.getState().reset()
-        useUIStore.getState().reset()
-        usePracticeFormStore.getState().reset()
-        usePracticeRecordStore.getState().reset()
-        useCompetitionFormStore.getState().reset()
-        useCompetitionRecordStore.getState().reset()
-        useCompetitionFilterStore.getState().reset()
-        usePracticeFilterStore.getState().reset()
-        useCommonFormStore.getState().reset()
-        useAttendanceTabStore.getState().reset()
-        useTeamDetailStore.getState().reset()
-        useTeamAdminStore.getState().reset()
-        useModalStore.getState().reset()
+        useProfileStore.getState().reset();
+        useTeamStore.getState().reset();
+        useUIStore.getState().reset();
+        usePracticeStore.getState().reset();
+        usePracticeRecordStore.getState().reset();
+        useCompetitionStore.getState().reset();
+        useCompetitionRecordStore.getState().reset();
+        useCommonFormStore.getState().reset();
+        useAttendanceTabStore.getState().reset();
+        useTeamDetailStore.getState().reset();
+        useTeamAdminStore.getState().reset();
+        useModalStore.getState().reset();
       } catch (error) {
         if (process.env.NODE_ENV !== "production") {
-          console.warn('ストアのリセットに失敗:', error)
+          console.warn("ストアのリセットに失敗:", error);
         }
       }
 
-      // localStorage・sessionStorageをクリア
       try {
-        window.localStorage.clear()
-        window.sessionStorage.clear()
+        window.localStorage.clear();
+        window.sessionStorage.clear();
       } catch (error) {
         if (process.env.NODE_ENV !== "production") {
-          console.warn('ストレージのクリアに失敗:', error)
+          console.warn("ストレージのクリアに失敗:", error);
         }
       }
     }
-  }, [])
+  }, []);
 
   // ログアウト
   const signOut = useCallback(async () => {
     if (!supabaseClient) {
-      return { error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
+      return {
+        error: new Error(
+          "Supabaseクライアントが初期化されていません",
+        ) as import("@supabase/supabase-js").AuthError,
+      };
     }
     try {
-      // キャッシュクリアを先に実行（signOut成功後のナビゲーションに備える）
-      await clearAllClientState()
+      await clearAllClientState();
 
-      const { error } = await supabaseClient.auth.signOut()
+      const { error } = await supabaseClient.auth.signOut();
 
       if (error) {
-        return { error: error as import('@supabase/supabase-js').AuthError }
+        return { error: error as import("@supabase/supabase-js").AuthError };
       }
 
-      return { error: null }
+      return { error: null };
     } catch (error) {
       if (process.env.NODE_ENV !== "production") {
-        console.error('Sign out error:', error)
+        console.error("Sign out error:", error);
       }
-      return { error: error as import('@supabase/supabase-js').AuthError }
+      return { error: error as import("@supabase/supabase-js").AuthError };
     }
-  }, [supabaseClient, clearAllClientState])
+  }, [supabaseClient, clearAllClientState]);
 
   // パスワードリセット
-  const resetPassword = useCallback(async (email: string) => {
-    if (!supabaseClient) {
-      return { data: null, error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
-    }
-    try {
-      // 重要: redirectToは必ずwindow.location.originを直接使用する
-      // 環境変数を使うと、PKCE code verifier Cookieが保存されない
-      if (typeof window === 'undefined') {
-        return { data: null, error: new Error('ブラウザ環境で実行してください') as import('@supabase/supabase-js').AuthError }
+  const resetPassword = useCallback(
+    async (email: string) => {
+      if (!supabaseClient) {
+        return {
+          data: null,
+          error: new Error(
+            "Supabaseクライアントが初期化されていません",
+          ) as import("@supabase/supabase-js").AuthError,
+        };
       }
-      
-      const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/api/auth/callback?redirect_to=/update-password`
-      })
-      
-      if (error) {
-        return { data: null, error: error as import('@supabase/supabase-js').AuthError }
+      try {
+        if (typeof window === "undefined") {
+          return {
+            data: null,
+            error: new Error(
+              "ブラウザ環境で実行してください",
+            ) as import("@supabase/supabase-js").AuthError,
+          };
+        }
+
+        const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/api/auth/callback?redirect_to=/update-password`,
+        });
+
+        if (error) {
+          return { data: null, error: error as import("@supabase/supabase-js").AuthError };
+        }
+
+        return { data: null, error: null };
+      } catch (error) {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Password reset error:", error);
+        }
+        return { data: null, error: error as import("@supabase/supabase-js").AuthError };
       }
-      
-      return { data: null, error: null }
-    } catch (error) {
-      if (process.env.NODE_ENV !== "production") {
-        console.error('Password reset error:', error)
-      }
-      return { data: null, error: error as import('@supabase/supabase-js').AuthError }
-    }
-  }, [supabaseClient])
+    },
+    [supabaseClient],
+  );
 
   // パスワード更新
-  const updatePassword = useCallback(async (newPassword: string) => {
-    if (!supabaseClient) {
-      return { data: null, error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
-    }
-    try {
-      const { data, error } = await supabaseClient.auth.updateUser({
-        password: newPassword
-      })
-      
-      if (error) {
-        return { data: null, error: error as import('@supabase/supabase-js').AuthError }
+  const updatePassword = useCallback(
+    async (newPassword: string) => {
+      if (!supabaseClient) {
+        return {
+          data: null,
+          error: new Error(
+            "Supabaseクライアントが初期化されていません",
+          ) as import("@supabase/supabase-js").AuthError,
+        };
       }
-      
-      return { data: data ? { user: data.user } : null, error: null }
-    } catch (error) {
-      if (process.env.NODE_ENV !== "production") {
-        console.error('Password update error:', error)
-      }
-      return { data: null, error: error as import('@supabase/supabase-js').AuthError }
-    }
-  }, [supabaseClient])
+      try {
+        const { data, error } = await supabaseClient.auth.updateUser({
+          password: newPassword,
+        });
 
-  // プロフィール更新（React Queryのミューテーションに移行予定）
-  const updateProfile = useCallback(async (updates: Partial<import('@swim-hub/shared/types').UserProfile>) => {
-    if (!supabaseClient) {
-      return { error: new Error('Supabaseクライアントが初期化されていません') as import('@supabase/supabase-js').AuthError }
-    }
-    try {
-      if (!authState.user) {
-        return { error: new Error('User not authenticated') as unknown as import('@supabase/supabase-js').AuthError }
-      }
+        if (error) {
+          return { data: null, error: error as import("@supabase/supabase-js").AuthError };
+        }
 
-      const { error } = await supabaseClient
-        .from('users')
-        .update(updates)
-        .eq('id', authState.user.id)
-
-      if (error) {
-        return { error: (error as unknown) as import('@supabase/supabase-js').AuthError }
+        return { data: data ? { user: data.user } : null, error: null };
+      } catch (error) {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Password update error:", error);
+        }
+        return { data: null, error: error as import("@supabase/supabase-js").AuthError };
       }
+    },
+    [supabaseClient],
+  );
 
-      return { error: null }
-    } catch (error) {
-      if (process.env.NODE_ENV !== "production") {
-        console.error('Profile update error:', error)
+  // プロフィール更新
+  const updateProfile = useCallback(
+    async (updates: Partial<import("@swim-hub/shared/types").UserProfile>) => {
+      if (!supabaseClient) {
+        return {
+          error: new Error(
+            "Supabaseクライアントが初期化されていません",
+          ) as import("@supabase/supabase-js").AuthError,
+        };
       }
-      return { error: (error as unknown) as import('@supabase/supabase-js').AuthError }
-    }
-  }, [authState.user, supabaseClient])
+      try {
+        if (!coreState.user) {
+          return {
+            error: new Error(
+              "User not authenticated",
+            ) as unknown as import("@supabase/supabase-js").AuthError,
+          };
+        }
+
+        const { error } = await supabaseClient
+          .from("users")
+          .update(updates)
+          .eq("id", coreState.user.id);
+
+        if (error) {
+          return { error: error as unknown as import("@supabase/supabase-js").AuthError };
+        }
+
+        return { error: null };
+      } catch (error) {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Profile update error:", error);
+        }
+        return { error: error as unknown as import("@supabase/supabase-js").AuthError };
+      }
+    },
+    [coreState.user, supabaseClient],
+  );
 
   useEffect(() => {
-    // ブラウザ環境でない場合、またはSupabaseクライアントが作成されていない場合はスキップ
-    if (typeof window === 'undefined' || !supabaseClient) {
-      return
+    if (typeof window === "undefined" || !supabaseClient) {
+      return;
     }
 
-    let isMounted = true
+    let isMounted = true;
 
-    // 認証状態の変更を監視（初期セッション取得も含む）
-    const { data: { subscription: authSubscription } } = supabaseClient.auth.onAuthStateChange(
-      async (event: string, session: Session | null) => {
-        if (!isMounted) {
-          return
+    // 認証状態の変更を監視
+    const {
+      data: { subscription: authSubscription },
+    } = supabaseClient.auth.onAuthStateChange(async (event: string, session: Session | null) => {
+      if (!isMounted) return;
+
+      // loading: false — subscription を待たずに即座に認証状態を確定
+      setCoreState({
+        user: session?.user ?? null,
+        session,
+        loading: false,
+      });
+
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
+        if (event === "SIGNED_OUT") {
+          await clearAllClientState();
         }
 
-        let subInfo: SubscriptionInfo | null = null
-        if (session?.user) {
-          subInfo = await fetchSubscription(session.user.id)
-        }
+        const currentPath = window.location.pathname;
+        const authPages = ["/login", "/signup", "/reset-password", "/auth/callback"];
+        const isAuthPage = authPages.some((page) => currentPath.startsWith(page));
 
-        setAuthState({
-          user: session?.user ?? null,
-          session,
-          loading: false,
-          subscription: subInfo
-        })
-
-        // ログイン/ログアウト時にページをリフレッシュ
-        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-          // ログアウト時は全てのキャッシュをクリア（外部要因によるサインアウトにも対応）
-          if (event === 'SIGNED_OUT') {
-            await clearAllClientState()
-          }
-          
-          const currentPath = window.location.pathname
-          const authPages = ['/login', '/signup', '/reset-password', '/auth/callback']
-          const isAuthPage = authPages.some(page => currentPath.startsWith(page))
-          
-          if (!isAuthPage) {
-            router.refresh()
-          }
+        if (!isAuthPage) {
+          router.refresh();
         }
       }
-    )
+    });
 
-    // 初期セッションを明示的に取得（onAuthStateChangeが呼ばれない場合のフォールバック）
-    // getSession()はローカルキャッシュ（JWT）を返すため、メール変更等の反映が遅れる
-    // getUser()でサーバーから最新のユーザー情報を取得する
+    // 初期セッションを取得
+    // getSession() はローカルキャッシュ（JWT）を返す — ネットワーク不要で高速
     const fetchInitialSession = async () => {
       try {
-        const { data: { session }, error } = await supabaseClient.auth.getSession()
+        const {
+          data: { session },
+          error,
+        } = await supabaseClient.auth.getSession();
         if (isMounted) {
           if (error) {
             if (process.env.NODE_ENV !== "production") {
-              console.error('初期セッション取得エラー:', error)
+              console.error("初期セッション取得エラー:", error);
             }
-            setAuthState({
-              user: null,
-              session: null,
-              loading: false,
-              subscription: null
-            })
-          } else if (session) {
-            const { data: { user } } = await supabaseClient.auth.getUser()
-            const currentUser = user ?? session.user
-            const subInfo = await fetchSubscription(currentUser.id)
-            setAuthState({
-              user: currentUser,
-              session,
-              loading: false,
-              subscription: subInfo
-            })
+            setCoreState({ user: null, session: null, loading: false });
           } else {
-            setAuthState({
-              user: null,
-              session: null,
+            setCoreState({
+              user: session?.user ?? null,
+              session: session ?? null,
               loading: false,
-              subscription: null
-            })
+            });
           }
         }
       } catch (error: unknown) {
         if (process.env.NODE_ENV !== "production") {
-          console.error('初期セッション取得エラー:', error)
+          console.error("初期セッション取得エラー:", error);
         }
         if (isMounted) {
-          setAuthState({
-            user: null,
-            session: null,
-            loading: false,
-            subscription: null
-          })
+          setCoreState({ user: null, session: null, loading: false });
         }
       }
-    }
+    };
 
-    // 即座にセッションを取得
-    fetchInitialSession()
+    fetchInitialSession();
 
-    // OAuthコールバック後のリダイレクト時に対応するため、少し遅延してセッションを再取得
-    // これにより、サーバーサイドで設定されたCookieが確実に読み取られる
-    const retryTimer = setTimeout(() => {
-      if (isMounted) {
-        fetchInitialSession()
-      }
-    }, 100)
-
-    // クリーンアップ関数
     return () => {
-      isMounted = false
-      authSubscription.unsubscribe()
-      if (retryTimer) {
-        clearTimeout(retryTimer)
-      }
-    }
-  }, [router, supabaseClient, clearAllClientState, fetchSubscription])
+      isMounted = false;
+      authSubscription.unsubscribe();
+    };
+  }, [router, supabaseClient, clearAllClientState]);
 
   const value: AuthContextType = {
-    ...authState,
+    ...coreState,
+    subscription,
     supabase: supabaseClient || ({} as SupabaseClient<Database>),
     signIn,
     signUp,
@@ -471,21 +456,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updatePassword,
     updateProfile,
     refreshSubscription,
-    isAuthenticated: !!authState.user
-  }
+    isAuthenticated: !!coreState.user,
+  };
 
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  )
-}
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
 
 export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext)
+  const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    throw new Error("useAuth must be used within an AuthProvider");
   }
-  return context
-}
+  return context;
+};

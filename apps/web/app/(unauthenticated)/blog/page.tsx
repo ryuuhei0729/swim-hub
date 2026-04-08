@@ -1,18 +1,19 @@
-import React from 'react'
-import Link from 'next/link'
-import { NewspaperIcon, TagIcon } from '@heroicons/react/24/outline'
-import { BackButton } from '@/components/ui/BackButton'
-import { getAllPosts } from '@/lib/blog'
+import React from "react";
+import Link from "next/link";
+import { NewspaperIcon, TagIcon } from "@heroicons/react/24/outline";
+import { BackButton } from "@/components/ui/BackButton";
+import { getAllPosts } from "@/lib/blog";
 
-export const revalidate = 3600
+export const revalidate = 3600;
 
 export const metadata = {
-  title: 'ブログ | SwimHub',
-  description: '水泳に関するお役立ち情報、練習のコツ、大会準備のヒントなどをお届けします。',
-}
+  title: "ブログ | SwimHub",
+  description: "水泳に関するお役立ち情報、練習のコツ、大会準備のヒントなどをお届けします。",
+  alternates: { canonical: "/blog" },
+};
 
 export default function BlogPage() {
-  const posts = getAllPosts()
+  const posts = getAllPosts();
 
   return (
     <div className="min-h-screen bg-blue-50">
@@ -52,9 +53,7 @@ export default function BlogPage() {
                   </time>
                 </div>
                 <Link href={`/blog/${post.slug}`} className="block">
-                  <p className="text-gray-600 text-sm leading-relaxed mb-3">
-                    {post.description}
-                  </p>
+                  <p className="text-gray-600 text-sm leading-relaxed mb-3">{post.description}</p>
                 </Link>
                 {post.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2">
@@ -76,5 +75,5 @@ export default function BlogPage() {
         )}
       </div>
     </div>
-  )
+  );
 }

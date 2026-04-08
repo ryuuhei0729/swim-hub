@@ -4,8 +4,8 @@
  */
 
 interface LoadingSkeletonProps {
-  type?: 'page' | 'table' | 'card' | 'list'
-  itemCount?: number
+  type?: "page" | "table" | "card" | "list";
+  itemCount?: number;
 }
 
 /**
@@ -23,7 +23,7 @@ function PageSkeleton() {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 /**
@@ -43,7 +43,7 @@ function TableSkeleton({ itemCount = 5 }: { itemCount?: number }) {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 /**
@@ -63,7 +63,7 @@ function CardSkeleton({ itemCount = 3 }: { itemCount?: number }) {
         </div>
       ))}
     </div>
-  )
+  );
 }
 
 /**
@@ -78,23 +78,23 @@ function ListSkeleton({ itemCount = 5 }: { itemCount?: number }) {
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 /**
  * 共通スケルトンローディングコンポーネント
  */
-export default function LoadingSkeleton({ type = 'page', itemCount }: LoadingSkeletonProps) {
+export default function LoadingSkeleton({ type = "page", itemCount }: LoadingSkeletonProps) {
   switch (type) {
-    case 'table':
-      return <TableSkeleton itemCount={itemCount} />
-    case 'card':
-      return <CardSkeleton itemCount={itemCount} />
-    case 'list':
-      return <ListSkeleton itemCount={itemCount} />
-    case 'page':
+    case "table":
+      return <TableSkeleton itemCount={itemCount} />;
+    case "card":
+      return <CardSkeleton itemCount={itemCount} />;
+    case "list":
+      return <ListSkeleton itemCount={itemCount} />;
+    case "page":
     default:
-      return <PageSkeleton />
+      return <PageSkeleton />;
   }
 }
 
@@ -109,7 +109,7 @@ export function HeaderSkeleton() {
         <div className="h-4 bg-gray-200 rounded w-1/2"></div>
       </div>
     </div>
-  )
+  );
 }
 
 /**
@@ -126,6 +126,5 @@ export function StatsCardSkeleton({ count = 3 }: { count?: number }) {
         </div>
       ))}
     </div>
-  )
+  );
 }
-

@@ -1,22 +1,22 @@
-import React from 'react'
-import { View, Text, Pressable, StyleSheet } from 'react-native'
-import { FlashList } from '@shopify/flash-list'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
-import type { TeamAnnouncement } from '@swim-hub/shared/types'
-import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
-import { ErrorView } from '@/components/layout/ErrorView'
+import React from "react";
+import { View, Text, Pressable, StyleSheet } from "react-native";
+import { FlashList } from "@shopify/flash-list";
+import { format } from "date-fns";
+import { ja } from "date-fns/locale";
+import type { TeamAnnouncement } from "@swim-hub/shared/types";
+import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
+import { ErrorView } from "@/components/layout/ErrorView";
 
 interface TeamAnnouncementListProps {
-  announcements: TeamAnnouncement[]
-  isLoading: boolean
-  isError: boolean
-  error: Error | null
-  isAdmin: boolean
-  onRetry?: () => void
-  onCreateNew?: () => void
-  onEdit?: (announcement: TeamAnnouncement) => void
-  onDelete?: (announcementId: string) => void
+  announcements: TeamAnnouncement[];
+  isLoading: boolean;
+  isError: boolean;
+  error: Error | null;
+  isAdmin: boolean;
+  onRetry?: () => void;
+  onCreateNew?: () => void;
+  onEdit?: (announcement: TeamAnnouncement) => void;
+  onDelete?: (announcementId: string) => void;
 }
 
 /**
@@ -39,7 +39,7 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
       <View style={styles.container}>
         <LoadingSpinner message="お知らせを読み込み中..." />
       </View>
-    )
+    );
   }
 
   // エラー状態
@@ -47,17 +47,17 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
     return (
       <View style={styles.container}>
         <ErrorView
-          message={error.message || 'お知らせ一覧の取得に失敗しました'}
+          message={error.message || "お知らせ一覧の取得に失敗しました"}
           onRetry={onRetry}
         />
       </View>
-    )
+    );
   }
 
   // 日付フォーマット
   const formatDate = (dateString: string): string => {
-    return format(new Date(dateString), 'yyyy年M月d日 HH:mm', { locale: ja })
-  }
+    return format(new Date(dateString), "yyyy年M月d日 HH:mm", { locale: ja });
+  };
 
   return (
     <View style={styles.container}>
@@ -76,9 +76,9 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
           data={announcements}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => {
-            const isPublished = item.is_published
-            const startAt = item.start_at ? formatDate(item.start_at) : null
-            const endAt = item.end_at ? formatDate(item.end_at) : null
+            const isPublished = item.is_published;
+            const startAt = item.start_at ? formatDate(item.start_at) : null;
+            const endAt = item.end_at ? formatDate(item.end_at) : null;
 
             return (
               <View style={styles.announcementItem}>
@@ -89,7 +89,7 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
                     </Text>
                     <View style={styles.announcementMeta}>
                       <Text style={styles.announcementDate}>
-                        {item.created_at ? formatDate(item.created_at) : '-'}
+                        {item.created_at ? formatDate(item.created_at) : "-"}
                       </Text>
                       {!isPublished && (
                         <View style={styles.draftBadge}>
@@ -106,10 +106,7 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
                   {isAdmin && (onEdit || onDelete) && (
                     <View style={styles.announcementActions}>
                       {onEdit && (
-                        <Pressable
-                          style={styles.actionButton}
-                          onPress={() => onEdit(item)}
-                        >
+                        <Pressable style={styles.actionButton} onPress={() => onEdit(item)}>
                           <Text style={styles.actionButtonText}>編集</Text>
                         </Pressable>
                       )}
@@ -132,7 +129,7 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
                   </Text>
                 )}
               </View>
-            )
+            );
           }}
           contentContainerStyle={styles.listContent}
         />
@@ -147,42 +144,42 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
         </View>
       )}
     </View>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   actionBar: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: "#E5E7EB",
   },
   createButton: {
-    backgroundColor: '#2563EB',
+    backgroundColor: "#2563EB",
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   createButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
   listContent: {
     padding: 16,
     gap: 12,
   },
   announcementItem: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 8,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 1,
@@ -199,37 +196,37 @@ const styles = StyleSheet.create({
   },
   announcementTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: "600",
+    color: "#111827",
     marginBottom: 4,
   },
   announcementMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   announcementDate: {
     fontSize: 12,
-    color: '#6B7280',
+    color: "#6B7280",
   },
   draftBadge: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: "#FEF3C7",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
   },
   draftBadgeText: {
     fontSize: 10,
-    fontWeight: '500',
-    color: '#92400E',
+    fontWeight: "500",
+    color: "#92400E",
   },
   announcementPeriod: {
     fontSize: 12,
-    color: '#6B7280',
+    color: "#6B7280",
     marginTop: 4,
   },
   announcementActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
     marginTop: 8,
   },
@@ -237,45 +234,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: "#F3F4F6",
   },
   actionButtonText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+    fontWeight: "500",
+    color: "#374151",
   },
   deleteButton: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: "#FEF2F2",
   },
   deleteButtonText: {
-    color: '#DC2626',
+    color: "#DC2626",
   },
   announcementContent: {
     fontSize: 14,
-    color: '#374151',
+    color: "#374151",
     lineHeight: 20,
     marginTop: 8,
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 40,
   },
   emptyText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: "#6B7280",
     marginBottom: 16,
   },
   emptyCreateButton: {
-    backgroundColor: '#2563EB',
+    backgroundColor: "#2563EB",
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
   },
   emptyCreateButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
-})
+});

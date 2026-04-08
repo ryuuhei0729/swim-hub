@@ -1,51 +1,53 @@
-'use client'
+"use client";
 
-import React, { useState } from 'react'
-import { ArrowDownTrayIcon, ClockIcon, TrophyIcon } from '@heroicons/react/24/outline'
-import { downloadPracticeExcelTemplate } from '@/utils/practiceExcel'
-import { downloadCompetitionExcelTemplate } from '@/utils/competitionExcel'
+import React, { useState } from "react";
+import { ArrowDownTrayIcon, ClockIcon, TrophyIcon } from "@heroicons/react/24/outline";
+import { downloadPracticeExcelTemplate } from "@/utils/practiceExcel";
+import { downloadCompetitionExcelTemplate } from "@/utils/competitionExcel";
 
 interface TemplateDownloadProps {
-  loading: boolean
-  onLoadingChange: (loading: boolean) => void
-  onError: (error: string) => void
+  loading: boolean;
+  onLoadingChange: (loading: boolean) => void;
+  onError: (error: string) => void;
 }
 
 export function TemplateDownload({ loading, onLoadingChange, onError }: TemplateDownloadProps) {
-  const [selectedPracticeYear, setSelectedPracticeYear] = useState<number>(new Date().getFullYear())
-  const [selectedCompetitionYear, setSelectedCompetitionYear] = useState<number>(new Date().getFullYear())
+  const [selectedPracticeYear, setSelectedPracticeYear] = useState<number>(
+    new Date().getFullYear(),
+  );
+  const [selectedCompetitionYear, setSelectedCompetitionYear] = useState<number>(
+    new Date().getFullYear(),
+  );
 
   const handleDownloadPracticeTemplate = async () => {
     try {
-      onLoadingChange(true)
-      await downloadPracticeExcelTemplate(selectedPracticeYear)
-      onError('')
+      onLoadingChange(true);
+      await downloadPracticeExcelTemplate(selectedPracticeYear);
+      onError("");
     } catch (err) {
-      onError('練習テンプレートのダウンロードに失敗しました')
-      console.error('テンプレートダウンロードエラー:', err)
+      onError("練習テンプレートのダウンロードに失敗しました");
+      console.error("テンプレートダウンロードエラー:", err);
     } finally {
-      onLoadingChange(false)
+      onLoadingChange(false);
     }
-  }
+  };
 
   const handleDownloadCompetitionTemplate = async () => {
     try {
-      onLoadingChange(true)
-      await downloadCompetitionExcelTemplate(selectedCompetitionYear)
-      onError('')
+      onLoadingChange(true);
+      await downloadCompetitionExcelTemplate(selectedCompetitionYear);
+      onError("");
     } catch (err) {
-      onError('大会テンプレートのダウンロードに失敗しました')
-      console.error('テンプレートダウンロードエラー:', err)
+      onError("大会テンプレートのダウンロードに失敗しました");
+      console.error("テンプレートダウンロードエラー:", err);
     } finally {
-      onLoadingChange(false)
+      onLoadingChange(false);
     }
-  }
+  };
 
   return (
     <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-      <h3 className="text-lg font-medium text-gray-900 mb-4">
-        Excelテンプレートのダウンロード
-      </h3>
+      <h3 className="text-lg font-medium text-gray-900 mb-4">Excelテンプレートのダウンロード</h3>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* 練習テンプレート */}
@@ -73,9 +75,7 @@ export function TemplateDownload({ loading, onLoadingChange, onError }: Template
               ダウンロード
             </button>
           </div>
-          <p className="text-xs text-gray-500">
-            列: 日付 | 曜日 | タイトル | 場所 | 備考
-          </p>
+          <p className="text-xs text-gray-500">列: 日付 | 曜日 | タイトル | 場所 | 備考</p>
         </div>
 
         {/* 大会テンプレート */}
@@ -109,5 +109,5 @@ export function TemplateDownload({ loading, onLoadingChange, onError }: Template
         </div>
       </div>
     </div>
-  )
+  );
 }

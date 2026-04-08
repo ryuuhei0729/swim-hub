@@ -1,17 +1,17 @@
-'use client'
+"use client";
 
-import React, { useCallback } from 'react'
-import { XMarkIcon, CheckIcon } from '@heroicons/react/24/outline'
-import Cropper from 'react-easy-crop'
-import { useImageCrop } from '@/hooks/useImageCrop'
-import Button from '@/components/ui/Button'
+import React, { useCallback } from "react";
+import { XMarkIcon, CheckIcon } from "@heroicons/react/24/outline";
+import Cropper from "react-easy-crop";
+import { useImageCrop } from "@/hooks/useImageCrop";
+import Button from "@/components/ui/Button";
 
 interface ImageCropModalProps {
-  isOpen: boolean
-  onClose: () => void
-  imageSrc: string
-  fileName: string
-  onCropComplete: (croppedFile: File) => void
+  isOpen: boolean;
+  onClose: () => void;
+  imageSrc: string;
+  fileName: string;
+  onCropComplete: (croppedFile: File) => void;
 }
 
 export default function ImageCropModal({
@@ -19,7 +19,7 @@ export default function ImageCropModal({
   onClose,
   imageSrc,
   fileName,
-  onCropComplete
+  onCropComplete,
 }: ImageCropModalProps) {
   const {
     crop,
@@ -30,39 +30,34 @@ export default function ImageCropModal({
     handleCropComplete,
     handleSave,
     handleCancel,
-    resetCrop
+    resetCrop,
   } = useImageCrop({
     onCropComplete,
-    onCancel: onClose
-  })
+    onCancel: onClose,
+  });
 
   const handleSaveClick = useCallback(() => {
-    handleSave(imageSrc, fileName)
-  }, [handleSave, imageSrc, fileName])
+    handleSave(imageSrc, fileName);
+  }, [handleSave, imageSrc, fileName]);
 
   const handleClose = useCallback(() => {
-    resetCrop()
-    handleCancel()
-  }, [resetCrop, handleCancel])
+    resetCrop();
+    handleCancel();
+  }, [resetCrop, handleCancel]);
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* オーバーレイ */}
-      <div 
-        className="fixed inset-0 bg-gray-900/75 transition-opacity"
-        onClick={handleClose}
-      />
-      
+      <div className="fixed inset-0 bg-gray-900/75 transition-opacity" onClick={handleClose} />
+
       {/* モーダル */}
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="relative bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
           {/* ヘッダー */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">
-              プロフィール画像をトリミング
-            </h3>
+            <h3 className="text-lg font-semibold text-gray-900">プロフィール画像をトリミング</h3>
             <button
               type="button"
               className="text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-1"
@@ -88,19 +83,17 @@ export default function ImageCropModal({
                 showGrid={true}
                 style={{
                   containerStyle: {
-                    width: '100%',
-                    height: '100%',
-                    position: 'relative'
-                  }
+                    width: "100%",
+                    height: "100%",
+                    position: "relative",
+                  },
                 }}
               />
             </div>
 
             {/* ズームコントロール */}
             <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                ズーム
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">ズーム</label>
               <input
                 type="range"
                 min={1}
@@ -121,12 +114,7 @@ export default function ImageCropModal({
 
           {/* フッター */}
           <div className="flex justify-end space-x-3 p-4 border-t border-gray-200">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={handleClose}
-              disabled={isProcessing}
-            >
+            <Button type="button" variant="secondary" onClick={handleClose} disabled={isProcessing}>
               キャンセル
             </Button>
             <Button
@@ -151,5 +139,5 @@ export default function ImageCropModal({
         </div>
       </div>
     </div>
-  )
+  );
 }

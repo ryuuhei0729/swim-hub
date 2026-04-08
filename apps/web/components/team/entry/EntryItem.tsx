@@ -1,31 +1,20 @@
-import { memo } from 'react'
-import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
-import { formatTimeBest } from '@/utils/formatters'
-import type { EntryItemProps } from '@/types/team-entry'
+import { memo } from "react";
+import { PencilIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { formatTimeBest } from "@/utils/formatters";
+import type { EntryItemProps } from "@/types/team-entry";
 
-function EntryItemComponent({
-  entry,
-  onEdit,
-  onDelete,
-  submitting
-}: EntryItemProps) {
+function EntryItemComponent({ entry, onEdit, onDelete, submitting }: EntryItemProps) {
   return (
     <div className="flex items-center justify-between p-3 bg-orange-50 rounded-md border border-orange-100">
       <div className="flex-1">
-        <p className="font-medium text-gray-900">
-          {entry.style?.name_jp || '種目不明'}
-        </p>
+        <p className="font-medium text-gray-900">{entry.style?.name_jp || "種目不明"}</p>
         {entry.entry_time && entry.entry_time > 0 && (
           <p className="text-sm text-gray-600">
-            エントリータイム:{' '}
-            <span className="font-mono font-semibold">
-              {formatTimeBest(entry.entry_time)}
-            </span>
+            エントリータイム:{" "}
+            <span className="font-mono font-semibold">{formatTimeBest(entry.entry_time)}</span>
           </p>
         )}
-        {entry.note && (
-          <p className="text-sm text-gray-500 mt-1">{entry.note}</p>
-        )}
+        {entry.note && <p className="text-sm text-gray-500 mt-1">{entry.note}</p>}
       </div>
       <div className="flex items-center space-x-2 ml-4">
         <button
@@ -45,7 +34,7 @@ function EntryItemComponent({
         </button>
       </div>
     </div>
-  )
+  );
 }
 
-export const EntryItem = memo(EntryItemComponent)
+export const EntryItem = memo(EntryItemComponent);

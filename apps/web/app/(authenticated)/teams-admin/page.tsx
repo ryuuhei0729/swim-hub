@@ -1,10 +1,10 @@
-import React, { Suspense } from 'react'
-import AdminTeamsDataLoader from './_server/AdminTeamsDataLoader'
+import React, { Suspense } from "react";
+import AdminTeamsDataLoader from "./_server/AdminTeamsDataLoader";
 
 /**
  * 動的レンダリングを強制（認証が必要なページのため）
  */
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
 /**
  * 管理者チーム一覧ページ（Server Component）
@@ -28,7 +28,5 @@ export default async function AdminTeamsPage() {
     >
       <AdminTeamsDataLoader />
     </Suspense>
-  )
+  );
 }
-
-

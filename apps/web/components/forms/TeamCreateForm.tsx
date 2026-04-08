@@ -1,193 +1,191 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect, useRef } from 'react'
-import { XMarkIcon } from '@heroicons/react/24/outline'
-import ConfirmDialog from '@/components/ui/ConfirmDialog'
+import React, { useState, useEffect, useRef } from "react";
+import { XMarkIcon } from "@heroicons/react/24/outline";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 export interface TeamCreateFormData {
-  name: string
-  description: string
+  name: string;
+  description: string;
 }
 
 export interface TeamCreateFormProps {
-  isOpen: boolean
-  onClose: () => void
-  onSubmit: (data: TeamCreateFormData) => Promise<void>
-  isLoading?: boolean
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (data: TeamCreateFormData) => Promise<void>;
+  isLoading?: boolean;
 }
 
 export default function TeamCreateForm({
   isOpen,
   onClose,
   onSubmit,
-  isLoading = false
+  isLoading = false,
 }: TeamCreateFormProps) {
   const [formData, setFormData] = useState<TeamCreateFormData>({
-    name: '',
-    description: ''
-  })
-  const [errors, setErrors] = useState<Partial<TeamCreateFormData>>({})
+    name: "",
+    description: "",
+  });
+  const [errors, setErrors] = useState<Partial<TeamCreateFormData>>({});
   // フォームに変更があるかどうかを追跡
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   // 送信済みフラグ（送信後は警告を出さない）
-  const [isSubmitted, setIsSubmitted] = useState(false)
+  const [isSubmitted, setIsSubmitted] = useState(false);
   // 確認ダイアログの表示状態
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   // 確認ダイアログのコンテキスト（close: モーダル閉じる, back: ブラウザバック）
-  const [confirmContext, setConfirmContext] = useState<'close' | 'back'>('close')
+  const [confirmContext, setConfirmContext] = useState<"close" | "back">("close");
   // pushStateが既に呼ばれたかを追跡
-  const pushedRef = useRef(false)
+  const pushedRef = useRef(false);
   // プログラムによるpopstateを無視するフラグ
-  const ignorePopRef = useRef(false)
+  const ignorePopRef = useRef(false);
 
   // モーダルが閉じた時にリセット
   useEffect(() => {
     if (!isOpen) {
-      setHasUnsavedChanges(false)
-      setIsSubmitted(false)
-      setShowConfirmDialog(false)
-      pushedRef.current = false
-      ignorePopRef.current = false
+      setHasUnsavedChanges(false);
+      setIsSubmitted(false);
+      setShowConfirmDialog(false);
+      pushedRef.current = false;
+      ignorePopRef.current = false;
     }
-  }, [isOpen])
+  }, [isOpen]);
 
   // ブラウザバックや閉じるボタンでの離脱を防ぐ
   useEffect(() => {
-    if (!isOpen || !hasUnsavedChanges || isSubmitted) return
+    if (!isOpen || !hasUnsavedChanges || isSubmitted) return;
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault()
-      e.returnValue = ''
-    }
+      e.preventDefault();
+      e.returnValue = "";
+    };
 
     const handlePopState = () => {
       // プログラムによるpopstateは無視
       if (ignorePopRef.current) {
-        ignorePopRef.current = false
-        return
+        ignorePopRef.current = false;
+        return;
       }
 
       if (hasUnsavedChanges && !isSubmitted) {
         // 履歴を戻す（ダイアログ表示中は戻らない）
-        window.history.pushState(null, '', window.location.href)
-        setConfirmContext('back')
-        setShowConfirmDialog(true)
-        ignorePopRef.current = true
+        window.history.pushState(null, "", window.location.href);
+        setConfirmContext("back");
+        setShowConfirmDialog(true);
+        ignorePopRef.current = true;
       }
-    }
+    };
 
-    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener("beforeunload", handleBeforeUnload);
     // 一度だけpushStateを呼ぶ
     if (!pushedRef.current) {
-      window.history.pushState(null, '', window.location.href)
-      pushedRef.current = true
+      window.history.pushState(null, "", window.location.href);
+      pushedRef.current = true;
     }
-    window.addEventListener('popstate', handlePopState)
+    window.addEventListener("popstate", handlePopState);
 
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload)
-      window.removeEventListener('popstate', handlePopState)
-    }
-  }, [isOpen, hasUnsavedChanges, isSubmitted])
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [isOpen, hasUnsavedChanges, isSubmitted]);
 
   // フォームバリデーション
   const validateForm = (): boolean => {
-    const newErrors: Partial<TeamCreateFormData> = {}
+    const newErrors: Partial<TeamCreateFormData> = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'チーム名は必須です'
+      newErrors.name = "チーム名は必須です";
     } else if (formData.name.length > 50) {
-      newErrors.name = 'チーム名は50文字以内で入力してください'
+      newErrors.name = "チーム名は50文字以内で入力してください";
     }
 
     if (formData.description.length > 200) {
-      newErrors.description = '説明は200文字以内で入力してください'
+      newErrors.description = "説明は200文字以内で入力してください";
     }
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   // フォーム送信
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!validateForm()) {
-      return
+      return;
     }
 
-    setIsSubmitted(true)
+    setIsSubmitted(true);
     try {
-      await onSubmit(formData)
+      await onSubmit(formData);
       // 成功時はフォームをリセット
-      setFormData({ name: '', description: '' })
-      setErrors({})
-      setHasUnsavedChanges(false)
+      setFormData({ name: "", description: "" });
+      setErrors({});
+      setHasUnsavedChanges(false);
     } catch (error) {
-      console.error('チーム作成エラー:', error)
-      setIsSubmitted(false)
+      console.error("チーム作成エラー:", error);
+      setIsSubmitted(false);
     }
-  }
+  };
 
   // フォームリセット
   const handleClose = () => {
     if (hasUnsavedChanges && !isSubmitted) {
-      setConfirmContext('close')
-      setShowConfirmDialog(true)
-      return
+      setConfirmContext("close");
+      setShowConfirmDialog(true);
+      return;
     }
-    cleanupAndClose()
-  }
+    cleanupAndClose();
+  };
 
   const cleanupAndClose = () => {
-    setFormData({ name: '', description: '' })
-    setErrors({})
-    setShowConfirmDialog(false)
-    onClose()
-  }
+    setFormData({ name: "", description: "" });
+    setErrors({});
+    setShowConfirmDialog(false);
+    onClose();
+  };
 
   const handleConfirmClose = () => {
-    if (confirmContext === 'back') {
-      ignorePopRef.current = true
-      window.history.back()
+    if (confirmContext === "back") {
+      ignorePopRef.current = true;
+      window.history.back();
     }
-    cleanupAndClose()
-  }
+    cleanupAndClose();
+  };
 
   const handleCancelClose = () => {
-    setShowConfirmDialog(false)
-  }
+    setShowConfirmDialog(false);
+  };
 
   // 入力値変更
   const handleInputChange = (field: keyof TeamCreateFormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
-    setHasUnsavedChanges(true)
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setHasUnsavedChanges(true);
     // エラーをクリア
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }))
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
-  }
+  };
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-60 overflow-y-auto" data-testid="team-create-modal">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         {/* オーバーレイ */}
-        <div 
-          className="fixed inset-0 bg-black/40 transition-opacity" 
-          onClick={handleClose}
-        />
+        <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose} />
 
         {/* モーダル */}
-        <div className="relative inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full" data-testid="team-create-dialog">
+        <div
+          className="relative inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full"
+          data-testid="team-create-dialog"
+        >
           <form onSubmit={handleSubmit}>
             {/* ヘッダー */}
             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">
-                  新しいチームを作成
-                </h3>
+                <h3 className="text-lg font-medium text-gray-900">新しいチームを作成</h3>
                 <button
                   type="button"
                   onClick={handleClose}
@@ -207,35 +205,34 @@ export default function TeamCreateForm({
                   type="text"
                   id="teamName"
                   value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  onChange={(e) => handleInputChange("name", e.target.value)}
                   className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.name ? 'border-red-300' : 'border-gray-300'
+                    errors.name ? "border-red-300" : "border-gray-300"
                   }`}
                   placeholder="例: 水泳クラブA"
                   maxLength={50}
                   disabled={isLoading}
                   data-testid="team-name-input"
                 />
-                {errors.name && (
-                  <p className="mt-1 text-sm text-red-600">{errors.name}</p>
-                )}
-                <p className="mt-1 text-sm text-gray-500">
-                  {formData.name.length}/50文字
-                </p>
+                {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+                <p className="mt-1 text-sm text-gray-500">{formData.name.length}/50文字</p>
               </div>
 
               {/* 説明 */}
               <div className="mb-4">
-                <label htmlFor="teamDescription" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="teamDescription"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   説明
                 </label>
                 <textarea
                   id="teamDescription"
                   value={formData.description}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  onChange={(e) => handleInputChange("description", e.target.value)}
                   rows={3}
                   className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.description ? 'border-red-300' : 'border-gray-300'
+                    errors.description ? "border-red-300" : "border-gray-300"
                   }`}
                   placeholder="チームの説明を入力してください（任意）"
                   maxLength={200}
@@ -245,9 +242,7 @@ export default function TeamCreateForm({
                 {errors.description && (
                   <p className="mt-1 text-sm text-red-600">{errors.description}</p>
                 )}
-                <p className="mt-1 text-sm text-gray-500">
-                  {formData.description.length}/200文字
-                </p>
+                <p className="mt-1 text-sm text-gray-500">{formData.description.length}/200文字</p>
               </div>
             </div>
 
@@ -259,7 +254,7 @@ export default function TeamCreateForm({
                 className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 data-testid="team-create-submit-button"
               >
-                {isLoading ? '作成中...' : 'チームを作成'}
+                {isLoading ? "作成中..." : "チームを作成"}
               </button>
               <button
                 type="button"
@@ -281,13 +276,15 @@ export default function TeamCreateForm({
         onConfirm={handleConfirmClose}
         onCancel={handleCancelClose}
         title="入力内容が保存されていません"
-        message={confirmContext === 'back'
-          ? '入力内容が保存されていません。このまま戻りますか？'
-          : '入力内容が保存されていません。このまま閉じますか？'}
-        confirmLabel={confirmContext === 'back' ? '戻る' : '閉じる'}
+        message={
+          confirmContext === "back"
+            ? "入力内容が保存されていません。このまま戻りますか？"
+            : "入力内容が保存されていません。このまま閉じますか？"
+        }
+        confirmLabel={confirmContext === "back" ? "戻る" : "閉じる"}
         cancelLabel="編集を続ける"
         variant="warning"
       />
     </div>
-  )
+  );
 }

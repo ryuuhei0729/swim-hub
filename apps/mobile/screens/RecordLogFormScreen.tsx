@@ -1,40 +1,56 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, Switch, Modal, ActivityIndicator, Keyboard, Dimensions } from 'react-native'
-import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { useQueryClient } from '@tanstack/react-query'
-import { Feather } from '@expo/vector-icons'
-import { useAuth } from '@/contexts/AuthProvider'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Alert,
+  Switch,
+  Modal,
+  ActivityIndicator,
+  Keyboard,
+  Dimensions,
+} from "react-native";
+import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useQueryClient } from "@tanstack/react-query";
+import { Feather } from "@expo/vector-icons";
+import { useAuth } from "@/contexts/AuthProvider";
 import {
   useCreateRecordMutation,
   useUpdateRecordMutation,
   useReplaceSplitTimesMutation,
-} from '@apps/shared/hooks/queries/records'
-import { StyleAPI } from '@apps/shared/api/styles'
-import { formatTime } from '@/utils/formatters'
-import { LoadingSpinner } from '@/components/layout/LoadingSpinner'
-import type { MainStackParamList } from '@/navigation/types'
-import type { Style, PoolType, RecordInsert } from '@apps/shared/types'
-import { useQuickTimeInput } from '@/hooks/useQuickTimeInput'
+} from "@apps/shared/hooks/queries/records";
+import { StyleAPI } from "@apps/shared/api/styles";
+import { formatTime } from "@/utils/formatters";
+import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
+import { PremiumBadge } from "@/components/shared/PremiumBadge";
+import { VideoUploader } from "@/components/shared/VideoUploader";
+import { checkIsPremium } from "@swim-hub/shared/utils/premium";
+import { PREMIUM_MESSAGES, FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
+import type { MainStackParamList } from "@/navigation/types";
+import type { Style, PoolType, RecordInsert } from "@apps/shared/types";
+import { useQuickTimeInput } from "@/hooks/useQuickTimeInput";
 
-type RecordLogFormScreenRouteProp = RouteProp<MainStackParamList, 'RecordLogForm'>
-type RecordLogFormScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>
+type RecordLogFormScreenRouteProp = RouteProp<MainStackParamList, "RecordLogForm">;
+type RecordLogFormScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
 interface SplitTimeData {
-  distance: number | string
-  splitTime: number
-  splitTimeDisplayValue: string
+  distance: number | string;
+  splitTime: number;
+  splitTimeDisplayValue: string;
 }
 
 interface RecordFormData {
-  styleId: string
-  time: number
-  timeDisplayValue: string
-  isRelaying: boolean
-  splitTimes: SplitTimeData[]
-  note: string
-  videoUrl: string
-  reactionTime: string
+  styleId: string;
+  time: number;
+  timeDisplayValue: string;
+  isRelaying: boolean;
+  splitTimes: SplitTimeData[];
+  note: string;
+  reactionTime: string;
 }
 
 /**
@@ -42,105 +58,121 @@ interface RecordFormData {
  * タイム、リレー種目フラグ、メモ、動画URL、スプリットタイムを入力
  */
 export const RecordLogFormScreen: React.FC = () => {
-  const route = useRoute<RecordLogFormScreenRouteProp>()
-  const navigation = useNavigation<RecordLogFormScreenNavigationProp>()
-  const { competitionId, recordId, date: _date } = route.params
-  const entryDataList = useMemo(() => route.params.entryDataList ?? [], [route.params.entryDataList])
-  const { supabase } = useAuth()
-  const queryClient = useQueryClient()
+  const route = useRoute<RecordLogFormScreenRouteProp>();
+  const navigation = useNavigation<RecordLogFormScreenNavigationProp>();
+  const { competitionId, recordId, date: _date } = route.params;
+  const entryDataList = useMemo(
+    () => route.params.entryDataList ?? [],
+    [route.params.entryDataList],
+  );
+  const { supabase, subscription } = useAuth();
+  const isPremium = checkIsPremium(subscription);
+  const queryClient = useQueryClient();
 
   // クイック入力フック
-  const { parseInput } = useQuickTimeInput()
+  const { parseInput } = useQuickTimeInput();
+
+  // 動画の状態管理
+  const [existingVideoPath, setExistingVideoPath] = useState<string | null>(null);
+  const [existingThumbnailPath, setExistingThumbnailPath] = useState<string | null>(null);
 
   // フォーム状態（複数エントリー対応）
-  const [formDataList, setFormDataList] = useState<RecordFormData[]>([])
-  const [swimStyles, setSwimStyles] = useState<Style[]>([])
-  const [loading, setLoading] = useState(false)
-  const [loadingStyles, setLoadingStyles] = useState(true)
-  const [loadingRecord, setLoadingRecord] = useState(false)
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [showStylePicker, setShowStylePicker] = useState(false)
-  const [pickingFormIndex, setPickingFormIndex] = useState<number | null>(null)
-  const styleButtonRefs = useRef<Map<number, View>>(new Map())
-  const [dropdownLayout, setDropdownLayout] = useState({ top: 0, left: 0, width: 0 })
+  const [formDataList, setFormDataList] = useState<RecordFormData[]>([]);
+  const [swimStyles, setSwimStyles] = useState<Style[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loadingStyles, setLoadingStyles] = useState(true);
+  const [loadingRecord, setLoadingRecord] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showStylePicker, setShowStylePicker] = useState(false);
+  const [pickingFormIndex, setPickingFormIndex] = useState<number | null>(null);
+  const styleButtonRefs = useRef<Map<number, View>>(new Map());
+  const [dropdownLayout, setDropdownLayout] = useState({ top: 0, left: 0, width: 0 });
 
   // 二重送信防止用のref
-  const isSubmittingRef = useRef(false)
+  const isSubmittingRef = useRef(false);
 
   // ミューテーション
-  const createMutation = useCreateRecordMutation(supabase)
-  const updateMutation = useUpdateRecordMutation(supabase)
-  const replaceSplitTimesMutation = useReplaceSplitTimesMutation(supabase)
+  const createMutation = useCreateRecordMutation(supabase);
+  const updateMutation = useUpdateRecordMutation(supabase);
+  const replaceSplitTimesMutation = useReplaceSplitTimesMutation(supabase);
 
   // 秒数を表示用文字列に変換
   const formatSecondsToDisplay = (seconds: number): string => {
-    if (!seconds || seconds <= 0) return ''
-    const minutes = Math.floor(seconds / 60)
-    const remainder = (seconds % 60).toFixed(2).padStart(5, '0')
-    return minutes > 0 ? `${minutes}:${remainder}` : remainder
-  }
+    if (!seconds || seconds <= 0) return "";
+    const minutes = Math.floor(seconds / 60);
+    const remainder = (seconds % 60).toFixed(2).padStart(5, "0");
+    return minutes > 0 ? `${minutes}:${remainder}` : remainder;
+  };
 
   // 種目一覧を取得
   useEffect(() => {
     const fetchStyles = async () => {
       try {
-        const styleApi = new StyleAPI(supabase)
-        const stylesData = await styleApi.getStyles()
-        setSwimStyles(stylesData)
+        const styleApi = new StyleAPI(supabase);
+        const stylesData = await styleApi.getStyles();
+        setSwimStyles(stylesData);
       } catch (error) {
-        console.error('種目取得エラー:', error)
-        Alert.alert('エラー', '種目の取得に失敗しました')
+        console.error("種目取得エラー:", error);
+        Alert.alert("エラー", "種目の取得に失敗しました");
       } finally {
-        setLoadingStyles(false)
+        setLoadingStyles(false);
       }
-    }
-    fetchStyles()
-  }, [supabase])
+    };
+    fetchStyles();
+  }, [supabase]);
 
   // 記録データを取得（編集モードの場合）
   useEffect(() => {
-    if (!recordId || loadingStyles || swimStyles.length === 0) return
+    if (!recordId || loadingStyles || swimStyles.length === 0) return;
 
-    let isMounted = true
+    let isMounted = true;
 
     const fetchRecord = async () => {
       try {
-        setLoadingRecord(true)
-        
+        setLoadingRecord(true);
+
         const { data: record, error } = await supabase
-          .from('records')
-          .select(`
+          .from("records")
+          .select(
+            `
             *,
             split_times(*)
-          `)
-          .eq('id', recordId)
-          .single()
+          `,
+          )
+          .eq("id", recordId)
+          .single();
 
-        if (!isMounted) return
+        if (!isMounted) return;
 
         if (error) {
-          console.error('記録取得エラー詳細:', error)
-          console.error('記録取得エラー - recordId:', recordId)
-          if (error.code === 'PGRST116') {
+          console.error("記録取得エラー詳細:", error);
+          console.error("記録取得エラー - recordId:", recordId);
+          if (error.code === "PGRST116") {
             // 記録が見つからない場合
-            Alert.alert('エラー', '記録が見つかりませんでした')
-            navigation.goBack()
-            return
+            Alert.alert("エラー", "記録が見つかりませんでした");
+            navigation.goBack();
+            return;
           }
-          throw error
+          throw error;
         }
         if (!record) {
-          Alert.alert('エラー', '記録データが見つかりませんでした')
-          navigation.goBack()
-          return
+          Alert.alert("エラー", "記録データが見つかりませんでした");
+          navigation.goBack();
+          return;
         }
 
         // 記録データでフォームを初期化
-        const splitTimes = (record.split_times || []).map((st: { distance: number; split_time: number }) => ({
-          distance: st.distance,
-          splitTime: st.split_time,
-          splitTimeDisplayValue: formatSecondsToDisplay(st.split_time),
-        }))
+        const splitTimes = (record.split_times || []).map(
+          (st: { distance: number; split_time: number }) => ({
+            distance: st.distance,
+            splitTime: st.split_time,
+            splitTimeDisplayValue: formatSecondsToDisplay(st.split_time),
+          }),
+        );
+
+        // 動画パスを初期化
+        setExistingVideoPath(record.video_path ?? null);
+        setExistingThumbnailPath(record.video_thumbnail_path ?? null);
 
         const formData = {
           styleId: String(record.style_id),
@@ -148,32 +180,31 @@ export const RecordLogFormScreen: React.FC = () => {
           timeDisplayValue: formatSecondsToDisplay(record.time),
           isRelaying: record.is_relaying || false,
           splitTimes,
-          note: record.note || '',
-          videoUrl: record.video_url || '',
-          reactionTime: record.reaction_time ? String(record.reaction_time) : '',
-        }
-        setFormDataList([formData])
+          note: record.note || "",
+          reactionTime: record.reaction_time ? String(record.reaction_time) : "",
+        };
+        setFormDataList([formData]);
       } catch (error) {
-        if (!isMounted) return
-        console.error('記録取得エラー:', error)
-        Alert.alert('エラー', '記録の取得に失敗しました')
+        if (!isMounted) return;
+        console.error("記録取得エラー:", error);
+        Alert.alert("エラー", "記録の取得に失敗しました");
       } finally {
         if (isMounted) {
-          setLoadingRecord(false)
+          setLoadingRecord(false);
         }
       }
-    }
+    };
 
-    fetchRecord()
+    fetchRecord();
 
     return () => {
-      isMounted = false
-    }
-  }, [recordId, competitionId, swimStyles.length, loadingStyles, supabase, navigation])
+      isMounted = false;
+    };
+  }, [recordId, competitionId, swimStyles.length, loadingStyles, supabase, navigation]);
 
   // エントリー情報からフォームデータを初期化（新規作成モードの場合）
   useEffect(() => {
-    if (recordId || loadingStyles || swimStyles.length === 0) return
+    if (recordId || loadingStyles || swimStyles.length === 0) return;
 
     if (entryDataList.length > 0) {
       // エントリー情報がある場合
@@ -181,60 +212,58 @@ export const RecordLogFormScreen: React.FC = () => {
         entryDataList.map((entry) => ({
           styleId: String(entry.styleId),
           time: 0,
-          timeDisplayValue: '',
+          timeDisplayValue: "",
           isRelaying: false,
           splitTimes: [],
-          note: '',
-          videoUrl: '',
-          reactionTime: '',
-        }))
-      )
+          note: "",
+          reactionTime: "",
+        })),
+      );
     } else {
       // エントリー情報がない場合（スキップした場合）
-      const firstStyle = swimStyles.length > 0 ? swimStyles[0] : null
+      const firstStyle = swimStyles.length > 0 ? swimStyles[0] : null;
       setFormDataList([
         {
-          styleId: firstStyle?.id ? String(firstStyle.id) : '',
+          styleId: firstStyle?.id ? String(firstStyle.id) : "",
           time: 0,
-          timeDisplayValue: '',
+          timeDisplayValue: "",
           isRelaying: false,
           splitTimes: [],
-          note: '',
-          videoUrl: '',
-          reactionTime: '',
+          note: "",
+          reactionTime: "",
         },
-      ])
+      ]);
     }
-  }, [entryDataList, swimStyles, loadingStyles, recordId])
+  }, [entryDataList, swimStyles, loadingStyles, recordId]);
 
   // タイム文字列を秒数に変換（クイック入力対応）
   const parseTimeToSeconds = (timeStr: string): number => {
-    if (!timeStr || timeStr.trim() === '') return 0
-    const { time } = parseInput(timeStr)
-    return time
-  }
+    if (!timeStr || timeStr.trim() === "") return 0;
+    const { time } = parseInput(timeStr);
+    return time;
+  };
 
   // フォームデータ更新
   const updateFormData = (index: number, updates: Partial<RecordFormData>) => {
     setFormDataList((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, ...updates } : item))
-    )
-  }
+      prev.map((item, i) => (i === index ? { ...item, ...updates } : item)),
+    );
+  };
 
   // タイム変更
   const handleTimeChange = (index: number, value: string) => {
-    const newTime = parseTimeToSeconds(value)
-    const formData = formDataList[index]
-    const style = swimStyles.find((s) => s.id.toString() === formData.styleId)
-    const raceDistance = style?.distance
+    const newTime = parseTimeToSeconds(value);
+    const formData = formDataList[index];
+    const style = swimStyles.find((s) => s.id.toString() === formData.styleId);
+    const raceDistance = style?.distance;
 
-    let updatedSplitTimes = [...formData.splitTimes]
+    let updatedSplitTimes = [...formData.splitTimes];
 
     // タイムが変更された場合、種目の距離と同じ距離のsplit-timeを自動追加/更新
     if (raceDistance && newTime > 0) {
       const existingSplitIndex = updatedSplitTimes.findIndex(
-        (st) => typeof st.distance === 'number' && st.distance === raceDistance
-      )
+        (st) => typeof st.distance === "number" && st.distance === raceDistance,
+      );
 
       if (existingSplitIndex >= 0) {
         // 既存のsplit-timeを更新
@@ -245,15 +274,15 @@ export const RecordLogFormScreen: React.FC = () => {
                 splitTime: newTime,
                 splitTimeDisplayValue: formatSecondsToDisplay(newTime),
               }
-            : st
-        )
+            : st,
+        );
       } else {
         // 新しいsplit-timeを追加
         updatedSplitTimes.push({
           distance: raceDistance,
           splitTime: newTime,
           splitTimeDisplayValue: formatSecondsToDisplay(newTime),
-        })
+        });
       }
     }
 
@@ -261,168 +290,194 @@ export const RecordLogFormScreen: React.FC = () => {
       timeDisplayValue: value,
       time: newTime,
       splitTimes: updatedSplitTimes,
-    })
-  }
+    });
+  };
+
+  // スプリットタイムの追加可否判定
+  const isSplitTimeLimitReached = (formIndex: number): boolean => {
+    if (isPremium) return false;
+    return formDataList[formIndex]?.splitTimes.length >= FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD;
+  };
 
   // スプリットタイム追加（空の1行）
   const handleAddSplitTime = (index: number) => {
-    const formData = formDataList[index]
+    if (isSplitTimeLimitReached(index)) return;
+    const formData = formDataList[index];
     updateFormData(index, {
       splitTimes: [
         ...formData.splitTimes,
         {
           distance: 0,
           splitTime: 0,
-          splitTimeDisplayValue: '',
+          splitTimeDisplayValue: "",
         },
       ],
-    })
-  }
+    });
+  };
 
   // スプリットタイムを25mごとに追加
   const handleAddSplitTimesEvery25m = (index: number) => {
-    const formData = formDataList[index]
-    const selectedStyle = swimStyles.find((s) => String(s.id) === formData.styleId)
-    if (!selectedStyle?.distance) return
+    const formData = formDataList[index];
+    const selectedStyle = swimStyles.find((s) => String(s.id) === formData.styleId);
+    if (!selectedStyle?.distance) return;
 
-    const raceDistance = selectedStyle.distance
+    const raceDistance = selectedStyle.distance;
     const existingDistances = new Set(
       formData.splitTimes
-        .map((st) => (typeof st.distance === 'number' ? st.distance : parseFloat(String(st.distance))))
-        .filter((d) => !isNaN(d) && d > 0)
-    )
+        .map((st) =>
+          typeof st.distance === "number" ? st.distance : parseFloat(String(st.distance)),
+        )
+        .filter((d) => !isNaN(d) && d > 0),
+    );
 
-    const newSplits: SplitTimeData[] = []
+    let newSplits: SplitTimeData[] = [];
     for (let distance = 25; distance <= raceDistance; distance += 25) {
       if (!existingDistances.has(distance)) {
-        newSplits.push({ distance, splitTime: 0, splitTimeDisplayValue: '' })
+        newSplits.push({ distance, splitTime: 0, splitTimeDisplayValue: "" });
       }
     }
 
-    if (newSplits.length === 0) return
+    if (newSplits.length === 0) return;
+
+    // Free ユーザーの場合、追加後の合計が制限を超えないようにカット
+    if (!isPremium) {
+      const remaining = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - formData.splitTimes.length;
+      if (remaining <= 0) return;
+      newSplits = newSplits.slice(0, remaining);
+    }
+
     updateFormData(index, {
       splitTimes: [...formData.splitTimes, ...newSplits],
-    })
-  }
+    });
+  };
 
   // スプリットタイムを距離でソートしてインデックスマッピングを返す
   const getSortedSplitIndices = (splitTimes: SplitTimeData[]) => {
     return splitTimes
       .map((st, idx) => ({ st, idx }))
       .sort((a, b) => {
-        const distA = typeof a.st.distance === 'number' ? a.st.distance : parseFloat(String(a.st.distance)) || 0
-        const distB = typeof b.st.distance === 'number' ? b.st.distance : parseFloat(String(b.st.distance)) || 0
-        if (distA === 0 && distB === 0) return a.idx - b.idx
-        if (distA === 0) return 1
-        if (distB === 0) return -1
-        return distA - distB
-      })
-  }
+        const distA =
+          typeof a.st.distance === "number"
+            ? a.st.distance
+            : parseFloat(String(a.st.distance)) || 0;
+        const distB =
+          typeof b.st.distance === "number"
+            ? b.st.distance
+            : parseFloat(String(b.st.distance)) || 0;
+        if (distA === 0 && distB === 0) return a.idx - b.idx;
+        if (distA === 0) return 1;
+        if (distB === 0) return -1;
+        return distA - distB;
+      });
+  };
 
   // スプリットタイム削除
   const handleRemoveSplitTime = (index: number, splitIndex: number) => {
-    const formData = formDataList[index]
+    const formData = formDataList[index];
     updateFormData(index, {
       splitTimes: formData.splitTimes.filter((_, i) => i !== splitIndex),
-    })
-  }
+    });
+  };
 
   // スプリットタイム変更
   const handleSplitTimeChange = (
     index: number,
     splitIndex: number,
-    field: 'distance' | 'splitTime',
-    value: string
+    field: "distance" | "splitTime",
+    value: string,
   ) => {
-    const formData = formDataList[index]
+    const formData = formDataList[index];
     const updatedSplitTimes = formData.splitTimes.map((st, i) => {
-      if (i !== splitIndex) return st
-      if (field === 'distance') {
-        if (value.endsWith('.')) return { ...st, distance: value }
-        const numValue = parseFloat(value)
-        return { ...st, distance: isNaN(numValue) ? value : numValue }
+      if (i !== splitIndex) return st;
+      if (field === "distance") {
+        if (value.endsWith(".")) return { ...st, distance: value };
+        const numValue = parseFloat(value);
+        return { ...st, distance: isNaN(numValue) ? value : numValue };
       }
-      const parsedTime = value.trim() === '' ? 0 : parseTimeToSeconds(value)
+      const parsedTime = value.trim() === "" ? 0 : parseTimeToSeconds(value);
       return {
         ...st,
         splitTimeDisplayValue: value,
         splitTime: parsedTime,
-      }
-    })
+      };
+    });
 
-    updateFormData(index, { splitTimes: updatedSplitTimes })
-  }
+    updateFormData(index, { splitTimes: updatedSplitTimes });
+  };
 
   // ドロップダウンを開く
-  const screenHeight = Dimensions.get('window').height
-  const DROPDOWN_MAX_HEIGHT = 260
+  const screenHeight = Dimensions.get("window").height;
+  const DROPDOWN_MAX_HEIGHT = 260;
 
-  const openStylePicker = useCallback((index: number) => {
-    Keyboard.dismiss()
-    const buttonRef = styleButtonRefs.current.get(index)
-    buttonRef?.measureInWindow((x, y, width, height) => {
-      const top = y + height + 4
-      const fitsBelow = top + DROPDOWN_MAX_HEIGHT < screenHeight - 40
-      setDropdownLayout({
-        top: fitsBelow ? top : y - DROPDOWN_MAX_HEIGHT - 4,
-        left: x,
-        width,
-      })
-      setPickingFormIndex(index)
-      setShowStylePicker(true)
-    })
-  }, [screenHeight])
+  const openStylePicker = useCallback(
+    (index: number) => {
+      Keyboard.dismiss();
+      const buttonRef = styleButtonRefs.current.get(index);
+      buttonRef?.measureInWindow((x, y, width, height) => {
+        const top = y + height + 4;
+        const fitsBelow = top + DROPDOWN_MAX_HEIGHT < screenHeight - 40;
+        setDropdownLayout({
+          top: fitsBelow ? top : y - DROPDOWN_MAX_HEIGHT - 4,
+          left: x,
+          width,
+        });
+        setPickingFormIndex(index);
+        setShowStylePicker(true);
+      });
+    },
+    [screenHeight],
+  );
 
   // バリデーション
   const validate = (): boolean => {
-    const newErrors: Record<string, string> = {}
+    const newErrors: Record<string, string> = {};
 
     formDataList.forEach((formData, index) => {
       if (!formData.styleId) {
-        newErrors[`style-${index}`] = '種目を選択してください'
+        newErrors[`style-${index}`] = "種目を選択してください";
       }
       if (formData.time <= 0) {
-        newErrors[`time-${index}`] = 'タイムを入力してください'
+        newErrors[`time-${index}`] = "タイムを入力してください";
       }
-    })
+    });
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   // 保存処理
   const handleSave = async () => {
     // 二重送信防止
-    if (isSubmittingRef.current) return
+    if (isSubmittingRef.current) return;
 
     if (!validate()) {
-      return
+      return;
     }
 
-    isSubmittingRef.current = true
-    setLoading(true)
+    isSubmittingRef.current = true;
+    setLoading(true);
 
     try {
       // 大会からプールタイプを取得
       const { data: competition, error: competitionError } = await supabase
-        .from('competitions')
-        .select('pool_type')
-        .eq('id', competitionId)
-        .single()
+        .from("competitions")
+        .select("pool_type")
+        .eq("id", competitionId)
+        .single();
 
       if (competitionError || !competition) {
-        throw competitionError || new Error('大会情報の取得に失敗しました')
+        throw competitionError || new Error("大会情報の取得に失敗しました");
       }
 
-      const poolType: PoolType = (competition.pool_type ?? 0) as PoolType
+      const poolType: PoolType = (competition.pool_type ?? 0) as PoolType;
 
       // 編集モードの場合
       if (recordId && formDataList.length > 0) {
-        const formData = formDataList[0]
+        const formData = formDataList[0];
         if (formData.time <= 0) {
-          Alert.alert('エラー', 'タイムを入力してください')
-          setLoading(false)
-          return
+          Alert.alert("エラー", "タイムを入力してください");
+          setLoading(false);
+          return;
         }
 
         // 記録を更新
@@ -430,127 +485,135 @@ export const RecordLogFormScreen: React.FC = () => {
           style_id: parseInt(formData.styleId),
           time: formData.time,
           reaction_time:
-            formData.reactionTime && formData.reactionTime.trim() !== ''
+            formData.reactionTime && formData.reactionTime.trim() !== ""
               ? parseFloat(formData.reactionTime)
               : null,
-          note: formData.note && formData.note.trim() !== '' ? formData.note.trim() : null,
+          note: formData.note && formData.note.trim() !== "" ? formData.note.trim() : null,
           is_relaying: formData.isRelaying,
-          video_url: formData.videoUrl && formData.videoUrl.trim() !== '' ? formData.videoUrl.trim() : null,
-        }
+        };
 
-        await updateMutation.mutateAsync({ id: recordId, updates })
+        await updateMutation.mutateAsync({ id: recordId, updates });
 
         // スプリットタイムを保存
         if (formData.splitTimes.length > 0) {
+          // 種目の距離を取得（ゴールタイム=split_timeは途中経過ではないので除外）
+          const selectedStyle = swimStyles.find((s) => String(s.id) === formData.styleId);
+          const raceDistance = selectedStyle?.distance;
+
           const validSplitTimes = formData.splitTimes
             .map((st) => {
               const distance =
-                typeof st.distance === 'number'
+                typeof st.distance === "number"
                   ? st.distance
-                  : st.distance === ''
+                  : st.distance === ""
                     ? NaN
-                    : parseFloat(String(st.distance))
+                    : parseFloat(String(st.distance));
               if (!isNaN(distance) && distance > 0 && st.splitTime > 0) {
                 return {
                   distance,
                   split_time: st.splitTime,
-                }
+                };
               }
-              return null
+              return null;
             })
             .filter((st): st is { distance: number; split_time: number } => st !== null)
+            .filter((st) => !(raceDistance && st.distance === raceDistance));
 
           if (validSplitTimes.length > 0) {
             await replaceSplitTimesMutation.mutateAsync({
               recordId,
               splitTimes: validSplitTimes,
-            })
+            });
           }
         }
       } else {
         // 新規作成モードの場合
         for (const formData of formDataList) {
-          if (formData.time <= 0) continue // タイム未入力のものはスキップ
+          if (formData.time <= 0) continue; // タイム未入力のものはスキップ
 
-          const recordData: Omit<RecordInsert, 'user_id'> = {
+          const recordData: Omit<RecordInsert, "user_id"> = {
             competition_id: competitionId,
             style_id: parseInt(formData.styleId),
             time: formData.time,
             reaction_time:
-              formData.reactionTime && formData.reactionTime.trim() !== ''
+              formData.reactionTime && formData.reactionTime.trim() !== ""
                 ? parseFloat(formData.reactionTime)
                 : null,
-            note: formData.note && formData.note.trim() !== '' ? formData.note.trim() : null,
+            note: formData.note && formData.note.trim() !== "" ? formData.note.trim() : null,
             is_relaying: formData.isRelaying,
-            video_url: formData.videoUrl && formData.videoUrl.trim() !== '' ? formData.videoUrl.trim() : null,
             pool_type: poolType,
-          }
+          };
 
           // 記録を作成
-          const savedRecord = await createMutation.mutateAsync(recordData)
+          const savedRecord = await createMutation.mutateAsync(recordData);
 
-          // スプリットタイムを保存
+          // スプリットタイムを保存（種目距離と同じsplitは除外）
           if (savedRecord && formData.splitTimes.length > 0) {
+            const selectedStyle = swimStyles.find((s) => String(s.id) === formData.styleId);
+            const raceDistance = selectedStyle?.distance;
+
             const validSplitTimes = formData.splitTimes
               .map((st) => {
                 const distance =
-                  typeof st.distance === 'number'
+                  typeof st.distance === "number"
                     ? st.distance
-                    : st.distance === ''
+                    : st.distance === ""
                       ? NaN
-                      : parseFloat(String(st.distance))
+                      : parseFloat(String(st.distance));
                 if (!isNaN(distance) && distance > 0 && st.splitTime > 0) {
                   return {
                     distance,
                     split_time: st.splitTime,
-                  }
+                  };
                 }
-                return null
+                return null;
               })
               .filter((st): st is { distance: number; split_time: number } => st !== null)
+              .filter((st) => !(raceDistance && st.distance === raceDistance));
 
             if (validSplitTimes.length > 0) {
               await replaceSplitTimesMutation.mutateAsync({
                 recordId: savedRecord.id,
                 splitTimes: validSplitTimes,
-              })
+              });
             }
           }
         }
       }
 
       // カレンダーのクエリを無効化してリフレッシュ
-      queryClient.invalidateQueries({ queryKey: ['calendar'] })
+      queryClient.invalidateQueries({ queryKey: ["calendar"] });
 
       // 成功: ダッシュボードに戻る
-      navigation.navigate('MainTabs', { screen: 'Dashboard' })
+      navigation.navigate("MainTabs", { screen: "Dashboard" });
     } catch (error) {
-      console.error('保存エラー:', error)
-      Alert.alert(
-        'エラー',
-        error instanceof Error ? error.message : '保存に失敗しました',
-        [{ text: 'OK' }]
-      )
+      console.error("保存エラー:", error);
+      Alert.alert("エラー", error instanceof Error ? error.message : "保存に失敗しました", [
+        { text: "OK" },
+      ]);
     } finally {
-      isSubmittingRef.current = false
-      setLoading(false)
+      isSubmittingRef.current = false;
+      setLoading(false);
     }
-  }
+  };
 
   if (loadingStyles || loadingRecord) {
     return (
       <View style={styles.container}>
-        <LoadingSpinner fullScreen message={loadingRecord ? "記録を読み込み中..." : "種目を読み込み中..."} />
+        <LoadingSpinner
+          fullScreen
+          message={loadingRecord ? "記録を読み込み中..." : "種目を読み込み中..."}
+        />
       </View>
-    )
+    );
   }
 
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {formDataList.map((formData, index) => {
-          const entryInfo = entryDataList[index]
-          const sectionIndex = index + 1
+          const entryInfo = entryDataList[index];
+          const sectionIndex = index + 1;
 
           return (
             <View key={index} style={styles.section}>
@@ -563,7 +626,8 @@ export const RecordLogFormScreen: React.FC = () => {
                 <View style={styles.entryInfo}>
                   <Text style={styles.entryInfoText}>
                     {entryInfo.styleName}
-                    {entryInfo.entryTime && ` (エントリータイム: ${formatTime(entryInfo.entryTime)})`}
+                    {entryInfo.entryTime &&
+                      ` (エントリータイム: ${formatTime(entryInfo.entryTime)})`}
                   </Text>
                 </View>
               )}
@@ -575,8 +639,13 @@ export const RecordLogFormScreen: React.FC = () => {
                     種目 <Text style={styles.required}>*</Text>
                   </Text>
                   <Pressable
-                    ref={(ref) => { if (ref) styleButtonRefs.current.set(index, ref) }}
-                    style={[styles.pickerButton, errors[`style-${index}`] && styles.pickerButtonError]}
+                    ref={(ref) => {
+                      if (ref) styleButtonRefs.current.set(index, ref);
+                    }}
+                    style={[
+                      styles.pickerButton,
+                      errors[`style-${index}`] && styles.pickerButtonError,
+                    ]}
                     onPress={() => openStylePicker(index)}
                     disabled={loading}
                   >
@@ -588,8 +657,8 @@ export const RecordLogFormScreen: React.FC = () => {
                     >
                       {formData.styleId
                         ? swimStyles.find((s) => s.id.toString() === formData.styleId)?.name_jp ||
-                          '種目を選択'
-                        : '種目を選択'}
+                          "種目を選択"
+                        : "種目を選択"}
                     </Text>
                     <Feather name="chevron-down" size={20} color="#6B7280" />
                   </Pressable>
@@ -656,17 +725,23 @@ export const RecordLogFormScreen: React.FC = () => {
                 />
               </View>
 
-              {/* 動画URL */}
+              {/* 動画 */}
               <View style={styles.field}>
-                <Text style={styles.label}>動画URL</Text>
-                <TextInput
-                  style={styles.input}
-                  value={formData.videoUrl}
-                  onChangeText={(text) => updateFormData(index, { videoUrl: text })}
-                  placeholder="https://www.youtube.com/watch?v=xxx"
-                  keyboardType="url"
-                  autoCapitalize="none"
-                  editable={!loading}
+                <Text style={styles.label}>動画</Text>
+                <VideoUploader
+                  type="record"
+                  id={recordId}
+                  existingVideoPath={existingVideoPath}
+                  existingThumbnailPath={existingThumbnailPath}
+                  isPremium={isPremium}
+                  onUploadComplete={(vPath, tPath) => {
+                    setExistingVideoPath(vPath);
+                    setExistingThumbnailPath(tPath);
+                  }}
+                  onDelete={() => {
+                    setExistingVideoPath(null);
+                    setExistingThumbnailPath(null);
+                  }}
                 />
               </View>
 
@@ -679,60 +754,82 @@ export const RecordLogFormScreen: React.FC = () => {
                       style={[
                         styles.addButton,
                         styles.addButton25m,
-                        (!formData.styleId || !swimStyles.find((s) => String(s.id) === formData.styleId)?.distance || loading) && styles.addButtonDisabled,
+                        (!formData.styleId ||
+                          !swimStyles.find((s) => String(s.id) === formData.styleId)?.distance ||
+                          loading ||
+                          isSplitTimeLimitReached(index)) &&
+                          styles.addButtonDisabled,
                       ]}
                       onPress={() => handleAddSplitTimesEvery25m(index)}
-                      disabled={!formData.styleId || !swimStyles.find((s) => String(s.id) === formData.styleId)?.distance || loading}
+                      disabled={
+                        !formData.styleId ||
+                        !swimStyles.find((s) => String(s.id) === formData.styleId)?.distance ||
+                        loading ||
+                        isSplitTimeLimitReached(index)
+                      }
                     >
                       <Text style={styles.addButton25mText}>追加(25mごと)</Text>
                     </Pressable>
                     <Pressable
-                      style={[styles.addButton, loading && styles.addButtonDisabled]}
+                      style={[styles.addButton, (loading || isSplitTimeLimitReached(index)) && styles.addButtonDisabled]}
                       onPress={() => handleAddSplitTime(index)}
-                      disabled={loading}
+                      disabled={loading || isSplitTimeLimitReached(index)}
                     >
                       <Feather name="plus" size={16} color="#2563EB" />
                       <Text style={styles.addButtonText}>追加</Text>
                     </Pressable>
                   </View>
                 </View>
-                {getSortedSplitIndices(formData.splitTimes).map(({ st: splitTime, idx: splitIndex }) => (
-                  <View key={splitIndex} style={styles.splitTimeRow}>
-                    <TextInput
-                      style={[styles.input, styles.splitTimeDistance]}
-                      value={typeof splitTime.distance === 'number' && splitTime.distance > 0 ? String(splitTime.distance) : (typeof splitTime.distance === 'string' ? splitTime.distance : '')}
-                      onChangeText={(text) => {
-                        if (text === '' || /^\d+(\.\d*)?$/.test(text)) {
-                          handleSplitTimeChange(index, splitIndex, 'distance', text)
+                {getSortedSplitIndices(formData.splitTimes).map(
+                  ({ st: splitTime, idx: splitIndex }) => (
+                    <View key={splitIndex} style={styles.splitTimeRow}>
+                      <TextInput
+                        style={[styles.input, styles.splitTimeDistance]}
+                        value={
+                          typeof splitTime.distance === "number" && splitTime.distance > 0
+                            ? String(splitTime.distance)
+                            : typeof splitTime.distance === "string"
+                              ? splitTime.distance
+                              : ""
                         }
-                      }}
-                      placeholder="距離 (m)"
-                      keyboardType="decimal-pad"
-                      editable={!loading}
-                    />
-                    <Text style={styles.splitTimeSeparator}>m:</Text>
-                    <TextInput
-                      style={[styles.input, styles.splitTimeTime]}
-                      value={splitTime.splitTimeDisplayValue}
-                      onChangeText={(text) =>
-                        handleSplitTimeChange(index, splitIndex, 'splitTime', text)
-                      }
-                      placeholder="例: 28-0"
-                      keyboardType="default"
-                      editable={!loading}
-                    />
-                    <Pressable
-                      style={styles.removeButton}
-                      onPress={() => handleRemoveSplitTime(index, splitIndex)}
-                      disabled={loading}
-                    >
-                      <Feather name="trash-2" size={16} color="#EF4444" />
-                    </Pressable>
+                        onChangeText={(text) => {
+                          if (text === "" || /^\d+(\.\d*)?$/.test(text)) {
+                            handleSplitTimeChange(index, splitIndex, "distance", text);
+                          }
+                        }}
+                        placeholder="距離 (m)"
+                        keyboardType="decimal-pad"
+                        editable={!loading}
+                      />
+                      <Text style={styles.splitTimeSeparator}>m:</Text>
+                      <TextInput
+                        style={[styles.input, styles.splitTimeTime]}
+                        value={splitTime.splitTimeDisplayValue}
+                        onChangeText={(text) =>
+                          handleSplitTimeChange(index, splitIndex, "splitTime", text)
+                        }
+                        placeholder="例: 28-0"
+                        keyboardType="default"
+                        editable={!loading}
+                      />
+                      <Pressable
+                        style={styles.removeButton}
+                        onPress={() => handleRemoveSplitTime(index, splitIndex)}
+                        disabled={loading}
+                      >
+                        <Feather name="trash-2" size={16} color="#EF4444" />
+                      </Pressable>
+                    </View>
+                  ),
+                )}
+                {isSplitTimeLimitReached(index) && (
+                  <View style={{ marginTop: 8 }}>
+                    <PremiumBadge message={PREMIUM_MESSAGES.split_time_limit} compact />
                   </View>
-                ))}
+                )}
               </View>
             </View>
-          )
+          );
         })}
       </ScrollView>
 
@@ -743,10 +840,7 @@ export const RecordLogFormScreen: React.FC = () => {
         animationType="none"
         onRequestClose={() => setShowStylePicker(false)}
       >
-        <Pressable
-          style={styles.dropdownOverlay}
-          onPress={() => setShowStylePicker(false)}
-        >
+        <Pressable style={styles.dropdownOverlay} onPress={() => setShowStylePicker(false)}>
           <View
             style={[
               styles.dropdownContainer,
@@ -759,21 +853,18 @@ export const RecordLogFormScreen: React.FC = () => {
               nestedScrollEnabled
             >
               {swimStyles.map((style) => {
-                const formData = pickingFormIndex !== null ? formDataList[pickingFormIndex] : null
-                const isSelected = formData?.styleId === String(style.id)
+                const formData = pickingFormIndex !== null ? formDataList[pickingFormIndex] : null;
+                const isSelected = formData?.styleId === String(style.id);
                 return (
                   <Pressable
                     key={style.id}
-                    style={[
-                      styles.dropdownOption,
-                      isSelected && styles.dropdownOptionSelected,
-                    ]}
+                    style={[styles.dropdownOption, isSelected && styles.dropdownOptionSelected]}
                     onPress={() => {
                       if (pickingFormIndex !== null) {
-                        updateFormData(pickingFormIndex, { styleId: String(style.id) })
+                        updateFormData(pickingFormIndex, { styleId: String(style.id) });
                       }
-                      setShowStylePicker(false)
-                      setPickingFormIndex(null)
+                      setShowStylePicker(false);
+                      setPickingFormIndex(null);
                     }}
                   >
                     <Text
@@ -784,11 +875,9 @@ export const RecordLogFormScreen: React.FC = () => {
                     >
                       {style.name_jp}
                     </Text>
-                    {isSelected && (
-                      <Feather name="check" size={16} color="#2563EB" />
-                    )}
+                    {isSelected && <Feather name="check" size={16} color="#2563EB" />}
                   </Pressable>
-                )
+                );
               })}
             </ScrollView>
           </View>
@@ -810,13 +899,13 @@ export const RecordLogFormScreen: React.FC = () => {
         </Pressable>
       </View>
     </View>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   scrollView: {
     flex: 1,
@@ -828,69 +917,73 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     paddingBottom: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: "#E5E7EB",
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: "600",
+    color: "#111827",
     marginBottom: 16,
   },
   entryInfo: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: "#EFF6FF",
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
   },
   entryInfoText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#2563EB',
+    fontWeight: "600",
+    color: "#2563EB",
   },
   field: {
     marginBottom: 20,
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: "600",
+    color: "#374151",
     marginBottom: 8,
   },
+  hintText: {
+    fontSize: 13,
+    color: "#9CA3AF",
+  },
   required: {
-    color: '#EF4444',
+    color: "#EF4444",
   },
   pickerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: "#D1D5DB",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   pickerButtonError: {
-    borderColor: '#EF4444',
+    borderColor: "#EF4444",
   },
   pickerButtonText: {
     fontSize: 16,
-    color: '#111827',
+    color: "#111827",
   },
   pickerButtonPlaceholder: {
-    color: '#9CA3AF',
+    color: "#9CA3AF",
   },
   dropdownOverlay: {
     flex: 1,
   },
   dropdownContainer: {
-    position: 'absolute',
-    backgroundColor: '#FFFFFF',
+    position: "absolute",
+    backgroundColor: "#FFFFFF",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: "#D1D5DB",
     maxHeight: 260,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -900,93 +993,93 @@ const styles = StyleSheet.create({
     maxHeight: 260,
   },
   dropdownOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: "#E5E7EB",
   },
   dropdownOptionSelected: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: "#EFF6FF",
   },
   dropdownOptionText: {
     fontSize: 15,
-    color: '#111827',
+    color: "#111827",
   },
   dropdownOptionTextSelected: {
-    color: '#2563EB',
-    fontWeight: '600',
+    color: "#2563EB",
+    fontWeight: "600",
   },
   input: {
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: "#D1D5DB",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
-    color: '#111827',
-    backgroundColor: '#FFFFFF',
+    color: "#111827",
+    backgroundColor: "#FFFFFF",
   },
   inputError: {
-    borderColor: '#EF4444',
+    borderColor: "#EF4444",
   },
   textArea: {
     minHeight: 80,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   errorText: {
     fontSize: 12,
-    color: '#EF4444',
+    color: "#EF4444",
     marginTop: 4,
   },
   switchContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   splitTimeHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
   splitTimeButtons: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
   },
   addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#2563EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: "#2563EB",
+    backgroundColor: "#FFFFFF",
   },
   addButton25m: {
-    borderColor: '#2563EB',
-    backgroundColor: '#2563EB',
+    borderColor: "#2563EB",
+    backgroundColor: "#2563EB",
   },
   addButton25mText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
   addButtonDisabled: {
     opacity: 0.4,
   },
   addButtonText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#2563EB',
+    fontWeight: "600",
+    color: "#2563EB",
   },
   splitTimeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     marginBottom: 8,
   },
@@ -995,7 +1088,7 @@ const styles = StyleSheet.create({
   },
   splitTimeSeparator: {
     fontSize: 14,
-    color: '#6B7280',
+    color: "#6B7280",
   },
   splitTimeTime: {
     flex: 1,
@@ -1006,25 +1099,25 @@ const styles = StyleSheet.create({
   footer: {
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
+    borderTopColor: "#E5E7EB",
+    backgroundColor: "#F9FAFB",
   },
   button: {
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   primaryButton: {
-    backgroundColor: '#2563EB',
+    backgroundColor: "#2563EB",
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   primaryButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
-})
+});

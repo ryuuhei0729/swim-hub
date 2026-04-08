@@ -1,13 +1,13 @@
-'use client'
+"use client";
 
-import React from 'react'
-import { SWIM_STYLES } from '../constants'
+import React from "react";
+import { SWIM_STYLES } from "../constants";
 
 interface StyleSelectorProps {
-  value: string
-  onChange: (value: string) => void
-  required?: boolean
-  disabled?: boolean
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+  disabled?: boolean;
 }
 
 /**
@@ -17,7 +17,7 @@ export default function StyleSelector({
   value,
   onChange,
   required = false,
-  disabled = false
+  disabled = false,
 }: StyleSelectorProps) {
   return (
     <select
@@ -33,5 +33,5 @@ export default function StyleSelector({
         </option>
       ))}
     </select>
-  )
+  );
 }

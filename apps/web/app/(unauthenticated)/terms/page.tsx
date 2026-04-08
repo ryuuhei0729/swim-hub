@@ -1,15 +1,16 @@
-import React from 'react'
-import Link from 'next/link'
-import { DocumentTextIcon } from '@heroicons/react/24/outline'
-import { BackButton } from '@/components/ui/BackButton'
-import { formatDate } from '@apps/shared/utils/date'
+import React from "react";
+import Link from "next/link";
+import { DocumentTextIcon } from "@heroicons/react/24/outline";
+import { BackButton } from "@/components/ui/BackButton";
+import { formatDate } from "@apps/shared/utils/date";
 
-export const revalidate = 3600 // 1時間ごとに再生成
+export const revalidate = 3600; // 1時間ごとに再生成
 
 export const metadata = {
-  title: '利用規約 | SwimHub',
-  description: 'SwimHubの利用規約',
-}
+  title: "利用規約 | SwimHub",
+  description: "SwimHubの利用規約",
+  alternates: { canonical: "/terms" },
+};
 
 export default function TermsPage() {
   return (
@@ -22,9 +23,7 @@ export default function TermsPage() {
             <DocumentTextIcon className="w-8 h-8 text-blue-600 mr-3" />
             <h1 className="text-3xl font-bold text-gray-900">利用規約</h1>
           </div>
-          <p className="text-sm text-gray-500">
-            最終更新日: {formatDate(new Date(), 'long')}
-          </p>
+          <p className="text-sm text-gray-500">最終更新日: {formatDate(new Date(), "long")}</p>
         </div>
 
         {/* コンテンツ */}
@@ -59,14 +58,16 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-4">4. 利用者の禁止行為</h2>
-            <p className="text-gray-700 leading-relaxed mb-3">
-              以下の行為を禁止します：
-            </p>
+            <p className="text-gray-700 leading-relaxed mb-3">以下の行為を禁止します：</p>
             <ul className="list-disc list-inside space-y-2 text-gray-700 ml-4">
               <li>法令または公序良俗に違反する行為</li>
               <li>犯罪行為に関連する行為</li>
-              <li>当サービスの内容等、当サービスの利用に関する一切の情報を無断で複製、転載、改変等すること</li>
-              <li>当サービスまたは他の利用者のサーバーまたはネットワークの機能を破壊したり、妨害したりする行為</li>
+              <li>
+                当サービスの内容等、当サービスの利用に関する一切の情報を無断で複製、転載、改変等すること
+              </li>
+              <li>
+                当サービスまたは他の利用者のサーバーまたはネットワークの機能を破壊したり、妨害したりする行為
+              </li>
               <li>当サービスによって得られた情報を商業的に利用する行為</li>
               <li>当サービスの運営を妨害するおそれのある行為</li>
               <li>不正アクセス、不正な方法による情報の取得</li>
@@ -86,17 +87,33 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">6. 有料プラン（サブスクリプション）</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              6. 有料プラン（サブスクリプション）
+            </h2>
             <p className="text-gray-700 leading-relaxed mb-3">
               当サービスでは、追加機能を利用できる有料プラン（以下「プレミアムプラン」）を提供しています。
             </p>
             <ul className="list-disc list-inside space-y-2 text-gray-700 ml-4">
-              <li>プレミアムプランの料金は、月額プラン（¥500/月）および年額プラン（¥5,000/年）です。料金は変更される場合があり、変更時は事前に通知いたします。</li>
-              <li>サブスクリプションは、現在の期間が終了する少なくとも24時間前にキャンセルしない限り、同じ条件で自動的に更新されます。</li>
-              <li>初回登録時には7日間の無料トライアル期間が設けられます。トライアル期間中にキャンセルしない場合、トライアル終了後に自動的に課金が開始されます。</li>
-              <li>Web経由でのお支払いにはStripeを使用し、モバイルアプリでのお支払いにはApple App Store / Google Playのアプリ内課金（RevenueCat経由）を使用します。</li>
-              <li>解約はいつでも可能です。Web経由の場合はStripeカスタマーポータルから、モバイルの場合は各ストアのサブスクリプション管理画面から行えます。解約後も、現在の課金期間が終了するまでプレミアム機能をご利用いただけます。</li>
-              <li>返金については、各決済プラットフォーム（Stripe、Apple App Store、Google Play）のポリシーに準じます。</li>
+              <li>
+                プレミアムプランの料金は、月額プラン（¥500/月）および年額プラン（¥5,000/年）です。料金は変更される場合があり、変更時は事前に通知いたします。
+              </li>
+              <li>
+                サブスクリプションは、現在の期間が終了する少なくとも24時間前にキャンセルしない限り、同じ条件で自動的に更新されます。
+              </li>
+              <li>
+                初回登録時には7日間の無料トライアル期間が設けられます。トライアル期間中にキャンセルしない場合、トライアル終了後に自動的に課金が開始されます。
+              </li>
+              <li>
+                Web経由でのお支払いにはStripeを使用し、モバイルアプリでのお支払いにはApple App Store
+                / Google Playのアプリ内課金（RevenueCat経由）を使用します。
+              </li>
+              <li>
+                解約はいつでも可能です。Web経由の場合はStripeカスタマーポータルから、モバイルの場合は各ストアのサブスクリプション管理画面から行えます。解約後も、現在の課金期間が終了するまでプレミアム機能をご利用いただけます。
+              </li>
+              <li>
+                返金については、各決済プラットフォーム（Stripe、Apple App Store、Google
+                Play）のポリシーに準じます。
+              </li>
             </ul>
           </section>
 
@@ -106,10 +123,16 @@ export default function TermsPage() {
               当サービスは、以下の事項について一切の責任を負いません：
             </p>
             <ul className="list-disc list-inside space-y-2 text-gray-700 ml-4">
-              <li>当サービスに起因してユーザーに生じたあらゆる損害について一切の責任を負いません</li>
-              <li>当サービスが提供する情報の正確性、完全性、有用性、適時性、信頼性等について一切保証しません</li>
+              <li>
+                当サービスに起因してユーザーに生じたあらゆる損害について一切の責任を負いません
+              </li>
+              <li>
+                当サービスが提供する情報の正確性、完全性、有用性、適時性、信頼性等について一切保証しません
+              </li>
               <li>当サービスに起因してユーザーに生じた損害について、一切の責任を負いません</li>
-              <li>当サービスの中断、停止、終了、利用不能、またはデータの消失等により生じた損害について、一切の責任を負いません</li>
+              <li>
+                当サービスの中断、停止、終了、利用不能、またはデータの消失等により生じた損害について、一切の責任を負いません
+              </li>
             </ul>
           </section>
 
@@ -151,7 +174,5 @@ export default function TermsPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
-
-

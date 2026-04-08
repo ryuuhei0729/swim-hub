@@ -1,15 +1,15 @@
-'use client'
+"use client";
 
-import React from 'react'
-import { PencilIcon, TrashIcon, UsersIcon } from '@heroicons/react/24/outline'
-import type { TeamGroupWithCount } from '../hooks/useTeamGroups'
+import React from "react";
+import { PencilIcon, TrashIcon, UsersIcon } from "@heroicons/react/24/outline";
+import type { TeamGroupWithCount } from "../hooks/useTeamGroups";
 
 interface GroupCardProps {
-  group: TeamGroupWithCount
-  onClick: (group: TeamGroupWithCount) => void
-  onEdit: (group: TeamGroupWithCount) => void
-  onDelete: (group: TeamGroupWithCount) => void
-  onManageMembers: (group: TeamGroupWithCount) => void
+  group: TeamGroupWithCount;
+  onClick: (group: TeamGroupWithCount) => void;
+  onEdit: (group: TeamGroupWithCount) => void;
+  onDelete: (group: TeamGroupWithCount) => void;
+  onManageMembers: (group: TeamGroupWithCount) => void;
 }
 
 export const GroupCard: React.FC<GroupCardProps> = ({
@@ -65,5 +65,5 @@ export const GroupCard: React.FC<GroupCardProps> = ({
         </button>
       </div>
     </div>
-  )
-}
+  );
+};

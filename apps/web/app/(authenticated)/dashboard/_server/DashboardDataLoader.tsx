@@ -2,18 +2,18 @@
 // ダッシュボードデータローダー（すべてのデータを並行取得）
 // =============================================================================
 
-import React from 'react'
-import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-server-auth'
-import { DashboardAPI } from '@apps/shared/api/dashboard'
-import { getCachedStyles, getUserTags, getUserTeams } from '@/lib/data-loaders/common'
-import { endOfMonth, startOfMonth } from 'date-fns'
-import { formatInTimeZone, toZonedTime } from 'date-fns-tz'
-import DashboardClient from '../_client/DashboardClient'
-import type { Style, PracticeTag, TeamMembership, Team } from '@apps/shared/types'
-import type { CalendarItem, MonthlySummary } from '@apps/shared/types/ui'
+import React from "react";
+import { createAuthenticatedServerClient, getServerUser } from "@/lib/supabase-server-auth";
+import { DashboardAPI } from "@apps/shared/api/dashboard";
+import { getStyles, getUserTags, getUserTeams } from "@/lib/data-loaders/common";
+import { endOfMonth, startOfMonth } from "date-fns";
+import { formatInTimeZone, toZonedTime } from "date-fns-tz";
+import DashboardClient from "../_client/DashboardClient";
+import type { Style, PracticeTag, TeamMembership, Team } from "@apps/shared/types";
+import type { CalendarItem, MonthlySummary } from "@apps/shared/types/ui";
 
 interface TeamMembershipWithTeam extends TeamMembership {
-  team?: Team
+  team?: Team;
 }
 
 /**
@@ -21,30 +21,30 @@ interface TeamMembershipWithTeam extends TeamMembership {
  */
 async function getCalendarData(
   supabase: Awaited<ReturnType<typeof createAuthenticatedServerClient>>,
-  currentDate: Date = new Date()
+  currentDate: Date = new Date(),
 ): Promise<{
-  calendarItems: CalendarItem[]
-  monthlySummary: MonthlySummary
+  calendarItems: CalendarItem[];
+  monthlySummary: MonthlySummary;
 }> {
-  const api = new DashboardAPI(supabase)
+  const api = new DashboardAPI(supabase);
 
   // タイムゾーンを考慮した日付変換（日本時間 'Asia/Tokyo'）
-  const TIMEZONE = 'Asia/Tokyo'
-  const zonedDate = toZonedTime(currentDate, TIMEZONE)
+  const TIMEZONE = "Asia/Tokyo";
+  const zonedDate = toZonedTime(currentDate, TIMEZONE);
 
   // 月の開始日と終了日を計算（タイムゾーン考慮済み）
-  const monthStart = startOfMonth(zonedDate)
-  const monthEnd = endOfMonth(zonedDate)
-  const startDate = formatInTimeZone(monthStart, TIMEZONE, 'yyyy-MM-dd')
-  const endDate = formatInTimeZone(monthEnd, TIMEZONE, 'yyyy-MM-dd')
+  const monthStart = startOfMonth(zonedDate);
+  const monthEnd = endOfMonth(zonedDate);
+  const startDate = formatInTimeZone(monthStart, TIMEZONE, "yyyy-MM-dd");
+  const endDate = formatInTimeZone(monthEnd, TIMEZONE, "yyyy-MM-dd");
 
   // 並行取得でパフォーマンス最適化
   const [calendarItems, monthlySummary] = await Promise.all([
     api.getCalendarEntries(startDate, endDate),
-    api.getMonthlySummary(zonedDate.getFullYear(), zonedDate.getMonth() + 1)
-  ])
+    api.getMonthlySummary(zonedDate.getFullYear(), zonedDate.getMonth() + 1),
+  ]);
 
-  return { calendarItems, monthlySummary }
+  return { calendarItems, monthlySummary };
 }
 
 /**
@@ -52,56 +52,55 @@ async function getCalendarData(
  * Waterfall問題を完全に解消
  */
 export default async function DashboardDataLoader({
-  currentDate = new Date()
+  currentDate = new Date(),
 }: {
-  currentDate?: Date
+  currentDate?: Date;
 }) {
   // 認証情報とSupabaseクライアントを取得
-  const [user, supabase] = await Promise.all([
-    getServerUser(),
-    createAuthenticatedServerClient()
-  ])
+  const [user, supabase] = await Promise.all([getServerUser(), createAuthenticatedServerClient()]);
 
   // すべてのデータ取得を並行実行（真の並列取得）
   const [stylesResult, tagsResult, teamsResult, calendarResult] = await Promise.all([
     // Styles取得（キャッシュ付き、認証なしクライアントを使用 - 全ユーザー共通）
-    getCachedStyles('dashboard-styles', 3600).catch((error) => {
-      console.error('[DashboardDataLoader] Styles取得エラー:', {
+    getStyles().catch((error) => {
+      console.error("[DashboardDataLoader] Styles取得エラー:", {
         error,
         message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      })
+        stack: error instanceof Error ? error.stack : undefined,
+      });
       // エラー時は空配列を返す（アプリケーションを継続させるため）
-      return [] as Style[]
+      return [] as Style[];
     }),
     // Tags取得（ユーザー固有、認証必要）
     user
       ? getUserTags(supabase, user.id).catch((error) => {
-          console.error('Tags取得エラー:', error)
-          return [] as PracticeTag[]
+          console.error("Tags取得エラー:", error);
+          return [] as PracticeTag[];
         })
       : Promise.resolve([] as PracticeTag[]),
     // チーム情報取得（認証必要）
     user
-      ? getUserTeams(supabase, user.id).catch((error) => {
-          console.error('チーム情報取得エラー:', error)
-          return [] as TeamMembershipWithTeam[]
-        }).then(teams => teams as TeamMembershipWithTeam[])
+      ? getUserTeams(supabase, user.id)
+          .catch((error) => {
+            console.error("チーム情報取得エラー:", error);
+            return [] as TeamMembershipWithTeam[];
+          })
+          .then((teams) => teams as TeamMembershipWithTeam[])
       : Promise.resolve([] as TeamMembershipWithTeam[]),
     // カレンダーデータ取得（認証必要）
     user
       ? getCalendarData(supabase, currentDate).catch((error) => {
-          console.error('カレンダーデータ取得エラー:', error)
+          console.error("カレンダーデータ取得エラー:", error);
           return {
             calendarItems: [] as CalendarItem[],
-            monthlySummary: { practiceCount: 0, recordCount: 0 } as MonthlySummary
-          }
+            monthlySummary: { practiceCount: 0, recordCount: 0 } as MonthlySummary,
+          };
         })
       : Promise.resolve({
           calendarItems: [] as CalendarItem[],
-          monthlySummary: { practiceCount: 0, recordCount: 0 } as MonthlySummary
-        })
-  ])
+          monthlySummary: { practiceCount: 0, recordCount: 0 } as MonthlySummary,
+        }),
+  ]);
 
   return (
     <DashboardClient
@@ -111,6 +110,5 @@ export default async function DashboardDataLoader({
       styles={stylesResult}
       tags={tagsResult}
     />
-  )
+  );
 }
-

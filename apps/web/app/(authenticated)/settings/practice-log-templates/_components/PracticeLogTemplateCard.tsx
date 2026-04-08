@@ -1,17 +1,22 @@
-'use client'
+"use client";
 
-import { useState, useCallback } from 'react'
-import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid'
-import { StarIcon as StarIconOutline, EllipsisVerticalIcon, TrashIcon, PencilIcon } from '@heroicons/react/24/outline'
-import type { PracticeLogTemplate } from '@swim-hub/shared/types'
-import ConfirmDialog from '@/components/ui/ConfirmDialog'
+import { useState, useCallback } from "react";
+import { StarIcon as StarIconSolid } from "@heroicons/react/24/solid";
+import {
+  StarIcon as StarIconOutline,
+  EllipsisVerticalIcon,
+  TrashIcon,
+  PencilIcon,
+} from "@heroicons/react/24/outline";
+import type { PracticeLogTemplate } from "@swim-hub/shared/types";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 interface PracticeLogTemplateCardProps {
-  template: PracticeLogTemplate
-  onToggleFavorite: (templateId: string) => void
-  onDelete: (templateId: string) => void
-  onEdit: (template: PracticeLogTemplate) => void
-  isLoading?: boolean
+  template: PracticeLogTemplate;
+  onToggleFavorite: (templateId: string) => void;
+  onDelete: (templateId: string) => void;
+  onEdit: (template: PracticeLogTemplate) => void;
+  isLoading?: boolean;
 }
 
 export function PracticeLogTemplateCard({
@@ -21,42 +26,45 @@ export function PracticeLogTemplateCard({
   onEdit,
   isLoading,
 }: PracticeLogTemplateCardProps) {
-  const [showMenu, setShowMenu] = useState(false)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showMenu, setShowMenu] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const formatCircle = (seconds: number | null): string => {
-    if (!seconds) return ''
-    const min = Math.floor(seconds / 60)
-    const sec = seconds % 60
-    return `${min}'${sec.toString().padStart(2, '0')}"`
-  }
+    if (!seconds) return "";
+    const min = Math.floor(seconds / 60);
+    const sec = seconds % 60;
+    return `${min}'${sec.toString().padStart(2, "0")}"`;
+  };
 
   const handleToggleFavorite = useCallback(() => {
-    onToggleFavorite(template.id)
-    setShowMenu(false)
-  }, [template.id, onToggleFavorite])
+    onToggleFavorite(template.id);
+    setShowMenu(false);
+  }, [template.id, onToggleFavorite]);
 
   const handleEditClick = useCallback(() => {
-    setShowMenu(false)
-    onEdit(template)
-  }, [template, onEdit])
+    setShowMenu(false);
+    onEdit(template);
+  }, [template, onEdit]);
 
   const handleDeleteClick = useCallback(() => {
-    setShowMenu(false)
-    setShowDeleteConfirm(true)
-  }, [])
+    setShowMenu(false);
+    setShowDeleteConfirm(true);
+  }, []);
 
   const handleConfirmDelete = useCallback(() => {
-    onDelete(template.id)
-    setShowDeleteConfirm(false)
-  }, [template.id, onDelete])
+    onDelete(template.id);
+    setShowDeleteConfirm(false);
+  }, [template.id, onDelete]);
 
-  const handleMenuKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      setShowMenu(!showMenu)
-    }
-  }, [showMenu])
+  const handleMenuKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        setShowMenu(!showMenu);
+      }
+    },
+    [showMenu],
+  );
 
   return (
     <>
@@ -69,7 +77,7 @@ export function PracticeLogTemplateCard({
               onClick={handleToggleFavorite}
               disabled={isLoading}
               className="focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
-              aria-label={template.is_favorite ? 'お気に入りから削除' : 'お気に入りに追加'}
+              aria-label={template.is_favorite ? "お気に入りから削除" : "お気に入りに追加"}
             >
               {template.is_favorite ? (
                 <StarIconSolid className="h-5 w-5 text-yellow-500" />
@@ -100,7 +108,7 @@ export function PracticeLogTemplateCard({
                 <div
                   className="fixed inset-0 z-10"
                   onClick={() => setShowMenu(false)}
-                  onKeyDown={(e) => e.key === 'Escape' && setShowMenu(false)}
+                  onKeyDown={(e) => e.key === "Escape" && setShowMenu(false)}
                   role="button"
                   tabIndex={-1}
                   aria-label="メニューを閉じる"
@@ -156,9 +164,7 @@ export function PracticeLogTemplateCard({
               <span className="ml-2">サークル {formatCircle(template.circle)}</span>
             )}
           </p>
-          {template.note && (
-            <p className="text-gray-500 truncate">{template.note}</p>
-          )}
+          {template.note && <p className="text-gray-500 truncate">{template.note}</p>}
         </div>
 
         {/* フッター */}
@@ -180,5 +186,5 @@ export function PracticeLogTemplateCard({
         confirmLabel="削除"
       />
     </>
-  )
+  );
 }

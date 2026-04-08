@@ -7,19 +7,19 @@
  * 印刷用タイムシートHTMLを生成し、新しいウィンドウで表示
  */
 export function openTimesheetPrintWindow(): void {
-  const html = generateTimesheetHtml()
-  const printWindow = window.open('', '_blank')
-  if (!printWindow) return
-  printWindow.document.write(html)
-  printWindow.document.close()
+  const html = generateTimesheetHtml();
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) return;
+  printWindow.document.write(html);
+  printWindow.document.close();
 }
 
 /** データ行数 */
-const DATA_ROWS = 16
+const DATA_ROWS = 16;
 /** 番号列数 */
-const NUM_COLUMNS = 20
+const NUM_COLUMNS = 20;
 /** ヘッダー行を再表示する間隔 */
-const HEADER_REPEAT_INTERVAL = 8
+const HEADER_REPEAT_INTERVAL = 8;
 
 /** 7セグメント3桁 "888" のSVG Data URI を生成 */
 function sevenSegDataUri(): string {
@@ -30,14 +30,14 @@ function sevenSegDataUri(): string {
     `<rect x='${ox + 2}' y='8.25' width='6' height='1.5' rx='.4'/>` +
     `<rect x='${ox}' y='10' width='1.5' height='5.5' rx='.4'/>` +
     `<rect x='${ox + 8.5}' y='10' width='1.5' height='5.5' rx='.4'/>` +
-    `<rect x='${ox + 2}' y='16.5' width='6' height='1.5' rx='.4'/>`
-  const svg = [0, 14, 28].map(digit).join('')
-  return `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 38 18' fill='%23ddd'>${svg}</svg>`
+    `<rect x='${ox + 2}' y='16.5' width='6' height='1.5' rx='.4'/>`;
+  const svg = [0, 14, 28].map(digit).join("");
+  return `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 38 18' fill='%23ddd'>${svg}</svg>`;
 }
 
 function generateTimesheetHtml(): string {
-  const table = buildTableHtml()
-  const segUri = sevenSegDataUri()
+  const table = buildTableHtml();
+  const segUri = sevenSegDataUri();
 
   return `<!DOCTYPE html>
 <html lang="ja">
@@ -223,7 +223,7 @@ function generateTimesheetHtml(): string {
   </div>
 </div>
 </body>
-</html>`
+</html>`;
 }
 
 /**
@@ -231,29 +231,37 @@ function generateTimesheetHtml(): string {
  */
 function buildTableHtml(): string {
   // ヘッダー行
-  const thCells = Array.from({ length: NUM_COLUMNS }, (_, i) =>
-    `<th>${i + 1}</th>`
-  ).join('')
+  const thCells = Array.from({ length: NUM_COLUMNS }, (_, i) => `<th>${i + 1}</th>`).join("");
 
-  const headerRow = `<tr><th class="col-name">名前</th><th class="col-style">種目</th>${thCells}</tr>`
+  const headerRow = `<tr><th class="col-name">名前</th><th class="col-style">種目</th>${thCells}</tr>`;
 
   // データ行（記入行とスペーサー行を交互に、一定間隔でヘッダー行を再表示）
-  const rows: string[] = []
+  const rows: string[] = [];
   for (let i = 0; i < DATA_ROWS; i++) {
     // ヘッダー行を再表示（直前にスペーサーを挿入）
     if (i > 0 && i % HEADER_REPEAT_INTERVAL === 0) {
-      const spacerCells = Array.from({ length: NUM_COLUMNS }, () => `<td class="cell-spacer"></td>`).join('')
-      rows.push(`<tr><td class="cell-spacer"></td><td class="cell-spacer"></td>${spacerCells}</tr>`)
-      rows.push(headerRow)
+      const spacerCells = Array.from(
+        { length: NUM_COLUMNS },
+        () => `<td class="cell-spacer"></td>`,
+      ).join("");
+      rows.push(
+        `<tr><td class="cell-spacer"></td><td class="cell-spacer"></td>${spacerCells}</tr>`,
+      );
+      rows.push(headerRow);
     }
 
-    const mainCells = Array.from({ length: NUM_COLUMNS }, () => `<td class="cell"></td>`).join('')
-    rows.push(`<tr><td class="col-name"></td><td class="col-style"></td>${mainCells}</tr>`)
+    const mainCells = Array.from({ length: NUM_COLUMNS }, () => `<td class="cell"></td>`).join("");
+    rows.push(`<tr><td class="col-name"></td><td class="col-style"></td>${mainCells}</tr>`);
 
     // 最後の行以外はスペーサー行を追加
     if (i < DATA_ROWS - 1 && (i + 1) % HEADER_REPEAT_INTERVAL !== 0) {
-      const spacerCells = Array.from({ length: NUM_COLUMNS }, () => `<td class="cell-spacer"></td>`).join('')
-      rows.push(`<tr><td class="cell-spacer"></td><td class="cell-spacer"></td>${spacerCells}</tr>`)
+      const spacerCells = Array.from(
+        { length: NUM_COLUMNS },
+        () => `<td class="cell-spacer"></td>`,
+      ).join("");
+      rows.push(
+        `<tr><td class="cell-spacer"></td><td class="cell-spacer"></td>${spacerCells}</tr>`,
+      );
     }
   }
 
@@ -263,7 +271,7 @@ function buildTableHtml(): string {
     ${headerRow}
   </thead>
   <tbody>
-    ${rows.join('\n')}
+    ${rows.join("\n")}
   </tbody>
-</table>`
+</table>`;
 }

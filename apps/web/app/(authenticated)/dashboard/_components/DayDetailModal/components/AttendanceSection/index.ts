@@ -1,2 +1,2 @@
-export { AttendanceButton } from './AttendanceButton'
-export { AttendanceModal } from './AttendanceModal'
+export { AttendanceButton } from "./AttendanceButton";
+export { AttendanceModal } from "./AttendanceModal";

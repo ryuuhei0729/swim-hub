@@ -2,74 +2,76 @@
  * RecordLogForm関連の型定義
  */
 
-import { EntryInfo } from '@apps/shared/types/ui'
+import { EntryInfo } from "@apps/shared/types/ui";
 
 // SplitTimeRow型定義（editData用のcamelCase型）
 export type SplitTimeRow = {
-  distance: number
-  splitTime: number
-}
+  distance: number;
+  splitTime: number;
+};
 
 // フォーム内部状態用のスプリットタイム型
 export interface SplitTimeDraft {
-  distance: number | string
-  splitTime: number
-  splitTimeDisplayValue?: string
-  uiKey?: string
+  distance: number | string;
+  splitTime: number;
+  splitTimeDisplayValue?: string;
+  uiKey?: string;
 }
 
 // フォーム内部状態用
 export interface RecordLogFormState {
-  styleId: string
-  time: number
-  timeDisplayValue?: string
-  isRelaying: boolean
-  splitTimes: SplitTimeDraft[]
-  note: string
-  videoUrl?: string
-  reactionTime: string
+  styleId: string;
+  time: number;
+  timeDisplayValue?: string;
+  isRelaying: boolean;
+  splitTimes: SplitTimeDraft[];
+  note: string;
+  videoPath?: string | null;
+  videoThumbnailPath?: string | null;
+  reactionTime: string;
 }
 
 // 送信用
 export interface RecordLogFormData {
-  styleId: string
-  time: number
-  timeDisplayValue?: string
-  isRelaying: boolean
-  splitTimes: Array<{ distance: number; splitTime: number }>
-  note: string
-  videoUrl?: string
-  reactionTime: string
+  styleId: string;
+  time: number;
+  timeDisplayValue?: string;
+  isRelaying: boolean;
+  splitTimes: Array<{ distance: number; splitTime: number }>;
+  note: string;
+  videoPath?: string | null;
+  videoThumbnailPath?: string | null;
+  reactionTime: string;
 }
 
 export interface RecordLogEditData {
-  id?: string
-  styleId?: number
-  time?: number
-  isRelaying?: boolean
-  splitTimes?: SplitTimeRow[]
-  note?: string
-  videoUrl?: string
-  reactionTime?: number | null
+  id?: string;
+  styleId?: number;
+  time?: number;
+  isRelaying?: boolean;
+  splitTimes?: SplitTimeRow[];
+  note?: string;
+  videoPath?: string | null;
+  reactionTime?: number | null;
 }
 
 export interface StyleOption {
-  id: string | number
-  nameJp: string
-  distance: number
+  id: string | number;
+  nameJp: string;
+  distance: number;
 }
 
 export interface RecordLogFormProps {
-  isOpen: boolean
-  onClose: () => void
-  onSubmit: (dataList: RecordLogFormData[]) => Promise<void>
-  competitionId: string
-  competitionTitle?: string
-  competitionDate?: string
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (dataList: RecordLogFormData[]) => Promise<void>;
+  competitionId: string;
+  competitionTitle?: string;
+  competitionDate?: string;
   /** プールタイプ（0: 短水路, 1: 長水路） */
-  poolType?: number
-  editData?: RecordLogEditData | null
-  isLoading?: boolean
-  styles?: StyleOption[]
-  entryDataList?: EntryInfo[]
+  poolType?: number;
+  editData?: RecordLogEditData | null;
+  isLoading?: boolean;
+  styles?: StyleOption[];
+  entryDataList?: EntryInfo[];
 }

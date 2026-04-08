@@ -1,12 +1,12 @@
 // middleware.ts - Next.js 15 Edge Middleware
-import { updateSession } from '@/lib/supabase-auth/middleware'
-import { type NextRequest } from 'next/server'
+import { updateSession } from "@/lib/supabase-auth/middleware";
+import { type NextRequest } from "next/server";
 
 // Cloudflare Workers 対応: Edge Runtime を使用
-export const runtime = 'experimental-edge'
+export const runtime = "experimental-edge";
 
 export async function middleware(request: NextRequest) {
-    return await updateSession(request)
+  return await updateSession(request);
 }
 
 export const config = {
@@ -18,6 +18,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public folder
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
-}
+};

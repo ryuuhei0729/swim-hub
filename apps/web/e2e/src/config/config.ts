@@ -2,28 +2,34 @@
  * E2Eテスト用の設定ファイル
  * 定数、環境変数、URL等を一元管理
  */
-import * as dotenv from 'dotenv'
-import path from 'node:path'
+import * as dotenv from "dotenv";
+import path from "node:path";
 
-// .envファイルを読み込む（相対パスで解決）
-// process.cwd()はapps/webディレクトリなので、直接.env.local/.envを参照
-const envLocalPath = path.resolve(process.cwd(), '.env.local')
-const envPath = path.resolve(process.cwd(), '.env')
+// .envファイルを読み込む
+// process.cwd() が swim-hub/ ルート or apps/web/ のどちらでも動くように両方探す
+const cwd = process.cwd();
+const candidates = [
+  cwd,                                // swim-hub/ から実行した場合
+  path.resolve(cwd, "apps/web"),      // swim-hub/ → apps/web
+  path.resolve(__dirname, "../../.."), // config.ts → apps/web
+];
 
-dotenv.config({ path: envLocalPath })
-dotenv.config({ path: envPath })
+for (const dir of candidates) {
+  dotenv.config({ path: path.resolve(dir, ".env.local") });
+  dotenv.config({ path: path.resolve(dir, ".env") });
+}
 
 /**
  * タイムアウト値（ミリ秒）
  */
 export const TIMEOUTS = {
-  DEFAULT: 10000,              // デフォルトタイムアウト
-  LONG: 20000,                 // 長いタイムアウト
-  SHORT: 3000,                 // 短いタイムアウト
-  MODAL_ANIMATION: 1000,       // モーダルアニメーション完了待ち
-  SPA_RENDERING: 2000,         // SPAレンダリング完了待ち（Supabaseデータ取得を含む）
-  REDIRECT: 3000,              // リダイレクト完了待ち
-} as const
+  DEFAULT: 10000, // デフォルトタイムアウト
+  LONG: 20000, // 長いタイムアウト
+  SHORT: 3000, // 短いタイムアウト
+  MODAL_ANIMATION: 1000, // モーダルアニメーション完了待ち
+  SPA_RENDERING: 2000, // SPAレンダリング完了待ち（Supabaseデータ取得を含む）
+  REDIRECT: 3000, // リダイレクト完了待ち
+} as const;
 
 /**
  * 共通セレクタ（複数ページで使用されるもの）
@@ -33,43 +39,43 @@ export const TIMEOUTS = {
 export const SELECTORS = {
   // モーダル
   MODAL: '[role="dialog"]',
-  
+
   // ボタン
   SUBMIT_BUTTON: 'button[type="submit"]',
-  
+
   // エラーメッセージ
-  ERROR_ALERT: '.bg-red-50, .text-red-700',
-  SUCCESS_ALERT: '.bg-green-50, .text-green-700',
-} as const
+  ERROR_ALERT: ".bg-red-50, .text-red-700",
+  SUCCESS_ALERT: ".bg-green-50, .text-green-700",
+} as const;
 
 /**
  * URLパス
  */
 export const URLS = {
-  LOGIN: '/login',
-  SIGNUP: '/signup',
-  DASHBOARD: '/dashboard',
-  PRACTICE: '/practice',
-  RECORD: '/record',
-  MYPAGE: '/mypage',
-  TEAMS: '/teams',
-  SETTINGS: '/settings',
-} as const
+  LOGIN: "/login",
+  SIGNUP: "/signup",
+  DASHBOARD: "/dashboard",
+  PRACTICE: "/practice",
+  RECORD: "/record",
+  MYPAGE: "/mypage",
+  TEAMS: "/teams",
+  SETTINGS: "/settings",
+} as const;
 
 /**
  * テスト環境の設定
  */
 export interface TestEnvironment {
-  baseUrl: string
+  baseUrl: string;
   credentials: {
-    email: string
-    password: string
-  }
+    email: string;
+    password: string;
+  };
   /** 2つ目のアカウント（チーム参加テスト等で使用） */
   secondaryCredentials?: {
-    email: string
-    password: string
-  }
+    email: string;
+    password: string;
+  };
 }
 
 /**
@@ -82,47 +88,45 @@ export class EnvConfig {
    */
   static getTestEnvironment(): TestEnvironment {
     // E2E_BASE_URLを取得（後方互換性のためPLAYWRIGHT_BASE_URLとBASE_URLもサポート）
-    const baseUrl = 
-      process.env.E2E_BASE_URL ||
-      process.env.PLAYWRIGHT_BASE_URL ||
-      process.env.BASE_URL
+    const baseUrl =
+      process.env.E2E_BASE_URL || process.env.PLAYWRIGHT_BASE_URL || process.env.BASE_URL;
 
     if (!baseUrl) {
       throw new Error(
-        '必要な環境変数が設定されていません。\n' +
-        'E2E_BASE_URL を設定してください。\n' +
-        '例: apps/web/.env.local に以下を追加:\n' +
-        'E2E_BASE_URL=http://localhost:3000'
-      )
+        "必要な環境変数が設定されていません。\n" +
+          "E2E_BASE_URL を設定してください。\n" +
+          "例: apps/web/.env.local に以下を追加:\n" +
+          "E2E_BASE_URL=http://localhost:3000",
+      );
     }
-    
+
     // E2E_EMAILとE2E_PASSWORDを優先し、後方互換性のためE2E_TEST_EMAILとE2E_TEST_PASSWORDもサポート
-    const email = process.env.E2E_EMAIL || process.env.E2E_TEST_EMAIL
-    const password = process.env.E2E_PASSWORD || process.env.E2E_TEST_PASSWORD
+    const email = process.env.E2E_EMAIL || process.env.E2E_TEST_EMAIL;
+    const password = process.env.E2E_PASSWORD || process.env.E2E_TEST_PASSWORD;
 
     if (!email || !password) {
       throw new Error(
-        '必要な環境変数が設定されていません。\n' +
-        'E2E_EMAIL と E2E_PASSWORD を設定してください。\n' +
-        '（後方互換性のため E2E_TEST_EMAIL と E2E_TEST_PASSWORD もサポートしています）\n' +
-        '例: apps/web/.env.local に以下を追加:\n' +
-        'E2E_EMAIL=test@example.com\n' +
-        'E2E_PASSWORD=testpassword123'
-      )
+        "必要な環境変数が設定されていません。\n" +
+          "E2E_EMAIL と E2E_PASSWORD を設定してください。\n" +
+          "（後方互換性のため E2E_TEST_EMAIL と E2E_TEST_PASSWORD もサポートしています）\n" +
+          "例: apps/web/.env.local に以下を追加:\n" +
+          "E2E_EMAIL=test@example.com\n" +
+          "E2E_PASSWORD=testpassword123",
+      );
     }
 
     // 2つ目のアカウント（オプション）
-    const secondaryEmail = process.env.E2E_EMAIL_B
-    const secondaryPassword = process.env.E2E_PASSWORD_B
-    const secondaryCredentials = secondaryEmail && secondaryPassword
-      ? { email: secondaryEmail, password: secondaryPassword }
-      : undefined
+    const secondaryEmail = process.env.E2E_EMAIL_B;
+    const secondaryPassword = process.env.E2E_PASSWORD_B;
+    const secondaryCredentials =
+      secondaryEmail && secondaryPassword
+        ? { email: secondaryEmail, password: secondaryPassword }
+        : undefined;
 
     return {
       baseUrl,
       credentials: { email, password },
-      secondaryCredentials
-    }
+      secondaryCredentials,
+    };
   }
 }
-

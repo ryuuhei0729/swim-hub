@@ -1,132 +1,131 @@
-import React, { useState } from 'react'
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from 'react-native'
-import { useAuth } from '@/contexts/AuthProvider'
+import React, { useState } from "react";
+import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import { useAuth } from "@/contexts/AuthProvider";
 
 interface SignupFormProps {
-  onSuccess?: () => void
+  onSuccess?: () => void;
 }
 
 export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [message, setMessage] = useState<string | null>(null)
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
-  const { signUp } = useAuth()
+  const { signUp } = useAuth();
 
   type AuthError = {
-    status?: number
-    message?: string
-    error_description?: string
-    error?: string
-  }
+    status?: number;
+    message?: string;
+    error_description?: string;
+    error?: string;
+  };
 
   const formatAuthError = (err: unknown): string => {
-    const errorObj: AuthError =
-      err && typeof err === 'object' ? (err as AuthError) : {}
-    const status = typeof errorObj.status === 'number' ? errorObj.status : undefined
-    const statusText = status ? ` [status: ${status}]` : ''
+    const errorObj: AuthError = err && typeof err === "object" ? (err as AuthError) : {};
+    const status = typeof errorObj.status === "number" ? errorObj.status : undefined;
+    const statusText = status ? ` [status: ${status}]` : "";
     const errMsg =
-      (typeof errorObj.message === 'string' ? errorObj.message : null) ||
-      (typeof errorObj.error_description === 'string' ? errorObj.error_description : null) ||
-      (typeof errorObj.error === 'string' ? errorObj.error : null) ||
-      '不明なエラーが発生しました。'
+      (typeof errorObj.message === "string" ? errorObj.message : null) ||
+      (typeof errorObj.error_description === "string" ? errorObj.error_description : null) ||
+      (typeof errorObj.error === "string" ? errorObj.error : null) ||
+      "不明なエラーが発生しました。";
 
     // エラーメッセージの日本語化と補足ヒント
-    if (typeof errMsg === 'string') {
-      const msg = errMsg.toLowerCase()
+    if (typeof errMsg === "string") {
+      const msg = errMsg.toLowerCase();
 
       // サインアップエラーの処理（OWASP準拠）
-      if (msg.includes('user already registered')) {
-        return 'アカウントの作成に失敗しました。入力内容を確認してから再度お試しください。'
+      if (msg.includes("user already registered")) {
+        return "アカウントの作成に失敗しました。入力内容を確認してから再度お試しください。";
       }
       // パスワード強度エラーの検出を拡張
-      const weakPwdRegex = /\b(pass(word)?).*(weak|too short|at least|characters)\b/i
+      const weakPwdRegex = /\b(pass(word)?).*(weak|too short|at least|characters)\b/i;
       if (
-        msg.includes('password') && msg.includes('weak') ||
-        msg.includes('too short') ||
-        (msg.includes('at least') && msg.includes('characters')) ||
-        (msg.includes('minimum') && msg.includes('characters')) ||
+        (msg.includes("password") && msg.includes("weak")) ||
+        msg.includes("too short") ||
+        (msg.includes("at least") && msg.includes("characters")) ||
+        (msg.includes("minimum") && msg.includes("characters")) ||
         weakPwdRegex.test(errMsg)
       ) {
-        return 'パスワードが弱すぎます。より強力なパスワードを設定してください。'
+        return "パスワードが弱すぎます。より強力なパスワードを設定してください。";
       }
 
       // 共通エラーの処理
-      if (msg.includes('captcha')) {
-        return 'Captcha認証が必要です。Captchaを完了してから再度お試しください。'
+      if (msg.includes("captcha")) {
+        return "Captcha認証が必要です。Captchaを完了してから再度お試しください。";
       }
-      if (msg.includes('rate limit') || status === 429) {
-        return 'リクエスト制限に達しました。しばらく時間をおいてから再度お試しください。'
+      if (msg.includes("rate limit") || status === 429) {
+        return "リクエスト制限に達しました。しばらく時間をおいてから再度お試しください。";
       }
-      if (msg.includes('network') || msg.includes('connection')) {
-        return 'ネットワークエラーが発生しました。インターネット接続を確認してから再度お試しください。'
+      if (msg.includes("network") || msg.includes("connection")) {
+        return "ネットワークエラーが発生しました。インターネット接続を確認してから再度お試しください。";
       }
     }
 
     // デフォルトのエラーメッセージ
     return __DEV__
       ? `エラーが発生しました: ${errMsg}${statusText}`
-      : 'エラーが発生しました。時間をおいて再度お試しください。'
-  }
+      : "エラーが発生しました。時間をおいて再度お試しください。";
+  };
 
   const validateForm = (): boolean => {
     if (!name.trim()) {
-      setError('名前を入力してください。')
-      return false
+      setError("名前を入力してください。");
+      return false;
     }
 
     if (!email.trim()) {
-      setError('メールアドレスを入力してください。')
-      return false
+      setError("メールアドレスを入力してください。");
+      return false;
     }
 
     // メールアドレス形式の簡易チェック
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setError('有効なメールアドレスを入力してください。')
-      return false
+      setError("有効なメールアドレスを入力してください。");
+      return false;
     }
 
     if (!password) {
-      setError('パスワードを入力してください。')
-      return false
+      setError("パスワードを入力してください。");
+      return false;
     }
 
     // パスワード強度チェック（最小6文字、推奨8文字以上）
     if (password.length < 6) {
-      setError('パスワードは6文字以上で入力してください。')
-      return false
+      setError("パスワードは6文字以上で入力してください。");
+      return false;
     }
 
-    return true
-  }
+    return true;
+  };
 
   const handleSubmit = async () => {
     if (!validateForm()) {
-      return
+      return;
     }
 
-    setLoading(true)
-    setError(null)
-    setMessage(null)
+    setLoading(true);
+    setError(null);
+    setMessage(null);
 
     try {
-      const { error } = await signUp(email, password, name)
+      const { error } = await signUp(email, password, name);
       if (error) {
-        setError(formatAuthError(error))
+        setError(formatAuthError(error));
       } else {
-        setMessage('確認メールを送信しました。メールを確認してアカウントを有効化してください。')
-        onSuccess?.()
+        setMessage("確認メールを送信しました。メールを確認してアカウントを有効化してください。");
+        onSuccess?.();
       }
     } catch {
-      setError('予期しないエラーが発生しました。')
+      setError("予期しないエラーが発生しました。");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <View style={styles.container}>
@@ -216,24 +215,24 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
         </View>
       </View>
     </View>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: "#EFF6FF",
   },
   formContainer: {
-    width: '100%',
+    width: "100%",
     maxWidth: 400,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 24,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -244,37 +243,37 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 24,
-    alignItems: 'center',
+    alignItems: "center",
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#111827',
+    fontWeight: "bold",
+    color: "#111827",
     marginBottom: 8,
   },
   errorContainer: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FECACA",
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
   },
   errorText: {
-    color: '#DC2626',
+    color: "#DC2626",
     fontSize: 14,
     lineHeight: 20,
   },
   messageContainer: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#BBF7D0',
+    backgroundColor: "#F0FDF4",
+    borderColor: "#BBF7D0",
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
   },
   messageText: {
-    color: '#16A34A',
+    color: "#16A34A",
     fontSize: 14,
     lineHeight: 20,
   },
@@ -286,37 +285,37 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+    fontWeight: "500",
+    color: "#374151",
   },
   input: {
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: "#D1D5DB",
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    color: '#111827',
-    backgroundColor: '#FFFFFF',
+    color: "#111827",
+    backgroundColor: "#FFFFFF",
   },
   passwordHint: {
     fontSize: 12,
-    color: '#F59E0B',
+    color: "#F59E0B",
     marginTop: 4,
   },
   button: {
-    backgroundColor: '#2563EB',
+    backgroundColor: "#2563EB",
     borderRadius: 8,
     padding: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 8,
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
-})
+});

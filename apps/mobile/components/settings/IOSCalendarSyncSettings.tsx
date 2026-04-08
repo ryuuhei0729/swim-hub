@@ -2,7 +2,7 @@
  * iOSカレンダー連携設定コンポーネント
  * iOSネイティブカレンダーとの同期設定を管理
  */
-import React, { useState } from 'react'
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -12,16 +12,16 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
-} from 'react-native'
-import Svg, { Path } from 'react-native-svg'
-import { useIOSCalendarSync } from '@/hooks/useIOSCalendarSync'
-import type { UserProfile } from '@swim-hub/shared/types'
+} from "react-native";
+import Svg, { Path } from "react-native-svg";
+import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
+import type { UserProfile } from "@swim-hub/shared/types";
 
 interface IOSCalendarSyncSettingsProps {
   /** ユーザープロフィール */
-  profile: UserProfile | null
+  profile: UserProfile | null;
   /** 設定更新後のコールバック */
-  onUpdate: () => void
+  onUpdate: () => void;
 }
 
 /**
@@ -44,7 +44,7 @@ const CalendarIcon: React.FC = () => (
       strokeLinejoin="round"
     />
   </Svg>
-)
+);
 
 export const IOSCalendarSyncSettings: React.FC<IOSCalendarSyncSettingsProps> = ({
   profile,
@@ -58,63 +58,59 @@ export const IOSCalendarSyncSettings: React.FC<IOSCalendarSyncSettingsProps> = (
     loading: syncLoading,
     error: syncError,
     clearError,
-  } = useIOSCalendarSync()
-  const [syncing, setSyncing] = useState(false)
+  } = useIOSCalendarSync();
+  const [syncing, setSyncing] = useState(false);
 
   // iOSでない場合は表示しない
-  if (Platform.OS !== 'ios' || !isAvailable) {
-    return null
+  if (Platform.OS !== "ios" || !isAvailable) {
+    return null;
   }
 
-  const isEnabled = profile?.ios_calendar_enabled || false
-  const syncPractices = profile?.ios_calendar_sync_practices ?? true
-  const syncCompetitions = profile?.ios_calendar_sync_competitions ?? true
+  const isEnabled = profile?.ios_calendar_enabled || false;
+  const syncPractices = profile?.ios_calendar_sync_practices ?? true;
+  const syncCompetitions = profile?.ios_calendar_sync_competitions ?? true;
 
   // 連携開始
   const handleConnect = async () => {
-    clearError()
-    const success = await enableSync()
+    clearError();
+    const success = await enableSync();
     if (success) {
-      onUpdate()
+      onUpdate();
     }
-  }
+  };
 
   // 連携解除
   const handleDisconnect = () => {
-    Alert.alert(
-      '確認',
-      'iOSカレンダー連携を解除しますか？',
-      [
-        { text: 'キャンセル', style: 'cancel' },
-        {
-          text: '解除',
-          style: 'destructive',
-          onPress: async () => {
-            const success = await disableSync()
-            if (success) {
-              onUpdate()
-            }
-          },
+    Alert.alert("確認", "iOSカレンダー連携を解除しますか？", [
+      { text: "キャンセル", style: "cancel" },
+      {
+        text: "解除",
+        style: "destructive",
+        onPress: async () => {
+          const success = await disableSync();
+          if (success) {
+            onUpdate();
+          }
         },
-      ]
-    )
-  }
+      },
+    ]);
+  };
 
   // 同期設定変更
   const handleSyncSettingChange = async (
-    field: 'ios_calendar_sync_practices' | 'ios_calendar_sync_competitions',
-    value: boolean
+    field: "ios_calendar_sync_practices" | "ios_calendar_sync_competitions",
+    value: boolean,
   ) => {
-    setSyncing(true)
-    clearError()
+    setSyncing(true);
+    clearError();
 
-    const success = await updateSyncSettings(field, value)
+    const success = await updateSyncSettings(field, value);
     if (success) {
-      onUpdate()
+      onUpdate();
     }
 
-    setSyncing(false)
-  }
+    setSyncing(false);
+  };
 
   return (
     <View style={styles.container}>
@@ -172,11 +168,11 @@ export const IOSCalendarSyncSettings: React.FC<IOSCalendarSyncSettingsProps> = (
               <Switch
                 value={syncPractices}
                 onValueChange={(value) =>
-                  handleSyncSettingChange('ios_calendar_sync_practices', value)
+                  handleSyncSettingChange("ios_calendar_sync_practices", value)
                 }
                 disabled={syncing || syncLoading}
-                trackColor={{ false: '#D1D5DB', true: '#93C5FD' }}
-                thumbColor={syncPractices ? '#2563EB' : '#F3F4F6'}
+                trackColor={{ false: "#D1D5DB", true: "#93C5FD" }}
+                thumbColor={syncPractices ? "#2563EB" : "#F3F4F6"}
               />
             </View>
             <View style={styles.settingRow}>
@@ -184,11 +180,11 @@ export const IOSCalendarSyncSettings: React.FC<IOSCalendarSyncSettingsProps> = (
               <Switch
                 value={syncCompetitions}
                 onValueChange={(value) =>
-                  handleSyncSettingChange('ios_calendar_sync_competitions', value)
+                  handleSyncSettingChange("ios_calendar_sync_competitions", value)
                 }
                 disabled={syncing || syncLoading}
-                trackColor={{ false: '#D1D5DB', true: '#93C5FD' }}
-                thumbColor={syncCompetitions ? '#2563EB' : '#F3F4F6'}
+                trackColor={{ false: "#D1D5DB", true: "#93C5FD" }}
+                thumbColor={syncCompetitions ? "#2563EB" : "#F3F4F6"}
               />
             </View>
           </View>
@@ -197,7 +193,6 @@ export const IOSCalendarSyncSettings: React.FC<IOSCalendarSyncSettingsProps> = (
           <View style={[styles.section, styles.borderTop]}>
             <Text style={styles.description}>
               練習や大会を作成・更新すると、自動的にiOSカレンダーに反映されます。
-              カレンダーアプリの「SwimHub」カレンダーで予定を確認できます。
             </Text>
           </View>
 
@@ -218,44 +213,44 @@ export const IOSCalendarSyncSettings: React.FC<IOSCalendarSyncSettingsProps> = (
         </>
       )}
     </View>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 8,
     padding: 20,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: "#E5E7EB",
   },
   title: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: "600",
+    color: "#111827",
   },
   badge: {
-    backgroundColor: '#D1FAE5',
+    backgroundColor: "#D1FAE5",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
   },
   badgeText: {
     fontSize: 12,
-    fontWeight: '500',
-    color: '#059669',
+    fontWeight: "500",
+    color: "#059669",
   },
   section: {
     gap: 12,
@@ -264,79 +259,79 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: "#E5E7EB",
   },
   description: {
     fontSize: 14,
-    color: '#6B7280',
+    color: "#6B7280",
     lineHeight: 20,
   },
   errorContainer: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FECACA",
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
   },
   errorText: {
-    color: '#DC2626',
+    color: "#DC2626",
     fontSize: 14,
   },
   connectButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: "#D1D5DB",
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     minHeight: 48,
   },
   buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
   },
   connectButtonText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+    fontWeight: "500",
+    color: "#374151",
   },
   buttonPressed: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: "#F3F4F6",
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   settingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 8,
   },
   settingLabel: {
     fontSize: 14,
-    color: '#374151',
+    color: "#374151",
   },
   disconnectButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: "#FECACA",
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     minHeight: 48,
   },
   disconnectButtonPressed: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: "#FEF2F2",
   },
   disconnectButtonText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#DC2626',
+    fontWeight: "500",
+    color: "#DC2626",
   },
-})
+});

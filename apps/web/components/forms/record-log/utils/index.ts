@@ -1,1 +1,1 @@
-export { formatSecondsToDisplay, parseTimeToSeconds } from './formatters'
+export { formatSecondsToDisplay, parseTimeToSeconds } from "./formatters";

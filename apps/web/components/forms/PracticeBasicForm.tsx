@@ -1,56 +1,61 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect, useCallback, useRef } from 'react'
-import Button from '@/components/ui/Button'
-import Input from '@/components/ui/Input'
-import ConfirmDialog from '@/components/ui/ConfirmDialog'
-import DatePicker from '@/components/ui/DatePicker'
-import PlaceCombobox from '@/components/ui/PlaceCombobox'
-import FormStepper from '@/components/ui/FormStepper'
-import { XMarkIcon } from '@heroicons/react/24/outline'
-import { supabase } from '@/lib/supabase'
-import { PracticeAPI } from '@apps/shared/api'
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import DatePicker from "@/components/ui/DatePicker";
+import PlaceCombobox from "@/components/ui/PlaceCombobox";
+import FormStepper from "@/components/ui/FormStepper";
+import { XMarkIcon } from "@heroicons/react/24/outline";
+import { supabase } from "@/lib/supabase";
+import { PracticeAPI } from "@apps/shared/api";
+import { format, parseISO, isValid } from "date-fns";
+import { ja } from "date-fns/locale";
+import PracticeImageUploader, { PracticeImageFile, ExistingImage } from "./PracticeImageUploader";
+import { useAuth } from "@/contexts";
+import { checkIsPremium } from "@swim-hub/shared/utils/premium";
+import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
+import PremiumBadge from "@/components/ui/PremiumBadge";
 
 // 練習記録フォームのステップ定義
 const PRACTICE_STEPS = [
-  { id: 'basic', label: '基本情報', description: '日付・場所' },
-  { id: 'log', label: '練習記録', description: 'メニュー・タイム' }
-]
-import { format, parseISO, isValid } from 'date-fns'
-import { ja } from 'date-fns/locale'
-import PracticeImageUploader, {
-  PracticeImageFile,
-  ExistingImage
-} from './PracticeImageUploader'
+  { id: "basic", label: "基本情報", description: "日付・場所" },
+  { id: "log", label: "練習記録", description: "メニュー・タイム" },
+];
 
 export interface PracticeBasicData {
-  date: string
-  title: string
-  place: string
-  note: string
+  date: string;
+  title: string;
+  place: string;
+  note: string;
 }
 
 export interface PracticeImageData {
-  newFiles: PracticeImageFile[]
-  deletedIds: string[]
+  newFiles: PracticeImageFile[];
+  deletedIds: string[];
 }
 
 type EditPracticeBasicData = {
-  date?: string
-  title?: string | null
-  place?: string
-  note?: string
-  images?: ExistingImage[]
-}
+  date?: string;
+  title?: string | null;
+  place?: string;
+  note?: string;
+  images?: ExistingImage[];
+};
 
 interface PracticeBasicFormProps {
-  isOpen: boolean
-  onClose: () => void
-  onSubmit: (data: PracticeBasicData, imageData?: PracticeImageData, continueToNext?: boolean) => Promise<void>
-  selectedDate: Date
-  editData?: EditPracticeBasicData // 編集時のデータ
-  isLoading?: boolean
-  teamMode?: boolean // チームモード: 保存して次へボタンを非表示
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (
+    data: PracticeBasicData,
+    imageData?: PracticeImageData,
+    continueToNext?: boolean,
+  ) => Promise<void>;
+  selectedDate: Date;
+  editData?: EditPracticeBasicData; // 編集時のデータ
+  isLoading?: boolean;
+  teamMode?: boolean; // チームモード: 保存して次へボタンを非表示
 }
 
 export default function PracticeBasicForm({
@@ -60,247 +65,247 @@ export default function PracticeBasicForm({
   selectedDate,
   editData,
   isLoading = false,
-  teamMode = false
+  teamMode = false,
 }: PracticeBasicFormProps) {
+  const { subscription } = useAuth();
+  const isPremium = checkIsPremium(subscription);
+
   // selectedDateの有効性を確保
-  const validDate = selectedDate && !isNaN(selectedDate.getTime()) ? selectedDate : new Date()
-  
+  const validDate = selectedDate && !isNaN(selectedDate.getTime()) ? selectedDate : new Date();
+
   const [formData, setFormData] = useState<PracticeBasicData>({
-    date: format(selectedDate, 'yyyy-MM-dd'),
-    title: '',
-    place: '',
-    note: ''
-  })
+    date: format(selectedDate, "yyyy-MM-dd"),
+    title: "",
+    place: "",
+    note: "",
+  });
 
   // 画像データ
   const [imageData, setImageData] = useState<PracticeImageData>({
     newFiles: [],
-    deletedIds: []
-  })
+    deletedIds: [],
+  });
 
   // 初期化済みフラグ（モーダルが開かれた時だけ初期化するため）
-  const [isInitialized, setIsInitialized] = useState(false)
+  const [isInitialized, setIsInitialized] = useState(false);
   // フォームに変更があるかどうかを追跡
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   // 送信済みフラグ（送信後は警告を出さない）
-  const [isSubmitted, setIsSubmitted] = useState(false)
+  const [isSubmitted, setIsSubmitted] = useState(false);
   // 初期値を保存（初期化時の変更を無視するため）
-  const initialFormDataRef = useRef<PracticeBasicData | null>(null)
+  const initialFormDataRef = useRef<PracticeBasicData | null>(null);
   // 確認ダイアログの表示状態
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   // 確認ダイアログのコンテキスト（close: モーダル閉じる, back: ブラウザバック）
-  const [confirmContext, setConfirmContext] = useState<'close' | 'back'>('close')
+  const [confirmContext, setConfirmContext] = useState<"close" | "back">("close");
   // 場所の候補一覧
-  const [placeSuggestions, setPlaceSuggestions] = useState<string[]>([])
+  const [placeSuggestions, setPlaceSuggestions] = useState<string[]>([]);
   // popstateイベントをスキップするためのフラグ
-  const skipPopstateRef = useRef(false)
+  const skipPopstateRef = useRef(false);
   // 二重送信防止用のref
-  const isSubmittingRef = useRef(false)
+  const isSubmittingRef = useRef(false);
 
   // 場所の候補を取得
   useEffect(() => {
-    if (!isOpen) return
-    if (!supabase) return
+    if (!isOpen) return;
+    if (!supabase) return;
 
-    const client = supabase
+    const client = supabase;
     const fetchPlaces = async () => {
       try {
-        const practiceAPI = new PracticeAPI(client)
-        const places = await practiceAPI.getUniquePlaces()
-        setPlaceSuggestions(places)
+        const practiceAPI = new PracticeAPI(client);
+        const places = await practiceAPI.getUniquePlaces();
+        setPlaceSuggestions(places);
       } catch (error) {
-        console.error('場所候補の取得に失敗:', error)
+        console.error("場所候補の取得に失敗:", error);
       }
-    }
-    fetchPlaces()
-  }, [isOpen])
+    };
+    fetchPlaces();
+  }, [isOpen]);
 
   // モーダルが閉じた時に初期化フラグをリセット
   useEffect(() => {
     if (!isOpen) {
-      setIsInitialized(false)
-      setHasUnsavedChanges(false)
-      setIsSubmitted(false)
-      setShowConfirmDialog(false)
+      setIsInitialized(false);
+      setHasUnsavedChanges(false);
+      setIsSubmitted(false);
+      setShowConfirmDialog(false);
       // 画像データもリセット
-      setImageData({ newFiles: [], deletedIds: [] })
-      initialFormDataRef.current = null
+      setImageData({ newFiles: [], deletedIds: [] });
+      initialFormDataRef.current = null;
       // 二重送信防止フラグをリセット
-      isSubmittingRef.current = false
+      isSubmittingRef.current = false;
     }
-  }, [isOpen])
+  }, [isOpen]);
 
   // フォームに変更があったことを記録（初期値と比較して、実際にユーザーが変更した場合のみ）
   useEffect(() => {
-    if (!isOpen || !isInitialized || !initialFormDataRef.current) return
+    if (!isOpen || !isInitialized || !initialFormDataRef.current) return;
 
     // 初期値と現在の値を比較
-    const formChanged = JSON.stringify(formData) !== JSON.stringify(initialFormDataRef.current)
-    const hasImageChanges = imageData.newFiles.length > 0 || imageData.deletedIds.length > 0
-    setHasUnsavedChanges(formChanged || hasImageChanges)
-  }, [formData, imageData, isOpen, isInitialized])
+    const formChanged = JSON.stringify(formData) !== JSON.stringify(initialFormDataRef.current);
+    const hasImageChanges = imageData.newFiles.length > 0 || imageData.deletedIds.length > 0;
+    setHasUnsavedChanges(formChanged || hasImageChanges);
+  }, [formData, imageData, isOpen, isInitialized]);
 
   // ブラウザバックや閉じるボタンでの離脱を防ぐ
   useEffect(() => {
-    if (!isOpen || !hasUnsavedChanges || isSubmitted) return
+    if (!isOpen || !hasUnsavedChanges || isSubmitted) return;
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault()
-      e.returnValue = ''
-    }
+      e.preventDefault();
+      e.returnValue = "";
+    };
 
     const handlePopState = (_e: PopStateEvent) => {
       if (skipPopstateRef.current) {
-        skipPopstateRef.current = false
-        return
+        skipPopstateRef.current = false;
+        return;
       }
       if (hasUnsavedChanges && !isSubmitted) {
         // 履歴を戻す（ダイアログ表示中は戻らない）
-        window.history.pushState(null, '', window.location.href)
-        setConfirmContext('back')
-        setShowConfirmDialog(true)
+        window.history.pushState(null, "", window.location.href);
+        setConfirmContext("back");
+        setShowConfirmDialog(true);
       }
-    }
+    };
 
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    window.history.pushState(null, '', window.location.href)
-    window.addEventListener('popstate', handlePopState)
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.history.pushState(null, "", window.location.href);
+    window.addEventListener("popstate", handlePopState);
 
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload)
-      window.removeEventListener('popstate', handlePopState)
-    }
-  }, [isOpen, hasUnsavedChanges, isSubmitted])
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [isOpen, hasUnsavedChanges, isSubmitted]);
 
   // selectedDateまたはeditDataが変更された時にフォームを初期化（モーダルが開かれた時だけ）
   useEffect(() => {
-    if (!isOpen || isInitialized) return
+    if (!isOpen || isInitialized) return;
 
-    let initialData: PracticeBasicData
+    let initialData: PracticeBasicData;
     if (editData) {
       // 編集モード
       initialData = {
-        date: editData.date || format(selectedDate, 'yyyy-MM-dd'),
-        title: editData.title || '',
-        place: editData.place || '',
-        note: editData.note || ''
-      }
+        date: editData.date || format(selectedDate, "yyyy-MM-dd"),
+        title: editData.title || "",
+        place: editData.place || "",
+        note: editData.note || "",
+      };
     } else {
       // 新規作成モード
       initialData = {
-        date: format(selectedDate, 'yyyy-MM-dd'),
-        title: '',
-        place: '',
-        note: ''
-      }
+        date: format(selectedDate, "yyyy-MM-dd"),
+        title: "",
+        place: "",
+        note: "",
+      };
     }
 
-    setFormData(initialData)
+    setFormData(initialData);
     // 初期値を保存（初期化時の変更を無視するため）
-    initialFormDataRef.current = { ...initialData }
-    setIsInitialized(true)
-  }, [isOpen, selectedDate, editData, isInitialized])
+    initialFormDataRef.current = { ...initialData };
+    setIsInitialized(true);
+  }, [isOpen, selectedDate, editData, isInitialized]);
 
   // 画像の変更ハンドラー
   const handleImagesChange = useCallback((newFiles: PracticeImageFile[], deletedIds: string[]) => {
-    setImageData({ newFiles, deletedIds })
-  }, [])
+    setImageData({ newFiles, deletedIds });
+  }, []);
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   const handleClose = () => {
     if (hasUnsavedChanges && !isSubmitted) {
-      setConfirmContext('close')
-      setShowConfirmDialog(true)
-      return
+      setConfirmContext("close");
+      setShowConfirmDialog(true);
+      return;
     }
-    cleanupAndClose()
-  }
+    cleanupAndClose();
+  };
 
   const cleanupAndClose = () => {
     // プレビューURLをクリーンアップ
-    imageData.newFiles.forEach(file => {
-      URL.revokeObjectURL(file.previewUrl)
-    })
-    setShowConfirmDialog(false)
-    onClose()
-  }
+    imageData.newFiles.forEach((file) => {
+      URL.revokeObjectURL(file.previewUrl);
+    });
+    setShowConfirmDialog(false);
+    onClose();
+  };
 
   const handleConfirmClose = () => {
-    if (confirmContext === 'back') {
+    if (confirmContext === "back") {
       // ブラウザバックの場合は履歴を戻す
       // popstateハンドラーが再トリガーされないようにフラグを設定
-      skipPopstateRef.current = true
-      window.history.back()
+      skipPopstateRef.current = true;
+      window.history.back();
     }
-    cleanupAndClose()
-  }
+    cleanupAndClose();
+  };
 
   const handleCancelClose = () => {
-    setShowConfirmDialog(false)
-  }
+    setShowConfirmDialog(false);
+  };
 
   // 日付が今日以前かどうかを判定
   const isDateTodayOrPast = () => {
-    const parsedDate = parseISO(formData.date)
+    const parsedDate = parseISO(formData.date);
     if (!isValid(parsedDate)) {
-      return false
+      return false;
     }
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    parsedDate.setHours(0, 0, 0, 0)
-    return parsedDate <= today
-  }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    parsedDate.setHours(0, 0, 0, 0);
+    return parsedDate <= today;
+  };
 
   // フォーム送信の共通処理
   const submitForm = async (continueToNext: boolean) => {
     // 二重送信防止
-    if (isSubmittingRef.current) return
+    if (isSubmittingRef.current) return;
 
-    isSubmittingRef.current = true
-    setIsSubmitted(true)
+    isSubmittingRef.current = true;
+    setIsSubmitted(true);
     try {
-      const hasImageChanges = imageData.newFiles.length > 0 || imageData.deletedIds.length > 0
-      await onSubmit(formData, hasImageChanges ? imageData : undefined, continueToNext)
-      setHasUnsavedChanges(false)
+      const hasImageChanges = imageData.newFiles.length > 0 || imageData.deletedIds.length > 0;
+      await onSubmit(formData, hasImageChanges ? imageData : undefined, continueToNext);
+      setHasUnsavedChanges(false);
       // 成功時も二重送信防止フラグをリセット
-      isSubmittingRef.current = false
+      isSubmittingRef.current = false;
     } catch (error) {
-      console.error('練習記録の保存に失敗しました:', error)
-      isSubmittingRef.current = false
-      setIsSubmitted(false)
+      console.error("練習記録の保存に失敗しました:", error);
+      isSubmittingRef.current = false;
+      setIsSubmitted(false);
     }
-  }
+  };
 
   // 保存して終了（次へ進まない）
   const handleSubmitAndClose = async (e: React.FormEvent) => {
-    e.preventDefault()
-    await submitForm(false)
-  }
+    e.preventDefault();
+    await submitForm(false);
+  };
 
   // 保存して次へ進む（デフォルトの送信動作）
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     // 編集モードまたは未来の日付の場合は、continueToNext=falseとして扱う
     // 今日/過去の日付で新規作成の場合のみ、continueToNext=trueとなる
-    const shouldContinue = !editData && isDateTodayOrPast()
-    await submitForm(shouldContinue)
-  }
+    const shouldContinue = !editData && isDateTodayOrPast();
+    await submitForm(shouldContinue);
+  };
 
   // 保存して次へ進む（明示的に次へ進む）
   const handleSubmitAndContinue = async (e: React.FormEvent) => {
-    e.preventDefault()
-    await submitForm(true)
-  }
+    e.preventDefault();
+    await submitForm(true);
+  };
 
   return (
     <div className="fixed inset-0 z-60 overflow-y-auto" data-testid="practice-form-modal">
       <div className="flex min-h-screen items-center justify-center p-4">
         {/* オーバーレイ */}
-        <div
-          className="fixed inset-0 bg-black/40 transition-opacity"
-          onClick={handleClose}
-        />
+        <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose} />
 
         {/* モーダルコンテンツ */}
         <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 w-full max-w-lg max-h-[90vh] flex flex-col">
@@ -308,7 +313,7 @@ export default function PracticeBasicForm({
           <div className="bg-white px-6 py-4 border-b border-gray-200 shrink-0">
             <div className="flex items-center justify-between">
               <h3 className="text-lg leading-6 font-medium text-gray-900">
-                {editData ? '予定を編集' : '予定を作成'}
+                {editData ? "予定を編集" : "予定を作成"}
               </h3>
               <button
                 type="button"
@@ -319,7 +324,8 @@ export default function PracticeBasicForm({
               </button>
             </div>
             <p className="mt-2 text-sm text-gray-600">
-              {validDate ? format(validDate, 'M月d日(E)', { locale: ja }) : '選択された日付'}の練習予定を{editData ? '編集' : '作成'}します
+              {validDate ? format(validDate, "M月d日(E)", { locale: ja }) : "選択された日付"}
+              の練習予定を{editData ? "編集" : "作成"}します
             </p>
             {/* ステッププログレス（新規作成時のみ表示） */}
             {!editData && (
@@ -330,73 +336,71 @@ export default function PracticeBasicForm({
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {/* グリッドレイアウト: 練習日・タイトル・場所 */}
-            <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-4 items-center">
-              {/* 練習日 */}
-              <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                練習日 <span className="text-red-500">*</span>
-              </label>
-              <DatePicker
-                value={formData.date}
-                onChange={(date) => setFormData({ ...formData, date })}
-                required
-                placeholder="練習日を選択"
-                data-testid="practice-date"
-              />
+            <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-2 sm:space-y-6">
+              {/* グリッドレイアウト: 練習日・タイトル・場所 */}
+              <div className="grid grid-cols-[auto_1fr] gap-x-2 sm:gap-x-4 gap-y-1.5 sm:gap-y-4 items-center">
+                {/* 練習日 */}
+                <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                  練習日 <span className="text-red-500">*</span>
+                </label>
+                <DatePicker
+                  value={formData.date}
+                  onChange={(date) => setFormData({ ...formData, date })}
+                  required
+                  placeholder="練習日を選択"
+                  data-testid="practice-date"
+                />
 
-              {/* 練習タイトル */}
-              <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                練習タイトル
-              </label>
-              <Input
-                type="text"
-                value={formData.title}
-                onChange={(e) =>
-                  setFormData({ ...formData, title: e.target.value })
-                }
-                placeholder="例: Swim, AM, 16:00"
-                data-testid="practice-title"
-              />
+                {/* 練習タイトル */}
+                <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                  練習タイトル
+                </label>
+                <Input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="例: Swim, AM, 16:00"
+                  data-testid="practice-title"
+                />
 
-              {/* 練習場所 */}
-              <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                練習場所
-              </label>
-              <PlaceCombobox
-                value={formData.place}
-                onChange={(value) => setFormData({ ...formData, place: value })}
-                suggestions={placeSuggestions}
-                placeholder="例: 市営プール、学校プール"
-                data-testid="practice-place"
-              />
-            </div>
+                {/* 練習場所 */}
+                <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                  練習場所
+                </label>
+                <PlaceCombobox
+                  value={formData.place}
+                  onChange={(value) => setFormData({ ...formData, place: value })}
+                  suggestions={placeSuggestions}
+                  placeholder="例: 市営プール、学校プール"
+                  data-testid="practice-place"
+                />
+              </div>
 
-            {/* メモ */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                メモ
-              </label>
-              <textarea
-                value={formData.note}
-                onChange={(e) =>
-                  setFormData({ ...formData, note: e.target.value })
-                }
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="練習に関する特記事項（天候、体調など）"
-                data-testid="practice-note"
-              />
-            </div>
+              {/* メモ */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">メモ</label>
+                <textarea
+                  value={formData.note}
+                  onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="練習に関する特記事項（天候、体調など）"
+                  data-testid="practice-note"
+                />
+              </div>
 
-            {/* 画像添付 */}
-            <div>
-              <PracticeImageUploader
-                existingImages={editData?.images}
-                onImagesChange={handleImagesChange}
-                disabled={isLoading}
-              />
-            </div>
+              {/* 画像添付 */}
+              <div>
+                {isPremium ? (
+                  <PracticeImageUploader
+                    existingImages={editData?.images}
+                    onImagesChange={handleImagesChange}
+                    disabled={isLoading}
+                  />
+                ) : (
+                  <PremiumBadge message={PREMIUM_MESSAGES.image_upload} />
+                )}
+              </div>
             </div>
 
             {/* フッター（固定） */}
@@ -419,7 +423,7 @@ export default function PracticeBasicForm({
                   className="w-full sm:w-auto"
                   data-testid="update-practice-button"
                 >
-                  {isLoading ? '更新中...' : '更新'}
+                  {isLoading ? "更新中..." : "更新"}
                 </Button>
               )}
 
@@ -431,7 +435,7 @@ export default function PracticeBasicForm({
                   className="w-full sm:w-auto"
                   data-testid="save-practice-button"
                 >
-                  {isLoading ? '保存中...' : '保存'}
+                  {isLoading ? "保存中..." : "保存"}
                 </Button>
               )}
 
@@ -446,7 +450,7 @@ export default function PracticeBasicForm({
                     className="w-full sm:w-auto"
                     data-testid="save-practice-close-button"
                   >
-                    {isLoading ? '保存中...' : '保存して終了'}
+                    {isLoading ? "保存中..." : "保存して終了"}
                   </Button>
                   <Button
                     type="button"
@@ -455,7 +459,7 @@ export default function PracticeBasicForm({
                     className="w-full sm:w-auto"
                     data-testid="save-practice-continue-button"
                   >
-                    {isLoading ? '保存中...' : '保存して次へ'}
+                    {isLoading ? "保存中..." : "保存して次へ"}
                   </Button>
                 </>
               )}
@@ -470,13 +474,15 @@ export default function PracticeBasicForm({
         onConfirm={handleConfirmClose}
         onCancel={handleCancelClose}
         title="入力内容が保存されていません"
-        message={confirmContext === 'back'
-          ? '入力内容が保存されていません。このまま戻りますか？'
-          : '入力内容が保存されていません。このまま閉じますか？'}
-        confirmLabel={confirmContext === 'back' ? '戻る' : '閉じる'}
+        message={
+          confirmContext === "back"
+            ? "入力内容が保存されていません。このまま戻りますか？"
+            : "入力内容が保存されていません。このまま閉じますか？"
+        }
+        confirmLabel={confirmContext === "back" ? "戻る" : "閉じる"}
         cancelLabel="編集を続ける"
         variant="warning"
       />
     </div>
-  )
+  );
 }

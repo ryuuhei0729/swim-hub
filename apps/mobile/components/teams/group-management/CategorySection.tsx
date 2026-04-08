@@ -1,18 +1,18 @@
-import React, { useState } from 'react'
-import { View, Text, Pressable, StyleSheet } from 'react-native'
-import { Feather } from '@expo/vector-icons'
-import { GroupCard } from './GroupCard'
-import type { TeamGroupWithCount } from './hooks'
+import React, { useState } from "react";
+import { View, Text, Pressable, StyleSheet } from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { GroupCard } from "./GroupCard";
+import type { TeamGroupWithCount } from "./hooks";
 
 interface CategorySectionProps {
-  category: string | null
-  groups: TeamGroupWithCount[]
-  isAdmin: boolean
-  onGroupPress: (group: TeamGroupWithCount) => void
-  onEditGroup: (group: TeamGroupWithCount) => void
-  onDeleteGroup: (group: TeamGroupWithCount) => void
-  onManageMembers: (group: TeamGroupWithCount) => void
-  onBulkAssign?: (category: string) => void
+  category: string | null;
+  groups: TeamGroupWithCount[];
+  isAdmin: boolean;
+  onGroupPress: (group: TeamGroupWithCount) => void;
+  onEditGroup: (group: TeamGroupWithCount) => void;
+  onDeleteGroup: (group: TeamGroupWithCount) => void;
+  onManageMembers: (group: TeamGroupWithCount) => void;
+  onBulkAssign?: (category: string) => void;
 }
 
 export const CategorySection: React.FC<CategorySectionProps> = ({
@@ -25,7 +25,7 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
   onManageMembers,
   onBulkAssign,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(true)
+  const [isExpanded, setIsExpanded] = useState(true);
 
   return (
     <View style={styles.container}>
@@ -35,14 +35,10 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
           style={styles.headerLeft}
           onPress={() => setIsExpanded(!isExpanded)}
           accessibilityRole="button"
-          accessibilityLabel={`${category || '未分類'} を${isExpanded ? '折りたたむ' : '展開する'}`}
+          accessibilityLabel={`${category || "未分類"} を${isExpanded ? "折りたたむ" : "展開する"}`}
         >
-          <Feather
-            name={isExpanded ? 'chevron-down' : 'chevron-right'}
-            size={16}
-            color="#6B7280"
-          />
-          <Text style={styles.categoryName}>{category || '未分類'}</Text>
+          <Feather name={isExpanded ? "chevron-down" : "chevron-right"} size={16} color="#6B7280" />
+          <Text style={styles.categoryName}>{category || "未分類"}</Text>
           <Text style={styles.groupCount}>({groups.length}グループ)</Text>
         </Pressable>
         {isAdmin && category && onBulkAssign && (
@@ -75,57 +71,57 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
         </View>
       )}
     </View>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: "#E5E7EB",
     borderRadius: 8,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: "#F9FAFB",
   },
   headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     flex: 1,
   },
   categoryName: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#1F2937',
+    fontWeight: "600",
+    color: "#1F2937",
   },
   groupCount: {
     fontSize: 12,
-    color: '#6B7280',
+    color: "#6B7280",
   },
   bulkAssignButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: "#D1D5DB",
     borderRadius: 6,
   },
   bulkAssignText: {
     fontSize: 11,
-    fontWeight: '500',
-    color: '#4B5563',
+    fontWeight: "500",
+    color: "#4B5563",
   },
   groupList: {
     padding: 8,
     gap: 6,
   },
-})
+});

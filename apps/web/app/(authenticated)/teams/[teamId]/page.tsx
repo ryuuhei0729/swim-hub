@@ -1,31 +1,29 @@
-import React, { Suspense } from 'react'
-import type { Metadata } from 'next'
-import { createAuthenticatedServerClient } from '@/lib/supabase-server-auth'
-import TeamDetailDataLoader from './_server/TeamDetailDataLoader'
+import React, { Suspense } from "react";
+import type { Metadata } from "next";
+import { createAuthenticatedServerClient } from "@/lib/supabase-server-auth";
+import TeamDetailDataLoader from "./_server/TeamDetailDataLoader";
 
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ teamId: string }>
+  params: Promise<{ teamId: string }>;
 }): Promise<Metadata> {
-  const { teamId } = await params
-  const supabase = await createAuthenticatedServerClient()
+  const { teamId } = await params;
+  const supabase = await createAuthenticatedServerClient();
   const { data: team } = await supabase
-    .from('teams')
-    .select('name')
-    .eq('id', teamId)
-    .single<{ name: string }>()
+    .from("teams")
+    .select("name")
+    .eq("id", teamId)
+    .single<{ name: string }>();
 
   return {
-    title: team?.name
-      ? `${team.name} | SwimHub`
-      : 'チーム | SwimHub',
-  }
+    title: team?.name ? `${team.name} | SwimHub` : "チーム | SwimHub",
+  };
 }
 
 interface TeamDetailPageProps {
-  params: Promise<{ teamId: string }>
-  searchParams: Promise<{ tab?: string }>
+  params: Promise<{ teamId: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }
 
 /**
@@ -33,8 +31,8 @@ interface TeamDetailPageProps {
  * データ取得はサーバー側で並行実行される
  */
 export default async function TeamDetailPage({ params, searchParams }: TeamDetailPageProps) {
-  const { teamId } = await params
-  const { tab } = await searchParams
+  const { teamId } = await params;
+  const { tab } = await searchParams;
 
   return (
     <Suspense
@@ -53,5 +51,5 @@ export default async function TeamDetailPage({ params, searchParams }: TeamDetai
     >
       <TeamDetailDataLoader teamId={teamId} initialTab={tab} />
     </Suspense>
-  )
+  );
 }

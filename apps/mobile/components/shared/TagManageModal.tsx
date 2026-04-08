@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,17 +11,17 @@ import {
   SafeAreaView,
   Alert,
   ActivityIndicator,
-} from 'react-native'
-import { Feather } from '@expo/vector-icons'
-import type { PracticeTag } from '@apps/shared/types'
-import { PRESET_TAG_COLORS, getRandomTagColor } from '@/constants/tagColors'
+} from "react-native";
+import { Feather } from "@expo/vector-icons";
+import type { PracticeTag } from "@apps/shared/types";
+import { PRESET_TAG_COLORS, getRandomTagColor } from "@/constants/tagColors";
 
 interface TagManageModalProps {
-  visible: boolean
-  onClose: () => void
-  tag: PracticeTag | null
-  onSave: (name: string, color: string) => Promise<void>
-  onDelete?: (id: string) => Promise<void>
+  visible: boolean;
+  onClose: () => void;
+  tag: PracticeTag | null;
+  onSave: (name: string, color: string) => Promise<void>;
+  onDelete?: (id: string) => Promise<void>;
 }
 
 /**
@@ -34,79 +34,76 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
   onSave,
   onDelete,
 }) => {
-  const [name, setName] = useState('')
-  const [color, setColor] = useState(PRESET_TAG_COLORS[0])
-  const [isSaving, setIsSaving] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
+  const [name, setName] = useState("");
+  const [color, setColor] = useState(PRESET_TAG_COLORS[0]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const isEditMode = tag !== null
+  const isEditMode = tag !== null;
 
   useEffect(() => {
     if (visible) {
       if (tag) {
-        setName(tag.name)
-        setColor(tag.color)
+        setName(tag.name);
+        setColor(tag.color);
       } else {
-        setName('')
-        setColor(getRandomTagColor())
+        setName("");
+        setColor(getRandomTagColor());
       }
     }
-  }, [visible, tag])
+  }, [visible, tag]);
 
   const handleSave = async () => {
-    const trimmedName = name.trim()
+    const trimmedName = name.trim();
     if (!trimmedName) {
-      Alert.alert('エラー', 'タグ名を入力してください')
-      return
+      Alert.alert("エラー", "タグ名を入力してください");
+      return;
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
     try {
-      await onSave(trimmedName, color)
-      onClose()
+      await onSave(trimmedName, color);
+      onClose();
     } catch (error) {
-      console.error('タグ保存エラー:', error)
-      Alert.alert(
-        'エラー',
-        error instanceof Error ? error.message : 'タグの保存に失敗しました'
-      )
+      console.error("タグ保存エラー:", error);
+      Alert.alert("エラー", error instanceof Error ? error.message : "タグの保存に失敗しました");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const handleDelete = () => {
-    if (!tag || !onDelete) return
+    if (!tag || !onDelete) return;
 
     Alert.alert(
-      'タグを削除',
+      "タグを削除",
       `「${tag.name}」を削除しますか？\nこのタグが付けられた練習ログからも削除されます。`,
       [
-        { text: 'キャンセル', style: 'cancel' },
+        { text: "キャンセル", style: "cancel" },
         {
-          text: '削除',
-          style: 'destructive',
+          text: "削除",
+          style: "destructive",
           onPress: async () => {
-            setIsDeleting(true)
+            setIsDeleting(true);
             try {
-              await onDelete(tag.id)
-              onClose()
+              await onDelete(tag.id);
+              onClose();
             } catch (error) {
-              console.error('タグ削除エラー:', error)
+              console.error("タグ削除エラー:", error);
               Alert.alert(
-                'エラー',
-                error instanceof Error ? error.message : 'タグの削除に失敗しました'
-              )
+                "エラー",
+                error instanceof Error ? error.message : "タグの削除に失敗しました",
+              );
             } finally {
-              setIsDeleting(false)
+              setIsDeleting(false);
             }
           },
         },
-      ]
-    )
-  }
+      ],
+    );
+  };
 
-  const isLoading = isSaving || isDeleting
+  const isLoading = isSaving || isDeleting;
 
   return (
     <Modal
@@ -118,9 +115,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
       <SafeAreaView style={styles.container}>
         {/* ヘッダー */}
         <View style={styles.header}>
-          <Text style={styles.title}>
-            {isEditMode ? 'タグを編集' : '新しいタグ'}
-          </Text>
+          <Text style={styles.title}>{isEditMode ? "タグを編集" : "新しいタグ"}</Text>
           <Pressable
             style={styles.closeButton}
             onPress={onClose}
@@ -162,9 +157,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
                   onPress={() => setColor(presetColor)}
                   disabled={isLoading}
                 >
-                  {color === presetColor && (
-                    <Feather name="check" size={18} color="#374151" />
-                  )}
+                  {color === presetColor && <Feather name="check" size={18} color="#374151" />}
                 </Pressable>
               ))}
             </View>
@@ -175,9 +168,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
             <Text style={styles.label}>プレビュー</Text>
             <View style={styles.previewContainer}>
               <View style={[styles.previewTag, { backgroundColor: color }]}>
-                <Text style={styles.previewTagText}>
-                  {name.trim() || 'タグ名'}
-                </Text>
+                <Text style={styles.previewTagText}>{name.trim() || "タグ名"}</Text>
               </View>
             </View>
           </View>
@@ -186,11 +177,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
         {/* フッター */}
         <View style={styles.footer}>
           {isEditMode && onDelete && (
-            <Pressable
-              style={styles.deleteButton}
-              onPress={handleDelete}
-              disabled={isLoading}
-            >
+            <Pressable style={styles.deleteButton} onPress={handleDelete} disabled={isLoading}>
               {isDeleting ? (
                 <ActivityIndicator size="small" color="#DC2626" />
               ) : (
@@ -202,18 +189,11 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
             </Pressable>
           )}
           <View style={styles.footerRight}>
-            <Pressable
-              style={styles.cancelButton}
-              onPress={onClose}
-              disabled={isLoading}
-            >
+            <Pressable style={styles.cancelButton} onPress={onClose} disabled={isLoading}>
               <Text style={styles.cancelButtonText}>キャンセル</Text>
             </Pressable>
             <Pressable
-              style={[
-                styles.saveButton,
-                (!name.trim() || isLoading) && styles.saveButtonDisabled,
-              ]}
+              style={[styles.saveButton, (!name.trim() || isLoading) && styles.saveButtonDisabled]}
               onPress={handleSave}
               disabled={!name.trim() || isLoading}
             >
@@ -227,27 +207,27 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
         </View>
       </SafeAreaView>
     </Modal>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: "#E5E7EB",
   },
   title: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: "600",
+    color: "#111827",
   },
   closeButton: {
     padding: 4,
@@ -262,38 +242,38 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: "600",
+    color: "#374151",
   },
   input: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: "#D1D5DB",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#111827',
+    color: "#111827",
   },
   colorGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
   },
   colorOption: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   colorOptionSelected: {
     borderWidth: 3,
-    borderColor: '#374151',
+    borderColor: "#374151",
   },
   previewContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 8,
   },
   previewTag: {
@@ -303,36 +283,36 @@ const styles = StyleSheet.create({
   },
   previewTagText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+    fontWeight: "500",
+    color: "#374151",
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderTopColor: "#E5E7EB",
+    backgroundColor: "#FFFFFF",
   },
   deleteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   deleteButtonText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#DC2626',
+    fontWeight: "600",
+    color: "#DC2626",
   },
   footerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
-    marginLeft: 'auto',
+    marginLeft: "auto",
   },
   cancelButton: {
     paddingHorizontal: 16,
@@ -340,25 +320,25 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#6B7280',
+    fontWeight: "600",
+    color: "#6B7280",
   },
   saveButton: {
-    backgroundColor: '#2563EB',
+    backgroundColor: "#2563EB",
     paddingHorizontal: 24,
     paddingVertical: 10,
     borderRadius: 8,
     minWidth: 80,
-    alignItems: 'center',
+    alignItems: "center",
   },
   saveButtonDisabled: {
-    backgroundColor: '#93C5FD',
+    backgroundColor: "#93C5FD",
   },
   saveButtonText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
-})
+});
 
-export default TagManageModal
+export default TagManageModal;

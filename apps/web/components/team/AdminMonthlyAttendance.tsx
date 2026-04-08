@@ -1,20 +1,20 @@
-'use client'
+"use client";
 
-import React, { useEffect, useState } from 'react'
-import { useAuth } from '@/contexts'
-import { useAdminAttendance } from '@/hooks/useAdminAttendance'
-import { useAttendanceModal } from '@/hooks/useAttendanceModal'
-import { EventListItem } from '@/components/admin-attendance/EventListItem'
-import { BulkChangeModal } from '@/components/admin-attendance/BulkChangeModal'
-import { AttendanceStatusModal } from '@/components/admin-attendance/AttendanceStatusModal'
+import React, { useEffect, useState } from "react";
+import { useAuth } from "@/contexts";
+import { useAdminAttendance } from "@/hooks/useAdminAttendance";
+import { useAttendanceModal } from "@/hooks/useAttendanceModal";
+import { EventListItem } from "@/components/admin-attendance/EventListItem";
+import { BulkChangeModal } from "@/components/admin-attendance/BulkChangeModal";
+import { AttendanceStatusModal } from "@/components/admin-attendance/AttendanceStatusModal";
 
 export interface AdminMonthlyAttendanceProps {
-  teamId: string
+  teamId: string;
 }
 
 export default function AdminMonthlyAttendance({ teamId }: AdminMonthlyAttendanceProps) {
-  const { supabase } = useAuth()
-  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false)
+  const { supabase } = useAuth();
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
   const {
     events,
@@ -25,19 +25,22 @@ export default function AdminMonthlyAttendance({ teamId }: AdminMonthlyAttendanc
     loadFutureEvents,
     handleStatusChange,
     handleSaveEvent,
-    handleBulkUpdate
-  } = useAdminAttendance(supabase, teamId)
+    handleBulkUpdate,
+  } = useAdminAttendance(supabase, teamId);
 
-  const attendanceModal = useAttendanceModal(supabase, teamId)
+  const attendanceModal = useAttendanceModal(supabase, teamId);
 
   useEffect(() => {
-    loadFutureEvents()
-  }, [loadFutureEvents])
+    loadFutureEvents();
+  }, [loadFutureEvents]);
 
-  const handleBulkUpdateWrapper = async (selectedEventIds: Set<string>, status: 'open' | 'closed') => {
-    await handleBulkUpdate(selectedEventIds, status)
-    setIsBulkModalOpen(false)
-  }
+  const handleBulkUpdateWrapper = async (
+    selectedEventIds: Set<string>,
+    status: "open" | "closed",
+  ) => {
+    await handleBulkUpdate(selectedEventIds, status);
+    setIsBulkModalOpen(false);
+  };
 
   if (loading) {
     return (
@@ -47,7 +50,7 @@ export default function AdminMonthlyAttendance({ teamId }: AdminMonthlyAttendanc
           <p className="mt-1.5 text-sm text-gray-500">読み込み中...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (error && !events.length) {
@@ -57,7 +60,7 @@ export default function AdminMonthlyAttendance({ teamId }: AdminMonthlyAttendanc
           <p className="text-sm text-red-800">{error}</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -87,9 +90,11 @@ export default function AdminMonthlyAttendance({ teamId }: AdminMonthlyAttendanc
       ) : (
         <div className="bg-white rounded-lg shadow divide-y divide-gray-200">
           {events.map((event) => {
-            const editState = editStates[event.id] || { attendanceStatus: event.attendance_status || null }
-            const isSaving = savingEventIds.has(event.id)
-            const hasChanges = event.attendance_status !== editState.attendanceStatus
+            const editState = editStates[event.id] || {
+              attendanceStatus: event.attendance_status || null,
+            };
+            const isSaving = savingEventIds.has(event.id);
+            const hasChanges = event.attendance_status !== editState.attendanceStatus;
 
             return (
               <EventListItem
@@ -102,7 +107,7 @@ export default function AdminMonthlyAttendance({ teamId }: AdminMonthlyAttendanc
                 onSave={handleSaveEvent}
                 onClick={() => attendanceModal.openModal(event)}
               />
-            )
+            );
           })}
         </div>
       )}
@@ -125,5 +130,5 @@ export default function AdminMonthlyAttendance({ teamId }: AdminMonthlyAttendanc
         onClose={attendanceModal.closeModal}
       />
     </div>
-  )
+  );
 }

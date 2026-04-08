@@ -11,15 +11,13 @@
 
 以下のコンポーネントが大きすぎるため、分割が必要です。
 
-
-| ファイル                                                                     | 行数         | 推奨アクション         |
-| ------------------------------------------------------------------------ | ---------- | --------------- |
+| ファイル                                                                 | 行数        | 推奨アクション                 |
+| ------------------------------------------------------------------------ | ----------- | ------------------------------ |
 | `apps/mobile/components/calendar/DayDetailModal.tsx`                     | **2,787行** | 機能ごとにサブコンポーネント化 |
-| `apps/web/app/(authenticated)/dashboard/_components/DayDetailModal.tsx`  | **2,326行** | 同上（Web版）        |
+| `apps/web/app/(authenticated)/dashboard/_components/DayDetailModal.tsx`  | **2,326行** | 同上（Web版）                  |
 | `apps/web/app/(authenticated)/practice/_client/PracticeClient.tsx`       | 944行       | ロジックをカスタムフックに抽出 |
-| `apps/web/app/(authenticated)/competition/_client/CompetitionClient.tsx` | 884行       | 同上              |
-| `apps/web/app/(authenticated)/dashboard/_hooks/useDashboardHandlers.ts`  | 849行       | ハンドラーを機能別に分割    |
-
+| `apps/web/app/(authenticated)/competition/_client/CompetitionClient.tsx` | 884行       | 同上                           |
+| `apps/web/app/(authenticated)/dashboard/_hooks/useDashboardHandlers.ts`  | 849行       | ハンドラーを機能別に分割       |
 
 ### DayDetailModalの分割案
 
@@ -45,8 +43,7 @@ DayDetailModal/
 
 ### Mobile App
 
-
-| ファイル                                                  | 行番号                |
+| ファイル                                              | 行番号             |
 | ----------------------------------------------------- | ------------------ |
 | `apps/mobile/lib/supabase.ts`                         | 12-14              |
 | `apps/mobile/screens/ResetPasswordScreen.tsx`         | 28                 |
@@ -57,35 +54,30 @@ DayDetailModal/
 | `apps/mobile/screens/SignupScreen.tsx`                | 28                 |
 | `apps/mobile/components/auth/LoginForm.tsx`           | 175                |
 
-
 ### Shared
 
-
-| ファイル                                     | 行番号           |
+| ファイル                                 | 行番号        |
 | ---------------------------------------- | ------------- |
 | `apps/shared/hooks/queries/practices.ts` | 414, 432, 442 |
 | `apps/shared/hooks/queries/records.ts`   | 387, 405, 415 |
 
-
 ### Web App
 
-
-| ファイル                                                                    | 行番号      |
+| ファイル                                                                | 行番号   |
 | ----------------------------------------------------------------------- | -------- |
 | `apps/web/app/(unauthenticated)/contact/page.tsx`                       | 30       |
 | `apps/web/app/api/auth/callback/route.ts`                               | 83       |
 | `apps/web/app/(authenticated)/dashboard/_hooks/useDashboardHandlers.ts` | 211, 542 |
-
 
 ### 推奨対応
 
 ```typescript
 // 開発時のみログ出力するユーティリティを作成
 export const devLog = (...args: unknown[]) => {
-  if (process.env.NODE_ENV === 'development') {
-    console.log(...args)
+  if (process.env.NODE_ENV === "development") {
+    console.log(...args);
   }
-}
+};
 ```
 
 ---
@@ -96,30 +88,24 @@ export const devLog = (...args: unknown[]) => {
 
 ### API層（優先）
 
-
-| ファイル                           | 行番号      | 内容                    |
+| ファイル                       | 行番号   | 内容                  |
 | ------------------------------ | -------- | --------------------- |
 | `apps/shared/api/goals.ts`     | 150, 444 | `.map((item: any) =>` |
 | `apps/shared/api/practices.ts` | 374      | `const config: any =` |
 | `apps/shared/api/records.ts`   | 562, 589 | `const config: any =` |
 
-
 ### ユーティリティ
 
-
-| ファイル                                 | 行番号         | 内容         |
-| ------------------------------------ | ----------- | ---------- |
+| ファイル                             | 行番号      | 内容            |
+| ------------------------------------ | ----------- | --------------- |
 | `apps/web/utils/practiceExcel.ts`    | 33, 62      | Excelデータ処理 |
 | `apps/web/utils/competitionExcel.ts` | 27, 62, 319 | Excelデータ処理 |
 
-
 ### 型ガード（許容可）
 
-
-| ファイル                          | 行番号                | 備考         |
-| ----------------------------- | ------------------ | ---------- |
+| ファイル                      | 行番号             | 備考                 |
+| ----------------------------- | ------------------ | -------------------- |
 | `apps/shared/types/common.ts` | 70, 74, 78, 82, 86 | 型ガード関数では妥当 |
-
 
 ---
 
@@ -144,13 +130,15 @@ export const devLog = (...args: unknown[]) => {
 ```typescript
 // 1回のクエリに統合
 const { data } = await this.supabase
-  .from('team_attendance')
-  .select(`
+  .from("team_attendance")
+  .select(
+    `
     *,
     practice:practices(id, title, date, team_id),
     competition:competitions(id, title, date, team_id)
-  `)
-  .or(`practice.team_id.eq.${teamId},competition.team_id.eq.${teamId}`)
+  `,
+  )
+  .or(`practice.team_id.eq.${teamId},competition.team_id.eq.${teamId}`);
 ```
 
 ### 4.2 RecordAPI.getBestTimes()
@@ -200,26 +188,22 @@ ORDER BY style_id, distance, pool_type, time ASC
 
 ### Mobile App
 
-
-| ファイル                                            | 行番号 | 内容                          |
-| ----------------------------------------------- | --- | --------------------------- |
-| `apps/mobile/screens/PracticeLogFormScreen.tsx` | 348 | タグの更新処理を実装                  |
-| `apps/mobile/screens/PracticeLogFormScreen.tsx` | 364 | タグの作成処理を実装                  |
-| `apps/mobile/screens/DashboardScreen.tsx`       | 99  | CompetitionDetail画面を実装したら追加 |
-
+| ファイル                                        | 行番号 | 内容                                  |
+| ----------------------------------------------- | ------ | ------------------------------------- |
+| `apps/mobile/screens/PracticeLogFormScreen.tsx` | 348    | タグの更新処理を実装                  |
+| `apps/mobile/screens/PracticeLogFormScreen.tsx` | 364    | タグの作成処理を実装                  |
+| `apps/mobile/screens/DashboardScreen.tsx`       | 99     | CompetitionDetail画面を実装したら追加 |
 
 ### Web App
 
-
-| ファイル                                                                     | 行番号     | 内容                 |
-| ------------------------------------------------------------------------ | ------- | ------------------ |
-| `apps/web/components/members/MembersList.tsx`                            | 10      | 実装予定               |
-| `apps/web/components/team/TeamScheduleManager.tsx`                       | 9       | Supabase直接アクセスで実装  |
-| `apps/web/components/team/TeamCompetitionManager.tsx`                    | 9       | 同上                 |
-| `apps/web/components/team/TeamPracticeManager.tsx`                       | 9       | 同上                 |
-| `apps/web/app/(authenticated)/practice/_client/PracticeClient.tsx`       | 316     | ユーザー名を取得           |
+| ファイル                                                                 | 行番号  | 内容                              |
+| ------------------------------------------------------------------------ | ------- | --------------------------------- |
+| `apps/web/components/members/MembersList.tsx`                            | 10      | 実装予定                          |
+| `apps/web/components/team/TeamScheduleManager.tsx`                       | 9       | Supabase直接アクセスで実装        |
+| `apps/web/components/team/TeamCompetitionManager.tsx`                    | 9       | 同上                              |
+| `apps/web/components/team/TeamPracticeManager.tsx`                       | 9       | 同上                              |
+| `apps/web/app/(authenticated)/practice/_client/PracticeClient.tsx`       | 316     | ユーザー名を取得                  |
 | `apps/web/app/(authenticated)/competition/_client/CompetitionClient.tsx` | 875-876 | ベストタイム判定 / ユーザー名取得 |
-
 
 ---
 
@@ -231,38 +215,39 @@ ORDER BY style_id, distance, pool_type, time ASC
 
 `apps/shared/utils/date.ts` に以下の関数を実装：
 
-
-| 関数                                 | 用途                 |
-| ---------------------------------- | ------------------ |
-| `formatDate(date, style)`          | 日付をフォーマット          |
-| `formatDateTime(date, style)`      | 日時をフォーマット（時刻含む）    |
-| `toISODateString(date)`            | `yyyy-MM-dd` 形式に変換 |
-| `addMonthsImmutable(date, months)` | 月を加算（ミューテーションなし）   |
-
+| 関数                               | 用途                             |
+| ---------------------------------- | -------------------------------- |
+| `formatDate(date, style)`          | 日付をフォーマット               |
+| `formatDateTime(date, style)`      | 日時をフォーマット（時刻含む）   |
+| `toISODateString(date)`            | `yyyy-MM-dd` 形式に変換          |
+| `addMonthsImmutable(date, months)` | 月を加算（ミューテーションなし） |
 
 ### DateStyle オプション
 
-
-| スタイル                 | 出力例             |
-| -------------------- | --------------- |
-| `'short'`            | `1月29日`         |
-| `'shortWithWeekday'` | `1月29日(水)`      |
-| `'long'`             | `2026年1月29日`    |
+| スタイル             | 出力例              |
+| -------------------- | ------------------- |
+| `'short'`            | `1月29日`           |
+| `'shortWithWeekday'` | `1月29日(水)`       |
+| `'long'`             | `2026年1月29日`     |
 | `'longWithWeekday'`  | `2026年1月29日(水)` |
-| `'numeric'`          | `2026/01/29`    |
-| `'iso'`              | `2026-01-29`    |
-
+| `'numeric'`          | `2026/01/29`        |
+| `'iso'`              | `2026-01-29`        |
 
 ### 使用例
 
 ```typescript
-import { formatDate, formatDateTime, toISODateString, addMonthsImmutable } from '@apps/shared/utils/date'
+import {
+  formatDate,
+  formatDateTime,
+  toISODateString,
+  addMonthsImmutable,
+} from "@apps/shared/utils/date";
 
-formatDate('2026-01-29', 'short')           // → "1月29日"
-formatDate(new Date(), 'longWithWeekday')   // → "2026年1月29日(水)"
-formatDateTime('2026-01-29T14:30:00')       // → "2026年1月29日 14:30"
-toISODateString(new Date())                 // → "2026-01-29"
-addMonthsImmutable(new Date(), 1)           // → 1ヶ月後のDate
+formatDate("2026-01-29", "short"); // → "1月29日"
+formatDate(new Date(), "longWithWeekday"); // → "2026年1月29日(水)"
+formatDateTime("2026-01-29T14:30:00"); // → "2026年1月29日 14:30"
+toISODateString(new Date()); // → "2026-01-29"
+addMonthsImmutable(new Date(), 1); // → 1ヶ月後のDate
 ```
 
 ---
@@ -320,7 +305,7 @@ class TeamAttendancesAPI extends BaseTeamAPI { ... }
 
 以下のストアを統合しました：
 
-| 統合前                                               | 統合後               | 場所     |
+| 統合前                                            | 統合後             | 場所   |
 | ------------------------------------------------- | ------------------ | ------ |
 | `practiceFormStore` + `practiceFilterStore`       | `practiceStore`    | Web    |
 | `competitionFormStore` + `competitionFilterStore` | `competitionStore` | Web    |
@@ -329,15 +314,18 @@ class TeamAttendancesAPI extends BaseTeamAPI { ... }
 ### 新しいストア構造
 
 **Web:**
+
 - `apps/web/stores/practice/practiceStore.ts` - 練習用統合ストア（Form + Filter）
 - `apps/web/stores/competition/competitionStore.ts` - 大会用統合ストア（Form + Filter）
 
 **Mobile:**
+
 - `apps/mobile/stores/recordStore.ts` - 大会記録用統合ストア（Form + Filter）
 
 ### 後方互換性
 
 各統合ストアから旧名のエイリアスをエクスポートしているため、既存コードは変更なしで動作します：
+
 - `usePracticeFormStore`, `usePracticeFilterStore` → `usePracticeStore`
 - `useCompetitionFormStore`, `useCompetitionFilterStore` → `useCompetitionStore`
 - `useRecordFormStore`, `useRecordFilterStore` → `useRecordStore`
@@ -345,15 +333,16 @@ class TeamAttendancesAPI extends BaseTeamAPI { ... }
 ### 現在のストア構成
 
 **Web: 13ストア（15→13）**
+
 - 統合ストア: practiceStore, competitionStore
 - フォーム: attendanceTabStore, commonFormStore, competitionRecordStore, practiceRecordStore, teamDetailStore, teamAdminStore
 - その他: modalStore, profileStore, teamStore, uiStore
 
 **Mobile: 7ストア（9→7）**
+
 - 統合ストア: recordStore
 - フォーム: competitionFormStore, practiceFormStore, practiceTimeStore
 - フィルター: practiceFilterStore
-
 
 ---
 
@@ -369,21 +358,21 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public code: string,
-    public details?: unknown
+    public details?: unknown,
   ) {
-    super(message)
+    super(message);
   }
 }
 
 export const handleSupabaseError = (error: PostgrestError): never => {
-  if (error.code === 'PGRST116') {
-    throw new ApiError('リソースが見つかりません', 'NOT_FOUND')
+  if (error.code === "PGRST116") {
+    throw new ApiError("リソースが見つかりません", "NOT_FOUND");
   }
-  if (error.code === '42501') {
-    throw new ApiError('権限がありません', 'FORBIDDEN')
+  if (error.code === "42501") {
+    throw new ApiError("権限がありません", "FORBIDDEN");
   }
-  throw new ApiError(error.message, error.code, error.details)
-}
+  throw new ApiError(error.message, error.code, error.details);
+};
 ```
 
 ---
@@ -394,18 +383,18 @@ export const handleSupabaseError = (error: PostgrestError): never => {
 
 ### 改善済みファイル
 
-| ファイル | 改善前 | 改善後 |
-|---------|-------|-------|
-| `utils/date.ts` | 30.43% | **100%** |
-| `utils/supabase-helpers.ts` | 0% | **100%** |
-| `api/teams/bulkRegister.ts` | 0% | **92%** |
-| `api/goals.ts` | 17.37% | **67.21%** |
-| `api/practices.ts` | 25.24% | **45.87%** |
-| `api/records.ts` | 32.09% | **53.70%** |
+| ファイル                     | 改善前 | 改善後     |
+| ---------------------------- | ------ | ---------- |
+| `utils/date.ts`              | 30.43% | **100%**   |
+| `utils/supabase-helpers.ts`  | 0%     | **100%**   |
+| `api/teams/bulkRegister.ts`  | 0%     | **92%**    |
+| `api/goals.ts`               | 17.37% | **67.21%** |
+| `api/practices.ts`           | 25.24% | **45.87%** |
+| `api/records.ts`             | 32.09% | **53.70%** |
 | `hooks/queries/practices.ts` | 38.98% | **77.57%** |
-| `hooks/queries/records.ts` | 38.98% | **72.15%** |
-| `hooks/queries/teams.ts` | 38.98% | **85.23%** |
-| utils全体 | 88.31% | **98.59%** |
+| `hooks/queries/records.ts`   | 38.98% | **72.15%** |
+| `hooks/queries/teams.ts`     | 38.98% | **85.23%** |
+| utils全体                    | 88.31% | **98.59%** |
 
 ### 追加されたテストファイル
 
@@ -416,12 +405,12 @@ export const handleSupabaseError = (error: PostgrestError): never => {
 
 ### カバレッジ詳細
 
-| 指標 | カバレッジ |
-|------|-----------|
-| Lines | **75.11%** ✅ |
-| Statements | 71.35% |
-| Branches | 62.92% |
-| Functions | 66.67% |
+| 指標       | カバレッジ    |
+| ---------- | ------------- |
+| Lines      | **75.11%** ✅ |
+| Statements | 71.35%        |
+| Branches   | 62.92%        |
+| Functions  | 66.67%        |
 
 ---
 
@@ -544,4 +533,4 @@ swim-hub/
   - `practices.test.ts`: practice times, tags, unique placesのテスト追加
   - `records.test.ts`: split times replacement, best times, bulk recordsのテスト追加
 
-*このドキュメントは 2026-01-31 時点の分析に基づいています。*
+_このドキュメントは 2026-01-31 時点の分析に基づいています。_

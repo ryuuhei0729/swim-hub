@@ -1,10 +1,11 @@
-import type { Metadata } from 'next'
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: 'ログイン | SwimHub',
-  description: 'SwimHubにログインして記録管理を始めましょう',
-}
+  title: "ログイン | SwimHub",
+  description: "SwimHubにログインして記録管理を始めましょう",
+  alternates: { canonical: "/login" },
+};
 
 export default function LoginLayout({ children }: { children: React.ReactNode }) {
-  return children
+  return children;
 }

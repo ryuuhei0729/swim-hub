@@ -1,96 +1,100 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import Input from '@/components/ui/Input'
-import type { MilestoneTimeParams, MilestoneRepsTimeParams, MilestoneSetParams } from '@apps/shared/types'
-import { formatTimeBest, parseTimeToSeconds } from '@/utils/formatters'
-import StyleSelector from '../shared/StyleSelector'
-import SwimCategorySelector from '../shared/SwimCategorySelector'
+import React, { useState, useEffect } from "react";
+import Input from "@/components/ui/Input";
+import type {
+  MilestoneTimeParams,
+  MilestoneRepsTimeParams,
+  MilestoneSetParams,
+} from "@apps/shared/types";
+import { formatTimeBest, parseTimeToSeconds } from "@/utils/formatters";
+import StyleSelector from "../shared/StyleSelector";
+import SwimCategorySelector from "../shared/SwimCategorySelector";
 
 interface TimeParamsFormProps {
-  params: MilestoneTimeParams
-  onChange: (params: MilestoneTimeParams) => void
+  params: MilestoneTimeParams;
+  onChange: (params: MilestoneTimeParams) => void;
 }
 
 export function TimeParamsForm({ params, onChange }: TimeParamsFormProps) {
-  const [timeDisplayValue, setTimeDisplayValue] = useState<string>('')
-  const [timeError, setTimeError] = useState<string>('')
-  const [distanceValue, setDistanceValue] = useState<string>(params.distance > 0 ? String(params.distance) : '')
+  const [timeDisplayValue, setTimeDisplayValue] = useState<string>("");
+  const [timeError, setTimeError] = useState<string>("");
+  const [distanceValue, setDistanceValue] = useState<string>(
+    params.distance > 0 ? String(params.distance) : "",
+  );
 
   // params.target_timeが変更されたときに表示値を更新
   useEffect(() => {
     if (params.target_time > 0) {
-      setTimeDisplayValue(formatTimeBest(params.target_time))
-      setTimeError('')
+      setTimeDisplayValue(formatTimeBest(params.target_time));
+      setTimeError("");
     } else {
-      setTimeDisplayValue('')
+      setTimeDisplayValue("");
     }
-  }, [params.target_time])
+  }, [params.target_time]);
 
   // params.distanceが変更されたときに表示値を更新
   useEffect(() => {
     if (params.distance > 0) {
-      setDistanceValue(String(params.distance))
+      setDistanceValue(String(params.distance));
     }
-  }, [params.distance])
+  }, [params.distance]);
 
   const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setTimeDisplayValue(value)
+    const value = e.target.value;
+    setTimeDisplayValue(value);
 
     // 空の場合はエラーをクリア
-    if (value.trim() === '') {
-      setTimeError('')
-      onChange({ ...params, target_time: 0 })
-      return
+    if (value.trim() === "") {
+      setTimeError("");
+      onChange({ ...params, target_time: 0 });
+      return;
     }
 
     // 入力値を秒数に変換
-    const seconds = parseTimeToSeconds(value)
+    const seconds = parseTimeToSeconds(value);
 
     // 有効な値の場合のみ更新
     if (!isNaN(seconds) && seconds >= 0) {
-      setTimeError('')
-      onChange({ ...params, target_time: seconds })
+      setTimeError("");
+      onChange({ ...params, target_time: seconds });
     } else {
       // 無効な値の場合はエラーを表示（ただし入力中は表示しない）
       // フォーカスが外れたときにエラーを表示するため、ここではエラーを設定しない
     }
-  }
+  };
 
   const handleTimeBlur = () => {
     // フォーカスが外れたときにバリデーション
-    if (timeDisplayValue.trim() === '') {
-      setTimeError('目標タイムを入力してください')
-      return
+    if (timeDisplayValue.trim() === "") {
+      setTimeError("目標タイムを入力してください");
+      return;
     }
 
-    const seconds = parseTimeToSeconds(timeDisplayValue)
+    const seconds = parseTimeToSeconds(timeDisplayValue);
     if (isNaN(seconds) || seconds < 0) {
-      setTimeError('有効なタイム形式で入力してください（例: 1:14.28 または 74.28）')
+      setTimeError("有効なタイム形式で入力してください（例: 1:14.28 または 74.28）");
     } else {
-      setTimeError('')
+      setTimeError("");
       // 表示値を正規化
-      setTimeDisplayValue(formatTimeBest(seconds))
+      setTimeDisplayValue(formatTimeBest(seconds));
     }
-  }
+  };
 
   const handleDistanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setDistanceValue(value)
-    const parsed = parseInt(value, 10)
+    const value = e.target.value;
+    setDistanceValue(value);
+    const parsed = parseInt(value, 10);
     if (Number.isFinite(parsed) && parsed > 0) {
-      onChange({ ...params, distance: parsed })
+      onChange({ ...params, distance: parsed });
     }
-  }
+  };
 
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-4 gap-2">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            距離 (m)
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">距離 (m)</label>
           <Input
             type="number"
             value={distanceValue}
@@ -101,9 +105,7 @@ export function TimeParamsForm({ params, onChange }: TimeParamsFormProps) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            種目
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">種目</label>
           <StyleSelector
             value={params.style}
             onChange={(value) => onChange({ ...params, style: value })}
@@ -111,9 +113,7 @@ export function TimeParamsForm({ params, onChange }: TimeParamsFormProps) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            S/P/K
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">S/P/K</label>
           <SwimCategorySelector
             value={params.swim_category}
             onChange={(value) => onChange({ ...params, swim_category: value })}
@@ -121,9 +121,7 @@ export function TimeParamsForm({ params, onChange }: TimeParamsFormProps) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            目標タイム
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">目標タイム</label>
           <Input
             type="text"
             value={timeDisplayValue}
@@ -131,150 +129,152 @@ export function TimeParamsForm({ params, onChange }: TimeParamsFormProps) {
             onBlur={handleTimeBlur}
             placeholder="1:14.28"
             required
-            className={timeError ? 'border-red-500' : ''}
+            className={timeError ? "border-red-500" : ""}
           />
         </div>
       </div>
-      {timeError && (
-        <p className="text-xs text-red-500">{timeError}</p>
-      )}
+      {timeError && <p className="text-xs text-red-500">{timeError}</p>}
     </div>
-  )
+  );
 }
 
 interface RepsTimeParamsFormProps {
-  params: MilestoneRepsTimeParams
-  onChange: (params: MilestoneRepsTimeParams) => void
+  params: MilestoneRepsTimeParams;
+  onChange: (params: MilestoneRepsTimeParams) => void;
 }
 
 export function RepsTimeParamsForm({ params, onChange }: RepsTimeParamsFormProps) {
-  const [averageTimeDisplayValue, setAverageTimeDisplayValue] = useState<string>('')
-  const [averageTimeError, setAverageTimeError] = useState<string>('')
-  const [circleMin, setCircleMin] = useState<string>(params.circle > 0 ? String(Math.floor(params.circle / 60)) : '')
-  const [circleSec, setCircleSec] = useState<string>(params.circle > 0 ? String(params.circle % 60) : '')
-  const [distanceValue, setDistanceValue] = useState<string>(params.distance > 0 ? String(params.distance) : '')
-  const [repsValue, setRepsValue] = useState<string>(params.reps > 0 ? String(params.reps) : '')
-  const [setsValue, setSetsValue] = useState<string>(params.sets > 0 ? String(params.sets) : '')
+  const [averageTimeDisplayValue, setAverageTimeDisplayValue] = useState<string>("");
+  const [averageTimeError, setAverageTimeError] = useState<string>("");
+  const [circleMin, setCircleMin] = useState<string>(
+    params.circle > 0 ? String(Math.floor(params.circle / 60)) : "",
+  );
+  const [circleSec, setCircleSec] = useState<string>(
+    params.circle > 0 ? String(params.circle % 60) : "",
+  );
+  const [distanceValue, setDistanceValue] = useState<string>(
+    params.distance > 0 ? String(params.distance) : "",
+  );
+  const [repsValue, setRepsValue] = useState<string>(params.reps > 0 ? String(params.reps) : "");
+  const [setsValue, setSetsValue] = useState<string>(params.sets > 0 ? String(params.sets) : "");
 
   // params.target_average_timeが変更されたときに表示値を更新
   useEffect(() => {
     if (params.target_average_time > 0) {
-      setAverageTimeDisplayValue(formatTimeBest(params.target_average_time))
-      setAverageTimeError('')
+      setAverageTimeDisplayValue(formatTimeBest(params.target_average_time));
+      setAverageTimeError("");
     } else {
-      setAverageTimeDisplayValue('')
+      setAverageTimeDisplayValue("");
     }
-  }, [params.target_average_time])
+  }, [params.target_average_time]);
 
   // params.circleが変更されたときに分・秒を更新
   useEffect(() => {
     if (params.circle > 0) {
-      setCircleMin(String(Math.floor(params.circle / 60)))
-      setCircleSec(String(params.circle % 60))
+      setCircleMin(String(Math.floor(params.circle / 60)));
+      setCircleSec(String(params.circle % 60));
     }
-  }, [params.circle])
+  }, [params.circle]);
 
   // params.distance, reps, setsが変更されたときに表示値を更新
   useEffect(() => {
-    if (params.distance > 0) setDistanceValue(String(params.distance))
-  }, [params.distance])
+    if (params.distance > 0) setDistanceValue(String(params.distance));
+  }, [params.distance]);
   useEffect(() => {
-    if (params.reps > 0) setRepsValue(String(params.reps))
-  }, [params.reps])
+    if (params.reps > 0) setRepsValue(String(params.reps));
+  }, [params.reps]);
   useEffect(() => {
-    if (params.sets > 0) setSetsValue(String(params.sets))
-  }, [params.sets])
+    if (params.sets > 0) setSetsValue(String(params.sets));
+  }, [params.sets]);
 
   const handleAverageTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setAverageTimeDisplayValue(value)
+    const value = e.target.value;
+    setAverageTimeDisplayValue(value);
 
-    if (value.trim() === '') {
-      setAverageTimeError('')
-      onChange({ ...params, target_average_time: 0 })
-      return
+    if (value.trim() === "") {
+      setAverageTimeError("");
+      onChange({ ...params, target_average_time: 0 });
+      return;
     }
 
-    const seconds = parseTimeToSeconds(value)
+    const seconds = parseTimeToSeconds(value);
     if (!isNaN(seconds) && seconds >= 0) {
-      setAverageTimeError('')
-      onChange({ ...params, target_average_time: seconds })
+      setAverageTimeError("");
+      onChange({ ...params, target_average_time: seconds });
     }
-  }
+  };
 
   const handleAverageTimeBlur = () => {
-    if (averageTimeDisplayValue.trim() === '') {
-      setAverageTimeError('平均目標タイムを入力してください')
-      return
+    if (averageTimeDisplayValue.trim() === "") {
+      setAverageTimeError("平均目標タイムを入力してください");
+      return;
     }
 
-    const seconds = parseTimeToSeconds(averageTimeDisplayValue)
+    const seconds = parseTimeToSeconds(averageTimeDisplayValue);
     if (isNaN(seconds) || seconds < 0) {
-      setAverageTimeError('有効なタイム形式で入力してください')
+      setAverageTimeError("有効なタイム形式で入力してください");
     } else {
-      setAverageTimeError('')
-      setAverageTimeDisplayValue(formatTimeBest(seconds))
+      setAverageTimeError("");
+      setAverageTimeDisplayValue(formatTimeBest(seconds));
     }
-  }
+  };
 
   const handleDistanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setDistanceValue(value)
-    const parsed = parseInt(value, 10)
+    const value = e.target.value;
+    setDistanceValue(value);
+    const parsed = parseInt(value, 10);
     if (Number.isFinite(parsed) && parsed > 0) {
-      onChange({ ...params, distance: parsed })
+      onChange({ ...params, distance: parsed });
     }
-  }
+  };
 
   const handleRepsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setRepsValue(value)
-    const parsed = parseInt(value, 10)
+    const value = e.target.value;
+    setRepsValue(value);
+    const parsed = parseInt(value, 10);
     if (Number.isFinite(parsed) && parsed > 0) {
-      onChange({ ...params, reps: parsed })
+      onChange({ ...params, reps: parsed });
     }
-  }
+  };
 
   const handleSetsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setSetsValue(value)
-    const parsed = parseInt(value, 10)
+    const value = e.target.value;
+    setSetsValue(value);
+    const parsed = parseInt(value, 10);
     if (Number.isFinite(parsed) && parsed > 0) {
-      onChange({ ...params, sets: parsed })
+      onChange({ ...params, sets: parsed });
     }
-  }
+  };
 
   const handleCircleMinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setCircleMin(value)
-    const min = value === '' ? 0 : parseInt(value, 10)
-    const parsedSec = circleSec === '' ? 0 : parseInt(circleSec, 10)
-    const clampedSec = Number.isFinite(parsedSec) ? Math.max(0, Math.min(parsedSec, 59)) : 0
-    if (clampedSec !== parsedSec && circleSec !== '') {
-      setCircleSec(String(clampedSec))
+    const value = e.target.value;
+    setCircleMin(value);
+    const min = value === "" ? 0 : parseInt(value, 10);
+    const parsedSec = circleSec === "" ? 0 : parseInt(circleSec, 10);
+    const clampedSec = Number.isFinite(parsedSec) ? Math.max(0, Math.min(parsedSec, 59)) : 0;
+    if (clampedSec !== parsedSec && circleSec !== "") {
+      setCircleSec(String(clampedSec));
     }
-    const totalSeconds = (Number.isFinite(min) ? min : 0) * 60 + clampedSec
-    onChange({ ...params, circle: totalSeconds })
-  }
+    const totalSeconds = (Number.isFinite(min) ? min : 0) * 60 + clampedSec;
+    onChange({ ...params, circle: totalSeconds });
+  };
 
   const handleCircleSecChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    const parsedSec = value === '' ? 0 : parseInt(value, 10)
-    const clampedSec = Number.isFinite(parsedSec) ? Math.max(0, Math.min(parsedSec, 59)) : 0
-    setCircleSec(value === '' ? '' : String(clampedSec))
-    const min = circleMin === '' ? 0 : parseInt(circleMin, 10)
-    const totalSeconds = (Number.isFinite(min) ? min : 0) * 60 + clampedSec
-    onChange({ ...params, circle: totalSeconds })
-  }
+    const value = e.target.value;
+    const parsedSec = value === "" ? 0 : parseInt(value, 10);
+    const clampedSec = Number.isFinite(parsedSec) ? Math.max(0, Math.min(parsedSec, 59)) : 0;
+    setCircleSec(value === "" ? "" : String(clampedSec));
+    const min = circleMin === "" ? 0 : parseInt(circleMin, 10);
+    const totalSeconds = (Number.isFinite(min) ? min : 0) * 60 + clampedSec;
+    onChange({ ...params, circle: totalSeconds });
+  };
 
   return (
     <div className="space-y-3">
       {/* 1行目：距離、本数、セット数、平均目標タイム */}
       <div className="grid grid-cols-4 gap-2">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            距離 (m)
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">距離 (m)</label>
           <Input
             type="number"
             value={distanceValue}
@@ -285,9 +285,7 @@ export function RepsTimeParamsForm({ params, onChange }: RepsTimeParamsFormProps
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            本数
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">本数</label>
           <Input
             type="number"
             value={repsValue}
@@ -298,9 +296,7 @@ export function RepsTimeParamsForm({ params, onChange }: RepsTimeParamsFormProps
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            セット数
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">セット数</label>
           <Input
             type="number"
             value={setsValue}
@@ -311,9 +307,7 @@ export function RepsTimeParamsForm({ params, onChange }: RepsTimeParamsFormProps
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            平均目標タイム
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">平均目標タイム</label>
           <Input
             type="text"
             value={averageTimeDisplayValue}
@@ -321,20 +315,16 @@ export function RepsTimeParamsForm({ params, onChange }: RepsTimeParamsFormProps
             onBlur={handleAverageTimeBlur}
             placeholder="1:14.28"
             required
-            className={averageTimeError ? 'border-red-500' : ''}
+            className={averageTimeError ? "border-red-500" : ""}
           />
         </div>
       </div>
-      {averageTimeError && (
-        <p className="text-xs text-red-500">{averageTimeError}</p>
-      )}
+      {averageTimeError && <p className="text-xs text-red-500">{averageTimeError}</p>}
 
       {/* 2行目：種目、Swim/Pull/Kick、サークル（分）、サークル（秒） */}
       <div className="grid grid-cols-4 gap-2">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            種目
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">種目</label>
           <StyleSelector
             value={params.style}
             onChange={(value) => onChange({ ...params, style: value })}
@@ -342,9 +332,7 @@ export function RepsTimeParamsForm({ params, onChange }: RepsTimeParamsFormProps
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            S/P/K
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">S/P/K</label>
           <SwimCategorySelector
             value={params.swim_category}
             onChange={(value) => onChange({ ...params, swim_category: value })}
@@ -352,9 +340,7 @@ export function RepsTimeParamsForm({ params, onChange }: RepsTimeParamsFormProps
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            サークル(分)
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">サークル(分)</label>
           <Input
             type="number"
             value={circleMin}
@@ -364,9 +350,7 @@ export function RepsTimeParamsForm({ params, onChange }: RepsTimeParamsFormProps
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            サークル(秒)
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">サークル(秒)</label>
           <Input
             type="number"
             value={circleSec}
@@ -378,98 +362,102 @@ export function RepsTimeParamsForm({ params, onChange }: RepsTimeParamsFormProps
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 interface SetParamsFormProps {
-  params: MilestoneSetParams
-  onChange: (params: MilestoneSetParams) => void
+  params: MilestoneSetParams;
+  onChange: (params: MilestoneSetParams) => void;
 }
 
 export function SetParamsForm({ params, onChange }: SetParamsFormProps) {
-  const [circleMin, setCircleMin] = useState<string>(params.circle > 0 ? String(Math.floor(params.circle / 60)) : '')
-  const [circleSec, setCircleSec] = useState<string>(params.circle > 0 ? String(params.circle % 60) : '')
-  const [distanceValue, setDistanceValue] = useState<string>(params.distance > 0 ? String(params.distance) : '')
-  const [repsValue, setRepsValue] = useState<string>(params.reps > 0 ? String(params.reps) : '')
-  const [setsValue, setSetsValue] = useState<string>(params.sets > 0 ? String(params.sets) : '')
+  const [circleMin, setCircleMin] = useState<string>(
+    params.circle > 0 ? String(Math.floor(params.circle / 60)) : "",
+  );
+  const [circleSec, setCircleSec] = useState<string>(
+    params.circle > 0 ? String(params.circle % 60) : "",
+  );
+  const [distanceValue, setDistanceValue] = useState<string>(
+    params.distance > 0 ? String(params.distance) : "",
+  );
+  const [repsValue, setRepsValue] = useState<string>(params.reps > 0 ? String(params.reps) : "");
+  const [setsValue, setSetsValue] = useState<string>(params.sets > 0 ? String(params.sets) : "");
 
   // params.circleが変更されたときに分・秒を更新
   useEffect(() => {
     if (params.circle > 0) {
-      setCircleMin(String(Math.floor(params.circle / 60)))
-      setCircleSec(String(params.circle % 60))
+      setCircleMin(String(Math.floor(params.circle / 60)));
+      setCircleSec(String(params.circle % 60));
     }
-  }, [params.circle])
+  }, [params.circle]);
 
   // params.distance, reps, setsが変更されたときに表示値を更新
   useEffect(() => {
-    if (params.distance > 0) setDistanceValue(String(params.distance))
-  }, [params.distance])
+    if (params.distance > 0) setDistanceValue(String(params.distance));
+  }, [params.distance]);
   useEffect(() => {
-    if (params.reps > 0) setRepsValue(String(params.reps))
-  }, [params.reps])
+    if (params.reps > 0) setRepsValue(String(params.reps));
+  }, [params.reps]);
   useEffect(() => {
-    if (params.sets > 0) setSetsValue(String(params.sets))
-  }, [params.sets])
+    if (params.sets > 0) setSetsValue(String(params.sets));
+  }, [params.sets]);
 
   const handleDistanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setDistanceValue(value)
-    const parsed = parseInt(value, 10)
+    const value = e.target.value;
+    setDistanceValue(value);
+    const parsed = parseInt(value, 10);
     if (Number.isFinite(parsed) && parsed > 0) {
-      onChange({ ...params, distance: parsed })
+      onChange({ ...params, distance: parsed });
     }
-  }
+  };
 
   const handleRepsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setRepsValue(value)
-    const parsed = parseInt(value, 10)
+    const value = e.target.value;
+    setRepsValue(value);
+    const parsed = parseInt(value, 10);
     if (Number.isFinite(parsed) && parsed > 0) {
-      onChange({ ...params, reps: parsed })
+      onChange({ ...params, reps: parsed });
     }
-  }
+  };
 
   const handleSetsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setSetsValue(value)
-    const parsed = parseInt(value, 10)
+    const value = e.target.value;
+    setSetsValue(value);
+    const parsed = parseInt(value, 10);
     if (Number.isFinite(parsed) && parsed > 0) {
-      onChange({ ...params, sets: parsed })
+      onChange({ ...params, sets: parsed });
     }
-  }
+  };
 
   const handleCircleMinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setCircleMin(value)
-    const min = value === '' ? 0 : parseInt(value, 10)
-    const parsedSec = circleSec === '' ? 0 : parseInt(circleSec, 10)
-    const clampedSec = Number.isFinite(parsedSec) ? Math.max(0, Math.min(parsedSec, 59)) : 0
-    if (clampedSec !== parsedSec && circleSec !== '') {
-      setCircleSec(String(clampedSec))
+    const value = e.target.value;
+    setCircleMin(value);
+    const min = value === "" ? 0 : parseInt(value, 10);
+    const parsedSec = circleSec === "" ? 0 : parseInt(circleSec, 10);
+    const clampedSec = Number.isFinite(parsedSec) ? Math.max(0, Math.min(parsedSec, 59)) : 0;
+    if (clampedSec !== parsedSec && circleSec !== "") {
+      setCircleSec(String(clampedSec));
     }
-    const totalSeconds = (Number.isFinite(min) ? min : 0) * 60 + clampedSec
-    onChange({ ...params, circle: totalSeconds })
-  }
+    const totalSeconds = (Number.isFinite(min) ? min : 0) * 60 + clampedSec;
+    onChange({ ...params, circle: totalSeconds });
+  };
 
   const handleCircleSecChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    const parsedSec = value === '' ? 0 : parseInt(value, 10)
-    const clampedSec = Number.isFinite(parsedSec) ? Math.max(0, Math.min(parsedSec, 59)) : 0
-    setCircleSec(value === '' ? '' : String(clampedSec))
-    const min = circleMin === '' ? 0 : parseInt(circleMin, 10)
-    const totalSeconds = (Number.isFinite(min) ? min : 0) * 60 + clampedSec
-    onChange({ ...params, circle: totalSeconds })
-  }
+    const value = e.target.value;
+    const parsedSec = value === "" ? 0 : parseInt(value, 10);
+    const clampedSec = Number.isFinite(parsedSec) ? Math.max(0, Math.min(parsedSec, 59)) : 0;
+    setCircleSec(value === "" ? "" : String(clampedSec));
+    const min = circleMin === "" ? 0 : parseInt(circleMin, 10);
+    const totalSeconds = (Number.isFinite(min) ? min : 0) * 60 + clampedSec;
+    onChange({ ...params, circle: totalSeconds });
+  };
 
   return (
     <div className="space-y-3">
       {/* 1行目：距離、本数、セット数 */}
       <div className="grid grid-cols-3 gap-2">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            距離 (m)
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">距離 (m)</label>
           <Input
             type="number"
             value={distanceValue}
@@ -480,9 +468,7 @@ export function SetParamsForm({ params, onChange }: SetParamsFormProps) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            本数
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">本数</label>
           <Input
             type="number"
             value={repsValue}
@@ -493,9 +479,7 @@ export function SetParamsForm({ params, onChange }: SetParamsFormProps) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            セット数
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">セット数</label>
           <Input
             type="number"
             value={setsValue}
@@ -510,9 +494,7 @@ export function SetParamsForm({ params, onChange }: SetParamsFormProps) {
       {/* 2行目：種目、S/P/K、サークル（分）、サークル（秒） */}
       <div className="grid grid-cols-4 gap-2">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            種目
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">種目</label>
           <StyleSelector
             value={params.style}
             onChange={(value) => onChange({ ...params, style: value })}
@@ -520,9 +502,7 @@ export function SetParamsForm({ params, onChange }: SetParamsFormProps) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            S/P/K
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">S/P/K</label>
           <SwimCategorySelector
             value={params.swim_category}
             onChange={(value) => onChange({ ...params, swim_category: value })}
@@ -530,9 +510,7 @@ export function SetParamsForm({ params, onChange }: SetParamsFormProps) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            サークル(分)
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">サークル(分)</label>
           <Input
             type="number"
             value={circleMin}
@@ -542,9 +520,7 @@ export function SetParamsForm({ params, onChange }: SetParamsFormProps) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            サークル(秒)
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">サークル(秒)</label>
           <Input
             type="number"
             value={circleSec}
@@ -556,5 +532,5 @@ export function SetParamsForm({ params, onChange }: SetParamsFormProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

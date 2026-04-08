@@ -1,3 +1,6 @@
+# Turbo
+.turbo/
+
 # Dependencies
 node_modules/
 npm-debug.log*
@@ -158,3 +161,6 @@ AuthKey_*.p8
 scripts/users.csv
 scripts/register-users.sql
 scripts/register-users-with-records.sql
+
+# Mobile local react override (managed by postinstall script)
+apps/mobile/node_modules/

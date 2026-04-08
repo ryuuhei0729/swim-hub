@@ -2,44 +2,46 @@
 // モーダル管理用Zustandストア
 // =============================================================================
 
-import { create } from 'zustand'
+import { create } from "zustand";
 
 interface ModalState {
-  modals: Record<string, boolean>
+  modals: Record<string, boolean>;
 }
 
 interface ModalActions {
-  openModal: (id: string) => void
-  closeModal: (id: string) => void
-  toggleModal: (id: string) => void
-  closeAll: () => void
-  isOpen: (id: string) => boolean
-  reset: () => void
+  openModal: (id: string) => void;
+  closeModal: (id: string) => void;
+  toggleModal: (id: string) => void;
+  closeAll: () => void;
+  isOpen: (id: string) => boolean;
+  reset: () => void;
 }
 
 const initialState: ModalState = {
   modals: {},
-}
+};
 
 export const useModalStore = create<ModalState & ModalActions>()((set, get) => ({
   ...initialState,
-  
-  openModal: (id) => set((state) => ({
-    modals: { ...state.modals, [id]: true },
-  })),
-  
-  closeModal: (id) => set((state) => ({
-    modals: { ...state.modals, [id]: false },
-  })),
-  
-  toggleModal: (id) => set((state) => ({
-    modals: { ...state.modals, [id]: !state.modals[id] },
-  })),
-  
-  closeAll: () => set({ modals: {} }),
-  
-  isOpen: (id) => get().modals[id] || false,
-  
-  reset: () => set(initialState),
-}))
 
+  openModal: (id) =>
+    set((state) => ({
+      modals: { ...state.modals, [id]: true },
+    })),
+
+  closeModal: (id) =>
+    set((state) => ({
+      modals: { ...state.modals, [id]: false },
+    })),
+
+  toggleModal: (id) =>
+    set((state) => ({
+      modals: { ...state.modals, [id]: !state.modals[id] },
+    })),
+
+  closeAll: () => set({ modals: {} }),
+
+  isOpen: (id) => get().modals[id] || false,
+
+  reset: () => set(initialState),
+}));

@@ -2,27 +2,19 @@
  * Googleカレンダー連携設定コンポーネント
  * Web版のGoogleCalendarSyncSettingsをReact Native向けに移植
  */
-import React, { useState } from 'react'
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  Switch,
-  ActivityIndicator,
-  Alert,
-} from 'react-native'
-import Svg, { Path } from 'react-native-svg'
-import { useAuth } from '@/contexts/AuthProvider'
-import { useGoogleAuth } from '@/hooks/useGoogleAuth'
-import { syncAllToGoogleCalendar } from '@/lib/google-calendar-api'
-import type { UserProfile } from '@swim-hub/shared/types'
+import React, { useState } from "react";
+import { View, Text, StyleSheet, Pressable, Switch, ActivityIndicator, Alert } from "react-native";
+import Svg, { Path } from "react-native-svg";
+import { useAuth } from "@/contexts/AuthProvider";
+import { useGoogleAuth } from "@/hooks/useGoogleAuth";
+import { syncAllToGoogleCalendar } from "@/lib/google-calendar-api";
+import type { UserProfile } from "@swim-hub/shared/types";
 
 interface GoogleCalendarSyncSettingsProps {
   /** ユーザープロフィール */
-  profile: UserProfile | null
+  profile: UserProfile | null;
   /** 設定更新後のコールバック */
-  onUpdate: () => void
+  onUpdate: () => void;
 }
 
 /**
@@ -47,125 +39,121 @@ const GoogleLogo: React.FC = () => (
       d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
     />
   </Svg>
-)
+);
 
 export const GoogleCalendarSyncSettings: React.FC<GoogleCalendarSyncSettingsProps> = ({
   profile,
   onUpdate,
 }) => {
-  const { supabase, user, session } = useAuth()
-  const { connectGoogleCalendar, loading: authLoading } = useGoogleAuth()
-  const [syncing, setSyncing] = useState(false)
-  const [bulkSyncing, setBulkSyncing] = useState(false)
+  const { supabase, user, session } = useAuth();
+  const { connectGoogleCalendar, loading: authLoading } = useGoogleAuth();
+  const [syncing, setSyncing] = useState(false);
+  const [bulkSyncing, setBulkSyncing] = useState(false);
   const [bulkSyncResult, setBulkSyncResult] = useState<{
-    practices: { success: number; error: number }
-    competitions: { success: number; error: number }
-  } | null>(null)
-  const [error, setError] = useState<string | null>(null)
+    practices: { success: number; error: number };
+    competitions: { success: number; error: number };
+  } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const isEnabled = profile?.google_calendar_enabled || false
-  const syncPractices = profile?.google_calendar_sync_practices ?? true
-  const syncCompetitions = profile?.google_calendar_sync_competitions ?? true
+  const isEnabled = profile?.google_calendar_enabled || false;
+  const syncPractices = profile?.google_calendar_sync_practices ?? true;
+  const syncCompetitions = profile?.google_calendar_sync_competitions ?? true;
 
   // Googleカレンダー連携開始
   const handleConnectGoogle = async () => {
-    setError(null)
-    const result = await connectGoogleCalendar()
+    setError(null);
+    const result = await connectGoogleCalendar();
     if (result.success) {
-      onUpdate()
+      onUpdate();
     } else if (result.error) {
-      setError(result.error.message)
+      setError(result.error.message);
     }
-  }
+  };
 
   // 連携解除
   const handleDisconnectGoogle = () => {
-    Alert.alert(
-      '確認',
-      'Googleカレンダー連携を解除しますか？',
-      [
-        { text: 'キャンセル', style: 'cancel' },
-        {
-          text: '解除',
-          style: 'destructive',
-          onPress: async () => {
-            if (!user || !supabase) return
+    Alert.alert("確認", "Googleカレンダー連携を解除しますか？", [
+      { text: "キャンセル", style: "cancel" },
+      {
+        text: "解除",
+        style: "destructive",
+        onPress: async () => {
+          if (!user || !supabase) return;
 
-            try {
-              // RPC関数でトークンを削除（NULLを設定）
-              await supabase.rpc('set_google_refresh_token', {
-                p_user_id: user.id,
-                p_token: null,
-              })
+          try {
+            // RPC関数でトークンを削除（NULLを設定）
+            await supabase.rpc("set_google_refresh_token", {
+              p_user_id: user.id,
+              p_token: null,
+            });
 
-              // フラグを更新
-              await supabase
-                .from('users')
-                .update({ google_calendar_enabled: false })
-                .eq('id', user.id)
+            // フラグを更新
+            await supabase
+              .from("users")
+              .update({ google_calendar_enabled: false })
+              .eq("id", user.id);
 
-              onUpdate()
-            } catch {
-              Alert.alert('エラー', '連携解除に失敗しました')
-            }
-          },
+            onUpdate();
+          } catch {
+            Alert.alert("エラー", "連携解除に失敗しました");
+          }
         },
-      ]
-    )
-  }
+      },
+    ]);
+  };
 
   // 同期設定変更
   const handleSyncSettingChange = async (
-    field: 'google_calendar_sync_practices' | 'google_calendar_sync_competitions',
-    value: boolean
+    field: "google_calendar_sync_practices" | "google_calendar_sync_competitions",
+    value: boolean,
   ) => {
-    if (!user || !supabase) return
+    if (!user || !supabase) return;
 
-    setSyncing(true)
-    setError(null)
+    setSyncing(true);
+    setError(null);
 
     try {
       const { error: updateError } = await supabase
-        .from('users')
+        .from("users")
         .update({ [field]: value })
-        .eq('id', user.id)
+        .eq("id", user.id);
 
-      if (updateError) throw updateError
+      if (updateError) throw updateError;
 
-      onUpdate()
+      onUpdate();
     } catch {
-      setError('設定の更新に失敗しました')
+      setError("設定の更新に失敗しました");
     } finally {
-      setSyncing(false)
+      setSyncing(false);
     }
-  }
+  };
 
   // 既存データ一括同期
   const handleBulkSync = async () => {
     if (!session?.access_token) {
-      setError('セッションが無効です。再度ログインしてください。')
-      return
+      setError("セッションが無効です。再度ログインしてください。");
+      return;
     }
 
-    setBulkSyncing(true)
-    setBulkSyncResult(null)
-    setError(null)
+    setBulkSyncing(true);
+    setBulkSyncResult(null);
+    setError(null);
 
     try {
-      const result = await syncAllToGoogleCalendar(session.access_token)
+      const result = await syncAllToGoogleCalendar(session.access_token);
 
       if (result.success && result.results) {
-        setBulkSyncResult(result.results)
-        onUpdate()
+        setBulkSyncResult(result.results);
+        onUpdate();
       } else {
-        setError(result.error || '一括同期に失敗しました')
+        setError(result.error || "一括同期に失敗しました");
       }
     } catch {
-      setError('一括同期に失敗しました')
+      setError("一括同期に失敗しました");
     } finally {
-      setBulkSyncing(false)
+      setBulkSyncing(false);
     }
-  }
+  };
 
   return (
     <View style={styles.container}>
@@ -223,11 +211,11 @@ export const GoogleCalendarSyncSettings: React.FC<GoogleCalendarSyncSettingsProp
               <Switch
                 value={syncPractices}
                 onValueChange={(value) =>
-                  handleSyncSettingChange('google_calendar_sync_practices', value)
+                  handleSyncSettingChange("google_calendar_sync_practices", value)
                 }
                 disabled={syncing}
-                trackColor={{ false: '#D1D5DB', true: '#93C5FD' }}
-                thumbColor={syncPractices ? '#2563EB' : '#F3F4F6'}
+                trackColor={{ false: "#D1D5DB", true: "#93C5FD" }}
+                thumbColor={syncPractices ? "#2563EB" : "#F3F4F6"}
               />
             </View>
             <View style={styles.settingRow}>
@@ -235,11 +223,11 @@ export const GoogleCalendarSyncSettings: React.FC<GoogleCalendarSyncSettingsProp
               <Switch
                 value={syncCompetitions}
                 onValueChange={(value) =>
-                  handleSyncSettingChange('google_calendar_sync_competitions', value)
+                  handleSyncSettingChange("google_calendar_sync_competitions", value)
                 }
                 disabled={syncing}
-                trackColor={{ false: '#D1D5DB', true: '#93C5FD' }}
-                thumbColor={syncCompetitions ? '#2563EB' : '#F3F4F6'}
+                trackColor={{ false: "#D1D5DB", true: "#93C5FD" }}
+                thumbColor={syncCompetitions ? "#2563EB" : "#F3F4F6"}
               />
             </View>
           </View>
@@ -276,21 +264,16 @@ export const GoogleCalendarSyncSettings: React.FC<GoogleCalendarSyncSettingsProp
                     練習記録: {bulkSyncResult.practices.success}件を同期
                   </Text>
                 ) : (
-                  <Text style={styles.resultText}>
-                    練習記録: 同期対象なし（既に同期済み）
-                  </Text>
+                  <Text style={styles.resultText}>練習記録: 同期対象なし（既に同期済み）</Text>
                 )}
                 {bulkSyncResult.competitions.success > 0 ? (
                   <Text style={styles.resultText}>
                     大会記録: {bulkSyncResult.competitions.success}件を同期
                   </Text>
                 ) : (
-                  <Text style={styles.resultText}>
-                    大会記録: 同期対象なし（既に同期済み）
-                  </Text>
+                  <Text style={styles.resultText}>大会記録: 同期対象なし（既に同期済み）</Text>
                 )}
-                {(bulkSyncResult.practices.error > 0 ||
-                  bulkSyncResult.competitions.error > 0) && (
+                {(bulkSyncResult.practices.error > 0 || bulkSyncResult.competitions.error > 0) && (
                   <Text style={styles.resultErrorText}>
                     エラー: 練習記録{bulkSyncResult.practices.error}件、大会記録
                     {bulkSyncResult.competitions.error}件
@@ -317,44 +300,44 @@ export const GoogleCalendarSyncSettings: React.FC<GoogleCalendarSyncSettingsProp
         </>
       )}
     </View>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 8,
     padding: 20,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: "#E5E7EB",
   },
   title: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: "600",
+    color: "#111827",
   },
   badge: {
-    backgroundColor: '#D1FAE5',
+    backgroundColor: "#D1FAE5",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
   },
   badgeText: {
     fontSize: 12,
-    fontWeight: '500',
-    color: '#059669',
+    fontWeight: "500",
+    color: "#059669",
   },
   section: {
     gap: 12,
@@ -363,117 +346,117 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: "#E5E7EB",
   },
   description: {
     fontSize: 14,
-    color: '#6B7280',
+    color: "#6B7280",
     lineHeight: 20,
   },
   errorContainer: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FECACA",
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
   },
   errorText: {
-    color: '#DC2626',
+    color: "#DC2626",
     fontSize: 14,
   },
   connectButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: "#D1D5DB",
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     minHeight: 48,
   },
   buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
   },
   connectButtonText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+    fontWeight: "500",
+    color: "#374151",
   },
   buttonPressed: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: "#F3F4F6",
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   settingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 8,
   },
   settingLabel: {
     fontSize: 14,
-    color: '#374151',
+    color: "#374151",
   },
   syncButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#93C5FD',
+    borderColor: "#93C5FD",
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     minHeight: 48,
   },
   syncButtonPressed: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: "#EFF6FF",
   },
   syncButtonText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#2563EB',
+    fontWeight: "500",
+    color: "#2563EB",
   },
   resultContainer: {
-    backgroundColor: '#D1FAE5',
+    backgroundColor: "#D1FAE5",
     borderRadius: 8,
     padding: 12,
     gap: 4,
   },
   resultTitle: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#059669',
+    fontWeight: "500",
+    color: "#059669",
   },
   resultText: {
     fontSize: 13,
-    color: '#047857',
+    color: "#047857",
   },
   resultErrorText: {
     fontSize: 13,
-    color: '#B45309',
+    color: "#B45309",
   },
   disconnectButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: "#FECACA",
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     minHeight: 48,
   },
   disconnectButtonPressed: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: "#FEF2F2",
   },
   disconnectButtonText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#DC2626',
+    fontWeight: "500",
+    color: "#DC2626",
   },
-})
+});

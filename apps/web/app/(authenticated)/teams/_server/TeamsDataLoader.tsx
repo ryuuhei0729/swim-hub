@@ -2,20 +2,20 @@
 // チームデータローダー（すべてのデータを並行取得）
 // =============================================================================
 
-import React from 'react'
-import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-server-auth'
-import { TeamCoreAPI } from '@apps/shared/api/teams/core'
-import TeamsClient from '../_client/TeamsClient'
-import type { TeamMembershipWithUser } from '@apps/shared/types'
+import React from "react";
+import { createAuthenticatedServerClient, getServerUser } from "@/lib/supabase-server-auth";
+import { TeamCoreAPI } from "@apps/shared/api/teams/core";
+import TeamsClient from "../_client/TeamsClient";
+import type { TeamMembershipWithUser } from "@apps/shared/types";
 
 /**
  * チーム情報を取得
  */
 async function getTeams(
-  supabase: Awaited<ReturnType<typeof createAuthenticatedServerClient>>
+  supabase: Awaited<ReturnType<typeof createAuthenticatedServerClient>>,
 ): Promise<TeamMembershipWithUser[]> {
-  const coreAPI = new TeamCoreAPI(supabase)
-  return await coreAPI.getMyTeams()
+  const coreAPI = new TeamCoreAPI(supabase);
+  return await coreAPI.getMyTeams();
 }
 
 /**
@@ -24,23 +24,17 @@ async function getTeams(
  */
 export default async function TeamsDataLoader() {
   // 認証情報とSupabaseクライアントを取得
-  const [user, supabase] = await Promise.all([
-    getServerUser(),
-    createAuthenticatedServerClient()
-  ])
+  const [user, supabase] = await Promise.all([getServerUser(), createAuthenticatedServerClient()]);
 
   // チーム情報取得（認証必要）
   const teamsResult = user
     ? await getTeams(supabase).catch((error) => {
-        console.error('チーム情報取得エラー:', error)
-        throw new Error(`Failed to fetch teams: ${error instanceof Error ? error.message : String(error)}`)
+        console.error("チーム情報取得エラー:", error);
+        throw new Error(
+          `Failed to fetch teams: ${error instanceof Error ? error.message : String(error)}`,
+        );
       })
-    : ([] as TeamMembershipWithUser[])
+    : ([] as TeamMembershipWithUser[]);
 
-  return (
-    <TeamsClient
-      initialTeams={teamsResult}
-    />
-  )
+  return <TeamsClient initialTeams={teamsResult} />;
 }
-

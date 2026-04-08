@@ -1,20 +1,20 @@
-'use client'
+"use client";
 
-import React, { useState } from 'react'
-import { useAuth } from '@/contexts'
-import type { Goal, Style, GoalWithMilestones, Competition } from '@apps/shared/types'
-import { useGoalsQuery, useGoalDetailQuery } from '@apps/shared/hooks/queries/goals'
-import { GoalAPI } from '@apps/shared/api/goals'
-import GoalList from '../_components/GoalList'
-import GoalDetail from '../_components/GoalDetail'
-import GoalCreateModal from '../_components/GoalCreateModal'
-import GoalEditModal from '../_components/GoalEditModal'
-import { PlusIcon } from '@heroicons/react/24/outline'
+import React, { useState } from "react";
+import { useAuth } from "@/contexts";
+import type { Goal, Style, GoalWithMilestones, Competition } from "@apps/shared/types";
+import { useGoalsQuery, useGoalDetailQuery } from "@apps/shared/hooks/queries/goals";
+import { GoalAPI } from "@apps/shared/api/goals";
+import GoalList from "../_components/GoalList";
+import GoalDetail from "../_components/GoalDetail";
+import GoalCreateModal from "../_components/GoalCreateModal";
+import GoalEditModal from "../_components/GoalEditModal";
+import { PlusIcon } from "@heroicons/react/24/outline";
 
 interface GoalsClientProps {
-  initialGoals: Goal[]
-  initialCompetitions: Competition[]
-  styles: Style[]
+  initialGoals: Goal[];
+  initialCompetitions: Competition[];
+  styles: Style[];
 }
 
 /**
@@ -23,85 +23,94 @@ interface GoalsClientProps {
 export default function GoalsClient({
   initialGoals,
   initialCompetitions,
-  styles
+  styles,
 }: GoalsClientProps) {
-  const { supabase } = useAuth()
+  const { supabase } = useAuth();
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(
-    initialGoals.length > 0 ? initialGoals[0].id : null
-  )
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-  const [editingGoal, setEditingGoal] = useState<GoalWithMilestones | null>(null)
+    initialGoals.length > 0 ? initialGoals[0].id : null,
+  );
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<GoalWithMilestones | null>(null);
 
   // React Query: 目標一覧
   const {
     data: goals = [],
     error: goalsError,
-    invalidate: invalidateGoals
+    invalidate: invalidateGoals,
   } = useGoalsQuery(supabase, {
     styles,
-    initialData: initialGoals.length > 0 || initialCompetitions.length > 0
-      ? { goals: initialGoals, competitions: initialCompetitions }
-      : undefined,
-  })
+    initialData:
+      initialGoals.length > 0 || initialCompetitions.length > 0
+        ? { goals: initialGoals, competitions: initialCompetitions }
+        : undefined,
+  });
 
   // React Query: 選択中の目標詳細
   const {
     data: selectedGoal,
     isLoading,
     error: goalError,
-    invalidate: invalidateGoalDetail
-  } = useGoalDetailQuery(supabase, selectedGoalId)
+    invalidate: invalidateGoalDetail,
+  } = useGoalDetailQuery(supabase, selectedGoalId);
 
   // 目標作成後のコールバック
   const handleGoalCreated = async () => {
-    await invalidateGoals()
-    setIsCreateModalOpen(false)
-  }
+    await invalidateGoals();
+    setIsCreateModalOpen(false);
+  };
 
   // 目標削除後のコールバック
   const handleGoalDeleted = async () => {
-    await invalidateGoals()
-    if (selectedGoalId) {
-      setSelectedGoalId(null)
+    try {
+      await invalidateGoals();
+    } catch (e) {
+      console.error("キャッシュ無効化エラー:", e);
+    } finally {
+      if (selectedGoalId) {
+        setSelectedGoalId(null);
+      }
     }
-  }
+  };
 
   // 目標更新後のコールバック
   const handleGoalUpdated = async () => {
-    await Promise.all([invalidateGoals(), invalidateGoalDetail()])
-  }
+    await Promise.all([invalidateGoals(), invalidateGoalDetail()]);
+  };
 
   // 目標編集ボタンが押されたときのハンドラー
   const handleEditGoal = async (goalId: string) => {
     try {
-      const goalAPI = new GoalAPI(supabase)
-      const goal = await goalAPI.getGoalWithMilestones(goalId)
-      setEditingGoal(goal)
-      setIsEditModalOpen(true)
+      const goalAPI = new GoalAPI(supabase);
+      const goal = await goalAPI.getGoalWithMilestones(goalId);
+      setEditingGoal(goal);
+      setIsEditModalOpen(true);
     } catch (error) {
-      console.error('目標詳細取得エラー:', error)
-      alert('目標の詳細を取得できませんでした')
+      console.error("目標詳細取得エラー:", error);
+      alert("目標の詳細を取得できませんでした");
     }
-  }
+  };
 
   // 目標編集後のコールバック
   const handleGoalEdited = async () => {
-    await Promise.all([invalidateGoals(), invalidateGoalDetail()])
-    setIsEditModalOpen(false)
-    setEditingGoal(null)
-  }
+    try {
+      await Promise.all([invalidateGoals(), invalidateGoalDetail()]);
+    } catch (e) {
+      console.error("キャッシュ無効化エラー:", e);
+    } finally {
+      setIsEditModalOpen(false);
+      setEditingGoal(null);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-3 sm:p-6">
       <div className="max-w-7xl mx-auto">
         {/* ヘッダー */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="hidden lg:flex mb-6 items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">目標管理</h1>
-            <p className="text-gray-600 mt-1">
-              大会目標を設定し、マイルストーンで進捗を管理します
-            </p>
+            <p className="text-gray-600 mt-1">大会目標を設定し、マイルストーンで進捗を管理します</p>
           </div>
           <button
             onClick={() => setIsCreateModalOpen(true)}
@@ -111,14 +120,24 @@ export default function GoalsClient({
             新規目標作成
           </button>
         </div>
+        {/* モバイル用: 新規目標作成ボタンのみ */}
+        <div className="flex lg:hidden mb-4 justify-end">
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+          >
+            <PlusIcon className="w-4 h-4" />
+            新規目標作成
+          </button>
+        </div>
 
         {/* メインコンテンツ: リスト+詳細レイアウト */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
           {/* 左側: 大会目標リスト */}
           <div className="lg:col-span-1">
             {goalsError ? (
-              <div className="bg-white rounded-lg shadow p-6 text-center">
-                <p className="text-red-600 mb-3">目標一覧の取得に失敗しました</p>
+              <div className="bg-white rounded-lg shadow p-4 sm:p-6 text-center">
+                <p className="text-red-600 mb-3 text-sm sm:text-base">目標一覧の取得に失敗しました</p>
                 <button
                   onClick={() => invalidateGoals()}
                   className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -140,8 +159,8 @@ export default function GoalsClient({
           {/* 右側: 目標詳細 */}
           <div className="lg:col-span-2">
             {goalError ? (
-              <div className="bg-white rounded-lg shadow p-6 text-center">
-                <p className="text-red-600 mb-3">目標詳細の取得に失敗しました</p>
+              <div className="bg-white rounded-lg shadow p-4 sm:p-6 text-center">
+                <p className="text-red-600 mb-3 text-sm sm:text-base">目標詳細の取得に失敗しました</p>
                 <button
                   onClick={() => invalidateGoalDetail()}
                   className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -165,10 +184,8 @@ export default function GoalsClient({
                 onDelete={handleGoalDeleted}
               />
             ) : (
-              <div className="bg-white rounded-lg shadow p-12 text-center">
-                <p className="text-gray-500 text-lg">
-                  左側のリストから目標を選択してください
-                </p>
+              <div className="bg-white rounded-lg shadow p-6 sm:p-12 text-center">
+                <p className="text-gray-500 text-xs sm:text-lg">左側のリストから目標を選択してください</p>
               </div>
             )}
           </div>
@@ -187,8 +204,8 @@ export default function GoalsClient({
           <GoalEditModal
             isOpen={isEditModalOpen}
             onClose={() => {
-              setIsEditModalOpen(false)
-              setEditingGoal(null)
+              setIsEditModalOpen(false);
+              setEditingGoal(null);
             }}
             onSuccess={handleGoalEdited}
             goal={editingGoal}
@@ -197,5 +214,5 @@ export default function GoalsClient({
         )}
       </div>
     </div>
-  )
+  );
 }

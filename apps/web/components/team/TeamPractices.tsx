@@ -1,85 +1,84 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react'
-import { useRouter } from 'next/navigation'
-import dynamic from 'next/dynamic'
-import { useAuth } from '@/contexts/AuthProvider'
+import React, { useState, useEffect, useCallback, Suspense } from "react";
+import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
+import { useAuth } from "@/contexts/AuthProvider";
 import {
   PlusIcon,
   CalendarDaysIcon,
   MapPinIcon,
   ClockIcon,
   PencilSquareIcon,
-  EyeIcon
-} from '@heroicons/react/24/outline'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
-import { usePracticeFormStore } from '@/stores/practice/practiceStore'
-import type { PracticeImageData } from '@/components/forms/PracticeBasicForm'
-import { TeamPracticesAPI } from '@apps/shared/api/teams/practices'
-import Pagination from '@/components/ui/Pagination'
-import TeamPracticeDetailModal from './TeamPracticeDetailModal'
+  EyeIcon,
+} from "@heroicons/react/24/outline";
+import { format } from "date-fns";
+import { ja } from "date-fns/locale";
+import { usePracticeStore } from "@/stores/practice/practiceStore";
+import type { PracticeImageData } from "@/components/forms/PracticeBasicForm";
+import { TeamPracticesAPI } from "@apps/shared/api/teams/practices";
+import Pagination from "@/components/ui/Pagination";
+import TeamPracticeDetailModal from "./TeamPracticeDetailModal";
 
-const PracticeBasicForm = dynamic(
-  () => import('@/components/forms/PracticeBasicForm'),
-  { ssr: false }
-)
+const PracticeBasicForm = dynamic(() => import("@/components/forms/PracticeBasicForm"), {
+  ssr: false,
+});
 
 // Supabase から返されるスネークケースの型
 // Supabaseのリレーションは配列または単一オブジェクトで返る可能性がある
 interface PracticeRecord {
-  id: string
-  user_id: string
-  date: string
-  title: string | null
-  place: string | null
-  note: string | null
-  created_at: string
-  created_by: string | null
-  users?: { name: string } | { name: string }[]
-  created_by_user?: { name: string } | { name: string }[]
+  id: string;
+  user_id: string;
+  date: string;
+  title: string | null;
+  place: string | null;
+  note: string | null;
+  created_at: string;
+  created_by: string | null;
+  users?: { name: string } | { name: string }[];
+  created_by_user?: { name: string } | { name: string }[];
   practice_logs?: {
-    id: string
-    style: string
-    distance: number
+    id: string;
+    style: string;
+    distance: number;
     practice_times?: {
-      time: number
-    }[]
-  }[]
+      time: number;
+    }[];
+  }[];
 }
 
 // UI で使用するキャメルケースの型
 export interface TeamPractice {
-  id: string
-  userId: string
-  date: string
-  title: string | null
-  place: string | null
-  note: string | null
-  createdAt: string
-  createdBy: string | null
+  id: string;
+  userId: string;
+  date: string;
+  title: string | null;
+  place: string | null;
+  note: string | null;
+  createdAt: string;
+  createdBy: string | null;
   users?: {
-    name: string
-  }
+    name: string;
+  };
   createdByUser?: {
-    name: string
-  }
+    name: string;
+  };
   practiceLogs?: {
-    id: string
-    style: string
-    distance: number
+    id: string;
+    style: string;
+    distance: number;
     practiceTimes?: {
-      time: number
-    }[]
-  }[]
+      time: number;
+    }[];
+  }[];
 }
 
 // ヘルパー: 配列または単一オブジェクトを単一オブジェクトに正規化
 function normalizeUser(
-  user: { name: string } | { name: string }[] | undefined
+  user: { name: string } | { name: string }[] | undefined,
 ): { name: string } | undefined {
-  if (!user) return undefined
-  return Array.isArray(user) ? user[0] : user
+  if (!user) return undefined;
+  return Array.isArray(user) ? user[0] : user;
 }
 
 // スネークケース → キャメルケース変換関数
@@ -103,25 +102,25 @@ function mapPracticeRecordToTeamPractice(record: PracticeRecord): TeamPractice {
         time: pt.time,
       })),
     })),
-  }
+  };
 }
 
 export interface TeamPracticesProps {
-  teamId: string
-  isAdmin?: boolean
+  teamId: string;
+  isAdmin?: boolean;
 }
 
 export default function TeamPractices({ teamId, isAdmin = false }: TeamPracticesProps) {
-  const { supabase, user } = useAuth()
-  const router = useRouter()
-  const [practices, setPractices] = useState<TeamPractice[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalCount, setTotalCount] = useState(0)
-  const [selectedPracticeId, setSelectedPracticeId] = useState<string | null>(null)
-  const [showDetailModal, setShowDetailModal] = useState(false)
-  const pageSize = 20
+  const { supabase, user } = useAuth();
+  const router = useRouter();
+  const [practices, setPractices] = useState<TeamPractice[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [selectedPracticeId, setSelectedPracticeId] = useState<string | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const pageSize = 20;
 
   const {
     isBasicFormOpen,
@@ -130,27 +129,28 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
     openBasicForm,
     closeBasicForm,
     setLoading: setFormLoading,
-  } = usePracticeFormStore()
+  } = usePracticeStore();
 
   // チームの練習記録を取得（関数として抽出）
   const loadTeamPractices = useCallback(async () => {
     try {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
 
-      const offset = (currentPage - 1) * pageSize
+      const offset = (currentPage - 1) * pageSize;
 
       // 総件数とデータを並列取得（パフォーマンス最適化）
       const [countResult, practicesResult] = await Promise.all([
         // 総件数を取得
         supabase
-          .from('practices')
-          .select('*', { count: 'exact', head: true })
-          .eq('team_id', teamId),
+          .from("practices")
+          .select("*", { count: "exact", head: true })
+          .eq("team_id", teamId),
         // チームIDが設定された練習記録を取得
         supabase
-          .from('practices')
-          .select(`
+          .from("practices")
+          .select(
+            `
             id,
             user_id,
             date,
@@ -171,52 +171,53 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
               distance,
               practice_times (time)
             )
-          `)
-          .eq('team_id', teamId)
-          .order('date', { ascending: false })
-          .range(offset, offset + pageSize - 1)
-      ])
+          `,
+          )
+          .eq("team_id", teamId)
+          .order("date", { ascending: false })
+          .range(offset, offset + pageSize - 1),
+      ]);
 
-      if (countResult.error) throw countResult.error
-      if (practicesResult.error) throw practicesResult.error
+      if (countResult.error) throw countResult.error;
+      if (practicesResult.error) throw practicesResult.error;
 
-      setTotalCount(countResult.count || 0)
+      setTotalCount(countResult.count || 0);
       const mappedPractices = (practicesResult.data || []).map((record) =>
-        mapPracticeRecordToTeamPractice(record as PracticeRecord)
-      )
-      setPractices(mappedPractices)
+        mapPracticeRecordToTeamPractice(record as PracticeRecord),
+      );
+      setPractices(mappedPractices);
     } catch (err) {
-      console.error('チーム練習情報の取得に失敗:', err)
-      setError('チーム練習情報の取得に失敗しました')
+      console.error("チーム練習情報の取得に失敗:", err);
+      setError("チーム練習情報の取得に失敗しました");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [teamId, supabase, currentPage, pageSize])
+  }, [teamId, supabase, currentPage, pageSize]);
 
   // 初回読み込みとページ変更時の読み込み
   useEffect(() => {
-    loadTeamPractices()
-  }, [loadTeamPractices])
+    loadTeamPractices();
+  }, [loadTeamPractices]);
 
   const handleAddPractice = () => {
-    openBasicForm(new Date())
-  }
+    openBasicForm(new Date());
+  };
 
   const handlePracticeBasicSubmit = async (
     basicData: { date: string; title: string; place: string; note: string },
     _imageData?: PracticeImageData,
-    _continueToNext?: boolean
+    _continueToNext?: boolean,
   ) => {
     // ユーザーがログインしていない場合はエラーを表示して早期リターン
     if (!user) {
-      setError('練習記録を作成するにはログインが必要です')
-      closeBasicForm()
-      return
+      setError("練習記録を作成するにはログインが必要です");
+      closeBasicForm();
+      return;
     }
 
-    setFormLoading(true)
+    setFormLoading(true);
     try {
-      const api = new TeamPracticesAPI(supabase)
+      const api = new TeamPracticesAPI(supabase);
       await api.create({
         user_id: user.id,
         team_id: teamId,
@@ -224,45 +225,44 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
         title: basicData.title || null,
         place: basicData.place || null,
         note: basicData.note || null,
-      })
+      });
 
-      closeBasicForm()
-      setCurrentPage(1)
+      closeBasicForm();
+      setCurrentPage(1);
       // loadTeamPracticesはuseEffectで自動実行される
     } catch (err) {
-      console.error('練習の作成に失敗:', err)
-      setError('練習の作成に失敗しました')
+      console.error("練習の作成に失敗:", err);
+      setError("練習の作成に失敗しました");
     } finally {
-      setFormLoading(false)
+      setFormLoading(false);
     }
-  }
+  };
 
   const handlePageChange = (page: number) => {
-    setCurrentPage(page)
+    setCurrentPage(page);
     // loadTeamPracticesはuseEffectで自動実行される
-  }
+  };
 
   // 練習ログ入力ページへ遷移
   const handlePracticeClick = (practiceId: string) => {
     if (isAdmin) {
-      router.push(`/teams-admin/${teamId}/practices/${practiceId}/logs`)
+      router.push(`/teams-admin/${teamId}/practices/${practiceId}/logs`);
     }
-  }
+  };
 
   // キーボード操作ハンドラー
   const handlePracticeKeyDown = (e: React.KeyboardEvent, practiceId: string) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      handlePracticeClick(practiceId)
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handlePracticeClick(practiceId);
     }
-  }
+  };
 
   // 詳細モーダルを開く
   const handleOpenDetail = (practiceId: string) => {
-    setSelectedPracticeId(practiceId)
-    setShowDetailModal(true)
-  }
-
+    setSelectedPracticeId(practiceId);
+    setShowDetailModal(true);
+  };
 
   if (loading) {
     return (
@@ -280,7 +280,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -296,7 +296,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
           </button>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -318,190 +318,186 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
           )}
         </div>
 
-      {/* 練習記録一覧 */}
-      <div className="space-y-4">
-        {practices.map((practice) => {
-          const practiceDate = format(new Date(practice.date), 'M月d日(E)', { locale: ja })
-          const hasLogs = practice.practiceLogs && practice.practiceLogs.length > 0
-          const ariaLabel = isAdmin 
-            ? `${practiceDate}の練習記録${hasLogs ? 'を編集' : 'を追加'}`
-            : undefined
+        {/* 練習記録一覧 */}
+        <div className="space-y-4">
+          {practices.map((practice) => {
+            const practiceDate = format(new Date(practice.date), "M月d日(E)", { locale: ja });
+            const hasLogs = practice.practiceLogs && practice.practiceLogs.length > 0;
+            const ariaLabel = isAdmin
+              ? `${practiceDate}の練習記録${hasLogs ? "を編集" : "を追加"}`
+              : undefined;
 
-          if (isAdmin) {
-            return (
-              <div
-                key={practice.id}
-                onClick={() => handlePracticeClick(practice.id)}
-                onKeyDown={(e) => handlePracticeKeyDown(e, practice.id)}
-                tabIndex={0}
-                role="button"
-                aria-label={ariaLabel}
-                className="w-full text-left border border-gray-200 rounded-lg p-4 transition-colors duration-200 cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
-                      <span className="text-lg font-medium text-gray-900">
-                        {practiceDate}
-                      </span>
-                      <span className="text-sm text-gray-500">
-                        by {practice.users?.name || practice.createdByUser?.name || 'Unknown'}
-                      </span>
-                    </div>
-                    
-                    {practice.title && (
-                      <div className="flex items-center space-x-2 mb-1">
-                        <span className="text-sm font-medium text-gray-900">{practice.title}</span>
-                      </div>
-                    )}
-                    
-                    {practice.place && (
-                      <div className="flex items-center space-x-2 mb-1">
-                        <MapPinIcon className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm text-gray-600">{practice.place}</span>
-                      </div>
-                    )}
-                    
-                    {practice.note && (
-                      <p className="text-sm text-gray-600 mb-2">{practice.note}</p>
-                    )}
-                    
-                    {hasLogs ? (
-                      <div className="flex items-center space-x-2">
-                        <ClockIcon className="h-4 w-4 text-green-500" />
-                        <span className="text-sm text-green-600 font-medium">
-                          {practice.practiceLogs!.length}セットの練習記録あり
-                        </span>
-                        <span className="text-xs text-gray-500 flex items-center">
-                          <PencilSquareIcon className="h-3 w-3 mr-1" />
-                          クリックで編集
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center space-x-2">
-                        <ClockIcon className="h-4 w-4 text-gray-400" />
+            if (isAdmin) {
+              return (
+                <div
+                  key={practice.id}
+                  onClick={() => handlePracticeClick(practice.id)}
+                  onKeyDown={(e) => handlePracticeKeyDown(e, practice.id)}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={ariaLabel}
+                  className="w-full text-left border border-gray-200 rounded-lg p-4 transition-colors duration-200 cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
+                        <span className="text-lg font-medium text-gray-900">{practiceDate}</span>
                         <span className="text-sm text-gray-500">
-                          練習記録なし
-                        </span>
-                        <span className="text-xs text-blue-600 flex items-center">
-                          <PlusIcon className="h-3 w-3 mr-1" />
-                          クリックで追加
+                          by {practice.users?.name || practice.createdByUser?.name || "Unknown"}
                         </span>
                       </div>
-                    )}
-                  </div>
 
-                  <div className="flex flex-col items-end gap-2">
-                    <p className="text-xs text-gray-500">
-                      {format(new Date(practice.createdAt), 'M/d HH:mm')}
-                    </p>
-                    {hasLogs && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleOpenDetail(practice.id)
-                        }}
-                        onKeyDown={(e) => e.stopPropagation()}
-                        className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-                        aria-label={`${practiceDate}の練習記録を閲覧`}
-                      >
-                        <EyeIcon className="h-3.5 w-3.5 mr-1" />
-                        詳細
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )
-          } else {
-            return (
-              <div
-                key={practice.id}
-                className="w-full text-left border border-gray-200 rounded-lg p-4"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
-                      <span className="text-lg font-medium text-gray-900">
-                        {practiceDate}
-                      </span>
+                      {practice.title && (
+                        <div className="flex items-center space-x-2 mb-1">
+                          <span className="text-sm font-medium text-gray-900">
+                            {practice.title}
+                          </span>
+                        </div>
+                      )}
+
+                      {practice.place && (
+                        <div className="flex items-center space-x-2 mb-1">
+                          <MapPinIcon className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm text-gray-600">{practice.place}</span>
+                        </div>
+                      )}
+
+                      {practice.note && (
+                        <p className="text-sm text-gray-600 mb-2">{practice.note}</p>
+                      )}
+
+                      {hasLogs ? (
+                        <div className="flex items-center space-x-2">
+                          <ClockIcon className="h-4 w-4 text-green-500" />
+                          <span className="text-sm text-green-600 font-medium">
+                            {practice.practiceLogs!.length}セットの練習記録あり
+                          </span>
+                          <span className="text-xs text-gray-500 flex items-center">
+                            <PencilSquareIcon className="h-3 w-3 mr-1" />
+                            クリックで編集
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-2">
+                          <ClockIcon className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm text-gray-500">練習記録なし</span>
+                          <span className="text-xs text-blue-600 flex items-center">
+                            <PlusIcon className="h-3 w-3 mr-1" />
+                            クリックで追加
+                          </span>
+                        </div>
+                      )}
                     </div>
 
-                    {practice.title && (
-                      <div className="flex items-center space-x-2 mb-1">
-                        <span className="text-sm font-medium text-gray-900">{practice.title}</span>
-                      </div>
-                    )}
-
-                    {practice.place && (
-                      <div className="flex items-center space-x-2 mb-1">
-                        <MapPinIcon className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm text-gray-600">{practice.place}</span>
-                      </div>
-                    )}
-
-                    {practice.note && (
-                      <p className="text-sm text-gray-600 mb-2">{practice.note}</p>
-                    )}
-
-                    {hasLogs ? (
-                      <div className="flex items-center space-x-2">
-                        <ClockIcon className="h-4 w-4 text-green-500" />
-                        <span className="text-sm text-green-600 font-medium">
-                          {practice.practiceLogs!.length}セットの練習記録あり
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center space-x-2">
-                        <ClockIcon className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm text-gray-500">
-                          練習記録なし
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="text-right">
-                    <p className="text-xs text-gray-500">
-                      {format(new Date(practice.createdAt), 'M/d HH:mm')}
-                    </p>
+                    <div className="flex flex-col items-end gap-2">
+                      <p className="text-xs text-gray-500">
+                        {format(new Date(practice.createdAt), "M/d HH:mm")}
+                      </p>
+                      {hasLogs && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenDetail(practice.id);
+                          }}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                          aria-label={`${practiceDate}の練習記録を閲覧`}
+                        >
+                          <EyeIcon className="h-3.5 w-3.5 mr-1" />
+                          詳細
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )
-          }
-        })}
-        
-        {practices.length === 0 && !loading && (
-          <div className="text-center py-8">
-            <ClockIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">練習記録がありません</p>
-            {isAdmin && (
-              <button
-                onClick={handleAddPractice}
-                className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-              >
-                最初の練習記録を追加
-              </button>
-            )}
+              );
+            } else {
+              return (
+                <div
+                  key={practice.id}
+                  className="w-full text-left border border-gray-200 rounded-lg p-4"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
+                        <span className="text-lg font-medium text-gray-900">{practiceDate}</span>
+                      </div>
+
+                      {practice.title && (
+                        <div className="flex items-center space-x-2 mb-1">
+                          <span className="text-sm font-medium text-gray-900">
+                            {practice.title}
+                          </span>
+                        </div>
+                      )}
+
+                      {practice.place && (
+                        <div className="flex items-center space-x-2 mb-1">
+                          <MapPinIcon className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm text-gray-600">{practice.place}</span>
+                        </div>
+                      )}
+
+                      {practice.note && (
+                        <p className="text-sm text-gray-600 mb-2">{practice.note}</p>
+                      )}
+
+                      {hasLogs ? (
+                        <div className="flex items-center space-x-2">
+                          <ClockIcon className="h-4 w-4 text-green-500" />
+                          <span className="text-sm text-green-600 font-medium">
+                            {practice.practiceLogs!.length}セットの練習記録あり
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-2">
+                          <ClockIcon className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm text-gray-500">練習記録なし</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500">
+                        {format(new Date(practice.createdAt), "M/d HH:mm")}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+          })}
+
+          {practices.length === 0 && !loading && (
+            <div className="text-center py-8">
+              <ClockIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600">練習記録がありません</p>
+              {isAdmin && (
+                <button
+                  onClick={handleAddPractice}
+                  className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                >
+                  最初の練習記録を追加
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ページング */}
+        {totalCount > 0 && (
+          <div className="mt-4 pt-4 px-4 sm:px-6 pb-6 border-t border-gray-200">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(totalCount / pageSize)}
+              totalItems={totalCount}
+              itemsPerPage={pageSize}
+              onPageChange={handlePageChange}
+            />
           </div>
         )}
-      </div>
-
-      {/* ページング */}
-      {totalCount > 0 && (
-        <div className="mt-4 pt-4 px-4 sm:px-6 pb-6 border-t border-gray-200">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={Math.ceil(totalCount / pageSize)}
-            totalItems={totalCount}
-            itemsPerPage={pageSize}
-            onPageChange={handlePageChange}
-          />
-        </div>
-      )}
       </div>
 
       {/* チーム練習記録作成モーダル */}
@@ -521,12 +517,12 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
         <TeamPracticeDetailModal
           isOpen={showDetailModal}
           onClose={() => {
-            setShowDetailModal(false)
-            setSelectedPracticeId(null)
+            setShowDetailModal(false);
+            setSelectedPracticeId(null);
           }}
           practiceId={selectedPracticeId}
         />
       )}
     </>
-  )
+  );
 }

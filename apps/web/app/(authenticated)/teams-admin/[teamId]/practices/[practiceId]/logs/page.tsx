@@ -1,30 +1,28 @@
-import React, { Suspense } from 'react'
-import type { Metadata } from 'next'
-import { createAuthenticatedServerClient } from '@/lib/supabase-server-auth'
-import PracticeLogDataLoader from './_server/PracticeLogDataLoader'
+import React, { Suspense } from "react";
+import type { Metadata } from "next";
+import { createAuthenticatedServerClient } from "@/lib/supabase-server-auth";
+import PracticeLogDataLoader from "./_server/PracticeLogDataLoader";
 
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ teamId: string; practiceId: string }>
+  params: Promise<{ teamId: string; practiceId: string }>;
 }): Promise<Metadata> {
-  const { practiceId } = await params
-  const supabase = await createAuthenticatedServerClient()
+  const { practiceId } = await params;
+  const supabase = await createAuthenticatedServerClient();
   const { data: practice } = await supabase
-    .from('practices')
-    .select('title')
-    .eq('id', practiceId)
-    .single<{ title: string | null }>()
+    .from("practices")
+    .select("title")
+    .eq("id", practiceId)
+    .single<{ title: string | null }>();
 
   return {
-    title: practice?.title
-      ? `${practice.title} - 練習記録 | SwimHub`
-      : '練習記録 | SwimHub',
-  }
+    title: practice?.title ? `${practice.title} - 練習記録 | SwimHub` : "練習記録 | SwimHub",
+  };
 }
 
 interface PracticeLogPageProps {
-  params: Promise<{ teamId: string; practiceId: string }>
+  params: Promise<{ teamId: string; practiceId: string }>;
 }
 
 /**
@@ -32,7 +30,7 @@ interface PracticeLogPageProps {
  * adminがチームメンバーのPractice_Log/Practice_timeを代理入力する
  */
 export default async function PracticeLogPage({ params }: PracticeLogPageProps) {
-  const { teamId, practiceId } = await params
+  const { teamId, practiceId } = await params;
 
   return (
     <Suspense
@@ -52,5 +50,5 @@ export default async function PracticeLogPage({ params }: PracticeLogPageProps) 
     >
       <PracticeLogDataLoader teamId={teamId} practiceId={practiceId} />
     </Suspense>
-  )
+  );
 }

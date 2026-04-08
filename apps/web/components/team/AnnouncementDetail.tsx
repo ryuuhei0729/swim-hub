@@ -1,19 +1,19 @@
-'use client'
+"use client";
 
 import {
   useTeamAnnouncementQuery,
   useDeleteTeamAnnouncementMutation,
-} from '@apps/shared/hooks/queries/announcements'
-import { useAuth } from '@/contexts'
-import type { TeamAnnouncement } from '@apps/shared/types/team'
-import { formatDateTime } from '@apps/shared/utils/date'
+} from "@apps/shared/hooks/queries/announcements";
+import { useAuth } from "@/contexts";
+import type { TeamAnnouncement } from "@apps/shared/types/team";
+import { formatDateTime } from "@apps/shared/utils/date";
 
 interface AnnouncementDetailProps {
-  teamId: string
-  announcementId: string
-  isAdmin: boolean
-  onClose: () => void
-  onEdit?: (announcement: TeamAnnouncement) => void
+  teamId: string;
+  announcementId: string;
+  isAdmin: boolean;
+  onClose: () => void;
+  onEdit?: (announcement: TeamAnnouncement) => void;
 }
 
 export const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({
@@ -21,27 +21,26 @@ export const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({
   announcementId,
   isAdmin,
   onClose,
-  onEdit
+  onEdit,
 }) => {
-  const { supabase } = useAuth()
+  const { supabase } = useAuth();
   const {
     data: announcement,
     isLoading: loading,
-    error
-  } = useTeamAnnouncementQuery(supabase, teamId, announcementId)
-  const deleteAnnouncementMutation = useDeleteTeamAnnouncementMutation(supabase)
+    error,
+  } = useTeamAnnouncementQuery(supabase, teamId, announcementId);
+  const deleteAnnouncementMutation = useDeleteTeamAnnouncementMutation(supabase);
 
   const handleDelete = async () => {
-    if (!announcement || !confirm('このお知らせを削除しますか？')) return
-    
-    try {
-      await deleteAnnouncementMutation.mutateAsync({ id: announcement.id, teamId })
-      onClose()
-    } catch (error) {
-      console.error('削除エラー:', error)
-    }
-  }
+    if (!announcement || !confirm("このお知らせを削除しますか？")) return;
 
+    try {
+      await deleteAnnouncementMutation.mutateAsync({ id: announcement.id, teamId });
+      onClose();
+    } catch (error) {
+      console.error("削除エラー:", error);
+    }
+  };
 
   if (loading) {
     return (
@@ -52,7 +51,7 @@ export const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (error || !announcement) {
@@ -70,7 +69,7 @@ export const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -94,7 +93,7 @@ export const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({
                 disabled={deleteAnnouncementMutation.isPending}
                 className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
               >
-                {deleteAnnouncementMutation.isPending ? '削除中...' : '削除'}
+                {deleteAnnouncementMutation.isPending ? "削除中..." : "削除"}
               </button>
             )}
             <button
@@ -110,9 +109,7 @@ export const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
           {/* タイトル */}
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              {announcement.title}
-            </h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">{announcement.title}</h1>
             <div className="flex items-center gap-4 text-sm text-gray-500">
               {!announcement.is_published && (
                 <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs">
@@ -124,7 +121,7 @@ export const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({
                 <span>更新: {formatDateTime(announcement.updated_at)}</span>
               )}
             </div>
-            
+
             {/* 表示期間 */}
             {(announcement.start_at || announcement.end_at) && (
               <div className="mt-3 p-3 bg-gray-50 rounded-lg">
@@ -143,20 +140,17 @@ export const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({
                   )}
                 </div>
                 {/* 期間外の場合は警告表示 */}
-                {announcement.is_published && (() => {
-                  const now = new Date()
-                  const startAt = announcement.start_at ? new Date(announcement.start_at) : null
-                  const endAt = announcement.end_at ? new Date(announcement.end_at) : null
-                  const isOutOfPeriod = 
-                    (startAt && startAt > now) || 
-                    (endAt && endAt < now)
-                  
-                  return isOutOfPeriod ? (
-                    <p className="text-xs text-orange-600 mt-1">
-                      ⚠️ 現在は表示期間外です
-                    </p>
-                  ) : null
-                })()}
+                {announcement.is_published &&
+                  (() => {
+                    const now = new Date();
+                    const startAt = announcement.start_at ? new Date(announcement.start_at) : null;
+                    const endAt = announcement.end_at ? new Date(announcement.end_at) : null;
+                    const isOutOfPeriod = (startAt && startAt > now) || (endAt && endAt < now);
+
+                    return isOutOfPeriod ? (
+                      <p className="text-xs text-orange-600 mt-1">⚠️ 現在は表示期間外です</p>
+                    ) : null;
+                  })()}
               </div>
             )}
           </div>
@@ -170,5 +164,5 @@ export const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};

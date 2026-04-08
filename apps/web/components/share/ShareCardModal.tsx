@@ -1,93 +1,123 @@
-'use client'
+"use client";
 
-import { useState, useRef, useCallback } from 'react'
-import { CompetitionShareCard } from './CompetitionShareCard'
-import { PracticeShareCard } from './PracticeShareCard'
-import type { CompetitionShareData, PracticeShareData } from './types'
-import { elementToImage, downloadImage } from './utils'
+import { useState, useRef, useCallback, useEffect } from "react";
+import { CompetitionShareCard } from "./CompetitionShareCard";
+import { PracticeShareCard } from "./PracticeShareCard";
+import type { CompetitionShareData, PracticeShareData } from "./types";
+import { elementToImage, downloadImage } from "./utils";
 
-type ShareCardType = 'competition' | 'practice'
+type ShareCardType = "competition" | "practice";
 
 interface ShareCardModalProps {
-  isOpen: boolean
-  onClose: () => void
-  type: ShareCardType
-  data: CompetitionShareData | PracticeShareData
+  isOpen: boolean;
+  onClose: () => void;
+  type: ShareCardType;
+  data: CompetitionShareData | PracticeShareData;
 }
 
 /**
  * シェアカードモーダル
  * プレビューと画像ダウンロード機能を提供
  */
-export function ShareCardModal({
-  isOpen,
-  onClose,
-  type,
-  data,
-}: ShareCardModalProps) {
-  const [isGenerating, setIsGenerating] = useState(false)
-  const cardRef = useRef<HTMLDivElement>(null)
+export function ShareCardModal({ isOpen, onClose, type, data }: ShareCardModalProps) {
+  const [isGenerating, setIsGenerating] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const handleDownload = useCallback(async () => {
-    if (!cardRef.current) return
+    if (!cardRef.current) return;
 
-    setIsGenerating(true)
+    setIsGenerating(true);
     try {
-      const dataUrl = await elementToImage(cardRef.current, 3) // 高解像度用に3倍スケール
+      const dataUrl = await elementToImage(cardRef.current, 3); // 高解像度用に3倍スケール
       const filename =
-        type === 'competition'
+        type === "competition"
           ? `swimhub-record-${Date.now()}.png`
-          : `swimhub-practice-${Date.now()}.png`
-      downloadImage(dataUrl, filename)
+          : `swimhub-practice-${Date.now()}.png`;
+      downloadImage(dataUrl, filename);
     } catch (error) {
-      console.error('画像生成に失敗しました:', error)
+      console.error("画像生成に失敗しました:", error);
     } finally {
-      setIsGenerating(false)
+      setIsGenerating(false);
     }
-  }, [type])
+  }, [type]);
 
   const handleShare = useCallback(async () => {
-    if (!cardRef.current) return
+    if (!cardRef.current) return;
 
     // Web Share APIが利用可能かチェック
     if (!navigator.share || !navigator.canShare) {
       // フォールバック：ダウンロードを促す
-      handleDownload()
-      return
+      handleDownload();
+      return;
     }
 
-    setIsGenerating(true)
+    setIsGenerating(true);
     try {
-      const dataUrl = await elementToImage(cardRef.current, 3)
-      const blob = await (await fetch(dataUrl)).blob()
-      const file = new File([blob], 'swimhub-share.png', { type: 'image/png' })
+      const dataUrl = await elementToImage(cardRef.current, 3);
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], "swimhub-share.png", { type: "image/png" });
 
       if (navigator.canShare({ files: [file] })) {
         const shareText =
-          type === 'competition'
-            ? '【Swimhub】\n大会記録をシェアしました！\n\n水泳記録管理アプリ「SwimHub」で記録を管理しよう!\nhttps://swim-hub.app'
-            : '【Swimhub】\n練習記録をシェアしました！\n\n水泳記録管理アプリ「SwimHub」で練習を記録しよう!\nhttps://swim-hub.app'
+          type === "competition"
+            ? "【Swimhub】\n大会記録をシェアしました！\n\n水泳記録管理アプリ「SwimHub」で記録を管理しよう!\nhttps://swim-hub.app"
+            : "【Swimhub】\n練習記録をシェアしました！\n\n水泳記録管理アプリ「SwimHub」で練習を記録しよう!\nhttps://swim-hub.app";
 
         await navigator.share({
           files: [file],
-          title: 'SwimHub',
+          title: "SwimHub",
           text: shareText,
-        })
+        });
       } else {
         // ファイル共有がサポートされていない場合はダウンロード
-        handleDownload()
+        handleDownload();
       }
     } catch (error) {
       // ユーザーがキャンセルした場合はエラーを無視
-      if ((error as Error).name !== 'AbortError') {
-        console.error('共有に失敗しました:', error)
+      if ((error as Error).name !== "AbortError") {
+        console.error("共有に失敗しました:", error);
       }
     } finally {
-      setIsGenerating(false)
+      setIsGenerating(false);
     }
-  }, [type, handleDownload])
+  }, [type, handleDownload]);
 
-  if (!isOpen) return null
+  // プレビュー領域に合わせてカードを動的スケーリング
+  const previewRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.8);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const updateScale = () => {
+      const preview = previewRef.current;
+      const inner = innerRef.current;
+      if (!preview || !inner) return;
+
+      // カード本来のサイズを取得（scale=1 に一時復元して測定）
+      inner.style.transform = "scale(1)";
+      const cardWidth = inner.scrollWidth;
+      const cardHeight = inner.scrollHeight;
+      inner.style.transform = "";
+
+      // プレビュー領域の利用可能サイズ
+      const availWidth = preview.clientWidth - 32; // padding分
+      const availHeight = preview.clientHeight;
+
+      if (cardWidth > 0 && cardHeight > 0) {
+        const s = Math.min(availWidth / cardWidth, availHeight / cardHeight, 1);
+        setScale(Math.max(s, 0.3)); // 最小 0.3
+      }
+    };
+
+    // DOM描画後に計測
+    requestAnimationFrame(() => requestAnimationFrame(updateScale));
+    window.addEventListener("resize", updateScale);
+    return () => window.removeEventListener("resize", updateScale);
+  }, [isOpen, data]);
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
@@ -99,18 +129,18 @@ export function ShareCardModal({
         tabIndex={0}
         aria-label="モーダルを閉じる"
         onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            onClose()
+          if (e.key === "Enter" || e.key === " ") {
+            onClose();
           }
         }}
       />
 
       {/* モーダルコンテンツ */}
-      <div className="relative z-10 bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden">
+      <div className="relative z-10 bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* ヘッダー */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-800">
+        <div className="flex items-center justify-between p-4 border-b border-gray-800 shrink-0">
           <h3 className="text-lg font-semibold text-white">
-            {type === 'competition' ? '記録をシェア' : '練習メニューをシェア'}
+            {type === "competition" ? "記録をシェア" : "練習メニューをシェア"}
           </h3>
           <button
             onClick={onClose}
@@ -133,19 +163,16 @@ export function ShareCardModal({
           </button>
         </div>
 
-        {/* プレビュー */}
-        <div className="p-4 flex justify-center overflow-y-auto max-h-[60vh]">
-          <div className="transform scale-[0.8] origin-top">
-            {type === 'competition' ? (
-              <CompetitionShareCard
-                ref={cardRef}
-                data={data as CompetitionShareData}
-              />
+        {/* プレビュー — カードを画面内に収まるよう動的スケーリング */}
+        <div ref={previewRef} className="flex-1 min-h-0 flex items-start justify-center overflow-hidden p-4">
+          <div
+            ref={innerRef}
+            style={{ transform: `scale(${scale})`, transformOrigin: "top center" }}
+          >
+            {type === "competition" ? (
+              <CompetitionShareCard ref={cardRef} data={data as CompetitionShareData} />
             ) : (
-              <PracticeShareCard
-                ref={cardRef}
-                data={data as PracticeShareData}
-              />
+              <PracticeShareCard ref={cardRef} data={data as PracticeShareData} />
             )}
           </div>
         </div>
@@ -158,11 +185,7 @@ export function ShareCardModal({
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gray-800 hover:bg-gray-700 text-white font-medium transition-colors disabled:opacity-50"
           >
             {isGenerating ? (
-              <svg
-                className="w-5 h-5 animate-spin"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
+              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle
                   className="opacity-25"
                   cx="12"
@@ -178,12 +201,7 @@ export function ShareCardModal({
                 />
               </svg>
             ) : (
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -200,12 +218,7 @@ export function ShareCardModal({
             disabled={isGenerating}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-800 hover:bg-blue-700 text-white font-medium transition-all disabled:opacity-50"
           >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -218,5 +231,5 @@ export function ShareCardModal({
         </div>
       </div>
     </div>
-  )
+  );
 }

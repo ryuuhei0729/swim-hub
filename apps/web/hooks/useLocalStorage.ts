@@ -1,93 +1,93 @@
-'use client'
+"use client";
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export function useLocalStorage<T>(key: string, initialValue: T, version = 1) {
-  const versionedKey = `${key}_v${version}`
+  const versionedKey = `${key}_v${version}`;
 
   // 初期値を取得する関数
   const getInitialValue = (): T => {
-    if (typeof window === 'undefined') {
-      return initialValue
+    if (typeof window === "undefined") {
+      return initialValue;
     }
 
     // 1. 現在のバージョンキーを確認
-    const item = window.localStorage.getItem(versionedKey)
+    const item = window.localStorage.getItem(versionedKey);
     if (item) {
       try {
-        return JSON.parse(item)
+        return JSON.parse(item);
       } catch (error) {
         if (process.env.NODE_ENV !== "production") {
-          console.warn(`Corrupted localStorage key "${versionedKey}", removing:`, error)
+          console.warn(`Corrupted localStorage key "${versionedKey}", removing:`, error);
         }
-        window.localStorage.removeItem(versionedKey)
+        window.localStorage.removeItem(versionedKey);
       }
     }
 
     // 2. 過去バージョンから最新のものを探してマイグレーション
     //    key_v{version-1}, key_v{version-2}, …, key_v1, key の順に検索
     for (let v = version - 1; v >= 0; v--) {
-      const legacyKey = v === 0 ? key : `${key}_v${v}`
-      const legacyItem = window.localStorage.getItem(legacyKey)
+      const legacyKey = v === 0 ? key : `${key}_v${v}`;
+      const legacyItem = window.localStorage.getItem(legacyKey);
       if (legacyItem) {
         try {
-          const parsed = JSON.parse(legacyItem)
-          window.localStorage.setItem(versionedKey, JSON.stringify(parsed))
-          return parsed
+          const parsed = JSON.parse(legacyItem);
+          window.localStorage.setItem(versionedKey, JSON.stringify(parsed));
+          return parsed;
         } catch (error) {
           if (process.env.NODE_ENV !== "production") {
-            console.warn(`Corrupted localStorage key "${legacyKey}", removing:`, error)
+            console.warn(`Corrupted localStorage key "${legacyKey}", removing:`, error);
           }
-          window.localStorage.removeItem(legacyKey)
+          window.localStorage.removeItem(legacyKey);
         }
       }
     }
 
     // 3. 何も見つからなければ初期値を返す
-    return initialValue
-  }
+    return initialValue;
+  };
 
-  const [storedValue, setStoredValue] = useState<T>(getInitialValue)
+  const [storedValue, setStoredValue] = useState<T>(getInitialValue);
 
   // 初回マウント時の書き込みをスキップするためのref
-  const isInitialMount = useRef(true)
+  const isInitialMount = useRef(true);
 
   // storedValue が変わったら localStorage に同期する
   useEffect(() => {
     if (isInitialMount.current) {
-      isInitialMount.current = false
-      return
+      isInitialMount.current = false;
+      return;
     }
 
     try {
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(versionedKey, JSON.stringify(storedValue))
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(versionedKey, JSON.stringify(storedValue));
       }
     } catch (error) {
       if (process.env.NODE_ENV !== "production") {
-        console.warn(`Error setting localStorage key "${versionedKey}":`, error)
+        console.warn(`Error setting localStorage key "${versionedKey}":`, error);
       }
     }
-  }, [storedValue, versionedKey])
+  }, [storedValue, versionedKey]);
 
   // 値を設定する関数（純粋な state 更新のみ）
   const setValue = useCallback((value: T | ((val: T) => T)) => {
-    setStoredValue((prev) => value instanceof Function ? value(prev) : value)
-  }, [])
+    setStoredValue((prev) => (value instanceof Function ? value(prev) : value));
+  }, []);
 
   // 値を削除する関数
   const removeValue = useCallback(() => {
-    setStoredValue(initialValue)
+    setStoredValue(initialValue);
     try {
-      if (typeof window !== 'undefined') {
-        window.localStorage.removeItem(versionedKey)
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem(versionedKey);
       }
     } catch (error) {
       if (process.env.NODE_ENV !== "production") {
-        console.warn(`Error removing localStorage key "${versionedKey}":`, error)
+        console.warn(`Error removing localStorage key "${versionedKey}":`, error);
       }
     }
-  }, [initialValue, versionedKey])
+  }, [initialValue, versionedKey]);
 
-  return [storedValue, setValue, removeValue] as const
+  return [storedValue, setValue, removeValue] as const;
 }

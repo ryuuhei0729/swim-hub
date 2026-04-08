@@ -1,5 +1,5 @@
-import React, { Suspense } from 'react'
-import TeamsDataLoader from './_server/TeamsDataLoader'
+import React, { Suspense } from "react";
+import TeamsDataLoader from "./_server/TeamsDataLoader";
 
 /**
  * チームページ（Server Component）
@@ -23,5 +23,5 @@ export default async function TeamsPage() {
     >
       <TeamsDataLoader />
     </Suspense>
-  )
+  );
 }

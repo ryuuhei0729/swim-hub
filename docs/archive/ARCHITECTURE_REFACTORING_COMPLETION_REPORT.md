@@ -36,13 +36,13 @@
 
 ### 定量的成果
 
-| 指標 | Before | After | 改善率 |
-|------|--------|-------|--------|
-| **型定義の重複** | 3箇所 | 1箇所 | -67% ✅ |
-| **コンポーネント分類** | 曖昧 | 明確 | 100%改善 ✅ |
-| **フックの分散** | 2箇所 | 1箇所 | -50% ✅ |
-| **テスト配置** | 不統一 | 統一 | 100%改善 ✅ |
-| **設定重複** | 高 | 低 | -70% ✅ |
+| 指標                   | Before | After | 改善率      |
+| ---------------------- | ------ | ----- | ----------- |
+| **型定義の重複**       | 3箇所  | 1箇所 | -67% ✅     |
+| **コンポーネント分類** | 曖昧   | 明確  | 100%改善 ✅ |
+| **フックの分散**       | 2箇所  | 1箇所 | -50% ✅     |
+| **テスト配置**         | 不統一 | 統一  | 100%改善 ✅ |
+| **設定重複**           | 高     | 低    | -70% ✅     |
 
 ### 定性的成果
 
@@ -162,8 +162,8 @@ export default function BaseModal({
   isOpen,
   onClose,
   title,
-  size = 'md',
-  children
+  size = "md",
+  children,
 }: BaseModalProps) {
   // 共通モーダル実装
 }
@@ -173,10 +173,7 @@ export default function BaseModal({
 
 ```typescript
 // apps/web/hooks/useAsyncState.ts
-export function useAsyncState<T>(
-  asyncFn: () => Promise<T>,
-  deps: React.DependencyList = []
-) {
+export function useAsyncState<T>(asyncFn: () => Promise<T>, deps: React.DependencyList = []) {
   // 非同期状態管理の実装
 }
 ```
@@ -186,15 +183,15 @@ export function useAsyncState<T>(
 ```typescript
 // packages/shared/types/database.ts
 export interface TeamAnnouncement {
-  id: string
-  team_id: string
-  title: string
-  content: string
-  is_published: boolean
-  created_by: string
-  created_at: string
-  updated_at: string
-  published_at?: string
+  id: string;
+  team_id: string;
+  title: string;
+  content: string;
+  is_published: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  published_at?: string;
 }
 ```
 

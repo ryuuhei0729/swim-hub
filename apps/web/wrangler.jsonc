@@ -31,6 +31,10 @@
     {
       "binding": "R2_BUCKET",
       "bucket_name": "swim-hub-images-prod"
+    },
+    {
+      "binding": "R2_VIDEO_BUCKET",
+      "bucket_name": "swim-hub-videos-prod"
     }
   ],
 
@@ -56,6 +60,10 @@
         {
           "binding": "R2_BUCKET",
           "bucket_name": "swim-hub-images-dev"
+        },
+        {
+          "binding": "R2_VIDEO_BUCKET",
+          "bucket_name": "swim-hub-videos-dev"
         }
       ],
       // KV（プレビュー専用 - 本番キャッシュとの分離）

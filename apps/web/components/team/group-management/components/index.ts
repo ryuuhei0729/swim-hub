@@ -1,6 +1,6 @@
-export { BulkAssignModal } from './BulkAssignModal'
-export { CategorySection } from './CategorySection'
-export { GroupCard } from './GroupCard'
-export { GroupFormModal } from './GroupFormModal'
-export { GroupMemberListModal } from './GroupMemberListModal'
-export { GroupMemberModal } from './GroupMemberModal'
+export { BulkAssignModal } from "./BulkAssignModal";
+export { CategorySection } from "./CategorySection";
+export { GroupCard } from "./GroupCard";
+export { GroupFormModal } from "./GroupFormModal";
+export { GroupMemberListModal } from "./GroupMemberListModal";
+export { GroupMemberModal } from "./GroupMemberModal";

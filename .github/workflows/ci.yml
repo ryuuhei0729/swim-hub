@@ -191,8 +191,9 @@ jobs:
         SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: "dummy-secret"
 
     - name: Start Supabase stack
-      run: supabase start --workdir supabase
-      timeout-minutes: 5
+      # E2E テストでは edge functions を使用しないため edge-runtime を除外して起動安定性を向上
+      run: supabase start --workdir supabase --exclude edge-runtime
+      timeout-minutes: 8
       env:
         SUPABASE_DB_PASSWORD: postgres
         # CI環境ではGoogle OAuthは不要なため、ダミー値を設定して警告を抑制
@@ -311,10 +312,12 @@ jobs:
         E2E_SUPABASE_MODE: local
         E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
         E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+        RESEND_API_KEY: "re_dummy"
 
     - name: Stop Supabase stack
       if: always()
       run: supabase stop --workdir supabase
+      continue-on-error: true
 
   build:
     needs: [unit-tests, e2e-tests]

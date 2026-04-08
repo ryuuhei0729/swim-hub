@@ -1,1 +1,1 @@
-export { default as PracticeMenuItem } from './PracticeMenuItem'
+export { default as PracticeMenuItem } from "./PracticeMenuItem";

@@ -1,15 +1,15 @@
-'use client'
+"use client";
 
-import React from 'react'
-import Input from '@/components/ui/Input'
-import DatePicker from '@/components/ui/DatePicker'
-import type { RecordFormData } from '../types'
-import { POOL_TYPES } from '../types'
+import React from "react";
+import Input from "@/components/ui/Input";
+import DatePicker from "@/components/ui/DatePicker";
+import type { RecordFormData } from "../types";
+import { POOL_TYPES } from "../types";
 
 interface RecordBasicInfoProps {
-  formData: RecordFormData
-  onFieldChange: (field: keyof RecordFormData, value: string | number) => void
-  recordDateError?: string
+  formData: RecordFormData;
+  onFieldChange: (field: keyof RecordFormData, value: string | number) => void;
+  recordDateError?: string;
 }
 
 /**
@@ -28,23 +28,20 @@ export default function RecordBasicInfo({
           <DatePicker
             label="大会日"
             value={formData.recordDate}
-            onChange={(date) => onFieldChange('recordDate', date)}
+            onChange={(date) => onFieldChange("recordDate", date)}
             required
             error={recordDateError}
           />
         </div>
         <div>
-          <label
-            htmlFor="record-place"
-            className="block text-sm font-medium text-gray-700 mb-2"
-          >
+          <label htmlFor="record-place" className="block text-sm font-medium text-gray-700 mb-2">
             開催地
           </label>
           <Input
             id="record-place"
             type="text"
             value={formData.place}
-            onChange={(e) => onFieldChange('place', e.target.value)}
+            onChange={(e) => onFieldChange("place", e.target.value)}
             placeholder="例: 東京プール"
             required
             data-testid="tournament-place"
@@ -65,7 +62,7 @@ export default function RecordBasicInfo({
             id="competition-name"
             type="text"
             value={formData.competitionName}
-            onChange={(e) => onFieldChange('competitionName', e.target.value)}
+            onChange={(e) => onFieldChange("competitionName", e.target.value)}
             placeholder="例: 第○回水泳大会"
             required
             data-testid="tournament-name"
@@ -81,7 +78,7 @@ export default function RecordBasicInfo({
           <select
             id="tournament-pool-type"
             value={formData.poolType}
-            onChange={(e) => onFieldChange('poolType', parseInt(e.target.value))}
+            onChange={(e) => onFieldChange("poolType", parseInt(e.target.value))}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
             data-testid="tournament-pool-type"
@@ -95,5 +92,5 @@ export default function RecordBasicInfo({
         </div>
       </div>
     </>
-  )
+  );
 }

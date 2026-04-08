@@ -2,18 +2,16 @@
 // チームお知らせ取得用Server Component
 // =============================================================================
 
-import React from 'react'
-import { createAuthenticatedServerClient, getServerUser } from '@/lib/supabase-server-auth'
-import type { TeamMembership, Team } from '@apps/shared/types'
+import React from "react";
+import { createAuthenticatedServerClient, getServerUser } from "@/lib/supabase-server-auth";
+import type { TeamMembership, Team } from "@apps/shared/types";
 
 interface TeamMembershipWithTeam extends TeamMembership {
-  team?: Partial<Team>
+  team?: Partial<Team>;
 }
 
 interface TeamAnnouncementsSectionProps {
-  children: (data: {
-    teams: TeamMembershipWithTeam[]
-  }) => React.ReactNode
+  children: (data: { teams: TeamMembershipWithTeam[] }) => React.ReactNode;
 }
 
 /**
@@ -21,44 +19,46 @@ interface TeamAnnouncementsSectionProps {
  * Suspenseでラップして使用してください
  */
 export default async function TeamAnnouncementsSection({
-  children
+  children,
 }: TeamAnnouncementsSectionProps) {
-  const user = await getServerUser()
-  
+  const user = await getServerUser();
+
   if (!user) {
     // ユーザーが認証されていない場合は空配列を返す
-    return <>{children({ teams: [] })}</>
+    return <>{children({ teams: [] })}</>;
   }
 
-  const supabase = await createAuthenticatedServerClient()
+  const supabase = await createAuthenticatedServerClient();
 
-  let teams: TeamMembershipWithTeam[] = []
+  let teams: TeamMembershipWithTeam[] = [];
 
   try {
     // チームメンバーシップを取得（チーム情報を含む）
     const { data: memberships, error: membershipError } = await supabase
-      .from('team_memberships')
-      .select(`
+      .from("team_memberships")
+      .select(
+        `
         *,
         team:teams (
           id,
           name,
           description
         )
-      `)
-      .eq('user_id', user.id)
-      .eq('is_active', true)
+      `,
+      )
+      .eq("user_id", user.id)
+      .eq("is_active", true);
 
     if (membershipError) {
-      console.error('チーム情報の取得に失敗:', membershipError)
-      teams = []
+      console.error("チーム情報の取得に失敗:", membershipError);
+      teams = [];
     } else {
-      teams = (memberships || []) as unknown as TeamMembershipWithTeam[]
+      teams = (memberships || []) as unknown as TeamMembershipWithTeam[];
     }
   } catch (error) {
-    console.error('チームお知らせセクションのエラー:', error)
-    teams = []
+    console.error("チームお知らせセクションのエラー:", error);
+    teams = [];
   }
 
-  return <>{children({ teams })}</>
+  return <>{children({ teams })}</>;
 }

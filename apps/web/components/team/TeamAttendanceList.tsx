@@ -1,101 +1,105 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { useAuth } from '@/contexts'
-import { AttendanceAPI } from '@swim-hub/shared/api/attendance'
-import type { TeamAttendanceWithDetails } from '@swim-hub/shared/types/attendance'
-import { AttendanceStatus } from '@swim-hub/shared/types'
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useAuth } from "@/contexts";
+import { AttendanceAPI } from "@swim-hub/shared/api/attendance";
+import type { TeamAttendanceWithDetails } from "@swim-hub/shared/types/attendance";
+import { AttendanceStatus } from "@swim-hub/shared/types";
 
 export interface TeamAttendanceListProps {
-  practiceId?: string
-  competitionId?: string
-  isAdmin?: boolean
+  practiceId?: string;
+  competitionId?: string;
+  isAdmin?: boolean;
 }
 
-export default function TeamAttendanceList({ 
-  practiceId, 
+export default function TeamAttendanceList({
+  practiceId,
   competitionId,
-  isAdmin = false 
+  isAdmin = false,
 }: TeamAttendanceListProps) {
-  const [attendances, setAttendances] = useState<TeamAttendanceWithDetails[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [canSubmit, setCanSubmit] = useState(false)
-  const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
-  const [noteInput, setNoteInput] = useState<string>('')
-  
-  const { supabase } = useAuth()
-  const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase])
+  const [attendances, setAttendances] = useState<TeamAttendanceWithDetails[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [canSubmit, setCanSubmit] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [noteInput, setNoteInput] = useState<string>("");
+
+  const { supabase } = useAuth();
+  const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase]);
 
   const loadAttendances = useCallback(async () => {
     try {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
 
       if (practiceId) {
         // 出欠データと提出可否を並列取得
         const [data, canSubmitStatus] = await Promise.all([
           attendanceAPI.getAttendanceByPractice(practiceId),
-          attendanceAPI.canSubmitAttendance(practiceId, null)
-        ])
-        setAttendances(data)
-        setCanSubmit(canSubmitStatus)
+          attendanceAPI.canSubmitAttendance(practiceId, null),
+        ]);
+        setAttendances(data);
+        setCanSubmit(canSubmitStatus);
       } else if (competitionId) {
         // 出欠データと提出可否を並列取得
         const [data, canSubmitStatus] = await Promise.all([
           attendanceAPI.getAttendanceByCompetition(competitionId),
-          attendanceAPI.canSubmitAttendance(null, competitionId)
-        ])
-        setAttendances(data)
-        setCanSubmit(canSubmitStatus)
+          attendanceAPI.canSubmitAttendance(null, competitionId),
+        ]);
+        setAttendances(data);
+        setCanSubmit(canSubmitStatus);
       }
     } catch (err) {
-      console.error('出欠情報の取得に失敗:', err)
-      setError('出欠情報の取得に失敗しました')
+      console.error("出欠情報の取得に失敗:", err);
+      setError("出欠情報の取得に失敗しました");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [practiceId, competitionId, attendanceAPI])
+  }, [practiceId, competitionId, attendanceAPI]);
 
   useEffect(() => {
-    loadAttendances()
-  }, [loadAttendances])
+    loadAttendances();
+  }, [loadAttendances]);
 
-  const handleStatusChange = async (attendanceId: string, status: AttendanceStatus | null, note?: string) => {
+  const handleStatusChange = async (
+    attendanceId: string,
+    status: AttendanceStatus | null,
+    note?: string,
+  ) => {
     try {
-      await attendanceAPI.updateMyAttendance(attendanceId, { status, note: note || null })
-      setEditingNoteId(null)
-      setNoteInput('')
-      loadAttendances()
+      await attendanceAPI.updateMyAttendance(attendanceId, { status, note: note || null });
+      setEditingNoteId(null);
+      setNoteInput("");
+      loadAttendances();
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err))
-      console.error('出欠情報の更新に失敗:', error)
+      const error = err instanceof Error ? err : new Error(String(err));
+      console.error("出欠情報の更新に失敗:", error);
     }
-  }
+  };
 
   const handleAdminStatusChange = async (attendanceId: string, status: AttendanceStatus | null) => {
     try {
-      await attendanceAPI.updateAttendance(attendanceId, { status })
-      loadAttendances()
+      await attendanceAPI.updateAttendance(attendanceId, { status });
+      loadAttendances();
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err))
-      console.error('出欠情報の更新に失敗:', error)
+      const error = err instanceof Error ? err : new Error(String(err));
+      console.error("出欠情報の更新に失敗:", error);
     }
-  }
+  };
 
   const handleNoteEdit = (attendanceId: string, currentNote: string | null) => {
-    setEditingNoteId(attendanceId)
-    setNoteInput(currentNote || '')
-  }
+    setEditingNoteId(attendanceId);
+    setNoteInput(currentNote || "");
+  };
 
   const handleNoteSave = async (attendanceId: string, status: AttendanceStatus | null) => {
-    await handleStatusChange(attendanceId, status, noteInput)
-  }
+    await handleStatusChange(attendanceId, status, noteInput);
+  };
 
   const handleNoteCancel = () => {
-    setEditingNoteId(null)
-    setNoteInput('')
-  }
+    setEditingNoteId(null);
+    setNoteInput("");
+  };
 
   if (loading) {
     return (
@@ -103,7 +107,7 @@ export default function TeamAttendanceList({
         <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
         <p className="mt-2 text-gray-500">読み込み中...</p>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -111,17 +115,17 @@ export default function TeamAttendanceList({
       <div className="bg-red-50 border border-red-200 rounded-lg p-4">
         <p className="text-red-800">{error}</p>
       </div>
-    )
+    );
   }
 
   // 出欠統計を計算
   const stats = {
-    present: attendances.filter(a => a.status === 'present').length,
-    absent: attendances.filter(a => a.status === 'absent').length,
-    other: attendances.filter(a => a.status === 'other').length,
-    pending: attendances.filter(a => a.status === null).length,
-    total: attendances.length
-  }
+    present: attendances.filter((a) => a.status === "present").length,
+    absent: attendances.filter((a) => a.status === "absent").length,
+    other: attendances.filter((a) => a.status === "other").length,
+    pending: attendances.filter((a) => a.status === null).length,
+    total: attendances.length,
+  };
 
   return (
     <div className="space-y-4">
@@ -129,7 +133,8 @@ export default function TeamAttendanceList({
       {!canSubmit && !isAdmin && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <p className="text-yellow-800 text-sm">
-            ⚠️ 現在、出欠提出期間外です。管理者が提出期間を「提出受付中」に変更するまでお待ちください。
+            ⚠️
+            現在、出欠提出期間外です。管理者が提出期間を「提出受付中」に変更するまでお待ちください。
           </p>
         </div>
       )}
@@ -179,16 +184,18 @@ export default function TeamAttendanceList({
               {attendances.map((attendance) => (
                 <tr key={attendance.id}>
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {attendance.user?.name || '不明'}
+                    {attendance.user?.name || "不明"}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     {isAdmin ? (
                       <select
-                        value={attendance.status || ''}
-                        onChange={(e) => handleAdminStatusChange(
-                          attendance.id, 
-                          e.target.value === '' ? null : e.target.value as AttendanceStatus
-                        )}
+                        value={attendance.status || ""}
+                        onChange={(e) =>
+                          handleAdminStatusChange(
+                            attendance.id,
+                            e.target.value === "" ? null : (e.target.value as AttendanceStatus),
+                          )
+                        }
                         className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                       >
                         <option value="">未回答</option>
@@ -199,40 +206,54 @@ export default function TeamAttendanceList({
                     ) : (
                       <div className="flex space-x-2">
                         <button
-                          onClick={() => handleStatusChange(attendance.id, 'present', attendance.note || undefined)}
+                          onClick={() =>
+                            handleStatusChange(
+                              attendance.id,
+                              "present",
+                              attendance.note || undefined,
+                            )
+                          }
                           disabled={!canSubmit}
                           className={`px-3 py-1 rounded text-sm ${
-                            attendance.status === 'present'
-                              ? 'bg-green-100 text-green-800 font-medium'
+                            attendance.status === "present"
+                              ? "bg-green-100 text-green-800 font-medium"
                               : canSubmit
-                              ? 'bg-gray-100 text-gray-600 hover:bg-green-50'
-                              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                ? "bg-gray-100 text-gray-600 hover:bg-green-50"
+                                : "bg-gray-100 text-gray-400 cursor-not-allowed"
                           }`}
                         >
                           出席
                         </button>
                         <button
-                          onClick={() => handleStatusChange(attendance.id, 'absent', attendance.note || undefined)}
+                          onClick={() =>
+                            handleStatusChange(
+                              attendance.id,
+                              "absent",
+                              attendance.note || undefined,
+                            )
+                          }
                           disabled={!canSubmit}
                           className={`px-3 py-1 rounded text-sm ${
-                            attendance.status === 'absent'
-                              ? 'bg-red-100 text-red-800 font-medium'
+                            attendance.status === "absent"
+                              ? "bg-red-100 text-red-800 font-medium"
                               : canSubmit
-                              ? 'bg-gray-100 text-gray-600 hover:bg-red-50'
-                              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                ? "bg-gray-100 text-gray-600 hover:bg-red-50"
+                                : "bg-gray-100 text-gray-400 cursor-not-allowed"
                           }`}
                         >
                           欠席
                         </button>
                         <button
-                          onClick={() => handleStatusChange(attendance.id, 'other', attendance.note || undefined)}
+                          onClick={() =>
+                            handleStatusChange(attendance.id, "other", attendance.note || undefined)
+                          }
                           disabled={!canSubmit}
                           className={`px-3 py-1 rounded text-sm ${
-                            attendance.status === 'other'
-                              ? 'bg-yellow-100 text-yellow-800 font-medium'
+                            attendance.status === "other"
+                              ? "bg-yellow-100 text-yellow-800 font-medium"
                               : canSubmit
-                              ? 'bg-gray-100 text-gray-600 hover:bg-yellow-50'
-                              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                ? "bg-gray-100 text-gray-600 hover:bg-yellow-50"
+                                : "bg-gray-100 text-gray-400 cursor-not-allowed"
                           }`}
                         >
                           その他
@@ -287,5 +308,5 @@ export default function TeamAttendanceList({
         </div>
       </div>
     </div>
-  )
+  );
 }

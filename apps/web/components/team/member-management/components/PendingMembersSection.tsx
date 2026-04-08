@@ -1,16 +1,16 @@
-'use client'
+"use client";
 
-import React from 'react'
-import Avatar from '@/components/ui/Avatar'
-import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
-import { formatDate } from '@apps/shared/utils/date'
-import type { TeamMember } from '../hooks/useMembers'
+import React from "react";
+import Avatar from "@/components/ui/Avatar";
+import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
+import { formatDate } from "@apps/shared/utils/date";
+import type { TeamMember } from "../hooks/useMembers";
 
 interface PendingMembersSectionProps {
-  pendingMembers: TeamMember[]
-  isLoading: boolean
-  onApprove: (membershipId: string) => Promise<boolean>
-  onReject: (membershipId: string) => Promise<boolean>
+  pendingMembers: TeamMember[];
+  isLoading: boolean;
+  onApprove: (membershipId: string) => Promise<boolean>;
+  onReject: (membershipId: string) => Promise<boolean>;
 }
 
 /**
@@ -20,10 +20,10 @@ export const PendingMembersSection: React.FC<PendingMembersSectionProps> = ({
   pendingMembers,
   isLoading,
   onApprove,
-  onReject
+  onReject,
 }) => {
   if (pendingMembers.length === 0) {
-    return null
+    return null;
   }
 
   return (
@@ -34,7 +34,10 @@ export const PendingMembersSection: React.FC<PendingMembersSectionProps> = ({
       {isLoading ? (
         <div className="animate-pulse space-y-3">
           {[...Array(2)].map((_, index) => (
-            <div key={index} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg">
+            <div
+              key={index}
+              className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg"
+            >
               <div className="h-10 w-10 bg-gray-200 rounded-full"></div>
               <div className="flex-1">
                 <div className="h-4 bg-gray-200 rounded w-32 mb-2"></div>
@@ -53,15 +56,16 @@ export const PendingMembersSection: React.FC<PendingMembersSectionProps> = ({
               <div className="flex items-center space-x-3">
                 <Avatar
                   avatarUrl={pendingMember.users?.profile_image_path || null}
-                  userName={pendingMember.users?.name || 'Unknown User'}
+                  userName={pendingMember.users?.name || "Unknown User"}
                   size="md"
                 />
                 <div>
                   <p className="text-sm font-medium text-gray-900">
-                    {pendingMember.users?.name || 'Unknown User'}
+                    {pendingMember.users?.name || "Unknown User"}
                   </p>
                   <p className="text-xs text-gray-500">
-                    申請日: {formatDate(pendingMember.created_at || pendingMember.joined_at, 'numeric')}
+                    申請日:{" "}
+                    {formatDate(pendingMember.created_at || pendingMember.joined_at, "numeric")}
                   </p>
                 </div>
               </div>
@@ -86,5 +90,5 @@ export const PendingMembersSection: React.FC<PendingMembersSectionProps> = ({
         </div>
       )}
     </div>
-  )
-}
+  );
+};

@@ -1,1 +1,1 @@
-export { MemberDetailModal } from './MemberDetailModal'
+export { MemberDetailModal } from "./MemberDetailModal";

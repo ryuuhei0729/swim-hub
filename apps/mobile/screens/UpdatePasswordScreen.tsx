@@ -1,10 +1,10 @@
-import React from 'react'
-import { View, ActivityIndicator, StyleSheet, Text } from 'react-native'
-import { useAuth } from '@/contexts/AuthProvider'
-import { UpdatePasswordForm } from '@/components/auth/UpdatePasswordForm'
+import React from "react";
+import { View, ActivityIndicator, StyleSheet, Text } from "react-native";
+import { useAuth } from "@/contexts/AuthProvider";
+import { UpdatePasswordForm } from "@/components/auth/UpdatePasswordForm";
 
 export const UpdatePasswordScreen: React.FC = () => {
-  const { isAuthenticated, loading } = useAuth()
+  const { isAuthenticated, loading } = useAuth();
 
   // 認証情報を確認中
   if (loading) {
@@ -12,18 +12,16 @@ export const UpdatePasswordScreen: React.FC = () => {
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2563EB" />
       </View>
-    )
+    );
   }
 
   // 認証済みでない場合はエラーメッセージを表示
   if (!isAuthenticated) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>
-          パスワードを更新するにはログインが必要です。
-        </Text>
+        <Text style={styles.errorText}>パスワードを更新するにはログインが必要です。</Text>
       </View>
-    )
+    );
   }
 
   return (
@@ -33,26 +31,26 @@ export const UpdatePasswordScreen: React.FC = () => {
         // AuthProviderが状態変更を検知してMainStackに自動切り替え
       }}
     />
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#EFF6FF',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#EFF6FF",
   },
   errorContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: "#EFF6FF",
   },
   errorText: {
     fontSize: 16,
-    color: '#DC2626',
-    textAlign: 'center',
+    color: "#DC2626",
+    textAlign: "center",
   },
-})
+});

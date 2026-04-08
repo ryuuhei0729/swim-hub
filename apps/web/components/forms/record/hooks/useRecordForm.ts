@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { format, isValid } from 'date-fns'
+import { useState, useEffect, useCallback, useRef } from "react";
+import { format, isValid } from "date-fns";
 import type {
   RecordFormData,
   RecordSet,
@@ -10,31 +10,38 @@ import type {
   EditRecord,
   EditSplitTime,
   SwimStyle,
-} from '../types'
-import { generateUUID } from '../utils/timeParser'
+} from "../types";
+import { generateUUID } from "../utils/timeParser";
+import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
+import { validateSplitTimeLimit } from "@swim-hub/shared/utils/validators";
 
 interface UseRecordFormOptions {
-  isOpen: boolean
-  initialDate?: Date
-  editData?: EditData
-  styles?: SwimStyle[]
+  isOpen: boolean;
+  initialDate?: Date;
+  editData?: EditData;
+  styles?: SwimStyle[];
+  isPremium?: boolean;
 }
 
 interface UseRecordFormReturn {
-  formData: RecordFormData
-  setFormData: React.Dispatch<React.SetStateAction<RecordFormData>>
-  hasUnsavedChanges: boolean
-  isSubmitted: boolean
-  setIsSubmitted: (value: boolean) => void
-  resetUnsavedChanges: () => void
-  addRecord: () => void
-  removeRecord: (recordId: string) => void
-  updateRecord: (recordId: string, updates: Partial<RecordSet>) => void
-  addSplitTime: (recordId: string) => void
-  addSplitTimesEvery25m: (recordId: string) => void
-  updateSplitTime: (recordId: string, splitIndex: number, updates: Partial<SplitTimeInput>) => void
-  removeSplitTime: (recordId: string, splitIndex: number) => void
-  sanitizeFormData: () => RecordFormData
+  formData: RecordFormData;
+  setFormData: React.Dispatch<React.SetStateAction<RecordFormData>>;
+  hasUnsavedChanges: boolean;
+  isSubmitted: boolean;
+  setIsSubmitted: (value: boolean) => void;
+  resetUnsavedChanges: () => void;
+  addRecord: () => void;
+  removeRecord: (recordId: string) => void;
+  updateRecord: (recordId: string, updates: Partial<RecordSet>) => void;
+  addSplitTime: (recordId: string) => void;
+  addSplitTimesEvery25m: (recordId: string) => void;
+  updateSplitTime: (recordId: string, splitIndex: number, updates: Partial<SplitTimeInput>) => void;
+  removeSplitTime: (recordId: string, splitIndex: number) => void;
+  sanitizeFormData: () => RecordFormData;
+  /** Free ユーザーの場合、split-time が制限に達しているかどうか */
+  isSplitTimeLimitReached: (recordId: string) => boolean;
+  /** split-time 制限のバリデーションエラーメッセージ（制限に達している場合） */
+  splitTimeLimitError: string | null;
 }
 
 /**
@@ -45,97 +52,98 @@ export const useRecordForm = ({
   initialDate,
   editData,
   styles = [],
+  isPremium = false,
 }: UseRecordFormOptions): UseRecordFormReturn => {
   const [formData, setFormData] = useState<RecordFormData>(() =>
-    createInitialFormData(initialDate, styles)
-  )
-  const [isInitialized, setIsInitialized] = useState(false)
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
-  const [isSubmitted, setIsSubmitted] = useState(false)
-  const isInitialChangeRef = useRef(true)
+    createInitialFormData(initialDate, styles),
+  );
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [splitTimeLimitError, setSplitTimeLimitError] = useState<string | null>(null);
+  const isInitialChangeRef = useRef(true);
 
   // モーダルが閉じた時にリセット
   useEffect(() => {
     if (!isOpen) {
-      setIsInitialized(false)
-      setHasUnsavedChanges(false)
-      setIsSubmitted(false)
-      isInitialChangeRef.current = true
+      setIsInitialized(false);
+      setHasUnsavedChanges(false);
+      setIsSubmitted(false);
+      isInitialChangeRef.current = true;
     }
-  }, [isOpen])
+  }, [isOpen]);
 
   // initialDateが変更された時にフォームデータを更新
   useEffect(() => {
     if (isOpen && initialDate && isValid(initialDate)) {
       setFormData((prev) => ({
         ...prev,
-        recordDate: format(initialDate, 'yyyy-MM-dd'),
-      }))
+        recordDate: format(initialDate, "yyyy-MM-dd"),
+      }));
     }
-  }, [isOpen, initialDate])
+  }, [isOpen, initialDate]);
 
   // フォームに変更があったことを記録
   useEffect(() => {
     if (isOpen) {
       if (isInitialChangeRef.current) {
-        isInitialChangeRef.current = false
-        return
+        isInitialChangeRef.current = false;
+        return;
       }
-      setHasUnsavedChanges(true)
+      setHasUnsavedChanges(true);
     }
-  }, [formData, isOpen])
+  }, [formData, isOpen]);
 
   // 編集データがある場合、フォームを初期化
   useEffect(() => {
-    if (!isOpen || isInitialized) return
+    if (!isOpen || isInitialized) return;
 
     if (editData) {
       // 複数のRecordが存在する場合の処理
       if (editData.records && editData.records.length > 0) {
-        const records: RecordSet[] = editData.records.map(
-          (record: EditRecord, index: number) => ({
-            id: record.id || `record-${index}`,
-            styleId: record.styleId || styles[0]?.id || '',
-            time: record.time || 0,
-            isRelaying: record.isRelaying || false,
-            splitTimes:
-              record.splitTimes?.map((st: EditSplitTime) => ({
-                distance: st.distance,
-                splitTime: st.splitTime,
-                uiKey: generateUUID(),
-              })) || [],
-            note: record.note || '',
-            videoUrl: record.videoUrl || '',
-            reactionTime: record.reactionTime?.toString() || '',
-          })
-        )
+        const records: RecordSet[] = editData.records.map((record: EditRecord, index: number) => ({
+          id: record.id || `record-${index}`,
+          styleId: record.styleId || styles[0]?.id || "",
+          time: record.time || 0,
+          isRelaying: record.isRelaying || false,
+          splitTimes:
+            record.splitTimes?.map((st: EditSplitTime) => ({
+              distance: st.distance,
+              splitTime: st.splitTime,
+              uiKey: generateUUID(),
+            })) || [],
+          note: record.note || "",
+          videoPath: record.videoPath ?? null,
+          videoThumbnailPath: null,
+          reactionTime: record.reactionTime?.toString() || "",
+        }));
 
-        const today = new Date()
-        const defaultDate = isValid(today) ? format(today, 'yyyy-MM-dd') : ''
+        const today = new Date();
+        const defaultDate = isValid(today) ? format(today, "yyyy-MM-dd") : "";
         setFormData({
           recordDate: editData.recordDate || defaultDate,
-          place: editData.place || '',
-          competitionName: editData.competitionName || '',
+          place: editData.place || "",
+          competitionName: editData.competitionName || "",
           poolType: editData.poolType || 0,
           records: records,
-          note: editData.note || '',
-        })
-        setIsInitialized(true)
-        return
+          note: editData.note || "",
+        });
+        setIsInitialized(true);
+        return;
       }
 
       // 単一のRecordの場合の従来の処理
-      const todaySingle = new Date()
-      const defaultDateSingle = isValid(todaySingle) ? format(todaySingle, 'yyyy-MM-dd') : ''
+      const todaySingle = new Date();
+      const defaultDateSingle = isValid(todaySingle) ? format(todaySingle, "yyyy-MM-dd") : "";
       setFormData({
         recordDate: editData.recordDate || defaultDateSingle,
-        place: editData.place || '',
-        competitionName: editData.competitionName || '',
+        place: editData.place || "",
+        competitionName: editData.competitionName || "",
         poolType: editData.poolType || 0,
         records: [
           {
-            id: editData.id || '1',
-            styleId: editData.styleId || styles[0]?.id || '',
+            id: editData.id || "1",
+            styleId: editData.styleId || styles[0]?.id || "",
             time: editData.time || 0,
             isRelaying: editData.isRelaying || false,
             splitTimes:
@@ -144,181 +152,214 @@ export const useRecordForm = ({
                 splitTime: st.splitTime,
                 uiKey: generateUUID(),
               })) || [],
-            note: editData.note || '',
-            videoUrl: editData.videoUrl || '',
-            reactionTime: editData.reactionTime?.toString() || '',
+            note: editData.note || "",
+            videoPath: editData.videoPath ?? null,
+            videoThumbnailPath: null,
+            reactionTime: editData.reactionTime?.toString() || "",
           },
         ],
-        note: editData.note || '',
-      })
-      setIsInitialized(true)
+        note: editData.note || "",
+      });
+      setIsInitialized(true);
     } else if (!editData && isOpen) {
       // 新規作成時はデフォルト値にリセット
-      setFormData(createInitialFormData(initialDate, styles))
-      setIsInitialized(true)
+      setFormData(createInitialFormData(initialDate, styles));
+      setIsInitialized(true);
     }
-  }, [editData, isOpen, initialDate, isInitialized, styles])
+  }, [editData, isOpen, initialDate, isInitialized, styles]);
 
   const resetUnsavedChanges = useCallback(() => {
-    setHasUnsavedChanges(false)
-  }, [])
+    setHasUnsavedChanges(false);
+  }, []);
 
   const addRecord = useCallback(() => {
     const newRecord: RecordSet = {
       id: `record-${Date.now()}`,
-      styleId: styles[0]?.id || '',
+      styleId: styles[0]?.id || "",
       time: 0,
       isRelaying: false,
       splitTimes: [],
-      note: '',
-      videoUrl: '',
-      reactionTime: '',
-    }
+      note: "",
+      videoPath: null,
+      reactionTime: "",
+    };
 
     setFormData((prev) => ({
       ...prev,
       records: [...prev.records, newRecord],
-    }))
-  }, [styles])
+    }));
+  }, [styles]);
 
   const removeRecord = useCallback((recordId: string) => {
     setFormData((prev) => {
-      if (prev.records.length <= 1) return prev
+      if (prev.records.length <= 1) return prev;
       return {
         ...prev,
         records: prev.records.filter((record) => record.id !== recordId),
-      }
-    })
-  }, [])
+      };
+    });
+  }, []);
 
   const updateRecord = useCallback(
     (recordId: string, updates: Partial<RecordSet>) => {
       setFormData((prev) => {
-        const record = prev.records.find((r) => r.id === recordId)
-        if (!record) return prev
+        const record = prev.records.find((r) => r.id === recordId);
+        if (!record) return prev;
 
-        const updatedRecord = { ...record, ...updates }
-        const style = styles.find((s) => s.id === updatedRecord.styleId)
-        const raceDistance = style?.distance
+        const updatedRecord = { ...record, ...updates };
+        const style = styles.find((s) => s.id === updatedRecord.styleId);
+        const raceDistance = style?.distance;
 
         // タイムが変更された場合、種目の距離と同じ距離のsplit-timeを自動追加/更新
         if (updates.time !== undefined && raceDistance && updatedRecord.time > 0) {
           const existingSplitIndex = updatedRecord.splitTimes.findIndex(
-            (st) => typeof st.distance === 'number' && st.distance === raceDistance
-          )
+            (st) => typeof st.distance === "number" && st.distance === raceDistance,
+          );
 
           if (existingSplitIndex >= 0) {
             updatedRecord.splitTimes = updatedRecord.splitTimes.map((st, idx) =>
               idx === existingSplitIndex
                 ? { ...st, splitTime: updatedRecord.time, splitTimeDisplayValue: undefined }
-                : st
-            )
+                : st,
+            );
           } else {
             const newSplitTime: SplitTimeInput = {
               distance: raceDistance,
               splitTime: updatedRecord.time,
               uiKey: generateUUID(),
-            }
-            updatedRecord.splitTimes = [...updatedRecord.splitTimes, newSplitTime]
+            };
+            updatedRecord.splitTimes = [...updatedRecord.splitTimes, newSplitTime];
           }
         }
 
         return {
           ...prev,
           records: prev.records.map((r) => (r.id === recordId ? updatedRecord : r)),
-        }
-      })
+        };
+      });
     },
-    [styles]
-  )
+    [styles],
+  );
 
-  const addSplitTime = useCallback(
-    (recordId: string) => {
-      const newSplitTime: SplitTimeInput = {
-        distance: '',
-        splitTime: 0,
-        uiKey: generateUUID(),
+  const isSplitTimeLimitReached = useCallback(
+    (recordId: string): boolean => {
+      if (isPremium) return false;
+      const record = formData.records.find((r) => r.id === recordId);
+      if (!record) return false;
+      return record.splitTimes.length >= FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD;
+    },
+    [isPremium, formData.records],
+  );
+
+  const addSplitTime = useCallback((recordId: string) => {
+    setFormData((prev) => {
+      const record = prev.records.find((r) => r.id === recordId);
+      if (!record) return prev;
+
+      // Free ユーザーの場合、制限チェック
+      if (!isPremium) {
+        const validation = validateSplitTimeLimit(record.splitTimes.length + 1, false);
+        if (!validation.valid) {
+          setSplitTimeLimitError(validation.error || null);
+          return prev;
+        }
+        setSplitTimeLimitError(null);
       }
 
-      setFormData((prev) => {
-        const record = prev.records.find((r) => r.id === recordId)
-        if (!record) return prev
+      const newSplitTime: SplitTimeInput = {
+        distance: "",
+        splitTime: 0,
+        uiKey: generateUUID(),
+      };
 
-        return {
-          ...prev,
-          records: prev.records.map((r) =>
-            r.id === recordId
-              ? { ...r, splitTimes: [...r.splitTimes, newSplitTime] }
-              : r
-          ),
-        }
-      })
-    },
-    []
-  )
+      return {
+        ...prev,
+        records: prev.records.map((r) =>
+          r.id === recordId ? { ...r, splitTimes: [...r.splitTimes, newSplitTime] } : r,
+        ),
+      };
+    });
+  }, [isPremium]);
 
   const addSplitTimesEvery25m = useCallback(
     (recordId: string) => {
       setFormData((prev) => {
-        const record = prev.records.find((r) => r.id === recordId)
-        if (!record) return prev
+        const record = prev.records.find((r) => r.id === recordId);
+        if (!record) return prev;
 
-        const style = styles.find((s) => s.id === record.styleId)
-        if (!style || !style.distance) return prev
+        const style = styles.find((s) => s.id === record.styleId);
+        if (!style || !style.distance) return prev;
 
-        const raceDistance = style.distance
+        const raceDistance = style.distance;
         const existingDistances = new Set(
           record.splitTimes
-            .map((st) => (typeof st.distance === 'number' ? st.distance : null))
-            .filter((d): d is number => d !== null)
-        )
+            .map((st) => (typeof st.distance === "number" ? st.distance : null))
+            .filter((d): d is number => d !== null),
+        );
 
-        const newSplitTimes: SplitTimeInput[] = []
+        let newSplitTimes: SplitTimeInput[] = [];
         for (let distance = 25; distance <= raceDistance; distance += 25) {
           if (!existingDistances.has(distance)) {
             newSplitTimes.push({
               distance,
               splitTime: 0,
               uiKey: generateUUID(),
-            })
+            });
           }
         }
 
-        if (newSplitTimes.length === 0) return prev
+        if (newSplitTimes.length === 0) return prev;
+
+        // Free ユーザーの場合、制限内に収まるよう切り詰める
+        if (!isPremium) {
+          const maxNew = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - record.splitTimes.length;
+          if (maxNew <= 0) {
+            setSplitTimeLimitError(
+              `Freeプランでは${FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD}個まで登録できます。Premiumにアップグレードすると無制限に`,
+            );
+            return prev;
+          }
+          if (newSplitTimes.length > maxNew) {
+            newSplitTimes = newSplitTimes.slice(0, maxNew);
+            setSplitTimeLimitError(
+              `Freeプランでは${FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD}個まで登録できます。Premiumにアップグレードすると無制限に`,
+            );
+          } else {
+            setSplitTimeLimitError(null);
+          }
+        }
 
         return {
           ...prev,
           records: prev.records.map((r) =>
-            r.id === recordId
-              ? { ...r, splitTimes: [...r.splitTimes, ...newSplitTimes] }
-              : r
+            r.id === recordId ? { ...r, splitTimes: [...r.splitTimes, ...newSplitTimes] } : r,
           ),
-        }
-      })
+        };
+      });
     },
-    [styles]
-  )
+    [styles, isPremium],
+  );
 
   const updateSplitTime = useCallback(
     (recordId: string, splitIndex: number, updates: Partial<SplitTimeInput>) => {
       setFormData((prev) => {
-        const record = prev.records.find((r) => r.id === recordId)
-        if (!record) return prev
+        const record = prev.records.find((r) => r.id === recordId);
+        if (!record) return prev;
 
-        const style = styles.find((s) => s.id === record.styleId)
-        const raceDistance = style?.distance
+        const style = styles.find((s) => s.id === record.styleId);
+        const raceDistance = style?.distance;
 
         const updatedSplitTimes = record.splitTimes.map((split, index) =>
-          index === splitIndex ? { ...split, ...updates } : split
-        )
+          index === splitIndex ? { ...split, ...updates } : split,
+        );
 
-        const updatedSplit = updatedSplitTimes[splitIndex]
-        let updatedRecord = { ...record, splitTimes: updatedSplitTimes }
+        const updatedSplit = updatedSplitTimes[splitIndex];
+        let updatedRecord = { ...record, splitTimes: updatedSplitTimes };
 
         // 種目の距離と同じ距離のsplit-timeが変更されたら、タイムも同期
         if (
           raceDistance &&
-          typeof updatedSplit.distance === 'number' &&
+          typeof updatedSplit.distance === "number" &&
           updatedSplit.distance === raceDistance &&
           updates.splitTime !== undefined
         ) {
@@ -326,22 +367,22 @@ export const useRecordForm = ({
             ...updatedRecord,
             time: updates.splitTime,
             timeDisplayValue: undefined,
-          }
+          };
         }
 
         return {
           ...prev,
           records: prev.records.map((r) => (r.id === recordId ? updatedRecord : r)),
-        }
-      })
+        };
+      });
     },
-    [styles]
-  )
+    [styles],
+  );
 
   const removeSplitTime = useCallback((recordId: string, splitIndex: number) => {
     setFormData((prev) => {
-      const record = prev.records.find((r) => r.id === recordId)
-      if (!record) return prev
+      const record = prev.records.find((r) => r.id === recordId);
+      if (!record) return prev;
 
       return {
         ...prev,
@@ -351,40 +392,40 @@ export const useRecordForm = ({
                 ...r,
                 splitTimes: r.splitTimes.filter((_, index) => index !== splitIndex),
               }
-            : r
+            : r,
         ),
-      }
-    })
-  }, [])
+      };
+    });
+  }, []);
 
   const sanitizeFormData = useCallback((): RecordFormData => {
     return {
       ...formData,
       records: formData.records.map((record) => {
-        const style = styles.find((s) => s.id === record.styleId)
-        const raceDistance = style?.distance
+        const style = styles.find((s) => s.id === record.styleId);
+        const raceDistance = style?.distance;
 
         // 種目の距離と同じ距離のsplit_timeは保存しない
         // （ゴールタイム=split_timeなので途中経過ではない）
         const filteredSplitTimes = record.splitTimes
           .filter((st) => {
             if (raceDistance && Number(st.distance) === raceDistance) {
-              return false
+              return false;
             }
-            return true
+            return true;
           })
           .map((st) => ({
             distance: st.distance,
             splitTime: st.splitTime,
-          }))
+          }));
 
         return {
           ...record,
           splitTimes: filteredSplitTimes,
-        }
+        };
       }),
-    }
-  }, [formData, styles])
+    };
+  }, [formData, styles]);
 
   return {
     formData,
@@ -401,37 +442,39 @@ export const useRecordForm = ({
     updateSplitTime,
     removeSplitTime,
     sanitizeFormData,
-  }
-}
+    isSplitTimeLimitReached,
+    splitTimeLimitError,
+  };
+};
 
 function createInitialFormData(initialDate?: Date, styles?: SwimStyle[]): RecordFormData {
-  const today = new Date()
-  const validInitialDate = initialDate && isValid(initialDate) ? initialDate : null
-  const validToday = isValid(today) ? today : null
+  const today = new Date();
+  const validInitialDate = initialDate && isValid(initialDate) ? initialDate : null;
+  const validToday = isValid(today) ? today : null;
 
   return {
     recordDate: validInitialDate
-      ? format(validInitialDate, 'yyyy-MM-dd')
+      ? format(validInitialDate, "yyyy-MM-dd")
       : validToday
-        ? format(validToday, 'yyyy-MM-dd')
-        : '',
-    place: '',
-    competitionName: '',
+        ? format(validToday, "yyyy-MM-dd")
+        : "",
+    place: "",
+    competitionName: "",
     poolType: 0,
     records: [
       {
-        id: '1',
-        styleId: styles?.[0]?.id || '',
+        id: "1",
+        styleId: styles?.[0]?.id || "",
         time: 0,
         isRelaying: false,
         splitTimes: [],
-        note: '',
-        videoUrl: '',
-        reactionTime: '',
+        note: "",
+        videoPath: null,
+        reactionTime: "",
       },
     ],
-    note: '',
-  }
+    note: "",
+  };
 }
 
-export default useRecordForm
+export default useRecordForm;

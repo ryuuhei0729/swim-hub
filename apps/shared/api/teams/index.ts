@@ -1,9 +1,8 @@
-export * from './announcements'
-export * from './attendances'
-export * from './bulkRegister'
-export * from './core'
-export * from './groups'
-export * from './members'
-export * from './practices'
-export * from './records'
-
+export * from "./announcements";
+export * from "./attendances";
+export * from "./bulkRegister";
+export * from "./core";
+export * from "./groups";
+export * from "./members";
+export * from "./practices";
+export * from "./records";

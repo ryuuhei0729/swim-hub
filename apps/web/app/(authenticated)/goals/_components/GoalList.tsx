@@ -1,19 +1,19 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect, useMemo } from 'react'
-import { TrashIcon, PencilIcon } from '@heroicons/react/24/outline'
-import { formatTimeBest } from '@/utils/formatters'
-import { useAuth } from '@/contexts'
-import { GoalAPI } from '@apps/shared/api/goals'
-import type { Goal } from '@apps/shared/types'
-import ProgressBar from './ProgressBar'
+import React, { useState, useEffect, useMemo } from "react";
+import { TrashIcon, PencilIcon } from "@heroicons/react/24/outline";
+import { formatTimeBest } from "@/utils/formatters";
+import { useAuth } from "@/contexts";
+import { GoalAPI } from "@apps/shared/api/goals";
+import type { Goal } from "@apps/shared/types";
+import ProgressBar from "./ProgressBar";
 
 interface GoalListProps {
-  goals: (Goal & { competition?: { title: string | null }; style?: { name_jp: string } })[]
-  selectedGoalId: string | null
-  onSelectGoal: (goalId: string) => void
-  onDeleteGoal: () => Promise<void>
-  onEditGoal: (goalId: string) => void
+  goals: (Goal & { competition?: { title: string | null }; style?: { name_jp: string } })[];
+  selectedGoalId: string | null;
+  onSelectGoal: (goalId: string) => void;
+  onDeleteGoal: () => Promise<void>;
+  onEditGoal: (goalId: string) => void;
 }
 
 /**
@@ -24,77 +24,77 @@ export default function GoalList({
   selectedGoalId,
   onSelectGoal,
   onDeleteGoal,
-  onEditGoal
+  onEditGoal,
 }: GoalListProps) {
-  const { supabase } = useAuth()
-  const [progressMap, setProgressMap] = useState<Record<string, number>>({})
-  const goalAPI = useMemo(() => new GoalAPI(supabase), [supabase])
+  const { supabase } = useAuth();
+  const [progressMap, setProgressMap] = useState<Record<string, number>>({});
+  const goalAPI = useMemo(() => new GoalAPI(supabase), [supabase]);
 
   // 各目標の達成率を計算
   useEffect(() => {
     const calculateProgresses = async () => {
-      const newProgressMap: Record<string, number> = {}
+      const newProgressMap: Record<string, number> = {};
       for (const goal of goals) {
         try {
-          const progress = await goalAPI.calculateGoalProgress(goal.id)
-          newProgressMap[goal.id] = progress
+          const progress = await goalAPI.calculateGoalProgress(goal.id);
+          newProgressMap[goal.id] = progress;
         } catch (error) {
-          console.error(`目標 ${goal.id} の達成率計算エラー:`, error)
-          newProgressMap[goal.id] = 0
+          console.error(`目標 ${goal.id} の達成率計算エラー:`, error);
+          newProgressMap[goal.id] = 0;
         }
       }
-      setProgressMap(newProgressMap)
-    }
+      setProgressMap(newProgressMap);
+    };
 
     if (goals.length > 0) {
-      calculateProgresses()
+      calculateProgresses();
     }
-  }, [goals, supabase, goalAPI])
+  }, [goals, supabase, goalAPI]);
 
   const handleDelete = async (e: React.MouseEvent, goalId: string) => {
-    e.stopPropagation()
-    if (confirm('この目標を削除しますか？')) {
+    e.stopPropagation();
+    if (confirm("この目標を削除しますか？")) {
       try {
-        await goalAPI.deleteGoal(goalId)
-        await onDeleteGoal()
+        await goalAPI.deleteGoal(goalId);
+        await onDeleteGoal();
       } catch (error) {
-        console.error('目標削除エラー:', error)
-        alert('目標の削除に失敗しました')
+        console.error("目標削除エラー:", error);
+        alert("目標の削除に失敗しました");
       }
     }
-  }
+  };
 
   const handleEdit = (e: React.MouseEvent, goalId: string) => {
-    e.stopPropagation()
-    onEditGoal(goalId)
-  }
+    e.stopPropagation();
+    onEditGoal(goalId);
+  };
 
   const getCompetitionName = (goal: Goal & { competition?: { title: string | null } }): string => {
-    return goal.competition?.title || '大会'
-  }
+    return goal.competition?.title || "大会";
+  };
 
   const getStyleName = (goal: Goal & { style?: { name_jp: string } }): string => {
-    return goal.style?.name_jp || '種目'
-  }
+    return goal.style?.name_jp || "種目";
+  };
 
   if (goals.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <p className="text-gray-500 text-center py-8">
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <p className="text-gray-500 text-center py-4 sm:py-8 text-xs sm:text-base">
           目標がありません
           <br />
           右上のボタンから新規作成してください
         </p>
       </div>
-    )
+    );
   }
 
   return (
     <div className="space-y-3">
       {goals.map((goal) => {
-        const progress = progressMap[goal.id] || 0
-        const isSelected = selectedGoalId === goal.id
-        const isAchieved = goal.status === 'achieved'
+        const progress = progressMap[goal.id] || 0;
+        const isSelected = selectedGoalId === goal.id;
+        const isAchieved = goal.status === "achieved";
 
         return (
           <div
@@ -102,8 +102,8 @@ export default function GoalList({
             onClick={() => onSelectGoal(goal.id)}
             className={`
               rounded-lg shadow p-4 cursor-pointer transition-all
-              ${isSelected ? 'ring-2 ring-blue-500' : 'hover:shadow-md'}
-              ${isAchieved ? 'bg-green-50 border border-green-200' : 'bg-white'}
+              ${isSelected ? "ring-2 ring-blue-500" : "hover:shadow-md"}
+              ${isAchieved ? "bg-green-50 border border-green-200" : "bg-white"}
             `}
           >
             <div className="flex items-start justify-between mb-2">
@@ -118,9 +118,7 @@ export default function GoalList({
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-gray-600 mt-1">
-                  {getStyleName(goal)}
-                </p>
+                <p className="text-xs text-gray-600 mt-1">{getStyleName(goal)}</p>
               </div>
               <div className="flex items-center gap-1">
                 <button
@@ -150,8 +148,8 @@ export default function GoalList({
               <ProgressBar progress={progress} />
             </div>
           </div>
-        )
+        );
       })}
     </div>
-  )
+  );
 }

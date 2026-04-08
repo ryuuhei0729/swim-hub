@@ -2,17 +2,19 @@
 // バリデーションユーティリティ - Swim Hub共通パッケージ
 // =============================================================================
 
+import { FREE_PLAN_LIMITS } from "../constants/premium";
+
 /**
  * バリデーション結果の型定義
  */
 export interface ValidationResult {
-  valid: boolean
-  error?: string
+  valid: boolean;
+  error?: string;
 }
 
 // ヘルパー関数
-const success = (): ValidationResult => ({ valid: true })
-const failure = (error: string): ValidationResult => ({ valid: false, error })
+const success = (): ValidationResult => ({ valid: true });
+const failure = (error: string): ValidationResult => ({ valid: false, error });
 
 // =============================================================================
 // 時間バリデーション
@@ -25,16 +27,16 @@ const failure = (error: string): ValidationResult => ({ valid: false, error })
  * @returns バリデーション結果
  */
 export function validateTime(seconds: number): ValidationResult {
-  if (typeof seconds !== 'number' || !Number.isFinite(seconds)) {
-    return failure('タイムが無効です')
+  if (typeof seconds !== "number" || !Number.isFinite(seconds)) {
+    return failure("タイムが無効です");
   }
   if (seconds <= 0) {
-    return failure('タイムは0より大きい必要があります')
+    return failure("タイムは0より大きい必要があります");
   }
   if (seconds > 86400) {
-    return failure('タイムは24時間以内である必要があります')
+    return failure("タイムは24時間以内である必要があります");
   }
-  return success()
+  return success();
 }
 
 /**
@@ -44,25 +46,25 @@ export function validateTime(seconds: number): ValidationResult {
  * @returns バリデーション結果
  */
 export function validateTimeString(timeString: string): ValidationResult {
-  if (!timeString || typeof timeString !== 'string') {
-    return failure('タイムを入力してください')
+  if (!timeString || typeof timeString !== "string") {
+    return failure("タイムを入力してください");
   }
 
-  const trimmed = timeString.trim()
-  if (trimmed === '') {
-    return failure('タイムを入力してください')
+  const trimmed = timeString.trim();
+  if (trimmed === "") {
+    return failure("タイムを入力してください");
   }
 
   // "MM:SS.ms" 形式
-  const fullPattern = /^(\d+):(\d{1,2})\.(\d{1,2})$/
+  const fullPattern = /^(\d+):(\d{1,2})\.(\d{1,2})$/;
   // "SS.ms" 形式
-  const shortPattern = /^(\d+)\.(\d{1,2})$/
+  const shortPattern = /^(\d+)\.(\d{1,2})$/;
 
   if (!fullPattern.test(trimmed) && !shortPattern.test(trimmed)) {
-    return failure('タイムの形式が正しくありません（例: 1:23.45 または 23.45）')
+    return failure("タイムの形式が正しくありません（例: 1:23.45 または 23.45）");
   }
 
-  return success()
+  return success();
 }
 
 /**
@@ -72,16 +74,16 @@ export function validateTimeString(timeString: string): ValidationResult {
  * @returns バリデーション結果
  */
 export function validateSwimTime(seconds: number): ValidationResult {
-  if (typeof seconds !== 'number' || !Number.isFinite(seconds)) {
-    return failure('タイムが無効です')
+  if (typeof seconds !== "number" || !Number.isFinite(seconds)) {
+    return failure("タイムが無効です");
   }
   if (seconds <= 0) {
-    return failure('タイムは0より大きい必要があります')
+    return failure("タイムは0より大きい必要があります");
   }
   if (seconds > 3600) {
-    return failure('タイムが大きすぎます')
+    return failure("タイムが大きすぎます");
   }
-  return success()
+  return success();
 }
 
 // =============================================================================
@@ -96,15 +98,15 @@ export function validateSwimTime(seconds: number): ValidationResult {
  */
 export function validateDate(dateString: string): ValidationResult {
   if (!dateString) {
-    return failure('日付を入力してください')
+    return failure("日付を入力してください");
   }
 
-  const date = new Date(dateString)
+  const date = new Date(dateString);
   if (isNaN(date.getTime())) {
-    return failure('無効な日付です')
+    return failure("無効な日付です");
   }
 
-  return success()
+  return success();
 }
 
 /**
@@ -114,18 +116,18 @@ export function validateDate(dateString: string): ValidationResult {
  * @returns バリデーション結果
  */
 export function validatePastDate(dateString: string): ValidationResult {
-  const dateResult = validateDate(dateString)
-  if (!dateResult.valid) return dateResult
+  const dateResult = validateDate(dateString);
+  if (!dateResult.valid) return dateResult;
 
-  const date = new Date(dateString)
-  const today = new Date()
-  today.setHours(23, 59, 59, 999)
+  const date = new Date(dateString);
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
 
   if (date > today) {
-    return failure('未来の日付は指定できません')
+    return failure("未来の日付は指定できません");
   }
 
-  return success()
+  return success();
 }
 
 /**
@@ -135,18 +137,18 @@ export function validatePastDate(dateString: string): ValidationResult {
  * @returns バリデーション結果
  */
 export function validateFutureDate(dateString: string): ValidationResult {
-  const dateResult = validateDate(dateString)
-  if (!dateResult.valid) return dateResult
+  const dateResult = validateDate(dateString);
+  if (!dateResult.valid) return dateResult;
 
-  const date = new Date(dateString)
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  const date = new Date(dateString);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
   if (date < today) {
-    return failure('過去の日付は指定できません')
+    return failure("過去の日付は指定できません");
   }
 
-  return success()
+  return success();
 }
 
 // =============================================================================
@@ -160,13 +162,13 @@ export function validateFutureDate(dateString: string): ValidationResult {
  * @returns バリデーション結果
  */
 export function validateDistance(distance: number): ValidationResult {
-  const validDistances = [25, 50, 100, 200, 400, 800, 1500]
+  const validDistances = [25, 50, 100, 200, 400, 800, 1500];
 
   if (!validDistances.includes(distance)) {
-    return failure(`距離は ${validDistances.join(', ')} mのいずれかである必要があります`)
+    return failure(`距離は ${validDistances.join(", ")} mのいずれかである必要があります`);
   }
 
-  return success()
+  return success();
 }
 
 /**
@@ -177,12 +179,12 @@ export function validateDistance(distance: number): ValidationResult {
  */
 export function validateRepCount(count: number): ValidationResult {
   if (!Number.isInteger(count) || count < 1) {
-    return failure('本数は1以上の整数である必要があります')
+    return failure("本数は1以上の整数である必要があります");
   }
   if (count > 100) {
-    return failure('本数は100以下である必要があります')
+    return failure("本数は100以下である必要があります");
   }
-  return success()
+  return success();
 }
 
 /**
@@ -193,12 +195,12 @@ export function validateRepCount(count: number): ValidationResult {
  */
 export function validateSetCount(count: number): ValidationResult {
   if (!Number.isInteger(count) || count < 1) {
-    return failure('セット数は1以上の整数である必要があります')
+    return failure("セット数は1以上の整数である必要があります");
   }
   if (count > 50) {
-    return failure('セット数は50以下である必要があります')
+    return failure("セット数は50以下である必要があります");
   }
-  return success()
+  return success();
 }
 
 /**
@@ -208,15 +210,15 @@ export function validateSetCount(count: number): ValidationResult {
  * @returns バリデーション結果
  */
 export function validateCircle(seconds: number | null): ValidationResult {
-  if (seconds === null) return success()
+  if (seconds === null) return success();
 
   if (!Number.isFinite(seconds) || seconds <= 0) {
-    return failure('サークルは0より大きい必要があります')
+    return failure("サークルは0より大きい必要があります");
   }
   if (seconds > 600) {
-    return failure('サークルは10分以内である必要があります')
+    return failure("サークルは10分以内である必要があります");
   }
-  return success()
+  return success();
 }
 
 // =============================================================================
@@ -231,10 +233,10 @@ export function validateCircle(seconds: number | null): ValidationResult {
  * @returns バリデーション結果
  */
 export function validateRequired(value: string, fieldName: string): ValidationResult {
-  if (!value || value.trim() === '') {
-    return failure(`${fieldName}を入力してください`)
+  if (!value || value.trim() === "") {
+    return failure(`${fieldName}を入力してください`);
   }
-  return success()
+  return success();
 }
 
 /**
@@ -248,12 +250,12 @@ export function validateRequired(value: string, fieldName: string): ValidationRe
 export function validateMaxLength(
   value: string,
   maxLength: number,
-  fieldName: string
+  fieldName: string,
 ): ValidationResult {
   if (value && value.length > maxLength) {
-    return failure(`${fieldName}は${maxLength}文字以内で入力してください`)
+    return failure(`${fieldName}は${maxLength}文字以内で入力してください`);
   }
-  return success()
+  return success();
 }
 
 // =============================================================================
@@ -267,10 +269,10 @@ export function validateMaxLength(
  * @returns バリデーション結果
  */
 export function validatePoolType(poolType: string): ValidationResult {
-  if (poolType !== 'long' && poolType !== 'short') {
-    return failure('プール種別が無効です')
+  if (poolType !== "long" && poolType !== "short") {
+    return failure("プール種別が無効です");
   }
-  return success()
+  return success();
 }
 
 /**
@@ -280,13 +282,72 @@ export function validatePoolType(poolType: string): ValidationResult {
  * @returns バリデーション結果
  */
 export function validateStroke(stroke: string): ValidationResult {
-  const validStrokes = ['freestyle', 'backstroke', 'breaststroke', 'butterfly', 'individual_medley']
+  const validStrokes = [
+    "freestyle",
+    "backstroke",
+    "breaststroke",
+    "butterfly",
+    "individual_medley",
+  ];
 
   if (!validStrokes.includes(stroke)) {
-    return failure('無効な泳法です')
+    return failure("無効な泳法です");
   }
 
-  return success()
+  return success();
+}
+
+// =============================================================================
+// Premium 制限バリデーション
+// =============================================================================
+
+/**
+ * Split-time 登録件数のバリデーション（Premium 制限）
+ *
+ * @param count - 登録しようとしている split_times の件数
+ * @param isPremium - Premium ユーザーかどうか
+ * @returns バリデーション結果
+ */
+export function validateSplitTimeLimit(count: number, isPremium: boolean): ValidationResult {
+  if (isPremium) return success();
+
+  if (count > FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD) {
+    return failure(
+      `Freeプランでは${FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD}個まで登録できます。Premiumにアップグレードすると無制限に`,
+    );
+  }
+  return success();
+}
+
+/**
+ * PracticeTime 登録件数のバリデーション（Premium 制限）
+ *
+ * @param count - 登録しようとしている practice_times の件数
+ * @param isPremium - Premium ユーザーかどうか
+ * @returns バリデーション結果
+ */
+export function validatePracticeTimeLimit(count: number, isPremium: boolean): ValidationResult {
+  if (isPremium) return success();
+
+  if (count > FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG) {
+    return failure(
+      `Freeプランでは${FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG}個まで登録できます。Premiumにアップグレードすると無制限に`,
+    );
+  }
+  return success();
+}
+
+/**
+ * 画像アップロード権限のバリデーション（Premium 制限）
+ *
+ * @param isPremium - Premium ユーザーかどうか
+ * @returns バリデーション結果
+ */
+export function validateImageUpload(isPremium: boolean): ValidationResult {
+  if (!isPremium) {
+    return failure("画像の添付は Premium 会員限定です");
+  }
+  return success();
 }
 
 // =============================================================================
@@ -301,7 +362,7 @@ export function validateStroke(stroke: string): ValidationResult {
  */
 export function validateAll(validations: ValidationResult[]): ValidationResult {
   for (const result of validations) {
-    if (!result.valid) return result
+    if (!result.valid) return result;
   }
-  return success()
+  return success();
 }

@@ -1,11 +1,11 @@
-import React from 'react'
-import { View, Text, Pressable, StyleSheet } from 'react-native'
+import React from "react";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 
 interface ErrorViewProps {
-  message: string
-  onRetry?: () => void
-  showIcon?: boolean
-  fullScreen?: boolean
+  message: string;
+  onRetry?: () => void;
+  showIcon?: boolean;
+  fullScreen?: boolean;
 }
 
 /**
@@ -20,32 +20,27 @@ export const ErrorView: React.FC<ErrorViewProps> = ({
 }) => {
   return (
     <View style={[styles.container, fullScreen && styles.fullScreen]}>
-      {showIcon && (
-        <Text style={styles.icon}>⚠️</Text>
-      )}
+      {showIcon && <Text style={styles.icon}>⚠️</Text>}
       <Text style={styles.message}>{message}</Text>
       {onRetry && (
-        <Pressable
-          style={styles.retryButton}
-          onPress={onRetry}
-        >
+        <Pressable style={styles.retryButton} onPress={onRetry}>
           <Text style={styles.retryButtonText}>再試行</Text>
         </Pressable>
       )}
     </View>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
     gap: 16,
   },
   fullScreen: {
     flex: 1,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: "#EFF6FF",
   },
   icon: {
     fontSize: 48,
@@ -53,21 +48,21 @@ const styles = StyleSheet.create({
   },
   message: {
     fontSize: 16,
-    color: '#DC2626',
-    textAlign: 'center',
+    color: "#DC2626",
+    textAlign: "center",
     lineHeight: 24,
     maxWidth: 300,
   },
   retryButton: {
-    backgroundColor: '#2563EB',
+    backgroundColor: "#2563EB",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
     marginTop: 8,
   },
   retryButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
-})
+});

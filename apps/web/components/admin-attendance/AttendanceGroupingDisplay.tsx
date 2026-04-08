@@ -1,21 +1,21 @@
-import React from 'react'
-import { TeamAttendanceWithDetails } from '@swim-hub/shared/types'
-import { TeamMember } from '@swim-hub/shared/utils/team'
-import { useAttendanceGrouping } from '@swim-hub/shared/hooks/useAttendanceGrouping'
+import React from "react";
+import { TeamAttendanceWithDetails } from "@swim-hub/shared/types";
+import { TeamMember } from "@swim-hub/shared/utils/team";
+import { useAttendanceGrouping } from "@swim-hub/shared/hooks/useAttendanceGrouping";
 
 interface AttendanceGroupingDisplayProps {
-  attendanceData: TeamAttendanceWithDetails[]
-  teamMembers: TeamMember[]
+  attendanceData: TeamAttendanceWithDetails[];
+  teamMembers: TeamMember[];
 }
 
 export function AttendanceGroupingDisplay({
   attendanceData,
-  teamMembers
+  teamMembers,
 }: AttendanceGroupingDisplayProps) {
   const { presentMembers, absentMembers, otherMembers, unansweredMembers } = useAttendanceGrouping(
     attendanceData,
-    teamMembers
-  )
+    teamMembers,
+  );
 
   return (
     <>
@@ -33,17 +33,13 @@ export function AttendanceGroupingDisplay({
             ))}
           </div>
         ) : (
-          <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">
-            なし
-          </div>
+          <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">なし</div>
         )}
       </div>
 
       {/* 欠席 */}
       <div>
-        <h3 className="text-sm font-semibold text-red-800 mb-2">
-          欠席 ({absentMembers.length}名)
-        </h3>
+        <h3 className="text-sm font-semibold text-red-800 mb-2">欠席 ({absentMembers.length}名)</h3>
         {absentMembers.length > 0 ? (
           <div className="bg-red-50 rounded-lg p-3 space-y-1">
             {absentMembers.map((member) => (
@@ -53,9 +49,7 @@ export function AttendanceGroupingDisplay({
             ))}
           </div>
         ) : (
-          <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">
-            なし
-          </div>
+          <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">なし</div>
         )}
       </div>
 
@@ -73,9 +67,7 @@ export function AttendanceGroupingDisplay({
             ))}
           </div>
         ) : (
-          <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">
-            なし
-          </div>
+          <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">なし</div>
         )}
       </div>
 
@@ -93,11 +85,9 @@ export function AttendanceGroupingDisplay({
             ))}
           </div>
         ) : (
-          <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">
-            なし
-          </div>
+          <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">なし</div>
         )}
       </div>
     </>
-  )
+  );
 }

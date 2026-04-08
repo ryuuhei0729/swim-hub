@@ -1,18 +1,18 @@
-import React from 'react'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale/ja'
-import BaseModal from '@/components/ui/BaseModal'
-import { TeamEvent, TeamAttendanceWithDetails } from '@swim-hub/shared/types'
-import { TeamMember } from '@swim-hub/shared/utils/team'
-import { AttendanceGroupingDisplay } from './AttendanceGroupingDisplay'
+import React from "react";
+import { format } from "date-fns";
+import { ja } from "date-fns/locale/ja";
+import BaseModal from "@/components/ui/BaseModal";
+import { TeamEvent, TeamAttendanceWithDetails } from "@swim-hub/shared/types";
+import { TeamMember } from "@swim-hub/shared/utils/team";
+import { AttendanceGroupingDisplay } from "./AttendanceGroupingDisplay";
 
 interface AttendanceStatusModalProps {
-  isOpen: boolean
-  event: TeamEvent | null
-  attendanceData: TeamAttendanceWithDetails[]
-  teamMembers: TeamMember[]
-  loading: boolean
-  onClose: () => void
+  isOpen: boolean;
+  event: TeamEvent | null;
+  attendanceData: TeamAttendanceWithDetails[];
+  teamMembers: TeamMember[];
+  loading: boolean;
+  onClose: () => void;
 }
 
 export function AttendanceStatusModal({
@@ -21,17 +21,17 @@ export function AttendanceStatusModal({
   attendanceData,
   teamMembers,
   loading,
-  onClose
+  onClose,
 }: AttendanceStatusModalProps) {
   const formatEventDate = (dateStr: string) => {
-    return format(new Date(dateStr), 'MMMM d日 (EEE)', { locale: ja })
-  }
+    return format(new Date(dateStr), "MMMM d日 (EEE)", { locale: ja });
+  };
 
   return (
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      title={event ? `${formatEventDate(event.date)}の出欠状況` : ''}
+      title={event ? `${formatEventDate(event.date)}の出欠状況` : ""}
       size="lg"
     >
       {loading ? (
@@ -41,12 +41,9 @@ export function AttendanceStatusModal({
         </div>
       ) : (
         <div className="space-y-4">
-          <AttendanceGroupingDisplay
-            attendanceData={attendanceData}
-            teamMembers={teamMembers}
-          />
+          <AttendanceGroupingDisplay attendanceData={attendanceData} teamMembers={teamMembers} />
         </div>
       )}
     </BaseModal>
-  )
+  );
 }

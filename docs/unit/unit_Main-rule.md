@@ -40,16 +40,17 @@
 
 このプロジェクトは**4つのルールブック**で構成されています：
 
-| ドキュメント | 役割 | 行数 |
-|-------------|------|------|
-| **unit_Main-rule.md** (本書) | メインルールブック・必須事項 | 400行 |
-| **[unit_Patterns.md](./unit_Patterns.md)** | 実装パターン・成功事例 | 400行 |
-| **[unit_Mocking.md](./unit_Mocking.md)** | モック戦略・Supabaseモックガイド | 400行 |
-| **[unit_FAQ.md](./unit_FAQ.md)** | トラブルシューティング | 300行 |
+| ドキュメント                               | 役割                             | 行数  |
+| ------------------------------------------ | -------------------------------- | ----- |
+| **unit_Main-rule.md** (本書)               | メインルールブック・必須事項     | 400行 |
+| **[unit_Patterns.md](./unit_Patterns.md)** | 実装パターン・成功事例           | 400行 |
+| **[unit_Mocking.md](./unit_Mocking.md)**   | モック戦略・Supabaseモックガイド | 400行 |
+| **[unit_FAQ.md](./unit_FAQ.md)**           | トラブルシューティング           | 300行 |
 
 ### 優先順位
 
 **矛盾する場合の優先順位**：
+
 1. **unit_Main-rule.md（本書）** - 必須ルール・禁止事項
 2. **unit_Patterns.md / unit_Mocking.md** - プロジェクト固有の実装方法
 3. 汎用的なベストプラクティス（参考）
@@ -63,6 +64,7 @@
 このプロジェクトは、**単体テスト**を行うためのテストフレームワークです。
 
 **技術スタック**：
+
 - Vitest（テストフレームワーク）
 - TypeScript
 - @testing-library/react（Reactコンポーネントテスト）
@@ -70,6 +72,7 @@
 - Supabase（モック対象）
 
 **開発フロー**：
+
 - 自然言語での指示 → AI（Cursor）がコード生成
 - テスト実行 → 不備発見 → ルール化
 - AIレビュー → ルール準拠チェック
@@ -103,6 +106,7 @@
 #### ✅ 必須：Supabaseモックを使用
 
 **ルール化の背景**：
+
 - **日付**: 2025-01-20
 - **発見**: 実データベースへの接続がテストに含まれていた
 - **問題**: テストが不安定、実行が遅い、データ汚染のリスク
@@ -110,36 +114,35 @@
 
 ```typescript
 // ✅ 正しい実装：モックを使用
-import { createMockSupabaseClient } from '../../__mocks__/supabase'
+import { createMockSupabaseClient } from "../../__mocks__/supabase";
 
-describe('RecordAPI', () => {
-  let mockClient: any
-  let api: RecordAPI
+describe("RecordAPI", () => {
+  let mockClient: any;
+  let api: RecordAPI;
 
   beforeEach(() => {
-    mockClient = createMockSupabaseClient()
-    api = new RecordAPI(mockClient)
-  })
-})
+    mockClient = createMockSupabaseClient();
+    api = new RecordAPI(mockClient);
+  });
+});
 ```
 
 ```typescript
 // ❌ 絶対禁止：実データベースに接続
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_KEY!
-)
+const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_KEY!);
 ```
 
 **対象となる外部依存**：
+
 - Supabaseクライアント
 - Next.js Router (`next/navigation`)
 - ブラウザAPI (`localStorage`, `window`等)
 - タイマー関数 (`setTimeout`, `setInterval`)
 
 **レビューポイント**：
+
 - 実データベースへの接続がないか
 - モックが適切に使用されているか
 - `__mocks__`ディレクトリのモックを活用しているか
@@ -152,24 +155,24 @@ const supabase = createClient(
 
 ```typescript
 // ✅ 正しい実装
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-describe('RecordAPI', () => {
-  let mockClient: any
-  let api: RecordAPI
+describe("RecordAPI", () => {
+  let mockClient: any;
+  let api: RecordAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks()
-    mockClient = createMockSupabaseClient()
-    api = new RecordAPI(mockClient)
-  })
+    vi.clearAllMocks();
+    mockClient = createMockSupabaseClient();
+    api = new RecordAPI(mockClient);
+  });
 
-  describe('getRecords', () => {
-    it('認証済みユーザーのとき記録一覧を取得できる', async () => {
+  describe("getRecords", () => {
+    it("認証済みユーザーのとき記録一覧を取得できる", async () => {
       // テスト内容
-    })
-  })
-})
+    });
+  });
+});
 ```
 
 #### ✅ 必須：beforeEachでモックをリセット
@@ -177,13 +180,14 @@ describe('RecordAPI', () => {
 ```typescript
 // ✅ 正しい実装：各テスト前にモックをリセット
 beforeEach(() => {
-  vi.clearAllMocks()
-  mockClient = createMockSupabaseClient()
-  api = new RecordAPI(mockClient)
-})
+  vi.clearAllMocks();
+  mockClient = createMockSupabaseClient();
+  api = new RecordAPI(mockClient);
+});
 ```
 
 **理由**：
+
 - テスト間の依存関係を排除
 - テストの独立性を保証
 - 予期しない副作用を防止
@@ -196,38 +200,40 @@ beforeEach(() => {
 
 ```typescript
 // ✅ 正しい実装：ファクトリー関数を使用
-import { createMockRecord, createMockPractice } from '../../__mocks__/supabase'
+import { createMockRecord, createMockPractice } from "../../__mocks__/supabase";
 
-it('記録一覧を取得できる', async () => {
+it("記録一覧を取得できる", async () => {
   const mockRecord = createMockRecord({
-    id: 'record-1',
-    time_seconds: 60.5
-  })
-  
+    id: "record-1",
+    time_seconds: 60.5,
+  });
+
   // テスト内容
-})
+});
 ```
 
 ```typescript
 // ❌ 禁止：ハードコードされたテストデータ
-it('記録一覧を取得できる', async () => {
+it("記録一覧を取得できる", async () => {
   const mockRecord = {
-    id: 'record-1',
-    user_id: 'test-user-id',
-    competition_id: 'comp-1',
+    id: "record-1",
+    user_id: "test-user-id",
+    competition_id: "comp-1",
     style_id: 1,
     time_seconds: 60.5,
     // ... 全てのフィールドを手動で定義
-  }
-})
+  };
+});
 ```
 
 **理由**：
+
 - テストデータの一貫性を保証
 - デフォルト値の管理が容易
 - 型安全性の確保
 
 **利用可能なファクトリー関数**：
+
 - `createMockPractice`
 - `createMockRecord`
 - `createMockStyle`
@@ -244,47 +250,48 @@ it('記録一覧を取得できる', async () => {
 
 ```typescript
 // ✅ 良い例：日本語で明確に記述
-describe('記録取得', () => {
-  it('認証済みユーザーのとき記録一覧を取得できる', async () => {
+describe("記録取得", () => {
+  it("認証済みユーザーのとき記録一覧を取得できる", async () => {
     // テスト内容
-  })
-  
-  it('認証されていないときエラーになる', async () => {
-    // テスト内容
-  })
-  
-  it('日付範囲を指定したとき該当期間の記録を取得できる', async () => {
-    // テスト内容
-  })
-})
+  });
 
-describe('レンダリング', () => {
-  it('フォームが開いているときに表示される', () => {
+  it("認証されていないときエラーになる", async () => {
     // テスト内容
-  })
-  
-  it('フォームが閉じているときに表示されない', () => {
+  });
+
+  it("日付範囲を指定したとき該当期間の記録を取得できる", async () => {
     // テスト内容
-  })
-})
+  });
+});
+
+describe("レンダリング", () => {
+  it("フォームが開いているときに表示される", () => {
+    // テスト内容
+  });
+
+  it("フォームが閉じているときに表示されない", () => {
+    // テスト内容
+  });
+});
 ```
 
 ```typescript
 // ❌ 悪い例：内容が不明確
-it('test1', async () => {
+it("test1", async () => {
   // テスト内容
-})
+});
 
-it('fetch', async () => {
+it("fetch", async () => {
   // テスト内容
-})
+});
 
-it('記録一覧を取得できる', async () => {
+it("記録一覧を取得できる", async () => {
   // テスト内容（英語は禁止）
-})
+});
 ```
 
 **推奨フォーマット**：
+
 - 日本語: `[条件]のとき[期待動作]`
   - 正常系の例: `認証済みユーザーのとき記録一覧を取得できる`
   - 異常系の例: `認証されていないときエラーになる`
@@ -297,9 +304,9 @@ it('記録一覧を取得できる', async () => {
 #### ✅ 推奨：AAAパターンに従う
 
 ```typescript
-it('認証済みユーザーのとき記録一覧を取得できる', async () => {
+it("認証済みユーザーのとき記録一覧を取得できる", async () => {
   // Arrange: テスト準備
-  const mockRecord = createMockRecord()
+  const mockRecord = createMockRecord();
   mockClient.from = vi.fn(() => ({
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
@@ -307,18 +314,19 @@ it('認証済みユーザーのとき記録一覧を取得できる', async () =
       data: [mockRecord],
       error: null,
     }),
-  }))
+  }));
 
   // Act: 操作実行
-  const result = await api.getRecords()
+  const result = await api.getRecords();
 
   // Assert: 結果検証
-  expect(result).toEqual([mockRecord])
-  expect(mockClient.from).toHaveBeenCalledWith('records')
-})
+  expect(result).toEqual([mockRecord]);
+  expect(mockClient.from).toHaveBeenCalledWith("records");
+});
 ```
 
 **理由**：
+
 - テストの可読性向上
 - テストの構造化
 - デバッグの容易化
@@ -327,13 +335,13 @@ it('認証済みユーザーのとき記録一覧を取得できる', async () =
 
 ## 🚫 § 3. 禁止事項まとめ
 
-| 禁止事項 | 理由 | 代替手段 |
-|---------|------|----------|
-| 実データベースへの接続 | テスト不安定、実行遅延 | Supabaseモック |
+| 禁止事項                       | 理由                   | 代替手段                 |
+| ------------------------------ | ---------------------- | ------------------------ |
+| 実データベースへの接続         | テスト不安定、実行遅延 | Supabaseモック           |
 | ハードコードされたテストデータ | 保守性低下、一貫性欠如 | テストデータファクトリー |
-| テスト間の依存関係 | テストの独立性欠如 | beforeEachでリセット |
-| モックの不適切な使用 | テストの信頼性低下 | 適切なモック戦略 |
-| テスト名の不明確な記述 | 可読性低下 | 明確な命名規則 |
+| テスト間の依存関係             | テストの独立性欠如     | beforeEachでリセット     |
+| モックの不適切な使用           | テストの信頼性低下     | 適切なモック戦略         |
+| テスト名の不明確な記述         | 可読性低下             | 明確な命名規則           |
 
 ---
 
@@ -373,11 +381,11 @@ apps/
 
 ### ファイル命名規則
 
-| 種類 | 命名規則 | 例 |
-|------|---------|-----|
+| 種類           | 命名規則                                      | 例                                         |
+| -------------- | --------------------------------------------- | ------------------------------------------ |
 | テストファイル | `{対象名}.test.ts` または `{対象名}.test.tsx` | `records.test.ts`, `PracticeForm.test.tsx` |
-| モックファイル | `{対象名}.ts` | `supabase.ts` |
-| テストデータ | `createMock{型名}` | `createMockPractice`, `createMockRecord` |
+| モックファイル | `{対象名}.ts`                                 | `supabase.ts`                              |
+| テストデータ   | `createMock{型名}`                            | `createMockPractice`, `createMockRecord`   |
 
 ---
 
@@ -389,24 +397,24 @@ apps/
 
 ```typescript
 // ✅ 良い例：各テストが独立
-describe('RecordAPI', () => {
-  let mockClient: any
-  let api: RecordAPI
+describe("RecordAPI", () => {
+  let mockClient: any;
+  let api: RecordAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks()
-    mockClient = createMockSupabaseClient()
-    api = new RecordAPI(mockClient)
-  })
+    vi.clearAllMocks();
+    mockClient = createMockSupabaseClient();
+    api = new RecordAPI(mockClient);
+  });
 
-  it('記録一覧を取得できる', async () => {
+  it("記録一覧を取得できる", async () => {
     // このテストは他のテストに依存しない
-  })
+  });
 
-  it('記録を作成できる', async () => {
+  it("記録を作成できる", async () => {
     // このテストも他のテストに依存しない
-  })
-})
+  });
+});
 ```
 
 ### 5.2 テストの実行速度
@@ -420,6 +428,7 @@ describe('RecordAPI', () => {
 ### 5.3 テストのカバレッジ
 
 **目標**：
+
 - Lines: 75%
 - Functions: 50%
 - Branches: 80%
@@ -436,20 +445,24 @@ Cursorがコードレビューする際は、以下を確認すること：
 ### 必須チェック（違反 = MUST FIX）
 
 #### ✅ モック使用
+
 - [ ] 実データベースへの接続がない
 - [ ] `createMockSupabaseClient`を使用している
 - [ ] 外部依存が適切にモックされている
 
 #### ✅ テスト構造
+
 - [ ] `describe/it`構造を使用している
 - [ ] `beforeEach`でモックをリセットしている
 - [ ] テスト名が明確に記述されている
 
 #### ✅ テストデータ
+
 - [ ] テストデータファクトリーを使用している
 - [ ] ハードコードされたテストデータがない
 
 #### ✅ テストの独立性
+
 - [ ] テスト間の依存関係がない
 - [ ] 各テストが独立して実行可能
 
@@ -458,11 +471,13 @@ Cursorがコードレビューする際は、以下を確認すること：
 ### 推奨チェック（違反 = SHOULD FIX）
 
 #### ✅ コード品質
+
 - [ ] AAAパターンに従っている
 - [ ] 適切なアサーションを使用している
 - [ ] エラーハンドリングがテストされている
 
 #### ✅ テスト品質
+
 - [ ] 正常系と異常系の両方をテストしている
 - [ ] エッジケースをテストしている
 - [ ] テストが高速に実行される
@@ -474,7 +489,9 @@ Cursorがコードレビューする際は、以下を確認すること：
 コード生成・実装の詳細は、以下のドキュメントを参照してください：
 
 ### 🎯 実装パターン
+
 👉 **[unit_Patterns.md](./unit_Patterns.md)**
+
 - APIクラステストパターン
 - React Hooksテストパターン
 - Reactコンポーネントテストパターン
@@ -482,7 +499,9 @@ Cursorがコードレビューする際は、以下を確認すること：
 - 認証チェックパターン
 
 ### 🔧 モック戦略
+
 👉 **[unit_Mocking.md](./unit_Mocking.md)**
+
 - Supabaseモックの使い方
 - クエリビルダーモック詳細
 - テストデータファクトリー活用方法
@@ -490,7 +509,9 @@ Cursorがコードレビューする際は、以下を確認すること：
 - Next.js Routerモック例
 
 ### 🔍 トラブルシューティング
+
 👉 **[unit_FAQ.md](./unit_FAQ.md)**
+
 - よくあるエラーと解決策
 - モックが動作しない場合の対処
 - テストが不安定な場合の対処
@@ -514,18 +535,21 @@ pnpm exec vitest run apps/shared/__tests__/api/records.test.ts
 ## ✅ § 9. クイックチェックリスト
 
 ### APIクラステスト作成時
+
 - [ ] `import { createMockSupabaseClient } from '../../__mocks__/supabase'` を追加
 - [ ] `beforeEach`でモックをリセット
 - [ ] テストデータファクトリーを使用
 - [ ] 正常系と異常系の両方をテスト
 
 ### React Hooksテスト作成時
+
 - [ ] `import { renderHook, waitFor } from '@testing-library/react'` を追加
 - [ ] APIクラスをモック
 - [ ] ローディング状態をテスト
 - [ ] エラーハンドリングをテスト
 
 ### Reactコンポーネントテスト作成時
+
 - [ ] `import { render, screen } from '@testing-library/react'` を追加
 - [ ] `import userEvent from '@testing-library/user-event'` を追加
 - [ ] Next.js Routerをモック（必要に応じて）
@@ -552,5 +576,5 @@ pnpm exec vitest run apps/shared/__tests__/api/records.test.ts
 **管理者**: QA Team
 
 **変更履歴**
-- v1.0 (2025-01-20): 初版作成
 
+- v1.0 (2025-01-20): 初版作成

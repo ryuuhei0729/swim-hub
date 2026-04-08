@@ -8,8 +8,8 @@
  * @param prefix プレフィックス（デフォルト: 'e2e-test'）
  * @returns 一意なメールアドレス
  */
-export function generateTestEmail(prefix: string = 'e2e-test'): string {
-  return `${prefix}-${Date.now()}@swimhub.com`
+export function generateTestEmail(prefix: string = "e2e-test"): string {
+  return `${prefix}-${Date.now()}@swimhub.com`;
 }
 
 /**
@@ -17,8 +17,8 @@ export function generateTestEmail(prefix: string = 'e2e-test'): string {
  * @param prefix プレフィックス（デフォルト: 'E2ETest'）
  * @returns テスト用パスワード
  */
-export function generateTestPassword(prefix: string = 'E2ETest'): string {
-  return `${prefix}123!`
+export function generateTestPassword(prefix: string = "E2ETest"): string {
+  return `${prefix}123!`;
 }
 
 /**
@@ -26,17 +26,17 @@ export function generateTestPassword(prefix: string = 'E2ETest'): string {
  * @param prefix プレフィックス（デフォルト: 'E2Eテストユーザー'）
  * @returns テスト用ユーザー名
  */
-export function generateTestUserName(prefix: string = 'E2Eテストユーザー'): string {
-  return `${prefix}_${Date.now()}`
+export function generateTestUserName(prefix: string = "E2Eテストユーザー"): string {
+  return `${prefix}_${Date.now()}`;
 }
 
 /**
  * テスト用認証情報を生成
  */
 export interface TestCredentials {
-  email: string
-  password: string
-  name: string
+  email: string;
+  password: string;
+  name: string;
 }
 
 /**
@@ -45,12 +45,12 @@ export interface TestCredentials {
  * @returns テスト用認証情報
  */
 export function generateTestCredentials(testName: string): TestCredentials {
-  const sanitizedTestName = testName.toLowerCase().replace(/\s+/g, '-')
+  const sanitizedTestName = testName.toLowerCase().replace(/\s+/g, "-");
   return {
     email: generateTestEmail(sanitizedTestName),
-    password: generateTestPassword(testName.replace(/\s+/g, '')),
+    password: generateTestPassword(testName.replace(/\s+/g, "")),
     name: generateTestUserName(`${testName}ユーザー`),
-  }
+  };
 }
 
 /**
@@ -61,35 +61,34 @@ export const TestCredentialsFactory = {
    * 新規登録からログインまでの完全フローテスト用
    */
   forSignupLoginFlow(): TestCredentials {
-    return generateTestCredentials('signup-login-flow')
+    return generateTestCredentials("signup-login-flow");
   },
 
   /**
    * ログアウトテスト用
    */
   forLogoutTest(): TestCredentials {
-    return generateTestCredentials('logout-test')
+    return generateTestCredentials("logout-test");
   },
 
   /**
    * 永続化テスト用
    */
   forPersistenceTest(): TestCredentials {
-    return generateTestCredentials('persistence-test')
+    return generateTestCredentials("persistence-test");
   },
 
   /**
    * パスワードリセットテスト用
    */
   forPasswordResetTest(): TestCredentials {
-    return generateTestCredentials('reset-test')
+    return generateTestCredentials("reset-test");
   },
 
   /**
    * 単体登録テスト用
    */
   forSingleRegisterTest(): TestCredentials {
-    return generateTestCredentials('single-register')
+    return generateTestCredentials("single-register");
   },
-}
-
+};

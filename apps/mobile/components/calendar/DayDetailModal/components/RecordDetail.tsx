@@ -1,122 +1,133 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react'
-import { View, Text, Pressable, StyleSheet } from 'react-native'
-import { Feather } from '@expo/vector-icons'
-import { useAuth } from '@/contexts/AuthProvider'
-import { formatTime } from '@/utils/formatters'
-import type { CalendarItem } from '@apps/shared/types/ui'
-import { styles } from '../styles'
-import type { RecordDetailProps, RecordData } from '../types'
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { View, Text, Pressable, StyleSheet } from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { useAuth } from "@/contexts/AuthProvider";
+import { formatTime } from "@/utils/formatters";
+import { VideoPlayer } from "@/components/shared/VideoPlayer";
+import type { CalendarItem } from "@apps/shared/types/ui";
+import { styles } from "../styles";
+import type { RecordDetailProps, RecordData } from "../types";
 
 /**
  * 個別記録カードコンポーネント（タブ付きスプリットタイム表示）
  */
 const RecordCard: React.FC<{
-  record: RecordData
-  splits: Array<{ distance: number; split_time: number }>
-  records: CalendarItem[]
-  place?: string
-  poolType?: number
-  competitionId: string
-  supabase: ReturnType<typeof useAuth>['supabase']
-  onEditRecord?: (item: CalendarItem) => void
-  onDeleteRecord?: (recordId: string) => void
-  onClose?: () => void
-}> = ({ record, splits, records, place, poolType, competitionId, supabase, onEditRecord, onDeleteRecord, onClose }) => {
-  const [splitTab, setSplitTab] = useState<'race' | 'all'>('race')
+  record: RecordData;
+  splits: Array<{ distance: number; split_time: number }>;
+  records: CalendarItem[];
+  place?: string;
+  poolType?: number;
+  competitionId: string;
+  supabase: ReturnType<typeof useAuth>["supabase"];
+  onEditRecord?: (item: CalendarItem) => void;
+  onDeleteRecord?: (recordId: string) => void;
+  onClose?: () => void;
+}> = ({
+  record,
+  splits,
+  records,
+  place,
+  poolType,
+  competitionId,
+  supabase,
+  onEditRecord,
+  onDeleteRecord,
+  onClose,
+}) => {
+  const [splitTab, setSplitTab] = useState<"race" | "all">("race");
 
   // ゴールタイムを含む表示用スプリットデータ
   const displaySplitTimes = useMemo(() => {
-    const sorted = [...splits].sort((a, b) => a.distance - b.distance)
+    const sorted = [...splits].sort((a, b) => a.distance - b.distance);
     const base = sorted.map((st, i) => ({
       distance: st.distance,
       split_time: st.split_time,
       id: `split-${i}`,
-    }))
-    const raceDistance = record.styleDistance
+    }));
+    const raceDistance = record.styleDistance;
     if (raceDistance && record.time > 0) {
-      const hasGoal = base.some((st) => st.distance === raceDistance)
+      const hasGoal = base.some((st) => st.distance === raceDistance);
       if (!hasGoal) {
-        base.push({ distance: raceDistance, split_time: record.time, id: 'goal' })
+        base.push({ distance: raceDistance, split_time: record.time, id: "goal" });
       }
     }
-    return base
-  }, [splits, record.styleDistance, record.time])
+    return base;
+  }, [splits, record.styleDistance, record.time]);
 
   // 距離別Lap用: 25m刻みのみフィルタ
   const raceSplitTimes = useMemo(() => {
-    return displaySplitTimes.filter((st) => st.distance % 25 === 0 && st.split_time > 0)
-  }, [displaySplitTimes])
+    return displaySplitTimes.filter((st) => st.distance % 25 === 0 && st.split_time > 0);
+  }, [displaySplitTimes]);
 
   // 距離別Lapのカラム間隔を決定
   const lapIntervals = useMemo(() => {
-    const raceDistance = record.styleDistance
-    if (!raceDistance) return []
-    const intervals: number[] = []
-    if (raceDistance >= 25 && raceDistance !== 25) intervals.push(25)
-    if (raceDistance >= 50 && raceDistance !== 50) intervals.push(50)
-    return intervals
-  }, [record.styleDistance])
+    const raceDistance = record.styleDistance;
+    if (!raceDistance) return [];
+    const intervals: number[] = [];
+    if (raceDistance >= 25 && raceDistance !== 25) intervals.push(25);
+    if (raceDistance >= 50 && raceDistance !== 50) intervals.push(50);
+    return intervals;
+  }, [record.styleDistance]);
 
   // データが1つもないintervalは列ごと非表示
   const visibleLapIntervals = useMemo(() => {
-    return lapIntervals.filter(interval =>
-      raceSplitTimes.some(st => {
-        if (st.distance % interval !== 0) return false
-        const prevDistance = st.distance - interval
-        if (prevDistance === 0) return true
-        const prevSplit = raceSplitTimes.find(s => s.distance === prevDistance)
-        return prevSplit != null && prevSplit.split_time > 0
-      })
-    )
-  }, [lapIntervals, raceSplitTimes])
+    return lapIntervals.filter((interval) =>
+      raceSplitTimes.some((st) => {
+        if (st.distance % interval !== 0) return false;
+        const prevDistance = st.distance - interval;
+        if (prevDistance === 0) return true;
+        const prevSplit = raceSplitTimes.find((s) => s.distance === prevDistance);
+        return prevSplit != null && prevSplit.split_time > 0;
+      }),
+    );
+  }, [lapIntervals, raceSplitTimes]);
 
   // 距離別Lapの各行のラップタイム計算
   const raceLapData = useMemo(() => {
     return raceSplitTimes.map((st) => {
-      const lapTimes: Record<number, number | null> = {}
+      const lapTimes: Record<number, number | null> = {};
       for (const interval of lapIntervals) {
         if (st.distance % interval === 0) {
-          const prevDistance = st.distance - interval
+          const prevDistance = st.distance - interval;
           if (prevDistance === 0) {
-            lapTimes[interval] = st.split_time
+            lapTimes[interval] = st.split_time;
           } else {
-            const prevSplit = raceSplitTimes.find((s) => s.distance === prevDistance)
-            lapTimes[interval] = prevSplit && prevSplit.split_time > 0
-              ? st.split_time - prevSplit.split_time
-              : null
+            const prevSplit = raceSplitTimes.find((s) => s.distance === prevDistance);
+            lapTimes[interval] =
+              prevSplit && prevSplit.split_time > 0 ? st.split_time - prevSplit.split_time : null;
           }
         } else {
-          lapTimes[interval] = null
+          lapTimes[interval] = null;
         }
       }
-      return { ...st, lapTimes }
-    })
-  }, [raceSplitTimes, lapIntervals])
+      return { ...st, lapTimes };
+    });
+  }, [raceSplitTimes, lapIntervals]);
 
   // All Lap計算（各区間のラップ）
   const allLapTimes = useMemo(() => {
-    if (displaySplitTimes.length === 0) return []
-    const laps: { fromDistance: number; toDistance: number; lapTime: number }[] = []
+    if (displaySplitTimes.length === 0) return [];
+    const laps: { fromDistance: number; toDistance: number; lapTime: number }[] = [];
     if (displaySplitTimes[0].distance > 0) {
       laps.push({
         fromDistance: 0,
         toDistance: displaySplitTimes[0].distance,
         lapTime: displaySplitTimes[0].split_time,
-      })
+      });
     }
     for (let i = 1; i < displaySplitTimes.length; i++) {
-      const prev = displaySplitTimes[i - 1]
-      const curr = displaySplitTimes[i]
+      const prev = displaySplitTimes[i - 1];
+      const curr = displaySplitTimes[i];
       if (prev.split_time > 0 && curr.split_time > 0) {
         laps.push({
           fromDistance: prev.distance,
           toDistance: curr.distance,
           lapTime: curr.split_time - prev.split_time,
-        })
+        });
       }
     }
-    return laps
-  }, [displaySplitTimes])
+    return laps;
+  }, [displaySplitTimes]);
 
   return (
     <View style={styles.recordCard}>
@@ -131,21 +142,23 @@ const RecordCard: React.FC<{
                 onPress={async () => {
                   try {
                     const { data: fullRecord } = await supabase
-                      .from('records')
-                      .select(`
+                      .from("records")
+                      .select(
+                        `
                         *,
                         style:styles(*),
                         competition:competitions(*),
                         split_times(*)
-                      `)
-                      .eq('id', record.id)
-                      .single()
+                      `,
+                      )
+                      .eq("id", record.id)
+                      .single();
 
                     if (fullRecord) {
                       const calendarItem: CalendarItem = {
                         id: fullRecord.id,
-                        type: 'record',
-                        date: records[0]?.date || fullRecord.competition?.date || '',
+                        type: "record",
+                        date: records[0]?.date || fullRecord.competition?.date || "",
                         title: fullRecord.style?.name_jp || record.styleName,
                         place: place || fullRecord.competition?.place || undefined,
                         note: fullRecord.note || undefined,
@@ -170,12 +183,12 @@ const RecordCard: React.FC<{
                           },
                           pool_type: fullRecord.competition?.pool_type ?? poolType ?? 0,
                         },
-                      }
-                      onEditRecord(calendarItem)
-                      onClose?.()
+                      };
+                      onEditRecord(calendarItem);
+                      onClose?.();
                     }
                   } catch (error) {
-                    console.error('記録編集データ取得エラー:', error)
+                    console.error("記録編集データ取得エラー:", error);
                   }
                 }}
               >
@@ -206,7 +219,7 @@ const RecordCard: React.FC<{
             <Text style={styles.recordInfoLabel}>タイム</Text>
             <View style={styles.recordTimeContainer}>
               <Text style={styles.recordTimeValue}>{formatTime(record.time)}</Text>
-              {record.reactionTime != null && typeof record.reactionTime === 'number' && (
+              {record.reactionTime != null && typeof record.reactionTime === "number" && (
                 <Text style={styles.recordReactionTimeInline}>
                   (RT {record.reactionTime.toFixed(2)})
                 </Text>
@@ -216,36 +229,41 @@ const RecordCard: React.FC<{
         </View>
       </View>
 
-      {/* スプリットタイム（タブ付き） */}
-      {displaySplitTimes.length > 0 && (
+      {/* スプリットタイム（タブ付き） — DBにsplitが存在する場合のみ表示 */}
+      {splits.length > 0 && (
         <View style={splitStyles.splitSection}>
           {/* タブ */}
           <View style={splitStyles.tabRow}>
             <Pressable
-              style={[splitStyles.tab, splitTab === 'race' && splitStyles.tabActive]}
-              onPress={() => setSplitTab('race')}
+              style={[splitStyles.tab, splitTab === "race" && splitStyles.tabActive]}
+              onPress={() => setSplitTab("race")}
             >
-              <Text style={[splitStyles.tabText, splitTab === 'race' && splitStyles.tabTextActive]}>
+              <Text style={[splitStyles.tabText, splitTab === "race" && splitStyles.tabTextActive]}>
                 距離別 Lap
               </Text>
             </Pressable>
             <Pressable
-              style={[splitStyles.tab, splitTab === 'all' && splitStyles.tabActive]}
-              onPress={() => setSplitTab('all')}
+              style={[splitStyles.tab, splitTab === "all" && splitStyles.tabActive]}
+              onPress={() => setSplitTab("all")}
             >
-              <Text style={[splitStyles.tabText, splitTab === 'all' && splitStyles.tabTextActive]}>
+              <Text style={[splitStyles.tabText, splitTab === "all" && splitStyles.tabTextActive]}>
                 All Lap
               </Text>
             </Pressable>
           </View>
 
-          {splitTab === 'race' ? (
+          {splitTab === "race" ? (
             <>
               <View style={splitStyles.splitHeaderRow}>
-                <Text style={[splitStyles.splitHeaderCell, splitStyles.splitDistanceCol]}>距離</Text>
+                <Text style={[splitStyles.splitHeaderCell, splitStyles.splitDistanceCol]}>
+                  距離
+                </Text>
                 <Text style={[splitStyles.splitHeaderCell, splitStyles.splitTimeCol]}>Split</Text>
                 {visibleLapIntervals.map((interval) => (
-                  <Text key={interval} style={[splitStyles.splitHeaderCell, splitStyles.splitLapCol]}>
+                  <Text
+                    key={interval}
+                    style={[splitStyles.splitHeaderCell, splitStyles.splitLapCol]}
+                  >
                     {interval}m Lap
                   </Text>
                 ))}
@@ -255,15 +273,34 @@ const RecordCard: React.FC<{
                   key={st.id || index}
                   style={[splitStyles.splitRow, index % 2 === 0 && splitStyles.splitRowEven]}
                 >
-                  <Text style={[splitStyles.splitCell, splitStyles.splitDistanceCol, splitStyles.splitDistanceText]}>
+                  <Text
+                    style={[
+                      splitStyles.splitCell,
+                      splitStyles.splitDistanceCol,
+                      splitStyles.splitDistanceText,
+                    ]}
+                  >
                     {st.distance}m
                   </Text>
-                  <Text style={[splitStyles.splitCell, splitStyles.splitTimeCol, splitStyles.splitTimeText]}>
+                  <Text
+                    style={[
+                      splitStyles.splitCell,
+                      splitStyles.splitTimeCol,
+                      splitStyles.splitTimeText,
+                    ]}
+                  >
                     {formatTime(st.split_time)}
                   </Text>
                   {visibleLapIntervals.map((interval) => (
-                    <Text key={interval} style={[splitStyles.splitCell, splitStyles.splitLapCol, splitStyles.splitLapText]}>
-                      {st.lapTimes[interval] != null ? formatTime(st.lapTimes[interval]!) : '-'}
+                    <Text
+                      key={interval}
+                      style={[
+                        splitStyles.splitCell,
+                        splitStyles.splitLapCol,
+                        splitStyles.splitLapText,
+                      ]}
+                    >
+                      {st.lapTimes[interval] != null ? formatTime(st.lapTimes[interval]!) : "-"}
                     </Text>
                   ))}
                 </View>
@@ -272,7 +309,9 @@ const RecordCard: React.FC<{
           ) : (
             <>
               <View style={splitStyles.splitHeaderRow}>
-                <Text style={[splitStyles.splitHeaderCell, splitStyles.splitDistanceCol]}>区間</Text>
+                <Text style={[splitStyles.splitHeaderCell, splitStyles.splitDistanceCol]}>
+                  区間
+                </Text>
                 <Text style={[splitStyles.splitHeaderCell, { flex: 2 }]}>Lap Time</Text>
               </View>
               {allLapTimes.map((lap, index) => (
@@ -280,7 +319,13 @@ const RecordCard: React.FC<{
                   key={index}
                   style={[splitStyles.splitRow, index % 2 === 0 && splitStyles.splitRowEven]}
                 >
-                  <Text style={[splitStyles.splitCell, splitStyles.splitDistanceCol, splitStyles.splitDistanceText]}>
+                  <Text
+                    style={[
+                      splitStyles.splitCell,
+                      splitStyles.splitDistanceCol,
+                      splitStyles.splitDistanceText,
+                    ]}
+                  >
                     {lap.fromDistance}m → {lap.toDistance}m
                   </Text>
                   <Text style={[splitStyles.splitCell, { flex: 2 }, splitStyles.splitTimeText]}>
@@ -293,6 +338,13 @@ const RecordCard: React.FC<{
         </View>
       )}
 
+      {/* 動画 */}
+      {record.videoPath && (
+        <View style={localStyles.videoContainer}>
+          <VideoPlayer videoPath={record.videoPath} thumbnailPath={record.videoThumbnailPath} />
+        </View>
+      )}
+
       {/* メモ */}
       {record.note && (
         <View style={styles.recordNoteContainer}>
@@ -301,8 +353,16 @@ const RecordCard: React.FC<{
         </View>
       )}
     </View>
-  )
-}
+  );
+};
+
+const localStyles = StyleSheet.create({
+  videoContainer: {
+    marginTop: 8,
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+});
 
 /**
  * 記録詳細表示コンポーネント（大会ごとにグループ化）
@@ -321,151 +381,167 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
   onDeleteRecord,
   onClose,
 }) => {
-  const { supabase, user } = useAuth()
-  const [actualRecords, setActualRecords] = useState<RecordData[]>([])
-  const [loading, setLoading] = useState(true)
-  const [splitTimesMap, setSplitTimesMap] = useState<Map<string, Array<{ distance: number; split_time: number }>>>(new Map())
-  const [_loadingSplits, setLoadingSplits] = useState<Set<string>>(new Set())
-  const loadingSplitsRef = useRef<Set<string>>(new Set())
+  const { supabase, user } = useAuth();
+  const [actualRecords, setActualRecords] = useState<RecordData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [splitTimesMap, setSplitTimesMap] = useState<
+    Map<string, Array<{ distance: number; split_time: number }>>
+  >(new Map());
+  const [_loadingSplits, setLoadingSplits] = useState<Set<string>>(new Set());
+  const loadingSplitsRef = useRef<Set<string>>(new Set());
 
   // プール種別のテキストを取得
   const getPoolTypeText = (poolType: number): string => {
-    return poolType === 1 ? '長水路(50m)' : '短水路(25m)'
-  }
+    return poolType === 1 ? "長水路(50m)" : "短水路(25m)";
+  };
 
   // 記録データを取得
   useEffect(() => {
     const loadRecords = async () => {
       try {
-        setLoading(true)
+        setLoading(true);
         let query = supabase
-          .from('records')
-          .select(`
+          .from("records")
+          .select(
+            `
             id,
             time,
             reaction_time,
             is_relaying,
             note,
             style_id,
+            video_path,
+            video_thumbnail_path,
             style:styles(id, name_jp, distance)
-          `)
-          .eq('competition_id', _competitionId)
+          `,
+          )
+          .eq("competition_id", _competitionId);
 
         // チーム大会の場合は自分の記録だけを表示
-        const isTeamCompetition = records[0]?.metadata?.team_id != null
+        const isTeamCompetition = records[0]?.metadata?.team_id != null;
         if (isTeamCompetition && user?.id) {
-          query = query.eq('user_id', user.id)
+          query = query.eq("user_id", user.id);
         }
 
-        const { data, error } = await query
+        const { data, error } = await query;
 
-        if (error) throw error
+        if (error) throw error;
 
         type RecordFromDB = {
-          id: string
-          time: number
-          reaction_time: number | null
-          is_relaying: boolean
-          note: string | null
-          style_id: number
-          style: {
-            id: number
-            name_jp: string
-            distance: number
-          } | {
-            id: number
-            name_jp: string
-            distance: number
-          }[] | null
-        }
-        const recordsData = (data || []) as unknown as RecordFromDB[]
+          id: string;
+          time: number;
+          reaction_time: number | null;
+          is_relaying: boolean;
+          note: string | null;
+          style_id: number;
+          video_path: string | null;
+          video_thumbnail_path: string | null;
+          style:
+            | {
+                id: number;
+                name_jp: string;
+                distance: number;
+              }
+            | {
+                id: number;
+                name_jp: string;
+                distance: number;
+              }[]
+            | null;
+        };
+        const recordsData = (data || []) as unknown as RecordFromDB[];
         const formattedRecords = recordsData.map((record) => {
-          const style = Array.isArray(record.style) ? record.style[0] : record.style
+          const style = Array.isArray(record.style) ? record.style[0] : record.style;
           return {
             id: record.id,
-            styleName: style?.name_jp || '',
+            styleName: style?.name_jp || "",
             time: record.time || 0,
             reactionTime: record.reaction_time ?? null,
             isRelaying: record.is_relaying || false,
             note: record.note,
             styleId: record.style_id,
             styleDistance: style?.distance || 0,
-          }
-        })
+            videoPath: record.video_path ?? null,
+            videoThumbnailPath: record.video_thumbnail_path ?? null,
+          };
+        });
 
-        setActualRecords(formattedRecords)
+        setActualRecords(formattedRecords);
       } catch (err) {
-        console.error('記録の取得エラー:', err)
-        setActualRecords([])
+        console.error("記録の取得エラー:", err);
+        setActualRecords([]);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    loadRecords()
-  }, [_competitionId, supabase, user?.id, records])
+    loadRecords();
+  }, [_competitionId, supabase, user?.id, records]);
 
   // スプリットタイムを取得
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
 
     const loadSplitTimes = async () => {
-      const recordIds = actualRecords.map(r => r.id)
-      const recordsToLoad = recordIds.filter(id => !loadingSplitsRef.current.has(id))
+      const recordIds = actualRecords.map((r) => r.id);
+      const recordsToLoad = recordIds.filter((id) => !loadingSplitsRef.current.has(id));
 
-      if (recordsToLoad.length === 0) return
+      if (recordsToLoad.length === 0) return;
 
       for (const recordId of recordsToLoad) {
-        if (cancelled) return
+        if (cancelled) return;
 
         try {
-          if (cancelled) return
-          loadingSplitsRef.current.add(recordId)
-          setLoadingSplits(prev => new Set(prev).add(recordId))
+          if (cancelled) return;
+          loadingSplitsRef.current.add(recordId);
+          setLoadingSplits((prev) => new Set(prev).add(recordId));
 
           const { data, error } = await supabase
-            .from('split_times')
-            .select('distance, split_time')
-            .eq('record_id', recordId)
-            .order('distance', { ascending: true })
+            .from("split_times")
+            .select("distance, split_time")
+            .eq("record_id", recordId)
+            .order("distance", { ascending: true });
 
-          if (error) throw error
+          if (error) throw error;
 
-          if (cancelled) return
+          if (cancelled) return;
 
           if (data && data.length > 0) {
-            setSplitTimesMap(prev => {
-              if (cancelled) return prev
-              const newMap = new Map(prev)
-              newMap.set(recordId, data.map(st => ({
-                distance: st.distance,
-                split_time: st.split_time
-              })))
-              return newMap
-            })
+            setSplitTimesMap((prev) => {
+              if (cancelled) return prev;
+              const newMap = new Map(prev);
+              newMap.set(
+                recordId,
+                data.map((st) => ({
+                  distance: st.distance,
+                  split_time: st.split_time,
+                })),
+              );
+              return newMap;
+            });
           }
         } catch (error) {
-          if (cancelled) return
-          console.error('スプリットタイム取得エラー:', error)
+          if (cancelled) return;
+          console.error("スプリットタイム取得エラー:", error);
         } finally {
           if (!cancelled) {
-            loadingSplitsRef.current.delete(recordId)
-            setLoadingSplits(prev => {
-              const newSet = new Set(prev)
-              newSet.delete(recordId)
-              return newSet
-            })
+            loadingSplitsRef.current.delete(recordId);
+            setLoadingSplits((prev) => {
+              const newSet = new Set(prev);
+              newSet.delete(recordId);
+              return newSet;
+            });
           }
         }
       }
-    }
+    };
 
-    loadSplitTimes()
+    loadSplitTimes();
 
     return () => {
-      cancelled = true
-    }
-  }, [actualRecords, supabase])
+      cancelled = true;
+    };
+  }, [actualRecords, supabase]);
 
   return (
     <View style={styles.competitionRecordContainer}>
@@ -474,7 +550,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
         <View style={styles.competitionHeaderContent}>
           <View style={styles.competitionHeaderLeft}>
             <View style={styles.competitionHeaderTitleRow}>
-              <View style={[styles.entryTypeBadge, { backgroundColor: '#2563EB' }]}>
+              <View style={[styles.entryTypeBadge, { backgroundColor: "#2563EB" }]}>
                 <Text style={styles.entryTypeText}>大会</Text>
               </View>
               <Text style={styles.competitionHeaderTitle}>{competitionName}</Text>
@@ -482,18 +558,12 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
           </View>
           <View style={styles.competitionHeaderActions}>
             {onEditCompetition && (
-              <Pressable
-                style={styles.competitionHeaderButton}
-                onPress={onEditCompetition}
-              >
+              <Pressable style={styles.competitionHeaderButton} onPress={onEditCompetition}>
                 <Feather name="edit" size={18} color="#2563EB" />
               </Pressable>
             )}
             {onDeleteCompetition && (
-              <Pressable
-                style={styles.competitionHeaderButton}
-                onPress={onDeleteCompetition}
-              >
+              <Pressable style={styles.competitionHeaderButton} onPress={onDeleteCompetition}>
                 <Feather name="trash-2" size={20} color="#EF4444" />
               </Pressable>
             )}
@@ -515,9 +585,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
             )}
           </View>
         )}
-        {note && (
-          <Text style={styles.competitionHeaderNote}>{note}</Text>
-        )}
+        {note && <Text style={styles.competitionHeaderNote}>{note}</Text>}
       </View>
 
       {/* 記録カード一覧 */}
@@ -533,8 +601,8 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
               <Pressable
                 style={styles.addCompetitionRecordButton}
                 onPress={() => {
-                  onAddRecord()
-                  onClose?.()
+                  onAddRecord();
+                  onClose?.();
                 }}
               >
                 <Feather name="plus" size={18} color="#2563EB" />
@@ -565,8 +633,8 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
           <Pressable
             style={styles.addCompetitionRecordButton}
             onPress={() => {
-              onAddRecord()
-              onClose?.()
+              onAddRecord();
+              onClose?.();
             }}
           >
             <Feather name="plus" size={18} color="#2563EB" />
@@ -575,63 +643,63 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
         )}
       </View>
     </View>
-  )
-}
+  );
+};
 
 const splitStyles = StyleSheet.create({
   splitSection: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: "#F9FAFB",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    overflow: 'hidden',
+    borderColor: "#E5E7EB",
+    overflow: "hidden",
     marginTop: 8,
   },
   tabRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: "#E5E7EB",
   },
   tab: {
     flex: 1,
     paddingVertical: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   tabActive: {
     borderBottomWidth: 2,
-    borderBottomColor: '#2563EB',
+    borderBottomColor: "#2563EB",
   },
   tabText: {
     fontSize: 12,
-    fontWeight: '500',
-    color: '#6B7280',
+    fontWeight: "500",
+    color: "#6B7280",
   },
   tabTextActive: {
-    color: '#2563EB',
-    fontWeight: '600',
+    color: "#2563EB",
+    fontWeight: "600",
   },
   splitHeaderRow: {
-    flexDirection: 'row',
-    backgroundColor: '#F3F4F6',
+    flexDirection: "row",
+    backgroundColor: "#F3F4F6",
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: "#E5E7EB",
   },
   splitHeaderCell: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#6B7280',
+    fontWeight: "600",
+    color: "#6B7280",
   },
   splitRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingVertical: 8,
     paddingHorizontal: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: "#E5E7EB",
   },
   splitRowEven: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   splitCell: {
     fontSize: 13,
@@ -646,14 +714,14 @@ const splitStyles = StyleSheet.create({
     flex: 1.5,
   },
   splitDistanceText: {
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: "600",
+    color: "#111827",
   },
   splitTimeText: {
-    color: '#1E40AF',
-    fontWeight: '600',
+    color: "#1E40AF",
+    fontWeight: "600",
   },
   splitLapText: {
-    color: '#111827',
+    color: "#111827",
   },
-})
+});

@@ -1,27 +1,27 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { useAuth } from '@/contexts/AuthProvider'
-import BaseModal from '@/components/ui/BaseModal'
-import { TrophyIcon } from '@heroicons/react/24/outline'
-import { useMemberDetail } from '@/hooks/useMemberDetail'
-import { useBestTimes } from '@/hooks/useBestTimes'
-import { ProfileSection } from '@/components/member-detail/ProfileSection'
-import { AdminControls } from '@/components/member-detail/AdminControls'
-import { BestTimesTable } from '@/components/member-detail/BestTimesTable'
-import { RoleChangeModal } from '@/components/member-detail/RoleChangeModal'
-import type { MemberDetail } from '@/types/member-detail'
+import React, { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthProvider";
+import BaseModal from "@/components/ui/BaseModal";
+import { TrophyIcon } from "@heroicons/react/24/outline";
+import { useMemberDetail } from "@/hooks/useMemberDetail";
+import { useBestTimes } from "@/hooks/useBestTimes";
+import { ProfileSection } from "@/components/member-detail/ProfileSection";
+import { AdminControls } from "@/components/member-detail/AdminControls";
+import { BestTimesTable } from "@/components/member-detail/BestTimesTable";
+import { RoleChangeModal } from "@/components/member-detail/RoleChangeModal";
+import type { MemberDetail } from "@/types/member-detail";
 
 // 型を再エクスポート（後方互換性のため）
-export type { MemberDetail, BestTime } from '@/types/member-detail'
+export type { MemberDetail, BestTime } from "@/types/member-detail";
 
 export interface MemberDetailModalProps {
-  isOpen: boolean
-  onClose: () => void
-  member: MemberDetail | null
-  currentUserId: string
-  isCurrentUserAdmin: boolean
-  onMembershipChange?: () => void
+  isOpen: boolean;
+  onClose: () => void;
+  member: MemberDetail | null;
+  currentUserId: string;
+  isCurrentUserAdmin: boolean;
+  onMembershipChange?: () => void;
 }
 
 export default function MemberDetailModal({
@@ -30,60 +30,60 @@ export default function MemberDetailModal({
   member,
   currentUserId,
   isCurrentUserAdmin,
-  onMembershipChange
+  onMembershipChange,
 }: MemberDetailModalProps) {
-  const [isRoleChangeConfirmOpen, setIsRoleChangeConfirmOpen] = useState(false)
-  const [pendingRole, setPendingRole] = useState<'admin' | 'user' | null>(null)
+  const [isRoleChangeConfirmOpen, setIsRoleChangeConfirmOpen] = useState(false);
+  const [pendingRole, setPendingRole] = useState<"admin" | "user" | null>(null);
 
-  const { supabase } = useAuth()
+  const { supabase } = useAuth();
   const { error, isRemoving, handleRoleChange, handleRemoveMember } = useMemberDetail(
     supabase,
     currentUserId,
-    onMembershipChange
-  )
-  const { bestTimes, loading, error: bestTimesError, loadBestTimes } = useBestTimes(supabase)
+    onMembershipChange,
+  );
+  const { bestTimes, loading, error: bestTimesError, loadBestTimes } = useBestTimes(supabase);
 
   useEffect(() => {
     if (isOpen && member) {
-      loadBestTimes(member.user_id)
+      loadBestTimes(member.user_id);
     }
-  }, [isOpen, member, loadBestTimes])
+  }, [isOpen, member, loadBestTimes]);
 
-  const handleRoleChangeClick = (newRole: 'admin' | 'user') => {
-    if (member?.role === newRole) return
-    setPendingRole(newRole)
-    setIsRoleChangeConfirmOpen(true)
-  }
+  const handleRoleChangeClick = (newRole: "admin" | "user") => {
+    if (member?.role === newRole) return;
+    setPendingRole(newRole);
+    setIsRoleChangeConfirmOpen(true);
+  };
 
   const confirmRoleChange = async () => {
     if (pendingRole && member) {
       try {
-        await handleRoleChange(member, pendingRole)
+        await handleRoleChange(member, pendingRole);
         // onMembershipChange is called within handleRoleChange to trigger parent reload
       } catch {
         // エラーはhookで処理される
       }
     }
-    setIsRoleChangeConfirmOpen(false)
-    setPendingRole(null)
-  }
+    setIsRoleChangeConfirmOpen(false);
+    setPendingRole(null);
+  };
 
   const cancelRoleChange = () => {
-    setIsRoleChangeConfirmOpen(false)
-    setPendingRole(null)
-  }
+    setIsRoleChangeConfirmOpen(false);
+    setPendingRole(null);
+  };
 
   const handleRemove = async () => {
-    if (!member) return
-    const success = await handleRemoveMember(member)
+    if (!member) return;
+    const success = await handleRemoveMember(member);
     if (success) {
-      onClose()
+      onClose();
     }
-  }
+  };
 
-  const displayError = error || bestTimesError
+  const displayError = error || bestTimesError;
 
-  if (!member) return null
+  if (!member) return null;
 
   return (
     <>
@@ -94,9 +94,7 @@ export default function MemberDetailModal({
             <div className="mb-8 rounded-md bg-red-50 p-4" data-testid="team-member-detail-error">
               <div className="flex">
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-800">
-                    エラーが発生しました
-                  </h3>
+                  <h3 className="text-sm font-medium text-red-800">エラーが発生しました</h3>
                   <div className="mt-2 text-sm text-red-700">
                     <p>{displayError}</p>
                   </div>
@@ -167,5 +165,5 @@ export default function MemberDetailModal({
         onCancel={cancelRoleChange}
       />
     </>
-  )
+  );
 }

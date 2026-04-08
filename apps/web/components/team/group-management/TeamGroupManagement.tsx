@@ -1,34 +1,42 @@
-'use client'
+"use client";
 
-import React, { useEffect, useState, useCallback } from 'react'
-import { useAuth } from '@/contexts'
-import { PlusIcon } from '@heroicons/react/24/outline'
-import { useTeamGroups, type TeamGroupWithCount } from './hooks/useTeamGroups'
-import { useGroupActions } from './hooks/useGroupActions'
-import { BulkAssignModal, CategorySection, GroupFormModal, GroupMemberListModal, GroupMemberModal } from './components'
-import MemberDetailModal from '@/components/team/MemberDetailModal'
-import type { MemberDetail } from '@/types/member-detail'
+import React, { useEffect, useState, useCallback } from "react";
+import { useAuth } from "@/contexts";
+import { PlusIcon } from "@heroicons/react/24/outline";
+import { useTeamGroups, type TeamGroupWithCount } from "./hooks/useTeamGroups";
+import { useGroupActions } from "./hooks/useGroupActions";
+import {
+  BulkAssignModal,
+  CategorySection,
+  GroupFormModal,
+  GroupMemberListModal,
+  GroupMemberModal,
+} from "./components";
+import MemberDetailModal from "@/components/team/MemberDetailModal";
+import type { MemberDetail } from "@/types/member-detail";
 
 interface TeamGroupManagementProps {
-  teamId: string
+  teamId: string;
 }
 
 interface TeamMemberForSelection {
-  id: string
-  user_id: string
+  id: string;
+  user_id: string;
   users: {
-    id: string
-    name: string
-    profile_image_path?: string | null
-  }
+    id: string;
+    name: string;
+    profile_image_path?: string | null;
+  };
 }
 
 export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps) {
-  const { supabase, user } = useAuth()
+  const { supabase, user } = useAuth();
 
   // グループデータ
-  const { groups, categories, groupsByCategory, loading, error, loadGroups } =
-    useTeamGroups(teamId, supabase)
+  const { groups, categories, groupsByCategory, loading, error, loadGroups } = useTeamGroups(
+    teamId,
+    supabase,
+  );
 
   // CRUD操作
   const {
@@ -41,36 +49,37 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
     listGroupMembers,
     setGroupMembers,
     clearError,
-  } = useGroupActions(teamId, supabase, loadGroups)
+  } = useGroupActions(teamId, supabase, loadGroups);
 
   // チームメンバー一覧（メンバー割り当て用）
-  const [teamMembers, setTeamMembers] = useState<TeamMemberForSelection[]>([])
+  const [teamMembers, setTeamMembers] = useState<TeamMemberForSelection[]>([]);
 
   // モーダル状態
-  const [showGroupForm, setShowGroupForm] = useState(false)
-  const [editingGroup, setEditingGroup] = useState<TeamGroupWithCount | null>(null)
-  const [memberModalGroup, setMemberModalGroup] = useState<TeamGroupWithCount | null>(null)
-  const [currentGroupMemberIds, setCurrentGroupMemberIds] = useState<string[]>([])
-  const [loadingMembers, setLoadingMembers] = useState(false)
+  const [showGroupForm, setShowGroupForm] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<TeamGroupWithCount | null>(null);
+  const [memberModalGroup, setMemberModalGroup] = useState<TeamGroupWithCount | null>(null);
+  const [currentGroupMemberIds, setCurrentGroupMemberIds] = useState<string[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
 
   // メンバー一覧表示モーダル（カードクリック時）
-  const [viewMembersGroup, setViewMembersGroup] = useState<TeamGroupWithCount | null>(null)
+  const [viewMembersGroup, setViewMembersGroup] = useState<TeamGroupWithCount | null>(null);
   // メンバー詳細モーダル
-  const [selectedMember, setSelectedMember] = useState<MemberDetail | null>(null)
+  const [selectedMember, setSelectedMember] = useState<MemberDetail | null>(null);
   // 一括振り分けモーダル
-  const [bulkAssignCategory, setBulkAssignCategory] = useState<string | null>(null)
+  const [bulkAssignCategory, setBulkAssignCategory] = useState<string | null>(null);
 
   // 初期読み込み
   useEffect(() => {
-    loadGroups()
-  }, [loadGroups])
+    loadGroups();
+  }, [loadGroups]);
 
   // チームメンバー一覧を取得
   useEffect(() => {
     const loadTeamMembers = async () => {
       const { data, error: fetchError } = await supabase
-        .from('team_memberships')
-        .select(`
+        .from("team_memberships")
+        .select(
+          `
           id,
           user_id,
           users!team_memberships_user_id_fkey (
@@ -78,87 +87,107 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
             name,
             profile_image_path
           )
-        `)
-        .eq('team_id', teamId)
-        .eq('status', 'approved')
-        .eq('is_active', true)
+        `,
+        )
+        .eq("team_id", teamId)
+        .eq("status", "approved")
+        .eq("is_active", true);
       if (!fetchError && data) {
-        setTeamMembers(data as unknown as TeamMemberForSelection[])
+        setTeamMembers(data as unknown as TeamMemberForSelection[]);
       }
-    }
-    loadTeamMembers()
-  }, [teamId, supabase])
+    };
+    loadTeamMembers();
+  }, [teamId, supabase]);
 
   // グループ作成/編集ハンドラ
-  const handleFormSubmit = useCallback(async (
-    category: string | null,
-    name: string,
-  ): Promise<boolean> => {
-    if (editingGroup) {
-      const result = await updateGroup(editingGroup.id, category, name)
-      return result !== null
-    } else {
-      // カンマ区切りで複数グループ作成に対応
-      const names = name.split(',').map((n) => n.trim()).filter((n) => n.length > 0)
-      if (names.length === 0) return false
-      if (names.length === 1) {
-        const result = await createGroup(category, names[0])
-        return result !== null
+  const handleFormSubmit = useCallback(
+    async (category: string | null, name: string): Promise<boolean> => {
+      if (editingGroup) {
+        const result = await updateGroup(editingGroup.id, category, name);
+        return result !== null;
+      } else {
+        // カンマ区切りで複数グループ作成に対応
+        const names = name
+          .split(",")
+          .map((n) => n.trim())
+          .filter((n) => n.length > 0);
+        if (names.length === 0) return false;
+        if (names.length === 1) {
+          const result = await createGroup(category, names[0]);
+          return result !== null;
+        }
+        return await createGroups(category, names);
       }
-      return await createGroups(category, names)
-    }
-  }, [editingGroup, createGroup, createGroups, updateGroup])
+    },
+    [editingGroup, createGroup, createGroups, updateGroup],
+  );
 
   // グループ削除ハンドラ
-  const handleDeleteGroup = useCallback(async (group: TeamGroupWithCount) => {
-    if (!window.confirm(`「${group.name}」を削除しますか？\nグループに割り当てられたメンバー情報も削除されます。`)) {
-      return
-    }
-    await deleteGroup(group.id)
-  }, [deleteGroup])
+  const handleDeleteGroup = useCallback(
+    async (group: TeamGroupWithCount) => {
+      if (
+        !window.confirm(
+          `「${group.name}」を削除しますか？\nグループに割り当てられたメンバー情報も削除されます。`,
+        )
+      ) {
+        return;
+      }
+      await deleteGroup(group.id);
+    },
+    [deleteGroup],
+  );
 
   // メンバー編集モーダルを開く
-  const handleManageMembers = useCallback(async (group: TeamGroupWithCount) => {
-    setLoadingMembers(true)
-    setMemberModalGroup(group)
-    const members = await listGroupMembers(group.id)
-    setCurrentGroupMemberIds(members.map((m) => m.user_id))
-    setLoadingMembers(false)
-  }, [listGroupMembers])
+  const handleManageMembers = useCallback(
+    async (group: TeamGroupWithCount) => {
+      setLoadingMembers(true);
+      setMemberModalGroup(group);
+      const members = await listGroupMembers(group.id);
+      setCurrentGroupMemberIds(members.map((m) => m.user_id));
+      setLoadingMembers(false);
+    },
+    [listGroupMembers],
+  );
 
   // メンバー保存
-  const handleSaveMembers = useCallback(async (groupId: string, userIds: string[]): Promise<boolean> => {
-    return await setGroupMembers(groupId, userIds)
-  }, [setGroupMembers])
+  const handleSaveMembers = useCallback(
+    async (groupId: string, userIds: string[]): Promise<boolean> => {
+      return await setGroupMembers(groupId, userIds);
+    },
+    [setGroupMembers],
+  );
 
   // 編集モーダルを開く
-  const handleEditGroup = useCallback((group: TeamGroupWithCount) => {
-    clearError()
-    setEditingGroup(group)
-    setShowGroupForm(true)
-  }, [clearError])
+  const handleEditGroup = useCallback(
+    (group: TeamGroupWithCount) => {
+      clearError();
+      setEditingGroup(group);
+      setShowGroupForm(true);
+    },
+    [clearError],
+  );
 
   // 新規作成モーダルを開く
   const handleOpenCreateForm = useCallback(() => {
-    clearError()
-    setEditingGroup(null)
-    setShowGroupForm(true)
-  }, [clearError])
+    clearError();
+    setEditingGroup(null);
+    setShowGroupForm(true);
+  }, [clearError]);
 
   // グループカードクリック → メンバー一覧表示
   const handleGroupClick = useCallback((group: TeamGroupWithCount) => {
-    setViewMembersGroup(group)
-  }, [])
+    setViewMembersGroup(group);
+  }, []);
 
   // メンバー一覧からメンバー詳細を開く
   const handleMemberClick = useCallback((member: MemberDetail) => {
-    setSelectedMember(member)
-  }, [])
+    setSelectedMember(member);
+  }, []);
 
   // 一括振り分けモーダルを開く
   const handleBulkAssign = useCallback((category: string) => {
-    setBulkAssignCategory(category)
-  }, [])
+    setBulkAssignCategory(category);
+  }, []);
 
   // ローディング
   if (loading) {
@@ -170,15 +199,15 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
           <div className="h-20 bg-gray-200 rounded"></div>
         </div>
       </div>
-    )
+    );
   }
 
   // カテゴリの表示順: 名前付きカテゴリ → 未分類
   const sortedCategoryKeys = [...groupsByCategory.keys()].sort((a, b) => {
-    if (a === null) return 1
-    if (b === null) return -1
-    return a.localeCompare(b)
-  })
+    if (a === null) return 1;
+    if (b === null) return -1;
+    return a.localeCompare(b);
+  });
 
   return (
     <div className="p-6">
@@ -186,9 +215,7 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">グループ管理</h2>
-          <p className="text-xs text-gray-500 mt-1">
-            メンバーをカテゴリ別にグループ分けできます
-          </p>
+          <p className="text-xs text-gray-500 mt-1">メンバーをカテゴリ別にグループ分けできます</p>
         </div>
         <button
           type="button"
@@ -221,10 +248,10 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
       ) : (
         <div className="space-y-4">
           {sortedCategoryKeys.map((categoryKey) => {
-            const categoryGroups = groupsByCategory.get(categoryKey) || []
+            const categoryGroups = groupsByCategory.get(categoryKey) || [];
             return (
               <CategorySection
-                key={categoryKey ?? '__null'}
+                key={categoryKey ?? "__null"}
                 category={categoryKey}
                 groups={categoryGroups}
                 onGroupClick={handleGroupClick}
@@ -233,7 +260,7 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
                 onManageMembers={handleManageMembers}
                 onBulkAssign={handleBulkAssign}
               />
-            )
+            );
           })}
         </div>
       )}
@@ -242,9 +269,9 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
       <GroupFormModal
         isOpen={showGroupForm}
         onClose={() => {
-          setShowGroupForm(false)
-          setEditingGroup(null)
-          clearError()
+          setShowGroupForm(false);
+          setEditingGroup(null);
+          clearError();
         }}
         onSubmit={handleFormSubmit}
         existingCategories={categories}
@@ -257,8 +284,8 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
       <GroupMemberModal
         isOpen={memberModalGroup !== null}
         onClose={() => {
-          setMemberModalGroup(null)
-          setCurrentGroupMemberIds([])
+          setMemberModalGroup(null);
+          setCurrentGroupMemberIds([]);
         }}
         group={memberModalGroup}
         teamMembers={teamMembers}
@@ -282,7 +309,7 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
         isOpen={selectedMember !== null}
         onClose={() => setSelectedMember(null)}
         member={selectedMember}
-        currentUserId={user?.id || ''}
+        currentUserId={user?.id || ""}
         isCurrentUserAdmin={true}
         onMembershipChange={loadGroups}
       />
@@ -300,5 +327,5 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
         />
       )}
     </div>
-  )
+  );
 }

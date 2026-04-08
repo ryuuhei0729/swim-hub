@@ -1,20 +1,20 @@
-import { createClient } from '@supabase/supabase-js'
-import { NextRequest, NextResponse } from 'next/server'
-import { encrypt } from '@/lib/encryption'
+import { createClient } from "@supabase/supabase-js";
+import { NextRequest, NextResponse } from "next/server";
+import { encrypt } from "@/lib/encryption";
 
 /**
  * Supabase設定を取得
  */
 function getSupabaseConfig() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !anonKey) {
-    throw new Error('Supabase環境変数が設定されていません')
+    throw new Error("Supabase環境変数が設定されていません");
   }
 
-  return { url, anonKey, serviceRoleKey }
+  return { url, anonKey, serviceRoleKey };
 }
 
 /**
@@ -25,18 +25,15 @@ function getSupabaseConfig() {
 export async function POST(request: NextRequest) {
   try {
     // 認証チェック（Authorizationヘッダーからトークンを取得）
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: '認証が必要です' },
-        { status: 401 }
-      )
+    const authHeader = request.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
 
-    const accessToken = authHeader.substring(7)
+    const accessToken = authHeader.substring(7);
 
     // Supabaseクライアントを作成（認証済み）
-    const config = getSupabaseConfig()
+    const config = getSupabaseConfig();
 
     // アクセストークンをヘッダーに含めて認証済みクライアントを作成
     const supabase = createClient(config.url, config.anonKey, {
@@ -45,92 +42,71 @@ export async function POST(request: NextRequest) {
           Authorization: `Bearer ${accessToken}`,
         },
       },
-    })
+    });
 
     // トークンでユーザーを取得
-    const { data: { user }, error: userError } = await supabase.auth.getUser(accessToken)
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser(accessToken);
     if (userError || !user) {
-      return NextResponse.json(
-        { error: '認証に失敗しました' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: "認証に失敗しました" }, { status: 401 });
     }
 
     // リクエストボディからprovider_refresh_tokenを取得
-    let providerRefreshToken: string | undefined
+    let providerRefreshToken: string | undefined;
     try {
-      const body = await request.json() as { providerRefreshToken?: string }
-      providerRefreshToken = body.providerRefreshToken
+      const body = (await request.json()) as { providerRefreshToken?: string };
+      providerRefreshToken = body.providerRefreshToken;
     } catch {
-      return NextResponse.json(
-        { error: '無効なJSONです' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: "無効なJSONです" }, { status: 400 });
     }
 
     if (!providerRefreshToken) {
-      return NextResponse.json(
-        { error: 'provider_refresh_tokenが必要です' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: "provider_refresh_tokenが必要です" }, { status: 400 });
     }
 
     // サービスロールキーがない場合はエラー
     if (!config.serviceRoleKey) {
-      return NextResponse.json(
-        { error: 'サーバー設定エラー' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: "サーバー設定エラー" }, { status: 500 });
     }
 
     // 暗号化キーの確認
     if (!process.env.TOKEN_ENCRYPTION_KEY) {
-      console.error('TOKEN_ENCRYPTION_KEY is not set')
-      return NextResponse.json(
-        { error: 'サーバー設定エラー' },
-        { status: 500 }
-      )
+      console.error("TOKEN_ENCRYPTION_KEY is not set");
+      return NextResponse.json({ error: "サーバー設定エラー" }, { status: 500 });
     }
 
     // トークンを暗号化
-    const encryptedToken = encrypt(providerRefreshToken)
+    const encryptedToken = encrypt(providerRefreshToken);
 
     // サービスロールクライアントを作成（RPC関数実行用）
-    const serviceClient = createClient(config.url, config.serviceRoleKey)
+    const serviceClient = createClient(config.url, config.serviceRoleKey);
 
     // RPC関数で暗号化済みトークンを保存（サービスロールで実行）
-    const { error: tokenError } = await serviceClient.rpc('set_google_refresh_token', {
+    const { error: tokenError } = await serviceClient.rpc("set_google_refresh_token", {
       p_user_id: user.id,
       p_token: encryptedToken,
-    })
+    });
 
     if (tokenError) {
-      console.error('Failed to save token:', tokenError.message)
-      return NextResponse.json(
-        { error: 'トークンの保存に失敗しました' },
-        { status: 500 }
-      )
+      console.error("Failed to save token:", tokenError.message);
+      return NextResponse.json({ error: "トークンの保存に失敗しました" }, { status: 500 });
     }
 
     // google_calendar_enabledフラグを更新（サービスロールで実行）
     const { error: updateError } = await serviceClient
-      .from('users')
+      .from("users")
       .update({ google_calendar_enabled: true })
-      .eq('id', user.id)
+      .eq("id", user.id);
 
     if (updateError) {
-      return NextResponse.json(
-        { error: 'フラグの更新に失敗しました' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: "フラグの更新に失敗しました" }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true });
   } catch (err) {
-    console.error('Unexpected error in google-calendar/connect:', err)
-    return NextResponse.json(
-      { error: '予期しないエラーが発生しました' },
-      { status: 500 }
-    )
+    console.error("Unexpected error in google-calendar/connect:", err);
+    return NextResponse.json({ error: "予期しないエラーが発生しました" }, { status: 500 });
   }
 }

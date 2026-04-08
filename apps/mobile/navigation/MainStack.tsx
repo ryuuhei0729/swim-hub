@@ -1,20 +1,21 @@
-import React from 'react'
-import { createNativeStackNavigator } from '@react-navigation/native-stack'
-import type { MainStackParamList } from './types'
-import { TabNavigator } from './TabNavigator'
-import { PracticeDetailScreen } from '@/screens/PracticeDetailScreen'
-import { PracticeFormScreen } from '@/screens/PracticeFormScreen'
-import { PracticeLogFormScreen } from '@/screens/PracticeLogFormScreen'
-import { PracticeTimeFormScreen } from '@/screens/PracticeTimeFormScreen'
-import { RecordDetailScreen } from '@/screens/RecordDetailScreen'
-import { RecordFormScreen } from '@/screens/RecordFormScreen'
-import { CompetitionBasicFormScreen } from '@/screens/CompetitionBasicFormScreen'
-import { EntryLogFormScreen } from '@/screens/EntryLogFormScreen'
-import { RecordLogFormScreen } from '@/screens/RecordLogFormScreen'
-import { TeamDetailScreen } from '@/screens/TeamDetailScreen'
-import { SettingsScreen } from '@/screens/SettingsScreen'
+import React from "react";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import type { MainStackParamList } from "./types";
+import { TabNavigator } from "./TabNavigator";
+import { PracticeDetailScreen } from "@/screens/PracticeDetailScreen";
+import { PracticeFormScreen } from "@/screens/PracticeFormScreen";
+import { PracticeLogFormScreen } from "@/screens/PracticeLogFormScreen";
+import { PracticeTimeFormScreen } from "@/screens/PracticeTimeFormScreen";
+import { RecordDetailScreen } from "@/screens/RecordDetailScreen";
+import { RecordFormScreen } from "@/screens/RecordFormScreen";
+import { CompetitionBasicFormScreen } from "@/screens/CompetitionBasicFormScreen";
+import { EntryLogFormScreen } from "@/screens/EntryLogFormScreen";
+import { RecordLogFormScreen } from "@/screens/RecordLogFormScreen";
+import { TeamDetailScreen } from "@/screens/TeamDetailScreen";
+import { SettingsScreen } from "@/screens/SettingsScreen";
+import { PaywallScreen } from "@/screens/PaywallScreen";
 
-const Stack = createNativeStackNavigator<MainStackParamList>()
+const Stack = createNativeStackNavigator<MainStackParamList>();
 
 /**
  * メインのスタックナビゲーター
@@ -27,7 +28,7 @@ export const MainStack: React.FC = () => {
       screenOptions={{
         headerShown: false,
         contentStyle: {
-          backgroundColor: '#EFF6FF',
+          backgroundColor: "#EFF6FF",
         },
       }}
     >
@@ -37,14 +38,14 @@ export const MainStack: React.FC = () => {
         component={PracticeDetailScreen}
         options={{
           headerShown: true,
-          title: '練習記録詳細',
-          headerBackTitle: '戻る',
+          title: "練習記録詳細",
+          headerBackTitle: "戻る",
           headerStyle: {
-            backgroundColor: '#FFFFFF',
+            backgroundColor: "#FFFFFF",
           },
-          headerTintColor: '#111827',
+          headerTintColor: "#111827",
           headerTitleStyle: {
-            fontWeight: '600',
+            fontWeight: "600",
           },
         }}
       />
@@ -53,14 +54,14 @@ export const MainStack: React.FC = () => {
         component={PracticeFormScreen}
         options={({ route }) => ({
           headerShown: true,
-          title: route.params?.practiceId ? '練習記録編集' : '練習記録作成',
-          headerBackTitle: '戻る',
+          title: route.params?.practiceId ? "練習記録編集" : "練習記録作成",
+          headerBackTitle: "戻る",
           headerStyle: {
-            backgroundColor: '#FFFFFF',
+            backgroundColor: "#FFFFFF",
           },
-          headerTintColor: '#111827',
+          headerTintColor: "#111827",
           headerTitleStyle: {
-            fontWeight: '600',
+            fontWeight: "600",
           },
         })}
       />
@@ -69,14 +70,14 @@ export const MainStack: React.FC = () => {
         component={PracticeLogFormScreen}
         options={({ route }) => ({
           headerShown: true,
-          title: route.params?.practiceLogId !== undefined ? '練習ログ編集' : '練習ログ作成',
-          headerBackTitle: '戻る',
+          title: route.params?.practiceLogId !== undefined ? "練習ログ編集" : "練習ログ作成",
+          headerBackTitle: "戻る",
           headerStyle: {
-            backgroundColor: '#FFFFFF',
+            backgroundColor: "#FFFFFF",
           },
-          headerTintColor: '#111827',
+          headerTintColor: "#111827",
           headerTitleStyle: {
-            fontWeight: '600',
+            fontWeight: "600",
           },
         })}
       />
@@ -85,14 +86,14 @@ export const MainStack: React.FC = () => {
         component={PracticeTimeFormScreen}
         options={{
           headerShown: true,
-          title: 'タイム入力',
-          headerBackTitle: '戻る',
+          title: "タイム入力",
+          headerBackTitle: "戻る",
           headerStyle: {
-            backgroundColor: '#FFFFFF',
+            backgroundColor: "#FFFFFF",
           },
-          headerTintColor: '#111827',
+          headerTintColor: "#111827",
           headerTitleStyle: {
-            fontWeight: '600',
+            fontWeight: "600",
           },
         }}
       />
@@ -101,14 +102,14 @@ export const MainStack: React.FC = () => {
         component={RecordDetailScreen}
         options={{
           headerShown: true,
-          title: '大会記録詳細',
-          headerBackTitle: '戻る',
+          title: "大会記録詳細",
+          headerBackTitle: "戻る",
           headerStyle: {
-            backgroundColor: '#FFFFFF',
+            backgroundColor: "#FFFFFF",
           },
-          headerTintColor: '#111827',
+          headerTintColor: "#111827",
           headerTitleStyle: {
-            fontWeight: '600',
+            fontWeight: "600",
           },
         }}
       />
@@ -117,14 +118,14 @@ export const MainStack: React.FC = () => {
         component={RecordFormScreen}
         options={({ route }) => ({
           headerShown: true,
-          title: route.params?.recordId ? '大会記録編集' : '大会記録作成',
-          headerBackTitle: '戻る',
+          title: route.params?.recordId ? "大会記録編集" : "大会記録作成",
+          headerBackTitle: "戻る",
           headerStyle: {
-            backgroundColor: '#FFFFFF',
+            backgroundColor: "#FFFFFF",
           },
-          headerTintColor: '#111827',
+          headerTintColor: "#111827",
           headerTitleStyle: {
-            fontWeight: '600',
+            fontWeight: "600",
           },
         })}
       />
@@ -133,14 +134,14 @@ export const MainStack: React.FC = () => {
         component={CompetitionBasicFormScreen}
         options={{
           headerShown: true,
-          title: '大会情報',
-          headerBackTitle: '戻る',
+          title: "大会情報",
+          headerBackTitle: "戻る",
           headerStyle: {
-            backgroundColor: '#FFFFFF',
+            backgroundColor: "#FFFFFF",
           },
-          headerTintColor: '#111827',
+          headerTintColor: "#111827",
           headerTitleStyle: {
-            fontWeight: '600',
+            fontWeight: "600",
           },
         }}
       />
@@ -149,14 +150,14 @@ export const MainStack: React.FC = () => {
         component={EntryLogFormScreen}
         options={{
           headerShown: true,
-          title: 'エントリー登録',
-          headerBackTitle: '戻る',
+          title: "エントリー登録",
+          headerBackTitle: "戻る",
           headerStyle: {
-            backgroundColor: '#FFFFFF',
+            backgroundColor: "#FFFFFF",
           },
-          headerTintColor: '#111827',
+          headerTintColor: "#111827",
           headerTitleStyle: {
-            fontWeight: '600',
+            fontWeight: "600",
           },
         }}
       />
@@ -165,14 +166,14 @@ export const MainStack: React.FC = () => {
         component={RecordLogFormScreen}
         options={{
           headerShown: true,
-          title: '記録入力',
-          headerBackTitle: '戻る',
+          title: "記録入力",
+          headerBackTitle: "戻る",
           headerStyle: {
-            backgroundColor: '#FFFFFF',
+            backgroundColor: "#FFFFFF",
           },
-          headerTintColor: '#111827',
+          headerTintColor: "#111827",
           headerTitleStyle: {
-            fontWeight: '600',
+            fontWeight: "600",
           },
         }}
       />
@@ -181,14 +182,14 @@ export const MainStack: React.FC = () => {
         component={TeamDetailScreen}
         options={{
           headerShown: true,
-          title: 'チーム詳細',
-          headerBackTitle: '戻る',
+          title: "チーム詳細",
+          headerBackTitle: "戻る",
           headerStyle: {
-            backgroundColor: '#FFFFFF',
+            backgroundColor: "#FFFFFF",
           },
-          headerTintColor: '#111827',
+          headerTintColor: "#111827",
           headerTitleStyle: {
-            fontWeight: '600',
+            fontWeight: "600",
           },
         }}
       />
@@ -197,17 +198,25 @@ export const MainStack: React.FC = () => {
         component={SettingsScreen}
         options={{
           headerShown: true,
-          title: '設定',
-          headerBackTitle: '戻る',
+          title: "設定",
+          headerBackTitle: "戻る",
           headerStyle: {
-            backgroundColor: '#FFFFFF',
+            backgroundColor: "#FFFFFF",
           },
-          headerTintColor: '#111827',
+          headerTintColor: "#111827",
           headerTitleStyle: {
-            fontWeight: '600',
+            fontWeight: "600",
           },
         }}
       />
+      <Stack.Screen
+        name="Paywall"
+        component={PaywallScreen}
+        options={{
+          headerShown: false,
+          presentation: "modal",
+        }}
+      />
     </Stack.Navigator>
-  )
-}
+  );
+};

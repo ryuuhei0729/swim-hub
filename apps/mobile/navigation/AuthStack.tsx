@@ -1,14 +1,14 @@
-import React from 'react'
-import { createNativeStackNavigator } from '@react-navigation/native-stack'
-import type { AuthStackParamList } from './types'
-import { WelcomeScreen } from '@/screens/WelcomeScreen'
-import { GetStartedScreen } from '@/screens/GetStartedScreen'
-import { LoginMethodScreen } from '@/screens/LoginMethodScreen'
-import { EmailLoginScreen } from '@/screens/EmailLoginScreen'
-import { EmailSignupScreen } from '@/screens/EmailSignupScreen'
-import { ResetPasswordScreen } from '@/screens/ResetPasswordScreen'
+import React from "react";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import type { AuthStackParamList } from "./types";
+import { WelcomeScreen } from "@/screens/WelcomeScreen";
+import { GetStartedScreen } from "@/screens/GetStartedScreen";
+import { LoginMethodScreen } from "@/screens/LoginMethodScreen";
+import { EmailLoginScreen } from "@/screens/EmailLoginScreen";
+import { EmailSignupScreen } from "@/screens/EmailSignupScreen";
+import { ResetPasswordScreen } from "@/screens/ResetPasswordScreen";
 
-const Stack = createNativeStackNavigator<AuthStackParamList>()
+const Stack = createNativeStackNavigator<AuthStackParamList>();
 
 /**
  * 認証関連のスタックナビゲーター
@@ -21,7 +21,7 @@ export const AuthStack: React.FC = () => {
       screenOptions={{
         headerShown: false,
         contentStyle: {
-          backgroundColor: '#EFF6FF',
+          backgroundColor: "#EFF6FF",
         },
       }}
     >
@@ -32,5 +32,5 @@ export const AuthStack: React.FC = () => {
       <Stack.Screen name="EmailSignup" component={EmailSignupScreen} />
       <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
     </Stack.Navigator>
-  )
-}
+  );
+};

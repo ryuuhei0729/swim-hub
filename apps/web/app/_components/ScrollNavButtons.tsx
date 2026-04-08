@@ -1,40 +1,40 @@
-'use client'
+"use client";
 
-import { useState, useCallback } from 'react'
-import Link from 'next/link'
+import { useState, useCallback } from "react";
+import Link from "next/link";
 
 const navItems = [
-  { id: 'practice', label: '練習記録' },
-  { id: 'competition', label: '大会記録' },
-  { id: 'goals', label: '目標管理' },
-  { id: 'pricing', label: '料金' },
-]
+  { id: "practice", label: "練習記録" },
+  { id: "competition", label: "大会記録" },
+  { id: "goals", label: "目標管理" },
+  { id: "pricing", label: "料金" },
+];
 
 function handleScrollTo(id: string) {
-  const element = document.getElementById(id)
+  const element = document.getElementById(id);
   if (element) {
-    const headerOffset = 100
-    const elementPosition = element.getBoundingClientRect().top
-    const offsetPosition = elementPosition + window.scrollY - headerOffset
+    const headerOffset = window.innerWidth >= 640 ? 100 : 80;
+    const elementPosition = element.getBoundingClientRect().top;
+    const offsetPosition = elementPosition + window.scrollY - headerOffset;
 
     window.scrollTo({
       top: offsetPosition,
-      behavior: 'smooth',
-    })
+      behavior: "smooth",
+    });
   }
 }
 
 export default function ScrollNavButtons() {
-  const [menuOpen, setMenuOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const toggleMenu = useCallback(() => {
-    setMenuOpen((prev) => !prev)
-  }, [])
+    setMenuOpen((prev) => !prev);
+  }, []);
 
   const handleMobileNavClick = useCallback((id: string) => {
-    setMenuOpen(false)
-    handleScrollTo(id)
-  }, [])
+    setMenuOpen(false);
+    handleScrollTo(id);
+  }, []);
 
   return (
     <>
@@ -73,60 +73,53 @@ export default function ScrollNavButtons() {
       {/* モバイルメニューボタン */}
       <button
         className="md:hidden p-2 text-gray-700 hover:text-blue-600"
-        aria-label={menuOpen ? 'メニューを閉じる' : 'メニューを開く'}
+        aria-label={menuOpen ? "メニューを閉じる" : "メニューを開く"}
         onClick={toggleMenu}
       >
         {menuOpen ? (
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         ) : (
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 6h16M4 12h16M4 18h16"
+            />
           </svg>
         )}
       </button>
 
       {/* モバイルメニュー */}
       {menuOpen && (
-        <div className="absolute top-full left-0 right-0 bg-white shadow-lg border-t border-gray-100 md:hidden">
-          <div className="flex flex-col py-2">
+        <div className="absolute top-full right-0 w-40 bg-white shadow-lg rounded-bl-lg border border-gray-100 md:hidden">
+          <div className="flex flex-col py-1">
             {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => handleMobileNavClick(item.id)}
-                className="px-6 py-3 text-left text-base text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                className="px-4 py-2 text-right text-xs text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-colors"
               >
                 {item.label}
               </button>
             ))}
             <Link
               href="/blog"
-              className="px-6 py-3 text-left text-base text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+              className="px-4 py-2 text-right text-xs text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-colors"
               onClick={() => setMenuOpen(false)}
             >
               ブログ
             </Link>
-            <div className="mx-4 my-2 h-px bg-gray-200" />
-            <div className="flex flex-col gap-2 px-4 py-2">
-              <Link
-                href="/signup"
-                className="px-5 py-2.5 text-center text-base font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
-                onClick={() => setMenuOpen(false)}
-              >
-                無料登録
-              </Link>
-              <Link
-                href="/login"
-                className="px-5 py-2.5 text-center text-base font-semibold text-blue-600 border border-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                onClick={() => setMenuOpen(false)}
-              >
-                ログイン
-              </Link>
-            </div>
           </div>
         </div>
       )}
     </>
-  )
+  );
 }
