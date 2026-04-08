@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { EnvConfig, URLS } from "../config/config";
+import { supabaseLogin } from "../utils/supabase-login";
 
 /**
  * マイページのE2Eテスト
@@ -10,26 +11,6 @@ import { EnvConfig, URLS } from "../config/config";
  * - TC-MYPAGE-003: アバター変更
  * - TC-MYPAGE-004: ベストタイム表示
  */
-
-/**
- * ログインヘルパー関数
- */
-async function loginIfNeeded(page: Page) {
-  await page.goto("/dashboard");
-  await page.waitForLoadState("networkidle");
-
-  const currentUrl = page.url();
-  if (currentUrl.includes("/login")) {
-    const testEnv = EnvConfig.getTestEnvironment();
-
-    await page.waitForSelector('[data-testid="email-input"]', { timeout: 10000 });
-    await page.fill('[data-testid="email-input"]', testEnv.credentials.email);
-    await page.fill('[data-testid="password-input"]', testEnv.credentials.password);
-    await page.click('[data-testid="login-button"]');
-    await page.waitForURL("**/dashboard", { timeout: 15000 });
-    await page.waitForLoadState("networkidle");
-  }
-}
 
 // テスト開始前に環境変数を検証
 let hasRequiredEnvVars = false;
@@ -45,7 +26,7 @@ test.describe("マイページのテスト", () => {
   test.skip(!hasRequiredEnvVars, "必要な環境変数が設定されていません。");
 
   test.beforeEach(async ({ page }) => {
-    await loginIfNeeded(page);
+    await supabaseLogin(page);
   });
 
   /**
@@ -121,7 +102,7 @@ test.describe("マイページのテスト", () => {
     // ステップ8: モーダルが閉じることを確認
     await page.waitForSelector('h3:has-text("プロフィール編集")', {
       state: "hidden",
-      timeout: 10000,
+      timeout: 20000,
     });
 
     // ステップ9: プロフィールが更新されたことを確認

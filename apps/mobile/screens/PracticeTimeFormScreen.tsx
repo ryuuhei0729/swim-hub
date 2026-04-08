@@ -3,6 +3,10 @@ import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from "react-
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { usePracticeTimeStore } from "@/stores/practiceTimeStore";
+import { useAuth } from "@/contexts/AuthProvider";
+import { PremiumBadge } from "@/components/shared/PremiumBadge";
+import { checkIsPremium } from "@swim-hub/shared/utils/premium";
+import { PREMIUM_MESSAGES, FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import type { MainStackParamList } from "@/navigation/types";
 import type { TimeEntry } from "@apps/shared/types/ui";
 import { formatTime } from "@/utils/formatters";
@@ -27,6 +31,12 @@ export const PracticeTimeFormScreen: React.FC = () => {
   const { setCount, repCount, initialTimes = [] } = route.params;
   const saveTimes = usePracticeTimeStore((state) => state.setTimes);
   const currentMenuId = usePracticeTimeStore((state) => state.currentMenuId);
+
+  // Premium 判定
+  const { subscription } = useAuth();
+  const isPremium = checkIsPremium(subscription);
+  const totalTimes = setCount * repCount;
+  const practiceTimeLimitExceeded = !isPremium && totalTimes > FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG;
 
   // クイック入力フック
   const { parseInput, resetContext } = useQuickTimeInput();
@@ -149,6 +159,11 @@ export const PracticeTimeFormScreen: React.FC = () => {
         <Text style={styles.subtitle}>
           {setCount}セット × {repCount}本のタイムを入力してください
         </Text>
+        {practiceTimeLimitExceeded && (
+          <View style={{ marginTop: 12 }}>
+            <PremiumBadge message={PREMIUM_MESSAGES.practice_time_limit} />
+          </View>
+        )}
       </View>
 
       <View style={styles.timesContainer}>
@@ -174,8 +189,11 @@ export const PracticeTimeFormScreen: React.FC = () => {
                   const globalIndex = (setNumber - 1) * repCount + repIndex;
                   const isLastInput = globalIndex === setCount * repCount - 1;
 
+                  // Free ユーザーは 18 個目までしか入力できない
+                  const isDisabledByLimit = !isPremium && globalIndex >= FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG;
+
                   return (
-                    <View key={timeEntry.id} style={styles.timeInputContainer}>
+                    <View key={timeEntry.id} style={[styles.timeInputContainer, isDisabledByLimit && { opacity: 0.4 }]}>
                       <Text style={styles.timeLabel}>{timeEntry.repNumber}本目</Text>
                       <TextInput
                         ref={(ref) => {
@@ -189,11 +207,12 @@ export const PracticeTimeFormScreen: React.FC = () => {
                           handleTimeConfirm(timeEntry.id, timeEntry.displayValue || "");
                           focusNextInput(globalIndex);
                         }}
-                        placeholder="例: 31-2"
+                        placeholder={isDisabledByLimit ? "Premium限定" : "例: 31-2"}
                         keyboardType="default"
                         autoCapitalize="none"
                         returnKeyType={isLastInput ? "done" : "next"}
                         blurOnSubmit={false}
+                        editable={!isDisabledByLimit}
                       />
                     </View>
                   );

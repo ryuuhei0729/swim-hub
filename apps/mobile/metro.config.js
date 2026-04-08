@@ -2,32 +2,56 @@
 const { getDefaultConfig } = require("expo/metro-config");
 const path = require("path");
 
-/** @type {import('expo/metro-config').MetroConfig} */
-const config = getDefaultConfig(__dirname);
+const projectRoot = __dirname;
+const monorepoRoot = path.resolve(projectRoot, "../..");
 
-// Reactの解決をmobileアプリのnode_modulesに統一
+/** @type {import('expo/metro-config').MetroConfig} */
+const config = getDefaultConfig(projectRoot);
+
+// pnpm monorepo: watch the entire monorepo root (keep defaults + add monorepo root)
+config.watchFolders = [...(config.watchFolders || []), monorepoRoot];
+
+// React の重複インスタンスを防ぐため、単一パスに強制解決するモジュール一覧
+const resolveToMonorepo = {
+  react: path.resolve(monorepoRoot, "node_modules/react"),
+  "react-native": path.resolve(monorepoRoot, "node_modules/react-native"),
+};
+
+// @apps/shared エイリアスの実パス
+const sharedRoot = path.resolve(projectRoot, "../shared");
+
 config.resolver = {
   ...config.resolver,
-  // mobileアプリのnode_modulesを優先的に解決
   nodeModulesPaths: [
-    path.resolve(__dirname, "node_modules"),
-    path.resolve(__dirname, "../../node_modules"),
+    path.resolve(projectRoot, "node_modules"),
+    path.resolve(monorepoRoot, "node_modules"),
   ],
-  // Reactを強制的にmobileアプリのnode_modulesから解決
+  extraNodeModules: {
+    "@apps/shared": sharedRoot,
+    ...resolveToMonorepo,
+  },
+  // extraNodeModules はフォールバックなので、resolveRequest で強制的に解決先を上書きする
   resolveRequest: (context, moduleName, platform) => {
-    // ReactとReact DOMをmobileアプリのnode_modulesから解決
-    if (moduleName === "react" || moduleName === "react-dom") {
-      try {
-        const reactPath = path.resolve(__dirname, "node_modules", moduleName);
-        return {
-          filePath: require.resolve(reactPath),
-          type: "sourceFile",
-        };
-      } catch (e) {
-        // フォールバック: デフォルトの解決を使用
-      }
+    // @apps/shared/* を実パスに解決
+    if (moduleName.startsWith("@apps/shared/")) {
+      const subPath = moduleName.replace("@apps/shared/", "");
+      return context.resolveRequest(
+        context,
+        path.resolve(sharedRoot, subPath),
+        platform,
+      );
     }
-    // デフォルトの解決を使用
+    if (moduleName === "@apps/shared") {
+      return context.resolveRequest(context, sharedRoot, platform);
+    }
+    if (resolveToMonorepo[moduleName]) {
+      return {
+        filePath: require.resolve(moduleName, {
+          paths: [monorepoRoot],
+        }),
+        type: "sourceFile",
+      };
+    }
     return context.resolveRequest(context, moduleName, platform);
   },
 };

@@ -31,7 +31,7 @@ interface RecordWithDetails {
   user_id: string;
   style_id: number;
   time: number;
-  video_url: string | null;
+  video_path: string | null;
   note: string | null;
   is_relaying: boolean;
   pool_type: number | null;
@@ -123,7 +123,7 @@ export default async function RecordDataLoader({ teamId, competitionId }: Record
         user_id,
         style_id,
         time,
-        video_url,
+        video_path,
         note,
         is_relaying,
         pool_type,

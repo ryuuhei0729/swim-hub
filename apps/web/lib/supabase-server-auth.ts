@@ -7,6 +7,7 @@ import { cache } from "react";
 import { createServerClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, UserProfile } from "@swim-hub/shared/types";
+import type { SubscriptionInfo, UserPlan } from "@swim-hub/shared/types/auth";
 import { cookies } from "next/headers";
 
 /**
@@ -78,6 +79,48 @@ export const getServerUser = cache(async () => {
 
   return user;
 });
+
+/**
+ * サーバー側でサブスクリプション情報を取得
+ * React.cache()により同一リクエスト内で自動デデュプリケーション
+ *
+ * @param userId ユーザーID
+ * @returns サブスクリプション情報、取得できない場合はデフォルト値(free)
+ */
+export const getServerSubscription = cache(
+  async (userId: string): Promise<SubscriptionInfo> => {
+    const defaultSubscription: SubscriptionInfo = {
+      plan: "free",
+      status: null,
+      cancelAtPeriodEnd: false,
+      premiumExpiresAt: null,
+      trialEnd: null,
+    };
+
+    try {
+      const supabase = await createAuthenticatedServerClient();
+      const { data, error } = await supabase
+        .from("user_subscriptions")
+        .select("plan, status, cancel_at_period_end, premium_expires_at, trial_end")
+        .eq("id", userId)
+        .single();
+
+      if (error || !data) {
+        return defaultSubscription;
+      }
+
+      return {
+        plan: data.plan as UserPlan,
+        status: data.status as SubscriptionInfo["status"],
+        cancelAtPeriodEnd: (data.cancel_at_period_end as boolean) ?? false,
+        premiumExpiresAt: (data.premium_expires_at as string) ?? null,
+        trialEnd: (data.trial_end as string) ?? null,
+      };
+    } catch {
+      return defaultSubscription;
+    }
+  },
+);
 
 /**
  * サーバー側でユーザープロフィールを取得

@@ -6,6 +6,8 @@
 import { randomUUID } from "expo-crypto";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { base64ToArrayBuffer } from "./base64";
+import { canUploadImage } from "@swim-hub/shared/utils/premium";
+import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
 
 export type ImageBucket = "practice-images" | "competition-images";
 
@@ -16,6 +18,8 @@ export interface UploadImageParams {
   base64: string;
   fileExtension: string;
   bucket: ImageBucket;
+  /** Premium ユーザーかどうか（防御的チェック用、省略時はチェックしない） */
+  isPremium?: boolean;
 }
 
 export interface UploadResult {
@@ -60,7 +64,13 @@ export async function uploadImage({
   base64,
   fileExtension,
   bucket,
+  isPremium,
 }: UploadImageParams): Promise<UploadResult> {
+  // Premium チェック（防御的: isPremium が明示的に false の場合のみブロック）
+  if (isPremium === false && !canUploadImage(false)) {
+    throw new Error(PREMIUM_MESSAGES.image_upload);
+  }
+
   // base64をArrayBufferに変換
   const arrayBuffer = base64ToArrayBuffer(base64);
 
@@ -103,7 +113,13 @@ export async function uploadImages(
   recordId: string,
   images: Array<{ base64: string; fileExtension: string }>,
   bucket: ImageBucket,
+  isPremium?: boolean,
 ): Promise<UploadResult[]> {
+  // Premium チェック（防御的: isPremium が明示的に false の場合のみブロック）
+  if (isPremium === false && !canUploadImage(false)) {
+    throw new Error(PREMIUM_MESSAGES.image_upload);
+  }
+
   const results: UploadResult[] = [];
 
   try {

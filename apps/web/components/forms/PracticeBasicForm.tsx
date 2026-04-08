@@ -10,15 +10,19 @@ import FormStepper from "@/components/ui/FormStepper";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { supabase } from "@/lib/supabase";
 import { PracticeAPI } from "@apps/shared/api";
+import { format, parseISO, isValid } from "date-fns";
+import { ja } from "date-fns/locale";
+import PracticeImageUploader, { PracticeImageFile, ExistingImage } from "./PracticeImageUploader";
+import { useAuth } from "@/contexts";
+import { checkIsPremium } from "@swim-hub/shared/utils/premium";
+import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
+import PremiumBadge from "@/components/ui/PremiumBadge";
 
 // 練習記録フォームのステップ定義
 const PRACTICE_STEPS = [
   { id: "basic", label: "基本情報", description: "日付・場所" },
   { id: "log", label: "練習記録", description: "メニュー・タイム" },
 ];
-import { format, parseISO, isValid } from "date-fns";
-import { ja } from "date-fns/locale";
-import PracticeImageUploader, { PracticeImageFile, ExistingImage } from "./PracticeImageUploader";
 
 export interface PracticeBasicData {
   date: string;
@@ -63,6 +67,9 @@ export default function PracticeBasicForm({
   isLoading = false,
   teamMode = false,
 }: PracticeBasicFormProps) {
+  const { subscription } = useAuth();
+  const isPremium = checkIsPremium(subscription);
+
   // selectedDateの有効性を確保
   const validDate = selectedDate && !isNaN(selectedDate.getTime()) ? selectedDate : new Date();
 
@@ -384,11 +391,15 @@ export default function PracticeBasicForm({
 
               {/* 画像添付 */}
               <div>
-                <PracticeImageUploader
-                  existingImages={editData?.images}
-                  onImagesChange={handleImagesChange}
-                  disabled={isLoading}
-                />
+                {isPremium ? (
+                  <PracticeImageUploader
+                    existingImages={editData?.images}
+                    onImagesChange={handleImagesChange}
+                    disabled={isLoading}
+                  />
+                ) : (
+                  <PremiumBadge message={PREMIUM_MESSAGES.image_upload} />
+                )}
               </div>
             </div>
 

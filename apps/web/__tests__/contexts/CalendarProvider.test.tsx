@@ -169,33 +169,33 @@ describe("CalendarProvider", () => {
     expect(contextValue?.calendarItems).not.toContainEqual(expect.objectContaining({ id: "4" }));
   });
 
-  it("refetch resets state when user is not authenticated", async () => {
-    const getUserMock = vi
-      .fn()
-      .mockResolvedValueOnce({ data: { user: { id: "user-1" } } })
-      .mockResolvedValue({ data: { user: null } });
-
+  it("refetch resets state when API call fails (e.g. user not authenticated)", async () => {
     mockUseAuth.mockReturnValue({
       supabase: {
         auth: {
-          getUser: getUserMock,
+          getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }),
         },
       },
     });
 
-    mockGetCalendarEntries.mockResolvedValue([
-      {
-        id: "5",
-        type: "practice",
-        date: "2025-04-01",
-        title: "朝練",
-        place: "学校プール",
-        note: "",
-        metadata: {},
-        editData: {},
-      },
-    ] as CalendarItem[]);
-    mockGetMonthlySummary.mockResolvedValue({ practiceCount: 2, recordCount: 0 });
+    // 初回は成功、2回目以降は失敗（認証切れをシミュレート）
+    mockGetCalendarEntries
+      .mockResolvedValueOnce([
+        {
+          id: "5",
+          type: "practice",
+          date: "2025-04-01",
+          title: "朝練",
+          place: "学校プール",
+          note: "",
+          metadata: {},
+          editData: {},
+        },
+      ] as CalendarItem[])
+      .mockRejectedValue(new Error("Not authenticated"));
+    mockGetMonthlySummary
+      .mockResolvedValueOnce({ practiceCount: 2, recordCount: 0 })
+      .mockRejectedValue(new Error("Not authenticated"));
 
     let contextValue: ReturnType<typeof useCalendar> | undefined;
 

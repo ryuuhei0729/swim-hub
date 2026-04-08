@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthProvider";
 import Button from "@/components/ui/Button";
+import dynamic from "next/dynamic";
 import {
   ArrowLeftIcon,
   PlusIcon,
@@ -12,12 +13,18 @@ import {
   MapPinIcon,
   UserGroupIcon,
   XMarkIcon,
+  VideoCameraIcon,
 } from "@heroicons/react/24/outline";
 import { Competition, Style } from "@apps/shared/types";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { formatTimeBest, parseTimeToSeconds } from "@/utils/formatters";
 import { LapTimeDisplay } from "@/components/forms/LapTimeDisplay";
+
+// TeamVideoUploaderを動的インポート
+const TeamVideoUploader = dynamic(() => import("@/components/video/TeamVideoUploader"), {
+  ssr: false,
+});
 
 interface TeamMember {
   id: string;
@@ -41,7 +48,7 @@ interface RecordWithDetails {
   user_id: string;
   style_id: number;
   time: number;
-  video_url: string | null;
+  video_path: string | null;
   note: string | null;
   is_relaying: boolean;
   pool_type: number | null;
@@ -80,6 +87,8 @@ interface MemberRecord {
   isRelaying: boolean;
   note: string;
   splitTimes: SplitTimeEntry[];
+  videoFile?: File | null;
+  videoThumbnailBlob?: Blob | null;
 }
 
 interface StyleEntry {
@@ -115,6 +124,11 @@ export default function RecordClient({
   const [showMemberSelectModal, setShowMemberSelectModal] = useState(false);
   const [currentStyleEntryId, setCurrentStyleEntryId] = useState<string | null>(null);
   const [tempSelectedUserIds, setTempSelectedUserIds] = useState<string[]>([]);
+  const [videoUploadModal, setVideoUploadModal] = useState<{
+    entryId: string;
+    memberUserId: string;
+    memberName: string;
+  } | null>(null);
 
   // 既存データから種目エントリを構築
   const buildStyleEntriesFromExisting = (): StyleEntry[] => {
@@ -475,6 +489,11 @@ export default function RecordClient({
     );
   };
 
+  const handleVideoReady = (entryId: string, memberUserId: string, file: File, thumbnail: Blob) => {
+    updateMemberRecord(entryId, memberUserId, { videoFile: file, videoThumbnailBlob: thumbnail });
+    setVideoUploadModal(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -599,6 +618,58 @@ export default function RecordClient({
       if (hasError) {
         alert("保存中にエラーが発生しました。もう一度お試しください。");
         return;
+      }
+
+      // 動画アップロード（保存されたrecordの各メンバーへ）
+      for (const entry of styleEntries) {
+        for (const mr of entry.memberRecords) {
+          if (!mr.videoFile || !mr.id) continue;
+          try {
+            const uploadUrlRes = await fetch("/api/storage/videos/upload-url", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ type: "record", id: mr.id, contentType: "video/mp4" }),
+            });
+            if (!uploadUrlRes.ok) continue;
+            const { videoUploadUrl, thumbnailUploadUrl, videoPath: vPath, thumbnailPath: tPath } =
+              await uploadUrlRes.json() as {
+                videoUploadUrl: string;
+                thumbnailUploadUrl: string;
+                videoPath: string;
+                thumbnailPath: string;
+              };
+            await fetch(videoUploadUrl, { method: "PUT", body: mr.videoFile });
+            if (mr.videoThumbnailBlob) {
+              await fetch(thumbnailUploadUrl, { method: "PUT", body: mr.videoThumbnailBlob });
+            }
+            const confirmFormData = new FormData();
+            confirmFormData.append("type", "record");
+            confirmFormData.append("id", mr.id);
+            confirmFormData.append("videoPath", vPath);
+            confirmFormData.append("thumbnailPath", tPath);
+            if (mr.videoThumbnailBlob) {
+              confirmFormData.append(
+                "thumbnailBlob",
+                new File([mr.videoThumbnailBlob], "thumbnail.webp", { type: "image/webp" }),
+              );
+            }
+            await fetch("/api/storage/videos/confirm", { method: "POST", body: confirmFormData });
+            await fetch("/api/storage/videos/team-assign", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                type: "record",
+                sourceId: mr.id,
+                targetUserId: mr.memberUserId,
+                teamId,
+                tempVideoPath: vPath,
+                tempThumbnailPath: tPath,
+              }),
+            });
+          } catch (videoErr) {
+            console.error("動画アップロードエラー:", videoErr);
+          }
+        }
       }
 
       router.push(`/teams/${teamId}?tab=competitions`);
@@ -895,6 +966,28 @@ export default function RecordClient({
                           </div>
                         )}
 
+                        {/* 動画選択ボタン */}
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setVideoUploadModal({
+                                entryId: entry.id,
+                                memberUserId: mr.memberUserId,
+                                memberName: mr.memberName,
+                              })
+                            }
+                            className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors ${
+                              mr.videoFile
+                                ? "border-green-500 bg-green-50 text-green-700"
+                                : "border-gray-300 bg-white text-gray-600 hover:border-blue-400"
+                            }`}
+                          >
+                            <VideoCameraIcon className="h-3.5 w-3.5" />
+                            {mr.videoFile ? "動画あり" : "動画を選択"}
+                          </button>
+                        </div>
+
                         {/* Lap-Time表示 */}
                         {mr.splitTimes.length > 0 && (
                           <LapTimeDisplay
@@ -1054,6 +1147,23 @@ export default function RecordClient({
             </div>
           </div>
         </div>
+      )}
+
+      {/* 動画アップロードモーダル */}
+      {videoUploadModal && (
+        <TeamVideoUploader
+          targetUserId={videoUploadModal.memberUserId}
+          targetUserName={videoUploadModal.memberName}
+          onVideoReady={(file, thumbnail) =>
+            handleVideoReady(
+              videoUploadModal.entryId,
+              videoUploadModal.memberUserId,
+              file,
+              thumbnail,
+            )
+          }
+          onCancel={() => setVideoUploadModal(null)}
+        />
       )}
     </div>
   );

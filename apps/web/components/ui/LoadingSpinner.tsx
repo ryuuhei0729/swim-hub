@@ -54,19 +54,17 @@ export function FullScreenLoading({
         </div>
       </div>
 
-      <style jsx>{`
-        @keyframes loading-bar {
-          0% {
-            width: 0%;
-          }
-          50% {
-            width: 70%;
-          }
-          100% {
-            width: 100%;
-          }
-        }
-      `}</style>
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @keyframes loading-bar {
+              0% { width: 0%; }
+              50% { width: 70%; }
+              100% { width: 100%; }
+            }
+          `,
+        }}
+      />
     </div>
   );
 }

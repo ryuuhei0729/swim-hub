@@ -5,6 +5,9 @@
 // 汎用フック
 export * from "./useAsyncState";
 
+// 認証状態管理フック (3アプリ共通)
+export * from "./useAuthState";
+
 // React Queryフック
 export * from "./queries/announcements";
 export * from "./queries/keys";

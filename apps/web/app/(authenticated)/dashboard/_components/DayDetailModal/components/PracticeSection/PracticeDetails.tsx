@@ -72,6 +72,7 @@ export function PracticeDetails({
   onShowAttendance,
 }: PracticeDetailsProps) {
   const { supabase, user } = useAuth();
+  const userId = user?.id;
   const [practice, setPractice] = useState<PracticeWithFormattedLogs | null>(null);
   const [practiceImages, setPracticeImages] = useState<GalleryImage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,6 +81,11 @@ export function PracticeDetails({
   const [sharePracticeData, setSharePracticeData] = useState<PracticeShareData | null>(null);
 
   useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+      setError(new Error("読み込みがタイムアウトしました"));
+    }, 15000);
+
     const loadPractice = async () => {
       try {
         setLoading(true);
@@ -127,9 +133,9 @@ export function PracticeDetails({
         const practiceData = data as PracticeFromDB;
         // チーム練習の場合、ダッシュボードでは自分のログのみ表示
         const filteredLogs =
-          isTeamPractice && user
+          isTeamPractice && userId
             ? (practiceData.practice_logs || []).filter(
-                (log: PracticeLogFromDB) => log.user_id === user.id,
+                (log: PracticeLogFromDB) => log.user_id === userId,
               )
             : practiceData.practice_logs || [];
         const formattedPractice: PracticeWithFormattedLogs = {
@@ -179,7 +185,9 @@ export function PracticeDetails({
 
         setPractice(formattedPractice);
         setPracticeImages(images);
+        clearTimeout(timeoutId);
       } catch (err) {
+        clearTimeout(timeoutId);
         console.error("練習詳細の取得エラー:", err);
         setError(err as Error);
       } finally {
@@ -188,7 +196,11 @@ export function PracticeDetails({
     };
 
     loadPractice();
-  }, [practiceId, supabase, practiceLogUpdateKey, isTeamPractice, user]);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [practiceId, supabase, practiceLogUpdateKey, isTeamPractice, userId]);
 
   if (loading) {
     return <div className="mt-3 text-sm text-gray-500">練習詳細を読み込み中...</div>;

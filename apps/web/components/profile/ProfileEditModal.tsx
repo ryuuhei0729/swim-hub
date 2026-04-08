@@ -59,17 +59,29 @@ export default function ProfileEditModal({
       // 誕生日をISO形式に変換
       const birthday = formData.birthday ? new Date(formData.birthday).toISOString() : null;
 
-      await onUpdate({
-        name: formData.name.trim(),
-        birthday,
-        gender: formData.gender,
-        bio: formData.bio.trim() || null,
-      });
-      // 成功時は即時にモーダルを閉じる
-      onClose();
+      // タイムアウト通知付きで更新を実行
+      const TIMEOUT = 15000;
+      const timeoutId = window.setTimeout(() => {
+        setError("更新に時間がかかっています。しばらくお待ちください...");
+      }, TIMEOUT);
+      try {
+        await onUpdate({
+          name: formData.name.trim(),
+          birthday,
+          gender: formData.gender,
+          bio: formData.bio.trim() || null,
+        });
+        // 成功時は即時にモーダルを閉じる
+        onClose();
+      } finally {
+        clearTimeout(timeoutId);
+      }
     } catch (err) {
       console.error("プロフィール更新エラー:", err);
-      setError("プロフィールの更新に失敗しました");
+      if (err instanceof Error) {
+        console.error("詳細:", err.message);
+      }
+      setError("プロフィールの更新に失敗しました。時間をおいて再度お試しください。");
     } finally {
       setIsUpdating(false);
     }

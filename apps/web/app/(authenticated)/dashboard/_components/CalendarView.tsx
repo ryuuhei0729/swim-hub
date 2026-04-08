@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import {
@@ -42,6 +42,12 @@ export default function CalendarView({
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showMonthSelector, setShowMonthSelector] = useState(false);
   const [showDayDetail, setShowDayDetail] = useState(false);
+  const [currentYear, setCurrentYear] = useState(2024); // SSR安全な初期値
+
+  // クライアント側でのみ現在年を設定（Hydration Mismatch回避）
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+  }, []);
 
   // カレンダーコンテキストからデータを取得
   const {
@@ -280,7 +286,7 @@ export default function CalendarView({
                         >
                           {Array.from(
                             { length: 10 },
-                            (_, i) => new Date().getFullYear() - 5 + i,
+                            (_, i) => currentYear - 5 + i,
                           ).map((year) => (
                             <option key={year} value={year}>
                               {year}年

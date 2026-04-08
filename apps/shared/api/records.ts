@@ -192,7 +192,8 @@ export class RecordAPI {
         pool_type: record.pool_type,
         competition_id: null, // 大会に紐づけない
         team_id: null, // 個人記録
-        video_url: null,
+        video_path: null,
+        video_thumbnail_path: null,
         reaction_time: record.reaction_time || null,
       }));
 

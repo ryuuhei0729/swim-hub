@@ -81,7 +81,7 @@ export default function DashboardClient({
     setEditingData,
     setCreatedPracticeId: _setCreatedPracticeId,
     setAvailableTags,
-    setLoading,
+    setLoading: setPracticeLoading,
   } = usePracticeStore();
 
   const {
@@ -100,6 +100,7 @@ export default function DashboardClient({
     setCreatedCompetitionId: _setCreatedCompetitionId,
     setCreatedEntries,
     setStyles: setCompetitionStyles,
+    setLoading: setCompetitionLoading,
   } = useCompetitionStore();
 
   // サーバー側から取得したデータをストアに設定（初回のみ）
@@ -260,7 +261,8 @@ export default function DashboardClient({
     createdPracticeId,
     competitionEditingData,
     createdCompetitionId,
-    setLoading,
+    setPracticeLoading,
+    setCompetitionLoading,
     closePracticeBasicForm,
     closePracticeLogForm,
     closeCompetitionBasicForm,

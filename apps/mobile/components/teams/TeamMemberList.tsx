@@ -386,24 +386,12 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
     }));
   }, []);
 
-  // 横スクロール同期用ref
+  // 横スクロール同期用ref（ボディ→ヘッダーの一方向同期）
   const headerScrollRef = useRef<ScrollView>(null);
   const bodyScrollRef = useRef<ScrollView>(null);
-  const isHeaderScrolling = useRef(false);
-  const isBodyScrolling = useRef(false);
-
-  const handleHeaderScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (isBodyScrolling.current) return;
-    isHeaderScrolling.current = true;
-    bodyScrollRef.current?.scrollTo({ x: e.nativeEvent.contentOffset.x, animated: false });
-    isHeaderScrolling.current = false;
-  }, []);
 
   const handleBodyScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (isHeaderScrolling.current) return;
-    isBodyScrolling.current = true;
     headerScrollRef.current?.scrollTo({ x: e.nativeEvent.contentOffset.x, animated: false });
-    isBodyScrolling.current = false;
   }, []);
 
   // ローディング状態
@@ -487,9 +475,8 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
             <ScrollView
               ref={headerScrollRef}
               horizontal
+              scrollEnabled={false}
               showsHorizontalScrollIndicator={false}
-              scrollEventThrottle={16}
-              onScroll={handleHeaderScroll}
               style={styles.scrollableColumns}
             >
               <View>

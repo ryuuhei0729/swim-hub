@@ -10,21 +10,30 @@ import FormStepper from "@/components/ui/FormStepper";
 import { XMarkIcon, PlusIcon, ClipboardDocumentListIcon } from "@heroicons/react/24/outline";
 import { useCreatePracticeLogTemplateMutation } from "@swim-hub/shared/hooks";
 import type { CreatePracticeLogTemplateInput } from "@swim-hub/shared/types";
+import { PracticeLogTemplateSelectModal } from "@/components/practice-log-templates/PracticeLogTemplateSelectModal";
+import type { PracticeLogTemplate } from "@swim-hub/shared/types";
+import { usePracticeLogForm } from "./hooks";
+import { PracticeMenuItem } from "./components";
+import type { PracticeLogFormProps, PracticeMenu } from "./types";
+import { useAuth } from "@/contexts";
+import { checkIsPremium } from "@swim-hub/shared/utils/premium";
+import { FREE_PLAN_LIMITS, PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
+import { validatePracticeTimeLimit } from "@swim-hub/shared/utils/validators";
+import PremiumBadge from "@/components/ui/PremiumBadge";
 
 // 練習記録フォームのステップ定義
 const PRACTICE_STEPS = [
   { id: "basic", label: "基本情報", description: "日付・場所" },
   { id: "log", label: "練習記録", description: "メニュー・タイム" },
 ];
-import { PracticeLogTemplateSelectModal } from "@/components/practice-log-templates/PracticeLogTemplateSelectModal";
-import type { PracticeLogTemplate } from "@swim-hub/shared/types";
 
-import { usePracticeLogForm } from "./hooks";
-import { PracticeMenuItem } from "./components";
-import type { PracticeLogFormProps, PracticeMenu } from "./types";
+import TimeInputModal from "../TimeInputModal";
+// VideoUploaderは重いコンポーネントのため動的インポートを維持
+const VideoUploader = dynamic(() => import("@/components/video/VideoUploader"), { ssr: false });
 
-// TimeInputModalを動的インポート（バンドルサイズ削減）
-const TimeInputModal = dynamic(() => import("../TimeInputModal"), { ssr: false });
+// DB の UUID かどうか判定
+const isDbUuid = (id: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
 /**
  * 練習記録入力フォーム
@@ -44,6 +53,9 @@ export default function PracticeLogForm({
   setAvailableTags,
   styles: _styles = [],
 }: PracticeLogFormProps) {
+  const { subscription } = useAuth();
+  const isPremium = checkIsPremium(subscription);
+
   const {
     menus,
     setMenus,
@@ -64,6 +76,17 @@ export default function PracticeLogForm({
     getCurrentMenu,
     prepareSubmitData,
   } = usePracticeLogForm({ isOpen, editData, availableTags });
+
+  // Practice time 件数制限チェック: 実際に入力されたタイム数の合計
+  const getTotalPracticeTimesCount = useCallback((): number => {
+    return menus.reduce((total, menu) => {
+      const enteredCount = (menu.times || []).filter((t) => t.time > 0).length;
+      return total + enteredCount;
+    }, 0);
+  }, [menus]);
+
+  const isPracticeTimeLimitReached = !isPremium &&
+    getTotalPracticeTimesCount() > FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG;
 
   // テンプレート選択モーダルの状態
   const [isTemplateSelectorOpen, setIsTemplateSelectorOpen] = useState(false);
@@ -161,6 +184,15 @@ export default function PracticeLogForm({
   };
 
   const executeSubmit = async () => {
+    // Practice time 件数バリデーション（送信前）
+    if (!isPremium) {
+      const totalTimes = getTotalPracticeTimesCount();
+      const validation = validatePracticeTimeLimit(totalTimes, false);
+      if (!validation.valid) {
+        return;
+      }
+    }
+
     setIsSubmitted(true);
     try {
       await onSubmit(prepareSubmitData());
@@ -307,20 +339,55 @@ export default function PracticeLogForm({
                 </div>
 
                 {menus.map((menu, index) => (
-                  <PracticeMenuItem
-                    key={menu.id}
-                    menu={menu}
-                    menuIndex={index}
-                    canRemove={menus.length > 1}
-                    availableTags={availableTags}
-                    isLoading={isLoading}
-                    onRemove={() => removeMenu(menu.id)}
-                    onUpdate={(field, value) => updateMenu(menu.id, field, value)}
-                    onTagsChange={(tags) => handleTagsChange(menu.id, tags)}
-                    onAvailableTagsUpdate={setAvailableTags}
-                    onOpenTimeModal={() => openTimeModal(menu.id)}
-                  />
+                  <div key={menu.id} className="space-y-3">
+                    <PracticeMenuItem
+                      menu={menu}
+                      menuIndex={index}
+                      canRemove={menus.length > 1}
+                      availableTags={availableTags}
+                      isLoading={isLoading}
+                      onRemove={() => removeMenu(menu.id)}
+                      onUpdate={(field, value) => updateMenu(menu.id, field, value)}
+                      onTagsChange={(tags) => handleTagsChange(menu.id, tags)}
+                      onAvailableTagsUpdate={setAvailableTags}
+                      onOpenTimeModal={() => openTimeModal(menu.id)}
+                    />
+                    {/* 動画アップロード（編集時のみ、1メニュー1動画） */}
+                    <div className="px-1">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">動画</label>
+                      <VideoUploader
+                        type="practice-log"
+                        id={isDbUuid(menu.id) ? menu.id : undefined}
+                        existingVideoPath={menu.videoPath ?? undefined}
+                        existingThumbnailPath={menu.videoThumbnailPath ?? undefined}
+                        isPremium={isPremium}
+                        onUploadComplete={(videoPath, thumbnailPath) =>
+                          setMenus((prev) =>
+                            prev.map((m) =>
+                              m.id === menu.id
+                                ? { ...m, videoPath, videoThumbnailPath: thumbnailPath }
+                                : m,
+                            ),
+                          )
+                        }
+                        onDelete={() =>
+                          setMenus((prev) =>
+                            prev.map((m) =>
+                              m.id === menu.id
+                                ? { ...m, videoPath: null, videoThumbnailPath: null }
+                                : m,
+                            ),
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
                 ))}
+
+                {/* Practice time 制限メッセージ */}
+                {isPracticeTimeLimitReached && (
+                  <PremiumBadge message={PREMIUM_MESSAGES.practice_time_limit} />
+                )}
               </div>
             </div>
 
@@ -361,7 +428,7 @@ export default function PracticeLogForm({
                 </Button>
                 <Button
                   type="button"
-                  disabled={isLoading}
+                  disabled={isLoading || isPracticeTimeLimitReached}
                   onClick={() => void handleSubmit()}
                   className="w-full sm:w-auto"
                   data-testid={editData ? "update-practice-log-button" : "save-practice-log-button"}

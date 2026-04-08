@@ -2,6 +2,8 @@
 // バリデーションユーティリティ - Swim Hub共通パッケージ
 // =============================================================================
 
+import { FREE_PLAN_LIMITS } from "../constants/premium";
+
 /**
  * バリデーション結果の型定義
  */
@@ -292,6 +294,59 @@ export function validateStroke(stroke: string): ValidationResult {
     return failure("無効な泳法です");
   }
 
+  return success();
+}
+
+// =============================================================================
+// Premium 制限バリデーション
+// =============================================================================
+
+/**
+ * Split-time 登録件数のバリデーション（Premium 制限）
+ *
+ * @param count - 登録しようとしている split_times の件数
+ * @param isPremium - Premium ユーザーかどうか
+ * @returns バリデーション結果
+ */
+export function validateSplitTimeLimit(count: number, isPremium: boolean): ValidationResult {
+  if (isPremium) return success();
+
+  if (count > FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD) {
+    return failure(
+      `Freeプランでは${FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD}個まで登録できます。Premiumにアップグレードすると無制限に`,
+    );
+  }
+  return success();
+}
+
+/**
+ * PracticeTime 登録件数のバリデーション（Premium 制限）
+ *
+ * @param count - 登録しようとしている practice_times の件数
+ * @param isPremium - Premium ユーザーかどうか
+ * @returns バリデーション結果
+ */
+export function validatePracticeTimeLimit(count: number, isPremium: boolean): ValidationResult {
+  if (isPremium) return success();
+
+  if (count > FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG) {
+    return failure(
+      `Freeプランでは${FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG}個まで登録できます。Premiumにアップグレードすると無制限に`,
+    );
+  }
+  return success();
+}
+
+/**
+ * 画像アップロード権限のバリデーション（Premium 制限）
+ *
+ * @param isPremium - Premium ユーザーかどうか
+ * @returns バリデーション結果
+ */
+export function validateImageUpload(isPremium: boolean): ValidationResult {
+  if (!isPremium) {
+    return failure("画像の添付は Premium 会員限定です");
+  }
   return success();
 }
 

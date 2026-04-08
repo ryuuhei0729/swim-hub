@@ -9,6 +9,7 @@ export const revalidate = 3600; // 1時間ごとに再生成
 export const metadata = {
   title: "利用規約 | SwimHub",
   description: "SwimHubの利用規約",
+  alternates: { canonical: "/terms" },
 };
 
 export default function TermsPage() {

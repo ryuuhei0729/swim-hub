@@ -13,6 +13,7 @@ import { EntryLogFormScreen } from "@/screens/EntryLogFormScreen";
 import { RecordLogFormScreen } from "@/screens/RecordLogFormScreen";
 import { TeamDetailScreen } from "@/screens/TeamDetailScreen";
 import { SettingsScreen } from "@/screens/SettingsScreen";
+import { PaywallScreen } from "@/screens/PaywallScreen";
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
@@ -206,6 +207,14 @@ export const MainStack: React.FC = () => {
           headerTitleStyle: {
             fontWeight: "600",
           },
+        }}
+      />
+      <Stack.Screen
+        name="Paywall"
+        component={PaywallScreen}
+        options={{
+          headerShown: false,
+          presentation: "modal",
         }}
       />
     </Stack.Navigator>

@@ -34,7 +34,7 @@ interface QueryProviderProps {
 
 /**
  * React Queryのプロバイダーコンポーネント
- * AuthProviderの内側に配置して、認証済みユーザーのみReact Queryを使用可能にする
+ * AuthProviderの外側に配置し、AuthProvider内でReact Queryフックを使用可能にする
  */
 export default function QueryProvider({ children }: QueryProviderProps) {
   const queryClient = getQueryClient();

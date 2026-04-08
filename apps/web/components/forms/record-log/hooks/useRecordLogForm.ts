@@ -11,12 +11,14 @@ import type {
   StyleOption,
 } from "../types";
 import { formatSecondsToDisplay, parseTimeToSeconds } from "../utils/formatters";
+import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 
 interface UseRecordLogFormOptions {
   isOpen: boolean;
   editData?: RecordLogEditData | null;
   entryDataList?: EntryInfo[];
   styles?: StyleOption[];
+  isPremium?: boolean;
 }
 
 interface UseRecordLogFormReturn {
@@ -29,7 +31,7 @@ interface UseRecordLogFormReturn {
   handleTimeChange: (index: number, value: string) => void;
   handleToggleRelaying: (index: number, checked: boolean) => void;
   handleNoteChange: (index: number, value: string) => void;
-  handleVideoChange: (index: number, value: string) => void;
+  handleVideoPathChange: (index: number, videoPath: string, thumbnailPath: string) => void;
   handleReactionTimeChange: (index: number, value: string) => void;
   handleStyleChange: (index: number, value: string) => void;
   handleAddSplitTime: (entryIndex: number) => void;
@@ -42,6 +44,7 @@ interface UseRecordLogFormReturn {
     value: string,
   ) => void;
   prepareSubmitData: () => { hasStyleError: boolean; submitList: RecordLogFormData[] };
+  isSplitTimeLimitReached: (entryIndex: number) => boolean;
 }
 
 function createDefaultState(styleId: string): RecordLogFormState {
@@ -52,7 +55,8 @@ function createDefaultState(styleId: string): RecordLogFormState {
     isRelaying: false,
     splitTimes: [],
     note: "",
-    videoUrl: "",
+    videoPath: null,
+    videoThumbnailPath: null,
     reactionTime: "",
   };
 }
@@ -65,6 +69,7 @@ export const useRecordLogForm = ({
   editData,
   entryDataList = [],
   styles = [],
+  isPremium = false,
 }: UseRecordLogFormOptions): UseRecordLogFormReturn => {
   const [formDataList, setFormDataList] = useState<RecordLogFormState[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -106,7 +111,8 @@ export const useRecordLogForm = ({
           isRelaying: editData.isRelaying || false,
           splitTimes,
           note: editData.note || "",
-          videoUrl: editData.videoUrl || "",
+          videoPath: editData.videoPath ?? null,
+          videoThumbnailPath: null,
           reactionTime: editData.reactionTime?.toString() || "",
         },
       ]);
@@ -198,9 +204,9 @@ export const useRecordLogForm = ({
     [updateFormData],
   );
 
-  const handleVideoChange = useCallback(
-    (index: number, value: string) => {
-      updateFormData(index, (prev) => ({ ...prev, videoUrl: value }));
+  const handleVideoPathChange = useCallback(
+    (index: number, videoPath: string, thumbnailPath: string) => {
+      updateFormData(index, (prev) => ({ ...prev, videoPath, videoThumbnailPath: thumbnailPath }));
     },
     [updateFormData],
   );
@@ -221,20 +227,25 @@ export const useRecordLogForm = ({
 
   const handleAddSplitTime = useCallback(
     (entryIndex: number) => {
-      updateFormData(entryIndex, (prev) => ({
-        ...prev,
-        splitTimes: [
-          ...prev.splitTimes,
-          {
-            distance: 0,
-            splitTime: 0,
-            splitTimeDisplayValue: "",
-            uiKey: `split-${Date.now()}`,
-          },
-        ],
-      }));
+      updateFormData(entryIndex, (prev) => {
+        if (!isPremium && prev.splitTimes.length >= FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD) {
+          return prev;
+        }
+        return {
+          ...prev,
+          splitTimes: [
+            ...prev.splitTimes,
+            {
+              distance: 0,
+              splitTime: 0,
+              splitTimeDisplayValue: "",
+              uiKey: `split-${Date.now()}`,
+            },
+          ],
+        };
+      });
     },
-    [updateFormData],
+    [updateFormData, isPremium],
   );
 
   const handleAddSplitTimesEvery25m = useCallback(
@@ -258,7 +269,7 @@ export const useRecordLogForm = ({
             .filter((d): d is number => d !== null),
         );
 
-        const newSplitTimes: SplitTimeDraft[] = [];
+        let newSplitTimes: SplitTimeDraft[] = [];
         for (let distance = 25; distance <= raceDistance; distance += 25) {
           if (!existingDistances.has(distance)) {
             newSplitTimes.push({
@@ -272,13 +283,22 @@ export const useRecordLogForm = ({
 
         if (newSplitTimes.length === 0) return prev;
 
+        // Free ユーザーの場合、制限内に収まるよう切り詰める
+        if (!isPremium) {
+          const maxNew = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - prev.splitTimes.length;
+          if (maxNew <= 0) return prev;
+          if (newSplitTimes.length > maxNew) {
+            newSplitTimes = newSplitTimes.slice(0, maxNew);
+          }
+        }
+
         return {
           ...prev,
           splitTimes: [...prev.splitTimes, ...newSplitTimes],
         };
       });
     },
-    [updateFormData, entryDataList, styles],
+    [updateFormData, entryDataList, styles, isPremium],
   );
 
   const handleRemoveSplitTime = useCallback(
@@ -402,6 +422,16 @@ export const useRecordLogForm = ({
     return { hasStyleError, submitList };
   }, [formDataList, entryDataList, styles]);
 
+  const isSplitTimeLimitReached = useCallback(
+    (entryIndex: number): boolean => {
+      if (isPremium) return false;
+      const entry = formDataList[entryIndex];
+      if (!entry) return false;
+      return entry.splitTimes.length >= FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD;
+    },
+    [isPremium, formDataList],
+  );
+
   return {
     formDataList,
     hasUnsavedChanges,
@@ -412,7 +442,7 @@ export const useRecordLogForm = ({
     handleTimeChange,
     handleToggleRelaying,
     handleNoteChange,
-    handleVideoChange,
+    handleVideoPathChange,
     handleReactionTimeChange,
     handleStyleChange,
     handleAddSplitTime,
@@ -420,6 +450,7 @@ export const useRecordLogForm = ({
     handleRemoveSplitTime,
     handleSplitTimeChange,
     prepareSubmitData,
+    isSplitTimeLimitReached,
   };
 };
 

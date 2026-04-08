@@ -71,6 +71,11 @@ export default function Footer() {
       href: "/about",
       icon: InformationCircleIcon,
     },
+    {
+      name: "特定商取引法に基づく表記",
+      href: "/tokushoho",
+      icon: DocumentTextIcon,
+    },
   ];
 
   return (

@@ -9,6 +9,7 @@ export const revalidate = 3600;
 export const metadata = {
   title: "ブログ | SwimHub",
   description: "水泳に関するお役立ち情報、練習のコツ、大会準備のヒントなどをお届けします。",
+  alternates: { canonical: "/blog" },
 };
 
 export default function BlogPage() {

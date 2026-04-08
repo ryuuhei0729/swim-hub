@@ -1,18 +1,12 @@
 "use client";
 
 import React, { useState, useMemo, useTransition } from "react";
-import dynamic from "next/dynamic";
 import { CalendarDaysIcon, PencilIcon, TrashIcon, ShareIcon } from "@heroicons/react/24/outline";
 import Button from "@/components/ui/Button";
 import Pagination from "@/components/ui/Pagination";
-const PracticeLogForm = dynamic(() => import("@/components/forms/PracticeLogForm"), { ssr: false });
+import PracticeLogForm from "@/components/forms/PracticeLogForm";
 import PracticeTimeModal from "../_components/PracticeTimeModal";
-
-const ShareCardModal = dynamic(
-  () =>
-    import("@/components/share/ShareCardModal").then((mod) => ({ default: mod.ShareCardModal })),
-  { ssr: false },
-);
+import { ShareCardModal } from "@/components/share/ShareCardModal";
 import type { PracticeShareData, PracticeMenuItem } from "@/components/share";
 import { format, isAfter, startOfDay } from "date-fns";
 import { ja } from "date-fns/locale";

@@ -2,9 +2,9 @@
  * Googleカレンダー同期APIクライアント
  * Web APIを呼び出して既存データをGoogleカレンダーに同期
  */
-import Constants from "expo-constants";
+import { env } from "@/lib/env";
 
-const WEB_API_URL = Constants.expoConfig?.extra?.webApiUrl || "https://swim-hub.app";
+const WEB_API_URL = env.webApiUrl;
 
 export interface BulkSyncResult {
   success: boolean;

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
+import dynamic from "next/dynamic";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
@@ -9,6 +10,13 @@ import { LapTimeDisplay } from "../../LapTimeDisplay";
 import type { EntryInfo } from "@apps/shared/types/ui";
 import type { RecordLogFormState, StyleOption } from "../types";
 import type { BestTime } from "@/types/member-detail";
+import PremiumBadge from "@/components/ui/PremiumBadge";
+import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
+
+const VideoUploader = dynamic(() => import("@/components/video/VideoUploader"), { ssr: false });
+
+const isDbUuid = (id: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
 interface RecordLogEntryProps {
   formData: RecordLogFormState;
@@ -23,13 +31,19 @@ interface RecordLogEntryProps {
   onTimeChange: (value: string) => void;
   onToggleRelaying: (checked: boolean) => void;
   onNoteChange: (value: string) => void;
-  onVideoChange: (value: string) => void;
+  onVideoPathChange: (videoPath: string, thumbnailPath: string) => void;
+  onVideoDelete: () => void;
+  recordId?: string;
+  videoPath?: string | null;
+  videoThumbnailPath?: string | null;
   onReactionTimeChange: (value: string) => void;
   onStyleChange: (value: string) => void;
   onAddSplitTime: () => void;
   onAddSplitTimesEvery25m: () => void;
   onRemoveSplitTime: (splitIndex: number) => void;
   onSplitTimeChange: (splitIndex: number, field: "distance" | "splitTime", value: string) => void;
+  isSplitTimeLimitReached?: boolean;
+  isPremium?: boolean;
 }
 
 /**
@@ -46,13 +60,19 @@ export default function RecordLogEntry({
   onTimeChange,
   onToggleRelaying,
   onNoteChange,
-  onVideoChange,
+  onVideoPathChange,
+  onVideoDelete,
+  recordId,
+  videoPath,
+  videoThumbnailPath,
   onReactionTimeChange,
   onStyleChange,
   onAddSplitTime,
   onAddSplitTimesEvery25m,
   onRemoveSplitTime,
   onSplitTimeChange,
+  isSplitTimeLimitReached = false,
+  isPremium = false,
 }: RecordLogEntryProps) {
   const sectionIndex = index + 1;
   const styleOptions = styles.map((style) => ({
@@ -291,7 +311,7 @@ export default function RecordLogEntry({
               onClick={onAddSplitTimesEvery25m}
               variant="outline"
               className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 sm:py-1 h-6 sm:h-7"
-              disabled={isLoading || !raceDistance}
+              disabled={isLoading || !raceDistance || isSplitTimeLimitReached}
               data-testid={`record-split-add-25m-button-${sectionIndex}`}
             >
               <PlusIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5" />
@@ -303,7 +323,7 @@ export default function RecordLogEntry({
               onClick={onAddSplitTime}
               variant="outline"
               className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 sm:py-1 h-6 sm:h-7"
-              disabled={isLoading}
+              disabled={isLoading || isSplitTimeLimitReached}
               data-testid={`record-split-add-button-${sectionIndex}`}
             >
               <PlusIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5" />
@@ -356,18 +376,26 @@ export default function RecordLogEntry({
 
         {/* Lap-Time表示 */}
         <LapTimeDisplay splitTimes={validSplitTimes} raceDistance={raceDistance} />
+
+        {/* Premium 制限メッセージ */}
+        {!isPremium && isSplitTimeLimitReached && (
+          <div className="mt-2" data-testid={`premium-badge-split-limit-${sectionIndex}`}>
+            <PremiumBadge message={PREMIUM_MESSAGES.split_time_limit} />
+          </div>
+        )}
       </div>
 
-      {/* ビデオURL */}
+      {/* 動画 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">ビデオURL</label>
-        <Input
-          type="url"
-          value={formData.videoUrl}
-          onChange={(e) => onVideoChange(e.target.value)}
-          placeholder="https://..."
-          className="w-full"
-          data-testid={`record-video-${sectionIndex}`}
+        <label className="block text-sm font-medium text-gray-700 mb-1">動画</label>
+        <VideoUploader
+          type="record"
+          id={recordId && isDbUuid(recordId) ? recordId : undefined}
+          existingVideoPath={videoPath ?? undefined}
+          existingThumbnailPath={videoThumbnailPath ?? undefined}
+          isPremium={isPremium ?? false}
+          onUploadComplete={(vPath, tPath) => onVideoPathChange(vPath, tPath)}
+          onDelete={onVideoDelete}
         />
       </div>
 

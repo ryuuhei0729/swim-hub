@@ -16,7 +16,8 @@ import {
 import { practiceKeys } from "@apps/shared/hooks/queries/keys";
 import { PracticeAPI } from "@apps/shared/api/practices";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
-import { TagChips, TagSelectModal, TagManageModal } from "@/components/shared";
+import { TagChips, TagSelectModal, TagManageModal, VideoUploader } from "@/components/shared";
+import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import type { MainStackParamList } from "@/navigation/types";
 import type { PracticeTag, PracticeTime } from "@apps/shared/types";
 import type { TimeEntry } from "@apps/shared/types/ui";
@@ -55,9 +56,14 @@ export const PracticeLogFormScreen: React.FC = () => {
   const route = useRoute<PracticeLogFormScreenRouteProp>();
   const navigation = useNavigation<PracticeLogFormScreenNavigationProp>();
   const { practiceId, practiceLogId, returnTo } = route.params;
-  const { supabase } = useAuth();
+  const { supabase, subscription } = useAuth();
   const queryClient = useQueryClient();
   const isEditMode = practiceLogId !== undefined;
+  const isPremium = checkIsPremium(subscription);
+
+  // 動画の状態管理
+  const [existingVideoPath, setExistingVideoPath] = useState<string | null>(null);
+  const [existingThumbnailPath, setExistingThumbnailPath] = useState<string | null>(null);
 
   // メニューデータ（複数）
   const [menus, setMenus] = useState<PracticeMenu[]>([
@@ -149,6 +155,10 @@ export const PracticeLogFormScreen: React.FC = () => {
             (practiceLogData.practice_log_tags || [])
               .map((plt: { practice_tags: PracticeTag }) => plt.practice_tags)
               .filter(Boolean) || [];
+
+          // 動画パスを初期化
+          setExistingVideoPath(practiceLogData.video_path ?? null);
+          setExistingThumbnailPath(practiceLogData.video_thumbnail_path ?? null);
 
           setMenus([
             {
@@ -752,6 +762,26 @@ export const PracticeLogFormScreen: React.FC = () => {
                   textAlignVertical="top"
                 />
               </View>
+
+              {/* 動画 */}
+              <View style={styles.field}>
+                <Text style={styles.label}>動画</Text>
+                <VideoUploader
+                  type="practice-log"
+                  id={practiceLogId}
+                  existingVideoPath={existingVideoPath}
+                  existingThumbnailPath={existingThumbnailPath}
+                  isPremium={isPremium}
+                  onUploadComplete={(vPath, tPath) => {
+                    setExistingVideoPath(vPath);
+                    setExistingThumbnailPath(tPath);
+                  }}
+                  onDelete={() => {
+                    setExistingVideoPath(null);
+                    setExistingThumbnailPath(null);
+                  }}
+                />
+              </View>
             </View>
           ))}
         </View>
@@ -873,6 +903,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#374151",
+  },
+  hintText: {
+    fontSize: 13,
+    color: "#9CA3AF",
   },
   required: {
     color: "#DC2626",

@@ -62,6 +62,8 @@ export interface PracticeLog {
   distance: number;
   circle: number | null;
   note: string | null;
+  video_path?: string | null;
+  video_thumbnail_path?: string | null;
   created_at: string;
   updated_at: string;
 }

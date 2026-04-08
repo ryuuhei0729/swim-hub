@@ -1,9 +1,13 @@
+import path from "path";
+import url from "url";
 import { defineConfig } from "vitest/config";
-import { createVitestConfig } from "../../tools/vitest-config/shared.js";
 
-export default defineConfig(
-  createVitestConfig({
+const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
+
+export default defineConfig({
+  test: {
     name: "shared",
+    globals: true,
     environment: "jsdom",
     include: ["**/*.{test,spec}.{js,mjs,cjs,ts,tsx,mts,cts}"],
     exclude: ["node_modules", "dist"],
@@ -25,8 +29,13 @@ export default defineConfig(
         statements: 75,
       },
     },
+  },
+  resolve: {
     alias: {
-      "@shared": "./",
+      "@shared": path.resolve(__dirname, "./"),
     },
-  }),
-);
+  },
+  esbuild: {
+    target: "node18",
+  },
+});

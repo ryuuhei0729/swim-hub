@@ -13,6 +13,7 @@ export const metadata = {
   title: "サポート・FAQ | SwimHub",
   description:
     "SwimHubのサポート情報とよくある質問。アカウント、練習記録、大会記録、チーム機能、ベストタイム、データ管理、料金プランなど、SwimHubに関するあらゆる疑問にお答えします。",
+  alternates: { canonical: "/support" },
 };
 
 export default function SupportPage() {

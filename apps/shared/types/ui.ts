@@ -92,7 +92,8 @@ export interface RecordMetadata {
     time: number;
     time_result?: number;
     is_relaying: boolean;
-    video_url?: string;
+    video_path?: string;
+    video_thumbnail_path?: string;
     reaction_time?: number | null; // 反応時間（リアクションタイム）
     style: {
       id: string;
@@ -166,7 +167,8 @@ export interface CalendarItem {
       time: number;
       time_result?: number;
       is_relaying: boolean;
-      video_url?: string;
+      video_path?: string;
+      video_thumbnail_path?: string;
       reaction_time?: number | null; // 反応時間（リアクションタイム）
       style: {
         id: string;
@@ -445,7 +447,8 @@ export function isRecordMetadata(metadata: unknown): metadata is {
     time: number;
     time_result?: number;
     is_relaying: boolean;
-    video_url?: string;
+    video_path?: string;
+    video_thumbnail_path?: string;
     style: { id: string; name_jp: string; distance: number };
     competition_id?: string;
     split_times?: SplitTime[];

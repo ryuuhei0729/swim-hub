@@ -1,25 +1,58 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AppState } from "react-native";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@swim-hub/shared/types";
-import Constants from "expo-constants";
+import { env } from "@/lib/env";
 
-// 環境変数からSupabase設定を取得
-// app.config.jsのextraフィールドから読み込む（dotenvxで復号化済み）
-const supabaseUrl = Constants.expoConfig?.extra?.supabaseUrl;
-const supabaseAnonKey = Constants.expoConfig?.extra?.supabaseAnonKey;
+const supabaseUrl = env.supabaseUrl;
+const supabaseAnonKey = env.supabaseAnonKey;
 
-// デバッグ用: 環境変数の確認（開発環境のみ）
 if (__DEV__) {
   console.log("Supabase環境変数の確認:");
-  console.log(
-    "supabaseUrl (from Constants.expoConfig.extra):",
-    supabaseUrl ? `${supabaseUrl.substring(0, 50)}...` : "未設定",
-  );
-  console.log(
-    "supabaseAnonKey (from Constants.expoConfig.extra):",
-    supabaseAnonKey ? "設定済み" : "未設定",
-  );
+  console.log("supabaseUrl:", supabaseUrl ? `${supabaseUrl.substring(0, 50)}...` : "未設定");
+  console.log("supabaseAnonKey:", supabaseAnonKey ? "設定済み" : "未設定");
 }
+
+/**
+ * AsyncStorage をエラーハンドリング付きでラップ。
+ * 読み込み失敗・パースエラー・タイムアウト時に null を返して
+ * Supabase SDK がハングするのを防ぐ。
+ */
+const safeStorage = {
+  getItem: async (key: string): Promise<string | null> => {
+    try {
+      // 5秒以内に読み込めなければタイムアウト
+      const result = await Promise.race([
+        AsyncStorage.getItem(key),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
+      ]);
+      return result;
+    } catch (err) {
+      console.error(`AsyncStorage.getItem("${key}") 失敗:`, err);
+      // 壊れたデータを削除して次回起動時に問題を回避
+      try {
+        await AsyncStorage.removeItem(key);
+      } catch {
+        // 削除も失敗した場合は無視
+      }
+      return null;
+    }
+  },
+  setItem: async (key: string, value: string): Promise<void> => {
+    try {
+      await AsyncStorage.setItem(key, value);
+    } catch (err) {
+      console.error(`AsyncStorage.setItem("${key}") 失敗:`, err);
+    }
+  },
+  removeItem: async (key: string): Promise<void> => {
+    try {
+      await AsyncStorage.removeItem(key);
+    } catch (err) {
+      console.error(`AsyncStorage.removeItem("${key}") 失敗:`, err);
+    }
+  },
+};
 
 // 環境変数の検証（エラーをthrowせず、nullを返す）
 let supabase: ReturnType<typeof createClient<Database>> | null = null;
@@ -27,10 +60,10 @@ let supabase: ReturnType<typeof createClient<Database>> | null = null;
 if (supabaseUrl && supabaseAnonKey) {
   try {
     // React Native用Supabaseクライアント
-    // AsyncStorageでセッションを永続化（タスクキル後もログイン状態を維持）
+    // safeStorage でセッションを永続化（破損時にもハングしない）
     supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
       auth: {
-        storage: AsyncStorage,
+        storage: safeStorage,
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: false,
@@ -47,6 +80,18 @@ if (supabaseUrl && supabaseAnonKey) {
       `EXPO_PUBLIC_SUPABASE_URL: ${supabaseUrl ? "set" : "unset"}\n` +
       `EXPO_PUBLIC_SUPABASE_ANON_KEY: ${supabaseAnonKey ? "set" : "unset"}`,
   );
+}
+
+// バックグラウンド復帰時にトークン自動リフレッシュを再開する
+// Supabase公式推奨パターン: https://supabase.com/docs/reference/javascript/auth-startautorefresh
+if (supabase) {
+  AppState.addEventListener("change", (state) => {
+    if (state === "active") {
+      supabase!.auth.startAutoRefresh();
+    } else {
+      supabase!.auth.stopAutoRefresh();
+    }
+  });
 }
 
 export { supabase };

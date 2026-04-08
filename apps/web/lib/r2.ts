@@ -10,6 +10,7 @@
 declare global {
   interface CloudflareEnv {
     R2_BUCKET?: R2Bucket;
+    R2_VIDEO_BUCKET?: R2Bucket;
   }
 }
 

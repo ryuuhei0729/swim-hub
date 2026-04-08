@@ -7,9 +7,17 @@ import type { Session } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { getQueryClient } from "@/providers/QueryProvider";
-import { AuthState, AuthContextType, SubscriptionInfo } from "@swim-hub/shared/types/auth";
+import { AuthContextType } from "@swim-hub/shared/types/auth";
+import { useSubscription } from "@/hooks/useSubscription";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// 認証状態（subscription を除く）
+type CoreAuthState = {
+  user: import("@supabase/supabase-js").User | null;
+  session: Session | null;
+  loading: boolean;
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const router = useRouter();
@@ -18,75 +26,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const supabaseClient = useMemo((): SupabaseClient<Database> | null => {
     // サーバー側（ビルド時）では実行しない
     if (typeof window === "undefined") {
-      // サーバー側ではnullを返す（実際には使用されない）
       return null;
     }
-    // supabase.tsから統一されたBrowser Clientを取得
     return supabase || null;
   }, []);
-  const [authState, setAuthState] = useState<AuthState>({
+
+  const [coreState, setCoreState] = useState<CoreAuthState>({
     user: null,
     session: null,
     loading: true,
-    subscription: null,
   });
 
-  // サブスクリプション情報を取得
-  const fetchSubscription = useCallback(
-    async (userId: string): Promise<SubscriptionInfo | null> => {
-      if (!supabaseClient) return null;
-      try {
-        const { data, error } = (await supabaseClient
-          .from("user_subscriptions")
-          .select("plan, status, cancel_at_period_end, premium_expires_at, trial_end")
-          .eq("id", userId)
-          .single()) as {
-          data: {
-            plan: string;
-            status: string | null;
-            cancel_at_period_end: boolean | null;
-            premium_expires_at: string | null;
-            trial_end: string | null;
-          } | null;
-          error: unknown;
-        };
-
-        if (error || !data) {
-          return {
-            plan: "free",
-            status: null,
-            cancelAtPeriodEnd: false,
-            premiumExpiresAt: null,
-            trialEnd: null,
-          };
-        }
-
-        return {
-          plan: data.plan as "free" | "premium",
-          status: data.status as SubscriptionInfo["status"],
-          cancelAtPeriodEnd: data.cancel_at_period_end ?? false,
-          premiumExpiresAt: data.premium_expires_at ?? null,
-          trialEnd: data.trial_end ?? null,
-        };
-      } catch {
-        return {
-          plan: "free",
-          status: null,
-          cancelAtPeriodEnd: false,
-          premiumExpiresAt: null,
-          trialEnd: null,
-        };
-      }
-    },
-    [supabaseClient],
-  );
-
-  // サブスクリプション情報を再取得（外部から呼び出し可能）
-  const refreshSubscription = useCallback(async () => {
-    if (!authState.user) return;
-    const subscription = await fetchSubscription(authState.user.id);
-    setAuthState((prev) => ({ ...prev, subscription }));
-  }, [authState.user, fetchSubscription]);
+  // subscription は React Query で管理（Server Component からハイドレート済み）
+  const { subscription, refreshSubscription } = useSubscription(coreState.user?.id ?? null);
 
   // ログイン
   const signIn = useCallback(
@@ -152,7 +104,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               gender: gender ?? 0,
               birthday: birthday || null,
             },
-            // メール認証後のリダイレクト先を設定
             emailRedirectTo: `${window.location.origin}/api/auth/callback?redirect_to=/dashboard`,
           },
         });
@@ -173,7 +124,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   // OAuth認証（Google / Apple）
-  // supabase.tsから統一されたBrowser Clientを使用することで、PKCE code verifierが確実にCookieに保存・読み取りされる
   const signInWithOAuth = useCallback(
     async (
       provider: "google" | "apple",
@@ -188,8 +138,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       try {
-        // 重要: redirectToは必ずwindow.location.originを直接使用する
-        // 環境変数を使うと、PKCE code verifier Cookieが保存されない
         if (typeof window === "undefined") {
           return {
             error: new Error(
@@ -218,7 +166,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return { error: error as import("@supabase/supabase-js").AuthError };
         }
 
-        // OAuthプロバイダーにリダイレクト（data.urlが存在する場合）
         if (data.url && typeof window !== "undefined") {
           window.location.href = data.url;
         }
@@ -236,11 +183,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // クライアント側の全キャッシュ・ストアをクリア（冪等）
   const clearAllClientState = useCallback(async () => {
-    // React Queryのキャッシュをクリア
     const queryClient = getQueryClient();
     queryClient.clear();
 
-    // Zustandストアを全てリセット
     if (typeof window !== "undefined") {
       try {
         const {
@@ -276,7 +221,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      // localStorage・sessionStorageをクリア
       try {
         window.localStorage.clear();
         window.sessionStorage.clear();
@@ -298,7 +242,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }
     try {
-      // キャッシュクリアを先に実行（signOut成功後のナビゲーションに備える）
       await clearAllClientState();
 
       const { error } = await supabaseClient.auth.signOut();
@@ -328,8 +271,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       }
       try {
-        // 重要: redirectToは必ずwindow.location.originを直接使用する
-        // 環境変数を使うと、PKCE code verifier Cookieが保存されない
         if (typeof window === "undefined") {
           return {
             data: null,
@@ -389,7 +330,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [supabaseClient],
   );
 
-  // プロフィール更新（React Queryのミューテーションに移行予定）
+  // プロフィール更新
   const updateProfile = useCallback(
     async (updates: Partial<import("@swim-hub/shared/types").UserProfile>) => {
       if (!supabaseClient) {
@@ -400,7 +341,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       }
       try {
-        if (!authState.user) {
+        if (!coreState.user) {
           return {
             error: new Error(
               "User not authenticated",
@@ -411,7 +352,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { error } = await supabaseClient
           .from("users")
           .update(updates)
-          .eq("id", authState.user.id);
+          .eq("id", coreState.user.id);
 
         if (error) {
           return { error: error as unknown as import("@supabase/supabase-js").AuthError };
@@ -425,40 +366,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error: error as unknown as import("@supabase/supabase-js").AuthError };
       }
     },
-    [authState.user, supabaseClient],
+    [coreState.user, supabaseClient],
   );
 
   useEffect(() => {
-    // ブラウザ環境でない場合、またはSupabaseクライアントが作成されていない場合はスキップ
     if (typeof window === "undefined" || !supabaseClient) {
       return;
     }
 
     let isMounted = true;
 
-    // 認証状態の変更を監視（初期セッション取得も含む）
+    // 認証状態の変更を監視
     const {
       data: { subscription: authSubscription },
     } = supabaseClient.auth.onAuthStateChange(async (event: string, session: Session | null) => {
-      if (!isMounted) {
-        return;
-      }
+      if (!isMounted) return;
 
-      let subInfo: SubscriptionInfo | null = null;
-      if (session?.user) {
-        subInfo = await fetchSubscription(session.user.id);
-      }
-
-      setAuthState({
+      // loading: false — subscription を待たずに即座に認証状態を確定
+      setCoreState({
         user: session?.user ?? null,
         session,
         loading: false,
-        subscription: subInfo,
       });
 
-      // ログイン/ログアウト時にページをリフレッシュ
       if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
-        // ログアウト時は全てのキャッシュをクリア（外部要因によるサインアウトにも対応）
         if (event === "SIGNED_OUT") {
           await clearAllClientState();
         }
@@ -473,9 +404,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    // 初期セッションを明示的に取得（onAuthStateChangeが呼ばれない場合のフォールバック）
-    // getSession()はローカルキャッシュ（JWT）を返すため、メール変更等の反映が遅れる
-    // getUser()でサーバーから最新のユーザー情報を取得する
+    // 初期セッションを取得
+    // getSession() はローカルキャッシュ（JWT）を返す — ネットワーク不要で高速
     const fetchInitialSession = async () => {
       try {
         const {
@@ -487,30 +417,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (process.env.NODE_ENV !== "production") {
               console.error("初期セッション取得エラー:", error);
             }
-            setAuthState({
-              user: null,
-              session: null,
-              loading: false,
-              subscription: null,
-            });
-          } else if (session) {
-            const {
-              data: { user },
-            } = await supabaseClient.auth.getUser();
-            const currentUser = user ?? session.user;
-            const subInfo = await fetchSubscription(currentUser.id);
-            setAuthState({
-              user: currentUser,
-              session,
-              loading: false,
-              subscription: subInfo,
-            });
+            setCoreState({ user: null, session: null, loading: false });
           } else {
-            setAuthState({
-              user: null,
-              session: null,
+            setCoreState({
+              user: session?.user ?? null,
+              session: session ?? null,
               loading: false,
-              subscription: null,
             });
           }
         }
@@ -519,39 +431,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error("初期セッション取得エラー:", error);
         }
         if (isMounted) {
-          setAuthState({
-            user: null,
-            session: null,
-            loading: false,
-            subscription: null,
-          });
+          setCoreState({ user: null, session: null, loading: false });
         }
       }
     };
 
-    // 即座にセッションを取得
     fetchInitialSession();
 
-    // OAuthコールバック後のリダイレクト時に対応するため、少し遅延してセッションを再取得
-    // これにより、サーバーサイドで設定されたCookieが確実に読み取られる
-    const retryTimer = setTimeout(() => {
-      if (isMounted) {
-        fetchInitialSession();
-      }
-    }, 100);
-
-    // クリーンアップ関数
     return () => {
       isMounted = false;
       authSubscription.unsubscribe();
-      if (retryTimer) {
-        clearTimeout(retryTimer);
-      }
     };
-  }, [router, supabaseClient, clearAllClientState, fetchSubscription]);
+  }, [router, supabaseClient, clearAllClientState]);
 
   const value: AuthContextType = {
-    ...authState,
+    ...coreState,
+    subscription,
     supabase: supabaseClient || ({} as SupabaseClient<Database>),
     signIn,
     signUp,
@@ -561,7 +456,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updatePassword,
     updateProfile,
     refreshSubscription,
-    isAuthenticated: !!authState.user,
+    isAuthenticated: !!coreState.user,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

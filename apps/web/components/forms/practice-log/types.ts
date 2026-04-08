@@ -19,6 +19,8 @@ export interface PracticeMenu {
   note: string;
   tags: Tag[];
   times: TimeEntry[];
+  videoPath?: string | null;
+  videoThumbnailPath?: string | null;
 }
 
 export interface PracticeLogSubmitData {
@@ -44,6 +46,8 @@ export interface PracticeLogEditData {
   note?: string | null;
   tags?: Tag[];
   tag_ids?: string[];
+  video_path?: string | null;
+  video_thumbnail_path?: string | null;
   times?: Array<{
     memberId: string;
     times: TimeEntry[];

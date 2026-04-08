@@ -81,6 +81,7 @@ export type MainStackParamList = {
     teamId: string;
   };
   Settings: undefined;
+  Paywall: undefined;
 };
 
 // ルートナビゲーターのパラメータ型（認証状態に応じて切り替え）

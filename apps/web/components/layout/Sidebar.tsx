@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import type { ComponentType, SVGProps } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -26,7 +25,7 @@ interface SidebarProps {
 interface NavigationItem {
   name: string;
   href: string;
-  icon: ComponentType<SVGProps<SVGSVGElement>>;
+  icon: React.ElementType;
   badge?: number;
   description?: string;
 }

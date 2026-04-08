@@ -62,9 +62,14 @@ export default function GoalsClient({
 
   // 目標削除後のコールバック
   const handleGoalDeleted = async () => {
-    await invalidateGoals();
-    if (selectedGoalId) {
-      setSelectedGoalId(null);
+    try {
+      await invalidateGoals();
+    } catch (e) {
+      console.error("キャッシュ無効化エラー:", e);
+    } finally {
+      if (selectedGoalId) {
+        setSelectedGoalId(null);
+      }
     }
   };
 
@@ -88,9 +93,14 @@ export default function GoalsClient({
 
   // 目標編集後のコールバック
   const handleGoalEdited = async () => {
-    await Promise.all([invalidateGoals(), invalidateGoalDetail()]);
-    setIsEditModalOpen(false);
-    setEditingGoal(null);
+    try {
+      await Promise.all([invalidateGoals(), invalidateGoalDetail()]);
+    } catch (e) {
+      console.error("キャッシュ無効化エラー:", e);
+    } finally {
+      setIsEditModalOpen(false);
+      setEditingGoal(null);
+    }
   };
 
   return (

@@ -4,7 +4,6 @@ import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import { View, ActivityIndicator, StyleSheet, Text } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import Constants from "expo-constants";
 import { AuthProvider, useAuth } from "./contexts/AuthProvider";
 import QueryProvider from "./providers/QueryProvider";
 import { NetworkProvider, useNetwork } from "./providers/NetworkProvider";
@@ -13,6 +12,7 @@ import { AuthStack } from "./navigation/AuthStack";
 import { MainStack } from "./navigation/MainStack";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { supabase } from "./lib/supabase";
+import { env } from "./lib/env";
 
 enableScreens();
 
@@ -20,8 +20,7 @@ enableScreens();
 declare global {
   var __SWIM_HUB_WEB_API_URL__: string | undefined;
 }
-globalThis.__SWIM_HUB_WEB_API_URL__ =
-  Constants.expoConfig?.extra?.webApiUrl || "https://swim-hub.app";
+globalThis.__SWIM_HUB_WEB_API_URL__ = env.webApiUrl;
 
 /**
  * Supabase未初期化時のエラー画面
@@ -47,6 +46,11 @@ const AppNavigator: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
   const { isConnected, isInternetReachable } = useNetwork();
 
+  // デバッグ: レンダリング状態をログ出力
+  if (__DEV__) {
+    console.log("[AppNavigator] render — loading:", loading, "isAuthenticated:", isAuthenticated, "supabase:", !!supabase);
+  }
+
   // Supabaseクライアントが初期化されていない場合はエラー画面を表示
   if (!supabase) {
     return <SupabaseErrorScreen />;
@@ -57,6 +61,7 @@ const AppNavigator: React.FC = () => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2563EB" />
+        <Text style={{ color: "#6B7280", marginTop: 12, fontSize: 13 }}>読み込み中...</Text>
         <StatusBar style="auto" />
       </View>
     );

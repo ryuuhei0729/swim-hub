@@ -34,18 +34,8 @@ export function useCalendarData(displayDate: Date, _userId?: string) {
       setLoading(true);
       setError(null);
 
-      // SupabaseクライアントとAPIインスタンスは既にメモ化済み
-
-      // ユーザー認証チェック
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
       // カレンダーエントリーと月間サマリーを並行取得
+      // 注意: 認証済みレイアウト内で使用されるため、ユーザー認証チェックは不要
       const [entries, summary] = await Promise.all([
         api.getCalendarEntries(startDate, endDate),
         api.getMonthlySummary(displayDate.getFullYear(), displayDate.getMonth() + 1),
@@ -61,7 +51,7 @@ export function useCalendarData(displayDate: Date, _userId?: string) {
     } finally {
       setLoading(false);
     }
-  }, [startDate, endDate, displayDate, api, supabase.auth]);
+  }, [startDate, endDate, displayDate, api]);
 
   // 初回データ取得
   useEffect(() => {

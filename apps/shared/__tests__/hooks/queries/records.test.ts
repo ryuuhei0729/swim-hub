@@ -255,7 +255,8 @@ describe("Record Query Hooks", () => {
         pool_type: 0 as const,
         is_relaying: false,
         note: null,
-        video_url: null,
+        video_path: null,
+        video_thumbnail_path: null,
         reaction_time: null,
       };
       const createdRecord = createMockRecord({ id: "new-record", ...newRecord });

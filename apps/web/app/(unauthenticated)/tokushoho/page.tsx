@@ -10,6 +10,7 @@ export const metadata = {
   title: "特定商取引法に基づく表記 | SwimHub",
   description:
     "SwimHubの特定商取引法に基づく表記。販売事業者、所在地、連絡先、販売価格、支払方法、返品ポリシー等の情報を掲載しています。",
+  alternates: { canonical: "/tokushoho" },
 };
 
 export default function TokushohoPage() {

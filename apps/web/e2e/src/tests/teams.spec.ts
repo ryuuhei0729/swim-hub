@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { EnvConfig, URLS } from "../config/config";
+import { supabaseLogin } from "../utils/supabase-login";
 
 /**
  * チーム機能のE2Eテスト
@@ -13,26 +14,6 @@ import { EnvConfig, URLS } from "../config/config";
  * - TC-TEAMS-005: チーム削除
  * - TC-TEAMS-006: チーム一覧表示
  */
-
-/**
- * ログインヘルパー関数
- */
-async function loginIfNeeded(page: Page) {
-  await page.goto("/dashboard");
-  await page.waitForLoadState("networkidle");
-
-  const currentUrl = page.url();
-  if (currentUrl.includes("/login")) {
-    const testEnv = EnvConfig.getTestEnvironment();
-
-    await page.waitForSelector('[data-testid="email-input"]', { timeout: 10000 });
-    await page.fill('[data-testid="email-input"]', testEnv.credentials.email);
-    await page.fill('[data-testid="password-input"]', testEnv.credentials.password);
-    await page.click('[data-testid="login-button"]');
-    await page.waitForURL("**/dashboard", { timeout: 15000 });
-    await page.waitForLoadState("networkidle");
-  }
-}
 
 // テスト開始前に環境変数を検証
 let hasRequiredEnvVars = false;
@@ -51,7 +32,7 @@ test.describe("チーム機能のテスト", () => {
   test.skip(!hasRequiredEnvVars, "必要な環境変数が設定されていません。");
 
   test.beforeEach(async ({ page }) => {
-    await loginIfNeeded(page);
+    await supabaseLogin(page);
   });
 
   /**

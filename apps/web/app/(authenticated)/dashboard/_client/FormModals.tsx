@@ -1,7 +1,6 @@
 "use client";
 
-import React, { Suspense } from "react";
-import dynamic from "next/dynamic";
+import React from "react";
 import type { PracticeTag, Style } from "@apps/shared/types";
 import type { TimeEntry, EntryInfo } from "@apps/shared/types/ui";
 import { usePracticeStore } from "@/stores/practice/practiceStore";
@@ -18,6 +17,11 @@ import { convertRecordFormData } from "@/stores/types";
 import { getCompetitionId } from "../_utils/dashboardHelpers";
 import { useAuth } from "@/contexts";
 import { useCompetitionInfoQuery } from "@apps/shared/hooks/queries/records";
+import PracticeBasicForm from "@/components/forms/PracticeBasicForm";
+import PracticeLogForm from "@/components/forms/PracticeLogForm";
+import CompetitionBasicForm from "@/components/forms/CompetitionBasicForm";
+import EntryLogForm from "@/components/forms/EntryLogForm";
+import RecordLogForm from "@/components/forms/RecordLogForm";
 
 interface CompetitionSubmitOptions {
   continueToNext?: boolean;
@@ -48,23 +52,6 @@ interface FormModalsProps {
   onRecordLogSubmit: (formDataList: RecordFormDataInternal[]) => Promise<void>;
   styles: Style[];
 }
-
-/**
- * すべてのフォームモーダルを管理するClient Component
- */
-const PracticeBasicForm = dynamic(() => import("@/components/forms/PracticeBasicForm"), {
-  ssr: false,
-});
-
-const PracticeLogForm = dynamic(() => import("@/components/forms/PracticeLogForm"), { ssr: false });
-
-const CompetitionBasicForm = dynamic(() => import("@/components/forms/CompetitionBasicForm"), {
-  ssr: false,
-});
-
-const EntryLogForm = dynamic(() => import("@/components/forms/EntryLogForm"), { ssr: false });
-
-const RecordLogForm = dynamic(() => import("@/components/forms/RecordLogForm"), { ssr: false });
 
 export function FormModals({
   onPracticeBasicSubmit,
@@ -360,7 +347,7 @@ export function FormModals({
   return (
     <>
       {/* 第1段階: 練習基本情報フォーム */}
-      <Suspense fallback={null}>
+      <>
         <PracticeBasicForm
           isOpen={isPracticeBasicFormOpen}
           onClose={closePracticeBasicForm}
@@ -429,10 +416,10 @@ export function FormModals({
           })()}
           isLoading={isLoading}
         />
-      </Suspense>
+      </>
 
       {/* 第2段階: 練習メニューフォーム */}
-      <Suspense fallback={null}>
+      <>
         <PracticeLogForm
           isOpen={isPracticeLogFormOpen}
           onClose={closePracticeLogForm}
@@ -479,10 +466,10 @@ export function FormModals({
           setAvailableTags={setAvailableTags}
           styles={[]}
         />
-      </Suspense>
+      </>
 
       {/* 第1段階: 大会基本情報フォーム */}
-      <Suspense fallback={null}>
+      <>
         <CompetitionBasicForm
           isOpen={isCompetitionBasicFormOpen}
           onClose={closeCompetitionBasicForm}
@@ -525,10 +512,10 @@ export function FormModals({
           })()}
           isLoading={competitionIsLoading}
         />
-      </Suspense>
+      </>
 
       {/* 第2段階: エントリー登録フォーム（SKIP可能） */}
-      <Suspense fallback={null}>
+      <>
         <EntryLogForm
           isOpen={isEntryLogFormOpen}
           onClose={closeEntryLogForm}
@@ -574,10 +561,10 @@ export function FormModals({
           })()}
           initialEntries={entryInitialEntries}
         />
-      </Suspense>
+      </>
 
       {/* 第3段階: 記録登録フォーム */}
-      <Suspense fallback={null}>
+      <>
         <RecordLogForm
           isOpen={isRecordLogFormOpen}
           onClose={closeRecordLogForm}
@@ -612,7 +599,7 @@ export function FormModals({
                 createdAt?: string;
               }>;
               note?: string;
-              videoUrl?: string | null;
+              videoPath?: string | null;
               reactionTime?: number | null;
             };
 
@@ -631,7 +618,7 @@ export function FormModals({
               isRelaying: data.isRelaying,
               splitTimes: splitTimes,
               note: data.note,
-              videoUrl: data.videoUrl === null ? undefined : data.videoUrl,
+              videoPath: data.videoPath === null ? undefined : data.videoPath,
               reactionTime: data.reactionTime,
             };
           })()}
@@ -643,7 +630,7 @@ export function FormModals({
           }))}
           entryDataList={getEntryDataListForRecord(competitionEditingData, createdEntries)}
         />
-      </Suspense>
+      </>
     </>
   );
 }

@@ -20,6 +20,7 @@ export const metadata = {
   title: "運営者情報・サービス概要 | SwimHub",
   description:
     "SwimHubの運営者情報・サービス概要・開発ストーリーについてご紹介します。水泳選手・コーチ・チーム管理者のための記録管理サービスSwimHubの詳細をご覧ください。",
+  alternates: { canonical: "/about" },
 };
 
 export default function AboutPage() {
@@ -465,6 +466,12 @@ export default function AboutPage() {
                   利用規約
                 </Link>
                 <span className="text-gray-500 text-sm ml-2">— サービスのご利用条件について</span>
+              </li>
+              <li>
+                <Link href="/tokushoho" className="text-blue-600 hover:text-blue-800 underline">
+                  特定商取引法に基づく表記
+                </Link>
+                <span className="text-gray-500 text-sm ml-2">— 販売事業者情報・返品ポリシー等</span>
               </li>
             </ul>
           </section>

@@ -114,7 +114,8 @@ describe("useCreateRecordMutation", () => {
       pool_type: 0 as const,
       reaction_time: null,
       note: "テスト記録",
-      video_url: null,
+      video_path: null,
+      video_thumbnail_path: null,
       is_relaying: false,
     };
     const createdRecord = createMockRecordWithDetails(newRecord);

@@ -10,6 +10,7 @@ import { useRecordsQuery, useDeleteRecordMutation } from "@apps/shared/hooks/que
 import { formatTime } from "@/utils/formatters";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
+import { VideoPlayer } from "@/components/shared/VideoPlayer";
 import type { MainStackParamList } from "@/navigation/types";
 
 type RecordDetailScreenRouteProp = RouteProp<MainStackParamList, "RecordDetail">;
@@ -356,6 +357,16 @@ export const RecordDetailScreen: React.FC = () => {
         <View style={styles.noteCard}>
           <Text style={styles.noteLabel}>📝 メモ</Text>
           <Text style={styles.noteText}>{record.note}</Text>
+        </View>
+      )}
+
+      {/* 動画 */}
+      {record.video_path && (
+        <View style={styles.noteCard}>
+          <VideoPlayer
+            videoPath={record.video_path}
+            thumbnailPath={record.video_thumbnail_path}
+          />
         </View>
       )}
 
