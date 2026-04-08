@@ -65,7 +65,7 @@
     "@cloudflare/workers-types": "^4.20260127.0",
     "@eslint/eslintrc": "^3",
     "@next/bundle-analyzer": "^16.2.2",
-    "@opennextjs/cloudflare": "^1.17.1",
+    "@opennextjs/cloudflare": "^1.18.1",
     "@playwright/test": "^1.56.1",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/forms": "^0.5.9",
