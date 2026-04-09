@@ -44,17 +44,10 @@ export async function POST(request: NextRequest) {
     try {
       accessToken = await refreshGoogleAccessToken(refreshToken);
     } catch {
-      // フォールバック: Supabaseセッションのprovider_tokenを使用
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session?.provider_token) {
-        return NextResponse.json(
-          { error: "Google認証トークンの取得に失敗しました" },
-          { status: 401 },
-        );
-      }
-      accessToken = session.provider_token;
+      return NextResponse.json(
+        { error: "Google認証トークンの取得に失敗しました。再連携してください。" },
+        { status: 401 },
+      );
     }
     const calendarApiUrl = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
 
