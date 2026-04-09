@@ -44,7 +44,6 @@ export interface TeamGroup {
   id: string;
   team_id: string;
   category?: string | null;
-  description: string | null;
   name: string;
   created_by: string | null;
   created_at: string | null;
