@@ -409,6 +409,54 @@ export default function RecordClient({
     );
   };
 
+  const addSplitTimesEvery50m = (entryId: string, memberUserId: string) => {
+    const entry = styleEntries.find((e) => e.id === entryId);
+    if (!entry) return;
+
+    const style = styles.find((s) => s.id === entry.styleId);
+    if (!style || !style.distance) return;
+
+    const raceDistance = style.distance;
+
+    setStyleEntries((prev) =>
+      prev.map((e) => {
+        if (e.id !== entryId) return e;
+        return {
+          ...e,
+          memberRecords: e.memberRecords.map((mr) => {
+            if (mr.memberUserId !== memberUserId) return mr;
+
+            const existingDistances = new Set(
+              mr.splitTimes
+                .map((st) => (typeof st.distance === "number" ? st.distance : 0))
+                .filter((d) => d > 0),
+            );
+
+            // 50m間隔で種目の距離までsplit-timeを追加
+            const newSplitTimes: SplitTimeEntry[] = [];
+            for (let distance = 50; distance <= raceDistance; distance += 50) {
+              if (!existingDistances.has(distance)) {
+                newSplitTimes.push({
+                  id: `${Date.now()}-${distance}`,
+                  distance,
+                  splitTime: 0,
+                  displayValue: "",
+                });
+              }
+            }
+
+            if (newSplitTimes.length === 0) return mr;
+
+            return {
+              ...mr,
+              splitTimes: [...mr.splitTimes, ...newSplitTimes],
+            };
+          }),
+        };
+      }),
+    );
+  };
+
   const removeSplitTime = (entryId: string, memberUserId: string, splitId: string) => {
     setStyleEntries((prev) =>
       prev.map((entry) => {
@@ -899,6 +947,16 @@ export default function RecordClient({
                             >
                               <PlusIcon className="h-3 w-3 mr-1" />
                               追加(25mごと)
+                            </Button>
+                            <Button
+                              type="button"
+                              onClick={() => addSplitTimesEvery50m(entry.id, mr.memberUserId)}
+                              variant="outline"
+                              className="text-xs py-1 px-2"
+                              disabled={!styles.find((s) => s.id === entry.styleId)?.distance}
+                            >
+                              <PlusIcon className="h-3 w-3 mr-1" />
+                              追加(50mごと)
                             </Button>
                             <Button
                               type="button"

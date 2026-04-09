@@ -26,6 +26,7 @@ interface RecordSetItemProps {
   onRemove: () => void;
   onAddSplitTime: () => void;
   onAddSplitTimesEvery25m: () => void;
+  onAddSplitTimesEvery50m: () => void;
   onUpdateSplitTime: (splitIndex: number, updates: Partial<SplitTimeInput>) => void;
   onRemoveSplitTime: (splitIndex: number) => void;
   /** Free ユーザーの場合、split-time の制限に達しているか */
@@ -48,6 +49,7 @@ export default function RecordSetItem({
   onRemove,
   onAddSplitTime,
   onAddSplitTimesEvery25m,
+  onAddSplitTimesEvery50m,
   onUpdateSplitTime,
   onRemoveSplitTime,
   isSplitTimeLimitReached = false,
@@ -203,6 +205,17 @@ export default function RecordSetItem({
             </Button>
             <Button
               type="button"
+              onClick={onAddSplitTimesEvery50m}
+              className="text-sm"
+              variant="outline"
+              disabled={!currentStyle?.distance || isSplitTimeLimitReached}
+              data-testid={`record-split-add-50m-button-${recordIndex + 1}`}
+            >
+              <PlusIcon className="h-3 w-3 mr-1" />
+              追加(50mごと)
+            </Button>
+            <Button
+              type="button"
               onClick={onAddSplitTime}
               className="text-sm"
               variant="outline"
@@ -271,15 +284,19 @@ export default function RecordSetItem({
               className="flex-1"
               data-testid={`record-split-time-${recordIndex + 1}-${originalIndex + 1}`}
             />
-            <button
-              type="button"
-              onClick={() => onRemoveSplitTime(originalIndex)}
-              className="text-red-500 hover:text-red-700"
-              aria-label="スプリットを削除"
-              data-testid={`record-split-remove-button-${recordIndex + 1}-${originalIndex + 1}`}
-            >
-              <TrashIcon className="h-4 w-4" />
-            </button>
+            {!(typeof split.distance === "number" && split.distance === currentStyle?.distance) ? (
+              <button
+                type="button"
+                onClick={() => onRemoveSplitTime(originalIndex)}
+                className="text-red-500 hover:text-red-700"
+                aria-label="スプリットを削除"
+                data-testid={`record-split-remove-button-${recordIndex + 1}-${originalIndex + 1}`}
+              >
+                <TrashIcon className="h-4 w-4" />
+              </button>
+            ) : (
+              <div className="w-4" />
+            )}
           </div>
         ))}
 

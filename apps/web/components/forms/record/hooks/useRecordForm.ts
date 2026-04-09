@@ -35,6 +35,7 @@ interface UseRecordFormReturn {
   updateRecord: (recordId: string, updates: Partial<RecordSet>) => void;
   addSplitTime: (recordId: string) => void;
   addSplitTimesEvery25m: (recordId: string) => void;
+  addSplitTimesEvery50m: (recordId: string) => void;
   updateSplitTime: (recordId: string, splitIndex: number, updates: Partial<SplitTimeInput>) => void;
   removeSplitTime: (recordId: string, splitIndex: number) => void;
   sanitizeFormData: () => RecordFormData;
@@ -241,14 +242,27 @@ export const useRecordForm = ({
     [styles],
   );
 
+  // 最終タイム（種目距離と同じ距離のsplit-time）を除いた、課金対象のsplit-time数を返す
+  const countBillableSplitTimes = useCallback(
+    (record: RecordSet): number => {
+      const style = styles.find((s) => s.id === record.styleId);
+      const raceDistance = style?.distance;
+      if (!raceDistance) return record.splitTimes.length;
+      return record.splitTimes.filter(
+        (st) => !(typeof st.distance === "number" && st.distance === raceDistance),
+      ).length;
+    },
+    [styles],
+  );
+
   const isSplitTimeLimitReached = useCallback(
     (recordId: string): boolean => {
       if (isPremium) return false;
       const record = formData.records.find((r) => r.id === recordId);
       if (!record) return false;
-      return record.splitTimes.length >= FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD;
+      return countBillableSplitTimes(record) >= FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD;
     },
-    [isPremium, formData.records],
+    [isPremium, formData.records, countBillableSplitTimes],
   );
 
   const addSplitTime = useCallback((recordId: string) => {
@@ -256,9 +270,10 @@ export const useRecordForm = ({
       const record = prev.records.find((r) => r.id === recordId);
       if (!record) return prev;
 
-      // Free ユーザーの場合、制限チェック
+      // Free ユーザーの場合、制限チェック（最終タイムは除外）
       if (!isPremium) {
-        const validation = validateSplitTimeLimit(record.splitTimes.length + 1, false);
+        const billableCount = countBillableSplitTimes(record);
+        const validation = validateSplitTimeLimit(billableCount + 1, false);
         if (!validation.valid) {
           setSplitTimeLimitError(validation.error || null);
           return prev;
@@ -310,17 +325,35 @@ export const useRecordForm = ({
 
         if (newSplitTimes.length === 0) return prev;
 
-        // Free ユーザーの場合、制限内に収まるよう切り詰める
+        // Free ユーザーの場合、制限内に収まるよう切り詰める（最終タイムは除外してカウント）
         if (!isPremium) {
-          const maxNew = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - record.splitTimes.length;
-          if (maxNew <= 0) {
+          const billableCount = countBillableSplitTimes(record);
+          // 新規追加分から最終タイム（raceDistance）を除外してカウント
+          const newBillable = newSplitTimes.filter(
+            (st) => !(typeof st.distance === "number" && st.distance === raceDistance),
+          );
+          const maxNewBillable = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - billableCount;
+          if (maxNewBillable <= 0 && newBillable.length > 0) {
             setSplitTimeLimitError(
               `Freeプランでは${FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD}個まで登録できます。Premiumにアップグレードすると無制限に`,
             );
-            return prev;
-          }
-          if (newSplitTimes.length > maxNew) {
-            newSplitTimes = newSplitTimes.slice(0, maxNew);
+            // 最終タイムだけなら追加OK
+            newSplitTimes = newSplitTimes.filter(
+              (st) => typeof st.distance === "number" && st.distance === raceDistance,
+            );
+            if (newSplitTimes.length === 0) return prev;
+          } else if (newBillable.length > maxNewBillable) {
+            // 課金対象の中から制限内に収まるよう切り詰め、最終タイムは常に含める
+            let billableAdded = 0;
+            newSplitTimes = newSplitTimes.filter((st) => {
+              const isRaceDist = typeof st.distance === "number" && st.distance === raceDistance;
+              if (isRaceDist) return true;
+              if (billableAdded < maxNewBillable) {
+                billableAdded++;
+                return true;
+              }
+              return false;
+            });
             setSplitTimeLimitError(
               `Freeプランでは${FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD}個まで登録できます。Premiumにアップグレードすると無制限に`,
             );
@@ -337,7 +370,81 @@ export const useRecordForm = ({
         };
       });
     },
-    [styles, isPremium],
+    [styles, isPremium, countBillableSplitTimes],
+  );
+
+  const addSplitTimesEvery50m = useCallback(
+    (recordId: string) => {
+      setFormData((prev) => {
+        const record = prev.records.find((r) => r.id === recordId);
+        if (!record) return prev;
+
+        const style = styles.find((s) => s.id === record.styleId);
+        if (!style || !style.distance) return prev;
+
+        const raceDistance = style.distance;
+        const existingDistances = new Set(
+          record.splitTimes
+            .map((st) => (typeof st.distance === "number" ? st.distance : null))
+            .filter((d): d is number => d !== null),
+        );
+
+        let newSplitTimes: SplitTimeInput[] = [];
+        for (let distance = 50; distance <= raceDistance; distance += 50) {
+          if (!existingDistances.has(distance)) {
+            newSplitTimes.push({
+              distance,
+              splitTime: 0,
+              uiKey: generateUUID(),
+            });
+          }
+        }
+
+        if (newSplitTimes.length === 0) return prev;
+
+        // Free ユーザーの場合、制限内に収まるよう切り詰める（最終タイムは除外してカウント）
+        if (!isPremium) {
+          const billableCount = countBillableSplitTimes(record);
+          const newBillable = newSplitTimes.filter(
+            (st) => !(typeof st.distance === "number" && st.distance === raceDistance),
+          );
+          const maxNewBillable = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - billableCount;
+          if (maxNewBillable <= 0 && newBillable.length > 0) {
+            setSplitTimeLimitError(
+              `Freeプランでは${FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD}個まで登録できます。Premiumにアップグレードすると無制限に`,
+            );
+            newSplitTimes = newSplitTimes.filter(
+              (st) => typeof st.distance === "number" && st.distance === raceDistance,
+            );
+            if (newSplitTimes.length === 0) return prev;
+          } else if (newBillable.length > maxNewBillable) {
+            let billableAdded = 0;
+            newSplitTimes = newSplitTimes.filter((st) => {
+              const isRaceDist = typeof st.distance === "number" && st.distance === raceDistance;
+              if (isRaceDist) return true;
+              if (billableAdded < maxNewBillable) {
+                billableAdded++;
+                return true;
+              }
+              return false;
+            });
+            setSplitTimeLimitError(
+              `Freeプランでは${FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD}個まで登録できます。Premiumにアップグレードすると無制限に`,
+            );
+          } else {
+            setSplitTimeLimitError(null);
+          }
+        }
+
+        return {
+          ...prev,
+          records: prev.records.map((r) =>
+            r.id === recordId ? { ...r, splitTimes: [...r.splitTimes, ...newSplitTimes] } : r,
+          ),
+        };
+      });
+    },
+    [styles, isPremium, countBillableSplitTimes],
   );
 
   const updateSplitTime = useCallback(
@@ -439,6 +546,7 @@ export const useRecordForm = ({
     updateRecord,
     addSplitTime,
     addSplitTimesEvery25m,
+    addSplitTimesEvery50m,
     updateSplitTime,
     removeSplitTime,
     sanitizeFormData,
