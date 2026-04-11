@@ -12,8 +12,8 @@
   },
   "dependencies": {
     "@holiday-jp/holiday_jp": "^2.5.1",
-    "@supabase/supabase-js": "^2.97.0",
-    "@tanstack/react-query": "^5.90.10",
+    "@supabase/supabase-js": "^2.103.0",
+    "@tanstack/react-query": "^5.97.0",
     "date-fns": "^4.1.0"
   },
   "peerDependencies": {
@@ -24,8 +24,8 @@
     "@testing-library/react": "^16.3.0",
     "@vitest/coverage-v8": "3.2.4",
     "jsdom": "^26.1.0",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
     "typescript": "^5.9.3",
     "vitest": "3.2.4"
   }
