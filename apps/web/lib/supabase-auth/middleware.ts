@@ -38,12 +38,12 @@ export async function updateSession(request: NextRequest) {
       request.nextUrl.hostname === "localhost" || request.nextUrl.hostname === "127.0.0.1";
     request.cookies.getAll().forEach((cookie) => {
       if (cookie.value) {
-        // Cookie属性を明示的に設定（PKCE code verifierが確実に転送されるように）
+        // Cookie属性を明示的に設定
         oauthResponse.cookies.set(cookie.name, cookie.value, {
           path: "/",
           sameSite: "lax",
           secure: !isLocal, // ローカルはHTTP、本番はHTTPS
-          httpOnly: cookie.name.includes("code-verifier") ? false : true,
+          httpOnly: true,
         });
       }
     });

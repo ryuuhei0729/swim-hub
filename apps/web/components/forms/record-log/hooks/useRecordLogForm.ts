@@ -36,6 +36,7 @@ interface UseRecordLogFormReturn {
   handleStyleChange: (index: number, value: string) => void;
   handleAddSplitTime: (entryIndex: number) => void;
   handleAddSplitTimesEvery25m: (entryIndex: number) => void;
+  handleAddSplitTimesEvery50m: (entryIndex: number) => void;
   handleRemoveSplitTime: (entryIndex: number, splitIndex: number) => void;
   handleSplitTimeChange: (
     entryIndex: number,
@@ -225,10 +226,25 @@ export const useRecordLogForm = ({
     [updateFormData],
   );
 
+  // 最終タイム（種目距離と同じ距離のsplit-time）を除いた、課金対象のsplit-time数を返す
+  const countBillableSplitTimes = useCallback(
+    (entryIndex: number, splitTimes: SplitTimeDraft[]): number => {
+      const entryInfo = entryDataList[entryIndex];
+      const styleId = entryInfo ? String(entryInfo.styleId) : formDataList[entryIndex]?.styleId;
+      const style = styles.find((s) => s.id.toString() === styleId);
+      const raceDistance = style?.distance;
+      if (!raceDistance) return splitTimes.length;
+      return splitTimes.filter(
+        (st) => !(typeof st.distance === "number" && st.distance === raceDistance),
+      ).length;
+    },
+    [entryDataList, formDataList, styles],
+  );
+
   const handleAddSplitTime = useCallback(
     (entryIndex: number) => {
       updateFormData(entryIndex, (prev) => {
-        if (!isPremium && prev.splitTimes.length >= FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD) {
+        if (!isPremium && countBillableSplitTimes(entryIndex, prev.splitTimes) >= FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD) {
           return prev;
         }
         return {
@@ -245,7 +261,7 @@ export const useRecordLogForm = ({
         };
       });
     },
-    [updateFormData, isPremium],
+    [updateFormData, isPremium, countBillableSplitTimes],
   );
 
   const handleAddSplitTimesEvery25m = useCallback(
@@ -283,12 +299,29 @@ export const useRecordLogForm = ({
 
         if (newSplitTimes.length === 0) return prev;
 
-        // Free ユーザーの場合、制限内に収まるよう切り詰める
+        // Free ユーザーの場合、制限内に収まるよう切り詰める（最終タイムは除外してカウント）
         if (!isPremium) {
-          const maxNew = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - prev.splitTimes.length;
-          if (maxNew <= 0) return prev;
-          if (newSplitTimes.length > maxNew) {
-            newSplitTimes = newSplitTimes.slice(0, maxNew);
+          const billableCount = countBillableSplitTimes(entryIndex, prev.splitTimes);
+          const newBillable = newSplitTimes.filter(
+            (st) => !(typeof st.distance === "number" && st.distance === raceDistance),
+          );
+          const maxNewBillable = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - billableCount;
+          if (maxNewBillable <= 0 && newBillable.length > 0) {
+            newSplitTimes = newSplitTimes.filter(
+              (st) => typeof st.distance === "number" && st.distance === raceDistance,
+            );
+            if (newSplitTimes.length === 0) return prev;
+          } else if (newBillable.length > maxNewBillable) {
+            let billableAdded = 0;
+            newSplitTimes = newSplitTimes.filter((st) => {
+              const isRaceDist = typeof st.distance === "number" && st.distance === raceDistance;
+              if (isRaceDist) return true;
+              if (billableAdded < maxNewBillable) {
+                billableAdded++;
+                return true;
+              }
+              return false;
+            });
           }
         }
 
@@ -298,7 +331,77 @@ export const useRecordLogForm = ({
         };
       });
     },
-    [updateFormData, entryDataList, styles, isPremium],
+    [updateFormData, entryDataList, styles, isPremium, countBillableSplitTimes],
+  );
+
+  const handleAddSplitTimesEvery50m = useCallback(
+    (entryIndex: number) => {
+      updateFormData(entryIndex, (prev) => {
+        const entryInfo = entryDataList[entryIndex];
+        const styleId = entryInfo ? String(entryInfo.styleId) : prev.styleId;
+        const style = styles.find((s) => s.id.toString() === styleId);
+        if (!style || !style.distance) return prev;
+
+        const raceDistance = style.distance;
+        const existingDistances = new Set(
+          prev.splitTimes
+            .map((st) =>
+              typeof st.distance === "number"
+                ? st.distance
+                : st.distance === ""
+                  ? null
+                  : parseFloat(String(st.distance)) || null,
+            )
+            .filter((d): d is number => d !== null),
+        );
+
+        let newSplitTimes: SplitTimeDraft[] = [];
+        for (let distance = 50; distance <= raceDistance; distance += 50) {
+          if (!existingDistances.has(distance)) {
+            newSplitTimes.push({
+              distance,
+              splitTime: 0,
+              splitTimeDisplayValue: "",
+              uiKey: `split-${Date.now()}-${distance}`,
+            });
+          }
+        }
+
+        if (newSplitTimes.length === 0) return prev;
+
+        // Free ユーザーの場合、制限内に収まるよう切り詰める（最終タイムは除外してカウント）
+        if (!isPremium) {
+          const billableCount = countBillableSplitTimes(entryIndex, prev.splitTimes);
+          const newBillable = newSplitTimes.filter(
+            (st) => !(typeof st.distance === "number" && st.distance === raceDistance),
+          );
+          const maxNewBillable = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - billableCount;
+          if (maxNewBillable <= 0 && newBillable.length > 0) {
+            newSplitTimes = newSplitTimes.filter(
+              (st) => typeof st.distance === "number" && st.distance === raceDistance,
+            );
+            if (newSplitTimes.length === 0) return prev;
+          } else if (newBillable.length > maxNewBillable) {
+            let billableAdded = 0;
+            newSplitTimes = newSplitTimes.filter((st) => {
+              const isRaceDist = typeof st.distance === "number" && st.distance === raceDistance;
+              if (isRaceDist) return true;
+              if (billableAdded < maxNewBillable) {
+                billableAdded++;
+                return true;
+              }
+              return false;
+            });
+          }
+        }
+
+        return {
+          ...prev,
+          splitTimes: [...prev.splitTimes, ...newSplitTimes],
+        };
+      });
+    },
+    [updateFormData, entryDataList, styles, isPremium, countBillableSplitTimes],
   );
 
   const handleRemoveSplitTime = useCallback(
@@ -427,9 +530,9 @@ export const useRecordLogForm = ({
       if (isPremium) return false;
       const entry = formDataList[entryIndex];
       if (!entry) return false;
-      return entry.splitTimes.length >= FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD;
+      return countBillableSplitTimes(entryIndex, entry.splitTimes) >= FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD;
     },
-    [isPremium, formDataList],
+    [isPremium, formDataList, countBillableSplitTimes],
   );
 
   return {
@@ -447,6 +550,7 @@ export const useRecordLogForm = ({
     handleStyleChange,
     handleAddSplitTime,
     handleAddSplitTimesEvery25m,
+    handleAddSplitTimesEvery50m,
     handleRemoveSplitTime,
     handleSplitTimeChange,
     prepareSubmitData,

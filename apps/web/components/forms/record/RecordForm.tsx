@@ -45,6 +45,7 @@ export default function RecordForm({
     updateRecord,
     addSplitTime,
     addSplitTimesEvery25m,
+    addSplitTimesEvery50m,
     updateSplitTime,
     removeSplitTime,
     sanitizeFormData,
@@ -189,6 +190,7 @@ export default function RecordForm({
                     onRemove={() => removeRecord(record.id)}
                     onAddSplitTime={() => addSplitTime(record.id)}
                     onAddSplitTimesEvery25m={() => addSplitTimesEvery25m(record.id)}
+                    onAddSplitTimesEvery50m={() => addSplitTimesEvery50m(record.id)}
                     onUpdateSplitTime={(splitIndex, updates) =>
                       updateSplitTime(record.id, splitIndex, updates)
                     }

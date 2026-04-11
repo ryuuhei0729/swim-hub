@@ -69,6 +69,7 @@ export default function RecordLogForm({
     handleStyleChange,
     handleAddSplitTime,
     handleAddSplitTimesEvery25m,
+    handleAddSplitTimesEvery50m,
     handleRemoveSplitTime,
     handleSplitTimeChange,
     prepareSubmitData,
@@ -269,6 +270,7 @@ export default function RecordLogForm({
                     onStyleChange={(value) => handleStyleChange(index, value)}
                     onAddSplitTime={() => handleAddSplitTime(index)}
                     onAddSplitTimesEvery25m={() => handleAddSplitTimesEvery25m(index)}
+                    onAddSplitTimesEvery50m={() => handleAddSplitTimesEvery50m(index)}
                     onRemoveSplitTime={(splitIndex) => handleRemoveSplitTime(index, splitIndex)}
                     onSplitTimeChange={(splitIndex, field, value) =>
                       handleSplitTimeChange(index, splitIndex, field, value)
