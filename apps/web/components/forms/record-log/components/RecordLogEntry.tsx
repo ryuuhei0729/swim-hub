@@ -40,6 +40,7 @@ interface RecordLogEntryProps {
   onStyleChange: (value: string) => void;
   onAddSplitTime: () => void;
   onAddSplitTimesEvery25m: () => void;
+  onAddSplitTimesEvery50m: () => void;
   onRemoveSplitTime: (splitIndex: number) => void;
   onSplitTimeChange: (splitIndex: number, field: "distance" | "splitTime", value: string) => void;
   isSplitTimeLimitReached?: boolean;
@@ -69,6 +70,7 @@ export default function RecordLogEntry({
   onStyleChange,
   onAddSplitTime,
   onAddSplitTimesEvery25m,
+  onAddSplitTimesEvery50m,
   onRemoveSplitTime,
   onSplitTimeChange,
   isSplitTimeLimitReached = false,
@@ -320,6 +322,18 @@ export default function RecordLogEntry({
             </Button>
             <Button
               type="button"
+              onClick={onAddSplitTimesEvery50m}
+              variant="outline"
+              className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 sm:py-1 h-6 sm:h-7"
+              disabled={isLoading || !raceDistance || isSplitTimeLimitReached}
+              data-testid={`record-split-add-50m-button-${sectionIndex}`}
+            >
+              <PlusIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5" />
+              <span className="sm:hidden">50mごと</span>
+              <span className="hidden sm:inline">追加(50mごと)</span>
+            </Button>
+            <Button
+              type="button"
               onClick={onAddSplitTime}
               variant="outline"
               className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 sm:py-1 h-6 sm:h-7"
@@ -360,15 +374,19 @@ export default function RecordLogEntry({
                   className="flex-1"
                   data-testid={`record-split-time-${sectionIndex}-${originalIndex + 1}`}
                 />
-                <button
-                  type="button"
-                  onClick={() => onRemoveSplitTime(originalIndex)}
-                  className="p-2 text-red-600 hover:text-red-700"
-                  disabled={isLoading}
-                  data-testid={`record-split-remove-button-${sectionIndex}-${splitIndex + 1}`}
-                >
-                  <TrashIcon className="h-5 w-5" />
-                </button>
+                {!(typeof st.distance === "number" && st.distance === raceDistance) ? (
+                  <button
+                    type="button"
+                    onClick={() => onRemoveSplitTime(originalIndex)}
+                    className="p-2 text-red-600 hover:text-red-700"
+                    disabled={isLoading}
+                    data-testid={`record-split-remove-button-${sectionIndex}-${splitIndex + 1}`}
+                  >
+                    <TrashIcon className="h-5 w-5" />
+                  </button>
+                ) : (
+                  <div className="p-2 w-9" />
+                )}
               </div>
             ))}
           </div>

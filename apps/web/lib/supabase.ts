@@ -44,15 +44,12 @@ function validateSupabaseEnv(): { url: string; anonKey: string } {
 
 // ブラウザ用のSupabaseクライアント（シングルトン）
 // 重要: Browser Clientは1箇所だけに統一することで、PKCE code verifierが確実にCookieに保存・読み取りされる
-// 環境変数を検証
 const { url, anonKey } = (() => {
-  try {
-    return validateSupabaseEnv();
-  } catch {
-    // サーバー側（ビルド時）では環境変数が取得できない場合がある
-    // その場合は後でエラーを投げる
+  // ブラウザ環境でのみ検証（サーバー側ビルド時はクライアント生成しない）
+  if (typeof window === "undefined") {
     return { url: "", anonKey: "" };
   }
+  return validateSupabaseEnv();
 })();
 
 // ローカル環境かどうかを判定する関数
@@ -73,8 +70,8 @@ function isLocalEnvironment(): boolean {
 export const supabase: SupabaseClient<Database> | undefined =
   typeof window !== "undefined"
     ? createBrowserClient<Database>(
-        url || process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        anonKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        url,
+        anonKey,
         {
           cookieOptions: {
             sameSite: "lax",

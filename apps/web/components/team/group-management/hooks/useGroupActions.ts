@@ -24,7 +24,6 @@ export const useGroupActions = (
         const result = await api.create({
           team_id: teamId,
           category,
-          description: null,
           name,
           created_by: null, // APIが上書きする
         });
@@ -61,7 +60,6 @@ export const useGroupActions = (
             await api.create({
               team_id: teamId,
               category,
-              description: null,
               name,
               created_by: null,
             });
