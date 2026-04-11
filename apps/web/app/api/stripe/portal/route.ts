@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-auth/server";
+import { createAdminClient } from "@/lib/supabase-server";
 import { getStripe } from "@/lib/stripe";
 
 export async function POST(request: NextRequest) {
@@ -45,8 +46,9 @@ export async function POST(request: NextRequest) {
 
       customerId = existingCustomers.data[0].id;
 
-      // DB に Customer ID をキャッシュ
-      await supabase
+      // DB に Customer ID をキャッシュ（service_role で RLS をバイパス）
+      const adminClient = createAdminClient();
+      await adminClient
         .from("user_subscriptions")
         .update({ stripe_customer_id: customerId })
         .eq("id", user.id);
