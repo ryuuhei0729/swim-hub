@@ -294,7 +294,7 @@ export const useRecordForm = ({
         ),
       };
     });
-  }, [isPremium]);
+  }, [isPremium, countBillableSplitTimes]);
 
   const addSplitTimesEvery25m = useCallback(
     (recordId: string) => {

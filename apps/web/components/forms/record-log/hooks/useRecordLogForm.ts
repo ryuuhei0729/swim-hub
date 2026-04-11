@@ -261,7 +261,7 @@ export const useRecordLogForm = ({
         };
       });
     },
-    [updateFormData, isPremium],
+    [updateFormData, isPremium, countBillableSplitTimes],
   );
 
   const handleAddSplitTimesEvery25m = useCallback(
