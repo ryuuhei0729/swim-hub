@@ -16,6 +16,7 @@ import {
   VideoCameraIcon,
 } from "@heroicons/react/24/outline";
 import { Competition, Style } from "@apps/shared/types";
+import { FREE_PLAN_LIMITS } from "@apps/shared/constants/premium";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { formatTimeBest, parseTimeToSeconds } from "@/utils/formatters";
@@ -118,7 +119,8 @@ export default function RecordClient({
   styles,
 }: RecordClientProps) {
   const router = useRouter();
-  const { supabase } = useAuth();
+  const { supabase, subscription } = useAuth();
+  const isPremium = subscription?.plan === "premium";
 
   const [saving, setSaving] = useState(false);
   const [showMemberSelectModal, setShowMemberSelectModal] = useState(false);
@@ -334,6 +336,21 @@ export default function RecordClient({
     );
   };
 
+  // 最終タイム（種目距離と同じ距離のsplit-time）を除いた、課金対象のsplit-time数を返す
+  const countBillableSplitTimes = (
+    entryId: string,
+    splitTimes: SplitTimeEntry[],
+  ): number => {
+    const entry = styleEntries.find((e) => e.id === entryId);
+    if (!entry) return splitTimes.length;
+    const style = styles.find((s) => s.id === entry.styleId);
+    const raceDistance = style?.distance;
+    if (!raceDistance) return splitTimes.length;
+    return splitTimes.filter(
+      (st) => !(typeof st.distance === "number" && st.distance === raceDistance),
+    ).length;
+  };
+
   const addSplitTime = (entryId: string, memberUserId: string) => {
     setStyleEntries((prev) =>
       prev.map((entry) => {
@@ -342,6 +359,14 @@ export default function RecordClient({
           ...entry,
           memberRecords: entry.memberRecords.map((mr) => {
             if (mr.memberUserId !== memberUserId) return mr;
+
+            if (!isPremium) {
+              const billableCount = countBillableSplitTimes(entryId, mr.splitTimes);
+              if (billableCount >= FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD) {
+                return mr;
+              }
+            }
+
             return {
               ...mr,
               splitTimes: [
@@ -384,7 +409,7 @@ export default function RecordClient({
             );
 
             // 25m間隔で種目の距離までsplit-timeを追加
-            const newSplitTimes: SplitTimeEntry[] = [];
+            let newSplitTimes: SplitTimeEntry[] = [];
             for (let distance = 25; distance <= raceDistance; distance += 25) {
               // 既に存在する距離はスキップ
               if (!existingDistances.has(distance)) {
@@ -398,6 +423,33 @@ export default function RecordClient({
             }
 
             if (newSplitTimes.length === 0) return mr;
+
+            // Free ユーザーの場合、制限内に収まるよう切り詰める（最終タイムは除外してカウント）
+            if (!isPremium) {
+              const billableCount = countBillableSplitTimes(entryId, mr.splitTimes);
+              const newBillable = newSplitTimes.filter(
+                (st) => !(typeof st.distance === "number" && st.distance === raceDistance),
+              );
+              const maxNewBillable = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - billableCount;
+              if (maxNewBillable <= 0 && newBillable.length > 0) {
+                // 最終タイムだけなら追加OK
+                newSplitTimes = newSplitTimes.filter(
+                  (st) => typeof st.distance === "number" && st.distance === raceDistance,
+                );
+                if (newSplitTimes.length === 0) return mr;
+              } else if (newBillable.length > maxNewBillable) {
+                let billableAdded = 0;
+                newSplitTimes = newSplitTimes.filter((st) => {
+                  const isRaceDist = typeof st.distance === "number" && st.distance === raceDistance;
+                  if (isRaceDist) return true;
+                  if (billableAdded < maxNewBillable) {
+                    billableAdded++;
+                    return true;
+                  }
+                  return false;
+                });
+              }
+            }
 
             return {
               ...mr,
@@ -433,7 +485,7 @@ export default function RecordClient({
             );
 
             // 50m間隔で種目の距離までsplit-timeを追加
-            const newSplitTimes: SplitTimeEntry[] = [];
+            let newSplitTimes: SplitTimeEntry[] = [];
             for (let distance = 50; distance <= raceDistance; distance += 50) {
               if (!existingDistances.has(distance)) {
                 newSplitTimes.push({
@@ -446,6 +498,32 @@ export default function RecordClient({
             }
 
             if (newSplitTimes.length === 0) return mr;
+
+            // Free ユーザーの場合、制限内に収まるよう切り詰める（最終タイムは除外してカウント）
+            if (!isPremium) {
+              const billableCount = countBillableSplitTimes(entryId, mr.splitTimes);
+              const newBillable = newSplitTimes.filter(
+                (st) => !(typeof st.distance === "number" && st.distance === raceDistance),
+              );
+              const maxNewBillable = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - billableCount;
+              if (maxNewBillable <= 0 && newBillable.length > 0) {
+                newSplitTimes = newSplitTimes.filter(
+                  (st) => typeof st.distance === "number" && st.distance === raceDistance,
+                );
+                if (newSplitTimes.length === 0) return mr;
+              } else if (newBillable.length > maxNewBillable) {
+                let billableAdded = 0;
+                newSplitTimes = newSplitTimes.filter((st) => {
+                  const isRaceDist = typeof st.distance === "number" && st.distance === raceDistance;
+                  if (isRaceDist) return true;
+                  if (billableAdded < maxNewBillable) {
+                    billableAdded++;
+                    return true;
+                  }
+                  return false;
+                });
+              }
+            }
 
             return {
               ...mr,
