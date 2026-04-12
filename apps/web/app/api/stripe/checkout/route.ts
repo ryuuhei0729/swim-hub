@@ -4,8 +4,10 @@ import { createAdminClient } from "@/lib/supabase-server";
 import { getStripe } from "@/lib/stripe";
 
 export async function POST(request: NextRequest) {
+  let step = "init";
   try {
     // 1. 認証チェック
+    step = "auth";
     const supabase = await createClient();
     const {
       data: { user },
@@ -17,6 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. リクエストボディから priceId を取得
+    step = "parse-body";
     const body = await request.json();
     const { priceId } = body as { priceId: string };
 
@@ -25,6 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 許可された Price ID のホワイトリスト検証
+    step = "validate-price";
     const allowedPriceIds = [
       process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID,
       process.env.NEXT_PUBLIC_STRIPE_YEARLY_PRICE_ID,
@@ -38,6 +42,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. user_subscriptions テーブルから現在のプラン・trial_start・stripe_customer_id を確認
+    step = "db-query";
     const { data: subscription } = await supabase
       .from("user_subscriptions")
       .select("plan, status, trial_start, stripe_customer_id")
@@ -60,6 +65,7 @@ export async function POST(request: NextRequest) {
     const hasUsedTrial = subscription?.trial_start != null;
 
     // 4. Stripe Customer を取得または作成（DB キャッシュ優先で Search API の遅延を回避）
+    step = "stripe-init";
     const stripe = getStripe();
 
     // user.id の UUID 形式を検証（Search API injection 防止）
@@ -75,6 +81,7 @@ export async function POST(request: NextRequest) {
       customerId = subscription.stripe_customer_id;
     } else {
       // Search API でフォールバック
+      step = "stripe-customer-search";
       const existingCustomers = await stripe.customers.search({
         query: `metadata["supabase_user_id"]:"${user.id}"`,
       });
@@ -82,6 +89,7 @@ export async function POST(request: NextRequest) {
       if (existingCustomers.data.length > 0) {
         customerId = existingCustomers.data[0].id;
       } else {
+        step = "stripe-customer-create";
         const newCustomer = await stripe.customers.create({
           email: user.email,
           metadata: {
@@ -92,6 +100,7 @@ export async function POST(request: NextRequest) {
       }
 
       // DB に Customer ID をキャッシュ（service_role で RLS をバイパス）
+      step = "db-cache-customer";
       const adminClient = createAdminClient();
       await adminClient
         .from("user_subscriptions")
@@ -100,6 +109,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Checkout Session 作成
+    step = "stripe-checkout-create";
     const origin = new URL(request.url).origin;
 
     const session = await stripe.checkout.sessions.create({
@@ -120,7 +130,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ url: session.url });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("Stripe Checkout エラー:", message, error);
-    return NextResponse.json({ error: "Checkout セッションの作成に失敗しました" }, { status: 500 });
+    console.error(`Stripe Checkout エラー [step=${step}]:`, message, error);
+    return NextResponse.json(
+      { error: `Checkout 失敗 [${step}]: ${message}` },
+      { status: 500 },
+    );
   }
 }
