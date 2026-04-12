@@ -121,6 +121,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("Stripe Checkout エラー:", message, error);
-    return NextResponse.json({ error: "Checkout セッションの作成に失敗しました" }, { status: 500 });
+    // デバッグ用: クライアントにもエラー詳細を返す（原因特定後に削除）
+    return NextResponse.json(
+      { error: `Checkout セッションの作成に失敗しました: ${message}` },
+      { status: 500 },
+    );
   }
 }
