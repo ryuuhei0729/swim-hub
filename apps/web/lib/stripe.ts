@@ -21,6 +21,8 @@ export function getStripe(): Stripe {
   stripeInstance = new Stripe(secretKey, {
     apiVersion: "2025-02-24.acacia",
     typescript: true,
+    // Cloudflare Workers では Node.js の http モジュールが使えないため fetch ベースに切り替え
+    httpClient: Stripe.createFetchHttpClient(),
   });
 
   return stripeInstance;
