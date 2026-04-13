@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
@@ -16,6 +16,7 @@ import SubscriptionSettings from "@/components/settings/SubscriptionSettings";
 export default function SettingsClient() {
   const router = useRouter();
   const { user, supabase, refreshSubscription } = useAuth();
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   // マウント時に subscription を最新化（null からの遅延ロード対策）
   useEffect(() => {
@@ -39,13 +40,24 @@ export default function SettingsClient() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ sessionId }),
           });
+          const data = (await res.json().catch(() => ({}))) as { error?: string };
           if (res.ok) {
             // DB 更新成功 — AuthProvider の subscription を最新化してページをリフレッシュ
             await refreshSubscription();
             router.refresh();
+            return;
           }
-        } catch {
-          // 検証失敗してもクラッシュしない — 次回の Webhook で補完される
+          // verify-session 失敗 — サーバー側のエラーを記録し、ユーザーに通知
+          console.error("verify-session failed:", res.status, data);
+          setCheckoutError(
+            data.error ||
+              "プランの反映に失敗しました。数分待っても反映されない場合はサポートまでお問い合わせください。",
+          );
+        } catch (err) {
+          console.error("verify-session request error:", err);
+          setCheckoutError(
+            "プランの反映中にエラーが発生しました。数分待っても反映されない場合はサポートまでお問い合わせください。",
+          );
         }
       };
       verifySession();
@@ -81,6 +93,16 @@ export default function SettingsClient() {
           アカウントや連携サービスの設定を管理します
         </p>
       </div>
+
+      {/* Checkout 戻り時のエラー表示 */}
+      {checkoutError && (
+        <div
+          role="alert"
+          className="rounded-md bg-red-50 border border-red-200 p-4 text-sm text-red-800"
+        >
+          {checkoutError}
+        </div>
+      )}
 
       {/* サブスクリプション管理 */}
       <SubscriptionSettings />
