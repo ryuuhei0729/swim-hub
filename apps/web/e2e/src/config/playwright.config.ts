@@ -159,7 +159,7 @@ export default defineConfig({
 
   // 開発サーバー設定
   webServer: {
-    command: process.env.CI ? "npm run build && npm run start -- --port=3000" : "npm run dev",
+    command: process.env.CI ? "npm run start -- --port=3000" : "npm run dev",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000, // ビルドタイムアウトを短縮

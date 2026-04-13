@@ -4,6 +4,8 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { VideoCameraIcon, TrashIcon, CheckCircleIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import VideoPlayer from "./VideoPlayer";
+import PremiumBadge from "@/components/ui/PremiumBadge";
+import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
 
 const VideoEditor = dynamic(() => import("./VideoEditor"), { ssr: false });
 
@@ -193,14 +195,8 @@ export default function VideoUploader({
   };
 
   // Premium制限バナー
-  if (!isPremium && uploadState === "idle") {
-    return (
-      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-        <VideoCameraIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-        <p className="text-sm text-gray-500">動画の添付は Premium 会員限定です</p>
-        <p className="text-xs text-gray-400 mt-1">Premiumにアップグレードすると動画を添付できます</p>
-      </div>
-    );
+  if (!isPremium && (uploadState === "idle" || uploadState === "error")) {
+    return <PremiumBadge message={PREMIUM_MESSAGES.video_upload} />;
   }
 
   if (uploadState === "done" && videoPath) {

@@ -95,7 +95,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [ 20.x, 22.x ]
+        node-version: [ 20.x ]
 
     steps:
     - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -120,13 +120,57 @@ jobs:
     - name: Run web package tests
       run: pnpm --filter @swim-hub/web test
 
+  e2e-build:
+    needs: [lint, type-check]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+
+    steps:
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+    - name: Download node_modules artifact
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      with:
+        name: node-modules
+        path: .
+
+    - name: Setup Node.js and Install dependencies
+      uses: ./.github/actions/setup-node
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Restore Next.js build cache
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      with:
+        path: |
+          apps/web/.next/cache
+          apps/web/node_modules/.cache
+        key: nextjs-e2e-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('apps/web/**/*.{ts,tsx,js,jsx}') }}
+        restore-keys: |
+          nextjs-e2e-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+
+    - name: Build Next.js for E2E tests
+      working-directory: apps/web
+      run: pnpm run build
+      env:
+        # ローカルSupabaseのデフォルト値（E2Eテスト用）
+        NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+
+    - name: Upload E2E build artifact
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: e2e-build-output
+        path: apps/web/.next
+        retention-days: 1
+        compression-level: 6
+        include-hidden-files: true
+
   e2e-tests:
-    needs: unit-tests
+    needs: e2e-build
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # pushイベントの場合、同じコミットに対するPRがあればスキップ（重複実行防止）
-    # PRイベントの場合は常に実行
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     strategy:
       fail-fast: false
       matrix:
@@ -143,21 +187,17 @@ jobs:
         restore-keys: |
           playwright-${{ runner.os }}-
 
-    - name: Restore Next.js build cache
-      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-      with:
-        path: |
-          apps/web/.next/cache
-          apps/web/node_modules/.cache
-        key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('apps/web/**/*.{ts,tsx,js,jsx}') }}
-        restore-keys: |
-          nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
-
     - name: Download node_modules artifact
       uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       with:
         name: node-modules
         path: .
+
+    - name: Download E2E build artifact
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      with:
+        name: e2e-build-output
+        path: apps/web/.next
 
     - name: Setup Node.js and Install dependencies
       uses: ./.github/actions/setup-node
@@ -191,8 +231,8 @@ jobs:
         SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: "dummy-secret"
 
     - name: Start Supabase stack
-      # E2E テストでは edge functions を使用しないため edge-runtime を除外して起動安定性を向上
-      run: supabase start --workdir supabase --exclude edge-runtime
+      # E2Eテストで不要なサービスを除外して起動時間を短縮
+      run: supabase start --workdir supabase --exclude edge-runtime,realtime,inbucket,studio
       timeout-minutes: 8
       env:
         SUPABASE_DB_PASSWORD: postgres
