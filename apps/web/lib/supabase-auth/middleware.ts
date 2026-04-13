@@ -1,7 +1,7 @@
 // lib/supabase-auth/middleware.ts
 
 import { getSafeRedirectUrl } from "@/utils/redirect";
-import { CookieOptions, createServerClient } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@swim-hub/shared/types";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -63,52 +63,20 @@ export async function updateSession(request: NextRequest) {
   // クライアントを作成
   const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
     cookies: {
-      get(name: string) {
-        return request.cookies.get(name)?.value;
+      getAll() {
+        return request.cookies.getAll();
       },
-      set(name: string, value: string, options: CookieOptions) {
-        // リクエストとレスポンスの両方にCookieを設定
-        request.cookies.set({
-          name,
-          value,
-          ...options,
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => {
+          request.cookies.set(name, value);
         });
-        const newResponse = NextResponse.next({
-          request: {
-            headers: request.headers,
-          },
-        });
+        const newResponse = NextResponse.next({ request });
         // 既存のヘッダーを保持
-        response.headers.forEach((value, key) => {
-          newResponse.headers.set(key, value);
+        response.headers.forEach((val, key) => {
+          newResponse.headers.set(key, val);
         });
-        newResponse.cookies.set({
-          name,
-          value,
-          ...options,
-        });
-        response = newResponse;
-      },
-      remove(name: string, options: CookieOptions) {
-        // Cookieを削除
-        request.cookies.set({
-          name,
-          value: "",
-          ...options,
-        });
-        const newResponse = NextResponse.next({
-          request: {
-            headers: request.headers,
-          },
-        });
-        // 既存のヘッダーを保持
-        response.headers.forEach((value, key) => {
-          newResponse.headers.set(key, value);
-        });
-        newResponse.cookies.set({
-          name,
-          value: "",
-          ...options,
+        cookiesToSet.forEach(({ name, value, options }) => {
+          newResponse.cookies.set(name, value, options);
         });
         response = newResponse;
       },

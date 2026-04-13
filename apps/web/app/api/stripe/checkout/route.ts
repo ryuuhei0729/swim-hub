@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-auth/server";
+import { createAdminClient } from "@/lib/supabase-server";
 import { getStripe } from "@/lib/stripe";
 
 export async function POST(request: NextRequest) {
@@ -90,8 +91,9 @@ export async function POST(request: NextRequest) {
         customerId = newCustomer.id;
       }
 
-      // DB に Customer ID をキャッシュ
-      await supabase
+      // DB に Customer ID をキャッシュ（service_role で RLS をバイパス）
+      const adminClient = createAdminClient();
+      await adminClient
         .from("user_subscriptions")
         .update({ stripe_customer_id: customerId })
         .eq("id", user.id);
@@ -117,7 +119,8 @@ export async function POST(request: NextRequest) {
     // 6. session.url を返却
     return NextResponse.json({ url: session.url });
   } catch (error) {
-    console.error("Stripe Checkout エラー:", error);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Stripe Checkout エラー:", message, error);
     return NextResponse.json({ error: "Checkout セッションの作成に失敗しました" }, { status: 500 });
   }
 }

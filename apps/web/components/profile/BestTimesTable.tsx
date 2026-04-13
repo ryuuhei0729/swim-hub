@@ -360,7 +360,7 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
                           <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-[11px] md:text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
                             <div className="flex items-center space-x-1 mb-1">
                               <CalendarIcon className="h-3 w-3" />
-                              <span>{formatDate(bestTime.created_at)}</span>
+                              <span>{formatDate(bestTime.competition?.date ?? bestTime.created_at)}</span>
                             </div>
                             {bestTime.competition ? (
                               <div className="text-blue-300">{bestTime.competition.title}</div>
