@@ -1,13 +1,13 @@
 version: 2
 updates:
-  # Enable version updates for npm
+  # Security updates only for npm/pnpm
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
       time: "09:00"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     reviewers:
       - "ryuuhei_0729"
     assignees:
@@ -15,27 +15,11 @@ updates:
     commit-message:
       prefix: "chore"
       include: "scope"
-    groups:
-      dependencies:
-        patterns:
-          - "*"
-        update-types:
-          - "minor"
-          - "patch"
-      dev-dependencies:
-        patterns:
-          - "@types/*"
-          - "@testing-library/*"
-          - "@vitest/*"
-          - "vitest"
-          - "typescript"
-          - "eslint*"
-          - "prettier*"
-        update-types:
-          - "minor"
-          - "patch"
+    # Only allow security updates (ignore all version updates)
+    ignore:
+      - dependency-name: "*"
 
-  # Enable version updates for GitHub Actions
+  # GitHub Actions - keep as-is (low risk)
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
