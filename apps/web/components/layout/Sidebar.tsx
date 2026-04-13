@@ -175,21 +175,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         ${isOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"}
       `}
       >
-        {/* モバイル用ヘッダー（デスクトップのみ表示） */}
-        <div className="hidden lg:flex items-center justify-between h-16 px-4 border-b border-gray-200">
-          <div className="flex items-center">
-            <div className="w-8 h-8 flex items-center justify-center mr-1">
-              <Image
-                src="/favicon.png"
-                alt="SwimHub"
-                width={32}
-                height={32}
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <span className="text-lg font-semibold text-gray-900">メニュー</span>
-          </div>
-        </div>
 
         {/* ナビゲーション */}
         <nav className="mt-6 px-3 pb-6">

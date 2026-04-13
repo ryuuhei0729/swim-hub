@@ -277,7 +277,7 @@ export const MembersTimeTable: React.FC<MembersTimeTableProps> = ({
                               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1.5 bg-gray-900 text-white text-[10px] rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
                                 <div className="flex items-center space-x-1 mb-1">
                                   <CalendarIcon className="h-2.5 w-2.5" />
-                                  <span>{formatDate(bestTime.created_at)}</span>
+                                  <span>{formatDate(bestTime.created_at, "numeric")}</span>
                                 </div>
                                 {bestTime.competition && (
                                   <div className="text-blue-300">{bestTime.competition.title}</div>
