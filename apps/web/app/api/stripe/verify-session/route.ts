@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-auth/server";
+import { createAdminClient } from "@/lib/supabase-server";
 import { getStripe } from "@/lib/stripe";
 
 /**
@@ -52,14 +53,14 @@ export async function POST(request: NextRequest) {
       if (sub.metadata?.supabase_user_id !== user.id) {
         return NextResponse.json({ error: "不正なセッションです" }, { status: 403 });
       }
-      return await updateSubscription(supabase, user.id, sub);
+      return await updateSubscription(user.id, sub);
     }
 
     // Session 所有者の検証
     if (subscription.metadata?.supabase_user_id !== user.id) {
       return NextResponse.json({ error: "不正なセッションです" }, { status: 403 });
     }
-    return await updateSubscription(supabase, user.id, subscription);
+    return await updateSubscription(user.id, subscription);
   } catch (error) {
     console.error("Stripe Session 検証エラー:", error);
     return NextResponse.json(
@@ -75,10 +76,13 @@ function unixToISO(ts: number | null | undefined): string | null {
 }
 
 async function updateSubscription(
-  supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   subscription: { id: string; status: string; current_period_start: number; current_period_end: number; cancel_at_period_end: boolean; trial_start: number | null; trial_end: number | null },
 ) {
+  // user_subscriptions.plan の UPDATE は RLS で service_role のみに制限されているため、
+  // ここでは admin client を使う。所有者検証は呼び出し元で metadata.supabase_user_id と
+  // 認証ユーザーを照合済みなので、.eq("id", userId) の制約で十分。
+  const supabase = createAdminClient();
   const validStatuses = ["active", "trialing"] as const;
   if (!validStatuses.includes(subscription.status as typeof validStatuses[number])) {
     return NextResponse.json(
