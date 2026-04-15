@@ -11,14 +11,31 @@ import type { AuthState, AuthContextType, SubscriptionInfo } from "@swim-hub/sha
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getQueryClient } from "@/providers/QueryProvider";
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+/**
+ * Mobile 固有の AuthState 拡張
+ * onboardingCompleted: null = 取得中, false = 未完了, true = 完了
+ *
+ * TODO: apps/shared/types/auth.ts の AuthState に onboardingCompleted が追加されたら
+ *       このローカル拡張を削除し、共通型を参照するように変更すること。
+ */
+type MobileAuthState = AuthState & {
+  onboardingCompleted: boolean | null;
+};
+
+type MobileAuthContextType = AuthContextType & {
+  onboardingCompleted: boolean | null;
+  updateOnboardingCompleted: (value: boolean) => Promise<{ error: Error | null }>;
+};
+
+const AuthContext = createContext<MobileAuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [authState, setAuthState] = useState<AuthState>({
+  const [authState, setAuthState] = useState<MobileAuthState>({
     user: null,
     session: null,
     loading: true,
     subscription: null,
+    onboardingCompleted: null,
   });
 
   // サブスクリプション情報を Supabase から直接取得（Web と同じパターン）
@@ -55,6 +72,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     },
     [],
+  );
+
+  // オンボーディング完了状態を users テーブルから取得
+  const fetchOnboardingCompleted = useCallback(async (userId: string): Promise<boolean | null> => {
+    if (!supabase) return null;
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("onboarding_completed")
+        .eq("id", userId)
+        .single();
+      if (error || !data) return null;
+      return (data as { onboarding_completed: boolean }).onboarding_completed;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  // オンボーディング完了状態を DB に保存し、ローカル state を更新
+  const updateOnboardingCompleted = useCallback(
+    async (value: boolean): Promise<{ error: Error | null }> => {
+      if (!supabase) {
+        return { error: new Error("Supabaseクライアントが初期化されていません") };
+      }
+      if (!authState.user) {
+        return { error: new Error("User not authenticated") };
+      }
+      try {
+        const { error } = await supabase
+          .from("users")
+          .update({ onboarding_completed: value })
+          .eq("id", authState.user.id);
+        if (error) {
+          return { error: new Error(error.message) };
+        }
+        setAuthState((prev) => ({ ...prev, onboardingCompleted: value }));
+        return { error: null };
+      } catch (err) {
+        console.error("updateOnboardingCompleted error:", err);
+        return { error: err instanceof Error ? err : new Error("Unknown error") };
+      }
+    },
+    [authState.user],
   );
 
   // サブスクリプション情報を再取得（外部から呼び出し可能）
@@ -332,7 +392,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return removeListener;
   }, [authState.user, fetchSubscription]);
 
-  // user が変わったらサブスクリプションを取得 & RevenueCat にログイン
+  // user が変わったらサブスクリプション + オンボーディング状態を取得 & RevenueCat にログイン
   useEffect(() => {
     if (authState.user) {
       loginRevenueCat(authState.user.id);
@@ -341,10 +401,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setAuthState((prev) => ({ ...prev, subscription: sub }));
         }
       });
+      fetchOnboardingCompleted(authState.user.id).then((completed) => {
+        // null は取得失敗 — デフォルト false (未完了) として扱い、オンボーディングを再表示
+        setAuthState((prev) => ({ ...prev, onboardingCompleted: completed ?? false }));
+      });
     } else {
-      setAuthState((prev) => ({ ...prev, subscription: null }));
+      setAuthState((prev) => ({ ...prev, subscription: null, onboardingCompleted: null }));
     }
-  }, [authState.user, fetchSubscription]);
+  }, [authState.user, fetchSubscription, fetchOnboardingCompleted]);
 
   useEffect(() => {
     let isMounted = true;
@@ -357,6 +421,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         session: null,
         loading: false,
         subscription: null,
+        onboardingCompleted: null,
       });
       return;
     }
@@ -461,7 +526,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   // supabaseがnullの場合のフォールバック（実際には使用されない）
-  const value: AuthContextType = {
+  const value: MobileAuthContextType = {
     ...authState,
     supabase: supabase || ({} as SupabaseClient<Database>),
     signIn,
@@ -473,12 +538,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateProfile,
     refreshSubscription,
     isAuthenticated: !!authState.user,
+    updateOnboardingCompleted,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export const useAuth = (): AuthContextType => {
+export const useAuth = (): MobileAuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");

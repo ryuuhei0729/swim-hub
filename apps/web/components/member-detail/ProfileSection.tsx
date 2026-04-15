@@ -1,5 +1,5 @@
 import React from "react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isValid } from "date-fns";
 import { ja } from "date-fns/locale";
 import Avatar from "@/components/ui/Avatar";
 import { StarIcon } from "@heroicons/react/24/outline";
@@ -47,12 +47,13 @@ export function ProfileSection({ member, currentUserId }: ProfileSectionProps) {
           </div>
 
           <div className="text-sm text-gray-600 mb-4">
-            {member.users?.birthday && (
-              <p>
-                生年月日:{" "}
-                {format(parseISO(member.users.birthday), "yyyy年MM月dd日", { locale: ja })}
-              </p>
-            )}
+            {member.users?.birthday &&
+              isValid(parseISO(member.users.birthday)) && (
+                <p>
+                  生年月日:{" "}
+                  {format(parseISO(member.users.birthday), "yyyy年MM月dd日", { locale: ja })}
+                </p>
+              )}
           </div>
 
           {/* 自己紹介 */}

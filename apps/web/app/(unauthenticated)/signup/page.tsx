@@ -11,7 +11,7 @@ export default function SignupPage() {
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
-      router.push("/dashboard");
+      router.push("/onboarding");
     }
   }, [isAuthenticated, loading, router]);
 

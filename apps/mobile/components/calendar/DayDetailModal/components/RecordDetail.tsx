@@ -398,9 +398,13 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
   // 記録データを取得
   useEffect(() => {
     const loadRecords = async () => {
+      if (!user?.id) {
+        setLoading(false);
+        return;
+      }
       try {
         setLoading(true);
-        let query = supabase
+        const query = supabase
           .from("records")
           .select(
             `
@@ -415,13 +419,8 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
             style:styles(id, name_jp, distance)
           `,
           )
-          .eq("competition_id", _competitionId);
-
-        // チーム大会の場合は自分の記録だけを表示
-        const isTeamCompetition = records[0]?.metadata?.team_id != null;
-        if (isTeamCompetition && user?.id) {
-          query = query.eq("user_id", user.id);
-        }
+          .eq("competition_id", _competitionId)
+          .eq("user_id", user.id);
 
         const { data, error } = await query;
 
@@ -476,7 +475,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
     };
 
     loadRecords();
-  }, [_competitionId, supabase, user?.id, records]);
+  }, [_competitionId, supabase, user?.id]);
 
   // スプリットタイムを取得
   useEffect(() => {
@@ -628,8 +627,8 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
           ))
         )}
 
-        {/* 大会記録を追加ボタン */}
-        {onAddRecord && (
+        {/* 大会記録を追加ボタン（記録が1件以上ある場合のみ表示） */}
+        {onAddRecord && actualRecords.length > 0 && (
           <Pressable
             style={styles.addCompetitionRecordButton}
             onPress={() => {

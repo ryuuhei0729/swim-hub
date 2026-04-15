@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts";
 import { useUserQuery } from "@apps/shared/hooks";
 import Avatar from "@/components/ui/Avatar";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import {
   Bars3Icon,
   ChevronDownIcon,
@@ -24,15 +25,17 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const { profile } = useUserQuery(supabase, { userId: user?.id });
   const router = useRouter();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = async () => {
     const { error } = await signOut();
+    setIsLogoutDialogOpen(false);
     if (error) {
       console.error("ログアウトエラー:", error);
+      return;
     }
     router.replace("/login");
-    setIsUserMenuOpen(false);
   };
 
   const handleProfileClick = () => {
@@ -159,7 +162,10 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 </div>
                 <div className="py-1">
                   <button
-                    onClick={handleLogout}
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      setIsLogoutDialogOpen(true);
+                    }}
                     className="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
                   >
                     <ArrowRightOnRectangleIcon className="mr-3 h-4 w-4 text-gray-400 group-hover:text-gray-500" />
@@ -171,6 +177,17 @@ export default function Header({ onMenuClick }: HeaderProps) {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={isLogoutDialogOpen}
+        variant="danger"
+        title="ログアウト"
+        message="ログアウトしますか？"
+        confirmLabel="ログアウト"
+        cancelLabel="キャンセル"
+        onConfirm={handleLogout}
+        onCancel={() => setIsLogoutDialogOpen(false)}
+      />
     </header>
   );
 }

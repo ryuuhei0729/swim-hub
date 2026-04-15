@@ -19,6 +19,7 @@ export interface UserProfile {
   ios_calendar_enabled: boolean;
   ios_calendar_sync_practices: boolean;
   ios_calendar_sync_competitions: boolean;
+  onboarding_completed: boolean;
   created_at: string | null;
   updated_at: string | null;
 }

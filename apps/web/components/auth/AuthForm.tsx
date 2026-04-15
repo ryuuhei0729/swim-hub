@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts";
-import DatePicker from "@/components/ui/DatePicker";
+import BirthdayInput from "@/components/ui/BirthdayInput";
 
 interface AuthFormProps {
   mode?: "signin" | "signup";
@@ -242,12 +242,10 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
                 </div>
               </div>
               <div>
-                <DatePicker
+                <BirthdayInput
                   label="生年月日"
                   value={birthday}
                   onChange={(date) => setBirthday(date)}
-                  maxDate={new Date()}
-                  defaultMonth={new Date(2000, 0, 1)}
                 />
               </div>
             </>

@@ -3,6 +3,8 @@
 // 100m目標タイムから、50m×6本×3セットで出すべき平均タイムを逆算
 // =============================================================================
 
+import { differenceInYears, parseISO, isValid } from "date-fns";
+
 /**
  * 予測式の係数
  * Y = 7.32 + 1.72X1 - 0.13X2 + 0.56X3 - 1.45X4 - 2.37X5 + 1.50X6 + 1.53X7 + 2.34X8
@@ -53,20 +55,13 @@ export function calculateGoalSetTargetTime(params: PredictionParams): number {
 
 /**
  * 年齢を計算（birthdayから）
+ * birthday は YYYY-MM-DD または ISO 文字列 (先頭 10 文字が YYYY-MM-DD) を受け付ける。
  */
 export function calculateAge(birthday: string | null): number | null {
   if (!birthday) return null;
-
-  const birthDate = new Date(birthday);
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-
-  return age;
+  const birthDate = parseISO(birthday);
+  if (!isValid(birthDate)) return null;
+  return differenceInYears(new Date(), birthDate);
 }
 
 /**

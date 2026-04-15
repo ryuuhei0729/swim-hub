@@ -1235,6 +1235,7 @@ export type Database = {
           ios_calendar_sync_competitions: boolean;
           ios_calendar_sync_practices: boolean;
           name: string;
+          onboarding_completed: boolean;
           profile_image_path: string | null;
           updated_at: string | null;
         };
@@ -1252,6 +1253,7 @@ export type Database = {
           ios_calendar_sync_competitions?: boolean;
           ios_calendar_sync_practices?: boolean;
           name: string;
+          onboarding_completed?: boolean;
           profile_image_path?: string | null;
           updated_at?: string | null;
         };
@@ -1269,6 +1271,7 @@ export type Database = {
           ios_calendar_sync_competitions?: boolean;
           ios_calendar_sync_practices?: boolean;
           name?: string;
+          onboarding_completed?: boolean;
           profile_image_path?: string | null;
           updated_at?: string | null;
         };

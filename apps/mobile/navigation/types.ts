@@ -5,6 +5,11 @@ import type { NavigatorScreenParams } from "@react-navigation/native";
  * React Navigationの型安全性を保証するための型定義
  */
 
+// オンボーディングスタックのパラメータ型
+export type OnboardingStackParamList = {
+  OnboardingWizard: undefined;
+};
+
 // 認証スタックのパラメータ型
 export type AuthStackParamList = {
   Welcome: undefined;
@@ -88,4 +93,5 @@ export type MainStackParamList = {
 export type RootStackParamList = {
   Auth: NavigatorScreenParams<AuthStackParamList>;
   Main: NavigatorScreenParams<MainStackParamList>;
+  Onboarding: NavigatorScreenParams<OnboardingStackParamList>;
 };
