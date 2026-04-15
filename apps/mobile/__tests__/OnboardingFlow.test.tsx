@@ -23,9 +23,14 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { createQueryWrapper } from "./helpers/testUtils";
-// NOTE: createQueryWrapper は将来の非同期テスト用のインポートとして保持
-// (現時点では it.todo のみのため lint の unused 警告を suppress)
+// NOTE: 以下のインポートは it.todo を本実装に置き換える際に使用する。
+// 現時点では lint の unused 警告を suppress するため void で参照しておく。
 void createQueryWrapper;
+void render;
+void screen;
+void waitFor;
+void userEvent;
+void expect;
 
 // React Navigation のモックは vitest.setup.ts で設定済み
 

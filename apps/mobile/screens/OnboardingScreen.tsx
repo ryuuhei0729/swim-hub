@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { View, StyleSheet, ActivityIndicator } from "react-native";
+import { View, StyleSheet, ActivityIndicator, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/contexts/AuthProvider";
 import { Stepper } from "@/components/shared/Stepper";
@@ -122,7 +122,19 @@ export const OnboardingScreen: React.FC = () => {
             {currentStep === 3 && (
               <OnboardingBestTime onSkip={handleComplete} onBack={goBack} />
             )}
+
+            {completeError && (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorText}>{completeError}</Text>
+              </View>
+            )}
           </View>
+
+          {completing && (
+            <View style={styles.completingOverlay}>
+              <ActivityIndicator size="large" color="#2563EB" />
+            </View>
+          )}
         </View>
       </SafeAreaView>
     </View>
@@ -166,5 +178,21 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingBottom: 20,
+  },
+  errorBanner: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: "#FEE2E2",
+    borderRadius: 8,
+  },
+  errorText: {
+    color: "#B91C1C",
+    fontSize: 14,
+  },
+  completingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
