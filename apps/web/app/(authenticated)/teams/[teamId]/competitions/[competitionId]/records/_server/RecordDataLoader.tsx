@@ -34,6 +34,7 @@ interface RecordWithDetails {
   video_path: string | null;
   note: string | null;
   is_relaying: boolean;
+  reaction_time: number | null;
   pool_type: number | null;
   team_id: string | null;
   split_times: {
@@ -126,6 +127,7 @@ export default async function RecordDataLoader({ teamId, competitionId }: Record
         video_path,
         note,
         is_relaying,
+        reaction_time,
         pool_type,
         team_id,
         split_times (

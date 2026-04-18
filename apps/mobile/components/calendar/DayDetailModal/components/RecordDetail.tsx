@@ -374,6 +374,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
   poolType,
   note,
   records,
+  isTeamCompetition = false,
   onEditCompetition,
   onDeleteCompetition,
   onAddRecord,
@@ -404,7 +405,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
       }
       try {
         setLoading(true);
-        const query = supabase
+        let query = supabase
           .from("records")
           .select(
             `
@@ -419,8 +420,12 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
             style:styles(id, name_jp, distance)
           `,
           )
-          .eq("competition_id", _competitionId)
-          .eq("user_id", user.id);
+          .eq("competition_id", _competitionId);
+
+        // チーム大会の場合は自分の記録だけを表示
+        if (isTeamCompetition && user?.id) {
+          query = query.eq("user_id", user.id);
+        }
 
         const { data, error } = await query;
 
@@ -475,7 +480,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
     };
 
     loadRecords();
-  }, [_competitionId, supabase, user?.id]);
+  }, [_competitionId, supabase, user?.id, isTeamCompetition]);
 
   // スプリットタイムを取得
   useEffect(() => {

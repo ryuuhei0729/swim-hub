@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { ONBOARDING_TOTAL_STEPS } from "@/constants/onboarding";
 
 interface StepperProps {
@@ -45,7 +46,7 @@ export const Stepper: React.FC<StepperProps> = ({
                 ]}
               >
                 {isDone ? (
-                  <Text style={styles.dotCheckmark}>✓</Text>
+                  <Feather name="check" size={14} color="#FFFFFF" />
                 ) : (
                   <Text style={[styles.dotLabel, isCurrent && styles.dotLabelCurrent]}>
                     {stepNum}
@@ -128,11 +129,6 @@ const styles = StyleSheet.create({
   },
   dotLabelCurrent: {
     color: "#2563EB",
-  },
-  dotCheckmark: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#FFFFFF",
   },
   stepLabelText: {
     fontSize: 10,

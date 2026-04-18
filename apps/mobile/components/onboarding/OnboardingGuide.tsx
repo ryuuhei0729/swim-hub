@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, Pressable, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
+import { Feather } from "@expo/vector-icons";
 
 interface OnboardingGuideProps {
   onComplete: () => Promise<void>;
@@ -33,25 +34,25 @@ export const OnboardingGuide: React.FC<OnboardingGuideProps> = ({
           step="1"
           title="練習を記録する"
           description="ダッシュボードの「練習記録」から日々のトレーニングを記録。セット・距離・タイムを詳細に管理できます。"
-          icon="📋"
+          iconName="clipboard"
         />
         <GuideCard
           step="2"
           title="大会記録を管理する"
           description="大会ごとにエントリーと結果を記録。自己ベストの推移をグラフで確認できます。"
-          icon="🏆"
+          iconName="award"
         />
         <GuideCard
           step="3"
           title="チームに参加する"
           description="コーチや仲間とチームを作成・参加。お知らせや記録を共有してチーム全体で成長しましょう。"
-          icon="👥"
+          iconName="users"
         />
         <GuideCard
           step="4"
           title="マイページで確認する"
           description="自分のプロフィール・サブスクリプション・設定はマイページからいつでも変更できます。"
-          icon="👤"
+          iconName="user"
         />
       </View>
 
@@ -98,13 +99,13 @@ interface GuideCardProps {
   step: string;
   title: string;
   description: string;
-  icon: string;
+  iconName: React.ComponentProps<typeof Feather>["name"];
 }
 
-const GuideCard: React.FC<GuideCardProps> = ({ step: _step, title, description, icon }) => (
+const GuideCard: React.FC<GuideCardProps> = ({ step: _step, title, description, iconName }) => (
   <View style={cardStyles.card}>
     <View style={cardStyles.iconWrapper}>
-      <Text style={cardStyles.icon}>{icon}</Text>
+      <Feather name={iconName} size={20} color="#2563EB" />
     </View>
     <View style={cardStyles.content}>
       <Text style={cardStyles.title}>{title}</Text>
@@ -132,9 +133,6 @@ const cardStyles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     flexShrink: 0,
-  },
-  icon: {
-    fontSize: 20,
   },
   content: {
     flex: 1,

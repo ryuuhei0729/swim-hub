@@ -66,6 +66,7 @@ export interface RecordDetailProps {
   poolType?: number;
   note?: string;
   records: CalendarItem[];
+  isTeamCompetition?: boolean;
   onEditCompetition?: () => void;
   onDeleteCompetition?: () => void;
   onAddRecord?: () => void;

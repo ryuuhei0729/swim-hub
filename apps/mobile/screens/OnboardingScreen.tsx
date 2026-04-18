@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { View, StyleSheet, ActivityIndicator, Text } from "react-native";
+import { View, StyleSheet, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/contexts/AuthProvider";
 import { Stepper } from "@/components/shared/Stepper";
@@ -12,7 +12,7 @@ import { supabase } from "@/lib/supabase";
 
 /**
  * オンボーディングウィザード状態管理画面
- * 4 ステップのオンボーディングフローを制御する
+ * 3 ステップのオンボーディングフローを制御する
  */
 export const OnboardingScreen: React.FC = () => {
   const { user, updateProfile, updateOnboardingCompleted } = useAuth();
@@ -20,7 +20,6 @@ export const OnboardingScreen: React.FC = () => {
   const [profileCache, setProfileCache] = useState<Partial<UserProfile> | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [completing, setCompleting] = useState(false);
-  const [completeError, setCompleteError] = useState<string | null>(null);
 
   // 現在のユーザープロフィールを取得
   useEffect(() => {
@@ -69,15 +68,13 @@ export const OnboardingScreen: React.FC = () => {
     [updateProfile, goNext],
   );
 
-  // Step 4: 完了処理 — DB に onboarding_completed = true を保存
+  // Step 3: 完了処理 — DB に onboarding_completed = true を保存
   const handleComplete = useCallback(async () => {
     setCompleting(true);
-    setCompleteError(null);
     const { error } = await updateOnboardingCompleted(true);
     if (error) {
-      setCompleteError(error.message ?? "完了処理に失敗しました");
       setCompleting(false);
-      return;
+      throw new Error(error.message ?? "完了処理に失敗しました");
     }
     // updateOnboardingCompleted が成功すると AuthProvider の state が更新され、
     // App.tsx の AppNavigator が onboardingCompleted = true を検知して MainStack に切り替わる
@@ -120,14 +117,9 @@ export const OnboardingScreen: React.FC = () => {
             )}
 
             {currentStep === 3 && (
-              <OnboardingBestTime onSkip={handleComplete} onBack={goBack} />
+              <OnboardingBestTime onComplete={handleComplete} onBack={goBack} />
             )}
 
-            {completeError && (
-              <View style={styles.errorBanner}>
-                <Text style={styles.errorText}>{completeError}</Text>
-              </View>
-            )}
           </View>
 
           {completing && (
@@ -178,16 +170,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingBottom: 20,
-  },
-  errorBanner: {
-    marginTop: 12,
-    padding: 12,
-    backgroundColor: "#FEE2E2",
-    borderRadius: 8,
-  },
-  errorText: {
-    color: "#B91C1C",
-    fontSize: 14,
   },
   completingOverlay: {
     ...StyleSheet.absoluteFillObject,

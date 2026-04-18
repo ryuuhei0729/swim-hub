@@ -109,3 +109,49 @@ export const RELAY_EVENTS: RelayEventDef[] = [
 export function isRelayingForLeg(legIndex: 0 | 1 | 2 | 3): boolean {
   return legIndex !== 0;
 }
+
+/**
+ * 区間タイム配列から累計タイム配列を計算する純粋関数。
+ *
+ * @param legTimes - 各 leg の区間タイム (秒)
+ * @returns 累計タイム配列 (インデックス i の値 = leg 0 〜 i の区間タイム合計)
+ */
+export function calcCumulativeTimes(legTimes: number[]): number[] {
+  const result: number[] = [];
+  let cumulative = 0;
+  for (const t of legTimes) {
+    cumulative = Math.round((cumulative + t) * 100) / 100;
+    result.push(cumulative);
+  }
+  return result;
+}
+
+/**
+ * 累計タイム配列から区間タイム配列を計算する純粋関数。
+ * 浮動小数点誤差を避けるため必ず小数第2位で丸める。
+ *
+ * @param cumulativeTimes - 累計タイム配列 (秒)
+ * @returns 各 leg の区間タイム配列
+ */
+export function calcLegTimesFromCumulative(cumulativeTimes: number[]): number[] {
+  if (cumulativeTimes.length === 0) return [];
+  return cumulativeTimes.map((cum, i) => {
+    if (i === 0) return cum;
+    return Math.round((cum - cumulativeTimes[i - 1]) * 100) / 100;
+  });
+}
+
+/**
+ * styleId 配列からリレー種目 ID を逆引きする純粋関数。
+ *
+ * @param legStyleIds - 各 leg の styleId (順序あり: leg0, leg1, leg2, leg3)
+ * @returns 一致する RelayEventId、一致しない場合は null
+ */
+export function detectRelayEventId(legStyleIds: number[]): RelayEventId | null {
+  if (legStyleIds.length !== 4) return null;
+  for (const event of RELAY_EVENTS) {
+    const match = event.legs.every((leg) => leg.styleId === legStyleIds[leg.legIndex]);
+    if (match) return event.id;
+  }
+  return null;
+}

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { differenceInDays, parseISO } from "date-fns";
+import { Feather } from "@expo/vector-icons";
 import { formatTime } from "@/utils/formatters";
 import type { BestTime } from "@apps/shared/types/ui";
 
@@ -176,7 +177,7 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
           onPress={() => setIncludeRelaying(!includeRelaying)}
         >
           <View style={[styles.checkbox, includeRelaying && styles.checkboxChecked]}>
-            {includeRelaying && <Text style={styles.checkboxMark}>✓</Text>}
+            {includeRelaying && <Feather name="check" size={10} color="#FFFFFF" />}
           </View>
           <Text style={styles.checkboxLabel}>引き継ぎタイム含</Text>
         </Pressable>
@@ -347,11 +348,6 @@ const styles = StyleSheet.create({
   checkboxChecked: {
     backgroundColor: "#2563EB",
     borderColor: "#2563EB",
-  },
-  checkboxMark: {
-    color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "bold",
   },
   checkboxLabel: {
     fontSize: 11,

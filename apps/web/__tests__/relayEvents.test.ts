@@ -2,6 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   RELAY_EVENTS,
   isRelayingForLeg,
+  calcCumulativeTimes,
+  calcLegTimesFromCumulative,
+  detectRelayEventId,
   RelayEventId,
 } from "../app/(authenticated)/teams/[teamId]/competitions/[competitionId]/records/_client/relayEvents";
 
@@ -147,5 +150,105 @@ describe("[V-02] isRelayingForLeg 純粋関数", () => {
 
   it("legIndex=3 (第4泳者) は true を返す", () => {
     expect(isRelayingForLeg(3)).toBe(true);
+  });
+});
+
+describe("calcCumulativeTimes 純粋関数", () => {
+  it("空配列は空配列を返す", () => {
+    expect(calcCumulativeTimes([])).toEqual([]);
+  });
+
+  it("1要素: [27.50] → [27.50]", () => {
+    expect(calcCumulativeTimes([27.5])).toEqual([27.5]);
+  });
+
+  it("4要素: [27.50, 28.70, 28.30, 27.60] → [27.50, 56.20, 84.50, 112.10]", () => {
+    expect(calcCumulativeTimes([27.5, 28.7, 28.3, 27.6])).toEqual([27.5, 56.2, 84.5, 112.1]);
+  });
+
+  it("同一値: [30, 30, 30, 30] → [30, 60, 90, 120]", () => {
+    expect(calcCumulativeTimes([30, 30, 30, 30])).toEqual([30, 60, 90, 120]);
+  });
+});
+
+describe("calcLegTimesFromCumulative 純粋関数", () => {
+  it("空配列は空配列を返す", () => {
+    expect(calcLegTimesFromCumulative([])).toEqual([]);
+  });
+
+  it("1要素: [27.50] → [27.50]", () => {
+    expect(calcLegTimesFromCumulative([27.5])).toEqual([27.5]);
+  });
+
+  it("4要素: [27.50, 56.20, 84.50, 112.10] → [27.50, 28.70, 28.30, 27.60]", () => {
+    expect(calcLegTimesFromCumulative([27.5, 56.2, 84.5, 112.1])).toEqual([27.5, 28.7, 28.3, 27.6]);
+  });
+
+  it("往復: [30, 60, 90, 120] → [30, 30, 30, 30]", () => {
+    expect(calcLegTimesFromCumulative([30, 60, 90, 120])).toEqual([30, 30, 30, 30]);
+  });
+
+  it("浮動小数点丸め: [27.1, 54.3] → [27.1, 27.2]", () => {
+    expect(calcLegTimesFromCumulative([27.1, 54.3])).toEqual([27.1, 27.2]);
+  });
+
+  it("浮動小数点丸め: [0.1, 0.3] → [0.1, 0.2]", () => {
+    expect(calcLegTimesFromCumulative([0.1, 0.3])).toEqual([0.1, 0.2]);
+  });
+});
+
+describe("detectRelayEventId 純粋関数", () => {
+  it("フリーリレー: 50m×4 (styleId=2×4) → relay_4x50_free", () => {
+    expect(detectRelayEventId([2, 2, 2, 2])).toBe("relay_4x50_free");
+  });
+
+  it("フリーリレー: 25m×4 (styleId=1×4) → relay_4x25_free", () => {
+    expect(detectRelayEventId([1, 1, 1, 1])).toBe("relay_4x25_free");
+  });
+
+  it("フリーリレー: 100m×4 (styleId=3×4) → relay_4x100_free", () => {
+    expect(detectRelayEventId([3, 3, 3, 3])).toBe("relay_4x100_free");
+  });
+
+  it("フリーリレー: 200m×4 (styleId=4×4) → relay_4x200_free", () => {
+    expect(detectRelayEventId([4, 4, 4, 4])).toBe("relay_4x200_free");
+  });
+
+  it("メドレーリレー: 50m×4 (ba=13, br=9, fly=17, fr=2) → relay_4x50_medley", () => {
+    expect(detectRelayEventId([13, 9, 17, 2])).toBe("relay_4x50_medley");
+  });
+
+  it("メドレーリレー: 25m×4 (ba=12, br=8, fly=16, fr=1) → relay_4x25_medley", () => {
+    expect(detectRelayEventId([12, 8, 16, 1])).toBe("relay_4x25_medley");
+  });
+
+  it("メドレーリレー: 100m×4 (ba=14, br=10, fly=18, fr=3) → relay_4x100_medley", () => {
+    expect(detectRelayEventId([14, 10, 18, 3])).toBe("relay_4x100_medley");
+  });
+
+  it("順番違い (fr先頭) → null", () => {
+    // フリーリレーと見なされないようにメドレーの順番違い
+    expect(detectRelayEventId([2, 13, 9, 17])).toBeNull();
+  });
+
+  it("メドレー順序違反: [fr, fly, br, ba] の逆順 → null", () => {
+    // 50m×4メドレーの正しい順序 [ba=13, br=9, fly=17, fr=2] を逆順にした場合
+    expect(detectRelayEventId([2, 17, 9, 13])).toBeNull();
+  });
+
+  it("不正 styleId 配列 → null", () => {
+    expect(detectRelayEventId([99, 99, 99, 99])).toBeNull();
+  });
+
+  it("長さ != 4 (3要素) → null", () => {
+    expect(detectRelayEventId([2, 2, 2])).toBeNull();
+  });
+
+  it("長さ != 4 (5要素) → null", () => {
+    expect(detectRelayEventId([2, 2, 2, 2, 2])).toBeNull();
+  });
+
+  it("空配列 → null", () => {
+    expect(detectRelayEventId([])).toBeNull();
   });
 });

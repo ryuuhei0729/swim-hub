@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Image } from "expo-image";
+import { Feather } from "@expo/vector-icons";
 
 interface OnboardingWelcomeProps {
   onNext: () => void;
@@ -24,9 +25,9 @@ export const OnboardingWelcome: React.FC<OnboardingWelcomeProps> = ({ onNext }) 
       </View>
 
       <View style={styles.featuresSection}>
-        <FeatureRow icon="📊" title="練習記録" description="日々の練習をかんたんに記録・管理" />
-        <FeatureRow icon="🏆" title="大会記録" description="自己ベストの推移をグラフで確認" />
-        <FeatureRow icon="👥" title="チーム機能" description="チームメンバーと情報を共有" />
+        <FeatureRow iconName="bar-chart-2" title="練習記録" description="日々の練習をかんたんに記録・管理" />
+        <FeatureRow iconName="award" title="大会記録" description="自己ベストの推移をグラフで確認" />
+        <FeatureRow iconName="users" title="チーム機能" description="チームメンバーと情報を共有" />
       </View>
 
       <View style={styles.footer}>
@@ -45,14 +46,16 @@ export const OnboardingWelcome: React.FC<OnboardingWelcomeProps> = ({ onNext }) 
 };
 
 interface FeatureRowProps {
-  icon: string;
+  iconName: React.ComponentProps<typeof Feather>["name"];
   title: string;
   description: string;
 }
 
-const FeatureRow: React.FC<FeatureRowProps> = ({ icon, title, description }) => (
+const FeatureRow: React.FC<FeatureRowProps> = ({ iconName, title, description }) => (
   <View style={featureStyles.row}>
-    <Text style={featureStyles.icon}>{icon}</Text>
+    <View style={featureStyles.iconWrapper}>
+      <Feather name={iconName} size={20} color="#2563EB" />
+    </View>
     <View style={featureStyles.text}>
       <Text style={featureStyles.title}>{title}</Text>
       <Text style={featureStyles.description}>{description}</Text>
@@ -67,10 +70,14 @@ const featureStyles = StyleSheet.create({
     gap: 16,
     paddingVertical: 12,
   },
-  icon: {
-    fontSize: 28,
+  iconWrapper: {
     width: 36,
-    textAlign: "center",
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: "#EFF6FF",
+    justifyContent: "center",
+    alignItems: "center",
+    flexShrink: 0,
   },
   text: {
     flex: 1,
