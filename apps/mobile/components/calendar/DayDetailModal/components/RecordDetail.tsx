@@ -391,6 +391,25 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
   const [_loadingSplits, setLoadingSplits] = useState<Set<string>>(new Set());
   const loadingSplitsRef = useRef<Set<string>>(new Set());
 
+  // DEBUG: 本番で現象再現のための一時ログ。記録 fetch の入出力を画面に出す
+  const [debugInfo, setDebugInfo] = useState<{
+    stage: string;
+    userId: string | null;
+    competitionId: string;
+    isTeamCompetition: boolean;
+    count: number | null;
+    error: string | null;
+    rawFirstIds: string[];
+  }>({
+    stage: "init",
+    userId: null,
+    competitionId: "",
+    isTeamCompetition: false,
+    count: null,
+    error: null,
+    rawFirstIds: [],
+  });
+
   // プール種別のテキストを取得
   const getPoolTypeText = (poolType: number): string => {
     return poolType === 1 ? "長水路(50m)" : "短水路(25m)";
@@ -399,7 +418,25 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
   // 記録データを取得
   useEffect(() => {
     const loadRecords = async () => {
+      console.log("[RecordDetail] loadRecords start", {
+        user_id: user?.id,
+        _competitionId,
+        isTeamCompetition,
+      });
+      setDebugInfo((prev) => ({
+        ...prev,
+        stage: "start",
+        userId: user?.id ?? null,
+        competitionId: _competitionId,
+        isTeamCompetition,
+        count: null,
+        error: null,
+        rawFirstIds: [],
+      }));
+
       if (!user?.id) {
+        console.log("[RecordDetail] early return: no user.id");
+        setDebugInfo((prev) => ({ ...prev, stage: "noUser" }));
         setLoading(false);
         return;
       }
@@ -410,6 +447,9 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
           .select(
             `
             id,
+            user_id,
+            team_id,
+            competition_id,
             time,
             reaction_time,
             is_relaying,
@@ -428,6 +468,20 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
         }
 
         const { data, error } = await query;
+        console.log("[RecordDetail] query result", {
+          _competitionId,
+          isTeamCompetition,
+          count: data?.length,
+          error,
+          sample: data?.slice(0, 3),
+        });
+        setDebugInfo((prev) => ({
+          ...prev,
+          stage: error ? "queryError" : "queryOk",
+          count: data?.length ?? 0,
+          error: error ? JSON.stringify(error) : null,
+          rawFirstIds: (data ?? []).slice(0, 3).map((r: { id: string }) => r.id),
+        }));
 
         if (error) throw error;
 
@@ -473,6 +527,11 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
         setActualRecords(formattedRecords);
       } catch (err) {
         console.error("記録の取得エラー:", err);
+        setDebugInfo((prev) => ({
+          ...prev,
+          stage: "caughtError",
+          error: err instanceof Error ? err.message : JSON.stringify(err),
+        }));
         setActualRecords([]);
       } finally {
         setLoading(false);
@@ -601,6 +660,31 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
         ) : actualRecords.length === 0 ? (
           <View style={styles.recordCard}>
             <Text style={styles.emptyText}>記録がありません</Text>
+            {/* DEBUG: 本番再現調査用。問題解決後に削除する */}
+            <View style={debugBoxStyles.container}>
+              <Text style={debugBoxStyles.title}>[DEBUG] RecordDetail fetch</Text>
+              <Text style={debugBoxStyles.line}>stage: {debugInfo.stage}</Text>
+              <Text style={debugBoxStyles.line}>
+                userId: {debugInfo.userId ?? "(null)"}
+              </Text>
+              <Text style={debugBoxStyles.line}>
+                competitionId: {debugInfo.competitionId}
+              </Text>
+              <Text style={debugBoxStyles.line}>
+                isTeamCompetition: {String(debugInfo.isTeamCompetition)}
+              </Text>
+              <Text style={debugBoxStyles.line}>
+                count: {debugInfo.count === null ? "(not yet)" : String(debugInfo.count)}
+              </Text>
+              {debugInfo.error && (
+                <Text style={debugBoxStyles.errorLine}>error: {debugInfo.error}</Text>
+              )}
+              {debugInfo.rawFirstIds.length > 0 && (
+                <Text style={debugBoxStyles.line}>
+                  firstIds: {debugInfo.rawFirstIds.join(", ")}
+                </Text>
+              )}
+            </View>
             {onAddRecord && (
               <Pressable
                 style={styles.addCompetitionRecordButton}
@@ -649,6 +733,35 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
     </View>
   );
 };
+
+// DEBUG: 問題解決後に削除する
+const debugBoxStyles = StyleSheet.create({
+  container: {
+    marginTop: 8,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#F59E0B",
+    backgroundColor: "#FEF3C7",
+    borderRadius: 6,
+    gap: 2,
+  },
+  title: {
+    fontWeight: "700",
+    color: "#92400E",
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  line: {
+    fontSize: 11,
+    color: "#92400E",
+    fontFamily: "Courier",
+  },
+  errorLine: {
+    fontSize: 11,
+    color: "#B91C1C",
+    fontFamily: "Courier",
+  },
+});
 
 const splitStyles = StyleSheet.create({
   splitSection: {

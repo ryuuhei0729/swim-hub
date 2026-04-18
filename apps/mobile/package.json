@@ -21,7 +21,7 @@
     "ios:clear": "pnpm exec dotenvx run -f .env.local -- expo start --ios --dev-client --clear",
     "ios:local": "pnpm exec dotenvx run -f .env.local -- expo start --ios --dev-client",
     "ios:dev": "pnpm exec dotenvx run -f .env.development -- expo start --ios --dev-client",
-    "ios:prod": "pnpm exec dotenvx run -f .env.production -- expo start --ios --dev-client",
+    "ios:prod": "EXPO_NO_DOTENV=1 pnpm exec dotenvx run -f .env.production -- expo start --ios --dev-client",
     "web": "pnpm exec dotenvx run -f .env.local -- expo start --web",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",

@@ -142,6 +142,42 @@ export function calcLegTimesFromCumulative(cumulativeTimes: number[]): number[] 
 }
 
 /**
+ * リレー種目の 1 leg あたりの距離を返す純粋関数。
+ *
+ * @param relayEventId - リレー種目 ID
+ * @returns 1 leg あたりの距離 (m)
+ * @throws 不正な relayEventId が渡された場合
+ */
+export function getRelayLegDistance(relayEventId: RelayEventId): number {
+  const legDistMap: Record<RelayEventId, number> = {
+    relay_4x25_free: 25,
+    relay_4x50_free: 50,
+    relay_4x100_free: 100,
+    relay_4x200_free: 200,
+    relay_4x25_medley: 25,
+    relay_4x50_medley: 50,
+    relay_4x100_medley: 100,
+  };
+  const dist = legDistMap[relayEventId];
+  if (dist === undefined) {
+    throw new Error(`Unknown relayEventId: ${relayEventId}`);
+  }
+  return dist;
+}
+
+/**
+ * リレー種目の累計距離境界配列を返す純粋関数。
+ * 配列の各要素は leg0〜leg3 の終端累計距離 (m) を表す。
+ *
+ * @param relayEventId - リレー種目 ID
+ * @returns [legDist, legDist*2, legDist*3, legDist*4]
+ */
+export function getRelayLegBoundaries(relayEventId: RelayEventId): number[] {
+  const legDist = getRelayLegDistance(relayEventId);
+  return [legDist, legDist * 2, legDist * 3, legDist * 4];
+}
+
+/**
  * styleId 配列からリレー種目 ID を逆引きする純粋関数。
  *
  * @param legStyleIds - 各 leg の styleId (順序あり: leg0, leg1, leg2, leg3)

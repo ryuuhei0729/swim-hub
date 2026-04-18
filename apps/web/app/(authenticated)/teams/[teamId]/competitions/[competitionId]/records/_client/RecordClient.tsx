@@ -26,6 +26,7 @@ import {
   RelayEventId,
   isRelayingForLeg,
   calcLegTimesFromCumulative,
+  getRelayLegBoundaries,
 } from "./relayEvents";
 import {
   buildStyleEntriesFromExisting,
@@ -38,6 +39,8 @@ import {
 const TeamVideoUploader = dynamic(() => import("@/components/video/TeamVideoUploader"), {
   ssr: false,
 });
+
+const RELAY_FREE_PLAN_MAX_SPLITS = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD * 4;
 
 interface TeamMember {
   id: string;
@@ -178,6 +181,7 @@ export default function RecordClient({
               styleName: relayDef.label,
               relayEventId,
               memberRecords: legRecords,
+              relaySplitTimes: [],
             }
           : entry,
       ),
@@ -269,132 +273,6 @@ export default function RecordClient({
     );
   };
 
-  const handleTimeChangeByIndex = (entryId: string, legIndex: number, value: string) => {
-    const entry = styleEntries.find((e) => e.id === entryId);
-    if (!entry) return;
-
-    const mr = entry.memberRecords[legIndex];
-    if (!mr) return;
-
-    // リレー種目: value は累計タイムとして受け取り、区間タイムを再計算してすべての leg に反映
-    if (entry.relayEventId) {
-      const newCumulative = parseTimeToSeconds(value);
-
-      setStyleEntries((prev) =>
-        prev.map((e) => {
-          if (e.id !== entryId) return e;
-
-          // 現在の累計タイム配列を組み立て (変更された leg だけ更新)
-          const updatedCumulatives = e.memberRecords.map((rec, idx) =>
-            idx === legIndex ? newCumulative : (rec.cumulativeTimeSeconds ?? 0),
-          );
-
-          // 累計→区間タイムへ変換
-          const legTimes = calcLegTimesFromCumulative(updatedCumulatives);
-
-          return {
-            ...e,
-            memberRecords: e.memberRecords.map((rec, idx) => {
-              const legStyleId = rec.relayLegStyleId ?? (e.styleId as number);
-              const style = styles.find((s) => s.id === legStyleId);
-              const raceDistance = style?.distance;
-              const legTime = legTimes[idx] ?? 0;
-              const cumTime = updatedCumulatives[idx] ?? 0;
-
-              let updatedSplitTimes = [...rec.splitTimes];
-
-              if (raceDistance && legTime > 0) {
-                const existingSplitIndex = updatedSplitTimes.findIndex(
-                  (st) => typeof st.distance === "number" && st.distance === raceDistance,
-                );
-                if (existingSplitIndex >= 0) {
-                  updatedSplitTimes = updatedSplitTimes.map((st, i) =>
-                    i === existingSplitIndex
-                      ? { ...st, splitTime: legTime, displayValue: formatTimeBest(legTime) }
-                      : st,
-                  );
-                } else {
-                  updatedSplitTimes = [
-                    ...updatedSplitTimes,
-                    {
-                      id: crypto.randomUUID(),
-                      distance: raceDistance,
-                      splitTime: legTime,
-                      displayValue: formatTimeBest(legTime),
-                    },
-                  ];
-                }
-              }
-
-              // 変更された leg のみ timeDisplayValue を更新
-              const isChangedLeg = idx === legIndex;
-
-              return {
-                ...rec,
-                cumulativeTimeSeconds: cumTime,
-                timeDisplayValue: isChangedLeg ? value : rec.timeDisplayValue,
-                time: legTime,
-                splitTimes: updatedSplitTimes,
-              };
-            }),
-          };
-        }),
-      );
-      return;
-    }
-
-    // 個人種目: 既存ロジックをそのまま維持
-    const legStyleId = mr.relayLegStyleId ?? (entry.styleId as number);
-    const style = styles.find((s) => s.id === legStyleId);
-    const raceDistance = style?.distance;
-    const newTime = parseTimeToSeconds(value);
-
-    setStyleEntries((prev) =>
-      prev.map((e) => {
-        if (e.id !== entryId) return e;
-        return {
-          ...e,
-          memberRecords: e.memberRecords.map((rec, idx) => {
-            if (idx !== legIndex) return rec;
-
-            let updatedSplitTimes = [...rec.splitTimes];
-
-            if (raceDistance && newTime > 0) {
-              const existingSplitIndex = updatedSplitTimes.findIndex(
-                (st) => typeof st.distance === "number" && st.distance === raceDistance,
-              );
-
-              if (existingSplitIndex >= 0) {
-                updatedSplitTimes = updatedSplitTimes.map((st, i) =>
-                  i === existingSplitIndex
-                    ? { ...st, splitTime: newTime, displayValue: formatTimeBest(newTime) }
-                    : st,
-                );
-              } else {
-                updatedSplitTimes = [
-                  ...updatedSplitTimes,
-                  {
-                    id: crypto.randomUUID(),
-                    distance: raceDistance,
-                    splitTime: newTime,
-                    displayValue: formatTimeBest(newTime),
-                  },
-                ];
-              }
-            }
-
-            return {
-              ...rec,
-              timeDisplayValue: value,
-              time: newTime,
-              splitTimes: updatedSplitTimes,
-            };
-          }),
-        };
-      }),
-    );
-  };
-
   const handleTimeChange = (entryId: string, memberUserId: string, value: string) => {
     const entry = styleEntries.find((e) => e.id === entryId);
     if (!entry) return;
@@ -465,6 +343,203 @@ export default function RecordClient({
     return splitTimes.filter(
       (st) => !(typeof st.distance === "number" && st.distance === raceDistance),
     ).length;
+  };
+
+  /**
+   * 合計タイム入力ハンドラ（リレー種目専用）。
+   * 全体距離スプリットを relaySplitTimes に同期し、各 leg の time を再計算する。
+   */
+  const handleRelayTotalTimeChange = (entryId: string, value: string) => {
+    setStyleEntries((prev) =>
+      prev.map((entry) => {
+        if (entry.id !== entryId || !entry.relayEventId) return entry;
+
+        const totalSeconds = parseTimeToSeconds(value);
+        const legBoundaries = getRelayLegBoundaries(entry.relayEventId);
+        const totalDistance = legBoundaries[3];
+
+        // relaySplitTimes の全体距離スプリット（= totalDistance）を同期更新
+        const currentSplits = entry.relaySplitTimes ?? [];
+        const existingIdx = currentSplits.findIndex((st) => st.distance === totalDistance);
+        let updatedSplits: SplitTimeEntry[];
+        if (totalSeconds > 0) {
+          const newSplit: SplitTimeEntry = {
+            id: existingIdx >= 0 ? currentSplits[existingIdx].id : crypto.randomUUID(),
+            distance: totalDistance,
+            splitTime: totalSeconds,
+            displayValue: value,
+          };
+          if (existingIdx >= 0) {
+            updatedSplits = currentSplits.map((st, i) => (i === existingIdx ? newSplit : st));
+          } else {
+            updatedSplits = [...currentSplits, newSplit];
+          }
+        } else {
+          updatedSplits = existingIdx >= 0
+            ? currentSplits.filter((_, i) => i !== existingIdx)
+            : currentSplits;
+        }
+
+        // leg 境界スプリットが揃っている場合に各 leg の time を再計算
+        const newCumulatives = legBoundaries.map((boundary) => {
+          const found = updatedSplits.find((st) => st.distance === boundary);
+          return found ? found.splitTime : 0;
+        });
+        const allBoundariesPresent = newCumulatives.every((c) => c > 0);
+        const legTimes = allBoundariesPresent ? calcLegTimesFromCumulative(newCumulatives) : null;
+
+        const updatedMemberRecords = entry.memberRecords.map((mr, idx) => {
+          const newCum = newCumulatives[idx];
+          const cumTime = newCum > 0 ? newCum : (mr.cumulativeTimeSeconds ?? 0);
+          const legTime = legTimes ? (legTimes[idx] ?? mr.time) : mr.time;
+          const isLastLeg = idx === 3;
+          return {
+            ...mr,
+            cumulativeTimeSeconds: cumTime,
+            time: legTime,
+            timeDisplayValue: isLastLeg && totalSeconds > 0 ? value : mr.timeDisplayValue,
+          };
+        });
+
+        return {
+          ...entry,
+          relaySplitTimes: updatedSplits,
+          memberRecords: updatedMemberRecords,
+        };
+      }),
+    );
+  };
+
+  /**
+   * リレースプリット変更ハンドラ（relaySplitTimes ベース）。
+   * leg 境界距離のスプリット変更時に対応する leg の cumulativeTimeSeconds を同期し、
+   * 全境界が揃っていれば各 leg の time を再計算する。
+   */
+  const handleRelaySplitTimeChange = (
+    entryId: string,
+    splitId: string,
+    field: "distance" | "splitTime",
+    value: string,
+  ) => {
+    setStyleEntries((prev) =>
+      prev.map((entry) => {
+        if (entry.id !== entryId || !entry.relayEventId) return entry;
+
+        const legBoundaries = getRelayLegBoundaries(entry.relayEventId);
+        const totalDistance = legBoundaries[3];
+
+        const updatedSplits = (entry.relaySplitTimes ?? []).map((st) => {
+          if (st.id !== splitId) return st;
+          if (field === "distance") {
+            const parsed = parseFloat(value);
+            return { ...st, distance: value === "" || isNaN(parsed) ? 0 : Math.max(0, parsed) };
+          }
+          return {
+            ...st,
+            displayValue: value,
+            splitTime: parseTimeToSeconds(value),
+          };
+        });
+
+        // leg 境界スプリットが揃っている場合に各 leg の time を再計算
+        const newCumulatives = legBoundaries.map((boundary) => {
+          const found = updatedSplits.find((st) => st.distance === boundary);
+          return found ? found.splitTime : 0;
+        });
+        const allBoundariesPresent = newCumulatives.every((c) => c > 0);
+        const legTimes = allBoundariesPresent ? calcLegTimesFromCumulative(newCumulatives) : null;
+
+        // 変更されたスプリットが全体距離の場合、合計タイム欄（leg3）を同期
+        const changedSplit = updatedSplits.find((st) => st.id === splitId);
+        const isTotalDistanceSplit =
+          field === "splitTime" && changedSplit && changedSplit.distance === totalDistance;
+
+        const updatedMemberRecords = entry.memberRecords.map((mr, idx) => {
+          const newCum = allBoundariesPresent ? newCumulatives[idx] : 0;
+          const cumTime = newCum > 0 ? newCum : (mr.cumulativeTimeSeconds ?? 0);
+          const legTime = legTimes ? (legTimes[idx] ?? mr.time) : mr.time;
+          const updates: Partial<MemberRecord> = {
+            cumulativeTimeSeconds: cumTime,
+            time: legTimes ? legTime : mr.time,
+          };
+          if (isTotalDistanceSplit && idx === 3) {
+            updates.timeDisplayValue = value;
+          }
+          return { ...mr, ...updates };
+        });
+
+        return {
+          ...entry,
+          relaySplitTimes: updatedSplits,
+          memberRecords: updatedMemberRecords,
+        };
+      }),
+    );
+  };
+
+  const addRelaySplitTime = (entryId: string) => {
+    setStyleEntries((prev) =>
+      prev.map((entry) => {
+        if (entry.id !== entryId || !entry.relayEventId) return entry;
+        const currentSplits = entry.relaySplitTimes ?? [];
+        if (!isPremium && currentSplits.length >= RELAY_FREE_PLAN_MAX_SPLITS) {
+          return entry;
+        }
+        return {
+          ...entry,
+          relaySplitTimes: [
+            ...currentSplits,
+            { id: crypto.randomUUID(), distance: 0, splitTime: 0, displayValue: "" },
+          ],
+        };
+      }),
+    );
+  };
+
+  const addRelaySplitTimesAtInterval = (entryId: string, interval: number) => {
+    setStyleEntries((prev) =>
+      prev.map((entry) => {
+        if (entry.id !== entryId || !entry.relayEventId) return entry;
+        const legBoundaries = getRelayLegBoundaries(entry.relayEventId);
+        const totalDistance = legBoundaries[3];
+        const currentSplits = entry.relaySplitTimes ?? [];
+        const existingDistances = new Set(
+          currentSplits.map((st) => st.distance).filter((d) => d > 0),
+        );
+
+        let newSplits: SplitTimeEntry[] = [];
+        for (let distance = interval; distance <= totalDistance; distance += interval) {
+          if (!existingDistances.has(distance)) {
+            newSplits.push({ id: crypto.randomUUID(), distance, splitTime: 0, displayValue: "" });
+          }
+        }
+        if (newSplits.length === 0) return entry;
+
+        if (!isPremium) {
+          const current = currentSplits.length;
+          const max = RELAY_FREE_PLAN_MAX_SPLITS - current;
+          if (max <= 0) return entry;
+          newSplits = newSplits.slice(0, max);
+        }
+
+        return { ...entry, relaySplitTimes: [...currentSplits, ...newSplits] };
+      }),
+    );
+  };
+
+  const addRelaySplitTimesEvery25m = (entryId: string) => addRelaySplitTimesAtInterval(entryId, 25);
+  const addRelaySplitTimesEvery50m = (entryId: string) => addRelaySplitTimesAtInterval(entryId, 50);
+
+  const removeRelaySplitTime = (entryId: string, splitId: string) => {
+    setStyleEntries((prev) =>
+      prev.map((entry) => {
+        if (entry.id !== entryId || !entry.relayEventId) return entry;
+        return {
+          ...entry,
+          relaySplitTimes: (entry.relaySplitTimes ?? []).filter((st) => st.id !== splitId),
+        };
+      }),
+    );
   };
 
   const addSplitTime = (entryId: string, memberUserId: string) => {
@@ -695,7 +770,8 @@ export default function RecordClient({
             const updatedSplitTimes = mr.splitTimes.map((st) => {
               if (st.id !== splitId) return st;
               if (field === "distance") {
-                return { ...st, distance: value === "" ? 0 : parseInt(value) || 0 };
+                const parsed = parseInt(value, 10);
+                return { ...st, distance: value === "" || isNaN(parsed) ? 0 : Math.max(0, parsed) };
               }
               return {
                 ...st,
@@ -792,12 +868,35 @@ export default function RecordClient({
           }
         }
 
-        for (const mr of entry.memberRecords) {
-          if (mr.time > 0) {
+        for (let legIdx = 0; legIdx < entry.memberRecords.length; legIdx++) {
+          const mr = entry.memberRecords[legIdx];
+          // リレー種目: 累計タイムが > 0 なら保存対象（区間タイムは累計から逆算されるため0になりえない）
+          // 個人種目: 区間タイムが > 0 なら保存対象
+          const shouldSave = entry.relayEventId
+            ? (mr.cumulativeTimeSeconds ?? 0) > 0
+            : mr.time > 0;
+          if (shouldSave) {
             // リレー種目の場合は各 leg の styleId を使用、個人種目は entry の styleId
             const styleId = entry.relayEventId
               ? (mr.relayLegStyleId ?? (entry.styleId as number))
               : (entry.styleId as number);
+
+            // リレー種目: relaySplitTimes を各 leg に分配して leg 内距離に変換
+            let splitTimes = mr.splitTimes;
+            if (entry.relayEventId && entry.relaySplitTimes) {
+              const legBoundaries = getRelayLegBoundaries(entry.relayEventId);
+              const legLow = legIdx === 0 ? 0 : legBoundaries[legIdx - 1];
+              const legHigh = legBoundaries[legIdx];
+              splitTimes = entry.relaySplitTimes
+                .filter(
+                  (st) => st.distance > legLow && st.distance <= legHigh,
+                )
+                .map((st) => ({
+                  ...st,
+                  distance: legIdx === 0 ? st.distance : st.distance - legLow,
+                }));
+            }
+
             validRecords.push({
               styleId,
               memberUserId: mr.memberUserId,
@@ -806,7 +905,7 @@ export default function RecordClient({
               isRelaying: mr.isRelaying,
               note: mr.note,
               reactionTime: mr.reactionTime || "",
-              splitTimes: mr.splitTimes,
+              splitTimes,
             });
           }
         }
@@ -835,11 +934,11 @@ export default function RecordClient({
           }
         }
 
+        const existingRecordIds = existingRecords.map((r) => r.id);
         const { error: deleteError } = await supabase
           .from("records")
           .delete()
-          .eq("competition_id", competitionId)
-          .eq("team_id", teamId);
+          .in("id", existingRecordIds);
 
         if (deleteError) {
           console.error("既存のレコード削除エラー:", deleteError);
@@ -1095,42 +1194,205 @@ export default function RecordClient({
                 </div>
               )}
 
-              {/* メンバーごとの記録入力 */}
-              {entry.memberRecords.length > 0 && (
+              {/* リレー種目: 3段構造 */}
+              {entry.relayEventId && (
                 <div className="space-y-4 border-t pt-4">
                   <h3 className="text-sm font-medium text-gray-700">記録入力</h3>
-                  {entry.memberRecords.map((mr, mrIndex) => (
-                    <div key={entry.relayEventId ? `relay-leg-${mrIndex}` : mr.memberUserId} className="bg-gray-50 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        {entry.relayEventId ? (
-                          // リレー種目: 泳者ラベル + メンバー選択セレクト
-                          <div className="flex-1">
-                            <p className="text-xs font-medium text-blue-700 mb-1">
-                              {mr.relayLegLabel}
-                            </p>
-                            <select
-                              value={mr.memberUserId}
-                              onChange={(e) => {
-                                const selectedUserId = e.target.value;
-                                const selectedMember = members.find((m) => m.user_id === selectedUserId);
-                                updateMemberRecordByIndex(entry.id, mrIndex, {
-                                  memberUserId: selectedUserId,
-                                  memberName: selectedMember?.users.name || "",
-                                });
-                              }}
-                              className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                              <option value="">泳者を選択</option>
-                              {members.map((m) => (
-                                <option key={m.user_id} value={m.user_id}>
-                                  {m.users.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        ) : (
-                          <span className="font-medium text-gray-900">{mr.memberName}</span>
+
+                  {/* 上段: 泳者4列グリッド */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {entry.memberRecords.map((mr, mrIndex) => (
+                      <div key={`relay-leg-${mrIndex}`}>
+                        <p className="text-xs font-medium text-blue-700 mb-1">
+                          {mr.relayLegLabel}
+                        </p>
+                        <select
+                          value={mr.memberUserId}
+                          onChange={(e) => {
+                            const selectedUserId = e.target.value;
+                            const selectedMember = members.find((m) => m.user_id === selectedUserId);
+                            updateMemberRecordByIndex(entry.id, mrIndex, {
+                              memberUserId: selectedUserId,
+                              memberName: selectedMember?.users.name || "",
+                            });
+                          }}
+                          className="w-full px-2 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">泳者を選択</option>
+                          {members.map((m) => (
+                            <option key={m.user_id} value={m.user_id}>
+                              {m.users.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* 中段: 合計タイム + リアクションタイム4列 */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex flex-wrap gap-4 mb-3">
+                      <div className="min-w-[160px]">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          合計タイム
+                        </label>
+                        <input
+                          type="text"
+                          value={entry.memberRecords[3]?.timeDisplayValue ?? ""}
+                          onChange={(e) => handleRelayTotalTimeChange(entry.id, e.target.value)}
+                          placeholder="例: 1:52.10"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* リアクションタイム4列 */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {entry.memberRecords.map((mr, mrIndex) => (
+                        <div key={`relay-reaction-${mrIndex}`}>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            {mr.relayLegLabel?.split(" ")[0]} RT
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0.40"
+                            max="1.00"
+                            value={mr.reactionTime || ""}
+                            onChange={(e) =>
+                              updateMemberRecordByIndex(entry.id, mrIndex, {
+                                reactionTime: e.target.value,
+                              })
+                            }
+                            placeholder="0.65"
+                            className="w-full px-2 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 下段: スプリット1ブロック */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs font-medium text-gray-600">
+                        スプリットタイム（リレー全体）
+                        {!isPremium && (
+                          <span className="ml-2 text-gray-400">
+                            {(entry.relaySplitTimes ?? []).length}/{RELAY_FREE_PLAN_MAX_SPLITS}
+                          </span>
                         )}
+                      </label>
+                      <div className="flex gap-1">
+                        <Button
+                          type="button"
+                          onClick={() => addRelaySplitTimesEvery25m(entry.id)}
+                          variant="outline"
+                          className="text-xs py-1 px-2"
+                          disabled={
+                            !isPremium &&
+                            (entry.relaySplitTimes ?? []).length >= RELAY_FREE_PLAN_MAX_SPLITS
+                          }
+                        >
+                          <PlusIcon className="h-3 w-3 mr-1" />
+                          追加(25mごと)
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => addRelaySplitTimesEvery50m(entry.id)}
+                          variant="outline"
+                          className="text-xs py-1 px-2"
+                          disabled={
+                            !isPremium &&
+                            (entry.relaySplitTimes ?? []).length >= RELAY_FREE_PLAN_MAX_SPLITS
+                          }
+                        >
+                          <PlusIcon className="h-3 w-3 mr-1" />
+                          追加(50mごと)
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => addRelaySplitTime(entry.id)}
+                          variant="outline"
+                          className="text-xs py-1 px-2"
+                          disabled={
+                            !isPremium &&
+                            (entry.relaySplitTimes ?? []).length >= RELAY_FREE_PLAN_MAX_SPLITS
+                          }
+                        >
+                          <PlusIcon className="h-3 w-3 mr-1" />
+                          追加
+                        </Button>
+                      </div>
+                    </div>
+                    {(entry.relaySplitTimes ?? []).length > 0 && (
+                      <div className="space-y-2">
+                        {[...(entry.relaySplitTimes ?? [])]
+                          .sort((a, b) => a.distance - b.distance)
+                          .map((split) => (
+                            <div key={split.id} className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                value={split.distance}
+                                onChange={(e) =>
+                                  handleRelaySplitTimeChange(entry.id, split.id, "distance", e.target.value)
+                                }
+                                placeholder="距離"
+                                className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
+                              <span className="text-gray-500 text-sm">m:</span>
+                              <input
+                                type="text"
+                                value={split.displayValue}
+                                onChange={(e) =>
+                                  handleRelaySplitTimeChange(entry.id, split.id, "splitTime", e.target.value)
+                                }
+                                placeholder="例: 30.50"
+                                className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeRelaySplitTime(entry.id, split.id)}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                <TrashIcon className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+
+                    {/* リレー全体の LapTimeDisplay */}
+                    {(entry.relaySplitTimes ?? []).length > 0 && entry.relayEventId && (
+                      <LapTimeDisplay
+                        splitTimes={(() => {
+                          const legBoundaries = getRelayLegBoundaries(entry.relayEventId!);
+                          const totalDistance = legBoundaries[3];
+                          const baseSplits = (entry.relaySplitTimes ?? []).map((st) => ({
+                            distance: st.distance,
+                            splitTime: st.splitTime,
+                          }));
+                          const totalTime = entry.memberRecords[3]?.cumulativeTimeSeconds ?? 0;
+                          if (totalTime > 0 && !baseSplits.some((st) => st.distance === totalDistance)) {
+                            return [...baseSplits, { distance: totalDistance, splitTime: totalTime }];
+                          }
+                          return baseSplits;
+                        })()}
+                        raceDistance={entry.relayEventId ? getRelayLegBoundaries(entry.relayEventId)[3] : undefined}
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 個人種目: メンバーごとの記録入力 */}
+              {!entry.relayEventId && entry.memberRecords.length > 0 && (
+                <div className="space-y-4 border-t pt-4">
+                  <h3 className="text-sm font-medium text-gray-700">記録入力</h3>
+                  {entry.memberRecords.map((mr) => (
+                    <div key={mr.memberUserId} className="bg-gray-50 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="font-medium text-gray-900">{mr.memberName}</span>
                       </div>
 
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-3">
@@ -1139,21 +1401,16 @@ export default function RecordClient({
                           <div className="grid grid-cols-[1fr_auto] gap-2 items-start">
                             <div>
                               <label className="block text-xs font-medium text-gray-600 mb-1">
-                                {entry.relayEventId ? "累計タイム" : "タイム"}
+                                タイム
                               </label>
                               <input
                                 type="text"
                                 value={mr.timeDisplayValue}
-                                onChange={(e) =>
-                                  entry.relayEventId
-                                    ? handleTimeChangeByIndex(entry.id, mrIndex, e.target.value)
-                                    : handleTimeChange(entry.id, mr.memberUserId, e.target.value)
-                                }
-                                placeholder={entry.relayEventId ? "累計タイム例: 27.50" : "例: 1:30.50"}
+                                onChange={(e) => handleTimeChange(entry.id, mr.memberUserId, e.target.value)}
+                                placeholder="例: 1:30.50"
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                               />
                             </div>
-                            {/* leg0 (第1泳者) はスタート台から飛び込むためリアクションタイムあり、leg1〜3 は非表示 */}
                             {!mr.isRelaying && (
                               <div className="w-36">
                                 <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -1166,13 +1423,9 @@ export default function RecordClient({
                                   max="1.00"
                                   value={mr.reactionTime || ""}
                                   onChange={(e) =>
-                                    entry.relayEventId
-                                      ? updateMemberRecordByIndex(entry.id, mrIndex, {
-                                          reactionTime: e.target.value,
-                                        })
-                                      : updateMemberRecord(entry.id, mr.memberUserId, {
-                                          reactionTime: e.target.value,
-                                        })
+                                    updateMemberRecord(entry.id, mr.memberUserId, {
+                                      reactionTime: e.target.value,
+                                    })
                                   }
                                   placeholder="0.65"
                                   className="w-full px-2 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1182,24 +1435,22 @@ export default function RecordClient({
                           </div>
                         </div>
 
-                        {/* リレーチェックボックス: 個人種目のみ表示 */}
-                        {!entry.relayEventId && (
-                          <div className="flex items-end pb-2">
-                            <label className="flex items-center gap-2 text-sm">
-                              <input
-                                type="checkbox"
-                                checked={mr.isRelaying}
-                                onChange={(e) =>
-                                  updateMemberRecord(entry.id, mr.memberUserId, {
-                                    isRelaying: e.target.checked,
-                                  })
-                                }
-                                className="rounded border-gray-300"
-                              />
-                              リレー
-                            </label>
-                          </div>
-                        )}
+                        {/* リレーチェックボックス */}
+                        <div className="flex items-end pb-2">
+                          <label className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={mr.isRelaying}
+                              onChange={(e) =>
+                                updateMemberRecord(entry.id, mr.memberUserId, {
+                                  isRelaying: e.target.checked,
+                                })
+                              }
+                              className="rounded border-gray-300"
+                            />
+                            リレー
+                          </label>
+                        </div>
 
                         {/* メモ */}
                         <div>
@@ -1210,13 +1461,9 @@ export default function RecordClient({
                             type="text"
                             value={mr.note}
                             onChange={(e) =>
-                              entry.relayEventId
-                                ? updateMemberRecordByIndex(entry.id, mrIndex, {
-                                    note: e.target.value,
-                                  })
-                                : updateMemberRecord(entry.id, mr.memberUserId, {
-                                    note: e.target.value,
-                                  })
+                              updateMemberRecord(entry.id, mr.memberUserId, {
+                                note: e.target.value,
+                              })
                             }
                             placeholder="メモ"
                             className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1236,12 +1483,7 @@ export default function RecordClient({
                               onClick={() => addSplitTimesEvery25m(entry.id, mr.memberUserId)}
                               variant="outline"
                               className="text-xs py-1 px-2"
-                              disabled={
-                                (entry.relayEventId ? !mr.memberUserId : false) ||
-                                (entry.relayEventId
-                                  ? !styles.find((s) => s.id === mr.relayLegStyleId)?.distance
-                                  : !styles.find((s) => s.id === entry.styleId)?.distance)
-                              }
+                              disabled={!styles.find((s) => s.id === entry.styleId)?.distance}
                             >
                               <PlusIcon className="h-3 w-3 mr-1" />
                               追加(25mごと)
@@ -1251,12 +1493,7 @@ export default function RecordClient({
                               onClick={() => addSplitTimesEvery50m(entry.id, mr.memberUserId)}
                               variant="outline"
                               className="text-xs py-1 px-2"
-                              disabled={
-                                (entry.relayEventId ? !mr.memberUserId : false) ||
-                                (entry.relayEventId
-                                  ? !styles.find((s) => s.id === mr.relayLegStyleId)?.distance
-                                  : !styles.find((s) => s.id === entry.styleId)?.distance)
-                              }
+                              disabled={!styles.find((s) => s.id === entry.styleId)?.distance}
                             >
                               <PlusIcon className="h-3 w-3 mr-1" />
                               追加(50mごと)
@@ -1266,7 +1503,6 @@ export default function RecordClient({
                               onClick={() => addSplitTime(entry.id, mr.memberUserId)}
                               variant="outline"
                               className="text-xs py-1 px-2"
-                              disabled={entry.relayEventId ? !mr.memberUserId : false}
                             >
                               <PlusIcon className="h-3 w-3 mr-1" />
                               追加
@@ -1358,12 +1594,7 @@ export default function RecordClient({
                                 distance: st.distance,
                                 splitTime: st.splitTime,
                               }));
-                              const legStyleId = entry.relayEventId
-                                ? (mr.relayLegStyleId ?? (entry.styleId as number))
-                                : (entry.styleId as number);
-                              const raceDistance = styles.find(
-                                (s) => s.id === legStyleId,
-                              )?.distance;
+                              const raceDistance = styles.find((s) => s.id === entry.styleId)?.distance;
                               const recordTime = mr.time;
                               if (raceDistance && recordTime && recordTime > 0) {
                                 const hasGoalSplit = baseSplits.some(
@@ -1378,11 +1609,7 @@ export default function RecordClient({
                               }
                               return baseSplits;
                             })()}
-                            raceDistance={
-                              entry.relayEventId
-                                ? styles.find((s) => s.id === mr.relayLegStyleId)?.distance
-                                : styles.find((s) => s.id === entry.styleId)?.distance
-                            }
+                            raceDistance={styles.find((s) => s.id === entry.styleId)?.distance}
                           />
                         )}
                       </div>

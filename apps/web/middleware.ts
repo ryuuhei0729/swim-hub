@@ -18,11 +18,28 @@ const SUPABASE_ORIGIN = (() => {
 })();
 const SUPABASE_WS_ORIGIN = SUPABASE_ORIGIN.replace(/^http/, "ws");
 
+// R2 公開 URL が custom domain の場合、*.r2.dev ではマッチしないため origin を動的注入
+const R2_PUBLIC_ORIGIN = (() => {
+  try {
+    const url = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
+    return url ? new URL(url).origin : "";
+  } catch {
+    return "";
+  }
+})();
+
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  // ffmpeg.wasm は unpkg から取得した core.js/core.wasm を blob: URL 経由で実行するため
+  // script-src に blob: と 'wasm-unsafe-eval' が必要
+  "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob:",
+  "worker-src 'self' blob:",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://*.supabase.co https://*.r2.dev",
+  ["img-src 'self' data: blob: https://*.supabase.co https://*.r2.dev", R2_PUBLIC_ORIGIN]
+    .filter(Boolean)
+    .join(" "),
+  // <video> の blob: プレビュー、および R2 presigned URL (S3 互換エンドポイント)
+  "media-src 'self' blob: https://*.r2.cloudflarestorage.com",
   "font-src 'self'",
   [
     "connect-src 'self'",
@@ -33,6 +50,9 @@ const CSP = [
     "https://api.stripe.com",
     "https://oauth2.googleapis.com",
     "https://www.googleapis.com",
+    "https://*.r2.cloudflarestorage.com",
+    // ffmpeg.wasm コアの取得先
+    "https://unpkg.com",
   ]
     .filter(Boolean)
     .join(" "),

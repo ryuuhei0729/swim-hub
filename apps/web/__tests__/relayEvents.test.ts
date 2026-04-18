@@ -5,6 +5,8 @@ import {
   calcCumulativeTimes,
   calcLegTimesFromCumulative,
   detectRelayEventId,
+  getRelayLegDistance,
+  getRelayLegBoundaries,
   RelayEventId,
 } from "../app/(authenticated)/teams/[teamId]/competitions/[competitionId]/records/_client/relayEvents";
 
@@ -251,4 +253,89 @@ describe("detectRelayEventId 純粋関数", () => {
   it("空配列 → null", () => {
     expect(detectRelayEventId([])).toBeNull();
   });
+});
+
+// =============================================================================
+// Sprint Contract 新機能テストスケルトン (Phase A)
+// 以下は Developer が実装後に it.todo() → 実装コードに置き換える
+// =============================================================================
+
+describe("[V-07] getRelayLegDistance - leg距離の取得", () => {
+  it("relay_4x25_free → legDist = 25", () => {
+    expect(getRelayLegDistance("relay_4x25_free")).toBe(25);
+  });
+
+  it("relay_4x50_free → legDist = 50", () => {
+    expect(getRelayLegDistance("relay_4x50_free")).toBe(50);
+  });
+
+  it("relay_4x100_free → legDist = 100", () => {
+    expect(getRelayLegDistance("relay_4x100_free")).toBe(100);
+  });
+
+  it("relay_4x200_free → legDist = 200", () => {
+    expect(getRelayLegDistance("relay_4x200_free")).toBe(200);
+  });
+
+  it("relay_4x25_medley → legDist = 25", () => {
+    expect(getRelayLegDistance("relay_4x25_medley")).toBe(25);
+  });
+
+  it("relay_4x50_medley → legDist = 50", () => {
+    expect(getRelayLegDistance("relay_4x50_medley")).toBe(50);
+  });
+
+  it("relay_4x100_medley → legDist = 100", () => {
+    expect(getRelayLegDistance("relay_4x100_medley")).toBe(100);
+  });
+
+  it("不正な relayEventId を渡したとき例外を投げる", () => {
+    expect(() => getRelayLegDistance("relay_unknown" as RelayEventId)).toThrow();
+  });
+});
+
+describe("[V-07] getRelayLegBoundaries - leg境界距離配列の取得", () => {
+  it("relay_4x25_free → [25, 50, 75, 100]", () => {
+    expect(getRelayLegBoundaries("relay_4x25_free")).toEqual([25, 50, 75, 100]);
+  });
+
+  it("relay_4x50_free → [50, 100, 150, 200]", () => {
+    expect(getRelayLegBoundaries("relay_4x50_free")).toEqual([50, 100, 150, 200]);
+  });
+
+  it("relay_4x100_free → [100, 200, 300, 400]", () => {
+    expect(getRelayLegBoundaries("relay_4x100_free")).toEqual([100, 200, 300, 400]);
+  });
+
+  it("relay_4x200_free → [200, 400, 600, 800]", () => {
+    expect(getRelayLegBoundaries("relay_4x200_free")).toEqual([200, 400, 600, 800]);
+  });
+
+  it("relay_4x25_medley → [25, 50, 75, 100]", () => {
+    expect(getRelayLegBoundaries("relay_4x25_medley")).toEqual([25, 50, 75, 100]);
+  });
+
+  it("relay_4x50_medley → [50, 100, 150, 200]", () => {
+    expect(getRelayLegBoundaries("relay_4x50_medley")).toEqual([50, 100, 150, 200]);
+  });
+
+  it("relay_4x100_medley → [100, 200, 300, 400]", () => {
+    expect(getRelayLegBoundaries("relay_4x100_medley")).toEqual([100, 200, 300, 400]);
+  });
+
+  it("全種目: 境界距離配列の長さは常に4である", () => {
+    for (const event of RELAY_EVENTS) {
+      expect(getRelayLegBoundaries(event.id)).toHaveLength(4);
+    }
+  });
+
+  it("全種目: 境界距離配列は昇順に並んでいる", () => {
+    for (const event of RELAY_EVENTS) {
+      const boundaries = getRelayLegBoundaries(event.id);
+      for (let i = 1; i < boundaries.length; i++) {
+        expect(boundaries[i]).toBeGreaterThan(boundaries[i - 1]);
+      }
+    }
+  });
+
 });
