@@ -9,6 +9,8 @@ import {
   RelayEventId,
   calcCumulativeTimes,
   detectRelayEventId,
+  getRelayLegDistance,
+  getRelayLegBoundaries,
 } from "./relayEvents";
 
 export interface SplitTimeEntry {
@@ -41,6 +43,7 @@ export interface StyleEntry {
   styleName: string;
   memberRecords: MemberRecord[];
   relayEventId?: RelayEventId | null;
+  relaySplitTimes?: SplitTimeEntry[];
 }
 
 /** buildStyleEntriesFromExisting の入力レコード型 (RecordWithDetails の必要フィールドのみ) */
@@ -82,7 +85,7 @@ export function buildStyleEntriesFromExisting(
 
   // Phase 1: リレーグループを先に識別する
   const usedIndices = new Set<number>();
-  const relayGroups: Array<{ records: ExistingRecord[] }> = [];
+  const relayGroups: Array<{ records: ExistingRecord[]; relayEventId: RelayEventId }> = [];
 
   for (let i = 0; i <= existingRecords.length - 4; i++) {
     if (usedIndices.has(i)) continue;
@@ -100,7 +103,7 @@ export function buildStyleEntriesFromExisting(
     const detectedRelayId = detectRelayEventId(legStyleIds);
     if (!detectedRelayId) continue;
 
-    relayGroups.push({ records: candidate });
+    relayGroups.push({ records: candidate, relayEventId: detectedRelayId });
     for (let j = i; j < i + 4; j++) {
       usedIndices.add(j);
     }
@@ -110,13 +113,31 @@ export function buildStyleEntriesFromExisting(
 
   // Phase 2: リレーグループを1つの StyleEntry にまとめる
   for (const group of relayGroups) {
-    const { records } = group;
-    const legStyleIds = records.map((r) => r.style_id);
-    const detectedRelayId = detectRelayEventId(legStyleIds)!;
+    const { records, relayEventId: detectedRelayId } = group;
     const relayDef = RELAY_EVENTS.find((r) => r.id === detectedRelayId)!;
 
     const legTimes = records.map((r) => r.time);
     const cumulatives = calcCumulativeTimes(legTimes);
+    const legDist = getRelayLegDistance(detectedRelayId);
+    const legBoundaries = getRelayLegBoundaries(detectedRelayId);
+
+    // 各 leg の split_times を全体距離に変換して relaySplitTimes を構築
+    const relaySplitTimes: SplitTimeEntry[] = [];
+    for (let legIdx = 0; legIdx < records.length; legIdx++) {
+      const record = records[legIdx];
+      const legOffset = legIdx === 0 ? 0 : legBoundaries[legIdx - 1];
+      for (let stIdx = 0; stIdx < (record.split_times || []).length; stIdx++) {
+        const st = record.split_times[stIdx];
+        // distance > legDist の場合は全体距離として解釈、それ以外は leg 内距離としてオフセット加算
+        const globalDistance = st.distance > legDist ? st.distance : legOffset + st.distance;
+        relaySplitTimes.push({
+          id: st.id || `${legIdx}-${stIdx + 1}`,
+          distance: globalDistance,
+          splitTime: st.split_time,
+          displayValue: formatTimeBest(st.split_time),
+        });
+      }
+    }
 
     const memberRecords: MemberRecord[] = records.map((record, idx) => {
       const leg = relayDef.legs[idx];
@@ -147,6 +168,7 @@ export function buildStyleEntriesFromExisting(
       styleName: relayDef.label,
       memberRecords,
       relayEventId: detectedRelayId,
+      relaySplitTimes,
     });
   }
 
@@ -206,9 +228,28 @@ export function buildStyleEntriesFromExisting(
     const relayDef = RELAY_EVENTS.find((r) => r.id === detectedRelayId)!;
     const legTimes = entry.memberRecords.map((mr) => mr.time);
     const cumulatives = calcCumulativeTimes(legTimes);
+    const legDist = getRelayLegDistance(detectedRelayId);
+    const legBoundaries = getRelayLegBoundaries(detectedRelayId);
+
+    // 各 leg の splitTimes を全体距離に変換して relaySplitTimes を構築
+    const relaySplitTimes: SplitTimeEntry[] = [];
+    for (let legIdx = 0; legIdx < entry.memberRecords.length; legIdx++) {
+      const mr = entry.memberRecords[legIdx];
+      const legOffset = legIdx === 0 ? 0 : legBoundaries[legIdx - 1];
+      for (const st of mr.splitTimes) {
+        const globalDistance = st.distance > legDist ? st.distance : legOffset + st.distance;
+        relaySplitTimes.push({
+          id: st.id,
+          distance: globalDistance,
+          splitTime: st.splitTime,
+          displayValue: st.displayValue,
+        });
+      }
+    }
 
     entry.relayEventId = detectedRelayId;
     entry.styleName = relayDef.label;
+    entry.relaySplitTimes = relaySplitTimes;
     entry.memberRecords = entry.memberRecords.map((mr, idx) => {
       const leg = relayDef.legs[idx];
       return {

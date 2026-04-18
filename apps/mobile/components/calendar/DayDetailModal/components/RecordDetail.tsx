@@ -399,7 +399,13 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
   // 記録データを取得
   useEffect(() => {
     const loadRecords = async () => {
+      console.log("[RecordDetail] loadRecords start", {
+        user_id: user?.id,
+        _competitionId,
+        isTeamCompetition,
+      });
       if (!user?.id) {
+        console.log("[RecordDetail] early return: no user.id");
         setLoading(false);
         return;
       }
@@ -410,6 +416,9 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
           .select(
             `
             id,
+            user_id,
+            team_id,
+            competition_id,
             time,
             reaction_time,
             is_relaying,
@@ -428,6 +437,13 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
         }
 
         const { data, error } = await query;
+        console.log("[RecordDetail] query result", {
+          _competitionId,
+          isTeamCompetition,
+          count: data?.length,
+          error,
+          sample: data?.slice(0, 3),
+        });
 
         if (error) throw error;
 
