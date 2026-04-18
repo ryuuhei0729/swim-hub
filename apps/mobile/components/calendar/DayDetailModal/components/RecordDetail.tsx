@@ -382,7 +382,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
   onDeleteRecord,
   onClose,
 }) => {
-  const { supabase, user, session } = useAuth();
+  const { supabase, user } = useAuth();
   const [actualRecords, setActualRecords] = useState<RecordData[]>([]);
   const [loading, setLoading] = useState(true);
   const [splitTimesMap, setSplitTimesMap] = useState<
@@ -390,37 +390,6 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
   >(new Map());
   const [_loadingSplits, setLoadingSplits] = useState<Set<string>>(new Set());
   const loadingSplitsRef = useRef<Set<string>>(new Set());
-
-  // DEBUG: 本番で現象再現のための一時ログ。記録 fetch の入出力を画面に出す
-  const [debugInfo, setDebugInfo] = useState<{
-    stage: string;
-    userId: string | null;
-    hasSession: boolean;
-    sessionExpiresIn: number | null; // 残り秒数 (負なら期限切れ)
-    competitionId: string;
-    isTeamCompetition: boolean;
-    propsRecordsCount: number;
-    count: number | null;
-    errorCode: string | null;
-    errorMessage: string | null;
-    errorHint: string | null;
-    errorDetails: string | null;
-    rawFirstIds: string[];
-  }>({
-    stage: "init",
-    userId: null,
-    hasSession: false,
-    sessionExpiresIn: null,
-    competitionId: "",
-    isTeamCompetition: false,
-    propsRecordsCount: 0,
-    count: null,
-    errorCode: null,
-    errorMessage: null,
-    errorHint: null,
-    errorDetails: null,
-    rawFirstIds: [],
-  });
 
   // プール種別のテキストを取得
   const getPoolTypeText = (poolType: number): string => {
@@ -430,32 +399,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
   // 記録データを取得
   useEffect(() => {
     const loadRecords = async () => {
-      console.log("[RecordDetail] loadRecords start", {
-        user_id: user?.id,
-        _competitionId,
-        isTeamCompetition,
-      });
-      const nowSec = Math.floor(Date.now() / 1000);
-      setDebugInfo((prev) => ({
-        ...prev,
-        stage: "start",
-        userId: user?.id ?? null,
-        hasSession: !!session,
-        sessionExpiresIn: session?.expires_at ? session.expires_at - nowSec : null,
-        competitionId: _competitionId,
-        isTeamCompetition,
-        propsRecordsCount: records?.length ?? 0,
-        count: null,
-        errorCode: null,
-        errorMessage: null,
-        errorHint: null,
-        errorDetails: null,
-        rawFirstIds: [],
-      }));
-
       if (!user?.id) {
-        console.log("[RecordDetail] early return: no user.id");
-        setDebugInfo((prev) => ({ ...prev, stage: "noUser" }));
         setLoading(false);
         return;
       }
@@ -466,9 +410,6 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
           .select(
             `
             id,
-            user_id,
-            team_id,
-            competition_id,
             time,
             reaction_time,
             is_relaying,
@@ -487,26 +428,6 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
         }
 
         const { data, error } = await query;
-        console.log("[RecordDetail] query result", {
-          _competitionId,
-          isTeamCompetition,
-          count: data?.length,
-          error,
-          sample: data?.slice(0, 3),
-        });
-        const pgErr = error as
-          | { code?: string; message?: string; hint?: string | null; details?: string | null }
-          | null;
-        setDebugInfo((prev) => ({
-          ...prev,
-          stage: error ? "queryError" : "queryOk",
-          count: data?.length ?? 0,
-          errorCode: pgErr?.code ?? null,
-          errorMessage: pgErr?.message ?? null,
-          errorHint: pgErr?.hint ?? null,
-          errorDetails: pgErr?.details ?? null,
-          rawFirstIds: (data ?? []).slice(0, 3).map((r: { id: string }) => r.id),
-        }));
 
         if (error) throw error;
 
@@ -552,11 +473,6 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
         setActualRecords(formattedRecords);
       } catch (err) {
         console.error("記録の取得エラー:", err);
-        setDebugInfo((prev) => ({
-          ...prev,
-          stage: "caughtError",
-          errorMessage: err instanceof Error ? err.message : JSON.stringify(err),
-        }));
         setActualRecords([]);
       } finally {
         setLoading(false);
@@ -676,44 +592,6 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
         {note && <Text style={styles.competitionHeaderNote}>{note}</Text>}
       </View>
 
-      {/* DEBUG: 本番再現調査用パネル。actualRecords の有無に関わらず常時表示。問題解決後に削除する */}
-      <View style={debugBoxStyles.container}>
-        <Text style={debugBoxStyles.title}>[DEBUG] RecordDetail fetch</Text>
-        <Text style={debugBoxStyles.line}>stage: {debugInfo.stage}</Text>
-        <Text style={debugBoxStyles.line}>userId: {debugInfo.userId ?? "(null)"}</Text>
-        <Text style={debugBoxStyles.line}>
-          hasSession: {String(debugInfo.hasSession)}
-          {debugInfo.sessionExpiresIn !== null
-            ? ` (expiresIn: ${debugInfo.sessionExpiresIn}s)`
-            : ""}
-        </Text>
-        <Text style={debugBoxStyles.line}>competitionId: {debugInfo.competitionId}</Text>
-        <Text style={debugBoxStyles.line}>
-          isTeamCompetition: {String(debugInfo.isTeamCompetition)}
-        </Text>
-        <Text style={debugBoxStyles.line}>
-          propsRecordsCount: {debugInfo.propsRecordsCount}
-        </Text>
-        <Text style={debugBoxStyles.line}>
-          fetchedCount: {debugInfo.count === null ? "(not yet)" : String(debugInfo.count)}
-        </Text>
-        {debugInfo.errorCode && (
-          <Text style={debugBoxStyles.errorLine}>errorCode: {debugInfo.errorCode}</Text>
-        )}
-        {debugInfo.errorMessage && (
-          <Text style={debugBoxStyles.errorLine}>errorMessage: {debugInfo.errorMessage}</Text>
-        )}
-        {debugInfo.errorHint && (
-          <Text style={debugBoxStyles.errorLine}>errorHint: {debugInfo.errorHint}</Text>
-        )}
-        {debugInfo.errorDetails && (
-          <Text style={debugBoxStyles.errorLine}>errorDetails: {debugInfo.errorDetails}</Text>
-        )}
-        {debugInfo.rawFirstIds.length > 0 && (
-          <Text style={debugBoxStyles.line}>firstIds: {debugInfo.rawFirstIds.join(", ")}</Text>
-        )}
-      </View>
-
       {/* 記録カード一覧 */}
       <View style={styles.recordsList}>
         {loading ? (
@@ -771,35 +649,6 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
     </View>
   );
 };
-
-// DEBUG: 問題解決後に削除する
-const debugBoxStyles = StyleSheet.create({
-  container: {
-    marginTop: 8,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: "#F59E0B",
-    backgroundColor: "#FEF3C7",
-    borderRadius: 6,
-    gap: 2,
-  },
-  title: {
-    fontWeight: "700",
-    color: "#92400E",
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  line: {
-    fontSize: 11,
-    color: "#92400E",
-    fontFamily: "Courier",
-  },
-  errorLine: {
-    fontSize: 11,
-    color: "#B91C1C",
-    fontFamily: "Courier",
-  },
-});
 
 const splitStyles = StyleSheet.create({
   splitSection: {

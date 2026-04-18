@@ -298,8 +298,11 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
       }
 
       closeBasicForm();
-      setCurrentPage(1);
-      // useEffectがcurrentPageの変更を検知して自動的にloadTeamCompetitionsを呼び出す
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+      } else {
+        await loadTeamCompetitions();
+      }
     } catch (err) {
       console.error("大会の作成に失敗:", err);
     } finally {

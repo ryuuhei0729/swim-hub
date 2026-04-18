@@ -994,8 +994,14 @@ export default function RecordClient({
           continue;
         }
 
+        // 種目の距離と同じ距離のsplit_timeは保存しない
+        // （ゴールタイム=split_timeなので途中経過ではない）
+        const raceDistance = styles.find((s) => s.id === record.styleId)?.distance;
         const validSplitTimes = record.splitTimes.filter(
-          (st) => st.distance > 0 && st.splitTime > 0,
+          (st) =>
+            st.distance > 0 &&
+            st.splitTime > 0 &&
+            !(raceDistance && st.distance === raceDistance),
         );
         if (validSplitTimes.length > 0 && newRecord) {
           const splitTimesData = validSplitTimes.map((st) => ({
