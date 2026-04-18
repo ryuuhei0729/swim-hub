@@ -6,6 +6,9 @@ import { cleanup } from "@testing-library/react";
 import React from "react";
 import { afterEach, vi } from "vitest";
 
+// React Native / Expo の __DEV__ グローバル (expo-modules-core 等が参照)
+(globalThis as unknown as { __DEV__: boolean }).__DEV__ = true;
+
 // Reactの複数インスタンスを防ぐため、グローバルに設定
 if (typeof globalThis !== "undefined") {
   (globalThis as unknown as { React: typeof React }).React = React;
@@ -34,6 +37,62 @@ vi.mock("expo-constants", () => ({
 
 vi.mock("expo-status-bar", () => ({
   StatusBar: () => null,
+}));
+
+// expo-modules-core: テスト環境では globalThis.expo が未定義で EventEmitter 参照が落ちるので最小スタブを提供
+vi.mock("expo-modules-core", () => {
+  class FakeEventEmitter {
+    addListener() {
+      return { remove: () => {} };
+    }
+    removeAllListeners() {}
+    emit() {}
+  }
+  return {
+    EventEmitter: FakeEventEmitter,
+    NativeModulesProxy: new Proxy({}, { get: () => () => null }),
+    requireNativeModule: () => ({}),
+    requireOptionalNativeModule: () => null,
+    Platform: { OS: "ios" },
+    uuidv4: () => "00000000-0000-0000-0000-000000000000",
+  };
+});
+
+// expo-crypto: useAppleAuth 等で digestStringAsync / getRandomValues を使用
+vi.mock("expo-crypto", () => ({
+  digestStringAsync: vi.fn(async () => "mock-digest"),
+  CryptoDigestAlgorithm: { SHA256: "SHA-256" },
+  randomUUID: () => "00000000-0000-0000-0000-000000000000",
+  getRandomValues: <T extends ArrayBufferView | null>(array: T): T => {
+    if (array && "length" in (array as unknown as { length: number })) {
+      const view = array as unknown as { length: number; [i: number]: number };
+      for (let i = 0; i < view.length; i++) view[i] = (i * 17) & 0xff;
+    }
+    return array;
+  },
+}));
+
+// expo-video: VideoPlayer 経由で PracticeLogItem 等が間接 import
+vi.mock("expo-video", () => ({
+  useVideoPlayer: () => ({
+    play: vi.fn(),
+    pause: vi.fn(),
+    release: vi.fn(),
+  }),
+  VideoView: () => null,
+}));
+
+// react-native-purchases: dist/purchases.js に Flow 構文が残っていて esbuild が落ちるので stub
+vi.mock("react-native-purchases", () => ({
+  default: {
+    configure: vi.fn(),
+    setLogLevel: vi.fn(),
+    logIn: vi.fn(async () => ({ customerInfo: {} })),
+    logOut: vi.fn(async () => ({})),
+    getCustomerInfo: vi.fn(async () => ({})),
+    addCustomerInfoUpdateListener: vi.fn(() => () => {}),
+  },
+  LOG_LEVEL: { DEBUG: "DEBUG", INFO: "INFO" },
 }));
 
 // expo-image のモック

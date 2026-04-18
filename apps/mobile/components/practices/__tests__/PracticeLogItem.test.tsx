@@ -74,9 +74,9 @@ describe("PracticeLogItem", () => {
     expect(screen.getByText("1セット目")).toBeTruthy();
     // 本数ラベルが表示される
     expect(screen.getByText("1本目")).toBeTruthy();
-    // タイム値が表示される
-    expect(screen.getByText("1:00.50")).toBeTruthy();
-    expect(screen.getByText("1:01.00")).toBeTruthy();
+    // タイム値が表示される (同じタイムがテーブル内と統計カード両方に出るので複数 match 可)
+    expect(screen.getAllByText("1:00.50").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("1:01.00").length).toBeGreaterThanOrEqual(1);
   });
 
   it("セット平均と全体統計が表示される", () => {

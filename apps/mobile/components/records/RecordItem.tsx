@@ -31,14 +31,19 @@ const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress }) => 
     try {
       const parsed = typeof recordDate === "string" ? parseISO(recordDate) : new Date(recordDate);
       const zoned = toZonedTime(parsed, Intl.DateTimeFormat().resolvedOptions().timeZone);
-      return format(zoned, "yyyy/MM/dd", { locale: ja });
+      return format(zoned, "yyyy年M月d日", { locale: ja });
     } catch {
       return "日付不明";
     }
   }, [recordDate]);
 
-  // 種目名（短縮表記: nameカラムを使用）
-  const styleDisplay = useMemo(() => record.style?.name || "不明", [record.style?.name]);
+  // 種目名 + 距離 (例: "自由形 100m"). memoize 比較も name_jp / distance を見ている
+  const styleDisplay = useMemo(() => {
+    const nameJp = record.style?.name_jp;
+    const distance = record.style?.distance;
+    if (!nameJp) return "不明";
+    return distance ? `${nameJp} ${distance}m` : nameJp;
+  }, [record.style?.name_jp, record.style?.distance]);
 
   // タイムをフォーマット
   const formattedTime = useMemo(() => formatTime(record.time), [record.time]);

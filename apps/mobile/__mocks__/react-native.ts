@@ -135,6 +135,13 @@ export const Alert = {
   prompt: vi.fn(),
 };
 
+// AppState (@tanstack/react-query focusManager 等が参照)
+export const AppState = {
+  currentState: "active" as const,
+  addEventListener: vi.fn(() => ({ remove: vi.fn() })),
+  removeEventListener: vi.fn(),
+};
+
 // デフォルトエクスポート（React Nativeのデフォルトエクスポートパターンに対応）
 const ReactNative = {
   View,
@@ -149,6 +156,7 @@ const ReactNative = {
   StyleSheet,
   Platform,
   Alert,
+  AppState,
 };
 
 export default ReactNative;
