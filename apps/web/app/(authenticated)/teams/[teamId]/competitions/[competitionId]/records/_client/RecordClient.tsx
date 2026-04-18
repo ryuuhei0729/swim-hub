@@ -172,6 +172,21 @@ export default function RecordClient({
       cumulativeTimeSeconds: 0,
     }));
 
+    // leg 境界のスプリット欄を事前に用意（最終 leg は合計タイム欄と同期するので除外）
+    const legBoundaries = getRelayLegBoundaries(relayEventId);
+    const defaultSplitDistances = legBoundaries.slice(0, 3);
+    const allowedCount = isPremium
+      ? defaultSplitDistances.length
+      : Math.max(0, Math.min(defaultSplitDistances.length, RELAY_FREE_PLAN_MAX_SPLITS));
+    const defaultSplits: SplitTimeEntry[] = defaultSplitDistances
+      .slice(0, allowedCount)
+      .map((distance) => ({
+        id: crypto.randomUUID(),
+        distance,
+        splitTime: 0,
+        displayValue: "",
+      }));
+
     setStyleEntries((prev) =>
       prev.map((entry) =>
         entry.id === entryId
@@ -181,7 +196,7 @@ export default function RecordClient({
               styleName: relayDef.label,
               relayEventId,
               memberRecords: legRecords,
-              relaySplitTimes: [],
+              relaySplitTimes: defaultSplits,
             }
           : entry,
       ),
@@ -390,14 +405,19 @@ export default function RecordClient({
 
         const updatedMemberRecords = entry.memberRecords.map((mr, idx) => {
           const newCum = newCumulatives[idx];
-          const cumTime = newCum > 0 ? newCum : (mr.cumulativeTimeSeconds ?? 0);
-          const legTime = legTimes ? (legTimes[idx] ?? mr.time) : mr.time;
           const isLastLeg = idx === 3;
+          // 最終leg（合計タイム）は入力値に常に追従させ、クリア操作も反映する
+          const cumTime = isLastLeg
+            ? totalSeconds
+            : newCum > 0
+              ? newCum
+              : (mr.cumulativeTimeSeconds ?? 0);
+          const legTime = legTimes ? (legTimes[idx] ?? mr.time) : mr.time;
           return {
             ...mr,
             cumulativeTimeSeconds: cumTime,
             time: legTime,
-            timeDisplayValue: isLastLeg && totalSeconds > 0 ? value : mr.timeDisplayValue,
+            timeDisplayValue: isLastLeg ? value : mr.timeDisplayValue,
           };
         });
 

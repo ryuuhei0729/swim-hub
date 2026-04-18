@@ -382,7 +382,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
   onDeleteRecord,
   onClose,
 }) => {
-  const { supabase, user } = useAuth();
+  const { supabase, user, session } = useAuth();
   const [actualRecords, setActualRecords] = useState<RecordData[]>([]);
   const [loading, setLoading] = useState(true);
   const [splitTimesMap, setSplitTimesMap] = useState<
@@ -395,18 +395,30 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
   const [debugInfo, setDebugInfo] = useState<{
     stage: string;
     userId: string | null;
+    hasSession: boolean;
+    sessionExpiresIn: number | null; // 残り秒数 (負なら期限切れ)
     competitionId: string;
     isTeamCompetition: boolean;
+    propsRecordsCount: number;
     count: number | null;
-    error: string | null;
+    errorCode: string | null;
+    errorMessage: string | null;
+    errorHint: string | null;
+    errorDetails: string | null;
     rawFirstIds: string[];
   }>({
     stage: "init",
     userId: null,
+    hasSession: false,
+    sessionExpiresIn: null,
     competitionId: "",
     isTeamCompetition: false,
+    propsRecordsCount: 0,
     count: null,
-    error: null,
+    errorCode: null,
+    errorMessage: null,
+    errorHint: null,
+    errorDetails: null,
     rawFirstIds: [],
   });
 
@@ -423,14 +435,21 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
         _competitionId,
         isTeamCompetition,
       });
+      const nowSec = Math.floor(Date.now() / 1000);
       setDebugInfo((prev) => ({
         ...prev,
         stage: "start",
         userId: user?.id ?? null,
+        hasSession: !!session,
+        sessionExpiresIn: session?.expires_at ? session.expires_at - nowSec : null,
         competitionId: _competitionId,
         isTeamCompetition,
+        propsRecordsCount: records?.length ?? 0,
         count: null,
-        error: null,
+        errorCode: null,
+        errorMessage: null,
+        errorHint: null,
+        errorDetails: null,
         rawFirstIds: [],
       }));
 
@@ -475,11 +494,17 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
           error,
           sample: data?.slice(0, 3),
         });
+        const pgErr = error as
+          | { code?: string; message?: string; hint?: string | null; details?: string | null }
+          | null;
         setDebugInfo((prev) => ({
           ...prev,
           stage: error ? "queryError" : "queryOk",
           count: data?.length ?? 0,
-          error: error ? JSON.stringify(error) : null,
+          errorCode: pgErr?.code ?? null,
+          errorMessage: pgErr?.message ?? null,
+          errorHint: pgErr?.hint ?? null,
+          errorDetails: pgErr?.details ?? null,
           rawFirstIds: (data ?? []).slice(0, 3).map((r: { id: string }) => r.id),
         }));
 
@@ -530,7 +555,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
         setDebugInfo((prev) => ({
           ...prev,
           stage: "caughtError",
-          error: err instanceof Error ? err.message : JSON.stringify(err),
+          errorMessage: err instanceof Error ? err.message : JSON.stringify(err),
         }));
         setActualRecords([]);
       } finally {
@@ -651,6 +676,44 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
         {note && <Text style={styles.competitionHeaderNote}>{note}</Text>}
       </View>
 
+      {/* DEBUG: 本番再現調査用パネル。actualRecords の有無に関わらず常時表示。問題解決後に削除する */}
+      <View style={debugBoxStyles.container}>
+        <Text style={debugBoxStyles.title}>[DEBUG] RecordDetail fetch</Text>
+        <Text style={debugBoxStyles.line}>stage: {debugInfo.stage}</Text>
+        <Text style={debugBoxStyles.line}>userId: {debugInfo.userId ?? "(null)"}</Text>
+        <Text style={debugBoxStyles.line}>
+          hasSession: {String(debugInfo.hasSession)}
+          {debugInfo.sessionExpiresIn !== null
+            ? ` (expiresIn: ${debugInfo.sessionExpiresIn}s)`
+            : ""}
+        </Text>
+        <Text style={debugBoxStyles.line}>competitionId: {debugInfo.competitionId}</Text>
+        <Text style={debugBoxStyles.line}>
+          isTeamCompetition: {String(debugInfo.isTeamCompetition)}
+        </Text>
+        <Text style={debugBoxStyles.line}>
+          propsRecordsCount: {debugInfo.propsRecordsCount}
+        </Text>
+        <Text style={debugBoxStyles.line}>
+          fetchedCount: {debugInfo.count === null ? "(not yet)" : String(debugInfo.count)}
+        </Text>
+        {debugInfo.errorCode && (
+          <Text style={debugBoxStyles.errorLine}>errorCode: {debugInfo.errorCode}</Text>
+        )}
+        {debugInfo.errorMessage && (
+          <Text style={debugBoxStyles.errorLine}>errorMessage: {debugInfo.errorMessage}</Text>
+        )}
+        {debugInfo.errorHint && (
+          <Text style={debugBoxStyles.errorLine}>errorHint: {debugInfo.errorHint}</Text>
+        )}
+        {debugInfo.errorDetails && (
+          <Text style={debugBoxStyles.errorLine}>errorDetails: {debugInfo.errorDetails}</Text>
+        )}
+        {debugInfo.rawFirstIds.length > 0 && (
+          <Text style={debugBoxStyles.line}>firstIds: {debugInfo.rawFirstIds.join(", ")}</Text>
+        )}
+      </View>
+
       {/* 記録カード一覧 */}
       <View style={styles.recordsList}>
         {loading ? (
@@ -660,31 +723,6 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
         ) : actualRecords.length === 0 ? (
           <View style={styles.recordCard}>
             <Text style={styles.emptyText}>記録がありません</Text>
-            {/* DEBUG: 本番再現調査用。問題解決後に削除する */}
-            <View style={debugBoxStyles.container}>
-              <Text style={debugBoxStyles.title}>[DEBUG] RecordDetail fetch</Text>
-              <Text style={debugBoxStyles.line}>stage: {debugInfo.stage}</Text>
-              <Text style={debugBoxStyles.line}>
-                userId: {debugInfo.userId ?? "(null)"}
-              </Text>
-              <Text style={debugBoxStyles.line}>
-                competitionId: {debugInfo.competitionId}
-              </Text>
-              <Text style={debugBoxStyles.line}>
-                isTeamCompetition: {String(debugInfo.isTeamCompetition)}
-              </Text>
-              <Text style={debugBoxStyles.line}>
-                count: {debugInfo.count === null ? "(not yet)" : String(debugInfo.count)}
-              </Text>
-              {debugInfo.error && (
-                <Text style={debugBoxStyles.errorLine}>error: {debugInfo.error}</Text>
-              )}
-              {debugInfo.rawFirstIds.length > 0 && (
-                <Text style={debugBoxStyles.line}>
-                  firstIds: {debugInfo.rawFirstIds.join(", ")}
-                </Text>
-              )}
-            </View>
             {onAddRecord && (
               <Pressable
                 style={styles.addCompetitionRecordButton}
