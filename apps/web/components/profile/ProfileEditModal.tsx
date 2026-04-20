@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import DatePicker from "@/components/ui/DatePicker";
+import BirthdayInput from "@/components/ui/BirthdayInput";
 import AvatarUpload from "./AvatarUpload";
 import type { UserProfile } from "@apps/shared/types";
 
@@ -56,8 +56,8 @@ export default function ProfileEditModal({
       setIsUpdating(true);
       setError(null);
 
-      // 誕生日をISO形式に変換
-      const birthday = formData.birthday ? new Date(formData.birthday).toISOString() : null;
+      // DB の birthday は date 型。YYYY-MM-DD のまま送る (Supabase が date にキャスト)
+      const birthday = formData.birthday || null;
 
       // タイムアウト通知付きで更新を実行
       const TIMEOUT = 15000;
@@ -170,15 +170,13 @@ export default function ProfileEditModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                   {/* 生年月日 */}
                   <div>
-                    <DatePicker
+                    <BirthdayInput
                       label="生年月日"
                       value={formData.birthday}
                       onChange={(date) => {
                         setFormData((prev) => ({ ...prev, birthday: date }));
                         setError(null);
                       }}
-                      maxDate={new Date()}
-                      defaultMonth={new Date(2000, 0, 1)}
                       disabled={isUpdating}
                     />
                   </div>

@@ -15,5 +15,8 @@ export * from "./hooks";
 // React Query設定
 export * from "./lib/react-query";
 
+// 定数
+export * from "./constants/onboarding";
+
 // ユーティリティ（今後追加予定）
 // export * from './utils'

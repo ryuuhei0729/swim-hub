@@ -106,6 +106,7 @@ export async function updateSession(request: NextRequest) {
     "/settings",
     "/profile",
     "/mypage",
+    "/onboarding",
   ];
 
   // 認証が不要なルート（認証済みユーザーがアクセスした場合はリダイレクト）

@@ -115,7 +115,7 @@ export default function FormStepper({
                 <div className="flex flex-col items-start">
                   <span
                     className={cn(
-                      "text-sm font-medium transition-colors",
+                      "text-xs font-medium transition-colors whitespace-nowrap",
                       isSkipped && "text-gray-400 line-through",
                       !isSkipped && isCompleted && "text-blue-600",
                       !isSkipped && isCurrent && "text-blue-600",

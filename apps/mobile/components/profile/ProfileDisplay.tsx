@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable } from "react-native";
 import { Image } from "expo-image";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { format } from "date-fns";
+import { format, parseISO, isValid } from "date-fns";
 import { ja } from "date-fns/locale";
 import type { TeamMembershipWithUser, UserProfile } from "@swim-hub/shared/types";
 import type { MainStackParamList } from "@/navigation/types";
@@ -23,11 +23,9 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({ profile, teams =
 
   const formatBirthday = (birthday: string | null | undefined): string => {
     if (!birthday) return "未設定";
-    try {
-      return format(new Date(birthday), "yyyy年M月d日", { locale: ja });
-    } catch {
-      return "未設定";
-    }
+    const date = parseISO(birthday);
+    if (!isValid(date)) return "未設定";
+    return format(date, "yyyy年M月d日", { locale: ja });
   };
 
   // 承認済みかつアクティブなチームのみフィルタリング

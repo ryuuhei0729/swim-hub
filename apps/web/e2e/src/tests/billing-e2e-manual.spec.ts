@@ -54,6 +54,22 @@ async function createFreeUser(page: Page, suffix: string = "") {
   await page.fill('[data-testid="email-input"]', email);
   await page.fill('[data-testid="password-input"]', password);
   await page.click('[data-testid="signup-button"]');
+  // サインアップ直後は (authenticated)/layout が onboarding_completed=false のユーザーを
+  // /onboarding へ強制リダイレクトする。課金テストは onboarding 自体の検証対象ではないので、
+  // DB 側で onboarding を完了済みに更新してからダッシュボードへ遷移する。
+  await page.waitForURL("**/onboarding", { timeout: TIMEOUTS.LONG });
+
+  const admin = getAdminClient();
+  const { data: users } = await admin.auth.admin.listUsers();
+  const targetUser = users?.users?.find((u) => u.email === email);
+  if (!targetUser) throw new Error(`User not found after signup: ${email}`);
+  const { error: updateError } = await admin
+    .from("users")
+    .update({ onboarding_completed: true })
+    .eq("id", targetUser.id);
+  if (updateError) throw updateError;
+
+  await page.goto(URLS.DASHBOARD);
   await page.waitForURL("**/dashboard", { timeout: TIMEOUTS.LONG });
   createdUserEmails.push(email);
   return { email, password };

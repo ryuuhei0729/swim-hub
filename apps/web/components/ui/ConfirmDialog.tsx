@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   ExclamationTriangleIcon,
   InformationCircleIcon,
@@ -103,9 +104,9 @@ export default function ConfirmDialog({
   const config = variantConfig[variant];
   const Icon = config.icon;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-60 flex items-center justify-center"
+      className="fixed inset-0 z-[100] flex items-center justify-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="confirm-dialog-title"
@@ -121,7 +122,7 @@ export default function ConfirmDialog({
       {/* ダイアログ */}
       <div
         ref={dialogRef}
-        className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 animate-in zoom-in-95 fade-in duration-200"
+        className="relative z-101 bg-white rounded-lg shadow-xl max-w-md w-full mx-4 animate-in zoom-in-95 fade-in duration-200"
       >
         {/* 閉じるボタン */}
         <button
@@ -181,6 +182,7 @@ export default function ConfirmDialog({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

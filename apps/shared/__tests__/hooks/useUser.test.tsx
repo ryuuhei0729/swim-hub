@@ -37,6 +37,7 @@ const createMockProfile = (overrides = {}) => ({
   ios_calendar_enabled: false,
   ios_calendar_sync_practices: true,
   ios_calendar_sync_competitions: true,
+  onboarding_completed: false,
   created_at: "2025-01-01T00:00:00Z",
   updated_at: "2025-01-01T00:00:00Z",
   ...overrides,

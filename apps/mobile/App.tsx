@@ -10,6 +10,7 @@ import { NetworkProvider, useNetwork } from "./providers/NetworkProvider";
 import { OfflineBanner } from "./components/layout/OfflineBanner";
 import { AuthStack } from "./navigation/AuthStack";
 import { MainStack } from "./navigation/MainStack";
+import { OnboardingStack } from "./navigation/OnboardingStack";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { supabase } from "./lib/supabase";
 import { env } from "./lib/env";
@@ -43,12 +44,17 @@ const SupabaseErrorScreen: React.FC = () => {
  */
 const AppNavigator: React.FC = () => {
   // React Hooksは常に同じ順序で呼ばれる必要があるため、条件分岐の前に呼ぶ
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, onboardingCompleted } = useAuth();
   const { isConnected, isInternetReachable } = useNetwork();
 
   // デバッグ: レンダリング状態をログ出力
   if (__DEV__) {
-    console.log("[AppNavigator] render — loading:", loading, "isAuthenticated:", isAuthenticated, "supabase:", !!supabase);
+    console.log(
+      "[AppNavigator] render — loading:", loading,
+      "isAuthenticated:", isAuthenticated,
+      "onboardingCompleted:", onboardingCompleted,
+      "supabase:", !!supabase,
+    );
   }
 
   // Supabaseクライアントが初期化されていない場合はエラー画面を表示
@@ -56,8 +62,8 @@ const AppNavigator: React.FC = () => {
     return <SupabaseErrorScreen />;
   }
 
-  // 認証状態の確認中
-  if (loading) {
+  // 認証状態 or オンボーディング状態の確認中 (loading または null)
+  if (loading || (isAuthenticated && onboardingCompleted === null)) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2563EB" />
@@ -71,13 +77,19 @@ const AppNavigator: React.FC = () => {
   // isInternetReachableがnullの場合は、isConnectedがfalseの場合のみオフラインと判定
   const isOffline = !isConnected || (isInternetReachable !== null && isInternetReachable === false);
 
-  // 認証状態に応じてスタックを切り替え
+  // 認証状態 × オンボーディング状態に応じてスタックを切り替え
+  const renderStack = () => {
+    if (!isAuthenticated) return <AuthStack />;
+    if (!onboardingCompleted) return <OnboardingStack />;
+    return <MainStack />;
+  };
+
   return (
     <View style={styles.container}>
       <OfflineBanner visible={isOffline} />
       <NavigationContainer>
-        {isAuthenticated ? <MainStack /> : <AuthStack />}
-        <StatusBar style="auto" />
+        {renderStack()}
+        <StatusBar style={isAuthenticated && !onboardingCompleted ? "light" : "auto"} />
       </NavigationContainer>
     </View>
   );

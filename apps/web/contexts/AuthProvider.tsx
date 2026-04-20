@@ -104,7 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               gender: gender ?? 0,
               birthday: birthday || null,
             },
-            emailRedirectTo: `${window.location.origin}/api/auth/callback?redirect_to=/dashboard`,
+            emailRedirectTo: `${window.location.origin}/api/auth/callback?redirect_to=/onboarding`,
           },
         });
 
@@ -148,7 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // 重要: redirectToはルートパス(/)に設定し、Middlewareで/api/auth/callbackにリダイレクトさせる
         // これにより、PKCE code verifier Cookieが確実に転送される
         const redirectTo =
-          options?.redirectTo || `${window.location.origin}/?redirect_to=/dashboard`;
+          options?.redirectTo || `${window.location.origin}/?redirect_to=/onboarding`;
 
         const { data, error } = await supabaseClient.auth.signInWithOAuth({
           provider,

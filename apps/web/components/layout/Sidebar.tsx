@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import {
   HomeIcon,
   ChartBarIcon,
@@ -13,7 +14,6 @@ import {
   UsersIcon,
   UserIcon,
   ShieldCheckIcon,
-  FlagIcon,
   ArrowTopRightOnSquareIcon,
 } from "@heroicons/react/24/outline";
 
@@ -49,13 +49,7 @@ const baseNavigation: NavigationItem[] = [
     icon: TrophyIcon,
     description: "大会結果とタイム記録",
   },
-  {
-    name: "目標管理",
-    href: "/goals",
-    icon: FlagIcon,
-    description: "目標設定と達成状況",
-  },
-  {
+{
     name: "マイページ",
     href: "/mypage",
     icon: UserIcon,
@@ -76,6 +70,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [singleTeamId, setSingleTeamId] = useState<string | null>(null);
   const [adminTeamIds, setAdminTeamIds] = useState<string[]>([]);
   const [singleAdminTeamId, setSingleAdminTeamId] = useState<string | null>(null);
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
 
   // ユーザーのチーム一覧を取得してチーム数をチェック
   useEffect(() => {
@@ -298,10 +293,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 設定
               </Link>
               <button
-                onClick={async () => {
+                onClick={() => {
                   onClose();
-                  await signOut();
-                  router.replace("/login");
+                  setIsLogoutDialogOpen(true);
                 }}
                 className="flex items-center w-full px-3 py-2 text-xs font-medium rounded-lg text-red-600 hover:bg-red-50 transition-all duration-200"
               >
@@ -352,6 +346,25 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={isLogoutDialogOpen}
+        variant="danger"
+        title="ログアウト"
+        message="ログアウトしますか？"
+        confirmLabel="ログアウト"
+        cancelLabel="キャンセル"
+        onConfirm={async () => {
+          const { error } = await signOut();
+          setIsLogoutDialogOpen(false);
+          if (error) {
+            console.error("ログアウトエラー:", error);
+            return;
+          }
+          router.replace("/login");
+        }}
+        onCancel={() => setIsLogoutDialogOpen(false)}
+      />
     </>
   );
 }

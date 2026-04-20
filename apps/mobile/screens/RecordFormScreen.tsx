@@ -515,6 +515,42 @@ export const RecordFormScreen: React.FC = () => {
     setSplitTimes(updatedSplitTimes);
   };
 
+  // スプリットタイムを50mごとに追加
+  const handleAddSplitTimesEvery50m = () => {
+    const selectedStyle = styleList.find((s) => s.id === styleId);
+    if (!selectedStyle?.distance) return;
+
+    const raceDistance = selectedStyle.distance;
+    const existingDistances = new Set(
+      splitTimes
+        .map((st) =>
+          typeof st.distance === "number" ? st.distance : parseFloat(String(st.distance)) || 0,
+        )
+        .filter((d) => d > 0),
+    );
+    const newSplits: Array<{ distance: number; splitTime: number }> = [];
+
+    for (let distance = 50; distance <= raceDistance; distance += 50) {
+      if (!existingDistances.has(distance)) {
+        newSplits.push({ distance, splitTime: 0 });
+      }
+    }
+
+    if (newSplits.length === 0) return;
+
+    // Free ユーザーの場合、追加後の合計が制限を超えないようにカット
+    let splitsToAdd = newSplits;
+    if (!isPremium) {
+      const remaining = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - splitTimes.length;
+      if (remaining <= 0) return;
+      splitsToAdd = newSplits.slice(0, remaining);
+    }
+
+    // 既存のスプリットタイムに新しいものを追加
+    const updatedSplitTimes = [...splitTimes, ...splitsToAdd];
+    setSplitTimes(updatedSplitTimes);
+  };
+
   // スプリットタイムを距離でソートして表示用のインデックスマッピングを作成
   const sortedSplitIndices = useMemo(() => {
     return splitTimes
@@ -734,6 +770,24 @@ export const RecordFormScreen: React.FC = () => {
                     ]}
                   >
                     追加(25mごと)
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.addButton,
+                    styles.addButton50m,
+                    (!selectedStyleDistance || storeLoading || splitTimeLimitReached) && styles.addButtonDisabled,
+                  ]}
+                  onPress={handleAddSplitTimesEvery50m}
+                  disabled={!selectedStyleDistance || storeLoading || splitTimeLimitReached}
+                >
+                  <Text
+                    style={[
+                      styles.addButtonText,
+                      (!selectedStyleDistance || storeLoading || splitTimeLimitReached) && styles.addButtonTextDisabled,
+                    ]}
+                  >
+                    追加(50mごと)
                   </Text>
                 </Pressable>
                 <Pressable
@@ -1160,6 +1214,9 @@ const styles = StyleSheet.create({
   },
   addButton25m: {
     backgroundColor: "#2563EB",
+  },
+  addButton50m: {
+    backgroundColor: "#059669",
   },
   addButtonDisabled: {
     opacity: 0.4,

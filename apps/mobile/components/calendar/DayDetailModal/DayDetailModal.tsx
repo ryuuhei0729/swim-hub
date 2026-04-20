@@ -363,6 +363,9 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                         firstRecord.metadata?.pool_type ??
                         0;
                       const note = firstRecord.note || undefined;
+                      const isTeamCompetition =
+                        !!firstRecord.metadata?.team_id ||
+                        !!firstRecord.metadata?.competition?.team_id;
 
                       return (
                         <RecordDetail
@@ -373,6 +376,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           poolType={poolType}
                           note={note}
                           records={records}
+                          isTeamCompetition={isTeamCompetition}
                           onEditCompetition={() => {
                             const competitionItem = entries.find(
                               (e) =>

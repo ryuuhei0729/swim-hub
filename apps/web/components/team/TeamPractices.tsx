@@ -228,8 +228,11 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
       });
 
       closeBasicForm();
-      setCurrentPage(1);
-      // loadTeamPracticesはuseEffectで自動実行される
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+      } else {
+        await loadTeamPractices();
+      }
     } catch (err) {
       console.error("練習の作成に失敗:", err);
       setError("練習の作成に失敗しました");

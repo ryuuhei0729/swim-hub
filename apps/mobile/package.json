@@ -21,7 +21,7 @@
     "ios:clear": "pnpm exec dotenvx run -f .env.local -- expo start --ios --dev-client --clear",
     "ios:local": "pnpm exec dotenvx run -f .env.local -- expo start --ios --dev-client",
     "ios:dev": "pnpm exec dotenvx run -f .env.development -- expo start --ios --dev-client",
-    "ios:prod": "pnpm exec dotenvx run -f .env.production -- expo start --ios --dev-client",
+    "ios:prod": "EXPO_NO_DOTENV=1 pnpm exec dotenvx run -f .env.production -- expo start --ios --dev-client",
     "web": "pnpm exec dotenvx run -f .env.local -- expo start --web",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
@@ -29,7 +29,9 @@
     "test": "vitest run",
     "test:watch": "vitest watch",
     "test:coverage": "vitest run --coverage",
-    "submit:ios": "set -a && source .env && set +a && export APPLE_ID APPLE_APP_SPECIFIC_PASSWORD && eas submit --platform ios --latest"
+    "submit:ios": "set -a && source .env && set +a && export APPLE_ID APPLE_APP_SPECIFIC_PASSWORD && eas submit --platform ios --latest",
+    "ios:bump-build": "plutil -replace CFBundleVersion -string $(($(plutil -extract CFBundleVersion raw ios/SwimHub/Info.plist) + 1)) ios/SwimHub/Info.plist && plutil -extract CFBundleVersion raw ios/SwimHub/Info.plist",
+    "build:ios:local": "pnpm ios:bump-build && eas build --platform ios --profile production --local"
   },
   "dependencies": {
     "@dotenvx/dotenvx": "^1.51.1",
@@ -45,21 +47,21 @@
     "@tanstack/react-query": "^5.90.10",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
-    "expo": "~55.0.11",
-    "expo-apple-authentication": "~55.0.11",
-    "expo-auth-session": "~55.0.12",
-    "expo-calendar": "~55.0.12",
-    "expo-clipboard": "55.0.11",
-    "expo-crypto": "~55.0.12",
-    "expo-dev-client": "^55.0.22",
+    "expo": "~55.0.15",
+    "expo-apple-authentication": "~55.0.13",
+    "expo-auth-session": "~55.0.14",
+    "expo-calendar": "~55.0.14",
+    "expo-clipboard": "55.0.13",
+    "expo-crypto": "~55.0.14",
+    "expo-dev-client": "^55.0.27",
     "expo-image": "~55.0.8",
-    "expo-image-manipulator": "~55.0.13",
-    "expo-image-picker": "~55.0.16",
-    "expo-linking": "~55.0.11",
+    "expo-image-manipulator": "~55.0.15",
+    "expo-image-picker": "~55.0.18",
+    "expo-linking": "~55.0.13",
     "expo-status-bar": "~55.0.5",
-    "expo-video": "~55.0.13",
-    "expo-video-thumbnails": "~55.0.12",
-    "expo-web-browser": "~55.0.12",
+    "expo-video": "~55.0.15",
+    "expo-video-thumbnails": "~55.0.14",
+    "expo-web-browser": "~55.0.14",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-native": "0.83.4",
@@ -92,7 +94,10 @@
   },
   "expo": {
     "install": {
-      "exclude": ["react", "react-dom"]
+      "exclude": [
+        "react",
+        "react-dom"
+      ]
     }
   }
 }

@@ -1,7 +1,3 @@
-// =============================================================================
-// ユーザー情報React Queryフック - Swim Hub共通パッケージ
-// =============================================================================
-
 "use client";
 
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -10,6 +6,47 @@ import { useEffect } from "react";
 import type { TeamMembershipWithUser, UserProfile } from "../../types";
 import { teamKeys, userKeys } from "./keys";
 import { useTeamsQuery } from "./teams";
+
+/** users テーブルの SELECT カラム (一元管理) */
+const USER_PROFILE_SELECT =
+  "id, name, gender, birthday, profile_image_path, bio, google_calendar_enabled, google_calendar_sync_practices, google_calendar_sync_competitions, ios_calendar_enabled, ios_calendar_sync_practices, ios_calendar_sync_competitions, onboarding_completed, created_at, updated_at";
+
+/** PGRST116 (行なし) エラー時にデフォルトプロフィールを作成 */
+async function createDefaultProfile(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<UserProfile | null> {
+  try {
+    const userInsert = {
+      id: userId,
+      name: "ユーザー",
+      gender: 0,
+      bio: "",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data: newProfile, error: createError } = await supabase
+      .from("users")
+      .insert(userInsert)
+      .select(USER_PROFILE_SELECT)
+      .single();
+
+    if (createError) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Failed to create profile:", createError);
+      }
+      return null;
+    }
+
+    return newProfile as UserProfile;
+  } catch (createErr) {
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Error creating profile:", createErr);
+    }
+    return null;
+  }
+}
 
 export interface UseUserQueryOptions {
   userId?: string;
@@ -51,47 +88,13 @@ export function useUserQuery(
 
       const { data, error } = await supabase
         .from("users")
-        .select(
-          "id, name, gender, birthday, profile_image_path, bio, google_calendar_enabled, google_calendar_sync_practices, google_calendar_sync_competitions, ios_calendar_enabled, ios_calendar_sync_practices, ios_calendar_sync_competitions, created_at, updated_at",
-        )
+        .select(USER_PROFILE_SELECT)
         .eq("id", targetUserId)
         .single();
 
       if (error) {
-        // ユーザーが存在しない場合（PGRST116エラー）、デフォルトプロフィールを作成
         if (error.code === "PGRST116") {
-          try {
-            const userInsert = {
-              id: targetUserId,
-              name: "ユーザー",
-              gender: 0,
-              bio: "",
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            };
-
-            const { data: newProfile, error: createError } = await supabase
-              .from("users")
-              .insert(userInsert)
-              .select(
-                "id, name, gender, birthday, profile_image_path, bio, google_calendar_enabled, google_calendar_sync_practices, google_calendar_sync_competitions, ios_calendar_enabled, ios_calendar_sync_practices, ios_calendar_sync_competitions, created_at, updated_at",
-              )
-              .single();
-
-            if (createError) {
-              if (process.env.NODE_ENV !== "production") {
-                console.error("Failed to create profile:", createError);
-              }
-              return null;
-            }
-
-            return newProfile as UserProfile;
-          } catch (createErr) {
-            if (process.env.NODE_ENV !== "production") {
-              console.error("Error creating profile:", createErr);
-            }
-            return null;
-          }
+          return createDefaultProfile(supabase, targetUserId!);
         }
         throw error;
       }
@@ -214,47 +217,13 @@ export function useUserProfileQuery(
 
       const { data, error } = await supabase
         .from("users")
-        .select(
-          "id, name, gender, birthday, profile_image_path, bio, google_calendar_enabled, google_calendar_sync_practices, google_calendar_sync_competitions, ios_calendar_enabled, ios_calendar_sync_practices, ios_calendar_sync_competitions, created_at, updated_at",
-        )
+        .select(USER_PROFILE_SELECT)
         .eq("id", targetUserId)
         .single();
 
       if (error) {
-        // ユーザーが存在しない場合（PGRST116エラー）、デフォルトプロフィールを作成
         if (error.code === "PGRST116") {
-          try {
-            const userInsert = {
-              id: targetUserId,
-              name: "ユーザー",
-              gender: 0,
-              bio: "",
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            };
-
-            const { data: newProfile, error: createError } = await supabase
-              .from("users")
-              .insert(userInsert)
-              .select(
-                "id, name, gender, birthday, profile_image_path, bio, google_calendar_enabled, google_calendar_sync_practices, google_calendar_sync_competitions, ios_calendar_enabled, ios_calendar_sync_practices, ios_calendar_sync_competitions, created_at, updated_at",
-              )
-              .single();
-
-            if (createError) {
-              if (process.env.NODE_ENV !== "production") {
-                console.error("Failed to create profile:", createError);
-              }
-              return null;
-            }
-
-            return newProfile as UserProfile;
-          } catch (createErr) {
-            if (process.env.NODE_ENV !== "production") {
-              console.error("Error creating profile:", createErr);
-            }
-            return null;
-          }
+          return createDefaultProfile(supabase, targetUserId!);
         }
         throw error;
       }

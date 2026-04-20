@@ -148,5 +148,5 @@ export async function getServerUserProfile(userId?: string): Promise<UserProfile
     throw error;
   }
 
-  return data;
+  return data as unknown as UserProfile;
 }

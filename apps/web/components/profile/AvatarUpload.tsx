@@ -14,6 +14,8 @@ interface AvatarUploadProps {
   userName: string;
   onAvatarChange: (newAvatarUrl: string | null) => void;
   disabled?: boolean;
+  /** アバターサイズの Tailwind クラス (デフォルト: "h-40 w-40") */
+  sizeClassName?: string;
 }
 
 export default function AvatarUpload({
@@ -21,6 +23,7 @@ export default function AvatarUpload({
   userName,
   onAvatarChange,
   disabled = false,
+  sizeClassName = "h-40 w-40",
 }: AvatarUploadProps) {
   const { user } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
@@ -153,7 +156,7 @@ export default function AvatarUpload({
       {/* アバター表示 */}
       <div
         className={`
-          relative h-40 w-40 md:h-40 md:w-40 rounded-full flex items-center justify-center cursor-pointer
+          relative ${sizeClassName} rounded-full flex items-center justify-center cursor-pointer
           ${disabled || isUploading ? "opacity-50 cursor-not-allowed" : "hover:opacity-80"}
           ${currentAvatarUrl ? "bg-gray-100" : "bg-blue-500"}
           transition-opacity duration-200

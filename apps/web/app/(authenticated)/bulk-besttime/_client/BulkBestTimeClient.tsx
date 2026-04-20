@@ -128,7 +128,18 @@ function canRelay(styleCode: string, distance: number): boolean {
 // メインコンポーネント
 // =============================================================================
 
-export default function BulkBestTimeClient() {
+// 安全なリダイレクト先かどうかを検証
+function isValidReturnTo(path: string | undefined): path is string {
+  if (!path) return false;
+  // 相対パスかつ /onboarding のみ許可
+  return path === "/onboarding";
+}
+
+interface BulkBestTimeClientProps {
+  returnTo?: string;
+}
+
+export default function BulkBestTimeClient({ returnTo }: BulkBestTimeClientProps) {
   const router = useRouter();
   const { supabase } = useAuth();
   const [activeTab, setActiveTab] = useState<StyleTab>("fr");
@@ -253,9 +264,11 @@ export default function BulkBestTimeClient() {
     }
   }, [inputs, recordAPI]);
 
+  const backPath = isValidReturnTo(returnTo) ? returnTo : "/mypage";
+
   const handleBack = useCallback(() => {
-    router.push("/mypage");
-  }, [router]);
+    router.push(backPath);
+  }, [router, backPath]);
 
   return (
     <div className="space-y-6">
@@ -292,11 +305,22 @@ export default function BulkBestTimeClient() {
         {/* 成功表示 */}
         {success && (
           <div className="p-4 bg-green-50 border-b border-green-200">
-            <div className="flex">
-              <CheckCircleIcon className="h-5 w-5 text-green-400 shrink-0" />
-              <div className="ml-3">
-                <p className="text-sm text-green-800">{success}</p>
+            <div className="flex items-center justify-between">
+              <div className="flex">
+                <CheckCircleIcon className="h-5 w-5 text-green-400 shrink-0" />
+                <div className="ml-3">
+                  <p className="text-sm text-green-800">{success}</p>
+                </div>
               </div>
+              {isValidReturnTo(returnTo) && (
+                <button
+                  type="button"
+                  onClick={() => router.push(returnTo)}
+                  className="text-sm font-medium text-green-700 hover:text-green-900 underline"
+                >
+                  オンボーディングに戻る
+                </button>
+              )}
             </div>
           </div>
         )}

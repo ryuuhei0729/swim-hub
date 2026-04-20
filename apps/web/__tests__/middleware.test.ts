@@ -167,11 +167,26 @@ describe("swim-hub middleware — セキュリティヘッダー", () => {
       expect(csp).toContain("form-action 'self'");
     });
 
-    it("timer 固有の wasm-unsafe-eval が含まれない (swim-hub スコープ外)", async () => {
+    it("script-src に 'wasm-unsafe-eval' と blob: が含まれる (ffmpeg.wasm 用)", async () => {
       const { middleware } = await import("../middleware");
       const res = await middleware(makeGetRequest("/"));
       const csp = res.headers.get("Content-Security-Policy") ?? "";
-      expect(csp).not.toContain("'wasm-unsafe-eval'");
+      expect(csp).toContain("'wasm-unsafe-eval'");
+      expect(csp).toContain("script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob:");
+    });
+
+    it("media-src に blob: と R2 S3 互換エンドポイントが含まれる (動画再生用)", async () => {
+      const { middleware } = await import("../middleware");
+      const res = await middleware(makeGetRequest("/"));
+      const csp = res.headers.get("Content-Security-Policy") ?? "";
+      expect(csp).toContain("media-src 'self' blob: https://*.r2.cloudflarestorage.com");
+    });
+
+    it("worker-src に blob: が含まれる (ffmpeg.wasm Worker 用)", async () => {
+      const { middleware } = await import("../middleware");
+      const res = await middleware(makeGetRequest("/"));
+      const csp = res.headers.get("Content-Security-Policy") ?? "";
+      expect(csp).toContain("worker-src 'self' blob:");
     });
   });
 });

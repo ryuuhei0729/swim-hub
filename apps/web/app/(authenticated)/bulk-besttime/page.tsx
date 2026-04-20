@@ -6,10 +6,15 @@ export const metadata = {
   description: "Excelファイルを使用してベストタイムを一括で登録できます",
 };
 
-export default function BulkBestTimePage() {
+export default async function BulkBestTimePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ return_to?: string }>;
+}) {
+  const { return_to } = await searchParams;
   return (
     <Suspense fallback={<BulkBestTimeLoading />}>
-      <BulkBestTimeClient />
+      <BulkBestTimeClient returnTo={return_to} />
     </Suspense>
   );
 }

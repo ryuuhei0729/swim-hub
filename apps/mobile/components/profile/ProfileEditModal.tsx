@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, Modal, Pressable, TextInput, StyleSheet, ScrollView } from "react-native";
-import { format, isValid } from "date-fns";
 import { AvatarUpload } from "./AvatarUpload";
+import { BirthdayInput } from "@/components/ui/BirthdayInput";
 import { useAuth } from "@/contexts/AuthProvider";
 import type { UserProfile } from "@swim-hub/shared/types";
 import { base64ToArrayBuffer } from "@/utils/base64";
@@ -37,13 +37,6 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
     fileExtension: string;
   } | null>(null);
 
-  // 年・月・日の状態管理（テキスト入力）
-  const [yearText, setYearText] = useState("");
-  const [monthText, setMonthText] = useState("");
-  const [dayText, setDayText] = useState("");
-  const monthRef = useRef<TextInput>(null);
-  const dayRef = useRef<TextInput>(null);
-
   // プロフィールが変更されたときにフォームデータを更新
   useEffect(() => {
     if (profile) {
@@ -54,42 +47,9 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         birthday: birthdayStr,
         bio: profile.bio || "",
       });
-
-      if (birthdayStr) {
-        const [y, m, d] = birthdayStr.split("-");
-        setYearText(y || "");
-        setMonthText(m ? String(Number(m)) : "");
-        setDayText(d ? String(Number(d)) : "");
-      } else {
-        setYearText("");
-        setMonthText("");
-        setDayText("");
-      }
     }
     setError(null);
   }, [profile, visible]);
-
-  // 年・月・日テキストからformData.birthdayを更新
-  useEffect(() => {
-    const y = Number(yearText);
-    const m = Number(monthText);
-    const d = Number(dayText);
-    if (y && m && d) {
-      const date = new Date(y, m - 1, d);
-      if (
-        isValid(date) &&
-        date.getFullYear() === y &&
-        date.getMonth() === m - 1 &&
-        date.getDate() === d
-      ) {
-        setFormData((prev) => ({ ...prev, birthday: format(date, "yyyy-MM-dd") }));
-      } else {
-        setFormData((prev) => ({ ...prev, birthday: "" }));
-      }
-    } else {
-      setFormData((prev) => ({ ...prev, birthday: "" }));
-    }
-  }, [yearText, monthText, dayText]);
 
   const handleClose = () => {
     if (isUpdating) return;
@@ -130,7 +90,6 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
               }
             }
           } catch {
-            // エラーが発生しても続行（新規ユーザーなど、フォルダが存在しない場合もある）
             // エラーが発生しても続行（新規ユーザーなど、フォルダが存在しない場合もある）
           }
 
@@ -178,11 +137,8 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         }
       }
 
-      // 誕生日をISO形式に変換（タイムゾーン問題を回避: YYYY-MM-DD形式をUTC 00:00:00として扱う）
-      const birthday =
-        formData.birthday && formData.birthday.length >= 10
-          ? `${formData.birthday}T00:00:00.000Z`
-          : null;
+      // DB の birthday は date 型。YYYY-MM-DD のまま送る
+      const birthday = formData.birthday || null;
 
       await onUpdate({
         name: formData.name.trim(),
@@ -256,67 +212,15 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
             </View>
 
             {/* 生年月日 */}
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>生年月日</Text>
-              <View style={styles.birthdayRow}>
-                <View style={styles.birthdayField}>
-                  <TextInput
-                    style={styles.birthdayInput}
-                    value={yearText}
-                    onChangeText={(text) => {
-                      const num = text.replace(/[^0-9]/g, "").slice(0, 4);
-                      setYearText(num);
-                      if (num.length === 4) monthRef.current?.focus();
-                    }}
-                    placeholder="1996"
-                    placeholderTextColor="#9CA3AF"
-                    keyboardType="number-pad"
-                    maxLength={4}
-                    editable={!isUpdating}
-                    accessibilityLabel="生年"
-                  />
-                  <Text style={styles.birthdaySuffix}>年</Text>
-                </View>
-                <View style={styles.birthdayField}>
-                  <TextInput
-                    ref={monthRef}
-                    style={styles.birthdayInput}
-                    value={monthText}
-                    onChangeText={(text) => {
-                      const num = text.replace(/[^0-9]/g, "").slice(0, 2);
-                      setMonthText(num);
-                      if (num.length === 2 || (num.length === 1 && Number(num) > 1))
-                        dayRef.current?.focus();
-                    }}
-                    placeholder="2"
-                    placeholderTextColor="#9CA3AF"
-                    keyboardType="number-pad"
-                    maxLength={2}
-                    editable={!isUpdating}
-                    accessibilityLabel="生月"
-                  />
-                  <Text style={styles.birthdaySuffix}>月</Text>
-                </View>
-                <View style={styles.birthdayField}>
-                  <TextInput
-                    ref={dayRef}
-                    style={styles.birthdayInput}
-                    value={dayText}
-                    onChangeText={(text) => {
-                      const num = text.replace(/[^0-9]/g, "").slice(0, 2);
-                      setDayText(num);
-                    }}
-                    placeholder="22"
-                    placeholderTextColor="#9CA3AF"
-                    keyboardType="number-pad"
-                    maxLength={2}
-                    editable={!isUpdating}
-                    accessibilityLabel="生日"
-                  />
-                  <Text style={styles.birthdaySuffix}>日</Text>
-                </View>
-              </View>
-            </View>
+            <BirthdayInput
+              label="生年月日"
+              value={formData.birthday}
+              onChange={(date) => {
+                setFormData((prev) => ({ ...prev, birthday: date }));
+                setError(null);
+              }}
+              disabled={isUpdating}
+            />
 
             {/* 自己紹介 */}
             <View style={styles.formGroup}>
@@ -451,32 +355,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#111827",
     backgroundColor: "#FFFFFF",
-  },
-  birthdayRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  birthdayField: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  birthdayInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: "#111827",
-    backgroundColor: "#FFFFFF",
-    textAlign: "center",
-  },
-  birthdaySuffix: {
-    fontSize: 14,
-    color: "#374151",
   },
   textArea: {
     minHeight: 120,

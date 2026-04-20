@@ -27,7 +27,7 @@ async function getAdminTeams(
     .order("joined_at", { ascending: false });
 
   if (error) throw error;
-  return data as TeamMembershipWithUser[];
+  return data as unknown as TeamMembershipWithUser[];
 }
 
 /**

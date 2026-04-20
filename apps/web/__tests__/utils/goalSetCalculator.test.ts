@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   calculateAge,
   calculateGoalSetTargetTime,
@@ -119,47 +119,49 @@ describe("calculateGoalSetTargetTime", () => {
 });
 
 describe("calculateAge", () => {
-  it("正しい年齢を計算できる", () => {
-    const today = new Date();
-    const birthYear = today.getFullYear() - 20;
-    const birthday = `${birthYear}-01-15`;
+  // 時間依存テストの再現性確保のため、システム時刻を固定
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-15T00:00:00Z"));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
-    const age = calculateAge(birthday);
+  it("誕生日を既に迎えている場合、正しい年齢を計算できる", () => {
+    // 2006-01-15 生まれ → 2026-04-15 時点で 20 歳
+    const age = calculateAge("2006-01-15");
     expect(age).toBe(20);
   });
 
   it("今年まだ誕生日を迎えていない場合、年齢が1つ少なくなる", () => {
-    const today = new Date();
-    const birthYear = today.getFullYear() - 20;
-    // 今日より後の日付（まだ誕生日を迎えていない）
-    // 12月の場合は1月に、それ以外は次の月にする
-    let futureMonth = today.getMonth() + 2; // 2ヶ月後を指定
-    let futureYear = birthYear;
-    if (futureMonth > 12) {
-      futureMonth = 1;
-      futureYear = birthYear + 1;
-    }
-    const birthday = `${futureYear}-${String(futureMonth).padStart(2, "0")}-15`;
-
-    const age = calculateAge(birthday);
+    // 2006-06-15 生まれ → 2026-04-15 時点でまだ 19 歳
+    const age = calculateAge("2006-06-15");
     expect(age).toBe(19);
   });
 
+  it("誕生日当日は新しい年齢になる", () => {
+    // 2006-04-15 生まれ → 2026-04-15 時点で 20 歳
+    const age = calculateAge("2006-04-15");
+    expect(age).toBe(20);
+  });
+
+  it("ISO 文字列 (T 付き) も正しくパースできる", () => {
+    const age = calculateAge("2006-01-15T00:00:00.000Z");
+    expect(age).toBe(20);
+  });
+
   it("nullを渡すとnullを返す", () => {
-    const age = calculateAge(null);
-    expect(age).toBeNull();
+    expect(calculateAge(null)).toBeNull();
   });
 
   it("空文字列を渡すとnullを返す", () => {
-    const age = calculateAge("");
-    expect(age).toBeNull();
+    expect(calculateAge("")).toBeNull();
   });
 
-  it("有効な日付文字列を処理できる", () => {
-    const birthday = "2000-06-15";
-    const age = calculateAge(birthday);
-    expect(typeof age).toBe("number");
-    expect(age).toBeGreaterThan(0);
+  it("無効な日付文字列を渡すとnullを返す", () => {
+    expect(calculateAge("not-a-date")).toBeNull();
+    expect(calculateAge("2006/01/15")).toBeNull();
   });
 });
 

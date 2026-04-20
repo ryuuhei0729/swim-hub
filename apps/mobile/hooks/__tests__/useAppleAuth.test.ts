@@ -252,10 +252,13 @@ describe("useAppleAuth", () => {
       expect(signInResult!.success).toBe(true);
       expect(signInResult!.error).toBeUndefined();
       expect(result.current.error).toBeNull();
-      expect(mocks.signInWithIdToken).toHaveBeenCalledWith({
-        provider: "apple",
-        token: "mock-identity-token",
-      });
+      expect(mocks.signInWithIdToken).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider: "apple",
+          token: "mock-identity-token",
+          nonce: expect.stringMatching(/^[0-9a-f]{64}$/),
+        }),
+      );
     });
 
     it("エラー時は localizeSupabaseAuthError を使用してエラーを設定", async () => {
@@ -431,10 +434,13 @@ describe("useAppleAuth", () => {
       // 呼び出しの検証
       expect(mocks.isAvailableAsync).toHaveBeenCalledTimes(1);
       expect(mocks.signInAsync).toHaveBeenCalledTimes(1);
-      expect(mocks.signInWithIdToken).toHaveBeenCalledWith({
-        provider: "apple",
-        token: "valid-token",
-      });
+      expect(mocks.signInWithIdToken).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider: "apple",
+          token: "valid-token",
+          nonce: expect.stringMatching(/^[0-9a-f]{64}$/),
+        }),
+      );
       expect(mocks.updateUser).toHaveBeenCalledWith({
         data: { name: "田中 花子" },
       });
