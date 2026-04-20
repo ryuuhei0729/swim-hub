@@ -351,6 +351,42 @@ export const RecordLogFormScreen: React.FC = () => {
     });
   };
 
+  // スプリットタイムを50mごとに追加
+  const handleAddSplitTimesEvery50m = (index: number) => {
+    const formData = formDataList[index];
+    const selectedStyle = swimStyles.find((s) => String(s.id) === formData.styleId);
+    if (!selectedStyle?.distance) return;
+
+    const raceDistance = selectedStyle.distance;
+    const existingDistances = new Set(
+      formData.splitTimes
+        .map((st) =>
+          typeof st.distance === "number" ? st.distance : parseFloat(String(st.distance)),
+        )
+        .filter((d) => !isNaN(d) && d > 0),
+    );
+
+    let newSplits: SplitTimeData[] = [];
+    for (let distance = 50; distance <= raceDistance; distance += 50) {
+      if (!existingDistances.has(distance)) {
+        newSplits.push({ distance, splitTime: 0, splitTimeDisplayValue: "" });
+      }
+    }
+
+    if (newSplits.length === 0) return;
+
+    // Free ユーザーの場合、追加後の合計が制限を超えないようにカット
+    if (!isPremium) {
+      const remaining = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - formData.splitTimes.length;
+      if (remaining <= 0) return;
+      newSplits = newSplits.slice(0, remaining);
+    }
+
+    updateFormData(index, {
+      splitTimes: [...formData.splitTimes, ...newSplits],
+    });
+  };
+
   // スプリットタイムを距離でソートしてインデックスマッピングを返す
   const getSortedSplitIndices = (splitTimes: SplitTimeData[]) => {
     return splitTimes
@@ -771,6 +807,26 @@ export const RecordLogFormScreen: React.FC = () => {
                       <Text style={styles.addButton25mText}>追加(25mごと)</Text>
                     </Pressable>
                     <Pressable
+                      style={[
+                        styles.addButton,
+                        styles.addButton50m,
+                        (!formData.styleId ||
+                          !swimStyles.find((s) => String(s.id) === formData.styleId)?.distance ||
+                          loading ||
+                          isSplitTimeLimitReached(index)) &&
+                          styles.addButtonDisabled,
+                      ]}
+                      onPress={() => handleAddSplitTimesEvery50m(index)}
+                      disabled={
+                        !formData.styleId ||
+                        !swimStyles.find((s) => String(s.id) === formData.styleId)?.distance ||
+                        loading ||
+                        isSplitTimeLimitReached(index)
+                      }
+                    >
+                      <Text style={styles.addButton50mText}>追加(50mごと)</Text>
+                    </Pressable>
+                    <Pressable
                       style={[styles.addButton, (loading || isSplitTimeLimitReached(index)) && styles.addButtonDisabled]}
                       onPress={() => handleAddSplitTime(index)}
                       disabled={loading || isSplitTimeLimitReached(index)}
@@ -1065,7 +1121,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#2563EB",
   },
   addButton25mText: {
-    fontSize: 14,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  addButton50m: {
+    borderColor: "#059669",
+    backgroundColor: "#059669",
+  },
+  addButton50mText: {
+    fontSize: 12,
     fontWeight: "600",
     color: "#FFFFFF",
   },
