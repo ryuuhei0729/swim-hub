@@ -30,6 +30,9 @@ module.exports = {
         80: "80",
         90: "90",
       },
+      screens: {
+        "lp-md": "960px",
+      },
     },
   },
   plugins: [
