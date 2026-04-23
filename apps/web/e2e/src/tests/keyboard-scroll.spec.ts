@@ -38,7 +38,10 @@ import { URLS } from "../config/config";
 // ------------------------------------------------------------------
 // モバイルビューポート設定 (iPhone 14 Pro 相当)
 // ------------------------------------------------------------------
-const IPHONE_14_PRO = devices["iPhone 14 Pro"];
+// NOTE: `defaultBrowserType` は describe 内 test.use() で設定不可 (新 worker を強制するため)。
+// describe スコープでは userAgent / hasTouch / isMobile / viewport などのみ適用する。
+const { defaultBrowserType: _defaultBrowserType, ...IPHONE_14_PRO } = devices["iPhone 14 Pro"];
+void _defaultBrowserType;
 const VIEWPORT = { width: 393, height: 852 };
 
 // キーボード表示時の仮想ビューポート高さ (iOS Safari 実機での概算値)
