@@ -16,7 +16,8 @@
       },
       "env": {
         "EXPO_PUBLIC_ENVIRONMENT": "production",
-        "EXPO_PUBLIC_WEB_API_URL": "https://swim-hub.app"
+        "EXPO_PUBLIC_WEB_API_URL": "https://swim-hub.app",
+        "EXPO_PUBLIC_R2_PUBLIC_URL": "https://images.swim-hub.app"
       }
     },
     "preview": {
