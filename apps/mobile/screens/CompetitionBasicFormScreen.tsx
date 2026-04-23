@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
@@ -11,6 +9,7 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  KeyboardAvoidingView,
 } from "react-native";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -27,7 +26,7 @@ import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
-import { uploadImages, deleteImages, getExistingImagesFromPaths } from "@/utils/imageUpload";
+import { uploadImagesViaApi, deleteImages, getExistingImagesFromPaths } from "@/utils/imageUpload";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
 import type { MainStackParamList } from "@/navigation/types";
@@ -48,7 +47,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
   const route = useRoute<CompetitionFormScreenRouteProp>();
   const navigation = useNavigation<CompetitionFormScreenNavigationProp>();
   const { competitionId, date: initialDateParam } = route.params;
-  const { supabase, user, subscription } = useAuth();
+  const { supabase, user, subscription, session } = useAuth();
   const isPremium = checkIsPremium(subscription);
   const queryClient = useQueryClient();
 
@@ -208,21 +207,23 @@ export const CompetitionBasicFormScreen: React.FC = () => {
 
   // 大会データの保存共通処理（編集・新規作成の両方に対応）
   // 成功時は保存された大会IDを返す
-  const saveCompetitionData = async (userId: string): Promise<string> => {
+  const saveCompetitionData = async (_userId: string): Promise<string> => {
     if (competitionId) {
       // 編集モード
       // 1. 新規画像をアップロード
       let newImagePaths: string[] = [];
       if (newImageFiles.length > 0) {
-        const uploadResults = await uploadImages(
-          supabase,
-          userId,
-          competitionId,
+        if (!session?.access_token) {
+          throw new Error("セッションが無効です。再ログインしてください。");
+        }
+        const uploadResults = await uploadImagesViaApi(
           newImageFiles.map((f) => ({
             base64: f.base64,
             fileExtension: f.fileExtension,
           })),
+          competitionId,
           "competition-images",
+          session.access_token,
         );
         newImagePaths = uploadResults.map((r) => r.path);
       }
@@ -289,15 +290,17 @@ export const CompetitionBasicFormScreen: React.FC = () => {
 
       // 新規画像をアップロード
       if (newImageFiles.length > 0) {
-        const uploadResults = await uploadImages(
-          supabase,
-          userId,
-          newCompetition.id,
+        if (!session?.access_token) {
+          throw new Error("セッションが無効です。再ログインしてください。");
+        }
+        const uploadResults = await uploadImagesViaApi(
           newImageFiles.map((f) => ({
             base64: f.base64,
             fileExtension: f.fileExtension,
           })),
+          newCompetition.id,
           "competition-images",
+          session.access_token,
         );
         const imagePaths = uploadResults.map((r) => r.path);
 
@@ -354,7 +357,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
     try {
       await saveCompetitionData(user.id);
       queryClient.invalidateQueries({ queryKey: ["calendar"] });
-      navigation.navigate("MainTabs", { screen: "Dashboard" });
+      navigation.popToTop();
     } catch (error) {
       console.error("保存エラー:", error);
       Alert.alert("エラー", error instanceof Error ? error.message : "保存に失敗しました", [
@@ -464,7 +467,10 @@ export const CompetitionBasicFormScreen: React.FC = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* 日付（開始日・終了日） */}
         <View style={styles.section}>
@@ -632,7 +638,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
           </Pressable>
         )}
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

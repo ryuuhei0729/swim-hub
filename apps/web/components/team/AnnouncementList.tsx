@@ -75,7 +75,7 @@ export const AnnouncementList: React.FC<AnnouncementListProps> = ({
   }
 
   return (
-    <div className="p-4 space-y-2">
+    <div className={viewOnly ? "space-y-2" : "p-4 space-y-2"}>
       {/* ヘッダー（viewOnlyの場合は非表示） */}
       {!viewOnly && (
         <div className="flex justify-between items-center">

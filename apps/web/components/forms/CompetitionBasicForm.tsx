@@ -312,6 +312,9 @@ export default function CompetitionBasicForm({
       console.error("フォーム送信エラー:", error);
       isSubmittingRef.current = false;
       setIsSubmitted(false);
+      if (error instanceof Error && error.message) {
+        setValidationError(error.message);
+      }
     }
   };
 

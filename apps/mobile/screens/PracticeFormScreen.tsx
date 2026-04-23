@@ -9,6 +9,7 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  KeyboardAvoidingView,
 } from "react-native";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -27,7 +28,7 @@ import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
-import { uploadImages, deleteImages, getExistingImagesFromPaths } from "@/utils/imageUpload";
+import { uploadImagesViaApi, deleteImages, getExistingImagesFromPaths } from "@/utils/imageUpload";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
 import type { MainStackParamList } from "@/navigation/types";
@@ -43,7 +44,7 @@ export const PracticeFormScreen: React.FC = () => {
   const route = useRoute<PracticeFormScreenRouteProp>();
   const navigation = useNavigation<PracticeFormScreenNavigationProp>();
   const { practiceId, date: initialDateParam } = route.params || {};
-  const { supabase, user, subscription } = useAuth();
+  const { supabase, user, subscription, session } = useAuth();
   const isPremium = checkIsPremium(subscription);
   const queryClient = useQueryClient();
   const isEditMode = !!practiceId;
@@ -210,16 +211,15 @@ export const PracticeFormScreen: React.FC = () => {
       if (isEditMode && practiceId) {
         // 新規画像をアップロード
         let newImagePaths: string[] = [];
-        if (newImageFiles.length > 0) {
-          const uploadResults = await uploadImages(
-            supabase,
-            user.id,
-            practiceId,
+        if (newImageFiles.length > 0 && session?.access_token) {
+          const uploadResults = await uploadImagesViaApi(
             newImageFiles.map((f) => ({
               base64: f.base64,
               fileExtension: f.fileExtension,
             })),
+            practiceId,
             "practice-images",
+            session.access_token,
           );
           newImagePaths = uploadResults.map((r) => r.path);
         }
@@ -289,16 +289,15 @@ export const PracticeFormScreen: React.FC = () => {
         const createdPractice = await createMutation.mutateAsync(formData);
 
         // 新規画像をアップロード
-        if (newImageFiles.length > 0) {
-          const uploadResults = await uploadImages(
-            supabase,
-            user.id,
-            createdPractice.id,
+        if (newImageFiles.length > 0 && session?.access_token) {
+          const uploadResults = await uploadImagesViaApi(
             newImageFiles.map((f) => ({
               base64: f.base64,
               fileExtension: f.fileExtension,
             })),
+            createdPractice.id,
             "practice-images",
+            session.access_token,
           );
           const imagePaths = uploadResults.map((r) => r.path);
 
@@ -368,16 +367,15 @@ export const PracticeFormScreen: React.FC = () => {
       if (isEditMode && practiceId) {
         // 新規画像をアップロード
         let newImagePaths: string[] = [];
-        if (newImageFiles.length > 0) {
-          const uploadResults = await uploadImages(
-            supabase,
-            user.id,
-            practiceId,
+        if (newImageFiles.length > 0 && session?.access_token) {
+          const uploadResults = await uploadImagesViaApi(
             newImageFiles.map((f) => ({
               base64: f.base64,
               fileExtension: f.fileExtension,
             })),
+            practiceId,
             "practice-images",
+            session.access_token,
           );
           newImagePaths = uploadResults.map((r) => r.path);
         }
@@ -448,16 +446,15 @@ export const PracticeFormScreen: React.FC = () => {
         const createdPractice = await createMutation.mutateAsync(formData);
 
         // 新規画像をアップロード
-        if (newImageFiles.length > 0) {
-          const uploadResults = await uploadImages(
-            supabase,
-            user.id,
-            createdPractice.id,
+        if (newImageFiles.length > 0 && session?.access_token) {
+          const uploadResults = await uploadImagesViaApi(
             newImageFiles.map((f) => ({
               base64: f.base64,
               fileExtension: f.fileExtension,
             })),
+            createdPractice.id,
             "practice-images",
+            session.access_token,
           );
           const imagePaths = uploadResults.map((r) => r.path);
 
@@ -524,7 +521,11 @@ export const PracticeFormScreen: React.FC = () => {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.form}>
         {/* 日付 */}
         <View style={styles.field}>
@@ -639,7 +640,8 @@ export const PracticeFormScreen: React.FC = () => {
           )}
         </Pressable>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 

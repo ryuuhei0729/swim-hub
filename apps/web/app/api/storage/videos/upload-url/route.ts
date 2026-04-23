@@ -43,7 +43,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(errorResponse, { status: 403 });
     }
 
-    const body = await request.json() as { type: "record" | "practice-log"; id: string; contentType: string };
+    let body: { type: "record" | "practice-log"; id: string; contentType: string };
+    try {
+      body = await request.json() as { type: "record" | "practice-log"; id: string; contentType: string };
+    } catch {
+      return NextResponse.json({ error: "リクエストボディが不正です" }, { status: 400 });
+    }
     const { type, id, contentType } = body;
 
     if (!type || !id || !contentType) {
@@ -94,10 +99,10 @@ export async function POST(request: NextRequest) {
     // R2 パス生成
     const prefix = type === "record" ? "records" : "practice-logs";
     const videoPath = `videos/${user.id}/${prefix}/${id}.mp4`;
-    const thumbnailPath = `thumbnails/${user.id}/${prefix}/${id}.webp`;
+    const thumbnailPath = `thumbnails/${user.id}/${prefix}/${id}.jpg`;
 
     const videoUploadUrl = await generateVideoPutUrl(videoPath, contentType);
-    const thumbnailUploadUrl = await generateVideoPutUrl(thumbnailPath, "image/webp");
+    const thumbnailUploadUrl = await generateVideoPutUrl(thumbnailPath, "image/jpeg");
 
     return NextResponse.json({
       videoUploadUrl,

@@ -18,6 +18,12 @@ interface VideoUploaderProps {
   isPremium: boolean;
   onUploadComplete?: (videoPath: string, thumbnailPath: string) => void;
   onDelete?: () => void;
+  /**
+   * id が undefined の場合（新規作成時）に動画選択・取消しを親に通知する。
+   * file と thumbnail が非 null のとき「選択済み」、null のとき「取消し」。
+   * id が設定されている場合（編集時）は呼ばれない。
+   */
+  onPendingFile?: (file: File | null, thumbnail: Blob | null) => void;
 }
 
 type UploadState = "idle" | "selecting" | "editing" | "selected" | "uploading" | "done" | "error";
@@ -37,6 +43,7 @@ export default function VideoUploader({
   isPremium,
   onUploadComplete,
   onDelete,
+  onPendingFile,
 }: VideoUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadState, setUploadState] = useState<UploadState>(
@@ -100,11 +107,14 @@ export default function VideoUploader({
 
       setUploadProgress(92);
 
-      await fetch(thumbnailUploadUrl, {
+      const thumbnailPutRes = await fetch(thumbnailUploadUrl, {
         method: "PUT",
-        headers: { "Content-Type": "image/webp" },
+        headers: { "Content-Type": "image/jpeg" },
         body: thumbnail,
       });
+      if (!thumbnailPutRes.ok) {
+        throw new Error(`サムネイルアップロード失敗: HTTP ${thumbnailPutRes.status}`);
+      }
 
       setUploadProgress(95);
 
@@ -113,7 +123,7 @@ export default function VideoUploader({
       confirmFormData.append("id", targetId);
       confirmFormData.append("videoPath", vPath);
       confirmFormData.append("thumbnailPath", tPath);
-      confirmFormData.append("thumbnailBlob", new File([thumbnail], "thumbnail.webp", { type: "image/webp" }));
+      confirmFormData.append("thumbnailBlob", new File([thumbnail], "thumbnail.jpg", { type: "image/jpeg" }));
 
       const confirmRes = await fetch("/api/storage/videos/confirm", {
         method: "POST",
@@ -148,6 +158,8 @@ export default function VideoUploader({
       setPendingFile(editedFile);
       setPendingThumbnail(thumbnail);
       setUploadState("selected");
+      // 親に pending file を通知（新規作成時のみ）
+      onPendingFile?.(editedFile, thumbnail);
     }
   };
 
@@ -167,6 +179,8 @@ export default function VideoUploader({
     setPendingFile(null);
     setPendingThumbnail(null);
     setUploadState("idle");
+    // 親に pending 取消しを通知（新規作成時のみ）
+    onPendingFile?.(null, null);
   };
 
   const handleDelete = async () => {

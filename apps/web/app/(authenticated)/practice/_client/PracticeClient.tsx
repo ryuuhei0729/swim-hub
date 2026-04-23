@@ -31,6 +31,7 @@ import { usePracticeStore } from "@/stores/practice/practiceStore";
 import { usePracticeRecordStore } from "@/stores/form/practiceRecordStore";
 import type { PracticeLogWithFormattedData } from "@/stores/form/practiceRecordStore";
 import type { PracticeMenuFormData } from "@/stores/types";
+import { uploadVideoClient } from "@/lib/video-upload-client";
 
 interface PracticeClientProps {
   // サーバー側で取得したデータ
@@ -394,6 +395,24 @@ export default function PracticeClient({ initialPractices, styles, tags }: Pract
           // タグの保存
           if (menu.tags && menu.tags.length > 0) {
             await savePracticeLogTags(newLog.id, menu.tags);
+          }
+
+          // 新規作成時の動画アップロード（pending video がある場合）
+          if (menu.pendingVideo) {
+            try {
+              await uploadVideoClient({
+                type: "practice-log",
+                id: newLog.id,
+                file: menu.pendingVideo.file,
+                thumbnail: menu.pendingVideo.thumbnail,
+              });
+            } catch (uploadErr) {
+              console.error("動画アップロードエラー:", uploadErr);
+              // ログ保存は成功しているため、エラーはユーザーに通知するが遷移は続行
+              alert(
+                "練習記録は保存されましたが、動画のアップロードに失敗しました。詳細画面から再度追加してください。",
+              );
+            }
           }
         }
       }

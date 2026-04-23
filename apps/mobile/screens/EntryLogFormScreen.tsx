@@ -11,6 +11,8 @@ import {
   ActivityIndicator,
   Keyboard,
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -467,7 +469,7 @@ export const EntryLogFormScreen: React.FC = () => {
       await saveOrUpdateEntries(entries, supabase, competitionId, swimStyles, entryAPI);
 
       // 成功: ダッシュボードに戻る
-      navigation.navigate("MainTabs", { screen: "Dashboard" });
+      navigation.popToTop();
     } catch (error) {
       console.error("エントリー登録エラー:", error);
       Alert.alert(
@@ -547,7 +549,10 @@ export const EntryLogFormScreen: React.FC = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* エントリー種目セクション */}
         <View style={styles.section}>
@@ -739,7 +744,7 @@ export const EntryLogFormScreen: React.FC = () => {
           )}
         </Pressable>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

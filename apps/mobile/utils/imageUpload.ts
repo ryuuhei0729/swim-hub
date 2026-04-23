@@ -8,6 +8,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { base64ToArrayBuffer } from "./base64";
 import { canUploadImage } from "@swim-hub/shared/utils/premium";
 import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
+import { env } from "@/lib/env";
 
 export type ImageBucket = "practice-images" | "competition-images";
 
@@ -209,6 +210,111 @@ export function getExistingImagesFromPaths(
 
   return paths.map((path) => ({
     id: path, // pathをIDとして使用（削除時に必要）
-    url: getImagePublicUrl(supabase, path, bucket),
+    url: getImageUrlFromPath(supabase, path, bucket),
   }));
+}
+
+/**
+ * R2またはSupabase StorageからパスのURLを解決する
+ * EXPO_PUBLIC_R2_PUBLIC_URL が設定されている場合はR2、未設定の場合はSupabaseを使用
+ */
+export function getImageUrlFromPath(
+  supabase: SupabaseClient,
+  path: string,
+  bucket: ImageBucket,
+): string {
+  if (!path) return "";
+  const r2PublicUrl = env.r2PublicUrl;
+  if (r2PublicUrl) {
+    return `${r2PublicUrl}/${bucket}/${path}`;
+  }
+  return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+}
+
+/**
+ * Web API 経由で単一の画像をアップロード
+ */
+export async function uploadImageViaApi(
+  file: { base64: string; fileExtension: string },
+  id: string,
+  bucket: ImageBucket,
+  accessToken: string,
+): Promise<{ path: string }> {
+  const endpoint =
+    bucket === "practice-images"
+      ? `${env.webApiUrl}/api/storage/images/practice`
+      : `${env.webApiUrl}/api/storage/images/competition`;
+
+  const formData = new FormData();
+  const mimeType = getContentType(file.fileExtension);
+  formData.append("file", {
+    uri: `data:${mimeType};base64,${file.base64}`,
+    type: mimeType,
+    name: `image.${file.fileExtension}`,
+  } as unknown as Blob);
+
+  if (bucket === "practice-images") {
+    formData.append("practiceId", id);
+  } else {
+    formData.append("competitionId", id);
+  }
+
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+    throw new Error(data.message ?? data.error ?? "画像のアップロードに失敗しました");
+  }
+
+  return (await res.json()) as { path: string };
+}
+
+/**
+ * Web API 経由で複数の画像をアップロード
+ * エラー発生時は成功済みの画像をAPI経由でロールバック
+ */
+export async function uploadImagesViaApi(
+  files: Array<{ base64: string; fileExtension: string }>,
+  id: string,
+  bucket: ImageBucket,
+  accessToken: string,
+): Promise<Array<{ path: string }>> {
+  const results: Array<{ path: string }> = [];
+
+  try {
+    for (const file of files) {
+      const result = await uploadImageViaApi(file, id, bucket, accessToken);
+      results.push(result);
+    }
+    return results;
+  } catch (error) {
+    console.error("画像アップロード中にエラーが発生。ロールバックを開始:", error);
+
+    const endpoint =
+      bucket === "practice-images"
+        ? `${env.webApiUrl}/api/storage/images/practice`
+        : `${env.webApiUrl}/api/storage/images/competition`;
+
+    for (const result of results) {
+      try {
+        const deleteUrl = `${endpoint}?path=${encodeURIComponent(result.path)}`;
+        await fetch(deleteUrl, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+      } catch (deleteError) {
+        console.error(`画像 ${result.path} の削除に失敗:`, deleteError);
+      }
+    }
+
+    throw error;
+  }
 }

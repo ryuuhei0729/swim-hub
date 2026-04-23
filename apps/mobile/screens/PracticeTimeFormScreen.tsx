@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { usePracticeTimeStore } from "@/stores/practiceTimeStore";
@@ -153,7 +162,15 @@ export const PracticeTimeFormScreen: React.FC = () => {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
       <View style={styles.header}>
         <Text style={styles.title}>タイム入力</Text>
         <Text style={styles.subtitle}>
@@ -248,7 +265,8 @@ export const PracticeTimeFormScreen: React.FC = () => {
           <Text style={styles.saveButtonText}>保存</Text>
         </Pressable>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 

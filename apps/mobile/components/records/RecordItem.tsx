@@ -5,17 +5,20 @@ import { ja } from "date-fns/locale";
 import { toZonedTime } from "date-fns-tz";
 import { formatTime } from "@/utils/formatters";
 import type { RecordWithDetails } from "@swim-hub/shared/types";
+import type { BestTime } from "@apps/shared/types/ui";
+import BestTimeBadge from "./BestTimeBadge";
 
 interface RecordItemProps {
   record: RecordWithDetails;
   onPress?: (record: RecordWithDetails) => void;
+  precomputedBestTimes?: BestTime[];
 }
 
 /**
  * 大会記録アイテムコンポーネント
  * 大会記録の1件を表示
  */
-const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress }) => {
+const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress, precomputedBestTimes }) => {
   // 大会名（nullの場合は「大会」）
   const competitionName = useMemo(
     () => record.competition?.title || "大会",
@@ -37,7 +40,6 @@ const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress }) => 
     }
   }, [recordDate]);
 
-  // 種目名 + 距離 (例: "自由形 100m"). memoize 比較も name_jp / distance を見ている
   const styleDisplay = useMemo(() => {
     const nameJp = record.style?.name_jp;
     const distance = record.style?.distance;
@@ -85,6 +87,16 @@ const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress }) => 
             <Text style={styles.poolType}>{poolType}</Text>
             <Text style={styles.style}>{styleDisplay}</Text>
             <Text style={styles.time}>{formattedTime}</Text>
+            <BestTimeBadge
+              recordId={record.id}
+              styleId={record.style_id}
+              currentTime={record.time}
+              recordDate={record.competition?.date ?? record.created_at}
+              poolType={record.pool_type}
+              isRelaying={record.is_relaying}
+              showDiff={false}
+              precomputedBestTimes={precomputedBestTimes}
+            />
           </View>
         </View>
       </View>
@@ -159,9 +171,7 @@ const styles = StyleSheet.create({
   },
 });
 
-// メモ化して再レンダリングを最適化
 export const RecordItem = React.memo(RecordItemComponent, (prevProps, nextProps) => {
-  // カスタム比較関数：record.idが同じで、recordの主要プロパティが変更されていない場合は再レンダリングしない
   const prevCompetition = prevProps.record.competition;
   const nextCompetition = nextProps.record.competition;
   const prevStyle = prevProps.record.style;
@@ -170,6 +180,9 @@ export const RecordItem = React.memo(RecordItemComponent, (prevProps, nextProps)
   return (
     prevProps.record.id === nextProps.record.id &&
     prevProps.record.time === nextProps.record.time &&
+    prevProps.record.pool_type === nextProps.record.pool_type &&
+    prevProps.record.is_relaying === nextProps.record.is_relaying &&
+    prevProps.record.style_id === nextProps.record.style_id &&
     prevCompetition?.id === nextCompetition?.id &&
     prevCompetition?.date === nextCompetition?.date &&
     prevCompetition?.title === nextCompetition?.title &&
@@ -178,6 +191,7 @@ export const RecordItem = React.memo(RecordItemComponent, (prevProps, nextProps)
     prevStyle?.id === nextStyle?.id &&
     prevStyle?.name_jp === nextStyle?.name_jp &&
     prevStyle?.distance === nextStyle?.distance &&
-    prevProps.onPress === nextProps.onPress
+    prevProps.onPress === nextProps.onPress &&
+    prevProps.precomputedBestTimes === nextProps.precomputedBestTimes
   );
 });

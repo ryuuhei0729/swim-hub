@@ -12,6 +12,8 @@ import {
   ActivityIndicator,
   Keyboard,
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -621,7 +623,7 @@ export const RecordLogFormScreen: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ["calendar"] });
 
       // 成功: ダッシュボードに戻る
-      navigation.navigate("MainTabs", { screen: "Dashboard" });
+      navigation.popToTop();
     } catch (error) {
       console.error("保存エラー:", error);
       Alert.alert("エラー", error instanceof Error ? error.message : "保存に失敗しました", [
@@ -645,8 +647,15 @@ export const RecordLogFormScreen: React.FC = () => {
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
         {formDataList.map((formData, index) => {
           const entryInfo = entryDataList[index];
           const sectionIndex = index + 1;
@@ -831,7 +840,6 @@ export const RecordLogFormScreen: React.FC = () => {
                       onPress={() => handleAddSplitTime(index)}
                       disabled={loading || isSplitTimeLimitReached(index)}
                     >
-                      <Feather name="plus" size={16} color="#2563EB" />
                       <Text style={styles.addButtonText}>追加</Text>
                     </Pressable>
                   </View>
@@ -954,7 +962,7 @@ export const RecordLogFormScreen: React.FC = () => {
           )}
         </Pressable>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -1096,9 +1104,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   splitTimeHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: "column",
+    alignItems: "stretch",
+    gap: 8,
     marginBottom: 12,
   },
   splitTimeButtons: {
@@ -1106,8 +1114,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   addButton: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 4,
     paddingHorizontal: 12,
     paddingVertical: 6,

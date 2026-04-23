@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { Inter, Noto_Sans_JP } from "next/font/google";
 import { AuthProvider } from "../contexts";
 import QueryProvider from "../providers/QueryProvider";
+import { KeyboardScrollProvider } from "../components/keyboard/KeyboardScrollProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -97,7 +98,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           />
         ))}
         <QueryProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <KeyboardScrollProvider>{children}</KeyboardScrollProvider>
+          </AuthProvider>
         </QueryProvider>
       </body>
     </html>

@@ -15,6 +15,7 @@ import type { PracticeLogTemplate } from "@swim-hub/shared/types";
 import { usePracticeLogForm } from "./hooks";
 import { PracticeMenuItem } from "./components";
 import type { PracticeLogFormProps, PracticeMenu } from "./types";
+import type { PendingVideoData } from "@/stores/types";
 import { useAuth } from "@/contexts";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS, PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
@@ -87,6 +88,9 @@ export default function PracticeLogForm({
 
   const isPracticeTimeLimitReached = !isPremium &&
     getTotalPracticeTimesCount() > FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG;
+
+  // 新規作成時の保留動画データ: menuId → { file, thumbnail }
+  const pendingVideosRef = useRef<Map<string, PendingVideoData>>(new Map());
 
   // テンプレート選択モーダルの状態
   const [isTemplateSelectorOpen, setIsTemplateSelectorOpen] = useState(false);
@@ -195,7 +199,19 @@ export default function PracticeLogForm({
 
     setIsSubmitted(true);
     try {
-      await onSubmit(prepareSubmitData());
+      // menus の id（一時ID）を tempMenuId として、pending video を pendingVideo としてマージ
+      const submitData = prepareSubmitData().map((data, index) => {
+        const menuId = menus[index]?.id;
+        const pendingVideo = menuId ? pendingVideosRef.current.get(menuId) : undefined;
+        return {
+          ...data,
+          tempMenuId: menuId,
+          pendingVideo,
+        };
+      });
+      await onSubmit(submitData);
+      // submit 成功後に pending videos をクリア
+      pendingVideosRef.current.clear();
       setHasUnsavedChanges(false);
     } catch (error) {
       console.error("フォーム送信エラー:", error);
@@ -379,6 +395,13 @@ export default function PracticeLogForm({
                             ),
                           )
                         }
+                        onPendingFile={(file, thumbnail) => {
+                          if (file && thumbnail) {
+                            pendingVideosRef.current.set(menu.id, { file, thumbnail });
+                          } else {
+                            pendingVideosRef.current.delete(menu.id);
+                          }
+                        }}
                       />
                     </div>
                   </div>

@@ -17,6 +17,8 @@ interface VideoUploaderProps {
   isPremium: boolean;
   onUploadComplete?: (videoPath: string, thumbnailPath: string) => void;
   onDelete?: () => void;
+  /** 新規作成フロー（id なし）で動画が選択/取り消された際に呼ばれる */
+  onPendingVideoUri?: (uri: string | null) => void;
 }
 
 type UploadState = "idle" | "selected" | "uploading" | "done" | "error";
@@ -36,6 +38,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
   isPremium,
   onUploadComplete,
   onDelete,
+  onPendingVideoUri,
 }) => {
   const { session } = useAuth();
   const [uploadState, setUploadState] = useState<UploadState>(
@@ -130,6 +133,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
         } else {
           // ID なし → 保留（保存後に自動アップロード）
           setPendingVideoUri(asset.uri);
+          onPendingVideoUri?.(asset.uri);
           setUploadState("selected");
           setError(null);
         }
@@ -139,7 +143,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
         setUploadState("error");
       }
     },
-    [session, type, id, onUploadComplete],
+    [session, type, id, onUploadComplete, onPendingVideoUri],
   );
 
   const handleSelectSource = useCallback(() => {
@@ -154,6 +158,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
     // 保留中の動画を削除
     if (pendingVideoUri) {
       setPendingVideoUri(null);
+      onPendingVideoUri?.(null);
       setUploadState("idle");
       return;
     }
@@ -179,7 +184,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
         },
       },
     ]);
-  }, [session, type, id, onDelete, pendingVideoUri]);
+  }, [session, type, id, onDelete, onPendingVideoUri, pendingVideoUri]);
 
   // Premium 制限
   if (!isPremium && uploadState === "idle") {

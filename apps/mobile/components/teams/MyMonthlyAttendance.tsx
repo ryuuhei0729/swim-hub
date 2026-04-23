@@ -72,17 +72,17 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
     }> => {
       const [startDateStr, endDateStr] = getMonthDateRange(year, month);
 
-      // イベント数を取得
+      // イベントIDを取得
       const [practicesResult, competitionsResult] = await Promise.all([
         supabase
           .from("practices")
-          .select("id", { count: "exact", head: true })
+          .select("id")
           .eq("team_id", teamId)
           .gte("date", startDateStr)
           .lte("date", endDateStr),
         supabase
           .from("competitions")
-          .select("id", { count: "exact", head: true })
+          .select("id")
           .eq("team_id", teamId)
           .gte("date", startDateStr)
           .lte("date", endDateStr),
@@ -91,17 +91,31 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       if (practicesResult.error) throw practicesResult.error;
       if (competitionsResult.error) throw competitionsResult.error;
 
-      const eventCount = (practicesResult.count || 0) + (competitionsResult.count || 0);
+      const practiceIds = (practicesResult.data || []).map((p) => p.id);
+      const competitionIds = (competitionsResult.data || []).map((c) => c.id);
+      const eventCount = practiceIds.length + competitionIds.length;
 
-      // 自分の出欠回答数を取得
+      // 自分の出欠回答を取得
+      // NOTE: イベント作成時の DB トリガーで status=NULL の未回答レコードが
+      // 自動生成されるため、status が設定されたレコードのみを回答済みとみなす。
       const attendanceData = await attendanceAPI.getMyAttendancesByMonth(teamId, year, month);
-      const answeredCount = attendanceData.length;
+      const answeredCount = attendanceData.filter((a) => a.status !== null).length;
+
+      const eventIds = new Set([...practiceIds, ...competitionIds]);
+      const answeredEventIds = new Set(
+        attendanceData
+          .filter((a) => a.status !== null)
+          .map((a) => a.practice_id || a.competition_id)
+          .filter((id): id is string => id !== null),
+      );
+
+      const allAnswered =
+        eventCount > 0 && Array.from(eventIds).every((id) => answeredEventIds.has(id));
 
       return {
         eventCount,
         answeredCount,
-        status:
-          eventCount === 0 ? null : answeredCount < eventCount ? "has_unanswered" : "all_answered",
+        status: eventCount === 0 ? null : allAnswered ? "all_answered" : "has_unanswered",
       };
     },
     [teamId, supabase, attendanceAPI],

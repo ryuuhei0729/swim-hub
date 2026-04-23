@@ -3,6 +3,7 @@
  */
 
 import { EntryInfo } from "@apps/shared/types/ui";
+import type { PendingVideoData } from "@/stores/types";
 
 // SplitTimeRow型定義（editData用のcamelCase型）
 export type SplitTimeRow = {
@@ -29,6 +30,8 @@ export interface RecordLogFormState {
   videoPath?: string | null;
   videoThumbnailPath?: string | null;
   reactionTime: string;
+  /** 新規作成時の保留動画データ（record UUID 確定後に親が直接アップロードする） */
+  pendingVideo?: PendingVideoData;
 }
 
 // 送信用
@@ -42,6 +45,8 @@ export interface RecordLogFormData {
   videoPath?: string | null;
   videoThumbnailPath?: string | null;
   reactionTime: string;
+  /** 新規作成時の保留動画データ（record UUID 確定後に親が直接アップロードする） */
+  pendingVideo?: PendingVideoData;
 }
 
 export interface RecordLogEditData {

@@ -120,9 +120,6 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
         styles.dayContainer,
         !isCurrentMonth && styles.dayContainerOtherMonth,
         isTodayDate && styles.dayContainerToday,
-        isTodayDate && isFirstColumn && styles.dayContainerTodayFirstColumn,
-        isTodayDate && isLastColumn && styles.dayContainerTodayLastColumn,
-        isTodayDate && !isFirstColumn && !isLastColumn && styles.dayContainerTodayMiddle,
         entries.length > 0 && isCurrentMonth && styles.dayContainerWithEntries,
         isFirstColumn && styles.dayContainerFirstColumn,
         isLastColumn && styles.dayContainerLastColumn,
@@ -130,6 +127,9 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
       onPress={() => onPress(date)}
       disabled={!isCurrentMonth}
     >
+      {/* 今日の枠線(グリッド線と独立した内側インセット・オーバーレイ) */}
+      {isTodayDate && <View pointerEvents="none" style={styles.todayBorderOverlay} />}
+
       {/* 日付 */}
       <View style={styles.dayHeader}>
         <Text
@@ -199,22 +199,17 @@ const styles = StyleSheet.create({
     backgroundColor: "#F3F4F6",
   },
   dayContainerToday: {
-    borderTopWidth: 2,
-    borderBottomWidth: 2,
-    borderColor: "#2563EB",
     backgroundColor: "#EFF6FF",
   },
-  dayContainerTodayFirstColumn: {
-    borderLeftWidth: 2,
-    borderRightWidth: 0.5,
-  },
-  dayContainerTodayLastColumn: {
-    borderLeftWidth: 0.5,
-    borderRightWidth: 2,
-  },
-  dayContainerTodayMiddle: {
-    borderLeftWidth: 0.5,
-    borderRightWidth: 0.5,
+  todayBorderOverlay: {
+    position: "absolute",
+    top: 2,
+    left: 2,
+    right: 2,
+    bottom: 2,
+    borderWidth: 2,
+    borderColor: "#2563EB",
+    borderRadius: 4,
   },
   dayContainerWithEntries: {
     shadowColor: "#000",

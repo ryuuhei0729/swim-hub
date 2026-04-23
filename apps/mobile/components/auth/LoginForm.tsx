@@ -1,5 +1,14 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  StyleSheet,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAuth } from "@/contexts/AuthProvider";
@@ -131,7 +140,11 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <View style={styles.container}>
       <View style={styles.formContainer}>
         <View style={styles.header}>
           <Text style={styles.title}>メールでログイン</Text>
@@ -203,7 +216,8 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
           )}
         </View>
       </View>
-    </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 };
 

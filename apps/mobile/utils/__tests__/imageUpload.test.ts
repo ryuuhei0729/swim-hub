@@ -2,7 +2,7 @@
 // imageUpload.test.ts - 画像アップロードユーティリティのユニットテスト
 // =============================================================================
 
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 // expo-crypto をモック
 vi.mock("expo-crypto", () => ({
@@ -222,8 +222,12 @@ describe("uploadImages", () => {
       uploadImages(mockSupabase, "user1", "record1", images, "practice-images"),
     ).rejects.toThrow();
 
-    // ロールバックで削除が呼ばれることを確認
-    expect(removeMock).toHaveBeenCalled();
+    // ロールバック検証: 成功した1件分だけ削除が呼ばれること
+    expect(removeMock).toHaveBeenCalledTimes(1);
+    // 1件目の成功パス（uuid はモックにより固定値）のみロールバックされること
+    expect(removeMock).toHaveBeenCalledWith([
+      "user1/record1/mocked-uuid-1234-5678-90ab-cdef12345678.jpg",
+    ]);
   });
 });
 
@@ -370,5 +374,151 @@ describe("getExistingImagesFromPaths", () => {
     const mockSupabase = createMockSupabaseClient();
     const result = getExistingImagesFromPaths(mockSupabase, [], "practice-images");
     expect(result).toEqual([]);
+  });
+});
+
+// =============================================================================
+// Bug 3(a) — getImageUrlFromPath テスト
+//
+// テスト観点:
+//   - EXPO_PUBLIC_R2_PUBLIC_URL が設定されている場合、R2 の公開 URL を返す
+//   - EXPO_PUBLIC_R2_PUBLIC_URL が未設定の場合、Supabase Storage の publicUrl を返す
+//   - path が空文字のとき空文字を返す（空文字境界値）
+//   - bucket 引数が "practice-images" / "competition-images" 両方で正しく動作する
+//
+// トートロジー防止メモ:
+//   - 「R2 URL が設定されていれば R2 URL を返す」という仕様から期待値を導く
+//   - env モジュールを vi.mock でモックし、テストごとに r2PublicUrl を制御する
+// =============================================================================
+
+// getImageUrlFromPath は env に依存するためここで動的にインポート
+import { getImageUrlFromPath } from "../imageUpload";
+
+// env モジュールのモック（テスト内で書き換えてR2の有無をシミュレート）
+vi.mock("@/lib/env", () => ({
+  env: {
+    supabaseUrl: "https://test.supabase.co",
+    supabaseAnonKey: "test-anon-key",
+    googleWebClientId: "",
+    webApiUrl: "https://swim-hub.app",
+    r2PublicUrl: "", // デフォルトは空（R2 なし）
+    revenuecatIosApiKey: "",
+    environment: "test",
+    webAppResetPasswordUrl: "https://swim-hub.app/reset-password",
+  },
+}));
+
+function createMockSupabaseForUrl(publicUrl: string) {
+  return {
+    storage: {
+      from: vi.fn(() => ({
+        getPublicUrl: vi.fn(() => ({ data: { publicUrl } })),
+      })),
+    },
+  } as unknown as Parameters<typeof getImageUrlFromPath>[0];
+}
+
+describe("getImageUrlFromPath (Bug 3(a))", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(async () => {
+    // テスト間の状態漏れを防ぐため、afterEach でも r2PublicUrl を必ずリセットする
+    const envModule = await import("@/lib/env");
+    // @ts-expect-error テスト用にリセット
+    envModule.env.r2PublicUrl = "";
+  });
+
+  describe("R2 URL が設定されている場合", () => {
+    it("EXPO_PUBLIC_R2_PUBLIC_URL + bucket + path を結合した URL を返す", async () => {
+      // env モジュールを動的に差し替えて r2PublicUrl を設定
+      const envModule = await import("@/lib/env");
+      // @ts-expect-error テスト用に r2PublicUrl を書き換え
+      envModule.env.r2PublicUrl = "https://r2.example.com";
+
+      const mockSupabase = createMockSupabaseForUrl("https://supabase.example.com/practice-images/user1/img.jpg");
+      const result = getImageUrlFromPath(mockSupabase, "user1/img.jpg", "practice-images");
+
+      // R2 URL が設定されている → R2 URL + bucket + path
+      expect(result).toBe("https://r2.example.com/practice-images/user1/img.jpg");
+
+      // 後片付け
+      // @ts-expect-error -- env は const as const だが、テスト用に書き換える
+      envModule.env.r2PublicUrl = "";
+    });
+
+    it("bucket 引数に関わらず R2 URL を優先して返す", async () => {
+      const envModule = await import("@/lib/env");
+      // @ts-expect-error -- env は const as const だが、テスト用に書き換える
+      envModule.env.r2PublicUrl = "https://r2.example.com";
+
+      const mockSupabase = createMockSupabaseForUrl("https://supabase.example.com/competition-images/user1/img.jpg");
+      const result = getImageUrlFromPath(mockSupabase, "user1/comp.jpg", "competition-images");
+
+      expect(result).toBe("https://r2.example.com/competition-images/user1/comp.jpg");
+
+      // @ts-expect-error -- env は const as const だが、テスト用に書き換える
+      envModule.env.r2PublicUrl = "";
+    });
+  });
+
+  describe("R2 URL が未設定の場合（Supabase フォールバック）", () => {
+    it("supabase.storage.from(bucket).getPublicUrl(path) の結果を返す", async () => {
+      const envModule = await import("@/lib/env");
+      // @ts-expect-error -- env は const as const だが、テスト用に書き換える
+      envModule.env.r2PublicUrl = "";
+
+      const supabaseUrl = "https://supabase.example.com/storage/v1/object/public/practice-images/user1/img.jpg";
+      const mockSupabase = createMockSupabaseForUrl(supabaseUrl);
+
+      const result = getImageUrlFromPath(mockSupabase, "user1/img.jpg", "practice-images");
+
+      expect(result).toBe(supabaseUrl);
+      expect(mockSupabase.storage.from).toHaveBeenCalledWith("practice-images");
+    });
+
+    it("bucket='competition-images' でも正しく動作する", async () => {
+      const envModule = await import("@/lib/env");
+      // @ts-expect-error -- env は const as const だが、テスト用に書き換える
+      envModule.env.r2PublicUrl = "";
+
+      const supabaseUrl = "https://supabase.example.com/storage/v1/object/public/competition-images/user1/comp.jpg";
+      const mockSupabase = createMockSupabaseForUrl(supabaseUrl);
+
+      const result = getImageUrlFromPath(mockSupabase, "user1/comp.jpg", "competition-images");
+
+      expect(result).toBe(supabaseUrl);
+      expect(mockSupabase.storage.from).toHaveBeenCalledWith("competition-images");
+    });
+  });
+
+  describe("境界値・異常系", () => {
+    it("path が空文字のとき空文字を返す（クラッシュしない）", async () => {
+      const envModule = await import("@/lib/env");
+      // @ts-expect-error -- env は const as const だが、テスト用に書き換える
+      envModule.env.r2PublicUrl = "";
+
+      const mockSupabase = createMockSupabaseForUrl("https://supabase.example.com/");
+
+      // path が空文字のとき実装は "" を返す
+      const result = getImageUrlFromPath(mockSupabase, "", "practice-images");
+      expect(result).toBe("");
+    });
+
+    it("path が空文字のとき R2 URL 設定時も空文字を返す", async () => {
+      const envModule = await import("@/lib/env");
+      // @ts-expect-error -- env は const as const だが、テスト用に書き換える
+      envModule.env.r2PublicUrl = "https://r2.example.com";
+
+      const mockSupabase = createMockSupabaseForUrl("https://supabase.example.com/");
+
+      const result = getImageUrlFromPath(mockSupabase, "", "practice-images");
+      // 実装: if (!path) return "" なので空文字を返す
+      expect(result).toBe("");
+
+      // @ts-expect-error -- env は const as const だが、テスト用に書き換える
+      envModule.env.r2PublicUrl = "";
+    });
   });
 });

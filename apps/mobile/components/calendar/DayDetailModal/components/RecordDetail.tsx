@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
+import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthProvider";
 import { formatTime } from "@/utils/formatters";
 import { VideoPlayer } from "@/components/shared/VideoPlayer";
+import { ImageViewerModal } from "@/components/shared";
+import { getExistingImagesFromPaths } from "@/utils/imageUpload";
 import type { CalendarItem } from "@apps/shared/types/ui";
 import { styles } from "../styles";
 import type { RecordDetailProps, RecordData } from "../types";
@@ -18,7 +21,6 @@ const RecordCard: React.FC<{
   place?: string;
   poolType?: number;
   competitionId: string;
-  supabase: ReturnType<typeof useAuth>["supabase"];
   onEditRecord?: (item: CalendarItem) => void;
   onDeleteRecord?: (recordId: string) => void;
   onClose?: () => void;
@@ -29,7 +31,6 @@ const RecordCard: React.FC<{
   place,
   poolType,
   competitionId,
-  supabase,
   onEditRecord,
   onDeleteRecord,
   onClose,
@@ -139,57 +140,40 @@ const RecordCard: React.FC<{
             {onEditRecord && (
               <Pressable
                 style={styles.recordCardActionButton}
-                onPress={async () => {
-                  try {
-                    const { data: fullRecord } = await supabase
-                      .from("records")
-                      .select(
-                        `
-                        *,
-                        style:styles(*),
-                        competition:competitions(*),
-                        split_times(*)
-                      `,
-                      )
-                      .eq("id", record.id)
-                      .single();
-
-                    if (fullRecord) {
-                      const calendarItem: CalendarItem = {
-                        id: fullRecord.id,
-                        type: "record",
-                        date: records[0]?.date || fullRecord.competition?.date || "",
-                        title: fullRecord.style?.name_jp || record.styleName,
-                        place: place || fullRecord.competition?.place || undefined,
-                        note: fullRecord.note || undefined,
-                        metadata: {
-                          record: {
-                            time: fullRecord.time,
-                            is_relaying: fullRecord.is_relaying || false,
-                            reaction_time: fullRecord.reaction_time ?? null,
-                            style: {
-                              id: fullRecord.style?.id?.toString() || record.styleId.toString(),
-                              name_jp: fullRecord.style?.name_jp || record.styleName,
-                              distance: fullRecord.style?.distance || record.styleDistance,
-                            },
-                            competition_id: fullRecord.competition_id || competitionId,
-                            split_times: fullRecord.split_times || [],
-                          },
-                          competition: fullRecord.competition || records[0]?.metadata?.competition,
-                          style: fullRecord.style || {
-                            id: record.styleId,
-                            name_jp: record.styleName,
-                            distance: record.styleDistance,
-                          },
-                          pool_type: fullRecord.competition?.pool_type ?? poolType ?? 0,
+                onPress={() => {
+                  const firstCalendarRecord = records[0];
+                  const calendarItem: CalendarItem = {
+                    id: record.id,
+                    type: "record",
+                    date: firstCalendarRecord?.date || "",
+                    title: record.styleName,
+                    place,
+                    note: record.note || undefined,
+                    metadata: {
+                      record: {
+                        time: record.time,
+                        is_relaying: record.isRelaying,
+                        reaction_time: record.reactionTime,
+                        video_path: record.videoPath ?? undefined,
+                        video_thumbnail_path: record.videoThumbnailPath ?? undefined,
+                        style: {
+                          id: record.styleId.toString(),
+                          name_jp: record.styleName,
+                          distance: record.styleDistance,
                         },
-                      };
-                      onEditRecord(calendarItem);
-                      onClose?.();
-                    }
-                  } catch (error) {
-                    console.error("記録編集データ取得エラー:", error);
-                  }
+                        competition_id: competitionId,
+                      },
+                      competition: firstCalendarRecord?.metadata?.competition,
+                      style: {
+                        id: record.styleId,
+                        name_jp: record.styleName,
+                        distance: record.styleDistance,
+                      },
+                      pool_type: poolType ?? 0,
+                    },
+                  };
+                  onEditRecord(calendarItem);
+                  onClose?.();
                 }}
               >
                 <Feather name="edit" size={18} color="#2563EB" />
@@ -384,7 +368,12 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
 }) => {
   const { supabase, user } = useAuth();
   const [actualRecords, setActualRecords] = useState<RecordData[]>([]);
+  const [competitionImages, setCompetitionImages] = useState<Array<{ id: string; url: string }>>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
   const [splitTimesMap, setSplitTimesMap] = useState<
     Map<string, Array<{ distance: number; split_time: number }>>
   >(new Map());
@@ -427,7 +416,18 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
           query = query.eq("user_id", user.id);
         }
 
-        const { data, error } = await query;
+        const [{ data: competitionData }, { data, error }] = await Promise.all([
+          supabase
+            .from("competitions")
+            .select("image_paths")
+            .eq("id", _competitionId)
+            .single(),
+          query,
+        ]);
+
+        const imagePaths =
+          (competitionData as { image_paths?: string[] | null } | null)?.image_paths ?? [];
+        setCompetitionImages(getExistingImagesFromPaths(supabase, imagePaths, "competition-images"));
 
         if (error) throw error;
 
@@ -474,6 +474,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
       } catch (err) {
         console.error("記録の取得エラー:", err);
         setActualRecords([]);
+        setCompetitionImages([]);
       } finally {
         setLoading(false);
       }
@@ -624,7 +625,6 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
               place={place}
               poolType={poolType}
               competitionId={_competitionId}
-              supabase={supabase}
               onEditRecord={onEditRecord}
               onDeleteRecord={onDeleteRecord}
               onClose={onClose}
@@ -646,9 +646,56 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
           </Pressable>
         )}
       </View>
+
+      {/* 添付画像 */}
+      {competitionImages.length > 0 && (
+        <View style={imageGalleryStyles.gallery}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {competitionImages.map((img, index) => (
+              <Pressable
+                key={img.id}
+                onPress={() => {
+                  setViewerIndex(index);
+                  setViewerVisible(true);
+                }}
+              >
+                <Image
+                  source={{ uri: img.url }}
+                  style={imageGalleryStyles.image}
+                  contentFit="cover"
+                  transition={200}
+                />
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      <ImageViewerModal
+        images={competitionImages.map((img) => ({ uri: img.url }))}
+        visible={viewerVisible}
+        initialIndex={viewerIndex}
+        onClose={() => setViewerVisible(false)}
+      />
     </View>
   );
 };
+
+const imageGalleryStyles = StyleSheet.create({
+  gallery: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#DBEAFE",
+  },
+  image: {
+    width: 120,
+    height: 120,
+    borderRadius: 8,
+    marginRight: 8,
+    backgroundColor: "#F3F4F6",
+  },
+});
 
 const splitStyles = StyleSheet.create({
   splitSection: {

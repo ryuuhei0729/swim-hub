@@ -48,6 +48,11 @@ export type EditingData =
 // 練習記録フォーム型定義
 // =============================================================================
 
+export interface PendingVideoData {
+  file: File;
+  thumbnail: Blob;
+}
+
 export interface PracticeMenuFormData {
   practiceDate?: string;
   title?: string;
@@ -61,6 +66,10 @@ export interface PracticeMenuFormData {
   circleTime?: number | null;
   tags?: PracticeTag[];
   times?: TimeEntry[];
+  /** フォーム内の一時的なメニューID（新規作成時のみ使用、DB UUIDではない） */
+  tempMenuId?: string;
+  /** 新規作成時の保留動画データ（mutate 成功後に親が直接アップロードする） */
+  pendingVideo?: PendingVideoData;
 }
 
 export interface EntryFormData {
@@ -82,6 +91,8 @@ export interface RecordFormDataInput {
     distance: string | number;
     splitTime: number;
   }>;
+  /** 新規作成時の保留動画データ（record UUID 確定後に親が直接アップロードする） */
+  pendingVideo?: PendingVideoData;
 }
 
 // 内部型（処理済み） - distanceはnumber
@@ -96,6 +107,8 @@ export interface RecordFormDataInternal {
     distance: number;
     splitTime: number;
   }>;
+  /** 新規作成時の保留動画データ（record UUID 確定後に親が直接アップロードする） */
+  pendingVideo?: PendingVideoData;
 }
 
 // 型変換関数

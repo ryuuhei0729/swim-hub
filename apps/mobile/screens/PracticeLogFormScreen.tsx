@@ -1,10 +1,21 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthProvider";
+import { uploadVideo } from "@/utils/videoUpload";
 import {
   useCreatePracticeLogMutation,
   useUpdatePracticeLogMutation,
@@ -56,7 +67,7 @@ export const PracticeLogFormScreen: React.FC = () => {
   const route = useRoute<PracticeLogFormScreenRouteProp>();
   const navigation = useNavigation<PracticeLogFormScreenNavigationProp>();
   const { practiceId, practiceLogId, returnTo } = route.params;
-  const { supabase, subscription } = useAuth();
+  const { supabase, subscription, session } = useAuth();
   const queryClient = useQueryClient();
   const isEditMode = practiceLogId !== undefined;
   const isPremium = checkIsPremium(subscription);
@@ -64,6 +75,8 @@ export const PracticeLogFormScreen: React.FC = () => {
   // 動画の状態管理
   const [existingVideoPath, setExistingVideoPath] = useState<string | null>(null);
   const [existingThumbnailPath, setExistingThumbnailPath] = useState<string | null>(null);
+  // メニュー ID をキーに保留動画 URI を管理する（複数メニュー対応）
+  const pendingVideoUriRef = useRef<Map<string, string>>(new Map());
 
   // メニューデータ（複数）
   const [menus, setMenus] = useState<PracticeMenu[]>([
@@ -226,6 +239,8 @@ export const PracticeLogFormScreen: React.FC = () => {
       if (prev.length <= 1) {
         return prev;
       }
+      // 削除されたメニューの保留動画 URI も破棄する
+      pendingVideoUriRef.current.delete(id);
       return prev.filter((menu) => menu.id !== id);
     });
   };
@@ -464,6 +479,27 @@ export const PracticeLogFormScreen: React.FC = () => {
             });
             if (tagError) throw tagError;
           }
+
+          // 保留中の動画をアップロード（新規作成後に id が確定）
+          const pendingUri = pendingVideoUriRef.current.get(menu.id);
+          if (pendingUri && session?.access_token) {
+            try {
+              await uploadVideo({
+                type: "practice-log",
+                id: createdLog.id,
+                videoUri: pendingUri,
+                accessToken: session.access_token,
+              });
+            } catch (err) {
+              console.error("動画アップロードエラー:", err);
+              Alert.alert(
+                "動画アップロード失敗",
+                "練習ログは保存されましたが、動画のアップロードに失敗しました。詳細画面から再度追加してください。",
+              );
+            }
+          }
+          // 成功・失敗・session なし問わず保留 URI をリセットする
+          pendingVideoUriRef.current.delete(menu.id);
         }
       }
 
@@ -501,7 +537,11 @@ export const PracticeLogFormScreen: React.FC = () => {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.form}>
         {/* メニューセクション */}
         <View style={styles.menuSection}>
@@ -780,6 +820,13 @@ export const PracticeLogFormScreen: React.FC = () => {
                     setExistingVideoPath(null);
                     setExistingThumbnailPath(null);
                   }}
+                  onPendingVideoUri={(uri) => {
+                    if (uri) {
+                      pendingVideoUriRef.current.set(menu.id, uri);
+                    } else {
+                      pendingVideoUriRef.current.delete(menu.id);
+                    }
+                  }}
                 />
               </View>
             </View>
@@ -821,7 +868,8 @@ export const PracticeLogFormScreen: React.FC = () => {
         onSave={handleSaveTag}
         onDelete={handleDeleteTag}
       />
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 

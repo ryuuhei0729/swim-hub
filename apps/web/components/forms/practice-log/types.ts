@@ -4,6 +4,7 @@
 
 import { PracticeTag } from "@apps/shared/types";
 import type { TimeEntry } from "@apps/shared/types/ui";
+import type { PendingVideoData } from "@/stores/types";
 
 export type Tag = PracticeTag;
 
@@ -33,6 +34,10 @@ export interface PracticeLogSubmitData {
   note: string;
   tags: Tag[];
   times: TimeEntry[];
+  /** フォーム内の一時的なメニューID（新規作成時のみ使用、DB UUIDではない） */
+  tempMenuId?: string;
+  /** 新規作成時の保留動画データ（mutate 成功後に親が直接アップロードする） */
+  pendingVideo?: PendingVideoData;
 }
 
 export interface PracticeLogEditData {

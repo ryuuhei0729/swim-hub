@@ -10,6 +10,7 @@ import type {
   SplitTimeRow,
   StyleOption,
 } from "../types";
+import type { PendingVideoData } from "@/stores/types";
 import { formatSecondsToDisplay, parseTimeToSeconds } from "../utils/formatters";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 
@@ -32,6 +33,7 @@ interface UseRecordLogFormReturn {
   handleToggleRelaying: (index: number, checked: boolean) => void;
   handleNoteChange: (index: number, value: string) => void;
   handleVideoPathChange: (index: number, videoPath: string, thumbnailPath: string) => void;
+  handlePendingFileChange: (index: number, file: File | null, thumbnail: Blob | null) => void;
   handleReactionTimeChange: (index: number, value: string) => void;
   handleStyleChange: (index: number, value: string) => void;
   handleAddSplitTime: (entryIndex: number) => void;
@@ -208,6 +210,19 @@ export const useRecordLogForm = ({
   const handleVideoPathChange = useCallback(
     (index: number, videoPath: string, thumbnailPath: string) => {
       updateFormData(index, (prev) => ({ ...prev, videoPath, videoThumbnailPath: thumbnailPath }));
+    },
+    [updateFormData],
+  );
+
+  const handlePendingFileChange = useCallback(
+    (index: number, file: File | null, thumbnail: Blob | null) => {
+      updateFormData(index, (prev) => ({
+        ...prev,
+        pendingVideo:
+          file && thumbnail
+            ? ({ file, thumbnail } as PendingVideoData)
+            : undefined,
+      }));
     },
     [updateFormData],
   );
@@ -546,6 +561,7 @@ export const useRecordLogForm = ({
     handleToggleRelaying,
     handleNoteChange,
     handleVideoPathChange,
+    handlePendingFileChange,
     handleReactionTimeChange,
     handleStyleChange,
     handleAddSplitTime,

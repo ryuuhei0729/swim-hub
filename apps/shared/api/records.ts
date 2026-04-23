@@ -158,6 +158,33 @@ export class RecordAPI {
   }
 
   /**
+   * 記録1件取得（IDで指定）
+   */
+  async getRecordById(recordId: string): Promise<RecordWithDetails | null> {
+    const {
+      data: { user },
+    } = await this.supabase.auth.getUser();
+    if (!user) throw new Error("認証が必要です");
+
+    const { data, error } = await this.supabase
+      .from("records")
+      .select(
+        `
+        *,
+        competition:competitions(*),
+        style:styles(*),
+        split_times(*)
+      `,
+      )
+      .eq("id", recordId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data as RecordWithDetails | null;
+  }
+
+  /**
    * 記録一括作成（ベストタイム一括入力用）
    */
   async createBulkRecords(

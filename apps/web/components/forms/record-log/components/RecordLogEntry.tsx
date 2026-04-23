@@ -4,7 +4,7 @@ import React, { useMemo } from "react";
 import dynamic from "next/dynamic";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { TrashIcon } from "@heroicons/react/24/outline";
 import { formatTimeBest } from "@/utils/formatters";
 import { LapTimeDisplay } from "../../LapTimeDisplay";
 import type { EntryInfo } from "@apps/shared/types/ui";
@@ -45,6 +45,8 @@ interface RecordLogEntryProps {
   onSplitTimeChange: (splitIndex: number, field: "distance" | "splitTime", value: string) => void;
   isSplitTimeLimitReached?: boolean;
   isPremium?: boolean;
+  /** 新規作成時に動画が選択／取消しされた場合の通知（id が undefined の場合のみ使用） */
+  onPendingFile?: (file: File | null, thumbnail: Blob | null) => void;
 }
 
 /**
@@ -75,6 +77,7 @@ export default function RecordLogEntry({
   onSplitTimeChange,
   isSplitTimeLimitReached = false,
   isPremium = false,
+  onPendingFile,
 }: RecordLogEntryProps) {
   const sectionIndex = index + 1;
   const styleOptions = styles.map((style) => ({
@@ -302,45 +305,39 @@ export default function RecordLogEntry({
 
       {/* スプリットタイム */}
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="block text-[10px] sm:text-sm font-medium text-gray-700 whitespace-nowrap">
-            <span className="sm:hidden">スプリット</span>
-            <span className="hidden sm:inline">スプリットタイム</span>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+          <label className="block text-sm font-medium text-gray-700 whitespace-nowrap">
+            スプリットタイム
           </label>
           <div className="flex gap-1">
             <Button
               type="button"
               onClick={onAddSplitTimesEvery25m}
               variant="outline"
-              className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 sm:py-1 h-6 sm:h-7"
+              className="!text-[10px] !px-1.5 !py-0.5 !h-6"
               disabled={isLoading || !raceDistance || isSplitTimeLimitReached}
               data-testid={`record-split-add-25m-button-${sectionIndex}`}
             >
-              <PlusIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5" />
-              <span className="sm:hidden">25mごと</span>
-              <span className="hidden sm:inline">追加(25mごと)</span>
+              追加(25mごと)
             </Button>
             <Button
               type="button"
               onClick={onAddSplitTimesEvery50m}
               variant="outline"
-              className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 sm:py-1 h-6 sm:h-7"
+              className="!text-[10px] !px-1.5 !py-0.5 !h-6"
               disabled={isLoading || !raceDistance || isSplitTimeLimitReached}
               data-testid={`record-split-add-50m-button-${sectionIndex}`}
             >
-              <PlusIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5" />
-              <span className="sm:hidden">50mごと</span>
-              <span className="hidden sm:inline">追加(50mごと)</span>
+              追加(50mごと)
             </Button>
             <Button
               type="button"
               onClick={onAddSplitTime}
               variant="outline"
-              className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 sm:py-1 h-6 sm:h-7"
+              className="!text-[10px] !px-1.5 !py-0.5 !h-6"
               disabled={isLoading || isSplitTimeLimitReached}
               data-testid={`record-split-add-button-${sectionIndex}`}
             >
-              <PlusIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5" />
               追加
             </Button>
           </div>
@@ -414,6 +411,7 @@ export default function RecordLogEntry({
           isPremium={isPremium ?? false}
           onUploadComplete={(vPath, tPath) => onVideoPathChange(vPath, tPath)}
           onDelete={onVideoDelete}
+          onPendingFile={onPendingFile}
         />
       </div>
 

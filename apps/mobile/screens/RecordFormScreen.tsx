@@ -11,6 +11,8 @@ import {
   Modal,
   Keyboard,
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -32,6 +34,7 @@ import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/Ima
 import { VideoUploader } from "@/components/shared/VideoUploader";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { uploadImages, deleteImages, getExistingImagesFromPaths } from "@/utils/imageUpload";
+import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { PREMIUM_MESSAGES, FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import type { MainStackParamList } from "@/navigation/types";
@@ -49,7 +52,7 @@ export const RecordFormScreen: React.FC = () => {
   const route = useRoute<RecordFormScreenRouteProp>();
   const navigation = useNavigation<RecordFormScreenNavigationProp>();
   const { recordId, competitionId: routeCompetitionId } = route.params || {};
-  const { supabase, user, subscription } = useAuth();
+  const { supabase, user, subscription, session } = useAuth();
   const queryClient = useQueryClient();
   const isEditMode = !!recordId;
   const isPremium = checkIsPremium(subscription);
@@ -134,6 +137,8 @@ export const RecordFormScreen: React.FC = () => {
   // 動画の状態管理
   const [existingVideoPath, setExistingVideoPath] = useState<string | null>(null);
   const [existingThumbnailPath, setExistingThumbnailPath] = useState<string | null>(null);
+  // 新規作成時：保存前に選択された動画URIを保留
+  const pendingVideoUriRef = useRef<string | null>(null);
 
   // 秒数を表示用文字列に変換
   const formatSecondsToDisplay = (seconds: number): string => {
@@ -362,6 +367,25 @@ export const RecordFormScreen: React.FC = () => {
       } else {
         // 作成
         savedRecord = await createMutation.mutateAsync(recordData);
+
+        // 新規作成時：保留中の動画をアップロード
+        if (pendingVideoUriRef.current && session?.access_token) {
+          try {
+            await uploadVideo({
+              type: "record",
+              id: savedRecord.id,
+              videoUri: pendingVideoUriRef.current,
+              accessToken: session.access_token,
+            });
+          } catch (err) {
+            console.error("動画アップロードエラー:", err);
+            Alert.alert(
+              "動画アップロード失敗",
+              "大会記録は保存されましたが、動画のアップロードに失敗しました。詳細画面から再度追加してください。",
+            );
+          }
+        }
+        pendingVideoUriRef.current = null;
       }
 
       // スプリットタイムを保存（編集時は空配列でも置き換え、種目距離と同じsplitは除外）
@@ -472,8 +496,25 @@ export const RecordFormScreen: React.FC = () => {
     navigation.goBack();
   };
 
-  // スプリットタイムの追加可否（Free: 3個まで）
-  const splitTimeLimitReached = !isPremium && splitTimes.length >= FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD;
+  // 選択中の種目の距離
+  const selectedStyleDistance = useMemo(() => {
+    if (styleId === null || styleId === undefined) return null;
+    const style = styleList.find((s) => s.id === styleId);
+    return style?.distance ?? null;
+  }, [styleId, styleList]);
+
+  // Free プランの上限判定で課金対象となる split 数
+  // （最終スプリット = distance が raceDistance と一致するもの = メインタイムのミラーなので除外）
+  const billableSplitCount = useMemo(() => {
+    if (!selectedStyleDistance) return splitTimes.length;
+    return splitTimes.filter(
+      (st) => !(typeof st.distance === "number" && st.distance === selectedStyleDistance),
+    ).length;
+  }, [splitTimes, selectedStyleDistance]);
+
+  // スプリットタイムの追加可否（Free: 課金対象3個まで、最終スプリットは除外）
+  const splitTimeLimitReached =
+    !isPremium && billableSplitCount >= FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD;
 
   // スプリットタイムを追加（空の1行）
   const handleAddSplitTime = () => {
@@ -481,12 +522,33 @@ export const RecordFormScreen: React.FC = () => {
     addSplitTime({ distance: 0, splitTime: 0 });
   };
 
+  // 新規 split 群を Free 上限にあわせて切り詰める（最終スプリットは常に残す）
+  const sliceByFreeLimit = (
+    newSplits: Array<{ distance: number; splitTime: number }>,
+    raceDistance: number,
+  ) => {
+    if (isPremium) return newSplits;
+    const maxNewBillable = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - billableSplitCount;
+    if (maxNewBillable <= 0) {
+      // 課金対象は追加不可。最終スプリットのみ許可
+      return newSplits.filter((s) => s.distance === raceDistance);
+    }
+    let billableAdded = 0;
+    return newSplits.filter((s) => {
+      if (s.distance === raceDistance) return true;
+      if (billableAdded < maxNewBillable) {
+        billableAdded++;
+        return true;
+      }
+      return false;
+    });
+  };
+
   // スプリットタイムを25mごとに追加
   const handleAddSplitTimesEvery25m = () => {
-    const selectedStyle = styleList.find((s) => s.id === styleId);
-    if (!selectedStyle?.distance) return;
+    if (!selectedStyleDistance) return;
 
-    const raceDistance = selectedStyle.distance;
+    const raceDistance = selectedStyleDistance;
     const existingDistances = new Set(
       splitTimes.map((st) =>
         typeof st.distance === "number" ? st.distance : parseFloat(String(st.distance)) || 0,
@@ -502,25 +564,17 @@ export const RecordFormScreen: React.FC = () => {
 
     if (newSplits.length === 0) return;
 
-    // Free ユーザーの場合、追加後の合計が制限を超えないようにカット
-    let splitsToAdd = newSplits;
-    if (!isPremium) {
-      const remaining = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - splitTimes.length;
-      if (remaining <= 0) return;
-      splitsToAdd = newSplits.slice(0, remaining);
-    }
+    const splitsToAdd = sliceByFreeLimit(newSplits, raceDistance);
+    if (splitsToAdd.length === 0) return;
 
-    // 既存のスプリットタイムに新しいものを追加
-    const updatedSplitTimes = [...splitTimes, ...splitsToAdd];
-    setSplitTimes(updatedSplitTimes);
+    setSplitTimes([...splitTimes, ...splitsToAdd]);
   };
 
   // スプリットタイムを50mごとに追加
   const handleAddSplitTimesEvery50m = () => {
-    const selectedStyle = styleList.find((s) => s.id === styleId);
-    if (!selectedStyle?.distance) return;
+    if (!selectedStyleDistance) return;
 
-    const raceDistance = selectedStyle.distance;
+    const raceDistance = selectedStyleDistance;
     const existingDistances = new Set(
       splitTimes
         .map((st) =>
@@ -538,17 +592,10 @@ export const RecordFormScreen: React.FC = () => {
 
     if (newSplits.length === 0) return;
 
-    // Free ユーザーの場合、追加後の合計が制限を超えないようにカット
-    let splitsToAdd = newSplits;
-    if (!isPremium) {
-      const remaining = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - splitTimes.length;
-      if (remaining <= 0) return;
-      splitsToAdd = newSplits.slice(0, remaining);
-    }
+    const splitsToAdd = sliceByFreeLimit(newSplits, raceDistance);
+    if (splitsToAdd.length === 0) return;
 
-    // 既存のスプリットタイムに新しいものを追加
-    const updatedSplitTimes = [...splitTimes, ...splitsToAdd];
-    setSplitTimes(updatedSplitTimes);
+    setSplitTimes([...splitTimes, ...splitsToAdd]);
   };
 
   // スプリットタイムを距離でソートして表示用のインデックスマッピングを作成
@@ -572,13 +619,6 @@ export const RecordFormScreen: React.FC = () => {
       });
   }, [splitTimes]);
 
-  // 選択中の種目の距離
-  const selectedStyleDistance = useMemo(() => {
-    if (styleId === null || styleId === undefined) return null;
-    const style = styleList.find((s) => s.id === styleId);
-    return style?.distance ?? null;
-  }, [styleId, styleList]);
-
   // タイム入力の処理（blur時に文字列から秒数に変換）
   const handleTimeBlur = () => {
     const text = timeDisplayValue.trim();
@@ -596,6 +636,24 @@ export const RecordFormScreen: React.FC = () => {
       setError("time", undefined);
       setTime(parsed);
       setTimeDisplayValue(formatSecondsToDisplay(parsed));
+
+      // 最終スプリット (distance = raceDistance) をメインタイムと同期
+      if (selectedStyleDistance) {
+        const existingIdx = splitTimes.findIndex(
+          (st) =>
+            typeof st.distance === "number" && st.distance === selectedStyleDistance,
+        );
+        if (existingIdx >= 0) {
+          updateSplitTime(existingIdx, { splitTime: parsed });
+          setSplitTimeDisplayValues((prev) => {
+            const next = { ...prev };
+            delete next[existingIdx];
+            return next;
+          });
+        } else {
+          addSplitTime({ distance: selectedStyleDistance, splitTime: parsed });
+        }
+      }
     }
   };
 
@@ -666,7 +724,10 @@ export const RecordFormScreen: React.FC = () => {
   }
 
   return (
-    <>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <View style={styles.form}>
           {/* 大会選択 */}
@@ -795,7 +856,7 @@ export const RecordFormScreen: React.FC = () => {
                   onPress={handleAddSplitTime}
                   disabled={storeLoading || splitTimeLimitReached}
                 >
-                  <Text style={styles.addButtonText}>+ 追加</Text>
+                  <Text style={styles.addButtonText}>追加</Text>
                 </Pressable>
               </View>
             </View>
@@ -857,6 +918,21 @@ export const RecordFormScreen: React.FC = () => {
                         ...prev,
                         [originalIndex]: formatSecondsToDisplay(parsed),
                       }));
+
+                      // distance = raceDistance の場合、メインタイムを同期
+                      const splitDistance =
+                        typeof st.distance === "number"
+                          ? st.distance
+                          : parseFloat(String(st.distance));
+                      if (
+                        selectedStyleDistance &&
+                        !isNaN(splitDistance) &&
+                        splitDistance === selectedStyleDistance
+                      ) {
+                        setTime(parsed);
+                        setTimeDisplayValue(formatSecondsToDisplay(parsed));
+                        setError("time", undefined);
+                      }
                     }
                   }}
                   placeholder="例: 1:23.45 または 31-2"
@@ -931,6 +1007,9 @@ export const RecordFormScreen: React.FC = () => {
               existingVideoPath={existingVideoPath}
               existingThumbnailPath={existingThumbnailPath}
               isPremium={isPremium}
+              onPendingVideoUri={(uri) => {
+                pendingVideoUriRef.current = uri;
+              }}
               onUploadComplete={(vPath, tPath) => {
                 setExistingVideoPath(vPath);
                 setExistingThumbnailPath(tPath);
@@ -1070,7 +1149,7 @@ export const RecordFormScreen: React.FC = () => {
           </View>
         </Pressable>
       </Modal>
-    </>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -1197,9 +1276,9 @@ const styles = StyleSheet.create({
     color: "#6B7280",
   },
   splitTimeHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: "column",
+    alignItems: "stretch",
+    gap: 8,
     marginBottom: 8,
   },
   splitTimeButtons: {
@@ -1207,10 +1286,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   addButton: {
+    flex: 1,
     paddingHorizontal: 12,
     paddingVertical: 6,
     backgroundColor: "#10B981",
     borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
   },
   addButton25m: {
     backgroundColor: "#2563EB",

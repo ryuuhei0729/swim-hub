@@ -1,7 +1,6 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useAuth } from "@/contexts";
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet } from "react-native";
+import { useAuth } from "@/contexts/AuthProvider";
 import { formatTimeBest } from "@/utils/formatters";
 import type { BestTime } from "@apps/shared/types/ui";
 
@@ -24,16 +23,16 @@ interface BestTimeBadgeProps {
   recordDate?: string | null;
   poolType?: number | null;
   isRelaying?: boolean;
-  showDiff?: boolean; // ベストとの差分を表示するか
+  showDiff?: boolean;
   precomputedBestTimes?: BestTime[];
 }
 
 /**
  * ベストタイム更新チェックバッジ
  * 記録が過去のベストタイムを更新した場合に表示される
- * showDiff=trueの場合、ベストでない時も差分を表示
+ * showDiff=true の場合、ベストでない時も差分を表示
  */
-export default function BestTimeBadge({
+const BestTimeBadge: React.FC<BestTimeBadgeProps> = ({
   recordId,
   styleId,
   currentTime,
@@ -42,7 +41,7 @@ export default function BestTimeBadge({
   isRelaying,
   showDiff = false,
   precomputedBestTimes,
-}: BestTimeBadgeProps) {
+}) => {
   const { supabase } = useAuth();
   const [isBestTime, setIsBestTime] = useState<boolean | null>(null);
   const [bestTimeDiff, setBestTimeDiff] = useState<number | null>(null);
@@ -82,35 +81,25 @@ export default function BestTimeBadge({
       return;
     }
 
+    let cancelled = false;
+
     const checkBestTime = async () => {
-      // ガード条件: styleIdまたはrecordDateがfalsyな値（undefined, null, ''）の場合は早期リターン
       if (!styleId || !recordDate) {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
         return;
       }
 
       try {
-        setLoading(true);
+        if (!cancelled) setLoading(true);
         const {
           data: { user },
         } = await supabase.auth.getUser();
         if (!user) {
-          setLoading(false);
+          if (!cancelled) setLoading(false);
           return;
         }
 
-        // その大会実施日より前の同じ条件（種目・プール種別・引き継ぎ有無）の記録を取得
-        // 1. 大会記録（competition_idあり）: competitions.date で比較
-        // 2. 一括登録（competition_id = null）: created_at で比較
-
-        // 共通フィルタ条件
-        const baseFilters = {
-          user_id: user.id,
-          style_id: styleId,
-          is_relaying: isRelaying ?? false,
-        };
-
-        // 1. 大会記録から過去のベストを取得
+        // 1. 大会記録（competition_id あり）: competitions.date で比較
         let competitionQuery = supabase
           .from("records")
           .select(
@@ -120,9 +109,9 @@ export default function BestTimeBadge({
             competition:competitions!inner(date)
           `,
           )
-          .eq("user_id", baseFilters.user_id)
-          .eq("style_id", baseFilters.style_id)
-          .eq("is_relaying", baseFilters.is_relaying)
+          .eq("user_id", user.id)
+          .eq("style_id", styleId)
+          .eq("is_relaying", isRelaying ?? false)
           .neq("id", recordId)
           .lt("competition.date", recordDate)
           .order("time", { ascending: true })
@@ -135,8 +124,6 @@ export default function BestTimeBadge({
         // recordDate を正規化: YYYY-MM-DD → YYYY-MM-DDT00:00:00.000Z
         // 当日の一括登録記録が除外されないよう created_at との型混用を解消する
         const normalizedRecordDate = normalizeRecordDateForBulkComparison(recordDate);
-
-        // 2. 一括登録（competition_id = null）から過去のベストを取得
         let bulkQuery = supabase
           .from("records")
           .select(
@@ -146,9 +133,9 @@ export default function BestTimeBadge({
             created_at
           `,
           )
-          .eq("user_id", baseFilters.user_id)
-          .eq("style_id", baseFilters.style_id)
-          .eq("is_relaying", baseFilters.is_relaying)
+          .eq("user_id", user.id)
+          .eq("style_id", styleId)
+          .eq("is_relaying", isRelaying ?? false)
           .is("competition_id", null)
           .neq("id", recordId)
           .lt("created_at", normalizedRecordDate)
@@ -159,13 +146,11 @@ export default function BestTimeBadge({
           bulkQuery = bulkQuery.eq("pool_type", poolType);
         }
 
-        // 両方のクエリを並列実行
         const [competitionResult, bulkResult] = await Promise.all([competitionQuery, bulkQuery]);
 
         if (competitionResult.error) throw competitionResult.error;
         if (bulkResult.error) throw bulkResult.error;
 
-        // 両方の結果から最速タイムを取得
         const competitionBest = competitionResult.data?.[0]?.time;
         const bulkBest = bulkResult.data?.[0]?.time;
 
@@ -178,48 +163,81 @@ export default function BestTimeBadge({
           previousBestTime = bulkBest;
         }
 
-        // 以前の記録がない、または現在のタイムが以前のベストより速い場合
         const isBest = previousBestTime === null || currentTime < previousBestTime;
-        setIsBestTime(isBest);
+        if (!cancelled) setIsBestTime(isBest);
 
-        // ベストとの差分を計算（ベストでない場合のみ）
         if (!isBest && previousBestTime !== null) {
-          setBestTimeDiff(currentTime - previousBestTime);
+          if (!cancelled) setBestTimeDiff(currentTime - previousBestTime);
         } else {
-          setBestTimeDiff(null);
+          if (!cancelled) setBestTimeDiff(null);
         }
       } catch (err) {
         console.error("ベストタイムチェックエラー:", err);
-        setIsBestTime(null);
+        if (!cancelled) setIsBestTime(null);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     checkBestTime();
+    return () => {
+      cancelled = true;
+    };
   }, [recordId, styleId, currentTime, recordDate, poolType, isRelaying, supabase, precomputedBestTimes]);
 
   if (loading || isBestTime === null) {
     return null;
   }
 
-  // ベストタイムの場合
   if (isBestTime) {
     return (
-      <span className="inline-flex items-center px-1 py-0.5 bg-yellow-100 border border-yellow-400 rounded text-[9px] sm:text-xs font-bold text-yellow-800 whitespace-nowrap">
-        🏆 Best Time!!
-      </span>
+      <View
+        style={styles.badge}
+        accessible={true}
+        accessibilityRole="text"
+        accessibilityLabel="自己ベスト更新"
+      >
+        <Text style={styles.badgeText}>🏆 Best Time!!</Text>
+      </View>
     );
   }
 
-  // ベストでない場合、差分を表示（showDiff=trueの場合のみ）
   if (showDiff && bestTimeDiff !== null && bestTimeDiff > 0) {
     return (
-      <span className="inline-flex items-center text-[9px] sm:text-xs text-gray-500 whitespace-nowrap">
-        (Best+{formatTimeBest(bestTimeDiff)})
-      </span>
+      <Text
+        style={styles.diffText}
+        accessible={true}
+        accessibilityRole="text"
+        accessibilityLabel={`ベストタイムより +${formatTimeBest(bestTimeDiff)} 遅い`}
+      >
+        {`Best +${formatTimeBest(bestTimeDiff)}`}
+      </Text>
     );
   }
 
   return null;
-}
+};
+
+const styles = StyleSheet.create({
+  badge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEF9C3",
+    borderWidth: 1,
+    borderColor: "#FACC15",
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#854D0E",
+  },
+  diffText: {
+    fontSize: 11,
+    color: "#6B7280",
+  },
+});
+
+export default BestTimeBadge;
