@@ -14,6 +14,7 @@ import type {
   RecordFormDataInternal,
 } from "@/stores/types";
 import { processCompetitionImage, processPracticeImage } from "@/utils/imageUtils";
+import { uploadVideoClient } from "@/lib/video-upload-client";
 import { EntryAPI, PracticeAPI, CompetitionAPI } from "@apps/shared/api";
 import type { Style, PracticeLogTagInsert } from "@apps/shared/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -152,21 +153,21 @@ export function useDashboardHandlers({
         };
 
         let practiceId: string | undefined;
+        let isNewPractice = false;
+        let createdPracticeRef: { id: string } | undefined;
 
         if (editingData && editingData.id) {
           await updatePractice(editingData.id, payload);
           practiceId = editingData.id;
-          closePracticeBasicForm();
         } else {
           const createdPractice = await createPractice(payload);
           practiceId = createdPractice?.id;
-          closePracticeBasicForm();
-          if (continueToNext) {
-            openPracticeLogForm(createdPractice?.id);
-          }
+          isNewPractice = true;
+          createdPracticeRef = createdPractice;
         }
 
         // 画像の処理（安全な順序: アップロード → DB更新 → ストレージ削除）
+        // NOTE: 画像アップロードを画面遷移より先に実行する（新規時にアンマウントされると fetch が abort される問題の回避）
         // NOTE: 画像パスはpractices.image_pathsで管理（practice_imagesテーブルは廃止）
         if (practiceId && imageData) {
           const practiceAPI = new PracticeAPI(supabase);
@@ -254,13 +255,24 @@ export function useDashboardHandlers({
               }
             }
 
-            throw new Error("画像の処理に失敗しました");
+            throw new Error("練習は作成されましたが、画像のアップロードに失敗しました");
           }
+        }
+
+        // 画像アップロード完了後に画面遷移（新規時）/ フォームを閉じる（編集時）
+        if (isNewPractice) {
+          closePracticeBasicForm();
+          if (continueToNext) {
+            openPracticeLogForm(createdPracticeRef?.id);
+          }
+        } else {
+          closePracticeBasicForm();
         }
 
         refreshCalendar();
       } catch (error) {
         console.error("練習予定の処理に失敗しました:", error);
+        throw error;
       } finally {
         setPracticeLoading(false);
       }
@@ -423,6 +435,23 @@ export function useDashboardHandlers({
                   ),
               );
             }
+
+            // 新規作成時の動画アップロード（pending video がある場合）
+            if (menu.pendingVideo && createdLog) {
+              try {
+                await uploadVideoClient({
+                  type: "practice-log",
+                  id: createdLog.id,
+                  file: menu.pendingVideo.file,
+                  thumbnail: menu.pendingVideo.thumbnail,
+                });
+              } catch (uploadErr) {
+                console.error("動画アップロードエラー:", uploadErr);
+                alert(
+                  "練習記録は保存されましたが、動画のアップロードに失敗しました。詳細画面から再度追加してください。",
+                );
+              }
+            }
           }
         }
 
@@ -515,6 +544,8 @@ export function useDashboardHandlers({
         const endDate = basicData.endDate ? basicData.endDate : null;
 
         let competitionId: string | undefined;
+        let isNewCompetition = false;
+        let newCompetitionRef: { id: string } | undefined;
 
         if (competitionEditingData && competitionEditingData.id) {
           await updateCompetition(competitionEditingData.id, {
@@ -526,7 +557,6 @@ export function useDashboardHandlers({
             note: basicData.note || null,
           });
           competitionId = competitionEditingData.id;
-          closeCompetitionBasicForm();
         } else {
           const newCompetition = await createCompetition({
             date: basicData.date,
@@ -537,23 +567,12 @@ export function useDashboardHandlers({
             note: basicData.note || null,
           });
           competitionId = newCompetition.id;
-          // openEntryLogForm/openRecordLogFormがisBasicFormOpen: falseをセットするので、closeCompetitionBasicFormは不要
-          // closeCompetitionBasicFormを呼ぶとcreatedCompetitionIdがnullにリセットされてしまう
-          if (continueToNext) {
-            if (skipEntry) {
-              // エントリーをスキップして記録入力へ（今日/過去の日付の場合）
-              openRecordLogForm(newCompetition.id, []);
-            } else {
-              // エントリー登録へ（未来の日付の場合）
-              openEntryLogForm(newCompetition.id);
-            }
-          } else {
-            // 保存して終了（今日/過去の日付で「保存して終了」を選んだ場合）
-            closeCompetitionBasicForm();
-          }
+          isNewCompetition = true;
+          newCompetitionRef = newCompetition;
         }
 
         // 画像の処理（安全な順序: アップロード → DB更新 → ストレージ削除）
+        // NOTE: 画像アップロードを画面遷移より先に実行する（新規時にアンマウントされると fetch が abort される問題の回避）
         // NOTE: 画像パスはcompetitions.image_pathsで管理（competition_imagesテーブルは廃止）
         if (competitionId && imageData) {
           const competitionAPI = new CompetitionAPI(supabase);
@@ -640,13 +659,34 @@ export function useDashboardHandlers({
               }
             }
 
-            throw new Error("画像の処理に失敗しました");
+            throw new Error("大会は作成されましたが、画像のアップロードに失敗しました");
           }
+        }
+
+        // 画像アップロード完了後に画面遷移（新規時）/ フォームを閉じる（編集時）
+        if (isNewCompetition && newCompetitionRef) {
+          // openEntryLogForm/openRecordLogFormがisBasicFormOpen: falseをセットするので、closeCompetitionBasicFormは不要
+          // closeCompetitionBasicFormを呼ぶとcreatedCompetitionIdがnullにリセットされてしまう
+          if (continueToNext) {
+            if (skipEntry) {
+              // エントリーをスキップして記録入力へ（今日/過去の日付の場合）
+              openRecordLogForm(newCompetitionRef.id, []);
+            } else {
+              // エントリー登録へ（未来の日付の場合）
+              openEntryLogForm(newCompetitionRef.id);
+            }
+          } else {
+            // 保存して終了（今日/過去の日付で「保存して終了」を選んだ場合）
+            closeCompetitionBasicForm();
+          }
+        } else if (!isNewCompetition) {
+          closeCompetitionBasicForm();
         }
 
         refreshCalendar();
       } catch (error) {
         console.error("大会情報の処理に失敗しました:", error);
+        throw error;
       } finally {
         setCompetitionLoading(false);
       }
@@ -968,6 +1008,23 @@ export function useDashboardHandlers({
                   splitTime?: number;
                 }>,
               });
+            }
+
+            // 新規作成時の動画アップロード（pending video がある場合）
+            if (formData.pendingVideo) {
+              try {
+                await uploadVideoClient({
+                  type: "record",
+                  id: newRecord.id,
+                  file: formData.pendingVideo.file,
+                  thumbnail: formData.pendingVideo.thumbnail,
+                });
+              } catch (uploadErr) {
+                console.error("動画アップロードエラー:", uploadErr);
+                alert(
+                  "大会と記録は作成されましたが、動画のアップロードに失敗しました。詳細画面から再度追加してください。",
+                );
+              }
             }
           }
         }

@@ -65,6 +65,7 @@ export default function RecordLogForm({
     handleToggleRelaying,
     handleNoteChange,
     handleVideoPathChange,
+    handlePendingFileChange,
     handleReactionTimeChange,
     handleStyleChange,
     handleAddSplitTime,
@@ -277,6 +278,11 @@ export default function RecordLogForm({
                     }
                     isSplitTimeLimitReached={isSplitTimeLimitReached(index)}
                     isPremium={isPremium}
+                    onPendingFile={
+                      !editData?.id
+                        ? (file, thumbnail) => handlePendingFileChange(index, file, thumbnail)
+                        : undefined
+                    }
                   />
                 );
               })}

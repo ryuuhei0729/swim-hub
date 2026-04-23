@@ -37,6 +37,7 @@ export const DashboardScreen: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDayDetail, setShowDayDetail] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // ユーザープロフィール取得（iOSカレンダー設定確認用）
   const { profile } = useUserQuery(supabase, { enableRealtime: false });
@@ -168,6 +169,7 @@ export const DashboardScreen: React.FC = () => {
         text: "削除",
         style: "destructive",
         onPress: async () => {
+          setIsDeleting(true);
           try {
             // iOSカレンダーから削除（iOS端末かつ連携が有効な場合）
             // カレンダー同期エラーはDB削除をブロックしないようにする
@@ -194,6 +196,8 @@ export const DashboardScreen: React.FC = () => {
             Alert.alert("エラー", error instanceof Error ? error.message : "削除に失敗しました", [
               { text: "OK" },
             ]);
+          } finally {
+            setIsDeleting(false);
           }
         },
       },
@@ -225,6 +229,7 @@ export const DashboardScreen: React.FC = () => {
         text: "削除",
         style: "destructive",
         onPress: async () => {
+          setIsDeleting(true);
           try {
             const api = new PracticeAPI(supabase);
             await api.deletePracticeLog(logId);
@@ -234,6 +239,8 @@ export const DashboardScreen: React.FC = () => {
             Alert.alert("エラー", error instanceof Error ? error.message : "削除に失敗しました", [
               { text: "OK" },
             ]);
+          } finally {
+            setIsDeleting(false);
           }
         },
       },
@@ -241,59 +248,20 @@ export const DashboardScreen: React.FC = () => {
   };
 
   // 記録編集
-  const handleEditRecord = async (item: CalendarItem) => {
-    const dateParam = item.date;
-
-    // competitionIdを取得（複数のパスを試す）
-    // type='record'の場合、item.idはcompetitionのIDなので、それをcompetitionIdとして使用
+  const handleEditRecord = (item: CalendarItem) => {
     const competitionId =
-      item.metadata?.competition?.id || item.metadata?.record?.competition_id || item.id;
+      item.metadata?.competition?.id || item.metadata?.record?.competition_id;
 
     if (!competitionId) {
       Alert.alert("エラー", "大会情報が見つかりませんでした");
       return;
     }
 
-    // competitionIdを使って、最初のrecordを取得
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        Alert.alert("エラー", "認証が必要です");
-        return;
-      }
-
-      const { data: records, error } = await supabase
-        .from("records")
-        .select("id")
-        .eq("competition_id", competitionId)
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1);
-
-      if (error) {
-        console.error("記録取得エラー:", error);
-        Alert.alert("エラー", "記録の取得に失敗しました");
-        return;
-      }
-
-      if (!records || records.length === 0) {
-        Alert.alert("エラー", "記録が見つかりませんでした");
-        return;
-      }
-
-      const recordId = records[0].id;
-
-      navigation.navigate("RecordLogForm", {
-        competitionId,
-        recordId,
-        date: dateParam,
-      });
-    } catch (error) {
-      console.error("記録取得エラー:", error);
-      Alert.alert("エラー", "記録の取得に失敗しました");
-    }
+    navigation.navigate("RecordLogForm", {
+      competitionId,
+      recordId: item.id,
+      date: item.date,
+    });
   };
 
   // 記録削除
@@ -308,6 +276,7 @@ export const DashboardScreen: React.FC = () => {
         text: "削除",
         style: "destructive",
         onPress: async () => {
+          setIsDeleting(true);
           try {
             await deleteRecordMutation.mutateAsync(recordId);
             refetch(); // カレンダーをリフレッシュ
@@ -316,6 +285,8 @@ export const DashboardScreen: React.FC = () => {
             Alert.alert("エラー", error instanceof Error ? error.message : "削除に失敗しました", [
               { text: "OK" },
             ]);
+          } finally {
+            setIsDeleting(false);
           }
         },
       },
@@ -379,6 +350,7 @@ export const DashboardScreen: React.FC = () => {
         text: "削除",
         style: "destructive",
         onPress: async () => {
+          setIsDeleting(true);
           try {
             // iOSカレンダーから削除（iOS端末かつ連携が有効な場合）
             // カレンダー同期エラーはDB削除をブロックしないようにする
@@ -410,6 +382,8 @@ export const DashboardScreen: React.FC = () => {
             Alert.alert("エラー", error instanceof Error ? error.message : "削除に失敗しました", [
               { text: "OK" },
             ]);
+          } finally {
+            setIsDeleting(false);
           }
         },
       },
@@ -492,6 +466,8 @@ export const DashboardScreen: React.FC = () => {
           onAddEntry={handleAddEntry}
           onEditCompetition={handleEditCompetition}
           onDeleteCompetition={handleDeleteCompetition}
+          isDeleting={isDeleting}
+          onDeletingChange={setIsDeleting}
         />
       )}
     </SafeAreaView>

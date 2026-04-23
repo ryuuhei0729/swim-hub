@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { PencilIcon, TrashIcon, ShareIcon } from "@heroicons/react/24/outline";
 import { TrophyIcon } from "@heroicons/react/24/solid";
@@ -22,6 +22,7 @@ import type { CalendarItem, Record as RecordType, SplitTime, PoolType } from "@a
 import { AttendanceButton } from "../AttendanceSection";
 import { RecordSplitTimes } from "./RecordSplitTimes";
 import type { CompetitionDetailsProps } from "../../types";
+import { useBestTimesQuery } from "@apps/shared/hooks/queries/records";
 
 // 種目名を短縮形に変換（例: "200m自由形" → "200Fr"）
 const getShortStyleName = (nameJp: string | undefined, distance?: number): string => {
@@ -73,6 +74,10 @@ export function CompetitionDetails({
   const { supabase, user } = useAuth();
   const [actualRecords, setActualRecords] = useState<CalendarItem[]>([]);
   const [competitionImages, setCompetitionImages] = useState<GalleryImage[]>([]);
+
+  // ベストタイム一括取得（N+1 解消: map 内の各 BestTimeBadge クエリをスキップ）
+  const { data: bestTimesData } = useBestTimesQuery(supabase, { userId: user?.id });
+  const precomputedBestTimes = useMemo(() => bestTimesData ?? [], [bestTimesData]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -485,6 +490,7 @@ export function CompetitionDetails({
                           }
                           isRelaying={record.metadata?.record?.is_relaying}
                           showDiff={true}
+                          precomputedBestTimes={precomputedBestTimes}
                         />
                       </div>
                       <div

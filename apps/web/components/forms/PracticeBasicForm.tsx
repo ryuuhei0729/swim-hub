@@ -104,6 +104,8 @@ export default function PracticeBasicForm({
   const skipPopstateRef = useRef(false);
   // 二重送信防止用のref
   const isSubmittingRef = useRef(false);
+  // バリデーション・サーバーエラーメッセージ
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // 場所の候補を取得
   useEffect(() => {
@@ -277,6 +279,9 @@ export default function PracticeBasicForm({
       console.error("練習記録の保存に失敗しました:", error);
       isSubmittingRef.current = false;
       setIsSubmitted(false);
+      if (error instanceof Error && error.message) {
+        setValidationError(error.message);
+      }
     }
   };
 
@@ -337,6 +342,15 @@ export default function PracticeBasicForm({
 
           <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
             <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-2 sm:space-y-6">
+              {/* バリデーション・サーバーエラー */}
+              {validationError && (
+                <div
+                  role="alert"
+                  className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-3"
+                >
+                  {validationError}
+                </div>
+              )}
               {/* グリッドレイアウト: 練習日・タイトル・場所 */}
               <div className="grid grid-cols-[auto_1fr] gap-x-2 sm:gap-x-4 gap-y-1.5 sm:gap-y-4 items-center">
                 {/* 練習日 */}

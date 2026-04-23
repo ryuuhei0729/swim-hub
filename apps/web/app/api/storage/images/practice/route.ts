@@ -5,7 +5,7 @@
  * 注意: 圧縮版画像のみ保存（オリジナルは保存しない）
  * DB登録なし - パスはpractices.image_pathsで管理
  */
-import { createAuthenticatedServerClient, getServerUser } from "@/lib/supabase-server-auth";
+import { authenticateApiRequest } from "@/lib/auth-api";
 import { isR2Enabled, uploadToR2, deleteFromR2 } from "@/lib/r2";
 import { NextRequest, NextResponse } from "next/server";
 import nodePath from "path";
@@ -25,14 +25,14 @@ export async function POST(request: NextRequest) {
   let r2Key: string | null = null;
 
   try {
-    const user = await getServerUser();
-    if (!user) {
+    const auth = await authenticateApiRequest(request);
+    if (!auth) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
+    const { user, supabase } = auth;
 
     // Premium チェック: 画像アップロードは Premium 会員限定
-    const supabaseForSub = await createAuthenticatedServerClient();
-    const { data: subscriptionData } = await supabaseForSub
+    const { data: subscriptionData } = await supabase
       .from("user_subscriptions")
       .select("plan, status, cancel_at_period_end, premium_expires_at, trial_end")
       .eq("id", user.id)
@@ -96,7 +96,6 @@ export async function POST(request: NextRequest) {
       await uploadToR2(buffer, r2Key, "image/webp");
     } else {
       // Supabase Storageにアップロード
-      const supabase = await createAuthenticatedServerClient();
       const { error: uploadError } = await supabase.storage
         .from("practice-images")
         .upload(filePath, file, {
@@ -128,10 +127,11 @@ export async function POST(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const user = await getServerUser();
-    if (!user) {
+    const auth = await authenticateApiRequest(request);
+    if (!auth) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
+    const { user, supabase } = auth;
 
     const { searchParams } = new URL(request.url);
     const path = searchParams.get("path");
@@ -161,7 +161,6 @@ export async function DELETE(request: NextRequest) {
       const r2Key = `practice-images/${path}`;
       await deleteFromR2(r2Key);
     } else {
-      const supabase = await createAuthenticatedServerClient();
       const { error: deleteError } = await supabase.storage.from("practice-images").remove([path]);
 
       if (deleteError) {

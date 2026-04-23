@@ -2,16 +2,32 @@
 // RecordItem.test.tsx - 大会記録アイテムコンポーネントのテスト
 // =============================================================================
 
+import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { RecordItem } from "../RecordItem";
 import {
   createMockRecordWithDetails,
   createMockCompetition,
   createMockStyle,
+  createMockSupabaseClient,
 } from "@/__mocks__/supabase";
 
+// BestTimeBadge が useAuth を使用するため AuthProvider をモック
+const mockUseAuth = vi.hoisted(() => vi.fn());
+vi.mock("@/contexts/AuthProvider", () => ({
+  useAuth: mockUseAuth,
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
 describe("RecordItem", () => {
+  // 各テスト前に useAuth モックをセットアップ (BestTimeBadge が useAuth を呼ぶため)
+  const mockSupabase = createMockSupabaseClient({ userId: "user-1", queryData: [] });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseAuth.mockReturnValue({ supabase: mockSupabase });
+  });
+
   const mockRecord = createMockRecordWithDetails({
     time: 60.5,
     competition: {

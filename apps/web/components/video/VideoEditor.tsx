@@ -300,8 +300,8 @@ export default function VideoEditor({ file, onComplete, onCancel }: VideoEditorP
         ctx.drawImage(video, 0, 0);
         canvas.toBlob(
           (blob) => { if (blob) resolve(blob); else reject(new Error("サムネイル生成失敗")); },
-          "image/webp",
-          0.8,
+          "image/jpeg",
+          0.85,
         );
       };
       if (Math.abs(video.currentTime - startTimeRef.current) < 0.1) {

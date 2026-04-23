@@ -22,6 +22,8 @@ export interface DayDetailModalProps {
   onAddEntry?: (competitionId: string, date: string) => void;
   onEditCompetition?: (item: CalendarItem) => void;
   onDeleteCompetition?: (competitionId: string) => void;
+  isDeleting?: boolean;
+  onDeletingChange?: (value: boolean) => void;
 }
 
 // PracticeLogDetailのProps
@@ -89,6 +91,7 @@ export interface EntryDetailProps {
   onDeleteEntry?: (entryId: string) => void;
   onAddRecord?: (competitionId: string, date: string) => void;
   onClose?: () => void;
+  onDeletingChange?: (value: boolean) => void;
 }
 
 // 練習ログの型
@@ -121,6 +124,8 @@ export interface PracticeLogDetailData {
   note: string | null;
   times: Array<{ id: string; time: number; repNumber: number; setNumber: number }>;
   tags?: PracticeTag[];
+  videoPath?: string | null;
+  videoThumbnailPath?: string | null;
 }
 
 // 記録データの型

@@ -12,6 +12,7 @@ const ShareCardModal = dynamic(
     import("@/components/share/ShareCardModal").then((mod) => ({ default: mod.ShareCardModal })),
   { ssr: false },
 );
+const VideoPlayer = dynamic(() => import("@/components/video/VideoPlayer"), { ssr: false });
 import type { PracticeShareData, PracticeMenuItem } from "@/components/share";
 import { formatTime, formatTimeAverage } from "@/utils/formatters";
 import { useAuth } from "@/contexts";
@@ -121,6 +122,8 @@ export function PracticeDetails({
           distance: number;
           circle: number | null;
           note: string | null;
+          video_path?: string | null;
+          video_thumbnail_path?: string | null;
           practice_log_tags?: Array<{ practice_tag: PracticeTag }>;
           practice_times?: PracticeTime[];
           created_at?: string;
@@ -151,6 +154,8 @@ export function PracticeDetails({
               distance: log.distance,
               circle: log.circle,
               note: log.note,
+              video_path: log.video_path,
+              video_thumbnail_path: log.video_thumbnail_path,
               tags:
                 log.practice_log_tags
                   ?.map((plt: { practice_tag: PracticeTag }) => plt.practice_tag)
@@ -361,7 +366,7 @@ export function PracticeDetails({
                         const parsedDate = practice.date ? parseISO(practice.date) : null;
                         const formattedDate =
                           parsedDate && isValid(parsedDate)
-                            ? format(parsedDate, "yyyy年M月d日（E）", { locale: ja })
+                            ? format(parsedDate, "yyyy年M月d日(E)", { locale: ja })
                             : "";
 
                         setSharePracticeData({
@@ -614,6 +619,16 @@ export function PracticeDetails({
                   <div className="rounded-lg p-3 mb-1 border border-slate-200">
                     <div className="text-xs font-medium text-gray-500 mb-1">メモ</div>
                     <div className="text-sm text-gray-700">{formattedLog.note}</div>
+                  </div>
+                )}
+
+                {/* 動画 */}
+                {formattedLog.video_path && (
+                  <div className="mt-3">
+                    <VideoPlayer
+                      videoPath={formattedLog.video_path}
+                      thumbnailPath={formattedLog.video_thumbnail_path}
+                    />
                   </div>
                 )}
               </div>

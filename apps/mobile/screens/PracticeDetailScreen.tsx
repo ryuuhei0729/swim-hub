@@ -3,6 +3,7 @@ import { View, Text, ScrollView, StyleSheet, Pressable, Alert, Platform } from "
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useAuth } from "@/contexts/AuthProvider";
@@ -13,6 +14,8 @@ import {
 import { PracticeLogItem } from "@/components/practices";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
+import { ImageViewerModal } from "@/components/shared";
+import { getExistingImagesFromPaths } from "@/utils/imageUpload";
 import type { MainStackParamList } from "@/navigation/types";
 
 type PracticeDetailScreenRouteProp = RouteProp<MainStackParamList, "PracticeDetail">;
@@ -30,6 +33,8 @@ export const PracticeDetailScreen: React.FC = () => {
 
   const deleteMutation = useDeletePracticeMutation(supabase);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
   const handleEdit = () => {
     navigation.navigate("PracticeForm", { practiceId });
@@ -118,6 +123,8 @@ export const PracticeDetailScreen: React.FC = () => {
   const formattedDate = format(new Date(practice.date), "yyyy年M月d日(E)", { locale: ja });
   const title = practice.title || "練習";
 
+  const practiceImages = getExistingImagesFromPaths(supabase, practice.image_paths, "practice-images");
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* ヘッダーカード */}
@@ -143,6 +150,30 @@ export const PracticeDetailScreen: React.FC = () => {
           </View>
         )}
       </View>
+
+      {/* 画像ギャラリー */}
+      {practiceImages.length > 0 && (
+        <View style={galleryStyles.gallerySection}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {practiceImages.map((img, index) => (
+              <Pressable
+                key={img.id}
+                onPress={() => {
+                  setViewerIndex(index);
+                  setViewerVisible(true);
+                }}
+              >
+                <Image
+                  source={{ uri: img.url }}
+                  style={galleryStyles.image}
+                  contentFit="cover"
+                  transition={200}
+                />
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {/* 練習ログ一覧 */}
       {practice.practice_logs && practice.practice_logs.length > 0 ? (
@@ -177,9 +208,33 @@ export const PracticeDetailScreen: React.FC = () => {
           <Text style={styles.deleteButtonText}>{isDeleting ? "削除中..." : "削除"}</Text>
         </Pressable>
       </View>
+
+      <ImageViewerModal
+        images={practiceImages.map((img) => ({ uri: img.url }))}
+        visible={viewerVisible}
+        initialIndex={viewerIndex}
+        onClose={() => setViewerVisible(false)}
+      />
     </ScrollView>
   );
 };
+
+const galleryStyles = StyleSheet.create({
+  gallerySection: {
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+  image: {
+    width: 120,
+    height: 120,
+    borderRadius: 8,
+    marginRight: 8,
+    backgroundColor: "#F3F4F6",
+  },
+});
 
 const styles = StyleSheet.create({
   container: {

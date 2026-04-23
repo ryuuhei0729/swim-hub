@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { PlusIcon } from "@heroicons/react/24/outline";
-import { format, isSameMonth, isToday, getDay } from "date-fns";
+import { format, isSameMonth, isSameDay, getDay } from "date-fns";
 import { isHoliday } from "@apps/shared/utils/holiday";
 import type { CalendarItem } from "@apps/shared/types/ui";
 import type { CalendarItemType } from "@apps/shared/types/common";
@@ -28,6 +28,16 @@ export default function CalendarGrid({
   onAddClick,
   getItemColor,
 }: CalendarGridProps) {
+  // SSR/CSR タイムゾーン差による hydration mismatch を防ぐため、
+  // 「今日」はクライアントマウント後にのみ設定する。
+  // SSR 時は null のままなので isTodayDate は常に false となり、
+  // サーバー・クライアント間で className が一致する。
+  const [today, setToday] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setToday(new Date());
+  }, []);
+
   const getDateEntries = (date: Date) => {
     const dateKey = format(date, "yyyy-MM-dd");
     return entriesByDate.get(dateKey) || [];
@@ -66,7 +76,7 @@ export default function CalendarGrid({
           : calendarDays.map((day) => {
               const dayEntries = getDateEntries(day);
               const isCurrentMonth = isSameMonth(day, currentDate);
-              const isTodayDate = isToday(day);
+              const isTodayDate = today !== null && isSameDay(day, today);
               const dayOfWeek = getDay(day); // 0 = 日曜日, 6 = 土曜日
               const isSunday = dayOfWeek === 0;
               const isSaturday = dayOfWeek === 6;

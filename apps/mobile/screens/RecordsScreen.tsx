@@ -16,7 +16,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { format, parseISO, isValid } from "date-fns";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthProvider";
-import { useRecordsQuery } from "@apps/shared/hooks/queries/records";
+import { useRecordsQuery, useBestTimesQuery } from "@apps/shared/hooks/queries/records";
 import { useRecordStore } from "@/stores/recordStore";
 import { useShallow } from "zustand/react/shallow";
 import { StyleAPI } from "@apps/shared/api/styles";
@@ -43,7 +43,7 @@ const getFiscalYear = (date: Date): number => {
  */
 export const RecordsScreen: React.FC = () => {
   const navigation = useNavigation<RecordsScreenNavigationProp>();
-  const { supabase } = useAuth();
+  const { supabase, user } = useAuth();
   const [page, setPage] = useState(1);
   const [refreshing, setRefreshing] = useState(false);
   const [allRecords, setAllRecords] = useState<RecordWithDetails[]>([]);
@@ -116,6 +116,14 @@ export const RecordsScreen: React.FC = () => {
     pageSize: 20,
     enableRealtime: true,
   });
+
+  // ベストタイムを 1 回だけ取得（FlatList N+1 解消）
+  const { data: bestTimesData, isError: bestTimesIsError, isLoading: bestTimesIsLoading } = useBestTimesQuery(supabase, { userId: user?.id });
+  // エラー時・ローディング中は undefined を渡し BestTimeBadge を Supabase フォールバックに切り替える
+  const precomputedBestTimes = useMemo(() => {
+    if (bestTimesIsError || bestTimesIsLoading || !bestTimesData) return undefined;
+    return bestTimesData;
+  }, [bestTimesData, bestTimesIsError, bestTimesIsLoading]);
 
   // クエリ結果をページごとに蓄積（フィルターとは独立）
   useEffect(() => {
@@ -254,9 +262,9 @@ export const RecordsScreen: React.FC = () => {
   // アイテムをレンダリング（メモ化）
   const renderItem = useCallback(
     ({ item }: { item: RecordWithDetails }) => {
-      return <RecordItem record={item} onPress={handleRecordPress} />;
+      return <RecordItem record={item} onPress={handleRecordPress} precomputedBestTimes={precomputedBestTimes} />;
     },
-    [handleRecordPress],
+    [handleRecordPress, precomputedBestTimes],
   );
 
   // ドロップダウンを開く

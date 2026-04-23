@@ -3,6 +3,19 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts";
 import { formatTimeBest } from "@/utils/formatters";
+import type { BestTime } from "@apps/shared/types/ui";
+
+/**
+ * YYYY-MM-DD 形式の日付を bulkQuery の created_at 比較用に正規化する。
+ * YYYY-MM-DD (10文字) は当日 00:00:00.000Z に拡張し、当日以前のみ対象とする。
+ * ISO タイムスタンプの場合はそのまま返す。
+ */
+function normalizeRecordDateForBulkComparison(recordDate: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(recordDate)) {
+    return `${recordDate}T00:00:00.000Z`;
+  }
+  return recordDate;
+}
 
 interface BestTimeBadgeProps {
   recordId: string;
@@ -12,6 +25,7 @@ interface BestTimeBadgeProps {
   poolType?: number | null;
   isRelaying?: boolean;
   showDiff?: boolean; // ベストとの差分を表示するか
+  precomputedBestTimes?: BestTime[];
 }
 
 /**
@@ -27,6 +41,7 @@ export default function BestTimeBadge({
   poolType,
   isRelaying,
   showDiff = false,
+  precomputedBestTimes,
 }: BestTimeBadgeProps) {
   const { supabase } = useAuth();
   const [isBestTime, setIsBestTime] = useState<boolean | null>(null);
@@ -34,6 +49,39 @@ export default function BestTimeBadge({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // precomputedBestTimes が渡された場合: 同期的に判定（Supabase クエリ不要）
+    if (precomputedBestTimes !== undefined) {
+      if (styleId === undefined || styleId === null) {
+        setIsBestTime(null);
+        setLoading(false);
+        return;
+      }
+      const match = precomputedBestTimes.find(
+        (bt) => bt.style_id === styleId && bt.pool_type === (poolType ?? 0),
+      );
+
+      let relevantBestTime: number | undefined;
+      if (match) {
+        if (isRelaying ?? false) {
+          // リレー記録の表示: 主エントリの relayingTime.time を優先、フォールバックエントリなら time を使う
+          relevantBestTime = match.is_relaying ? match.time : match.relayingTime?.time;
+        } else {
+          // 非リレー記録の表示: 主エントリの time のみ（フォールバックエントリは非リレー記録がないことを意味するので無視）
+          relevantBestTime = match.is_relaying ? undefined : match.time;
+        }
+      }
+
+      const isBest = relevantBestTime === undefined || currentTime < relevantBestTime;
+      setIsBestTime(isBest);
+      if (!isBest && relevantBestTime !== undefined) {
+        setBestTimeDiff(currentTime - relevantBestTime);
+      } else {
+        setBestTimeDiff(null);
+      }
+      setLoading(false);
+      return;
+    }
+
     const checkBestTime = async () => {
       // ガード条件: styleIdまたはrecordDateがfalsyな値（undefined, null, ''）の場合は早期リターン
       if (!styleId || !recordDate) {
@@ -59,7 +107,7 @@ export default function BestTimeBadge({
         const baseFilters = {
           user_id: user.id,
           style_id: styleId,
-          is_relaying: isRelaying || false,
+          is_relaying: isRelaying ?? false,
         };
 
         // 1. 大会記録から過去のベストを取得
@@ -84,6 +132,10 @@ export default function BestTimeBadge({
           competitionQuery = competitionQuery.eq("pool_type", poolType);
         }
 
+        // recordDate を正規化: YYYY-MM-DD → YYYY-MM-DDT00:00:00.000Z
+        // 当日の一括登録記録が除外されないよう created_at との型混用を解消する
+        const normalizedRecordDate = normalizeRecordDateForBulkComparison(recordDate);
+
         // 2. 一括登録（competition_id = null）から過去のベストを取得
         let bulkQuery = supabase
           .from("records")
@@ -99,7 +151,7 @@ export default function BestTimeBadge({
           .eq("is_relaying", baseFilters.is_relaying)
           .is("competition_id", null)
           .neq("id", recordId)
-          .lt("created_at", recordDate)
+          .lt("created_at", normalizedRecordDate)
           .order("time", { ascending: true })
           .limit(1);
 
@@ -145,7 +197,7 @@ export default function BestTimeBadge({
     };
 
     checkBestTime();
-  }, [recordId, styleId, currentTime, recordDate, poolType, isRelaying, supabase]);
+  }, [recordId, styleId, currentTime, recordDate, poolType, isRelaying, supabase, precomputedBestTimes]);
 
   if (loading || isBestTime === null) {
     return null;

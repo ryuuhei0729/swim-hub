@@ -134,6 +134,8 @@ export interface FormattedPracticeLog {
   distance: number;
   circle: number | null;
   note: string | null;
+  video_path?: string | null;
+  video_thumbnail_path?: string | null;
   tags: PracticeTag[];
   times: Array<{
     id: string;

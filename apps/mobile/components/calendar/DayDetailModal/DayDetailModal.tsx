@@ -7,6 +7,7 @@ import { ja } from "date-fns/locale";
 import type { CalendarItem } from "@apps/shared/types/ui";
 import { styles } from "./styles";
 import { MemoizedPracticeLogDetail, RecordDetail, EntryDetail } from "./components";
+import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import type { DayDetailModalProps } from "./types";
 
 /**
@@ -92,6 +93,8 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   onAddEntry,
   onEditCompetition,
   onDeleteCompetition,
+  isDeleting = false,
+  onDeletingChange,
 }) => {
   const formattedDate = format(date, "M月d日(E)", { locale: ja });
 
@@ -346,6 +349,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                               }
                             }}
                             onClose={onClose}
+                            onDeletingChange={onDeletingChange}
                           />
                         );
                       },
@@ -378,15 +382,29 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           records={records}
                           isTeamCompetition={isTeamCompetition}
                           onEditCompetition={() => {
-                            const competitionItem = entries.find(
-                              (e) =>
-                                (e.type === "competition" || e.type === "team_competition") &&
-                                e.id === competitionId,
-                            );
-                            if (competitionItem && onEditCompetition) {
-                              onEditCompetition(competitionItem);
-                              onClose();
-                            }
+                            if (!onEditCompetition) return;
+                            const firstRecord = records[0];
+                            const teamId =
+                              firstRecord?.metadata?.team_id ??
+                              firstRecord?.metadata?.competition?.team_id ??
+                              null;
+                            const competitionItem: CalendarItem = {
+                              id: competitionId,
+                              type: teamId ? "team_competition" : "competition",
+                              date:
+                                firstRecord?.date ??
+                                (isValid(date) ? format(date, "yyyy-MM-dd") : ""),
+                              title: competitionName,
+                              place,
+                              note,
+                              metadata: {
+                                competition: firstRecord?.metadata?.competition,
+                                team_id: teamId,
+                                pool_type: poolType,
+                              },
+                            };
+                            onEditCompetition(competitionItem);
+                            onClose();
                           }}
                           onDeleteCompetition={() => {
                             if (onDeleteCompetition) {
@@ -444,6 +462,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                 </>
               )}
             </ScrollView>
+            {isDeleting && <LoadingSpinner fullScreen message="削除中..." />}
           </View>
         </SafeAreaView>
       </View>

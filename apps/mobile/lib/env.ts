@@ -9,6 +9,7 @@ export const env = {
   supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "",
   googleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? "",
   webApiUrl: process.env.EXPO_PUBLIC_WEB_API_URL || "https://swim-hub.app",
+  r2PublicUrl: process.env.EXPO_PUBLIC_R2_PUBLIC_URL ?? "",
   revenuecatIosApiKey: process.env.EXPO_PUBLIC_REVENUCAT_IOS_API_KEY ?? "",
   environment: process.env.EXPO_PUBLIC_ENVIRONMENT || "development",
   webAppResetPasswordUrl: process.env.EXPO_PUBLIC_WEB_APP_RESET_PASSWORD_URL || "https://swim-hub.app/reset-password",

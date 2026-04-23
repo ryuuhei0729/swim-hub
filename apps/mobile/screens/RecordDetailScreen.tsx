@@ -1,16 +1,20 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { View, Text, ScrollView, StyleSheet, Pressable, Alert, Platform } from "react-native";
+import { Image } from "expo-image";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
-import { format } from "date-fns";
+import { format, isValid, parseISO } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useAuth } from "@/contexts/AuthProvider";
-import { useRecordsQuery, useDeleteRecordMutation } from "@apps/shared/hooks/queries/records";
+import { useRecordByIdQuery, useDeleteRecordMutation } from "@apps/shared/hooks/queries/records";
 import { formatTime } from "@/utils/formatters";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { VideoPlayer } from "@/components/shared/VideoPlayer";
+import { ImageViewerModal } from "@/components/shared";
+import { getExistingImagesFromPaths } from "@/utils/imageUpload";
+import { BestTimeBadge } from "@/components/records";
 import type { MainStackParamList } from "@/navigation/types";
 
 type RecordDetailScreenRouteProp = RouteProp<MainStackParamList, "RecordDetail">;
@@ -28,6 +32,11 @@ export const RecordDetailScreen: React.FC = () => {
   const deleteMutation = useDeleteRecordMutation(supabase);
   const [isDeleting, setIsDeleting] = useState(false);
   const [splitTab, setSplitTab] = useState<"race" | "all">("race");
+  const [competitionImages, setCompetitionImages] = useState<Array<{ id: string; url: string }>>(
+    [],
+  );
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
   const handleEdit = () => {
     if (record?.competition_id && record?.competition?.date) {
@@ -79,20 +88,31 @@ export const RecordDetailScreen: React.FC = () => {
   };
 
   const {
-    records = [],
+    data: record,
     isLoading,
     isError,
     error,
     refetch,
-  } = useRecordsQuery(supabase, {
-    page: 1,
-    pageSize: 1000,
-    enableRealtime: true,
-  });
+  } = useRecordByIdQuery(supabase, recordId);
 
-  const record = useMemo(() => {
-    return records.find((r) => r.id === recordId);
-  }, [records, recordId]);
+  useEffect(() => {
+    if (!record?.competition_id) return;
+    let isMounted = true;
+    const loadImages = async () => {
+      const { data } = await supabase
+        .from("competitions")
+        .select("image_paths")
+        .eq("id", record.competition_id)
+        .single();
+      if (!isMounted) return;
+      const imagePaths = (data as { image_paths?: string[] | null } | null)?.image_paths ?? [];
+      setCompetitionImages(getExistingImagesFromPaths(supabase, imagePaths, "competition-images"));
+    };
+    loadImages();
+    return () => {
+      isMounted = false;
+    };
+  }, [record?.competition_id, supabase]);
 
   // スプリットタイムを距離順にソート
   const sortedSplitTimes = useMemo(() => {
@@ -223,7 +243,8 @@ export const RecordDetailScreen: React.FC = () => {
 
   const competitionName = record.competition?.title || "大会";
   const recordDate = record.competition?.date || record.created_at;
-  const formattedDate = format(new Date(recordDate), "yyyy年M月d日(E)", { locale: ja });
+  const parsedDate = parseISO(recordDate);
+  const formattedDate = isValid(parsedDate) ? format(parsedDate, "yyyy年M月d日(E)", { locale: ja }) : "-";
   const styleName = record.style?.name || record.style?.name_jp || "不明";
   const formattedTime = formatTime(record.time);
   const poolType = record.competition?.pool_type === 0 ? "短水路(25m)" : "長水路(50m)";
@@ -266,6 +287,18 @@ export const RecordDetailScreen: React.FC = () => {
           <Text style={styles.reactionTime}>
             {record.reaction_time != null ? record.reaction_time.toFixed(2) : "-"}
           </Text>
+        </View>
+        {/* ベストタイムバッジ行 */}
+        <View style={styles.bestTimeRow}>
+          <BestTimeBadge
+            recordId={record.id}
+            styleId={record.style_id}
+            currentTime={record.time}
+            recordDate={record.competition?.date ?? record.created_at}
+            poolType={record.pool_type}
+            isRelaying={record.is_relaying}
+            showDiff={true}
+          />
         </View>
       </View>
 
@@ -370,6 +403,38 @@ export const RecordDetailScreen: React.FC = () => {
         </View>
       )}
 
+      {/* 添付画像 */}
+      {competitionImages.length > 0 && (
+        <View style={styles.noteCard}>
+          <Text style={styles.noteLabel}>添付画像</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+            {competitionImages.map((img, index) => (
+              <Pressable
+                key={img.id}
+                onPress={() => {
+                  setViewerIndex(index);
+                  setViewerVisible(true);
+                }}
+              >
+                <Image
+                  source={{ uri: img.url }}
+                  style={imageGalleryStyles.image}
+                  contentFit="cover"
+                  transition={200}
+                />
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      <ImageViewerModal
+        images={competitionImages.map((img) => ({ uri: img.url }))}
+        visible={viewerVisible}
+        initialIndex={viewerIndex}
+        onClose={() => setViewerVisible(false)}
+      />
+
       {/* アクションボタン */}
       <View style={styles.actionContainer}>
         <Pressable
@@ -464,6 +529,11 @@ const styles = StyleSheet.create({
   recordValueRow: {
     flexDirection: "row",
     alignItems: "baseline",
+  },
+  bestTimeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
   },
   styleValue: {
     flex: 1,
@@ -613,5 +683,15 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#DC2626",
+  },
+});
+
+const imageGalleryStyles = StyleSheet.create({
+  image: {
+    width: 120,
+    height: 120,
+    borderRadius: 8,
+    marginRight: 8,
+    backgroundColor: "#F3F4F6",
   },
 });

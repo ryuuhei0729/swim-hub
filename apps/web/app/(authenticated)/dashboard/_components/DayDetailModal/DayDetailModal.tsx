@@ -196,7 +196,7 @@ export default function DayDetailModal({
           <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg leading-6 font-medium text-gray-900">
-                {format(date, "M月d日（E）", { locale: ja })}の記録
+                {format(date, "M月d日(E)", { locale: ja })}の記録
               </h3>
               <button
                 onClick={onClose}

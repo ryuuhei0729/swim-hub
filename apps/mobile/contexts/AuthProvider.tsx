@@ -25,6 +25,7 @@ type MobileAuthState = AuthState & {
 type MobileAuthContextType = AuthContextType & {
   onboardingCompleted: boolean | null;
   updateOnboardingCompleted: (value: boolean) => Promise<{ error: Error | null }>;
+  getAccessToken: () => Promise<string | null>;
 };
 
 const AuthContext = createContext<MobileAuthContextType | undefined>(undefined);
@@ -116,6 +117,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     },
     [authState.user],
   );
+
+  // 最新の access_token を取得（有効期限切れ・期限切れ間近の場合はリフレッシュを試みる）
+  const getAccessToken = useCallback(async (): Promise<string | null> => {
+    if (!supabase) return null;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        // セッション自体がない、または access_token がない場合はリフレッシュを試みる
+        const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+        return refreshed?.access_token ?? null;
+      }
+      // expires_at が設定されている場合のみ有効期限チェックを行う
+      if (session.expires_at !== undefined) {
+        const now = Math.floor(Date.now() / 1000);
+        const isExpiredOrExpiringSoon = session.expires_at - now < 60;
+        if (isExpiredOrExpiringSoon) {
+          const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+          return refreshed?.access_token ?? null;
+        }
+      }
+      return session.access_token;
+    } catch {
+      return null;
+    }
+  }, []);
 
   // サブスクリプション情報を再取得（外部から呼び出し可能）
   const refreshSubscription = useCallback(async () => {
@@ -539,6 +565,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshSubscription,
     isAuthenticated: !!authState.user,
     updateOnboardingCompleted,
+    getAccessToken,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

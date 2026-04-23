@@ -258,7 +258,7 @@ export function useDeleteRecordMutation(
       await recordApi.deleteRecord(id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: recordKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: recordKeys.all });
     },
   });
 }
@@ -547,6 +547,27 @@ export function useReplaceSplitTimesMutation(
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: recordKeys.lists() });
     },
+  });
+}
+
+/**
+ * 大会記録1件取得クエリ（IDで指定）
+ */
+export function useRecordByIdQuery(
+  supabase: SupabaseClient,
+  recordId: string,
+  options: { api?: RecordAPI } = {},
+): UseQueryResult<RecordWithDetails | null, Error> {
+  const { api: providedApi } = options;
+  const api = useMemo(() => providedApi ?? new RecordAPI(supabase), [supabase, providedApi]);
+
+  return useQuery({
+    queryKey: recordKeys.detail(recordId),
+    queryFn: async () => {
+      return await api.getRecordById(recordId);
+    },
+    enabled: !!recordId,
+    staleTime: 5 * 60 * 1000, // 5分
   });
 }
 

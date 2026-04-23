@@ -65,10 +65,15 @@ export async function uploadThumbnailToR2(
   // Workers バインディングが使えるか試みる
   try {
     const bucket = await getVideoR2Bucket();
-    await bucket.put(key, file, { httpMetadata: { contentType: "image/webp" } });
+    await bucket.put(key, file, { httpMetadata: { contentType: "image/jpeg" } });
     return;
-  } catch {
-    // ローカル dev などで Workers コンテキストがない場合は S3 API にフォールバック
+  } catch (err) {
+    // Workers コンテキスト不在 (ローカル dev 等) は S3 API にフォールバック
+    // エラーメッセージはランタイムバージョンによって異なるため、型チェックのみで判定しない
+    console.warn(
+      "R2 Workers binding failed, falling back to S3 API:",
+      err instanceof Error ? err.message : err,
+    );
   }
 
   const { PutObjectCommand } = await import("@aws-sdk/client-s3");
@@ -78,7 +83,7 @@ export async function uploadThumbnailToR2(
       Bucket: getBucketName(),
       Key: key,
       Body: file,
-      ContentType: "image/webp",
+      ContentType: "image/jpeg",
     }),
   );
 }

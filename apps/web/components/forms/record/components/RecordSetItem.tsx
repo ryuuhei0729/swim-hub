@@ -189,7 +189,7 @@ export default function RecordSetItem({
 
       {/* スプリットタイム */}
       <div>
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
           <label className="block text-sm font-medium text-gray-700">スプリットタイム</label>
           <div className="flex gap-2">
             <Button
@@ -223,7 +223,7 @@ export default function RecordSetItem({
               data-testid={`record-split-add-button-${recordIndex + 1}`}
             >
               <PlusIcon className="h-3 w-3 mr-1" />
-              スプリットを追加
+              追加
             </Button>
           </div>
         </div>

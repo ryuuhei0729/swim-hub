@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, Text, Pressable } from "react-native";
+import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
+import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthProvider";
 import { formatTime, formatCircleTime, getStyleLabel } from "@/utils/formatters";
 import type { PracticeTime, PracticeTag } from "@apps/shared/types";
+import { VideoPlayer } from "@/components/shared/VideoPlayer";
+import { ImageViewerModal } from "@/components/shared";
+import { getExistingImagesFromPaths } from "@/utils/imageUpload";
 import { styles } from "../styles";
 import { MemoizedTimeTable } from "./TimeTable";
 import type {
@@ -51,6 +55,9 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
   const [loadingRecordDetail, setLoadingRecordDetail] = useState(false);
   const [practiceLogs, setPracticeLogs] = useState<PracticeLogData[]>([]);
   const [loading, setLoading] = useState(false);
+  const [practiceImages, setPracticeImages] = useState<Array<{ id: string; url: string }>>([]);
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
   const loadPracticeLogs = useCallback(async () => {
     if (!isPractice || !practiceId) return;
@@ -81,6 +88,9 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
 
       if (error) throw error;
       if (!data) return;
+
+      const imagePaths = (data as { image_paths?: string[] | null } | null)?.image_paths ?? [];
+      setPracticeImages(getExistingImagesFromPaths(supabase, imagePaths, "practice-images"));
 
       const formattedLogs = (data.practice_logs || []).map(
         (
@@ -159,6 +169,8 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
         distance: number;
         circle: number | null;
         note: string | null;
+        video_path?: string | null;
+        video_thumbnail_path?: string | null;
         practice_times?: PracticeTime[];
         practice_log_tags?: Array<{ practice_tags: PracticeTag }>;
       };
@@ -184,6 +196,8 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
         note: log.note,
         times,
         tags,
+        videoPath: log.video_path ?? null,
+        videoThumbnailPath: log.video_thumbnail_path ?? null,
       });
 
       // PracticeTimeの有無を親に通知
@@ -353,6 +367,13 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                   <Text style={styles.noteLabel}>メモ</Text>
                   <Text style={styles.noteText}>{practiceLogDetail.note}</Text>
                 </View>
+              )}
+
+              {practiceLogDetail.videoPath && (
+                <VideoPlayer
+                  videoPath={practiceLogDetail.videoPath}
+                  thumbnailPath={practiceLogDetail.videoThumbnailPath}
+                />
               )}
             </>
           ) : null}
@@ -647,11 +668,65 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
               </View>
             ))
           )}
+
+          {/* 添付画像 */}
+          {practiceImages.length > 0 && (
+            <View style={imageGalleryStyles.gallery}>
+              <Text style={imageGalleryStyles.galleryTitle}>添付画像</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {practiceImages.map((img, index) => (
+                  <Pressable
+                    key={img.id}
+                    onPress={() => {
+                      setViewerIndex(index);
+                      setViewerVisible(true);
+                    }}
+                  >
+                    <Image
+                      source={{ uri: img.url }}
+                      style={imageGalleryStyles.image}
+                      contentFit="cover"
+                      transition={200}
+                    />
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          )}
         </View>
       )}
+
+      <ImageViewerModal
+        images={practiceImages.map((img) => ({ uri: img.url }))}
+        visible={viewerVisible}
+        initialIndex={viewerIndex}
+        onClose={() => setViewerVisible(false)}
+      />
     </View>
   );
 };
 
 // PracticeLogDetailをメモ化して不要な再レンダリングを防ぐ
 export const MemoizedPracticeLogDetail = React.memo(PracticeLogDetail);
+
+const imageGalleryStyles = StyleSheet.create({
+  gallery: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#DBEAFE",
+  },
+  galleryTitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#6B7280",
+    marginBottom: 8,
+  },
+  image: {
+    width: 120,
+    height: 120,
+    borderRadius: 8,
+    marginRight: 8,
+    backgroundColor: "#F3F4F6",
+  },
+});

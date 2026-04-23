@@ -334,6 +334,14 @@ enabled = false
 [functions.scan-timesheet]
 verify_jwt = false
 
+# Stripe / RevenueCat からの Webhook は Supabase JWT を送らず、
+# 各ハンドラ内で署名検証を行うため JWT 検証を無効化する。
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.revenucat-webhook]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

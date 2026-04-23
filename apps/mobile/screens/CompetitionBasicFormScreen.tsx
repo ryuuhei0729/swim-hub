@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
@@ -11,6 +9,7 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  KeyboardAvoidingView,
 } from "react-native";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -27,7 +26,7 @@ import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
-import { uploadImages, deleteImages, getExistingImagesFromPaths } from "@/utils/imageUpload";
+import { uploadImagesViaApi, deleteImages, getExistingImagesFromPaths } from "@/utils/imageUpload";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
 import type { MainStackParamList } from "@/navigation/types";
@@ -48,7 +47,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
   const route = useRoute<CompetitionFormScreenRouteProp>();
   const navigation = useNavigation<CompetitionFormScreenNavigationProp>();
   const { competitionId, date: initialDateParam } = route.params;
-  const { supabase, user, subscription } = useAuth();
+  const { supabase, subscription, getAccessToken } = useAuth();
   const isPremium = checkIsPremium(subscription);
   const queryClient = useQueryClient();
 
@@ -208,21 +207,27 @@ export const CompetitionBasicFormScreen: React.FC = () => {
 
   // 大会データの保存共通処理（編集・新規作成の両方に対応）
   // 成功時は保存された大会IDを返す
-  const saveCompetitionData = async (userId: string): Promise<string> => {
+  const saveCompetitionData = async (): Promise<string> => {
+    // 最新の access_token を取得（長時間バックグラウンド後のリフレッシュ対応）
+    // stale な user state より先に呼び、リフレッシュのチャンスを与える
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      throw new Error("セッションが無効です。再ログインしてください。");
+    }
+
     if (competitionId) {
       // 編集モード
       // 1. 新規画像をアップロード
       let newImagePaths: string[] = [];
       if (newImageFiles.length > 0) {
-        const uploadResults = await uploadImages(
-          supabase,
-          userId,
-          competitionId,
+        const uploadResults = await uploadImagesViaApi(
           newImageFiles.map((f) => ({
             base64: f.base64,
             fileExtension: f.fileExtension,
           })),
+          competitionId,
           "competition-images",
+          accessToken,
         );
         newImagePaths = uploadResults.map((r) => r.path);
       }
@@ -289,15 +294,14 @@ export const CompetitionBasicFormScreen: React.FC = () => {
 
       // 新規画像をアップロード
       if (newImageFiles.length > 0) {
-        const uploadResults = await uploadImages(
-          supabase,
-          userId,
-          newCompetition.id,
+        const uploadResults = await uploadImagesViaApi(
           newImageFiles.map((f) => ({
             base64: f.base64,
             fileExtension: f.fileExtension,
           })),
+          newCompetition.id,
           "competition-images",
+          accessToken,
         );
         const imagePaths = uploadResults.map((r) => r.path);
 
@@ -341,10 +345,6 @@ export const CompetitionBasicFormScreen: React.FC = () => {
   const handleSave = async () => {
     if (isSubmittingRef.current) return;
     if (!validate()) return;
-    if (!user) {
-      Alert.alert("エラー", "認証が必要です", [{ text: "OK" }]);
-      return;
-    }
 
     isSubmittingRef.current = true;
     setLoading(true);
@@ -352,9 +352,9 @@ export const CompetitionBasicFormScreen: React.FC = () => {
     setErrors({});
 
     try {
-      await saveCompetitionData(user.id);
+      await saveCompetitionData();
       queryClient.invalidateQueries({ queryKey: ["calendar"] });
-      navigation.navigate("MainTabs", { screen: "Dashboard" });
+      navigation.popToTop();
     } catch (error) {
       console.error("保存エラー:", error);
       Alert.alert("エラー", error instanceof Error ? error.message : "保存に失敗しました", [
@@ -371,10 +371,6 @@ export const CompetitionBasicFormScreen: React.FC = () => {
   const handleContinueToEntry = async () => {
     if (isSubmittingRef.current) return;
     if (!validate()) return;
-    if (!user) {
-      Alert.alert("エラー", "認証が必要です", [{ text: "OK" }]);
-      return;
-    }
 
     isSubmittingRef.current = true;
     setLoading(true);
@@ -382,7 +378,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
     setErrors({});
 
     try {
-      const resultId = await saveCompetitionData(user.id);
+      const resultId = await saveCompetitionData();
       if (!competitionId) {
         setCreatedCompetitionId(resultId);
       }
@@ -407,10 +403,6 @@ export const CompetitionBasicFormScreen: React.FC = () => {
   const handleContinueToRecord = async () => {
     if (isSubmittingRef.current) return;
     if (!validate()) return;
-    if (!user) {
-      Alert.alert("エラー", "認証が必要です", [{ text: "OK" }]);
-      return;
-    }
 
     isSubmittingRef.current = true;
     setLoading(true);
@@ -418,7 +410,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
     setErrors({});
 
     try {
-      const resultId = await saveCompetitionData(user.id);
+      const resultId = await saveCompetitionData();
       if (!competitionId) {
         setCreatedCompetitionId(resultId);
       }
@@ -464,7 +456,10 @@ export const CompetitionBasicFormScreen: React.FC = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* 日付（開始日・終了日） */}
         <View style={styles.section}>
@@ -632,7 +627,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
           </Pressable>
         )}
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

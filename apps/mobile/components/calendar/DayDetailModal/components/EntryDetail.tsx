@@ -24,6 +24,7 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
   onDeleteEntry,
   onAddRecord,
   onClose,
+  onDeletingChange,
 }) => {
   const { supabase } = useAuth();
   const [actualEntries, setActualEntries] = useState<EntryData[]>([]);
@@ -257,6 +258,7 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
                               text: "削除",
                               style: "destructive",
                               onPress: async () => {
+                                onDeletingChange?.(true);
                                 try {
                                   const api = new EntryAPI(supabase);
                                   await api.deleteEntry(entry.id);
@@ -273,6 +275,8 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
                                     error instanceof Error ? error.message : "削除に失敗しました",
                                     [{ text: "OK" }],
                                   );
+                                } finally {
+                                  onDeletingChange?.(false);
                                 }
                               },
                             },

@@ -44,9 +44,15 @@ export default function CalendarView({
   const [showDayDetail, setShowDayDetail] = useState(false);
   const [currentYear, setCurrentYear] = useState(2024); // SSR安全な初期値
 
-  // クライアント側でのみ現在年を設定（Hydration Mismatch回避）
+  // マウント済みフラグ: SSR と CSR でタイムゾーンが異なる場合に calendarDays や
+  // format(currentDate, ...) の出力が変わることで hydration mismatch が起きる。
+  // マウント前はスケルトン表示に固定して不一致を防ぐ。
+  const [mounted, setMounted] = useState(false);
+
+  // クライアント側でのみ現在年・mountedを設定（Hydration Mismatch回避）
   useEffect(() => {
     setCurrentYear(new Date().getFullYear());
+    setMounted(true);
   }, []);
 
   // カレンダーコンテキストからデータを取得
@@ -237,7 +243,7 @@ export default function CalendarView({
       {/* ヘッダー */}
       <CalendarHeader
         currentDate={currentDate}
-        isLoading={isLoading}
+        isLoading={!mounted || isLoading}
         onPrevMonth={handlePrevMonth}
         onNextMonth={handleNextMonth}
         onTodayClick={handleTodayClick}
@@ -251,7 +257,7 @@ export default function CalendarView({
         calendarDays={calendarDays}
         currentDate={currentDate}
         entriesByDate={entriesByDate}
-        isLoading={isLoading}
+        isLoading={!mounted || isLoading}
         onDateClick={handleDateClick}
         onAddClick={handleAddClick}
         getItemColor={getItemColor}

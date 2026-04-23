@@ -18,11 +18,13 @@ export async function POST(request: NextRequest) {
     const type = formData.get("type") as "record" | "practice-log" | null;
     const id = formData.get("id") as string | null;
     const videoPath = formData.get("videoPath") as string | null;
-    const thumbnailPath = formData.get("thumbnailPath") as string | null;
+    const thumbnailPathRaw = formData.get("thumbnailPath") as string | null;
+    // 空文字はサムネイル生成失敗を意味する — null として扱う
+    const thumbnailPath = thumbnailPathRaw && thumbnailPathRaw.length > 0 ? thumbnailPathRaw : null;
     const thumbnailBlob = formData.get("thumbnailBlob") as File | null;
 
-    if (!type || !id || !videoPath || !thumbnailPath) {
-      return NextResponse.json({ error: "type, id, videoPath, thumbnailPath が必要です" }, { status: 400 });
+    if (!type || !id || !videoPath) {
+      return NextResponse.json({ error: "type, id, videoPath が必要です" }, { status: 400 });
     }
 
     // 所有者確認
@@ -55,7 +57,8 @@ export async function POST(request: NextRequest) {
     }
 
     // サムネイルをR2にアップロード（Workers バインディング経由）
-    if (thumbnailBlob) {
+    // thumbnailPath が null の場合はサムネイル生成失敗を意味するのでスキップ
+    if (thumbnailBlob && thumbnailPath) {
       const buffer = Buffer.from(await thumbnailBlob.arrayBuffer());
       await uploadThumbnailToR2(buffer, thumbnailPath);
     }
