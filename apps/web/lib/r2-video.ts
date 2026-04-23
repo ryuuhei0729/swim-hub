@@ -4,24 +4,21 @@
  * - アップロード: 署名付きPUT URL (クライアント直接PUT、1GB対応)
  * - 再生: 署名付きGET URL (24時間有効)
  * - サムネイル: Workers バインディング経由でアップロード
+ *
+ * aws4fetch を使用 (Web Standard API のみ依存、Cloudflare Workers 完全互換)
  */
-import {
-  S3Client,
-  GetObjectCommand,
-  PutObjectCommand,
-  CopyObjectCommand,
-} from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { AwsClient } from "aws4fetch";
 
-const getS3Client = () =>
-  new S3Client({
+const getAwsClient = () =>
+  new AwsClient({
+    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+    service: "s3",
     region: "auto",
-    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-    },
   });
+
+const getEndpoint = () =>
+  `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
 
 function getBucketName(): string {
   return process.env.R2_VIDEO_BUCKET_NAME ?? "swim-hub-videos-prod";
@@ -38,25 +35,38 @@ async function getVideoR2Bucket() {
 
 /** 再生・ダウンロード用署名付きGET URL (24時間) */
 export async function generateVideoGetUrl(key: string): Promise<string> {
-  const s3 = getS3Client();
-  const cmd = new GetObjectCommand({ Bucket: getBucketName(), Key: key });
-  return getSignedUrl(s3, cmd, { expiresIn: 60 * 60 * 24 });
+  const aws = getAwsClient();
+  const bucket = getBucketName();
+  const url = new URL(`${getEndpoint()}/${bucket}/${encodeURIComponent(key)}`);
+  url.searchParams.set("X-Amz-Expires", "86400");
+
+  const signed = await aws.sign(url.toString(), {
+    method: "GET",
+    aws: { signQuery: true },
+  });
+
+  return signed.url;
 }
 
 /** クライアント直接PUT用署名付きURL (1時間) - 1GB対応 */
 export async function generateVideoPutUrl(key: string, contentType: string): Promise<string> {
-  const s3 = getS3Client();
-  const cmd = new PutObjectCommand({
-    Bucket: getBucketName(),
-    Key: key,
-    ContentType: contentType,
+  const aws = getAwsClient();
+  const bucket = getBucketName();
+  const url = new URL(`${getEndpoint()}/${bucket}/${encodeURIComponent(key)}`);
+  url.searchParams.set("X-Amz-Expires", "3600");
+
+  const signed = await aws.sign(url.toString(), {
+    method: "PUT",
+    headers: { "content-type": contentType },
+    aws: { signQuery: true },
   });
-  return getSignedUrl(s3, cmd, { expiresIn: 60 * 60 });
+
+  return signed.url;
 }
 
 /** サムネイル (WebP, 小容量) をアップロード
  * Workers 環境: バインディング経由
- * ローカル dev / フォールバック: S3 API 経由
+ * ローカル dev / フォールバック: S3 互換 API 経由 (aws4fetch)
  */
 export async function uploadThumbnailToR2(
   file: Buffer | Uint8Array,
@@ -68,24 +78,27 @@ export async function uploadThumbnailToR2(
     await bucket.put(key, file, { httpMetadata: { contentType: "image/jpeg" } });
     return;
   } catch (err) {
-    // Workers コンテキスト不在 (ローカル dev 等) は S3 API にフォールバック
-    // エラーメッセージはランタイムバージョンによって異なるため、型チェックのみで判定しない
+    // Workers コンテキスト不在 (ローカル dev 等) は S3 互換 API にフォールバック
     console.warn(
       "R2 Workers binding failed, falling back to S3 API:",
       err instanceof Error ? err.message : err,
     );
   }
 
-  const { PutObjectCommand } = await import("@aws-sdk/client-s3");
-  const s3 = getS3Client();
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: getBucketName(),
-      Key: key,
-      Body: file,
-      ContentType: "image/jpeg",
-    }),
-  );
+  const aws = getAwsClient();
+  const bucket = getBucketName();
+  // Buffer / Uint8Array は tsconfig の BodyInit と一致しないため ArrayBuffer に変換
+  const arrayBuffer = file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength);
+  const res = await aws.fetch(`${getEndpoint()}/${bucket}/${encodeURIComponent(key)}`, {
+    method: "PUT",
+    body: arrayBuffer as BodyInit,
+    headers: { "content-type": "image/jpeg" },
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Thumbnail upload failed: ${res.status} ${body.slice(0, 200)}`);
+  }
 }
 
 /** 動画・サムネイルの削除 (Workers バインディング経由) */
@@ -94,17 +107,19 @@ export async function deleteVideosFromR2(keys: string[]): Promise<void> {
   await Promise.all(keys.map((k) => bucket.delete(k)));
 }
 
-/** R2 内でのコピー (チーム管理者アサイン用, S3 API 経由) */
+/** R2 内でのコピー (チーム管理者アサイン用, aws4fetch 経由) */
 export async function copyVideoInR2(sourceKey: string, destKey: string): Promise<void> {
-  const s3 = getS3Client();
-  const bucketName = getBucketName();
-  await s3.send(
-    new CopyObjectCommand({
-      Bucket: bucketName,
-      CopySource: `${bucketName}/${sourceKey}`,
-      Key: destKey,
-    }),
-  );
+  const aws = getAwsClient();
+  const bucket = getBucketName();
+  const res = await aws.fetch(`${getEndpoint()}/${bucket}/${encodeURIComponent(destKey)}`, {
+    method: "PUT",
+    headers: { "x-amz-copy-source": `/${bucket}/${encodeURIComponent(sourceKey)}` },
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`R2 copy failed: ${res.status} ${body.slice(0, 200)}`);
+  }
 }
 
 export function isVideoR2Enabled(): boolean {

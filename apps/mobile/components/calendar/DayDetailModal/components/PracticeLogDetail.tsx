@@ -59,6 +59,12 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
 
+  const [practiceLogImages, setPracticeLogImages] = useState<Array<{ id: string; url: string }>>(
+    [],
+  );
+  const [logViewerVisible, setLogViewerVisible] = useState(false);
+  const [logViewerIndex, setLogViewerIndex] = useState(0);
+
   const loadPracticeLogs = useCallback(async () => {
     if (!isPractice || !practiceId) return;
 
@@ -130,7 +136,6 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
     }
   }, [expanded, isPractice, practiceId, loadPracticeLogs]);
 
-  // Practice_Logの場合は直接タイム情報を表示
   const [practiceLogDetail, setPracticeLogDetail] = useState<PracticeLogDetailData | null>(null);
   const [loadingLogDetail, setLoadingLogDetail] = useState(false);
 
@@ -163,6 +168,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
 
       const log = data as {
         id: string;
+        practice_id: string | null;
         style: string;
         rep_count: number;
         set_count: number;
@@ -200,7 +206,25 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
         videoThumbnailPath: log.video_thumbnail_path ?? null,
       });
 
-      // PracticeTimeの有無を親に通知
+      const logPracticeId = log.practice_id;
+      if (logPracticeId) {
+        try {
+          const { data: practiceData, error: practiceError } = await supabase
+            .from("practices")
+            .select("image_paths")
+            .eq("id", logPracticeId)
+            .single();
+
+          if (!practiceError && practiceData) {
+            const imagePaths =
+              (practiceData as { image_paths?: string[] | null } | null)?.image_paths ?? [];
+            setPracticeLogImages(getExistingImagesFromPaths(supabase, imagePaths, "practice-images"));
+          }
+        } catch (err) {
+          console.warn("practice_log 画像取得に失敗:", err);
+        }
+      }
+
       if (onPracticeTimeLoaded) {
         onPracticeTimeLoaded(item.id, times.length > 0);
       }
@@ -274,6 +298,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
 
   if (isPracticeLog) {
     return (
+      <>
       <View style={[styles.entryItem, { borderLeftColor: color }]}>
         <View style={styles.entryContent}>
           <View style={styles.entryHeader}>
@@ -375,6 +400,30 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                   thumbnailPath={practiceLogDetail.videoThumbnailPath}
                 />
               )}
+
+              {practiceLogImages.length > 0 && (
+                <View style={imageGalleryStyles.gallery}>
+                  <Text style={imageGalleryStyles.galleryTitle}>添付画像</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    {practiceLogImages.map((img, index) => (
+                      <Pressable
+                        key={img.id}
+                        onPress={() => {
+                          setLogViewerIndex(index);
+                          setLogViewerVisible(true);
+                        }}
+                      >
+                        <Image
+                          source={{ uri: img.url }}
+                          style={imageGalleryStyles.image}
+                          contentFit="cover"
+                          transition={200}
+                        />
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
             </>
           ) : null}
 
@@ -388,6 +437,14 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
           )}
         </View>
       </View>
+
+      <ImageViewerModal
+        images={practiceLogImages.map((img) => ({ uri: img.url }))}
+        visible={logViewerVisible}
+        initialIndex={logViewerIndex}
+        onClose={() => setLogViewerVisible(false)}
+      />
+      </>
     );
   }
 
@@ -602,7 +659,6 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
         </View>
       </Pressable>
 
-      {/* 展開時のPractice_Log詳細表示 */}
       {expanded && isPractice && (
         <View style={styles.expandedContent}>
           {loading ? (
@@ -669,7 +725,6 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
             ))
           )}
 
-          {/* 添付画像 */}
           {practiceImages.length > 0 && (
             <View style={imageGalleryStyles.gallery}>
               <Text style={imageGalleryStyles.galleryTitle}>添付画像</Text>
