@@ -217,7 +217,7 @@ describe("RecordForm", () => {
       const relayCheckbox = relayCheckboxes[relayCheckboxes.length - 1];
       await user.click(relayCheckbox);
 
-      const addSplitButtons = screen.getAllByText("スプリットを追加");
+      const addSplitButtons = screen.getAllByTestId(/^record-split-add-button-\d+$/);
       await user.click(addSplitButtons[addSplitButtons.length - 1]);
 
       expect(screen.getAllByPlaceholderText("距離 (m)")).toHaveLength(1);
@@ -245,7 +245,7 @@ describe("RecordForm", () => {
       await user.click(relayCheckbox);
 
       // スプリットを追加
-      const addSplitButtons = screen.getAllByText("スプリットを追加");
+      const addSplitButtons = screen.getAllByTestId(/^record-split-add-button-\d+$/);
       await user.click(addSplitButtons[addSplitButtons.length - 1]);
 
       const removeSplitButton = screen.getByRole("button", { name: "スプリットを削除" });
