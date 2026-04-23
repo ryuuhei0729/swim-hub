@@ -34,7 +34,10 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: vi.fn(() => ({ session: { access_token: "mock-token" } })),
+  useAuth: vi.fn(() => ({
+    session: { access_token: "mock-token" },
+    getAccessToken: vi.fn(() => Promise.resolve("mock-token")),
+  })),
 }));
 
 vi.mock("@/utils/videoUpload", () => ({

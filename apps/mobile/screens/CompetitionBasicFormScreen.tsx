@@ -47,7 +47,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
   const route = useRoute<CompetitionFormScreenRouteProp>();
   const navigation = useNavigation<CompetitionFormScreenNavigationProp>();
   const { competitionId, date: initialDateParam } = route.params;
-  const { supabase, user, subscription, session } = useAuth();
+  const { supabase, subscription, getAccessToken } = useAuth();
   const isPremium = checkIsPremium(subscription);
   const queryClient = useQueryClient();
 
@@ -207,15 +207,19 @@ export const CompetitionBasicFormScreen: React.FC = () => {
 
   // 大会データの保存共通処理（編集・新規作成の両方に対応）
   // 成功時は保存された大会IDを返す
-  const saveCompetitionData = async (_userId: string): Promise<string> => {
+  const saveCompetitionData = async (): Promise<string> => {
+    // 最新の access_token を取得（長時間バックグラウンド後のリフレッシュ対応）
+    // stale な user state より先に呼び、リフレッシュのチャンスを与える
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      throw new Error("セッションが無効です。再ログインしてください。");
+    }
+
     if (competitionId) {
       // 編集モード
       // 1. 新規画像をアップロード
       let newImagePaths: string[] = [];
       if (newImageFiles.length > 0) {
-        if (!session?.access_token) {
-          throw new Error("セッションが無効です。再ログインしてください。");
-        }
         const uploadResults = await uploadImagesViaApi(
           newImageFiles.map((f) => ({
             base64: f.base64,
@@ -223,7 +227,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
           })),
           competitionId,
           "competition-images",
-          session.access_token,
+          accessToken,
         );
         newImagePaths = uploadResults.map((r) => r.path);
       }
@@ -290,9 +294,6 @@ export const CompetitionBasicFormScreen: React.FC = () => {
 
       // 新規画像をアップロード
       if (newImageFiles.length > 0) {
-        if (!session?.access_token) {
-          throw new Error("セッションが無効です。再ログインしてください。");
-        }
         const uploadResults = await uploadImagesViaApi(
           newImageFiles.map((f) => ({
             base64: f.base64,
@@ -300,7 +301,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
           })),
           newCompetition.id,
           "competition-images",
-          session.access_token,
+          accessToken,
         );
         const imagePaths = uploadResults.map((r) => r.path);
 
@@ -344,10 +345,6 @@ export const CompetitionBasicFormScreen: React.FC = () => {
   const handleSave = async () => {
     if (isSubmittingRef.current) return;
     if (!validate()) return;
-    if (!user) {
-      Alert.alert("エラー", "認証が必要です", [{ text: "OK" }]);
-      return;
-    }
 
     isSubmittingRef.current = true;
     setLoading(true);
@@ -355,7 +352,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
     setErrors({});
 
     try {
-      await saveCompetitionData(user.id);
+      await saveCompetitionData();
       queryClient.invalidateQueries({ queryKey: ["calendar"] });
       navigation.popToTop();
     } catch (error) {
@@ -374,10 +371,6 @@ export const CompetitionBasicFormScreen: React.FC = () => {
   const handleContinueToEntry = async () => {
     if (isSubmittingRef.current) return;
     if (!validate()) return;
-    if (!user) {
-      Alert.alert("エラー", "認証が必要です", [{ text: "OK" }]);
-      return;
-    }
 
     isSubmittingRef.current = true;
     setLoading(true);
@@ -385,7 +378,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
     setErrors({});
 
     try {
-      const resultId = await saveCompetitionData(user.id);
+      const resultId = await saveCompetitionData();
       if (!competitionId) {
         setCreatedCompetitionId(resultId);
       }
@@ -410,10 +403,6 @@ export const CompetitionBasicFormScreen: React.FC = () => {
   const handleContinueToRecord = async () => {
     if (isSubmittingRef.current) return;
     if (!validate()) return;
-    if (!user) {
-      Alert.alert("エラー", "認証が必要です", [{ text: "OK" }]);
-      return;
-    }
 
     isSubmittingRef.current = true;
     setLoading(true);
@@ -421,7 +410,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
     setErrors({});
 
     try {
-      const resultId = await saveCompetitionData(user.id);
+      const resultId = await saveCompetitionData();
       if (!competitionId) {
         setCreatedCompetitionId(resultId);
       }

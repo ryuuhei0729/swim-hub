@@ -33,7 +33,7 @@ import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
 import { VideoUploader } from "@/components/shared/VideoUploader";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
-import { uploadImages, deleteImages, getExistingImagesFromPaths } from "@/utils/imageUpload";
+import { uploadImagesViaApi, deleteImagesViaApi, getExistingImagesFromPaths } from "@/utils/imageUpload";
 import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { PREMIUM_MESSAGES, FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
@@ -52,7 +52,7 @@ export const RecordFormScreen: React.FC = () => {
   const route = useRoute<RecordFormScreenRouteProp>();
   const navigation = useNavigation<RecordFormScreenNavigationProp>();
   const { recordId, competitionId: routeCompetitionId } = route.params || {};
-  const { supabase, user, subscription, session } = useAuth();
+  const { supabase, subscription, getAccessToken } = useAuth();
   const queryClient = useQueryClient();
   const isEditMode = !!recordId;
   const isPremium = checkIsPremium(subscription);
@@ -137,8 +137,8 @@ export const RecordFormScreen: React.FC = () => {
   // 動画の状態管理
   const [existingVideoPath, setExistingVideoPath] = useState<string | null>(null);
   const [existingThumbnailPath, setExistingThumbnailPath] = useState<string | null>(null);
-  // 新規作成時：保存前に選択された動画URIを保留
-  const pendingVideoUriRef = useRef<string | null>(null);
+  // 新規作成時：保存前に選択された動画アセット（URI + mimeType）を保留
+  const pendingVideoAssetRef = useRef<{ uri: string; mimeType?: string } | null>(null);
 
   // 秒数を表示用文字列に変換
   const formatSecondsToDisplay = (seconds: number): string => {
@@ -329,19 +329,27 @@ export const RecordFormScreen: React.FC = () => {
       return;
     }
 
-    if (!user) {
-      Alert.alert("エラー", "認証が必要です", [{ text: "OK" }]);
-      return;
-    }
-
     isSubmittingRef.current = true;
     setLoading(true);
     clearErrors();
 
     // アップロードした画像パス（ロールバック用）
     let uploadedImagePaths: string[] = [];
+    // catch ブロックからも参照するため try の外で宣言
+    let accessToken: string | null = null;
 
     try {
+      // 最新の access_token を取得（長時間バックグラウンド後のリフレッシュ対応）
+      accessToken = await getAccessToken();
+
+      // accessToken が null の場合は mutation 実行前に早期リターン
+      if (!accessToken) {
+        Alert.alert("エラー", "セッションが無効です。再ログインしてください。", [{ text: "OK" }]);
+        isSubmittingRef.current = false;
+        setLoading(false);
+        return;
+      }
+
       // 大会からプールタイプを取得
       const finalCompetitionId = routeCompetitionId || storeCompetitionId;
       const selectedCompetition = competitions.find((c) => c.id === finalCompetitionId);
@@ -369,23 +377,32 @@ export const RecordFormScreen: React.FC = () => {
         savedRecord = await createMutation.mutateAsync(recordData);
 
         // 新規作成時：保留中の動画をアップロード
-        if (pendingVideoUriRef.current && session?.access_token) {
-          try {
-            await uploadVideo({
-              type: "record",
-              id: savedRecord.id,
-              videoUri: pendingVideoUriRef.current,
-              accessToken: session.access_token,
-            });
-          } catch (err) {
-            console.error("動画アップロードエラー:", err);
+        if (pendingVideoAssetRef.current) {
+          if (!accessToken) {
             Alert.alert(
               "動画アップロード失敗",
-              "大会記録は保存されましたが、動画のアップロードに失敗しました。詳細画面から再度追加してください。",
+              "動画アップロード失敗: セッションが無効です。再ログインしてください。",
             );
+          } else {
+            try {
+              await uploadVideo({
+                type: "record",
+                id: savedRecord.id,
+                videoUri: pendingVideoAssetRef.current.uri,
+                mimeType: pendingVideoAssetRef.current.mimeType,
+                accessToken,
+              });
+            } catch (err) {
+              console.error("動画アップロードエラー:", err);
+              const errorDetail = err instanceof Error ? err.message : "不明なエラー";
+              Alert.alert(
+                "動画アップロード失敗",
+                `大会記録は保存されましたが、動画のアップロードに失敗しました。\n\n詳細: ${errorDetail}\n\n詳細画面から再度追加してください。`,
+              );
+            }
           }
         }
-        pendingVideoUriRef.current = null;
+        pendingVideoAssetRef.current = null;
       }
 
       // スプリットタイムを保存（編集時は空配列でも置き換え、種目距離と同じsplitは除外）
@@ -417,15 +434,17 @@ export const RecordFormScreen: React.FC = () => {
         try {
           // 新規画像をアップロード（先にアップロードしてパスを取得）
           if (newImageFiles.length > 0) {
-            const uploadResults = await uploadImages(
-              supabase,
-              user.id,
-              finalCompetitionId,
+            if (!accessToken) {
+              throw new Error("認証が必要です。再ログインしてください。");
+            }
+            const uploadResults = await uploadImagesViaApi(
               newImageFiles.map((f) => ({
                 base64: f.base64,
                 fileExtension: f.fileExtension,
               })),
+              finalCompetitionId,
               "competition-images",
+              accessToken,
             );
             uploadedImagePaths = uploadResults.map((r) => r.path);
           }
@@ -444,15 +463,15 @@ export const RecordFormScreen: React.FC = () => {
             },
           });
 
-          // 大会の画像パス更新成功後に削除対象画像をストレージから削除
+          // 大会の画像パス更新成功後に削除対象画像をストレージから削除（Web API 経由）
           if (deletedImageIds.length > 0) {
-            await deleteImages(supabase, deletedImageIds, "competition-images");
+            await deleteImagesViaApi(deletedImageIds, "competition-images", accessToken);
           }
         } catch (imageError) {
-          // 画像処理失敗時はアップロードした画像をロールバック
+          // 画像処理失敗時はアップロードした画像をロールバック（Web API 経由）
           if (uploadedImagePaths.length > 0) {
             try {
-              await deleteImages(supabase, uploadedImagePaths, "competition-images");
+              await deleteImagesViaApi(uploadedImagePaths, "competition-images", accessToken);
             } catch (rollbackError) {
               console.error("画像ロールバックエラー:", rollbackError);
             }
@@ -473,10 +492,10 @@ export const RecordFormScreen: React.FC = () => {
       navigation.goBack();
     } catch (error) {
       console.error("保存エラー:", error);
-      // レコード保存失敗時はアップロードした画像をロールバック
-      if (uploadedImagePaths.length > 0) {
+      // レコード保存失敗時はアップロードした画像をロールバック（Web API 経由）
+      if (uploadedImagePaths.length > 0 && accessToken) {
         try {
-          await deleteImages(supabase, uploadedImagePaths, "competition-images");
+          await deleteImagesViaApi(uploadedImagePaths, "competition-images", accessToken);
         } catch (rollbackError) {
           console.error("画像ロールバックエラー:", rollbackError);
         }
@@ -1007,8 +1026,8 @@ export const RecordFormScreen: React.FC = () => {
               existingVideoPath={existingVideoPath}
               existingThumbnailPath={existingThumbnailPath}
               isPremium={isPremium}
-              onPendingVideoUri={(uri) => {
-                pendingVideoUriRef.current = uri;
+              onPendingVideoAsset={(asset) => {
+                pendingVideoAssetRef.current = asset;
               }}
               onUploadComplete={(vPath, tPath) => {
                 setExistingVideoPath(vPath);

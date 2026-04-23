@@ -28,7 +28,7 @@ import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
-import { uploadImagesViaApi, deleteImages, getExistingImagesFromPaths } from "@/utils/imageUpload";
+import { uploadImagesViaApi, deleteImagesViaApi, getExistingImagesFromPaths } from "@/utils/imageUpload";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
 import type { MainStackParamList } from "@/navigation/types";
@@ -44,7 +44,7 @@ export const PracticeFormScreen: React.FC = () => {
   const route = useRoute<PracticeFormScreenRouteProp>();
   const navigation = useNavigation<PracticeFormScreenNavigationProp>();
   const { practiceId, date: initialDateParam } = route.params || {};
-  const { supabase, user, subscription, session } = useAuth();
+  const { supabase, subscription, getAccessToken } = useAuth();
   const isPremium = checkIsPremium(subscription);
   const queryClient = useQueryClient();
   const isEditMode = !!practiceId;
@@ -198,20 +198,25 @@ export const PracticeFormScreen: React.FC = () => {
       return;
     }
 
-    if (!user) {
-      Alert.alert("エラー", "認証が必要です", [{ text: "OK" }]);
-      return;
-    }
-
     isSubmittingRef.current = true;
     setLoading(true);
     clearErrors();
 
     try {
+      // 最新の access_token を取得（長時間バックグラウンド後のリフレッシュ対応）
+      // stale な user state より先に getAccessToken() を呼び、リフレッシュのチャンスを与える
+      const accessToken = await getAccessToken();
+
+      // accessToken が null の場合は mutation 実行前に早期リターン
+      if (!accessToken) {
+        Alert.alert("エラー", "セッションが無効です。再ログインしてください。", [{ text: "OK" }]);
+        return;
+      }
+
       if (isEditMode && practiceId) {
         // 新規画像をアップロード
         let newImagePaths: string[] = [];
-        if (newImageFiles.length > 0 && session?.access_token) {
+        if (newImageFiles.length > 0) {
           const uploadResults = await uploadImagesViaApi(
             newImageFiles.map((f) => ({
               base64: f.base64,
@@ -219,7 +224,7 @@ export const PracticeFormScreen: React.FC = () => {
             })),
             practiceId,
             "practice-images",
-            session.access_token,
+            accessToken,
           );
           newImagePaths = uploadResults.map((r) => r.path);
         }
@@ -244,9 +249,9 @@ export const PracticeFormScreen: React.FC = () => {
           updates: formData,
         });
 
-        // DB更新成功後に削除対象画像をストレージから削除
+        // DB更新成功後に削除対象画像をストレージから削除（Web API 経由）
         if (deletedImageIds.length > 0) {
-          await deleteImages(supabase, deletedImageIds, "practice-images");
+          await deleteImagesViaApi(deletedImageIds, "practice-images", accessToken);
         }
 
         // iOSカレンダー同期（iOS端末かつ連携が有効な場合）
@@ -289,7 +294,10 @@ export const PracticeFormScreen: React.FC = () => {
         const createdPractice = await createMutation.mutateAsync(formData);
 
         // 新規画像をアップロード
-        if (newImageFiles.length > 0 && session?.access_token) {
+        if (newImageFiles.length > 0) {
+          if (!accessToken) {
+            throw new Error("認証が必要です。再ログインしてください。");
+          }
           const uploadResults = await uploadImagesViaApi(
             newImageFiles.map((f) => ({
               base64: f.base64,
@@ -297,7 +305,7 @@ export const PracticeFormScreen: React.FC = () => {
             })),
             createdPractice.id,
             "practice-images",
-            session.access_token,
+            accessToken,
           );
           const imagePaths = uploadResults.map((r) => r.path);
 
@@ -354,20 +362,25 @@ export const PracticeFormScreen: React.FC = () => {
       return;
     }
 
-    if (!user) {
-      Alert.alert("エラー", "認証が必要です", [{ text: "OK" }]);
-      return;
-    }
-
     isSubmittingRef.current = true;
     setLoading(true);
     clearErrors();
 
     try {
+      // 最新の access_token を取得（長時間バックグラウンド後のリフレッシュ対応）
+      // stale な user state より先に getAccessToken() を呼び、リフレッシュのチャンスを与える
+      const accessToken = await getAccessToken();
+
+      // accessToken が null の場合は mutation 実行前に早期リターン
+      if (!accessToken) {
+        Alert.alert("エラー", "セッションが無効です。再ログインしてください。", [{ text: "OK" }]);
+        return;
+      }
+
       if (isEditMode && practiceId) {
         // 新規画像をアップロード
         let newImagePaths: string[] = [];
-        if (newImageFiles.length > 0 && session?.access_token) {
+        if (newImageFiles.length > 0) {
           const uploadResults = await uploadImagesViaApi(
             newImageFiles.map((f) => ({
               base64: f.base64,
@@ -375,7 +388,7 @@ export const PracticeFormScreen: React.FC = () => {
             })),
             practiceId,
             "practice-images",
-            session.access_token,
+            accessToken,
           );
           newImagePaths = uploadResults.map((r) => r.path);
         }
@@ -400,9 +413,9 @@ export const PracticeFormScreen: React.FC = () => {
           updates: formData,
         });
 
-        // DB更新成功後に削除対象画像をストレージから削除
+        // DB更新成功後に削除対象画像をストレージから削除（Web API 経由）
         if (deletedImageIds.length > 0) {
-          await deleteImages(supabase, deletedImageIds, "practice-images");
+          await deleteImagesViaApi(deletedImageIds, "practice-images", accessToken);
         }
 
         // iOSカレンダー同期（iOS端末かつ連携が有効な場合）
@@ -446,7 +459,10 @@ export const PracticeFormScreen: React.FC = () => {
         const createdPractice = await createMutation.mutateAsync(formData);
 
         // 新規画像をアップロード
-        if (newImageFiles.length > 0 && session?.access_token) {
+        if (newImageFiles.length > 0) {
+          if (!accessToken) {
+            throw new Error("認証が必要です。再ログインしてください。");
+          }
           const uploadResults = await uploadImagesViaApi(
             newImageFiles.map((f) => ({
               base64: f.base64,
@@ -454,7 +470,7 @@ export const PracticeFormScreen: React.FC = () => {
             })),
             createdPractice.id,
             "practice-images",
-            session.access_token,
+            accessToken,
           );
           const imagePaths = uploadResults.map((r) => r.path);
 

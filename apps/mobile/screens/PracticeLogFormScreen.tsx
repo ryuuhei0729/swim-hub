@@ -67,7 +67,7 @@ export const PracticeLogFormScreen: React.FC = () => {
   const route = useRoute<PracticeLogFormScreenRouteProp>();
   const navigation = useNavigation<PracticeLogFormScreenNavigationProp>();
   const { practiceId, practiceLogId, returnTo } = route.params;
-  const { supabase, subscription, session } = useAuth();
+  const { supabase, subscription, getAccessToken } = useAuth();
   const queryClient = useQueryClient();
   const isEditMode = practiceLogId !== undefined;
   const isPremium = checkIsPremium(subscription);
@@ -75,8 +75,8 @@ export const PracticeLogFormScreen: React.FC = () => {
   // 動画の状態管理
   const [existingVideoPath, setExistingVideoPath] = useState<string | null>(null);
   const [existingThumbnailPath, setExistingThumbnailPath] = useState<string | null>(null);
-  // メニュー ID をキーに保留動画 URI を管理する（複数メニュー対応）
-  const pendingVideoUriRef = useRef<Map<string, string>>(new Map());
+  // メニュー ID をキーに保留動画アセット（URI + mimeType）を管理する（複数メニュー対応）
+  const pendingVideoAssetRef = useRef<Map<string, { uri: string; mimeType?: string }>>(new Map());
 
   // メニューデータ（複数）
   const [menus, setMenus] = useState<PracticeMenu[]>([
@@ -112,6 +112,9 @@ export const PracticeLogFormScreen: React.FC = () => {
   // 既存データの取得（編集モード時）
   const [loadingPracticeLog, setLoadingPracticeLog] = useState(isEditMode);
   const initializedRef = useRef(false);
+
+  // 二重送信防止用のref
+  const isSubmittingRef = useRef(false);
 
   // 既存データの取得（編集モード時）
   useEffect(() => {
@@ -239,8 +242,8 @@ export const PracticeLogFormScreen: React.FC = () => {
       if (prev.length <= 1) {
         return prev;
       }
-      // 削除されたメニューの保留動画 URI も破棄する
-      pendingVideoUriRef.current.delete(id);
+      // 削除されたメニューの保留動画アセットも破棄する
+      pendingVideoAssetRef.current.delete(id);
       return prev.filter((menu) => menu.id !== id);
     });
   };
@@ -406,9 +409,14 @@ export const PracticeLogFormScreen: React.FC = () => {
 
   // 保存処理
   const handleSave = async () => {
+    // 二重送信防止
+    if (isSubmittingRef.current) return;
+
     if (!validate()) {
       return;
     }
+
+    isSubmittingRef.current = true;
 
     try {
       const api = new PracticeAPI(supabase);
@@ -481,25 +489,35 @@ export const PracticeLogFormScreen: React.FC = () => {
           }
 
           // 保留中の動画をアップロード（新規作成後に id が確定）
-          const pendingUri = pendingVideoUriRef.current.get(menu.id);
-          if (pendingUri && session?.access_token) {
-            try {
-              await uploadVideo({
-                type: "practice-log",
-                id: createdLog.id,
-                videoUri: pendingUri,
-                accessToken: session.access_token,
-              });
-            } catch (err) {
-              console.error("動画アップロードエラー:", err);
+          const pendingAsset = pendingVideoAssetRef.current.get(menu.id);
+          if (pendingAsset) {
+            const accessToken = await getAccessToken();
+            if (!accessToken) {
               Alert.alert(
                 "動画アップロード失敗",
-                "練習ログは保存されましたが、動画のアップロードに失敗しました。詳細画面から再度追加してください。",
+                "動画アップロード失敗: セッションが無効です。再ログインしてください。",
               );
+            } else {
+              try {
+                await uploadVideo({
+                  type: "practice-log",
+                  id: createdLog.id,
+                  videoUri: pendingAsset.uri,
+                  mimeType: pendingAsset.mimeType,
+                  accessToken,
+                });
+              } catch (err) {
+                console.error("動画アップロードエラー:", err);
+                const errorDetail = err instanceof Error ? err.message : "不明なエラー";
+                Alert.alert(
+                  "動画アップロード失敗",
+                  `練習ログは保存されましたが、動画のアップロードに失敗しました。\n\n詳細: ${errorDetail}\n\n詳細画面から再度追加してください。`,
+                );
+              }
             }
           }
-          // 成功・失敗・session なし問わず保留 URI をリセットする
-          pendingVideoUriRef.current.delete(menu.id);
+          // 成功・失敗・token なし問わず保留アセットをリセットする
+          pendingVideoAssetRef.current.delete(menu.id);
         }
       }
 
@@ -519,6 +537,8 @@ export const PracticeLogFormScreen: React.FC = () => {
       Alert.alert("エラー", error instanceof Error ? error.message : "保存に失敗しました", [
         { text: "OK" },
       ]);
+    } finally {
+      isSubmittingRef.current = false;
     }
   };
 
@@ -820,11 +840,11 @@ export const PracticeLogFormScreen: React.FC = () => {
                     setExistingVideoPath(null);
                     setExistingThumbnailPath(null);
                   }}
-                  onPendingVideoUri={(uri) => {
-                    if (uri) {
-                      pendingVideoUriRef.current.set(menu.id, uri);
+                  onPendingVideoAsset={(asset) => {
+                    if (asset) {
+                      pendingVideoAssetRef.current.set(menu.id, asset);
                     } else {
-                      pendingVideoUriRef.current.delete(menu.id);
+                      pendingVideoAssetRef.current.delete(menu.id);
                     }
                   }}
                 />

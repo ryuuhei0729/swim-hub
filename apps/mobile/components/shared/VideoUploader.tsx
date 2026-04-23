@@ -17,7 +17,9 @@ interface VideoUploaderProps {
   isPremium: boolean;
   onUploadComplete?: (videoPath: string, thumbnailPath: string) => void;
   onDelete?: () => void;
-  /** 新規作成フロー（id なし）で動画が選択/取り消された際に呼ばれる */
+  /** 新規作成フロー（id なし）で動画が選択/取り消された際に呼ばれる（URI + mimeType） */
+  onPendingVideoAsset?: (asset: { uri: string; mimeType?: string } | null) => void;
+  /** @deprecated onPendingVideoAsset を使用してください。後方互換のために残しています。 */
   onPendingVideoUri?: (uri: string | null) => void;
 }
 
@@ -38,9 +40,10 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
   isPremium,
   onUploadComplete,
   onDelete,
+  onPendingVideoAsset,
   onPendingVideoUri,
 }) => {
-  const { session } = useAuth();
+  const { getAccessToken } = useAuth();
   const [uploadState, setUploadState] = useState<UploadState>(
     existingVideoPath ? "done" : "idle",
   );
@@ -55,8 +58,17 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
 
   // id が後からセットされた場合、保留中の動画を自動アップロード
   useEffect(() => {
-    if (id && pendingVideoUri && uploadState === "selected" && session?.access_token) {
+    if (id && pendingVideoUri && uploadState === "selected") {
+      let isMounted = true;
+
       const doUpload = async () => {
+        const accessToken = await getAccessToken();
+        if (!isMounted) return;
+        if (!accessToken) {
+          setError("セッションが無効です。再ログインしてください。");
+          setUploadState("error");
+          return;
+        }
         setUploadState("uploading");
         setError(null);
         setProgress(0);
@@ -65,31 +77,35 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
             type,
             id,
             videoUri: pendingVideoUri,
-            accessToken: session.access_token,
-            onProgress: setProgress,
+            accessToken,
+            onProgress: (p) => {
+              if (isMounted) setProgress(p);
+            },
           });
+          if (!isMounted) return;
           setPendingVideoUri(null);
           setVideoPath(result.videoPath);
           setThumbnailPath(result.thumbnailPath);
           setUploadState("done");
           onUploadComplete?.(result.videoPath, result.thumbnailPath);
         } catch (err) {
+          if (!isMounted) return;
           console.error("動画アップロードエラー:", err);
           setError(err instanceof Error ? err.message : "アップロードに失敗しました");
           setUploadState("error");
         }
       };
+
       doUpload();
+
+      return () => {
+        isMounted = false;
+      };
     }
-  }, [id, pendingVideoUri, uploadState, session?.access_token, type, onUploadComplete]);
+  }, [id, pendingVideoUri, uploadState, getAccessToken, type, onUploadComplete]);
 
   const pickVideo = useCallback(
     async (source: "library" | "camera") => {
-      if (!session?.access_token) {
-        Alert.alert("エラー", "認証情報が見つかりません。再ログインしてください。");
-        return;
-      }
-
       try {
         const pickerFn =
           source === "camera"
@@ -113,7 +129,13 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
         }
 
         if (id) {
-          // ID あり → 即アップロード
+          // ID あり → 最新 token を取得してから即アップロード
+          const accessToken = await getAccessToken();
+          if (!accessToken) {
+            Alert.alert("エラー", "認証情報が見つかりません。再ログインしてください。");
+            return;
+          }
+
           setUploadState("uploading");
           setError(null);
           setProgress(0);
@@ -122,7 +144,8 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
             type,
             id,
             videoUri: asset.uri,
-            accessToken: session.access_token,
+            mimeType: asset.mimeType ?? undefined,
+            accessToken,
             onProgress: setProgress,
           });
 
@@ -133,17 +156,18 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
         } else {
           // ID なし → 保留（保存後に自動アップロード）
           setPendingVideoUri(asset.uri);
+          onPendingVideoAsset?.({ uri: asset.uri, mimeType: asset.mimeType ?? undefined });
           onPendingVideoUri?.(asset.uri);
           setUploadState("selected");
           setError(null);
         }
       } catch (err) {
-        console.error("動画アップロードエラー:", err);
+        console.error("動画選択/アップロードエラー:", err);
         setError(err instanceof Error ? err.message : "アップロードに失敗しました");
         setUploadState("error");
       }
     },
-    [session, type, id, onUploadComplete, onPendingVideoUri],
+    [getAccessToken, type, id, onUploadComplete, onPendingVideoAsset, onPendingVideoUri],
   );
 
   const handleSelectSource = useCallback(() => {
@@ -158,12 +182,13 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
     // 保留中の動画を削除
     if (pendingVideoUri) {
       setPendingVideoUri(null);
+      onPendingVideoAsset?.(null);
       onPendingVideoUri?.(null);
       setUploadState("idle");
       return;
     }
 
-    if (!session?.access_token || !id) return;
+    if (!id) return;
 
     Alert.alert("動画を削除", "この動画を削除しますか？", [
       { text: "キャンセル", style: "cancel" },
@@ -172,7 +197,12 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
         style: "destructive",
         onPress: async () => {
           try {
-            await deleteVideo(type, id, session.access_token);
+            const accessToken = await getAccessToken();
+            if (!accessToken) {
+              Alert.alert("エラー", "認証情報が見つかりません。再ログインしてください。");
+              return;
+            }
+            await deleteVideo(type, id, accessToken);
             setVideoPath(null);
             setThumbnailPath(null);
             setUploadState("idle");
@@ -184,7 +214,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
         },
       },
     ]);
-  }, [session, type, id, onDelete, onPendingVideoUri, pendingVideoUri]);
+  }, [getAccessToken, type, id, onDelete, onPendingVideoAsset, onPendingVideoUri, pendingVideoUri]);
 
   // Premium 制限
   if (!isPremium && uploadState === "idle") {

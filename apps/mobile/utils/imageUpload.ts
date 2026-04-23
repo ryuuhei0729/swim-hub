@@ -276,6 +276,45 @@ export async function uploadImageViaApi(
 }
 
 /**
+ * Web API 経由で単一の画像を削除
+ */
+export async function deleteImageViaApi(
+  path: string,
+  bucket: ImageBucket,
+  accessToken: string,
+): Promise<void> {
+  const endpoint =
+    bucket === "practice-images"
+      ? `${env.webApiUrl}/api/storage/images/practice`
+      : `${env.webApiUrl}/api/storage/images/competition`;
+
+  const deleteUrl = `${endpoint}?path=${encodeURIComponent(path)}`;
+  const res = await fetch(deleteUrl, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error ?? "画像の削除に失敗しました");
+  }
+}
+
+/**
+ * Web API 経由で複数の画像を削除
+ */
+export async function deleteImagesViaApi(
+  paths: string[],
+  bucket: ImageBucket,
+  accessToken: string,
+): Promise<void> {
+  if (paths.length === 0) return;
+  await Promise.all(paths.map((path) => deleteImageViaApi(path, bucket, accessToken)));
+}
+
+/**
  * Web API 経由で複数の画像をアップロード
  * エラー発生時は成功済みの画像をAPI経由でロールバック
  */
