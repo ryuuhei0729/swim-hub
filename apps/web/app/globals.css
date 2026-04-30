@@ -4,24 +4,6 @@
 
 @theme {
   --font-sans: var(--font-inter), var(--font-noto-sans-jp), ui-sans-serif, system-ui, sans-serif;
-
-  --breakpoint-lp-md: 960px;
-
-  /* LP Design Tokens */
-  --color-lp-paper:        #fbfaf6;
-  --color-lp-paper2:       #f5f2ea;
-  --color-lp-surface:      #ffffff;
-  --color-lp-ink:          #0a1a36;
-  --color-lp-accent:       #1f5aa8;
-  --color-lp-accent2:      #86aaff;
-  --color-lp-good:         #0a7a4a;
-  --color-lp-line:         rgba(10,26,54,0.12);
-  --color-lp-line-strong:  rgba(10,26,54,0.22);
-  --color-lp-dim:          rgba(10,26,54,0.58);
-  --color-lp-dim2:         rgba(10,26,54,0.35);
-
-  --font-display: var(--font-zen-kaku-gothic-new), var(--font-noto-sans-jp), sans-serif;
-  --font-mono:    var(--font-jetbrains-mono), ui-monospace, monospace;
   --color-primary-50: #eff6ff;
   --color-primary-100: #dbeafe;
   --color-primary-200: #bfdbfe;

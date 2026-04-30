@@ -1,7 +1,7 @@
 import React from "react";
 import "./globals.css";
 import type { Metadata } from "next";
-import { Inter, Noto_Sans_JP, Zen_Kaku_Gothic_New, JetBrains_Mono } from "next/font/google";
+import { Inter, Noto_Sans_JP } from "next/font/google";
 import { AuthProvider } from "../contexts";
 import QueryProvider from "../providers/QueryProvider";
 import { KeyboardScrollProvider } from "../components/keyboard/KeyboardScrollProvider";
@@ -17,20 +17,6 @@ const notoSansJP = Noto_Sans_JP({
   subsets: ["latin"],
   variable: "--font-noto-sans-jp",
   weight: ["400", "500", "700"],
-});
-
-const zenKakuGothicNew = Zen_Kaku_Gothic_New({
-  subsets: ["latin"],
-  weight: ["400", "900"],
-  variable: "--font-zen-kaku-gothic-new",
-  display: "swap",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  variable: "--font-jetbrains-mono",
-  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -136,7 +122,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="/blog/feed.xml"
         />
       </head>
-      <body className={`${inter.variable} ${notoSansJP.variable} ${zenKakuGothicNew.variable} ${jetbrainsMono.variable} font-sans`}>
+      <body className={`${inter.variable} ${notoSansJP.variable} font-sans`}>
         {jsonLd.map((data, i) => (
           <script
             key={i}
