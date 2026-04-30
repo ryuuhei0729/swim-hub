@@ -5,6 +5,8 @@ import {
   LpFeatureSection,
   LpScannerBlock,
   LpPricing,
+  LpFaqSection,
+  LpPersonaSection,
   LpFinalCTA,
 } from "./_components/lp";
 import StaticFooter from "@/components/layout/StaticFooter";
@@ -67,6 +69,8 @@ export default function Home() {
         />
         <LpScannerBlock />
         <LpPricing />
+        <LpFaqSection />
+        <LpPersonaSection />
         <LpFinalCTA />
       </main>
       <StaticFooter />

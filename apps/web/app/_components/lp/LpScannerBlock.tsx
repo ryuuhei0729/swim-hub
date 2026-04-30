@@ -82,11 +82,9 @@ export default function LpScannerBlock() {
                 maxWidth: 440,
                 marginTop: 20,
               }}
-              dangerouslySetInnerHTML={{
-                __html:
-                  "プールサイドの手書きメニューを撮るだけ。AIが即座に構造化して SwimHub へ取り込む。<strong>入力の手間がゼロ</strong>になるから、記録は続く。続くから、縮む。",
-              }}
-            />
+            >
+              プールサイドの手書きメニューを撮るだけ。AIが即座に構造化して SwimHub へ取り込む。<strong>入力の手間がゼロ</strong>になるから、記録は続く。続くから、縮む。
+            </p>
             <div style={{ display: "flex", gap: 10, marginTop: 32, flexWrap: "wrap" }}>
               <a
                 href="https://scanner.swim-hub.app"
@@ -105,24 +103,6 @@ export default function LpScannerBlock() {
               >
                 SCANNER を試す
               </a>
-              {/* TODO: YouTube デモ動画 URL 決定後に href を設定 */}
-              <button
-                disabled
-                style={{
-                  background: "transparent",
-                  color: "#fff",
-                  border: "1px solid rgba(255,255,255,0.4)",
-                  padding: "14px 24px",
-                  borderRadius: 999,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: "not-allowed",
-                  opacity: 0.5,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                デモ動画
-              </button>
             </div>
           </div>
 

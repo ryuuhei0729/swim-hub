@@ -5,12 +5,14 @@ import {
   XMarkIcon,
   ArrowRightIcon,
 } from "@heroicons/react/24/outline";
+import { safeJsonLd } from "@/lib/seo";
+import { SITE_URL } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "料金プラン | SwimHub",
   description:
     "SwimHubの料金プランをご確認ください。無料プランでも基本機能が使えます。Premiumプランは月額¥500、年額¥5,000で全機能が無制限に。7日間の無料トライアル付き。",
-  alternates: { canonical: "/pricing" },
+  alternates: { canonical: `${SITE_URL}/pricing` },
   openGraph: {
     title: "料金プラン | SwimHub",
     description:
@@ -40,6 +42,25 @@ const COMPARISON_ROWS: { feature: string; free: string | boolean; premium: strin
   { feature: "SwimHub Timer 連携", free: true, premium: true },
 ];
 
+const PRICING_FAQS: { question: string; answer: string }[] = [
+  {
+    question: "無料トライアル中に課金されますか？",
+    answer: "いいえ。7日間の無料トライアル中は一切課金されません。トライアル終了前にキャンセルすれば料金は発生しません。",
+  },
+  {
+    question: "年払いと月払いの違いは？",
+    answer: "年払いは¥5,000/年で、月払い（¥500/月 = ¥6,000/年）と比べて2ヶ月分（¥1,000）お得です。",
+  },
+  {
+    question: "途中でプランを変更できますか？",
+    answer: "はい。いつでもアップグレード・ダウングレードが可能です。設定画面からプランを管理できます。",
+  },
+  {
+    question: "SwimHub Scanner や SwimHub Timer も使えますか？",
+    answer: "はい。SwimHub の Premium プランに加入すると、SwimHub Scanner・SwimHub Timer の有料機能も統一課金で利用できます。",
+  },
+];
+
 function CellContent({ value }: { value: string | boolean }) {
   if (typeof value === "string") {
     return <span className="text-sm text-gray-700">{value}</span>;
@@ -48,13 +69,26 @@ function CellContent({ value }: { value: string | boolean }) {
 }
 
 export default function PricingPage() {
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: PRICING_FAQS.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.answer,
+      },
+    })),
+  };
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebPage",
     name: "料金プラン | SwimHub",
     description:
       "SwimHubの料金プラン。無料で始めて、Premiumで全機能を解放。",
-    url: "https://swim-hub.app/pricing",
+    url: `${SITE_URL}/pricing`,
     mainEntity: [
       {
         "@type": "Offer",
@@ -85,7 +119,11 @@ export default function PricingPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd) }}
       />
 
       <div className="min-h-screen bg-white">
@@ -262,27 +300,10 @@ export default function PricingPage() {
             </h2>
 
             <div className="space-y-6">
-              {[
-                {
-                  q: "無料トライアル中に課金されますか？",
-                  a: "いいえ。7日間の無料トライアル中は一切課金されません。トライアル終了前にキャンセルすれば料金は発生しません。",
-                },
-                {
-                  q: "年払いと月払いの違いは？",
-                  a: "年払いは¥5,000/年で、月払い（¥500/月 = ¥6,000/年）と比べて2ヶ月分（¥1,000）お得です。",
-                },
-                {
-                  q: "途中でプランを変更できますか？",
-                  a: "はい。いつでもアップグレード・ダウングレードが可能です。設定画面からプランを管理できます。",
-                },
-                {
-                  q: "SwimHub Scanner や SwimHub Timer も使えますか？",
-                  a: "はい。SwimHub の Premium プランに加入すると、SwimHub Scanner・SwimHub Timer の有料機能も統一課金で利用できます。",
-                },
-              ].map(({ q, a }) => (
-                <div key={q} className="bg-gray-50 rounded-xl p-6">
-                  <h3 className="text-base font-semibold text-gray-900 mb-2">{q}</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">{a}</p>
+              {PRICING_FAQS.map(({ question, answer }) => (
+                <div key={question} className="bg-gray-50 rounded-xl p-6">
+                  <h3 className="text-base font-semibold text-gray-900 mb-2">{question}</h3>
+                  <p className="text-sm text-gray-600 leading-relaxed">{answer}</p>
                 </div>
               ))}
             </div>

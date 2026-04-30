@@ -46,7 +46,6 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
   onPracticeTimeLoaded,
 }) => {
   const { supabase } = useAuth();
-  const [expanded, setExpanded] = useState(false);
   const [recordDetail, setRecordDetail] = useState<{
     time: number;
     note: string;
@@ -131,10 +130,10 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
   }, [isPractice, practiceId, supabase]);
 
   useEffect(() => {
-    if (expanded && isPractice && practiceId) {
+    if (isPractice && practiceId) {
       loadPracticeLogs();
     }
-  }, [expanded, isPractice, practiceId, loadPracticeLogs]);
+  }, [isPractice, practiceId, loadPracticeLogs]);
 
   const [practiceLogDetail, setPracticeLogDetail] = useState<PracticeLogDetailData | null>(null);
   const [loadingLogDetail, setLoadingLogDetail] = useState(false);
@@ -454,12 +453,9 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
       <Pressable
         style={styles.entryContentWrapper}
         onPress={() => {
-          if (isPractice) {
-            setExpanded(!expanded);
-          } else {
-            onEntryPress?.(item);
-            onClose();
-          }
+          if (isPractice) return;
+          onEntryPress?.(item);
+          onClose();
         }}
       >
         <View style={styles.entryContent}>
@@ -562,21 +558,6 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                     <Feather name="trash-2" size={20} color="#EF4444" />
                   </Pressable>
                 )}
-              {isPractice && (
-                <Pressable
-                  style={styles.actionButton}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    setExpanded(!expanded);
-                  }}
-                >
-                  <Feather
-                    name={expanded ? "chevron-up" : "chevron-down"}
-                    size={20}
-                    color="#6B7280"
-                  />
-                </Pressable>
-              )}
             </View>
           </View>
           <Text style={styles.entryTitle} numberOfLines={2}>
@@ -659,7 +640,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
         </View>
       </Pressable>
 
-      {expanded && isPractice && (
+      {isPractice && (
         <View style={styles.expandedContent}>
           {loading ? (
             <Text style={styles.loadingText}>読み込み中...</Text>

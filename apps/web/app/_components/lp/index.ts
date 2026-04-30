@@ -4,6 +4,8 @@ export { default as LpHeroLiveCard } from "./LpHeroLiveCard";
 export { default as LpFeatureSection } from "./LpFeatureSection";
 export { default as LpScannerBlock } from "./LpScannerBlock";
 export { default as LpPricing } from "./LpPricing";
+export { default as LpFaqSection } from "./LpFaqSection";
+export { default as LpPersonaSection } from "./LpPersonaSection";
 export { default as LpFinalCTA } from "./LpFinalCTA";
 export { default as LpTickBar } from "./LpTickBar";
 export { default as AnimatedCounter } from "./AnimatedCounter";

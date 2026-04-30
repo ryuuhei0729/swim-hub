@@ -21,8 +21,8 @@ export default function LpHero() {
           borderRadius: 999,
           background: "#ffffff",
           border: "1px solid rgba(10,26,54,0.12)",
-          fontSize: 12,
-          color: "rgba(10,26,54,0.58)",
+          fontSize: 14,
+          color: "rgba(10,26,54,0.85)",
         }}
       >
         <span
@@ -75,7 +75,7 @@ export default function LpHero() {
         }}
         className="text-[13.5px] lp-md:text-[17px]"
       >
-        練習も、大会も、コーチからの代理入力も。中学から大学まで、選手ひとりに紐づくタイムを、一生分のログブックとして積み上げる。
+        練習ログ・大会記録・コーチの代理入力。チームを移っても消えない、選手ひとりの記録帳。
       </p>
 
       {/* CTAs */}

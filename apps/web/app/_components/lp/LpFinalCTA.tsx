@@ -64,8 +64,10 @@ export default function LpFinalCTA() {
         >
           無料ではじめる ↗
         </Link>
-        <button
-          disabled
+        <a
+          href="https://apps.apple.com/jp/app/swimhub/id6756808731"
+          target="_blank"
+          rel="noopener noreferrer"
           style={{
             padding: "14px 24px",
             background: "#fff",
@@ -74,13 +76,22 @@ export default function LpFinalCTA() {
             borderRadius: 999,
             fontSize: 14,
             fontWeight: 600,
-            cursor: "not-allowed",
-            opacity: 0.5,
+            textDecoration: "none",
             whiteSpace: "nowrap",
           }}
         >
-          App Store · 準備中
-        </button>
+          App Store でダウンロード
+        </a>
+        <p
+          style={{
+            fontSize: 12,
+            color: "rgba(10,26,54,0.40)",
+            alignSelf: "center",
+            margin: 0,
+          }}
+        >
+          Android 版 近日公開
+        </p>
       </div>
 
       <div style={{ maxWidth: 900, margin: "56px auto 0" }}>

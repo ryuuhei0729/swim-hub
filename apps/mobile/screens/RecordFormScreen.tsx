@@ -378,7 +378,11 @@ export const RecordFormScreen: React.FC = () => {
 
         // 新規作成時：保留中の動画をアップロード
         if (pendingVideoAssetRef.current) {
-          if (!accessToken) {
+          // Supabase の read replica 反映を待つ (動画アップロード API が records を SELECT するため)
+          await new Promise((resolve) => setTimeout(resolve, 300));
+
+          const videoToken = await getAccessToken();
+          if (!videoToken) {
             Alert.alert(
               "動画アップロード失敗",
               "動画アップロード失敗: セッションが無効です。再ログインしてください。",
@@ -390,7 +394,7 @@ export const RecordFormScreen: React.FC = () => {
                 id: savedRecord.id,
                 videoUri: pendingVideoAssetRef.current.uri,
                 mimeType: pendingVideoAssetRef.current.mimeType,
-                accessToken,
+                accessToken: videoToken,
               });
             } catch (err) {
               console.error("動画アップロードエラー:", err);
