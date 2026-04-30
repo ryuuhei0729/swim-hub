@@ -1,5 +1,3 @@
-"use client";
-
 import Image from "next/image";
 import AnimatedCounter from "./AnimatedCounter";
 import LpTickBar from "./LpTickBar";

@@ -1,17 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 export default function LpNav() {
   const [menuOpen, setMenuOpen] = useState(false);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [menuOpen]);
+
   function handleSmoothScroll(e: React.MouseEvent<HTMLAnchorElement>, href: string) {
     if (!href.startsWith("#")) return;
     e.preventDefault();
-    const target = document.querySelector(href);
+    const target = document.querySelector<HTMLElement>(href);
     if (target) {
       target.scrollIntoView({ behavior: "smooth" });
+      if (!target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1");
+      target.focus({ preventScroll: true });
     }
     setMenuOpen(false);
   }

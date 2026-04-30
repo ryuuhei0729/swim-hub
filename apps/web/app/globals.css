@@ -5,6 +5,8 @@
 @theme {
   --font-sans: var(--font-inter), var(--font-noto-sans-jp), ui-sans-serif, system-ui, sans-serif;
 
+  --breakpoint-lp-md: 960px;
+
   /* LP Design Tokens */
   --color-lp-paper:        #fbfaf6;
   --color-lp-paper2:       #f5f2ea;
