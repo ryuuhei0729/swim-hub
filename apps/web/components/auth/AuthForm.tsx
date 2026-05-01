@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts";
 import BirthdayInput from "@/components/ui/BirthdayInput";
+import { validatePassword, type PasswordChecks } from "@/utils/passwordValidator";
 
 interface AuthFormProps {
   mode?: "signin" | "signup";
@@ -20,6 +21,8 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  const passwordValidation = useMemo(() => validatePassword(password), [password]);
 
   const { signIn, signUp, signInWithOAuth } = useAuth();
 
@@ -100,6 +103,35 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (formMode === "signup") {
+      if (!name.trim()) {
+        setError("名前を入力してください。");
+        return;
+      }
+      const checks = passwordValidation.checks;
+      if (!checks.minLength) {
+        setError("パスワードは6文字以上で入力してください。");
+        return;
+      }
+      if (!checks.lowercase) {
+        setError("パスワードに小文字を含めてください。");
+        return;
+      }
+      if (!checks.uppercase) {
+        setError("パスワードに大文字を含めてください。");
+        return;
+      }
+      if (!checks.digit) {
+        setError("パスワードに数字を含めてください。");
+        return;
+      }
+      if (!checks.symbol) {
+        setError("パスワードに記号を含めてください。");
+        return;
+      }
+    }
+
     setLoading(true);
     setError(null);
     setMessage(null);
@@ -314,6 +346,11 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
                 minLength={6}
               />
             </div>
+            {formMode === "signup" && (
+              <div className="mt-2">
+                <PasswordRequirementsList checks={passwordValidation.checks} />
+              </div>
+            )}
           </div>
         </div>
 
@@ -438,3 +475,34 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
     </div>
   );
 };
+
+function PasswordRequirementsList({ checks }: { checks: PasswordChecks }) {
+  const items: { key: keyof PasswordChecks; label: string }[] = [
+    { key: "minLength", label: "6文字以上" },
+    { key: "lowercase", label: "小文字を含む" },
+    { key: "uppercase", label: "大文字を含む" },
+    { key: "digit", label: "数字を含む" },
+    { key: "symbol", label: "記号を含む" },
+  ];
+  return (
+    <div className="space-y-1 rounded-lg border border-gray-200 bg-gray-50 p-3">
+      <p className="text-xs font-medium text-gray-600">パスワード要件</p>
+      <ul className="space-y-1">
+        {items.map(({ key, label }) => {
+          const met = checks[key];
+          return (
+            <li
+              key={key}
+              className={`flex items-center gap-2 text-xs ${
+                met ? "text-emerald-600" : "text-gray-500"
+              }`}
+            >
+              <span aria-hidden="true">{met ? "✓" : "○"}</span>
+              <span>{label}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}

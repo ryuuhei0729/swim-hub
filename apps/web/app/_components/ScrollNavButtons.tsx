@@ -6,7 +6,7 @@ import Link from "next/link";
 const navItems = [
   { id: "practice", label: "練習記録" },
   { id: "competition", label: "大会記録" },
-  { id: "goals", label: "目標管理" },
+  { id: "proxy", label: "代理入力" },
   { id: "pricing", label: "料金" },
 ];
 
@@ -49,12 +49,6 @@ export default function ScrollNavButtons() {
             {item.label}
           </button>
         ))}
-        <Link
-          href="/blog"
-          className="px-4 py-2 text-base text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-        >
-          ブログ
-        </Link>
         <div className="mx-2 h-6 w-px bg-gray-300" />
         <Link
           href="/signup"
@@ -110,13 +104,6 @@ export default function ScrollNavButtons() {
                 {item.label}
               </button>
             ))}
-            <Link
-              href="/blog"
-              className="px-4 py-2 text-right text-xs text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-              onClick={() => setMenuOpen(false)}
-            >
-              ブログ
-            </Link>
           </div>
         </div>
       )}

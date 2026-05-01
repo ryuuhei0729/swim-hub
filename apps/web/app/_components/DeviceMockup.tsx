@@ -54,7 +54,7 @@ export default function DeviceMockup() {
 
   return (
     <div
-      className="animate-fade-in order-1 lg:order-2"
+      className="animate-fade-in order-1 lg:order-2 hidden md:block"
       style={{
         width: CANVAS_WIDTH * containerScale,
         height: CANVAS_HEIGHT * containerScale,

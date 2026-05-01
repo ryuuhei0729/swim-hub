@@ -147,9 +147,13 @@ export const RecordDetailScreen: React.FC = () => {
   const lapIntervals = useMemo(() => {
     const raceDistance = record?.style?.distance;
     if (!raceDistance) return [];
+    if (raceDistance === 1500) return [25, 50, 100];
     const intervals: number[] = [];
     if (raceDistance >= 25 && raceDistance !== 25) intervals.push(25);
     if (raceDistance >= 50 && raceDistance !== 50) intervals.push(50);
+    if (raceDistance >= 100 && raceDistance !== 100) intervals.push(100);
+    if (raceDistance >= 200 && raceDistance !== 200) intervals.push(200);
+    if (raceDistance >= 400 && raceDistance !== 400) intervals.push(400);
     return intervals;
   }, [record?.style?.distance]);
 
