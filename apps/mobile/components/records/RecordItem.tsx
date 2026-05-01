@@ -41,11 +41,8 @@ const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress, preco
   }, [recordDate]);
 
   const styleDisplay = useMemo(() => {
-    const nameJp = record.style?.name_jp;
-    const distance = record.style?.distance;
-    if (!nameJp) return "不明";
-    return distance ? `${nameJp} ${distance}m` : nameJp;
-  }, [record.style?.name_jp, record.style?.distance]);
+    return record.style?.name_jp || "不明";
+  }, [record.style?.name_jp]);
 
   // タイムをフォーマット
   const formattedTime = useMemo(() => formatTime(record.time), [record.time]);

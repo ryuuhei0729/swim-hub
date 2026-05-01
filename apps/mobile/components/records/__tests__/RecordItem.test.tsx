@@ -41,7 +41,7 @@ describe("RecordItem", () => {
     style: {
       ...createMockStyle(),
       id: 1,
-      name_jp: "自由形",
+      name_jp: "100m自由形",
       distance: 100,
     },
   });
@@ -54,7 +54,7 @@ describe("RecordItem", () => {
     // 大会名が表示される
     expect(screen.getByText("テスト大会")).toBeTruthy();
     // 種目・距離が表示される
-    expect(screen.getByText("自由形 100m")).toBeTruthy();
+    expect(screen.getByText("100m自由形")).toBeTruthy();
     // プールタイプが表示される
     expect(screen.getByText("長水路")).toBeTruthy();
   });

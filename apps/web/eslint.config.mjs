@@ -76,6 +76,7 @@ export default [
       "e2e/**",
       "server.js", // Next.js HTTPS開発サーバー（CommonJS）
       "next-env.d.ts", // Next.js自動生成ファイル
+      "scripts/**", // ビルド外の生成スクリプト
     ],
   },
 ];

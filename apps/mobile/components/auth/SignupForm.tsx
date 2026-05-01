@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthProvider";
+import { validatePassword, type PasswordChecks } from "@/utils/validatePassword";
 
 interface SignupFormProps {
   onSuccess?: () => void;
@@ -13,6 +15,8 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  const passwordValidation = useMemo(() => validatePassword(password), [password]);
 
   const { signUp } = useAuth();
 
@@ -94,9 +98,25 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
       return false;
     }
 
-    // パスワード強度チェック（最小6文字、推奨8文字以上）
-    if (password.length < 6) {
+    const checks = passwordValidation.checks;
+    if (!checks.minLength) {
       setError("パスワードは6文字以上で入力してください。");
+      return false;
+    }
+    if (!checks.lowercase) {
+      setError("パスワードに小文字を含めてください。");
+      return false;
+    }
+    if (!checks.uppercase) {
+      setError("パスワードに大文字を含めてください。");
+      return false;
+    }
+    if (!checks.digit) {
+      setError("パスワードに数字を含めてください。");
+      return false;
+    }
+    if (!checks.symbol) {
+      setError("パスワードに記号を含めてください。");
       return false;
     }
 
@@ -191,11 +211,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
               textContentType="newPassword"
               editable={!loading}
             />
-            {password.length > 0 && password.length < 8 && (
-              <Text style={styles.passwordHint}>
-                より強力なパスワードにするため、8文字以上を推奨します。
-              </Text>
-            )}
+            <PasswordRequirementsList checks={passwordValidation.checks} />
           </View>
 
           <Pressable
@@ -217,6 +233,34 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
     </View>
   );
 };
+
+function PasswordRequirementsList({ checks }: { checks: PasswordChecks }) {
+  const items: { key: keyof PasswordChecks; label: string }[] = [
+    { key: "minLength", label: "6文字以上" },
+    { key: "lowercase", label: "小文字を含む" },
+    { key: "uppercase", label: "大文字を含む" },
+    { key: "digit", label: "数字を含む" },
+    { key: "symbol", label: "記号を含む" },
+  ];
+  return (
+    <View style={styles.requirements}>
+      <Text style={styles.requirementsTitle}>パスワード要件</Text>
+      {items.map(({ key, label }) => {
+        const met = checks[key];
+        return (
+          <View key={key} style={styles.requirementRow}>
+            <Ionicons
+              name={met ? "checkmark-circle" : "ellipse-outline"}
+              size={14}
+              color={met ? "#10B981" : "#9CA3AF"}
+            />
+            <Text style={[styles.requirementText, met && styles.requirementTextMet]}>{label}</Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -317,5 +361,27 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
+  },
+  requirements: {
+    marginTop: 8,
+    gap: 4,
+  },
+  requirementsTitle: {
+    fontSize: 12,
+    color: "#6B7280",
+    fontWeight: "500",
+    marginBottom: 2,
+  },
+  requirementRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  requirementText: {
+    fontSize: 12,
+    color: "#9CA3AF",
+  },
+  requirementTextMet: {
+    color: "#10B981",
   },
 });

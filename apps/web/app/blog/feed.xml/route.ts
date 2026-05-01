@@ -1,4 +1,5 @@
 import { getAllPosts } from "@/lib/blog";
+import { SITE_URL } from "@/lib/constants";
 
 export const revalidate = 3600;
 
@@ -13,7 +14,7 @@ function escapeXml(str: string): string {
 
 export async function GET() {
   const posts = getAllPosts();
-  const baseUrl = "https://swim-hub.app";
+  const baseUrl = SITE_URL;
 
   const lastBuildDate =
     posts.length > 0 ? new Date(posts[0].date).toUTCString() : new Date().toUTCString();

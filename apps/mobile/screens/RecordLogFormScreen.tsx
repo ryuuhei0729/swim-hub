@@ -30,6 +30,7 @@ import { formatTime } from "@/utils/formatters";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { VideoUploader } from "@/components/shared/VideoUploader";
+import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { PREMIUM_MESSAGES, FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import type { MainStackParamList } from "@/navigation/types";
@@ -67,7 +68,7 @@ export const RecordLogFormScreen: React.FC = () => {
     () => route.params.entryDataList ?? [],
     [route.params.entryDataList],
   );
-  const { supabase, subscription } = useAuth();
+  const { supabase, subscription, getAccessToken } = useAuth();
   const isPremium = checkIsPremium(subscription);
   const queryClient = useQueryClient();
 
@@ -77,6 +78,8 @@ export const RecordLogFormScreen: React.FC = () => {
   // 動画の状態管理
   const [existingVideoPath, setExistingVideoPath] = useState<string | null>(null);
   const [existingThumbnailPath, setExistingThumbnailPath] = useState<string | null>(null);
+  // 新規作成時：保存前にフォーム index ごとの保留動画アセット（URI + mimeType）
+  const pendingVideoAssetRef = useRef<Map<number, { uri: string; mimeType?: string }>>(new Map());
 
   // フォーム状態（複数エントリー対応）
   const [formDataList, setFormDataList] = useState<RecordFormData[]>([]);
@@ -566,8 +569,13 @@ export const RecordLogFormScreen: React.FC = () => {
         }
       } else {
         // 新規作成モードの場合
-        for (const formData of formDataList) {
-          if (formData.time <= 0) continue; // タイム未入力のものはスキップ
+        for (let index = 0; index < formDataList.length; index++) {
+          const formData = formDataList[index];
+          if (formData.time <= 0) {
+            // タイム未入力のフォームはスキップ。保留動画も破棄する
+            pendingVideoAssetRef.current.delete(index);
+            continue;
+          }
 
           const recordData: Omit<RecordInsert, "user_id"> = {
             competition_id: competitionId,
@@ -616,6 +624,40 @@ export const RecordLogFormScreen: React.FC = () => {
               });
             }
           }
+
+          // 保留中の動画をアップロード（新規作成後に id が確定）
+          const pendingAsset = pendingVideoAssetRef.current.get(index);
+          if (pendingAsset && savedRecord) {
+            // Supabase の read replica 反映を待つ (動画アップロード API が records を SELECT するため)
+            await new Promise((resolve) => setTimeout(resolve, 300));
+
+            const videoToken = await getAccessToken();
+            if (!videoToken) {
+              Alert.alert(
+                "動画アップロード失敗",
+                "動画アップロード失敗: セッションが無効です。再ログインしてください。",
+              );
+            } else {
+              try {
+                await uploadVideo({
+                  type: "record",
+                  id: savedRecord.id,
+                  videoUri: pendingAsset.uri,
+                  mimeType: pendingAsset.mimeType,
+                  accessToken: videoToken,
+                });
+              } catch (err) {
+                console.error("動画アップロードエラー:", err);
+                const errorDetail = err instanceof Error ? err.message : "不明なエラー";
+                Alert.alert(
+                  "動画アップロード失敗",
+                  `大会記録は保存されましたが、動画のアップロードに失敗しました。\n\n詳細: ${errorDetail}\n\n詳細画面から再度追加してください。`,
+                );
+              }
+            }
+          }
+          // 成功・失敗・token なし問わず保留アセットをリセットする
+          pendingVideoAssetRef.current.delete(index);
         }
       }
 
@@ -786,6 +828,13 @@ export const RecordLogFormScreen: React.FC = () => {
                   onDelete={() => {
                     setExistingVideoPath(null);
                     setExistingThumbnailPath(null);
+                  }}
+                  onPendingVideoAsset={(asset) => {
+                    if (asset) {
+                      pendingVideoAssetRef.current.set(index, asset);
+                    } else {
+                      pendingVideoAssetRef.current.delete(index);
+                    }
                   }}
                 />
               </View>

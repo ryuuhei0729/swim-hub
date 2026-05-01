@@ -433,18 +433,6 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                   <View style={styles.addRecordSection}>
                     <Text style={styles.addRecordSectionTitle}>記録を追加</Text>
                     <View style={styles.addRecordButtonContainer}>
-                      {onAddPractice && (
-                        <Pressable
-                          style={styles.addRecordButtonRow}
-                          onPress={() => {
-                            onAddPractice(date);
-                            onClose();
-                          }}
-                        >
-                          <Feather name="activity" size={20} color="#F59E0B" />
-                          <Text style={styles.addRecordButtonText}>練習記録</Text>
-                        </Pressable>
-                      )}
                       {onAddRecord && (
                         <Pressable
                           style={styles.addRecordButtonRow}
@@ -455,6 +443,18 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                         >
                           <Feather name="droplet" size={20} color="#3B82F6" />
                           <Text style={styles.addRecordButtonText}>大会記録</Text>
+                        </Pressable>
+                      )}
+                      {onAddPractice && (
+                        <Pressable
+                          style={styles.addRecordButtonRow}
+                          onPress={() => {
+                            onAddPractice(date);
+                            onClose();
+                          }}
+                        >
+                          <Feather name="activity" size={20} color="#10B981" />
+                          <Text style={styles.addRecordButtonText}>練習記録</Text>
                         </Pressable>
                       )}
                     </View>

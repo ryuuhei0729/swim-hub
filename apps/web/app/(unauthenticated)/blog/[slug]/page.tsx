@@ -11,6 +11,8 @@ import {
 import { getAllSlugs, getPostBySlug } from "@/lib/blog";
 import { marked } from "marked";
 import type { Metadata } from "next";
+import { safeJsonLd } from "@/lib/seo";
+import { SITE_URL } from "@/lib/constants";
 
 export const revalidate = 3600;
 
@@ -27,7 +29,7 @@ export function generateMetadata({
     const post = getPostBySlug(slug);
     if (!post) return { title: "記事が見つかりません | SwimHub" };
 
-    const url = `https://swim-hub.app/blog/${encodeURIComponent(slug)}`;
+    const url = `${SITE_URL}/blog/${encodeURIComponent(slug)}`;
 
     return {
       title: `${post.title} | SwimHub ブログ`,
@@ -43,14 +45,14 @@ export function generateMetadata({
         publishedTime: post.date,
         tags: post.tags,
         images: [
-          { url: "https://swim-hub.app/icon.png", width: 512, height: 512, alt: post.title },
+          { url: `${SITE_URL}/icon.png`, width: 512, height: 512, alt: post.title },
         ],
       },
       twitter: {
         card: "summary",
         title: post.title,
         description: post.description,
-        images: ["https://swim-hub.app/icon.png"],
+        images: [`${SITE_URL}/icon.png`],
       },
     };
   });
@@ -63,7 +65,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
   const contentHtml = await marked(post.content);
 
-  const postUrl = `https://swim-hub.app/blog/${encodeURIComponent(slug)}`;
+  const postUrl = `${SITE_URL}/blog/${encodeURIComponent(slug)}`;
 
   const articleJsonLd = {
     "@context": "https://schema.org",
@@ -75,15 +77,15 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     author: {
       "@type": "Organization",
       name: "SwimHub",
-      url: "https://swim-hub.app",
+      url: SITE_URL,
     },
     publisher: {
       "@type": "Organization",
       name: "SwimHub",
-      logo: { "@type": "ImageObject", url: "https://swim-hub.app/favicon.png" },
+      logo: { "@type": "ImageObject", url: `${SITE_URL}/favicon.png` },
     },
     mainEntityOfPage: { "@type": "WebPage", "@id": postUrl },
-    image: "https://swim-hub.app/icon.png",
+    image: `${SITE_URL}/icon.png`,
     keywords: post.tags.join(", "),
     inLanguage: "ja",
   };
@@ -92,8 +94,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "ホーム", item: "https://swim-hub.app" },
-      { "@type": "ListItem", position: 2, name: "ブログ", item: "https://swim-hub.app/blog" },
+      { "@type": "ListItem", position: 1, name: "ホーム", item: SITE_URL },
+      { "@type": "ListItem", position: 2, name: "ブログ", item: `${SITE_URL}/blog` },
       { "@type": "ListItem", position: 3, name: post.title, item: postUrl },
     ],
   };
@@ -102,11 +104,11 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     <div className="min-h-screen bg-linear-to-b from-blue-50 to-white">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(articleJsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd) }}
       />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* パンくずリスト */}
