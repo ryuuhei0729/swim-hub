@@ -35,7 +35,10 @@ const CSP = [
   "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob:",
   "worker-src 'self' blob:",
   "style-src 'self' 'unsafe-inline'",
-  ["img-src 'self' data: blob: https://*.supabase.co https://*.r2.dev", R2_PUBLIC_ORIGIN]
+  [
+    "img-src 'self' data: blob: https://*.supabase.co https://*.r2.dev https://*.r2.cloudflarestorage.com",
+    R2_PUBLIC_ORIGIN,
+  ]
     .filter(Boolean)
     .join(" "),
   // <video> の blob: プレビュー、および R2 presigned URL (S3 互換エンドポイント)
