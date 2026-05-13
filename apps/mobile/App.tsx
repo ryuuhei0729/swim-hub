@@ -7,6 +7,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "./contexts/AuthProvider";
 import QueryProvider from "./providers/QueryProvider";
 import { NetworkProvider, useNetwork } from "./providers/NetworkProvider";
+import { I18nProvider } from "./providers/I18nProvider";
 import { OfflineBanner } from "./components/layout/OfflineBanner";
 import { AuthStack } from "./navigation/AuthStack";
 import { MainStack } from "./navigation/MainStack";
@@ -101,15 +102,17 @@ const AppNavigator: React.FC = () => {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <ErrorBoundary>
-        <QueryProvider>
-          <NetworkProvider>
-            <AuthProvider>
-              <AppNavigator />
-            </AuthProvider>
-          </NetworkProvider>
-        </QueryProvider>
-      </ErrorBoundary>
+      <I18nProvider>
+        <ErrorBoundary>
+          <QueryProvider>
+            <NetworkProvider>
+              <AuthProvider>
+                <AppNavigator />
+              </AuthProvider>
+            </NetworkProvider>
+          </QueryProvider>
+        </ErrorBoundary>
+      </I18nProvider>
     </SafeAreaProvider>
   );
 }

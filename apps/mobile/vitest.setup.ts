@@ -120,6 +120,38 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
+// expo-localization のモック (i18n/detector.ts が getDeviceLocale で参照)
+vi.mock("expo-localization", () => ({
+  getLocales: () => [{ languageCode: "ja", languageTag: "ja-JP", regionCode: "JP" }],
+  getCalendars: () => [{ calendar: "gregorian", timeZone: "Asia/Tokyo" }],
+}));
+
+// react-i18next のモック: t() はキー文字列を返し、ロケール非依存テストを可能にする。
+// 個別テストで `t` の挙動を変えたい場合は `vi.mocked(useTranslation)` で上書き可能。
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key,
+    i18n: {
+      language: "ja",
+      changeLanguage: vi.fn(async () => undefined),
+    },
+  }),
+  Trans: ({ children }: { children?: React.ReactNode }) => children ?? null,
+  I18nextProvider: ({ children }: { children: React.ReactNode }) => children,
+  initReactI18next: { type: "3rdParty", init: () => {} },
+}));
+
+// i18next のモック (initReactI18next 経由の init を no-op に)
+vi.mock("i18next", () => ({
+  default: {
+    use: () => ({ init: () => Promise.resolve() }),
+    init: () => Promise.resolve(),
+    changeLanguage: vi.fn(async () => undefined),
+    language: "ja",
+    t: (key: string) => key,
+  },
+}));
+
 // React Navigation のモック
 vi.mock("@react-navigation/native", () => ({
   useNavigation: () => ({
