@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { useTranslations } from "next-intl";
 import type { TeamAttendanceWithDetails } from "@swim-hub/shared/types/attendance";
 import { TeamEvent } from "@swim-hub/shared/types";
 import { TeamAttendancesAPI } from "@apps/shared/api/teams/attendances";
@@ -12,6 +13,7 @@ export const useAttendanceStatus = (
   supabase: SupabaseClient,
   attendancesAPI: TeamAttendancesAPI,
 ) => {
+  const t = useTranslations("teams");
   const [attendanceData, setAttendanceData] = useState<TeamAttendanceWithDetails[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(false);
@@ -33,12 +35,12 @@ export const useAttendanceStatus = (
         setTeamMembers(members);
       } catch (err) {
         console.error("出欠情報の取得に失敗:", err);
-        setError("出欠情報の取得に失敗しました");
+        setError(t("attendanceStatusHook.loadError"));
       } finally {
         setLoading(false);
       }
     },
-    [teamId, supabase, attendancesAPI],
+    [teamId, supabase, attendancesAPI, t],
   );
 
   return {

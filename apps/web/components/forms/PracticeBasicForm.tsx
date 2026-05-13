@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -11,18 +12,11 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import { supabase } from "@/lib/supabase";
 import { PracticeAPI } from "@apps/shared/api";
 import { format, parseISO, isValid } from "date-fns";
-import { ja } from "date-fns/locale";
+import { ja, enUS } from "date-fns/locale";
 import PracticeImageUploader, { PracticeImageFile, ExistingImage } from "./PracticeImageUploader";
 import { useAuth } from "@/contexts";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
-import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
 import PremiumBadge from "@/components/ui/PremiumBadge";
-
-// 練習記録フォームのステップ定義
-const PRACTICE_STEPS = [
-  { id: "basic", label: "基本情報", description: "日付・場所" },
-  { id: "log", label: "練習記録", description: "メニュー・タイム" },
-];
 
 export interface PracticeBasicData {
   date: string;
@@ -67,6 +61,28 @@ export default function PracticeBasicForm({
   isLoading = false,
   teamMode = false,
 }: PracticeBasicFormProps) {
+  const t = useTranslations("forms.practice");
+  const tUnsaved = useTranslations("forms.unsavedChanges");
+  const tPremium = useTranslations("forms.premium");
+  const locale = useLocale();
+  const dateFnsLocale = locale === "ja" ? ja : enUS;
+
+  const PRACTICE_STEPS = useMemo(
+    () => [
+      {
+        id: "basic",
+        label: t("steps.basic.label"),
+        description: t("steps.basic.description"),
+      },
+      {
+        id: "log",
+        label: t("steps.log.label"),
+        description: t("steps.log.description"),
+      },
+    ],
+    [t],
+  );
+
   const { subscription } = useAuth();
   const isPremium = checkIsPremium(subscription);
 
@@ -318,7 +334,7 @@ export default function PracticeBasicForm({
           <div className="bg-white px-6 py-4 border-b border-gray-200 shrink-0">
             <div className="flex items-center justify-between">
               <h3 className="text-lg leading-6 font-medium text-gray-900">
-                {editData ? "予定を編集" : "予定を作成"}
+                {editData ? t("title_edit") : t("title_create")}
               </h3>
               <button
                 type="button"
@@ -329,8 +345,9 @@ export default function PracticeBasicForm({
               </button>
             </div>
             <p className="mt-2 text-sm text-gray-600">
-              {validDate ? format(validDate, "M月d日(E)", { locale: ja }) : "選択された日付"}
-              の練習予定を{editData ? "編集" : "作成"}します
+              {editData
+                ? t("subtitle_edit", { date: validDate ? format(validDate, "M月d日(E)", { locale: dateFnsLocale }) : "" })
+                : t("subtitle_create", { date: validDate ? format(validDate, "M月d日(E)", { locale: dateFnsLocale }) : "" })}
             </p>
             {/* ステッププログレス（新規作成時のみ表示） */}
             {!editData && (
@@ -355,50 +372,50 @@ export default function PracticeBasicForm({
               <div className="grid grid-cols-[auto_1fr] gap-x-2 sm:gap-x-4 gap-y-1.5 sm:gap-y-4 items-center">
                 {/* 練習日 */}
                 <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                  練習日 <span className="text-red-500">*</span>
+                  {t("date_label")} <span className="text-red-500">*</span>
                 </label>
                 <DatePicker
                   value={formData.date}
                   onChange={(date) => setFormData({ ...formData, date })}
                   required
-                  placeholder="練習日を選択"
+                  placeholder={t("date_placeholder")}
                   data-testid="practice-date"
                 />
 
                 {/* 練習タイトル */}
                 <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                  練習タイトル
+                  {t("title_field")}
                 </label>
                 <Input
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="例: Swim, AM, 16:00"
+                  placeholder={t("title_placeholder")}
                   data-testid="practice-title"
                 />
 
                 {/* 練習場所 */}
                 <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                  練習場所
+                  {t("place_label")}
                 </label>
                 <PlaceCombobox
                   value={formData.place}
                   onChange={(value) => setFormData({ ...formData, place: value })}
                   suggestions={placeSuggestions}
-                  placeholder="例: 市営プール、学校プール"
+                  placeholder={t("place_placeholder")}
                   data-testid="practice-place"
                 />
               </div>
 
               {/* メモ */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">メモ</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t("note_label")}</label>
                 <textarea
                   value={formData.note}
                   onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="練習に関する特記事項（天候、体調など）"
+                  placeholder={t("note_placeholder")}
                   data-testid="practice-note"
                 />
               </div>
@@ -412,7 +429,7 @@ export default function PracticeBasicForm({
                     disabled={isLoading}
                   />
                 ) : (
-                  <PremiumBadge message={PREMIUM_MESSAGES.image_upload} />
+                  <PremiumBadge message={tPremium("imageUpload")} />
                 )}
               </div>
             </div>
@@ -426,7 +443,7 @@ export default function PracticeBasicForm({
                 disabled={isLoading}
                 className="w-full sm:w-auto"
               >
-                キャンセル
+                {t("cancel")}
               </Button>
 
               {/* 編集モード */}
@@ -437,7 +454,7 @@ export default function PracticeBasicForm({
                   className="w-full sm:w-auto"
                   data-testid="update-practice-button"
                 >
-                  {isLoading ? "更新中..." : "更新"}
+                  {isLoading ? t("updating") : t("update")}
                 </Button>
               )}
 
@@ -449,7 +466,7 @@ export default function PracticeBasicForm({
                   className="w-full sm:w-auto"
                   data-testid="save-practice-button"
                 >
-                  {isLoading ? "保存中..." : "保存"}
+                  {isLoading ? t("saving") : t("save")}
                 </Button>
               )}
 
@@ -464,7 +481,7 @@ export default function PracticeBasicForm({
                     className="w-full sm:w-auto"
                     data-testid="save-practice-close-button"
                   >
-                    {isLoading ? "保存中..." : "保存して終了"}
+                    {isLoading ? t("saving") : t("save_close")}
                   </Button>
                   <Button
                     type="button"
@@ -473,7 +490,7 @@ export default function PracticeBasicForm({
                     className="w-full sm:w-auto"
                     data-testid="save-practice-continue-button"
                   >
-                    {isLoading ? "保存中..." : "保存して次へ"}
+                    {isLoading ? t("saving") : t("save_next")}
                   </Button>
                 </>
               )}
@@ -487,14 +504,14 @@ export default function PracticeBasicForm({
         isOpen={showConfirmDialog}
         onConfirm={handleConfirmClose}
         onCancel={handleCancelClose}
-        title="入力内容が保存されていません"
+        title={tUnsaved("title")}
         message={
           confirmContext === "back"
-            ? "入力内容が保存されていません。このまま戻りますか？"
-            : "入力内容が保存されていません。このまま閉じますか？"
+            ? tUnsaved("messageBack")
+            : tUnsaved("messageClose")
         }
-        confirmLabel={confirmContext === "back" ? "戻る" : "閉じる"}
-        cancelLabel="編集を続ける"
+        confirmLabel={confirmContext === "back" ? tUnsaved("confirmBack") : tUnsaved("confirmClose")}
+        cancelLabel={tUnsaved("cancel")}
         variant="warning"
       />
     </div>

@@ -2,6 +2,7 @@
 
 import React, { type ReactNode } from "react";
 import { useDroppable } from "@dnd-kit/core";
+import { useTranslations } from "next-intl";
 
 interface DroppableGroupZoneProps {
   groupId: string;
@@ -17,6 +18,7 @@ export const DroppableGroupZone: React.FC<DroppableGroupZoneProps> = ({
   memberCount,
 }) => {
   const { isOver, setNodeRef } = useDroppable({ id: groupId });
+  const t = useTranslations("teamsAdmin");
 
   return (
     <div
@@ -27,7 +29,7 @@ export const DroppableGroupZone: React.FC<DroppableGroupZoneProps> = ({
     >
       <div className="flex items-center justify-between px-2 py-1.5 sm:px-3 sm:py-2">
         <span className="text-[11px] sm:text-xs font-semibold text-gray-700">{groupName}</span>
-        <span className="text-[11px] sm:text-xs text-gray-400">{memberCount}人</span>
+        <span className="text-[11px] sm:text-xs text-gray-400">{t("groupManagement.memberCount", { count: memberCount })}</span>
       </div>
       <div className="px-1.5 pb-1.5 sm:px-2 sm:pb-2 min-h-[32px] sm:min-h-[40px] flex flex-wrap gap-1 sm:gap-1.5">
         {children}

@@ -22,6 +22,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
 
   type AuthError = {
     status?: number;
+    code?: string;
     message?: string;
     error_description?: string;
     error?: string;
@@ -41,9 +42,13 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
     if (typeof errMsg === "string") {
       const msg = errMsg.toLowerCase();
 
-      // サインアップエラーの処理（OWASP準拠）
-      if (msg.includes("user already registered")) {
-        return "アカウントの作成に失敗しました。入力内容を確認してから再度お試しください。";
+      // 登録済みメールアドレス: AuthProvider 側で identities=[] を検出して error 化している
+      if (
+        errorObj.code === "user_already_exists" ||
+        msg.includes("user already registered") ||
+        msg.includes("すでに登録されています")
+      ) {
+        return "このメールアドレスはすでに登録されています。ログイン画面からサインインするか、パスワードをお忘れの場合は再設定してください。";
       }
       // パスワード強度エラーの検出を拡張
       const weakPwdRegex = /\b(pass(word)?).*(weak|too short|at least|characters)\b/i;

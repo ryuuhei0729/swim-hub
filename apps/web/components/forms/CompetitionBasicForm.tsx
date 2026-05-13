@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -17,15 +18,7 @@ import CompetitionImageUploader, {
 } from "./CompetitionImageUploader";
 import { useAuth } from "@/contexts";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
-import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
 import PremiumBadge from "@/components/ui/PremiumBadge";
-
-// 大会記録フォームのステップ定義
-const COMPETITION_STEPS = [
-  { id: "basic", label: "大会情報", description: "日程・場所" },
-  { id: "entry", label: "エントリー", description: "種目・タイム" },
-  { id: "record", label: "記録入力", description: "結果・スプリット" },
-];
 
 interface CompetitionBasicFormData {
   date: string;
@@ -71,10 +64,7 @@ interface CompetitionBasicFormProps {
   teamMode?: boolean; // チームモード: 保存ボタンのみ表示
 }
 
-const POOL_TYPES = [
-  { value: 0, label: "短水路 (25m)" },
-  { value: 1, label: "長水路 (50m)" },
-];
+const POOL_TYPES = [{ value: 0 }, { value: 1 }];
 
 export default function CompetitionBasicForm({
   isOpen,
@@ -85,6 +75,31 @@ export default function CompetitionBasicForm({
   isLoading = false,
   teamMode = false,
 }: CompetitionBasicFormProps) {
+  const t = useTranslations("forms.competition");
+  const tUnsaved = useTranslations("forms.unsavedChanges");
+  const tPremium = useTranslations("forms.premium");
+
+  const COMPETITION_STEPS = useMemo(
+    () => [
+      {
+        id: "basic",
+        label: t("steps.basic.label"),
+        description: t("steps.basic.description"),
+      },
+      {
+        id: "entry",
+        label: t("steps.entry.label"),
+        description: t("steps.entry.description"),
+      },
+      {
+        id: "record",
+        label: t("steps.record.label"),
+        description: t("steps.record.description"),
+      },
+    ],
+    [t],
+  );
+
   const { subscription } = useAuth();
   const isPremium = checkIsPremium(subscription);
 
@@ -295,7 +310,7 @@ export default function CompetitionBasicForm({
 
     // バリデーション
     if (formData.endDate && formData.endDate < formData.date) {
-      setValidationError("終了日は開始日以降の日付を指定してください");
+      setValidationError(t("end_date_error"));
       return;
     }
 
@@ -356,7 +371,7 @@ export default function CompetitionBasicForm({
           <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 flex-1 overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg leading-6 font-medium text-gray-900">
-                {editData ? "大会情報編集" : "大会情報登録"}
+                {editData ? t("title_edit") : t("title_create")}
               </h3>
               <button
                 onClick={handleClose}
@@ -391,18 +406,18 @@ export default function CompetitionBasicForm({
               {/* 日付（開始日・終了日） */}
               <div className="grid grid-cols-2 gap-4">
                 <DatePicker
-                  label="開始日"
+                  label={t("start_date_label")}
                   value={formData.date}
                   onChange={(date) => {
                     setFormData({ ...formData, date });
                     setValidationError(null);
                   }}
                   required
-                  placeholder="開始日を選択"
+                  placeholder={t("start_date_label")}
                   data-testid="competition-date"
                 />
                 <DatePicker
-                  label="終了日(任意)"
+                  label={t("end_date_label")}
                   value={formData.endDate}
                   onChange={(date) => {
                     setFormData({ ...formData, endDate: date });
@@ -419,18 +434,18 @@ export default function CompetitionBasicForm({
               <div className="grid grid-cols-[auto_1fr] gap-x-2 sm:gap-x-4 gap-y-1.5 sm:gap-y-4 items-center">
                 {/* 大会名 */}
                 <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                  大会名
+                  {t("name_label")}
                 </label>
                 <Input
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="全国大会, 対抗戦"
+                  placeholder={t("name_placeholder")}
                   data-testid="competition-title"
                 />
 
                 {/* 場所 */}
-                <label className="text-sm font-medium text-gray-700 whitespace-nowrap">場所</label>
+                <label className="text-sm font-medium text-gray-700 whitespace-nowrap">{t("place_label")}</label>
                 <PlaceCombobox
                   value={formData.place}
                   onChange={(value) => setFormData({ ...formData, place: value })}
@@ -441,7 +456,7 @@ export default function CompetitionBasicForm({
 
                 {/* プール種別 */}
                 <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                  水路 <span className="text-red-500">*</span>
+                  {t("pool_type_label")} <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formData.poolType}
@@ -452,7 +467,7 @@ export default function CompetitionBasicForm({
                 >
                   {POOL_TYPES.map((type) => (
                     <option key={type.value} value={type.value}>
-                      {type.label}
+                      {type.value === 0 ? t("pool_short") : t("pool_long")}
                     </option>
                   ))}
                 </select>
@@ -460,11 +475,11 @@ export default function CompetitionBasicForm({
 
               {/* メモ */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">メモ</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t("note_label")}</label>
                 <textarea
                   value={formData.note}
                   onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                  placeholder="大会に関するメモ（任意）"
+                  placeholder={t("note_placeholder")}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   data-testid="competition-note"
@@ -480,7 +495,7 @@ export default function CompetitionBasicForm({
                     disabled={isLoading}
                   />
                 ) : (
-                  <PremiumBadge message={PREMIUM_MESSAGES.image_upload} />
+                  <PremiumBadge message={tPremium("imageUpload")} />
                 )}
               </div>
             </form>
@@ -497,7 +512,7 @@ export default function CompetitionBasicForm({
                 className="w-full sm:w-auto"
                 data-testid="competition-update-button"
               >
-                {isLoading ? "更新中..." : "更新"}
+                {isLoading ? t("updating") : t("update")}
               </Button>
             )}
 
@@ -510,7 +525,7 @@ export default function CompetitionBasicForm({
                 className="w-full sm:w-auto"
                 data-testid="competition-save-button"
               >
-                {isLoading ? "保存中..." : "保存"}
+                {isLoading ? t("saving") : t("save")}
               </Button>
             )}
 
@@ -523,7 +538,7 @@ export default function CompetitionBasicForm({
                 className="w-full sm:w-auto"
                 data-testid="competition-next-button"
               >
-                {isLoading ? "保存中..." : "次へ（エントリー登録）"}
+                {isLoading ? t("saving") : t("next_entry")}
               </Button>
             )}
 
@@ -537,7 +552,7 @@ export default function CompetitionBasicForm({
                   className="w-full sm:w-auto"
                   data-testid="competition-record-button"
                 >
-                  {isLoading ? "保存中..." : "次へ（記録入力）"}
+                  {isLoading ? t("saving") : t("next_record")}
                 </Button>
                 <Button
                   type="button"
@@ -547,7 +562,7 @@ export default function CompetitionBasicForm({
                   className="mt-1.5 sm:mt-0 w-full sm:w-auto"
                   data-testid="competition-close-button"
                 >
-                  {isLoading ? "保存中..." : "保存して終了"}
+                  {isLoading ? t("saving") : t("save_close")}
                 </Button>
               </>
             )}
@@ -559,7 +574,7 @@ export default function CompetitionBasicForm({
               disabled={isLoading}
               className="mt-1.5 sm:mt-0 w-full sm:w-auto"
             >
-              キャンセル
+              {t("cancel")}
             </Button>
           </div>
         </div>
@@ -570,14 +585,14 @@ export default function CompetitionBasicForm({
         isOpen={showConfirmDialog}
         onConfirm={handleConfirmClose}
         onCancel={handleCancelClose}
-        title="入力内容が保存されていません"
+        title={tUnsaved("title")}
         message={
           confirmContext === "back"
-            ? "入力内容が保存されていません。このまま戻りますか？"
-            : "入力内容が保存されていません。このまま閉じますか？"
+            ? tUnsaved("messageBack")
+            : tUnsaved("messageClose")
         }
-        confirmLabel={confirmContext === "back" ? "戻る" : "閉じる"}
-        cancelLabel="編集を続ける"
+        confirmLabel={confirmContext === "back" ? tUnsaved("confirmBack") : tUnsaved("confirmClose")}
+        cancelLabel={tUnsaved("cancel")}
         variant="warning"
       />
     </div>

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   buildStyleEntriesFromExisting,
   ExistingRecord,
-} from "../app/(authenticated)/teams/[teamId]/competitions/[competitionId]/records/_client/buildStyleEntries";
+} from "../app/[locale]/(authenticated)/teams/[teamId]/competitions/[competitionId]/records/_client/buildStyleEntries";
 
 function makeRecord(
   overrides: Partial<ExistingRecord> & { style_id: number; time: number },

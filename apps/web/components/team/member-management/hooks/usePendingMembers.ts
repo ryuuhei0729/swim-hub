@@ -1,11 +1,15 @@
+"use client";
+
 import { useState, useCallback } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TeamMember } from "./useMembers";
+import { useTranslations } from "next-intl";
 
 /**
  * 承認待ちメンバーを管理するカスタムフック
  */
 export const usePendingMembers = (teamId: string, isAdmin: boolean, supabase: SupabaseClient) => {
+  const t = useTranslations("teams");
   const [pendingMembers, setPendingMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,11 +48,11 @@ export const usePendingMembers = (teamId: string, isAdmin: boolean, supabase: Su
       setPendingMembers((data ?? []) as unknown as TeamMember[]);
     } catch (err) {
       console.error("承認待ちメンバー情報の取得に失敗:", err);
-      setError("承認待ちメンバー情報の取得に失敗しました");
+      setError(t("pendingMembersHook.loadError"));
     } finally {
       setLoading(false);
     }
-  }, [teamId, isAdmin, supabase]);
+  }, [teamId, isAdmin, supabase, t]);
 
   const refresh = useCallback(() => {
     loadPendingMembers();

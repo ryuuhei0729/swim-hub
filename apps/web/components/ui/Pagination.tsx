@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslations } from "next-intl";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 
 export interface PaginationProps {
@@ -24,6 +25,7 @@ export default function Pagination({
   onPageChange,
   className = "",
 }: PaginationProps) {
+  const t = useTranslations("common");
   // 表示するページ番号を計算
   const getPageNumbers = () => {
     const pages: (number | "ellipsis")[] = [];
@@ -93,10 +95,10 @@ export default function Pagination({
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
           className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          aria-label="前のページ"
+          aria-label={t("aria.previousPage")}
         >
           <ChevronLeftIcon className="h-4 w-4" />
-          <span className="hidden sm:inline ml-1">前へ</span>
+          <span className="hidden sm:inline ml-1">{t("pagination.prev")}</span>
         </button>
 
         {/* ページ番号 */}
@@ -119,7 +121,7 @@ export default function Pagination({
                     ? "bg-blue-600 text-white border-blue-600"
                     : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                 }`}
-                aria-label={`ページ ${page}`}
+                aria-label={t("aria.pageN", { page })}
                 aria-current={currentPage === page ? "page" : undefined}
               >
                 {page}
@@ -133,9 +135,9 @@ export default function Pagination({
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
           className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          aria-label="次のページ"
+          aria-label={t("aria.nextPage")}
         >
-          <span className="hidden sm:inline mr-1">次へ</span>
+          <span className="hidden sm:inline mr-1">{t("pagination.next")}</span>
           <ChevronRightIcon className="h-4 w-4" />
         </button>
       </div>

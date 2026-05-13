@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import { useAdminAttendance } from "@/hooks/useAdminAttendance";
 import { useAttendanceModal } from "@/hooks/useAttendanceModal";
@@ -13,6 +14,7 @@ export interface AdminMonthlyAttendanceProps {
 }
 
 export default function AdminMonthlyAttendance({ teamId }: AdminMonthlyAttendanceProps) {
+  const t = useTranslations("teamsAdmin");
   const { supabase } = useAuth();
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
@@ -47,17 +49,18 @@ export default function AdminMonthlyAttendance({ teamId }: AdminMonthlyAttendanc
       <div className="p-4">
         <div className="text-center py-6">
           <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
-          <p className="mt-1.5 text-sm text-gray-500">読み込み中...</p>
+          <p className="mt-1.5 text-sm text-gray-500">{t("adminAttendance.loading")}</p>
         </div>
       </div>
     );
   }
 
   if (error && !events.length) {
+    if (error) console.error("AdminMonthlyAttendance error:", error);
     return (
       <div className="p-4">
         <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-          <p className="text-sm text-red-800">{error}</p>
+          <p className="text-sm text-red-800">{t("adminAttendance.error")}</p>
         </div>
       </div>
     );
@@ -68,7 +71,7 @@ export default function AdminMonthlyAttendance({ teamId }: AdminMonthlyAttendanc
       {/* エラーメッセージ */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-          <p className="text-sm text-red-800">{error}</p>
+          <p className="text-sm text-red-800">{t("adminAttendance.error")}</p>
         </div>
       )}
 
@@ -78,14 +81,14 @@ export default function AdminMonthlyAttendance({ teamId }: AdminMonthlyAttendanc
           onClick={() => setIsBulkModalOpen(true)}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
         >
-          まとめて出欠状態を変更
+          {t("adminAttendance.bulkChangeButton")}
         </button>
       </div>
 
       {/* イベント一覧 */}
       {events.length === 0 ? (
         <div className="bg-gray-50 rounded-lg p-6 text-center">
-          <p className="text-sm text-gray-600">未来のイベントがありません</p>
+          <p className="text-sm text-gray-600">{t("adminAttendance.empty")}</p>
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow divide-y divide-gray-200">

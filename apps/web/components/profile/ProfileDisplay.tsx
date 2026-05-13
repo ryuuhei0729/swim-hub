@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { PlusIcon, UserPlusIcon, UsersIcon } from "@heroicons/react/24/outline";
+import { useTranslations } from "next-intl";
 import { formatDate } from "@apps/shared/utils/date";
 import Avatar from "@/components/ui/Avatar";
 import type { TeamMembershipWithUser } from "@apps/shared/types";
@@ -31,6 +32,7 @@ export default function ProfileDisplay({
   onCreateTeam,
   onJoinTeam,
 }: ProfileDisplayProps) {
+  const t = useTranslations("mypage.profileDisplay");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -51,13 +53,13 @@ export default function ProfileDisplay({
     };
   }, [isMenuOpen]);
   const formatBirthday = (birthday: string | null | undefined) => {
-    if (!birthday) return "未設定";
+    if (!birthday) return t("notSet");
     return formatDate(birthday, "long");
   };
 
   const formatGender = (gender: number | undefined) => {
-    if (gender === undefined || gender === null) return "未設定";
-    return gender === 0 ? "男性" : "女性";
+    if (gender === undefined || gender === null) return t("notSet");
+    return gender === 0 ? t("genderMale") : t("genderFemale");
   };
 
   // 承認済みかつアクティブなチームのみフィルタリング
@@ -97,7 +99,7 @@ export default function ProfileDisplay({
             <div className="flex-1 flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6">
               {/* 生年月日 */}
               <div className="flex-1">
-                <dt className="text-xs sm:text-sm font-medium text-gray-500">生年月日</dt>
+                <dt className="text-xs sm:text-sm font-medium text-gray-500">{t("birthdayLabel")}</dt>
                 <dd className="mt-1 text-xs sm:text-sm text-gray-900">
                   {formatBirthday(profile.birthday)}
                 </dd>
@@ -105,7 +107,7 @@ export default function ProfileDisplay({
 
               {/* 性別 */}
               <div className="flex-1">
-                <dt className="text-xs sm:text-sm font-medium text-gray-500">性別</dt>
+                <dt className="text-xs sm:text-sm font-medium text-gray-500">{t("genderLabel")}</dt>
                 <dd className="mt-1 text-xs sm:text-sm text-gray-900">
                   {formatGender(profile.gender)}
                 </dd>
@@ -114,14 +116,14 @@ export default function ProfileDisplay({
 
             {/* 参加チーム */}
             <div className="flex-1">
-              <dt className="text-xs sm:text-sm font-medium text-gray-500">参加チーム</dt>
+              <dt className="text-xs sm:text-sm font-medium text-gray-500">{t("teamsLabel")}</dt>
               <dd className="mt-1">
                 <div className="flex flex-wrap items-center gap-2">
                   {approvedTeams.map((membership) => {
                     const teamName =
                       "teams" in membership && membership.teams?.name
                         ? membership.teams.name
-                        : "チーム名不明";
+                        : t("unknownTeam");
                     const teamId = membership.team_id;
 
                     return (
@@ -145,7 +147,7 @@ export default function ProfileDisplay({
                         className="inline-flex items-center px-2.5 py-1 rounded-full text-xs sm:text-sm font-medium border border-gray-300 text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-colors"
                       >
                         <PlusIcon className="w-3.5 h-3.5 mr-1" />
-                        追加
+                        {t("addTeam")}
                       </button>
 
                       {/* ドロップダウンメニュー */}
@@ -162,7 +164,7 @@ export default function ProfileDisplay({
                                 className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                               >
                                 <UsersIcon className="w-4 h-4 mr-2 text-gray-400" />
-                                チームを作成
+                                {t("createTeam")}
                               </button>
                             )}
                             {onJoinTeam && (
@@ -175,7 +177,7 @@ export default function ProfileDisplay({
                                 className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                               >
                                 <UserPlusIcon className="w-4 h-4 mr-2 text-gray-400" />
-                                チームに参加
+                                {t("joinTeam")}
                               </button>
                             )}
                           </div>
@@ -187,7 +189,7 @@ export default function ProfileDisplay({
                   {/* チームがない場合のメッセージ */}
                   {approvedTeams.length === 0 && !(onCreateTeam || onJoinTeam) && (
                     <span className="text-xs sm:text-sm text-gray-500">
-                      参加しているチームはありません
+                      {t("noTeams")}
                     </span>
                   )}
                 </div>
@@ -197,10 +199,10 @@ export default function ProfileDisplay({
 
           {/* 自己紹介 */}
           <div className="mt-2 sm:mt-4">
-            <dt className="text-xs sm:text-sm font-medium text-gray-500">自己紹介</dt>
+            <dt className="text-xs sm:text-sm font-medium text-gray-500">{t("bioLabel")}</dt>
             <dd className="mt-1 text-xs sm:text-sm">
               <div className="bg-gray-50 text-gray-900 p-2 sm:p-4 rounded-lg">
-                {profile.bio || "未設定"}
+                {profile.bio || t("notSet")}
               </div>
             </dd>
           </div>

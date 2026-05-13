@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { differenceInDays, parseISO } from "date-fns";
 import { CalendarIcon } from "@heroicons/react/24/outline";
+import { useTranslations } from "next-intl";
 import { formatTimeBest, formatDate } from "../../utils/formatters";
 import { Tabs } from "../ui/Tabs";
 
@@ -55,7 +56,20 @@ const STYLES_SHORT: Record<string, string> = {
   個人メドレー: "IM",
 };
 
+// DB照合用の日本語名 → 翻訳キーマップ
+type StyleTranslationKey = "Fr" | "Br" | "Ba" | "Fly" | "IM";
+
+const STYLE_KEY_MAP: Partial<Record<string, StyleTranslationKey>> = {
+  自由形: "Fr",
+  平泳ぎ: "Br",
+  背泳ぎ: "Ba",
+  バタフライ: "Fly",
+  個人メドレー: "IM",
+};
+
 export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
+  const t = useTranslations("mypage.bestTimesTable");
+  const tStyles = useTranslations("practice.styles");
   const [activeTab, setActiveTab] = useState<TabType>("all");
   const [includeRelaying, setIncludeRelaying] = useState<boolean>(false);
 
@@ -227,8 +241,8 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
 
   const tabs = [
     { id: "all", label: "ALL" },
-    { id: "short", label: "短水路" },
-    { id: "long", label: "長水路" },
+    { id: "short", label: t("shortCourse") },
+    { id: "long", label: t("longCourse") },
   ];
 
   if (bestTimes.length === 0) {
@@ -244,8 +258,8 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
             />
           </svg>
         </div>
-        <p className="text-gray-600">記録がありません</p>
-        <p className="text-sm text-gray-500 mt-1">まだ記録を登録していません</p>
+        <p className="text-gray-600">{t("noRecords")}</p>
+        <p className="text-sm text-gray-500 mt-1">{t("noRecordsDetail")}</p>
       </div>
     );
   }
@@ -266,7 +280,7 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
             onChange={(e) => setIncludeRelaying(e.target.checked)}
             className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
           />
-          <span className="text-xs sm:text-sm text-gray-700">引き継ぎタイムも含めて表示</span>
+          <span className="text-xs sm:text-sm text-gray-700">{t("includeRelay")}</span>
         </label>
       </div>
 
@@ -275,17 +289,20 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
           <thead className="sticky top-0 z-10">
             <tr>
               <th className="px-0.5 sm:px-3 py-0.5 sm:py-2 text-left text-[9px] sm:text-xs md:text-sm font-semibold text-gray-700 border-r border-gray-300 w-[32px] sm:w-[72px] h-[24px] sm:h-[44px]">
-                距離
+                {t("distanceHeader")}
               </th>
-              {STYLES.map((style) => (
-                <th
-                  key={style}
-                  className={`px-0.5 sm:px-3 py-0.5 sm:py-2 text-center text-[9px] sm:text-xs md:text-sm font-semibold text-gray-800 border-r border-gray-300 last:border-r-0 h-[24px] sm:h-[44px] ${styleHeaderBgClass[style]}`}
-                >
-                  <span className="sm:hidden">{STYLES_SHORT[style]}</span>
-                  <span className="hidden sm:inline">{style}</span>
-                </th>
-              ))}
+              {STYLES.map((style) => {
+                const styleKey = STYLE_KEY_MAP[style];
+                return (
+                  <th
+                    key={style}
+                    className={`px-0.5 sm:px-3 py-0.5 sm:py-2 text-center text-[9px] sm:text-xs md:text-sm font-semibold text-gray-800 border-r border-gray-300 last:border-r-0 h-[24px] sm:h-[44px] ${styleHeaderBgClass[style]}`}
+                  >
+                    <span className="sm:hidden">{STYLES_SHORT[style]}</span>
+                    <span className="hidden sm:inline">{styleKey ? tStyles(styleKey) : style}</span>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody className="bg-white">

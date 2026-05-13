@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 export interface ImageFile {
   id: string;
@@ -99,6 +100,7 @@ export const useImageUpload = ({
   onImagesChange,
   initialDeletedIds = [],
 }: UseImageUploadOptions): UseImageUploadReturn => {
+  const t = useTranslations("forms.imageUploader");
   const [newFiles, setNewFiles] = useState<ImageFile[]>([]);
   const [deletedIds, setDeletedIds] = useState<string[]>(initialDeletedIds);
   const [isDragging, setIsDragging] = useState(false);
@@ -138,7 +140,7 @@ export const useImageUpload = ({
       // 最大枚数チェック
       const remainingSlots = maxImages - totalCount;
       if (fileArray.length > remainingSlots) {
-        setError(`あと${remainingSlots}枚まで追加できます（最大${maxImages}枚）`);
+        setError(t("remainingSlotsError", { remaining: remainingSlots, max: maxImages }));
         return;
       }
 
@@ -151,7 +153,7 @@ export const useImageUpload = ({
           if (!validation.valid) {
             // バリデーション失敗時は、既に作成されたオブジェクトURLをクリーンアップ
             validFiles.forEach((item) => URL.revokeObjectURL(item.previewUrl));
-            setError(validation.error || "無効なファイルです");
+            setError(validation.error || t("invalidFile"));
             return;
           }
 
@@ -168,7 +170,7 @@ export const useImageUpload = ({
           if (previewUrl) {
             URL.revokeObjectURL(previewUrl);
           }
-          setError(err instanceof Error ? err.message : "無効なファイルです");
+          setError(err instanceof Error ? err.message : t("invalidFile"));
           return;
         }
       }
@@ -177,7 +179,7 @@ export const useImageUpload = ({
       setNewFiles(updatedNewFiles);
       onImagesChange(updatedNewFiles, deletedIds);
     },
-    [newFiles, deletedIds, totalCount, maxImages, validateFile, onImagesChange],
+    [newFiles, deletedIds, totalCount, maxImages, validateFile, onImagesChange, t],
   );
 
   const handleDragOver = useCallback(

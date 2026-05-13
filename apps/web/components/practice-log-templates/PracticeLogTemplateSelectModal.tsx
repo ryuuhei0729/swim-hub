@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { XMarkIcon, Cog6ToothIcon } from "@heroicons/react/24/outline";
@@ -22,6 +23,7 @@ export function PracticeLogTemplateSelectModal({
   onClose,
   onSelect,
 }: PracticeLogTemplateSelectModalProps) {
+  const t = useTranslations("practiceLogTemplates.selectModal");
   const router = useRouter();
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -101,13 +103,13 @@ export function PracticeLogTemplateSelectModal({
               id="select-template-title"
               className="text-base sm:text-lg font-semibold text-gray-900"
             >
-              テンプレートを選択
+              {t("title")}
             </h3>
             <button
               type="button"
               onClick={onClose}
               className="text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-1"
-              aria-label="閉じる"
+              aria-label={t("closeAriaLabel")}
             >
               <XMarkIcon className="h-6 w-6" />
             </button>
@@ -123,13 +125,13 @@ export function PracticeLogTemplateSelectModal({
               </div>
             ) : templates?.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
-                <p className="mb-4">テンプレートがありません</p>
+                <p className="mb-4">{t("emptyText")}</p>
                 <button
                   type="button"
                   onClick={handleManageClick}
                   className="text-blue-600 hover:text-blue-800"
                 >
-                  テンプレートを作成する
+                  {t("emptyCreateLink")}
                 </button>
               </div>
             ) : (
@@ -139,7 +141,7 @@ export function PracticeLogTemplateSelectModal({
                   <section>
                     <h3 className="text-sm font-medium text-gray-500 mb-2 flex items-center gap-1">
                       <StarIcon className="h-4 w-4 text-yellow-500" />
-                      よく使うテンプレート
+                      {t("favoritesTitle")}
                     </h3>
                     <div className="space-y-2">
                       {favoriteTemplates.map((template) => (
@@ -160,7 +162,7 @@ export function PracticeLogTemplateSelectModal({
                   <section>
                     {favoriteTemplates.length > 0 && (
                       <h3 className="text-sm font-medium text-gray-500 mb-2">
-                        すべてのテンプレート
+                        {t("allTemplatesTitle")}
                       </h3>
                     )}
                     <div className="space-y-2">
@@ -188,7 +190,7 @@ export function PracticeLogTemplateSelectModal({
               className="w-full flex items-center justify-center gap-2 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
             >
               <Cog6ToothIcon className="h-5 w-5" />
-              テンプレートを管理
+              {t("manageButton")}
             </button>
           </div>
         </div>
@@ -209,6 +211,9 @@ function TemplateItem({
   onKeyDown: (e: React.KeyboardEvent, template: PracticeLogTemplate) => void;
   formatCircle: (seconds: number | null) => string;
 }) {
+  const tBase = useTranslations("practiceLogTemplates");
+  const tModal = useTranslations("practiceLogTemplates.selectModal");
+
   return (
     <div
       role="button"
@@ -216,17 +221,23 @@ function TemplateItem({
       onClick={() => onSelect(template)}
       onKeyDown={(e) => onKeyDown(e, template)}
       className="p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-colors"
-      aria-label={`テンプレート: ${template.name}`}
+      aria-label={tModal("templateAriaLabel", { name: template.name })}
     >
       <div className="flex items-center justify-between">
         <span className="font-medium text-gray-900">{template.name}</span>
         <span className="text-gray-400 text-sm">&gt;</span>
       </div>
       <div className="text-sm text-gray-600 mt-1">
-        {template.distance}m × {template.rep_count}本 × {template.set_count}セット {template.style}{" "}
-        {template.swim_category}
+        {tBase("distanceFormat", {
+          distance: template.distance,
+          reps: template.rep_count,
+          sets: template.set_count,
+        })}{" "}
+        {template.style} {template.swim_category}
         {template.circle && (
-          <span className="ml-2 text-gray-500">サークル {formatCircle(template.circle)}</span>
+          <span className="ml-2 text-gray-500">
+            {tBase("circleFormat", { circle: formatCircle(template.circle) })}
+          </span>
         )}
       </div>
     </div>

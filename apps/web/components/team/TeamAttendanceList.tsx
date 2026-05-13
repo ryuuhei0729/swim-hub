@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import { AttendanceAPI } from "@swim-hub/shared/api/attendance";
 import type { TeamAttendanceWithDetails } from "@swim-hub/shared/types/attendance";
@@ -25,6 +26,8 @@ export default function TeamAttendanceList({
   const [noteInput, setNoteInput] = useState<string>("");
 
   const { supabase } = useAuth();
+  const t = useTranslations("teams.attendanceList");
+  const tCommon = useTranslations("common");
   const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase]);
 
   const loadAttendances = useCallback(async () => {
@@ -51,11 +54,11 @@ export default function TeamAttendanceList({
       }
     } catch (err) {
       console.error("出欠情報の取得に失敗:", err);
-      setError("出欠情報の取得に失敗しました");
+      setError(t("loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [practiceId, competitionId, attendanceAPI]);
+  }, [practiceId, competitionId, attendanceAPI, t]);
 
   useEffect(() => {
     loadAttendances();
@@ -105,7 +108,7 @@ export default function TeamAttendanceList({
     return (
       <div className="text-center py-8">
         <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-        <p className="mt-2 text-gray-500">読み込み中...</p>
+        <p className="mt-2 text-gray-500">{tCommon("loading")}</p>
       </div>
     );
   }
@@ -133,8 +136,7 @@ export default function TeamAttendanceList({
       {!canSubmit && !isAdmin && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <p className="text-yellow-800 text-sm">
-            ⚠️
-            現在、出欠提出期間外です。管理者が提出期間を「提出受付中」に変更するまでお待ちください。
+            ⚠️ {t("outsidePeriod")}
           </p>
         </div>
       )}
@@ -143,23 +145,23 @@ export default function TeamAttendanceList({
       <div className="grid grid-cols-5 gap-4">
         <div className="bg-green-50 rounded-lg p-3 text-center">
           <div className="text-2xl font-bold text-green-600">{stats.present}</div>
-          <div className="text-xs text-green-700">出席</div>
+          <div className="text-xs text-green-700">{t("statsPresent")}</div>
         </div>
         <div className="bg-red-50 rounded-lg p-3 text-center">
           <div className="text-2xl font-bold text-red-600">{stats.absent}</div>
-          <div className="text-xs text-red-700">欠席</div>
+          <div className="text-xs text-red-700">{t("statsAbsent")}</div>
         </div>
         <div className="bg-yellow-50 rounded-lg p-3 text-center">
           <div className="text-2xl font-bold text-yellow-600">{stats.other}</div>
-          <div className="text-xs text-yellow-700">その他</div>
+          <div className="text-xs text-yellow-700">{t("statsOther")}</div>
         </div>
         <div className="bg-gray-50 rounded-lg p-3 text-center">
           <div className="text-2xl font-bold text-gray-600">{stats.pending}</div>
-          <div className="text-xs text-gray-700">未回答</div>
+          <div className="text-xs text-gray-700">{t("statsPending")}</div>
         </div>
         <div className="bg-blue-50 rounded-lg p-3 text-center">
           <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
-          <div className="text-xs text-blue-700">合計</div>
+          <div className="text-xs text-blue-700">{t("statsTotal")}</div>
         </div>
       </div>
 
@@ -170,13 +172,13 @@ export default function TeamAttendanceList({
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  名前
+                  {t("colName")}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  ステータス
+                  {t("colStatus")}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  備考
+                  {t("colNote")}
                 </th>
               </tr>
             </thead>
@@ -184,7 +186,7 @@ export default function TeamAttendanceList({
               {attendances.map((attendance) => (
                 <tr key={attendance.id}>
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {attendance.user?.name || "不明"}
+                    {attendance.user?.name || t("unknownUser")}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     {isAdmin ? (
@@ -198,10 +200,10 @@ export default function TeamAttendanceList({
                         }
                         className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                       >
-                        <option value="">未回答</option>
-                        <option value="present">出席</option>
-                        <option value="absent">欠席</option>
-                        <option value="other">その他</option>
+                        <option value="">{t("statusPending")}</option>
+                        <option value="present">{t("statusPresent")}</option>
+                        <option value="absent">{t("statusAbsent")}</option>
+                        <option value="other">{t("statusOther")}</option>
                       </select>
                     ) : (
                       <div className="flex space-x-2">
@@ -222,7 +224,7 @@ export default function TeamAttendanceList({
                                 : "bg-gray-100 text-gray-400 cursor-not-allowed"
                           }`}
                         >
-                          出席
+                          {t("statusPresent")}
                         </button>
                         <button
                           onClick={() =>
@@ -241,7 +243,7 @@ export default function TeamAttendanceList({
                                 : "bg-gray-100 text-gray-400 cursor-not-allowed"
                           }`}
                         >
-                          欠席
+                          {t("statusAbsent")}
                         </button>
                         <button
                           onClick={() =>
@@ -256,7 +258,7 @@ export default function TeamAttendanceList({
                                 : "bg-gray-100 text-gray-400 cursor-not-allowed"
                           }`}
                         >
-                          その他
+                          {t("statusOther")}
                         </button>
                       </div>
                     )}
@@ -268,7 +270,7 @@ export default function TeamAttendanceList({
                           type="text"
                           value={noteInput}
                           onChange={(e) => setNoteInput(e.target.value)}
-                          placeholder="備考を入力..."
+                          placeholder={t("notePlaceholder")}
                           className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                           disabled={!canSubmit && !isAdmin}
                         />
@@ -276,26 +278,26 @@ export default function TeamAttendanceList({
                           onClick={() => handleNoteSave(attendance.id, attendance.status)}
                           className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
                         >
-                          保存
+                          {t("saveButton")}
                         </button>
                         <button
                           onClick={handleNoteCancel}
                           className="px-2 py-1 bg-gray-300 text-gray-700 rounded text-xs hover:bg-gray-400"
                         >
-                          キャンセル
+                          {t("cancelButton")}
                         </button>
                       </div>
                     ) : (
                       <div className="flex items-center justify-between">
                         <span className="text-gray-700">
-                          {attendance.note || <span className="text-gray-400">なし</span>}
+                          {attendance.note || <span className="text-gray-400">{t("noteNone")}</span>}
                         </span>
                         {(canSubmit || isAdmin) && (
                           <button
                             onClick={() => handleNoteEdit(attendance.id, attendance.note)}
                             className="ml-2 text-blue-600 hover:text-blue-800 text-xs"
                           >
-                            編集
+                            {t("editButton")}
                           </button>
                         )}
                       </div>

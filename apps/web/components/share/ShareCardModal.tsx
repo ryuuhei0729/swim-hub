@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { CompetitionShareCard } from "./CompetitionShareCard";
 import { PracticeShareCard } from "./PracticeShareCard";
 import type { CompetitionShareData, PracticeShareData } from "./types";
@@ -20,6 +21,7 @@ interface ShareCardModalProps {
  * プレビューと画像ダウンロード機能を提供
  */
 export function ShareCardModal({ isOpen, onClose, type, data }: ShareCardModalProps) {
+  const t = useTranslations("common.shareCardModal");
   const [isGenerating, setIsGenerating] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -60,8 +62,8 @@ export function ShareCardModal({ isOpen, onClose, type, data }: ShareCardModalPr
       if (navigator.canShare({ files: [file] })) {
         const shareText =
           type === "competition"
-            ? "【Swimhub】\n大会記録をシェアしました！\n\n水泳記録管理アプリ「SwimHub」で記録を管理しよう!\nhttps://swim-hub.app"
-            : "【Swimhub】\n練習記録をシェアしました！\n\n水泳記録管理アプリ「SwimHub」で練習を記録しよう!\nhttps://swim-hub.app";
+            ? t("competitionShareText")
+            : t("practiceShareText");
 
         await navigator.share({
           files: [file],
@@ -80,7 +82,7 @@ export function ShareCardModal({ isOpen, onClose, type, data }: ShareCardModalPr
     } finally {
       setIsGenerating(false);
     }
-  }, [type, handleDownload]);
+  }, [type, handleDownload, t]);
 
   // プレビュー領域に合わせてカードを動的スケーリング
   const previewRef = useRef<HTMLDivElement>(null);
@@ -127,7 +129,7 @@ export function ShareCardModal({ isOpen, onClose, type, data }: ShareCardModalPr
         onClick={onClose}
         role="button"
         tabIndex={0}
-        aria-label="モーダルを閉じる"
+        aria-label={t("closeOverlay")}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             onClose();
@@ -140,12 +142,12 @@ export function ShareCardModal({ isOpen, onClose, type, data }: ShareCardModalPr
         {/* ヘッダー */}
         <div className="flex items-center justify-between p-4 border-b border-gray-800 shrink-0">
           <h3 className="text-lg font-semibold text-white">
-            {type === "competition" ? "記録をシェア" : "練習メニューをシェア"}
+            {type === "competition" ? t("competitionTitle") : t("practiceTitle")}
           </h3>
           <button
             onClick={onClose}
             className="p-2 rounded-lg hover:bg-gray-800 transition-colors"
-            aria-label="閉じる"
+            aria-label={t("close")}
           >
             <svg
               className="w-5 h-5 text-gray-400"
@@ -210,7 +212,7 @@ export function ShareCardModal({ isOpen, onClose, type, data }: ShareCardModalPr
                 />
               </svg>
             )}
-            <span>保存</span>
+            <span>{t("save")}</span>
           </button>
 
           <button
@@ -226,7 +228,7 @@ export function ShareCardModal({ isOpen, onClose, type, data }: ShareCardModalPr
                 d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
               />
             </svg>
-            <span>シェア</span>
+            <span>{t("share")}</span>
           </button>
         </div>
       </div>

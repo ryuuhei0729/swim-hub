@@ -1,6 +1,8 @@
 // middleware.ts - Next.js 15 Edge Middleware
+import { routing } from "@/i18n/routing";
 import { updateSession } from "@/lib/supabase-auth/middleware";
-import { type NextRequest } from "next/server";
+import createMiddleware from "next-intl/middleware";
+import { NextResponse, type NextRequest } from "next/server";
 
 // Cloudflare Workers 対応: Edge Runtime を使用
 export const runtime = "experimental-edge";
@@ -66,15 +68,36 @@ const CSP = [
   "form-action 'self'",
 ].join("; ");
 
-export async function middleware(request: NextRequest) {
-  const response = await updateSession(request);
+// next-intl middleware を生成 (locale プレフィックス判定 + リダイレクト)
+const intlMiddleware = createMiddleware(routing);
 
-  // セキュリティヘッダー（next.config.mjs の headers() から移動）
+function applySecurityHeaders(response: NextResponse): void {
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   response.headers.set("Content-Security-Policy", CSP);
+}
+
+export async function middleware(request: NextRequest) {
+  // Step 1: next-intl middleware で locale 判定 / リダイレクト
+  // localePrefix: "always" のため /dashboard 等は /ja/dashboard へ 308 リダイレクト
+  const intlResponse = intlMiddleware(request);
+
+  // next-intl がリダイレクト (3xx) を返した場合は
+  // CSP 等のセキュリティヘッダーを付与してから即座に return する
+  // (status code で判定。location ヘッダー依存は next-intl の内部実装に依存しすぎるため避ける)
+  if (intlResponse.status >= 300 && intlResponse.status < 400) {
+    applySecurityHeaders(intlResponse);
+    return intlResponse;
+  }
+
+  // Step 2: Supabase Auth セッション更新と認証ガード
+  // 認証ガード内でリダイレクトが発生する場合もあるが、その場合も CSP は付与する
+  const response = await updateSession(request);
+
+  // Step 3: CSP / セキュリティヘッダー付与 (next-intl リダイレクトでない全レスポンスに対して)
+  applySecurityHeaders(response);
 
   return response;
 }
@@ -86,8 +109,9 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - public folder
+     * - api/* (Route Handlers; ロケールリダイレクトと Supabase 認証 chain を通さない)
+     * - 静的アセット (画像)
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

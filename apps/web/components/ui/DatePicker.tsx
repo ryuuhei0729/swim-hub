@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback, useId } from "react";
+import { useTranslations } from "next-intl";
 import {
   format,
   parseISO,
@@ -57,8 +58,6 @@ interface DatePickerProps {
   "data-testid"?: string;
 }
 
-const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
-
 export default function DatePicker({
   value,
   onChange,
@@ -69,13 +68,16 @@ export default function DatePicker({
   helperText,
   minDate,
   maxDate,
-  placeholder = "日付を選択",
+  placeholder,
   className,
   defaultMonth,
   popupPosition = "bottom",
   popupAlign = "left",
   "data-testid": dataTestId,
 }: DatePickerProps) {
+  const t = useTranslations("common");
+  const resolvedPlaceholder = placeholder ?? t("datePicker.placeholder");
+  const weekdays = t.raw("datePicker.weekdays") as string[];
   const [isOpen, setIsOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState<Date>(() => {
     if (value) {
@@ -267,7 +269,7 @@ export default function DatePicker({
           )}
         >
           <CalendarIcon className="h-5 w-5 text-gray-400 shrink-0" aria-hidden="true" />
-          {selectedDate && isValid(selectedDate) ? format(selectedDate, "yyyy/MM/dd") : placeholder}
+          {selectedDate && isValid(selectedDate) ? format(selectedDate, "yyyy/MM/dd") : resolvedPlaceholder}
         </span>
 
         {/* クリアボタン */}
@@ -283,7 +285,7 @@ export default function DatePicker({
               }
             }}
             className="p-1 text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer"
-            aria-label="日付をクリア"
+            aria-label={t("datePicker.clearDate")}
           >
             <XMarkIcon className="h-4 w-4" />
           </span>
@@ -306,7 +308,7 @@ export default function DatePicker({
           ref={calendarRef}
           role="dialog"
           aria-modal="true"
-          aria-label="日付選択カレンダー"
+          aria-label={t("datePicker.calendarAriaLabel")}
           className={cn(
             "absolute z-50 p-4 bg-white border border-gray-200 rounded-lg shadow-lg animate-in fade-in duration-200 min-w-[280px]",
             popupPosition === "top"
@@ -321,7 +323,7 @@ export default function DatePicker({
               type="button"
               onClick={handlePrevMonth}
               className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
-              aria-label="前月"
+              aria-label={t("datePicker.prevMonth")}
             >
               <ChevronLeftIcon className="h-5 w-5" />
             </button>
@@ -334,7 +336,7 @@ export default function DatePicker({
               type="button"
               onClick={handleNextMonth}
               className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
-              aria-label="次月"
+              aria-label={t("datePicker.nextMonth")}
             >
               <ChevronRightIcon className="h-5 w-5" />
             </button>
@@ -342,7 +344,7 @@ export default function DatePicker({
 
           {/* 曜日ヘッダー */}
           <div className="grid grid-cols-7 mb-2">
-            {WEEKDAYS.map((day, index) => (
+            {weekdays.map((day: string, index: number) => (
               <div
                 key={day}
                 className={cn(

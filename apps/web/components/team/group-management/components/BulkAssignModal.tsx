@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import {
   DndContext,
   DragOverlay,
@@ -48,6 +49,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
   teamId,
   onSaved,
 }) => {
+  const t = useTranslations("teamsAdmin");
   const { supabase } = useAuth();
 
   // userId → groupId | null (null=未割り当て)
@@ -164,7 +166,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
   }, [supabase, groups, membersByGroup, onSaved, onClose]);
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title={`${category} — 一括振り分け`} size="xl">
+    <BaseModal isOpen={isOpen} onClose={onClose} title={t("bulkAssign.title", { category })} size="xl">
       {loading ? (
         <div className="py-12">
           <div className="animate-pulse space-y-3">
@@ -184,7 +186,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
             <div className="w-2/5 sm:w-1/3 shrink-0">
               <DroppableGroupZone
                 groupId="unassigned"
-                groupName="未割り当て"
+                groupName={t("bulkAssign.unassignedLabel")}
                 memberCount={unassignedMembers.length}
               >
                 {unassignedMembers.map((m) => (
@@ -251,7 +253,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
           >
-            キャンセル
+            {t("bulkAssign.cancelButton")}
           </button>
           <button
             type="button"
@@ -259,7 +261,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
             disabled={saving}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {saving ? "保存中..." : "保存"}
+            {saving ? t("bulkAssign.saving") : t("bulkAssign.saveButton")}
           </button>
         </div>
       )}

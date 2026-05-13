@@ -2,6 +2,7 @@
 
 import React, { useCallback } from "react";
 import { XMarkIcon, CheckIcon } from "@heroicons/react/24/outline";
+import { useTranslations } from "next-intl";
 import Cropper from "react-easy-crop";
 import { useImageCrop } from "@/hooks/useImageCrop";
 import Button from "@/components/ui/Button";
@@ -21,6 +22,7 @@ export default function ImageCropModal({
   fileName,
   onCropComplete,
 }: ImageCropModalProps) {
+  const t = useTranslations("mypage.imageCrop");
   const {
     crop,
     setCrop,
@@ -57,14 +59,14 @@ export default function ImageCropModal({
         <div className="relative bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
           {/* ヘッダー */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">プロフィール画像をトリミング</h3>
+            <h3 className="text-lg font-semibold text-gray-900">{t("title")}</h3>
             <button
               type="button"
               className="text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-1"
               onClick={handleClose}
               disabled={isProcessing}
             >
-              <span className="sr-only">閉じる</span>
+              <span className="sr-only">{t("close")}</span>
               <XMarkIcon className="h-6 w-6" />
             </button>
           </div>
@@ -93,7 +95,7 @@ export default function ImageCropModal({
 
             {/* ズームコントロール */}
             <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">ズーム</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t("zoomLabel")}</label>
               <input
                 type="range"
                 min={1}
@@ -115,7 +117,7 @@ export default function ImageCropModal({
           {/* フッター */}
           <div className="flex justify-end space-x-3 p-4 border-t border-gray-200">
             <Button type="button" variant="secondary" onClick={handleClose} disabled={isProcessing}>
-              キャンセル
+              {t("cancel")}
             </Button>
             <Button
               type="button"
@@ -126,12 +128,12 @@ export default function ImageCropModal({
               {isProcessing ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span>処理中...</span>
+                  <span>{t("processing")}</span>
                 </>
               ) : (
                 <>
                   <CheckIcon className="h-4 w-4" />
-                  <span>保存</span>
+                  <span>{t("save")}</span>
                 </>
               )}
             </Button>

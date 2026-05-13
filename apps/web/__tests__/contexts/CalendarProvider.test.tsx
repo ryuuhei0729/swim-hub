@@ -4,7 +4,7 @@ import { vi, beforeEach, describe, it, expect } from "vitest";
 import {
   CalendarProvider,
   useCalendar,
-} from "@/app/(authenticated)/dashboard/_providers/CalendarProvider";
+} from "@/app/[locale]/(authenticated)/dashboard/_providers/CalendarProvider";
 import type { CalendarItem } from "@apps/shared/types/ui";
 
 const mockUseAuth = vi.hoisted(() => vi.fn());

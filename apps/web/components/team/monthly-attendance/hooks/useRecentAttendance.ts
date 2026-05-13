@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AttendanceAPI } from "@swim-hub/shared/api/attendance";
+import { useTranslations } from "next-intl";
 import type { TeamAttendanceWithDetails } from "@swim-hub/shared/types/attendance";
 import { AttendanceStatus, TeamEvent } from "@swim-hub/shared/types";
 import { getMonthDateRange } from "@swim-hub/shared/utils/date";
@@ -22,6 +23,7 @@ export const useRecentAttendance = (
   attendanceAPI: AttendanceAPI,
   onMonthStatusUpdate: (year: number, month: number) => Promise<void>,
 ) => {
+  const t = useTranslations("teams");
   const [events, setEvents] = useState<TeamEvent[]>([]);
   const [attendances, setAttendances] = useState<TeamAttendanceWithDetails[]>([]);
   const [editStates, setEditStates] = useState<Record<string, AttendanceEditState>>({});
@@ -119,14 +121,14 @@ export const useRecentAttendance = (
         if (signal?.aborted) return;
 
         console.error("直近の出欠情報の取得に失敗:", err);
-        setError("直近の出欠情報の取得に失敗しました");
+        setError(t("recentAttendanceHook.loadError"));
       } finally {
         if (!signal?.aborted) {
           setLoading(false);
         }
       }
     },
-    [teamId, supabase, attendanceAPI],
+    [teamId, supabase, attendanceAPI, t],
   );
 
   const handleStatusChange = useCallback((eventId: string, status: AttendanceStatus | null) => {
@@ -178,7 +180,7 @@ export const useRecentAttendance = (
         const date = parseISO(event.date);
         const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
         const confirmed = window.confirm(
-          `提出締め切り後の編集になります（${dateStr}）。備考に編集日時が自動的に追加されます。保存しますか？`,
+          t("recentAttendanceHook.confirmEditAfterDeadline", { date: dateStr }),
         );
         if (!confirmed) {
           return;
@@ -192,7 +194,7 @@ export const useRecentAttendance = (
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        if (!user) throw new Error("認証が必要です");
+        if (!user) throw new Error(t("recentAttendanceHook.authRequired"));
 
         let note = editState.note ? sanitizeTextInput(editState.note, NOTE_MAX_LENGTH) : null;
 
@@ -319,7 +321,7 @@ export const useRecentAttendance = (
         await onMonthStatusUpdate(eventYear, eventMonth);
       } catch (err) {
         console.error("出欠情報の保存に失敗:", err);
-        setError("出欠情報の保存に失敗しました");
+        setError(t("recentAttendanceHook.saveSuccess"));
       } finally {
         setSavingEventIds((prev) => {
           const next = new Set(prev);
@@ -328,7 +330,7 @@ export const useRecentAttendance = (
         });
       }
     },
-    [events, editStates, attendances, supabase, loadRecentAttendances, onMonthStatusUpdate],
+    [events, editStates, attendances, supabase, loadRecentAttendances, onMonthStatusUpdate, t],
   );
 
   return {

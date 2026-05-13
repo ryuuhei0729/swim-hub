@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -9,7 +10,7 @@ import { LapTimeDisplay } from "../../LapTimeDisplay";
 import type { RecordSet, SplitTimeInput, SwimStyle } from "../types";
 import { parseTimeString, formatTimeDisplay } from "../utils/timeParser";
 import PremiumBadge from "@/components/ui/PremiumBadge";
-import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
+import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 
 const VideoUploader = dynamic(() => import("@/components/video/VideoUploader"), { ssr: false });
 
@@ -56,6 +57,8 @@ export default function RecordSetItem({
   splitTimeLimitError = null,
   isPremium = false,
 }: RecordSetItemProps) {
+  const t = useTranslations("forms.record");
+  const tPremium = useTranslations("forms.premium");
   const styleId = `record-${record.id}-style`;
   const timeId = `record-${record.id}-time`;
   const relayId = `record-${record.id}-relay`;
@@ -86,13 +89,13 @@ export default function RecordSetItem({
     <div className="border border-gray-200 rounded-lg p-3 sm:p-4 space-y-3 sm:space-y-4 bg-blue-50">
       {/* ヘッダー */}
       <div className="flex items-center justify-between">
-        <h4 className="text-sm sm:text-base font-medium text-gray-700">種目 {recordIndex + 1}</h4>
+        <h4 className="text-sm sm:text-base font-medium text-gray-700">{t("eventHeader", { n: recordIndex + 1 })}</h4>
         {canRemove && (
           <button
             type="button"
             onClick={onRemove}
             className="text-red-500 hover:text-red-700"
-            aria-label="種目を削除"
+            aria-label={t("removeEventAria")}
             data-testid={`record-remove-button-${recordIndex + 1}`}
           >
             <TrashIcon className="h-4 w-4" />
@@ -104,7 +107,7 @@ export default function RecordSetItem({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-4">
         <div>
           <label htmlFor={styleId} className="block text-sm font-medium text-gray-700 mb-2">
-            種目
+            {t("styleLabel")}
           </label>
           <select
             id={styleId}
@@ -114,7 +117,7 @@ export default function RecordSetItem({
             required
             data-testid={`record-style-${recordIndex + 1}`}
           >
-            <option value="">種目を選択</option>
+            <option value="">{t("stylePlaceholder")}</option>
             {styles.map((style) => (
               <option key={style.id} value={style.id}>
                 {style.nameJp}
@@ -127,7 +130,7 @@ export default function RecordSetItem({
           <div className="grid grid-cols-[1fr_auto] gap-2 items-start">
             <div>
               <label htmlFor={timeId} className="block text-sm font-medium text-gray-700 mb-2">
-                タイム
+                {t("timeLabel")}
               </label>
               <Input
                 id={timeId}
@@ -149,14 +152,14 @@ export default function RecordSetItem({
                     onUpdate({ time, timeDisplayValue: undefined });
                   }
                 }}
-                placeholder="例: 1:30.50"
+                placeholder={t("time_placeholder")}
                 required
                 data-testid={`record-time-${recordIndex + 1}`}
               />
             </div>
             <div className="w-full sm:w-36">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                リアクションタイム
+                {t("reactionTimeLabel")}
               </label>
               <Input
                 type="number"
@@ -182,7 +185,7 @@ export default function RecordSetItem({
             data-testid={`record-relay-${recordIndex + 1}`}
           />
           <label htmlFor={relayId} className="text-sm text-gray-700">
-            リレー
+            {t("relayLabel")}
           </label>
         </div>
       </div>
@@ -190,7 +193,7 @@ export default function RecordSetItem({
       {/* スプリットタイム */}
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-          <label className="block text-sm font-medium text-gray-700">スプリットタイム</label>
+          <label className="block text-sm font-medium text-gray-700">{t("splitTimeLabel")}</label>
           <div className="flex gap-2">
             <Button
               type="button"
@@ -201,7 +204,7 @@ export default function RecordSetItem({
               data-testid={`record-split-add-25m-button-${recordIndex + 1}`}
             >
               <PlusIcon className="h-3 w-3 mr-1" />
-              追加(25mごと)
+              {t("splitAdd25m")}
             </Button>
             <Button
               type="button"
@@ -212,7 +215,7 @@ export default function RecordSetItem({
               data-testid={`record-split-add-50m-button-${recordIndex + 1}`}
             >
               <PlusIcon className="h-3 w-3 mr-1" />
-              追加(50mごと)
+              {t("splitAdd50m")}
             </Button>
             <Button
               type="button"
@@ -223,7 +226,7 @@ export default function RecordSetItem({
               data-testid={`record-split-add-button-${recordIndex + 1}`}
             >
               <PlusIcon className="h-3 w-3 mr-1" />
-              追加
+              {t("splitAdd")}
             </Button>
           </div>
         </div>
@@ -232,7 +235,7 @@ export default function RecordSetItem({
           <div key={split.uiKey} className="flex items-center gap-2 mb-2">
             <Input
               type="text"
-              placeholder="距離 (m)"
+              placeholder={t("distance_placeholder")}
               value={split.distance}
               onChange={(e) => {
                 const value = e.target.value;
@@ -255,7 +258,7 @@ export default function RecordSetItem({
             <span className="text-gray-500">m:</span>
             <Input
               type="text"
-              placeholder="例: 1:30.50"
+              placeholder={t("time_placeholder")}
               value={
                 split.splitTimeDisplayValue !== undefined
                   ? split.splitTimeDisplayValue
@@ -289,7 +292,7 @@ export default function RecordSetItem({
                 type="button"
                 onClick={() => onRemoveSplitTime(originalIndex)}
                 className="text-red-500 hover:text-red-700"
-                aria-label="スプリットを削除"
+                aria-label={t("removeEventAria")}
                 data-testid={`record-split-remove-button-${recordIndex + 1}-${originalIndex + 1}`}
               >
                 <TrashIcon className="h-4 w-4" />
@@ -317,7 +320,12 @@ export default function RecordSetItem({
         {/* Premium 制限メッセージ */}
         {!isPremium && isSplitTimeLimitReached && (
           <div className="mt-2" data-testid={`premium-badge-split-limit-${recordIndex + 1}`}>
-            <PremiumBadge message={splitTimeLimitError || PREMIUM_MESSAGES.split_time_limit} />
+            <PremiumBadge
+              message={
+                splitTimeLimitError ||
+                tPremium("splitTimeLimit", { limit: FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD })
+              }
+            />
           </div>
         )}
       </div>
@@ -325,7 +333,7 @@ export default function RecordSetItem({
       {/* 動画・メモ */}
       <div className="space-y-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">動画</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">{t("videoLabel")}</label>
           <VideoUploader
             type="record"
             id={isDbUuid(record.id) ? record.id : undefined}
@@ -339,12 +347,12 @@ export default function RecordSetItem({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">メモ</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">{t("noteLabel")}</label>
           <Input
             type="text"
             value={record.note}
             onChange={(e) => onUpdate({ note: e.target.value })}
-            placeholder="特記事項"
+            placeholder={t("notePlaceholder")}
             data-testid={`record-note-${recordIndex + 1}`}
           />
         </div>

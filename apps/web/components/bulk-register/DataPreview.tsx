@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslations } from "next-intl";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { format, isValid } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -13,6 +14,7 @@ interface DataPreviewProps {
 }
 
 export function DataPreview({ parsedData, loading, onRegister }: DataPreviewProps) {
+  const t = useTranslations("teamsAdmin");
   const errors = parsedData.type === "practice" ? parsedData.data.errors : parsedData.data.errors;
   const hasItems =
     parsedData.type === "practice"
@@ -22,9 +24,9 @@ export function DataPreview({ parsedData, loading, onRegister }: DataPreviewProp
   return (
     <div className="mb-6">
       <h3 className="text-lg font-medium text-gray-900 mb-4">
-        プレビュー
+        {t("dataPreview.title")}
         <span className="ml-2 text-sm font-normal text-gray-500">
-          ({parsedData.type === "practice" ? "練習" : "大会"}データ)
+          ({parsedData.type === "practice" ? t("dataPreview.practiceType") : t("dataPreview.competitionType")}データ)
         </span>
       </h3>
 
@@ -35,7 +37,7 @@ export function DataPreview({ parsedData, loading, onRegister }: DataPreviewProp
             <ExclamationTriangleIcon className="h-5 w-5 text-yellow-400 shrink-0 mt-0.5" />
             <div className="ml-3 flex-1">
               <h4 className="text-sm font-medium text-yellow-800 mb-2">
-                エラー ({errors.length}件)
+                {t("dataPreview.errorTitle", { count: errors.length })}
               </h4>
               <div className="max-h-40 overflow-y-auto">
                 <ul className="list-disc list-inside text-sm text-yellow-700 space-y-1">
@@ -45,7 +47,7 @@ export function DataPreview({ parsedData, loading, onRegister }: DataPreviewProp
                     </li>
                   ))}
                   {errors.length > 20 && (
-                    <li className="text-yellow-600">他 {errors.length - 20}件のエラーがあります</li>
+                    <li className="text-yellow-600">{t("dataPreview.moreItems", { count: errors.length - 20 })}</li>
                   )}
                 </ul>
               </div>
@@ -60,23 +62,23 @@ export function DataPreview({ parsedData, loading, onRegister }: DataPreviewProp
         {parsedData.type === "practice" && parsedData.data.practices.length > 0 && (
           <div>
             <h4 className="text-md font-medium text-gray-800 mb-2">
-              練習 ({parsedData.data.practices.length}件)
+              {t("dataPreview.practiceCount", { count: parsedData.data.practices.length })}
             </h4>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      日付
+                      {t("dataPreview.practice.col.date")}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      タイトル
+                      {t("dataPreview.practice.col.title")}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      場所
+                      {t("dataPreview.practice.col.place")}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      備考
+                      {t("dataPreview.practice.col.note")}
                     </th>
                   </tr>
                 </thead>
@@ -101,7 +103,7 @@ export function DataPreview({ parsedData, loading, onRegister }: DataPreviewProp
               </table>
               {parsedData.data.practices.length > 10 && (
                 <p className="mt-2 text-sm text-gray-600">
-                  他 {parsedData.data.practices.length - 10}件の練習データがあります
+                  {t("dataPreview.moreItems", { count: parsedData.data.practices.length - 10 })}
                 </p>
               )}
             </div>
@@ -112,29 +114,29 @@ export function DataPreview({ parsedData, loading, onRegister }: DataPreviewProp
         {parsedData.type === "competition" && parsedData.data.competitions.length > 0 && (
           <div>
             <h4 className="text-md font-medium text-gray-800 mb-2">
-              大会 ({parsedData.data.competitions.length}件)
+              {t("dataPreview.competitionCount", { count: parsedData.data.competitions.length })}
             </h4>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      開始日
+                      {t("dataPreview.competition.col.startDate")}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      終了日
+                      {t("dataPreview.competition.col.endDate")}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      大会名
+                      {t("dataPreview.competition.col.name")}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      場所
+                      {t("dataPreview.competition.col.place")}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      プール種別
+                      {t("dataPreview.competition.col.poolType")}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      備考
+                      {t("dataPreview.competition.col.note")}
                     </th>
                   </tr>
                 </thead>
@@ -159,9 +161,9 @@ export function DataPreview({ parsedData, loading, onRegister }: DataPreviewProp
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                         {competition.pool_type === 0
-                          ? "25m"
+                          ? t("dataPreview.poolShort")
                           : competition.pool_type === 1
-                            ? "50m"
+                            ? t("dataPreview.poolLong")
                             : "-"}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500">{competition.note || "-"}</td>
@@ -171,7 +173,7 @@ export function DataPreview({ parsedData, loading, onRegister }: DataPreviewProp
               </table>
               {parsedData.data.competitions.length > 10 && (
                 <p className="mt-2 text-sm text-gray-600">
-                  他 {parsedData.data.competitions.length - 10}件の大会データがあります
+                  {t("dataPreview.moreItems", { count: parsedData.data.competitions.length - 10 })}
                 </p>
               )}
             </div>
@@ -208,10 +210,10 @@ export function DataPreview({ parsedData, loading, onRegister }: DataPreviewProp
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  登録中...
+                  {t("dataPreview.registering")}
                 </>
               ) : (
-                `${parsedData.type === "practice" ? "練習" : "大会"}を一括登録`
+                `${parsedData.type === "practice" ? t("dataPreview.practiceType") : t("dataPreview.competitionType")}${t("dataPreview.registerButton")}`
               )}
             </button>
           </div>

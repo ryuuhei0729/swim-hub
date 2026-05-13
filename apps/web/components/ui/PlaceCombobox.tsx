@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/utils/cn";
 
 export interface PlaceComboboxProps {
@@ -18,12 +19,14 @@ export default function PlaceCombobox({
   value,
   onChange,
   suggestions,
-  placeholder = "場所を入力または選択",
+  placeholder,
   label,
   disabled = false,
   className,
   "data-testid": testId,
 }: PlaceComboboxProps) {
+  const t = useTranslations("common");
+  const resolvedPlaceholder = placeholder ?? t("placeCombobox.placeholder");
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -132,7 +135,7 @@ export default function PlaceCombobox({
           onChange={handleInputChange}
           onFocus={handleInputFocus}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           disabled={disabled}
           className={cn(
             "flex h-8 sm:h-10 w-full rounded-md border border-gray-300 bg-white px-2 sm:px-3 py-1 sm:py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 transition-colors",

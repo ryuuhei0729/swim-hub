@@ -7,6 +7,7 @@ import {
   TrophyIcon,
   ClipboardDocumentCheckIcon,
 } from "@heroicons/react/24/outline";
+import { useTranslations } from "next-intl";
 
 export type TeamTabType = "members" | "practices" | "competitions" | "attendance";
 
@@ -22,30 +23,32 @@ export interface TeamTabsProps {
   isAdmin?: boolean;
 }
 
-const tabs: TeamTab[] = [
-  {
-    id: "attendance",
-    name: "出欠",
-    icon: ClipboardDocumentCheckIcon,
-  },
-  {
-    id: "members",
-    name: "メンバー",
-    icon: UsersIcon,
-  },
-  {
-    id: "practices",
-    name: "練習",
-    icon: ClockIcon,
-  },
-  {
-    id: "competitions",
-    name: "大会",
-    icon: TrophyIcon,
-  },
-];
-
 export default function TeamTabs({ activeTab, onTabChange }: TeamTabsProps) {
+  const t = useTranslations("teams");
+
+  const tabs: TeamTab[] = [
+    {
+      id: "attendance",
+      name: t("tabs.attendance"),
+      icon: ClipboardDocumentCheckIcon,
+    },
+    {
+      id: "members",
+      name: t("tabs.members"),
+      icon: UsersIcon,
+    },
+    {
+      id: "practices",
+      name: t("tabs.practices"),
+      icon: ClockIcon,
+    },
+    {
+      id: "competitions",
+      name: t("tabs.competitions"),
+      icon: TrophyIcon,
+    },
+  ];
+
   // 一般ページは閲覧専用のため、全てのタブを表示（isAdminは使用しない）
   const visibleTabs = tabs;
 

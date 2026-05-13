@@ -1,0 +1,115 @@
+"use client";
+
+import { useState, useCallback, useMemo } from "react";
+import { useTranslations } from "next-intl";
+
+import { Link } from "@/i18n/navigation";
+
+const NAV_ITEM_IDS = ["practice", "competition", "proxy", "pricing"] as const;
+
+function handleScrollTo(id: string) {
+  const element = document.getElementById(id);
+  if (element) {
+    const headerOffset = window.innerWidth >= 640 ? 100 : 80;
+    const elementPosition = element.getBoundingClientRect().top;
+    const offsetPosition = elementPosition + window.scrollY - headerOffset;
+
+    window.scrollTo({
+      top: offsetPosition,
+      behavior: "smooth",
+    });
+  }
+}
+
+export default function ScrollNavButtons() {
+  const tNav = useTranslations("nav");
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const navItems = useMemo(
+    () => NAV_ITEM_IDS.map((id) => ({ id, label: tNav(id) })),
+    [tNav],
+  );
+
+  const toggleMenu = useCallback(() => {
+    setMenuOpen((prev) => !prev);
+  }, []);
+
+  const handleMobileNavClick = useCallback((id: string) => {
+    setMenuOpen(false);
+    handleScrollTo(id);
+  }, []);
+
+  return (
+    <>
+      {/* デスクトップナビ */}
+      <div className="hidden md:flex items-center space-x-1 lg:space-x-2">
+        {navItems.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => handleScrollTo(item.id)}
+            className="px-4 py-2 text-base text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+          >
+            {item.label}
+          </button>
+        ))}
+        <div className="mx-2 h-6 w-px bg-gray-300" />
+        <Link
+          href="/signup"
+          className="px-5 py-2.5 text-base font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+        >
+          {tNav("signup")}
+        </Link>
+        <Link
+          href="/login"
+          className="px-5 py-2.5 text-base font-semibold text-blue-600 border border-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+        >
+          {tNav("login")}
+        </Link>
+      </div>
+
+      {/* モバイルメニューボタン */}
+      <button
+        className="md:hidden p-2 text-gray-700 hover:text-blue-600"
+        aria-label={menuOpen ? tNav("closeMenu") : tNav("openMenu")}
+        onClick={toggleMenu}
+      >
+        {menuOpen ? (
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        ) : (
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 6h16M4 12h16M4 18h16"
+            />
+          </svg>
+        )}
+      </button>
+
+      {/* モバイルメニュー */}
+      {menuOpen && (
+        <div className="absolute top-full right-0 w-40 bg-white shadow-lg rounded-bl-lg border border-gray-100 md:hidden">
+          <div className="flex flex-col py-1">
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => handleMobileNavClick(item.id)}
+                className="px-4 py-2 text-right text-xs text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/contexts/AuthProvider";
+import { useTranslations } from "next-intl";
 import {
   PlusIcon,
   CalendarDaysIcon,
@@ -113,6 +114,7 @@ export interface TeamPracticesProps {
 export default function TeamPractices({ teamId, isAdmin = false }: TeamPracticesProps) {
   const { supabase, user } = useAuth();
   const router = useRouter();
+  const t = useTranslations("teams");
   const [practices, setPractices] = useState<TeamPractice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -188,11 +190,11 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
       setPractices(mappedPractices);
     } catch (err) {
       console.error("チーム練習情報の取得に失敗:", err);
-      setError("チーム練習情報の取得に失敗しました");
+      setError(t("practices.error"));
     } finally {
       setLoading(false);
     }
-  }, [teamId, supabase, currentPage, pageSize]);
+  }, [teamId, supabase, currentPage, pageSize, t]);
 
   // 初回読み込みとページ変更時の読み込み
   useEffect(() => {
@@ -210,7 +212,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
   ) => {
     // ユーザーがログインしていない場合はエラーを表示して早期リターン
     if (!user) {
-      setError("練習記録を作成するにはログインが必要です");
+      setError(t("practiceForm.authRequired"));
       closeBasicForm();
       return;
     }
@@ -235,7 +237,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
       }
     } catch (err) {
       console.error("練習の作成に失敗:", err);
-      setError("練習の作成に失敗しました");
+      setError(t("practiceForm.createFailed"));
     } finally {
       setFormLoading(false);
     }
@@ -295,7 +297,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
             onClick={() => router.refresh()}
             className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
           >
-            再試行
+            {t("practices.retry")}
           </button>
         </div>
       </div>
@@ -308,7 +310,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
         {/* ヘッダー */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-gray-900">
-            チーム練習記録 ({practices.length}件)
+            {t("practices.title", { count: practices.length })}
           </h2>
           {isAdmin && (
             <button
@@ -316,7 +318,7 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               <PlusIcon className="h-5 w-5 mr-2" />
-              練習記録追加
+              {t("practices.addButton")}
             </button>
           )}
         </div>
@@ -327,7 +329,9 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
             const practiceDate = format(new Date(practice.date), "M月d日(E)", { locale: ja });
             const hasLogs = practice.practiceLogs && practice.practiceLogs.length > 0;
             const ariaLabel = isAdmin
-              ? `${practiceDate}の練習記録${hasLogs ? "を編集" : "を追加"}`
+              ? (hasLogs
+                  ? t("practices.card.editAriaLabel", { date: practiceDate })
+                  : t("practices.card.addAriaLabel", { date: practiceDate }))
               : undefined;
 
             if (isAdmin) {
@@ -374,20 +378,20 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
                         <div className="flex items-center space-x-2">
                           <ClockIcon className="h-4 w-4 text-green-500" />
                           <span className="text-sm text-green-600 font-medium">
-                            {practice.practiceLogs!.length}セットの練習記録あり
+                            {t("practices.card.logsCount", { count: practice.practiceLogs!.length })}
                           </span>
                           <span className="text-xs text-gray-500 flex items-center">
                             <PencilSquareIcon className="h-3 w-3 mr-1" />
-                            クリックで編集
+                            {t("practices.card.clickToEdit")}
                           </span>
                         </div>
                       ) : (
                         <div className="flex items-center space-x-2">
                           <ClockIcon className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-gray-500">練習記録なし</span>
+                          <span className="text-sm text-gray-500">{t("practices.card.noLogsLabel")}</span>
                           <span className="text-xs text-blue-600 flex items-center">
                             <PlusIcon className="h-3 w-3 mr-1" />
-                            クリックで追加
+                            {t("practices.card.clickToAdd")}
                           </span>
                         </div>
                       )}
@@ -405,10 +409,10 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
                           }}
                           onKeyDown={(e) => e.stopPropagation()}
                           className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-                          aria-label={`${practiceDate}の練習記録を閲覧`}
+                          aria-label={t("practices.card.viewAriaLabel", { date: practiceDate })}
                         >
                           <EyeIcon className="h-3.5 w-3.5 mr-1" />
-                          詳細
+                          {t("practices.card.detailButton")}
                         </button>
                       )}
                     </div>
@@ -451,13 +455,13 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
                         <div className="flex items-center space-x-2">
                           <ClockIcon className="h-4 w-4 text-green-500" />
                           <span className="text-sm text-green-600 font-medium">
-                            {practice.practiceLogs!.length}セットの練習記録あり
+                            {t("practices.card.logsCount", { count: practice.practiceLogs!.length })}
                           </span>
                         </div>
                       ) : (
                         <div className="flex items-center space-x-2">
                           <ClockIcon className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-gray-500">練習記録なし</span>
+                          <span className="text-sm text-gray-500">{t("practices.card.noLogsLabel")}</span>
                         </div>
                       )}
                     </div>
@@ -476,13 +480,13 @@ export default function TeamPractices({ teamId, isAdmin = false }: TeamPractices
           {practices.length === 0 && !loading && (
             <div className="text-center py-8">
               <ClockIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">練習記録がありません</p>
+              <p className="text-gray-600">{t("practices.empty")}</p>
               {isAdmin && (
                 <button
                   onClick={handleAddPractice}
                   className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
                 >
-                  最初の練習記録を追加
+                  {t("practices.addButton")}
                 </button>
               )}
             </div>

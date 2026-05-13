@@ -1,5 +1,8 @@
 /* global process */
 import withBundleAnalyzer from "@next/bundle-analyzer";
+import createNextIntlPlugin from "next-intl/plugin";
+
+const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
 const analyzer = withBundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
@@ -33,7 +36,13 @@ const nextConfig = {
   },
 
   // Turbopack 設定（Next.js 16 デフォルト、bundle-analyzer の webpack 設定との共存用）
-  turbopack: {},
+  // next-intl v3 + Turbopack 環境では plugin の alias 注入が一部効かないため、
+  // `next-intl/config` を i18n/request.ts に解決する alias を明示的に追加する。
+  turbopack: {
+    resolveAlias: {
+      "next-intl/config": "./i18n/request.ts",
+    },
+  },
 
   // 画像設定
   images: {
@@ -78,4 +87,4 @@ const nextConfig = {
   },
 };
 
-export default analyzer(nextConfig);
+export default analyzer(withNextIntl(nextConfig));

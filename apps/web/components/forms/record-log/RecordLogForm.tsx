@@ -1,19 +1,13 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import Button from "@/components/ui/Button";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import FormStepper from "@/components/ui/FormStepper";
 import { XMarkIcon } from "@heroicons/react/24/outline";
-
-// 大会記録フォームのステップ定義
-const COMPETITION_STEPS = [
-  { id: "basic", label: "大会情報", description: "日程・場所" },
-  { id: "entry", label: "エントリー", description: "種目・タイム" },
-  { id: "record", label: "記録入力", description: "結果・スプリット" },
-];
 import { format } from "date-fns";
-import { ja } from "date-fns/locale";
+import { ja, enUS } from "date-fns/locale";
 import { useRecordLogForm } from "./hooks/useRecordLogForm";
 import { RecordLogEntry } from "./components";
 import type { RecordLogFormProps, StyleOption } from "./types";
@@ -43,6 +37,33 @@ export default function RecordLogForm({
   styles = EMPTY_STYLES,
   entryDataList = EMPTY_ENTRY_DATA_LIST,
 }: RecordLogFormProps) {
+  const t = useTranslations("forms.recordLog");
+  const tCompetition = useTranslations("forms.competition");
+  const tUnsaved = useTranslations("forms.unsavedChanges");
+  const locale = useLocale();
+  const dateFnsLocale = locale === "ja" ? ja : enUS;
+
+  const COMPETITION_STEPS = useMemo(
+    () => [
+      {
+        id: "basic",
+        label: tCompetition("steps.basic.label"),
+        description: tCompetition("steps.basic.description"),
+      },
+      {
+        id: "entry",
+        label: tCompetition("steps.entry.label"),
+        description: tCompetition("steps.entry.description"),
+      },
+      {
+        id: "record",
+        label: tCompetition("steps.record.label"),
+        description: tCompetition("steps.record.description"),
+      },
+    ],
+    [tCompetition],
+  );
+
   const { supabase, user, subscription } = useAuth();
   const isPremium = checkIsPremium(subscription);
   const { bestTimes, loadBestTimes } = useBestTimes(supabase);
@@ -133,13 +154,13 @@ export default function RecordLogForm({
     const { hasStyleError, submitList } = prepareSubmitData();
 
     if (hasStyleError) {
-      setFormError("種目を選択してください");
+      setFormError(t("formError_noStyle"));
       setIsSubmitted(false);
       return;
     }
 
     if (submitList.length === 0) {
-      setFormError("タイムを入力してください（形式: 分:秒.小数 または 秒.小数）");
+      setFormError(t("formError_noTime"));
       setIsSubmitted(false);
       return;
     }
@@ -200,7 +221,7 @@ export default function RecordLogForm({
                         <>
                           <span className="text-base font-semibold text-blue-700">
                             {format(new Date(competitionDate), "yyyy年M月d日(E)", {
-                              locale: ja,
+                              locale: dateFnsLocale,
                             })}
                           </span>
                           <span className="ml-3">{competitionTitle}</span>
@@ -208,7 +229,7 @@ export default function RecordLogForm({
                       )}
                       {competitionDate &&
                         !competitionTitle &&
-                        format(new Date(competitionDate), "yyyy年M月d日(E)", { locale: ja })}
+                        format(new Date(competitionDate), "yyyy年M月d日(E)", { locale: dateFnsLocale })}
                       {!competitionDate && competitionTitle && competitionTitle}
                     </p>
                   </div>
@@ -297,7 +318,7 @@ export default function RecordLogForm({
                 disabled={isLoading}
                 className="w-full sm:w-auto"
               >
-                キャンセル
+                {t("cancel")}
               </Button>
               <Button
                 type="submit"
@@ -305,7 +326,7 @@ export default function RecordLogForm({
                 className="w-full sm:w-auto"
                 data-testid={editData ? "update-record-button" : "save-record-button"}
               >
-                {isLoading ? "保存中..." : editData ? "更新" : "保存"}
+                {isLoading ? t("saving") : editData ? t("update") : t("save")}
               </Button>
             </div>
           </form>
@@ -317,14 +338,14 @@ export default function RecordLogForm({
         isOpen={showConfirmDialog}
         onConfirm={handleConfirmClose}
         onCancel={handleCancelClose}
-        title="入力内容が保存されていません"
+        title={tUnsaved("title")}
         message={
           confirmContext === "back"
-            ? "入力内容が保存されていません。このまま戻りますか？"
-            : "入力内容が保存されていません。このまま閉じますか？"
+            ? tUnsaved("messageBack")
+            : tUnsaved("messageClose")
         }
-        confirmLabel={confirmContext === "back" ? "戻る" : "閉じる"}
-        cancelLabel="編集を続ける"
+        confirmLabel={confirmContext === "back" ? tUnsaved("confirmBack") : tUnsaved("confirmClose")}
+        cancelLabel={tUnsaved("cancel")}
         variant="warning"
       />
     </div>

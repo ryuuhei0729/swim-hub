@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { createBrowserClient } from "@supabase/ssr";
 import Button from "@/components/ui/Button";
@@ -18,15 +19,9 @@ import type { PracticeLogFormProps, PracticeMenu } from "./types";
 import type { PendingVideoData } from "@/stores/types";
 import { useAuth } from "@/contexts";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
-import { FREE_PLAN_LIMITS, PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
+import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import { validatePracticeTimeLimit } from "@swim-hub/shared/utils/validators";
 import PremiumBadge from "@/components/ui/PremiumBadge";
-
-// 練習記録フォームのステップ定義
-const PRACTICE_STEPS = [
-  { id: "basic", label: "基本情報", description: "日付・場所" },
-  { id: "log", label: "練習記録", description: "メニュー・タイム" },
-];
 
 import TimeInputModal from "../TimeInputModal";
 // VideoUploaderは重いコンポーネントのため動的インポートを維持
@@ -54,6 +49,10 @@ export default function PracticeLogForm({
   setAvailableTags,
   styles: _styles = [],
 }: PracticeLogFormProps) {
+  const t = useTranslations("forms.practiceLog");
+  const tPractice = useTranslations("forms.practice");
+  const tUnsaved = useTranslations("forms.unsavedChanges");
+  const tPremium = useTranslations("forms.premium");
   const { subscription } = useAuth();
   const isPremium = checkIsPremium(subscription);
 
@@ -77,6 +76,12 @@ export default function PracticeLogForm({
     getCurrentMenu,
     prepareSubmitData,
   } = usePracticeLogForm({ isOpen, editData, availableTags });
+
+  // 練習記録フォームのステップ定義
+  const PRACTICE_STEPS = useMemo(() => [
+    { id: "basic", label: tPractice("steps.basic.label"), description: tPractice("steps.basic.description") },
+    { id: "log", label: tPractice("steps.log.label"), description: tPractice("steps.log.description") },
+  ], [tPractice]);
 
   // Practice time 件数制限チェック: 実際に入力されたタイム数の合計
   const getTotalPracticeTimesCount = useCallback((): number => {
@@ -305,13 +310,13 @@ export default function PracticeLogForm({
           <div className="bg-white px-6 py-4 border-b border-gray-200 shrink-0">
             <div className="flex items-center justify-between">
               <h3 className="text-lg leading-6 font-medium text-gray-900">
-                {editData ? "練習記録を編集" : "練習記録を追加"}
+                {editData ? t("title_edit") : t("title_create")}
               </h3>
               <button
                 type="button"
                 onClick={handleClose}
                 className="text-gray-400 hover:text-gray-600"
-                aria-label="練習記録を閉じる"
+                aria-label={t("close_aria")}
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -338,8 +343,8 @@ export default function PracticeLogForm({
                       disabled={isLoading}
                     >
                       <ClipboardDocumentListIcon className="h-5 w-5" />
-                      <span className="sm:hidden">テンプレート</span>
-                      <span className="hidden sm:inline">テンプレートから作成</span>
+                      <span className="sm:hidden">{t("templateFrom")}</span>
+                      <span className="hidden sm:inline">{t("templateFromLong")}</span>
                     </Button>
                     <Button
                       type="button"
@@ -349,7 +354,7 @@ export default function PracticeLogForm({
                       data-testid="add-menu-button"
                     >
                       <PlusIcon className="h-4 w-4" />
-                      メニューを追加
+                      {t("addMenu")}
                     </Button>
                   </div>
                 </div>
@@ -370,7 +375,7 @@ export default function PracticeLogForm({
                     />
                     {/* 動画アップロード（編集時のみ、1メニュー1動画） */}
                     <div className="px-1">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">動画</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">{t("videoLabel")}</label>
                       <VideoUploader
                         type="practice-log"
                         id={isDbUuid(menu.id) ? menu.id : undefined}
@@ -409,7 +414,9 @@ export default function PracticeLogForm({
 
                 {/* Practice time 制限メッセージ */}
                 {isPracticeTimeLimitReached && (
-                  <PremiumBadge message={PREMIUM_MESSAGES.practice_time_limit} />
+                  <PremiumBadge
+                    message={tPremium("practiceTimeLimit", { limit: FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG })}
+                  />
                 )}
               </div>
             </div>
@@ -431,7 +438,7 @@ export default function PracticeLogForm({
                     htmlFor="save-as-template"
                     className="ml-2 text-sm text-gray-700 cursor-pointer select-none"
                   >
-                    テンプレートとして保存する
+                    {t("saveAsTemplate")}
                   </label>
                 </div>
               ) : (
@@ -447,7 +454,7 @@ export default function PracticeLogForm({
                   className="w-full sm:w-auto"
                   data-testid="practice-log-cancel-button"
                 >
-                  キャンセル
+                  {t("cancel")}
                 </Button>
                 <Button
                   type="button"
@@ -456,7 +463,7 @@ export default function PracticeLogForm({
                   className="w-full sm:w-auto"
                   data-testid={editData ? "update-practice-log-button" : "save-practice-log-button"}
                 >
-                  {isLoading ? (editData ? "更新中..." : "保存中...") : editData ? "更新" : "保存"}
+                  {isLoading ? (editData ? t("updating") : t("saving")) : editData ? t("update") : t("save")}
                 </Button>
               </div>
             </div>
@@ -500,14 +507,14 @@ export default function PracticeLogForm({
         isOpen={showConfirmDialog}
         onConfirm={handleConfirmClose}
         onCancel={handleCancelClose}
-        title="入力内容が保存されていません"
+        title={tUnsaved("title")}
         message={
           confirmContext === "back"
-            ? "入力内容が保存されていません。このまま戻りますか？"
-            : "入力内容が保存されていません。このまま閉じますか？"
+            ? tUnsaved("messageBack")
+            : tUnsaved("messageClose")
         }
-        confirmLabel={confirmContext === "back" ? "戻る" : "閉じる"}
-        cancelLabel="編集を続ける"
+        confirmLabel={confirmContext === "back" ? tUnsaved("confirmBack") : tUnsaved("confirmClose")}
+        cancelLabel={tUnsaved("cancel")}
         variant="warning"
       />
 
@@ -532,13 +539,13 @@ export default function PracticeLogForm({
               {/* ヘッダー */}
               <div className="flex items-center justify-between p-4 border-b border-gray-200">
                 <h3 id="template-save-modal-title" className="text-lg font-semibold text-gray-900">
-                  テンプレートとして保存
+                  {t("templateSaveTitle")}
                 </h3>
                 <button
                   type="button"
                   onClick={() => setShowTemplateSaveModal(false)}
                   className="text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 rounded-md p-1"
-                  aria-label="閉じる"
+                  aria-label={t("close_aria")}
                 >
                   <XMarkIcon className="h-6 w-6" />
                 </button>
@@ -550,14 +557,14 @@ export default function PracticeLogForm({
                   htmlFor="template-name"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  テンプレート名
+                  {t("templateNameLabel")}
                 </label>
                 <Input
                   id="template-name"
                   type="text"
                   value={templateName}
                   onChange={(e) => setTemplateName(e.target.value)}
-                  placeholder="例: 100m × 10本 Fr"
+                  placeholder={t("templateNamePlaceholder")}
                   className="w-full"
                   autoFocus
                 />
@@ -571,7 +578,7 @@ export default function PracticeLogForm({
                   onClick={() => setShowTemplateSaveModal(false)}
                   disabled={isSavingTemplate}
                 >
-                  キャンセル
+                  {t("cancel")}
                 </Button>
                 <Button
                   type="button"
@@ -579,7 +586,7 @@ export default function PracticeLogForm({
                   disabled={!templateName.trim() || isSavingTemplate}
                   className="bg-green-600 hover:bg-green-700"
                 >
-                  {isSavingTemplate ? "保存中..." : "保存"}
+                  {isSavingTemplate ? t("saving") : t("save")}
                 </Button>
               </div>
             </div>

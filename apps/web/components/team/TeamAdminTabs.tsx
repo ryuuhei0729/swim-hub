@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslations } from "next-intl";
 import {
   MegaphoneIcon,
   UsersIcon,
@@ -34,54 +35,56 @@ export interface TeamAdminTabsProps {
   pendingCount?: number;
 }
 
-const adminTabs: TeamAdminTab[] = [
-  {
-    id: "attendance",
-    name: "出欠",
-    icon: ClipboardDocumentCheckIcon,
-  },
-  {
-    id: "announcements",
-    name: "お知らせ",
-    icon: MegaphoneIcon,
-  },
-  {
-    id: "members",
-    name: "メンバー",
-    icon: UsersIcon,
-  },
-  {
-    id: "groups",
-    name: "グループ",
-    icon: TagIcon,
-  },
-  {
-    id: "practices",
-    name: "練習",
-    icon: ClockIcon,
-  },
-  {
-    id: "competitions",
-    name: "大会",
-    icon: TrophyIcon,
-  },
-  {
-    id: "bulk-register",
-    name: "一括登録",
-    icon: DocumentArrowUpIcon,
-  },
-  {
-    id: "settings",
-    name: "設定",
-    icon: CogIcon,
-  },
-];
-
 export default function TeamAdminTabs({
   activeTab,
   onTabChange,
   pendingCount = 0,
 }: TeamAdminTabsProps) {
+  const t = useTranslations("teamsAdmin");
+
+  const adminTabs: TeamAdminTab[] = [
+    {
+      id: "attendance",
+      name: t("tabs.attendance"),
+      icon: ClipboardDocumentCheckIcon,
+    },
+    {
+      id: "announcements",
+      name: t("tabs.announcements"),
+      icon: MegaphoneIcon,
+    },
+    {
+      id: "members",
+      name: t("tabs.members"),
+      icon: UsersIcon,
+    },
+    {
+      id: "groups",
+      name: t("tabs.groups"),
+      icon: TagIcon,
+    },
+    {
+      id: "practices",
+      name: t("tabs.practices"),
+      icon: ClockIcon,
+    },
+    {
+      id: "competitions",
+      name: t("tabs.competitions"),
+      icon: TrophyIcon,
+    },
+    {
+      id: "bulk-register",
+      name: t("tabs.bulkRegister"),
+      icon: DocumentArrowUpIcon,
+    },
+    {
+      id: "settings",
+      name: t("tabs.settings"),
+      icon: CogIcon,
+    },
+  ];
+
   return (
     <div className="bg-white rounded-lg shadow">
       {/* タブナビゲーション */}

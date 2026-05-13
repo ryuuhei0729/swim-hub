@@ -1,21 +1,15 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import FormStepper from "@/components/ui/FormStepper";
 import { XMarkIcon, PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
-
-// 大会記録フォームのステップ定義
-const COMPETITION_STEPS = [
-  { id: "basic", label: "大会情報", description: "日程・場所" },
-  { id: "entry", label: "エントリー", description: "種目・タイム" },
-  { id: "record", label: "記録入力", description: "結果・スプリット" },
-];
 import { formatTimeBest, formatTimeShort, parseTime } from "@apps/shared/utils/time";
 import { format } from "date-fns";
-import { ja } from "date-fns/locale";
+import { ja, enUS } from "date-fns/locale";
 import { useBestTimes } from "@/hooks/useBestTimes";
 import { useAuth } from "@/contexts";
 
@@ -79,6 +73,34 @@ export default function EntryLogForm({
   editData,
   initialEntries = EMPTY_ENTRIES,
 }: EntryLogFormProps) {
+  const t = useTranslations("forms.entry");
+  const tCompetition = useTranslations("forms.competition");
+  const tRecordLog = useTranslations("forms.recordLog");
+  const tUnsaved = useTranslations("forms.unsavedChanges");
+  const locale = useLocale();
+  const dateFnsLocale = locale === "ja" ? ja : enUS;
+
+  const COMPETITION_STEPS = useMemo(
+    () => [
+      {
+        id: "basic",
+        label: tCompetition("steps.basic.label"),
+        description: tCompetition("steps.basic.description"),
+      },
+      {
+        id: "entry",
+        label: tCompetition("steps.entry.label"),
+        description: tCompetition("steps.entry.description"),
+      },
+      {
+        id: "record",
+        label: tCompetition("steps.record.label"),
+        description: tCompetition("steps.record.description"),
+      },
+    ],
+    [tCompetition],
+  );
+
   const { supabase, user } = useAuth();
   const { bestTimes, loadBestTimes } = useBestTimes(supabase);
 
@@ -103,14 +125,15 @@ export default function EntryLogForm({
 
       const styleName = style.nameJp;
       const otherPoolType = poolType === 0 ? 1 : 0;
-      const otherPoolLabel = poolType === 0 ? "長水路" : "短水路";
+      const otherPoolLabelKey = poolType === 0 ? "bestTimeLong" : "bestTimeShort";
+      const otherPoolRelayLabelKey = poolType === 0 ? "bestTimeLongRelay" : "bestTimeShortRelay";
 
       // 1. 同じ水路・非リレー
       const samePoolNonRelay = bestTimes.find(
         (bt) => bt.style.name_jp === styleName && bt.pool_type === poolType && !bt.is_relaying,
       );
       if (samePoolNonRelay) {
-        return { time: samePoolNonRelay.time, label: "ベストタイム" };
+        return { time: samePoolNonRelay.time, label: tRecordLog("bestTimeLabel") };
       }
 
       // 2. 同じ水路・リレー（relayingTimeを探す）
@@ -118,7 +141,7 @@ export default function EntryLogForm({
         (bt) => bt.style.name_jp === styleName && bt.pool_type === poolType && bt.relayingTime,
       );
       if (samePoolRelay?.relayingTime) {
-        return { time: samePoolRelay.relayingTime.time, label: "ベストタイム(引継)" };
+        return { time: samePoolRelay.relayingTime.time, label: tRecordLog("bestTimeRelay") };
       }
 
       // 3. 異なる水路・非リレー
@@ -126,7 +149,7 @@ export default function EntryLogForm({
         (bt) => bt.style.name_jp === styleName && bt.pool_type === otherPoolType && !bt.is_relaying,
       );
       if (otherPoolNonRelay) {
-        return { time: otherPoolNonRelay.time, label: `ベストタイム(${otherPoolLabel})` };
+        return { time: otherPoolNonRelay.time, label: tRecordLog(otherPoolLabelKey) };
       }
 
       // 4. 異なる水路・リレー
@@ -136,13 +159,13 @@ export default function EntryLogForm({
       if (otherPoolRelay?.relayingTime) {
         return {
           time: otherPoolRelay.relayingTime.time,
-          label: `ベストタイム(${otherPoolLabel}引継)`,
+          label: tRecordLog(otherPoolRelayLabelKey),
         };
       }
 
       return null;
     };
-  }, [bestTimes, styles, poolType]);
+  }, [bestTimes, styles, poolType, tRecordLog]);
 
   const [entries, setEntries] = useState<EntryData[]>([
     {
@@ -386,14 +409,14 @@ export default function EntryLogForm({
                       {competitionDate && competitionTitle && (
                         <>
                           <span className="text-base font-semibold text-blue-700">
-                            {format(new Date(competitionDate), "yyyy年M月d日(E)", { locale: ja })}
+                            {format(new Date(competitionDate), "yyyy年M月d日(E)", { locale: dateFnsLocale })}
                           </span>
                           <span className="ml-3">{competitionTitle}</span>
                         </>
                       )}
                       {competitionDate &&
                         !competitionTitle &&
-                        format(new Date(competitionDate), "yyyy年M月d日(E)", { locale: ja })}
+                        format(new Date(competitionDate), "yyyy年M月d日(E)", { locale: dateFnsLocale })}
                       {!competitionDate && competitionTitle && competitionTitle}
                     </p>
                   </div>
@@ -414,10 +437,8 @@ export default function EntryLogForm({
                 <FormStepper steps={COMPETITION_STEPS} currentStep={1} />
               </div>
             )}
-            <p className="mt-3 text-[10px] sm:text-sm text-gray-600">
-              大会にエントリーする種目とエントリータイムを入力してください。
-              <br />
-              エントリーをスキップして記録のみ登録することもできます。
+            <p className="mt-3 text-[10px] sm:text-sm text-gray-600 whitespace-pre-line">
+              {t("subtitle")}
             </p>
           </div>
 
@@ -426,7 +447,7 @@ export default function EntryLogForm({
               {/* エントリー一覧 */}
               <div className="space-y-2 sm:space-y-4">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-md font-medium text-gray-900">エントリー種目</h4>
+                  <h4 className="text-md font-medium text-gray-900">{t("eventsHeader")}</h4>
                   <Button
                     type="button"
                     onClick={addEntry}
@@ -437,7 +458,7 @@ export default function EntryLogForm({
                     data-testid="entry-add-button"
                   >
                     <PlusIcon className="h-4 w-4" />
-                    種目を追加
+                    {t("addEvent")}
                   </Button>
                 </div>
 
@@ -447,7 +468,7 @@ export default function EntryLogForm({
                     className="border border-gray-200 rounded-lg p-4 space-y-3 bg-blue-50"
                   >
                     <div className="flex items-center justify-between">
-                      <h5 className="font-medium text-gray-700">種目 {index + 1}</h5>
+                      <h5 className="font-medium text-gray-700">{t("eventHeader", { n: index + 1 })}</h5>
                       {entries.length > 1 && (
                         <button
                           type="button"
@@ -465,8 +486,8 @@ export default function EntryLogForm({
                       {/* 種目選択 */}
                       <div className="flex items-start gap-2 sm:flex-1">
                         <label className="text-[10px] sm:text-sm font-medium text-gray-700 whitespace-nowrap shrink-0 h-8 sm:h-10 flex items-center">
-                          <span className="sm:hidden">種目</span>
-                          <span className="hidden sm:inline">エントリー種目</span>
+                          <span className="sm:hidden">{t("styleLabelShort")}</span>
+                          <span className="hidden sm:inline">{t("styleLabel")}</span>
                           {" "}<span className="text-red-500">*</span>
                         </label>
                         <select
@@ -477,7 +498,7 @@ export default function EntryLogForm({
                           disabled={isLoading}
                           data-testid={`entry-style-${index + 1}`}
                         >
-                          <option value="">種目を選択</option>
+                          <option value="">{t("stylePlaceholder")}</option>
                           {styles.map((style) => (
                             <option key={style.id} value={style.id}>
                               {style.nameJp}
@@ -489,8 +510,8 @@ export default function EntryLogForm({
                       {/* エントリータイム */}
                       <div className="flex items-start gap-2 sm:flex-1">
                         <label className="text-[10px] sm:text-sm font-medium text-gray-700 whitespace-nowrap shrink-0 h-8 sm:h-10 flex items-center">
-                          <span className="sm:hidden">エントリー</span>
-                          <span className="hidden sm:inline">エントリータイム</span>
+                          <span className="sm:hidden">{t("timeLabelShort")}</span>
+                          <span className="hidden sm:inline">{t("timeLabel")}</span>
                         </label>
                         <div className="flex-1 min-w-0">
                           <Input
@@ -539,13 +560,13 @@ export default function EntryLogForm({
                     {/* メモ */}
                     <div className="flex items-center gap-2 w-full">
                       <label className="text-[10px] sm:text-sm font-medium text-gray-700 whitespace-nowrap shrink-0">
-                        メモ
+                        {t("noteLabel")}
                       </label>
                       <input
                         type="text"
                         value={entry.note}
                         onChange={(e) => updateEntry(entry.id, { note: e.target.value })}
-                        placeholder="特記事項など"
+                        placeholder={t("notePlaceholder")}
                         disabled={isLoading}
                         data-testid={`entry-note-${index + 1}`}
                         className="flex-1 min-w-0 h-8 sm:h-10 rounded-md border border-gray-300 bg-white px-2 sm:px-3 py-1 sm:py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50"
@@ -566,7 +587,7 @@ export default function EntryLogForm({
                 data-testid="entry-cancel-button"
                 className="w-full sm:w-auto order-last sm:order-first"
               >
-                キャンセル
+                {t("cancel")}
               </Button>
 
               <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
@@ -578,7 +599,7 @@ export default function EntryLogForm({
                   data-testid="entry-skip-button"
                   className="w-full sm:w-auto"
                 >
-                  エントリーをスキップ
+                  {t("skip")}
                 </Button>
                 <Button
                   type="submit"
@@ -586,7 +607,7 @@ export default function EntryLogForm({
                   data-testid="entry-submit-button"
                   className="w-full sm:w-auto"
                 >
-                  {isLoading ? "登録中..." : "エントリー登録"}
+                  {isLoading ? t("submitting") : t("submit")}
                 </Button>
               </div>
             </div>
@@ -599,14 +620,14 @@ export default function EntryLogForm({
         isOpen={showConfirmDialog}
         onConfirm={handleConfirmClose}
         onCancel={handleCancelClose}
-        title="入力内容が保存されていません"
+        title={tUnsaved("title")}
         message={
           confirmContext === "back"
-            ? "入力内容が保存されていません。このまま戻りますか？"
-            : "入力内容が保存されていません。このまま閉じますか？"
+            ? tUnsaved("messageBack")
+            : tUnsaved("messageClose")
         }
-        confirmLabel={confirmContext === "back" ? "戻る" : "閉じる"}
-        cancelLabel="編集を続ける"
+        confirmLabel={confirmContext === "back" ? tUnsaved("confirmBack") : tUnsaved("confirmClose")}
+        cancelLabel={tUnsaved("cancel")}
         variant="warning"
       />
     </div>

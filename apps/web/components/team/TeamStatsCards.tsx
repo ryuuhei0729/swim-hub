@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslations } from "next-intl";
 import { UsersIcon, ClockIcon, TrophyIcon, CalendarDaysIcon } from "@heroicons/react/24/outline";
 import { formatDate } from "@apps/shared/utils/date";
 
@@ -17,6 +18,7 @@ export interface TeamStatsCardsProps {
 }
 
 export default function TeamStatsCards({ stats, isLoading = false }: TeamStatsCardsProps) {
+  const t = useTranslations("teams.statsCards");
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -34,7 +36,7 @@ export default function TeamStatsCards({ stats, isLoading = false }: TeamStatsCa
 
   const statsData = [
     {
-      title: "メンバー",
+      title: t("members"),
       value: stats.memberCount,
       icon: UsersIcon,
       color: "bg-blue-500",
@@ -42,7 +44,7 @@ export default function TeamStatsCards({ stats, isLoading = false }: TeamStatsCa
       textColor: "text-blue-600",
     },
     {
-      title: "練習回数",
+      title: t("practiceCount"),
       value: stats.practiceCount,
       icon: ClockIcon,
       color: "bg-green-500",
@@ -50,7 +52,7 @@ export default function TeamStatsCards({ stats, isLoading = false }: TeamStatsCa
       textColor: "text-green-600",
     },
     {
-      title: "記録数",
+      title: t("recordCount"),
       value: stats.recordCount,
       icon: TrophyIcon,
       color: "bg-yellow-500",
@@ -58,8 +60,8 @@ export default function TeamStatsCards({ stats, isLoading = false }: TeamStatsCa
       textColor: "text-yellow-600",
     },
     {
-      title: "最近の活動",
-      value: stats.lastActivity ? formatLastActivity(stats.lastActivity) : "なし",
+      title: t("lastActivity"),
+      value: stats.lastActivity ? formatLastActivity(stats.lastActivity, t("yesterday")) : t("lastActivityNone"),
       icon: CalendarDaysIcon,
       color: "bg-orange-500",
       bgColor: "bg-orange-50",
@@ -92,14 +94,14 @@ export default function TeamStatsCards({ stats, isLoading = false }: TeamStatsCa
 }
 
 // 最近の活動日をフォーマット
-function formatLastActivity(dateString: string): string {
+function formatLastActivity(dateString: string, yesterdayLabel: string): string {
   const date = new Date(dateString);
   const now = new Date();
   const diffTime = Math.abs(now.getTime() - date.getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
   if (diffDays === 1) {
-    return "昨日";
+    return yesterdayLabel;
   } else if (diffDays <= 7) {
     return `${diffDays}日前`;
   } else if (diffDays <= 30) {

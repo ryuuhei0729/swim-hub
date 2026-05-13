@@ -214,19 +214,19 @@ export default Input;
 
 // バリデーションルールのヘルパー関数
 export const validationHelpers = {
-  required: (message = "必須項目です"): ValidationRule => ({
+  required: (message = "This field is required"): ValidationRule => ({
     validate: (value) => value.trim().length > 0,
     message,
   }),
   minLength: (min: number, message?: string): ValidationRule => ({
     validate: (value) => value.length >= min,
-    message: message || `${min}文字以上で入力してください`,
+    message: message || `Minimum ${min} characters required`,
   }),
   maxLength: (max: number, message?: string): ValidationRule => ({
     validate: (value) => value.length <= max,
-    message: message || `${max}文字以下で入力してください`,
+    message: message || `Maximum ${max} characters allowed`,
   }),
-  email: (message = "有効なメールアドレスを入力してください"): ValidationRule => ({
+  email: (message = "Please enter a valid email address"): ValidationRule => ({
     validate: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
     message,
   }),
@@ -234,7 +234,7 @@ export const validationHelpers = {
     validate: (value) => regex.test(value),
     message,
   }),
-  numeric: (message = "数値を入力してください"): ValidationRule => ({
+  numeric: (message = "Please enter a number"): ValidationRule => ({
     validate: (value) => /^\d*$/.test(value),
     message,
   }),

@@ -82,7 +82,4 @@ export interface RecordFormProps {
   styles?: SwimStyle[];
 }
 
-export const POOL_TYPES = [
-  { value: 0, label: "短水路 (25m)" },
-  { value: 1, label: "長水路 (50m)" },
-] as const;
+export const POOL_TYPES = [{ value: 0 }, { value: 1 }] as const;

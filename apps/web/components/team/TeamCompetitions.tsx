@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/contexts/AuthProvider";
+import { useTranslations } from "next-intl";
 import {
   PlusIcon,
   CalendarDaysIcon,
@@ -158,6 +159,7 @@ export interface TeamCompetitionsProps {
 export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompetitionsProps) {
   const { supabase, user } = useAuth();
   const router = useRouter();
+  const t = useTranslations("teams");
   const [competitions, setCompetitions] = useState<TeamCompetition[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -247,11 +249,11 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
       );
     } catch (err) {
       console.error("チーム大会情報の取得に失敗:", err);
-      setError("チーム大会情報の取得に失敗しました");
+      setError(t("competitions.error"));
     } finally {
       setLoading(false);
     }
-  }, [teamId, supabase, currentPage, pageSize]);
+  }, [teamId, supabase, currentPage, pageSize, t]);
 
   // 初回読み込み
   useEffect(() => {
@@ -362,7 +364,7 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
             onClick={() => router.refresh()}
             className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
           >
-            再試行
+            {t("competitions.retry")}
           </button>
         </div>
       </div>
@@ -375,7 +377,7 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
         {/* ヘッダー */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-gray-900">
-            チーム大会 ({competitions.length}件)
+            {t("competitions.title", { count: competitions.length })}
           </h2>
           {isAdmin && (
             <button
@@ -383,7 +385,7 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               <PlusIcon className="h-5 w-5 mr-2" />
-              大会追加
+              {t("competitions.addButton")}
             </button>
           )}
         </div>
@@ -404,7 +406,7 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
                   }
                 }}
                 aria-label={
-                  canViewRecords ? `${competition.title || "大会"}の記録を閲覧` : undefined
+                  canViewRecords ? `${competition.title || t("competitions.fallbackTitle")}の記録を閲覧` : undefined
                 }
                 tabIndex={canViewRecords ? 0 : undefined}
                 role={canViewRecords ? "button" : undefined}
@@ -419,7 +421,7 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <TrophyIcon className="h-5 w-5 text-blue-500" />
                       <span className="text-lg font-medium text-gray-900">
-                        {competition.title || "大会"}
+                        {competition.title || t("competitions.fallbackTitle")}
                       </span>
                       {/* エントリーステータスバッジ */}
                       {competition.entry_status && (
@@ -433,10 +435,10 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
                           }`}
                         >
                           {competition.entry_status === "open"
-                            ? "受付中"
+                            ? t("competitions.entryStatus.open")
                             : competition.entry_status === "closed"
-                              ? "受付終了"
-                              : "受付前"}
+                              ? t("competitions.entryStatus.closed")
+                              : t("competitions.entryStatus.before")}
                         </span>
                       )}
                     </div>
@@ -511,10 +513,9 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
                       <button
                         onClick={(e) => handleEntryClick(e, competition)}
                         className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-                        title="エントリー管理"
                       >
                         <ClipboardDocumentListIcon className="h-4 w-4 mr-1" />
-                        エントリー
+                        {t("competitions.card.entryButton")}
                       </button>
 
                       {/* 記録入力ボタン（adminのみ） */}
@@ -522,10 +523,9 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
                         <button
                           onClick={(e) => handleRecordClick(e, competition.id)}
                           className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
-                          title="記録を入力"
                         >
                           <PencilSquareIcon className="h-4 w-4 mr-1" />
-                          記録入力
+                          {t("competitions.card.recordsButton")}
                         </button>
                       )}
                     </div>
@@ -538,13 +538,13 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
           {competitions.length === 0 && !loading && (
             <div className="text-center py-8">
               <TrophyIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">大会がありません</p>
+              <p className="text-gray-600">{t("competitions.empty")}</p>
               {isAdmin && (
                 <button
                   onClick={handleAddCompetition}
                   className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
                 >
-                  最初の大会を追加
+                  {t("competitions.addButton")}
                 </button>
               )}
             </div>
@@ -588,7 +588,7 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
             loadTeamCompetitions();
           }}
           competitionId={selectedCompetition.id}
-          competitionTitle={selectedCompetition.title || "大会"}
+          competitionTitle={selectedCompetition.title || t("competitions.fallbackTitle")}
           teamId={teamId}
         />
       )}
@@ -602,7 +602,7 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
             setSelectedCompetitionForRecords(null);
           }}
           competitionId={selectedCompetitionForRecords.id}
-          competitionTitle={selectedCompetitionForRecords.title || "大会"}
+          competitionTitle={selectedCompetitionForRecords.title || t("competitions.fallbackTitle")}
         />
       )}
     </>

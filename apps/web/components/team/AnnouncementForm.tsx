@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import {
   useCreateTeamAnnouncementMutation,
@@ -21,6 +22,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
   teamId,
   editData,
 }) => {
+  const t = useTranslations("teamsAdmin");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [startAt, setStartAt] = useState<string>("");
@@ -70,7 +72,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
     if (endAt) {
       const endDate = new Date(endAt);
       if (endDate < now) {
-        newErrors.endAt = "表示終了日時は現在時刻より後の日時を指定してください";
+        newErrors.endAt = t("announcementForm.endAtPastError");
       }
     }
 
@@ -79,7 +81,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
       const startDate = new Date(startAt);
       const endDate = new Date(endAt);
       if (endDate < startDate) {
-        newErrors.endAt = "表示終了日時は表示開始日時より後の日時を指定してください";
+        newErrors.endAt = t("announcementForm.endAtBeforeStartError");
       }
     }
 
@@ -121,7 +123,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        if (!user) throw new Error("認証が必要です");
+        if (!user) throw new Error(t("announcementForm.authRequired"));
 
         await createAnnouncementMutation.mutateAsync({
           team_id: teamId,
@@ -164,7 +166,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
           <div className="shrink-0 bg-white px-6 py-4 border-b border-gray-200">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">
-                {editData ? "お知らせを編集" : "新しいお知らせ"}
+                {editData ? t("announcementForm.editTitle") : t("announcementForm.createTitle")}
               </h2>
               <button
                 onClick={handleClose}
@@ -182,7 +184,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
               {/* タイトル */}
               <div>
                 <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-                  タイトル <span className="text-red-500">*</span>
+                  {t("announcementForm.titleLabel")} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -191,7 +193,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
                   onChange={(e) => setTitle(e.target.value)}
                   disabled={isLoading}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                  placeholder="お知らせのタイトルを入力"
+                  placeholder={t("announcementForm.titlePlaceholder")}
                   maxLength={100}
                 />
                 <p className="text-xs text-gray-500 mt-1">{title.length}/100</p>
@@ -200,7 +202,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
               {/* 内容 */}
               <div>
                 <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1">
-                  内容 <span className="text-red-500">*</span>
+                  {t("announcementForm.contentLabel")} <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   id="content"
@@ -209,7 +211,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
                   disabled={isLoading}
                   rows={8}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                  placeholder="お知らせの内容を入力"
+                  placeholder={t("announcementForm.contentPlaceholder")}
                   maxLength={2000}
                 />
                 <p className="text-xs text-gray-500 mt-1">{content.length}/2000</p>
@@ -224,7 +226,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
                       htmlFor="startAt"
                       className="block text-sm font-medium text-gray-700 mb-1"
                     >
-                      開始日時
+                      {t("announcementForm.startAtLabel")}
                     </label>
                     <input
                       type="datetime-local"
@@ -242,7 +244,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
                   {/* 表示終了日時 */}
                   <div>
                     <label htmlFor="endAt" className="block text-sm font-medium text-gray-700 mb-1">
-                      終了日時
+                      {t("announcementForm.endAtLabel")}
                     </label>
                     <input
                       type="datetime-local"
@@ -272,7 +274,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
               disabled={isLoading || !title.trim() || !content.trim()}
               className="w-full sm:w-auto sm:mr-auto px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? "保存中..." : "下書きとして保存"}
+              {isLoading ? t("announcementForm.saving") : t("announcementForm.saveDraftButton")}
             </button>
             <button
               type="button"
@@ -280,7 +282,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
               disabled={isLoading}
               className="w-full sm:w-auto px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
             >
-              キャンセル
+              {t("announcementForm.cancelButton")}
             </button>
             <button
               type="button"
@@ -288,7 +290,11 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
               disabled={isLoading || !title.trim() || !content.trim()}
               className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? "保存中..." : editData ? "公開して更新" : "公開して作成"}
+              {isLoading
+                ? t("announcementForm.saving")
+                : editData
+                  ? t("announcementForm.publishUpdateButton")
+                  : t("announcementForm.publishCreateButton")}
             </button>
           </div>
         </div>

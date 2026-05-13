@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AttendanceAPI } from "@swim-hub/shared/api/attendance";
+import { useTranslations } from "next-intl";
 import { getMonthDateRange } from "@swim-hub/shared/utils/date";
 import { format, startOfMonth, endOfMonth, addMonths, parseISO } from "date-fns";
 
@@ -19,6 +20,7 @@ export const useMonthList = (
   supabase: SupabaseClient,
   attendanceAPI: AttendanceAPI,
 ) => {
+  const t = useTranslations("teams");
   const [monthList, setMonthList] = useState<MonthItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -138,11 +140,11 @@ export const useMonthList = (
       setMonthList(monthList);
     } catch (err) {
       console.error("月リストの取得に失敗:", err);
-      setError("月リストの取得に失敗しました");
+      setError(t("monthListHook.loadError"));
     } finally {
       setLoading(false);
     }
-  }, [teamId, supabase, calculateMonthStatus]);
+  }, [teamId, supabase, calculateMonthStatus, t]);
 
   const updateMonthStatus = useCallback(
     async (year: number, month: number) => {

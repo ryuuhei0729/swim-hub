@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslations } from "next-intl";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 
 interface ErrorBoundaryProps {
@@ -20,6 +21,7 @@ export default function ErrorBoundary({
   pageName,
   redirectPath,
 }: ErrorBoundaryProps) {
+  const t = useTranslations("common.errorBoundary");
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
@@ -30,14 +32,14 @@ export default function ErrorBoundary({
           </div>
 
           {/* エラーメッセージ */}
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">エラーが発生しました</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">{t("title")}</h2>
           <p className="text-gray-600 mb-6">{pageName}の読み込み中に問題が発生しました。</p>
 
           {/* エラー詳細（開発環境のみ） */}
           {process.env.NODE_ENV === "development" && (
             <div className="mb-6 p-4 bg-gray-50 rounded-lg text-left">
               <p className="text-sm font-mono text-red-600 break-all">
-                {error.message || "不明なエラー"}
+                {error.message || t("unknownError")}
               </p>
               {error.digest && (
                 <p className="text-xs text-gray-500 mt-2">Error ID: {error.digest}</p>
@@ -51,20 +53,20 @@ export default function ErrorBoundary({
               onClick={reset}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
             >
-              再試行
+              {t("retry")}
             </button>
             <button
               onClick={() => (window.location.href = redirectPath)}
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
             >
-              ページを再読み込み
+              {t("reload")}
             </button>
           </div>
 
           {/* ヘルプ情報 */}
           <div className="mt-6 pt-6 border-t border-gray-200">
             <p className="text-sm text-gray-500">
-              問題が解決しない場合は、ページを再読み込みするか、サポートにお問い合わせください。
+              {t("helpText")}
             </p>
           </div>
         </div>

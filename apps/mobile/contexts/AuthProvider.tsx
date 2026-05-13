@@ -207,6 +207,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { data: null, error: error as import("@supabase/supabase-js").AuthError };
       }
 
+      // Supabase は Confirm Email 有効時、登録済みメールでも error を返さず
+      // identities が空配列の user を返す（メール列挙攻撃対策のデフォルト挙動）。
+      // 確認メールも実際には送信されないため、ユーザーに明示的に伝える。
+      if (data?.user && (data.user.identities?.length ?? 0) === 0) {
+        const alreadyRegisteredError = Object.assign(
+          new Error("このメールアドレスはすでに登録されています。"),
+          { status: 422, code: "user_already_exists" },
+        ) as import("@supabase/supabase-js").AuthError;
+        return { data: null, error: alreadyRegisteredError };
+      }
+
       return { data: data ? { user: data.user, session: data.session } : null, error: null };
     } catch (error) {
       console.error("Sign up error:", error);

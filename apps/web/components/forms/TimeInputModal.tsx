@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { XMarkIcon } from "@heroicons/react/24/outline";
@@ -34,6 +35,8 @@ export default function TimeInputModal({
   initialTimes = [],
   menuNumber,
 }: TimeInputModalProps) {
+  const t = useTranslations("forms.timeInput");
+  const tUnsaved = useTranslations("forms.unsavedChanges");
   const [times, setTimes] = useState<TimeEntry[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -214,29 +217,29 @@ export default function TimeInputModal({
   };
 
   const getTimesBySet = (setNumber: number) => {
-    return times.filter((t) => t.setNumber === setNumber);
+    return times.filter((te) => te.setNumber === setNumber);
   };
 
   const _getSetTotal = (setNumber: number) => {
     const setTimes = getTimesBySet(setNumber);
-    return setTimes.reduce((sum, t) => sum + t.time, 0);
+    return setTimes.reduce((sum, te) => sum + te.time, 0);
   };
 
   const getSetAverage = (setNumber: number) => {
     const setTimes = getTimesBySet(setNumber);
-    const validTimes = setTimes.filter((t) => t.time > 0);
+    const validTimes = setTimes.filter((te) => te.time > 0);
     if (validTimes.length === 0) return 0;
-    return validTimes.reduce((sum, t) => sum + t.time, 0) / validTimes.length;
+    return validTimes.reduce((sum, te) => sum + te.time, 0) / validTimes.length;
   };
 
   const _getOverallTotal = () => {
-    return times.reduce((sum, t) => sum + t.time, 0);
+    return times.reduce((sum, te) => sum + te.time, 0);
   };
 
   const getOverallAverage = () => {
-    const validTimes = times.filter((t) => t.time > 0);
+    const validTimes = times.filter((te) => te.time > 0);
     if (validTimes.length === 0) return 0;
-    return validTimes.reduce((sum, t) => sum + t.time, 0) / validTimes.length;
+    return validTimes.reduce((sum, te) => sum + te.time, 0) / validTimes.length;
   };
 
   return (
@@ -249,19 +252,19 @@ export default function TimeInputModal({
           <div className="bg-white px-3 sm:px-6 py-2 sm:py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h3 className="text-sm sm:text-lg leading-6 font-medium text-gray-900">
-                {menuNumber ? `メニュー${menuNumber}のタイム入力` : "タイム入力"}
+                {menuNumber ? t("title", { n: menuNumber }) : t("titleGeneric")}
               </h3>
               <button
                 type="button"
                 className="text-gray-400 hover:text-gray-500"
                 onClick={handleClose}
-                aria-label="タイム入力を閉じる"
+                aria-label={t("titleGeneric")}
               >
                 <XMarkIcon className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
             <p className="text-[10px] sm:text-sm text-gray-600 mt-0.5 sm:mt-1">
-              {setCount}セット × {repCount}本のタイムを入力してください
+              {t("subtitle", { sets: setCount, reps: repCount })}
             </p>
           </div>
 
@@ -272,15 +275,15 @@ export default function TimeInputModal({
                 const setNumber = setIndex + 1;
                 const setTimes = getTimesBySet(setNumber);
                 const setAverage = getSetAverage(setNumber);
-                const validTimesCount = setTimes.filter((t) => t.time > 0).length;
+                const validTimesCount = setTimes.filter((te) => te.time > 0).length;
 
                 return (
                   <div key={setNumber} className="border border-gray-200 rounded-lg p-2 sm:p-4">
                     <div className="flex items-center justify-between mb-1.5 sm:mb-4">
-                      <h4 className="text-xs sm:text-md font-semibold text-gray-900">セット {setNumber}</h4>
+                      <h4 className="text-xs sm:text-md font-semibold text-gray-900">{t("setHeader", { n: setNumber })}</h4>
                       <div className="text-[10px] sm:text-sm text-gray-600">
-                        平均: {setAverage > 0 ? formatTimeAverage(setAverage) : "未入力"}
-                        {validTimesCount > 0 && ` (${validTimesCount}本)`}
+                        {t("average")} {setAverage > 0 ? formatTimeAverage(setAverage) : t("notEntered")}
+                        {validTimesCount > 0 && ` (${validTimesCount})`}
                       </div>
                     </div>
 
@@ -290,7 +293,7 @@ export default function TimeInputModal({
                         return (
                           <div key={timeEntry.id}>
                             <label className="block text-[10px] sm:text-xs font-medium text-gray-700 mb-0.5">
-                              {timeEntry.repNumber}本目
+                              {t("repLabel", { n: timeEntry.repNumber })}
                             </label>
                             <input
                               type="text"
@@ -323,9 +326,9 @@ export default function TimeInputModal({
           {/* 平均値表示 */}
           <div className="bg-gray-50 px-3 sm:px-6 py-2 sm:py-3 border-t border-gray-200">
             <div className="flex items-center justify-between">
-              <span className="text-xs sm:text-sm font-medium text-gray-700">全体平均:</span>
+              <span className="text-xs sm:text-sm font-medium text-gray-700">{t("overallAvg")}</span>
               <span className="text-sm sm:text-lg font-bold text-blue-600">
-                {getOverallAverage() > 0 ? formatTimeAverage(getOverallAverage()) : "未入力"}
+                {getOverallAverage() > 0 ? formatTimeAverage(getOverallAverage()) : t("notEntered")}
               </span>
             </div>
           </div>
@@ -337,7 +340,7 @@ export default function TimeInputModal({
               className="w-full sm:w-auto"
               data-testid="save-times-button"
             >
-              保存
+              {t("save")}
             </Button>
             <Button
               type="button"
@@ -345,7 +348,7 @@ export default function TimeInputModal({
               onClick={handleClose}
               className="w-full sm:w-auto"
             >
-              キャンセル
+              {t("cancel")}
             </Button>
           </div>
         </div>
@@ -356,14 +359,14 @@ export default function TimeInputModal({
         isOpen={showConfirmDialog}
         onConfirm={handleConfirmClose}
         onCancel={handleCancelClose}
-        title="入力内容が保存されていません"
+        title={tUnsaved("title")}
         message={
           confirmContext === "back"
-            ? "入力内容が保存されていません。このまま戻りますか？"
-            : "入力内容が保存されていません。このまま閉じますか？"
+            ? tUnsaved("messageBack")
+            : tUnsaved("messageClose")
         }
-        confirmLabel={confirmContext === "back" ? "戻る" : "閉じる"}
-        cancelLabel="編集を続ける"
+        confirmLabel={confirmContext === "back" ? tUnsaved("confirmBack") : tUnsaved("confirmClose")}
+        cancelLabel={tUnsaved("cancel")}
         variant="warning"
       />
     </div>

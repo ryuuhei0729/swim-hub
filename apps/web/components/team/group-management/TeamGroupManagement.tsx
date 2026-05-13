@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import { PlusIcon } from "@heroicons/react/24/outline";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useTeamGroups, type TeamGroupWithCount } from "./hooks/useTeamGroups";
 import { useGroupActions } from "./hooks/useGroupActions";
 import {
@@ -30,6 +32,7 @@ interface TeamMemberForSelection {
 }
 
 export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps) {
+  const t = useTranslations("teamsAdmin");
   const { supabase, user } = useAuth();
 
   // グループデータ
@@ -60,6 +63,7 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
   const [memberModalGroup, setMemberModalGroup] = useState<TeamGroupWithCount | null>(null);
   const [currentGroupMemberIds, setCurrentGroupMemberIds] = useState<string[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
+  const [deleteConfirmGroup, setDeleteConfirmGroup] = useState<TeamGroupWithCount | null>(null);
 
   // メンバー一覧表示モーダル（カードクリック時）
   const [viewMembersGroup, setViewMembersGroup] = useState<TeamGroupWithCount | null>(null);
@@ -124,18 +128,18 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
 
   // グループ削除ハンドラ
   const handleDeleteGroup = useCallback(
-    async (group: TeamGroupWithCount) => {
-      if (
-        !window.confirm(
-          `「${group.name}」を削除しますか？\nグループに割り当てられたメンバー情報も削除されます。`,
-        )
-      ) {
-        return;
-      }
-      await deleteGroup(group.id);
+    (group: TeamGroupWithCount) => {
+      setDeleteConfirmGroup(group);
     },
-    [deleteGroup],
+    [],
   );
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteConfirmGroup) return;
+    const groupId = deleteConfirmGroup.id;
+    setDeleteConfirmGroup(null);
+    await deleteGroup(groupId);
+  }, [deleteConfirmGroup, deleteGroup]);
 
   // メンバー編集モーダルを開く
   const handleManageMembers = useCallback(
@@ -214,8 +218,8 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
       {/* ヘッダー */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">グループ管理</h2>
-          <p className="text-xs text-gray-500 mt-1">メンバーをカテゴリ別にグループ分けできます</p>
+          <h2 className="text-lg font-semibold text-gray-900">{t("groupManagement.title")}</h2>
+          <p className="text-xs text-gray-500 mt-1">{t("groupManagement.description")}</p>
         </div>
         <button
           type="button"
@@ -223,7 +227,7 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
           className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
           <PlusIcon className="h-4 w-4" />
-          グループを追加
+          {t("groupManagement.addButton")}
         </button>
       </div>
 
@@ -240,10 +244,8 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
           <div className="text-gray-400 mb-3">
             <PlusIcon className="h-12 w-12 mx-auto" />
           </div>
-          <p className="text-gray-500 text-sm">まだグループがありません</p>
-          <p className="text-gray-400 text-xs mt-1">
-            「グループを追加」からカテゴリとグループを作成しましょう
-          </p>
+          <p className="text-gray-500 text-sm">{t("groupManagement.emptyTitle")}</p>
+          <p className="text-gray-400 text-xs mt-1">{t("groupManagement.emptyDescription")}</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -326,6 +328,18 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
           onSaved={loadGroups}
         />
       )}
+
+      {/* グループ削除確認ダイアログ */}
+      <ConfirmDialog
+        isOpen={deleteConfirmGroup !== null}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteConfirmGroup(null)}
+        title={t("groupManagement.deleteConfirm.title")}
+        message={t("groupManagement.deleteConfirm.message", { name: deleteConfirmGroup?.name ?? "" })}
+        confirmLabel={t("groupManagement.deleteConfirm.confirmButton")}
+        cancelLabel={t("groupManagement.deleteConfirm.cancelButton")}
+        variant="danger"
+      />
     </div>
   );
 }

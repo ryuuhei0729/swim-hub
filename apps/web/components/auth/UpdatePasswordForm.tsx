@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/contexts";
 
 interface UpdatePasswordFormProps {
@@ -15,6 +16,11 @@ export const UpdatePasswordForm: React.FC<UpdatePasswordFormProps> = ({ onSucces
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
+  const t = useTranslations("auth.updatePassword");
+  const tFields = useTranslations("auth.fields");
+  const tValidation = useTranslations("auth.validation");
+  const tErrors = useTranslations("auth.errors");
+
   const { updatePassword } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,13 +30,13 @@ export const UpdatePasswordForm: React.FC<UpdatePasswordFormProps> = ({ onSucces
     setMessage(null);
 
     if (newPassword !== confirmPassword) {
-      setError("パスワードが一致しません。");
+      setError(tValidation("passwordMismatch"));
       setLoading(false);
       return;
     }
 
     if (newPassword.length < 6) {
-      setError("パスワードは6文字以上で入力してください。");
+      setError(tValidation("passwordMinLength"));
       setLoading(false);
       return;
     }
@@ -38,15 +44,15 @@ export const UpdatePasswordForm: React.FC<UpdatePasswordFormProps> = ({ onSucces
     try {
       const { error } = await updatePassword(newPassword);
       if (error) {
-        setError("パスワードの更新に失敗しました。");
+        setError(tErrors("updateFailed"));
       } else {
-        setMessage("パスワードを正常に更新しました。");
+        setMessage(t("successMessage"));
         setNewPassword("");
         setConfirmPassword("");
         onSuccess?.();
       }
     } catch {
-      setError("予期しないエラーが発生しました。");
+      setError(tErrors("unexpected"));
     } finally {
       setLoading(false);
     }
@@ -55,8 +61,8 @@ export const UpdatePasswordForm: React.FC<UpdatePasswordFormProps> = ({ onSucces
   return (
     <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-2xl shadow-xl transform transition-all duration-300">
       <div className="text-center">
-        <h2 className="text-3xl font-extrabold text-gray-900 mb-2">パスワード変更</h2>
-        <p className="text-sm text-gray-600">新しいパスワードを設定してください</p>
+        <h2 className="text-3xl font-extrabold text-gray-900 mb-2">{t("title")}</h2>
+        <p className="text-sm text-gray-600">{t("subtitle")}</p>
       </div>
 
       {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">{error}</div>}
@@ -66,7 +72,7 @@ export const UpdatePasswordForm: React.FC<UpdatePasswordFormProps> = ({ onSucces
       <form onSubmit={handleSubmit} className="mt-8 space-y-6">
         <div>
           <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
-            新しいパスワード
+            {tFields("newPassword")}
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -91,7 +97,7 @@ export const UpdatePasswordForm: React.FC<UpdatePasswordFormProps> = ({ onSucces
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               className="pl-10 mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-3 px-3 transition duration-150 ease-in-out"
-              placeholder="新しいパスワード（6文字以上）"
+              placeholder={tFields("newPassword")}
               minLength={6}
             />
           </div>
@@ -99,7 +105,7 @@ export const UpdatePasswordForm: React.FC<UpdatePasswordFormProps> = ({ onSucces
 
         <div>
           <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-            パスワード確認
+            {tFields("confirmPassword")}
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -123,7 +129,7 @@ export const UpdatePasswordForm: React.FC<UpdatePasswordFormProps> = ({ onSucces
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="pl-10 mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-3 px-3 transition duration-150 ease-in-out"
-              placeholder="パスワード確認"
+              placeholder={tFields("confirmPassword")}
               minLength={6}
             />
           </div>
@@ -135,7 +141,7 @@ export const UpdatePasswordForm: React.FC<UpdatePasswordFormProps> = ({ onSucces
             disabled={loading}
             className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transform transition duration-150 ease-in-out hover:scale-[1.02] shadow-md"
           >
-            {loading ? "更新中..." : "パスワードを更新"}
+            {loading ? t("loadingButton") : t("submitButton")}
           </button>
         </div>
       </form>
@@ -145,7 +151,7 @@ export const UpdatePasswordForm: React.FC<UpdatePasswordFormProps> = ({ onSucces
           href="/login"
           className="text-sm text-gray-600 hover:text-indigo-600 transition duration-150 ease-in-out"
         >
-          ログイン画面に戻る
+          {t("backToLogin")}
         </Link>
       </div>
     </div>

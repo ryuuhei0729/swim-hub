@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslations } from "next-intl";
 
 interface LoadingSpinnerProps {
   size?: "sm" | "md" | "lg" | "xl";
@@ -34,14 +35,16 @@ export default function LoadingSpinner({
 
 // フルスクリーンローディング
 export function FullScreenLoading({
-  message = "アプリケーションを読み込み中...",
+  message,
 }: {
   message?: string;
 }) {
+  const t = useTranslations("common.loadingSpinner");
+  const resolvedMessage = message ?? t("fullScreenMessage");
   return (
     <div className="fixed inset-0 bg-white/95 backdrop-blur-sm z-50 flex items-center justify-center">
       <div className="text-center">
-        <LoadingSpinner size="xl" message={message} />
+        <LoadingSpinner size="xl" message={resolvedMessage} />
         <div className="mt-6">
           <div className="w-64 bg-gray-200 rounded-full h-1 overflow-hidden">
             <div

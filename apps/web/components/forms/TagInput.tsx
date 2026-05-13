@@ -5,6 +5,7 @@ import { ChevronDownIcon, XMarkIcon, EllipsisVerticalIcon } from "@heroicons/rea
 import TagManagementModal from "./TagManagementModal";
 import { useAuth } from "@/contexts";
 import { PracticeTag } from "@apps/shared/types";
+import { useTranslations } from "next-intl";
 
 type Tag = PracticeTag;
 
@@ -21,8 +22,9 @@ export default function TagInput({
   availableTags,
   onTagsChange,
   onAvailableTagsUpdate,
-  placeholder = "タグを選択または作成",
+  placeholder,
 }: TagInputProps) {
+  const t = useTranslations("forms.tag");
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [selectedTagForManagement, setSelectedTagForManagement] = useState<Tag | null>(null);
@@ -87,7 +89,7 @@ export default function TagInput({
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) throw new Error("認証が必要です");
+      if (!user) throw new Error(t("authRequired"));
 
       // ランダム色を設定
       const randomColor = getRandomColor();
@@ -119,7 +121,7 @@ export default function TagInput({
       console.error("タグ作成エラー:", error);
       const pgError = error as { code?: string };
       if (pgError.code === "23505") {
-        alert("同じ名前のタグが既に存在します");
+        alert(t("duplicateError"));
       }
     }
   };
@@ -130,7 +132,7 @@ export default function TagInput({
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) throw new Error("認証が必要です");
+      if (!user) throw new Error(t("authRequired"));
 
       // DBを更新
       const { error } = await supabase
@@ -167,7 +169,7 @@ export default function TagInput({
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) throw new Error("認証が必要です");
+      if (!user) throw new Error(t("authRequired"));
 
       // DBから削除
       const { error } = await supabase
@@ -256,7 +258,7 @@ export default function TagInput({
                     onTagsChange(selectedTags.filter((t) => t.id !== tag.id));
                   }}
                   className="hover:bg-black/20 rounded-full p-0.5 transition-colors"
-                  title="タグを削除"
+                  title={t("manageTip")}
                   data-testid={`remove-tag-button-${tag.id}`}
                 >
                   <XMarkIcon className="h-3 w-3" />
@@ -273,7 +275,7 @@ export default function TagInput({
               onKeyDown={handleKeyDown}
               onKeyPress={handleKeyPress}
               onFocus={() => setIsOpen(true)}
-              placeholder={selectedTags.length === 0 ? placeholder : "タグを検索または作成..."}
+              placeholder={selectedTags.length === 0 ? (placeholder ?? t("placeholder")) : t("searchPlaceholder")}
               className="flex-1 min-w-[120px] text-sm border-none outline-none bg-transparent"
               data-testid="tag-input"
             />
@@ -314,13 +316,13 @@ export default function TagInput({
                     </div>
                     <div className="flex items-center gap-1">
                       <span className="text-xs text-blue-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                        + 追加
+                        {t("addHint")}
                       </span>
                       <button
                         type="button"
                         onClick={(e) => handleTagManagement(tag, e)}
                         className="p-1 hover:bg-blue-100 rounded transition-colors"
-                        title="タグを管理"
+                        title={t("manageTip")}
                         data-testid={`manage-tag-button-${tag.id}`}
                       >
                         <EllipsisVerticalIcon className="h-4 w-4 text-gray-500 hover:text-blue-600 transition-colors" />
@@ -330,14 +332,14 @@ export default function TagInput({
                 ))
               ) : (
                 <div className="px-3 py-2 text-sm text-gray-500 text-center">
-                  {inputValue ? "該当するタグが見つかりません" : "利用可能なタグがありません"}
+                  {inputValue ? t("noMatch") : t("noTags")}
                 </div>
               )}
 
               {/* 新規タグ作成のヒント */}
               {inputValue && filteredTags.length === 0 && (
                 <div className="px-3 py-2 text-sm text-blue-600 text-center border-t border-gray-200 bg-blue-50">
-                  Enterキーで「{inputValue}」を新規作成
+                  {t("createHint", { name: inputValue })}
                 </div>
               )}
             </div>

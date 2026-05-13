@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
@@ -22,6 +23,9 @@ export default function TeamCreateForm({
   onSubmit,
   isLoading = false,
 }: TeamCreateFormProps) {
+  const t = useTranslations("forms.teamCreate");
+  const tUnsaved = useTranslations("forms.unsavedChanges");
+
   const [formData, setFormData] = useState<TeamCreateFormData>({
     name: "",
     description: "",
@@ -95,13 +99,13 @@ export default function TeamCreateForm({
     const newErrors: Partial<TeamCreateFormData> = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = "チーム名は必須です";
+      newErrors.name = t("nameRequired");
     } else if (formData.name.length > 50) {
-      newErrors.name = "チーム名は50文字以内で入力してください";
+      newErrors.name = t("nameTooLong");
     }
 
     if (formData.description.length > 200) {
-      newErrors.description = "説明は200文字以内で入力してください";
+      newErrors.description = t("descTooLong");
     }
 
     setErrors(newErrors);
@@ -185,7 +189,7 @@ export default function TeamCreateForm({
             {/* ヘッダー */}
             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">新しいチームを作成</h3>
+                <h3 className="text-lg font-medium text-gray-900">{t("title")}</h3>
                 <button
                   type="button"
                   onClick={handleClose}
@@ -199,7 +203,7 @@ export default function TeamCreateForm({
               {/* チーム名 */}
               <div className="mb-4">
                 <label htmlFor="teamName" className="block text-sm font-medium text-gray-700 mb-2">
-                  チーム名 <span className="text-red-500">*</span>
+                  {t("nameLabel")} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -209,13 +213,13 @@ export default function TeamCreateForm({
                   className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                     errors.name ? "border-red-300" : "border-gray-300"
                   }`}
-                  placeholder="例: 水泳クラブA"
+                  placeholder={t("namePlaceholder")}
                   maxLength={50}
                   disabled={isLoading}
                   data-testid="team-name-input"
                 />
                 {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
-                <p className="mt-1 text-sm text-gray-500">{formData.name.length}/50文字</p>
+                <p className="mt-1 text-sm text-gray-500">{t("nameCounter", { current: formData.name.length })}</p>
               </div>
 
               {/* 説明 */}
@@ -224,7 +228,7 @@ export default function TeamCreateForm({
                   htmlFor="teamDescription"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  説明
+                  {t("descLabel")}
                 </label>
                 <textarea
                   id="teamDescription"
@@ -234,7 +238,7 @@ export default function TeamCreateForm({
                   className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                     errors.description ? "border-red-300" : "border-gray-300"
                   }`}
-                  placeholder="チームの説明を入力してください（任意）"
+                  placeholder={t("descPlaceholder")}
                   maxLength={200}
                   disabled={isLoading}
                   data-testid="team-description-input"
@@ -242,7 +246,7 @@ export default function TeamCreateForm({
                 {errors.description && (
                   <p className="mt-1 text-sm text-red-600">{errors.description}</p>
                 )}
-                <p className="mt-1 text-sm text-gray-500">{formData.description.length}/200文字</p>
+                <p className="mt-1 text-sm text-gray-500">{t("descCounter", { current: formData.description.length })}</p>
               </div>
             </div>
 
@@ -254,7 +258,7 @@ export default function TeamCreateForm({
                 className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 data-testid="team-create-submit-button"
               >
-                {isLoading ? "作成中..." : "チームを作成"}
+                {isLoading ? t("submitting") : t("submit")}
               </button>
               <button
                 type="button"
@@ -263,7 +267,7 @@ export default function TeamCreateForm({
                 className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 data-testid="team-create-cancel-button"
               >
-                キャンセル
+                {t("cancel")}
               </button>
             </div>
           </form>
@@ -275,14 +279,14 @@ export default function TeamCreateForm({
         isOpen={showConfirmDialog}
         onConfirm={handleConfirmClose}
         onCancel={handleCancelClose}
-        title="入力内容が保存されていません"
+        title={tUnsaved("title")}
         message={
           confirmContext === "back"
-            ? "入力内容が保存されていません。このまま戻りますか？"
-            : "入力内容が保存されていません。このまま閉じますか？"
+            ? tUnsaved("messageBack")
+            : tUnsaved("messageClose")
         }
-        confirmLabel={confirmContext === "back" ? "戻る" : "閉じる"}
-        cancelLabel="編集を続ける"
+        confirmLabel={confirmContext === "back" ? tUnsaved("confirmBack") : tUnsaved("confirmClose")}
+        cancelLabel={tUnsaved("cancel")}
         variant="warning"
       />
     </div>

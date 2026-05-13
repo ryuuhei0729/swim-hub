@@ -1,5 +1,6 @@
 // lib/supabase-auth/middleware.ts
 
+import { extractLocale, stripLocale } from "@/i18n/routing";
 import { getSafeRedirectUrl } from "@/utils/redirect";
 import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@swim-hub/shared/types";
@@ -13,18 +14,23 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   response.headers.set("x-current-path", pathname); // パス情報をヘッダーに設定
 
+  // locale を pathname から取得
+  const locale = extractLocale(pathname);
+  // locale プレフィックスを除いた正規化パス
+  const normalizedPathname = stripLocale(pathname);
+
   // ---------------------------------------------
   // OAuthコールバック処理: /?code=... を /api/auth/callback?code=... にリダイレクト
   // これにより、Cookieが確実に送信される
   // 注意: OAuthコールバック時はauth.getUser()を実行する前にリダイレクトする
   // ---------------------------------------------
-  if (pathname === "/" && request.nextUrl.searchParams.has("code")) {
+  if (normalizedPathname === "/" && request.nextUrl.searchParams.has("code")) {
     const code = request.nextUrl.searchParams.get("code");
     const rawRedirectTo = request.nextUrl.searchParams.get("redirect_to");
     const redirectTo = getSafeRedirectUrl(rawRedirectTo);
     if (!code) {
       // codeがない場合はログインページにリダイレクト
-      return NextResponse.redirect(new URL("/login?error=missing_code", request.url));
+      return NextResponse.redirect(new URL(`/${locale}/login?error=missing_code`, request.url));
     }
     const callbackUrl = new URL("/api/auth/callback", request.url);
     callbackUrl.searchParams.set("code", code);
@@ -91,7 +97,8 @@ export async function updateSession(request: NextRequest) {
   // 問題のデバッグが非常に困難になる可能性があります。
 
   // ---------------------------------------------
-  // 認証が必要なルート
+  // 認証が必要なルート (locale プレフィックスなしで定義)
+  // normalizedPathname と照合する
   // ---------------------------------------------
   const protectedRoutes = [
     "/dashboard",
@@ -154,37 +161,40 @@ export async function updateSession(request: NextRequest) {
     return staticExtensions.some((ext) => path.endsWith(ext));
   };
 
-  // パブリックルートかどうかをチェックするヘルパー関数
+  // パブリックルートかどうかをチェックするヘルパー関数 (正規化パスで比較)
   const isPublicRoute = (path: string): boolean => {
     return publicRoutes.some((route) => path === route || path.startsWith(route + "/"));
   };
 
-  const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
-  const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
+  // 正規化パス (locale プレフィックス除去後) でルート判定
+  const isProtectedRoute = protectedRoutes.some((route) =>
+    normalizedPathname.startsWith(route),
+  );
+  const isAuthRoute = authRoutes.some((route) => normalizedPathname.startsWith(route));
 
   // ---------------------------------------------
   // 未ログインユーザーの場合: リダイレクト処理
   // ---------------------------------------------
   if (isProtectedRoute && !user) {
-    const redirectUrl = new URL("/login", request.url);
+    const redirectUrl = new URL(`/${locale}/login`, request.url);
     redirectUrl.searchParams.set("redirect_to", pathname);
     return NextResponse.redirect(redirectUrl);
   }
 
   // 認証済みユーザーが認証ページにアクセスした場合
   if (isAuthRoute && user) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(new URL(`/${locale}/dashboard`, request.url));
   }
 
   // 認証済みユーザーがランディングページにアクセスした場合はダッシュボードにリダイレクト
-  if (pathname === "/" && user) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+  if (normalizedPathname === "/" && user) {
+    return NextResponse.redirect(new URL(`/${locale}/dashboard`, request.url));
   }
 
   // テンプレート通りの基本的な認証チェック（保護ルート以外の場合）
-  if (!user && !isPublicRoute(pathname) && !isStaticAsset(pathname)) {
+  if (!user && !isPublicRoute(normalizedPathname) && !isStaticAsset(normalizedPathname)) {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = `/${locale}/login`;
     return NextResponse.redirect(url);
   }
 

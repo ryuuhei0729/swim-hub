@@ -6,6 +6,7 @@ import { AttendanceEditState } from "../hooks/useAttendanceEdit";
 import { getStatusBadge } from "./StatusBadge";
 import { parseISO } from "date-fns";
 import { formatDate } from "@apps/shared/utils/date";
+import { useTranslations } from "next-intl";
 
 interface RecentAttendanceProps {
   events: TeamEvent[];
@@ -31,6 +32,7 @@ export const RecentAttendance = React.memo(
     onSave,
     attendances,
   }: RecentAttendanceProps) => {
+    const t = useTranslations("teams");
     const [selectedTab, setSelectedTab] = useState<"current" | "next">("current");
 
     const filteredEvents = useMemo(() => {
@@ -57,14 +59,14 @@ export const RecentAttendance = React.memo(
       return (
         <div className="text-center py-6">
           <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
-          <p className="mt-1.5 text-sm text-gray-500">読み込み中...</p>
+          <p className="mt-1.5 text-sm text-gray-500">{t("attendance.loading")}</p>
         </div>
       );
     }
 
     return (
       <div className="mt-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">直近の出欠</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">{t("recentAttendance.title")}</h2>
 
         <div className="flex border-b border-gray-200 mb-4">
           <button
@@ -75,7 +77,7 @@ export const RecentAttendance = React.memo(
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            今月
+            {t("recentAttendance.thisMonth")}
           </button>
           <button
             onClick={() => setSelectedTab("next")}
@@ -85,15 +87,13 @@ export const RecentAttendance = React.memo(
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            来月
+            {t("recentAttendance.nextMonth")}
           </button>
         </div>
 
         {filteredEvents.length === 0 ? (
           <div className="bg-gray-50 rounded-lg p-6 text-center">
-            <p className="text-sm text-gray-600">
-              {selectedTab === "current" ? "今月" : "来月"}のイベントがありません
-            </p>
+            <p className="text-sm text-gray-600">{t("recentAttendance.empty")}</p>
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow divide-y divide-gray-200">
@@ -125,7 +125,7 @@ export const RecentAttendance = React.memo(
                         {formatDate(event.date, "shortWithWeekday")}
                       </span>
                       <h3 className="text-xs font-medium text-gray-900">
-                        {event.type === "competition" ? event.title : "練習"}
+                        {event.type === "competition" ? event.title : t("monthDetail.practiceLabel")}
                       </h3>
                       {event.place && <span className="text-xs text-gray-600">@{event.place}</span>}
                     </div>
@@ -167,7 +167,7 @@ export const RecentAttendance = React.memo(
                           type="text"
                           value={editState.note}
                           onChange={(e) => onNoteChange(event.id, e.target.value)}
-                          placeholder="備考を入力（任意）"
+                          placeholder={t("recentAttendance.notePlaceholder")}
                           maxLength={NOTE_MAX_LENGTH}
                           className="w-60 px-2 py-1 border border-gray-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
@@ -178,7 +178,7 @@ export const RecentAttendance = React.memo(
                             isSaving || !hasChanges ? "opacity-50 cursor-not-allowed" : ""
                           }`}
                         >
-                          {isSaving ? "保存中..." : "保存"}
+                          {isSaving ? t("monthDetail.saving") : t("recentAttendance.saveButton")}
                         </button>
                       </div>
                     </div>

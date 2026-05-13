@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Tabs } from "@/components/ui/Tabs";
 import type { Tab } from "@/components/ui/Tabs";
 import {
@@ -17,6 +18,7 @@ interface LapTimeDisplayProps {
 }
 
 export function LapTimeDisplay({ splitTimes, raceDistance }: LapTimeDisplayProps) {
+  const t = useTranslations("forms.lapTime");
   const [activeTab, setActiveTab] = useState<"all" | "race">("race");
 
   // split-timeを有効なものだけフィルタリングしてSplitTime型に変換
@@ -53,14 +55,14 @@ export function LapTimeDisplay({ splitTimes, raceDistance }: LapTimeDisplayProps
   }, [lapIntervals, raceLapTimesTable]);
 
   const tabs: Tab[] = [
-    { id: "race", label: "距離別 Lap" },
-    { id: "all", label: "All Lap" },
+    { id: "race", label: t("raceLapTab") },
+    { id: "all", label: t("allLapTab") },
   ];
 
   if (validSplitTimes.length === 0) {
     return (
       <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-        <p className="text-sm text-gray-500 text-center">スプリットタイムを入力してください</p>
+        <p className="text-sm text-gray-500 text-center">{t("noSplits")}</p>
       </div>
     );
   }
@@ -77,9 +79,9 @@ export function LapTimeDisplay({ splitTimes, raceDistance }: LapTimeDisplayProps
       <div className="p-4">
         {activeTab === "all" && (
           <div className="space-y-2">
-            <h4 className="text-sm font-medium text-gray-700 mb-2">全てのラップタイム</h4>
+            <h4 className="text-sm font-medium text-gray-700 mb-2">{t("allLapTab")}</h4>
             {allLapTimes.length === 0 ? (
-              <p className="text-sm text-gray-500">ラップタイムを計算できません</p>
+              <p className="text-sm text-gray-500">{t("noLap")}</p>
             ) : (
               <div className="space-y-1">
                 {allLapTimes.map((lap, index) => (
@@ -103,19 +105,19 @@ export function LapTimeDisplay({ splitTimes, raceDistance }: LapTimeDisplayProps
         {activeTab === "race" && (
           <div>
             {!raceDistance ? (
-              <p className="text-sm text-gray-500">種目を選択してください</p>
+              <p className="text-sm text-gray-500">{t("noStyle")}</p>
             ) : raceLapTimesTable.length === 0 ? (
-              <p className="text-sm text-gray-500">ラップタイムを計算できません</p>
+              <p className="text-sm text-gray-500">{t("noLap")}</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-100">
                     <tr>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                        距離
+                        {t("distanceHeader")}
                       </th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                        Split Time
+                        {t("splitTimeHeader")}
                       </th>
                       {visibleLapIntervals.map((interval) => (
                         <th

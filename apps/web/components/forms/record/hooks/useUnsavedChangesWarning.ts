@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useTranslations } from "next-intl";
 
 interface UseUnsavedChangesWarningOptions {
   isOpen: boolean;
@@ -16,6 +17,7 @@ export const useUnsavedChangesWarning = ({
   hasUnsavedChanges,
   isSubmitted,
 }: UseUnsavedChangesWarningOptions): void => {
+  const t = useTranslations("forms.unsavedChanges");
   useEffect(() => {
     if (!isOpen || !hasUnsavedChanges || isSubmitted) return;
 
@@ -26,7 +28,7 @@ export const useUnsavedChangesWarning = ({
 
     const handlePopState = () => {
       if (hasUnsavedChanges && !isSubmitted) {
-        const confirmed = window.confirm("入力内容が保存されていません。このまま戻りますか？");
+        const confirmed = window.confirm(t("messageBack"));
         if (!confirmed) {
           window.history.pushState(null, "", window.location.href);
         }
@@ -41,7 +43,7 @@ export const useUnsavedChangesWarning = ({
       window.removeEventListener("beforeunload", handleBeforeUnload);
       window.removeEventListener("popstate", handlePopState);
     };
-  }, [isOpen, hasUnsavedChanges, isSubmitted]);
+  }, [isOpen, hasUnsavedChanges, isSubmitted, t]);
 };
 
 export default useUnsavedChangesWarning;
