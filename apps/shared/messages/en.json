@@ -752,6 +752,8 @@
     "step1": {
       "title": "Welcome to SwimHub!",
       "description": "A record management tool for swimmers. Track practice, manage meets, and connect with your team — all in one place.",
+      "tagline": "An all-in-one platform for swimmers",
+      "timeHint": "Quick setup to get you started (about 1 minute)",
       "feature": {
         "practice": {
           "title": "Practice Log",
@@ -769,13 +771,18 @@
       "startButton": "Get Started"
     },
     "step2": {
+      "title": "Set up your profile",
+      "subtitle": "This information will be visible to other members",
       "nameLabel": "Name",
       "namePlaceholder": "Jane Doe",
+      "emailNameWarning": "Looks like an email address. Please enter a display name instead.",
       "genderLabel": "Gender",
       "genderMale": "Male",
       "genderFemale": "Female",
       "birthdayLabel": "Date of Birth",
+      "birthdayLabelOptional": "Date of Birth (optional)",
       "bioLabel": "Bio",
+      "bioLabelOptional": "Bio (optional)",
       "bioPlaceholder": "Tell us about your best events or goals",
       "bioCharCount": "{count}/500 characters",
       "validation": {
@@ -784,19 +791,28 @@
         "nameTooLong": "Name must be {max} characters or fewer"
       },
       "saveError": "Failed to save profile. Please try again.",
+      "skipFailed": "Failed to skip",
       "saving": "Saving...",
       "nextButton": "Next",
+      "skipButton": "Skip",
       "backButton": "Back"
     },
     "step3": {
       "title": "Register Your Best Times",
       "subtitle": "You can add or edit these anytime later",
       "addStylePlaceholder": "Add an event...",
+      "addStyleButton": "Add an event",
+      "styleModalTitle": "Choose an event",
+      "removeStyleAria": "Remove {styleName}",
+      "timePlaceholder": "e.g. 1:23.45",
+      "timeAriaLabel": "Time for {styleName}",
       "poolTypeShort": "Short Course",
       "poolTypeLong": "Long Course",
       "relay": "Relay takeover",
       "duplicateError": "Duplicate events detected",
+      "partialFailure": "Some entries failed to register: {errors}",
       "saveError": "Registration failed. Please try again.",
+      "skipError": "Operation failed. Please try again.",
       "skipButton": "Skip for now",
       "saveButton": "Save and Start",
       "saving": "Saving...",
@@ -804,6 +820,12 @@
       "backButton": "Back",
       "inputHintTitle": "Enter as numbers",
       "inputHintBody": "You can enter formats like 1:23.45, 23.45, 23-45, or 1-23-45"
+    },
+    "completionFailed": "Failed to complete setup",
+    "stepLabels": {
+      "welcome": "Welcome",
+      "profile": "Profile",
+      "bestTime": "Best Times"
     }
   },
   "sidebar": {

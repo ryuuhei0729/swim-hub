@@ -752,6 +752,8 @@
     "step1": {
       "title": "SwimHub へようこそ！",
       "description": "水泳選手のための記録管理ツールです。練習記録・大会管理・チーム連携をひとつにまとめます。",
+      "tagline": "水泳選手のための統合管理プラットフォーム",
+      "timeHint": "簡単な設定をして始めましょう（約 1 分）",
       "feature": {
         "practice": {
           "title": "練習記録",
@@ -769,13 +771,18 @@
       "startButton": "始める"
     },
     "step2": {
+      "title": "プロフィールを設定しよう",
+      "subtitle": "他のメンバーに表示される情報です",
       "nameLabel": "名前",
       "namePlaceholder": "山田 太郎",
+      "emailNameWarning": "メールアドレス形式のため、表示名の変更が必要です",
       "genderLabel": "性別",
       "genderMale": "男性",
       "genderFemale": "女性",
       "birthdayLabel": "生年月日",
+      "birthdayLabelOptional": "生年月日（任意）",
       "bioLabel": "自己紹介",
+      "bioLabelOptional": "自己紹介（任意）",
       "bioPlaceholder": "得意種目や目標など、自由に記入してください",
       "bioCharCount": "{count}/500文字",
       "validation": {
@@ -784,19 +791,28 @@
         "nameTooLong": "名前は{max}文字以内で入力してください"
       },
       "saveError": "プロフィールの保存に失敗しました。もう一度お試しください。",
+      "skipFailed": "スキップに失敗しました",
       "saving": "保存中...",
       "nextButton": "次へ",
+      "skipButton": "スキップ",
       "backButton": "戻る"
     },
     "step3": {
       "title": "ベストタイムを登録",
       "subtitle": "後からいつでも追加・編集できます",
       "addStylePlaceholder": "種目を追加...",
+      "addStyleButton": "種目を追加",
+      "styleModalTitle": "種目を選択",
+      "removeStyleAria": "{styleName}を削除",
+      "timePlaceholder": "例: 1:23.45",
+      "timeAriaLabel": "{styleName}のタイム",
       "poolTypeShort": "短水路",
       "poolTypeLong": "長水路",
       "relay": "引き継ぎあり",
       "duplicateError": "重複する種目があります",
+      "partialFailure": "一部の登録に失敗しました: {errors}",
       "saveError": "登録に失敗しました。もう一度お試しください。",
+      "skipError": "処理に失敗しました。もう一度お試しください。",
       "skipButton": "スキップして始める",
       "saveButton": "保存して始める",
       "saving": "登録中...",
@@ -804,6 +820,12 @@
       "backButton": "戻る",
       "inputHintTitle": "半角数字で入力",
       "inputHintBody": "1:23.45 / 23.45 / 23-45 / 1-23-45 など自由な形式で入力できます"
+    },
+    "completionFailed": "完了処理に失敗しました",
+    "stepLabels": {
+      "welcome": "ようこそ",
+      "profile": "プロフィール",
+      "bestTime": "ベストタイム"
     }
   },
   "sidebar": {

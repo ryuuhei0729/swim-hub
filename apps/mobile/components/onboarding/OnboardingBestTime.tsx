@@ -11,6 +11,8 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { RecordAPI } from "@apps/shared/api/records";
 import { parseTime } from "@apps/shared/utils/time";
@@ -112,6 +114,7 @@ function canSave(entries: BestTimeEntry[]): boolean {
 
 export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({ onComplete, onBack }) => {
   const { supabase } = useAuth();
+  const { t } = useTranslation();
   const [entries, setEntries] = useState<BestTimeEntry[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -165,18 +168,18 @@ export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({ onComple
 
       const result = await recordAPI.createBulkRecords(records);
       if (result.errors.length > 0) {
-        setSaveError(`一部の登録に失敗しました: ${result.errors.join(", ")}`);
+        setSaveError(t("onboarding.step3.partialFailure", { errors: result.errors.join(", ") }));
         return;
       }
 
       await onComplete();
     } catch {
-      setSaveError("登録に失敗しました。もう一度お試しください。");
+      setSaveError(t("onboarding.step3.saveError"));
     } finally {
       savingRef.current = false;
       setSaving(false);
     }
-  }, [entries, recordAPI, onComplete]);
+  }, [entries, recordAPI, onComplete, t]);
 
   const handleSkip = useCallback(async () => {
     if (savingRef.current) return;
@@ -186,12 +189,12 @@ export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({ onComple
     try {
       await onComplete();
     } catch {
-      setSaveError("処理に失敗しました。もう一度お試しください。");
+      setSaveError(t("onboarding.step3.skipError"));
     } finally {
       savingRef.current = false;
       setSaving(false);
     }
-  }, [onComplete]);
+  }, [onComplete, t]);
 
   return (
     <View style={styles.container}>
@@ -200,10 +203,8 @@ export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({ onComple
         <View style={styles.headerIconRow}>
           <Feather name="trending-up" size={24} color="#2563EB" />
         </View>
-        <Text style={styles.title}>ベストタイムを入力</Text>
-        <Text style={styles.subtitle}>
-          記録しておくと成長の推移が一目でわかります。後からでも追加・編集できます。
-        </Text>
+        <Text style={styles.title}>{t("onboarding.step3.title")}</Text>
+        <Text style={styles.subtitle}>{t("onboarding.step3.subtitle")}</Text>
       </View>
 
       {/* エラー表示 */}
@@ -216,7 +217,7 @@ export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({ onComple
       {/* 重複警告 */}
       {isDuplicate && (
         <View style={styles.warningBanner}>
-          <Text style={styles.warningText}>重複する種目があります</Text>
+          <Text style={styles.warningText}>{t("onboarding.step3.duplicateError")}</Text>
         </View>
       )}
 
@@ -238,6 +239,7 @@ export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({ onComple
               onRemove={removeEntry}
               disabled={saving}
               isDuplicate={duplicateKeys.has(entry.key)}
+              t={t}
             />
           );
         })}
@@ -248,11 +250,11 @@ export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({ onComple
           onPress={() => setShowStyleModal(true)}
           disabled={saving}
           accessibilityRole="button"
-          accessibilityLabel="種目を追加"
+          accessibilityLabel={t("onboarding.step3.addStyleButton")}
         >
           <Feather name="plus" size={16} color={saving ? "#9CA3AF" : "#2563EB"} />
           <Text style={[styles.addButtonText, saving && styles.addButtonTextDisabled]}>
-            種目を追加
+            {t("onboarding.step3.addStyleButton")}
           </Text>
         </Pressable>
       </ScrollView>
@@ -265,10 +267,10 @@ export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({ onComple
             onPress={onBack}
             disabled={saving}
             accessibilityRole="button"
-            accessibilityLabel="戻る"
+            accessibilityLabel={t("onboarding.step3.backButton")}
           >
             <Text style={[styles.backButtonText, saving && styles.backButtonTextDisabled]}>
-              戻る
+              {t("onboarding.step3.backButton")}
             </Text>
           </Pressable>
 
@@ -282,12 +284,12 @@ export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({ onComple
               onPress={handleSave}
               disabled={!isSaveable || saving}
               accessibilityRole="button"
-              accessibilityLabel="保存して始める"
+              accessibilityLabel={t("onboarding.step3.saveButton")}
             >
               {saving ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <Text style={styles.primaryButtonText}>保存して始める</Text>
+                <Text style={styles.primaryButtonText}>{t("onboarding.step3.saveButton")}</Text>
               )}
             </Pressable>
           ) : (
@@ -300,12 +302,12 @@ export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({ onComple
               onPress={handleSkip}
               disabled={saving}
               accessibilityRole="button"
-              accessibilityLabel="スキップして始める"
+              accessibilityLabel={t("onboarding.step3.skipButton")}
             >
               {saving ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <Text style={styles.primaryButtonText}>スキップして始める</Text>
+                <Text style={styles.primaryButtonText}>{t("onboarding.step3.skipButton")}</Text>
               )}
             </Pressable>
           )}
@@ -322,11 +324,11 @@ export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({ onComple
         <Pressable style={styles.modalOverlay} onPress={() => setShowStyleModal(false)}>
           <View style={styles.modalSheet}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>種目を選択</Text>
+              <Text style={styles.modalTitle}>{t("onboarding.step3.styleModalTitle")}</Text>
               <Pressable
                 onPress={() => setShowStyleModal(false)}
                 accessibilityRole="button"
-                accessibilityLabel="閉じる"
+                accessibilityLabel={t("common.close")}
               >
                 <Feather name="x" size={20} color="#374151" />
               </Pressable>
@@ -364,6 +366,7 @@ interface EntryRowProps {
   onRemove: (key: string) => void;
   disabled: boolean;
   isDuplicate: boolean;
+  t: TFunction;
 }
 
 const EntryRow: React.FC<EntryRowProps> = ({
@@ -373,6 +376,7 @@ const EntryRow: React.FC<EntryRowProps> = ({
   onRemove,
   disabled,
   isDuplicate,
+  t,
 }) => {
   return (
     <View style={[entryStyles.card, isDuplicate && entryStyles.cardDuplicate]}>
@@ -383,7 +387,7 @@ const EntryRow: React.FC<EntryRowProps> = ({
           onPress={() => onRemove(entry.key)}
           disabled={disabled}
           accessibilityRole="button"
-          accessibilityLabel={`${styleName}を削除`}
+          accessibilityLabel={t("onboarding.step3.removeStyleAria", { styleName })}
           style={({ pressed }) => [entryStyles.removeButton, pressed && entryStyles.removeButtonPressed]}
         >
           <Feather name="x" size={16} color={disabled ? "#D1D5DB" : "#9CA3AF"} />
@@ -399,7 +403,7 @@ const EntryRow: React.FC<EntryRowProps> = ({
             onPress={() => onUpdate(entry.key, { poolType: 0 })}
             disabled={disabled}
             accessibilityRole="button"
-            accessibilityLabel="短水路"
+            accessibilityLabel={t("common.poolTypeShort")}
           >
             <Text
               style={[
@@ -407,7 +411,7 @@ const EntryRow: React.FC<EntryRowProps> = ({
                 entry.poolType === 0 && entryStyles.poolButtonTextActive,
               ]}
             >
-              短水路
+              {t("common.poolTypeShort")}
             </Text>
           </Pressable>
           <Pressable
@@ -415,7 +419,7 @@ const EntryRow: React.FC<EntryRowProps> = ({
             onPress={() => onUpdate(entry.key, { poolType: 1 })}
             disabled={disabled}
             accessibilityRole="button"
-            accessibilityLabel="長水路"
+            accessibilityLabel={t("common.poolTypeLong")}
           >
             <Text
               style={[
@@ -423,7 +427,7 @@ const EntryRow: React.FC<EntryRowProps> = ({
                 entry.poolType === 1 && entryStyles.poolButtonTextActive,
               ]}
             >
-              長水路
+              {t("common.poolTypeLong")}
             </Text>
           </Pressable>
         </View>
@@ -433,11 +437,11 @@ const EntryRow: React.FC<EntryRowProps> = ({
           style={[entryStyles.timeInput, disabled && entryStyles.timeInputDisabled]}
           value={entry.time}
           onChangeText={(text) => onUpdate(entry.key, { time: text })}
-          placeholder="例: 1:23.45"
+          placeholder={t("onboarding.step3.timePlaceholder")}
           placeholderTextColor="#9CA3AF"
           keyboardType="numbers-and-punctuation"
           editable={!disabled}
-          accessibilityLabel={`${styleName}のタイム`}
+          accessibilityLabel={t("onboarding.step3.timeAriaLabel", { styleName })}
         />
       </View>
     </View>

@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 interface OnboardingWelcomeProps {
   onNext: () => void;
@@ -12,6 +13,9 @@ interface OnboardingWelcomeProps {
  * ※ WelcomeScreen と名前衝突を避けるため OnboardingWelcome プレフィックス
  */
 export const OnboardingWelcome: React.FC<OnboardingWelcomeProps> = ({ onNext }) => {
+  const { t } = useTranslation();
+  const startLabel = t("onboarding.step1.startButton");
+
   return (
     <View style={styles.container}>
       <View style={styles.heroSection}>
@@ -20,25 +24,37 @@ export const OnboardingWelcome: React.FC<OnboardingWelcomeProps> = ({ onNext }) 
           style={styles.logo}
           contentFit="contain"
         />
-        <Text style={styles.appName}>SwimHub へようこそ</Text>
-        <Text style={styles.tagline}>水泳選手のための統合管理プラットフォーム</Text>
+        <Text style={styles.appName}>{t("onboarding.step1.title")}</Text>
+        <Text style={styles.tagline}>{t("onboarding.step1.tagline")}</Text>
       </View>
 
       <View style={styles.featuresSection}>
-        <FeatureRow iconName="bar-chart-2" title="練習記録" description="日々の練習をかんたんに記録・管理" />
-        <FeatureRow iconName="award" title="大会記録" description="自己ベストの推移をグラフで確認" />
-        <FeatureRow iconName="users" title="チーム機能" description="チームメンバーと情報を共有" />
+        <FeatureRow
+          iconName="bar-chart-2"
+          title={t("onboarding.step1.feature.practice.title")}
+          description={t("onboarding.step1.feature.practice.description")}
+        />
+        <FeatureRow
+          iconName="award"
+          title={t("onboarding.step1.feature.competition.title")}
+          description={t("onboarding.step1.feature.competition.description")}
+        />
+        <FeatureRow
+          iconName="users"
+          title={t("onboarding.step1.feature.team.title")}
+          description={t("onboarding.step1.feature.team.description")}
+        />
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.stepHint}>簡単な設定をして始めましょう（約 1 分）</Text>
+        <Text style={styles.stepHint}>{t("onboarding.step1.timeHint")}</Text>
         <Pressable
           style={({ pressed }) => [styles.primaryButton, pressed && styles.primaryButtonPressed]}
           onPress={onNext}
           accessibilityRole="button"
-          accessibilityLabel="始める"
+          accessibilityLabel={startLabel}
         >
-          <Text style={styles.primaryButtonText}>始める</Text>
+          <Text style={styles.primaryButtonText}>{startLabel}</Text>
         </Pressable>
       </View>
     </View>
