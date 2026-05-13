@@ -17,6 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { PurchasesPackage } from "react-native-purchases";
+import { useTranslation } from "react-i18next";
 import { getOfferings, purchasePackage, restorePurchases } from "@/lib/revenucat";
 import { useAuth } from "@/contexts/AuthProvider";
 import type { MainStackParamList } from "@/navigation/types";
@@ -27,6 +28,7 @@ type BillingPeriod = "monthly" | "annual";
 export const PaywallScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { subscription, refreshSubscription } = useAuth();
+  const { t } = useTranslation();
 
   const [loadingOfferings, setLoadingOfferings] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
@@ -94,12 +96,12 @@ export const PaywallScreen: React.FC = () => {
       const info = await purchasePackage(pkg);
       if (info) {
         await refreshSubscription();
-        Alert.alert("購入完了", "Premium プランをご利用いただけます。", [
+        Alert.alert(t("paywallMobile.purchaseSuccessTitle"), t("paywallMobile.purchaseSuccessMessage"), [
           { text: "OK", onPress: () => navigation.goBack() },
         ]);
       }
     } catch (err) {
-      Alert.alert("エラー", "購入処理に失敗しました。もう一度お試しください。");
+      Alert.alert(t("common.error"), t("paywallMobile.purchaseFailed"));
       console.error("購入エラー:", err);
     } finally {
       setPurchasing(false);
@@ -112,11 +114,11 @@ export const PaywallScreen: React.FC = () => {
     try {
       await restorePurchases();
       await refreshSubscription();
-      Alert.alert("復元完了", "購入情報を復元しました。", [
+      Alert.alert(t("paywallMobile.restoreSuccessTitle"), t("paywallMobile.restoreSuccessMessage"), [
         { text: "OK", onPress: () => navigation.goBack() },
       ]);
     } catch (err) {
-      Alert.alert("エラー", "購入情報の復元に失敗しました。");
+      Alert.alert(t("common.error"), t("paywallMobile.restoreFailed"));
       console.error("リストアエラー:", err);
     } finally {
       setRestoring(false);
@@ -144,7 +146,7 @@ export const PaywallScreen: React.FC = () => {
           style={styles.closeButton}
           onPress={() => navigation.goBack()}
           accessibilityRole="button"
-          accessibilityLabel="閉じる"
+          accessibilityLabel={t("paywallMobile.closeAria")}
         >
           <Text style={styles.closeButtonText}>✕</Text>
         </TouchableOpacity>
@@ -198,8 +200,8 @@ export const PaywallScreen: React.FC = () => {
           <View style={styles.noPackagesContainer}>
             <Text style={styles.noPackagesText}>
               {offeringsError
-                ? "プラン情報の取得に失敗しました"
-                : "利用可能なプランがありません"}
+                ? t("paywallMobile.fetchPlansFailedShort")
+                : t("paywallMobile.noPlansAvailable")}
             </Text>
             <TouchableOpacity style={styles.retryButton} onPress={fetchOfferings}>
               <Text style={styles.retryButtonText}>再試行</Text>
@@ -282,7 +284,7 @@ export const PaywallScreen: React.FC = () => {
               <ActivityIndicator color="#ffffff" />
             ) : (
               <Text style={styles.purchaseButtonText}>
-                {!hasTrialed ? "7日間無料でお試し" : "Premium を開始する"}
+                {!hasTrialed ? t("paywallMobile.trialStart") : t("paywallMobile.premiumStart")}
               </Text>
             )}
           </TouchableOpacity>

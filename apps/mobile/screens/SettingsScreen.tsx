@@ -3,6 +3,7 @@ import { View, Text, Pressable, ScrollView, StyleSheet, RefreshControl, Alert, L
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { restorePurchases } from "@/lib/revenucat";
 import { useUserQuery } from "@apps/shared/hooks/queries/user";
@@ -24,6 +25,7 @@ export const SettingsScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { supabase, signOut, subscription, refreshSubscription } = useAuth();
   const isPremium = checkIsPremium(subscription);
+  const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
@@ -42,7 +44,7 @@ export const SettingsScreen: React.FC = () => {
       const { error } = await signOut();
       if (error) {
         console.error("ログアウトエラー:", error);
-        Alert.alert("エラー", "ログアウトに失敗しました。もう一度お試しください。");
+        Alert.alert(t("common.error"), t("settings.mobile.logoutFailed"));
       }
     } catch (err) {
       console.error("ログアウト処理エラー:", err);
@@ -53,9 +55,13 @@ export const SettingsScreen: React.FC = () => {
   }, [signOut]);
 
   const handleLogout = useCallback(() => {
-    Alert.alert("ログアウト", "ログアウトしてもよろしいですか？", [
-      { text: "キャンセル", style: "cancel" },
-      { text: "ログアウト", style: "destructive", onPress: executeLogout },
+    Alert.alert(t("settings.mobile.logoutTitle"), t("settings.mobile.logoutConfirmMessage"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("settings.mobile.logoutButtonText"),
+        style: "destructive",
+        onPress: executeLogout,
+      },
     ]);
   }, [executeLogout]);
 
@@ -64,9 +70,9 @@ export const SettingsScreen: React.FC = () => {
     try {
       await restorePurchases();
       await refreshSubscription();
-      Alert.alert("復元完了", "購入情報を復元しました。");
+      Alert.alert(t("settings.mobile.restoreSuccessTitle"), t("settings.mobile.restoreSuccessMessage"));
     } catch {
-      Alert.alert("エラー", "購入情報の復元に失敗しました。");
+      Alert.alert(t("common.error"), t("settings.mobile.restoreFailed"));
     } finally {
       setIsRestoring(false);
     }
@@ -84,7 +90,7 @@ export const SettingsScreen: React.FC = () => {
   if (isLoading && !profile) {
     return (
       <SafeAreaView style={styles.container} edges={["left", "right"]}>
-        <LoadingSpinner fullScreen message="設定を読み込み中..." />
+        <LoadingSpinner fullScreen message={t("settings.mobile.loading")} />
       </SafeAreaView>
     );
   }
@@ -141,7 +147,7 @@ export const SettingsScreen: React.FC = () => {
                 style={styles.upgradeButton}
                 onPress={() => navigation.navigate("Paywall")}
                 accessibilityRole="button"
-                accessibilityLabel="Premium にアップグレード"
+                accessibilityLabel={t("settings.mobile.upgradeAria")}
               >
                 <Text style={styles.upgradeButtonText}>Premium にアップグレード</Text>
               </Pressable>
@@ -153,7 +159,7 @@ export const SettingsScreen: React.FC = () => {
               onPress={handleRestore}
               disabled={isRestoring}
               accessibilityRole="button"
-              accessibilityLabel="購入を復元する"
+              accessibilityLabel={t("settings.mobile.restoreAria")}
             >
               {isRestoring ? (
                 <ActivityIndicator color="#2563EB" size="small" />
@@ -167,7 +173,7 @@ export const SettingsScreen: React.FC = () => {
               style={styles.manageSubButton}
               onPress={() => Linking.openURL("https://apps.apple.com/account/subscriptions")}
               accessibilityRole="link"
-              accessibilityLabel="サブスクリプションを管理"
+              accessibilityLabel={t("settings.mobile.manageSubAria")}
             >
               <Text style={styles.manageSubText}>サブスクリプションを管理</Text>
             </Pressable>
@@ -216,11 +222,11 @@ export const SettingsScreen: React.FC = () => {
             onPress={handleLogout}
             disabled={isLoggingOut}
             accessibilityRole="button"
-            accessibilityLabel="ログアウト"
-            accessibilityHint="アカウントからログアウトします"
+            accessibilityLabel={t("settings.mobile.logoutAriaLabel")}
+            accessibilityHint={t("settings.mobile.logoutAriaHint")}
           >
             <Text style={styles.logoutButtonText}>
-              {isLoggingOut ? "ログアウト中..." : "ログアウト"}
+              {isLoggingOut ? t("settings.mobile.logoutLoading") : t("settings.mobile.logoutButtonText")}
             </Text>
           </Pressable>
         </View>

@@ -444,6 +444,18 @@
     "aboutItem3Suffix": ""
   },
   "dashboard": {
+    "mobile": {
+      "calendarFetchFailed": "Failed to fetch calendar data",
+      "calendarLoading": "Loading calendar...",
+      "competitionNotFound": "Competition not found",
+      "deleteFailed": "Failed to delete",
+      "deletePracticeConfirmTitle": "Confirm deletion",
+      "deletePracticeConfirmMessage": "Delete this practice record?\nThis cannot be undone.",
+      "deleteMenuConfirmMessage": "Delete this practice menu?\nThis cannot be undone.",
+      "deleteRecordConfirmMessage": "Delete this race record?\nThis cannot be undone.",
+      "deleteCompetitionConfirmMessage": "Delete this competition?\nThis cannot be undone.",
+      "deleteButton": "Delete"
+    },
     "stats": {
       "monthlyPractice": {
         "title": "Practice This Month",
@@ -1141,6 +1153,22 @@
     }
   },
   "settings": {
+    "mobile": {
+      "loading": "Loading settings...",
+      "logoutTitle": "Log out",
+      "logoutConfirmMessage": "Are you sure you want to log out?",
+      "logoutButtonText": "Log out",
+      "logoutLoading": "Logging out...",
+      "logoutFailed": "Failed to log out. Please try again.",
+      "logoutAriaLabel": "Log out",
+      "logoutAriaHint": "Sign out of your account",
+      "upgradeAria": "Upgrade to Premium",
+      "restoreAria": "Restore purchases",
+      "manageSubAria": "Manage subscription",
+      "restoreSuccessTitle": "Restore complete",
+      "restoreSuccessMessage": "Your purchase has been restored.",
+      "restoreFailed": "Failed to restore purchases."
+    },
     "header": {
       "title": "Settings",
       "description": "Manage your account and connected services"
@@ -2624,6 +2652,19 @@
       "close": "Close",
       "copyTitle": "Copy"
     }
+  },
+  "paywallMobile": {
+    "purchaseSuccessTitle": "Purchase complete",
+    "purchaseSuccessMessage": "You can now enjoy Premium.",
+    "purchaseFailed": "Purchase failed. Please try again.",
+    "restoreSuccessTitle": "Restore complete",
+    "restoreSuccessMessage": "Your purchase has been restored.",
+    "restoreFailed": "Failed to restore purchases.",
+    "closeAria": "Close",
+    "fetchPlansFailedShort": "Failed to fetch plans",
+    "noPlansAvailable": "No plans available",
+    "trialStart": "Try free for 7 days",
+    "premiumStart": "Start Premium"
   },
   "recordMobile": {
     "loading": "Loading competition records...",

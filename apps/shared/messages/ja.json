@@ -444,6 +444,18 @@
     "aboutItem3Suffix": "をご確認ください"
   },
   "dashboard": {
+    "mobile": {
+      "calendarFetchFailed": "カレンダーデータの取得に失敗しました",
+      "calendarLoading": "カレンダーを読み込み中...",
+      "competitionNotFound": "大会情報が見つかりませんでした",
+      "deleteFailed": "削除に失敗しました",
+      "deletePracticeConfirmTitle": "削除確認",
+      "deletePracticeConfirmMessage": "この練習記録を削除しますか？\nこの操作は取り消せません。",
+      "deleteMenuConfirmMessage": "この練習メニューを削除しますか？\nこの操作は取り消せません。",
+      "deleteRecordConfirmMessage": "この大会記録を削除しますか？\nこの操作は取り消せません。",
+      "deleteCompetitionConfirmMessage": "この大会を削除しますか？\nこの操作は取り消せません。",
+      "deleteButton": "削除"
+    },
     "stats": {
       "monthlyPractice": {
         "title": "今月の練習",
@@ -1141,6 +1153,22 @@
     }
   },
   "settings": {
+    "mobile": {
+      "loading": "設定を読み込み中...",
+      "logoutTitle": "ログアウト",
+      "logoutConfirmMessage": "ログアウトしてもよろしいですか？",
+      "logoutButtonText": "ログアウト",
+      "logoutLoading": "ログアウト中...",
+      "logoutFailed": "ログアウトに失敗しました。もう一度お試しください。",
+      "logoutAriaLabel": "ログアウト",
+      "logoutAriaHint": "アカウントからログアウトします",
+      "upgradeAria": "Premium にアップグレード",
+      "restoreAria": "購入を復元する",
+      "manageSubAria": "サブスクリプションを管理",
+      "restoreSuccessTitle": "復元完了",
+      "restoreSuccessMessage": "購入情報を復元しました。",
+      "restoreFailed": "購入情報の復元に失敗しました。"
+    },
     "header": {
       "title": "設定",
       "description": "アカウントや連携サービスの設定を管理します"
@@ -2624,6 +2652,19 @@
       "close": "閉じる",
       "copyTitle": "コピー"
     }
+  },
+  "paywallMobile": {
+    "purchaseSuccessTitle": "購入完了",
+    "purchaseSuccessMessage": "Premium プランをご利用いただけます。",
+    "purchaseFailed": "購入処理に失敗しました。もう一度お試しください。",
+    "restoreSuccessTitle": "復元完了",
+    "restoreSuccessMessage": "購入情報を復元しました。",
+    "restoreFailed": "購入情報の復元に失敗しました。",
+    "closeAria": "閉じる",
+    "fetchPlansFailedShort": "プラン情報の取得に失敗しました",
+    "noPlansAvailable": "利用可能なプランがありません",
+    "trialStart": "7日間無料でお試し",
+    "premiumStart": "Premium を開始する"
   },
   "recordMobile": {
     "loading": "大会記録を読み込み中...",
