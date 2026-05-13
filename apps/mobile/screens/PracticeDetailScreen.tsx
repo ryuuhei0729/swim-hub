@@ -6,6 +6,7 @@ import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import {
   usePracticeByIdQuery,
@@ -30,6 +31,7 @@ export const PracticeDetailScreen: React.FC = () => {
   const navigation = useNavigation<PracticeDetailScreenNavigationProp>();
   const { practiceId } = route.params;
   const { supabase } = useAuth();
+  const { t } = useTranslation();
 
   const deleteMutation = useDeletePracticeMutation(supabase);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -42,22 +44,22 @@ export const PracticeDetailScreen: React.FC = () => {
 
   const handleDelete = () => {
     if (Platform.OS === "web") {
-      const confirmed = window.confirm("この練習記録を削除しますか？\nこの操作は取り消せません。");
+      const confirmed = window.confirm(t("practice.mobile.deleteConfirmMessage"));
       if (!confirmed) {
         return;
       }
       executeDelete();
     } else {
       Alert.alert(
-        "削除確認",
-        "この練習記録を削除しますか？\nこの操作は取り消せません。",
+        t("practice.mobile.deleteConfirmTitle"),
+        t("practice.mobile.deleteConfirmMessage"),
         [
           {
-            text: "キャンセル",
+            text: t("common.cancel"),
             style: "cancel",
           },
           {
-            text: "削除",
+            text: t("practice.mobile.deleteConfirmButton"),
             style: "destructive",
             onPress: executeDelete,
           },
@@ -74,12 +76,11 @@ export const PracticeDetailScreen: React.FC = () => {
       navigation.goBack();
     } catch (error) {
       console.error("削除エラー:", error);
+      const msg = error instanceof Error ? error.message : t("practice.mobile.deleteFailed");
       if (Platform.OS === "web") {
-        window.alert(error instanceof Error ? error.message : "削除に失敗しました");
+        window.alert(msg);
       } else {
-        Alert.alert("エラー", error instanceof Error ? error.message : "削除に失敗しました", [
-          { text: "OK" },
-        ]);
+        Alert.alert(t("common.error"), msg, [{ text: "OK" }]);
       }
     } finally {
       setIsDeleting(false);
@@ -96,7 +97,7 @@ export const PracticeDetailScreen: React.FC = () => {
   });
 
   if (error) {
-    const errorMessage = error instanceof Error ? error.message : "練習記録の取得に失敗しました";
+    const errorMessage = error instanceof Error ? error.message : t("practice.mobile.fetchFailed");
     return (
       <View style={styles.container}>
         <ErrorView message={errorMessage} onRetry={() => refetch()} fullScreen />
@@ -107,7 +108,7 @@ export const PracticeDetailScreen: React.FC = () => {
   if (isLoading && !practice) {
     return (
       <View style={styles.container}>
-        <LoadingSpinner fullScreen message="練習記録を読み込み中..." />
+        <LoadingSpinner fullScreen message={t("practice.mobile.loading")} />
       </View>
     );
   }
@@ -115,13 +116,17 @@ export const PracticeDetailScreen: React.FC = () => {
   if (!practice) {
     return (
       <View style={styles.container}>
-        <ErrorView message="練習記録が見つかりませんでした" onRetry={() => refetch()} fullScreen />
+        <ErrorView
+          message={t("practice.mobile.notFound")}
+          onRetry={() => refetch()}
+          fullScreen
+        />
       </View>
     );
   }
 
   const formattedDate = format(new Date(practice.date), "yyyy年M月d日(E)", { locale: ja });
-  const title = practice.title || "練習";
+  const title = practice.title || t("practice.client.practiceTitle");
 
   const practiceImages = getExistingImagesFromPaths(supabase, practice.image_paths, "practice-images");
 
@@ -145,7 +150,7 @@ export const PracticeDetailScreen: React.FC = () => {
         {/* メモ */}
         {practice.note && (
           <View style={styles.noteCard}>
-            <Text style={styles.noteLabel}>メモ</Text>
+            <Text style={styles.noteLabel}>{t("practice.modal.memo")}</Text>
             <Text style={styles.noteText}>{practice.note}</Text>
           </View>
         )}
@@ -178,14 +183,14 @@ export const PracticeDetailScreen: React.FC = () => {
       {/* 練習ログ一覧 */}
       {practice.practice_logs && practice.practice_logs.length > 0 ? (
         <View style={styles.logsSection}>
-          <Text style={styles.sectionTitle}>練習ログ</Text>
+          <Text style={styles.sectionTitle}>{t("practice.mobile.practiceLogsSection")}</Text>
           {practice.practice_logs.map((log) => (
             <PracticeLogItem key={log.id} log={log} />
           ))}
         </View>
       ) : (
         <View style={styles.emptySection}>
-          <Text style={styles.emptyText}>練習ログがありません</Text>
+          <Text style={styles.emptyText}>{t("practice.mobile.noPracticeLogs")}</Text>
         </View>
       )}
 
@@ -197,7 +202,7 @@ export const PracticeDetailScreen: React.FC = () => {
           disabled={isDeleting}
         >
           <Feather name="edit-2" size={16} color="#FFFFFF" />
-          <Text style={styles.editButtonText}>編集</Text>
+          <Text style={styles.editButtonText}>{t("practice.page.edit")}</Text>
         </Pressable>
         <Pressable
           style={[styles.actionButton, styles.deleteButton]}
@@ -205,7 +210,9 @@ export const PracticeDetailScreen: React.FC = () => {
           disabled={isDeleting}
         >
           <Feather name="trash-2" size={16} color="#DC2626" />
-          <Text style={styles.deleteButtonText}>{isDeleting ? "削除中..." : "削除"}</Text>
+          <Text style={styles.deleteButtonText}>
+            {isDeleting ? t("practice.page.deleting") : t("practice.page.delete")}
+          </Text>
         </Pressable>
       </View>
 

@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { useTranslation } from "react-i18next";
 import {
   formatTime,
   formatTimeAverage,
@@ -19,6 +20,7 @@ interface PracticeLogItemProps {
  * Web版と同じデザイン: エメラルドグリーンカード + タイムテーブル
  */
 export const PracticeLogItem: React.FC<PracticeLogItemProps> = React.memo(({ log }) => {
+  const { t } = useTranslation();
   const styleDisplay = getStyleLabel(log.style);
   const tags = log.practice_log_tags?.map((lt) => lt.practice_tags) || [];
   const allTimes = useMemo(
@@ -87,7 +89,7 @@ export const PracticeLogItem: React.FC<PracticeLogItemProps> = React.memo(({ log
 
       {/* 練習内容カード */}
       <View style={styles.contentCard}>
-        <Text style={styles.contentLabel}>練習内容</Text>
+        <Text style={styles.contentLabel}>{t("practice.modal.content")}</Text>
         <View style={styles.contentRow}>
           <Text style={styles.contentValue}>{log.distance}</Text>
           <Text style={styles.contentUnit}>m × </Text>
@@ -116,7 +118,7 @@ export const PracticeLogItem: React.FC<PracticeLogItemProps> = React.memo(({ log
       {/* メモ */}
       {log.note && (
         <View style={styles.memoCard}>
-          <Text style={styles.memoLabel}>メモ</Text>
+          <Text style={styles.memoLabel}>{t("practice.modal.memo")}</Text>
           <Text style={styles.memoText}>{log.note}</Text>
         </View>
       )}
@@ -133,7 +135,7 @@ export const PracticeLogItem: React.FC<PracticeLogItemProps> = React.memo(({ log
         <View style={styles.timeSection}>
           <View style={styles.timeHeader}>
             <View style={styles.timeAccent} />
-            <Text style={styles.timeTitle}>タイム</Text>
+            <Text style={styles.timeTitle}>{t("practice.modal.time")}</Text>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={true} style={styles.tableScroll}>
             <View style={styles.table}>
@@ -144,7 +146,7 @@ export const PracticeLogItem: React.FC<PracticeLogItemProps> = React.memo(({ log
                 </View>
                 {Array.from({ length: log.set_count }, (_, i) => (
                   <View key={i} style={[styles.tableCell, styles.tableDataCell]}>
-                    <Text style={styles.tableHeaderText}>{i + 1}セット目</Text>
+                    <Text style={styles.tableHeaderText}>{t("practice.modal.setLabel", { n: i + 1 })}</Text>
                   </View>
                 ))}
               </View>
@@ -155,7 +157,7 @@ export const PracticeLogItem: React.FC<PracticeLogItemProps> = React.memo(({ log
                 return (
                   <View key={repNumber} style={[styles.tableRow, styles.tableBodyRow]}>
                     <View style={[styles.tableCell, styles.tableLabelCell]}>
-                      <Text style={styles.tableLabelText}>{repNumber}本目</Text>
+                      <Text style={styles.tableLabelText}>{t("practice.modal.repLabel", { n: repNumber })}</Text>
                     </View>
                     {Array.from({ length: log.set_count }, (_, setIdx) => {
                       const setNumber = setIdx + 1;
@@ -179,7 +181,7 @@ export const PracticeLogItem: React.FC<PracticeLogItemProps> = React.memo(({ log
               {/* セット平均行 */}
               <View style={[styles.tableRow, styles.setAverageRow]}>
                 <View style={[styles.tableCell, styles.tableLabelCell, styles.setAverageLabelCell]}>
-                  <Text style={styles.setAverageLabel}>セット平均</Text>
+                  <Text style={styles.setAverageLabel}>{t("practice.modal.setAverage")}</Text>
                 </View>
                 {Array.from({ length: log.set_count }, (_, setIdx) => {
                   const setNumber = setIdx + 1;
@@ -200,7 +202,7 @@ export const PracticeLogItem: React.FC<PracticeLogItemProps> = React.memo(({ log
               {/* 全体平均行 */}
               <View style={[styles.tableRow, styles.overallRow, styles.overallRowTop]}>
                 <View style={[styles.tableCell, styles.tableLabelCell, styles.overallLabelCell]}>
-                  <Text style={styles.overallLabel}>全体平均</Text>
+                  <Text style={styles.overallLabel}>{t("practice.modal.overallAverage")}</Text>
                 </View>
                 <View style={[styles.tableCell, styles.overallDataCell, { flex: log.set_count }]}>
                   <Text style={styles.overallValue}>
@@ -212,7 +214,7 @@ export const PracticeLogItem: React.FC<PracticeLogItemProps> = React.memo(({ log
               {/* 全体最速行 */}
               <View style={[styles.tableRow, styles.overallRow]}>
                 <View style={[styles.tableCell, styles.tableLabelCell, styles.overallLabelCell]}>
-                  <Text style={styles.overallLabel}>全体最速</Text>
+                  <Text style={styles.overallLabel}>{t("practice.modal.overallFastest")}</Text>
                 </View>
                 <View style={[styles.tableCell, styles.overallDataCell, { flex: log.set_count }]}>
                   <Text style={styles.overallValue}>

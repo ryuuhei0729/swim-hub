@@ -14,6 +14,7 @@ import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { uploadVideo } from "@/utils/videoUpload";
 import {
@@ -71,6 +72,7 @@ export const PracticeLogFormScreen: React.FC = () => {
   const queryClient = useQueryClient();
   const isEditMode = practiceLogId !== undefined;
   const isPremium = checkIsPremium(subscription);
+  const { t } = useTranslation();
 
   // 動画の状態管理
   const [existingVideoPath, setExistingVideoPath] = useState<string | null>(null);
@@ -196,8 +198,8 @@ export const PracticeLogFormScreen: React.FC = () => {
         } catch (error) {
           console.error("練習ログ取得エラー:", error);
           Alert.alert(
-            "エラー",
-            error instanceof Error ? error.message : "練習ログの取得に失敗しました",
+            t("common.error"),
+            error instanceof Error ? error.message : t("practice.mobile.fetchLogFailed"),
             [{ text: "OK", onPress: () => navigation.goBack() }],
           );
           setLoadingPracticeLog(false);
@@ -308,7 +310,7 @@ export const PracticeLogFormScreen: React.FC = () => {
         }
       } catch (error) {
         console.error("タグ保存エラー:", error);
-        Alert.alert("エラー", "タグの保存に失敗しました。もう一度お試しください。");
+        Alert.alert(t("common.error"), t("practice.mobile.tagSaveFailed"));
       }
     },
     [editingTag, updateTagMutation, createTagMutation, menus, activeMenuIndex],
@@ -328,7 +330,7 @@ export const PracticeLogFormScreen: React.FC = () => {
         );
       } catch (error) {
         console.error("タグ削除エラー:", error);
-        Alert.alert("エラー", "タグの削除に失敗しました。もう一度お試しください。");
+        Alert.alert(t("common.error"), t("practice.mobile.tagDeleteFailed"));
       }
     },
     [deleteTagMutation],
@@ -388,19 +390,19 @@ export const PracticeLogFormScreen: React.FC = () => {
   const validate = (): boolean => {
     for (const menu of menus) {
       if (!menu.style || menu.style.trim() === "") {
-        Alert.alert("エラー", "種目を選択してください");
+        Alert.alert(t("common.error"), t("practice.form.styleRequired"));
         return false;
       }
       if (!menu.distance || Number(menu.distance) <= 0) {
-        Alert.alert("エラー", "距離を入力してください");
+        Alert.alert(t("common.error"), t("practice.form.distanceRequired"));
         return false;
       }
       if (!menu.reps || Number(menu.reps) <= 0) {
-        Alert.alert("エラー", "本数を入力してください");
+        Alert.alert(t("common.error"), t("practice.form.repsRequired"));
         return false;
       }
       if (!menu.sets || Number(menu.sets) <= 0) {
-        Alert.alert("エラー", "セット数を入力してください");
+        Alert.alert(t("common.error"), t("practice.form.setsRequired"));
         return false;
       }
     }
@@ -494,8 +496,8 @@ export const PracticeLogFormScreen: React.FC = () => {
             const accessToken = await getAccessToken();
             if (!accessToken) {
               Alert.alert(
-                "動画アップロード失敗",
-                "動画アップロード失敗: セッションが無効です。再ログインしてください。",
+                t("practice.mobile.videoUploadFailedTitle"),
+                t("practice.mobile.videoUploadFailedSession"),
               );
             } else {
               try {
@@ -508,10 +510,10 @@ export const PracticeLogFormScreen: React.FC = () => {
                 });
               } catch (err) {
                 console.error("動画アップロードエラー:", err);
-                const errorDetail = err instanceof Error ? err.message : "不明なエラー";
+                const errorDetail = err instanceof Error ? err.message : t("common.error");
                 Alert.alert(
-                  "動画アップロード失敗",
-                  `練習ログは保存されましたが、動画のアップロードに失敗しました。\n\n詳細: ${errorDetail}\n\n詳細画面から再度追加してください。`,
+                  t("practice.mobile.videoUploadFailedTitle"),
+                  `${t("practice.mobile.videoUploadFailedSaved")}\n\n${errorDetail}`,
                 );
               }
             }
@@ -534,9 +536,11 @@ export const PracticeLogFormScreen: React.FC = () => {
       }
     } catch (error) {
       console.error("保存エラー:", error);
-      Alert.alert("エラー", error instanceof Error ? error.message : "保存に失敗しました", [
-        { text: "OK" },
-      ]);
+      Alert.alert(
+        t("common.error"),
+        error instanceof Error ? error.message : t("practice.mobile.saveFailed"),
+        [{ text: "OK" }],
+      );
     } finally {
       isSubmittingRef.current = false;
     }
@@ -551,7 +555,7 @@ export const PracticeLogFormScreen: React.FC = () => {
   if (loadingPracticeLog) {
     return (
       <View style={styles.container}>
-        <LoadingSpinner fullScreen message="練習ログを読み込み中..." />
+        <LoadingSpinner fullScreen message={t("practice.mobile.loadingLogs")} />
       </View>
     );
   }
@@ -566,10 +570,10 @@ export const PracticeLogFormScreen: React.FC = () => {
         {/* メニューセクション */}
         <View style={styles.menuSection}>
           <View style={styles.menuHeader}>
-            <Text style={styles.sectionTitle}>練習メニュー</Text>
+            <Text style={styles.sectionTitle}>{t("practice.form.menuSection")}</Text>
             <Pressable style={styles.addButton} onPress={addMenu}>
               <Feather name="plus" size={16} color="#FFFFFF" />
-              <Text style={styles.addButtonText}>メニューを追加</Text>
+              <Text style={styles.addButtonText}>{t("practice.details.addMenu")}</Text>
             </Pressable>
           </View>
 
@@ -577,7 +581,7 @@ export const PracticeLogFormScreen: React.FC = () => {
             <View key={menu.id} style={styles.menuContainer}>
               {/* メニューヘッダー */}
               <View style={styles.menuItemHeader}>
-                <Text style={styles.menuNumber}>メニュー {index + 1}</Text>
+                <Text style={styles.menuNumber}>{t("practice.form.menuNumber", { index: index + 1 })}</Text>
                 {menus.length > 1 && (
                   <Pressable style={styles.removeButton} onPress={() => removeMenu(menu.id)}>
                     <Feather name="trash-2" size={18} color="#EF4444" />
@@ -587,7 +591,7 @@ export const PracticeLogFormScreen: React.FC = () => {
 
               {/* タグ入力 */}
               <View style={styles.field}>
-                <Text style={styles.label}>タグ</Text>
+                <Text style={styles.label}>{t("practice.form.tagsLabel")}</Text>
                 <TagChips
                   tags={menu.tags}
                   onPress={() => openTagSelectModal(index)}
@@ -604,7 +608,7 @@ export const PracticeLogFormScreen: React.FC = () => {
               {/* 種目 */}
               <View style={styles.field}>
                 <Text style={styles.label}>
-                  種目① <Text style={styles.required}>*</Text>
+                  {t("practice.form.styleLabel")} <Text style={styles.required}>*</Text>
                 </Text>
                 <View style={styles.pickerContainer}>
                   {SWIM_STYLES.map((style) => (
@@ -632,7 +636,7 @@ export const PracticeLogFormScreen: React.FC = () => {
               {/* 泳法カテゴリ */}
               <View style={styles.field}>
                 <Text style={styles.label}>
-                  種目② <Text style={styles.required}>*</Text>
+                  {t("practice.form.categoryLabel")} <Text style={styles.required}>*</Text>
                 </Text>
                 <View style={styles.pickerContainer}>
                   {SWIM_CATEGORIES.map((category) => (
@@ -667,7 +671,7 @@ export const PracticeLogFormScreen: React.FC = () => {
               <View style={styles.row}>
                 <View style={styles.fieldHalf}>
                   <Text style={styles.label}>
-                    距離(m) <Text style={styles.required}>*</Text>
+                    {t("practice.form.distanceLabel")} <Text style={styles.required}>*</Text>
                   </Text>
                   <TextInput
                     style={styles.input}
@@ -682,7 +686,7 @@ export const PracticeLogFormScreen: React.FC = () => {
                 </View>
                 <View style={styles.fieldHalf}>
                   <Text style={styles.label}>
-                    本数 <Text style={styles.required}>*</Text>
+                    {t("practice.form.repsLabel")} <Text style={styles.required}>*</Text>
                   </Text>
                   <TextInput
                     style={styles.input}
@@ -697,7 +701,7 @@ export const PracticeLogFormScreen: React.FC = () => {
                 </View>
                 <View style={styles.fieldHalf}>
                   <Text style={styles.label}>
-                    セット数 <Text style={styles.required}>*</Text>
+                    {t("practice.form.setsLabel")} <Text style={styles.required}>*</Text>
                   </Text>
                   <TextInput
                     style={styles.input}
@@ -715,7 +719,7 @@ export const PracticeLogFormScreen: React.FC = () => {
               {/* サークル（分・秒） */}
               <View style={styles.row}>
                 <View style={styles.fieldHalf}>
-                  <Text style={styles.label}>サークル(分)</Text>
+                  <Text style={styles.label}>{t("practice.form.circleMinLabel")}</Text>
                   <TextInput
                     style={styles.input}
                     value={menu.circleMin.toString()}
@@ -728,7 +732,7 @@ export const PracticeLogFormScreen: React.FC = () => {
                   />
                 </View>
                 <View style={styles.fieldHalf}>
-                  <Text style={styles.label}>サークル(秒)</Text>
+                  <Text style={styles.label}>{t("practice.form.circleSecLabel")}</Text>
                   <TextInput
                     style={styles.input}
                     value={menu.circleSec.toString()}
@@ -744,13 +748,13 @@ export const PracticeLogFormScreen: React.FC = () => {
 
               {/* タイム入力ボタン */}
               <View style={styles.field}>
-                <Text style={styles.label}>練習タイム</Text>
+                <Text style={styles.label}>{t("practice.details.timeLabel")}</Text>
                 <Pressable style={styles.timeButton} onPress={() => handleTimeInput(menu.id)}>
                   <Feather name="clock" size={16} color="#374151" />
                   <Text style={styles.timeButtonText}>
                     {menu.times && menu.times.length > 0
-                      ? `タイムを編集 (${menu.times.length}件登録済み)`
-                      : "タイムを入力"}
+                      ? t("practice.form.editTimes", { count: menu.times.length })
+                      : t("practice.form.inputTimes")}
                   </Text>
                 </Pressable>
               </View>
@@ -758,7 +762,7 @@ export const PracticeLogFormScreen: React.FC = () => {
               {/* 既存タイム表示 */}
               {menu.times && menu.times.length > 0 && (
                 <View style={styles.timesContainer}>
-                  <Text style={styles.timesLabel}>登録済みタイム</Text>
+                  <Text style={styles.timesLabel}>{t("practice.form.registeredTimes")}</Text>
                   <View style={styles.timesTable}>
                     {Array.from({ length: Number(menu.sets) || 1 }, (_, setIndex) => {
                       const setNumber = setIndex + 1;
@@ -774,7 +778,7 @@ export const PracticeLogFormScreen: React.FC = () => {
 
                       return (
                         <View key={setNumber} style={styles.setRow}>
-                          <Text style={styles.setLabel}>{setNumber}セット目</Text>
+                          <Text style={styles.setLabel}>{t("practice.modal.setLabel", { n: setNumber })}</Text>
                           <View style={styles.setTimes}>
                             {Array.from({ length: Number(menu.reps) || 1 }, (_, repIndex) => {
                               const repNumber = repIndex + 1;
@@ -785,7 +789,7 @@ export const PracticeLogFormScreen: React.FC = () => {
 
                               return (
                                 <View key={repNumber} style={styles.timeCell}>
-                                  <Text style={styles.timeCellLabel}>{repNumber}本目</Text>
+                                  <Text style={styles.timeCellLabel}>{t("practice.modal.repLabel", { n: repNumber })}</Text>
                                   <Text
                                     style={[
                                       styles.timeCellValue,
@@ -799,7 +803,7 @@ export const PracticeLogFormScreen: React.FC = () => {
                             })}
                           </View>
                           {setAverage > 0 && (
-                            <Text style={styles.setAverage}>平均: {formatTime(setAverage)}</Text>
+                            <Text style={styles.setAverage}>{t("practice.modal.setAverage")}: {formatTime(setAverage)}</Text>
                           )}
                         </View>
                       );
@@ -810,12 +814,12 @@ export const PracticeLogFormScreen: React.FC = () => {
 
               {/* メモ */}
               <View style={styles.field}>
-                <Text style={styles.label}>メモ</Text>
+                <Text style={styles.label}>{t("practice.modal.memo")}</Text>
                 <TextInput
                   style={[styles.input, styles.textArea]}
                   value={menu.note}
                   onChangeText={(text) => updateMenu(menu.id, "note", text)}
-                  placeholder="メモ（任意）"
+                  placeholder={t("practice.form.memoPlaceholder")}
                   placeholderTextColor="#9CA3AF"
                   multiline
                   numberOfLines={4}
@@ -825,7 +829,7 @@ export const PracticeLogFormScreen: React.FC = () => {
 
               {/* 動画 */}
               <View style={styles.field}>
-                <Text style={styles.label}>動画</Text>
+                <Text style={styles.label}>{t("practice.form.videoLabel")}</Text>
                 <VideoUploader
                   type="practice-log"
                   id={practiceLogId}
@@ -856,10 +860,10 @@ export const PracticeLogFormScreen: React.FC = () => {
         {/* ボタン */}
         <View style={styles.buttonContainer}>
           <Pressable style={[styles.button, styles.cancelButton]} onPress={handleCancel}>
-            <Text style={styles.cancelButtonText}>キャンセル</Text>
+            <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
           </Pressable>
           <Pressable style={[styles.button, styles.saveButton]} onPress={handleSave}>
-            <Text style={styles.saveButtonText}>保存</Text>
+            <Text style={styles.saveButtonText}>{t("common.save")}</Text>
           </Pressable>
         </View>
       </View>

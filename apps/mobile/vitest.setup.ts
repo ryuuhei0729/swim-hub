@@ -126,11 +126,43 @@ vi.mock("expo-localization", () => ({
   getCalendars: () => [{ calendar: "gregorian", timeZone: "Asia/Tokyo" }],
 }));
 
-// react-i18next のモック: t() はキー文字列を返し、ロケール非依存テストを可能にする。
-// 個別テストで `t` の挙動を変えたい場合は `vi.mocked(useTranslation)` で上書き可能。
+// react-i18next のモック: 実際の ja.json から値を取得し、ICU 風の {var} 補間も処理する。
+// これにより既存テストの「日本語期待値」がそのまま通り、t() 化したコンポーネントもテスト可能になる。
+import jaMessages from "../shared/messages/ja.json";
+
+function resolveKey(key: string): string | undefined {
+  const parts = key.split(".");
+  let cur: unknown = jaMessages;
+  for (const p of parts) {
+    if (cur && typeof cur === "object" && p in (cur as Record<string, unknown>)) {
+      cur = (cur as Record<string, unknown>)[p];
+    } else {
+      return undefined;
+    }
+  }
+  return typeof cur === "string" ? cur : undefined;
+}
+
+function interpolate(template: string, values: Record<string, unknown>): string {
+  return template.replace(/\{(\w+)\}/g, (_match, name) => {
+    return name in values ? String(values[name]) : `{${name}}`;
+  });
+}
+
+function tMock(key: string, options?: Record<string, unknown> & { defaultValue?: string }): string {
+  const raw = resolveKey(key);
+  if (raw === undefined) {
+    return options?.defaultValue !== undefined ? String(options.defaultValue) : key;
+  }
+  if (options && Object.keys(options).length > 0) {
+    return interpolate(raw, options);
+  }
+  return raw;
+}
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key,
+    t: tMock,
     i18n: {
       language: "ja",
       changeLanguage: vi.fn(async () => undefined),

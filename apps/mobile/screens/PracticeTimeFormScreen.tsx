@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useTranslation } from "react-i18next";
 import { usePracticeTimeStore } from "@/stores/practiceTimeStore";
 import { useAuth } from "@/contexts/AuthProvider";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
@@ -46,6 +47,7 @@ export const PracticeTimeFormScreen: React.FC = () => {
   const isPremium = checkIsPremium(subscription);
   const totalTimes = setCount * repCount;
   const practiceTimeLimitExceeded = !isPremium && totalTimes > FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG;
+  const { t } = useTranslation();
 
   // クイック入力フック
   const { parseInput, resetContext } = useQuickTimeInput();
@@ -172,9 +174,9 @@ export const PracticeTimeFormScreen: React.FC = () => {
         keyboardShouldPersistTaps="handled"
       >
       <View style={styles.header}>
-        <Text style={styles.title}>タイム入力</Text>
+        <Text style={styles.title}>{t("practice.form.timeInputTitle")}</Text>
         <Text style={styles.subtitle}>
-          {setCount}セット × {repCount}本のタイムを入力してください
+          {t("practice.form.timeInputSubtitle", { setCount, repCount })}
         </Text>
         {practiceTimeLimitExceeded && (
           <View style={{ marginTop: 12 }}>
@@ -193,10 +195,11 @@ export const PracticeTimeFormScreen: React.FC = () => {
           return (
             <View key={setNumber} style={styles.setContainer}>
               <View style={styles.setHeader}>
-                <Text style={styles.setTitle}>セット {setNumber}</Text>
+                <Text style={styles.setTitle}>{t("practice.form.setNumberLabel", { setNumber })}</Text>
                 <Text style={styles.setAverage}>
-                  平均: {setAverage > 0 ? formatTime(setAverage) : "未入力"}
-                  {validTimesCount > 0 && ` (${validTimesCount}本)`}
+                  {setAverage > 0
+                    ? t("practice.form.setAverageDetail", { avg: formatTime(setAverage), count: validTimesCount })
+                    : t("practice.form.noInput")}
                 </Text>
               </View>
 
@@ -211,7 +214,7 @@ export const PracticeTimeFormScreen: React.FC = () => {
 
                   return (
                     <View key={timeEntry.id} style={[styles.timeInputContainer, isDisabledByLimit && { opacity: 0.4 }]}>
-                      <Text style={styles.timeLabel}>{timeEntry.repNumber}本目</Text>
+                      <Text style={styles.timeLabel}>{t("practice.modal.repLabel", { n: timeEntry.repNumber })}</Text>
                       <TextInput
                         ref={(ref) => {
                           inputRefs.current[globalIndex] = ref;
@@ -224,7 +227,7 @@ export const PracticeTimeFormScreen: React.FC = () => {
                           handleTimeConfirm(timeEntry.id, timeEntry.displayValue || "");
                           focusNextInput(globalIndex);
                         }}
-                        placeholder={isDisabledByLimit ? "Premium限定" : "例: 31-2"}
+                        placeholder={isDisabledByLimit ? t("practice.form.premiumLimited") : "例: 31-2"}
                         keyboardType="default"
                         autoCapitalize="none"
                         returnKeyType={isLastInput ? "done" : "next"}
@@ -243,15 +246,15 @@ export const PracticeTimeFormScreen: React.FC = () => {
       {/* 統計情報 */}
       <View style={styles.statsContainer}>
         <View style={styles.statRow}>
-          <Text style={styles.statLabel}>全体平均:</Text>
+          <Text style={styles.statLabel}>{t("practice.form.overallAverage")}</Text>
           <Text style={styles.statValue}>
-            {getOverallAverage() > 0 ? formatTime(getOverallAverage()) : "未入力"}
+            {getOverallAverage() > 0 ? formatTime(getOverallAverage()) : t("practice.form.noInput")}
           </Text>
         </View>
         <View style={styles.statRow}>
-          <Text style={styles.statLabel}>最速:</Text>
+          <Text style={styles.statLabel}>{t("practice.form.fastest")}</Text>
           <Text style={[styles.statValue, styles.statValueFastest]}>
-            {getFastestTime() > 0 ? formatTime(getFastestTime()) : "未入力"}
+            {getFastestTime() > 0 ? formatTime(getFastestTime()) : t("practice.form.noInput")}
           </Text>
         </View>
       </View>
@@ -259,10 +262,10 @@ export const PracticeTimeFormScreen: React.FC = () => {
       {/* ボタン */}
       <View style={styles.buttonContainer}>
         <Pressable style={[styles.button, styles.cancelButton]} onPress={() => navigation.goBack()}>
-          <Text style={styles.cancelButtonText}>キャンセル</Text>
+          <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
         </Pressable>
         <Pressable style={[styles.button, styles.saveButton]} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>保存</Text>
+          <Text style={styles.saveButtonText}>{t("common.save")}</Text>
         </Pressable>
       </View>
       </ScrollView>

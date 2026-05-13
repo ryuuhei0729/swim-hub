@@ -14,6 +14,7 @@ import {
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import {
   useCreatePracticeMutation,
@@ -48,6 +49,7 @@ export const PracticeFormScreen: React.FC = () => {
   const isPremium = checkIsPremium(subscription);
   const queryClient = useQueryClient();
   const isEditMode = !!practiceId;
+  const { t } = useTranslation();
 
   // ユーザープロフィール取得（iOSカレンダー設定確認用）
   const { profile } = useUserQuery(supabase, { enableRealtime: false });
@@ -162,13 +164,13 @@ export const PracticeFormScreen: React.FC = () => {
 
     // 日付のバリデーション
     if (!date || date.trim() === "") {
-      setError("date", "日付を入力してください");
+      setError("date", t("practice.form.dateRequired"));
       isValid = false;
     } else {
       // YYYY-MM-DD形式のチェック
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
       if (!dateRegex.test(date)) {
-        setError("date", "日付はYYYY-MM-DD形式で入力してください");
+        setError("date", t("practice.form.dateInvalidFormat"));
         isValid = false;
       } else {
         // 有効な日付かチェック
@@ -180,7 +182,7 @@ export const PracticeFormScreen: React.FC = () => {
           dateObj.getMonth() + 1 !== month ||
           dateObj.getDate() !== day
         ) {
-          setError("date", "有効な日付を入力してください");
+          setError("date", t("practice.form.dateInvalid"));
           isValid = false;
         }
       }
@@ -209,7 +211,7 @@ export const PracticeFormScreen: React.FC = () => {
 
       // accessToken が null の場合は mutation 実行前に早期リターン
       if (!accessToken) {
-        Alert.alert("エラー", "セッションが無効です。再ログインしてください。", [{ text: "OK" }]);
+        Alert.alert(t("common.error"), t("practice.mobile.sessionInvalid"), [{ text: "OK" }]);
         return;
       }
 
@@ -268,8 +270,8 @@ export const PracticeFormScreen: React.FC = () => {
             } catch (syncError) {
               console.warn("カレンダー同期エラー:", syncError);
               Alert.alert(
-                "カレンダー同期に失敗",
-                "練習記録は保存されましたが、カレンダーへの同期に失敗しました。",
+                t("practice.mobile.calendarSyncFailedTitle"),
+                t("practice.mobile.calendarSyncFailedMessage"),
                 [{ text: "OK" }],
               );
             }
@@ -328,8 +330,8 @@ export const PracticeFormScreen: React.FC = () => {
           } catch (syncError) {
             console.warn("カレンダー同期エラー:", syncError);
             Alert.alert(
-              "カレンダー同期に失敗",
-              "練習記録は保存されましたが、カレンダーへの同期に失敗しました。",
+              t("practice.mobile.calendarSyncFailedTitle"),
+              t("practice.mobile.calendarSyncFailedMessage"),
               [{ text: "OK" }],
             );
           }
@@ -344,7 +346,7 @@ export const PracticeFormScreen: React.FC = () => {
       }
     } catch (error) {
       console.error("保存エラー:", error);
-      Alert.alert("エラー", error instanceof Error ? error.message : "保存に失敗しました", [
+      Alert.alert(t("common.error"), error instanceof Error ? error.message : t("practice.mobile.saveFailed"), [
         { text: "OK" },
       ]);
     } finally {
@@ -373,7 +375,7 @@ export const PracticeFormScreen: React.FC = () => {
 
       // accessToken が null の場合は mutation 実行前に早期リターン
       if (!accessToken) {
-        Alert.alert("エラー", "セッションが無効です。再ログインしてください。", [{ text: "OK" }]);
+        Alert.alert(t("common.error"), t("practice.mobile.sessionInvalid"), [{ text: "OK" }]);
         return;
       }
 
@@ -432,8 +434,8 @@ export const PracticeFormScreen: React.FC = () => {
             } catch (syncError) {
               console.warn("カレンダー同期エラー:", syncError);
               Alert.alert(
-                "カレンダー同期に失敗",
-                "練習記録は保存されましたが、カレンダーへの同期に失敗しました。",
+                t("practice.mobile.calendarSyncFailedTitle"),
+                t("practice.mobile.calendarSyncFailedMessage"),
                 [{ text: "OK" }],
               );
             }
@@ -493,8 +495,8 @@ export const PracticeFormScreen: React.FC = () => {
           } catch (syncError) {
             console.warn("カレンダー同期エラー:", syncError);
             Alert.alert(
-              "カレンダー同期に失敗",
-              "練習記録は保存されましたが、カレンダーへの同期に失敗しました。",
+              t("practice.mobile.calendarSyncFailedTitle"),
+              t("practice.mobile.calendarSyncFailedMessage"),
               [{ text: "OK" }],
             );
           }
@@ -512,7 +514,7 @@ export const PracticeFormScreen: React.FC = () => {
       }
     } catch (error) {
       console.error("保存エラー:", error);
-      Alert.alert("エラー", error instanceof Error ? error.message : "保存に失敗しました", [
+      Alert.alert(t("common.error"), error instanceof Error ? error.message : t("practice.mobile.saveFailed"), [
         { text: "OK" },
       ]);
     } finally {
@@ -531,7 +533,7 @@ export const PracticeFormScreen: React.FC = () => {
   if (loadingPractice) {
     return (
       <View style={styles.container}>
-        <LoadingSpinner fullScreen message="練習記録を読み込み中..." />
+        <LoadingSpinner fullScreen message={t("practice.mobile.loading")} />
       </View>
     );
   }
@@ -546,7 +548,7 @@ export const PracticeFormScreen: React.FC = () => {
         {/* 日付 */}
         <View style={styles.field}>
           <Text style={styles.label}>
-            日付 <Text style={styles.required}>*</Text>
+            {t("practice.form.dateLabel")} <Text style={styles.required}>*</Text>
           </Text>
           <TextInput
             style={[styles.input, errors.date && styles.inputError]}
@@ -557,7 +559,7 @@ export const PracticeFormScreen: React.FC = () => {
                 clearErrors();
               }
             }}
-            placeholder="YYYY-MM-DD"
+            placeholder={t("practice.form.datePlaceholder")}
             placeholderTextColor="#9CA3AF"
             editable={!storeLoading}
           />
@@ -566,12 +568,12 @@ export const PracticeFormScreen: React.FC = () => {
 
         {/* タイトル */}
         <View style={styles.field}>
-          <Text style={styles.label}>タイトル</Text>
+          <Text style={styles.label}>{t("practice.form.titleLabel")}</Text>
           <TextInput
             style={styles.input}
             value={title || ""}
             onChangeText={setTitle}
-            placeholder="練習タイトル（任意）"
+            placeholder={t("practice.form.titlePlaceholder")}
             placeholderTextColor="#9CA3AF"
             editable={!storeLoading}
           />
@@ -579,12 +581,12 @@ export const PracticeFormScreen: React.FC = () => {
 
         {/* 場所 */}
         <View style={styles.field}>
-          <Text style={styles.label}>場所</Text>
+          <Text style={styles.label}>{t("practice.form.placeLabel")}</Text>
           <TextInput
             style={styles.input}
             value={place || ""}
             onChangeText={setPlace}
-            placeholder="練習場所（任意）"
+            placeholder={t("practice.form.placePlaceholder")}
             placeholderTextColor="#9CA3AF"
             editable={!storeLoading}
           />
@@ -592,12 +594,12 @@ export const PracticeFormScreen: React.FC = () => {
 
         {/* メモ */}
         <View style={styles.field}>
-          <Text style={styles.label}>メモ</Text>
+          <Text style={styles.label}>{t("practice.modal.memo")}</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
             value={note || ""}
             onChangeText={setNote}
-            placeholder="メモ（任意）"
+            placeholder={t("practice.form.memoPlaceholder")}
             placeholderTextColor="#9CA3AF"
             multiline
             numberOfLines={4}
@@ -614,7 +616,7 @@ export const PracticeFormScreen: React.FC = () => {
               onImagesChange={handleImagesChange}
               maxImages={3}
               disabled={storeLoading}
-              label="画像"
+              label={t("practice.form.imagesLabel")}
             />
           ) : (
             <PremiumBadge message={PREMIUM_MESSAGES.image_upload} />
@@ -628,7 +630,7 @@ export const PracticeFormScreen: React.FC = () => {
             onPress={handleCancel}
             disabled={storeLoading}
           >
-            <Text style={styles.cancelButtonText}>キャンセル</Text>
+            <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
           </Pressable>
           <Pressable
             style={[styles.button, styles.saveButton, storeLoading && styles.buttonDisabled]}
@@ -638,7 +640,7 @@ export const PracticeFormScreen: React.FC = () => {
             {storeLoading ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Text style={styles.saveButtonText}>保存</Text>
+              <Text style={styles.saveButtonText}>{t("common.save")}</Text>
             )}
           </Pressable>
         </View>
@@ -652,7 +654,7 @@ export const PracticeFormScreen: React.FC = () => {
           {storeLoading ? (
             <ActivityIndicator size="small" color="#2563EB" />
           ) : (
-            <Text style={styles.continueButtonText}>続けて練習ログを作成</Text>
+            <Text style={styles.continueButtonText}>{t("practice.form.continueToLog")}</Text>
           )}
         </Pressable>
       </View>

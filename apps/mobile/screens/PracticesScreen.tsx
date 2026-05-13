@@ -13,6 +13,7 @@ import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { usePracticeFilterStore } from "@/stores/practiceFilterStore";
 import { useShallow } from "zustand/react/shallow";
+import { useTranslation } from "react-i18next";
 import type { MainStackParamList } from "@/navigation/types";
 import type { PracticeWithLogs, PracticeTag } from "@swim-hub/shared/types";
 import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
@@ -26,6 +27,7 @@ type PracticesScreenNavigationProp = NativeStackNavigationProp<MainStackParamLis
 export const PracticesScreen: React.FC = () => {
   const navigation = useNavigation<PracticesScreenNavigationProp>();
   const { supabase } = useAuth();
+  const { t } = useTranslation();
 
   // タグフィルターストア
   const { selectedTagIds, showTagFilter, setSelectedTags, toggleTagFilter } =
@@ -161,7 +163,7 @@ export const PracticesScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
         <ErrorView
-          message={error.message || "練習記録の取得に失敗しました"}
+          message={error.message || t("practice.mobile.fetchFailed")}
           onRetry={() => refetch()}
           fullScreen
         />
@@ -173,7 +175,7 @@ export const PracticesScreen: React.FC = () => {
   if (isLoading && allPractices.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-        <LoadingSpinner fullScreen message="練習記録を読み込み中..." />
+        <LoadingSpinner fullScreen message={t("practice.mobile.loading")} />
       </SafeAreaView>
     );
   }
@@ -183,7 +185,7 @@ export const PracticesScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>練習記録がありません</Text>
+          <Text style={styles.emptyText}>{t("practice.page.emptyTitle")}</Text>
         </View>
       </SafeAreaView>
     );
@@ -194,7 +196,7 @@ export const PracticesScreen: React.FC = () => {
       {/* タグフィルターUI */}
       <View style={styles.filterContainer}>
         <Pressable style={styles.filterToggleButton} onPress={toggleTagFilter}>
-          <Text style={styles.filterToggleButtonText}>タグでフィルター</Text>
+          <Text style={styles.filterToggleButtonText}>{t("practice.page.filterByTag")}</Text>
         </Pressable>
 
         {/* タグフィルタリングUI */}
@@ -228,13 +230,13 @@ export const PracticesScreen: React.FC = () => {
               ))}
               {selectedTagIds.length > 0 && (
                 <Pressable style={styles.clearButton} onPress={handleClearTags}>
-                  <Text style={styles.clearButtonText}>クリア</Text>
+                  <Text style={styles.clearButtonText}>{t("practice.page.clearFilter")}</Text>
                 </Pressable>
               )}
             </ScrollView>
             {selectedTagIds.length > 0 && (
               <Text style={styles.filterInfoText}>
-                {selectedTagIds.length}個のタグでフィルタリング中
+                {t("practice.page.filteringWith", { n: selectedTagIds.length })}
               </Text>
             )}
           </View>
@@ -259,13 +261,13 @@ export const PracticesScreen: React.FC = () => {
         ListFooterComponent={
           isFetchingNextPage ? (
             <View style={styles.footerLoader}>
-              <LoadingSpinner size="small" message="読み込み中..." />
+              <LoadingSpinner size="small" message={t("common.loading")} />
             </View>
           ) : null
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>練習記録がありません</Text>
+            <Text style={styles.emptyText}>{t("practice.page.emptyTitle")}</Text>
           </View>
         }
       />
