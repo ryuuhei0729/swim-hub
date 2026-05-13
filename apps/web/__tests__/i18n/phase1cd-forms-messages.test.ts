@@ -58,8 +58,8 @@
  */
 
 import { describe, it, expect, test } from "vitest";
-import jaMessages from "../../messages/ja.json";
-import enMessages from "../../messages/en.json";
+import jaMessages from "../../../shared/messages/ja.json";
+import enMessages from "../../../shared/messages/en.json";
 
 // ---------------------------------------------------------------------------
 // ヘルパー: ネストしたキーをフラットなパスで列挙
