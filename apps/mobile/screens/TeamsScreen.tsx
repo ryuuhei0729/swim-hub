@@ -4,6 +4,7 @@ import { FlashList } from "@shopify/flash-list";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import { TeamItem, TeamCreateModal, TeamJoinModal } from "@/components/teams";
@@ -22,6 +23,7 @@ type TeamsScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>;
 export const TeamsScreen: React.FC = () => {
   const navigation = useNavigation<TeamsScreenNavigationProp>();
   const { supabase } = useAuth();
+  const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
@@ -107,7 +109,7 @@ export const TeamsScreen: React.FC = () => {
 
   // エラー状態
   if (isError && error) {
-    const errorMessage = error instanceof Error ? error.message : "チーム一覧の取得に失敗しました";
+    const errorMessage = error instanceof Error ? error.message : t("teams.mobile.fetchListFailed");
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
         <ErrorView message={errorMessage} onRetry={() => refetch()} fullScreen />
@@ -119,7 +121,7 @@ export const TeamsScreen: React.FC = () => {
   if (isLoading && teams.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-        <LoadingSpinner fullScreen message="チーム一覧を読み込み中..." />
+        <LoadingSpinner fullScreen message={t("teams.mobile.loadingList")} />
       </SafeAreaView>
     );
   }

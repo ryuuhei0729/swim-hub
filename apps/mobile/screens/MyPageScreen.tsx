@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useUserQuery } from "@apps/shared/hooks/queries/user";
 import { useBestTimesQuery } from "@apps/shared/hooks/queries/records";
@@ -21,6 +22,7 @@ import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
 export const MyPageScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { supabase, user } = useAuth();
+  const { t } = useTranslation();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -125,7 +127,7 @@ export const MyPageScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
         <ErrorView
-          message={error.message || "データの取得に失敗しました"}
+          message={error.message || t("mypage.mobile.dataFetchFailed")}
           onRetry={() => {
             refetchProfile();
             refetchBestTimes();
@@ -140,7 +142,7 @@ export const MyPageScreen: React.FC = () => {
   if (isLoading && !profile) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-        <LoadingSpinner fullScreen message="データを読み込み中..." />
+        <LoadingSpinner fullScreen message={t("mypage.mobile.loadingData")} />
       </SafeAreaView>
     );
   }
@@ -189,7 +191,7 @@ export const MyPageScreen: React.FC = () => {
           {bestTimesError ? (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>
-                {bestTimesErrorMessage || "ベストタイムの取得に失敗しました"}
+                {bestTimesErrorMessage || t("mypage.mobile.bestTimesFetchFailed")}
               </Text>
             </View>
           ) : (
@@ -202,7 +204,7 @@ export const MyPageScreen: React.FC = () => {
           style={styles.settingsButton}
           onPress={() => navigation.navigate("Settings")}
           accessibilityRole="button"
-          accessibilityLabel="設定画面を開く"
+          accessibilityLabel={t("mypage.mobile.settingsButtonAria")}
         >
           <Feather name="settings" size={18} color="#6B7280" />
           <Text style={styles.settingsButtonText}>設定</Text>

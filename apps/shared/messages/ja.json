@@ -724,6 +724,12 @@
     }
   },
   "mypage": {
+    "mobile": {
+      "dataFetchFailed": "データの取得に失敗しました",
+      "loadingData": "データを読み込み中...",
+      "bestTimesFetchFailed": "ベストタイムの取得に失敗しました",
+      "settingsButtonAria": "設定画面を開く"
+    },
     "title": "マイページ",
     "subtitle": "プロフィールとベストタイムを管理します",
     "settingsLink": "設定",
@@ -1636,6 +1642,16 @@
     }
   },
   "teams": {
+    "mobile": {
+      "fetchListFailed": "チーム一覧の取得に失敗しました",
+      "loadingList": "チーム一覧を読み込み中...",
+      "fetchTeamFailed": "チーム情報の取得に失敗しました",
+      "loadingTeam": "チーム情報を読み込み中...",
+      "copyFailed": "コピーに失敗しました",
+      "tabGroupManagement": "グループ管理",
+      "tabPracticeManagement": "練習管理",
+      "tabCompetitionManagement": "大会管理"
+    },
     "page": {
       "title": "マイチーム",
       "description": "参加しているチームの一覧"

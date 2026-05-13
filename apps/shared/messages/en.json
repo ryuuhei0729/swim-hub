@@ -724,6 +724,12 @@
     }
   },
   "mypage": {
+    "mobile": {
+      "dataFetchFailed": "Failed to fetch data",
+      "loadingData": "Loading data...",
+      "bestTimesFetchFailed": "Failed to fetch best times",
+      "settingsButtonAria": "Open settings"
+    },
     "title": "My Page",
     "subtitle": "Manage your profile and best times",
     "settingsLink": "Settings",
@@ -1636,6 +1642,16 @@
     }
   },
   "teams": {
+    "mobile": {
+      "fetchListFailed": "Failed to fetch team list",
+      "loadingList": "Loading team list...",
+      "fetchTeamFailed": "Failed to fetch team info",
+      "loadingTeam": "Loading team info...",
+      "copyFailed": "Failed to copy",
+      "tabGroupManagement": "Group Management",
+      "tabPracticeManagement": "Practice Management",
+      "tabCompetitionManagement": "Competition Management"
+    },
     "page": {
       "title": "My Teams",
       "description": "List of teams you have joined"
