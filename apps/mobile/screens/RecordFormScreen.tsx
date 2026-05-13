@@ -18,6 +18,7 @@ import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import {
   useCreateRecordMutation,
@@ -54,6 +55,7 @@ export const RecordFormScreen: React.FC = () => {
   const { recordId, competitionId: routeCompetitionId } = route.params || {};
   const { supabase, subscription, getAccessToken } = useAuth();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const isEditMode = !!recordId;
   const isPremium = checkIsPremium(subscription);
 
@@ -344,7 +346,7 @@ export const RecordFormScreen: React.FC = () => {
 
       // accessToken が null の場合は mutation 実行前に早期リターン
       if (!accessToken) {
-        Alert.alert("エラー", "セッションが無効です。再ログインしてください。", [{ text: "OK" }]);
+        Alert.alert(t("common.error"), t("practice.mobile.sessionInvalid"), [{ text: "OK" }]);
         isSubmittingRef.current = false;
         setLoading(false);
         return;
@@ -384,8 +386,8 @@ export const RecordFormScreen: React.FC = () => {
           const videoToken = await getAccessToken();
           if (!videoToken) {
             Alert.alert(
-              "動画アップロード失敗",
-              "動画アップロード失敗: セッションが無効です。再ログインしてください。",
+              t("recordMobile.videoUploadFailedTitle"),
+              t("recordMobile.videoUploadFailedSession"),
             );
           } else {
             try {
@@ -398,10 +400,10 @@ export const RecordFormScreen: React.FC = () => {
               });
             } catch (err) {
               console.error("動画アップロードエラー:", err);
-              const errorDetail = err instanceof Error ? err.message : "不明なエラー";
+              const errorDetail = err instanceof Error ? err.message : t("common.error");
               Alert.alert(
-                "動画アップロード失敗",
-                `大会記録は保存されましたが、動画のアップロードに失敗しました。\n\n詳細: ${errorDetail}\n\n詳細画面から再度追加してください。`,
+                t("recordMobile.videoUploadFailedTitle"),
+                `${t("recordMobile.videoUploadFailedSaved")}\n\n${errorDetail}`,
               );
             }
           }
@@ -482,7 +484,7 @@ export const RecordFormScreen: React.FC = () => {
           }
           // レコードは保存済みなので、画像エラーは警告として表示
           console.error("画像処理エラー:", imageError);
-          Alert.alert("警告", "レコードは保存されましたが、画像の処理に失敗しました", [
+          Alert.alert(t("recordMobile.imageProcessingFailedTitle"), t("recordMobile.imageProcessingFailed"), [
             { text: "OK" },
           ]);
         }
@@ -504,7 +506,7 @@ export const RecordFormScreen: React.FC = () => {
           console.error("画像ロールバックエラー:", rollbackError);
         }
       }
-      Alert.alert("エラー", error instanceof Error ? error.message : "保存に失敗しました", [
+      Alert.alert(t("common.error"), error instanceof Error ? error.message : t("recordMobile.saveFailed"), [
         { text: "OK" },
       ]);
     } finally {
@@ -741,7 +743,7 @@ export const RecordFormScreen: React.FC = () => {
   if (loadingRecord || loadingStyles) {
     return (
       <View style={styles.container}>
-        <LoadingSpinner fullScreen message="データを読み込み中..." />
+        <LoadingSpinner fullScreen message={t("recordMobile.loadingData")} />
       </View>
     );
   }

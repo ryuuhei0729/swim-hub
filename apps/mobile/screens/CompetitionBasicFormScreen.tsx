@@ -15,6 +15,7 @@ import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { format, parseISO, isValid, isBefore } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import {
   useCreateCompetitionMutation,
@@ -34,9 +35,10 @@ import type { MainStackParamList } from "@/navigation/types";
 type CompetitionFormScreenRouteProp = RouteProp<MainStackParamList, "CompetitionForm">;
 type CompetitionFormScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
-const POOL_TYPES = [
-  { value: 0, label: "短水路 (25m)" },
-  { value: 1, label: "長水路 (50m)" },
+type PoolTypeOption = { value: number; labelKey: string };
+const POOL_TYPES: PoolTypeOption[] = [
+  { value: 0, labelKey: "competition.form.poolTypeShort" },
+  { value: 1, labelKey: "competition.form.poolTypeLong" },
 ];
 
 /**
@@ -50,6 +52,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
   const { supabase, subscription, getAccessToken } = useAuth();
   const isPremium = checkIsPremium(subscription);
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   // ユーザープロフィール取得（iOSカレンダー設定確認用）
   const { profile } = useUserQuery(supabase, { enableRealtime: false });
@@ -104,7 +107,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        if (!user) throw new Error("認証が必要です");
+        if (!user) throw new Error(t("auth.errorMap.sessionNotFound"));
 
         const { data: competition, error } = await supabase
           .from("competitions")
@@ -117,7 +120,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
         if (error) {
           if (error.code === "PGRST116") {
             // 大会が見つからない場合
-            Alert.alert("エラー", "大会が見つかりませんでした");
+            Alert.alert(t("common.error"), t("competition.mobile.notFound"));
             navigation.goBack();
             return;
           }
@@ -142,7 +145,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
       } catch (error) {
         if (!isMounted) return;
         console.error("大会取得エラー:", error);
-        Alert.alert("エラー", "大会情報の取得に失敗しました");
+        Alert.alert(t("common.error"), t("competition.mobile.fetchFailed"));
         navigation.goBack();
       } finally {
         if (isMounted) {
@@ -164,11 +167,11 @@ export const CompetitionBasicFormScreen: React.FC = () => {
 
     // 日付のバリデーション
     if (!date || date.trim() === "") {
-      newErrors.date = "日付を入力してください";
+      newErrors.date = t("competition.form.dateRequired");
     } else {
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
       if (!dateRegex.test(date)) {
-        newErrors.date = "日付はYYYY-MM-DD形式で入力してください";
+        newErrors.date = t("competition.form.dateFormatInvalid");
       }
     }
 
@@ -177,12 +180,12 @@ export const CompetitionBasicFormScreen: React.FC = () => {
       // フォーマット検証（YYYY-MM-DD）
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
       if (!dateRegex.test(endDate)) {
-        newErrors.endDate = "日付はYYYY-MM-DD形式で入力してください";
+        newErrors.endDate = t("competition.form.dateFormatInvalid");
       } else {
         // 日付として有効か確認
         const parsedEndDate = parseISO(endDate);
         if (!isValid(parsedEndDate)) {
-          newErrors.endDate = "有効な日付を入力してください";
+          newErrors.endDate = t("competition.form.dateInvalid");
         } else {
           // 開始日が有効な場合のみ比較
           if (date && date.trim() !== "") {
@@ -192,7 +195,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
               if (isValid(parsedStartDate)) {
                 // 終了日が開始日より前でないか確認
                 if (isBefore(parsedEndDate, parsedStartDate)) {
-                  newErrors.endDate = "終了日は開始日以降の日付を指定してください";
+                  newErrors.endDate = t("competition.form.endBeforeStart");
                 }
               }
             }
@@ -212,7 +215,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
     // stale な user state より先に呼び、リフレッシュのチャンスを与える
     const accessToken = await getAccessToken();
     if (!accessToken) {
-      throw new Error("セッションが無効です。再ログインしてください。");
+      throw new Error(t("practice.mobile.sessionInvalid"));
     }
 
     if (competitionId) {
@@ -271,8 +274,8 @@ export const CompetitionBasicFormScreen: React.FC = () => {
         } catch (syncError) {
           console.warn("カレンダー同期エラー:", syncError);
           Alert.alert(
-            "カレンダー同期に失敗",
-            "大会情報は保存されましたが、カレンダーへの同期に失敗しました。",
+            t("competition.mobile.calendarSyncFailedTitle"),
+            t("competition.mobile.calendarSyncFailedMessage"),
             [{ text: "OK" }],
           );
         }
@@ -330,8 +333,8 @@ export const CompetitionBasicFormScreen: React.FC = () => {
         } catch (syncError) {
           console.warn("カレンダー同期エラー:", syncError);
           Alert.alert(
-            "カレンダー同期に失敗",
-            "大会情報は保存されましたが、カレンダーへの同期に失敗しました。",
+            t("competition.mobile.calendarSyncFailedTitle"),
+            t("competition.mobile.calendarSyncFailedMessage"),
             [{ text: "OK" }],
           );
         }
@@ -357,7 +360,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
       navigation.popToTop();
     } catch (error) {
       console.error("保存エラー:", error);
-      Alert.alert("エラー", error instanceof Error ? error.message : "保存に失敗しました", [
+      Alert.alert(t("common.error"), error instanceof Error ? error.message : t("competition.mobile.saveFailed"), [
         { text: "OK" },
       ]);
     } finally {
@@ -389,7 +392,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
       });
     } catch (error) {
       console.error("保存エラー:", error);
-      Alert.alert("エラー", error instanceof Error ? error.message : "保存に失敗しました", [
+      Alert.alert(t("common.error"), error instanceof Error ? error.message : t("competition.mobile.saveFailed"), [
         { text: "OK" },
       ]);
     } finally {
@@ -422,7 +425,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
       });
     } catch (error) {
       console.error("保存エラー:", error);
-      Alert.alert("エラー", error instanceof Error ? error.message : "保存に失敗しました", [
+      Alert.alert(t("common.error"), error instanceof Error ? error.message : t("competition.mobile.saveFailed"), [
         { text: "OK" },
       ]);
     } finally {
@@ -450,7 +453,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
   if (loadingCompetition) {
     return (
       <View style={styles.container}>
-        <LoadingSpinner fullScreen message="大会情報を読み込み中..." />
+        <LoadingSpinner fullScreen message={t("competition.mobile.loadingInfo")} />
       </View>
     );
   }
@@ -466,7 +469,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
           <View style={styles.dateRow}>
             <View style={styles.dateColumn}>
               <Text style={styles.label}>
-                開始日 <Text style={styles.required}>*</Text>
+                {t("competition.form.startDateLabel")} <Text style={styles.required}>*</Text>
               </Text>
               <TextInput
                 style={[styles.input, styles.dateInput, errors.date && styles.inputError]}
@@ -480,7 +483,8 @@ export const CompetitionBasicFormScreen: React.FC = () => {
 
             <View style={styles.dateColumn}>
               <Text style={styles.label}>
-                終了日 <Text style={styles.optional}>(複数日の場合)</Text>
+                {t("competition.form.endDateLabel")}{" "}
+                <Text style={styles.optional}>{t("competition.form.multiDayHint")}</Text>
               </Text>
               <TextInput
                 style={[styles.input, styles.dateInput, errors.endDate && styles.inputError]}
@@ -496,24 +500,24 @@ export const CompetitionBasicFormScreen: React.FC = () => {
 
         {/* 大会名 */}
         <View style={styles.section}>
-          <Text style={styles.label}>大会名</Text>
+          <Text style={styles.label}>{t("competition.form.nameLabel")}</Text>
           <TextInput
             style={styles.input}
             value={title}
             onChangeText={setTitle}
-            placeholder="例: 全国大会, 対抗戦, タイムトライアル"
+            placeholder={t("competition.form.namePlaceholder")}
             editable={!loading}
           />
         </View>
 
         {/* 場所 */}
         <View style={styles.section}>
-          <Text style={styles.label}>場所</Text>
+          <Text style={styles.label}>{t("competition.form.placeLabel")}</Text>
           <TextInput
             style={styles.input}
             value={place}
             onChangeText={setPlace}
-            placeholder="例: 東京アクアティクスセンター"
+            placeholder={t("competition.form.placePlaceholder")}
             editable={!loading}
           />
         </View>
@@ -521,7 +525,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
         {/* プール種別 */}
         <View style={styles.section}>
           <Text style={styles.label}>
-            プール種別 <Text style={styles.required}>*</Text>
+            {t("competition.form.poolTypeLabel")} <Text style={styles.required}>*</Text>
           </Text>
           <View style={styles.pickerContainer}>
             {POOL_TYPES.map((type) => (
@@ -540,7 +544,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
                     poolType === type.value && styles.pickerOptionTextSelected,
                   ]}
                 >
-                  {type.label}
+                  {t(type.labelKey)}
                 </Text>
               </Pressable>
             ))}
@@ -549,12 +553,12 @@ export const CompetitionBasicFormScreen: React.FC = () => {
 
         {/* メモ */}
         <View style={styles.section}>
-          <Text style={styles.label}>メモ</Text>
+          <Text style={styles.label}>{t("competition.form.memoLabel")}</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
             value={note}
             onChangeText={setNote}
-            placeholder="大会に関するメモ（任意）"
+            placeholder={t("competition.form.memoPlaceholder")}
             multiline
             numberOfLines={3}
             editable={!loading}
@@ -569,7 +573,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
               onImagesChange={handleImagesChange}
               maxImages={3}
               disabled={loading}
-              label="画像"
+              label={t("competition.form.imagesLabel")}
             />
           ) : (
             <PremiumBadge message={PREMIUM_MESSAGES.image_upload} />
@@ -585,7 +589,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
             onPress={handleCancel}
             disabled={loading}
           >
-            <Text style={styles.cancelButtonText}>キャンセル</Text>
+            <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
           </Pressable>
           <Pressable
             style={[styles.button, styles.saveButton, loading && styles.buttonDisabled]}
@@ -595,7 +599,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
             {loading ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Text style={styles.saveButtonText}>保存</Text>
+              <Text style={styles.saveButtonText}>{t("common.save")}</Text>
             )}
           </Pressable>
         </View>
@@ -610,7 +614,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
             {loading ? (
               <ActivityIndicator size="small" color="#2563EB" />
             ) : (
-              <Text style={styles.continueButtonText}>続けて記録を入力</Text>
+              <Text style={styles.continueButtonText}>{t("competition.mobile.continueToRecord")}</Text>
             )}
           </Pressable>
         ) : (
@@ -622,7 +626,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
             {loading ? (
               <ActivityIndicator size="small" color="#2563EB" />
             ) : (
-              <Text style={styles.continueButtonText}>続けてエントリーを作成</Text>
+              <Text style={styles.continueButtonText}>{t("competition.mobile.continueToEntry")}</Text>
             )}
           </Pressable>
         )}

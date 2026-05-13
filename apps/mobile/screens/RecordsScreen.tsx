@@ -15,6 +15,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { format, parseISO, isValid } from "date-fns";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useRecordsQuery, useBestTimesQuery } from "@apps/shared/hooks/queries/records";
 import { useRecordStore } from "@/stores/recordStore";
@@ -44,6 +45,7 @@ const getFiscalYear = (date: Date): number => {
 export const RecordsScreen: React.FC = () => {
   const navigation = useNavigation<RecordsScreenNavigationProp>();
   const { supabase, user } = useAuth();
+  const { t } = useTranslation();
   const [page, setPage] = useState(1);
   const [refreshing, setRefreshing] = useState(false);
   const [allRecords, setAllRecords] = useState<RecordWithDetails[]>([]);
@@ -299,23 +301,23 @@ export const RecordsScreen: React.FC = () => {
 
   // 選択済み種目名を取得
   const selectedStyleName = useMemo(() => {
-    if (!filterStyleId) return "全種目";
+    if (!filterStyleId) return t("recordMobile.filterAllStyles");
     const style = styleList.find((s) => s.id === filterStyleId);
-    return style?.name_jp || "全種目";
-  }, [filterStyleId, styleList]);
+    return style?.name_jp || t("recordMobile.filterAllStyles");
+  }, [filterStyleId, styleList, t]);
 
   // 選択済み年度名を取得
   const selectedYearName = useMemo(() => {
-    if (!filterFiscalYear) return "全期間";
-    return `${filterFiscalYear}年度`;
-  }, [filterFiscalYear]);
+    if (!filterFiscalYear) return t("recordMobile.filterAllPeriods");
+    return t("recordMobile.filterYearFormat", { year: filterFiscalYear });
+  }, [filterFiscalYear, t]);
 
   // エラー状態
   if (isError && error) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
         <ErrorView
-          message={error.message || "大会記録の取得に失敗しました"}
+          message={error.message || t("recordMobile.fetchFailed")}
           onRetry={() => refetch()}
           fullScreen
         />
@@ -327,7 +329,7 @@ export const RecordsScreen: React.FC = () => {
   if (isLoading && displayRecords.length === 0 && allRecords.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-        <LoadingSpinner fullScreen message="大会記録を読み込み中..." />
+        <LoadingSpinner fullScreen message={t("recordMobile.loading")} />
       </SafeAreaView>
     );
   }
@@ -357,9 +359,9 @@ export const RecordsScreen: React.FC = () => {
           <View style={styles.poolTabs}>
             {(
               [
-                { value: null, label: "全て" },
-                { value: 0, label: "短水路" },
-                { value: 1, label: "長水路" },
+                { value: null, label: t("recordMobile.tabAll") },
+                { value: 0, label: t("recordMobile.poolTypeShort") },
+                { value: 1, label: t("recordMobile.poolTypeLong") },
               ] as const
             ).map((tab) => (
               <Pressable
@@ -385,11 +387,11 @@ export const RecordsScreen: React.FC = () => {
             <View style={[styles.checkbox, includeRelay && styles.checkboxChecked]}>
               {includeRelay && <Text style={styles.checkboxMark}>✓</Text>}
             </View>
-            <Text style={styles.checkboxLabel}>引き継ぎ含</Text>
+            <Text style={styles.checkboxLabel}>{t("recordMobile.tabIncludeRelay")}</Text>
           </Pressable>
           {hasActiveFilter && (
             <Pressable style={styles.resetButton} onPress={resetFilter}>
-              <Text style={styles.resetButtonText}>リセット</Text>
+              <Text style={styles.resetButtonText}>{t("recordMobile.buttonReset")}</Text>
             </Pressable>
           )}
         </View>
@@ -412,7 +414,7 @@ export const RecordsScreen: React.FC = () => {
         onEndReachedThreshold={0.5}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>大会記録がありません</Text>
+            <Text style={styles.emptyText}>{t("recordMobile.noRecords")}</Text>
           </View>
         }
         ListFooterComponent={
@@ -442,14 +444,14 @@ export const RecordsScreen: React.FC = () => {
               data={
                 pickerModal === "year"
                   ? [
-                      { id: "", label: "全期間" },
+                      { id: "", label: t("recordMobile.filterAllPeriods") },
                       ...participatedFiscalYears.map((y) => ({
                         id: y.toString(),
-                        label: `${y}年度`,
+                        label: t("recordMobile.filterYearFormat", { year: y }),
                       })),
                     ]
                   : [
-                      { id: "", label: "全種目" },
+                      { id: "", label: t("recordMobile.filterAllStyles") },
                       ...participatedStyles.map((s) => ({ id: s.id.toString(), label: s.name_jp })),
                     ]
               }

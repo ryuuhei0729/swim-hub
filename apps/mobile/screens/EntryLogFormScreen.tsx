@@ -18,6 +18,7 @@ import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { EntryAPI } from "@apps/shared/api/entries";
 import { StyleAPI } from "@apps/shared/api/styles";
@@ -49,6 +50,7 @@ export const EntryLogFormScreen: React.FC = () => {
   const { competitionId, entryId, date } = route.params;
   const { supabase } = useAuth();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const entryApi = useMemo(() => new EntryAPI(supabase), [supabase]);
 
   // フォーム状態
@@ -87,7 +89,7 @@ export const EntryLogFormScreen: React.FC = () => {
         setSwimStyles(stylesData);
       } catch (error) {
         console.error("種目取得エラー:", error);
-        Alert.alert("エラー", "種目の取得に失敗しました");
+        Alert.alert(t("common.error"), t("competition.entry.stylesFetchFailed"));
       } finally {
         setLoadingStyles(false);
       }
@@ -115,7 +117,7 @@ export const EntryLogFormScreen: React.FC = () => {
         try {
           const firstEntry = await entryApi.getEntry(entryId);
           if (!firstEntry || !firstEntry.competition_id) {
-            Alert.alert("エラー", "エントリーデータが見つかりませんでした");
+            Alert.alert(t("common.error"), t("competition.entry.entryDataNotFound"));
             navigation.goBack();
             return;
           }
@@ -129,7 +131,7 @@ export const EntryLogFormScreen: React.FC = () => {
             error && typeof error === "object" && "code" in error ? String(error.code) : undefined;
           if (errorMessage === "アクセスが拒否されました" || errorCode === "PGRST116") {
             // エントリーが見つからない場合
-            Alert.alert("エラー", "エントリーが見つかりませんでした");
+            Alert.alert(t("common.error"), t("competition.entry.entryNotFound"));
             navigation.goBack();
             return;
           }
@@ -147,7 +149,7 @@ export const EntryLogFormScreen: React.FC = () => {
         if (!isMounted) return;
 
         if (!userEntries || userEntries.length === 0) {
-          Alert.alert("エラー", "エントリーデータが見つかりませんでした");
+          Alert.alert(t("common.error"), t("competition.entry.entryDataNotFound"));
           navigation.goBack();
           return;
         }
@@ -164,7 +166,7 @@ export const EntryLogFormScreen: React.FC = () => {
       } catch (error) {
         if (!isMounted) return;
         console.error("エントリー取得エラー:", error);
-        Alert.alert("エラー", "エントリーの取得に失敗しました");
+        Alert.alert(t("common.error"), t("competition.entry.entryFetchFailed"));
         navigation.goBack();
       } finally {
         if (isMounted) {
@@ -209,7 +211,7 @@ export const EntryLogFormScreen: React.FC = () => {
 
     // 少なくとも1つのエントリーが必要
     if (entries.length === 0) {
-      Alert.alert("エラー", "少なくとも1つのエントリーを追加してください");
+      Alert.alert(t("common.error"), t("competition.entry.addAtLeastOne"));
       return false;
     }
 
@@ -473,8 +475,8 @@ export const EntryLogFormScreen: React.FC = () => {
     } catch (error) {
       console.error("エントリー登録エラー:", error);
       Alert.alert(
-        "エラー",
-        error instanceof Error ? error.message : "エントリー登録に失敗しました",
+        t("common.error"),
+        error instanceof Error ? error.message : t("competition.entry.registrationFailed"),
         [{ text: "OK" }],
       );
     } finally {
@@ -516,8 +518,8 @@ export const EntryLogFormScreen: React.FC = () => {
     } catch (error) {
       console.error("エントリー登録エラー:", error);
       Alert.alert(
-        "エラー",
-        error instanceof Error ? error.message : "エントリー登録に失敗しました",
+        t("common.error"),
+        error instanceof Error ? error.message : t("competition.entry.registrationFailed"),
         [{ text: "OK" }],
       );
     } finally {
@@ -542,7 +544,9 @@ export const EntryLogFormScreen: React.FC = () => {
       <View style={styles.container}>
         <LoadingSpinner
           fullScreen
-          message={loadingEntry ? "エントリーを読み込み中..." : "種目を読み込み中..."}
+          message={
+            loadingEntry ? t("competition.mobile.entryLoading") : t("competition.mobile.stylesLoading")
+          }
         />
       </View>
     );

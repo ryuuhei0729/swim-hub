@@ -6,6 +6,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
 import { format, isValid, parseISO } from "date-fns";
 import { ja } from "date-fns/locale";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useRecordByIdQuery, useDeleteRecordMutation } from "@apps/shared/hooks/queries/records";
 import { formatTime } from "@/utils/formatters";
@@ -28,6 +29,7 @@ export const RecordDetailScreen: React.FC = () => {
   const navigation = useNavigation<RecordDetailScreenNavigationProp>();
   const { recordId } = route.params;
   const { supabase } = useAuth();
+  const { t } = useTranslation();
 
   const deleteMutation = useDeleteRecordMutation(supabase);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -52,16 +54,20 @@ export const RecordDetailScreen: React.FC = () => {
 
   const handleDelete = () => {
     if (Platform.OS === "web") {
-      const confirmed = window.confirm("この大会記録を削除しますか？\nこの操作は取り消せません。");
+      const confirmed = window.confirm(t("recordMobile.deleteConfirmMessage"));
       if (!confirmed) return;
       executeDelete();
     } else {
       Alert.alert(
-        "削除確認",
-        "この大会記録を削除しますか？\nこの操作は取り消せません。",
+        t("recordMobile.deleteConfirmTitle"),
+        t("recordMobile.deleteConfirmMessage"),
         [
-          { text: "キャンセル", style: "cancel" },
-          { text: "削除", style: "destructive", onPress: executeDelete },
+          { text: t("common.cancel"), style: "cancel" },
+          {
+            text: t("recordMobile.deleteConfirmButton"),
+            style: "destructive",
+            onPress: executeDelete,
+          },
         ],
         { cancelable: true },
       );
@@ -75,12 +81,11 @@ export const RecordDetailScreen: React.FC = () => {
       navigation.goBack();
     } catch (error) {
       console.error("削除エラー:", error);
+      const msg = error instanceof Error ? error.message : t("recordMobile.deleteFailed");
       if (Platform.OS === "web") {
-        window.alert(error instanceof Error ? error.message : "削除に失敗しました");
+        window.alert(msg);
       } else {
-        Alert.alert("エラー", error instanceof Error ? error.message : "削除に失敗しました", [
-          { text: "OK" },
-        ]);
+        Alert.alert(t("common.error"), msg, [{ text: "OK" }]);
       }
     } finally {
       setIsDeleting(false);
@@ -221,7 +226,7 @@ export const RecordDetailScreen: React.FC = () => {
     return (
       <View style={styles.container}>
         <ErrorView
-          message={error.message || "大会記録の取得に失敗しました"}
+          message={error.message || t("recordMobile.fetchFailed")}
           onRetry={() => refetch()}
           fullScreen
         />
@@ -232,7 +237,7 @@ export const RecordDetailScreen: React.FC = () => {
   if (isLoading && !record) {
     return (
       <View style={styles.container}>
-        <LoadingSpinner fullScreen message="大会記録を読み込み中..." />
+        <LoadingSpinner fullScreen message={t("recordMobile.loading")} />
       </View>
     );
   }
@@ -240,18 +245,21 @@ export const RecordDetailScreen: React.FC = () => {
   if (!record) {
     return (
       <View style={styles.container}>
-        <ErrorView message="大会記録が見つかりませんでした" onRetry={() => refetch()} fullScreen />
+        <ErrorView message={t("recordMobile.notFound")} onRetry={() => refetch()} fullScreen />
       </View>
     );
   }
 
-  const competitionName = record.competition?.title || "大会";
+  const competitionName = record.competition?.title || t("recordMobile.fallbackTitle");
   const recordDate = record.competition?.date || record.created_at;
   const parsedDate = parseISO(recordDate);
   const formattedDate = isValid(parsedDate) ? format(parsedDate, "yyyy年M月d日(E)", { locale: ja }) : "-";
-  const styleName = record.style?.name || record.style?.name_jp || "不明";
+  const styleName = record.style?.name || record.style?.name_jp || t("recordMobile.unknownValue");
   const formattedTime = formatTime(record.time);
-  const poolType = record.competition?.pool_type === 0 ? "短水路(25m)" : "長水路(50m)";
+  const poolType =
+    record.competition?.pool_type === 0
+      ? t("recordMobile.poolTypeShortDetail")
+      : t("recordMobile.poolTypeLongDetail");
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -280,9 +288,9 @@ export const RecordDetailScreen: React.FC = () => {
       <View style={styles.recordCard}>
         {/* ラベル行 */}
         <View style={styles.recordLabelRow}>
-          <Text style={styles.recordLabel}>種目</Text>
-          <Text style={styles.recordLabel}>タイム</Text>
-          <Text style={[styles.recordLabel, { textAlign: "right" }]}>RT</Text>
+          <Text style={styles.recordLabel}>{t("recordMobile.tableHeaderStyle")}</Text>
+          <Text style={styles.recordLabel}>{t("recordMobile.tableHeaderTime")}</Text>
+          <Text style={[styles.recordLabel, { textAlign: "right" }]}>{t("recordMobile.tableHeaderRT")}</Text>
         </View>
         {/* 値行 */}
         <View style={styles.recordValueRow}>
@@ -316,7 +324,7 @@ export const RecordDetailScreen: React.FC = () => {
               onPress={() => setSplitTab("race")}
             >
               <Text style={[styles.tabText, splitTab === "race" && styles.tabTextActive]}>
-                距離別 Lap
+                {t("recordMobile.tabSplit")}
               </Text>
             </Pressable>
             <Pressable
@@ -324,7 +332,7 @@ export const RecordDetailScreen: React.FC = () => {
               onPress={() => setSplitTab("all")}
             >
               <Text style={[styles.tabText, splitTab === "all" && styles.tabTextActive]}>
-                All Lap
+                {t("recordMobile.tabAllLap")}
               </Text>
             </Pressable>
           </View>
@@ -333,11 +341,11 @@ export const RecordDetailScreen: React.FC = () => {
             <>
               {/* 距離別 Lap テーブル */}
               <View style={styles.splitHeaderRow}>
-                <Text style={[styles.splitHeaderCell, styles.splitDistanceCol]}>距離</Text>
-                <Text style={[styles.splitHeaderCell, styles.splitTimeCol]}>Split</Text>
+                <Text style={[styles.splitHeaderCell, styles.splitDistanceCol]}>{t("recordMobile.tableHeaderDistance")}</Text>
+                <Text style={[styles.splitHeaderCell, styles.splitTimeCol]}>{t("recordMobile.tableHeaderSplit")}</Text>
                 {visibleLapIntervals.map((interval) => (
                   <Text key={interval} style={[styles.splitHeaderCell, styles.splitLapCol]}>
-                    {interval}m Lap
+                    {t("recordMobile.tableHeaderLapColumn", { interval })}
                   </Text>
                 ))}
               </View>
@@ -349,7 +357,7 @@ export const RecordDetailScreen: React.FC = () => {
                   <Text
                     style={[styles.splitCell, styles.splitDistanceCol, styles.splitDistanceText]}
                   >
-                    {st.distance}m
+                    {t("recordMobile.distanceDisplay", { distance: st.distance })}
                   </Text>
                   <Text style={[styles.splitCell, styles.splitTimeCol, styles.splitTimeText]}>
                     {formatTime(st.split_time)}
@@ -369,15 +377,15 @@ export const RecordDetailScreen: React.FC = () => {
             <>
               {/* All Lap テーブル */}
               <View style={styles.splitHeaderRow}>
-                <Text style={[styles.splitHeaderCell, styles.splitDistanceCol]}>区間</Text>
-                <Text style={[styles.splitHeaderCell, { flex: 2 }]}>Lap Time</Text>
+                <Text style={[styles.splitHeaderCell, styles.splitDistanceCol]}>{t("recordMobile.tableHeaderSection")}</Text>
+                <Text style={[styles.splitHeaderCell, { flex: 2 }]}>{t("recordMobile.tableHeaderLapTime")}</Text>
               </View>
               {allLapTimes.map((lap, index) => (
                 <View key={index} style={[styles.splitRow, index % 2 === 0 && styles.splitRowEven]}>
                   <Text
                     style={[styles.splitCell, styles.splitDistanceCol, styles.splitDistanceText]}
                   >
-                    {lap.fromDistance}m → {lap.toDistance}m
+                    {t("recordMobile.sectionRange", { from: lap.fromDistance, to: lap.toDistance })}
                   </Text>
                   <Text style={[styles.splitCell, { flex: 2 }, styles.splitTimeText]}>
                     {formatTime(lap.lapTime)}
@@ -392,7 +400,7 @@ export const RecordDetailScreen: React.FC = () => {
       {/* メモ */}
       {record.note && (
         <View style={styles.noteCard}>
-          <Text style={styles.noteLabel}>📝 メモ</Text>
+          <Text style={styles.noteLabel}>{t("recordMobile.memoIcon")}</Text>
           <Text style={styles.noteText}>{record.note}</Text>
         </View>
       )}
@@ -410,7 +418,7 @@ export const RecordDetailScreen: React.FC = () => {
       {/* 添付画像 */}
       {competitionImages.length > 0 && (
         <View style={styles.noteCard}>
-          <Text style={styles.noteLabel}>添付画像</Text>
+          <Text style={styles.noteLabel}>{t("recordMobile.attachedImages")}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
             {competitionImages.map((img, index) => (
               <Pressable
@@ -447,7 +455,7 @@ export const RecordDetailScreen: React.FC = () => {
           disabled={isDeleting}
         >
           <Feather name="edit-2" size={16} color="#FFFFFF" />
-          <Text style={styles.editButtonText}>編集</Text>
+          <Text style={styles.editButtonText}>{t("recordMobile.editButton")}</Text>
         </Pressable>
         <Pressable
           style={[styles.actionButton, styles.deleteButton]}
@@ -455,7 +463,9 @@ export const RecordDetailScreen: React.FC = () => {
           disabled={isDeleting}
         >
           <Feather name="trash-2" size={16} color="#DC2626" />
-          <Text style={styles.deleteButtonText}>{isDeleting ? "削除中..." : "削除"}</Text>
+          <Text style={styles.deleteButtonText}>
+            {isDeleting ? t("recordMobile.deletingButton") : t("recordMobile.deleteButton")}
+          </Text>
         </Pressable>
       </View>
     </ScrollView>

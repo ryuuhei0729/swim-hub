@@ -19,6 +19,7 @@ import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import {
   useCreateRecordMutation,
@@ -71,6 +72,7 @@ export const RecordLogFormScreen: React.FC = () => {
   const { supabase, subscription, getAccessToken } = useAuth();
   const isPremium = checkIsPremium(subscription);
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   // クイック入力フック
   const { parseInput } = useQuickTimeInput();
@@ -118,7 +120,7 @@ export const RecordLogFormScreen: React.FC = () => {
         setSwimStyles(stylesData);
       } catch (error) {
         console.error("種目取得エラー:", error);
-        Alert.alert("エラー", "種目の取得に失敗しました");
+        Alert.alert(t("common.error"), t("competition.entry.stylesFetchFailed"));
       } finally {
         setLoadingStyles(false);
       }
@@ -154,14 +156,14 @@ export const RecordLogFormScreen: React.FC = () => {
           console.error("記録取得エラー - recordId:", recordId);
           if (error.code === "PGRST116") {
             // 記録が見つからない場合
-            Alert.alert("エラー", "記録が見つかりませんでした");
+            Alert.alert(t("common.error"), t("recordMobile.recordNotFound"));
             navigation.goBack();
             return;
           }
           throw error;
         }
         if (!record) {
-          Alert.alert("エラー", "記録データが見つかりませんでした");
+          Alert.alert(t("common.error"), t("recordMobile.recordDataNotFound"));
           navigation.goBack();
           return;
         }
@@ -192,7 +194,7 @@ export const RecordLogFormScreen: React.FC = () => {
       } catch (error) {
         if (!isMounted) return;
         console.error("記録取得エラー:", error);
-        Alert.alert("エラー", "記録の取得に失敗しました");
+        Alert.alert(t("common.error"), t("recordMobile.recordFetchFailed"));
       } finally {
         if (isMounted) {
           setLoadingRecord(false);
@@ -516,7 +518,7 @@ export const RecordLogFormScreen: React.FC = () => {
       if (recordId && formDataList.length > 0) {
         const formData = formDataList[0];
         if (formData.time <= 0) {
-          Alert.alert("エラー", "タイムを入力してください");
+          Alert.alert(t("common.error"), t("recordMobile.form.timeRequired"));
           setLoading(false);
           return;
         }
@@ -634,8 +636,8 @@ export const RecordLogFormScreen: React.FC = () => {
             const videoToken = await getAccessToken();
             if (!videoToken) {
               Alert.alert(
-                "動画アップロード失敗",
-                "動画アップロード失敗: セッションが無効です。再ログインしてください。",
+                t("recordMobile.videoUploadFailedTitle"),
+                t("recordMobile.videoUploadFailedSession"),
               );
             } else {
               try {
@@ -648,10 +650,10 @@ export const RecordLogFormScreen: React.FC = () => {
                 });
               } catch (err) {
                 console.error("動画アップロードエラー:", err);
-                const errorDetail = err instanceof Error ? err.message : "不明なエラー";
+                const errorDetail = err instanceof Error ? err.message : t("common.error");
                 Alert.alert(
-                  "動画アップロード失敗",
-                  `大会記録は保存されましたが、動画のアップロードに失敗しました。\n\n詳細: ${errorDetail}\n\n詳細画面から再度追加してください。`,
+                  t("recordMobile.videoUploadFailedTitle"),
+                  `${t("recordMobile.videoUploadFailedSaved")}\n\n${errorDetail}`,
                 );
               }
             }
@@ -668,9 +670,11 @@ export const RecordLogFormScreen: React.FC = () => {
       navigation.popToTop();
     } catch (error) {
       console.error("保存エラー:", error);
-      Alert.alert("エラー", error instanceof Error ? error.message : "保存に失敗しました", [
-        { text: "OK" },
-      ]);
+      Alert.alert(
+        t("common.error"),
+        error instanceof Error ? error.message : t("recordMobile.saveFailed"),
+        [{ text: "OK" }],
+      );
     } finally {
       isSubmittingRef.current = false;
       setLoading(false);
@@ -682,7 +686,9 @@ export const RecordLogFormScreen: React.FC = () => {
       <View style={styles.container}>
         <LoadingSpinner
           fullScreen
-          message={loadingRecord ? "記録を読み込み中..." : "種目を読み込み中..."}
+          message={
+            loadingRecord ? t("recordMobile.recordLoading") : t("recordMobile.stylesLoading")
+          }
         />
       </View>
     );
