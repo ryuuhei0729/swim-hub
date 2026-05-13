@@ -221,12 +221,18 @@
       "submitButton": "ログイン",
       "loadingButton": "処理中...",
       "loadingMessage": "認証情報を確認中...",
-      "errorTitle": "認証エラーが発生しました"
+      "errorTitle": "認証エラーが発生しました",
+      "emailMethodTitle": "メールでログイン",
+      "emailMethodButton": "Emailでログイン"
     },
     "signup": {
       "title": "アカウント作成",
       "subtitle": "新しいアカウントを作成",
-      "submitButton": "アカウント作成"
+      "submitButton": "アカウント作成",
+      "emailMethodTitle": "メールで登録",
+      "emailMethodButton": "Emailで作成",
+      "welcomeTagline": "SwimHubを始めましょう",
+      "startButton": "さっそく始める"
     },
     "resetPassword": {
       "title": "パスワードリセット",
@@ -241,7 +247,8 @@
       "submitButton": "パスワードを更新",
       "loadingButton": "更新中...",
       "backToLogin": "ログイン画面に戻る",
-      "successMessage": "パスワードを正常に更新しました。"
+      "successMessage": "パスワードを正常に更新しました。",
+      "notLoggedIn": "パスワードを更新するにはログインが必要です。"
     },
     "fields": {
       "email": "メールアドレス",
@@ -252,18 +259,26 @@
       "genderMale": "男性",
       "genderFemale": "女性",
       "newPassword": "新しいパスワード",
-      "confirmPassword": "パスワード確認"
+      "confirmPassword": "パスワード確認",
+      "emailPlaceholder": "your@email.com",
+      "namePlaceholder": "山田太郎",
+      "passwordPlaceholder": "パスワード（6文字以上）",
+      "newPasswordPlaceholder": "新しいパスワード（6文字以上）",
+      "confirmPasswordPlaceholder": "パスワード確認"
     },
     "forgotPassword": "パスワードを忘れた方はこちら",
     "switchToSignup": "アカウントをお持ちでない方はこちら",
     "switchToSignin": "すでにアカウントをお持ちの方はこちら",
     "googleSignin": "Googleでログイン",
-    "googleSignup": "GoogleでサインUP",
+    "googleSignup": "Googleで作成",
     "appleSignin": "Appleでログイン",
-    "appleSignup": "AppleでサインUP",
+    "appleSignup": "Appleで作成",
     "orSeparator": "または",
     "validation": {
       "nameRequired": "名前を入力してください。",
+      "emailRequired": "メールアドレスを入力してください。",
+      "passwordRequired": "パスワードを入力してください。",
+      "newPasswordRequired": "新しいパスワードを入力してください。",
       "passwordMinLength": "パスワードは6文字以上で入力してください。",
       "passwordLowercase": "パスワードに小文字を含めてください。",
       "passwordUppercase": "パスワードに大文字を含めてください。",
@@ -305,6 +320,14 @@
     },
     "backToLogin": "ログイン画面に戻る",
     "logoutConfirmMessage": "ログアウトしますか？",
+    "redirecting": "リダイレクト中...",
+    "legal": {
+      "agreePrefix": "続行することで、",
+      "termsOfService": "利用規約",
+      "conjunction": "と",
+      "privacyPolicy": "プライバシーポリシー",
+      "agreeSuffix": "に同意したものとみなされます。"
+    },
     "errorMap": {
       "accessDenied": "アクセスが拒否されました。",
       "invalidRequest": "無効なリクエストです。",

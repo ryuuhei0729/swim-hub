@@ -1,11 +1,67 @@
 import React, { useMemo, useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { validatePassword, type PasswordChecks } from "@/utils/validatePassword";
 
 interface SignupFormProps {
   onSuccess?: () => void;
+}
+
+type AuthError = {
+  status?: number;
+  code?: string;
+  message?: string;
+  error_description?: string;
+  error?: string;
+};
+
+function formatSignupError(t: TFunction, err: unknown): string {
+  const errorObj: AuthError = err && typeof err === "object" ? (err as AuthError) : {};
+  const status = typeof errorObj.status === "number" ? errorObj.status : undefined;
+  const statusText = status ? ` [status: ${status}]` : "";
+  const rawMsg =
+    (typeof errorObj.message === "string" ? errorObj.message : null) ||
+    (typeof errorObj.error_description === "string" ? errorObj.error_description : null) ||
+    (typeof errorObj.error === "string" ? errorObj.error : null) ||
+    "";
+  const msg = rawMsg.toLowerCase();
+
+  // 登録済みメールアドレス: AuthProvider 側で identities=[] を検出して error 化している
+  if (
+    errorObj.code === "user_already_exists" ||
+    msg.includes("user already registered") ||
+    msg.includes("すでに登録されています")
+  ) {
+    return t("auth.errorMap.emailAlreadyExists");
+  }
+  // パスワード強度エラーの検出を拡張
+  const weakPwdRegex = /\b(pass(word)?).*(weak|too short|at least|characters)\b/i;
+  if (
+    (msg.includes("password") && msg.includes("weak")) ||
+    msg.includes("too short") ||
+    (msg.includes("at least") && msg.includes("characters")) ||
+    (msg.includes("minimum") && msg.includes("characters")) ||
+    weakPwdRegex.test(rawMsg)
+  ) {
+    return t("auth.errors.weakPassword");
+  }
+
+  if (msg.includes("captcha")) {
+    return t("auth.errors.captchaRequired");
+  }
+  if (msg.includes("rate limit") || status === 429) {
+    return t("auth.errors.rateLimitExceeded");
+  }
+  if (msg.includes("network") || msg.includes("connection")) {
+    return t("auth.errors.networkError");
+  }
+
+  return __DEV__ && rawMsg
+    ? `${t("auth.errorMap.defaultError")} (${rawMsg}${statusText})`
+    : t("auth.errorMap.defaultError");
 }
 
 export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
@@ -19,109 +75,50 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
   const passwordValidation = useMemo(() => validatePassword(password), [password]);
 
   const { signUp } = useAuth();
-
-  type AuthError = {
-    status?: number;
-    code?: string;
-    message?: string;
-    error_description?: string;
-    error?: string;
-  };
-
-  const formatAuthError = (err: unknown): string => {
-    const errorObj: AuthError = err && typeof err === "object" ? (err as AuthError) : {};
-    const status = typeof errorObj.status === "number" ? errorObj.status : undefined;
-    const statusText = status ? ` [status: ${status}]` : "";
-    const errMsg =
-      (typeof errorObj.message === "string" ? errorObj.message : null) ||
-      (typeof errorObj.error_description === "string" ? errorObj.error_description : null) ||
-      (typeof errorObj.error === "string" ? errorObj.error : null) ||
-      "不明なエラーが発生しました。";
-
-    // エラーメッセージの日本語化と補足ヒント
-    if (typeof errMsg === "string") {
-      const msg = errMsg.toLowerCase();
-
-      // 登録済みメールアドレス: AuthProvider 側で identities=[] を検出して error 化している
-      if (
-        errorObj.code === "user_already_exists" ||
-        msg.includes("user already registered") ||
-        msg.includes("すでに登録されています")
-      ) {
-        return "このメールアドレスはすでに登録されています。ログイン画面からサインインするか、パスワードをお忘れの場合は再設定してください。";
-      }
-      // パスワード強度エラーの検出を拡張
-      const weakPwdRegex = /\b(pass(word)?).*(weak|too short|at least|characters)\b/i;
-      if (
-        (msg.includes("password") && msg.includes("weak")) ||
-        msg.includes("too short") ||
-        (msg.includes("at least") && msg.includes("characters")) ||
-        (msg.includes("minimum") && msg.includes("characters")) ||
-        weakPwdRegex.test(errMsg)
-      ) {
-        return "パスワードが弱すぎます。より強力なパスワードを設定してください。";
-      }
-
-      // 共通エラーの処理
-      if (msg.includes("captcha")) {
-        return "Captcha認証が必要です。Captchaを完了してから再度お試しください。";
-      }
-      if (msg.includes("rate limit") || status === 429) {
-        return "リクエスト制限に達しました。しばらく時間をおいてから再度お試しください。";
-      }
-      if (msg.includes("network") || msg.includes("connection")) {
-        return "ネットワークエラーが発生しました。インターネット接続を確認してから再度お試しください。";
-      }
-    }
-
-    // デフォルトのエラーメッセージ
-    return __DEV__
-      ? `エラーが発生しました: ${errMsg}${statusText}`
-      : "エラーが発生しました。時間をおいて再度お試しください。";
-  };
+  const { t } = useTranslation();
 
   const validateForm = (): boolean => {
     if (!name.trim()) {
-      setError("名前を入力してください。");
+      setError(t("auth.validation.nameRequired"));
       return false;
     }
 
     if (!email.trim()) {
-      setError("メールアドレスを入力してください。");
+      setError(t("auth.validation.emailRequired"));
       return false;
     }
 
     // メールアドレス形式の簡易チェック
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setError("有効なメールアドレスを入力してください。");
+      setError(t("auth.errorMap.invalidEmail"));
       return false;
     }
 
     if (!password) {
-      setError("パスワードを入力してください。");
+      setError(t("auth.validation.passwordRequired"));
       return false;
     }
 
     const checks = passwordValidation.checks;
     if (!checks.minLength) {
-      setError("パスワードは6文字以上で入力してください。");
+      setError(t("auth.validation.passwordMinLength"));
       return false;
     }
     if (!checks.lowercase) {
-      setError("パスワードに小文字を含めてください。");
+      setError(t("auth.validation.passwordLowercase"));
       return false;
     }
     if (!checks.uppercase) {
-      setError("パスワードに大文字を含めてください。");
+      setError(t("auth.validation.passwordUppercase"));
       return false;
     }
     if (!checks.digit) {
-      setError("パスワードに数字を含めてください。");
+      setError(t("auth.validation.passwordDigit"));
       return false;
     }
     if (!checks.symbol) {
-      setError("パスワードに記号を含めてください。");
+      setError(t("auth.validation.passwordSymbol"));
       return false;
     }
 
@@ -140,13 +137,13 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
     try {
       const { error } = await signUp(email, password, name);
       if (error) {
-        setError(formatAuthError(error));
+        setError(formatSignupError(t, error));
       } else {
-        setMessage("確認メールを送信しました。メールを確認してアカウントを有効化してください。");
+        setMessage(t("auth.success.emailConfirmation"));
         onSuccess?.();
       }
     } catch {
-      setError("予期しないエラーが発生しました。");
+      setError(t("auth.errors.unexpected"));
     } finally {
       setLoading(false);
     }
@@ -156,7 +153,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
     <View style={styles.container}>
       <View style={styles.formContainer}>
         <View style={styles.header}>
-          <Text style={styles.title}>メールで登録</Text>
+          <Text style={styles.title}>{t("auth.signup.emailMethodTitle")}</Text>
         </View>
 
         {error && (
@@ -173,10 +170,10 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
 
         <View style={styles.form}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>名前</Text>
+            <Text style={styles.label}>{t("auth.fields.name")}</Text>
             <TextInput
               style={styles.input}
-              placeholder="山田太郎"
+              placeholder={t("auth.fields.namePlaceholder")}
               placeholderTextColor="#9CA3AF"
               value={name}
               onChangeText={setName}
@@ -187,10 +184,10 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>メールアドレス</Text>
+            <Text style={styles.label}>{t("auth.fields.email")}</Text>
             <TextInput
               style={styles.input}
-              placeholder="your@email.com"
+              placeholder={t("auth.fields.emailPlaceholder")}
               placeholderTextColor="#9CA3AF"
               value={email}
               onChangeText={setEmail}
@@ -203,10 +200,10 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>パスワード</Text>
+            <Text style={styles.label}>{t("auth.fields.password")}</Text>
             <TextInput
               style={styles.input}
-              placeholder="パスワード（6文字以上）"
+              placeholder={t("auth.fields.passwordPlaceholder")}
               placeholderTextColor="#9CA3AF"
               value={password}
               onChangeText={setPassword}
@@ -224,13 +221,13 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
             onPress={handleSubmit}
             disabled={loading}
             accessibilityRole="button"
-            accessibilityLabel="アカウント作成"
+            accessibilityLabel={t("auth.signup.submitButton")}
             accessibilityState={{ disabled: loading }}
           >
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.buttonText}>アカウント作成</Text>
+              <Text style={styles.buttonText}>{t("auth.signup.submitButton")}</Text>
             )}
           </Pressable>
         </View>
@@ -240,17 +237,18 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
 };
 
 function PasswordRequirementsList({ checks }: { checks: PasswordChecks }) {
-  const items: { key: keyof PasswordChecks; label: string }[] = [
-    { key: "minLength", label: "6文字以上" },
-    { key: "lowercase", label: "小文字を含む" },
-    { key: "uppercase", label: "大文字を含む" },
-    { key: "digit", label: "数字を含む" },
-    { key: "symbol", label: "記号を含む" },
+  const { t } = useTranslation();
+  const items: { key: keyof PasswordChecks; labelKey: string }[] = [
+    { key: "minLength", labelKey: "auth.passwordRequirements.minLength" },
+    { key: "lowercase", labelKey: "auth.passwordRequirements.lowercase" },
+    { key: "uppercase", labelKey: "auth.passwordRequirements.uppercase" },
+    { key: "digit", labelKey: "auth.passwordRequirements.digit" },
+    { key: "symbol", labelKey: "auth.passwordRequirements.symbol" },
   ];
   return (
     <View style={styles.requirements}>
-      <Text style={styles.requirementsTitle}>パスワード要件</Text>
-      {items.map(({ key, label }) => {
+      <Text style={styles.requirementsTitle}>{t("auth.passwordRequirements.title")}</Text>
+      {items.map(({ key, labelKey }) => {
         const met = checks[key];
         return (
           <View key={key} style={styles.requirementRow}>
@@ -259,7 +257,9 @@ function PasswordRequirementsList({ checks }: { checks: PasswordChecks }) {
               size={14}
               color={met ? "#10B981" : "#9CA3AF"}
             />
-            <Text style={[styles.requirementText, met && styles.requirementTextMet]}>{label}</Text>
+            <Text style={[styles.requirementText, met && styles.requirementTextMet]}>
+              {t(labelKey)}
+            </Text>
           </View>
         );
       })}

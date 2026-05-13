@@ -4,10 +4,14 @@ import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useTranslation } from "react-i18next";
 import type { AuthStackParamList } from "@/navigation/types";
 
 export const WelcomeScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
+  const { t } = useTranslation();
+  const startLabel = t("auth.signup.startButton");
+  const loginLabel = t("auth.signin.title");
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
@@ -29,9 +33,9 @@ export const WelcomeScreen: React.FC = () => {
           style={({ pressed }) => [styles.primaryButton, pressed && styles.primaryButtonPressed]}
           onPress={() => navigation.navigate("GetStarted")}
           accessibilityRole="button"
-          accessibilityLabel="さっそく始める"
+          accessibilityLabel={startLabel}
         >
-          <Text style={styles.primaryButtonText}>さっそく始める</Text>
+          <Text style={styles.primaryButtonText}>{startLabel}</Text>
         </Pressable>
 
         <Pressable
@@ -41,9 +45,9 @@ export const WelcomeScreen: React.FC = () => {
           ]}
           onPress={() => navigation.navigate("LoginMethod")}
           accessibilityRole="button"
-          accessibilityLabel="ログイン"
+          accessibilityLabel={loginLabel}
         >
-          <Text style={styles.secondaryButtonText}>ログイン</Text>
+          <Text style={styles.secondaryButtonText}>{loginLabel}</Text>
         </Pressable>
       </View>
     </SafeAreaView>

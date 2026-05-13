@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useGoogleAuth } from "@/hooks/useGoogleAuth";
 import { useAppleAuth } from "@/hooks/useAppleAuth";
 import { AppleLoginButton } from "@/components/auth/AppleLoginButton";
@@ -12,6 +13,8 @@ import type { AuthStackParamList } from "@/navigation/types";
 
 export const LoginMethodScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
+  const { t } = useTranslation();
+  const emailMethodLabel = t("auth.signin.emailMethodButton");
   const {
     signInWithGoogle,
     loading: googleLoading,
@@ -53,7 +56,7 @@ export const LoginMethodScreen: React.FC = () => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
           accessibilityRole="button"
-          accessibilityLabel="戻る"
+          accessibilityLabel={t("common.back")}
         >
           <Feather name="arrow-left" size={24} color="#111827" />
         </Pressable>
@@ -61,8 +64,8 @@ export const LoginMethodScreen: React.FC = () => {
 
       <View style={styles.content}>
         <View style={styles.titleContainer}>
-          <Text style={styles.title}>ログイン</Text>
-          <Text style={styles.subtitle}>SwimHubへようこそ</Text>
+          <Text style={styles.title}>{t("auth.signin.title")}</Text>
+          <Text style={styles.subtitle}>{t("auth.signin.subtitle")}</Text>
         </View>
 
         {displayError && (
@@ -78,7 +81,6 @@ export const LoginMethodScreen: React.FC = () => {
               onPress={handleAppleLogin}
               loading={appleLoading}
               disabled={isLoading}
-              label="Appleでログイン"
             />
           )}
 
@@ -87,7 +89,6 @@ export const LoginMethodScreen: React.FC = () => {
             onPress={handleGoogleLogin}
             loading={googleLoading}
             disabled={isLoading}
-            label="Googleでログイン"
           />
 
           {/* Emailでログイン */}
@@ -100,11 +101,11 @@ export const LoginMethodScreen: React.FC = () => {
             onPress={() => navigation.navigate("EmailLogin")}
             disabled={isLoading}
             accessibilityRole="button"
-            accessibilityLabel="Emailでログイン"
+            accessibilityLabel={emailMethodLabel}
           >
             <View style={styles.emailButtonContent}>
               <Feather name="mail" size={20} color="#374151" />
-              <Text style={styles.emailButtonText}>Emailでログイン</Text>
+              <Text style={styles.emailButtonText}>{emailMethodLabel}</Text>
             </View>
           </Pressable>
         </View>

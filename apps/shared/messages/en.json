@@ -221,12 +221,18 @@
       "submitButton": "Log In",
       "loadingButton": "Logging in...",
       "loadingMessage": "Checking authentication...",
-      "errorTitle": "Authentication error"
+      "errorTitle": "Authentication error",
+      "emailMethodTitle": "Log in with email",
+      "emailMethodButton": "Continue with email"
     },
     "signup": {
       "title": "Create Account",
       "subtitle": "Create a new account",
-      "submitButton": "Create Account"
+      "submitButton": "Create Account",
+      "emailMethodTitle": "Sign up with email",
+      "emailMethodButton": "Continue with email",
+      "welcomeTagline": "Let's get started with SwimHub",
+      "startButton": "Get started"
     },
     "resetPassword": {
       "title": "Reset Password",
@@ -241,7 +247,8 @@
       "submitButton": "Update Password",
       "loadingButton": "Updating...",
       "backToLogin": "Back to login",
-      "successMessage": "Your password has been updated successfully."
+      "successMessage": "Your password has been updated successfully.",
+      "notLoggedIn": "You must be logged in to update your password."
     },
     "fields": {
       "email": "Email address",
@@ -252,7 +259,12 @@
       "genderMale": "Male",
       "genderFemale": "Female",
       "newPassword": "New password",
-      "confirmPassword": "Confirm password"
+      "confirmPassword": "Confirm password",
+      "emailPlaceholder": "your@email.com",
+      "namePlaceholder": "John Smith",
+      "passwordPlaceholder": "Password (6+ characters)",
+      "newPasswordPlaceholder": "New password (6+ characters)",
+      "confirmPasswordPlaceholder": "Confirm password"
     },
     "forgotPassword": "Forgot your password?",
     "switchToSignup": "Don't have an account? Sign up",
@@ -264,6 +276,9 @@
     "orSeparator": "or",
     "validation": {
       "nameRequired": "Please enter your name.",
+      "emailRequired": "Please enter your email address.",
+      "passwordRequired": "Please enter your password.",
+      "newPasswordRequired": "Please enter a new password.",
       "passwordMinLength": "Password must be at least 6 characters.",
       "passwordLowercase": "Password must include a lowercase letter.",
       "passwordUppercase": "Password must include an uppercase letter.",
@@ -305,6 +320,14 @@
     },
     "backToLogin": "Back to login",
     "logoutConfirmMessage": "Are you sure you want to log out?",
+    "redirecting": "Redirecting...",
+    "legal": {
+      "agreePrefix": "By continuing, you agree to our ",
+      "termsOfService": "Terms of Service",
+      "conjunction": " and ",
+      "privacyPolicy": "Privacy Policy",
+      "agreeSuffix": "."
+    },
     "errorMap": {
       "accessDenied": "Access denied.",
       "invalidRequest": "Invalid request.",

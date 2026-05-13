@@ -11,8 +11,56 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import type { AuthStackParamList } from "@/navigation/types";
+
+type AuthError = {
+  status?: number;
+  message?: string;
+  error_description?: string;
+  error?: string;
+};
+
+/**
+ * Supabase 等から返る AuthError を i18n キー経由でユーザー向け文言にマップする。
+ * pure function に保ち、UI から t を渡すことでテスト・shared 化を阻害しない。
+ */
+function formatAuthError(t: TFunction, err: unknown): string {
+  const errorObj: AuthError = err && typeof err === "object" ? (err as AuthError) : {};
+  const status = typeof errorObj.status === "number" ? errorObj.status : undefined;
+  const statusText = status ? ` [status: ${status}]` : "";
+  const rawMsg =
+    (typeof errorObj.message === "string" ? errorObj.message : null) ||
+    (typeof errorObj.error_description === "string" ? errorObj.error_description : null) ||
+    (typeof errorObj.error === "string" ? errorObj.error : null) ||
+    "";
+  const msg = rawMsg.toLowerCase();
+
+  if (msg.includes("invalid") && (msg.includes("credentials") || msg.includes("email"))) {
+    return t("auth.errors.invalidCredentials");
+  }
+  if (msg.includes("email not confirmed")) {
+    return t("auth.errors.invalidCredentials");
+  }
+  if (msg.includes("too many requests")) {
+    return t("auth.errors.tooManyRequests");
+  }
+  if (msg.includes("captcha")) {
+    return t("auth.errors.captchaRequired");
+  }
+  if (msg.includes("rate limit") || status === 429) {
+    return t("auth.errors.rateLimitExceeded");
+  }
+  if (msg.includes("network") || msg.includes("connection")) {
+    return t("auth.errors.networkError");
+  }
+
+  return __DEV__ && rawMsg
+    ? `${t("auth.errorMap.loginFailed")} (${rawMsg}${statusText})`
+    : t("auth.errorMap.loginFailed");
+}
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -45,72 +93,23 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
   const [error, setError] = useState<string | null>(null);
 
   const { signIn } = useAuth();
-
-  type AuthError = {
-    status?: number;
-    message?: string;
-    error_description?: string;
-    error?: string;
-  };
-
-  const formatAuthError = (err: unknown): string => {
-    const errorObj: AuthError = err && typeof err === "object" ? (err as AuthError) : {};
-    const status = typeof errorObj.status === "number" ? errorObj.status : undefined;
-    const statusText = status ? ` [status: ${status}]` : "";
-    const errMsg =
-      (typeof errorObj.message === "string" ? errorObj.message : null) ||
-      (typeof errorObj.error_description === "string" ? errorObj.error_description : null) ||
-      (typeof errorObj.error === "string" ? errorObj.error : null) ||
-      "不明なエラーが発生しました。";
-
-    // エラーメッセージの日本語化と補足ヒント
-    if (typeof errMsg === "string") {
-      const msg = errMsg.toLowerCase();
-
-      // ログイン認証エラーの処理（OWASP準拠）
-      if (msg.includes("invalid") && (msg.includes("credentials") || msg.includes("email"))) {
-        return "メールアドレスまたはパスワードが正しくありません。入力内容を確認してから再度お試しください。";
-      }
-      if (msg.includes("email not confirmed")) {
-        return "メールアドレスまたはパスワードが正しくありません。入力内容を確認してから再度お試しください。";
-      }
-      if (msg.includes("too many requests")) {
-        return "ログイン試行回数が上限に達しました。しばらく時間をおいてから再度お試しください。";
-      }
-
-      // 共通エラーの処理
-      if (msg.includes("captcha")) {
-        return "Captcha認証が必要です。Captchaを完了してから再度お試しください。";
-      }
-      if (msg.includes("rate limit") || status === 429) {
-        return "リクエスト制限に達しました。しばらく時間をおいてから再度お試しください。";
-      }
-      if (msg.includes("network") || msg.includes("connection")) {
-        return "ネットワークエラーが発生しました。インターネット接続を確認してから再度お試しください。";
-      }
-    }
-
-    // デフォルトのエラーメッセージ
-    return __DEV__
-      ? `エラーが発生しました: ${errMsg}${statusText}`
-      : "ログインに失敗しました。入力内容を確認してから再度お試しください。";
-  };
+  const { t } = useTranslation();
 
   const validateForm = (): boolean => {
     if (!email.trim()) {
-      setError("メールアドレスを入力してください。");
+      setError(t("auth.validation.emailRequired"));
       return false;
     }
 
     // メールアドレス形式の簡易チェック
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setError("有効なメールアドレスを入力してください。");
+      setError(t("auth.errorMap.invalidEmail"));
       return false;
     }
 
     if (!password) {
-      setError("パスワードを入力してください。");
+      setError(t("auth.validation.passwordRequired"));
       return false;
     }
 
@@ -128,12 +127,12 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
     try {
       const { error } = await signIn(email, password);
       if (error) {
-        setError(formatAuthError(error));
+        setError(formatAuthError(t, error));
       } else {
         onSuccess?.();
       }
     } catch {
-      setError("予期しないエラーが発生しました。");
+      setError(t("auth.errors.unexpected"));
     } finally {
       setLoading(false);
     }
@@ -147,7 +146,7 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
       <View style={styles.container}>
       <View style={styles.formContainer}>
         <View style={styles.header}>
-          <Text style={styles.title}>メールでログイン</Text>
+          <Text style={styles.title}>{t("auth.signin.emailMethodTitle")}</Text>
         </View>
 
         {error && (
@@ -158,10 +157,10 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
 
         <View style={styles.form}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>メールアドレス</Text>
+            <Text style={styles.label}>{t("auth.fields.email")}</Text>
             <TextInput
               style={styles.input}
-              placeholder="your@email.com"
+              placeholder={t("auth.fields.emailPlaceholder")}
               placeholderTextColor="#9CA3AF"
               value={email}
               onChangeText={setEmail}
@@ -174,10 +173,10 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>パスワード</Text>
+            <Text style={styles.label}>{t("auth.fields.password")}</Text>
             <TextInput
               style={styles.input}
-              placeholder="パスワード"
+              placeholder={t("auth.fields.password")}
               placeholderTextColor="#9CA3AF"
               value={password}
               onChangeText={setPassword}
@@ -194,13 +193,13 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
             onPress={handleSubmit}
             disabled={loading}
             accessibilityRole="button"
-            accessibilityLabel="ログイン"
+            accessibilityLabel={t("auth.signin.title")}
             accessibilityState={{ disabled: loading }}
           >
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.buttonText}>ログイン</Text>
+              <Text style={styles.buttonText}>{t("auth.signin.title")}</Text>
             )}
           </Pressable>
 
@@ -209,9 +208,9 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
               style={styles.linkContainer}
               onPress={onResetPassword}
               accessibilityRole="button"
-              accessibilityLabel="パスワードを忘れた方はこちら"
+              accessibilityLabel={t("auth.forgotPassword")}
             >
-              <Text style={styles.linkText}>パスワードをお忘れの方はこちら</Text>
+              <Text style={styles.linkText}>{t("auth.forgotPassword")}</Text>
             </Pressable>
           )}
         </View>

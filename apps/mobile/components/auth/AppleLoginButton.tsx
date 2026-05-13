@@ -5,6 +5,7 @@
 import React from "react";
 import { Pressable, Text, StyleSheet, ActivityIndicator, View, Platform } from "react-native";
 import Svg, { Path } from "react-native-svg";
+import { useTranslation } from "react-i18next";
 
 interface AppleLoginButtonProps {
   /** ボタン押下時のコールバック */
@@ -33,8 +34,11 @@ export const AppleLoginButton: React.FC<AppleLoginButtonProps> = ({
   onPress,
   loading = false,
   disabled = false,
-  label = "Appleでログイン",
+  label,
 }) => {
+  const { t } = useTranslation();
+  const resolvedLabel = label ?? t("auth.appleSignin");
+
   // iOS以外では表示しない（Androidでは非表示）
   if (Platform.OS !== "ios") {
     return null;
@@ -52,7 +56,7 @@ export const AppleLoginButton: React.FC<AppleLoginButtonProps> = ({
       onPress={onPress}
       disabled={isDisabled}
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={resolvedLabel}
       accessibilityState={{ disabled: isDisabled }}
     >
       {loading ? (
@@ -60,7 +64,7 @@ export const AppleLoginButton: React.FC<AppleLoginButtonProps> = ({
       ) : (
         <View style={styles.content}>
           <AppleLogo />
-          <Text style={styles.buttonText}>{label}</Text>
+          <Text style={styles.buttonText}>{resolvedLabel}</Text>
         </View>
       )}
     </Pressable>
