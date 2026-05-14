@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { differenceInDays, parseISO } from "date-fns";
@@ -43,6 +44,7 @@ interface BestTimesTableProps {
 }
 
 export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>("all");
   const [includeRelaying, setIncludeRelaying] = useState(false);
 
@@ -122,8 +124,8 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
     return (
       <View style={styles.emptyContainer}>
         <Feather name="award" size={40} color="#9CA3AF" />
-        <Text style={styles.emptyText}>記録がありません</Text>
-        <Text style={styles.emptySubText}>このメンバーはまだ記録を登録していません</Text>
+        <Text style={styles.emptyText}>{t("teams.mobile.bestTimesEmpty")}</Text>
+        <Text style={styles.emptySubText}>{t("teams.mobile.bestTimesEmptySubText")}</Text>
       </View>
     );
   }
@@ -135,8 +137,8 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
         <View style={styles.tabs}>
           {[
             { id: "all" as TabType, label: "ALL" },
-            { id: "short" as TabType, label: "短水路" },
-            { id: "long" as TabType, label: "長水路" },
+            { id: "short" as TabType, label: t("teams.mobile.poolTypeShort") },
+            { id: "long" as TabType, label: t("teams.mobile.poolTypeLong") },
           ].map((tab) => (
             <Pressable
               key={tab.id}
@@ -156,7 +158,7 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
           <View style={[styles.checkbox, includeRelaying && styles.checkboxChecked]}>
             {includeRelaying && <Text style={styles.checkboxMark}>✓</Text>}
           </View>
-          <Text style={styles.checkboxLabel}>引き継ぎタイム含</Text>
+          <Text style={styles.checkboxLabel}>{t("teams.mobile.bestTimesIncludeRelaying")}</Text>
         </Pressable>
       </View>
 
@@ -249,7 +251,7 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
 
       {/* 注釈 */}
       <View style={styles.annotation}>
-        <Text style={styles.annotationText}>※ L: 長水路, R: 引き継ぎあり</Text>
+        <Text style={styles.annotationText}>{t("teams.mobile.bestTimesAnnotation")}</Text>
       </View>
     </View>
   );

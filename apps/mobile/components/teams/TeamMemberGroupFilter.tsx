@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TeamGroupsAPI } from "@apps/shared/api/teams/groups";
 import type {
@@ -32,6 +33,7 @@ export const TeamMemberGroupFilter: React.FC<MemberGroupSorterProps> = ({
   members,
   onGroupedMembersChange,
 }) => {
+  const { t } = useTranslation();
   const [groups, setGroups] = useState<TeamGroup[]>([]);
   const [memberships, setMemberships] = useState<TeamGroupMembership[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(GENDER_CATEGORY);
@@ -110,11 +112,11 @@ export const TeamMemberGroupFilter: React.FC<MemberGroupSorterProps> = ({
       const femaleMembers = members.filter((m) => m.users.gender === 1);
 
       if (maleMembers.length > 0) {
-        headers.set(flat.length, "男性");
+        headers.set(flat.length, t("teams.mobile.genderMale"));
         flat.push(...maleMembers);
       }
       if (femaleMembers.length > 0) {
-        headers.set(flat.length, "女性");
+        headers.set(flat.length, t("teams.mobile.genderFemale"));
         flat.push(...femaleMembers);
       }
 
@@ -140,7 +142,7 @@ export const TeamMemberGroupFilter: React.FC<MemberGroupSorterProps> = ({
     // 未所属メンバー
     const unassigned = members.filter((m) => !assigned.has(m.user_id));
     if (unassigned.length > 0) {
-      headers.set(flat.length, "未所属");
+      headers.set(flat.length, t("teams.mobile.unassigned"));
       flat.push(...unassigned);
     }
 
@@ -151,7 +153,7 @@ export const TeamMemberGroupFilter: React.FC<MemberGroupSorterProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>グループ表示:</Text>
+      <Text style={styles.label}>{t("teams.mobile.groupDisplayLabel")}</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -165,7 +167,9 @@ export const TeamMemberGroupFilter: React.FC<MemberGroupSorterProps> = ({
               onPress={() => toggleCategory(category)}
               style={[styles.pill, isActive && styles.pillActive]}
             >
-              <Text style={[styles.pillText, isActive && styles.pillTextActive]}>{category}</Text>
+              <Text style={[styles.pillText, isActive && styles.pillTextActive]}>
+                {category === GENDER_CATEGORY ? t("teams.mobile.genderCategoryLabel") : category}
+              </Text>
             </Pressable>
           );
         })}

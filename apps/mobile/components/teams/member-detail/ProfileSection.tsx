@@ -4,6 +4,7 @@ import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 import { format, parseISO, isValid } from "date-fns";
 import { ja } from "date-fns/locale";
+import { useTranslation } from "react-i18next";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 
 interface ProfileSectionProps {
@@ -12,6 +13,7 @@ interface ProfileSectionProps {
 }
 
 export const ProfileSection: React.FC<ProfileSectionProps> = ({ member, currentUserId }) => {
+  const { t } = useTranslation();
   const user = member.users;
   const isCurrentUser = member.user_id === currentUserId;
 
@@ -63,17 +65,21 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({ member, currentU
                   member.role === "admin" ? styles.roleBadgeTextAdmin : styles.roleBadgeTextUser,
                 ]}
               >
-                {member.role === "admin" ? "管理者" : "ユーザー"}
+                {member.role === "admin"
+                  ? t("teams.mobile.roleAdmin")
+                  : t("teams.mobile.roleUser")}
               </Text>
             </View>
             {isCurrentUser && (
               <View style={styles.youBadge}>
-                <Text style={styles.youBadgeText}>あなた</Text>
+                <Text style={styles.youBadgeText}>{t("teams.mobile.youBadge")}</Text>
               </View>
             )}
           </View>
 
-          {birthday && <Text style={styles.birthday}>生年月日: {birthday}</Text>}
+          {birthday && (
+            <Text style={styles.birthday}>{t("teams.mobile.birthdayLabel", { date: birthday })}</Text>
+          )}
         </View>
       </View>
 

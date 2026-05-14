@@ -17,6 +17,7 @@ import { AttendanceStatus, TeamEvent } from "@swim-hub/shared/types";
 import { getMonthDateRange } from "@swim-hub/shared/utils/date";
 import { format, startOfMonth, endOfMonth, addMonths } from "date-fns";
 import { ja } from "date-fns/locale";
+import { useTranslation } from "react-i18next";
 
 export interface MyMonthlyAttendanceProps {
   teamId: string;
@@ -40,6 +41,7 @@ interface MonthItem {
  */
 export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId }) => {
   const { supabase } = useAuth();
+  const { t } = useTranslation();
   const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase]);
 
   // 月リスト表示用の状態
@@ -186,7 +188,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       setMonthList(monthList);
     } catch (err) {
       console.error("月リストの取得に失敗:", err);
-      setError("月リストの取得に失敗しました");
+      setError(t("teams.mobile.attendanceListFetchFailed"));
     } finally {
       setLoadingMonthList(false);
     }
@@ -269,7 +271,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       setEditStates(initialEditStates);
     } catch (err) {
       console.error("出欠情報の取得に失敗:", err);
-      setError("出欠情報の取得に失敗しました");
+      setError(t("teams.mobile.attendanceFetchFailed"));
     } finally {
       setLoading(false);
     }
@@ -361,7 +363,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) throw new Error("認証が必要です");
+      if (!user) throw new Error(t("auth.errorMap.sessionNotFound"));
 
       const newAttendances = events
         .filter((event) => {
@@ -406,12 +408,17 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
 
       // 保存成功後、モーダルを閉じる
       handleCloseModal();
-      Alert.alert("保存完了", "出欠情報を保存しました", [{ text: "OK" }]);
+      Alert.alert(
+        t("teams.mobile.attendanceSaveSuccessTitle"),
+        t("teams.mobile.attendanceSaveSuccessMessage"),
+        [{ text: "OK" }],
+      );
     } catch (err) {
       console.error("出欠情報の保存に失敗:", err);
-      const errorMessage = err instanceof Error ? err.message : "出欠情報の保存に失敗しました";
+      const errorMessage =
+        err instanceof Error ? err.message : t("teams.mobile.attendanceSaveFailed");
       setError(errorMessage);
-      Alert.alert("エラー", errorMessage, [{ text: "OK" }]);
+      Alert.alert(t("common.error"), errorMessage, [{ text: "OK" }]);
     } finally {
       setSaving(false);
     }
@@ -454,7 +461,9 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
               : styles.monthStatusBadgeTextAnswered
           }
         >
-          {status === "has_unanswered" ? "未回答あり" : "全て回答済み"}
+          {status === "has_unanswered"
+            ? t("teams.mobile.attendanceUnanswered")
+            : t("teams.mobile.attendanceAllAnswered")}
         </Text>
       </View>
     );
@@ -585,7 +594,9 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
                                 {format(new Date(event.date), "M月d日(E)", { locale: ja })}
                               </Text>
                               <Text style={styles.eventTitle}>
-                                {event.type === "competition" ? event.title : "練習"}
+                                {event.type === "competition"
+                                  ? event.title
+                                  : t("teams.mobile.fallbackPractice")}
                               </Text>
                               {event.place && <Text style={styles.eventPlace}>@{event.place}</Text>}
                             </View>
@@ -653,7 +664,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
                             style={styles.noteInput}
                             value={editState.note}
                             onChangeText={(text) => handleNoteChange(event.id, text)}
-                            placeholder="備考を入力（任意）"
+                            placeholder={t("teams.mobile.attendanceNotePlaceholder")}
                             multiline
                             numberOfLines={2}
                           />
@@ -669,10 +680,12 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
                     >
                       <Text style={styles.saveButtonText}>
                         {saving
-                          ? "保存中..."
+                          ? t("teams.mobile.saveLoading")
                           : selectedMonth
-                            ? `${getMonthLabel(selectedMonth.year, selectedMonth.month)}分をまとめて保存`
-                            : "保存"}
+                            ? t("teams.mobile.attendanceSaveMonth", {
+                                label: getMonthLabel(selectedMonth.year, selectedMonth.month),
+                              })
+                            : t("teams.mobile.saveButton")}
                       </Text>
                     </Pressable>
                   </>

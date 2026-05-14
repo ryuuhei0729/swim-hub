@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { GestureHandlerRootView, GestureDetector, Gesture } from "react-native-gesture-handler";
 import Animated, { useSharedValue, useAnimatedStyle, runOnJS } from "react-native-reanimated";
+import { useTranslation } from "react-i18next";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TeamGroupsAPI } from "@apps/shared/api/teams/groups";
 import type { TeamGroupWithCount } from "./hooks";
@@ -47,6 +48,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
   supabase,
   onSaved,
 }) => {
+  const { t } = useTranslation();
   const [assignments, setAssignments] = useState<Map<string, string | null>>(new Map());
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -305,7 +307,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
               <DraggableMemberChip key={m.user_id} member={m} />
             ))}
             {zoneMembers.length === 0 && (
-              <Text style={styles.zoneEmpty}>{isHovered ? "ここにドロップ" : ""}</Text>
+              <Text style={styles.zoneEmpty}>{isHovered ? t("teams.mobile.dropHere") : ""}</Text>
             )}
           </View>
         </View>
@@ -321,14 +323,14 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
           {/* ヘッダー */}
           <View style={styles.header}>
             <Text style={styles.title} numberOfLines={1}>
-              {category} — 一括振り分け
+              {t("teams.mobile.bulkAssignTitle", { category })}
             </Text>
             <Pressable style={styles.closeButton} onPress={handleClose}>
               <Text style={styles.closeButtonText}>×</Text>
             </Pressable>
           </View>
 
-          <Text style={styles.hint}>長押し + ドラッグでメンバーを移動</Text>
+          <Text style={styles.hint}>{t("teams.mobile.bulkAssignHint")}</Text>
 
           {loading ? (
             <View style={styles.loadingContainer}>
@@ -346,7 +348,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
               >
                 <DropZone
                   zoneId={UNASSIGNED_ZONE}
-                  label="未割り当て"
+                  label={t("teams.mobile.unassignedLabel")}
                   members={unassignedMembers}
                   variant="unassigned"
                 />
@@ -380,14 +382,16 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
                 onPress={handleClose}
                 disabled={saving}
               >
-                <Text style={styles.btnCancelText}>キャンセル</Text>
+                <Text style={styles.btnCancelText}>{t("common.cancel")}</Text>
               </Pressable>
               <Pressable
                 style={[styles.btn, styles.btnSave, saving && styles.btnDisabled]}
                 onPress={handleSave}
                 disabled={saving}
               >
-                <Text style={styles.btnSaveText}>{saving ? "保存中..." : "保存"}</Text>
+                <Text style={styles.btnSaveText}>
+                  {saving ? t("teams.mobile.saveLoading") : t("teams.mobile.saveButton")}
+                </Text>
               </Pressable>
             </View>
           )}

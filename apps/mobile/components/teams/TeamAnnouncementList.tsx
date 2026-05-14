@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
+import { useTranslation } from "react-i18next";
 import type { TeamAnnouncement } from "@swim-hub/shared/types";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
@@ -33,11 +34,13 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
   onEdit,
   onDelete,
 }) => {
+  const { t } = useTranslation();
+
   // ローディング状態
   if (isLoading && announcements.length === 0) {
     return (
       <View style={styles.container}>
-        <LoadingSpinner message="お知らせを読み込み中..." />
+        <LoadingSpinner message={t("teams.mobile.announcementLoading")} />
       </View>
     );
   }
@@ -47,7 +50,7 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
     return (
       <View style={styles.container}>
         <ErrorView
-          message={error.message || "お知らせ一覧の取得に失敗しました"}
+          message={error.message || t("teams.mobile.announcementFetchFailed")}
           onRetry={onRetry}
         />
       </View>

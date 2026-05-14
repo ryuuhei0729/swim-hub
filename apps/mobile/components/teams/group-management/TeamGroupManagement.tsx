@@ -9,6 +9,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 import { useTeamGroups, useGroupActions, type TeamGroupWithCount } from "./hooks";
@@ -40,6 +41,7 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
   isCurrentUserAdmin,
 }) => {
   const { supabase } = useAuth();
+  const { t } = useTranslation();
 
   // グループデータ
   const { groups, categories, groupsByCategory, loading, error, loadGroups } = useTeamGroups(
@@ -130,12 +132,12 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
   const handleDeleteGroup = useCallback(
     (group: TeamGroupWithCount) => {
       Alert.alert(
-        "確認",
-        `「${group.name}」を削除しますか？\nグループに割り当てられたメンバー情報も削除されます。`,
+        t("teams.mobile.groupConfirmTitle"),
+        t("teams.mobile.groupDeleteConfirmMessage", { name: group.name }),
         [
-          { text: "キャンセル", style: "cancel" },
+          { text: t("common.cancel"), style: "cancel" },
           {
-            text: "削除",
+            text: t("teams.mobile.deleteConfirmText"),
             style: "destructive",
             onPress: () => deleteGroup(group.id),
           },
@@ -222,7 +224,7 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
               style={styles.addButton}
               onPress={handleOpenCreateForm}
               accessibilityRole="button"
-              accessibilityLabel="グループを追加"
+              accessibilityLabel={t("teams.mobile.groupAddAria")}
             >
               <Feather name="plus" size={16} color="#FFFFFF" />
               <Text style={styles.addButtonText}>追加</Text>

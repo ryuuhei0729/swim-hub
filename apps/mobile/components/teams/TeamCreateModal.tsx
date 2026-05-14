@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, Modal, Pressable, TextInput, StyleSheet, ScrollView } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useCreateTeamMutation } from "@apps/shared/hooks/queries/teams";
 import type { TeamInsert } from "@swim-hub/shared/types";
@@ -20,6 +21,7 @@ export const TeamCreateModal: React.FC<TeamCreateModalProps> = ({
 }) => {
   const { supabase, user } = useAuth();
   const createTeamMutation = useCreateTeamMutation(supabase);
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -36,12 +38,12 @@ export const TeamCreateModal: React.FC<TeamCreateModalProps> = ({
 
   const handleSubmit = async () => {
     if (!user) {
-      setError("ログインが必要です");
+      setError(t("teams.mobile.loginRequired"));
       return;
     }
 
     if (!name.trim()) {
-      setError("チーム名を入力してください");
+      setError(t("teams.mobile.nameRequired"));
       return;
     }
 
@@ -62,7 +64,7 @@ export const TeamCreateModal: React.FC<TeamCreateModalProps> = ({
       handleClose();
     } catch (err) {
       console.error("チーム作成エラー:", err);
-      let errorMessage = "チームの作成に失敗しました";
+      let errorMessage = t("teams.mobile.createFailed");
       if (err instanceof Error) {
         errorMessage = err.message;
       } else if (err && typeof err === "object" && "message" in err) {
@@ -77,7 +79,7 @@ export const TeamCreateModal: React.FC<TeamCreateModalProps> = ({
       <Pressable style={styles.overlay} onPress={handleClose}>
         <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
           <View style={styles.header}>
-            <Text style={styles.title}>チームを作成</Text>
+            <Text style={styles.title}>{t("teams.mobile.createTitle")}</Text>
             <Pressable style={styles.closeButton} onPress={handleClose}>
               <Text style={styles.closeButtonText}>×</Text>
             </Pressable>
@@ -91,24 +93,24 @@ export const TeamCreateModal: React.FC<TeamCreateModalProps> = ({
             )}
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>チーム名 *</Text>
+              <Text style={styles.label}>{t("teams.mobile.nameLabel")}</Text>
               <TextInput
                 style={styles.input}
                 value={name}
                 onChangeText={setName}
-                placeholder="チーム名を入力"
+                placeholder={t("teams.mobile.namePlaceholder")}
                 placeholderTextColor="#9CA3AF"
                 editable={!isLoading}
               />
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>説明</Text>
+              <Text style={styles.label}>{t("teams.mobile.descriptionLabel")}</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
                 value={description}
                 onChangeText={setDescription}
-                placeholder="チームの説明を入力（任意）"
+                placeholder={t("teams.mobile.descriptionPlaceholder")}
                 placeholderTextColor="#9CA3AF"
                 multiline
                 numberOfLines={4}
@@ -124,14 +126,16 @@ export const TeamCreateModal: React.FC<TeamCreateModalProps> = ({
               onPress={handleClose}
               disabled={isLoading}
             >
-              <Text style={styles.cancelButtonText}>キャンセル</Text>
+              <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
             </Pressable>
             <Pressable
               style={[styles.button, styles.submitButton, isLoading && styles.submitButtonDisabled]}
               onPress={handleSubmit}
               disabled={isLoading || !name.trim()}
             >
-              <Text style={styles.submitButtonText}>{isLoading ? "作成中..." : "作成"}</Text>
+              <Text style={styles.submitButtonText}>
+                {isLoading ? t("teams.mobile.creating") : t("teams.mobile.createButton")}
+              </Text>
             </Pressable>
           </View>
         </Pressable>

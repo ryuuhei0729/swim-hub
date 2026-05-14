@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, Modal, Pressable, TextInput, StyleSheet, ScrollView } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useJoinTeamMutation } from "@apps/shared/hooks/queries/teams";
 
@@ -15,6 +16,7 @@ interface TeamJoinModalProps {
 export const TeamJoinModal: React.FC<TeamJoinModalProps> = ({ visible, onClose, onSuccess }) => {
   const { supabase, user } = useAuth();
   const joinTeamMutation = useJoinTeamMutation(supabase);
+  const { t } = useTranslation();
   const [inviteCode, setInviteCode] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -29,12 +31,12 @@ export const TeamJoinModal: React.FC<TeamJoinModalProps> = ({ visible, onClose, 
 
   const handleSubmit = async () => {
     if (!user) {
-      setError("ログインが必要です");
+      setError(t("teams.mobile.loginRequired"));
       return;
     }
 
     if (!inviteCode.trim()) {
-      setError("招待コードを入力してください");
+      setError(t("teams.mobile.inviteCodeRequired"));
       return;
     }
 
@@ -47,11 +49,11 @@ export const TeamJoinModal: React.FC<TeamJoinModalProps> = ({ visible, onClose, 
         onSuccess(membership.team_id);
         handleClose();
       } else {
-        throw new Error("チームIDの取得に失敗しました");
+        throw new Error(t("teams.mobile.teamIdFetchFailed"));
       }
     } catch (err) {
       console.error("チーム参加エラー:", err);
-      let errorMessage = "チームの参加に失敗しました";
+      let errorMessage = t("teams.mobile.joinFailed");
       if (err instanceof Error) {
         errorMessage = err.message;
       } else if (err && typeof err === "object" && "message" in err) {
@@ -66,7 +68,7 @@ export const TeamJoinModal: React.FC<TeamJoinModalProps> = ({ visible, onClose, 
       <Pressable style={styles.overlay} onPress={handleClose}>
         <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
           <View style={styles.header}>
-            <Text style={styles.title}>チームに参加</Text>
+            <Text style={styles.title}>{t("teams.mobile.joinTitle")}</Text>
             <Pressable style={styles.closeButton} onPress={handleClose}>
               <Text style={styles.closeButtonText}>×</Text>
             </Pressable>
@@ -80,20 +82,18 @@ export const TeamJoinModal: React.FC<TeamJoinModalProps> = ({ visible, onClose, 
             )}
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>招待コード *</Text>
+              <Text style={styles.label}>{t("teams.mobile.inviteCodeLabel")}</Text>
               <TextInput
                 style={styles.input}
                 value={inviteCode}
                 onChangeText={setInviteCode}
-                placeholder="招待コードを入力"
+                placeholder={t("teams.mobile.inviteCodePlaceholder")}
                 placeholderTextColor="#9CA3AF"
                 autoCapitalize="none"
                 autoCorrect={false}
                 editable={!isLoading}
               />
-              <Text style={styles.hint}>
-                チーム管理者から提供された招待コードを入力してください
-              </Text>
+              <Text style={styles.hint}>{t("teams.mobile.inviteCodeHint")}</Text>
             </View>
           </ScrollView>
 
@@ -103,14 +103,16 @@ export const TeamJoinModal: React.FC<TeamJoinModalProps> = ({ visible, onClose, 
               onPress={handleClose}
               disabled={isLoading}
             >
-              <Text style={styles.cancelButtonText}>キャンセル</Text>
+              <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
             </Pressable>
             <Pressable
               style={[styles.button, styles.submitButton, isLoading && styles.submitButtonDisabled]}
               onPress={handleSubmit}
               disabled={isLoading || !inviteCode.trim()}
             >
-              <Text style={styles.submitButtonText}>{isLoading ? "参加中..." : "参加"}</Text>
+              <Text style={styles.submitButtonText}>
+                {isLoading ? t("teams.mobile.joining") : t("teams.mobile.joinButton")}
+              </Text>
             </Pressable>
           </View>
         </Pressable>

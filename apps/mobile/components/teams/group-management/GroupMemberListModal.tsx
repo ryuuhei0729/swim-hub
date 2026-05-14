@@ -9,6 +9,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TeamGroupWithCount } from "./hooks";
 
@@ -38,6 +39,7 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
   teamId,
   supabase,
 }) => {
+  const { t } = useTranslation();
   const [members, setMembers] = useState<MemberInfo[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -131,11 +133,11 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
                 renderItem={({ item }) => (
                   <View style={styles.memberRow}>
                     <Text style={styles.memberName} numberOfLines={1}>
-                      {item.users?.name || "名前未設定"}
+                      {item.users?.name || t("teams.mobile.unnamedMember")}
                     </Text>
                     {item.role === "admin" && (
                       <View style={styles.adminBadge}>
-                        <Text style={styles.adminBadgeText}>管理者</Text>
+                        <Text style={styles.adminBadgeText}>{t("teams.mobile.roleAdmin")}</Text>
                       </View>
                     )}
                   </View>

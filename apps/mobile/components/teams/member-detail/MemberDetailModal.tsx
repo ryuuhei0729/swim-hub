@@ -12,6 +12,7 @@ import {
   SafeAreaView,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import {
   useUpdateMemberRoleMutation,
@@ -41,6 +42,7 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
   onMembershipChange,
 }) => {
   const { supabase } = useAuth();
+  const { t } = useTranslation();
   const updateRoleMutation = useUpdateMemberRoleMutation(supabase);
   const removeMemberMutation = useRemoveMemberMutation(supabase);
   const [isRemoving, setIsRemoving] = useState(false);
@@ -63,9 +65,12 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
     (newRole: "admin" | "user") => {
       if (!member || member.role === newRole) return;
 
-      const memberName = member.users?.name || "このメンバー";
-      const roleName = newRole === "admin" ? "管理者" : "ユーザー";
-      const message = `${memberName}さんの権限を「${roleName}」に変更しますか？`;
+      const memberName = member.users?.name || t("teams.mobile.fallbackMemberName");
+      const roleName = newRole === "admin" ? t("teams.mobile.roleAdmin") : t("teams.mobile.roleUser");
+      const message = t("teams.mobile.memberRoleChangeMessage", {
+        name: memberName,
+        role: roleName,
+      });
 
       const execute = async () => {
         try {
@@ -78,7 +83,7 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
           onMembershipChange?.();
         } catch (err) {
           console.error("権限変更エラー:", err);
-          const errorMsg = err instanceof Error ? err.message : "権限の変更に失敗しました";
+          const errorMsg = err instanceof Error ? err.message : t("teams.mobile.roleChangeFailed");
           setError(errorMsg);
         }
       };
@@ -88,9 +93,9 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
           execute();
         }
       } else {
-        Alert.alert("権限変更の確認", message, [
-          { text: "キャンセル", style: "cancel" },
-          { text: "変更する", onPress: execute },
+        Alert.alert(t("teams.mobile.roleChangeTitle"), message, [
+          { text: t("common.cancel"), style: "cancel" },
+          { text: t("teams.mobile.roleChangeButton"), onPress: execute },
         ]);
       }
     },
@@ -101,8 +106,8 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
   const handleRemoveMember = useCallback(() => {
     if (!member) return;
 
-    const memberName = member.users?.name || "このメンバー";
-    const message = `${memberName}をチームから削除しますか？\nこの操作は取り消せません。`;
+    const memberName = member.users?.name || t("teams.mobile.fallbackMemberName");
+    const message = t("teams.mobile.memberRemoveMessage", { name: memberName });
 
     const execute = async () => {
       setIsRemoving(true);
@@ -116,7 +121,7 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
         onClose();
       } catch (err) {
         console.error("メンバー削除エラー:", err);
-        const errorMsg = err instanceof Error ? err.message : "メンバーの削除に失敗しました";
+        const errorMsg = err instanceof Error ? err.message : t("teams.mobile.memberDeleteFailed");
         setError(errorMsg);
       } finally {
         setIsRemoving(false);
@@ -128,9 +133,13 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
         execute();
       }
     } else {
-      Alert.alert("削除確認", message, [
-        { text: "キャンセル", style: "cancel" },
-        { text: "削除", style: "destructive", onPress: execute },
+      Alert.alert(t("teams.mobile.deleteConfirmTitle"), message, [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("teams.mobile.deleteConfirmText"),
+          style: "destructive",
+          onPress: execute,
+        },
       ]);
     }
   }, [member, removeMemberMutation, onMembershipChange, onClose]);
@@ -149,7 +158,7 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
       <SafeAreaView style={styles.safeArea}>
         {/* ヘッダー */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>メンバー詳細</Text>
+          <Text style={styles.headerTitle}>{t("teams.mobile.memberDetailTitle")}</Text>
           <Pressable style={styles.closeButton} onPress={onClose}>
             <Feather name="x" size={22} color="#374151" />
           </Pressable>
@@ -190,13 +199,13 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
           <View style={styles.bestTimesSection}>
             <View style={styles.bestTimesHeader}>
               <Feather name="award" size={18} color="#EAB308" />
-              <Text style={styles.bestTimesTitle}>Best Time</Text>
+              <Text style={styles.bestTimesTitle}>{t("teams.mobile.bestTimeSection")}</Text>
             </View>
 
             {loadingBestTimes ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#2563EB" />
-                <Text style={styles.loadingText}>ベストタイム読込中...</Text>
+                <Text style={styles.loadingText}>{t("teams.mobile.bestTimeLoading")}</Text>
               </View>
             ) : (
               <BestTimesTable bestTimes={bestTimes} />
@@ -205,7 +214,7 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
 
           {/* 閉じるボタン */}
           <Pressable style={styles.closeFooterButton} onPress={onClose}>
-            <Text style={styles.closeFooterButtonText}>閉じる</Text>
+            <Text style={styles.closeFooterButtonText}>{t("common.close")}</Text>
           </Pressable>
         </ScrollView>
       </SafeAreaView>

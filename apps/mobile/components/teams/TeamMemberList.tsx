@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { parseISO, differenceInDays } from "date-fns";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import {
   useUpdateMemberRoleMutation,
@@ -102,6 +103,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
   onMemberChange,
 }) => {
   const { supabase } = useAuth();
+  const { t } = useTranslation();
   const updateRoleMutation = useUpdateMemberRoleMutation(supabase);
   const removeMemberMutation = useRemoveMemberMutation(supabase);
   const [_processingMemberId, setProcessingMemberId] = useState<string | null>(null);
@@ -324,11 +326,11 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
       if (onMemberChange) onMemberChange();
     } catch (err) {
       console.error("ロール変更エラー:", err);
-      const errorMessage = err instanceof Error ? err.message : "ロールの変更に失敗しました";
+      const errorMessage = err instanceof Error ? err.message : t("teams.mobile.roleChangeFailed");
       if (Platform.OS === "web") {
         window.alert(errorMessage);
       } else {
-        Alert.alert("エラー", errorMessage, [{ text: "OK" }]);
+        Alert.alert(t("common.error"), errorMessage, [{ text: "OK" }]);
       }
     } finally {
       setProcessingMemberId(null);
@@ -337,7 +339,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
 
   // メンバー削除処理
   const _handleRemoveMember = (member: TeamMembershipWithUser) => {
-    const memberName = member.users.name || "このメンバー";
+    const memberName = member.users.name || t("teams.mobile.fallbackMemberName");
     const confirmMessage = `${memberName}をチームから削除しますか？\nこの操作は取り消せません。`;
 
     if (Platform.OS === "web") {
@@ -345,10 +347,10 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
       if (!confirmed) return;
       executeRemoveMember(member);
     } else {
-      Alert.alert("削除確認", confirmMessage, [
-        { text: "キャンセル", style: "cancel" },
+      Alert.alert(t("teams.mobile.deleteConfirmTitle"), confirmMessage, [
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "削除",
+          text: t("teams.mobile.deleteConfirmText"),
           style: "destructive",
           onPress: () => executeRemoveMember(member),
         },
@@ -366,11 +368,12 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
       if (onMemberChange) onMemberChange();
     } catch (err) {
       console.error("メンバー削除エラー:", err);
-      const errorMessage = err instanceof Error ? err.message : "メンバーの削除に失敗しました";
+      const errorMessage =
+        err instanceof Error ? err.message : t("teams.mobile.memberDeleteFailed");
       if (Platform.OS === "web") {
         window.alert(errorMessage);
       } else {
-        Alert.alert("エラー", errorMessage, [{ text: "OK" }]);
+        Alert.alert(t("common.error"), errorMessage, [{ text: "OK" }]);
       }
     } finally {
       setProcessingMemberId(null);
@@ -398,7 +401,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
   if (isLoading && members.length === 0) {
     return (
       <View style={styles.container}>
-        <LoadingSpinner message="メンバーを読み込み中..." />
+        <LoadingSpinner message={t("teams.mobile.memberLoading")} />
       </View>
     );
   }
@@ -408,7 +411,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
     return (
       <View style={styles.container}>
         <ErrorView
-          message={error.message || "メンバー一覧の取得に失敗しました"}
+          message={error.message || t("teams.mobile.memberFetchFailed")}
           onRetry={onRetry}
         />
       </View>
@@ -574,7 +577,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
                         <View style={styles.nameCellContent}>
                           <View style={styles.nameCellNameRow}>
                             <Text style={styles.nameCellText} numberOfLines={1}>
-                              {user.name || "名前未設定"}
+                              {user.name || t("teams.mobile.unnamedMember")}
                             </Text>
                             {item.role === "admin" && (
                               <Feather name="star" size={9} color="#EAB308" />

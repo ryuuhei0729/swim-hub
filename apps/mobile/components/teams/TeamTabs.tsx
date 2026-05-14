@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 export type TeamTabType = "members" | "groups" | "practices" | "competitions" | "attendance";
 
@@ -10,32 +11,12 @@ export interface TeamTabsProps {
   isAdmin?: boolean;
 }
 
-const tabs: { id: TeamTabType; name: string; icon: keyof typeof Feather.glyphMap }[] = [
-  {
-    id: "members",
-    name: "メンバー",
-    icon: "users",
-  },
-  {
-    id: "groups",
-    name: "グループ",
-    icon: "layers",
-  },
-  {
-    id: "practices",
-    name: "練習",
-    icon: "clock",
-  },
-  {
-    id: "competitions",
-    name: "大会",
-    icon: "award",
-  },
-  {
-    id: "attendance",
-    name: "出欠",
-    icon: "clipboard",
-  },
+const tabs: { id: TeamTabType; nameKey: string; icon: keyof typeof Feather.glyphMap }[] = [
+  { id: "members", nameKey: "teams.mobile.tabMembers", icon: "users" },
+  { id: "groups", nameKey: "teams.mobile.tabGroups", icon: "layers" },
+  { id: "practices", nameKey: "teams.mobile.tabPractices", icon: "clock" },
+  { id: "competitions", nameKey: "teams.mobile.tabCompetitions", icon: "award" },
+  { id: "attendance", nameKey: "teams.mobile.tabAttendance", icon: "clipboard" },
 ];
 
 /**
@@ -43,6 +24,7 @@ const tabs: { id: TeamTabType; name: string; icon: keyof typeof Feather.glyphMap
  * メンバー、練習、大会、出欠のタブ切り替え（閲覧専用）
  */
 export const TeamTabs: React.FC<TeamTabsProps> = ({ activeTab, onTabChange }) => {
+  const { t } = useTranslation();
   // 一般ページは閲覧専用のため、全てのタブを表示
   const visibleTabs = tabs;
 
@@ -59,7 +41,7 @@ export const TeamTabs: React.FC<TeamTabsProps> = ({ activeTab, onTabChange }) =>
               onPress={() => onTabChange(tab.id)}
             >
               <Feather name={tab.icon} size={14} color={isActive ? "#2563EB" : "#6B7280"} />
-              <Text style={[styles.tabText, isActive && styles.tabTextActive]}>{tab.name}</Text>
+              <Text style={[styles.tabText, isActive && styles.tabTextActive]}>{t(tab.nameKey)}</Text>
               {isActive && <View style={styles.tabIndicator} />}
             </Pressable>
           );

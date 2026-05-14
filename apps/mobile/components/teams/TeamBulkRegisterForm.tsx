@@ -10,6 +10,7 @@ import {
   Platform,
 } from "react-native";
 import { format } from "date-fns";
+import { useTranslation } from "react-i18next";
 import { TeamBulkRegisterAPI, type BulkRegisterInput } from "@apps/shared/api/teams/bulkRegister";
 import { useAuth } from "@/contexts/AuthProvider";
 
@@ -50,6 +51,7 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
   onSuccess,
 }) => {
   const { supabase } = useAuth();
+  const { t } = useTranslation();
   const api = useMemo(() => new TeamBulkRegisterAPI(supabase), [supabase]);
 
   const today = format(new Date(), "yyyy-MM-dd");
@@ -170,11 +172,11 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
         : { practices: [], competitions: previewInput.competitions };
 
     if (mode === "practice" && input.practices.length === 0) {
-      setError("登録する練習データがありません");
+      setError(t("teams.mobile.bulkPracticeEmpty"));
       return;
     }
     if (mode === "competition" && input.competitions.length === 0) {
-      setError("登録する大会データがありません");
+      setError(t("teams.mobile.bulkCompetitionEmpty"));
       return;
     }
 
@@ -197,12 +199,12 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
         ]);
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "一括登録に失敗しました";
+      const message = err instanceof Error ? err.message : t("teams.mobile.bulkRegisterFailed");
       setError(message);
       if (Platform.OS === "web") {
         window.alert(message);
       } else {
-        Alert.alert("エラー", message, [{ text: "OK" }]);
+        Alert.alert(t("common.error"), message, [{ text: "OK" }]);
       }
     } finally {
       setLoading(false);
@@ -237,7 +239,7 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
               style={styles.input}
               value={row.title}
               onChangeText={(text) => handlePracticeChange(index, "title", text)}
-              placeholder="例: 朝練"
+              placeholder={t("teams.mobile.bulkPracticeTitlePlaceholder")}
               placeholderTextColor="#9CA3AF"
             />
           </View>
@@ -247,7 +249,7 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
               style={styles.input}
               value={row.place}
               onChangeText={(text) => handlePracticeChange(index, "place", text)}
-              placeholder="例: 市民プール"
+              placeholder={t("teams.mobile.bulkPlacePlaceholder")}
               placeholderTextColor="#9CA3AF"
             />
           </View>
@@ -257,7 +259,7 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
               style={[styles.input, styles.textArea]}
               value={row.note}
               onChangeText={(text) => handlePracticeChange(index, "note", text)}
-              placeholder="メモ"
+              placeholder={t("teams.mobile.bulkMemoPlaceholder")}
               placeholderTextColor="#9CA3AF"
               multiline
             />
@@ -311,7 +313,7 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
               style={styles.input}
               value={row.title}
               onChangeText={(text) => handleCompetitionChange(index, "title", text)}
-              placeholder="大会名"
+              placeholder={t("teams.mobile.bulkCompetitionNamePlaceholder")}
               placeholderTextColor="#9CA3AF"
             />
           </View>
@@ -321,7 +323,7 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
               style={styles.input}
               value={row.place}
               onChangeText={(text) => handleCompetitionChange(index, "place", text)}
-              placeholder="例: 市民プール"
+              placeholder={t("teams.mobile.bulkPlacePlaceholder")}
               placeholderTextColor="#9CA3AF"
             />
           </View>
@@ -356,7 +358,7 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
               style={[styles.input, styles.textArea]}
               value={row.note}
               onChangeText={(text) => handleCompetitionChange(index, "note", text)}
-              placeholder="メモ"
+              placeholder={t("teams.mobile.bulkMemoPlaceholder")}
               placeholderTextColor="#9CA3AF"
               multiline
             />
@@ -383,7 +385,7 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
             <Text style={styles.previewSectionTitle}>練習 {input.practices.length}件</Text>
             {input.practices.slice(0, 5).map((p, idx) => (
               <Text key={idx} style={styles.previewItem}>
-                {p.date} / {p.title || "練習"} / {p.place || "-"}
+                {p.date} / {p.title || t("teams.mobile.fallbackPractice")} / {p.place || "-"}
               </Text>
             ))}
             {input.practices.length > 5 && (
@@ -397,7 +399,7 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
             {input.competitions.slice(0, 5).map((c, idx) => (
               <Text key={idx} style={styles.previewItem}>
                 {c.date}
-                {c.end_date ? `〜${c.end_date}` : ""} / {c.title || "大会"} / {c.place || "-"} /{" "}
+                {c.end_date ? `〜${c.end_date}` : ""} / {c.title || t("teams.mobile.fallbackCompetitionTitle")} / {c.place || "-"} /{" "}
                 {c.pool_type === 0 ? "25m" : "50m"}
               </Text>
             ))}
@@ -449,7 +451,9 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
           onPress={handleSubmit}
           disabled={loading}
         >
-          <Text style={styles.submitButtonText}>{loading ? "登録中..." : "一括登録"}</Text>
+          <Text style={styles.submitButtonText}>
+            {loading ? t("teams.mobile.bulkRegisterLoading") : t("teams.mobile.bulkRegisterSubmit")}
+          </Text>
         </Pressable>
 
         {/* 結果表示 */}
