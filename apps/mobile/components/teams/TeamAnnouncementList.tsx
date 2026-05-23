@@ -1,9 +1,9 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
 import { useTranslation } from "react-i18next";
+import { formatDateTime } from "@apps/shared/utils/date";
+import { useDateLocale } from "@/hooks/useDateLocale";
 import type { TeamAnnouncement } from "@swim-hub/shared/types";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
@@ -35,6 +35,7 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
   onDelete,
 }) => {
   const { t } = useTranslation();
+  const locale = useDateLocale();
 
   // ローディング状態
   if (isLoading && announcements.length === 0) {
@@ -58,8 +59,8 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
   }
 
   // 日付フォーマット
-  const formatDate = (dateString: string): string => {
-    return format(new Date(dateString), "yyyy年M月d日 HH:mm", { locale: ja });
+  const formatAnnouncementDate = (dateString: string): string => {
+    return formatDateTime(dateString, "long", locale);
   };
 
   return (
@@ -80,8 +81,8 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => {
             const isPublished = item.is_published;
-            const startAt = item.start_at ? formatDate(item.start_at) : null;
-            const endAt = item.end_at ? formatDate(item.end_at) : null;
+            const startAt = item.start_at ? formatAnnouncementDate(item.start_at) : null;
+            const endAt = item.end_at ? formatAnnouncementDate(item.end_at) : null;
 
             return (
               <View style={styles.announcementItem}>
@@ -92,7 +93,7 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
                     </Text>
                     <View style={styles.announcementMeta}>
                       <Text style={styles.announcementDate}>
-                        {item.created_at ? formatDate(item.created_at) : "-"}
+                        {item.created_at ? formatAnnouncementDate(item.created_at) : "-"}
                       </Text>
                       {!isPublished && (
                         <View style={styles.draftBadge}>

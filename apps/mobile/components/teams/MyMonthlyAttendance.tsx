@@ -14,10 +14,10 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { AttendanceAPI } from "@swim-hub/shared/api/attendance";
 import type { TeamAttendanceWithDetails } from "@swim-hub/shared/types/attendance";
 import { AttendanceStatus, TeamEvent } from "@swim-hub/shared/types";
-import { getMonthDateRange } from "@swim-hub/shared/utils/date";
-import { format, startOfMonth, endOfMonth, addMonths } from "date-fns";
-import { ja } from "date-fns/locale";
+import { getMonthDateRange, formatDate, toISODateString } from "@swim-hub/shared/utils/date";
+import { startOfMonth, endOfMonth, addMonths } from "date-fns";
 import { useTranslation } from "react-i18next";
+import { useDateLocale } from "@/hooks/useDateLocale";
 
 export interface MyMonthlyAttendanceProps {
   teamId: string;
@@ -42,6 +42,7 @@ interface MonthItem {
 export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId }) => {
   const { supabase } = useAuth();
   const { t } = useTranslation();
+  const locale = useDateLocale();
   const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase]);
 
   // 月リスト表示用の状態
@@ -130,9 +131,9 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       setError(null);
 
       const now = new Date();
-      const startDateStr = format(startOfMonth(now), "yyyy-MM-dd");
+      const startDateStr = toISODateString(startOfMonth(now));
       const oneYearLater = addMonths(now, 12);
-      const endDateStr = format(endOfMonth(oneYearLater), "yyyy-MM-dd");
+      const endDateStr = toISODateString(endOfMonth(oneYearLater));
 
       // 練習・大会を取得（日付のみ）
       const [practicesResult, competitionsResult] = await Promise.all([
@@ -591,7 +592,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
                           <View style={styles.eventHeader}>
                             <View style={styles.eventInfo}>
                               <Text style={styles.eventDate}>
-                                {format(new Date(event.date), "M月d日(E)", { locale: ja })}
+                                {formatDate(event.date, "shortWithWeekday", locale)}
                               </Text>
                               <Text style={styles.eventTitle}>
                                 {event.type === "competition"

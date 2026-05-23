@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, Pressable, Alert } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { formatTime } from "@/utils/formatters";
 import { EntryAPI } from "@apps/shared/api/entries";
@@ -26,6 +27,7 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
   onClose,
   onDeletingChange,
 }) => {
+  const { t } = useTranslation();
   const { supabase } = useAuth();
   const [actualEntries, setActualEntries] = useState<EntryData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,7 +109,9 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
   }, [fetchEntries]);
 
   const getPoolTypeText = (poolType: number) => {
-    return poolType === 1 ? "長水路(50m)" : "短水路(25m)";
+    return poolType === 1
+      ? t("dashboard.mobile.competition.poolTypeLong")
+      : t("dashboard.mobile.competition.poolTypeShort");
   };
 
   // エントリーが0件で読み込み完了した場合は、コンポーネント全体を非表示にする
@@ -183,7 +187,7 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
       <View style={styles.entrySection}>
         <View style={styles.entrySectionHeader}>
           <Text style={styles.entrySectionHeaderEmoji}>📝</Text>
-          <Text style={styles.entrySectionHeaderTitle}>エントリー済み（記録未登録）</Text>
+          <Text style={styles.entrySectionHeaderTitle}>{t("dashboard.mobile.dayDetail.entryAlreadyTitle")}</Text>
           {onEditEntry && (
             <Pressable
               style={styles.entrySectionHeaderActionButton}
@@ -214,9 +218,9 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
         </View>
 
         {loading ? (
-          <Text style={styles.entryLoadingText}>読み込み中...</Text>
+          <Text style={styles.entryLoadingText}>{t("dashboard.mobile.dayDetail.entryLoadingText")}</Text>
         ) : actualEntries.length === 0 ? (
-          <Text style={styles.entryEmptyText}>エントリー情報が見つかりません</Text>
+          <Text style={styles.entryEmptyText}>{t("dashboard.mobile.dayDetail.entryEmptyText")}</Text>
         ) : (
           <View style={styles.entryList}>
             {actualEntries.map((entry) => (
@@ -224,12 +228,12 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
                 <View style={styles.entryCardContent}>
                   <View style={styles.entryCardInfo}>
                     <View style={styles.entryCardInfoRow}>
-                      <Text style={styles.entryCardInfoLabel}>種目:</Text>
+                      <Text style={styles.entryCardInfoLabel}>{t("dashboard.mobile.dayDetail.fieldStyle")}</Text>
                       <Text style={styles.entryCardInfoValue}>{entry.styleName}</Text>
                     </View>
                     {entry.entryTime && entry.entryTime > 0 && (
                       <View style={styles.entryCardInfoRow}>
-                        <Text style={styles.entryCardInfoLabel}>エントリータイム:</Text>
+                        <Text style={styles.entryCardInfoLabel}>{t("dashboard.mobile.dayDetail.fieldEntryTime")}</Text>
                         <Text style={styles.entryCardInfoValueTime}>
                           {formatTime(entry.entryTime)}
                         </Text>
@@ -237,7 +241,7 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
                     )}
                     {entry.note && entry.note.trim().length > 0 && (
                       <View style={styles.entryCardInfoRow}>
-                        <Text style={styles.entryCardInfoLabel}>メモ:</Text>
+                        <Text style={styles.entryCardInfoLabel}>{t("dashboard.mobile.dayDetail.fieldMemo")}</Text>
                         <Text style={styles.entryCardInfoValue}>{entry.note}</Text>
                       </View>
                     )}
@@ -247,15 +251,15 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
                       style={styles.entryCardDeleteButton}
                       onPress={async () => {
                         Alert.alert(
-                          "削除確認",
-                          "このエントリーを削除しますか？\nこの操作は取り消せません。",
+                          t("dashboard.mobile.dayDetail.entryDeleteConfirmTitle"),
+                          t("dashboard.mobile.dayDetail.entryDeleteConfirmMessage"),
                           [
                             {
-                              text: "キャンセル",
+                              text: t("common.cancel"),
                               style: "cancel",
                             },
                             {
-                              text: "削除",
+                              text: t("common.upload.removeChoice"),
                               style: "destructive",
                               onPress: async () => {
                                 onDeletingChange?.(true);
@@ -271,8 +275,10 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
                                 } catch (error) {
                                   console.error("削除エラー:", error);
                                   Alert.alert(
-                                    "エラー",
-                                    error instanceof Error ? error.message : "削除に失敗しました",
+                                    t("common.alertErrorTitle"),
+                                    error instanceof Error
+                                      ? error.message
+                                      : t("dashboard.mobile.dayDetail.entryDeleteFailed"),
                                     [{ text: "OK" }],
                                   );
                                 } finally {
@@ -308,7 +314,7 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
           }}
         >
           <Feather name="plus" size={20} color="#FFFFFF" />
-          <Text style={styles.addCompetitionRecordButtonText}>大会記録を追加</Text>
+          <Text style={styles.addCompetitionRecordButtonText}>{t("dashboard.mobile.dayDetail.addCompetitionRecord")}</Text>
         </Pressable>
       )}
     </View>

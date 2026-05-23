@@ -2,8 +2,10 @@ import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { format, parseISO, isValid } from "date-fns";
-import { ja } from "date-fns/locale";
+import { parseISO, isValid } from "date-fns";
+import { useTranslation } from "react-i18next";
+import { formatDateTime } from "@apps/shared/utils/date";
+import { useDateLocale } from "@/hooks/useDateLocale";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useTeamAnnouncementsQuery } from "@apps/shared/hooks/queries/announcements";
 import {
@@ -96,8 +98,9 @@ const TeamCard: React.FC<TeamCardProps> = ({
   navigation,
   supabase,
 }) => {
+  const { t } = useTranslation();
   const teamId = membership.team_id;
-  const teamName = membership.teams?.name || "チーム";
+  const teamName = membership.teams?.name || t("teams.mobile.fallbackTeamName");
 
   const { data: announcements = [] } = useTeamAnnouncementsQuery(supabase, {
     teamId,
@@ -169,9 +172,10 @@ const TeamCard: React.FC<TeamCardProps> = ({
 };
 
 const AnnouncementItem: React.FC<{ announcement: TeamAnnouncement }> = ({ announcement }) => {
+  const locale = useDateLocale();
   const parsedUpdatedAt = announcement.updated_at ? parseISO(announcement.updated_at) : new Date(0);
   const updatedAt = isValid(parsedUpdatedAt)
-    ? format(parsedUpdatedAt, "M月d日 HH:mm", { locale: ja })
+    ? formatDateTime(parsedUpdatedAt, "shortDate", locale)
     : "-";
 
   return (

@@ -78,7 +78,7 @@ export const TeamDetailScreen: React.FC = () => {
           setIsCopied(true);
           setTimeout(() => setIsCopied(false), 2000);
         } catch {
-          window.alert("コピーに失敗しました");
+          window.alert(t("teams.mobile.copyFailed"));
         }
         document.body.removeChild(textArea);
       }

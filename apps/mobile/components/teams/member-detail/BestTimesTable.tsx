@@ -168,7 +168,7 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
           {/* ヘッダー */}
           <View style={styles.tableHeader}>
             <View style={[styles.headerCell, styles.distanceCell]}>
-              <Text style={styles.headerText}>距離</Text>
+              <Text style={styles.headerText}>{t("teams.memberDetail.bestTimesTable.distanceHeader")}</Text>
             </View>
             {STYLES.map((style) => (
               <View

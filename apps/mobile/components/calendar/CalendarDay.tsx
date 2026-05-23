@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { format, isSameMonth, isToday, getDay } from "date-fns";
+import { useTranslation } from "react-i18next";
 import { isHoliday } from "@apps/shared/utils/holiday";
 import type { CalendarItem } from "@apps/shared/types/ui";
 
@@ -24,6 +25,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
   isFirstColumn = false,
   isLastColumn = false,
 }) => {
+  const { t } = useTranslation();
   const isCurrentMonth = isSameMonth(date, currentDate);
   const isTodayDate = isToday(date);
   const dayNumber = format(date, "d");
@@ -101,10 +103,10 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
     let displayTitle = item.title;
 
     if (item.type === "team_practice") {
-      const teamName = item.metadata?.team?.name || "チーム";
+      const teamName = item.metadata?.team?.name || t("teams.mobile.fallbackTeamName");
       displayTitle = `${teamName} - ${item.title}`;
     } else if (item.type === "entry" || item.type === "record") {
-      displayTitle = item.metadata?.competition?.title || item.title || "大会";
+      displayTitle = item.metadata?.competition?.title || item.title || t("teams.mobile.fallbackCompetitionName");
     }
 
     return displayTitle;

@@ -33,39 +33,54 @@ export interface OnboardingBestTimeProps {
   onBack: () => void;
 }
 
+type StyleKey = "Fr" | "Br" | "Ba" | "Fly" | "IM";
+
 interface StyleOption {
+  /** バックエンド (DB) 上の styleId */
   id: number;
-  nameJp: string;
+  /** 距離 (メートル) */
+  distance: number;
+  /** `practice.styles.*` の i18n キー */
+  styleKey: StyleKey;
 }
 
 // =============================================================================
 // 種目マスター (Web版 Step3BestTime.tsx から複製)
 // =============================================================================
+// id は DB 上の styleId。表示は `${distance}m ${t("practice.styles." + styleKey)}`。
 
 const STYLES: StyleOption[] = [
-  { id: 1, nameJp: "25m 自由形" },
-  { id: 2, nameJp: "50m 自由形" },
-  { id: 3, nameJp: "100m 自由形" },
-  { id: 4, nameJp: "200m 自由形" },
-  { id: 5, nameJp: "400m 自由形" },
-  { id: 6, nameJp: "800m 自由形" },
-  { id: 7, nameJp: "1500m 自由形" },
-  { id: 8, nameJp: "25m 平泳ぎ" },
-  { id: 9, nameJp: "50m 平泳ぎ" },
-  { id: 10, nameJp: "100m 平泳ぎ" },
-  { id: 11, nameJp: "200m 平泳ぎ" },
-  { id: 12, nameJp: "25m 背泳ぎ" },
-  { id: 13, nameJp: "50m 背泳ぎ" },
-  { id: 14, nameJp: "100m 背泳ぎ" },
-  { id: 15, nameJp: "200m 背泳ぎ" },
-  { id: 16, nameJp: "25m バタフライ" },
-  { id: 17, nameJp: "50m バタフライ" },
-  { id: 18, nameJp: "100m バタフライ" },
-  { id: 19, nameJp: "200m バタフライ" },
-  { id: 20, nameJp: "100m 個人メドレー" },
-  { id: 21, nameJp: "200m 個人メドレー" },
-  { id: 22, nameJp: "400m 個人メドレー" },
+  { id: 1, distance: 25, styleKey: "Fr" },
+  { id: 2, distance: 50, styleKey: "Fr" },
+  { id: 3, distance: 100, styleKey: "Fr" },
+  { id: 4, distance: 200, styleKey: "Fr" },
+  { id: 5, distance: 400, styleKey: "Fr" },
+  { id: 6, distance: 800, styleKey: "Fr" },
+  { id: 7, distance: 1500, styleKey: "Fr" },
+  { id: 8, distance: 25, styleKey: "Br" },
+  { id: 9, distance: 50, styleKey: "Br" },
+  { id: 10, distance: 100, styleKey: "Br" },
+  { id: 11, distance: 200, styleKey: "Br" },
+  { id: 12, distance: 25, styleKey: "Ba" },
+  { id: 13, distance: 50, styleKey: "Ba" },
+  { id: 14, distance: 100, styleKey: "Ba" },
+  { id: 15, distance: 200, styleKey: "Ba" },
+  { id: 16, distance: 25, styleKey: "Fly" },
+  { id: 17, distance: 50, styleKey: "Fly" },
+  { id: 18, distance: 100, styleKey: "Fly" },
+  { id: 19, distance: 200, styleKey: "Fly" },
+  { id: 20, distance: 100, styleKey: "IM" },
+  { id: 21, distance: 200, styleKey: "IM" },
+  { id: 22, distance: 400, styleKey: "IM" },
 ];
+
+/**
+ * `StyleOption` を locale-aware な表示文字列に変換。
+ * 例: ja → "50m 自由形", en → "50m Freestyle"
+ */
+function formatStyleDisplay(style: StyleOption, t: (key: string) => string): string {
+  return `${style.distance}m ${t(`practice.styles.${style.styleKey}`)}`;
+}
 
 function genKey(): string {
   return `bt-${Math.random().toString(36).slice(2)}-${Date.now()}`;
@@ -229,7 +244,8 @@ export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({ onComple
         keyboardShouldPersistTaps="handled"
       >
         {entries.map((entry) => {
-          const styleName = STYLES.find((s) => s.id === entry.styleId)?.nameJp ?? "";
+          const styleOption = STYLES.find((s) => s.id === entry.styleId);
+          const styleName = styleOption ? formatStyleDisplay(styleOption, t) : "";
           return (
             <EntryRow
               key={entry.key}
@@ -336,16 +352,19 @@ export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({ onComple
             <FlatList
               data={STYLES}
               keyExtractor={(item) => String(item.id)}
-              renderItem={({ item }) => (
-                <Pressable
-                  style={({ pressed }) => [styles.modalItem, pressed && styles.modalItemPressed]}
-                  onPress={() => addEntry(item.id)}
-                  accessibilityRole="button"
-                  accessibilityLabel={item.nameJp}
-                >
-                  <Text style={styles.modalItemText}>{item.nameJp}</Text>
-                </Pressable>
-              )}
+              renderItem={({ item }) => {
+                const label = formatStyleDisplay(item, t);
+                return (
+                  <Pressable
+                    style={({ pressed }) => [styles.modalItem, pressed && styles.modalItemPressed]}
+                    onPress={() => addEntry(item.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={label}
+                  >
+                    <Text style={styles.modalItemText}>{label}</Text>
+                  </Pressable>
+                );
+              }}
               showsVerticalScrollIndicator={false}
             />
           </View>

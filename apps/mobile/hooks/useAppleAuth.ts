@@ -6,6 +6,7 @@ import { useState, useCallback } from "react";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as Crypto from "expo-crypto";
 import { Platform } from "react-native";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/lib/supabase";
 import { localizeSupabaseAuthError } from "@/utils/authErrorLocalizer";
 
@@ -46,6 +47,7 @@ export interface UseAppleAuthReturn {
  * Apple認証フック
  */
 export const useAppleAuth = (): UseAppleAuthReturn => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,13 +59,15 @@ export const useAppleAuth = (): UseAppleAuthReturn => {
    */
   const signInWithApple = useCallback(async (): Promise<AppleAuthResult> => {
     if (!isAvailable) {
-      setError("Apple認証はiOSでのみ利用可能です");
-      return { success: false, error: new Error("Apple認証はiOSでのみ利用可能です") };
+      const msg = t("auth.mobile.appleAuthIosOnly");
+      setError(msg);
+      return { success: false, error: new Error(msg) };
     }
 
     if (!supabase) {
-      setError("Supabaseクライアントが初期化されていません");
-      return { success: false, error: new Error("Supabaseクライアントが初期化されていません") };
+      const msg = t("auth.ui.clientNotInitialized");
+      setError(msg);
+      return { success: false, error: new Error(msg) };
     }
 
     setLoading(true);
@@ -73,15 +77,16 @@ export const useAppleAuth = (): UseAppleAuthReturn => {
     const APPLE_AUTH_TIMEOUT_MS = 60000;
     const timeoutId = setTimeout(() => {
       setLoading(false);
-      setError("認証がタイムアウトしました。もう一度お試しください。");
+      setError(t("auth.mobile.appleAuthTimeout"));
     }, APPLE_AUTH_TIMEOUT_MS);
 
     try {
       // Apple認証が利用可能かチェック
       const isAppleAuthAvailable = await AppleAuthentication.isAvailableAsync();
       if (!isAppleAuthAvailable) {
-        setError("このデバイスではApple認証を利用できません");
-        return { success: false, error: new Error("このデバイスではApple認証を利用できません") };
+        const msg = t("auth.mobile.appleAuthDeviceUnavailable");
+        setError(msg);
+        return { success: false, error: new Error(msg) };
       }
 
       // nonce生成（リプレイ攻撃防止・Supabaseトークン検証に必要）
@@ -105,8 +110,9 @@ export const useAppleAuth = (): UseAppleAuthReturn => {
 
       // identityTokenが必要
       if (!credential.identityToken) {
-        setError("Apple認証トークンが取得できませんでした");
-        return { success: false, error: new Error("Apple認証トークンが取得できませんでした") };
+        const msg = t("auth.mobile.appleTokenNotReceived");
+        setError(msg);
+        return { success: false, error: new Error(msg) };
       }
 
       // ユーザー名を取得（初回のみ取得可能）
@@ -146,11 +152,12 @@ export const useAppleAuth = (): UseAppleAuthReturn => {
         (err.code === "ERR_REQUEST_UNKNOWN" &&
           err.message?.toLowerCase().includes("authorization attempt failed"))
       ) {
-        setError("認証がキャンセルされました");
-        return { success: false, error: new Error("認証がキャンセルされました") };
+        const msg = t("auth.mobile.cancelled");
+        setError(msg);
+        return { success: false, error: new Error(msg) };
       }
 
-      const rawMessage = err.message || "不明なエラーが発生しました";
+      const rawMessage = err.message || t("auth.mobile.unknownError");
       const localizedMessage = localizeSupabaseAuthError({ message: rawMessage });
       setError(localizedMessage);
       return { success: false, error: err };
@@ -158,7 +165,7 @@ export const useAppleAuth = (): UseAppleAuthReturn => {
       clearTimeout(timeoutId);
       setLoading(false);
     }
-  }, [isAvailable]);
+  }, [isAvailable, t]);
 
   /**
    * エラーをクリア

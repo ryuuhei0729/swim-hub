@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { formatTime } from "@/utils/formatters";
 import { VideoPlayer } from "@/components/shared/VideoPlayer";
@@ -366,6 +367,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
   onDeleteRecord,
   onClose,
 }) => {
+  const { t } = useTranslation();
   const { supabase, user } = useAuth();
   const [actualRecords, setActualRecords] = useState<RecordData[]>([]);
   const [competitionImages, setCompetitionImages] = useState<Array<{ id: string; url: string }>>(
@@ -382,7 +384,9 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
 
   // プール種別のテキストを取得
   const getPoolTypeText = (poolType: number): string => {
-    return poolType === 1 ? "長水路(50m)" : "短水路(25m)";
+    return poolType === 1
+      ? t("dashboard.mobile.competition.poolTypeLong")
+      : t("dashboard.mobile.competition.poolTypeShort");
   };
 
   // 記録データを取得

@@ -298,7 +298,7 @@ export const PracticeFormScreen: React.FC = () => {
         // 新規画像をアップロード
         if (newImageFiles.length > 0) {
           if (!accessToken) {
-            throw new Error("認証が必要です。再ログインしてください。");
+            throw new Error(t("practice.form.reauthRequired"));
           }
           const uploadResults = await uploadImagesViaApi(
             newImageFiles.map((f) => ({
@@ -463,7 +463,7 @@ export const PracticeFormScreen: React.FC = () => {
         // 新規画像をアップロード
         if (newImageFiles.length > 0) {
           if (!accessToken) {
-            throw new Error("認証が必要です。再ログインしてください。");
+            throw new Error(t("practice.form.reauthRequired"));
           }
           const uploadResults = await uploadImagesViaApi(
             newImageFiles.map((f) => ({

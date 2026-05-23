@@ -4,9 +4,9 @@ import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
 import { useTranslation } from "react-i18next";
+import { formatDate } from "@apps/shared/utils/date";
+import { useDateLocale } from "@/hooks/useDateLocale";
 import { useAuth } from "@/contexts/AuthProvider";
 import {
   usePracticeByIdQuery,
@@ -32,6 +32,7 @@ export const PracticeDetailScreen: React.FC = () => {
   const { practiceId } = route.params;
   const { supabase } = useAuth();
   const { t } = useTranslation();
+  const locale = useDateLocale();
 
   const deleteMutation = useDeletePracticeMutation(supabase);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -125,7 +126,7 @@ export const PracticeDetailScreen: React.FC = () => {
     );
   }
 
-  const formattedDate = format(new Date(practice.date), "yyyy年M月d日(E)", { locale: ja });
+  const formattedDate = formatDate(practice.date, "longWithWeekday", locale);
   const title = practice.title || t("practice.client.practiceTitle");
 
   const practiceImages = getExistingImagesFromPaths(supabase, practice.image_paths, "practice-images");

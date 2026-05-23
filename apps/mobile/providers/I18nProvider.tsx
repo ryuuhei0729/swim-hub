@@ -1,54 +1,34 @@
 // =============================================================================
-// I18nProvider - i18n 初期化とローディング制御
+// I18nProvider - OS 言語追従の i18n コンテキスト
 // =============================================================================
+//
+// 端末 OS のロケール設定を起動時とランタイムで監視し、ja/en のいずれかに
+// 揃えて i18next の言語を切り替える。明示的な言語選択 UI は持たない。
 
 import React, { useEffect } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { I18nextProvider } from "react-i18next";
+import { useLocales } from "expo-localization";
 
-import i18n from "@/i18n";
-import { initializeLocale } from "@/i18n/bootstrap";
-import { useLocaleStore } from "@/stores/localeStore";
+import i18n, { DEVICE_FALLBACK_LOCALE, isSupportedLocale, type SupportedLocale } from "@/i18n";
 
 interface I18nProviderProps {
   children: React.ReactNode;
 }
 
-/**
- * i18n 初期化 (AsyncStorage 読み込み + 端末ロケール検出) が完了するまで
- * ローディングスピナーを表示し、完了後に children を描画する。
- * App.tsx 全体の loadingContainer と同じスタイルで切替時に違和感を出さない。
- */
+function deriveLocale(osLocales: ReturnType<typeof useLocales>): SupportedLocale {
+  const code = osLocales[0]?.languageCode?.toLowerCase();
+  return isSupportedLocale(code) ? code : DEVICE_FALLBACK_LOCALE;
+}
+
 export function I18nProvider({ children }: I18nProviderProps) {
-  const ready = useLocaleStore((state) => state.ready);
-  const markReady = useLocaleStore((state) => state.markReady);
+  const osLocales = useLocales();
+  const desired = deriveLocale(osLocales);
 
   useEffect(() => {
-    let cancelled = false;
-    void initializeLocale().then((locale) => {
-      if (!cancelled) markReady(locale);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [markReady]);
-
-  if (!ready) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2563EB" />
-      </View>
-    );
-  }
+    if (i18n.language !== desired) {
+      void i18n.changeLanguage(desired);
+    }
+  }, [desired]);
 
   return <I18nextProvider i18n={i18n}>{children}</I18nextProvider>;
 }
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#EFF6FF",
-  },
-});

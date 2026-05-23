@@ -10,6 +10,7 @@ import {
   Dimensions,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import type { PracticeTag } from "@apps/shared/types";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -39,6 +40,7 @@ export const TagSelectModal: React.FC<TagSelectModalProps> = ({
   onEditTag,
   onDeleteTag,
 }) => {
+  const { t } = useTranslation();
   const selectedIds = useMemo(() => new Set(selectedTags.map((t) => t.id)), [selectedTags]);
 
   const handleTagToggle = (tag: PracticeTag) => {
@@ -50,22 +52,22 @@ export const TagSelectModal: React.FC<TagSelectModalProps> = ({
   };
 
   const handleMorePress = (tag: PracticeTag) => {
-    Alert.alert(tag.name, "タグの操作を選択してください", [
+    Alert.alert(tag.name, t("record.tag.actionPrompt"), [
       {
-        text: "編集",
+        text: t("record.tag.actionEdit"),
         onPress: () => onEditTag(tag),
       },
       {
-        text: "削除",
+        text: t("record.tag.actionDelete"),
         style: "destructive",
         onPress: () => {
           Alert.alert(
-            "タグを削除",
-            `「${tag.name}」を削除しますか？\nこのタグが付けられた練習ログからも削除されます。`,
+            t("record.tag.deleteConfirmTitle"),
+            t("record.tag.deleteConfirmMessage", { name: tag.name }),
             [
-              { text: "キャンセル", style: "cancel" },
+              { text: t("common.cancel"), style: "cancel" },
               {
-                text: "削除",
+                text: t("record.tag.actionDelete"),
                 style: "destructive",
                 onPress: () => onDeleteTag(tag),
               },
@@ -74,7 +76,7 @@ export const TagSelectModal: React.FC<TagSelectModalProps> = ({
         },
       },
       {
-        text: "キャンセル",
+        text: t("common.cancel"),
         style: "cancel",
       },
     ]);
@@ -95,7 +97,7 @@ export const TagSelectModal: React.FC<TagSelectModalProps> = ({
 
           {/* ヘッダー */}
           <View style={styles.header}>
-            <Text style={styles.title}>タグを選択</Text>
+            <Text style={styles.title}>{t("record.tag.selectModalTitle")}</Text>
             <Pressable
               style={styles.closeButton}
               onPress={onClose}
@@ -113,8 +115,8 @@ export const TagSelectModal: React.FC<TagSelectModalProps> = ({
           >
             {availableTags.length === 0 ? (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>タグがありません</Text>
-                <Text style={styles.emptySubText}>下のボタンから新しいタグを作成してください</Text>
+                <Text style={styles.emptyText}>{t("record.tag.emptyTitle")}</Text>
+                <Text style={styles.emptySubText}>{t("record.tag.emptySubtext")}</Text>
               </View>
             ) : (
               <View style={styles.tagsGrid}>
@@ -156,15 +158,17 @@ export const TagSelectModal: React.FC<TagSelectModalProps> = ({
             {/* 新規タグ作成ボタン */}
             <Pressable style={styles.createButton} onPress={onCreateTag}>
               <Feather name="plus" size={18} color="#2563EB" />
-              <Text style={styles.createButtonText}>新しいタグを作成</Text>
+              <Text style={styles.createButtonText}>{t("record.tag.createNewButton")}</Text>
             </Pressable>
           </ScrollView>
 
           {/* フッター */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>{selectedTags.length}件選択中</Text>
+            <Text style={styles.footerText}>
+              {t("record.tag.selectedCount", { count: selectedTags.length })}
+            </Text>
             <Pressable style={styles.doneButton} onPress={onClose}>
-              <Text style={styles.doneButtonText}>完了</Text>
+              <Text style={styles.doneButtonText}>{t("record.tag.doneButton")}</Text>
             </Pressable>
           </View>
         </View>

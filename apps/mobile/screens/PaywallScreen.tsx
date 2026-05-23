@@ -164,7 +164,7 @@ export const PaywallScreen: React.FC = () => {
         style={styles.closeButton}
         onPress={() => navigation.goBack()}
         accessibilityRole="button"
-        accessibilityLabel="閉じる"
+        accessibilityLabel={t("common.aria.close")}
       >
         <Text style={styles.closeButtonText}>✕</Text>
       </TouchableOpacity>

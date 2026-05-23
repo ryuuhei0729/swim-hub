@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { View, Text, TextInput, StyleSheet } from "react-native";
 import { format, isValid } from "date-fns";
+import { useTranslation } from "react-i18next";
 
 interface BirthdayInputProps {
   /** 値 (yyyy-MM-dd 形式の文字列、または先頭 10 文字が YYYY-MM-DD である ISO 文字列) */
@@ -34,6 +35,7 @@ export const BirthdayInput: React.FC<BirthdayInputProps> = ({
   minYear = 1900,
   maxYear = new Date().getFullYear(),
 }) => {
+  const { t } = useTranslation();
   const [yearText, setYearText] = useState("");
   const [monthText, setMonthText] = useState("");
   const [dayText, setDayText] = useState("");
@@ -90,13 +92,13 @@ export const BirthdayInput: React.FC<BirthdayInputProps> = ({
         date.getDate() === dNum;
 
       if (!isRealDate) {
-        setInternalError("存在しない日付です");
+        setInternalError(t("common.birthdayInput.invalidDate"));
         emit("");
         return;
       }
 
       if (yNum < minYear || yNum > maxYear) {
-        setInternalError(`${minYear}〜${maxYear}年の範囲で入力してください`);
+        setInternalError(t("common.birthdayInput.outOfRange", { min: minYear, max: maxYear }));
         emit("");
         return;
       }
@@ -162,10 +164,10 @@ export const BirthdayInput: React.FC<BirthdayInputProps> = ({
             keyboardType="number-pad"
             maxLength={4}
             editable={!disabled}
-            accessibilityLabel="生年"
+            accessibilityLabel={t("common.birthdayInput.yearLabel")}
             autoComplete="birthdate-year"
           />
-          <Text style={styles.suffix}>年</Text>
+          <Text style={styles.suffix}>{t("common.birthdayInput.yearUnit")}</Text>
         </View>
         <View style={styles.field}>
           <TextInput
@@ -179,10 +181,10 @@ export const BirthdayInput: React.FC<BirthdayInputProps> = ({
             keyboardType="number-pad"
             maxLength={2}
             editable={!disabled}
-            accessibilityLabel="生月"
+            accessibilityLabel={t("common.birthdayInput.monthLabel")}
             autoComplete="birthdate-month"
           />
-          <Text style={styles.suffix}>月</Text>
+          <Text style={styles.suffix}>{t("common.birthdayInput.monthUnit")}</Text>
         </View>
         <View style={styles.field}>
           <TextInput
@@ -196,10 +198,10 @@ export const BirthdayInput: React.FC<BirthdayInputProps> = ({
             keyboardType="number-pad"
             maxLength={2}
             editable={!disabled}
-            accessibilityLabel="生日"
+            accessibilityLabel={t("common.birthdayInput.dayLabel")}
             autoComplete="birthdate-day"
           />
-          <Text style={styles.suffix}>日</Text>
+          <Text style={styles.suffix}>{t("common.birthdayInput.dayUnit")}</Text>
         </View>
       </View>
 

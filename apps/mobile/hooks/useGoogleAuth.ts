@@ -4,6 +4,7 @@
  */
 import { useState, useCallback } from "react";
 import * as WebBrowser from "expo-web-browser";
+import { useTranslation } from "react-i18next";
 import { getRedirectUri, extractTokensFromUrl, type GoogleAuthOptions } from "@/lib/google-auth";
 import { supabase } from "@/lib/supabase";
 import { localizeSupabaseAuthError } from "@/utils/authErrorLocalizer";
@@ -33,6 +34,7 @@ export interface UseGoogleAuthReturn {
  * Google認証フック
  */
 export const useGoogleAuth = (): UseGoogleAuthReturn => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,8 +44,9 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
   const signInWithGoogle = useCallback(
     async (options?: GoogleAuthOptions): Promise<GoogleAuthResult> => {
       if (!supabase) {
-        setError("Supabaseクライアントが初期化されていません");
-        return { success: false, error: new Error("Supabaseクライアントが初期化されていません") };
+        const msg = t("auth.ui.clientNotInitialized");
+        setError(msg);
+        return { success: false, error: new Error(msg) };
       }
 
       setLoading(true);
@@ -78,11 +81,11 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
         if (oauthError || !data.url) {
           const errorMessage = oauthError
             ? localizeSupabaseAuthError(oauthError)
-            : "OAuth URLの生成に失敗しました";
+            : t("auth.mobile.oauthUrlGenerationFailed");
           setError(errorMessage);
           return {
             success: false,
-            error: oauthError || new Error("OAuth URLの生成に失敗しました"),
+            error: oauthError || new Error(t("auth.mobile.oauthUrlGenerationFailed")),
           };
         }
 
@@ -114,9 +117,7 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
             if (forCalendarConnect) {
               // provider_refresh_tokenがない場合でもエラーを表示
               if (!tokens.providerRefreshToken) {
-                setError(
-                  "Googleカレンダーのアクセス権限が取得できませんでした。再度お試しください。",
-                );
+                setError(t("auth.mobile.googleCalendarPermissionDenied"));
                 return { success: false, error: new Error("provider_refresh_token not received") };
               }
 
@@ -134,10 +135,11 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
 
               if (!response.ok) {
                 const errorData = (await response.json().catch(() => ({}))) as { error?: string };
-                setError(errorData.error || "カレンダー連携の保存に失敗しました");
+                const fallback = t("auth.mobile.calendarConnectionSaveFailed");
+                setError(errorData.error || fallback);
                 return {
                   success: false,
-                  error: new Error(errorData.error || "カレンダー連携の保存に失敗しました"),
+                  error: new Error(errorData.error || fallback),
                 };
               }
             }
@@ -145,24 +147,28 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
             return { success: true };
           }
 
-          setError("認証トークンが取得できませんでした");
-          return { success: false, error: new Error("認証トークンが取得できませんでした") };
+          const tokensMsg = t("auth.mobile.tokensNotReceived");
+          setError(tokensMsg);
+          return { success: false, error: new Error(tokensMsg) };
         }
 
         if (result.type === "cancel") {
-          setError("認証がキャンセルされました");
-          return { success: false, error: new Error("認証がキャンセルされました") };
+          const msg = t("auth.mobile.cancelled");
+          setError(msg);
+          return { success: false, error: new Error(msg) };
         }
 
         if (result.type === "dismiss") {
-          setError("認証が中断されました");
-          return { success: false, error: new Error("認証が中断されました") };
+          const msg = t("auth.mobile.dismissed");
+          setError(msg);
+          return { success: false, error: new Error(msg) };
         }
 
-        setError("認証に失敗しました");
-        return { success: false, error: new Error("認証に失敗しました") };
+        const failedMsg = t("auth.mobile.authFailed");
+        setError(failedMsg);
+        return { success: false, error: new Error(failedMsg) };
       } catch (err) {
-        const rawMessage = err instanceof Error ? err.message : "不明なエラーが発生しました";
+        const rawMessage = err instanceof Error ? err.message : t("auth.mobile.unknownError");
         const localizedMessage = localizeSupabaseAuthError({ message: rawMessage });
         setError(localizedMessage);
         return { success: false, error: err instanceof Error ? err : new Error(rawMessage) };
@@ -170,7 +176,7 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
         setLoading(false);
       }
     },
-    [],
+    [t],
   );
 
   /**

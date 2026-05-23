@@ -13,7 +13,6 @@ import { IOSCalendarSyncSettings } from "@/components/settings/IOSCalendarSyncSe
 import { EmailChangeSettings } from "@/components/settings/EmailChangeSettings";
 import { IdentityLinkSettings } from "@/components/settings/IdentityLinkSettings";
 import { AccountDeleteSettings } from "@/components/settings/AccountDeleteSettings";
-import { LanguageSelector } from "@/components/settings/LanguageSelector";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import type { MainStackParamList } from "@/navigation/types";
 
@@ -48,7 +47,7 @@ export const SettingsScreen: React.FC = () => {
       }
     } catch (err) {
       console.error("ログアウト処理エラー:", err);
-      Alert.alert("エラー", "ログアウトに失敗しました。もう一度お試しください。");
+      Alert.alert(t("common.error"), t("settings.mobile.logoutFailed"));
     } finally {
       setIsLoggingOut(false);
     }
@@ -179,9 +178,6 @@ export const SettingsScreen: React.FC = () => {
             </Pressable>
           </View>
         </View>
-
-        {/* 言語設定セクション */}
-        <LanguageSelector />
 
         {/* Googleカレンダー連携セクション */}
         <GoogleCalendarSyncSettings profile={profile} onUpdate={refetchProfile} />

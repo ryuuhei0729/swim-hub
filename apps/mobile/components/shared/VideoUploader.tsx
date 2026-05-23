@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from "react";
 import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { uploadVideo, deleteVideo, type VideoType } from "@/utils/videoUpload";
 import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
@@ -43,6 +44,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
   onPendingVideoAsset,
   onPendingVideoUri,
 }) => {
+  const { t } = useTranslation();
   const { getAccessToken } = useAuth();
   const [uploadState, setUploadState] = useState<UploadState>(
     existingVideoPath ? "done" : "idle",
@@ -65,7 +67,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
         const accessToken = await getAccessToken();
         if (!isMounted) return;
         if (!accessToken) {
-          setError("セッションが無効です。再ログインしてください。");
+          setError(t("common.upload.sessionInvalid"));
           setUploadState("error");
           return;
         }
@@ -91,7 +93,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
         } catch (err) {
           if (!isMounted) return;
           console.error("動画アップロードエラー:", err);
-          setError(err instanceof Error ? err.message : "アップロードに失敗しました");
+          setError(err instanceof Error ? err.message : t("common.upload.uploadFailed"));
           setUploadState("error");
         }
       };
@@ -124,7 +126,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
         const asset = result.assets[0];
 
         if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE_MB * 1024 * 1024) {
-          Alert.alert("エラー", `動画のサイズが${MAX_FILE_SIZE_MB}MBを超えています`);
+          Alert.alert(t("common.alertErrorTitle"), t("common.upload.videoSizeError", { maxMb: MAX_FILE_SIZE_MB }));
           return;
         }
 
@@ -132,7 +134,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
           // ID あり → 最新 token を取得してから即アップロード
           const accessToken = await getAccessToken();
           if (!accessToken) {
-            Alert.alert("エラー", "認証情報が見つかりません。再ログインしてください。");
+            Alert.alert(t("common.alertErrorTitle"), t("common.upload.authNotFound"));
             return;
           }
 
@@ -163,7 +165,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
         }
       } catch (err) {
         console.error("動画選択/アップロードエラー:", err);
-        setError(err instanceof Error ? err.message : "アップロードに失敗しました");
+        setError(err instanceof Error ? err.message : t("common.upload.uploadFailed"));
         setUploadState("error");
       }
     },
@@ -171,12 +173,12 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
   );
 
   const handleSelectSource = useCallback(() => {
-    Alert.alert("動画を追加", "動画の取得元を選択してください", [
-      { text: "キャンセル", style: "cancel" },
-      { text: "カメラで撮影", onPress: () => pickVideo("camera") },
-      { text: "ライブラリから選択", onPress: () => pickVideo("library") },
+    Alert.alert(t("common.upload.videoAddTitle"), t("common.upload.videoSourceSelectMessage"), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("common.upload.cameraOption"), onPress: () => pickVideo("camera") },
+      { text: t("common.upload.libraryOption"), onPress: () => pickVideo("library") },
     ]);
-  }, [pickVideo]);
+  }, [pickVideo, t]);
 
   const handleDelete = useCallback(async () => {
     // 保留中の動画を削除
@@ -190,16 +192,16 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
 
     if (!id) return;
 
-    Alert.alert("動画を削除", "この動画を削除しますか？", [
-      { text: "キャンセル", style: "cancel" },
+    Alert.alert(t("common.upload.videoRemoveTitle"), t("common.upload.videoRemoveConfirm"), [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "削除",
+        text: t("common.upload.removeChoice"),
         style: "destructive",
         onPress: async () => {
           try {
             const accessToken = await getAccessToken();
             if (!accessToken) {
-              Alert.alert("エラー", "認証情報が見つかりません。再ログインしてください。");
+              Alert.alert(t("common.alertErrorTitle"), t("common.upload.authNotFound"));
               return;
             }
             await deleteVideo(type, id, accessToken);
@@ -209,12 +211,12 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
             setShowPlayer(false);
             onDelete?.();
           } catch (err) {
-            Alert.alert("エラー", err instanceof Error ? err.message : "削除に失敗しました");
+            Alert.alert(t("common.alertErrorTitle"), err instanceof Error ? err.message : t("common.upload.deleteFailed"));
           }
         },
       },
     ]);
-  }, [getAccessToken, type, id, onDelete, onPendingVideoAsset, onPendingVideoUri, pendingVideoUri]);
+  }, [getAccessToken, type, id, onDelete, onPendingVideoAsset, onPendingVideoUri, pendingVideoUri, t]);
 
   // Premium 制限
   if (!isPremium && uploadState === "idle") {

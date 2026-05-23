@@ -227,7 +227,7 @@ export const PracticeTimeFormScreen: React.FC = () => {
                           handleTimeConfirm(timeEntry.id, timeEntry.displayValue || "");
                           focusNextInput(globalIndex);
                         }}
-                        placeholder={isDisabledByLimit ? t("practice.form.premiumLimited") : "例: 31-2"}
+                        placeholder={isDisabledByLimit ? t("practice.form.premiumLimited") : t("practice.form.timeInputPlaceholder")}
                         keyboardType="default"
                         autoCapitalize="none"
                         returnKeyType={isLastInput ? "done" : "next"}

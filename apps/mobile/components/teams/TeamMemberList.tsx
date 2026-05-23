@@ -37,7 +37,18 @@ interface MemberBestTime {
 }
 
 // 種目リスト（WEBと同様）
+// DB 照合用の日本語キー (バックエンドの style.name_jp と一致させるため翻訳しない)
 const STYLES = ["自由形", "平泳ぎ", "背泳ぎ", "バタフライ", "個人メドレー"] as const;
+
+// 日本語 style キー → practice.styles の翻訳キー (表示用)
+type StyleTranslationKey = "Fr" | "Br" | "Ba" | "Fly" | "IM";
+const STYLE_KEY_MAP: Record<(typeof STYLES)[number], StyleTranslationKey> = {
+  自由形: "Fr",
+  平泳ぎ: "Br",
+  背泳ぎ: "Ba",
+  バタフライ: "Fly",
+  個人メドレー: "IM",
+};
 const DISTANCES = [50, 100, 200, 400, 800] as const;
 
 // 種目の色定義
@@ -423,7 +434,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
     return (
       <View style={styles.emptyContainer}>
         <Feather name="users" size={48} color="#9CA3AF" />
-        <Text style={styles.emptyText}>メンバーがいません</Text>
+        <Text style={styles.emptyText}>{t("teams.mobile.memberListEmpty")}</Text>
       </View>
     );
   }
@@ -437,16 +448,16 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
       <View style={styles.fixedTop}>
         {/* メンバー統計ヘッダー */}
         <View style={styles.statsHeader}>
-          <Text style={styles.statsTitle}>メンバー</Text>
+          <Text style={styles.statsTitle}>{t("teams.mobile.memberListTitle")}</Text>
           <View style={styles.statsRow}>
             <Text style={styles.statsText}>
-              合計: <Text style={styles.statsValue}>{members.length}人</Text>
+              {t("teams.mobile.memberListTotal", { count: members.length })}
+            </Text>
+            <Text style={[styles.statsText, styles.statsAdmin]}>
+              {t("teams.mobile.memberListAdmin", { count: adminCount })}
             </Text>
             <Text style={styles.statsText}>
-              管理者: <Text style={[styles.statsValue, styles.statsAdmin]}>{adminCount}人</Text>
-            </Text>
-            <Text style={styles.statsText}>
-              メンバー: <Text style={styles.statsValue}>{userCount}人</Text>
+              {t("teams.mobile.memberListMember", { count: userCount })}
             </Text>
           </View>
         </View>
@@ -464,7 +475,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
       {loadingBestTimes ? (
         <View style={styles.tableLoading}>
           <ActivityIndicator size="large" color="#2563EB" />
-          <Text style={styles.tableLoadingText}>ベストタイム読込中...</Text>
+          <Text style={styles.tableLoadingText}>{t("teams.mobile.bestTimeLoading")}</Text>
         </View>
       ) : (
         <View style={styles.tableWrapper}>
@@ -472,7 +483,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
           <View style={styles.tableHeaderFixed}>
             {/* 左上: メンバーラベル */}
             <View style={[styles.nameHeaderCellFrozen, styles.cellBorderRight]}>
-              <Text style={styles.nameHeaderText}>メンバー</Text>
+              <Text style={styles.nameHeaderText}>{t("teams.mobile.memberColLabel")}</Text>
             </View>
             {/* 右上: 種目ヘッダー（横スクロール同期） */}
             <ScrollView
@@ -498,7 +509,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
                       ]}
                     >
                       <Text style={[styles.styleGroupHeaderText, { color: colors.text }]}>
-                        {style}
+                        {t(`practice.styles.${STYLE_KEY_MAP[style]}`)}
                       </Text>
                     </View>
                   ))}
@@ -583,7 +594,9 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
                               <Feather name="star" size={9} color="#EAB308" />
                             )}
                           </View>
-                          {isCurrentUser && <Text style={styles.nameCellYou}>あなた</Text>}
+                          {isCurrentUser && (
+                            <Text style={styles.nameCellYou}>{t("teams.mobile.youLabel")}</Text>
+                          )}
                         </View>
                       </Pressable>
                     </React.Fragment>

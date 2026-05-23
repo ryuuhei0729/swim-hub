@@ -4,8 +4,8 @@ import { Image } from "expo-image";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
-import { format, isValid, parseISO } from "date-fns";
-import { ja } from "date-fns/locale";
+import { formatDate } from "@apps/shared/utils/date";
+import { useDateLocale } from "@/hooks/useDateLocale";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useRecordByIdQuery, useDeleteRecordMutation } from "@apps/shared/hooks/queries/records";
@@ -30,6 +30,7 @@ export const RecordDetailScreen: React.FC = () => {
   const { recordId } = route.params;
   const { supabase } = useAuth();
   const { t } = useTranslation();
+  const locale = useDateLocale();
 
   const deleteMutation = useDeleteRecordMutation(supabase);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -252,8 +253,7 @@ export const RecordDetailScreen: React.FC = () => {
 
   const competitionName = record.competition?.title || t("recordMobile.fallbackTitle");
   const recordDate = record.competition?.date || record.created_at;
-  const parsedDate = parseISO(recordDate);
-  const formattedDate = isValid(parsedDate) ? format(parsedDate, "yyyy年M月d日(E)", { locale: ja }) : "-";
+  const formattedDate = formatDate(recordDate, "longWithWeekday", locale);
   const styleName = record.style?.name || record.style?.name_jp || t("recordMobile.unknownValue");
   const formattedTime = formatTime(record.time);
   const poolType =

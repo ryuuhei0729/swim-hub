@@ -19,7 +19,9 @@ interface MemberGroupSorterProps {
   ) => void;
 }
 
-const GENDER_CATEGORY = "性別";
+// 性別カテゴリの内部識別子。表示は t("teams.mobile.genderCategoryLabel") 経由。
+// 末尾アンダースコアでユーザー定義カテゴリ名との衝突を避ける。
+const GENDER_CATEGORY = "__gender__";
 
 /**
  * グループ表示コンポーネント（WEB版 MemberGroupSorter 準拠）

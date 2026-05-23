@@ -11,6 +11,7 @@ import {
 import * as WebBrowser from "expo-web-browser";
 import * as AppleAuthentication from "expo-apple-authentication";
 import Svg, { Path } from "react-native-svg";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { getRedirectUri, extractTokensFromUrl } from "@/lib/google-auth";
 import { localizeSupabaseAuthError } from "@/utils/authErrorLocalizer";
@@ -60,6 +61,7 @@ const PROVIDERS: ProviderConfig[] = [
 ];
 
 export const IdentityLinkSettings: React.FC = () => {
+  const { t } = useTranslation();
   const { supabase } = useAuth();
   const [identities, setIdentities] = useState<UserIdentity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,7 +78,7 @@ export const IdentityLinkSettings: React.FC = () => {
       }
       setIdentities(data?.identities ?? []);
     } catch {
-      setError("連携情報の取得に失敗しました");
+      setError(t("settings.identity.errors.fetchFailed"));
     } finally {
       setLoading(false);
     }
@@ -117,7 +119,7 @@ export const IdentityLinkSettings: React.FC = () => {
       }
 
       if (!data.url) {
-        setError("OAuth URLの生成に失敗しました");
+        setError(t("auth.mobile.oauthUrlGenerationFailed"));
         return;
       }
 
@@ -140,13 +142,13 @@ export const IdentityLinkSettings: React.FC = () => {
           }
           await fetchIdentities();
         } else {
-          setError("認証トークンが取得できませんでした");
+          setError(t("auth.mobile.tokensNotReceived"));
         }
       } else if (result.type === "cancel" || result.type === "dismiss") {
         // ユーザーがキャンセル：エラー表示不要
       }
     } catch (err) {
-      const rawMessage = err instanceof Error ? err.message : "不明なエラーが発生しました";
+      const rawMessage = err instanceof Error ? err.message : t("auth.mobile.unknownError");
       setError(localizeSupabaseAuthError({ message: rawMessage }));
     } finally {
       setActionLoading(null);
@@ -160,7 +162,7 @@ export const IdentityLinkSettings: React.FC = () => {
     try {
       const isAppleAuthAvailable = await AppleAuthentication.isAvailableAsync();
       if (!isAppleAuthAvailable) {
-        setError("このデバイスではApple認証を利用できません");
+        setError(t("auth.mobile.appleAuthDeviceUnavailable"));
         return;
       }
 
@@ -172,7 +174,7 @@ export const IdentityLinkSettings: React.FC = () => {
       });
 
       if (!credential.identityToken) {
-        setError("Apple認証トークンが取得できませんでした");
+        setError(t("auth.mobile.appleTokenNotReceived"));
         return;
       }
 
@@ -193,7 +195,7 @@ export const IdentityLinkSettings: React.FC = () => {
         // ユーザーがキャンセル：エラー表示不要
         return;
       }
-      const rawMessage = err.message || "不明なエラーが発生しました";
+      const rawMessage = err.message || t("auth.mobile.unknownError");
       setError(localizeSupabaseAuthError({ message: rawMessage }));
     } finally {
       setActionLoading(null);
@@ -215,36 +217,40 @@ export const IdentityLinkSettings: React.FC = () => {
 
     const providerName = PROVIDERS.find((p) => p.id === provider)?.name ?? provider;
 
-    Alert.alert("連携解除", `${providerName}の連携を解除しますか？`, [
-      { text: "キャンセル", style: "cancel" },
-      {
-        text: "解除する",
-        style: "destructive",
-        onPress: async () => {
-          setActionLoading(provider);
-          setError(null);
-          try {
-            const { error: unlinkError } = await supabase.auth.unlinkIdentity(identity);
-            if (unlinkError) {
-              setError(unlinkError.message);
-              return;
+    Alert.alert(
+      t("settings.identity.unlinkConfirmTitle"),
+      t("settings.identity.unlinkConfirmMessage", { providerName }),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("settings.identity.unlinkButton"),
+          style: "destructive",
+          onPress: async () => {
+            setActionLoading(provider);
+            setError(null);
+            try {
+              const { error: unlinkError } = await supabase.auth.unlinkIdentity(identity);
+              if (unlinkError) {
+                setError(unlinkError.message);
+                return;
+              }
+              await fetchIdentities();
+            } catch {
+              setError(t("settings.identity.errors.unlinkFailed"));
+            } finally {
+              setActionLoading(null);
             }
-            await fetchIdentities();
-          } catch {
-            setError("連携解除に失敗しました。再度お試しください。");
-          } finally {
-            setActionLoading(null);
-          }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   if (loading) {
     return (
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>ログイン連携</Text>
+          <Text style={styles.sectionTitle}>{t("settings.identity.title")}</Text>
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="small" color="#9CA3AF" />
@@ -278,9 +284,13 @@ export const IdentityLinkSettings: React.FC = () => {
               <View>
                 <Text style={styles.providerName}>{provider.name}</Text>
                 {isLinked ? (
-                  <Text style={styles.statusLinked}>連携済み{email ? `（${email}）` : ""}</Text>
+                  <Text style={styles.statusLinked}>
+                    {email
+                      ? t("settings.identity.linkedWithEmail", { email })
+                      : t("settings.identity.linked")}
+                  </Text>
                 ) : (
-                  <Text style={styles.statusUnlinked}>未連携</Text>
+                  <Text style={styles.statusUnlinked}>{t("settings.identity.notLinked")}</Text>
                 )}
               </View>
             </View>
@@ -294,12 +304,12 @@ export const IdentityLinkSettings: React.FC = () => {
                 onPress={() => handleUnlink(provider.id)}
                 disabled={!canUnlink || isLoading}
                 accessibilityRole="button"
-                accessibilityLabel={`${provider.name}の連携を解除`}
+                accessibilityLabel={t("settings.identity.unlinkProviderAria", { providerName: provider.name })}
               >
                 {isLoading ? (
                   <ActivityIndicator size="small" color="#374151" />
                 ) : (
-                  <Text style={styles.actionButtonText}>解除する</Text>
+                  <Text style={styles.actionButtonText}>{t("settings.identity.unlinkButton")}</Text>
                 )}
               </Pressable>
             ) : (
@@ -308,12 +318,12 @@ export const IdentityLinkSettings: React.FC = () => {
                 onPress={() => handleLink(provider.id)}
                 disabled={isLoading}
                 accessibilityRole="button"
-                accessibilityLabel={`${provider.name}と連携`}
+                accessibilityLabel={t("settings.identity.linkProviderAria", { providerName: provider.name })}
               >
                 {isLoading ? (
                   <ActivityIndicator size="small" color="#374151" />
                 ) : (
-                  <Text style={styles.actionButtonText}>連携する</Text>
+                  <Text style={styles.actionButtonText}>{t("settings.identity.linkButton")}</Text>
                 )}
               </Pressable>
             )}
@@ -322,9 +332,7 @@ export const IdentityLinkSettings: React.FC = () => {
       })}
 
       {!canUnlink && identities.length > 0 && (
-        <Text style={styles.noteText}>
-          ※ 最低1つのログイン方法が必要なため、すべての連携を解除することはできません
-        </Text>
+        <Text style={styles.noteText}>{t("settings.identity.minOneRequired")}</Text>
       )}
     </View>
   );

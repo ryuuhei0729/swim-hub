@@ -120,11 +120,16 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
-// expo-localization のモック (i18n/detector.ts が getDeviceLocale で参照)
-vi.mock("expo-localization", () => ({
-  getLocales: () => [{ languageCode: "ja", languageTag: "ja-JP", regionCode: "JP" }],
-  getCalendars: () => [{ calendar: "gregorian", timeZone: "Asia/Tokyo" }],
-}));
+// expo-localization のモック (i18n/index.ts が getDeviceLocale, I18nProvider が useLocales で参照)
+vi.mock("expo-localization", () => {
+  const jaLocales = [{ languageCode: "ja", languageTag: "ja-JP", regionCode: "JP" }];
+  return {
+    getLocales: () => jaLocales,
+    useLocales: () => jaLocales,
+    getCalendars: () => [{ calendar: "gregorian", timeZone: "Asia/Tokyo" }],
+    useCalendars: () => [{ calendar: "gregorian", timeZone: "Asia/Tokyo" }],
+  };
+});
 
 // react-i18next のモック: 実際の ja.json から値を取得し、ICU 風の {var} 補間も処理する。
 // これにより既存テストの「日本語期待値」がそのまま通り、t() 化したコンポーネントもテスト可能になる。
