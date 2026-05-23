@@ -382,7 +382,7 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
                             {bestTime.competition ? (
                               <div className="text-blue-300">{bestTime.competition.title}</div>
                             ) : (
-                              <div className="text-gray-400">{bestTime.note || "一括登録"}</div>
+                              <div className="text-gray-400">{bestTime.note || t("bulkEntryNote")}</div>
                             )}
                             {/* 矢印 */}
                             <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
@@ -402,7 +402,7 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
 
       {/* 注釈 */}
       <div className="mt-2 sm:mt-3 text-xs sm:text-sm text-red-600 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-1 sm:gap-0 sm:space-x-4">
-        <span>※ L: 長水路, R: 引き継ぎあり</span>
+        <span>{`※ ${t("legend.longCourse")}, ${t("legend.relaying")}`}</span>
       </div>
     </div>
   );

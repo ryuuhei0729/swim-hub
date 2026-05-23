@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Noto_Sans_JP } from "next/font/google";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
-import { getMessages, setRequestLocale } from "next-intl/server";
+import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
 import React from "react";
 
 import { KeyboardScrollProvider } from "@/components/keyboard/KeyboardScrollProvider";
@@ -35,14 +35,12 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  const isJa = locale === "ja";
+  const t = await getTranslations({ locale, namespace: "metadata" });
 
-  const title = isJa
-    ? "SwimHub - 水泳選手のための記録管理システム"
-    : "SwimHub - Swim records & training platform";
-  const description = isJa
-    ? "練習も大会もチーム管理も。中高大マスターズまで、選手ひとりの水泳記録を一生分積み上げる無料の記録プラットフォーム。"
-    : "Track practices, meets, and team management. A free swim records platform for athletes of all levels.";
+  const title = t("title");
+  const description = t("description");
+  const keywordsRaw = t.raw("keywords");
+  const keywords = Array.isArray(keywordsRaw) ? (keywordsRaw as string[]) : [];
 
   return {
     metadataBase: new URL(SITE_URL),
@@ -61,39 +59,18 @@ export async function generateMetadata({
       icon: "/favicon.png",
       apple: "/apple-touch-icon.png",
     },
-    keywords: isJa
-      ? [
-          "水泳",
-          "記録管理",
-          "スイミング",
-          "練習記録",
-          "大会記録",
-          "タイム管理",
-          "SwimHub",
-          "水泳選手",
-          "マスターズスイマー",
-        ]
-      : [
-          "swimming",
-          "swim records",
-          "training log",
-          "swim meet",
-          "swim team",
-          "SwimHub",
-        ],
+    keywords,
     openGraph: {
       title,
       description,
       type: "website",
-      locale: isJa ? "ja_JP" : "en_US",
+      locale: t("ogLocale"),
       images: [
         {
           url: "/og-image.png",
           width: 1200,
           height: 630,
-          alt: isJa
-            ? "SwimHub - 水泳の記録を一生分残す"
-            : "SwimHub - swim records for life",
+          alt: t("ogImageAlt"),
         },
       ],
     },
@@ -128,16 +105,14 @@ export default async function LocaleLayout({
 
   // メッセージ取得 (locale を明示的に渡して、Turbopack 環境での requestLocale 伝播失敗を回避)
   const messages = await getMessages({ locale });
+  const tMeta = await getTranslations({ locale, namespace: "metadata" });
 
   const jsonLd: Record<string, unknown>[] = [
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
       name: "SwimHub",
-      description:
-        locale === "ja"
-          ? "水泳選手のための記録管理システム"
-          : "Swim records & training platform",
+      description: tMeta("shortDescription"),
       applicationCategory: "SportsApplication",
       operatingSystem: "Web",
       offers: [

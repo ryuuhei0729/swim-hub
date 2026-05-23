@@ -1,4 +1,19 @@
 {
+  "metadata": {
+    "title": "SwimHub - Swim records & training platform",
+    "description": "Track practices, meets, and team management. A free swim records platform for athletes of all levels.",
+    "shortDescription": "Swim records & training platform",
+    "ogLocale": "en_US",
+    "ogImageAlt": "SwimHub - swim records for life",
+    "keywords": [
+      "swimming",
+      "swim records",
+      "training log",
+      "swim meet",
+      "swim team",
+      "SwimHub"
+    ]
+  },
   "common": {
     "appName": "SwimHub",
     "loading": "Loading...",
@@ -810,7 +825,11 @@
       "longCourse": "Long Course",
       "includeRelay": "Include relay times",
       "bulkEntryNote": "Bulk entry",
-      "distanceHeader": "Distance"
+      "distanceHeader": "Distance",
+      "legend": {
+        "longCourse": "L: Long Course",
+        "relaying": "R: Relay"
+      }
     },
     "error": {
       "title": "An error occurred",
@@ -2008,7 +2027,11 @@
         "longCourse": "Long Course",
         "includeRelay": "Include relay times",
         "bulkEntryNote": "Bulk entry",
-        "distanceHeader": "Distance"
+        "distanceHeader": "Distance",
+        "legend": {
+          "longCourse": "L: Long Course",
+          "relaying": "R: Relay"
+        }
       }
     },
     "attendance": {
