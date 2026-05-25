@@ -99,7 +99,7 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
         ]);
       }
     },
-    [member, updateRoleMutation, onMembershipChange],
+    [member, updateRoleMutation, onMembershipChange, t],
   );
 
   // メンバー削除
@@ -142,7 +142,7 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
         },
       ]);
     }
-  }, [member, removeMemberMutation, onMembershipChange, onClose]);
+  }, [member, removeMemberMutation, onMembershipChange, onClose, t]);
 
   if (!member) return null;
 

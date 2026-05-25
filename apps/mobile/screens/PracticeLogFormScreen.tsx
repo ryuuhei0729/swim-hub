@@ -313,7 +313,7 @@ export const PracticeLogFormScreen: React.FC = () => {
         Alert.alert(t("common.error"), t("practice.mobile.tagSaveFailed"));
       }
     },
-    [editingTag, updateTagMutation, createTagMutation, menus, activeMenuIndex],
+    [editingTag, updateTagMutation, createTagMutation, menus, activeMenuIndex, t],
   );
 
   // タグ削除
@@ -333,7 +333,7 @@ export const PracticeLogFormScreen: React.FC = () => {
         Alert.alert(t("common.error"), t("practice.mobile.tagDeleteFailed"));
       }
     },
-    [deleteTagMutation],
+    [deleteTagMutation, t],
   );
 
   // タイム入力画面へ遷移

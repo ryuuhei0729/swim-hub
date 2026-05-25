@@ -126,7 +126,7 @@ export const RecordLogFormScreen: React.FC = () => {
       }
     };
     fetchStyles();
-  }, [supabase]);
+  }, [supabase, t]);
 
   // 記録データを取得（編集モードの場合）
   useEffect(() => {
@@ -207,7 +207,7 @@ export const RecordLogFormScreen: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [recordId, competitionId, swimStyles.length, loadingStyles, supabase, navigation]);
+  }, [recordId, competitionId, swimStyles.length, loadingStyles, supabase, navigation, t]);
 
   // エントリー情報からフォームデータを初期化（新規作成モードの場合）
   useEffect(() => {

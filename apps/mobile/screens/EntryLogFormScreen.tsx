@@ -95,7 +95,7 @@ export const EntryLogFormScreen: React.FC = () => {
       }
     };
     fetchStyles();
-  }, [supabase]);
+  }, [supabase, t]);
 
   // エントリーデータを取得（編集モードの場合）
   useEffect(() => {
@@ -180,7 +180,7 @@ export const EntryLogFormScreen: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [entryId, swimStyles.length, loadingStyles, supabase, navigation, entryApi]);
+  }, [entryId, swimStyles.length, loadingStyles, supabase, navigation, entryApi, t]);
 
   // 新規作成モードの場合、最初のエントリーにデフォルトの種目を設定
   useEffect(() => {

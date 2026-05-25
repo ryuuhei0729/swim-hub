@@ -104,7 +104,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
         isMounted = false;
       };
     }
-  }, [id, pendingVideoUri, uploadState, getAccessToken, type, onUploadComplete]);
+  }, [id, pendingVideoUri, uploadState, getAccessToken, type, onUploadComplete, t]);
 
   const pickVideo = useCallback(
     async (source: "library" | "camera") => {
@@ -169,7 +169,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
         setUploadState("error");
       }
     },
-    [getAccessToken, type, id, onUploadComplete, onPendingVideoAsset, onPendingVideoUri],
+    [getAccessToken, type, id, onUploadComplete, onPendingVideoAsset, onPendingVideoUri, t],
   );
 
   const handleSelectSource = useCallback(() => {

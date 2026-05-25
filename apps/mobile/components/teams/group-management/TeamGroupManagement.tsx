@@ -144,7 +144,7 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
         ],
       );
     },
-    [deleteGroup],
+    [deleteGroup, t],
   );
 
   // メンバー編集モーダルを開く

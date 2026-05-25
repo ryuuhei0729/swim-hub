@@ -313,7 +313,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
         </View>
       );
     },
-    [hoveredZone, setZoneRef, DraggableMemberChip],
+    [hoveredZone, setZoneRef, DraggableMemberChip, t],
   );
 
   return (

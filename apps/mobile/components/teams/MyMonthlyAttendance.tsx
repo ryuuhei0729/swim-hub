@@ -193,7 +193,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
     } finally {
       setLoadingMonthList(false);
     }
-  }, [teamId, supabase, calculateMonthStatus]);
+  }, [teamId, supabase, calculateMonthStatus, t]);
 
   // 月別の出欠情報を取得（モーダル用）
   const loadAttendances = useCallback(async () => {
@@ -276,7 +276,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
     } finally {
       setLoading(false);
     }
-  }, [teamId, selectedMonth, supabase, attendanceAPI]);
+  }, [teamId, selectedMonth, supabase, attendanceAPI, t]);
 
   // 月リストを初期読み込み
   useEffect(() => {

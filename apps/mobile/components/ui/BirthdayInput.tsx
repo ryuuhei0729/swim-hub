@@ -106,7 +106,7 @@ export const BirthdayInput: React.FC<BirthdayInputProps> = ({
       setInternalError(null);
       emit(format(date, "yyyy-MM-dd"));
     },
-    [minYear, maxYear, emit],
+    [minYear, maxYear, emit, t],
   );
 
   useEffect(() => {

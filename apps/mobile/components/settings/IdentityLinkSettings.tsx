@@ -82,7 +82,7 @@ export const IdentityLinkSettings: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, [supabase, t]);
 
   useEffect(() => {
     fetchIdentities();

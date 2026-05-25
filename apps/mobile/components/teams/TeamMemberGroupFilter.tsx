@@ -149,7 +149,7 @@ export const TeamMemberGroupFilter: React.FC<MemberGroupSorterProps> = ({
     }
 
     onGroupedMembersChange(flat, headers);
-  }, [members, activeCategory, groupsByCategory, userGroupMap, onGroupedMembersChange]);
+  }, [members, activeCategory, groupsByCategory, userGroupMap, onGroupedMembersChange, t]);
 
   if (categories.length === 0) return null;
 

@@ -51,7 +51,7 @@ export const SettingsScreen: React.FC = () => {
     } finally {
       setIsLoggingOut(false);
     }
-  }, [signOut]);
+  }, [signOut, t]);
 
   const handleLogout = useCallback(() => {
     Alert.alert(t("settings.mobile.logoutTitle"), t("settings.mobile.logoutConfirmMessage"), [
@@ -62,7 +62,7 @@ export const SettingsScreen: React.FC = () => {
         onPress: executeLogout,
       },
     ]);
-  }, [executeLogout]);
+  }, [executeLogout, t]);
 
   const handleRestore = useCallback(async () => {
     setIsRestoring(true);
@@ -75,7 +75,7 @@ export const SettingsScreen: React.FC = () => {
     } finally {
       setIsRestoring(false);
     }
-  }, [refreshSubscription]);
+  }, [refreshSubscription, t]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);

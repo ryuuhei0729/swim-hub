@@ -159,7 +159,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [competitionId, supabase, navigation]);
+  }, [competitionId, supabase, navigation, t]);
 
   // バリデーション
   const validate = (): boolean => {
