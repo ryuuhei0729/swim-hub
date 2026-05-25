@@ -81,12 +81,16 @@ describe("LanguageSwitcher コンポーネント (Issue #32 Phase 1-A)", () => {
   // [V-09-LS] ロケール切り替え動作
   // -------------------------------------------------------------------------
   describe("ロケール切り替え", () => {
-    it("現在ロケールが ja のとき、en をクリックすると router.push が pathname と {locale: 'en'} で呼ばれる", async () => {
+    it("現在ロケールが ja のとき、en をクリックすると window.location.assign('/en/...') が呼ばれる", async () => {
       const { useLocale } = await import("next-intl");
       vi.mocked(useLocale).mockReturnValue("ja");
 
-      const { usePathname } = await import("@/i18n/navigation");
-      vi.mocked(usePathname).mockReturnValue("/dashboard");
+      // window.location.pathname を /ja/dashboard に固定し、assign を mock
+      const assignMock = vi.fn();
+      Object.defineProperty(window, "location", {
+        writable: true,
+        value: { pathname: "/ja/dashboard", search: "", assign: assignMock },
+      });
 
       const { default: LanguageSwitcher } = await import("@/components/ui/LanguageSwitcher");
 
@@ -96,19 +100,20 @@ describe("LanguageSwitcher コンポーネント (Issue #32 Phase 1-A)", () => {
         screen.queryByRole("button", { name: /en/i }) ?? screen.getByText(/^(en|EN|English)$/i);
       await userEvent.click(enButton);
 
-      // 実装は router.push(pathname, { locale: 'en' }) を呼ぶ。
-      // 引数を正確に検証 (緩い OR 判定はリグレッション検出力が落ちるため避ける)。
-      expect(mockRouterPush).toHaveBeenCalledWith("/dashboard", { locale: "en" });
-      expect(mockRouterPush).toHaveBeenCalledTimes(1);
-      expect(mockRouterReplace).not.toHaveBeenCalled();
+      // 実装は window.location.assign("/en/dashboard") を呼ぶ。
+      expect(assignMock).toHaveBeenCalledWith("/en/dashboard");
+      expect(assignMock).toHaveBeenCalledTimes(1);
     });
 
-    it("現在ロケールが en のとき、ja をクリックすると router.push が pathname と {locale: 'ja'} で呼ばれる", async () => {
+    it("現在ロケールが en のとき、ja をクリックすると window.location.assign('/ja/...') が呼ばれる", async () => {
       const { useLocale } = await import("next-intl");
       vi.mocked(useLocale).mockReturnValue("en");
 
-      const { usePathname } = await import("@/i18n/navigation");
-      vi.mocked(usePathname).mockReturnValue("/dashboard");
+      const assignMock = vi.fn();
+      Object.defineProperty(window, "location", {
+        writable: true,
+        value: { pathname: "/en/dashboard", search: "", assign: assignMock },
+      });
 
       const { default: LanguageSwitcher } = await import("@/components/ui/LanguageSwitcher");
 
@@ -118,9 +123,8 @@ describe("LanguageSwitcher コンポーネント (Issue #32 Phase 1-A)", () => {
         screen.queryByRole("button", { name: /ja/i }) ?? screen.getByText(/^(ja|JA|日本語)$/i);
       await userEvent.click(jaButton);
 
-      expect(mockRouterPush).toHaveBeenCalledWith("/dashboard", { locale: "ja" });
-      expect(mockRouterPush).toHaveBeenCalledTimes(1);
-      expect(mockRouterReplace).not.toHaveBeenCalled();
+      expect(assignMock).toHaveBeenCalledWith("/ja/dashboard");
+      expect(assignMock).toHaveBeenCalledTimes(1);
     });
   });
 

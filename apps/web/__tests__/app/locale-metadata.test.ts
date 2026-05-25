@@ -22,14 +22,38 @@ vi.mock("next/font/google", () => ({
   Noto_Sans_JP: () => ({ variable: "--font-noto-sans-jp", className: "" }),
 }));
 
-// next-intl/server の getMessages は metadata 検証では呼ばれないが、
-// 型解決のため空オブジェクトを返す mock を入れる
+// next-intl/server をモック: Node テスト環境では server context が無いため
+// getTranslations を locale 別の messages 読み込みで再現する
 vi.mock("next-intl/server", async () => {
   const actual = await vi.importActual<typeof import("next-intl/server")>("next-intl/server");
+  const messagesByLocale: Record<string, Record<string, unknown>> = {
+    ja: (await import("@apps/shared/messages/ja.json")).default as Record<string, unknown>,
+    en: (await import("@apps/shared/messages/en.json")).default as Record<string, unknown>,
+  };
+
+  const getValue = (obj: Record<string, unknown>, path: string): unknown => {
+    return path.split(".").reduce<unknown>((acc, key) => {
+      if (acc && typeof acc === "object") return (acc as Record<string, unknown>)[key];
+      return undefined;
+    }, obj);
+  };
+
   return {
     ...actual,
-    getMessages: vi.fn(() => Promise.resolve({})),
+    getMessages: vi.fn(({ locale }: { locale: string }) =>
+      Promise.resolve(messagesByLocale[locale] ?? {}),
+    ),
     setRequestLocale: vi.fn(),
+    getTranslations: vi.fn(({ locale, namespace }: { locale: string; namespace: string }) => {
+      const messages = messagesByLocale[locale] ?? {};
+      const ns = getValue(messages, namespace) as Record<string, unknown>;
+      const t = (key: string) => {
+        const value = ns?.[key];
+        return typeof value === "string" ? value : key;
+      };
+      t.raw = (key: string) => ns?.[key];
+      return Promise.resolve(t);
+    }),
   };
 });
 

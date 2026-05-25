@@ -1,4 +1,5 @@
-import { act, renderHook } from "@testing-library/react";
+import { act } from "@testing-library/react";
+import { renderHookWithI18n as renderHook } from "../utils/render";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { BestTime } from "../../components/team/shared/hooks/useMemberBestTimes";

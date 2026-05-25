@@ -17,10 +17,24 @@
  *   apps/web/app/(authenticated)/onboarding/_client/OnboardingWizard.tsx (未実装)
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { render as rtlRender, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect as _expect, expect, it, vi, beforeEach } from "vitest";
+import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
+import type { ReactElement } from "react";
 import type { UserProfile } from "@apps/shared/types";
+import messages from "@apps/shared/messages/ja.json";
+
+// OnboardingWizard 及び子コンポーネントは useTranslations を呼ぶため NextIntlClientProvider が必要
+const render = (ui: ReactElement) =>
+  rtlRender(
+    <NextIntlClientProvider
+      locale="ja"
+      messages={messages as unknown as AbstractIntlMessages}
+    >
+      {ui}
+    </NextIntlClientProvider>,
+  );
 
 // Next.js Router をモック
 const mockRouterPush = vi.fn();

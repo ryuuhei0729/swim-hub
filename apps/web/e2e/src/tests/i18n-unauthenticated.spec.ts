@@ -83,9 +83,9 @@ test.describe("login ページのロケール別 UI", () => {
     const passwordLabel = page.locator('label[for="password"]').first();
     await expect(passwordLabel).toContainText(/Password/i);
 
-    // Sign In ボタンが英語
+    // ログインボタンが英語 (auth.signin.submitButton = "Log In")
     const loginButton = page.getByTestId("login-button");
-    await expect(loginButton).toContainText(/Sign In/i);
+    await expect(loginButton).toContainText(/Log In/i);
 
     // ラベルに日本語が含まれないこと
     const pageText = await page.locator("form").textContent();

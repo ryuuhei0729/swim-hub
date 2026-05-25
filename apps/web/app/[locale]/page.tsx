@@ -16,20 +16,27 @@ import {
 import LanguageSwitcher from "@/components/ui/LanguageSwitcher";
 import ScrollNavButtons from "./_components/ScrollNavButtons";
 import DeviceMockup from "./_components/DeviceMockup";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
-export default async function Home() {
-  const tHero = await getTranslations("lp.hero");
-  const tFeatures = await getTranslations("lp.features");
-  const tPricing = await getTranslations("lp.pricing");
-  const tCta = await getTranslations("lp.cta");
-  const tFamily = await getTranslations("lp.family");
-  const tNav = await getTranslations("nav");
+export default async function Home({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  // Turbopack 環境で requestLocale 伝播が失敗するケースに備え、locale を明示的に渡す
+  setRequestLocale(locale);
+  const tHero = await getTranslations({ locale, namespace: "lp.hero" });
+  const tFeatures = await getTranslations({ locale, namespace: "lp.features" });
+  const tPricing = await getTranslations({ locale, namespace: "lp.pricing" });
+  const tCta = await getTranslations({ locale, namespace: "lp.cta" });
+  const tFamily = await getTranslations({ locale, namespace: "lp.family" });
+  const tNav = await getTranslations({ locale, namespace: "nav" });
   // LP の Free/Premium プランカードは pricing/page.tsx と同じ pricing.* namespace を共有。
   // (DRY 原則。個別ページとのキー二重定義を避ける)
-  const tPricingPlan = await getTranslations("pricing");
-  const tFree = await getTranslations("pricing.freePlan");
-  const tPremium = await getTranslations("pricing.premiumPlan");
+  const tPricingPlan = await getTranslations({ locale, namespace: "pricing" });
+  const tFree = await getTranslations({ locale, namespace: "pricing.freePlan" });
+  const tPremium = await getTranslations({ locale, namespace: "pricing.premiumPlan" });
 
   return (
     <div className="min-h-screen bg-white">

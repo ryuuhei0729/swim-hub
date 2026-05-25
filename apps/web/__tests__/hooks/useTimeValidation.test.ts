@@ -1,4 +1,4 @@
-import { renderHook } from "@testing-library/react";
+import { renderHookWithI18n as renderHook } from "../utils/render";
 import { describe, expect, it } from "vitest";
 
 import type { ValidationResult } from "../../components/team/shared/hooks/useTimeValidation";
