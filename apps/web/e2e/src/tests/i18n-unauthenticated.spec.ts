@@ -166,9 +166,9 @@ test.describe("LanguageSwitcher でのロケール切り替え (unauthenticated)
     await enSwitcher.waitFor({ state: "visible", timeout: 10000 });
     await enSwitcher.click();
 
-    // /en/ に遷移すること
-    await page.waitForURL("**/en/**", { timeout: 10000 });
-    expect(page.url()).toContain("/en/");
+    // /en に遷移すること (trailingSlash:false のため /en または /en/... の両形を許容)
+    await page.waitForURL(/\/en(\/|$|\?)/, { timeout: 10000 });
+    expect(page.url()).toMatch(/\/en(\/|$|\?)/);
 
     // html lang が en になること
     expect(await page.getAttribute("html", "lang")).toBe("en");
@@ -189,9 +189,9 @@ test.describe("LanguageSwitcher でのロケール切り替え (unauthenticated)
     await jaSwitcher.waitFor({ state: "visible", timeout: 10000 });
     await jaSwitcher.click();
 
-    // /ja/ に遷移すること
-    await page.waitForURL("**/ja/**", { timeout: 10000 });
-    expect(page.url()).toContain("/ja/");
+    // /ja に遷移すること (trailingSlash:false のため /ja または /ja/... の両形を許容)
+    await page.waitForURL(/\/ja(\/|$|\?)/, { timeout: 10000 });
+    expect(page.url()).toMatch(/\/ja(\/|$|\?)/);
 
     // html lang が ja になること
     expect(await page.getAttribute("html", "lang")).toBe("ja");
