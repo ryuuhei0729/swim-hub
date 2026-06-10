@@ -5,6 +5,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 interface OfflineBannerProps {
   visible: boolean;
@@ -16,12 +17,13 @@ interface OfflineBannerProps {
  */
 export const OfflineBanner: React.FC<OfflineBannerProps> = ({ visible }) => {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   if (!visible) return null;
 
   return (
     <View style={[styles.container, { paddingTop: Math.max(insets.top, 8) }]}>
-      <Text style={styles.text}>📡 オフラインです。一部の機能が制限されます。</Text>
+      <Text style={styles.text}>{t("common.offlineBanner")}</Text>
     </View>
   );
 };

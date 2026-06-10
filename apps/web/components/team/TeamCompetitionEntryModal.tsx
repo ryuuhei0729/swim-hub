@@ -8,6 +8,7 @@ import { formatTimeBest } from "@/utils/formatters";
 import { EntryAPI } from "@apps/shared/api/entries";
 import { RecordAPI } from "@apps/shared/api/records";
 import { useAuth } from "@/contexts/AuthProvider";
+import { useTranslations } from "next-intl";
 
 interface TeamCompetitionEntryModalProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export default function TeamCompetitionEntryModal({
   teamId: _teamId,
 }: TeamCompetitionEntryModalProps) {
   const { supabase } = useAuth();
+  const t = useTranslations("teams");
   const entryApi = useMemo(() => new EntryAPI(supabase), [supabase]);
   const recordApi = useMemo(() => new RecordAPI(supabase), [supabase]);
   const [loading, setLoading] = useState(true);
@@ -69,14 +71,14 @@ export default function TeamCompetitionEntryModal({
       // 1) 競技会情報取得（team_id含む）
       const competitions = await recordApi.getCompetitions();
       const competition = competitions.find((c) => c.id === competitionId);
-      if (!competition) throw new Error("大会が見つかりません");
-      if (!competition.team_id) throw new Error("チーム大会ではありません");
+      if (!competition) throw new Error(t("competitionEntryModal.competitionNotFound"));
+      if (!competition.team_id) throw new Error(t("competitionEntryModal.notTeamCompetition"));
 
       // 2) 現在ユーザーのロール取得
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) throw new Error("認証が必要です");
+      if (!user) throw new Error(t("competitionEntryModal.authRequired"));
       const { data: membership, error: membershipError } = await supabase
         .from("team_memberships")
         .select("role")
@@ -103,7 +105,7 @@ export default function TeamCompetitionEntryModal({
           const user = entry.user
             ? {
                 id: entry.user.id,
-                name: entry.user.name || "不明なユーザー",
+                name: entry.user.name || t("competitionEntryModal.unknownUser"),
               }
             : null;
           if (!acc[styleId]) acc[styleId] = { style: style, entries: [] };
@@ -137,11 +139,11 @@ export default function TeamCompetitionEntryModal({
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       console.error("エントリー情報の取得に失敗:", err);
-      setError(error.message || "エントリー情報の取得に失敗しました");
+      setError(error.message || t("competitionEntryModal.fetchFailed"));
     } finally {
       setLoading(false);
     }
-  }, [competitionId, competitionTitle, entryApi, recordApi, supabase]);
+  }, [competitionId, competitionTitle, entryApi, recordApi, supabase, t]);
 
   useEffect(() => {
     if (isOpen) {
@@ -160,13 +162,13 @@ export default function TeamCompetitionEntryModal({
       // 管理者チェックと更新（RecordAPIを使用）
       const competitions = await recordApi.getCompetitions();
       const competition = competitions.find((c) => c.id === competitionId);
-      if (!competition) throw new Error("大会が見つかりません");
-      if (!competition.team_id) throw new Error("チーム大会ではありません");
+      if (!competition) throw new Error(t("competitionEntryModal.competitionNotFound"));
+      if (!competition.team_id) throw new Error(t("competitionEntryModal.notTeamCompetition"));
 
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) throw new Error("認証が必要です");
+      if (!user) throw new Error(t("competitionEntryModal.authRequired"));
       const { data: membership, error: membershipError } = await supabase
         .from("team_memberships")
         .select("role")
@@ -175,14 +177,14 @@ export default function TeamCompetitionEntryModal({
         .eq("is_active", true)
         .single();
       if (membershipError) throw membershipError;
-      if (membership?.role !== "admin") throw new Error("管理者権限が必要です");
+      if (membership?.role !== "admin") throw new Error(t("competitionEntryModal.adminRequired"));
 
       await recordApi.updateCompetition(competitionId, { entry_status: newStatus });
       await loadEntries(); // 再読み込み
     } catch (err) {
       console.error("ステータス変更に失敗:", err);
       const error = err instanceof Error ? err : new Error(String(err));
-      setError(error.message || "ステータス変更に失敗しました");
+      setError(error.message || t("competitionEntryModal.statusChangeFailed"));
     } finally {
       setUpdatingStatus(false);
     }
@@ -191,11 +193,11 @@ export default function TeamCompetitionEntryModal({
   const getStatusLabel = (status: "before" | "open" | "closed") => {
     switch (status) {
       case "before":
-        return "受付前";
+        return t("competitions.entryStatus.before");
       case "open":
-        return "受付中";
+        return t("competitions.entryStatus.open");
       case "closed":
-        return "受付終了";
+        return t("competitions.entryStatus.closed");
     }
   };
 
@@ -226,11 +228,11 @@ export default function TeamCompetitionEntryModal({
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-lg leading-6 font-medium text-gray-900">
-                  {competitionTitle} - エントリー管理
+                  {competitionTitle}{t("competitionEntryModal.titleSuffix")}
                 </h3>
                 {data && (
                   <p className="text-sm text-gray-500 mt-1">
-                    合計: {data.totalEntries}件のエントリー
+                    {t("competitionEntryModal.totalEntries", { count: data.totalEntries })}
                   </p>
                 )}
               </div>
@@ -246,7 +248,7 @@ export default function TeamCompetitionEntryModal({
             {loading && (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-4 text-gray-600">読み込み中...</p>
+                <p className="mt-4 text-gray-600">{t("competitionEntryModal.loading")}</p>
               </div>
             )}
 
@@ -269,7 +271,7 @@ export default function TeamCompetitionEntryModal({
                         htmlFor="entry-status"
                         className="block text-sm font-medium text-gray-700 mb-2"
                       >
-                        エントリーステータス
+                        {t("competitionEntryModal.entryStatusLabel")}
                       </label>
                       {data.isAdmin ? (
                         <select
@@ -282,9 +284,9 @@ export default function TeamCompetitionEntryModal({
                           className="block w-full sm:w-64 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                           data-testid="team-competition-entry-status-select"
                         >
-                          <option value="before">受付前</option>
-                          <option value="open">受付中</option>
-                          <option value="closed">受付終了</option>
+                          <option value="before">{t("competitions.entryStatus.before")}</option>
+                          <option value="open">{t("competitions.entryStatus.open")}</option>
+                          <option value="closed">{t("competitions.entryStatus.closed")}</option>
                         </select>
                       ) : (
                         <span
@@ -309,10 +311,10 @@ export default function TeamCompetitionEntryModal({
                 <div className="space-y-6">
                   {Object.keys(data.entriesByStyle).length === 0 && (
                     <div className="text-center py-8 text-gray-500">
-                      <p>まだエントリーがありません</p>
+                      <p>{t("competitionEntryModal.emptyNoEntry")}</p>
                       {data.competition.entry_status === "open" && (
                         <p className="mt-2 text-sm">
-                          メンバーがエントリーを提出すると、ここに表示されます
+                          {t("competitionEntryModal.emptyOpenHint")}
                         </p>
                       )}
                     </div>
@@ -327,7 +329,7 @@ export default function TeamCompetitionEntryModal({
                       {/* 種目ヘッダー */}
                       <div className="bg-blue-50 px-4 py-3 border-b border-blue-200">
                         <h4 className="font-semibold text-blue-900">
-                          {styleData.style?.name_jp ?? "種目不明"} ({styleData.entries.length})
+                          {styleData.style?.name_jp ?? t("competitionEntryModal.unknownStyle")} ({styleData.entries.length})
                         </h4>
                       </div>
 
@@ -338,11 +340,11 @@ export default function TeamCompetitionEntryModal({
                             <div className="flex items-center justify-between">
                               <div className="flex-1">
                                 <p className="font-medium text-gray-900">
-                                  {index + 1}. {entry.users?.name ?? "不明なユーザー"}
+                                  {index + 1}. {entry.users?.name ?? t("competitionEntryModal.unknownUser")}
                                 </p>
                                 {entry.entry_time && (
                                   <p className="text-sm text-gray-600 mt-1">
-                                    エントリータイム:{" "}
+                                    {t("competitionEntryModal.entryTimeLabel")}{" "}
                                     <span className="font-mono font-semibold">
                                       {formatTimeBest(entry.entry_time)}
                                     </span>
@@ -374,7 +376,7 @@ export default function TeamCompetitionEntryModal({
               className="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm"
               data-testid="team-competition-entry-close-action"
             >
-              閉じる
+              {t("competitionEntryModal.close")}
             </button>
           </div>
         </div>

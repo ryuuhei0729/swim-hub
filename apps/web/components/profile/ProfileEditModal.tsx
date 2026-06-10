@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
+import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import BirthdayInput from "@/components/ui/BirthdayInput";
@@ -23,6 +24,7 @@ export default function ProfileEditModal({
   onUpdate,
   onAvatarChange,
 }: ProfileEditModalProps) {
+  const t = useTranslations("mypage.profileEdit");
   const [formData, setFormData] = useState({
     name: "",
     birthday: "",
@@ -48,7 +50,7 @@ export default function ProfileEditModal({
     e.preventDefault();
 
     if (!formData.name.trim()) {
-      setError("名前は必須です");
+      setError(t("nameRequired"));
       return;
     }
 
@@ -62,7 +64,7 @@ export default function ProfileEditModal({
       // タイムアウト通知付きで更新を実行
       const TIMEOUT = 15000;
       const timeoutId = window.setTimeout(() => {
-        setError("更新に時間がかかっています。しばらくお待ちください...");
+        setError(t("updating"));
       }, TIMEOUT);
       try {
         await onUpdate({
@@ -81,7 +83,7 @@ export default function ProfileEditModal({
       if (err instanceof Error) {
         console.error("詳細:", err.message);
       }
-      setError("プロフィールの更新に失敗しました。時間をおいて再度お試しください。");
+      setError(t("updateFailed"));
     } finally {
       setIsUpdating(false);
     }
@@ -115,14 +117,14 @@ export default function ProfileEditModal({
         <div className="relative bg-white rounded-lg shadow-xl max-w-3xl w-full">
           {/* ヘッダー */}
           <div className="flex items-center justify-between p-3 sm:p-6 border-b border-gray-200">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900">プロフィール編集</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">{t("title")}</h3>
             <button
               type="button"
               className="text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-1"
               onClick={handleClose}
               disabled={isUpdating}
             >
-              <span className="sr-only">閉じる</span>
+              <span className="sr-only">{t("close")}</span>
               <XMarkIcon className="h-6 w-6" />
             </button>
           </div>
@@ -153,14 +155,14 @@ export default function ProfileEditModal({
                 {/* 名前 */}
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                    名前 <span className="text-red-500">*</span>
+                    {t("nameLabel")} <span className="text-red-500">*</span>
                   </label>
                   <Input
                     id="name"
                     type="text"
                     value={formData.name}
                     onChange={handleChange("name")}
-                    placeholder="名前を入力"
+                    placeholder={t("namePlaceholder")}
                     required
                     className="w-full"
                     disabled={isUpdating}
@@ -171,7 +173,7 @@ export default function ProfileEditModal({
                   {/* 生年月日 */}
                   <div>
                     <BirthdayInput
-                      label="生年月日"
+                      label={t("birthdayLabel")}
                       value={formData.birthday}
                       onChange={(date) => {
                         setFormData((prev) => ({ ...prev, birthday: date }));
@@ -186,7 +188,7 @@ export default function ProfileEditModal({
                       htmlFor="gender"
                       className="block text-sm font-medium text-gray-700 mb-2"
                     >
-                      性別
+                      {t("genderLabel")}
                     </label>
                     <select
                       id="gender"
@@ -195,8 +197,8 @@ export default function ProfileEditModal({
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
                       disabled={isUpdating}
                     >
-                      <option value={0}>男性</option>
-                      <option value={1}>女性</option>
+                      <option value={0}>{t("genderMale")}</option>
+                      <option value={1}>{t("genderFemale")}</option>
                     </select>
                   </div>
                 </div>
@@ -205,29 +207,29 @@ export default function ProfileEditModal({
               {/* 自己紹介（下段・全幅） */}
               <div className="md:col-span-2">
                 <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-2">
-                  自己紹介
+                  {t("bioLabel")}
                 </label>
                 <textarea
                   id="bio"
                   value={formData.bio}
                   onChange={handleChange("bio")}
-                  placeholder="自己紹介を入力してください"
+                  placeholder={t("bioPlaceholder")}
                   rows={5}
                   maxLength={500}
                   disabled={isUpdating}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
                 />
-                <p className="mt-1 text-sm text-gray-500">{formData.bio.length}/500文字</p>
+                <p className="mt-1 text-sm text-gray-500">{t("bioCount", { count: formData.bio.length })}</p>
               </div>
             </div>
 
             {/* ボタン */}
             <div className="flex justify-end gap-2 sm:gap-3">
               <Button type="button" variant="secondary" onClick={handleClose} disabled={isUpdating}>
-                キャンセル
+                {t("cancel")}
               </Button>
               <Button type="submit" disabled={isUpdating || !formData.name.trim()}>
-                {isUpdating ? "更新中..." : "更新"}
+                {isUpdating ? t("submitUpdating") : t("submit")}
               </Button>
             </div>
           </form>

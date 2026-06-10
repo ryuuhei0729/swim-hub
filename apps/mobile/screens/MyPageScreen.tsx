@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useUserQuery } from "@apps/shared/hooks/queries/user";
 import { useBestTimesQuery } from "@apps/shared/hooks/queries/records";
@@ -21,6 +22,7 @@ import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
 export const MyPageScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { supabase, user } = useAuth();
+  const { t } = useTranslation();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -125,7 +127,7 @@ export const MyPageScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
         <ErrorView
-          message={error.message || "データの取得に失敗しました"}
+          message={error.message || t("mypage.mobile.dataFetchFailed")}
           onRetry={() => {
             refetchProfile();
             refetchBestTimes();
@@ -140,7 +142,7 @@ export const MyPageScreen: React.FC = () => {
   if (isLoading && !profile) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-        <LoadingSpinner fullScreen message="データを読み込み中..." />
+        <LoadingSpinner fullScreen message={t("mypage.mobile.loadingData")} />
       </SafeAreaView>
     );
   }
@@ -150,7 +152,7 @@ export const MyPageScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>プロフィールが見つかりません</Text>
+          <Text style={styles.errorText}>{t("mypage.mobile.profileNotFound")}</Text>
         </View>
       </SafeAreaView>
     );
@@ -173,9 +175,9 @@ export const MyPageScreen: React.FC = () => {
         {/* プロフィールセクション */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>プロフィール</Text>
+            <Text style={styles.sectionTitle}>{t("mypage.mobile.profileSectionTitle")}</Text>
             <Pressable style={styles.editButton} onPress={() => setIsEditModalOpen(true)}>
-              <Text style={styles.editButtonText}>編集</Text>
+              <Text style={styles.editButtonText}>{t("mypage.mobile.editButton")}</Text>
             </Pressable>
           </View>
           <ProfileDisplay profile={profile} teams={teams} />
@@ -185,11 +187,20 @@ export const MyPageScreen: React.FC = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Best Time</Text>
+            <Pressable
+              style={styles.bulkInputButton}
+              onPress={() => navigation.navigate("BulkBestTime")}
+              accessibilityRole="button"
+              accessibilityLabel={t("mypage.mobile.bulkInputAria")}
+            >
+              <Feather name="upload" size={14} color="#374151" />
+              <Text style={styles.bulkInputButtonText}>{t("mypage.mobile.bulkInput")}</Text>
+            </Pressable>
           </View>
           {bestTimesError ? (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>
-                {bestTimesErrorMessage || "ベストタイムの取得に失敗しました"}
+                {bestTimesErrorMessage || t("mypage.mobile.bestTimesFetchFailed")}
               </Text>
             </View>
           ) : (
@@ -202,10 +213,10 @@ export const MyPageScreen: React.FC = () => {
           style={styles.settingsButton}
           onPress={() => navigation.navigate("Settings")}
           accessibilityRole="button"
-          accessibilityLabel="設定画面を開く"
+          accessibilityLabel={t("mypage.mobile.settingsButtonAria")}
         >
           <Feather name="settings" size={18} color="#6B7280" />
-          <Text style={styles.settingsButtonText}>設定</Text>
+          <Text style={styles.settingsButtonText}>{t("mypage.mobile.settingsButton")}</Text>
         </Pressable>
       </ScrollView>
 
@@ -269,6 +280,22 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   editButtonText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#374151",
+  },
+  bulkInputButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    backgroundColor: "#FFFFFF",
+  },
+  bulkInputButtonText: {
     fontSize: 14,
     fontWeight: "500",
     color: "#374151",

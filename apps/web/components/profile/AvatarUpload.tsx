@@ -3,6 +3,7 @@
 import React, { useState, useRef } from "react";
 import dynamic from "next/dynamic";
 import { CameraIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import { validateImageFile } from "@/utils/imageUtils";
 
@@ -25,6 +26,7 @@ export default function AvatarUpload({
   disabled = false,
   sizeClassName = "h-40 w-40",
 }: AvatarUploadProps) {
+  const t = useTranslations("mypage.avatarUpload");
   const { user } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,14 +41,14 @@ export default function AvatarUpload({
     if (!file) return;
 
     if (!user) {
-      setError("ログインが必要です");
+      setError(t("loginRequired"));
       return;
     }
 
     // ファイルバリデーション
     const validation = validateImageFile(file);
     if (!validation.valid) {
-      setError(validation.error || "ファイルが無効です");
+      setError(validation.error || t("fileInvalid"));
       return;
     }
 
@@ -63,7 +65,7 @@ export default function AvatarUpload({
       setIsCropModalOpen(true);
     } catch (err) {
       console.error("ファイル読み込みエラー:", err);
-      setError("ファイルの読み込みに失敗しました");
+      setError(t("fileReadFailed"));
     }
   };
 
@@ -81,13 +83,13 @@ export default function AvatarUpload({
 
       if (!response.ok) {
         const data = (await response.json()) as { error?: string };
-        throw new Error(data.error || "画像の削除に失敗しました");
+        throw new Error(data.error || t("deleteImageFailed"));
       }
 
       onAvatarChange(null);
     } catch (err) {
       console.error("画像削除エラー:", err);
-      setError(err instanceof Error ? err.message : "画像の削除に失敗しました");
+      setError(err instanceof Error ? err.message : t("deleteImageFailed"));
     } finally {
       setIsUploading(false);
     }
@@ -112,14 +114,14 @@ export default function AvatarUpload({
 
       if (!response.ok) {
         const data = (await response.json()) as { error?: string };
-        throw new Error(data.error || "画像のアップロードに失敗しました");
+        throw new Error(data.error || t("uploadImageFailed"));
       }
 
       const { url } = (await response.json()) as { url: string };
       onAvatarChange(url);
     } catch (err) {
       console.error("アップロードエラー:", err);
-      setError(err instanceof Error ? err.message : "画像のアップロードに失敗しました");
+      setError(err instanceof Error ? err.message : t("uploadImageFailed"));
     } finally {
       // メモリリークを防ぐため、生成したオブジェクトURLを解放
       try {
@@ -166,7 +168,7 @@ export default function AvatarUpload({
         {currentAvatarUrl ? (
           <img
             src={currentAvatarUrl}
-            alt="プロフィール画像"
+            alt={t("profileImageAlt")}
             className="w-full h-full rounded-full object-cover"
           />
         ) : (
@@ -198,7 +200,7 @@ export default function AvatarUpload({
               handleRemoveAvatar();
             }}
             className="absolute top-1 right-1 z-10 bg-red-500 text-white rounded-full p-1 shadow-lg hover:bg-red-600"
-            aria-label="アバターを削除"
+            aria-label={t("deleteAvatarAriaLabel")}
           >
             <XMarkIcon className="h-3 w-3" />
           </button>

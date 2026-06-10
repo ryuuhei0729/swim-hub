@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, Modal, Pressable, TextInput, ScrollView, StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
 import type { TeamGroupWithCount } from "./hooks";
 
 interface GroupFormModalProps {
@@ -21,6 +22,7 @@ export const GroupFormModal: React.FC<GroupFormModalProps> = ({
   saving,
   error,
 }) => {
+  const { t } = useTranslation();
   const [categoryMode, setCategoryMode] = useState<"existing" | "new">("existing");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [newCategory, setNewCategory] = useState("");
@@ -67,7 +69,9 @@ export const GroupFormModal: React.FC<GroupFormModalProps> = ({
       <Pressable style={styles.overlay} onPress={handleClose}>
         <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
           <View style={styles.header}>
-            <Text style={styles.title}>{editingGroup ? "グループを編集" : "グループを追加"}</Text>
+            <Text style={styles.title}>
+              {editingGroup ? t("teams.mobile.groupEditTitle") : t("teams.mobile.groupAddTitle")}
+            </Text>
             <Pressable style={styles.closeButton} onPress={handleClose}>
               <Text style={styles.closeButtonText}>×</Text>
             </Pressable>
@@ -76,7 +80,7 @@ export const GroupFormModal: React.FC<GroupFormModalProps> = ({
           <ScrollView style={styles.body} keyboardShouldPersistTaps="handled">
             {/* カテゴリ */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>カテゴリ</Text>
+              <Text style={styles.label}>{t("teams.mobile.groupCategoryLabel")}</Text>
               {existingCategories.length > 0 && (
                 <View style={styles.modeToggle}>
                   <Pressable
@@ -92,7 +96,7 @@ export const GroupFormModal: React.FC<GroupFormModalProps> = ({
                         categoryMode === "existing" && styles.modeButtonTextActive,
                       ]}
                     >
-                      既存から選択
+                      {t("teams.mobile.groupCategoryExisting")}
                     </Text>
                   </Pressable>
                   <Pressable
@@ -105,7 +109,7 @@ export const GroupFormModal: React.FC<GroupFormModalProps> = ({
                         categoryMode === "new" && styles.modeButtonTextActive,
                       ]}
                     >
-                      新規カテゴリ
+                      {t("teams.mobile.groupCategoryNew")}
                     </Text>
                   </Pressable>
                 </View>
@@ -126,7 +130,7 @@ export const GroupFormModal: React.FC<GroupFormModalProps> = ({
                         selectedCategory === "" && styles.categoryPillTextSelected,
                       ]}
                     >
-                      カテゴリなし
+                      {t("teams.mobile.groupCategoryNone")}
                     </Text>
                   </Pressable>
                   {existingCategories.map((cat) => (
@@ -154,31 +158,33 @@ export const GroupFormModal: React.FC<GroupFormModalProps> = ({
                   style={styles.input}
                   value={newCategory}
                   onChangeText={setNewCategory}
-                  placeholder="例: 学年、距離、S1"
+                  placeholder={t("teams.mobile.groupCategoryPlaceholder")}
                   placeholderTextColor="#9CA3AF"
                   editable={!saving}
                 />
               )}
-              <Text style={styles.hint}>同じ分類のグループをまとめるための名前です</Text>
+              <Text style={styles.hint}>{t("teams.mobile.groupCategoryHint")}</Text>
             </View>
 
             {/* グループ名 */}
             <View style={styles.formGroup}>
               <Text style={styles.label}>
-                グループ名 <Text style={styles.required}>*</Text>
+                {t("teams.mobile.groupNameLabel")} <Text style={styles.required}>*</Text>
               </Text>
               <TextInput
                 style={styles.input}
                 value={name}
                 onChangeText={setName}
                 placeholder={
-                  editingGroup ? "例: スプリント" : "例: スプリント, ディスタンス, ミドル"
+                  editingGroup
+                    ? t("teams.mobile.groupNamesPlaceholderEdit")
+                    : t("teams.mobile.groupNamesPlaceholderNew")
                 }
                 placeholderTextColor="#9CA3AF"
                 editable={!saving}
               />
               {!editingGroup && (
-                <Text style={styles.hint}>カンマ区切りで複数のグループを一度に作成できます</Text>
+                <Text style={styles.hint}>{t("teams.mobile.groupNameMultiHint")}</Text>
               )}
             </View>
 
@@ -196,7 +202,7 @@ export const GroupFormModal: React.FC<GroupFormModalProps> = ({
               onPress={handleClose}
               disabled={saving}
             >
-              <Text style={styles.cancelButtonText}>キャンセル</Text>
+              <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
             </Pressable>
             <Pressable
               style={[
@@ -208,7 +214,11 @@ export const GroupFormModal: React.FC<GroupFormModalProps> = ({
               disabled={!isValid || saving}
             >
               <Text style={styles.submitButtonText}>
-                {saving ? "保存中..." : editingGroup ? "更新" : "作成"}
+                {saving
+                  ? t("teams.mobile.saveLoading")
+                  : editingGroup
+                    ? t("teams.mobile.groupSaveButtonUpdate")
+                    : t("teams.mobile.groupSaveButtonCreate")}
               </Text>
             </Pressable>
           </View>

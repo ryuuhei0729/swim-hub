@@ -9,6 +9,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 import { useTeamGroups, useGroupActions, type TeamGroupWithCount } from "./hooks";
@@ -40,6 +41,7 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
   isCurrentUserAdmin,
 }) => {
   const { supabase } = useAuth();
+  const { t } = useTranslation();
 
   // グループデータ
   const { groups, categories, groupsByCategory, loading, error, loadGroups } = useTeamGroups(
@@ -130,19 +132,19 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
   const handleDeleteGroup = useCallback(
     (group: TeamGroupWithCount) => {
       Alert.alert(
-        "確認",
-        `「${group.name}」を削除しますか？\nグループに割り当てられたメンバー情報も削除されます。`,
+        t("teams.mobile.groupConfirmTitle"),
+        t("teams.mobile.groupDeleteConfirmMessage", { name: group.name }),
         [
-          { text: "キャンセル", style: "cancel" },
+          { text: t("common.cancel"), style: "cancel" },
           {
-            text: "削除",
+            text: t("teams.mobile.deleteConfirmText"),
             style: "destructive",
             onPress: () => deleteGroup(group.id),
           },
         ],
       );
     },
-    [deleteGroup],
+    [deleteGroup, t],
   );
 
   // メンバー編集モーダルを開く
@@ -214,18 +216,18 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
         {/* ヘッダー */}
         <View style={styles.headerRow}>
           <View style={styles.headerInfo}>
-            <Text style={styles.headerTitle}>グループ管理</Text>
-            <Text style={styles.headerSubtitle}>メンバーをカテゴリ別にグループ分けできます</Text>
+            <Text style={styles.headerTitle}>{t("teams.mobile.groupManagement.title")}</Text>
+            <Text style={styles.headerSubtitle}>{t("teams.mobile.groupManagement.subtitle")}</Text>
           </View>
           {isCurrentUserAdmin && (
             <Pressable
               style={styles.addButton}
               onPress={handleOpenCreateForm}
               accessibilityRole="button"
-              accessibilityLabel="グループを追加"
+              accessibilityLabel={t("teams.mobile.groupAddAria")}
             >
               <Feather name="plus" size={16} color="#FFFFFF" />
-              <Text style={styles.addButtonText}>追加</Text>
+              <Text style={styles.addButtonText}>{t("common.add")}</Text>
             </Pressable>
           )}
         </View>
@@ -241,9 +243,9 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
         {groups.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Feather name="layers" size={48} color="#D1D5DB" />
-            <Text style={styles.emptyText}>まだグループがありません</Text>
+            <Text style={styles.emptyText}>{t("teams.mobile.groupManagement.emptyTitle")}</Text>
             {isCurrentUserAdmin && (
-              <Text style={styles.emptyHint}>「追加」からカテゴリとグループを作成しましょう</Text>
+              <Text style={styles.emptyHint}>{t("teams.mobile.groupManagement.emptyHint")}</Text>
             )}
           </View>
         ) : (

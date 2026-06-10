@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import type { UserIdentity } from "@supabase/supabase-js";
 
@@ -42,6 +43,8 @@ const AppleIcon = () => (
 );
 
 export default function IdentityLinkSettings() {
+  const t = useTranslations("settings.identity");
+  const tErrors = useTranslations("settings.identity.errors");
   const { supabase } = useAuth();
   const [identities, setIdentities] = useState<UserIdentity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,11 +62,11 @@ export default function IdentityLinkSettings() {
       }
       setIdentities(data?.identities ?? []);
     } catch {
-      setError("連携情報の取得に失敗しました");
+      setError(tErrors("fetchFailed"));
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, [supabase, tErrors]);
 
   useEffect(() => {
     fetchIdentities();
@@ -99,7 +102,7 @@ export default function IdentityLinkSettings() {
         window.location.href = data.url;
       }
     } catch {
-      setError("連携に失敗しました。再度お試しください。");
+      setError(tErrors("linkFailed"));
     } finally {
       setActionLoading(null);
     }
@@ -121,7 +124,7 @@ export default function IdentityLinkSettings() {
       }
       await fetchIdentities();
     } catch {
-      setError("連携解除に失敗しました。再度お試しください。");
+      setError(tErrors("unlinkFailed"));
     } finally {
       setActionLoading(null);
     }
@@ -146,7 +149,7 @@ export default function IdentityLinkSettings() {
     return (
       <div className="bg-white rounded-lg shadow p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 pb-2 mb-4 border-b border-gray-200">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">ログイン連携</h2>
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">{t("title")}</h2>
         </div>
         <div className="flex items-center justify-center py-4">
           <svg
@@ -177,7 +180,7 @@ export default function IdentityLinkSettings() {
   return (
     <div className="bg-white rounded-lg shadow p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 pb-2 mb-4 border-b border-gray-200">
-        <h2 className="text-lg sm:text-xl font-semibold text-gray-900">ログイン連携</h2>
+        <h2 className="text-lg sm:text-xl font-semibold text-gray-900">{t("title")}</h2>
       </div>
 
       {error && (
@@ -201,10 +204,10 @@ export default function IdentityLinkSettings() {
                   <div className="text-sm font-medium text-gray-900">{provider.name}</div>
                   {isLinked ? (
                     <div className="text-xs text-green-600">
-                      連携済み{email ? `（${email}）` : ""}
+                      {t("linked")}{email ? `（${email}）` : ""}
                     </div>
                   ) : (
-                    <div className="text-xs text-gray-500">未連携</div>
+                    <div className="text-xs text-gray-500">{t("notLinked")}</div>
                   )}
                 </div>
               </div>
@@ -213,14 +216,14 @@ export default function IdentityLinkSettings() {
                 {isLinked ? (
                   isConfirming ? (
                     <>
-                      <span className="text-xs text-gray-500">解除しますか？</span>
+                      <span className="text-xs text-gray-500">{t("unlinkConfirmText")}</span>
                       <button
                         type="button"
                         onClick={() => handleUnlink(provider.id)}
                         disabled={isLoading}
                         className="inline-flex items-center justify-center px-3 py-1.5 border border-red-300 rounded-md text-xs font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 transition-colors"
                       >
-                        {isLoading ? "解除中..." : "確認"}
+                        {isLoading ? t("unlinking") : t("unlinkConfirmButton")}
                       </button>
                       <button
                         type="button"
@@ -228,7 +231,7 @@ export default function IdentityLinkSettings() {
                         disabled={isLoading}
                         className="inline-flex items-center justify-center px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 transition-colors"
                       >
-                        キャンセル
+                        {t("unlinkCancelButton")}
                       </button>
                     </>
                   ) : (
@@ -236,10 +239,10 @@ export default function IdentityLinkSettings() {
                       type="button"
                       onClick={() => setUnlinkConfirm(provider.id)}
                       disabled={!canUnlink || isLoading}
-                      title={!canUnlink ? "最低1つのログイン方法が必要です" : undefined}
+                      title={!canUnlink ? t("minOneRequiredTitle") : undefined}
                       className="inline-flex items-center justify-center px-3 py-1.5 border border-gray-300 rounded-md text-xs sm:text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      解除する
+                      {t("unlinkButton")}
                     </button>
                   )
                 ) : (
@@ -271,10 +274,10 @@ export default function IdentityLinkSettings() {
                             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                           />
                         </svg>
-                        連携中...
+                        {t("linking")}
                       </>
                     ) : (
-                      "連携する"
+                      t("linkButton")
                     )}
                   </button>
                 )}
@@ -286,7 +289,7 @@ export default function IdentityLinkSettings() {
 
       {!canUnlink && identities.length > 0 && (
         <p className="mt-3 text-xs text-gray-500">
-          ※ 最低1つのログイン方法が必要なため、すべての連携を解除することはできません
+          {t("minOneRequired")}
         </p>
       )}
     </div>

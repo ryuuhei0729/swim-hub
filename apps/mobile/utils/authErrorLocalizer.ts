@@ -1,124 +1,145 @@
-/**
- * Supabase認証エラーメッセージの日本語化ユーティリティ
- */
+// =============================================================================
+// Supabase 認証エラーメッセージのロケール対応ユーティリティ
+// =============================================================================
+// Supabase が返す英語エラーメッセージ (lowercase) をキーとして i18n の
+// auth.errors.<key> を引く。マップにないキーはジェネリックなメッセージで返す。
 
-// React Nativeのグローバル変数を宣言
+import i18n from "@/i18n";
+
 declare const __DEV__: boolean;
 
-/**
- * 既知のSupabaseエラーメッセージを日本語にマッピング
- */
-export const errorMessageMap: Record<string, string> = {
-  // 認証関連
-  "invalid login credentials": "メールアドレスまたはパスワードが正しくありません",
-  "invalid credentials": "認証情報が正しくありません",
-  "email not confirmed": "メールアドレスが確認されていません。確認メールをご確認ください",
-  "user not found": "ユーザーが見つかりません",
-  "user already registered": "このメールアドレスは既に登録されています",
-  "email already in use": "このメールアドレスは既に使用されています",
+const ERROR_I18N_KEYS = [
+  "invalidLoginCredentials",
+  "invalidCredentials",
+  "emailNotConfirmed",
+  "userNotFound",
+  "userAlreadyRegistered",
+  "emailAlreadyInUse",
+  "providerNotEnabled",
+  "oauthError",
+  "accessDenied",
+  "invalidGrant",
+  "invalidRequest",
+  "unauthorizedClient",
+  "unsupportedGrantType",
+  "invalidToken",
+  "tokenExpired",
+  "invalidRefreshToken",
+  "refreshTokenNotFound",
+  "invalidIdToken",
+  "idTokenExpired",
+  "sessionNotFound",
+  "sessionExpired",
+  "invalidSession",
+  "tooManyRequests",
+  "rateLimitExceeded",
+  "networkError",
+  "connectionRefused",
+  "timeout",
+  "appleAuthFailed",
+  "appleSignInFailed",
+  "googleAuthFailed",
+  "googleSignInFailed",
+  "internalServerError",
+  "serviceUnavailable",
+  "badGateway",
+] as const;
 
-  // OAuth関連
-  "provider not enabled": "この認証プロバイダーは有効化されていません",
-  "oauth error": "OAuth認証でエラーが発生しました",
-  access_denied: "アクセスが拒否されました",
-  invalid_grant: "認証の有効期限が切れました。再度お試しください",
-  invalid_request: "リクエストが無効です",
-  unauthorized_client: "認証が許可されていません",
-  unsupported_grant_type: "サポートされていない認証タイプです",
+const MATCH_PATTERN_TO_KEY: Array<[string, (typeof ERROR_I18N_KEYS)[number]]> = [
+  ["invalid login credentials", "invalidLoginCredentials"],
+  ["invalid credentials", "invalidCredentials"],
+  ["email not confirmed", "emailNotConfirmed"],
+  ["user not found", "userNotFound"],
+  ["user already registered", "userAlreadyRegistered"],
+  ["email already in use", "emailAlreadyInUse"],
+  ["provider not enabled", "providerNotEnabled"],
+  ["oauth error", "oauthError"],
+  ["access_denied", "accessDenied"],
+  ["invalid_grant", "invalidGrant"],
+  ["invalid_request", "invalidRequest"],
+  ["unauthorized_client", "unauthorizedClient"],
+  ["unsupported_grant_type", "unsupportedGrantType"],
+  ["invalid token", "invalidToken"],
+  ["token expired", "tokenExpired"],
+  ["invalid refresh token", "invalidRefreshToken"],
+  ["refresh token not found", "refreshTokenNotFound"],
+  ["invalid id token", "invalidIdToken"],
+  ["id token expired", "idTokenExpired"],
+  ["session not found", "sessionNotFound"],
+  ["session expired", "sessionExpired"],
+  ["invalid session", "invalidSession"],
+  ["too many requests", "tooManyRequests"],
+  ["rate limit exceeded", "rateLimitExceeded"],
+  ["network error", "networkError"],
+  ["connection refused", "connectionRefused"],
+  ["timeout", "timeout"],
+  ["apple authentication failed", "appleAuthFailed"],
+  ["apple sign in failed", "appleSignInFailed"],
+  ["google authentication failed", "googleAuthFailed"],
+  ["google sign in failed", "googleSignInFailed"],
+  ["internal server error", "internalServerError"],
+  ["service unavailable", "serviceUnavailable"],
+  ["bad gateway", "badGateway"],
+];
 
-  // トークン関連
-  "invalid token": "認証トークンが無効です",
-  "token expired": "認証トークンの有効期限が切れました",
-  "invalid refresh token": "リフレッシュトークンが無効です",
-  "refresh token not found": "リフレッシュトークンが見つかりません",
-  "invalid id token": "IDトークンが無効です",
-  "id token expired": "IDトークンの有効期限が切れました",
-
-  // セッション関連
-  "session not found": "セッションが見つかりません。再度ログインしてください",
-  "session expired": "セッションの有効期限が切れました。再度ログインしてください",
-  "invalid session": "セッションが無効です",
-
-  // レート制限
-  "too many requests": "リクエスト回数が上限に達しました。しばらくお待ちください",
-  "rate limit exceeded": "リクエスト制限を超えました。しばらくお待ちください",
-
-  // ネットワーク関連
-  "network error": "ネットワークエラーが発生しました。接続を確認してください",
-  "connection refused": "接続が拒否されました。しばらくしてから再度お試しください",
-  timeout: "接続がタイムアウトしました。再度お試しください",
-
-  // Apple認証関連
-  "apple authentication failed": "Apple認証に失敗しました",
-  "apple sign in failed": "Appleサインインに失敗しました",
-
-  // Google認証関連
-  "google authentication failed": "Google認証に失敗しました",
-  "google sign in failed": "Googleサインインに失敗しました",
-
-  // サーバーエラー
-  "internal server error": "サーバーエラーが発生しました。しばらくしてから再度お試しください",
-  "service unavailable": "サービスが一時的に利用できません。しばらくしてから再度お試しください",
-  "bad gateway": "サーバーとの通信に問題が発生しました",
-};
-
-/**
- * エラーメッセージを日本語に変換する
- * @param message 元のエラーメッセージ（英語）
- * @returns 日本語のエラーメッセージ
- */
+/** エラーメッセージを現在のロケールに合わせて変換する */
 export const localizeAuthError = (message: string): string => {
-  if (!message) {
-    return "認証エラーが発生しました。再度お試しください";
-  }
+  if (!message) return i18n.t("auth.supabaseErrors.generic");
 
   const lowerMessage = message.toLowerCase();
 
-  // 完全一致を優先
-  for (const [key, value] of Object.entries(errorMessageMap)) {
-    if (lowerMessage === key) {
-      return value;
-    }
+  for (const [pattern, key] of MATCH_PATTERN_TO_KEY) {
+    if (lowerMessage === pattern) return i18n.t(`auth.supabaseErrors.${key}`);
+  }
+  for (const [pattern, key] of MATCH_PATTERN_TO_KEY) {
+    if (lowerMessage.includes(pattern)) return i18n.t(`auth.supabaseErrors.${key}`);
   }
 
-  // 部分一致を検索
-  for (const [key, value] of Object.entries(errorMessageMap)) {
-    if (lowerMessage.includes(key)) {
-      return value;
-    }
-  }
-
-  // キャンセル関連のエラーはそのまま（既に日本語の場合が多い）
   if (lowerMessage.includes("cancel") || lowerMessage.includes("キャンセル")) {
-    return "認証がキャンセルされました";
+    return i18n.t("auth.supabaseErrors.cancelled");
   }
 
-  // 既に日本語のメッセージはそのまま返す
-  if (/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(message)) {
-    return message;
-  }
+  // 既にロケール固有 (ja の場合) のメッセージはそのまま返す
+  if (/[぀-ゟ゠-ヿ一-龯]/.test(message)) return message;
 
-  // 開発環境では元のメッセージも表示
-  if (__DEV__) {
-    return `認証エラーが発生しました: ${message}`;
-  }
+  if (__DEV__) return i18n.t("auth.supabaseErrors.genericWithDetail", { detail: message });
 
-  // 本番環境ではジェネリックなメッセージ
-  return "認証エラーが発生しました。再度お試しください";
+  return i18n.t("auth.supabaseErrors.generic");
 };
 
-/**
- * Supabase AuthError オブジェクトからローカライズされたメッセージを取得
- * @param error Supabase AuthError または Error オブジェクト
- * @returns 日本語のエラーメッセージ
- */
+/** Supabase AuthError オブジェクト経由でロケール対応メッセージを取得 */
 export const localizeSupabaseAuthError = (
   error: { message?: string; error_description?: string; error?: string } | null | undefined,
 ): string => {
-  if (!error) {
-    return "認証エラーが発生しました。再度お試しください";
-  }
-
+  if (!error) return i18n.t("auth.supabaseErrors.generic");
   const message = error.message || error.error_description || error.error || "";
   return localizeAuthError(message);
 };
+
+// 互換性のため一覧をエクスポート (既存テスト等で参照される可能性)
+export const ERROR_KEYS: readonly string[] = ERROR_I18N_KEYS;
+
+/**
+ * 既存テスト・コード互換: 「英語パターン → ロケール対応メッセージ」の辞書を返す。
+ * 現在のロケールに合わせて動的に解決されるので、テスト時 (ja モック) では
+ * 旧来の日本語固定マップと等価に振る舞う。
+ */
+export const errorMessageMap: Record<string, string> = new Proxy({} as Record<string, string>, {
+  get(_target, prop: string) {
+    const key = MATCH_PATTERN_TO_KEY.find(([pattern]) => pattern === prop)?.[1];
+    return key ? i18n.t(`auth.supabaseErrors.${key}`) : undefined;
+  },
+  ownKeys() {
+    return MATCH_PATTERN_TO_KEY.map(([pattern]) => pattern);
+  },
+  getOwnPropertyDescriptor(_target, prop: string) {
+    const key = MATCH_PATTERN_TO_KEY.find(([pattern]) => pattern === prop)?.[1];
+    if (!key) return undefined;
+    return {
+      value: i18n.t(`auth.supabaseErrors.${key}`),
+      writable: false,
+      enumerable: true,
+      configurable: true,
+    };
+  },
+});

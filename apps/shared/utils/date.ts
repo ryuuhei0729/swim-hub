@@ -3,7 +3,21 @@
 // =============================================================================
 
 import { addMonths, endOfMonth, format, isValid, parseISO, startOfMonth } from "date-fns";
-import { ja } from "date-fns/locale";
+import { enUS, ja } from "date-fns/locale";
+import type { Locale } from "date-fns";
+
+// =============================================================================
+// ロケール
+// =============================================================================
+
+/** サポートロケール (i18next の言語コードと一致) */
+export type SupportedLocale = "ja" | "en";
+
+/** date-fns Locale オブジェクトのマップ */
+const DATE_FNS_LOCALES: Record<SupportedLocale, Locale> = {
+  ja,
+  en: enUS,
+};
 
 // =============================================================================
 // 日付フォーマット共通関数
@@ -16,33 +30,39 @@ export type DateStyle =
   | "shortWithWeekday"
   | "long"
   | "longWithWeekday"
-  | "numeric";
+  | "longPadded"
+  | "numeric"
+  | "yearMonth";
 
-const DATE_PATTERNS: Record<DateStyle, string> = {
-  iso: "yyyy-MM-dd",
-  short: "M月d日",
-  shortWithWeekday: "M月d日(E)",
-  long: "yyyy年M月d日",
-  longWithWeekday: "yyyy年M月d日(E)",
-  numeric: "yyyy/MM/dd",
+const DATE_PATTERNS: Record<DateStyle, Record<SupportedLocale, string>> = {
+  iso: { ja: "yyyy-MM-dd", en: "yyyy-MM-dd" },
+  short: { ja: "M月d日", en: "MMM d" },
+  shortWithWeekday: { ja: "M月d日(E)", en: "EEE, MMM d" },
+  long: { ja: "yyyy年M月d日", en: "MMM d, yyyy" },
+  longWithWeekday: { ja: "yyyy年M月d日(E)", en: "EEE, MMM d, yyyy" },
+  longPadded: { ja: "yyyy年MM月dd日", en: "MMMM d, yyyy" },
+  numeric: { ja: "yyyy/MM/dd", en: "yyyy/MM/dd" },
+  yearMonth: { ja: "yyyy年M月", en: "MMMM yyyy" },
 };
 
 /**
  * 日付を指定されたスタイルでフォーマット
  * @param date 日付（文字列またはDate）
  * @param style フォーマットスタイル（デフォルト: 'short'）
+ * @param locale ロケール（デフォルト: 'ja'）
  * @returns フォーマットされた日付文字列、無効な場合は '-'
  */
 export function formatDate(
   date: string | Date | null | undefined,
   style: DateStyle = "short",
+  locale: SupportedLocale = "ja",
 ): string {
   if (!date) return "-";
 
   const d = typeof date === "string" ? parseISO(date) : date;
   if (!isValid(d)) return "-";
 
-  return format(d, DATE_PATTERNS[style], { locale: ja });
+  return format(d, DATE_PATTERNS[style][locale], { locale: DATE_FNS_LOCALES[locale] });
 }
 
 /**
@@ -63,29 +83,32 @@ export function addMonthsImmutable(date: Date, months: number): Date {
 }
 
 /** 日時フォーマットスタイル */
-export type DateTimeStyle = "long" | "short";
+export type DateTimeStyle = "long" | "short" | "shortDate";
 
-const DATETIME_PATTERNS: Record<DateTimeStyle, string> = {
-  long: "yyyy年M月d日 HH:mm",
-  short: "M/d HH:mm",
+const DATETIME_PATTERNS: Record<DateTimeStyle, Record<SupportedLocale, string>> = {
+  long: { ja: "yyyy年M月d日 HH:mm", en: "MMM d, yyyy HH:mm" },
+  short: { ja: "M/d HH:mm", en: "M/d HH:mm" },
+  shortDate: { ja: "M月d日 HH:mm", en: "MMM d HH:mm" },
 };
 
 /**
  * 日時を指定されたスタイルでフォーマット（時刻含む）
  * @param date 日付（文字列またはDate）
  * @param style フォーマットスタイル（デフォルト: 'long'）
+ * @param locale ロケール（デフォルト: 'ja'）
  * @returns フォーマットされた日時文字列、無効な場合は '-'
  */
 export function formatDateTime(
   date: string | Date | null | undefined,
   style: DateTimeStyle = "long",
+  locale: SupportedLocale = "ja",
 ): string {
   if (!date) return "-";
 
   const d = typeof date === "string" ? parseISO(date) : date;
   if (!isValid(d)) return "-";
 
-  return format(d, DATETIME_PATTERNS[style], { locale: ja });
+  return format(d, DATETIME_PATTERNS[style][locale], { locale: DATE_FNS_LOCALES[locale] });
 }
 
 /**

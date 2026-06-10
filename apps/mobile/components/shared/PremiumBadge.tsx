@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { useTranslation } from "react-i18next";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { MainStackParamList } from "@/navigation/types";
 
@@ -17,6 +18,7 @@ interface PremiumBadgeProps {
  */
 export const PremiumBadge: React.FC<PremiumBadgeProps> = ({ message, compact = false }) => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const { t } = useTranslation();
 
   const handlePress = () => {
     navigation.navigate("Paywall");
@@ -41,7 +43,7 @@ export const PremiumBadge: React.FC<PremiumBadgeProps> = ({ message, compact = f
       </View>
       <Text style={styles.message}>{message}</Text>
       <Pressable style={styles.upgradeButton} onPress={handlePress}>
-        <Text style={styles.upgradeButtonText}>アップグレードする</Text>
+        <Text style={styles.upgradeButtonText}>{t("common.premiumBadge.upgradeAction")}</Text>
       </Pressable>
     </View>
   );

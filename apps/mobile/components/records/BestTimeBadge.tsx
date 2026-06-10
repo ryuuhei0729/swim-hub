@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { formatTimeBest } from "@/utils/formatters";
 import type { BestTime } from "@apps/shared/types/ui";
@@ -43,6 +44,7 @@ const BestTimeBadge: React.FC<BestTimeBadgeProps> = ({
   precomputedBestTimes,
 }) => {
   const { supabase } = useAuth();
+  const { t } = useTranslation();
   const [isBestTime, setIsBestTime] = useState<boolean | null>(null);
   const [bestTimeDiff, setBestTimeDiff] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -195,9 +197,9 @@ const BestTimeBadge: React.FC<BestTimeBadgeProps> = ({
         style={styles.badge}
         accessible={true}
         accessibilityRole="text"
-        accessibilityLabel="自己ベスト更新"
+        accessibilityLabel={t("recordMobile.bestTimeAria")}
       >
-        <Text style={styles.badgeText}>🏆 Best Time!!</Text>
+        <Text style={styles.badgeText}>{t("recordMobile.bestTimeBadge")}</Text>
       </View>
     );
   }
@@ -208,7 +210,7 @@ const BestTimeBadge: React.FC<BestTimeBadgeProps> = ({
         style={styles.diffText}
         accessible={true}
         accessibilityRole="text"
-        accessibilityLabel={`ベストタイムより +${formatTimeBest(bestTimeDiff)} 遅い`}
+        accessibilityLabel={t("recordMobile.bestTimeDiffAria", { diff: formatTimeBest(bestTimeDiff) })}
       >
         {`Best +${formatTimeBest(bestTimeDiff)}`}
       </Text>

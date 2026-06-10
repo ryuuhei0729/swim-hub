@@ -1,6 +1,7 @@
 "use client";
 
 import React, { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 
 interface BaseModalProps {
@@ -20,6 +21,7 @@ export default function BaseModal({
   size = "md",
   showCloseButton = true,
 }: BaseModalProps) {
+  const t = useTranslations("common");
   if (!isOpen) return null;
 
   const sizeClasses = {
@@ -47,7 +49,7 @@ export default function BaseModal({
                 <button
                   onClick={onClose}
                   className="text-gray-400 hover:text-gray-600 transition-colors"
-                  aria-label="閉じる"
+                  aria-label={t("aria.close")}
                 >
                   <XMarkIcon className="h-6 w-6" />
                 </button>

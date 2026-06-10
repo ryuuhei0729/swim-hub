@@ -8,6 +8,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import DatePicker from "@/components/ui/DatePicker";
 import { XMarkIcon } from "@heroicons/react/24/outline";
+import { useTranslations } from "next-intl";
 
 interface TeamCompetitionFormProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export default function TeamCompetitionForm({
   onSuccess,
 }: TeamCompetitionFormProps) {
   const { supabase } = useAuth();
+  const t = useTranslations("teams.competitionForm");
   const recordsAPI = useMemo(() => new TeamRecordsAPI(supabase), [supabase]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,13 +41,13 @@ export default function TeamCompetitionForm({
     e.preventDefault();
 
     if (!formData.date) {
-      setError("日付は必須です");
+      setError(t("dateRequired"));
       return;
     }
 
     // 終了日が設定されている場合、開始日以降であることを確認
     if (formData.endDate && formData.endDate < formData.date) {
-      setError("終了日は開始日以降の日付を指定してください");
+      setError(t("endDateBeforeStart"));
       return;
     }
 
@@ -58,7 +60,7 @@ export default function TeamCompetitionForm({
         error: authError,
       } = await supabase.auth.getUser();
       if (authError) throw authError;
-      if (!user) throw new Error("認証が必要です");
+      if (!user) throw new Error(t("authRequired"));
 
       const competitionInput: import("@swim-hub/shared/types").CompetitionInsert = {
         user_id: user.id,
@@ -86,7 +88,7 @@ export default function TeamCompetitionForm({
       });
     } catch (err) {
       console.error("チーム大会作成エラー:", err);
-      setError(err instanceof Error ? err.message : "チーム大会の作成に失敗しました");
+      setError(err instanceof Error ? err.message : t("createFailed"));
     } finally {
       setLoading(false);
     }
@@ -123,7 +125,7 @@ export default function TeamCompetitionForm({
           <div className="bg-white px-3 py-3 sm:px-6 sm:py-4 border-b border-gray-200 shrink-0">
             <div className="flex items-center justify-between">
               <h3 className="text-base sm:text-lg leading-6 font-medium text-gray-900">
-                大会を追加
+                {t("title")}
               </h3>
               <button
                 type="button"
@@ -135,7 +137,7 @@ export default function TeamCompetitionForm({
                 <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
-            <p className="mt-2 text-xs sm:text-sm text-gray-600">チームの大会記録を作成します</p>
+            <p className="mt-2 text-xs sm:text-sm text-gray-600">{t("description")}</p>
           </div>
 
           <form
@@ -149,7 +151,7 @@ export default function TeamCompetitionForm({
                 <div className="rounded-md bg-red-50 p-4" data-testid="team-competition-error">
                   <div className="flex">
                     <div className="ml-3">
-                      <h3 className="text-sm font-medium text-red-800">エラーが発生しました</h3>
+                      <h3 className="text-sm font-medium text-red-800">{t("errorTitle")}</h3>
                       <div className="mt-2 text-sm text-red-700">
                         <p>{error}</p>
                       </div>
@@ -160,12 +162,12 @@ export default function TeamCompetitionForm({
 
               {/* 大会名 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">大会名</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t("competitionNameLabel")}</label>
                 <Input
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="例: 県大会（空欄の場合は「大会」と表示）"
+                  placeholder={t("competitionNamePlaceholder")}
                   data-testid="team-competition-title"
                 />
               </div>
@@ -174,7 +176,7 @@ export default function TeamCompetitionForm({
               <div className="grid grid-cols-2 gap-2 sm:gap-4">
                 <div>
                   <DatePicker
-                    label="開始日"
+                    label={t("startDateLabel")}
                     value={formData.date}
                     onChange={(date) => setFormData({ ...formData, date })}
                     required
@@ -182,23 +184,23 @@ export default function TeamCompetitionForm({
                 </div>
                 <div>
                   <DatePicker
-                    label="終了日"
+                    label={t("endDateLabel")}
                     value={formData.endDate}
                     onChange={(date) => setFormData({ ...formData, endDate: date })}
                     minDate={formData.date ? parseISO(formData.date) : undefined}
-                    helperText="複数日の場合"
+                    helperText={t("endDateHelperText")}
                   />
                 </div>
               </div>
 
               {/* 場所 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">場所</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t("placeLabel")}</label>
                 <Input
                   type="text"
                   value={formData.place}
                   onChange={(e) => setFormData({ ...formData, place: e.target.value })}
-                  placeholder="例: 県立プール"
+                  placeholder={t("placePlaceholder")}
                   data-testid="team-competition-place"
                 />
               </div>
@@ -206,7 +208,7 @@ export default function TeamCompetitionForm({
               {/* プール種別 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  プール種別 <span className="text-red-500">*</span>
+                  {t("poolTypeLabel")} <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formData.poolType}
@@ -215,20 +217,20 @@ export default function TeamCompetitionForm({
                   required
                   data-testid="team-competition-pool-type"
                 >
-                  <option value={0}>短水路 (25m)</option>
-                  <option value={1}>長水路 (50m)</option>
+                  <option value={0}>{t("poolTypeShort")}</option>
+                  <option value={1}>{t("poolTypeLong")}</option>
                 </select>
               </div>
 
               {/* メモ */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">メモ</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t("noteLabel")}</label>
                 <textarea
                   value={formData.note}
                   onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="大会の詳細や注意事項など"
+                  placeholder={t("notePlaceholder")}
                   data-testid="team-competition-note"
                 />
               </div>
@@ -243,7 +245,7 @@ export default function TeamCompetitionForm({
                 disabled={loading}
                 data-testid="team-competition-cancel-button"
               >
-                キャンセル
+                {t("cancelButton")}
               </Button>
               <Button
                 type="submit"
@@ -251,7 +253,7 @@ export default function TeamCompetitionForm({
                 className="bg-blue-600 hover:bg-blue-700"
                 data-testid="team-competition-submit-button"
               >
-                {loading ? "作成中..." : "作成"}
+                {loading ? t("creating") : t("createButton")}
               </Button>
             </div>
           </form>

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { XMarkIcon, TrashIcon } from "@heroicons/react/24/outline";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import { useTranslations } from "next-intl";
 
 import { PracticeTag } from "@apps/shared/types";
 
@@ -68,6 +69,7 @@ export default function TagManagementModal({
   onUpdateTag,
   onDeleteTag,
 }: TagManagementModalProps) {
+  const t = useTranslations("forms.tag");
   const [tagName, setTagName] = useState(tag.name);
   const [selectedColor, setSelectedColor] = useState(() => normalizeColor(tag.color));
   const [isUpdating, setIsUpdating] = useState(false);
@@ -102,9 +104,9 @@ export default function TagManagementModal({
       console.error("タグ更新エラー:", error);
       const pgError = error as { code?: string };
       if (pgError.code === "23505") {
-        setErrorMessage("同じ名前のタグが既に存在します");
+        setErrorMessage(t("duplicateError"));
       } else {
-        setErrorMessage("タグの更新に失敗しました");
+        setErrorMessage(t("updateError"));
       }
     } finally {
       setIsUpdating(false);
@@ -133,7 +135,7 @@ export default function TagManagementModal({
           {/* ヘッダー */}
           <div className="bg-white px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">タグの管理</h3>
+              <h3 className="text-lg leading-6 font-medium text-gray-900">{t("manageTipTitle")}</h3>
               <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600">
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -144,7 +146,7 @@ export default function TagManagementModal({
           <div className="bg-white px-6 py-4 space-y-4">
             {/* タグ名入力 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">タグ名</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t("nameLabel")}</label>
               <Input
                 type="text"
                 value={tagName}
@@ -152,7 +154,7 @@ export default function TagManagementModal({
                   setTagName(e.target.value);
                   setErrorMessage(null);
                 }}
-                placeholder="タグ名を入力"
+                placeholder={t("namePlaceholder")}
                 className="w-full"
                 data-testid="tag-name-input"
               />
@@ -163,7 +165,7 @@ export default function TagManagementModal({
 
             {/* 色選択 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">色</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t("colorLabel")}</label>
               <div className="grid grid-cols-5 gap-2">
                 {colorOptions.map((color) => {
                   const normalizedColor = normalizeColor(color);
@@ -190,13 +192,13 @@ export default function TagManagementModal({
 
             {/* プレビュー */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">プレビュー</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t("previewLabel")}</label>
               <div className="flex items-center gap-2">
                 <span
                   className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-black"
                   style={{ backgroundColor: normalizeColor(selectedColor) }}
                 >
-                  {tagName || "タグ名"}
+                  {tagName || t("previewDefault")}
                 </span>
               </div>
             </div>
@@ -211,7 +213,7 @@ export default function TagManagementModal({
               className="w-full sm:w-auto"
               data-testid="tag-update-button"
             >
-              {isUpdating ? "更新中..." : "更新"}
+              {isUpdating ? t("updating") : t("update")}
             </Button>
 
             {/* 削除ボタン */}
@@ -224,7 +226,7 @@ export default function TagManagementModal({
               data-testid="tag-delete-button"
             >
               <TrashIcon className="h-4 w-4 mr-2" />
-              削除
+              {t("delete")}
             </Button>
 
             {/* キャンセルボタン */}
@@ -235,7 +237,7 @@ export default function TagManagementModal({
               className="w-full sm:w-auto mt-2 sm:mt-0"
               data-testid="tag-cancel-button"
             >
-              キャンセル
+              {t("cancel")}
             </Button>
           </div>
         </div>
@@ -257,10 +259,10 @@ export default function TagManagementModal({
                     <TrashIcon className="h-6 w-6 text-red-600" />
                   </div>
                   <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900">タグを削除</h3>
+                    <h3 className="text-lg leading-6 font-medium text-gray-900">{t("deleteTitle")}</h3>
                     <div className="mt-2">
                       <p className="text-sm text-gray-500">
-                        「{tag.name}」を削除してもよろしいですか？この操作は元に戻せません。
+                        {t("deleteConfirm", { name: tag.name })}
                       </p>
                     </div>
                   </div>
@@ -274,7 +276,7 @@ export default function TagManagementModal({
                   className="w-full sm:w-auto sm:ml-3 bg-red-600 hover:bg-red-700"
                   data-testid="confirm-delete-button"
                 >
-                  {isDeleting ? "削除中..." : "削除"}
+                  {isDeleting ? t("deleting") : t("delete")}
                 </Button>
                 <Button
                   type="button"
@@ -282,7 +284,7 @@ export default function TagManagementModal({
                   onClick={() => setShowDeleteConfirm(false)}
                   className="mt-3 w-full sm:mt-0 sm:w-auto"
                 >
-                  キャンセル
+                  {t("cancel")}
                 </Button>
               </div>
             </div>

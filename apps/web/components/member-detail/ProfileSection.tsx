@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslations } from "next-intl";
 import { format, parseISO, isValid } from "date-fns";
 import { ja } from "date-fns/locale";
 import Avatar from "@/components/ui/Avatar";
@@ -11,6 +12,7 @@ interface ProfileSectionProps {
 }
 
 export function ProfileSection({ member, currentUserId }: ProfileSectionProps) {
+  const t = useTranslations("teams.memberDetail.profileSection");
   return (
     <div className="mb-10">
       <div className="flex items-start space-x-8">
@@ -36,7 +38,7 @@ export function ProfileSection({ member, currentUserId }: ProfileSectionProps) {
                   : "bg-gray-100 text-gray-800"
               }`}
             >
-              {member.role === "admin" ? "管理者" : "ユーザー"}
+              {member.role === "admin" ? t("roleAdmin") : t("roleUser")}
             </span>
             {member.user_id === currentUserId && (
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
@@ -58,7 +60,7 @@ export function ProfileSection({ member, currentUserId }: ProfileSectionProps) {
 
           {/* 自己紹介 */}
           <div>
-            <h4 className="text-sm font-semibold text-gray-900 mb-3">自己紹介</h4>
+            <h4 className="text-sm font-semibold text-gray-900 mb-3">{t("bioTitle")}</h4>
             <p className="text-sm text-gray-700 bg-gray-50 p-4 rounded-lg">
               {member.users?.bio ||
                 `${member.users?.name || "Unknown User"}の自己紹介文です。まだ自己紹介が設定されていません。`}

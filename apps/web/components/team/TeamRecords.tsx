@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import { TrophyIcon, StarIcon, UserIcon } from "@heroicons/react/24/outline";
 import { formatTimeBest } from "@apps/shared/utils/time";
@@ -32,6 +33,7 @@ export interface TeamRecordsProps {
 
 export default function TeamRecords({ teamId, isAdmin: _isAdmin = false }: TeamRecordsProps) {
   const router = useRouter();
+  const t = useTranslations("teams");
   const [records, setRecords] = useState<TeamRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -119,14 +121,14 @@ export default function TeamRecords({ teamId, isAdmin: _isAdmin = false }: TeamR
         setRecords(transformedRecords);
       } catch (err) {
         console.error("チーム記録情報の取得に失敗:", err);
-        setError("チーム記録情報の取得に失敗しました");
+        setError(t("records.error"));
       } finally {
         setLoading(false);
       }
     };
 
     loadTeamRecords();
-  }, [teamId, selectedStyle, supabase]);
+  }, [teamId, selectedStyle, supabase, t]);
 
   const getRankIcon = (index: number) => {
     switch (index) {
@@ -176,7 +178,7 @@ export default function TeamRecords({ teamId, isAdmin: _isAdmin = false }: TeamR
             onClick={() => router.refresh()}
             className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
           >
-            再試行
+            {t("records.retry")}
           </button>
         </div>
       </div>
@@ -187,7 +189,7 @@ export default function TeamRecords({ teamId, isAdmin: _isAdmin = false }: TeamR
     <div className="bg-white rounded-lg shadow p-6">
       {/* ヘッダー */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">チーム記録ランキング</h2>
+        <h2 className="text-xl font-semibold text-gray-900">{t("records.title")}</h2>
 
         {/* 種目フィルター */}
         <select
@@ -195,7 +197,7 @@ export default function TeamRecords({ teamId, isAdmin: _isAdmin = false }: TeamR
           onChange={(e) => setSelectedStyle(e.target.value)}
           className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         >
-          <option value="all">全種目</option>
+          <option value="all">{t("records.allStyles")}</option>
           {styles.map((style) => (
             <option key={style.id} value={style.id}>
               {style.name_jp} {style.distance}m
@@ -253,9 +255,7 @@ export default function TeamRecords({ teamId, isAdmin: _isAdmin = false }: TeamR
         {records.length === 0 && (
           <div className="text-center py-8">
             <TrophyIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">
-              {selectedStyle === "all" ? "記録がありません" : "この種目の記録がありません"}
-            </p>
+            <p className="text-gray-600">{t("records.empty")}</p>
           </div>
         )}
       </div>

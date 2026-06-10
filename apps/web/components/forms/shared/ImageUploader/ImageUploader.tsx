@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslations } from "next-intl";
 import { PhotoIcon, XMarkIcon, ArrowUpTrayIcon } from "@heroicons/react/24/outline";
 import {
   useImageUpload,
@@ -49,10 +50,13 @@ export default function ImageUploader({
   disabled = false,
   maxImages,
   validateFile,
-  label = "画像を添付",
-  formatDescription = "JPEG, PNG, WebP, HEIC（各10MBまで）",
+  label,
+  formatDescription,
   acceptedFormats = "image/jpeg,image/png,image/webp,image/heic,image/heif",
 }: ImageUploaderProps) {
+  const t = useTranslations("forms.imageUploader");
+  const resolvedLabel = label ?? t("label");
+  const resolvedFormatDescription = formatDescription ?? t("formatDescription");
   // 表示中の既存画像（削除されていないもの）をカウント
   const {
     newFiles,
@@ -84,9 +88,9 @@ export default function ImageUploader({
     <div className="space-y-3">
       {/* ラベル */}
       <div className="flex items-center justify-between">
-        <label className="block text-sm font-medium text-gray-700">{label}</label>
+        <label className="block text-sm font-medium text-gray-700">{resolvedLabel}</label>
         <span className="text-xs text-gray-500">
-          {totalImageCount} / {maxImages}枚
+          {t("countDisplay", { current: totalImageCount, max: maxImages })}
         </span>
       </div>
 
@@ -116,7 +120,7 @@ export default function ImageUploader({
                   type="button"
                   onClick={() => handleRemoveExistingImage(image.id)}
                   className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-md"
-                  aria-label="画像を削除"
+                  aria-label={t("removeImageAria")}
                 >
                   <XMarkIcon className="h-4 w-4" />
                 </button>
@@ -136,14 +140,14 @@ export default function ImageUploader({
                 className="w-full h-full object-cover"
               />
               <div className="absolute bottom-0 left-0 right-0 bg-green-500/80 text-white text-xs py-0.5 text-center">
-                新規
+                {t("new")}
               </div>
               {!disabled && (
                 <button
                   type="button"
                   onClick={() => handleRemoveNewFile(imageFile.id)}
                   className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-md"
-                  aria-label="画像を削除"
+                  aria-label={t("removeImageAria")}
                 >
                   <XMarkIcon className="h-4 w-4" />
                 </button>
@@ -173,7 +177,7 @@ export default function ImageUploader({
             }
             ${disabled ? "opacity-50 cursor-not-allowed" : ""}
           `}
-          aria-label="画像をアップロード"
+          aria-label={t("uploadAria")}
         >
           <input
             ref={fileInputRef}
@@ -192,10 +196,10 @@ export default function ImageUploader({
               <PhotoIcon className="h-6 w-6 text-gray-400 shrink-0" />
             )}
             <div className="text-sm text-gray-600">
-              <span className="text-green-600 font-medium">クリックして選択</span>
-              <span className="text-gray-500 hidden sm:inline"> または ドラッグ&ドロップ</span>
+              <span className="text-green-600 font-medium">{t("clickToSelect")}</span>
+              <span className="text-gray-500 hidden sm:inline">{t("orDragDrop")}</span>
               <br />
-              <span className="text-xs text-gray-400 ml-2">{formatDescription}</span>
+              <span className="text-xs text-gray-400 ml-2">{resolvedFormatDescription}</span>
             </div>
           </div>
         </button>
@@ -204,7 +208,7 @@ export default function ImageUploader({
       {/* 最大枚数に達した場合のメッセージ */}
       {!canAddMore && (
         <p className="text-sm text-gray-500 text-center py-2">
-          最大{maxImages}枚の画像が選択されています
+          {t("maxReached", { max: maxImages })}
         </p>
       )}
     </div>

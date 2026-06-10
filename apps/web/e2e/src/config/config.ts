@@ -50,16 +50,19 @@ export const SELECTORS = {
 
 /**
  * URLパス
+ *
+ * Issue #32 Phase 1-A 以降は localePrefix: 'always' のため、
+ * 全 URL に locale プレフィックス (/ja/...) を付与する。
  */
 export const URLS = {
-  LOGIN: "/login",
-  SIGNUP: "/signup",
-  DASHBOARD: "/dashboard",
-  PRACTICE: "/practice",
-  RECORD: "/record",
-  MYPAGE: "/mypage",
-  TEAMS: "/teams",
-  SETTINGS: "/settings",
+  LOGIN: "/ja/login",
+  SIGNUP: "/ja/signup",
+  DASHBOARD: "/ja/dashboard",
+  PRACTICE: "/ja/practice",
+  RECORD: "/ja/record",
+  MYPAGE: "/ja/mypage",
+  TEAMS: "/ja/teams",
+  SETTINGS: "/ja/settings",
 } as const;
 
 /**

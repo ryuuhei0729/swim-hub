@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
+import { useTranslations } from "next-intl";
 import { formatDate } from "@apps/shared/utils/date";
 import type { CompetitionCardProps } from "@/types/team-entry";
 
@@ -10,6 +11,14 @@ function CompetitionCardComponent({
   onToggle,
   children,
 }: CompetitionCardProps) {
+  const t = useTranslations("teams");
+
+  const entryStatusLabel = {
+    before: t("entryCompetitionCard.statusBefore"),
+    open: t("entryCompetitionCard.statusOpen"),
+    closed: t("entryCompetitionCard.statusClosed"),
+  }[competition.entry_status];
+
   return (
     <div className="bg-white border border-orange-200 rounded-lg overflow-hidden">
       {/* 大会ヘッダー（クリックで展開/折りたたみ） */}
@@ -20,10 +29,13 @@ function CompetitionCardComponent({
         <div className="flex items-center space-x-3">
           <span className="text-xl">🏆</span>
           <div className="text-left">
-            <h3 className="font-semibold text-gray-900">{competition.title || "大会"}</h3>
+            <h3 className="font-semibold text-gray-900">{competition.title || t("competitions.fallbackTitle")}</h3>
             <div className="flex items-center space-x-3 text-sm text-gray-600 mt-1">
               <span>📅 {formatDate(competition.date, "numeric")}</span>
-              {competition.place && <span>📍 {competition.place}</span>}
+              {competition.place && (
+                <span>📍 {t("entryCompetitionCard.placeLabel")} {competition.place}</span>
+              )}
+              <span className="text-xs font-medium text-orange-700">{entryStatusLabel}</span>
             </div>
           </div>
         </div>

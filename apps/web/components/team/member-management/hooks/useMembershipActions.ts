@@ -1,12 +1,14 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { approveMembership, rejectMembership } from "@/app/(authenticated)/teams/_actions/actions";
+import { approveMembership, rejectMembership } from "@/app/[locale]/(authenticated)/teams/_actions/actions";
+import { useTranslations } from "next-intl";
 
 /**
  * メンバーシップの承認・却下アクションを提供するカスタムフック
  */
 export const useMembershipActions = (teamId: string, onMembershipChange?: () => void) => {
   const [error, setError] = useState<string | null>(null);
+  const t = useTranslations("teams");
   const router = useRouter();
 
   const handleApprove = useCallback(
@@ -21,21 +23,21 @@ export const useMembershipActions = (teamId: string, onMembershipChange?: () => 
           router.refresh();
           return true;
         } else {
-          setError(result.error || "承認に失敗しました");
+          setError(result.error || t("membershipActions.approveError"));
           return false;
         }
       } catch (err) {
         console.error("承認エラー:", err);
-        setError("承認に失敗しました");
+        setError(t("membershipActions.approveError"));
         return false;
       }
     },
-    [teamId, onMembershipChange, router],
+    [teamId, onMembershipChange, router, t],
   );
 
   const handleReject = useCallback(
     async (membershipId: string) => {
-      if (!confirm("この参加申請を拒否しますか？")) {
+      if (!confirm(t("membershipActionsModal.rejectConfirm"))) {
         return false;
       }
 
@@ -49,16 +51,16 @@ export const useMembershipActions = (teamId: string, onMembershipChange?: () => 
           router.refresh();
           return true;
         } else {
-          setError(result.error || "拒否に失敗しました");
+          setError(result.error || t("membershipActions.rejectError"));
           return false;
         }
       } catch (err) {
         console.error("拒否エラー:", err);
-        setError("拒否に失敗しました");
+        setError(t("membershipActions.rejectError"));
         return false;
       }
     },
-    [teamId, onMembershipChange, router],
+    [teamId, onMembershipChange, router, t],
   );
 
   return {

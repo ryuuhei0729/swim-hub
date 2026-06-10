@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, Modal, Pressable, TextInput, StyleSheet, ScrollView } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import {
   useCreateAnnouncementMutation,
@@ -26,6 +27,7 @@ export const TeamAnnouncementForm: React.FC<TeamAnnouncementFormProps> = ({
   onSuccess,
 }) => {
   const { supabase, user } = useAuth();
+  const { t } = useTranslation();
   const createMutation = useCreateAnnouncementMutation(supabase);
   const updateMutation = useUpdateAnnouncementMutation(supabase);
   const [title, setTitle] = useState("");
@@ -60,17 +62,17 @@ export const TeamAnnouncementForm: React.FC<TeamAnnouncementFormProps> = ({
 
   const handleSubmit = async () => {
     if (!user) {
-      setError("ログインが必要です");
+      setError(t("teams.mobile.loginRequired"));
       return;
     }
 
     if (!title.trim()) {
-      setError("タイトルを入力してください");
+      setError(t("teams.mobile.announcementTitleRequired"));
       return;
     }
 
     if (!content.trim()) {
-      setError("内容を入力してください");
+      setError(t("teams.mobile.announcementContentRequired"));
       return;
     }
 
@@ -107,7 +109,7 @@ export const TeamAnnouncementForm: React.FC<TeamAnnouncementFormProps> = ({
       handleClose();
     } catch (err) {
       console.error("お知らせ保存エラー:", err);
-      let errorMessage = "お知らせの保存に失敗しました";
+      let errorMessage = t("teams.mobile.announcementSaveFailed");
       if (err instanceof Error) {
         errorMessage = err.message;
       } else if (err && typeof err === "object" && "message" in err) {
@@ -122,7 +124,11 @@ export const TeamAnnouncementForm: React.FC<TeamAnnouncementFormProps> = ({
       <Pressable style={styles.overlay} onPress={handleClose}>
         <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
           <View style={styles.header}>
-            <Text style={styles.title}>{editData ? "お知らせを編集" : "お知らせを作成"}</Text>
+            <Text style={styles.title}>
+              {editData
+                ? t("teams.mobile.announcementEditTitle")
+                : t("teams.mobile.announcementCreateTitle")}
+            </Text>
             <Pressable style={styles.closeButton} onPress={handleClose}>
               <Text style={styles.closeButtonText}>×</Text>
             </Pressable>
@@ -136,24 +142,24 @@ export const TeamAnnouncementForm: React.FC<TeamAnnouncementFormProps> = ({
             )}
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>タイトル *</Text>
+              <Text style={styles.label}>{t("teams.mobile.announcementTitleLabel")}</Text>
               <TextInput
                 style={styles.input}
                 value={title}
                 onChangeText={setTitle}
-                placeholder="お知らせのタイトルを入力"
+                placeholder={t("teams.mobile.announcementTitlePlaceholder")}
                 placeholderTextColor="#9CA3AF"
                 editable={!isLoading}
               />
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>内容 *</Text>
+              <Text style={styles.label}>{t("teams.mobile.announcementContentLabel")}</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
                 value={content}
                 onChangeText={setContent}
-                placeholder="お知らせの内容を入力"
+                placeholder={t("teams.mobile.announcementContentPlaceholder")}
                 placeholderTextColor="#9CA3AF"
                 multiline
                 numberOfLines={8}
@@ -171,7 +177,7 @@ export const TeamAnnouncementForm: React.FC<TeamAnnouncementFormProps> = ({
                 <View style={[styles.checkbox, isPublished && styles.checkboxChecked]}>
                   {isPublished && <Text style={styles.checkboxMark}>✓</Text>}
                 </View>
-                <Text style={styles.checkboxLabel}>公開する</Text>
+                <Text style={styles.checkboxLabel}>{t("teams.mobile.announcementPublishLabel")}</Text>
               </Pressable>
             </View>
           </ScrollView>
@@ -182,14 +188,16 @@ export const TeamAnnouncementForm: React.FC<TeamAnnouncementFormProps> = ({
               onPress={handleClose}
               disabled={isLoading}
             >
-              <Text style={styles.cancelButtonText}>キャンセル</Text>
+              <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
             </Pressable>
             <Pressable
               style={[styles.button, styles.submitButton, isLoading && styles.submitButtonDisabled]}
               onPress={handleSubmit}
               disabled={isLoading || !title.trim() || !content.trim()}
             >
-              <Text style={styles.submitButtonText}>{isLoading ? "保存中..." : "保存"}</Text>
+              <Text style={styles.submitButtonText}>
+                {isLoading ? t("teams.mobile.saveLoading") : t("teams.mobile.saveButton")}
+              </Text>
             </Pressable>
           </View>
         </Pressable>

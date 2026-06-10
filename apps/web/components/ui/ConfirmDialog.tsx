@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useTranslations } from "next-intl";
 import {
   ExclamationTriangleIcon,
   InformationCircleIcon,
@@ -28,12 +29,15 @@ export default function ConfirmDialog({
   onCancel,
   title,
   message,
-  confirmLabel = "確認",
-  cancelLabel = "キャンセル",
+  confirmLabel,
+  cancelLabel,
   variant = "warning",
   onTertiary,
   tertiaryLabel,
 }: ConfirmDialogProps) {
+  const tCommon = useTranslations("common");
+  const resolvedConfirmLabel = confirmLabel ?? tCommon("submit");
+  const resolvedCancelLabel = cancelLabel ?? tCommon("cancel");
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -129,7 +133,7 @@ export default function ConfirmDialog({
           type="button"
           onClick={onCancel}
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-          aria-label="ダイアログを閉じる"
+          aria-label={tCommon("close")}
         >
           <XMarkIcon className="h-5 w-5" />
         </button>
@@ -157,7 +161,7 @@ export default function ConfirmDialog({
               onClick={onCancel}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
             >
-              {cancelLabel}
+              {resolvedCancelLabel}
             </button>
             {onTertiary && tertiaryLabel && (
               <button
@@ -172,12 +176,13 @@ export default function ConfirmDialog({
               ref={confirmButtonRef}
               type="button"
               onClick={onConfirm}
+              data-testid="confirm-dialog-confirm-button"
               className={cn(
                 "px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors",
                 config.buttonClass,
               )}
             >
-              {confirmLabel}
+              {resolvedConfirmLabel}
             </button>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 
 interface AdminControlsProps {
@@ -16,9 +17,10 @@ export const AdminControls: React.FC<AdminControlsProps> = ({
   onRoleChangeClick,
   onRemoveMember,
 }) => {
+  const { t } = useTranslation();
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>管理者機能</Text>
+      <Text style={styles.title}>{t("teams.mobile.adminControlsTitle")}</Text>
       <View style={styles.controlsRow}>
         {/* 権限切り替え */}
         <View style={styles.roleToggle}>
@@ -29,7 +31,7 @@ export const AdminControls: React.FC<AdminControlsProps> = ({
             <Text
               style={[styles.roleButtonText, member.role === "user" && styles.roleButtonTextActive]}
             >
-              ユーザー
+              {t("teams.mobile.roleUser")}
             </Text>
           </Pressable>
           <Pressable
@@ -42,7 +44,7 @@ export const AdminControls: React.FC<AdminControlsProps> = ({
                 member.role === "admin" && styles.roleButtonTextAdminActive,
               ]}
             >
-              管理者
+              {t("teams.mobile.roleAdmin")}
             </Text>
           </Pressable>
         </View>
@@ -58,7 +60,11 @@ export const AdminControls: React.FC<AdminControlsProps> = ({
           ) : (
             <Feather name="trash-2" size={14} color="#DC2626" />
           )}
-          <Text style={styles.removeButtonText}>{isRemoving ? "削除中..." : "チームから削除"}</Text>
+          <Text style={styles.removeButtonText}>
+            {isRemoving
+              ? t("teams.mobile.memberRemoveLoading")
+              : t("teams.mobile.memberRemoveButton")}
+          </Text>
         </Pressable>
       </View>
     </View>

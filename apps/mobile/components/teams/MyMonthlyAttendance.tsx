@@ -14,9 +14,10 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { AttendanceAPI } from "@swim-hub/shared/api/attendance";
 import type { TeamAttendanceWithDetails } from "@swim-hub/shared/types/attendance";
 import { AttendanceStatus, TeamEvent } from "@swim-hub/shared/types";
-import { getMonthDateRange } from "@swim-hub/shared/utils/date";
-import { format, startOfMonth, endOfMonth, addMonths } from "date-fns";
-import { ja } from "date-fns/locale";
+import { getMonthDateRange, formatDate, toISODateString } from "@swim-hub/shared/utils/date";
+import { startOfMonth, endOfMonth, addMonths } from "date-fns";
+import { useTranslation } from "react-i18next";
+import { useDateLocale } from "@/hooks/useDateLocale";
 
 export interface MyMonthlyAttendanceProps {
   teamId: string;
@@ -40,6 +41,8 @@ interface MonthItem {
  */
 export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId }) => {
   const { supabase } = useAuth();
+  const { t } = useTranslation();
+  const locale = useDateLocale();
   const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase]);
 
   // 月リスト表示用の状態
@@ -128,9 +131,9 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       setError(null);
 
       const now = new Date();
-      const startDateStr = format(startOfMonth(now), "yyyy-MM-dd");
+      const startDateStr = toISODateString(startOfMonth(now));
       const oneYearLater = addMonths(now, 12);
-      const endDateStr = format(endOfMonth(oneYearLater), "yyyy-MM-dd");
+      const endDateStr = toISODateString(endOfMonth(oneYearLater));
 
       // 練習・大会を取得（日付のみ）
       const [practicesResult, competitionsResult] = await Promise.all([
@@ -186,11 +189,11 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       setMonthList(monthList);
     } catch (err) {
       console.error("月リストの取得に失敗:", err);
-      setError("月リストの取得に失敗しました");
+      setError(t("teams.mobile.attendanceListFetchFailed"));
     } finally {
       setLoadingMonthList(false);
     }
-  }, [teamId, supabase, calculateMonthStatus]);
+  }, [teamId, supabase, calculateMonthStatus, t]);
 
   // 月別の出欠情報を取得（モーダル用）
   const loadAttendances = useCallback(async () => {
@@ -269,11 +272,11 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       setEditStates(initialEditStates);
     } catch (err) {
       console.error("出欠情報の取得に失敗:", err);
-      setError("出欠情報の取得に失敗しました");
+      setError(t("teams.mobile.attendanceFetchFailed"));
     } finally {
       setLoading(false);
     }
-  }, [teamId, selectedMonth, supabase, attendanceAPI]);
+  }, [teamId, selectedMonth, supabase, attendanceAPI, t]);
 
   // 月リストを初期読み込み
   useEffect(() => {
@@ -361,7 +364,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) throw new Error("認証が必要です");
+      if (!user) throw new Error(t("auth.errorMap.sessionNotFound"));
 
       const newAttendances = events
         .filter((event) => {
@@ -406,12 +409,17 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
 
       // 保存成功後、モーダルを閉じる
       handleCloseModal();
-      Alert.alert("保存完了", "出欠情報を保存しました", [{ text: "OK" }]);
+      Alert.alert(
+        t("teams.mobile.attendanceSaveSuccessTitle"),
+        t("teams.mobile.attendanceSaveSuccessMessage"),
+        [{ text: "OK" }],
+      );
     } catch (err) {
       console.error("出欠情報の保存に失敗:", err);
-      const errorMessage = err instanceof Error ? err.message : "出欠情報の保存に失敗しました";
+      const errorMessage =
+        err instanceof Error ? err.message : t("teams.mobile.attendanceSaveFailed");
       setError(errorMessage);
-      Alert.alert("エラー", errorMessage, [{ text: "OK" }]);
+      Alert.alert(t("common.error"), errorMessage, [{ text: "OK" }]);
     } finally {
       setSaving(false);
     }
@@ -432,7 +440,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
 
   // 月名を取得
   const getMonthLabel = (year: number, month: number) => {
-    return `${year}年${month}月`;
+    return t("common.yearMonth", { year, month });
   };
 
   // 月のステータスバッジ
@@ -454,7 +462,9 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
               : styles.monthStatusBadgeTextAnswered
           }
         >
-          {status === "has_unanswered" ? "未回答あり" : "全て回答済み"}
+          {status === "has_unanswered"
+            ? t("teams.mobile.attendanceUnanswered")
+            : t("teams.mobile.attendanceAllAnswered")}
         </Text>
       </View>
     );
@@ -466,19 +476,19 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       case "open":
         return (
           <View style={styles.statusBadgeOpen}>
-            <Text style={styles.statusBadgeTextOpen}>提出受付中</Text>
+            <Text style={styles.statusBadgeTextOpen}>{t("teams.mobile.monthlyAttendance.statusOpen")}</Text>
           </View>
         );
       case "closed":
         return (
           <View style={styles.statusBadgeClosed}>
-            <Text style={styles.statusBadgeTextClosed}>提出締切</Text>
+            <Text style={styles.statusBadgeTextClosed}>{t("teams.mobile.monthlyAttendance.statusClosed")}</Text>
           </View>
         );
       default:
         return (
           <View style={styles.statusBadgeDefault}>
-            <Text style={styles.statusBadgeTextDefault}>未設定</Text>
+            <Text style={styles.statusBadgeTextDefault}>{t("common.notSet")}</Text>
           </View>
         );
     }
@@ -488,7 +498,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
     return (
       <View style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>読み込み中...</Text>
+          <Text style={styles.loadingText}>{t("common.loading")}</Text>
         </View>
       </View>
     );
@@ -510,7 +520,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
         {/* 月リスト表示 */}
         {monthList.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>表示できる月がありません</Text>
+            <Text style={styles.emptyText}>{t("teams.mobile.monthlyAttendance.noMonths")}</Text>
           </View>
         ) : (
           <View style={styles.monthListContainer}>
@@ -552,7 +562,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
           <ScrollView style={styles.modalContent} contentContainerStyle={styles.modalScrollContent}>
             {loading ? (
               <View style={styles.loadingContainer}>
-                <Text style={styles.loadingText}>読み込み中...</Text>
+                <Text style={styles.loadingText}>{t("common.loading")}</Text>
               </View>
             ) : error ? (
               <View style={styles.errorContainer}>
@@ -563,7 +573,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
                 {/* イベント一覧 */}
                 {events.length === 0 ? (
                   <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>この月にはイベントがありません</Text>
+                    <Text style={styles.emptyText}>{t("teams.mobile.monthlyAttendance.noEvents")}</Text>
                   </View>
                 ) : (
                   <>
@@ -582,10 +592,12 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
                           <View style={styles.eventHeader}>
                             <View style={styles.eventInfo}>
                               <Text style={styles.eventDate}>
-                                {format(new Date(event.date), "M月d日(E)", { locale: ja })}
+                                {formatDate(event.date, "shortWithWeekday", locale)}
                               </Text>
                               <Text style={styles.eventTitle}>
-                                {event.type === "competition" ? event.title : "練習"}
+                                {event.type === "competition"
+                                  ? event.title
+                                  : t("teams.mobile.fallbackPractice")}
                               </Text>
                               {event.place && <Text style={styles.eventPlace}>@{event.place}</Text>}
                             </View>
@@ -653,7 +665,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
                             style={styles.noteInput}
                             value={editState.note}
                             onChangeText={(text) => handleNoteChange(event.id, text)}
-                            placeholder="備考を入力（任意）"
+                            placeholder={t("teams.mobile.attendanceNotePlaceholder")}
                             multiline
                             numberOfLines={2}
                           />
@@ -669,10 +681,12 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
                     >
                       <Text style={styles.saveButtonText}>
                         {saving
-                          ? "保存中..."
+                          ? t("teams.mobile.saveLoading")
                           : selectedMonth
-                            ? `${getMonthLabel(selectedMonth.year, selectedMonth.month)}分をまとめて保存`
-                            : "保存"}
+                            ? t("teams.mobile.attendanceSaveMonth", {
+                                label: getMonthLabel(selectedMonth.year, selectedMonth.month),
+                              })
+                            : t("teams.mobile.saveButton")}
                       </Text>
                     </Pressable>
                   </>

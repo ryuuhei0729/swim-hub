@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { BirthdayInput } from "@/components/ui/BirthdayInput";
 import type { UserProfile } from "@swim-hub/shared/types";
 
@@ -36,6 +37,7 @@ export const OnboardingProfile: React.FC<OnboardingProfileProps> = ({
   onNext,
   onBack,
 }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: "",
     birthday: "",
@@ -64,7 +66,7 @@ export const OnboardingProfile: React.FC<OnboardingProfileProps> = ({
 
   const handleSubmit = async () => {
     if (!formData.name.trim()) {
-      setError("名前は必須です");
+      setError(t("onboarding.step2.validation.nameRequired"));
       return;
     }
     setIsSaving(true);
@@ -78,7 +80,7 @@ export const OnboardingProfile: React.FC<OnboardingProfileProps> = ({
         bio: formData.bio.trim() || null,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "保存に失敗しました");
+      setError(err instanceof Error ? err.message : t("onboarding.step2.saveError"));
     } finally {
       setIsSaving(false);
     }
@@ -92,7 +94,7 @@ export const OnboardingProfile: React.FC<OnboardingProfileProps> = ({
       // スキップ時は更新なしで次のステップへ
       await onNext({});
     } catch (err) {
-      setError(err instanceof Error ? err.message : "スキップに失敗しました");
+      setError(err instanceof Error ? err.message : t("onboarding.step2.skipFailed"));
     } finally {
       setIsSaving(false);
     }
@@ -110,8 +112,8 @@ export const OnboardingProfile: React.FC<OnboardingProfileProps> = ({
         keyboardShouldPersistTaps="handled"
       >
       <View style={styles.header}>
-        <Text style={styles.title}>プロフィールを設定しよう</Text>
-        <Text style={styles.subtitle}>他のメンバーに表示される情報です</Text>
+        <Text style={styles.title}>{t("onboarding.step2.title")}</Text>
+        <Text style={styles.subtitle}>{t("onboarding.step2.subtitle")}</Text>
       </View>
 
       {error && (
@@ -123,12 +125,10 @@ export const OnboardingProfile: React.FC<OnboardingProfileProps> = ({
       {/* 名前 */}
       <View style={styles.formGroup}>
         <Text style={styles.label}>
-          名前 <Text style={styles.required}>*</Text>
+          {t("onboarding.step2.nameLabel")} <Text style={styles.required}>*</Text>
         </Text>
         {nameIsEmail && (
-          <Text style={styles.hint}>
-            メールアドレス形式のため、表示名の変更が必要です
-          </Text>
+          <Text style={styles.hint}>{t("onboarding.step2.emailNameWarning")}</Text>
         )}
         <TextInput
           style={[styles.input, nameIsEmail && styles.inputHighlight]}
@@ -137,7 +137,7 @@ export const OnboardingProfile: React.FC<OnboardingProfileProps> = ({
             setFormData((prev) => ({ ...prev, name: text }));
             setError(null);
           }}
-          placeholder="例: 山田 太郎"
+          placeholder={t("onboarding.step2.namePlaceholder")}
           placeholderTextColor="#9CA3AF"
           editable={!isSaving}
           autoCapitalize="words"
@@ -146,7 +146,7 @@ export const OnboardingProfile: React.FC<OnboardingProfileProps> = ({
 
       {/* 生年月日 */}
       <BirthdayInput
-        label="生年月日（任意）"
+        label={t("onboarding.step2.birthdayLabelOptional")}
         value={formData.birthday}
         onChange={(date) => setFormData((prev) => ({ ...prev, birthday: date }))}
         disabled={isSaving}
@@ -154,12 +154,12 @@ export const OnboardingProfile: React.FC<OnboardingProfileProps> = ({
 
       {/* 自己紹介 */}
       <View style={styles.formGroup}>
-        <Text style={styles.label}>自己紹介（任意）</Text>
+        <Text style={styles.label}>{t("onboarding.step2.bioLabelOptional")}</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
           value={formData.bio}
           onChangeText={(text) => setFormData((prev) => ({ ...prev, bio: text }))}
-          placeholder="得意な種目や目標などを書いてみよう"
+          placeholder={t("onboarding.step2.bioPlaceholder")}
           placeholderTextColor="#9CA3AF"
           multiline
           numberOfLines={4}
@@ -167,7 +167,9 @@ export const OnboardingProfile: React.FC<OnboardingProfileProps> = ({
           textAlignVertical="top"
           editable={!isSaving}
         />
-        <Text style={styles.charCount}>{formData.bio.length}/500文字</Text>
+        <Text style={styles.charCount}>
+          {t("onboarding.step2.bioCharCount", { count: formData.bio.length })}
+        </Text>
       </View>
 
       {/* ボタン */}
@@ -177,9 +179,9 @@ export const OnboardingProfile: React.FC<OnboardingProfileProps> = ({
           onPress={onBack}
           disabled={isSaving}
           accessibilityRole="button"
-          accessibilityLabel="戻る"
+          accessibilityLabel={t("onboarding.step2.backButton")}
         >
-          <Text style={styles.backButtonText}>戻る</Text>
+          <Text style={styles.backButtonText}>{t("onboarding.step2.backButton")}</Text>
         </Pressable>
 
         <View style={styles.rightButtons}>
@@ -189,9 +191,9 @@ export const OnboardingProfile: React.FC<OnboardingProfileProps> = ({
               onPress={handleSkip}
               disabled={isSaving}
               accessibilityRole="button"
-              accessibilityLabel="スキップ"
+              accessibilityLabel={t("onboarding.step2.skipButton")}
             >
-              <Text style={styles.skipButtonText}>スキップ</Text>
+              <Text style={styles.skipButtonText}>{t("onboarding.step2.skipButton")}</Text>
             </Pressable>
           )}
           <Pressable
@@ -202,12 +204,12 @@ export const OnboardingProfile: React.FC<OnboardingProfileProps> = ({
             onPress={handleSubmit}
             disabled={isSaving || !formData.name.trim()}
             accessibilityRole="button"
-            accessibilityLabel="次へ"
+            accessibilityLabel={t("onboarding.step2.nextButton")}
           >
             {isSaving ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Text style={styles.nextButtonText}>次へ</Text>
+              <Text style={styles.nextButtonText}>{t("onboarding.step2.nextButton")}</Text>
             )}
           </Pressable>
         </View>

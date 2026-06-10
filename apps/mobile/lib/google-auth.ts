@@ -3,6 +3,7 @@
  * Expo + Supabase でのGoogle認証フローを管理
  */
 import { makeRedirectUri } from "expo-auth-session";
+import i18n from "@/i18n";
 
 /**
  * リダイレクトURIを生成
@@ -89,7 +90,7 @@ export const extractTokensFromUrl = (url: string): ExtractedTokens => {
       tokenType: null,
       providerToken: null,
       providerRefreshToken: null,
-      error: "URLの解析に失敗しました",
+      error: i18n.t("common.app.urlParseFailed"),
     };
   }
 };

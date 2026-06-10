@@ -3,21 +3,24 @@
 import React from "react";
 import { MonthItem } from "../hooks/useMonthList";
 import { StatusBadge } from "./StatusBadge";
+import { useTranslations } from "next-intl";
 
 interface MonthListProps {
   monthList: MonthItem[];
   onMonthClick: (year: number, month: number) => void;
 }
 
-const getMonthLabel = (year: number, month: number) => {
-  return `${year}年${month}月`;
-};
-
 export const MonthList = React.memo(({ monthList, onMonthClick }: MonthListProps) => {
+  const t = useTranslations("teams");
+
+  const getMonthLabel = (year: number, month: number) => {
+    return t("attendance.monthLabel", { year, month });
+  };
+
   if (monthList.length === 0) {
     return (
       <div className="bg-gray-50 rounded-lg p-6 text-center">
-        <p className="text-sm text-gray-600">表示できる月がありません</p>
+        <p className="text-sm text-gray-600">{t("monthList.empty")}</p>
       </div>
     );
   }

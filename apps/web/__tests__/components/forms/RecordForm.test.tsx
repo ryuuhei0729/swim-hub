@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { renderWithI18n as render, screen, waitFor, within } from "../../utils/render";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import RecordForm from "../../../components/forms/RecordForm";
@@ -248,7 +248,8 @@ describe("RecordForm", () => {
       const addSplitButtons = screen.getAllByTestId(/^record-split-add-button-\d+$/);
       await user.click(addSplitButtons[addSplitButtons.length - 1]);
 
-      const removeSplitButton = screen.getByRole("button", { name: "スプリットを削除" });
+      // スプリット削除ボタンは data-testid="record-split-remove-button-*" で取得
+      const removeSplitButton = screen.getAllByTestId(/^record-split-remove-button-\d+-\d+$/)[0];
       await user.click(removeSplitButton);
 
       await waitFor(() => {
@@ -354,10 +355,10 @@ describe("RecordForm", () => {
       await user.click(closeButton);
 
       // 初期状態では変更がないので直接閉じる、または確認ダイアログが表示される
-      // 確認ダイアログが表示された場合は「閉じる」をクリック
+      // 確認ダイアログが表示された場合は確認ボタンをクリック
       const dialog = screen.queryByRole("dialog");
       if (dialog) {
-        const confirmCloseButton = within(dialog).getByRole("button", { name: "閉じる" });
+        const confirmCloseButton = within(dialog).getByTestId("confirm-dialog-confirm-button");
         await user.click(confirmCloseButton);
       }
 
@@ -415,9 +416,10 @@ describe("RecordForm", () => {
         expect(screen.getByText("入力内容が保存されていません")).toBeInTheDocument();
       });
 
-      // 確認ダイアログ内の「閉じる」ボタンを取得（role="dialog"の中）
+      // 確認ダイアログ内の確認ボタンを data-testid で取得
+      // (X 閉じるアイコンと confirmLabel "閉じる" が同名のため role+name では曖昧)
       const dialog = screen.getByRole("dialog");
-      const confirmCloseButton = within(dialog).getByRole("button", { name: "閉じる" });
+      const confirmCloseButton = within(dialog).getByTestId("confirm-dialog-confirm-button");
       await user.click(confirmCloseButton);
 
       expect(mockOnClose).toHaveBeenCalled();

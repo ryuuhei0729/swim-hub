@@ -3,12 +3,14 @@ import { View, Pressable, ActivityIndicator, StyleSheet, Text } from "react-nati
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { LoginForm } from "@/components/auth/LoginForm";
 
 export const EmailLoginScreen: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
   const navigation = useNavigation();
+  const { t } = useTranslation();
 
   // 認証情報を確認中
   if (loading) {
@@ -24,7 +26,7 @@ export const EmailLoginScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.loadingContainer} edges={["top", "left", "right", "bottom"]}>
         <ActivityIndicator size="large" color="#2563EB" />
-        <Text style={styles.redirectingText}>リダイレクト中...</Text>
+        <Text style={styles.redirectingText}>{t("auth.redirecting")}</Text>
       </SafeAreaView>
     );
   }
@@ -36,7 +38,7 @@ export const EmailLoginScreen: React.FC = () => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
           accessibilityRole="button"
-          accessibilityLabel="戻る"
+          accessibilityLabel={t("common.back")}
         >
           <Feather name="arrow-left" size={24} color="#111827" />
         </Pressable>

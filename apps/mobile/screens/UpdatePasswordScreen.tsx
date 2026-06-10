@@ -1,10 +1,12 @@
 import React from "react";
 import { View, ActivityIndicator, StyleSheet, Text } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { UpdatePasswordForm } from "@/components/auth/UpdatePasswordForm";
 
 export const UpdatePasswordScreen: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
+  const { t } = useTranslation();
 
   // 認証情報を確認中
   if (loading) {
@@ -19,7 +21,7 @@ export const UpdatePasswordScreen: React.FC = () => {
   if (!isAuthenticated) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>パスワードを更新するにはログインが必要です。</Text>
+        <Text style={styles.errorText}>{t("auth.updatePassword.notLoggedIn")}</Text>
       </View>
     );
   }

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
 import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { formatTime, formatCircleTime, getStyleLabel } from "@/utils/formatters";
 import type { PracticeTime, PracticeTag } from "@apps/shared/types";
@@ -45,6 +46,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
   onDeleteCompetition,
   onPracticeTimeLoaded,
 }) => {
+  const { t } = useTranslation();
   const { supabase } = useAuth();
   const [recordDetail, setRecordDetail] = useState<{
     time: number;
@@ -332,7 +334,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
           </View>
 
           {loadingLogDetail ? (
-            <Text style={styles.loadingText}>読み込み中...</Text>
+            <Text style={styles.loadingText}>{t("common.loading")}</Text>
           ) : practiceLogDetail ? (
             <>
               {/* タグ表示 */}
@@ -348,7 +350,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
 
               {/* 練習内容 */}
               <View style={styles.practiceContentContainer}>
-                <Text style={styles.practiceContentLabel}>練習内容</Text>
+                <Text style={styles.practiceContentLabel}>{t("practice.modal.content")}</Text>
                 <Text style={styles.practiceContentText}>
                   <Text style={styles.practiceContentValue}>{practiceLogDetail.distance}</Text>m ×{" "}
                   <Text style={styles.practiceContentValue}>{practiceLogDetail.repCount}</Text>
@@ -364,7 +366,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                   </Text>
                   {"　"}
                   <Text style={styles.practiceContentValue}>
-                    {getStyleLabel(practiceLogDetail.style)}
+                    {getStyleLabel(practiceLogDetail.style, t)}
                   </Text>
                 </Text>
               </View>
@@ -374,7 +376,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                 <View style={styles.timeContainer}>
                   <View style={styles.timeHeader}>
                     <View style={styles.timeHeaderBar} />
-                    <Text style={styles.timeHeaderText}>タイム</Text>
+                    <Text style={styles.timeHeaderText}>{t("practice.modal.time")}</Text>
                   </View>
                   <View style={styles.timeTableContainer}>
                     <MemoizedTimeTable
@@ -388,7 +390,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
 
               {practiceLogDetail.note && (
                 <View style={styles.noteContainer}>
-                  <Text style={styles.noteLabel}>メモ</Text>
+                  <Text style={styles.noteLabel}>{t("practice.modal.memo")}</Text>
                   <Text style={styles.noteText}>{practiceLogDetail.note}</Text>
                 </View>
               )}
@@ -402,7 +404,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
 
               {practiceLogImages.length > 0 && (
                 <View style={imageGalleryStyles.gallery}>
-                  <Text style={imageGalleryStyles.galleryTitle}>添付画像</Text>
+                  <Text style={imageGalleryStyles.galleryTitle}>{t("common.imageGallery.attachedImages")}</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     {practiceLogImages.map((img, index) => (
                       <Pressable
@@ -566,16 +568,16 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
           {item.type === "record" && (
             <View style={styles.recordDetailContainer}>
               {loadingRecordDetail ? (
-                <Text style={styles.loadingText}>記録を読み込み中...</Text>
+                <Text style={styles.loadingText}>{t("recordMobile.recordLoading")}</Text>
               ) : recordDetail ? (
                 <>
                   <View style={styles.recordRow}>
-                    <Text style={styles.recordLabel}>タイム</Text>
+                    <Text style={styles.recordLabel}>{t("practice.modal.time")}</Text>
                     <Text style={styles.recordValue}>{formatTime(recordDetail.time)}</Text>
                   </View>
                   {recordDetail.reactionTime !== null && (
                     <View style={styles.recordRow}>
-                      <Text style={styles.recordLabel}>リアクション</Text>
+                      <Text style={styles.recordLabel}>{t("practice.modal.reaction")}</Text>
                       <Text style={styles.recordValue}>{recordDetail.reactionTime}</Text>
                     </View>
                   )}
@@ -586,7 +588,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                   ) : null}
                 </>
               ) : (
-                <Text style={styles.recordEmptyText}>記録詳細が見つかりません</Text>
+                <Text style={styles.recordEmptyText}>{t("practice.modal.recordNotFound")}</Text>
               )}
             </View>
           )}
@@ -614,7 +616,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
               }}
             >
               <Feather name="plus" size={14} color="#374151" style={styles.addLogButtonIcon} />
-              <Text style={styles.addLogButtonText}>練習メニューを追加</Text>
+              <Text style={styles.addLogButtonText}>{t("practice.modal.addPracticeMenu")}</Text>
             </Pressable>
           )}
           {/* 大会記録追加ボタン */}
@@ -634,7 +636,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                 }}
               >
                 <Feather name="plus" size={14} color="#374151" style={styles.addLogButtonIcon} />
-                <Text style={styles.addLogButtonText}>大会記録を追加</Text>
+                <Text style={styles.addLogButtonText}>{t("dashboard.dayDetail.addRecord")}</Text>
               </Pressable>
             )}
         </View>
@@ -643,9 +645,9 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
       {isPractice && (
         <View style={styles.expandedContent}>
           {loading ? (
-            <Text style={styles.loadingText}>読み込み中...</Text>
+            <Text style={styles.loadingText}>{t("common.loading")}</Text>
           ) : practiceLogs.length === 0 ? (
-            <Text style={styles.emptyText}>練習メニューがありません</Text>
+            <Text style={styles.emptyText}>{t("practice.modal.noPracticeMenus")}</Text>
           ) : (
             practiceLogs.map((log) => (
               <View key={log.id} style={styles.practiceLogDetail}>
@@ -662,7 +664,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
 
                 {/* 練習内容 */}
                 <View style={styles.practiceContentContainer}>
-                  <Text style={styles.practiceContentLabel}>練習内容</Text>
+                  <Text style={styles.practiceContentLabel}>{t("practice.modal.content")}</Text>
                   <Text style={styles.practiceContentText}>
                     <Text style={styles.practiceContentValue}>{log.distance}</Text>m ×{" "}
                     <Text style={styles.practiceContentValue}>{log.repCount}</Text>
@@ -675,7 +677,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                     {"　　"}
                     <Text style={styles.practiceContentValue}>{formatCircleTime(log.circle)}</Text>
                     {"　"}
-                    <Text style={styles.practiceContentValue}>{getStyleLabel(log.style)}</Text>
+                    <Text style={styles.practiceContentValue}>{getStyleLabel(log.style, t)}</Text>
                   </Text>
                 </View>
 
@@ -684,7 +686,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                   <View style={styles.timeContainer}>
                     <View style={styles.timeHeader}>
                       <View style={styles.timeHeaderBar} />
-                      <Text style={styles.timeHeaderText}>タイム</Text>
+                      <Text style={styles.timeHeaderText}>{t("practice.modal.time")}</Text>
                     </View>
                     <View style={styles.timeTableContainer}>
                       <MemoizedTimeTable
@@ -698,7 +700,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
 
                 {log.note && (
                   <View style={styles.noteContainer}>
-                    <Text style={styles.noteLabel}>メモ</Text>
+                    <Text style={styles.noteLabel}>{t("practice.modal.memo")}</Text>
                     <Text style={styles.noteText}>{log.note}</Text>
                   </View>
                 )}
@@ -708,7 +710,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
 
           {practiceImages.length > 0 && (
             <View style={imageGalleryStyles.gallery}>
-              <Text style={imageGalleryStyles.galleryTitle}>添付画像</Text>
+              <Text style={imageGalleryStyles.galleryTitle}>{t("common.imageGallery.attachedImages")}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {practiceImages.map((img, index) => (
                   <Pressable

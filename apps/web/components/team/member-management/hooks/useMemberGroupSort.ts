@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TeamGroupsAPI } from "@apps/shared/api/teams/groups";
 import type { TeamGroup, TeamGroupMembership } from "@swim-hub/shared/types";
@@ -9,7 +10,7 @@ export interface MemberGroup {
   members: TeamMember[];
 }
 
-const GENDER_CATEGORY = "性別";
+const GENDER_CATEGORY = "__gender__";
 
 /**
  * メンバー一覧のグループ別表示機能
@@ -18,6 +19,7 @@ const GENDER_CATEGORY = "性別";
  * デフォルトで性別によるグルーピングが有効
  */
 export const useMemberGroupSort = (teamId: string, supabase: SupabaseClient) => {
+  const t = useTranslations("teams.memberGroupSort");
   const [groups, setGroups] = useState<TeamGroup[]>([]);
   const [memberships, setMemberships] = useState<TeamGroupMembership[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(GENDER_CATEGORY);
@@ -86,8 +88,8 @@ export const useMemberGroupSort = (teamId: string, supabase: SupabaseClient) => 
         const maleMembers = members.filter((m) => m.users?.gender === 0);
         const femaleMembers = members.filter((m) => m.users?.gender === 1);
 
-        if (maleMembers.length > 0) result.push({ groupName: "男性", members: maleMembers });
-        if (femaleMembers.length > 0) result.push({ groupName: "女性", members: femaleMembers });
+        if (maleMembers.length > 0) result.push({ groupName: t("male"), members: maleMembers });
+        if (femaleMembers.length > 0) result.push({ groupName: t("female"), members: femaleMembers });
 
         return result;
       }
@@ -108,18 +110,23 @@ export const useMemberGroupSort = (teamId: string, supabase: SupabaseClient) => 
       // 未所属メンバー
       const unassigned = members.filter((m) => !assigned.has(m.user_id));
       if (unassigned.length > 0) {
-        result.push({ groupName: "未所属", members: unassigned });
+        result.push({ groupName: t("unassigned"), members: unassigned });
       }
 
       return result;
     },
-    [activeCategory, groupsByCategory, userGroupMap],
+    [activeCategory, groupsByCategory, userGroupMap, t],
   );
+
+  const getCategoryLabel = useCallback((category: string) => {
+    return category === GENDER_CATEGORY ? t("genderCategory") : category;
+  }, [t]);
 
   return {
     categories,
     activeCategory,
     toggleCategory,
     groupMembers,
+    getCategoryLabel,
   };
 };

@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { parseTimeStrict } from "@apps/shared/utils/time";
 import { validateSwimTime, validateTimeString } from "@apps/shared/utils/validators";
 
@@ -17,6 +18,7 @@ export interface ValidationResult {
  * TeamEntrySectionで使用
  */
 export const useTimeValidation = () => {
+  const t = useTranslations("teams.timeValidation");
   /**
    * タイムをパースする
    *
@@ -52,7 +54,7 @@ export const useTimeValidation = () => {
     if (parsedTime === null) {
       return {
         isValid: false,
-        error: "タイムの形式が正しくありません（例: 1:23.45 または 23.45）",
+        error: t("invalid"),
       };
     }
 
@@ -68,7 +70,7 @@ export const useTimeValidation = () => {
     return {
       isValid: true,
     };
-  }, []);
+  }, [t]);
 
   return {
     parseTime,

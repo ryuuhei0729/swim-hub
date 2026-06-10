@@ -86,6 +86,7 @@ export type MainStackParamList = {
     teamId: string;
   };
   Settings: undefined;
+  BulkBestTime: undefined;
   Paywall: undefined;
 };
 

@@ -19,6 +19,7 @@ import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import {
   useCreateRecordMutation,
@@ -27,6 +28,7 @@ import {
 } from "@apps/shared/hooks/queries/records";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { formatTime } from "@/utils/formatters";
+import { localizedStyleName } from "@/utils/styleName";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { VideoUploader } from "@/components/shared/VideoUploader";
@@ -71,6 +73,7 @@ export const RecordLogFormScreen: React.FC = () => {
   const { supabase, subscription, getAccessToken } = useAuth();
   const isPremium = checkIsPremium(subscription);
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   // クイック入力フック
   const { parseInput } = useQuickTimeInput();
@@ -118,13 +121,13 @@ export const RecordLogFormScreen: React.FC = () => {
         setSwimStyles(stylesData);
       } catch (error) {
         console.error("種目取得エラー:", error);
-        Alert.alert("エラー", "種目の取得に失敗しました");
+        Alert.alert(t("common.error"), t("competition.entry.stylesFetchFailed"));
       } finally {
         setLoadingStyles(false);
       }
     };
     fetchStyles();
-  }, [supabase]);
+  }, [supabase, t]);
 
   // 記録データを取得（編集モードの場合）
   useEffect(() => {
@@ -154,14 +157,14 @@ export const RecordLogFormScreen: React.FC = () => {
           console.error("記録取得エラー - recordId:", recordId);
           if (error.code === "PGRST116") {
             // 記録が見つからない場合
-            Alert.alert("エラー", "記録が見つかりませんでした");
+            Alert.alert(t("common.error"), t("recordMobile.recordNotFound"));
             navigation.goBack();
             return;
           }
           throw error;
         }
         if (!record) {
-          Alert.alert("エラー", "記録データが見つかりませんでした");
+          Alert.alert(t("common.error"), t("recordMobile.recordDataNotFound"));
           navigation.goBack();
           return;
         }
@@ -192,7 +195,7 @@ export const RecordLogFormScreen: React.FC = () => {
       } catch (error) {
         if (!isMounted) return;
         console.error("記録取得エラー:", error);
-        Alert.alert("エラー", "記録の取得に失敗しました");
+        Alert.alert(t("common.error"), t("recordMobile.recordFetchFailed"));
       } finally {
         if (isMounted) {
           setLoadingRecord(false);
@@ -205,7 +208,7 @@ export const RecordLogFormScreen: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [recordId, competitionId, swimStyles.length, loadingStyles, supabase, navigation]);
+  }, [recordId, competitionId, swimStyles.length, loadingStyles, supabase, navigation, t]);
 
   // エントリー情報からフォームデータを初期化（新規作成モードの場合）
   useEffect(() => {
@@ -475,10 +478,10 @@ export const RecordLogFormScreen: React.FC = () => {
 
     formDataList.forEach((formData, index) => {
       if (!formData.styleId) {
-        newErrors[`style-${index}`] = "種目を選択してください";
+        newErrors[`style-${index}`] = t("recordMobile.form.styleRequired");
       }
       if (formData.time <= 0) {
-        newErrors[`time-${index}`] = "タイムを入力してください";
+        newErrors[`time-${index}`] = t("recordMobile.form.timeRequired");
       }
     });
 
@@ -507,7 +510,7 @@ export const RecordLogFormScreen: React.FC = () => {
         .single();
 
       if (competitionError || !competition) {
-        throw competitionError || new Error("大会情報の取得に失敗しました");
+        throw competitionError || new Error(t("recordMobile.competitionFetchFailed"));
       }
 
       const poolType: PoolType = (competition.pool_type ?? 0) as PoolType;
@@ -516,7 +519,7 @@ export const RecordLogFormScreen: React.FC = () => {
       if (recordId && formDataList.length > 0) {
         const formData = formDataList[0];
         if (formData.time <= 0) {
-          Alert.alert("エラー", "タイムを入力してください");
+          Alert.alert(t("common.error"), t("recordMobile.form.timeRequired"));
           setLoading(false);
           return;
         }
@@ -634,8 +637,8 @@ export const RecordLogFormScreen: React.FC = () => {
             const videoToken = await getAccessToken();
             if (!videoToken) {
               Alert.alert(
-                "動画アップロード失敗",
-                "動画アップロード失敗: セッションが無効です。再ログインしてください。",
+                t("recordMobile.videoUploadFailedTitle"),
+                t("recordMobile.videoUploadFailedSession"),
               );
             } else {
               try {
@@ -648,10 +651,10 @@ export const RecordLogFormScreen: React.FC = () => {
                 });
               } catch (err) {
                 console.error("動画アップロードエラー:", err);
-                const errorDetail = err instanceof Error ? err.message : "不明なエラー";
+                const errorDetail = err instanceof Error ? err.message : t("common.error");
                 Alert.alert(
-                  "動画アップロード失敗",
-                  `大会記録は保存されましたが、動画のアップロードに失敗しました。\n\n詳細: ${errorDetail}\n\n詳細画面から再度追加してください。`,
+                  t("recordMobile.videoUploadFailedTitle"),
+                  `${t("recordMobile.videoUploadFailedSaved")}\n\n${errorDetail}`,
                 );
               }
             }
@@ -668,9 +671,11 @@ export const RecordLogFormScreen: React.FC = () => {
       navigation.popToTop();
     } catch (error) {
       console.error("保存エラー:", error);
-      Alert.alert("エラー", error instanceof Error ? error.message : "保存に失敗しました", [
-        { text: "OK" },
-      ]);
+      Alert.alert(
+        t("common.error"),
+        error instanceof Error ? error.message : t("recordMobile.saveFailed"),
+        [{ text: "OK" }],
+      );
     } finally {
       isSubmittingRef.current = false;
       setLoading(false);
@@ -682,7 +687,9 @@ export const RecordLogFormScreen: React.FC = () => {
       <View style={styles.container}>
         <LoadingSpinner
           fullScreen
-          message={loadingRecord ? "記録を読み込み中..." : "種目を読み込み中..."}
+          message={
+            loadingRecord ? t("recordMobile.recordLoading") : t("recordMobile.stylesLoading")
+          }
         />
       </View>
     );
@@ -705,7 +712,9 @@ export const RecordLogFormScreen: React.FC = () => {
           return (
             <View key={index} style={styles.section}>
               {formDataList.length > 1 && (
-                <Text style={styles.sectionTitle}>記録 {sectionIndex}</Text>
+                <Text style={styles.sectionTitle}>
+                  {t("recordMobile.recordNumber", { index: sectionIndex })}
+                </Text>
               )}
 
               {/* 種目表示（エントリー情報がある場合） */}
@@ -714,7 +723,7 @@ export const RecordLogFormScreen: React.FC = () => {
                   <Text style={styles.entryInfoText}>
                     {entryInfo.styleName}
                     {entryInfo.entryTime &&
-                      ` (エントリータイム: ${formatTime(entryInfo.entryTime)})`}
+                      ` (${t("recordMobile.entryTimeInfo", { time: formatTime(entryInfo.entryTime) })})`}
                   </Text>
                 </View>
               )}
@@ -723,7 +732,7 @@ export const RecordLogFormScreen: React.FC = () => {
               {!entryInfo && (
                 <View style={styles.field}>
                   <Text style={styles.label}>
-                    種目 <Text style={styles.required}>*</Text>
+                    {t("recordMobile.form.styleLabel")} <Text style={styles.required}>*</Text>
                   </Text>
                   <Pressable
                     ref={(ref) => {
@@ -743,9 +752,11 @@ export const RecordLogFormScreen: React.FC = () => {
                       ]}
                     >
                       {formData.styleId
-                        ? swimStyles.find((s) => s.id.toString() === formData.styleId)?.name_jp ||
-                          "種目を選択"
-                        : "種目を選択"}
+                        ? localizedStyleName(
+                            swimStyles.find((s) => s.id.toString() === formData.styleId),
+                            t,
+                          ) || t("recordMobile.form.stylePlaceholder")
+                        : t("recordMobile.form.stylePlaceholder")}
                     </Text>
                     <Feather name="chevron-down" size={20} color="#6B7280" />
                   </Pressable>
@@ -758,13 +769,13 @@ export const RecordLogFormScreen: React.FC = () => {
               {/* タイム入力 */}
               <View style={styles.field}>
                 <Text style={styles.label}>
-                  タイム <Text style={styles.required}>*</Text>
+                  {t("recordMobile.form.timeLabel")} <Text style={styles.required}>*</Text>
                 </Text>
                 <TextInput
                   style={[styles.input, errors[`time-${index}`] && styles.inputError]}
                   value={formData.timeDisplayValue}
                   onChangeText={(text) => handleTimeChange(index, text)}
-                  placeholder="例: 2:00.00 または 2-0-0"
+                  placeholder={t("recordMobile.form.timePlaceholder2")}
                   keyboardType="default"
                   editable={!loading}
                 />
@@ -776,7 +787,7 @@ export const RecordLogFormScreen: React.FC = () => {
               {/* リレー種目 */}
               <View style={styles.field}>
                 <View style={styles.switchContainer}>
-                  <Text style={styles.label}>リレー種目</Text>
+                  <Text style={styles.label}>{t("recordMobile.form.relayStyleLabel")}</Text>
                   <Switch
                     value={formData.isRelaying}
                     onValueChange={(value) => updateFormData(index, { isRelaying: value })}
@@ -787,12 +798,12 @@ export const RecordLogFormScreen: React.FC = () => {
 
               {/* 反応時間 */}
               <View style={styles.field}>
-                <Text style={styles.label}>反応時間（秒）</Text>
+                <Text style={styles.label}>{t("recordMobile.form.reactionTimeLabel")}</Text>
                 <TextInput
                   style={styles.input}
                   value={formData.reactionTime}
                   onChangeText={(text) => updateFormData(index, { reactionTime: text })}
-                  placeholder="0.40〜1.00"
+                  placeholder={t("recordMobile.form.reactionTimePlaceholder")}
                   keyboardType="decimal-pad"
                   editable={!loading}
                 />
@@ -800,12 +811,12 @@ export const RecordLogFormScreen: React.FC = () => {
 
               {/* メモ */}
               <View style={styles.field}>
-                <Text style={styles.label}>メモ</Text>
+                <Text style={styles.label}>{t("recordMobile.form.memoLabel")}</Text>
                 <TextInput
                   style={[styles.input, styles.textArea]}
                   value={formData.note}
                   onChangeText={(text) => updateFormData(index, { note: text })}
-                  placeholder="メモ（任意）"
+                  placeholder={t("recordMobile.form.memoPlaceholder")}
                   multiline
                   numberOfLines={3}
                   editable={!loading}
@@ -814,7 +825,7 @@ export const RecordLogFormScreen: React.FC = () => {
 
               {/* 動画 */}
               <View style={styles.field}>
-                <Text style={styles.label}>動画</Text>
+                <Text style={styles.label}>{t("recordMobile.form.videoLabel")}</Text>
                 <VideoUploader
                   type="record"
                   id={recordId}
@@ -842,7 +853,7 @@ export const RecordLogFormScreen: React.FC = () => {
               {/* スプリットタイム */}
               <View style={styles.field}>
                 <View style={styles.splitTimeHeader}>
-                  <Text style={styles.label}>スプリットタイム</Text>
+                  <Text style={styles.label}>{t("recordMobile.form.splitTimeLabel")}</Text>
                   <View style={styles.splitTimeButtons}>
                     <Pressable
                       style={[
@@ -862,7 +873,7 @@ export const RecordLogFormScreen: React.FC = () => {
                         isSplitTimeLimitReached(index)
                       }
                     >
-                      <Text style={styles.addButton25mText}>追加(25mごと)</Text>
+                      <Text style={styles.addButton25mText}>{t("recordMobile.form.addEvery25m")}</Text>
                     </Pressable>
                     <Pressable
                       style={[
@@ -882,14 +893,14 @@ export const RecordLogFormScreen: React.FC = () => {
                         isSplitTimeLimitReached(index)
                       }
                     >
-                      <Text style={styles.addButton50mText}>追加(50mごと)</Text>
+                      <Text style={styles.addButton50mText}>{t("recordMobile.form.addEvery50m")}</Text>
                     </Pressable>
                     <Pressable
                       style={[styles.addButton, (loading || isSplitTimeLimitReached(index)) && styles.addButtonDisabled]}
                       onPress={() => handleAddSplitTime(index)}
                       disabled={loading || isSplitTimeLimitReached(index)}
                     >
-                      <Text style={styles.addButtonText}>追加</Text>
+                      <Text style={styles.addButtonText}>{t("recordMobile.form.addButton")}</Text>
                     </Pressable>
                   </View>
                 </View>
@@ -910,7 +921,7 @@ export const RecordLogFormScreen: React.FC = () => {
                             handleSplitTimeChange(index, splitIndex, "distance", text);
                           }
                         }}
-                        placeholder="距離 (m)"
+                        placeholder={t("recordMobile.form.distancePlaceholder")}
                         keyboardType="decimal-pad"
                         editable={!loading}
                       />
@@ -921,7 +932,7 @@ export const RecordLogFormScreen: React.FC = () => {
                         onChangeText={(text) =>
                           handleSplitTimeChange(index, splitIndex, "splitTime", text)
                         }
-                        placeholder="例: 28-0"
+                        placeholder={t("recordMobile.form.splitPlaceholder")}
                         keyboardType="default"
                         editable={!loading}
                       />
@@ -986,7 +997,7 @@ export const RecordLogFormScreen: React.FC = () => {
                         isSelected && styles.dropdownOptionTextSelected,
                       ]}
                     >
-                      {style.name_jp}
+                      {localizedStyleName(style, t)}
                     </Text>
                     {isSelected && <Feather name="check" size={16} color="#2563EB" />}
                   </Pressable>
@@ -1007,7 +1018,7 @@ export const RecordLogFormScreen: React.FC = () => {
           {loading ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
-            <Text style={styles.primaryButtonText}>保存</Text>
+            <Text style={styles.primaryButtonText}>{t("common.save")}</Text>
           )}
         </Pressable>
       </View>

@@ -9,6 +9,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TeamGroupWithCount } from "./hooks";
 
@@ -38,6 +39,7 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
   teamId,
   supabase,
 }) => {
+  const { t } = useTranslation();
   const [members, setMembers] = useState<MemberInfo[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -111,7 +113,7 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
             {/* メンバー数 */}
             <View style={styles.countRow}>
               <Feather name="users" size={14} color="#6B7280" />
-              <Text style={styles.countText}>{members.length}人のメンバー</Text>
+              <Text style={styles.countText}>{t("teams.mobile.groupManagement.memberCount", { count: members.length })}</Text>
             </View>
 
             {loading ? (
@@ -121,7 +123,7 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
             ) : members.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <Feather name="users" size={40} color="#D1D5DB" />
-                <Text style={styles.emptyText}>メンバーが登録されていません</Text>
+                <Text style={styles.emptyText}>{t("teams.mobile.groupManagement.membersEmpty")}</Text>
               </View>
             ) : (
               <FlatList
@@ -131,11 +133,11 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
                 renderItem={({ item }) => (
                   <View style={styles.memberRow}>
                     <Text style={styles.memberName} numberOfLines={1}>
-                      {item.users?.name || "名前未設定"}
+                      {item.users?.name || t("teams.mobile.unnamedMember")}
                     </Text>
                     {item.role === "admin" && (
                       <View style={styles.adminBadge}>
-                        <Text style={styles.adminBadgeText}>管理者</Text>
+                        <Text style={styles.adminBadgeText}>{t("teams.mobile.roleAdmin")}</Text>
                       </View>
                     )}
                   </View>

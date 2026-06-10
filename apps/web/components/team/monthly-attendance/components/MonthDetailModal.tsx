@@ -6,6 +6,7 @@ import { TeamEvent } from "@swim-hub/shared/types";
 import { AttendanceEditState } from "../hooks/useAttendanceEdit";
 import { getStatusBadge } from "./StatusBadge";
 import { formatDate } from "@apps/shared/utils/date";
+import { useTranslations } from "next-intl";
 
 interface MonthDetailModalProps {
   isOpen: boolean;
@@ -39,12 +40,14 @@ export const MonthDetailModal = React.memo(
     onSaveAll,
     onEventClick,
   }: MonthDetailModalProps) => {
+    const t = useTranslations("teams");
+
     return (
       <BaseModal isOpen={isOpen} onClose={onClose} title={title} size="xl">
         {loading ? (
           <div className="text-center py-6">
             <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
-            <p className="mt-1.5 text-sm text-gray-500">読み込み中...</p>
+            <p className="mt-1.5 text-sm text-gray-500">{t("monthDetail.loading")}</p>
           </div>
         ) : error ? (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3">
@@ -54,7 +57,7 @@ export const MonthDetailModal = React.memo(
           <div className="space-y-3">
             {events.length === 0 ? (
               <div className="bg-gray-50 rounded-lg p-6 text-center">
-                <p className="text-sm text-gray-600">この月にはイベントがありません</p>
+                <p className="text-sm text-gray-600">{t("monthList.empty")}</p>
               </div>
             ) : (
               <>
@@ -76,7 +79,7 @@ export const MonthDetailModal = React.memo(
                               {formatDate(event.date, "shortWithWeekday")}
                             </span>
                             <h3 className="text-xs font-medium text-gray-900">
-                              {event.type === "competition" ? event.title : "練習"}
+                              {event.type === "competition" ? event.title : t("monthDetail.practiceLabel")}
                             </h3>
                             {event.place && (
                               <span className="text-xs text-gray-600">@{event.place}</span>
@@ -97,7 +100,7 @@ export const MonthDetailModal = React.memo(
                                     : "bg-gray-100 text-gray-600 hover:bg-green-50 border-2 border-transparent"
                                 }`}
                               >
-                                出席
+                                {t("attendanceList.statusPresent")}
                               </button>
                               <button
                                 onClick={() => onStatusChange(event.id, "absent")}
@@ -107,7 +110,7 @@ export const MonthDetailModal = React.memo(
                                     : "bg-gray-100 text-gray-600 hover:bg-red-50 border-2 border-transparent"
                                 }`}
                               >
-                                欠席
+                                {t("attendanceList.statusAbsent")}
                               </button>
                               <button
                                 onClick={() => onStatusChange(event.id, "other")}
@@ -117,13 +120,13 @@ export const MonthDetailModal = React.memo(
                                     : "bg-gray-100 text-gray-600 hover:bg-yellow-50 border-2 border-transparent"
                                 }`}
                               >
-                                その他
+                                {t("attendanceList.statusOther")}
                               </button>
                               <input
                                 type="text"
                                 value={editState.note}
                                 onChange={(e) => onNoteChange(event.id, e.target.value)}
-                                placeholder="備考を入力（任意）"
+                                placeholder={t("monthDetail.notePlaceholder")}
                                 maxLength={NOTE_MAX_LENGTH}
                                 className="w-60 px-2 py-1 border border-gray-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               />
@@ -143,7 +146,7 @@ export const MonthDetailModal = React.memo(
                       saving ? "opacity-50 cursor-not-allowed" : ""
                     }`}
                   >
-                    {saving ? "保存中..." : `${title}分をまとめて保存`}
+                    {saving ? t("monthDetail.saving") : t("monthDetail.saveButton")}
                   </button>
                 </div>
               </>

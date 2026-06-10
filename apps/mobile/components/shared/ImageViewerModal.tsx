@@ -10,6 +10,7 @@ import {
   SafeAreaView,
 } from "react-native";
 import { Image } from "expo-image";
+import { useTranslation } from "react-i18next";
 
 interface ImageViewerModalProps {
   images: { uri: string }[];
@@ -35,6 +36,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
   initialIndex,
   onClose,
 }) => {
+  const { t } = useTranslation();
   const [currentIndex, setCurrentIndex] = useState(() =>
     clampIndex(initialIndex, images.length),
   );
@@ -68,7 +70,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
       <Modal visible={visible} animationType="fade" transparent={false} onRequestClose={onClose}>
         <View style={styles.container}>
           <SafeAreaView style={styles.safeArea}>
-            <Pressable style={styles.closeButton} onPress={onClose} accessibilityLabel="閉じる">
+            <Pressable style={styles.closeButton} onPress={onClose} accessibilityLabel={t("common.aria.close")}>
               <Text style={styles.closeButtonText}>✕</Text>
             </Pressable>
           </SafeAreaView>
@@ -85,7 +87,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
             <Text style={styles.indexText}>
               {currentIndex + 1} / {images.length}
             </Text>
-            <Pressable style={styles.closeButton} onPress={onClose} accessibilityLabel="閉じる">
+            <Pressable style={styles.closeButton} onPress={onClose} accessibilityLabel={t("common.aria.close")}>
               <Text style={styles.closeButtonText}>✕</Text>
             </Pressable>
           </View>

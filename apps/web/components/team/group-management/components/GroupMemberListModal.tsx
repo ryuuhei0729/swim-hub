@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import BaseModal from "@/components/ui/BaseModal";
 import Avatar from "@/components/ui/Avatar";
@@ -23,6 +24,7 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
   teamId,
   onMemberClick,
 }) => {
+  const t = useTranslations("teamsAdmin");
   const { supabase } = useAuth();
   const [members, setMembers] = useState<MemberDetail[]>([]);
   const [loading, setLoading] = useState(false);
@@ -92,7 +94,7 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
         {/* ヘッダー */}
         <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
           <UsersIcon className="h-4 w-4" />
-          <span>{members.length}人のメンバー</span>
+          <span>{t("groupMemberList.memberCount", { count: members.length })}</span>
         </div>
 
         {/* ローディング */}
@@ -110,7 +112,7 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
         ) : members.length === 0 ? (
           <div className="text-center py-8">
             <UsersIcon className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-            <p className="text-sm text-gray-500">メンバーが登録されていません</p>
+            <p className="text-sm text-gray-500">{t("groupMemberList.empty")}</p>
           </div>
         ) : (
           <div className="max-h-[60vh] overflow-y-auto -mx-1">
@@ -120,7 +122,7 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
                 type="button"
                 onClick={() => onMemberClick(member)}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left"
-                aria-label={`${member.users?.name || "名前未設定"} の詳細を表示`}
+                aria-label={t("groupMemberList.viewDetailAriaLabel", { name: member.users?.name || t("groupMemberList.noNameLabel") })}
               >
                 <Avatar
                   avatarUrl={member.users?.profile_image_path ?? null}
@@ -129,12 +131,12 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
                 />
                 <div className="flex-1 min-w-0">
                   <span className="text-sm font-medium text-gray-900 truncate block">
-                    {member.users?.name || "名前未設定"}
+                    {member.users?.name || t("groupMemberList.noNameLabel")}
                   </span>
                 </div>
                 {member.role === "admin" && (
                   <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full shrink-0">
-                    管理者
+                    {t("badge.admin")}
                   </span>
                 )}
               </button>

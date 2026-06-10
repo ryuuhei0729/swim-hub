@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthProvider";
 import BaseModal from "@/components/ui/BaseModal";
+import { useTranslations } from "next-intl";
 import { TrophyIcon } from "@heroicons/react/24/outline";
 import { useMemberDetail } from "@/hooks/useMemberDetail";
 import { useBestTimes } from "@/hooks/useBestTimes";
@@ -34,6 +35,7 @@ export default function MemberDetailModal({
 }: MemberDetailModalProps) {
   const [isRoleChangeConfirmOpen, setIsRoleChangeConfirmOpen] = useState(false);
   const [pendingRole, setPendingRole] = useState<"admin" | "user" | null>(null);
+  const t = useTranslations("teams");
 
   const { supabase } = useAuth();
   const { error, isRemoving, handleRoleChange, handleRemoveMember } = useMemberDetail(
@@ -94,7 +96,7 @@ export default function MemberDetailModal({
             <div className="mb-8 rounded-md bg-red-50 p-4" data-testid="team-member-detail-error">
               <div className="flex">
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-800">エラーが発生しました</h3>
+                  <h3 className="text-sm font-medium text-red-800">{t("createModal.errorTitle")}</h3>
                   <div className="mt-2 text-sm text-red-700">
                     <p>{displayError}</p>
                   </div>
@@ -123,7 +125,7 @@ export default function MemberDetailModal({
           <div>
             <div className="flex items-center space-x-2 mb-4">
               <TrophyIcon className="h-5 w-5 text-yellow-500" />
-              <h3 className="text-lg font-medium text-gray-900">Best Time</h3>
+              <h3 className="text-lg font-medium text-gray-900">{t("memberDetail.bestTimesTitle")}</h3>
             </div>
 
             {loading ? (
@@ -135,9 +137,9 @@ export default function MemberDetailModal({
             ) : (
               <div className="text-center py-8">
                 <TrophyIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">記録がありません</p>
+                <p className="text-gray-600">{t("memberDetail.bestTimesEmpty")}</p>
                 <p className="text-sm text-gray-500 mt-1">
-                  このメンバーはまだ記録を登録していません
+                  {t("memberDetail.noRecords")}
                 </p>
               </div>
             )}
@@ -149,7 +151,7 @@ export default function MemberDetailModal({
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 data-testid="team-member-detail-close-button"
               >
-                閉じる
+                {t("memberDetail.close")}
               </button>
             </div>
           </div>

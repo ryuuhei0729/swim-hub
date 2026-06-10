@@ -5,6 +5,7 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, Pressable, Switch, ActivityIndicator, Alert } from "react-native";
 import Svg, { Path } from "react-native-svg";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useGoogleAuth } from "@/hooks/useGoogleAuth";
 import { syncAllToGoogleCalendar } from "@/lib/google-calendar-api";
@@ -45,6 +46,7 @@ export const GoogleCalendarSyncSettings: React.FC<GoogleCalendarSyncSettingsProp
   profile,
   onUpdate,
 }) => {
+  const { t } = useTranslation();
   const { supabase, user, session } = useAuth();
   const { connectGoogleCalendar, loading: authLoading } = useGoogleAuth();
   const [syncing, setSyncing] = useState(false);
@@ -72,34 +74,38 @@ export const GoogleCalendarSyncSettings: React.FC<GoogleCalendarSyncSettingsProp
 
   // 連携解除
   const handleDisconnectGoogle = () => {
-    Alert.alert("確認", "Googleカレンダー連携を解除しますか？", [
-      { text: "キャンセル", style: "cancel" },
-      {
-        text: "解除",
-        style: "destructive",
-        onPress: async () => {
-          if (!user || !supabase) return;
+    Alert.alert(
+      t("settings.googleCalendar.confirmTitle"),
+      t("settings.googleCalendar.confirmDisconnect"),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("settings.googleCalendar.disconnectChoice"),
+          style: "destructive",
+          onPress: async () => {
+            if (!user || !supabase) return;
 
-          try {
-            // RPC関数でトークンを削除（NULLを設定）
-            await supabase.rpc("set_google_refresh_token", {
-              p_user_id: user.id,
-              p_token: null,
-            });
+            try {
+              // RPC関数でトークンを削除（NULLを設定）
+              await supabase.rpc("set_google_refresh_token", {
+                p_user_id: user.id,
+                p_token: null,
+              });
 
-            // フラグを更新
-            await supabase
-              .from("users")
-              .update({ google_calendar_enabled: false })
-              .eq("id", user.id);
+              // フラグを更新
+              await supabase
+                .from("users")
+                .update({ google_calendar_enabled: false })
+                .eq("id", user.id);
 
-            onUpdate();
-          } catch {
-            Alert.alert("エラー", "連携解除に失敗しました");
-          }
+              onUpdate();
+            } catch {
+              Alert.alert(t("common.alertErrorTitle"), t("settings.googleCalendar.errors.disconnectFailed"));
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   // 同期設定変更
@@ -122,7 +128,7 @@ export const GoogleCalendarSyncSettings: React.FC<GoogleCalendarSyncSettingsProp
 
       onUpdate();
     } catch {
-      setError("設定の更新に失敗しました");
+      setError(t("settings.googleCalendar.errors.syncSettingFailed"));
     } finally {
       setSyncing(false);
     }
@@ -131,7 +137,7 @@ export const GoogleCalendarSyncSettings: React.FC<GoogleCalendarSyncSettingsProp
   // 既存データ一括同期
   const handleBulkSync = async () => {
     if (!session?.access_token) {
-      setError("セッションが無効です。再度ログインしてください。");
+      setError(t("settings.googleCalendar.sessionInvalid"));
       return;
     }
 
@@ -146,10 +152,10 @@ export const GoogleCalendarSyncSettings: React.FC<GoogleCalendarSyncSettingsProp
         setBulkSyncResult(result.results);
         onUpdate();
       } else {
-        setError(result.error || "一括同期に失敗しました");
+        setError(result.error || t("settings.googleCalendar.errors.bulkSyncFailed"));
       }
     } catch {
-      setError("一括同期に失敗しました");
+      setError(t("settings.googleCalendar.errors.bulkSyncFailed"));
     } finally {
       setBulkSyncing(false);
     }
@@ -159,10 +165,10 @@ export const GoogleCalendarSyncSettings: React.FC<GoogleCalendarSyncSettingsProp
     <View style={styles.container}>
       {/* ヘッダー */}
       <View style={styles.header}>
-        <Text style={styles.title}>Googleカレンダー連携</Text>
+        <Text style={styles.title}>{t("settings.googleCalendar.title")}</Text>
         {isEnabled && (
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>連携中</Text>
+            <Text style={styles.badgeText}>{t("settings.googleCalendar.connectedBadge")}</Text>
           </View>
         )}
       </View>
@@ -178,7 +184,7 @@ export const GoogleCalendarSyncSettings: React.FC<GoogleCalendarSyncSettingsProp
         // 未連携状態
         <View style={styles.section}>
           <Text style={styles.description}>
-            Googleカレンダーと連携すると、練習記録と大会記録が自動的にカレンダーに追加されます。
+            {t("settings.googleCalendar.disconnected.description")}
           </Text>
           <Pressable
             style={({ pressed }) => [
@@ -189,14 +195,14 @@ export const GoogleCalendarSyncSettings: React.FC<GoogleCalendarSyncSettingsProp
             onPress={handleConnectGoogle}
             disabled={authLoading}
             accessibilityRole="button"
-            accessibilityLabel="Googleカレンダーと連携"
+            accessibilityLabel={t("settings.googleCalendar.connectAriaLabel")}
           >
             {authLoading ? (
               <ActivityIndicator color="#374151" size="small" />
             ) : (
               <View style={styles.buttonContent}>
                 <GoogleLogo />
-                <Text style={styles.connectButtonText}>Googleカレンダーと連携</Text>
+                <Text style={styles.connectButtonText}>{t("settings.googleCalendar.disconnected.connectButton")}</Text>
               </View>
             )}
           </Pressable>
@@ -207,7 +213,7 @@ export const GoogleCalendarSyncSettings: React.FC<GoogleCalendarSyncSettingsProp
           {/* 同期設定 */}
           <View style={styles.section}>
             <View style={styles.settingRow}>
-              <Text style={styles.settingLabel}>練習記録を自動同期</Text>
+              <Text style={styles.settingLabel}>{t("settings.googleCalendar.connected.syncPracticesLabel")}</Text>
               <Switch
                 value={syncPractices}
                 onValueChange={(value) =>
@@ -219,7 +225,7 @@ export const GoogleCalendarSyncSettings: React.FC<GoogleCalendarSyncSettingsProp
               />
             </View>
             <View style={styles.settingRow}>
-              <Text style={styles.settingLabel}>大会記録を自動同期</Text>
+              <Text style={styles.settingLabel}>{t("settings.googleCalendar.connected.syncCompetitionsLabel")}</Text>
               <Switch
                 value={syncCompetitions}
                 onValueChange={(value) =>
@@ -235,7 +241,7 @@ export const GoogleCalendarSyncSettings: React.FC<GoogleCalendarSyncSettingsProp
           {/* 一括同期 */}
           <View style={[styles.section, styles.borderTop]}>
             <Text style={styles.description}>
-              既に登録されている練習記録・大会記録をGoogleカレンダーに同期します。
+              {t("settings.googleCalendar.bulkSync.description")}
             </Text>
             <Pressable
               style={({ pressed }) => [
@@ -246,37 +252,40 @@ export const GoogleCalendarSyncSettings: React.FC<GoogleCalendarSyncSettingsProp
               onPress={handleBulkSync}
               disabled={bulkSyncing}
               accessibilityRole="button"
-              accessibilityLabel="既存データを同期"
+              accessibilityLabel={t("settings.googleCalendar.syncExistingAriaLabel")}
             >
               {bulkSyncing ? (
                 <ActivityIndicator color="#2563EB" size="small" />
               ) : (
-                <Text style={styles.syncButtonText}>既存データを同期</Text>
+                <Text style={styles.syncButtonText}>{t("settings.googleCalendar.bulkSync.button")}</Text>
               )}
             </Pressable>
 
             {/* 同期結果表示 */}
             {bulkSyncResult && (
               <View style={styles.resultContainer}>
-                <Text style={styles.resultTitle}>同期が完了しました</Text>
+                <Text style={styles.resultTitle}>{t("settings.googleCalendar.bulkSync.successTitle")}</Text>
                 {bulkSyncResult.practices.success > 0 ? (
                   <Text style={styles.resultText}>
-                    練習記録: {bulkSyncResult.practices.success}件を同期
+                    {t("settings.googleCalendar.bulkSync.practicesSuccess", { count: bulkSyncResult.practices.success })}
                   </Text>
                 ) : (
-                  <Text style={styles.resultText}>練習記録: 同期対象なし（既に同期済み）</Text>
+                  <Text style={styles.resultText}>
+                    {t("settings.googleCalendar.bulkSync.practicesNoneNeeded")}
+                  </Text>
                 )}
                 {bulkSyncResult.competitions.success > 0 ? (
                   <Text style={styles.resultText}>
-                    大会記録: {bulkSyncResult.competitions.success}件を同期
+                    {t("settings.googleCalendar.bulkSync.competitionsSuccess", { count: bulkSyncResult.competitions.success })}
                   </Text>
                 ) : (
-                  <Text style={styles.resultText}>大会記録: 同期対象なし（既に同期済み）</Text>
+                  <Text style={styles.resultText}>
+                    {t("settings.googleCalendar.bulkSync.competitionsNoneNeeded")}
+                  </Text>
                 )}
                 {(bulkSyncResult.practices.error > 0 || bulkSyncResult.competitions.error > 0) && (
                   <Text style={styles.resultErrorText}>
-                    エラー: 練習記録{bulkSyncResult.practices.error}件、大会記録
-                    {bulkSyncResult.competitions.error}件
+                    {t("settings.googleCalendar.bulkSync.errorCount", { practiceErrors: bulkSyncResult.practices.error, competitionErrors: bulkSyncResult.competitions.error })}
                   </Text>
                 )}
               </View>
@@ -292,9 +301,9 @@ export const GoogleCalendarSyncSettings: React.FC<GoogleCalendarSyncSettingsProp
               ]}
               onPress={handleDisconnectGoogle}
               accessibilityRole="button"
-              accessibilityLabel="連携を解除"
+              accessibilityLabel={t("settings.googleCalendar.disconnectAriaLabel")}
             >
-              <Text style={styles.disconnectButtonText}>連携を解除</Text>
+              <Text style={styles.disconnectButtonText}>{t("settings.googleCalendar.disconnectButton")}</Text>
             </Pressable>
           </View>
         </>

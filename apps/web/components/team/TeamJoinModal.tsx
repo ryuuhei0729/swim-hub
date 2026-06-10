@@ -4,7 +4,8 @@ import React, { useState } from "react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/contexts";
 import TeamJoinForm from "@/components/forms/TeamJoinForm";
-import { joinTeam } from "@/app/(authenticated)/teams/_actions/actions";
+import { joinTeam } from "@/app/[locale]/(authenticated)/teams/_actions/actions";
+import { useTranslations } from "next-intl";
 
 export interface TeamJoinModalProps {
   isOpen: boolean;
@@ -16,10 +17,11 @@ export default function TeamJoinModal({ isOpen, onClose, onSuccess }: TeamJoinMo
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
+  const t = useTranslations("teams");
 
   const handleSubmit = async (inviteId: string) => {
     if (!user) {
-      setError("ログインが必要です");
+      setError(t("joinModal.loginRequired"));
       return;
     }
 
@@ -31,7 +33,7 @@ export default function TeamJoinModal({ isOpen, onClose, onSuccess }: TeamJoinMo
       const result = await joinTeam(inviteId);
 
       if (!result.success) {
-        throw new Error(result.error || "チームの参加に失敗しました");
+        throw new Error(result.error || t("joinModal.joinFailed"));
       }
 
       // 成功時の処理（team_idを取得するために、membershipから取得）
@@ -40,13 +42,13 @@ export default function TeamJoinModal({ isOpen, onClose, onSuccess }: TeamJoinMo
         onSuccess(teamId);
         onClose();
       } else {
-        throw new Error("チームIDの取得に失敗しました");
+        throw new Error(t("joinModal.teamIdFailed"));
       }
     } catch (err) {
       console.error("チーム参加エラー:", err);
 
       // より詳細なエラーメッセージを設定
-      let errorMessage = "チームの参加に失敗しました";
+      let errorMessage = t("joinModal.joinFailed");
       if (err instanceof Error) {
         errorMessage = err.message;
       } else if (err && typeof err === "object" && "message" in err) {
@@ -83,7 +85,7 @@ export default function TeamJoinModal({ isOpen, onClose, onSuccess }: TeamJoinMo
           <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             {/* ヘッダー */}
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900">チームに参加</h3>
+              <h3 className="text-lg font-medium text-gray-900">{t("joinModal.title")}</h3>
               <button
                 type="button"
                 onClick={handleClose}

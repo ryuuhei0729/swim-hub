@@ -98,7 +98,7 @@ test.describe("認証フローのテスト", () => {
     await expect(errorMessage).toBeVisible();
 
     // ステップ5: ログインページに留まっていることを確認
-    expect(page.url()).toContain("/login");
+    expect(page.url()).toContain("/ja/login");
   });
 
   /**
@@ -119,17 +119,18 @@ test.describe("認証フローのテスト", () => {
     await userMenuButton.click();
     await page.waitForTimeout(500); // ドロップダウンが開くのを待つ
 
-    // ステップ2: ログアウトボタンをクリック
-    const logoutButton = page
-      .locator(
-        'button:has-text("ログアウト"), [data-testid="logout-button"], a:has-text("ログアウト")',
-      )
-      .first();
+    // ステップ2: ログアウトボタンをクリック (確認ダイアログが開く)
+    const logoutButton = page.locator('[data-testid="logout-button"]').first();
     await logoutButton.click();
+
+    // ステップ3: 確認ダイアログでログアウト確定
+    const confirmButton = page.locator('[data-testid="confirm-dialog-confirm-button"]');
+    await confirmButton.waitFor({ state: "visible", timeout: 5000 });
+    await confirmButton.click();
     await page.waitForURL("**/login", { timeout: 15000 });
 
     // ステップ3: ログインページにリダイレクトされることを確認
-    expect(page.url()).toContain("/login");
+    expect(page.url()).toContain("/ja/login");
 
     // ステップ4: ログインフォームが表示されることを確認
     await page.waitForSelector('[data-testid="email-input"]', { timeout: 10000 });
@@ -146,12 +147,12 @@ test.describe("認証フローのテスト", () => {
 
     // ステップ2: ログインページにリダイレクトされることを確認
     await page.waitForURL("**/login**", { timeout: 15000 });
-    expect(page.url()).toContain("/login");
+    expect(page.url()).toContain("/ja/login");
 
     // ステップ3: 他の保護ページでも同様にリダイレクトされることを確認
     await page.goto(URLS.MYPAGE);
     await page.waitForURL("**/login**", { timeout: 15000 });
-    expect(page.url()).toContain("/login");
+    expect(page.url()).toContain("/ja/login");
   });
 
   /**
@@ -198,13 +199,13 @@ test.describe("認証フローのテスト", () => {
     await page.waitForLoadState("networkidle");
 
     // ステップ2: パスワードリセットリンクをクリック
-    const resetLink = page.locator('a:has-text("パスワードを忘れた")');
+    const resetLink = page.locator('[data-testid="forgot-password-link"]');
     await resetLink.waitFor({ state: "visible", timeout: 10000 });
     await resetLink.click();
 
     // ステップ3: パスワードリセットページに遷移することを確認
     await page.waitForURL("**/reset-password**", { timeout: 10000 });
-    expect(page.url()).toContain("/reset-password");
+    expect(page.url()).toContain("/ja/reset-password");
 
     // ステップ4: メールアドレス入力フォームが表示されることを確認
     const emailInput = page
@@ -222,9 +223,9 @@ test.describe("認証フローのテスト", () => {
     await submitButton.click();
 
     // ステップ6: 送信成功メッセージが表示されることを確認
-    const successMessage = page.locator(".bg-green-100");
+    const successMessage = page.locator('[data-testid="reset-success-message"]');
     await successMessage.waitFor({ state: "visible", timeout: 10000 });
-    await expect(successMessage).toContainText("パスワードリセット用のメールを送信しました");
+    await expect(successMessage).toBeVisible();
   });
 
   /**

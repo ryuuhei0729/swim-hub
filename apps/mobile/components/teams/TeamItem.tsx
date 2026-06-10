@@ -1,5 +1,6 @@
 import React, { useMemo, useCallback } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 
 interface TeamItemProps {
@@ -12,19 +13,23 @@ interface TeamItemProps {
  * チーム一覧の1件を表示
  */
 const TeamItemComponent: React.FC<TeamItemProps> = ({ membership, onPress }) => {
+  const { t } = useTranslation();
   const team = useMemo(() => membership.teams, [membership.teams]);
   const role = useMemo(
-    () => (membership.role === "admin" ? "管理者" : "メンバー"),
-    [membership.role],
+    () =>
+      membership.role === "admin"
+        ? t("teams.mobile.roleAdmin")
+        : t("teams.mobile.roleMember"),
+    [membership.role, t],
   );
   const status = useMemo(
     () =>
       membership.status === "pending"
-        ? "承認待ち"
+        ? t("teams.mobile.statusPending")
         : membership.status === "approved"
-          ? "承認済み"
-          : "拒否",
-    [membership.status],
+          ? t("teams.mobile.statusApproved")
+          : t("teams.mobile.statusRejected"),
+    [membership.status, t],
   );
 
   const handlePress = useCallback(() => {

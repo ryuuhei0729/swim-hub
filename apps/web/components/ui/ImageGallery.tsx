@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { PhotoIcon } from "@heroicons/react/24/solid";
@@ -18,6 +19,7 @@ interface ImageGalleryProps {
 }
 
 export default function ImageGallery({ images, className = "" }: ImageGalleryProps) {
+  const t = useTranslations("common");
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -88,7 +90,7 @@ export default function ImageGallery({ images, className = "" }: ImageGalleryPro
       <div className={`${className}`}>
         <div className="flex items-center gap-2 mb-2">
           <PhotoIcon className="h-4 w-4 text-gray-500" />
-          <span className="text-xs font-medium text-gray-500">添付画像</span>
+          <span className="text-xs font-medium text-gray-500">{t("imageGallery.attachedImages")}</span>
         </div>
         <div className="flex gap-2 overflow-x-auto pb-1">
           {images.map((image, index) => (
@@ -100,7 +102,7 @@ export default function ImageGallery({ images, className = "" }: ImageGalleryPro
             >
               <Image
                 src={image.thumbnailUrl}
-                alt={image.fileName || `画像 ${index + 1}`}
+                alt={image.fileName || t("imageGallery.imageAlt", { index: index + 1 })}
                 fill
                 className="object-cover"
                 loading="lazy"
@@ -121,7 +123,7 @@ export default function ImageGallery({ images, className = "" }: ImageGalleryPro
             type="button"
             onClick={handleClose}
             className="absolute top-4 right-4 p-2 text-white/80 hover:text-white bg-black/40 hover:bg-black/60 rounded-full transition-colors z-10"
-            aria-label="閉じる"
+            aria-label={t("aria.close")}
           >
             <XMarkIcon className="h-6 w-6" />
           </button>
@@ -137,7 +139,7 @@ export default function ImageGallery({ images, className = "" }: ImageGalleryPro
               type="button"
               onClick={handlePrevious}
               className="absolute left-4 top-1/2 -translate-y-1/2 p-2 text-white/80 hover:text-white bg-black/40 hover:bg-black/60 rounded-full transition-colors z-10"
-              aria-label="前の画像"
+              aria-label={t("aria.previousImage")}
             >
               <ChevronLeftIcon className="h-8 w-8" />
             </button>
@@ -149,7 +151,7 @@ export default function ImageGallery({ images, className = "" }: ImageGalleryPro
               type="button"
               onClick={handleNext}
               className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-white/80 hover:text-white bg-black/40 hover:bg-black/60 rounded-full transition-colors z-10"
-              aria-label="次の画像"
+              aria-label={t("aria.nextImage")}
             >
               <ChevronRightIcon className="h-8 w-8" />
             </button>
@@ -165,7 +167,7 @@ export default function ImageGallery({ images, className = "" }: ImageGalleryPro
             )}
             <Image
               src={selectedImage.originalUrl}
-              alt={selectedImage.fileName || "拡大画像"}
+              alt={selectedImage.fileName || t("imageGallery.attachedImages")}
               fill
               className={`object-contain transition-opacity duration-200 ${
                 isLoading ? "opacity-0" : "opacity-100"

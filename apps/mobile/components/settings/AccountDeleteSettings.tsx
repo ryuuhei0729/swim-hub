@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { env } from "@/lib/env";
 
@@ -10,12 +11,13 @@ const WEB_API_URL = env.webApiUrl;
  * 設定画面でアカウントの完全削除を行う
  */
 export const AccountDeleteSettings: React.FC = () => {
+  const { t } = useTranslation();
   const { session, signOut } = useAuth();
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = useCallback(async () => {
     if (!session?.access_token) {
-      Alert.alert("エラー", "認証情報が見つかりません。再ログインしてください。");
+      Alert.alert(t("common.alertErrorTitle"), t("settings.accountDelete.authNotFound"));
       return;
     }
 
@@ -30,7 +32,7 @@ export const AccountDeleteSettings: React.FC = () => {
 
       if (!response.ok) {
         const data = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(data.error || "アカウントの削除に失敗しました");
+        throw new Error(data.error || t("settings.accountDelete.errors.deleteFailed"));
       }
 
       // ローカルセッション・キャッシュ・ストアをクリア
@@ -38,43 +40,44 @@ export const AccountDeleteSettings: React.FC = () => {
       await signOut();
     } catch (err) {
       setIsDeleting(false);
-      Alert.alert("エラー", err instanceof Error ? err.message : "アカウントの削除に失敗しました");
+      Alert.alert(
+        t("common.error"),
+        err instanceof Error ? err.message : t("settings.accountDelete.errors.deleteFailed"),
+      );
     }
-  }, [session, signOut]);
+  }, [session, signOut, t]);
 
   const handlePress = useCallback(() => {
     Alert.alert(
-      "アカウントを削除しますか？",
-      "この操作は取り消せません。すべての練習記録、大会記録、チーム情報、画像データが永久に削除されます。\n\n※チームの練習・大会データはチームに残ります。",
+      t("settings.accountDelete.mobileConfirmTitle"),
+      t("settings.accountDelete.mobileConfirmMessage"),
       [
-        { text: "キャンセル", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "削除する",
+          text: t("settings.accountDelete.confirmDialog.confirmLabel"),
           style: "destructive",
           onPress: handleDelete,
         },
       ],
     );
-  }, [handleDelete]);
+  }, [handleDelete, t]);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>アカウント削除</Text>
-      <Text style={styles.description}>
-        アカウントを削除すると、すべての個人データが完全に削除され、復元できません。
-      </Text>
+      <Text style={styles.title}>{t("settings.accountDelete.title")}</Text>
+      <Text style={styles.description}>{t("settings.accountDelete.description")}</Text>
       <Pressable
         style={[styles.deleteButton, isDeleting && styles.deleteButtonDisabled]}
         onPress={handlePress}
         disabled={isDeleting}
         accessibilityRole="button"
-        accessibilityLabel="アカウントを削除する"
-        accessibilityHint="アカウントとすべてのデータを完全に削除します"
+        accessibilityLabel={t("settings.accountDelete.deleteButtonAriaLabel")}
+        accessibilityHint={t("settings.accountDelete.deleteButtonAriaHint")}
       >
         {isDeleting ? (
           <ActivityIndicator color="#FFFFFF" size="small" />
         ) : (
-          <Text style={styles.deleteButtonText}>アカウントを削除する</Text>
+          <Text style={styles.deleteButtonText}>{t("settings.accountDelete.deleteButton")}</Text>
         )}
       </Pressable>
     </View>

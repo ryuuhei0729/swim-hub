@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 interface PremiumBadgeProps {
   /** 表示するメッセージ */
@@ -23,6 +24,9 @@ export default function PremiumBadge({
   href = "/settings?tab=subscription",
   className = "",
 }: PremiumBadgeProps) {
+  const t = useTranslations("forms.premium");
+  const upgradeText = t("upgradeText");
+
   return (
     <div
       className={`flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 ${className}`}
@@ -44,9 +48,9 @@ export default function PremiumBadge({
           className="mt-1 inline-block text-xs font-semibold text-amber-600 underline hover:text-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1 rounded"
           tabIndex={0}
           role="link"
-          aria-label="Premium にアップグレード"
+          aria-label={upgradeText}
         >
-          Premium にアップグレード
+          {upgradeText}
         </Link>
       </div>
     </div>

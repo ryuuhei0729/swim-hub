@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import BaseModal from "@/components/ui/BaseModal";
 import type { TeamGroupWithCount } from "../hooks/useTeamGroups";
 
@@ -23,6 +24,7 @@ export const GroupFormModal: React.FC<GroupFormModalProps> = ({
   saving,
   error,
 }) => {
+  const t = useTranslations("teamsAdmin");
   const [categoryMode, setCategoryMode] = useState<"existing" | "new">("existing");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [newCategory, setNewCategory] = useState("");
@@ -65,13 +67,13 @@ export const GroupFormModal: React.FC<GroupFormModalProps> = ({
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      title={editingGroup ? "グループを編集" : "グループを追加"}
+      title={editingGroup ? t("groupForm.editTitle") : t("groupForm.createTitle")}
       size="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* カテゴリ */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">カテゴリ</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t("groupForm.categoryLabel")}</label>
           {existingCategories.length > 0 && (
             <div className="flex gap-2 mb-2">
               <button
@@ -83,7 +85,7 @@ export const GroupFormModal: React.FC<GroupFormModalProps> = ({
                     : "bg-white border-gray-300 text-gray-600 hover:bg-gray-50"
                 }`}
               >
-                既存から選択
+                {t("groupForm.selectExistingButton")}
               </button>
               <button
                 type="button"
@@ -94,7 +96,7 @@ export const GroupFormModal: React.FC<GroupFormModalProps> = ({
                     : "bg-white border-gray-300 text-gray-600 hover:bg-gray-50"
                 }`}
               >
-                新規カテゴリ
+                {t("groupForm.newCategoryButton")}
               </button>
             </div>
           )}
@@ -104,7 +106,7 @@ export const GroupFormModal: React.FC<GroupFormModalProps> = ({
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
-              <option value="">カテゴリなし</option>
+              <option value="">{t("groupForm.noCategoryOption")}</option>
               {existingCategories.map((cat) => (
                 <option key={cat} value={cat}>
                   {cat}
@@ -116,30 +118,28 @@ export const GroupFormModal: React.FC<GroupFormModalProps> = ({
               type="text"
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value)}
-              placeholder="例: 学年、距離、S1"
+              placeholder={t("groupForm.categoryPlaceholder")}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           )}
-          <p className="mt-1 text-xs text-gray-500">同じ分類のグループをまとめるための名前です</p>
+          <p className="mt-1 text-xs text-gray-500">{t("groupForm.categoryHint")}</p>
         </div>
 
         {/* グループ名 */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            グループ名 <span className="text-red-500">*</span>
+            {t("groupForm.nameLabel")} <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder={editingGroup ? "例: スプリント" : "例: スプリント, ディスタンス, ミドル"}
+            placeholder={editingGroup ? t("groupForm.namePlaceholderEdit") : t("groupForm.namePlaceholderCreate")}
             required
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
           {!editingGroup && (
-            <p className="mt-1 text-xs text-gray-500">
-              カンマ区切りで複数のグループを一度に作成できます
-            </p>
+            <p className="mt-1 text-xs text-gray-500">{t("groupForm.multipleHint")}</p>
           )}
         </div>
 
@@ -157,14 +157,14 @@ export const GroupFormModal: React.FC<GroupFormModalProps> = ({
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            キャンセル
+            {t("groupForm.cancelButton")}
           </button>
           <button
             type="submit"
             disabled={!isValid || saving}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {saving ? "保存中..." : editingGroup ? "更新" : "作成"}
+            {saving ? t("groupForm.saving") : editingGroup ? t("groupForm.updateButton") : t("groupForm.createButton")}
           </button>
         </div>
       </form>

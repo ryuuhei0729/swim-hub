@@ -2,6 +2,8 @@ import React, { useMemo, useCallback } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { format } from "date-fns";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import type { PracticeWithLogs } from "@swim-hub/shared/types";
 import { formatCircleTime } from "@/utils/formatters";
 
@@ -10,16 +12,17 @@ interface PracticeItemProps {
   onPress?: (practice: PracticeWithLogs) => void;
 }
 
-// 種目の略称を日本語に変換
-const getStyleName = (style: string): string => {
-  const styleMap: Record<string, string> = {
-    fr: "自由形",
-    ba: "背泳ぎ",
-    br: "平泳ぎ",
-    fly: "バタフライ",
-    im: "個人メドレー",
+// 種目の略称をローカライズ。t を引数で受け取り pure に保つ
+const getStyleName = (t: TFunction, style: string): string => {
+  const styleKeyMap: Record<string, string> = {
+    fr: "practice.styles.Fr",
+    ba: "practice.styles.Ba",
+    br: "practice.styles.Br",
+    fly: "practice.styles.Fly",
+    im: "practice.styles.IM",
   };
-  return styleMap[style.toLowerCase()] || style;
+  const key = styleKeyMap[style.toLowerCase()];
+  return key ? t(key) : style;
 };
 
 /**
@@ -27,11 +30,16 @@ const getStyleName = (style: string): string => {
  * 練習記録の1件を表示
  */
 const PracticeItemComponent: React.FC<PracticeItemProps> = ({ practice, onPress }) => {
+  const { t } = useTranslation();
+
   // 日付をフォーマット（M/d形式、年と曜日なし）
   const formattedDate = useMemo(() => format(new Date(practice.date), "M/d"), [practice.date]);
 
-  // タイトル（nullの場合は「練習」）
-  const title = useMemo(() => practice.title || "練習", [practice.title]);
+  // タイトル（null の場合は既存 client.practiceTitle = "練習" を流用）
+  const title = useMemo(
+    () => practice.title || t("practice.client.practiceTitle"),
+    [practice.title, t],
+  );
 
   // 最初のログの情報を取得（複数ログがある場合は最初のものを表示）
   const firstLog = useMemo(() => practice.practice_logs?.[0], [practice.practice_logs]);
@@ -44,7 +52,13 @@ const PracticeItemComponent: React.FC<PracticeItemProps> = ({ practice, onPress 
 
     // 距離・本数・セット
     if (firstLog.distance && firstLog.rep_count && firstLog.set_count) {
-      parts.push(`${firstLog.distance}m × ${firstLog.rep_count}本 × ${firstLog.set_count}セット`);
+      parts.push(
+        t("practice.page.distanceFormat", {
+          distance: firstLog.distance,
+          reps: firstLog.rep_count,
+          sets: firstLog.set_count,
+        }),
+      );
     }
 
     // サークル
@@ -58,11 +72,11 @@ const PracticeItemComponent: React.FC<PracticeItemProps> = ({ practice, onPress 
 
     // 種目
     if (firstLog.style) {
-      parts.push(getStyleName(firstLog.style));
+      parts.push(getStyleName(t, firstLog.style));
     }
 
     return parts.join(" / ");
-  }, [firstLog]);
+  }, [firstLog, t]);
 
   // タグ情報を取得
   const tags = useMemo(() => {

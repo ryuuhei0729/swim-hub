@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, Alert, Platform, Linking } from "rea
 import * as Clipboard from "expo-clipboard";
 import { Feather } from "@expo/vector-icons";
 import { useRoute, RouteProp } from "@react-navigation/native";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import {
@@ -25,6 +26,7 @@ export const TeamDetailScreen: React.FC = () => {
   const route = useRoute<TeamDetailScreenRouteProp>();
   const { teamId } = route.params;
   const { supabase, user } = useAuth();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TeamTabType>("members");
   const [isCopied, setIsCopied] = useState(false);
 
@@ -60,7 +62,7 @@ export const TeamDetailScreen: React.FC = () => {
             setTimeout(() => setIsCopied(false), 2000);
           },
           () => {
-            window.alert("コピーに失敗しました");
+            window.alert(t("teams.mobile.copyFailed"));
           },
         );
       } else {
@@ -76,7 +78,7 @@ export const TeamDetailScreen: React.FC = () => {
           setIsCopied(true);
           setTimeout(() => setIsCopied(false), 2000);
         } catch {
-          window.alert("コピーに失敗しました");
+          window.alert(t("teams.mobile.copyFailed"));
         }
         document.body.removeChild(textArea);
       }
@@ -86,7 +88,7 @@ export const TeamDetailScreen: React.FC = () => {
         setIsCopied(true);
         setTimeout(() => setIsCopied(false), 2000);
       } catch {
-        Alert.alert("エラー", "コピーに失敗しました", [{ text: "OK" }]);
+        Alert.alert(t("common.error"), t("teams.mobile.copyFailed"), [{ text: "OK" }]);
       }
     }
   };
@@ -97,14 +99,11 @@ export const TeamDetailScreen: React.FC = () => {
       <View style={styles.container}>
         <View style={styles.pendingContainer}>
           <Feather name="clock" size={48} color="#F59E0B" />
-          <Text style={styles.pendingTitle}>承認待ち</Text>
-          <Text style={styles.pendingMessage}>
-            チームへの参加リクエストは管理者の承認待ちです。{"\n"}
-            承認されるまでしばらくお待ちください。
-          </Text>
+          <Text style={styles.pendingTitle}>{t("teams.mobile.statusPending")}</Text>
+          <Text style={styles.pendingMessage}>{t("teams.mobile.pendingMessage")}</Text>
           <Pressable style={styles.pendingRetryButton} onPress={() => refetch()}>
             <Feather name="refresh-cw" size={16} color="#FFFFFF" />
-            <Text style={styles.pendingRetryText}>状態を更新</Text>
+            <Text style={styles.pendingRetryText}>{t("teams.mobile.pendingRetry")}</Text>
           </Pressable>
         </View>
       </View>
@@ -116,7 +115,7 @@ export const TeamDetailScreen: React.FC = () => {
     return (
       <View style={styles.container}>
         <ErrorView
-          message={error.message || "チーム情報の取得に失敗しました"}
+          message={error.message || t("teams.mobile.fetchTeamFailed")}
           onRetry={() => refetch()}
           fullScreen
         />
@@ -128,7 +127,7 @@ export const TeamDetailScreen: React.FC = () => {
   if (isLoading && !currentTeam) {
     return (
       <View style={styles.container}>
-        <LoadingSpinner fullScreen message="チーム情報を読み込み中..." />
+        <LoadingSpinner fullScreen message={t("teams.mobile.loadingTeam")} />
       </View>
     );
   }
@@ -138,7 +137,7 @@ export const TeamDetailScreen: React.FC = () => {
     return (
       <View style={styles.container}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>チームが見つかりません</Text>
+          <Text style={styles.errorText}>{t("teams.mobile.teamNotFound")}</Text>
         </View>
       </View>
     );
@@ -169,15 +168,15 @@ export const TeamDetailScreen: React.FC = () => {
             <Feather name="monitor" size={48} color="#9CA3AF" />
             <Text style={styles.webGuideTitle}>
               {activeTab === "groups"
-                ? "グループ管理"
+                ? t("teams.mobile.tabGroupManagement")
                 : activeTab === "practices"
-                  ? "練習管理"
-                  : "大会管理"}
+                  ? t("teams.mobile.tabPracticeManagement")
+                  : t("teams.mobile.tabCompetitionManagement")}
             </Text>
-            <Text style={styles.webGuideText}>チーム管理機能に関してはWEB版をご利用ください。</Text>
+            <Text style={styles.webGuideText}>{t("teams.mobile.webGuide")}</Text>
             <Pressable style={styles.webGuideButton} onPress={handleOpenWebApp}>
               <Feather name="external-link" size={16} color="#FFFFFF" />
-              <Text style={styles.webGuideButtonText}>WEB版を開く</Text>
+              <Text style={styles.webGuideButtonText}>{t("teams.mobile.webGuideButton")}</Text>
             </Pressable>
             <Text style={styles.webGuideUrl}>{WEB_APP_URL}</Text>
           </View>

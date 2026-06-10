@@ -18,11 +18,13 @@ import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { EntryAPI } from "@apps/shared/api/entries";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { useCompetitionFormStore, type EntryInfo } from "@/stores/competitionFormStore";
 import { formatTime } from "@/utils/formatters";
+import { localizedStyleName } from "@/utils/styleName";
 import { parseTime } from "@apps/shared/utils/time";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import type { MainStackParamList } from "@/navigation/types";
@@ -49,6 +51,7 @@ export const EntryLogFormScreen: React.FC = () => {
   const { competitionId, entryId, date } = route.params;
   const { supabase } = useAuth();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const entryApi = useMemo(() => new EntryAPI(supabase), [supabase]);
 
   // フォーム状態
@@ -87,13 +90,13 @@ export const EntryLogFormScreen: React.FC = () => {
         setSwimStyles(stylesData);
       } catch (error) {
         console.error("種目取得エラー:", error);
-        Alert.alert("エラー", "種目の取得に失敗しました");
+        Alert.alert(t("common.error"), t("competition.entry.stylesFetchFailed"));
       } finally {
         setLoadingStyles(false);
       }
     };
     fetchStyles();
-  }, [supabase]);
+  }, [supabase, t]);
 
   // エントリーデータを取得（編集モードの場合）
   useEffect(() => {
@@ -108,14 +111,14 @@ export const EntryLogFormScreen: React.FC = () => {
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        if (!user) throw new Error("認証が必要です");
+        if (!user) throw new Error(t("auth.errorMap.sessionNotFound"));
 
         // まず、指定されたエントリーを取得してcompetitionIdを取得
         let competitionIdFromEntry: string;
         try {
           const firstEntry = await entryApi.getEntry(entryId);
           if (!firstEntry || !firstEntry.competition_id) {
-            Alert.alert("エラー", "エントリーデータが見つかりませんでした");
+            Alert.alert(t("common.error"), t("competition.entry.entryDataNotFound"));
             navigation.goBack();
             return;
           }
@@ -127,9 +130,9 @@ export const EntryLogFormScreen: React.FC = () => {
           const errorMessage = error instanceof Error ? error.message : String(error);
           const errorCode =
             error && typeof error === "object" && "code" in error ? String(error.code) : undefined;
-          if (errorMessage === "アクセスが拒否されました" || errorCode === "PGRST116") {
+          if (errorMessage === t("auth.errorMap.accessDenied") || errorCode === "PGRST116") {
             // エントリーが見つからない場合
-            Alert.alert("エラー", "エントリーが見つかりませんでした");
+            Alert.alert(t("common.error"), t("competition.entry.entryNotFound"));
             navigation.goBack();
             return;
           }
@@ -147,7 +150,7 @@ export const EntryLogFormScreen: React.FC = () => {
         if (!isMounted) return;
 
         if (!userEntries || userEntries.length === 0) {
-          Alert.alert("エラー", "エントリーデータが見つかりませんでした");
+          Alert.alert(t("common.error"), t("competition.entry.entryDataNotFound"));
           navigation.goBack();
           return;
         }
@@ -164,7 +167,7 @@ export const EntryLogFormScreen: React.FC = () => {
       } catch (error) {
         if (!isMounted) return;
         console.error("エントリー取得エラー:", error);
-        Alert.alert("エラー", "エントリーの取得に失敗しました");
+        Alert.alert(t("common.error"), t("competition.entry.entryFetchFailed"));
         navigation.goBack();
       } finally {
         if (isMounted) {
@@ -178,7 +181,7 @@ export const EntryLogFormScreen: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [entryId, swimStyles.length, loadingStyles, supabase, navigation, entryApi]);
+  }, [entryId, swimStyles.length, loadingStyles, supabase, navigation, entryApi, t]);
 
   // 新規作成モードの場合、最初のエントリーにデフォルトの種目を設定
   useEffect(() => {
@@ -209,14 +212,14 @@ export const EntryLogFormScreen: React.FC = () => {
 
     // 少なくとも1つのエントリーが必要
     if (entries.length === 0) {
-      Alert.alert("エラー", "少なくとも1つのエントリーを追加してください");
+      Alert.alert(t("common.error"), t("competition.entry.addAtLeastOne"));
       return false;
     }
 
     // 種目が選択されているか
     entries.forEach((entry, index) => {
       if (!entry.styleId) {
-        newErrors[`style-${index}`] = "種目を選択してください";
+        newErrors[`style-${index}`] = t("competition.entry.selectStyleRequired");
       }
     });
 
@@ -262,8 +265,7 @@ export const EntryLogFormScreen: React.FC = () => {
               // 不正な形式の場合、エラーメッセージを設定
               setErrors((prev) => ({
                 ...prev,
-                [`entryTime-${index}`]:
-                  "タイムの形式が正しくありません（例: 1:23.45 または 83.45）",
+                [`entryTime-${index}`]: t("competition.entry.timeFormatInvalid"),
               }));
             } else {
               // 正常な形式の場合、エラーをクリア
@@ -333,7 +335,7 @@ export const EntryLogFormScreen: React.FC = () => {
     const {
       data: { user },
     } = await supabaseClient.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw new Error(t("auth.errorMap.sessionNotFound"));
 
     // 編集モードの場合、既存のエントリーをすべて取得
     const existingEntriesMap = new Map<string, { id: string; style_id: number }>();
@@ -376,8 +378,10 @@ export const EntryLogFormScreen: React.FC = () => {
           // 変更後の種目が既に他のエントリーで使用されていないかチェック
           const existingEntryWithSameStyle = existingEntriesMap.get(String(styleIdNum));
           if (existingEntryWithSameStyle && existingEntryWithSameStyle.id !== entryData.id) {
-            const styleName = styles.find((s) => s.id === styleIdNum)?.name_jp || "不明";
-            throw new Error(`種目「${styleName}」は既にエントリー済みです`);
+            const styleName =
+              localizedStyleName(styles.find((s) => s.id === styleIdNum), t) ||
+              t("recordMobile.unknownValue");
+            throw new Error(t("competition.entry.duplicateStyle", { styleName }));
           }
         }
 
@@ -426,7 +430,7 @@ export const EntryLogFormScreen: React.FC = () => {
       if (style && entry) {
         createdEntriesList.push({
           styleId: entry.style_id,
-          styleName: style.name_jp,
+          styleName: localizedStyleName(style, t),
           entryTime: entry.entry_time ?? undefined,
         });
       }
@@ -473,8 +477,8 @@ export const EntryLogFormScreen: React.FC = () => {
     } catch (error) {
       console.error("エントリー登録エラー:", error);
       Alert.alert(
-        "エラー",
-        error instanceof Error ? error.message : "エントリー登録に失敗しました",
+        t("common.error"),
+        error instanceof Error ? error.message : t("competition.entry.registrationFailed"),
         [{ text: "OK" }],
       );
     } finally {
@@ -516,8 +520,8 @@ export const EntryLogFormScreen: React.FC = () => {
     } catch (error) {
       console.error("エントリー登録エラー:", error);
       Alert.alert(
-        "エラー",
-        error instanceof Error ? error.message : "エントリー登録に失敗しました",
+        t("common.error"),
+        error instanceof Error ? error.message : t("competition.entry.registrationFailed"),
         [{ text: "OK" }],
       );
     } finally {
@@ -542,7 +546,9 @@ export const EntryLogFormScreen: React.FC = () => {
       <View style={styles.container}>
         <LoadingSpinner
           fullScreen
-          message={loadingEntry ? "エントリーを読み込み中..." : "種目を読み込み中..."}
+          message={
+            loadingEntry ? t("competition.mobile.entryLoading") : t("competition.mobile.stylesLoading")
+          }
         />
       </View>
     );
@@ -557,10 +563,10 @@ export const EntryLogFormScreen: React.FC = () => {
         {/* エントリー種目セクション */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.label}>エントリー種目</Text>
+            <Text style={styles.label}>{t("competition.entry.title")}</Text>
             <Pressable style={styles.addButton} onPress={addEntry} disabled={loading}>
               <Feather name="plus" size={16} color="#2563EB" />
-              <Text style={styles.addButtonText}>種目を追加</Text>
+              <Text style={styles.addButtonText}>{t("competition.entry.addStyle")}</Text>
             </Pressable>
           </View>
         </View>
@@ -570,7 +576,9 @@ export const EntryLogFormScreen: React.FC = () => {
           <React.Fragment key={entry.id}>
             {/* エントリーヘッダー */}
             <View style={styles.entryHeaderSection}>
-              <Text style={styles.entryNumber}>種目 {index + 1}</Text>
+              <Text style={styles.entryNumber}>
+                {t("competition.entry.styleNumber", { index: index + 1 })}
+              </Text>
               {entries.length > 1 && (
                 <Pressable
                   style={styles.removeButton}
@@ -585,7 +593,7 @@ export const EntryLogFormScreen: React.FC = () => {
             {/* 種目選択 */}
             <View style={styles.section}>
               <Text style={styles.label}>
-                種目 <Text style={styles.required}>*</Text>
+                {t("competition.entry.styleLabel")} <Text style={styles.required}>*</Text>
               </Text>
               <Pressable
                 ref={(ref) => {
@@ -606,9 +614,11 @@ export const EntryLogFormScreen: React.FC = () => {
                   ]}
                 >
                   {entry.styleId
-                    ? swimStyles.find((s) => s.id.toString() === entry.styleId)?.name_jp ||
-                      "種目を選択"
-                    : "種目を選択"}
+                    ? localizedStyleName(
+                        swimStyles.find((s) => s.id.toString() === entry.styleId),
+                        t,
+                      ) || t("competition.entry.selectStyle")
+                    : t("competition.entry.selectStyle")}
                 </Text>
                 <Feather name="chevron-down" size={20} color="#6B7280" />
               </Pressable>
@@ -619,12 +629,12 @@ export const EntryLogFormScreen: React.FC = () => {
 
             {/* エントリータイム */}
             <View style={styles.section}>
-              <Text style={styles.label}>エントリータイム</Text>
+              <Text style={styles.label}>{t("competition.entry.entryTimeLabel")}</Text>
               <TextInput
                 style={[styles.input, errors[`entryTime-${index}`] && styles.inputError]}
                 value={entry.entryTimeDisplayValue}
                 onChangeText={(text) => updateEntry(entry.id, { entryTimeDisplayValue: text })}
-                placeholder="例: 2:05.00 または 2-05-00"
+                placeholder={t("competition.entry.entryTimePlaceholder")}
                 placeholderTextColor="#9CA3AF"
                 keyboardType="default"
                 editable={!loading}
@@ -633,18 +643,20 @@ export const EntryLogFormScreen: React.FC = () => {
                 <Text style={styles.errorText}>{errors[`entryTime-${index}`]}</Text>
               )}
               {entry.entryTime > 0 && !errors[`entryTime-${index}`] && (
-                <Text style={styles.timeHint}>入力値: {formatTime(entry.entryTime)}</Text>
+                <Text style={styles.timeHint}>
+                  {t("competition.entry.inputValueHint", { time: formatTime(entry.entryTime) })}
+                </Text>
               )}
             </View>
 
             {/* メモ */}
             <View style={styles.section}>
-              <Text style={styles.label}>メモ</Text>
+              <Text style={styles.label}>{t("competition.entry.memoLabel")}</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
                 value={entry.note}
                 onChangeText={(text) => updateEntry(entry.id, { note: text })}
-                placeholder="メモ（任意）"
+                placeholder={t("competition.entry.memoPlaceholder")}
                 placeholderTextColor="#9CA3AF"
                 multiline
                 numberOfLines={3}
@@ -697,7 +709,7 @@ export const EntryLogFormScreen: React.FC = () => {
                         isSelected && styles.dropdownOptionTextSelected,
                       ]}
                     >
-                      {style.name_jp}
+                      {localizedStyleName(style, t)}
                     </Text>
                     {isSelected && <Feather name="check" size={16} color="#2563EB" />}
                   </Pressable>
@@ -716,7 +728,7 @@ export const EntryLogFormScreen: React.FC = () => {
             onPress={handleSkip}
             disabled={loading}
           >
-            <Text style={styles.cancelButtonText}>スキップ</Text>
+            <Text style={styles.cancelButtonText}>{t("competition.entry.skipButton")}</Text>
           </Pressable>
           <Pressable
             style={[styles.button, styles.saveButton, loading && styles.buttonDisabled]}
@@ -726,7 +738,7 @@ export const EntryLogFormScreen: React.FC = () => {
             {loading ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Text style={styles.saveButtonText}>保存</Text>
+              <Text style={styles.saveButtonText}>{t("common.save")}</Text>
             )}
           </Pressable>
         </View>
@@ -740,7 +752,9 @@ export const EntryLogFormScreen: React.FC = () => {
           {loading ? (
             <ActivityIndicator size="small" color="#2563EB" />
           ) : (
-            <Text style={styles.continueButtonText}>続けて大会記録を作成</Text>
+            <Text style={styles.continueButtonText}>
+              {t("competition.entry.continueToRecord")}
+            </Text>
           )}
         </Pressable>
       </View>

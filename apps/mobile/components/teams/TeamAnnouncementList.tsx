@@ -1,8 +1,9 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
+import { useTranslation } from "react-i18next";
+import { formatDateTime } from "@apps/shared/utils/date";
+import { useDateLocale } from "@/hooks/useDateLocale";
 import type { TeamAnnouncement } from "@swim-hub/shared/types";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
@@ -33,11 +34,14 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
   onEdit,
   onDelete,
 }) => {
+  const { t } = useTranslation();
+  const locale = useDateLocale();
+
   // ローディング状態
   if (isLoading && announcements.length === 0) {
     return (
       <View style={styles.container}>
-        <LoadingSpinner message="お知らせを読み込み中..." />
+        <LoadingSpinner message={t("teams.mobile.announcementLoading")} />
       </View>
     );
   }
@@ -47,7 +51,7 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
     return (
       <View style={styles.container}>
         <ErrorView
-          message={error.message || "お知らせ一覧の取得に失敗しました"}
+          message={error.message || t("teams.mobile.announcementFetchFailed")}
           onRetry={onRetry}
         />
       </View>
@@ -55,8 +59,8 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
   }
 
   // 日付フォーマット
-  const formatDate = (dateString: string): string => {
-    return format(new Date(dateString), "yyyy年M月d日 HH:mm", { locale: ja });
+  const formatAnnouncementDate = (dateString: string): string => {
+    return formatDateTime(dateString, "long", locale);
   };
 
   return (
@@ -65,7 +69,7 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
       {isAdmin && onCreateNew && (
         <View style={styles.actionBar}>
           <Pressable style={styles.createButton} onPress={onCreateNew}>
-            <Text style={styles.createButtonText}>+ お知らせを作成</Text>
+            <Text style={styles.createButtonText}>{t("teams.mobile.announcementListCreateButton")}</Text>
           </Pressable>
         </View>
       )}
@@ -77,8 +81,8 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => {
             const isPublished = item.is_published;
-            const startAt = item.start_at ? formatDate(item.start_at) : null;
-            const endAt = item.end_at ? formatDate(item.end_at) : null;
+            const startAt = item.start_at ? formatAnnouncementDate(item.start_at) : null;
+            const endAt = item.end_at ? formatAnnouncementDate(item.end_at) : null;
 
             return (
               <View style={styles.announcementItem}>
@@ -89,17 +93,17 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
                     </Text>
                     <View style={styles.announcementMeta}>
                       <Text style={styles.announcementDate}>
-                        {item.created_at ? formatDate(item.created_at) : "-"}
+                        {item.created_at ? formatAnnouncementDate(item.created_at) : "-"}
                       </Text>
                       {!isPublished && (
                         <View style={styles.draftBadge}>
-                          <Text style={styles.draftBadgeText}>下書き</Text>
+                          <Text style={styles.draftBadgeText}>{t("common.draft")}</Text>
                         </View>
                       )}
                     </View>
                     {startAt && endAt && (
                       <Text style={styles.announcementPeriod}>
-                        公開期間: {startAt} 〜 {endAt}
+                        {t("teams.mobile.announcementPublishPeriod", { start: startAt, end: endAt })}
                       </Text>
                     )}
                   </View>
@@ -107,7 +111,7 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
                     <View style={styles.announcementActions}>
                       {onEdit && (
                         <Pressable style={styles.actionButton} onPress={() => onEdit(item)}>
-                          <Text style={styles.actionButtonText}>編集</Text>
+                          <Text style={styles.actionButtonText}>{t("common.edit")}</Text>
                         </Pressable>
                       )}
                       {onDelete && (
@@ -116,7 +120,7 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
                           onPress={() => onDelete(item.id)}
                         >
                           <Text style={[styles.actionButtonText, styles.deleteButtonText]}>
-                            削除
+                            {t("common.delete")}
                           </Text>
                         </Pressable>
                       )}
@@ -135,10 +139,10 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
         />
       ) : (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>お知らせがありません</Text>
+          <Text style={styles.emptyText}>{t("teams.mobile.announcementListEmpty")}</Text>
           {isAdmin && onCreateNew && (
             <Pressable style={styles.emptyCreateButton} onPress={onCreateNew}>
-              <Text style={styles.emptyCreateButtonText}>お知らせを作成</Text>
+              <Text style={styles.emptyCreateButtonText}>{t("teams.mobile.announcementListEmptyCreate")}</Text>
             </Pressable>
           )}
         </View>

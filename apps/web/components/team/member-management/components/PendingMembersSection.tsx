@@ -5,6 +5,7 @@ import Avatar from "@/components/ui/Avatar";
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import { formatDate } from "@apps/shared/utils/date";
 import type { TeamMember } from "../hooks/useMembers";
+import { useTranslations } from "next-intl";
 
 interface PendingMembersSectionProps {
   pendingMembers: TeamMember[];
@@ -22,6 +23,8 @@ export const PendingMembersSection: React.FC<PendingMembersSectionProps> = ({
   onApprove,
   onReject,
 }) => {
+  const t = useTranslations("teams");
+
   if (pendingMembers.length === 0) {
     return null;
   }
@@ -29,7 +32,7 @@ export const PendingMembersSection: React.FC<PendingMembersSectionProps> = ({
   return (
     <div className="mb-6 border-b border-gray-200 pb-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">
-        承認待ち ({pendingMembers.length}件)
+        {t("pendingMembers.sectionTitle", { count: pendingMembers.length })}
       </h3>
       {isLoading ? (
         <div className="animate-pulse space-y-3">
@@ -64,7 +67,7 @@ export const PendingMembersSection: React.FC<PendingMembersSectionProps> = ({
                     {pendingMember.users?.name || "Unknown User"}
                   </p>
                   <p className="text-xs text-gray-500">
-                    申請日:{" "}
+                    {t("pending.appliedAtLabel")}{" "}
                     {formatDate(pendingMember.created_at || pendingMember.joined_at, "numeric")}
                   </p>
                 </div>
@@ -75,14 +78,14 @@ export const PendingMembersSection: React.FC<PendingMembersSectionProps> = ({
                   className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                 >
                   <CheckCircleIcon className="h-4 w-4 mr-1" />
-                  承認
+                  {t("pendingMembers.approveButton")}
                 </button>
                 <button
                   onClick={() => onReject(pendingMember.id)}
                   className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                 >
                   <XCircleIcon className="h-4 w-4 mr-1" />
-                  拒否
+                  {t("pendingMembers.rejectButton")}
                 </button>
               </div>
             </div>

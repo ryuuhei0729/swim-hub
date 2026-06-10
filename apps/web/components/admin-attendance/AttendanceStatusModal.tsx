@@ -1,6 +1,9 @@
+"use client";
+
 import React from "react";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale/ja";
+import { useTranslations, useLocale } from "next-intl";
+import { format, isValid } from "date-fns";
+import { ja, enUS } from "date-fns/locale";
 import BaseModal from "@/components/ui/BaseModal";
 import { TeamEvent, TeamAttendanceWithDetails } from "@swim-hub/shared/types";
 import { TeamMember } from "@swim-hub/shared/utils/team";
@@ -23,21 +26,26 @@ export function AttendanceStatusModal({
   loading,
   onClose,
 }: AttendanceStatusModalProps) {
+  const t = useTranslations("teamsAdmin");
+  const locale = useLocale();
+  const dateLocale = locale === "ja" ? ja : enUS;
+  const datePattern = locale === "ja" ? "MMMM d日 (EEE)" : "MMMM d (EEE)";
   const formatEventDate = (dateStr: string) => {
-    return format(new Date(dateStr), "MMMM d日 (EEE)", { locale: ja });
+    const date = new Date(dateStr);
+    return isValid(date) ? format(date, datePattern, { locale: dateLocale }) : "-";
   };
 
   return (
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      title={event ? `${formatEventDate(event.date)}の出欠状況` : ""}
+      title={event ? `${formatEventDate(event.date)}${t("attendanceStatus.titleSuffix")}` : ""}
       size="lg"
     >
       {loading ? (
         <div className="text-center py-6">
           <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
-          <p className="mt-1.5 text-sm text-gray-500">読み込み中...</p>
+          <p className="mt-1.5 text-sm text-gray-500">{t("attendanceStatus.loading")}</p>
         </div>
       ) : (
         <div className="space-y-4">

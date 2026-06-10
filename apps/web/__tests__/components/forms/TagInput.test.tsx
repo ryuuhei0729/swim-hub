@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { renderWithI18n as render, screen, waitFor } from "../../utils/render";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import TagInput from "@/components/forms/TagInput";

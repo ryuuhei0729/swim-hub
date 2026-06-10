@@ -7,6 +7,7 @@ import { Platform } from "react-native";
 import { parseISO } from "date-fns/parseISO";
 import { isValid } from "date-fns/isValid";
 import type { Practice, Competition } from "@swim-hub/shared/types";
+import i18n from "@/i18n";
 
 export interface IOSCalendarEvent {
   title: string;
@@ -127,7 +128,7 @@ export const practiceToIOSEvent = (
   practice: Practice,
   teamName?: string | null,
 ): IOSCalendarEvent | null => {
-  const title = practice.title || "練習";
+  const title = practice.title || i18n.t("common.app.defaultPracticeTitle");
   const eventTitle = teamName ? `[${teamName}] ${title}` : title;
 
   const date = parseISO(practice.date);
@@ -152,7 +153,7 @@ export const competitionToIOSEvent = (
   competition: Competition,
   teamName?: string | null,
 ): IOSCalendarEvent | null => {
-  const title = competition.title || "大会";
+  const title = competition.title || i18n.t("common.app.defaultCompetitionTitle");
   const eventTitle = teamName ? `[${teamName}] ${title}` : title;
 
   const startDate = parseISO(competition.date);
@@ -189,7 +190,7 @@ export const createCalendarEvent = async (
     const targetCalendarId = calendarId || (await getDefaultCalendarId());
 
     if (!targetCalendarId) {
-      return { success: false, error: "カレンダーが見つかりません" };
+      return { success: false, error: i18n.t("common.app.iosCalendarNotFound") };
     }
 
     const eventId = await Calendar.createEventAsync(targetCalendarId, {
@@ -206,7 +207,7 @@ export const createCalendarEvent = async (
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "イベントの作成に失敗しました",
+      error: error instanceof Error ? error.message : i18n.t("common.app.iosEventCreateFailed"),
     };
   }
 };
@@ -233,7 +234,7 @@ export const updateCalendarEvent = async (
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "イベントの更新に失敗しました",
+      error: error instanceof Error ? error.message : i18n.t("common.app.iosEventUpdateFailed"),
     };
   }
 };
@@ -248,7 +249,7 @@ export const deleteCalendarEvent = async (eventId: string): Promise<SyncResult> 
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "イベントの削除に失敗しました",
+      error: error instanceof Error ? error.message : i18n.t("common.app.iosEventDeleteFailed"),
     };
   }
 };

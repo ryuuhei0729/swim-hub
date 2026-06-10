@@ -11,8 +11,12 @@
 
 import { supabase } from "@/lib/supabase";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 export const AuthUI: React.FC = () => {
+  const tUi = useTranslations("auth.ui");
+  const tErrors = useTranslations("auth.errors");
+  const tAuth = useTranslations("auth");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,7 +36,7 @@ export const AuthUI: React.FC = () => {
       // 重要: redirectToは必ずwindow.location.originを直接使用する
       // 環境変数を使うと、PKCE code verifier Cookieが保存されない
       if (typeof window === "undefined") {
-        setError("ブラウザ環境で実行してください");
+        setError(tUi("browserOnly"));
         setLoading(false);
         return;
       }
@@ -49,7 +53,7 @@ export const AuthUI: React.FC = () => {
         if (process.env.NODE_ENV !== "production") {
           console.error("OAuth signInWithOAuth error:", authError);
         }
-        setError("Google認証に失敗しました。再度お試しください。");
+        setError(tErrors("googleFailed"));
         setLoading(false);
         return;
       }
@@ -62,7 +66,7 @@ export const AuthUI: React.FC = () => {
       if (process.env.NODE_ENV !== "production") {
         console.error("Google認証エラー:", err);
       }
-      setError("Google認証に失敗しました。再度お試しください。");
+      setError(tErrors("googleFailed"));
       setLoading(false);
     }
   };
@@ -71,7 +75,7 @@ export const AuthUI: React.FC = () => {
     <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-2xl shadow-xl transform transition-all duration-300">
       <div className="text-center">
         <h2 className="text-3xl font-extrabold text-gray-900 mb-2">SwimHubへようこそ</h2>
-        <p className="text-sm text-gray-600">ログインまたはアカウント作成</p>
+        <p className="text-sm text-gray-600">{tUi("tagline")}</p>
       </div>
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
@@ -102,7 +106,7 @@ export const AuthUI: React.FC = () => {
             d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
           />
         </svg>
-        {loading ? "認証中..." : "Googleでログイン"}
+        {loading ? tUi("authenticating") : tAuth("googleSignin")}
       </button>
     </div>
   );

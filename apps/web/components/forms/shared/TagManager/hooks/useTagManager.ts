@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import { PracticeTag } from "@apps/shared/types";
 
@@ -112,6 +113,7 @@ export const useTagManager = ({
   onTagsChange,
   onAvailableTagsUpdate,
 }: UseTagManagerOptions): UseTagManagerReturn => {
+  const t = useTranslations("forms.tag");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { supabase } = useAuth();
@@ -149,7 +151,7 @@ export const useTagManager = ({
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        if (!user) throw new Error("認証が必要です");
+        if (!user) throw new Error(t("authRequired"));
 
         const randomColor = getRandomColor();
 
@@ -172,13 +174,13 @@ export const useTagManager = ({
         onTagsChange([...selectedTags, data]);
       } catch (err) {
         console.error("タグ作成エラー:", err);
-        setError("タグの作成に失敗しました");
+        setError(t("createFailed"));
         throw err;
       } finally {
         setIsLoading(false);
       }
     },
-    [supabase, availableTags, selectedTags, onTagsChange, onAvailableTagsUpdate],
+    [supabase, availableTags, selectedTags, onTagsChange, onAvailableTagsUpdate, t],
   );
 
   /**
@@ -193,7 +195,7 @@ export const useTagManager = ({
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        if (!user) throw new Error("認証が必要です");
+        if (!user) throw new Error(t("authRequired"));
 
         const { error: dbError } = await supabase
           .from("practice_tags")
@@ -219,13 +221,13 @@ export const useTagManager = ({
         onTagsChange(updatedSelectedTags);
       } catch (err) {
         console.error("タグ更新エラー:", err);
-        setError("タグの更新に失敗しました");
+        setError(t("updateError"));
         throw err;
       } finally {
         setIsLoading(false);
       }
     },
-    [supabase, availableTags, selectedTags, onTagsChange, onAvailableTagsUpdate],
+    [supabase, availableTags, selectedTags, onTagsChange, onAvailableTagsUpdate, t],
   );
 
   /**
@@ -240,7 +242,7 @@ export const useTagManager = ({
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        if (!user) throw new Error("認証が必要です");
+        if (!user) throw new Error(t("authRequired"));
 
         const { error: dbError } = await supabase
           .from("practice_tags")
@@ -259,13 +261,13 @@ export const useTagManager = ({
         onTagsChange(updatedSelectedTags);
       } catch (err) {
         console.error("タグ削除エラー:", err);
-        setError("タグの削除に失敗しました");
+        setError(t("deleteFailed"));
         throw err;
       } finally {
         setIsLoading(false);
       }
     },
-    [supabase, availableTags, selectedTags, onTagsChange, onAvailableTagsUpdate],
+    [supabase, availableTags, selectedTags, onTagsChange, onAvailableTagsUpdate, t],
   );
 
   /**

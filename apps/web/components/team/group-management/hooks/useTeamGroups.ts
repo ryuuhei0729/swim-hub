@@ -1,5 +1,8 @@
+"use client";
+
 import { useState, useCallback, useMemo } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { useTranslations } from "next-intl";
 import { TeamGroupsAPI } from "@apps/shared/api/teams/groups";
 import type { TeamGroup } from "@swim-hub/shared/types";
 
@@ -9,6 +12,7 @@ export type TeamGroupWithCount = TeamGroup & { member_count: number };
  * グループ一覧取得 + カテゴリ導出
  */
 export const useTeamGroups = (teamId: string, supabase: SupabaseClient) => {
+  const t = useTranslations("teamsAdmin.groupManagement.errors");
   const [groups, setGroups] = useState<TeamGroupWithCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,12 +25,12 @@ export const useTeamGroups = (teamId: string, supabase: SupabaseClient) => {
       const data = await api.listWithMemberCount(teamId);
       setGroups(data);
     } catch (err) {
-      console.error("グループ情報の取得に失敗:", err);
-      setError("グループ情報の取得に失敗しました");
+      console.error("Failed to fetch group information:", err);
+      setError(t("fetchFailed"));
     } finally {
       setLoading(false);
     }
-  }, [teamId, supabase]);
+  }, [teamId, supabase, t]);
 
   // カテゴリ一覧を導出
   const categories = useMemo(() => {

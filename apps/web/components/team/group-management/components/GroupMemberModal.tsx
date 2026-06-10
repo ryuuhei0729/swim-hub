@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import BaseModal from "@/components/ui/BaseModal";
 import Avatar from "@/components/ui/Avatar";
 import type { TeamGroupWithCount } from "../hooks/useTeamGroups";
@@ -36,6 +37,7 @@ export const GroupMemberModal: React.FC<GroupMemberModalProps> = ({
   saving,
   loading,
 }) => {
+  const t = useTranslations("teamsAdmin");
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -83,21 +85,21 @@ export const GroupMemberModal: React.FC<GroupMemberModalProps> = ({
   if (!group) return null;
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title={`${group.name} のメンバー`} size="lg">
+    <BaseModal isOpen={isOpen} onClose={onClose} title={t("groupMember.title", { groupName: group.name })} size="lg">
       <div className="space-y-4">
         {/* 検索 */}
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="メンバーを検索..."
+          placeholder={t("groupMember.searchPlaceholder")}
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         />
 
         {/* 一括選択 */}
         <div className="flex items-center justify-between text-xs text-gray-500">
           <span>
-            {selectedUserIds.size} / {teamMembers.length} 人選択中
+            {t("groupMember.selectedCount", { selected: selectedUserIds.size, total: teamMembers.length })}
           </span>
           <div className="flex gap-2">
             <button
@@ -105,14 +107,14 @@ export const GroupMemberModal: React.FC<GroupMemberModalProps> = ({
               onClick={handleSelectAll}
               className="text-blue-600 hover:text-blue-800"
             >
-              全選択
+              {t("groupMember.selectAll")}
             </button>
             <button
               type="button"
               onClick={handleDeselectAll}
               className="text-gray-500 hover:text-gray-700"
             >
-              全解除
+              {t("groupMember.deselectAll")}
             </button>
           </div>
         </div>
@@ -120,10 +122,10 @@ export const GroupMemberModal: React.FC<GroupMemberModalProps> = ({
         {/* メンバーリスト */}
         <div className="max-h-80 overflow-y-auto border border-gray-200 rounded-md divide-y divide-gray-200">
           {loading ? (
-            <div className="p-4 text-center text-sm text-gray-500">読み込み中...</div>
+            <div className="p-4 text-center text-sm text-gray-500">{t("groupMember.loading")}</div>
           ) : filteredMembers.length === 0 ? (
             <div className="p-4 text-center text-sm text-gray-500">
-              {searchQuery ? "該当するメンバーがいません" : "メンバーがいません"}
+              {searchQuery ? t("groupMember.noSearchResult") : t("groupMember.empty")}
             </div>
           ) : (
             filteredMembers.map((member) => {
@@ -160,7 +162,7 @@ export const GroupMemberModal: React.FC<GroupMemberModalProps> = ({
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            キャンセル
+            {t("groupMember.cancelButton")}
           </button>
           <button
             type="button"
@@ -168,7 +170,7 @@ export const GroupMemberModal: React.FC<GroupMemberModalProps> = ({
             disabled={saving}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {saving ? "保存中..." : "保存"}
+            {saving ? t("groupMember.saving") : t("groupMember.saveButton")}
           </button>
         </div>
       </div>

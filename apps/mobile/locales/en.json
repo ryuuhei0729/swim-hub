@@ -1,0 +1,10 @@
+{
+  "CFBundleDisplayName": "SwimHub",
+  "NSCameraUsageDescription": "Camera access is required to take your profile photo.",
+  "NSPhotoLibraryUsageDescription": "Photo library access is required to choose your profile photo.",
+  "NSCalendarsUsageDescription": "Used to sync your practices and competitions with your calendar.",
+  "NSCalendarsWriteOnlyAccessUsageDescription": "Used to add your practices and competitions to your calendar.",
+  "NSCalendarsFullAccessUsageDescription": "Used to sync your practices and competitions with your calendar.",
+  "NSRemindersUsageDescription": "Used to access your reminders.",
+  "NSRemindersFullAccessUsageDescription": "Used to manage your reminders."
+}

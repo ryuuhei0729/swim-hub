@@ -1,11 +1,16 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+
+// next-intl の usePathname は locale プレフィックスを除いたパス (/dashboard 等) を返す。
+// Link / useRouter も @/i18n/navigation に統一して、href にロケールプレフィックスを
+// 含めずに済ませる (二重リダイレクト解消)。
+import { Link, useRouter, usePathname } from "@/i18n/navigation";
 import { useAuth } from "@/contexts";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import LanguageSwitcher from "@/components/ui/LanguageSwitcher";
 import {
   HomeIcon,
   ChartBarIcon,
@@ -23,47 +28,39 @@ interface SidebarProps {
 }
 
 interface NavigationItem {
-  name: string;
   href: string;
   icon: React.ElementType;
   badge?: number;
-  description?: string;
 }
 
 const baseNavigation: NavigationItem[] = [
-  {
-    name: "ダッシュボード",
-    href: "/dashboard",
-    icon: HomeIcon,
-    description: "お知らせとスケジュール",
-  },
-  {
-    name: "練習履歴",
-    href: "/practice",
-    icon: ChartBarIcon,
-    description: "練習内容とタイム記録",
-  },
-  {
-    name: "大会履歴",
-    href: "/competition",
-    icon: TrophyIcon,
-    description: "大会結果とタイム記録",
-  },
-{
-    name: "マイページ",
-    href: "/mypage",
-    icon: UserIcon,
-    description: "プロフィールとベストタイム",
-  },
-  {
-    name: "チーム",
-    href: "/teams",
-    icon: UsersIcon,
-    description: "チームの参加・管理",
-  },
+  { href: "/dashboard", icon: HomeIcon },
+  { href: "/practice", icon: ChartBarIcon },
+  { href: "/competition", icon: TrophyIcon },
+  { href: "/mypage", icon: UserIcon },
+  { href: "/teams", icon: UsersIcon },
 ];
 
+type NavHref = "/dashboard" | "/practice" | "/competition" | "/mypage" | "/teams";
+
+const NAV_NAME_KEYS: Record<NavHref, "nav.dashboard" | "nav.practice" | "nav.competition" | "nav.mypage" | "nav.team"> = {
+  "/dashboard": "nav.dashboard",
+  "/practice": "nav.practice",
+  "/competition": "nav.competition",
+  "/mypage": "nav.mypage",
+  "/teams": "nav.team",
+};
+
+const NAV_DESC_KEYS: Record<NavHref, "nav.dashboardDesc" | "nav.practiceDesc" | "nav.competitionDesc" | "nav.mypageDesc" | "nav.teamDesc"> = {
+  "/dashboard": "nav.dashboardDesc",
+  "/practice": "nav.practiceDesc",
+  "/competition": "nav.competitionDesc",
+  "/mypage": "nav.mypageDesc",
+  "/teams": "nav.teamDesc",
+};
+
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+  const t = useTranslations("sidebar");
   const pathname = usePathname();
   const router = useRouter();
   const { user, supabase, signOut } = useAuth();
@@ -177,13 +174,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             {baseNavigation.map((item) => {
               // チームの場合は、チームが1つだけの場合は直接チームページへ
               const href =
-                item.name === "チーム" && singleTeamId ? `/teams/${singleTeamId}` : item.href;
+                item.href === "/teams" && singleTeamId ? `/teams/${singleTeamId}` : item.href;
 
               // アクティブ判定
               let isActive = pathname === item.href;
 
               // チームの場合は特別処理
-              if (item.name === "チーム") {
+              if (item.href === "/teams") {
                 if (singleTeamId) {
                   // チームが1つの場合: チーム詳細ページ（/teams/[teamId]）にいる時はアクティブ
                   isActive =
@@ -196,7 +193,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               }
 
               return (
-                <div key={item.name} className="group">
+                <div key={item.href} className="group">
                   <Link
                     href={href}
                     className={`
@@ -219,7 +216,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <span className="truncate">{item.name}</span>
+                        <span className="truncate">{t(NAV_NAME_KEYS[item.href as NavHref])}</span>
                         <div className="flex items-center space-x-2">
                           {item.badge && (
                             <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full">
@@ -231,9 +228,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           )}
                         </div>
                       </div>
-                      {item.description && (
-                        <p className="hidden lg:block text-xs text-gray-500 mt-1 truncate">{item.description}</p>
-                      )}
+                      <p className="hidden lg:block text-xs text-gray-500 mt-1 truncate">{t(NAV_DESC_KEYS[item.href as NavHref])}</p>
                     </div>
                   </Link>
                 </div>
@@ -269,19 +264,22 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <span className="truncate">チーム管理</span>
+                      <span className="truncate">{t("nav.teamAdmin")}</span>
                       {!pathname.startsWith("/teams-admin") && (
                         <ChevronRightIcon className="h-4 w-4 text-purple-300 group-hover:text-purple-400 transition-colors duration-200" />
                       )}
                     </div>
-                    <p className="hidden lg:block text-xs text-purple-600 mt-1 truncate font-medium">管理者専用</p>
+                    <p className="hidden lg:block text-xs text-purple-600 mt-1 truncate font-medium">{t("nav.teamAdminDesc")}</p>
                   </div>
                 </Link>
               </div>
             )}
 
-            {/* スマホ用：設定・ログアウト */}
+            {/* スマホ用：言語切り替え + 設定・ログアウト */}
             <div className="lg:hidden mt-2 pt-2 border-t border-gray-200 space-y-1">
+              <div className="px-3 py-2">
+                <LanguageSwitcher />
+              </div>
               <Link
                 href="/settings"
                 className={`
@@ -290,7 +288,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 `}
                 onClick={onClose}
               >
-                設定
+                {t("settings")}
               </Link>
               <button
                 onClick={() => {
@@ -299,7 +297,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 }}
                 className="flex items-center w-full px-3 py-2 text-xs font-medium rounded-lg text-red-600 hover:bg-red-50 transition-all duration-200"
               >
-                ログアウト
+                {t("logout")}
               </button>
             </div>
           </div>
@@ -308,7 +306,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         {/* 関連サービス（デスクトップのみ） */}
         <div className="hidden lg:block mt-auto border-t border-gray-200 px-3 py-4">
           <p className="px-3 mb-2 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
-            関連サービス
+            {t("relatedServices")}
           </p>
           <div className="space-y-1">
             <a
@@ -350,10 +348,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       <ConfirmDialog
         isOpen={isLogoutDialogOpen}
         variant="danger"
-        title="ログアウト"
-        message="ログアウトしますか？"
-        confirmLabel="ログアウト"
-        cancelLabel="キャンセル"
+        title={t("logout")}
+        message={t("logoutConfirm")}
+        confirmLabel={t("logout")}
+        cancelLabel={t("cancel")}
         onConfirm={async () => {
           const { error } = await signOut();
           setIsLogoutDialogOpen(false);

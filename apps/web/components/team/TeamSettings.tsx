@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts/AuthProvider";
 import { TeamCoreAPI } from "@apps/shared/api/teams/core";
 import { ExclamationTriangleIcon, PencilIcon } from "@heroicons/react/24/outline";
@@ -18,6 +19,7 @@ export default function TeamSettings({
   teamDescription,
   isAdmin = false,
 }: TeamSettingsProps) {
+  const t = useTranslations("teamsAdmin");
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(teamName);
   const [description, setDescription] = useState(teamDescription || "");
@@ -34,7 +36,7 @@ export default function TeamSettings({
 
   const handleSave = async () => {
     if (!name.trim()) {
-      setError("チーム名は必須です");
+      setError(t("settings.nameRequired"));
       return;
     }
 
@@ -50,7 +52,7 @@ export default function TeamSettings({
       setIsEditing(false);
     } catch (err) {
       console.error("チーム更新エラー:", err);
-      setError("チーム情報の更新に失敗しました");
+      setError(t("settings.updateFailed"));
     } finally {
       setLoading(false);
     }
@@ -68,7 +70,7 @@ export default function TeamSettings({
     return (
       <>
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">チーム設定</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">{t("settings.title")}</h2>
 
           {/* エラー表示 */}
           {error && (
@@ -85,13 +87,13 @@ export default function TeamSettings({
           {/* チーム情報（読み取り専用） */}
           <div className="space-y-6 mb-8">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">チーム名</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t("settings.nameLabel")}</label>
               <p className="text-lg font-medium text-gray-900">{name}</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">説明</label>
-              <p className="text-gray-900">{description || "説明がありません"}</p>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t("settings.descriptionLabel")}</label>
+              <p className="text-gray-900">{description || t("settings.noDescription")}</p>
             </div>
           </div>
         </div>
@@ -102,7 +104,7 @@ export default function TeamSettings({
   return (
     <>
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-6">チーム設定</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-6">{t("settings.title")}</h2>
 
         {/* エラー表示 */}
         {error && (
@@ -120,7 +122,7 @@ export default function TeamSettings({
         <div className="space-y-6">
           <div>
             <label htmlFor="teamName" className="block text-sm font-medium text-gray-700 mb-2">
-              チーム名 <span className="text-red-500">*</span>
+              {t("settings.nameLabel")} <span className="text-red-500">*</span>
             </label>
             {isEditing ? (
               <input
@@ -141,7 +143,7 @@ export default function TeamSettings({
               htmlFor="teamDescription"
               className="block text-sm font-medium text-gray-700 mb-2"
             >
-              説明
+              {t("settings.descriptionLabel")}
             </label>
             {isEditing ? (
               <textarea
@@ -153,7 +155,7 @@ export default function TeamSettings({
                 disabled={loading}
               />
             ) : (
-              <p className="text-gray-900">{description || "説明がありません"}</p>
+              <p className="text-gray-900">{description || t("settings.noDescription")}</p>
             )}
           </div>
 
@@ -166,14 +168,14 @@ export default function TeamSettings({
                   disabled={loading}
                   className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? "保存中..." : "保存"}
+                  {loading ? t("settings.saving") : t("settings.saveButton")}
                 </button>
                 <button
                   onClick={handleCancel}
                   disabled={loading}
                   className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  キャンセル
+                  {t("settings.cancelButton")}
                 </button>
               </>
             ) : (
@@ -182,7 +184,7 @@ export default function TeamSettings({
                 className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 <PencilIcon className="h-4 w-4 mr-2" />
-                編集
+                {t("settings.editButton")}
               </button>
             )}
           </div>

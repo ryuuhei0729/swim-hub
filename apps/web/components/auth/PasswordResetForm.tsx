@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 
 interface PasswordResetFormProps {
@@ -13,6 +14,10 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess 
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
+  const t = useTranslations("auth.resetPassword");
+  const tFields = useTranslations("auth.fields");
+  const tErrors = useTranslations("auth.errors");
+
   const { resetPassword } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,13 +29,13 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess 
     try {
       const { error } = await resetPassword(email);
       if (error) {
-        setError("パスワードリセットメールの送信に失敗しました。");
+        setError(tErrors("resetFailed"));
       } else {
-        setMessage("パスワードリセット用のメールを送信しました。メールを確認してください。");
+        setMessage(t("successMessage"));
         onSuccess?.();
       }
     } catch {
-      setError("予期しないエラーが発生しました。");
+      setError(tErrors("unexpected"));
     } finally {
       setLoading(false);
     }
@@ -39,20 +44,25 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess 
   return (
     <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-2xl shadow-xl transform transition-all duration-300">
       <div className="text-center">
-        <h2 className="text-3xl font-extrabold text-gray-900 mb-2">パスワードリセット</h2>
-        <p className="text-sm text-gray-600">
-          メールアドレスを入力してリセット用のリンクを受け取ってください
-        </p>
+        <h2 className="text-3xl font-extrabold text-gray-900 mb-2">{t("title")}</h2>
+        <p className="text-sm text-gray-600">{t("subtitle")}</p>
       </div>
 
       {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">{error}</div>}
 
-      {message && <div className="mb-4 p-3 bg-green-100 text-green-700 rounded">{message}</div>}
+      {message && (
+        <div
+          className="mb-4 p-3 bg-green-100 text-green-700 rounded"
+          data-testid="reset-success-message"
+        >
+          {message}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-6">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-            メールアドレス
+            {tFields("email")}
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -86,7 +96,7 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess 
             disabled={loading}
             className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transform transition duration-150 ease-in-out hover:scale-[1.02] shadow-md"
           >
-            {loading ? "送信中..." : "リセットメールを送信"}
+            {loading ? t("loadingButton") : t("submitButton")}
           </button>
         </div>
       </form>

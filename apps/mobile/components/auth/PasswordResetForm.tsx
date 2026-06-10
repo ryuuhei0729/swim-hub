@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 
 interface PasswordResetFormProps {
@@ -13,17 +14,18 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess 
   const [message, setMessage] = useState<string | null>(null);
 
   const { resetPassword } = useAuth();
+  const { t } = useTranslation();
 
   const validateForm = (): boolean => {
     if (!email.trim()) {
-      setError("メールアドレスを入力してください。");
+      setError(t("auth.validation.emailRequired"));
       return false;
     }
 
     // メールアドレス形式の簡易チェック
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setError("有効なメールアドレスを入力してください。");
+      setError(t("auth.errorMap.invalidEmail"));
       return false;
     }
 
@@ -42,13 +44,13 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess 
     try {
       const { error } = await resetPassword(email);
       if (error) {
-        setError("パスワードリセットメールの送信に失敗しました。");
+        setError(t("auth.errors.resetFailed"));
       } else {
-        setMessage("パスワードリセット用のメールを送信しました。メールを確認してください。");
+        setMessage(t("auth.resetPassword.successMessage"));
         onSuccess?.();
       }
     } catch {
-      setError("予期しないエラーが発生しました。");
+      setError(t("auth.errors.unexpected"));
     } finally {
       setLoading(false);
     }
@@ -58,10 +60,8 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess 
     <View style={styles.container}>
       <View style={styles.formContainer}>
         <View style={styles.header}>
-          <Text style={styles.title}>パスワードリセット</Text>
-          <Text style={styles.subtitle}>
-            メールアドレスを入力してリセット用のリンクを受け取ってください
-          </Text>
+          <Text style={styles.title}>{t("auth.resetPassword.title")}</Text>
+          <Text style={styles.subtitle}>{t("auth.resetPassword.subtitle")}</Text>
         </View>
 
         {error && (
@@ -78,10 +78,10 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess 
 
         <View style={styles.form}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>メールアドレス</Text>
+            <Text style={styles.label}>{t("auth.fields.email")}</Text>
             <TextInput
               style={styles.input}
-              placeholder="your@email.com"
+              placeholder={t("auth.fields.emailPlaceholder")}
               placeholderTextColor="#9CA3AF"
               value={email}
               onChangeText={setEmail}
@@ -101,7 +101,7 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess 
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.buttonText}>リセットメールを送信</Text>
+              <Text style={styles.buttonText}>{t("auth.resetPassword.submitButton")}</Text>
             )}
           </Pressable>
         </View>

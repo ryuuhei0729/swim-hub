@@ -2,8 +2,10 @@ import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { format, parseISO, isValid } from "date-fns";
-import { ja } from "date-fns/locale";
+import { parseISO, isValid } from "date-fns";
+import { useTranslation } from "react-i18next";
+import { formatDateTime } from "@apps/shared/utils/date";
+import { useDateLocale } from "@/hooks/useDateLocale";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useTeamAnnouncementsQuery } from "@apps/shared/hooks/queries/announcements";
 import {
@@ -96,8 +98,9 @@ const TeamCard: React.FC<TeamCardProps> = ({
   navigation,
   supabase,
 }) => {
+  const { t } = useTranslation();
   const teamId = membership.team_id;
-  const teamName = membership.teams?.name || "チーム";
+  const teamName = membership.teams?.name || t("teams.mobile.fallbackTeamName");
 
   const { data: announcements = [] } = useTeamAnnouncementsQuery(supabase, {
     teamId,
@@ -115,8 +118,10 @@ const TeamCard: React.FC<TeamCardProps> = ({
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <Text style={styles.teamName}>{teamName} のお知らせ</Text>
-        {membership.role === "admin" && <Text style={styles.adminBadge}>管理者</Text>}
+        <Text style={styles.teamName}>{teamName}{t("dashboard.announcements.title")}</Text>
+        {membership.role === "admin" && (
+          <Text style={styles.adminBadge}>{t("dashboard.announcements.adminRole")}</Text>
+        )}
       </View>
 
       {/* 出欠未回答 */}
@@ -126,8 +131,7 @@ const TeamCard: React.FC<TeamCardProps> = ({
           onPress={() => navigation.navigate("TeamDetail", { teamId })}
         >
           <Text style={styles.notificationText}>
-            直近1ヶ月で出欠が未回答の練習・大会があります。（
-            {unansweredAttendances.length}件）
+            {t("dashboard.announcements.unansweredAttendance", { count: unansweredAttendances.length })}
           </Text>
         </Pressable>
       )}
@@ -135,7 +139,7 @@ const TeamCard: React.FC<TeamCardProps> = ({
       {/* エントリー未提出 */}
       {unsubmittedEntries.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>エントリー未提出 ({unsubmittedEntries.length}件)</Text>
+          <Text style={styles.sectionTitle}>{t("dashboard.announcements.unsubmittedEntries", { count: unsubmittedEntries.length })}</Text>
           {unsubmittedEntries.map((entry) => (
             <Pressable
               key={entry.competitionId}
@@ -169,9 +173,10 @@ const TeamCard: React.FC<TeamCardProps> = ({
 };
 
 const AnnouncementItem: React.FC<{ announcement: TeamAnnouncement }> = ({ announcement }) => {
+  const locale = useDateLocale();
   const parsedUpdatedAt = announcement.updated_at ? parseISO(announcement.updated_at) : new Date(0);
   const updatedAt = isValid(parsedUpdatedAt)
-    ? format(parsedUpdatedAt, "M月d日 HH:mm", { locale: ja })
+    ? formatDateTime(parsedUpdatedAt, "shortDate", locale)
     : "-";
 
   return (

@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslations } from "next-intl";
 import BaseModal from "@/components/ui/BaseModal";
 import type { MemberDetail } from "@/types/member-detail";
 
@@ -17,25 +18,26 @@ export function RoleChangeModal({
   onConfirm,
   onCancel,
 }: RoleChangeModalProps) {
+  const t = useTranslations("teams.memberDetail.roleChange");
+  const role = pendingRole === "admin" ? t("roleAdmin") : t("roleUser");
   return (
-    <BaseModal isOpen={isOpen} onClose={onCancel} title="権限変更の確認" size="sm">
+    <BaseModal isOpen={isOpen} onClose={onCancel} title={t("title")} size="sm">
       <div className="p-4">
         <p className="text-gray-700 mb-6">
-          {member?.users?.name}さんの権限を 「{pendingRole === "admin" ? "管理者" : "ユーザー"}
-          」に変更しますか？
+          {t("message", { name: member?.users?.name ?? "", role })}
         </p>
         <div className="flex justify-end space-x-3">
           <button
             onClick={onCancel}
             className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            キャンセル
+            {t("cancel")}
           </button>
           <button
             onClick={onConfirm}
             className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
           >
-            変更する
+            {t("confirm")}
           </button>
         </div>
       </div>

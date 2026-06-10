@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { formatTime } from "@/utils/formatters";
+import { localizedStyleName } from "@/utils/styleName";
 import { VideoPlayer } from "@/components/shared/VideoPlayer";
 import { ImageViewerModal } from "@/components/shared";
 import { getExistingImagesFromPaths } from "@/utils/imageUpload";
@@ -35,6 +37,7 @@ const RecordCard: React.FC<{
   onDeleteRecord,
   onClose,
 }) => {
+  const { t } = useTranslation();
   const [splitTab, setSplitTab] = useState<"race" | "all">("race");
 
   // ゴールタイムを含む表示用スプリットデータ
@@ -193,14 +196,14 @@ const RecordCard: React.FC<{
         {/* 種目とタイム */}
         <View style={styles.recordInfoGrid}>
           <View style={styles.recordInfoRow}>
-            <Text style={styles.recordInfoLabel}>種目</Text>
+            <Text style={styles.recordInfoLabel}>{t("dashboard.dayDetail.recordStyleLabel")}</Text>
             <Text style={styles.recordStyleValue}>
               {record.styleName}
               {record.isRelaying && <Text style={styles.recordRelayBadge}> R</Text>}
             </Text>
           </View>
           <View style={styles.recordInfoRow}>
-            <Text style={styles.recordInfoLabel}>タイム</Text>
+            <Text style={styles.recordInfoLabel}>{t("dashboard.dayDetail.recordTimeLabel")}</Text>
             <View style={styles.recordTimeContainer}>
               <Text style={styles.recordTimeValue}>{formatTime(record.time)}</Text>
               {record.reactionTime != null && typeof record.reactionTime === "number" && (
@@ -332,7 +335,7 @@ const RecordCard: React.FC<{
       {/* メモ */}
       {record.note && (
         <View style={styles.recordNoteContainer}>
-          <Text style={styles.recordNoteLabel}>メモ</Text>
+          <Text style={styles.recordNoteLabel}>{t("dashboard.dayDetail.recordMemoLabel")}</Text>
           <Text style={styles.recordNoteText}>{record.note}</Text>
         </View>
       )}
@@ -366,6 +369,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
   onDeleteRecord,
   onClose,
 }) => {
+  const { t } = useTranslation();
   const { supabase, user } = useAuth();
   const [actualRecords, setActualRecords] = useState<RecordData[]>([]);
   const [competitionImages, setCompetitionImages] = useState<Array<{ id: string; url: string }>>(
@@ -382,7 +386,9 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
 
   // プール種別のテキストを取得
   const getPoolTypeText = (poolType: number): string => {
-    return poolType === 1 ? "長水路(50m)" : "短水路(25m)";
+    return poolType === 1
+      ? t("dashboard.competition.poolTypeLong")
+      : t("dashboard.competition.poolTypeShort");
   };
 
   // 記録データを取得
@@ -406,7 +412,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
             style_id,
             video_path,
             video_thumbnail_path,
-            style:styles(id, name_jp, distance)
+            style:styles(id, name_jp, distance, style)
           `,
           )
           .eq("competition_id", _competitionId);
@@ -445,11 +451,13 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
                 id: number;
                 name_jp: string;
                 distance: number;
+                style: string;
               }
             | {
                 id: number;
                 name_jp: string;
                 distance: number;
+                style: string;
               }[]
             | null;
         };
@@ -458,7 +466,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
           const style = Array.isArray(record.style) ? record.style[0] : record.style;
           return {
             id: record.id,
-            styleName: style?.name_jp || "",
+            styleName: localizedStyleName(style, t),
             time: record.time || 0,
             reactionTime: record.reaction_time ?? null,
             isRelaying: record.is_relaying || false,
@@ -481,7 +489,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
     };
 
     loadRecords();
-  }, [_competitionId, supabase, user?.id, isTeamCompetition]);
+  }, [_competitionId, supabase, user?.id, isTeamCompetition, t]);
 
   // スプリットタイムを取得
   useEffect(() => {
@@ -556,7 +564,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
           <View style={styles.competitionHeaderLeft}>
             <View style={styles.competitionHeaderTitleRow}>
               <View style={[styles.entryTypeBadge, { backgroundColor: "#2563EB" }]}>
-                <Text style={styles.entryTypeText}>大会</Text>
+                <Text style={styles.entryTypeText}>{t("dashboard.dayDetail.entryTypeCompetition")}</Text>
               </View>
               <Text style={styles.competitionHeaderTitle}>{competitionName}</Text>
             </View>
@@ -597,11 +605,11 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
       <View style={styles.recordsList}>
         {loading ? (
           <View style={styles.recordCard}>
-            <Text style={styles.loadingText}>記録を読み込み中...</Text>
+            <Text style={styles.loadingText}>{t("dashboard.dayDetail.recordsLoading")}</Text>
           </View>
         ) : actualRecords.length === 0 ? (
           <View style={styles.recordCard}>
-            <Text style={styles.emptyText}>記録がありません</Text>
+            <Text style={styles.emptyText}>{t("dashboard.dayDetail.recordsEmpty")}</Text>
             {onAddRecord && (
               <Pressable
                 style={styles.addCompetitionRecordButton}
@@ -611,7 +619,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
                 }}
               >
                 <Feather name="plus" size={18} color="#2563EB" />
-                <Text style={styles.addCompetitionRecordButtonText}>大会記録を追加</Text>
+                <Text style={styles.addCompetitionRecordButtonText}>{t("dashboard.dayDetail.addRecord")}</Text>
               </Pressable>
             )}
           </View>
@@ -642,7 +650,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
             }}
           >
             <Feather name="plus" size={18} color="#2563EB" />
-            <Text style={styles.addCompetitionRecordButtonText}>大会記録を追加</Text>
+            <Text style={styles.addCompetitionRecordButtonText}>{t("dashboard.dayDetail.addRecord")}</Text>
           </Pressable>
         )}
       </View>

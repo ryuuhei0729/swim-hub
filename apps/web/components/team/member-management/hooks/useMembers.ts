@@ -1,5 +1,8 @@
+"use client";
+
 import { useState, useCallback } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { useTranslations } from "next-intl";
 
 export interface TeamMember {
   id: string;
@@ -23,6 +26,7 @@ export interface TeamMember {
  * 承認済みメンバーを管理するカスタムフック
  */
 export const useMembers = (teamId: string, supabase: SupabaseClient) => {
+  const t = useTranslations("teams");
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,11 +65,11 @@ export const useMembers = (teamId: string, supabase: SupabaseClient) => {
       setMembers((data ?? []) as unknown as TeamMember[]);
     } catch (err) {
       console.error("メンバー情報の取得に失敗:", err);
-      setError("メンバー情報の取得に失敗しました");
+      setError(t("membersHook.loadError"));
     } finally {
       setLoading(false);
     }
-  }, [teamId, supabase]);
+  }, [teamId, supabase, t]);
 
   const refresh = useCallback(() => {
     loadMembers();

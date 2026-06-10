@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -28,6 +29,7 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
   onManageMembers,
   onBulkAssign,
 }) => {
+  const t = useTranslations("teamsAdmin");
   const [isExpanded, setIsExpanded] = useState(true);
 
   return (
@@ -45,8 +47,8 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
           ) : (
             <ChevronRightIcon className="h-4 w-4 text-gray-500" />
           )}
-          <span className="text-sm font-semibold text-gray-800">{category || "未分類"}</span>
-          <span className="text-xs text-gray-500">({groups.length}グループ)</span>
+          <span className="text-sm font-semibold text-gray-800">{category || t("categorySection.uncategorized")}</span>
+          <span className="text-xs text-gray-500">{t("categorySection.groupCount", { count: groups.length })}</span>
         </button>
         {category && onBulkAssign && (
           <button
@@ -55,7 +57,7 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
             className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:text-gray-800 transition-colors"
           >
             <ArrowsRightLeftIcon className="h-3.5 w-3.5" />
-            一括振り分け
+            {t("categorySection.bulkAssignButton")}
           </button>
         )}
       </div>

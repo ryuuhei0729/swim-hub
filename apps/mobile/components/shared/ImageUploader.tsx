@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet, Alert, Platform, ScrollView } from "
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 export interface ExistingImage {
   id: string;
@@ -71,8 +72,10 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   onImagesChange,
   maxImages = 3,
   disabled = false,
-  label = "画像",
+  label,
 }) => {
+  const { t } = useTranslation();
+  const resolvedLabel = label ?? t("common.upload.imageLabel");
   const [newFiles, setNewFiles] = useState<ImageFile[]>([]);
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -121,11 +124,11 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         for (const file of filesToProcess) {
           // バリデーション
           if (!file.type.startsWith("image/")) {
-            setError("画像ファイルを選択してください");
+            setError(t("common.upload.imageOnlyError"));
             continue;
           }
           if (file.size > 10 * 1024 * 1024) {
-            setError("画像サイズは10MB以下にしてください");
+            setError(t("common.upload.imageSizeError", { maxMb: 10 }));
             continue;
           }
 
@@ -166,8 +169,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== "granted") {
           Alert.alert(
-            "権限が必要です",
-            "画像を選択するには、フォトライブラリへのアクセス権限が必要です。",
+            t("common.upload.permissionRequiredTitle"),
+            t("common.upload.photoLibraryPermissionRequired"),
             [{ text: "OK" }],
           );
           return;
@@ -188,13 +191,13 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 
         const asset = result.assets[0];
         if (!asset || !asset.base64) {
-          setError("画像データの取得に失敗しました");
+          setError(t("common.upload.imageDataFetchFailed"));
           return;
         }
 
         // ファイルサイズチェック
         if (asset.fileSize && asset.fileSize > 10 * 1024 * 1024) {
-          setError("画像サイズは10MB以下にしてください");
+          setError(t("common.upload.imageSizeError", { maxMb: 10 }));
           return;
         }
 
@@ -211,9 +214,9 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         });
       } catch (err) {
         console.error("画像選択エラー:", err);
-        const errorMessage = err instanceof Error ? err.message : "画像の選択に失敗しました";
+        const errorMessage = err instanceof Error ? err.message : t("common.upload.imageSelectFailed");
         setError(errorMessage);
-        Alert.alert("エラー", errorMessage, [{ text: "OK" }]);
+        Alert.alert(t("common.alertErrorTitle"), errorMessage, [{ text: "OK" }]);
       }
     }
   };
@@ -230,13 +233,13 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     };
 
     if (Platform.OS === "web") {
-      if (window.confirm("この画像を削除しますか？")) {
+      if (window.confirm(t("common.upload.imageRemoveConfirm"))) {
         confirmRemove();
       }
     } else {
-      Alert.alert("削除確認", "この画像を削除しますか？", [
-        { text: "キャンセル", style: "cancel" },
-        { text: "削除", style: "destructive", onPress: confirmRemove },
+      Alert.alert(t("common.upload.removeConfirmTitle"), t("common.upload.imageRemoveConfirm"), [
+        { text: t("common.cancel"), style: "cancel" },
+        { text: t("common.upload.removeChoice"), style: "destructive", onPress: confirmRemove },
       ]);
     }
   };
@@ -255,7 +258,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.label}>{label}</Text>
+        <Text style={styles.label}>{resolvedLabel}</Text>
         <Text style={styles.count}>
           {currentImageCount} / {maxImages}枚
         </Text>
@@ -291,7 +294,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           <View key={`new-${index}`} style={styles.imageWrapper}>
             <Image source={{ uri: file.uri }} style={styles.image} contentFit="cover" />
             <View style={styles.newBadge}>
-              <Text style={styles.newBadgeText}>新規</Text>
+              <Text style={styles.newBadgeText}>{t("common.imageUploader.newBadge")}</Text>
             </View>
             {!disabled && (
               <Pressable style={styles.removeButton} onPress={() => handleRemoveNew(index)}>
@@ -305,13 +308,13 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         {canAddMore && !disabled && (
           <Pressable style={styles.addButton} onPress={handleImageSelect}>
             <Feather name="plus" size={24} color="#6B7280" />
-            <Text style={styles.addButtonText}>追加</Text>
+            <Text style={styles.addButtonText}>{t("common.imageUploader.addButton")}</Text>
           </Pressable>
         )}
       </ScrollView>
 
       {currentImageCount >= maxImages && (
-        <Text style={styles.maxReachedText}>最大枚数に達しました</Text>
+        <Text style={styles.maxReachedText}>{t("common.imageUploader.maxReached")}</Text>
       )}
     </View>
   );

@@ -2,6 +2,7 @@
 
 import React, { useMemo } from "react";
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { TrashIcon } from "@heroicons/react/24/outline";
@@ -11,7 +12,7 @@ import type { EntryInfo } from "@apps/shared/types/ui";
 import type { RecordLogFormState, StyleOption } from "../types";
 import type { BestTime } from "@/types/member-detail";
 import PremiumBadge from "@/components/ui/PremiumBadge";
-import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
+import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 
 const VideoUploader = dynamic(() => import("@/components/video/VideoUploader"), { ssr: false });
 
@@ -79,6 +80,8 @@ export default function RecordLogEntry({
   isPremium = false,
   onPendingFile,
 }: RecordLogEntryProps) {
+  const t = useTranslations("forms.recordLog");
+  const tPremium = useTranslations("forms.premium");
   const sectionIndex = index + 1;
   const styleOptions = styles.map((style) => ({
     id: style.id.toString(),
@@ -112,7 +115,8 @@ export default function RecordLogEntry({
     const styleName = currentStyle.nameJp;
     const isRelaying = formData.isRelaying;
     const otherPoolType = poolType === 0 ? 1 : 0;
-    const otherPoolLabel = poolType === 0 ? "長水路" : "短水路";
+    const otherPoolLabelKey = poolType === 0 ? "bestTimeLong" : "bestTimeShort";
+    const otherPoolRelayLabelKey = poolType === 0 ? "bestTimeLongRelay" : "bestTimeShortRelay";
 
     // 同じ水路のベストタイムを検索
     const samePool = bestTimes.find(
@@ -127,42 +131,42 @@ export default function RecordLogEntry({
       // リレーONの場合の優先順位
       // 1. 同じ水路・リレー
       if (samePool?.relayingTime) {
-        return { time: samePool.relayingTime.time, label: "ベストタイム(引継)" };
+        return { time: samePool.relayingTime.time, label: t("bestTimeRelay") };
       }
       // 2. 同じ水路・非リレー
       if (samePool && !samePool.is_relaying) {
-        return { time: samePool.time, label: "ベストタイム" };
+        return { time: samePool.time, label: t("bestTimeLabel") };
       }
       // 3. 異なる水路・リレー
       if (otherPool?.relayingTime) {
-        return { time: otherPool.relayingTime.time, label: `ベストタイム(${otherPoolLabel}引継)` };
+        return { time: otherPool.relayingTime.time, label: t(otherPoolRelayLabelKey) };
       }
       // 4. 異なる水路・非リレー
       if (otherPool && !otherPool.is_relaying) {
-        return { time: otherPool.time, label: `ベストタイム(${otherPoolLabel})` };
+        return { time: otherPool.time, label: t(otherPoolLabelKey) };
       }
     } else {
       // リレーOFFの場合の優先順位
       // 1. 同じ水路・非リレー
       if (samePool && !samePool.is_relaying) {
-        return { time: samePool.time, label: "ベストタイム" };
+        return { time: samePool.time, label: t("bestTimeLabel") };
       }
       // 2. 同じ水路・リレー
       if (samePool?.relayingTime) {
-        return { time: samePool.relayingTime.time, label: "ベストタイム(引継)" };
+        return { time: samePool.relayingTime.time, label: t("bestTimeRelay") };
       }
       // 3. 異なる水路・非リレー
       if (otherPool && !otherPool.is_relaying) {
-        return { time: otherPool.time, label: `ベストタイム(${otherPoolLabel})` };
+        return { time: otherPool.time, label: t(otherPoolLabelKey) };
       }
       // 4. 異なる水路・リレー
       if (otherPool?.relayingTime) {
-        return { time: otherPool.relayingTime.time, label: `ベストタイム(${otherPoolLabel}引継)` };
+        return { time: otherPool.relayingTime.time, label: t(otherPoolRelayLabelKey) };
       }
     }
 
     return null;
-  }, [currentStyle, bestTimes, poolType, formData.isRelaying]);
+  }, [currentStyle, bestTimes, poolType, formData.isRelaying, t]);
 
   // スプリットタイムを距離でソート
   const sortedSplitTimes = [...formData.splitTimes]
@@ -208,12 +212,12 @@ export default function RecordLogEntry({
       data-testid={`record-entry-section-${sectionIndex}`}
     >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <h4 className="text-base font-semibold text-gray-900">種目 {sectionIndex}</h4>
+        <h4 className="text-base font-semibold text-gray-900">{t("eventHeader", { n: sectionIndex })}</h4>
         <div className="flex flex-wrap items-center gap-2">
           {entryInfo && entryInfo.entryTime && entryInfo.entryTime > 0 && (
             <div className="text-xs text-blue-800 bg-blue-100 px-3 py-1 rounded-full inline-flex items-center gap-2">
               <span className="text-blue-700">
-                エントリータイム: {formatTimeBest(entryInfo.entryTime)}
+                {t("entryTimeLabel")} {formatTimeBest(entryInfo.entryTime)}
               </span>
             </div>
           )}
@@ -230,7 +234,7 @@ export default function RecordLogEntry({
       {/* 種目とリレー */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          種目 <span className="text-red-500">*</span>
+          {t("styleLabel")} <span className="text-red-500">*</span>
         </label>
         <div className="flex items-center gap-1.5 sm:gap-3">
           <select
@@ -241,7 +245,7 @@ export default function RecordLogEntry({
             disabled={!!entryInfo}
             data-testid={`record-style-${sectionIndex}`}
           >
-            <option value="">種目を選択</option>
+            <option value="">{t("stylePlaceholder")}</option>
             {styleOptions.map((option) => (
               <option key={option.id} value={option.id}>
                 {option.label}
@@ -262,7 +266,7 @@ export default function RecordLogEntry({
                 htmlFor={`isRelaying-${sectionIndex}`}
                 className="ml-1 sm:ml-2 text-[10px] sm:text-sm text-gray-700 whitespace-nowrap"
               >
-                リレー
+                {t("relayLabel")}
               </label>
             </div>
           )}
@@ -273,21 +277,21 @@ export default function RecordLogEntry({
       <div className="grid grid-cols-[1fr_auto] gap-2 items-start">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            タイム <span className="text-red-500">*</span>
+            {t("timeLabel")} <span className="text-red-500">*</span>
           </label>
           <Input
             type="text"
             value={formData.timeDisplayValue}
             onChange={(e) => onTimeChange(e.target.value)}
-            placeholder="例: 1:23.45   32.45"
+            placeholder={t("time_placeholder")}
             className="w-full"
             data-testid={`record-time-${sectionIndex}`}
           />
         </div>
         <div className="w-20 sm:w-36">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="sm:hidden">RT</span>
-            <span className="hidden sm:inline">リアクションタイム</span>
+            <span className="sm:hidden">{t("reactionTimeLabelShort")}</span>
+            <span className="hidden sm:inline">{t("reactionTimeLabelFull")}</span>
           </label>
           <Input
             type="number"
@@ -296,7 +300,7 @@ export default function RecordLogEntry({
             max="1.00"
             value={formData.reactionTime}
             onChange={(e) => onReactionTimeChange(e.target.value)}
-            placeholder="0.65"
+            placeholder={t("reactionTime_placeholder")}
             className="w-full"
             data-testid={`record-reaction-time-${sectionIndex}`}
           />
@@ -307,7 +311,7 @@ export default function RecordLogEntry({
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
           <label className="block text-sm font-medium text-gray-700 whitespace-nowrap">
-            スプリットタイム
+            {t("splitTimeLabel")}
           </label>
           <div className="flex gap-1">
             <Button
@@ -318,7 +322,7 @@ export default function RecordLogEntry({
               disabled={isLoading || !raceDistance || isSplitTimeLimitReached}
               data-testid={`record-split-add-25m-button-${sectionIndex}`}
             >
-              追加(25mごと)
+              {t("splitAdd25m")}
             </Button>
             <Button
               type="button"
@@ -328,7 +332,7 @@ export default function RecordLogEntry({
               disabled={isLoading || !raceDistance || isSplitTimeLimitReached}
               data-testid={`record-split-add-50m-button-${sectionIndex}`}
             >
-              追加(50mごと)
+              {t("splitAdd50m")}
             </Button>
             <Button
               type="button"
@@ -338,7 +342,7 @@ export default function RecordLogEntry({
               disabled={isLoading || isSplitTimeLimitReached}
               data-testid={`record-split-add-button-${sectionIndex}`}
             >
-              追加
+              {t("splitAdd")}
             </Button>
           </div>
         </div>
@@ -359,7 +363,7 @@ export default function RecordLogEntry({
                       onSplitTimeChange(originalIndex, "distance", value);
                     }
                   }}
-                  placeholder="距離 (m)"
+                  placeholder={t("distance_placeholder")}
                   className="w-24"
                   data-testid={`record-split-distance-${sectionIndex}-${originalIndex + 1}`}
                 />
@@ -367,7 +371,7 @@ export default function RecordLogEntry({
                   type="text"
                   value={st.splitTimeDisplayValue || ""}
                   onChange={(e) => onSplitTimeChange(originalIndex, "splitTime", e.target.value)}
-                  placeholder="例: 28.50"
+                  placeholder={t("reactionTime_placeholder")}
                   className="flex-1"
                   data-testid={`record-split-time-${sectionIndex}-${originalIndex + 1}`}
                 />
@@ -395,14 +399,16 @@ export default function RecordLogEntry({
         {/* Premium 制限メッセージ */}
         {!isPremium && isSplitTimeLimitReached && (
           <div className="mt-2" data-testid={`premium-badge-split-limit-${sectionIndex}`}>
-            <PremiumBadge message={PREMIUM_MESSAGES.split_time_limit} />
+            <PremiumBadge
+              message={tPremium("splitTimeLimit", { limit: FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD })}
+            />
           </div>
         )}
       </div>
 
       {/* 動画 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">動画</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">{t("videoLabel")}</label>
         <VideoUploader
           type="record"
           id={recordId && isDbUuid(recordId) ? recordId : undefined}
@@ -417,11 +423,11 @@ export default function RecordLogEntry({
 
       {/* メモ */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">メモ</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">{t("noteLabel")}</label>
         <textarea
           value={formData.note}
           onChange={(e) => onNoteChange(e.target.value)}
-          placeholder="記録に関するメモ（任意）"
+          placeholder={t("notePlaceholder")}
           rows={3}
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           data-testid={`record-note-${sectionIndex}`}

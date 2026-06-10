@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AttendanceAPI } from "@swim-hub/shared/api/attendance";
+import { useTranslations } from "next-intl";
 import type { TeamAttendanceWithDetails } from "@swim-hub/shared/types/attendance";
 import { TeamEvent } from "@swim-hub/shared/types";
 import { getMonthDateRange } from "@swim-hub/shared/utils/date";
@@ -13,6 +14,7 @@ export const useMonthDetail = (
   supabase: SupabaseClient,
   attendanceAPI: AttendanceAPI,
 ) => {
+  const t = useTranslations("teams");
   const [events, setEvents] = useState<TeamEvent[]>([]);
   const [attendances, setAttendances] = useState<TeamAttendanceWithDetails[]>([]);
   const [loading, setLoading] = useState(false);
@@ -65,13 +67,13 @@ export const useMonthDetail = (
         return { events: allEvents, attendances: attendanceData };
       } catch (err) {
         console.error("出欠情報の取得に失敗:", err);
-        setError("出欠情報の取得に失敗しました");
+        setError(t("monthDetailHook.loadError"));
         return null;
       } finally {
         setLoading(false);
       }
     },
-    [teamId, supabase, attendanceAPI],
+    [teamId, supabase, attendanceAPI, t],
   );
 
   return {
