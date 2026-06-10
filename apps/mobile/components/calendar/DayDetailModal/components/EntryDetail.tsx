@@ -105,7 +105,7 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [competitionId, supabase, entries]);
+  }, [competitionId, supabase, entries, t]);
 
   useEffect(() => {
     fetchEntries();

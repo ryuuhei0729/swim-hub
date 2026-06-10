@@ -489,7 +489,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
     };
 
     loadRecords();
-  }, [_competitionId, supabase, user?.id, isTeamCompetition]);
+  }, [_competitionId, supabase, user?.id, isTeamCompetition, t]);
 
   // スプリットタイムを取得
   useEffect(() => {
